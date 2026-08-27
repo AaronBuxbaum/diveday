@@ -3,19 +3,25 @@ import { describe, expect, it } from "vitest";
 import {
   hasSupportNeeds,
   type SupportNeeds,
+  supportDiversToArrange,
   supportNeedFacts,
-  totalSupportDiversNeeded,
+  supportNeedsAnswered,
 } from "./support-needs";
+
+const ANSWERED_AT = new Date("2026-07-20T10:00:00.000Z");
 
 const NOTHING: SupportNeeds = {
   supportDiversNeeded: null,
+  supportDiversProvidedBy: null,
   needsBoardingAssistance: false,
-  needsWaterEntryLift: false,
+  needsWaterLift: false,
   briefingInSign: false,
   briefingInWriting: false,
+  briefingAloud: false,
   briefingBySignals: false,
   equipmentAdaptation: null,
   divesWithName: null,
+  statedAt: ANSWERED_AT,
 };
 
 describe("support needs", () => {
@@ -33,8 +39,9 @@ describe("support needs", () => {
 
   it("reads a stated need as something to plan around", () => {
     expect(hasSupportNeeds({ ...NOTHING, supportDiversNeeded: 1 })).toBe(true);
-    expect(hasSupportNeeds({ ...NOTHING, needsWaterEntryLift: true })).toBe(true);
+    expect(hasSupportNeeds({ ...NOTHING, needsWaterLift: true })).toBe(true);
     expect(hasSupportNeeds({ ...NOTHING, briefingInSign: true })).toBe(true);
+    expect(hasSupportNeeds({ ...NOTHING, briefingAloud: true })).toBe(true);
     expect(hasSupportNeeds({ ...NOTHING, equipmentAdaptation: "webbed gloves" })).toBe(true);
     expect(hasSupportNeeds({ ...NOTHING, divesWithName: "Marisol Vega" })).toBe(true);
     // Whitespace is not an answer — the writer trims, and a reader that did not
@@ -46,39 +53,56 @@ describe("support needs", () => {
   it("lists the facts in the order the day runs", () => {
     expect(
       supportNeedFacts({
+        ...NOTHING,
         supportDiversNeeded: 2,
+        supportDiversProvidedBy: "diver",
         needsBoardingAssistance: true,
-        needsWaterEntryLift: true,
-        briefingInSign: false,
+        needsWaterLift: true,
         briefingInWriting: true,
+        briefingAloud: true,
         briefingBySignals: true,
         equipmentAdaptation: "  webbed gloves  ",
         divesWithName: "  Marisol Vega  ",
       }),
     ).toEqual([
-      { kind: "support_divers", count: 2 },
+      { kind: "support_divers", count: 2, providedBy: "diver" },
       { kind: "boarding_assistance" },
-      { kind: "water_entry_lift" },
+      { kind: "water_lift" },
       { kind: "briefing_written" },
+      { kind: "briefing_aloud" },
       { kind: "briefing_signals" },
       { kind: "equipment", note: "webbed gloves" },
       { kind: "dives_with", name: "Marisol Vega" },
     ]);
   });
 
-  it("sums a departure's support requirement over its whole roster", () => {
+  it("counts only the support divers the shop has to find", () => {
+    // The distinction the whole field exists for: summing a diver's own buddy
+    // into this would have a manager roster crew for somebody already coming,
+    // and the same mistake the other way leaves a diver alone in the water.
     expect(
-      totalSupportDiversNeeded([
-        { supportNeeds: { ...NOTHING, supportDiversNeeded: 2 } },
+      supportDiversToArrange([
+        { supportNeeds: { ...NOTHING, supportDiversNeeded: 2, supportDiversProvidedBy: "shop" } },
+        { supportNeeds: { ...NOTHING, supportDiversNeeded: 2, supportDiversProvidedBy: "diver" } },
         // Asked, needs nobody.
         { supportNeeds: { ...NOTHING, supportDiversNeeded: 0 } },
         // Never asked.
         { supportNeeds: null },
         {},
-        { supportNeeds: { ...NOTHING, supportDiversNeeded: 1 } },
+        { supportNeeds: { ...NOTHING, supportDiversNeeded: 1, supportDiversProvidedBy: "shop" } },
       ]),
     ).toBe(3);
-    expect(totalSupportDiversNeeded([])).toBe(0);
+    expect(supportDiversToArrange([])).toBe(0);
+  });
+
+  it("tells a diver who was asked from one who never was", () => {
+    // The only reader is the diver's own `/ready` row, which must stop asking
+    // once they have answered — including when the answer was "nobody".
+    expect(supportNeedsAnswered(null)).toBe(false);
+    expect(supportNeedsAnswered({ ...NOTHING, statedAt: null })).toBe(false);
+    expect(supportNeedsAnswered(NOTHING)).toBe(true);
+    // And it stays a separate question from whether there is anything to do.
+    expect(hasSupportNeeds(NOTHING)).toBe(false);
   });
 
   /**

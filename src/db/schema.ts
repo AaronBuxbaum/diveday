@@ -5401,19 +5401,60 @@ export const diveSupportNeeds = pgTable(
      * is worth being able to say out loud.
      */
     supportDiversNeeded: integer("support_divers_needed"),
+    /**
+     * **Who supplies them**, which is a different question from how many and the
+     * one the count is useless without.
+     *
+     * The answer splits two ways in real adaptive practice and the shop's action
+     * is opposite in each. `shop` is "please arrange them" — the shop rosters
+     * that many more in-water crew, and usually bills for it. `diver` is "they
+     * are coming with me" — an adaptive-trained buddy or a carer booking their
+     * own seats, and the shop rosters **nobody** but must seat them and put them
+     * on the same team.
+     *
+     * Without this the crew reads one string for both, and the departure total a
+     * manager staffs by sums them together: a participant travelling with two
+     * volunteers makes a shop staff up for nothing, and the reverse puts a diver
+     * in the water with nobody. That second one is the failure the ADR's own
+     * Consequences section names, and it is why the count alone was not enough
+     * (`dive-domain-expert` review, 2026-08-27).
+     *
+     * Null whenever `support_divers_needed` is null or 0 — there is nobody to
+     * supply. The check constraint below pins that pairing rather than trusting
+     * a form.
+     */
+    supportDiversProvidedBy: text("support_divers_provided_by", {
+      enum: ["shop", "diver"],
+    }),
     /** Getting aboard: a hand, a transfer from a chair, a seat moved. */
     needsBoardingAssistance: boolean("needs_boarding_assistance").notNull().default(false),
-    /** Getting into the water: a lift, a hoist, or crew lowering the diver in. */
-    needsWaterEntryLift: boolean("needs_water_entry_lift").notNull().default(false),
     /**
-     * How the briefing has to be delivered. Three flags rather than one code
-     * because they are not alternatives — a diver may want the briefing in
-     * writing *and* a signal set agreed with their buddy — and because that is
-     * the shape `rental_fit_profiles`'s `rents_*` columns already use for "which
-     * of these apply".
+     * A lift or hoist getting into the water **and back out of it**.
+     *
+     * One flag covering both directions, not two, because a diver who needs one
+     * essentially always needs the other — and getting out is the manoeuvre
+     * crews actually staff up for: a tired diver, a ladder, sea state, and more
+     * hands than the entry took. Asking only about entry would have had the crew
+     * plan the easy half (`dive-domain-expert` review, 2026-08-27).
+     */
+    needsWaterLift: boolean("needs_water_lift").notNull().default(false),
+    /**
+     * How the briefing has to be delivered. Flags rather than one code because
+     * they are not alternatives — a diver may want the briefing in writing *and*
+     * a signal set agreed with their buddy — and because that is the shape
+     * `rental_fit_profiles`'s `rents_*` columns already use for "which of these
+     * apply".
+     *
+     * `briefing_aloud` is here because the first three were all *visual*, which
+     * is the wrong set for a blind or low-vision diver — "in writing" is exactly
+     * the wrong answer for one, and they are a substantial share of adaptive
+     * programme participants. A briefing is normally delivered off a site map or
+     * a slate, so "describe it out loud" is a real and different ask
+     * (`dive-domain-expert` review, 2026-08-27).
      */
     briefingInSign: boolean("briefing_in_sign").notNull().default(false),
     briefingInWriting: boolean("briefing_in_writing").notNull().default(false),
+    briefingAloud: boolean("briefing_aloud").notNull().default(false),
     briefingBySignals: boolean("briefing_by_signals").notNull().default(false),
     /** Kit to adapt or bring, in the diver's own words. */
     equipmentAdaptation: text("equipment_adaptation"),
@@ -5439,8 +5480,10 @@ export const diveSupportNeeds = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    // One index, not two: the unique index below covers `(shop_id, person_id)`
+    // lookups already, and `rental_fit_profiles` carries a redundant plain index
+    // beside its unique one that nothing needs (`security-reviewer`, 2026-08-27).
     uniqueIndex("dive_support_needs_shop_person_unique").on(table.shopId, table.personId),
-    index("dive_support_needs_shop_person_idx").on(table.shopId, table.personId),
     /**
      * A bound, not a policy. Four in-water supporters for one diver is already
      * beyond anything an adaptive programme runs, so this catches a typo rather
@@ -5450,6 +5493,16 @@ export const diveSupportNeeds = pgTable(
     check(
       "dive_support_needs_support_divers_range",
       sql`${table.supportDiversNeeded} is null or (${table.supportDiversNeeded} between 0 and 4)`,
+    ),
+    /**
+     * A count and its supplier travel together or not at all. "2 support divers,
+     * nobody said who brings them" is the ambiguity this column exists to
+     * remove, so the database refuses it rather than leaving every reader to
+     * guess — and a supplier with no count is a form bug.
+     */
+    check(
+      "dive_support_needs_provider_pairs_with_count",
+      sql`(coalesce(${table.supportDiversNeeded}, 0) > 0) = (${table.supportDiversProvidedBy} is not null)`,
     ),
   ],
 );

@@ -23,7 +23,7 @@ import { DAY_MS } from "@/lib/clock";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { nowDate } from "./clock";
 import { rentalFitCompleteness, type SizedRentalKind } from "./rentals";
-import { hasSupportNeeds, type SupportNeeds, totalSupportDiversNeeded } from "./support-needs";
+import { hasSupportNeeds, type SupportNeeds, supportDiversToArrange } from "./support-needs";
 
 export type RentalItemKind =
   | "bcd"
@@ -299,7 +299,12 @@ export type DivePrepChecklist = {
    * conversation.
    */
   supportNeeds: {
-    supportDiversNeeded: number;
+    /**
+     * How many in-water supporters the **shop** has to find, which is not how
+     * many will be in the water: a diver bringing their own adaptive-trained
+     * buddy needs seats and a team, not crew.
+     */
+    supportDiversToArrange: number;
     divers: { personId: string; fullName: string; needs: SupportNeeds }[];
   };
 };
@@ -568,7 +573,7 @@ export function buildDivePrepChecklist(input: {
       // Summed over the whole roster, not only the divers listed below: a
       // stated 0 contributes 0 and a diver nobody asked contributes nothing, so
       // the two agree by construction.
-      supportDiversNeeded: totalSupportDiversNeeded(input.divers),
+      supportDiversToArrange: supportDiversToArrange(input.divers),
       divers: diversWithSupportNeeds.sort((a, b) => a.fullName.localeCompare(b.fullName)),
     },
   };

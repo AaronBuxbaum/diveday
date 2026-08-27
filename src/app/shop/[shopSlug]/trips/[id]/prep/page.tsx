@@ -452,10 +452,14 @@ export default async function TripPrepPage({
               anything, which is almost every departure. */}
           {checklist.supportNeeds.divers.length > 0 ? (
             <SectionCard title={t("trips.prep.supportHeading")} className="mt-8">
-              {checklist.supportNeeds.supportDiversNeeded > 0 ? (
+              {/* Only what the shop has to *find*. A diver bringing their own
+                  adaptive-trained buddy needs a seat and a team, not crew, and
+                  summing them here would have a manager staff up for people who
+                  are already coming. */}
+              {checklist.supportNeeds.supportDiversToArrange > 0 ? (
                 <p className="text-sm font-medium">
-                  {t("trips.prep.supportTotal", {
-                    count: checklist.supportNeeds.supportDiversNeeded,
+                  {t("trips.prep.supportToArrange", {
+                    count: checklist.supportNeeds.supportDiversToArrange,
                   })}
                 </p>
               ) : null}
@@ -480,6 +484,11 @@ export default async function TripPrepPage({
                   </li>
                 ))}
               </ul>
+              {/* Whoever arranged them, they are people on a boat — and the
+                  manifest is the authoritative list of every person aboard, which
+                  is what a coastguard reads. A support diver the diver brought
+                  has no booking unless somebody makes one. */}
+              <p className="mt-3 text-sm text-muted">{t("trips.prep.supportOnTheManifest")}</p>
             </SectionCard>
           ) : null}
 

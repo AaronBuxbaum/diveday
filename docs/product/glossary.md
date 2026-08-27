@@ -450,6 +450,31 @@ new domain concept, define it here in the same PR.
   (`shops.shore_group_size`), which only a shop with no boat was asked for.
   See `src/lib/divemaster-ratio.ts` and
   [20260820-shop-divemaster-ratio](../architecture/decisions/20260820-shop-divemaster-ratio.md).
+- **Dive support needs** — what a diver says their *dive* needs set up, recorded once per person per
+  shop in `dive_support_needs` and answered by the diver on `/ready/[token]`, after the sale, on
+  their own page. Six facts: how many **support divers** they need in the water and **who supplies
+  them**, whether getting aboard needs a hand or a transfer, whether getting in and out of the water
+  needs a lift, how the briefing has to reach them (sign, writing, described aloud, agreed signals),
+  equipment to adapt, and somebody who must be on the same departure and buddy team. Read by the
+  crew on the trip prep list and the manifest.
+  **It records what the dive needs, not what the person is** — there is no disability field, no
+  medical classification and no HSA/IAHD level, and adding one is the thing this design most
+  deliberately refuses. **It never gates**: no readiness blocker, no booking refusal, no effect on
+  any ratio, and `src/lib/readiness.ts`, `src/lib/trip-admission.ts` and `src/lib/course-ratios.ts`
+  neither read it nor import its module. Never asked on the public booking form, which would be a
+  disclosure to a stranger before a purchase. A stated **0** support divers is a real answer and a
+  different one from never being asked — `stated_at` is what tells them apart, and both render
+  nothing on a crew surface. See `src/lib/support-needs.ts` and
+  [20260827-support-needs-are-a-record-about-the-dive](../architecture/decisions/20260827-support-needs-are-a-record-about-the-dive.md).
+- **Support diver** — somebody in the water alongside a diver who has arranged for them, counted per
+  diver in `dive_support_needs.support_divers_needed`. **Who supplies them decides what the shop
+  does**: `shop` means the shop rosters that many more in-water crew, `diver` means an
+  adaptive-trained buddy or carer is coming and needs a seat, not a shift. Only the `shop` half is
+  summed into a departure's "support divers to arrange". Like the **Target diver:divemaster ratio**
+  and unlike the **entry-level** and **intro in-water ratios**, the figure binds nothing: a
+  departure short of it sails and the shop has a conversation. Whoever arranges them, anyone in the
+  water goes on the **Manifest** — that list is every person aboard, and a support diver with no
+  booking is a person the coastguard's copy does not know about.
 - **Refresher / ReActivate** — short course for certified divers returning after inactivity.
 
 ## Operations

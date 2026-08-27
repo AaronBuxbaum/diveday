@@ -20,15 +20,23 @@ import type { StaffTranslator } from "./staff-messages";
 function factText(t: StaffTranslator, fact: SupportNeedFact): string {
   switch (fact.kind) {
     case "support_divers":
-      return t("shared.supportNeeds.supportDivers", { count: fact.count });
+      // Who supplies them is half the fact. "2 support divers in the water" is
+      // the same string whether the shop has to find two people or the diver is
+      // bringing two — and the shop's action is opposite in each
+      // (`dive-domain-expert` review, 2026-08-27).
+      return fact.providedBy === "shop"
+        ? t("shared.supportNeeds.supportDiversFromShop", { count: fact.count })
+        : t("shared.supportNeeds.supportDiversOwn", { count: fact.count });
     case "boarding_assistance":
       return t("shared.supportNeeds.boardingAssistance");
-    case "water_entry_lift":
-      return t("shared.supportNeeds.waterEntryLift");
+    case "water_lift":
+      return t("shared.supportNeeds.waterLift");
     case "briefing_sign":
       return t("shared.supportNeeds.briefingSign");
     case "briefing_written":
       return t("shared.supportNeeds.briefingWritten");
+    case "briefing_aloud":
+      return t("shared.supportNeeds.briefingAloud");
     case "briefing_signals":
       return t("shared.supportNeeds.briefingSignals");
     case "equipment":

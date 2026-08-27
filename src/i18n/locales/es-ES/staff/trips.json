@@ -538,7 +538,8 @@
     "pickupDiverColumn": "Buceador",
     "pickupTimeUnset": "Sin programar",
     "supportHeading": "Apoyo en la inmersión",
-    "supportTotal": "{count, plural, one {# acompañante solicitado en todo el barco} other {# acompañantes solicitados en todo el barco}}"
+    "supportToArrange": "{count, plural, one {# buceador de apoyo por organizar} other {# buceadores de apoyo por organizar}}",
+    "supportOnTheManifest": "Toda persona que entre al agua va en la lista de embarque, la organice quien la organice."
   },
   "guests": {
     "cancelledBadge": "Cancelada",

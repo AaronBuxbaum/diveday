@@ -24,6 +24,13 @@
  * really do refuse a seat — and no diver's support needs may ever move one.
  */
 
+/**
+ * Who puts the support divers in the water. See the column's own note in
+ * `schema.ts`: the shop's action is opposite in the two cases, and a count
+ * without this is a number nobody can staff by.
+ */
+export type SupportDiverProvider = "shop" | "diver";
+
 /** The record as any reader sees it. Every field is optional; most divers state none. */
 export type SupportNeeds = {
   /**
@@ -32,14 +39,29 @@ export type SupportNeeds = {
    * saying they need nobody, which a crew planning a boat is entitled to read.
    */
   supportDiversNeeded: number | null;
+  /** Null exactly when the count is null or 0 — a DB check constraint pins the pairing. */
+  supportDiversProvidedBy: SupportDiverProvider | null;
   needsBoardingAssistance: boolean;
-  needsWaterEntryLift: boolean;
+  /** A lift or hoist into the water **and back out of it** — see the column's note. */
+  needsWaterLift: boolean;
   briefingInSign: boolean;
   briefingInWriting: boolean;
+  /** Described out loud, for a diver who cannot read a slate or a site map. */
+  briefingAloud: boolean;
   briefingBySignals: boolean;
   equipmentAdaptation: string | null;
   /** Somebody who must be on the same departure and buddy team, as the diver named them. */
   divesWithName: string | null;
+  /**
+   * When the diver last answered, or null when nobody has asked.
+   *
+   * The one field here that is not itself an arrangement, and the only thing
+   * that tells "asked, needs nothing" from "never asked" — every other field
+   * reads identically in both. A crew surface renders neither (both ask nothing
+   * of the boat), but the diver's own page reads it to stop asking a question
+   * they have already answered with a no.
+   */
+  statedAt: Date | null;
 };
 
 /**
@@ -56,13 +78,27 @@ export function hasSupportNeeds(needs: SupportNeeds | null | undefined): boolean
   return (
     (needs.supportDiversNeeded ?? 0) > 0 ||
     needs.needsBoardingAssistance ||
-    needs.needsWaterEntryLift ||
+    needs.needsWaterLift ||
     needs.briefingInSign ||
     needs.briefingInWriting ||
+    needs.briefingAloud ||
     needs.briefingBySignals ||
     Boolean(needs.equipmentAdaptation?.trim()) ||
     Boolean(needs.divesWithName?.trim())
   );
+}
+
+/**
+ * Whether the diver has answered at all, whatever they answered.
+ *
+ * Distinct from {@link hasSupportNeeds} and used in exactly one place: the
+ * diver's own `/ready` row, which must stop asking once they have said "I need
+ * nobody". A crew surface has no use for it — "asked, needs nothing" and "never
+ * asked" both ask nothing of the boat, and a manifest that printed a line for
+ * either would be formatting the absence of information as information.
+ */
+export function supportNeedsAnswered(needs: SupportNeeds | null | undefined): boolean {
+  return Boolean(needs?.statedAt);
 }
 
 /**
@@ -74,11 +110,12 @@ export function hasSupportNeeds(needs: SupportNeeds | null | undefined): boolean
  * language and by the diver's own page in theirs.
  */
 export type SupportNeedFact =
-  | { kind: "support_divers"; count: number }
+  | { kind: "support_divers"; count: number; providedBy: SupportDiverProvider }
   | { kind: "boarding_assistance" }
-  | { kind: "water_entry_lift" }
+  | { kind: "water_lift" }
   | { kind: "briefing_sign" }
   | { kind: "briefing_written" }
+  | { kind: "briefing_aloud" }
   | { kind: "briefing_signals" }
   | { kind: "equipment"; note: string }
   | { kind: "dives_with"; name: string };
@@ -90,12 +127,21 @@ export function supportNeedFacts(needs: SupportNeeds | null | undefined): Suppor
   // Ordered the way the day runs: who is in the water, then getting aboard and
   // in, then the briefing, then kit, then who they are diving with.
   if ((needs.supportDiversNeeded ?? 0) > 0) {
-    facts.push({ kind: "support_divers", count: needs.supportDiversNeeded as number });
+    facts.push({
+      kind: "support_divers",
+      count: needs.supportDiversNeeded as number,
+      // Defaulted rather than narrowed: the DB pairs the two, and a crew reading
+      // "2 support divers" with no idea who brings them is the ambiguity this
+      // field exists to remove — so a row that somehow lost its provider reads
+      // as the answer that makes a shop *look*, not the one that makes it relax.
+      providedBy: needs.supportDiversProvidedBy ?? "shop",
+    });
   }
   if (needs.needsBoardingAssistance) facts.push({ kind: "boarding_assistance" });
-  if (needs.needsWaterEntryLift) facts.push({ kind: "water_entry_lift" });
+  if (needs.needsWaterLift) facts.push({ kind: "water_lift" });
   if (needs.briefingInSign) facts.push({ kind: "briefing_sign" });
   if (needs.briefingInWriting) facts.push({ kind: "briefing_written" });
+  if (needs.briefingAloud) facts.push({ kind: "briefing_aloud" });
   if (needs.briefingBySignals) facts.push({ kind: "briefing_signals" });
   const equipment = needs.equipmentAdaptation?.trim();
   if (equipment) facts.push({ kind: "equipment", note: equipment });
@@ -105,16 +151,32 @@ export function supportNeedFacts(needs: SupportNeeds | null | undefined): Suppor
 }
 
 /**
- * How many in-water supporters a whole departure has been asked for.
+ * **How many in-water supporters this departure has to find**, which is not the
+ * same as how many will be in the water.
  *
- * **Information, never a gate.** This is the figure a shop reads beside its
- * rostered crew when deciding whether it has the day covered, exactly as
- * `divemaster-ratio.ts` shows its target beside `inWaterDivemasterCount`.
- * Nothing compares the two and refuses anything: a departure short of this
- * number sails, and the shop has a conversation.
+ * Only the divers who asked the *shop* to arrange them. A diver bringing their
+ * own adaptive-trained buddy needs seats and a buddy team, not crew — summing
+ * them in would have a manager staff up for people who are already coming, and
+ * that mistake in the other direction leaves a diver alone in the water
+ * (`dive-domain-expert` review, 2026-08-27).
+ *
+ * **Information, never a gate.** Nothing compares this against the roster and
+ * refuses anything — the same authority `src/lib/divemaster-ratio.ts` has, which
+ * is none. A departure short of this number sails, and the shop has a
+ * conversation.
+ *
+ * It renders on the prep list, beside the divers who asked. The crew-versus-target
+ * comparison lives on the trip page's Crew panel, so no single screen shows both
+ * today — worth knowing before writing that it does.
  */
-export function totalSupportDiversNeeded(
+export function supportDiversToArrange(
   roster: readonly { supportNeeds?: SupportNeeds | null }[],
 ): number {
-  return roster.reduce((total, diver) => total + (diver.supportNeeds?.supportDiversNeeded ?? 0), 0);
+  return roster.reduce(
+    (total, diver) =>
+      diver.supportNeeds?.supportDiversProvidedBy === "shop"
+        ? total + (diver.supportNeeds.supportDiversNeeded ?? 0)
+        : total,
+    0,
+  );
 }

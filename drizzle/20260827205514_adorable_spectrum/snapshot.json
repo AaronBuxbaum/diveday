@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "bb6d23ee-534f-487a-8bf3-6639e67eaa26",
+  "id": "4ddc58aa-2178-4d85-a57f-011d2a5690bf",
   "prevIds": [
     "85137848-deb2-438e-8200-af9d1591cb63"
   ],
@@ -5485,6 +5485,19 @@
       "table": "dive_support_needs"
     },
     {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "support_divers_provided_by",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "dive_support_needs"
+    },
+    {
       "type": "boolean",
       "typeSchema": null,
       "notNull": true,
@@ -5505,7 +5518,7 @@
       "default": "false",
       "generated": null,
       "identity": null,
-      "name": "needs_water_entry_lift",
+      "name": "needs_water_lift",
       "entityType": "columns",
       "schema": "public",
       "table": "dive_support_needs"
@@ -5532,6 +5545,19 @@
       "generated": null,
       "identity": null,
       "name": "briefing_in_writing",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "dive_support_needs"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "briefing_aloud",
       "entityType": "columns",
       "schema": "public",
       "table": "dive_support_needs"
@@ -17607,34 +17633,6 @@
       "nameExplicit": true,
       "columns": [
         {
-          "value": "shop_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "person_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "dive_support_needs_shop_person_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "dive_support_needs"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
           "value": "trip_id",
           "isExpression": false,
           "asc": true,
@@ -27291,6 +27289,13 @@
     {
       "value": "\"support_divers_needed\" is null or (\"support_divers_needed\" between 0 and 4)",
       "name": "dive_support_needs_support_divers_range",
+      "entityType": "checks",
+      "schema": "public",
+      "table": "dive_support_needs"
+    },
+    {
+      "value": "(coalesce(\"support_divers_needed\", 0) > 0) = (\"support_divers_provided_by\" is not null)",
+      "name": "dive_support_needs_provider_pairs_with_count",
       "entityType": "checks",
       "schema": "public",
       "table": "dive_support_needs"

@@ -77,7 +77,7 @@ function DiverFacts({
   columns: 1 | 2;
   t: StaffTranslator;
 }) {
-  const supportLines = supportNeedsLines(t, diver.supportNeeds);
+  const diveSupportLines = supportNeedsLines(t, diver.supportNeeds);
   return (
     <div className={`grid gap-2 text-base${columns === 2 ? " sm:grid-cols-2" : ""}`}>
       <p>
@@ -137,10 +137,22 @@ function DiverFacts({
           Only when something was stated: a line reading "nothing needed" down
           the whole boat is the absence of information formatted as information
           (principle 9). */}
-      {supportLines.length > 0 ? (
+      {diveSupportLines.length > 0 ? (
         <p>
           <span className="font-bold">{t("manifest.supportNeedsLabel")}</span>
-          <span className="mt-0.5 block text-muted">{supportLines.join(" · ")}</span>
+          {/* One line per fact, not a joined run — for the reason
+              `support-needs-labels.ts` returns a list: two of these carry the
+              diver's own free text, and a sentence inside a `·`-joined line is
+              where a crew loses track of which fact is which. It matters most
+              here, of the two surfaces, because this is the one read at the
+              rail. */}
+          <span className="mt-0.5 block text-muted">
+            {diveSupportLines.map((line) => (
+              <span key={line} className="block">
+                {line}
+              </span>
+            ))}
+          </span>
         </p>
       ) : null}
       {diver.hotelPickupLocation ? (

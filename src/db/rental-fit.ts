@@ -4,6 +4,7 @@ import type { PrepDiver } from "@/lib/dive-prep";
 import type { AppDb } from "./client";
 import { verifiedNitroxPersonIds } from "./nitrox";
 import { bookings, diveSupportNeeds, people, rentalFitProfiles } from "./schema";
+import { SUPPORT_NEEDS_COLUMNS } from "./support-needs";
 
 export type RentalFitInput = {
   shopId: string;
@@ -236,7 +237,13 @@ export async function listTripPrepDivers(
       booking: bookings,
       person: people,
       fit: rentalFitProfiles,
-      supportNeeds: diveSupportNeeds,
+      // The projection, never the row. `PrepDiver.supportNeeds` is the eight
+      // stated facts; the row also carries `id`, `shop_id`, `person_id` and two
+      // housekeeping timestamps, and TypeScript's excess-property check does not
+      // fire on a variable — so selecting the table would put internal ids on
+      // every `PrepDiver` and one `"use client"` away from a browser payload
+      // (`security-reviewer`, 2026-08-27).
+      supportNeeds: SUPPORT_NEEDS_COLUMNS,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -279,7 +286,9 @@ export async function listTripPrepDivers(
     lastDivedBand: row.booking.lastDivedBand,
     hotelPickupLocation: row.booking.hotelPickupLocation,
     pickupTime: row.booking.pickupTime,
-    supportNeeds: row.supportNeeds,
+    // Every column of the projection is null when the outer join found no row,
+    // so `statedAt` is the honest discriminator for "does this record exist".
+    supportNeeds: row.supportNeeds?.statedAt ? row.supportNeeds : null,
   }));
 }
 

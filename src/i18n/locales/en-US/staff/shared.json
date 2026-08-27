@@ -714,14 +714,15 @@
   },
   "supportNeeds": {
     "label": "Dive support",
-    "supportDivers": "{count, plural, one {# support diver in the water} other {# support divers in the water}}",
+    "supportDiversFromShop": "{count, plural, one {# support diver in the water — the shop arranges} other {# support divers in the water — the shop arranges}}",
+    "supportDiversOwn": "{count, plural, one {# support diver in the water — the diver brings their own} other {# support divers in the water — the diver brings their own}}",
     "boardingAssistance": "Help getting aboard",
-    "waterEntryLift": "Lift into the water",
+    "waterLift": "Lift in and out of the water",
     "briefingSign": "Briefing in sign language",
     "briefingWritten": "Briefing in writing",
+    "briefingAloud": "Briefing described aloud",
     "briefingSignals": "Agreed signals",
     "equipment": "Equipment: {note}",
-    "divesWith": "Dives with {name}",
-    "departureTotal": "{count, plural, one {# support diver asked for} other {# support divers asked for}}"
+    "divesWith": "Dives with {name}"
   }
 }

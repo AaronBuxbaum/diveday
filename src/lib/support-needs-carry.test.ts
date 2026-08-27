@@ -24,27 +24,36 @@ import type { SupportNeeds } from "./support-needs";
  * then declines to publish it, which is what these two assert.
  */
 
-const ARRANGED: SupportNeeds = {
-  supportDiversNeeded: 2,
-  needsBoardingAssistance: true,
-  needsWaterEntryLift: true,
+/** Asked, and needs nobody — a real answer, and a different one from silence. */
+const NEEDS_NOTHING: SupportNeeds = {
+  supportDiversNeeded: 0,
+  supportDiversProvidedBy: null,
+  needsBoardingAssistance: false,
+  needsWaterLift: false,
   briefingInSign: false,
-  briefingInWriting: true,
+  briefingInWriting: false,
+  briefingAloud: false,
   briefingBySignals: false,
+  equipmentAdaptation: null,
+  divesWithName: null,
+  statedAt: new Date("2026-07-19T09:00:00.000Z"),
+};
+
+const ARRANGED: SupportNeeds = {
+  ...NEEDS_NOTHING,
+  supportDiversNeeded: 2,
+  supportDiversProvidedBy: "shop",
+  needsBoardingAssistance: true,
+  needsWaterLift: true,
+  briefingInWriting: true,
   equipmentAdaptation: "webbed gloves",
   divesWithName: "Marisol Vega",
 };
 
-/** Asked, and needs nobody — a real answer, and a different one from silence. */
-const NEEDS_NOTHING: SupportNeeds = {
-  supportDiversNeeded: 0,
-  needsBoardingAssistance: false,
-  needsWaterEntryLift: false,
-  briefingInSign: false,
-  briefingInWriting: false,
-  briefingBySignals: false,
-  equipmentAdaptation: null,
-  divesWithName: null,
+/** The same arrangements, but the diver brings their own two. */
+const BRINGS_OWN: SupportNeeds = {
+  ...ARRANGED,
+  supportDiversProvidedBy: "diver",
 };
 
 function prepDiver(overrides: Partial<PrepDiver> & Pick<PrepDiver, "bookingId" | "fullName">) {
@@ -91,7 +100,19 @@ describe("what a diver arranged reaches the people who have to arrange it", () =
     expect(checklist.supportNeeds.divers).toEqual([
       { personId: "b1", fullName: "Adaeze Nwosu", needs: ARRANGED },
     ]);
-    expect(checklist.supportNeeds.supportDiversNeeded).toBe(2);
+    expect(checklist.supportNeeds.supportDiversToArrange).toBe(2);
+  });
+
+  it("counts a diver's own support divers as seats, not as crew to roster", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [prepDiver({ bookingId: "b1", fullName: "Adaeze Nwosu", supportNeeds: BRINGS_OWN })],
+      plannedDives: 2,
+    });
+
+    // Still listed — the crew plans around a lift and a briefing either way —
+    // but the shop has nobody to find.
+    expect(checklist.supportNeeds.divers).toHaveLength(1);
+    expect(checklist.supportNeeds.supportDiversToArrange).toBe(0);
   });
 
   it("carries onto the manifest, per diver, unchanged", () => {

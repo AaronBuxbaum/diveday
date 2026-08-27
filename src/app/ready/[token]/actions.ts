@@ -162,6 +162,12 @@ export async function saveNoteFromReady(token: string, formData: FormData) {
  * departure for being short of the number.
  */
 const supportNeedsSchema = z.object({
+  /**
+   * A count and a supplier, which the `dive_support_needs_provider_pairs_with_count`
+   * check constraint requires to travel together. An empty radio is "no support
+   * divers", and the writer normalises the count away with it.
+   */
+  supportDiversProvidedBy: z.enum(["shop", "diver"]).or(z.literal("")),
   supportDiversNeeded: z
     .string()
     .trim()
@@ -170,9 +176,10 @@ const supportNeedsSchema = z.object({
     .transform((value) => (value === "" ? null : Number(value)))
     .refine((value) => value === null || (value >= 0 && value <= 4)),
   needsBoardingAssistance: z.literal("on").optional(),
-  needsWaterEntryLift: z.literal("on").optional(),
+  needsWaterLift: z.literal("on").optional(),
   briefingInSign: z.literal("on").optional(),
   briefingInWriting: z.literal("on").optional(),
+  briefingAloud: z.literal("on").optional(),
   briefingBySignals: z.literal("on").optional(),
   equipmentAdaptation: z.string().trim().max(300),
   divesWithName: z.string().trim().max(120),
@@ -182,15 +189,29 @@ export async function saveSupportNeedsFromReady(token: string, formData: FormDat
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
   const parsed = supportNeedsSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(`${base(token)}?error=support`);
+  // The count is the one field a diver can plausibly get refused on — 5 is a
+  // real configuration for a first open-water session — so it says so on the
+  // field rather than as a page-level "that did not save". Everything else in
+  // this schema is a control the form itself produces, where a failure is a bug
+  // rather than an answer.
+  if (!parsed.success) {
+    const countRefused = parsed.error.issues.some(
+      (issue) => issue.path[0] === "supportDiversNeeded",
+    );
+    redirect(`${base(token)}?error=${countRefused ? "support-count" : "support"}`);
+  }
+  const providedBy = parsed.data.supportDiversProvidedBy;
   const saved = await saveSupportNeeds(ctx.db, {
     shopId: ctx.data.shop.id,
     personId: ctx.data.person.id,
-    supportDiversNeeded: parsed.data.supportDiversNeeded,
+    // "No" means no support divers, whatever number is left in the box.
+    supportDiversNeeded: providedBy === "" ? null : parsed.data.supportDiversNeeded,
+    supportDiversProvidedBy: providedBy === "" ? null : providedBy,
     needsBoardingAssistance: parsed.data.needsBoardingAssistance === "on",
-    needsWaterEntryLift: parsed.data.needsWaterEntryLift === "on",
+    needsWaterLift: parsed.data.needsWaterLift === "on",
     briefingInSign: parsed.data.briefingInSign === "on",
     briefingInWriting: parsed.data.briefingInWriting === "on",
+    briefingAloud: parsed.data.briefingAloud === "on",
     briefingBySignals: parsed.data.briefingBySignals === "on",
     equipmentAdaptation: parsed.data.equipmentAdaptation,
     divesWithName: parsed.data.divesWithName,

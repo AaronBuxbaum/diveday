@@ -4,16 +4,29 @@ import { seededShopContext } from "@/test/db";
 import { people } from "./schema";
 import { getSupportNeeds, saveSupportNeeds, supportNeedsByPerson } from "./support-needs";
 
-const STATED = {
-  supportDiversNeeded: 2,
-  needsBoardingAssistance: true,
-  needsWaterEntryLift: false,
+/** Every field a caller may state, so a test can override one and mean it. */
+const NONE = {
+  supportDiversNeeded: null,
+  supportDiversProvidedBy: null,
+  needsBoardingAssistance: false,
+  needsWaterLift: false,
   briefingInSign: false,
-  briefingInWriting: true,
+  briefingInWriting: false,
+  briefingAloud: false,
   briefingBySignals: false,
+  equipmentAdaptation: null,
+  divesWithName: null,
+} as const;
+
+const STATED = {
+  ...NONE,
+  supportDiversNeeded: 2,
+  supportDiversProvidedBy: "shop",
+  needsBoardingAssistance: true,
+  briefingInWriting: true,
   equipmentAdaptation: "  webbed gloves  ",
   divesWithName: "  Marisol Vega  ",
-};
+} as const;
 
 async function aDiver() {
   const { db, shop } = await seededShopContext();
@@ -31,12 +44,14 @@ describe("the support-needs record", () => {
     const { db, shopId, personId } = await aDiver();
     await saveSupportNeeds(db, { shopId, personId, ...STATED });
 
-    expect(await getSupportNeeds(db, shopId, personId)).toEqual({
+    expect(await getSupportNeeds(db, shopId, personId)).toMatchObject({
       supportDiversNeeded: 2,
+      supportDiversProvidedBy: "shop",
       needsBoardingAssistance: true,
-      needsWaterEntryLift: false,
+      needsWaterLift: false,
       briefingInSign: false,
       briefingInWriting: true,
+      briefingAloud: false,
       briefingBySignals: false,
       // Trimmed by the writer, so a reader never prints a bullet made of spaces.
       equipmentAdaptation: "webbed gloves",
@@ -52,20 +67,19 @@ describe("the support-needs record", () => {
     await saveSupportNeeds(db, {
       shopId,
       personId,
+      ...NONE,
       supportDiversNeeded: 1,
-      needsBoardingAssistance: false,
-      needsWaterEntryLift: true,
+      supportDiversProvidedBy: "diver",
+      needsWaterLift: true,
       briefingInSign: true,
-      briefingInWriting: false,
-      briefingBySignals: false,
       equipmentAdaptation: "",
-      divesWithName: null,
     });
 
     expect(await getSupportNeeds(db, shopId, personId)).toMatchObject({
       supportDiversNeeded: 1,
+      supportDiversProvidedBy: "diver",
       needsBoardingAssistance: false,
-      needsWaterEntryLift: true,
+      needsWaterLift: true,
       briefingInSign: true,
       equipmentAdaptation: null,
       divesWithName: null,
@@ -74,24 +88,13 @@ describe("the support-needs record", () => {
 
   it("keeps a stated zero, which is not the same as never being asked", async () => {
     const { db, shopId, personId } = await aDiver();
-    await saveSupportNeeds(db, {
-      shopId,
-      personId,
-      supportDiversNeeded: 0,
-      needsBoardingAssistance: false,
-      needsWaterEntryLift: false,
-      briefingInSign: false,
-      briefingInWriting: false,
-      briefingBySignals: false,
-      equipmentAdaptation: null,
-      divesWithName: null,
-    });
+    await saveSupportNeeds(db, { shopId, personId, ...NONE, supportDiversNeeded: 0 });
 
-    // A row exists and says zero. `null` here would be the record claiming
-    // nobody ever asked, which is a different thing to tell a crew.
-    expect(await getSupportNeeds(db, shopId, personId)).toMatchObject({
-      supportDiversNeeded: 0,
-    });
+    // A row exists, says zero, and carries a `stated_at`. `null` here would be
+    // the record claiming nobody ever asked, which is a different thing.
+    const row = await getSupportNeeds(db, shopId, personId);
+    expect(row).toMatchObject({ supportDiversNeeded: 0, supportDiversProvidedBy: null });
+    expect(row?.statedAt).toBeInstanceOf(Date);
   });
 
   /**
@@ -110,16 +113,30 @@ describe("the support-needs record", () => {
       await saveSupportNeeds(db, {
         shopId: stranger,
         personId,
+        ...NONE,
         supportDiversNeeded: 3,
-        needsBoardingAssistance: false,
-        needsWaterEntryLift: false,
-        briefingInSign: false,
-        briefingInWriting: false,
-        briefingBySignals: false,
-        equipmentAdaptation: null,
-        divesWithName: null,
+        supportDiversProvidedBy: "shop",
       }),
     ).toBeNull();
+  });
+
+  it("drops the supplier when there is nobody to supply", async () => {
+    // The `dive_support_needs_provider_pairs_with_count` check constraint refuses
+    // a supplier with no count, so a form that clears the number but leaves the
+    // radio would fail the write. The writer normalises instead.
+    const { db, shopId, personId } = await aDiver();
+    await saveSupportNeeds(db, {
+      shopId,
+      personId,
+      ...NONE,
+      supportDiversNeeded: null,
+      supportDiversProvidedBy: "shop",
+    });
+
+    expect(await getSupportNeeds(db, shopId, personId)).toMatchObject({
+      supportDiversNeeded: null,
+      supportDiversProvidedBy: null,
+    });
   });
 
   it("never reads another shop's record as this shop's", async () => {

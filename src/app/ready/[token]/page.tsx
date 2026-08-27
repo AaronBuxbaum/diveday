@@ -77,7 +77,7 @@ import {
 import { nitroxCardWanted } from "@/lib/rentals";
 import { shopAddressLines, shopMapQuery } from "@/lib/shop-address";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
-import { hasSupportNeeds } from "@/lib/support-needs";
+import { supportNeedsAnswered } from "@/lib/support-needs";
 import {
   cancelMyBookingAction,
   emailFreshReadinessLinkAction,
@@ -180,6 +180,32 @@ function CheckboxRow({
         value="on"
         defaultChecked={defaultChecked}
         className="mt-1 size-4 shrink-0 rounded border-border-strong"
+      />
+      <span>{label}</span>
+    </label>
+  );
+}
+
+/** One radio in the support-divers question, worded on its right. */
+function RadioRow({
+  name,
+  value,
+  label,
+  defaultChecked,
+}: {
+  name: string;
+  value: string;
+  label: string;
+  defaultChecked: boolean;
+}) {
+  return (
+    <label className="flex items-start gap-2 text-base">
+      <input
+        type="radio"
+        name={name}
+        value={value}
+        defaultChecked={defaultChecked}
+        className="mt-1 size-4 shrink-0 border-border-strong"
       />
       <span>{label}</span>
     </label>
@@ -834,6 +860,9 @@ const READY_NOTICES: Record<
   "error-last-dived": { tone: "danger", key: "ready.lastDivedUnavailable" },
   "saved-support": { tone: "success", key: "ready.supportSaved" },
   "error-support": { tone: "danger", key: "ready.supportUnavailable" },
+  // The count is refused on its own field (see `saveSupportNeedsFromReady`);
+  // the banner stays quiet so the page does not shout about one number.
+  "error-support-count": { tone: "neutral", key: "ready.supportDiversCountHint" },
 };
 
 /**
@@ -1486,7 +1515,6 @@ export default async function DiverReadinessPage({
               visit and disappears into the furniture on the tenth. */}
           <p className="mt-3 text-sm text-muted">{t("ready.keepThisPage")}</p>
         </TokenPageHeader>
-
         {notice ? (
           <div className="mt-6">
             <ShopNotice tone={notice.tone} role={noticeRole(notice.tone)}>
@@ -1494,13 +1522,11 @@ export default async function DiverReadinessPage({
             </ShopNotice>
           </div>
         ) : null}
-
         {/* Client-only, per-device convenience (task 27): remember who just
             booked so their next visit starts from a filled-in form. */}
         {justBooked && person.email ? (
           <RememberBooker fullName={detail.person.fullName} email={person.email} />
         ) : null}
-
         {/* One earned moment, never two. A diver who just booked reads that
             they are on the boat; a diver arriving from an email reminder with
             nothing left to do reads that they are ready. Both at once would be
@@ -1528,7 +1554,6 @@ export default async function DiverReadinessPage({
             <p>{t("ready.allSetBodyReady")}</p>
           </EarnedMoment>
         ) : null}
-
         {/* Two messages land within seconds of each other; saying so up front
             stops the second one reading as a duplicate or a mistake. Claimed
             only when both actually left the building — a walk-in party member
@@ -1536,14 +1561,12 @@ export default async function DiverReadinessPage({
         {emailsOnTheWay ? (
           <p className="mt-3 text-sm text-muted">{t("booking.emailsOnTheWay")}</p>
         ) : null}
-
         {/* What was actually charged. Above the checklist, because a diver who
             has just paid is looking for exactly this, and the checklist's own
             payment row says "done" without ever saying how much. */}
         {paymentReceipt ? (
           <PaymentReceiptPanel receipt={paymentReceipt} locale={locale} t={t} />
         ) : null}
-
         {/* The spine: one card that is the page's whole reason to exist —
             "am I ready, and what's left?" answered in the first screenful.
             The greeting, the next step, the progress bar, and the rows were
@@ -1762,14 +1785,63 @@ export default async function DiverReadinessPage({
                 anything. */}
             <ChecklistRow
               label={t("ready.supportLabel")}
-              state={hasSupportNeeds(data.supportNeeds) ? "done" : "optional"}
+              // `supportNeedsAnswered`, not `hasSupportNeeds`: a diver who has
+              // said "I need nobody" has answered, and a row that stayed
+              // "optional" would ask them the same question on every visit —
+              // the precise experience failure this record exists to prevent
+              // (`dive-domain-expert` review, 2026-08-27).
+              state={supportNeedsAnswered(data.supportNeeds) ? "done" : "optional"}
               detail={null}
               action={
                 <form
                   action={saveSupportNeedsFromReady.bind(null, token)}
                   className="flex flex-col gap-4"
                 >
-                  <Field label={t("ready.supportDiversLabel")} htmlFor="support-divers">
+                  {/* **How many, and who brings them.** Two questions, because
+                      the shop's action is opposite in each: "please arrange
+                      them" is two more crew to roster, "they're coming with me"
+                      is two more seats to book and a buddy team to build. One
+                      number could not say which, and the crew was reading the
+                      same sentence for both. */}
+                  <fieldset className="flex flex-col gap-2">
+                    <legend className="text-sm font-semibold">
+                      {t("ready.supportDiversLabel")}
+                    </legend>
+                    <RadioRow
+                      name="supportDiversProvidedBy"
+                      value=""
+                      label={t("ready.supportDiversNone")}
+                      defaultChecked={!data.supportNeeds?.supportDiversProvidedBy}
+                    />
+                    <RadioRow
+                      name="supportDiversProvidedBy"
+                      value="shop"
+                      label={t("ready.supportDiversFromShop")}
+                      defaultChecked={data.supportNeeds?.supportDiversProvidedBy === "shop"}
+                    />
+                    <RadioRow
+                      name="supportDiversProvidedBy"
+                      value="diver"
+                      label={t("ready.supportDiversOwn")}
+                      defaultChecked={data.supportNeeds?.supportDiversProvidedBy === "diver"}
+                    />
+                    {/* Seats, not crew. Somebody in the water who is on no
+                        manifest is a person the coastguard's copy does not
+                        know about. */}
+                    <p className="text-sm text-muted">{t("ready.supportDiversSeatNote")}</p>
+                  </fieldset>
+                  <Field
+                    label={t("ready.supportDiversCountLabel")}
+                    htmlFor="support-divers"
+                    // The ceiling is a typo guard, not a limit, and it has to
+                    // say so: a browser's own validation bubble arrives in the
+                    // wrong language and reads as a refusal on the one form
+                    // that must never feel like one.
+                    hint={t("ready.supportDiversCountHint")}
+                    error={
+                      error === "support-count" ? t("ready.supportDiversCountHint") : undefined
+                    }
+                  >
                     <input
                       id="support-divers"
                       name="supportDiversNeeded"
@@ -1791,9 +1863,9 @@ export default async function DiverReadinessPage({
                       defaultChecked={data.supportNeeds?.needsBoardingAssistance ?? false}
                     />
                     <CheckboxRow
-                      name="needsWaterEntryLift"
-                      label={t("ready.supportWaterEntryLift")}
-                      defaultChecked={data.supportNeeds?.needsWaterEntryLift ?? false}
+                      name="needsWaterLift"
+                      label={t("ready.supportWaterLift")}
+                      defaultChecked={data.supportNeeds?.needsWaterLift ?? false}
                     />
                   </fieldset>
                   <fieldset className="flex flex-col gap-2">
@@ -1810,6 +1882,15 @@ export default async function DiverReadinessPage({
                       label={t("ready.supportBriefingWriting")}
                       defaultChecked={data.supportNeeds?.briefingInWriting ?? false}
                     />
+                    {/* A briefing is delivered off a map or a slate, so the
+                        three options above are all *visual* — which is the
+                        wrong set for a blind or low-vision diver, and "in
+                        writing" is exactly the wrong answer for one. */}
+                    <CheckboxRow
+                      name="briefingAloud"
+                      label={t("ready.supportBriefingAloud")}
+                      defaultChecked={data.supportNeeds?.briefingAloud ?? false}
+                    />
                     <CheckboxRow
                       name="briefingBySignals"
                       label={t("ready.supportBriefingSignals")}
@@ -1817,9 +1898,10 @@ export default async function DiverReadinessPage({
                     />
                   </fieldset>
                   <Field label={t("ready.supportEquipmentLabel")} htmlFor="support-equipment">
-                    <input
+                    <textarea
                       id="support-equipment"
                       name="equipmentAdaptation"
+                      rows={2}
                       maxLength={300}
                       defaultValue={data.supportNeeds?.equipmentAdaptation ?? ""}
                       className={controlClass}
@@ -1896,9 +1978,7 @@ export default async function DiverReadinessPage({
             />
           </ul>
         </section>
-
         <PartyClaimPanel locale={locale} seats={partySeats} className="mt-8" />
-
         {/* What the day actually is: what to bring, and what each tank dives.
             Below the checklist — which carries the gear form as one of its rows
             — because this page's job is still "what's left before you
@@ -1926,7 +2006,6 @@ export default async function DiverReadinessPage({
             <DiveBriefingsSection briefings={diveBriefings} trip={fullTrip} locale={locale} />
           </>
         ) : null}
-
         {/* The diver may release their own seat; moving it is the shop's
             (ADR 20260821-the-diver-may-release-their-own-seat). It sits last,
             under everything the page is actually for, and above the shop card
@@ -1959,7 +2038,6 @@ export default async function DiverReadinessPage({
             </form>
           </section>
         ) : null}
-
         <ShopCard
           name={detail.shop.name}
           contactPhone={shop.contactPhone}

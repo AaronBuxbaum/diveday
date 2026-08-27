@@ -1,6 +1,6 @@
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import type { SupportNeeds } from "@/lib/support-needs";
+import type { SupportDiverProvider, SupportNeeds } from "@/lib/support-needs";
 import type { AppDb, DbExecutor } from "./client";
 import { bookings, diveSupportNeeds, people } from "./schema";
 
@@ -23,10 +23,12 @@ export type SupportNeedsInput = {
   shopId: string;
   personId: string;
   supportDiversNeeded: number | null;
+  supportDiversProvidedBy: SupportDiverProvider | null;
   needsBoardingAssistance: boolean;
-  needsWaterEntryLift: boolean;
+  needsWaterLift: boolean;
   briefingInSign: boolean;
   briefingInWriting: boolean;
+  briefingAloud: boolean;
   briefingBySignals: boolean;
   equipmentAdaptation: string | null;
   divesWithName: string | null;
@@ -36,15 +38,28 @@ function optional(value: string | null | undefined): string | null {
   return value?.trim() || null;
 }
 
-const COLUMNS = {
+/**
+ * The eight stated facts plus `stated_at`, and nothing else.
+ *
+ * A projection rather than `.select()`, for the reason `toDiverRentalFit` is one:
+ * the row also carries `id`, `shop_id`, `person_id` and two housekeeping
+ * timestamps, and a reader that hands the whole row to a component is one
+ * `"use client"` away from shipping internal ids into a browser payload with
+ * nothing failing (`security-reviewer`, 2026-08-27). **Every** read of this
+ * table goes through here, including the joins in other modules.
+ */
+export const SUPPORT_NEEDS_COLUMNS = {
   supportDiversNeeded: diveSupportNeeds.supportDiversNeeded,
+  supportDiversProvidedBy: diveSupportNeeds.supportDiversProvidedBy,
   needsBoardingAssistance: diveSupportNeeds.needsBoardingAssistance,
-  needsWaterEntryLift: diveSupportNeeds.needsWaterEntryLift,
+  needsWaterLift: diveSupportNeeds.needsWaterLift,
   briefingInSign: diveSupportNeeds.briefingInSign,
   briefingInWriting: diveSupportNeeds.briefingInWriting,
+  briefingAloud: diveSupportNeeds.briefingAloud,
   briefingBySignals: diveSupportNeeds.briefingBySignals,
   equipmentAdaptation: diveSupportNeeds.equipmentAdaptation,
   divesWithName: diveSupportNeeds.divesWithName,
+  statedAt: diveSupportNeeds.statedAt,
 } as const;
 
 /**
@@ -70,12 +85,18 @@ export async function saveSupportNeeds(
     .limit(1);
   if (!person) return null;
 
+  const count = input.supportDiversNeeded;
   const values = {
-    supportDiversNeeded: input.supportDiversNeeded,
+    supportDiversNeeded: count,
+    // The check constraint pairs these, so normalise here rather than let a form
+    // that forgot to clear one fail the write: nobody to supply means nobody to
+    // name as the supplier.
+    supportDiversProvidedBy: (count ?? 0) > 0 ? input.supportDiversProvidedBy : null,
     needsBoardingAssistance: input.needsBoardingAssistance,
-    needsWaterEntryLift: input.needsWaterEntryLift,
+    needsWaterLift: input.needsWaterLift,
     briefingInSign: input.briefingInSign,
     briefingInWriting: input.briefingInWriting,
+    briefingAloud: input.briefingAloud,
     briefingBySignals: input.briefingBySignals,
     equipmentAdaptation: optional(input.equipmentAdaptation),
     divesWithName: optional(input.divesWithName),
@@ -103,7 +124,7 @@ export async function getSupportNeeds(
   personId: string,
 ): Promise<SupportNeeds | null> {
   const [row] = await db
-    .select(COLUMNS)
+    .select(SUPPORT_NEEDS_COLUMNS)
     .from(diveSupportNeeds)
     .where(and(eq(diveSupportNeeds.shopId, shopId), eq(diveSupportNeeds.personId, personId)))
     .limit(1);
@@ -124,7 +145,7 @@ export async function supportNeedsByPerson(
 ): Promise<Map<string, SupportNeeds>> {
   if (personIds.length === 0) return new Map();
   const rows = await db
-    .select({ personId: diveSupportNeeds.personId, ...COLUMNS })
+    .select({ personId: diveSupportNeeds.personId, ...SUPPORT_NEEDS_COLUMNS })
     .from(diveSupportNeeds)
     .where(
       and(
@@ -150,7 +171,7 @@ export async function supportNeedsByTripPerson(
   tripId: string,
 ): Promise<Map<string, SupportNeeds>> {
   const rows = await db
-    .select({ personId: diveSupportNeeds.personId, ...COLUMNS })
+    .select({ personId: diveSupportNeeds.personId, ...SUPPORT_NEEDS_COLUMNS })
     .from(bookings)
     .innerJoin(
       diveSupportNeeds,

@@ -3994,9 +3994,7 @@ for (const scheme of ["light", "dark"] as const) {
         await openReefTrip(page);
         await openTripTab(page, "Manifest");
         await offlineCopySaved(page);
-        const row = page
-          .locator("#roll-call-list > ul > li")
-          .filter({ hasText: "Diego Alvarez" });
+        const row = page.locator("#roll-call-list > ul > li").filter({ hasText: "Diego Alvarez" });
         await openManifestPerson(row);
         await expect(row.getByText("Dive support")).toBeVisible();
         // The click leaves the pointer on the summary, which would bank a

@@ -538,7 +538,8 @@
     "pickupDiverColumn": "Diver",
     "pickupTimeUnset": "Unscheduled",
     "supportHeading": "Dive support",
-    "supportTotal": "{count, plural, one {# support diver asked for across the boat} other {# support divers asked for across the boat}}"
+    "supportToArrange": "{count, plural, one {# support diver to arrange} other {# support divers to arrange}}",
+    "supportOnTheManifest": "Anyone in the water goes on the manifest, whoever arranged them."
   },
   "guests": {
     "cancelledBadge": "Cancelled",

@@ -43,8 +43,11 @@ export async function seedSupportNeeds(
       shopId,
       personId: arranged.id,
       supportDiversNeeded: 2,
+      // The shop finds these two, so they land in the prep panel's "to arrange"
+      // figure. A diver bringing their own would not.
+      supportDiversProvidedBy: "shop",
       needsBoardingAssistance: true,
-      needsWaterEntryLift: true,
+      needsWaterLift: true,
       briefingInWriting: true,
       briefingBySignals: true,
       equipmentAdaptation:

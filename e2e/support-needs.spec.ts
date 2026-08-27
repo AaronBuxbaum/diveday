@@ -1,6 +1,6 @@
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, test } from "./fixtures";
-import { e2eNow, signInAs, tripPathByTitle } from "./helpers";
+import { e2eNow, openManifestPerson, signInAs, tripPathByTitle } from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
 const TRIP = "Two-Tank Reef — Christ of the Abyss";
@@ -44,9 +44,12 @@ test("what a diver arranges on their own page reaches prep and the manifest", as
   const support = page.getByRole("heading", { name: "Anything we should set up for you?" });
   await expect(support).toBeVisible();
 
-  await page.getByLabel("People you need in the water with you").fill("2");
+  // Who supplies them is asked separately from how many, because the shop's
+  // action is opposite in each — two more crew to roster, or two more seats.
+  await page.getByRole("radio", { name: "Yes — please arrange them" }).check();
+  await page.getByLabel("How many?").fill("2");
   await page.getByRole("checkbox", { name: "A hand or a transfer getting aboard" }).check();
-  await page.getByRole("checkbox", { name: "A lift into the water" }).check();
+  await page.getByRole("checkbox", { name: "A lift getting into and out of the water" }).check();
   await page.getByRole("checkbox", { name: "In writing" }).check();
   await page.getByLabel("Equipment to adapt or bring").fill("webbed gloves, short fin");
   await page
@@ -56,7 +59,8 @@ test("what a diver arranges on their own page reaches prep and the manifest", as
   await expect(page.getByRole("status")).toContainText("the crew will have that");
 
   // Answered once: the diver's own page reads it back rather than asking again.
-  await expect(page.getByLabel("People you need in the water with you")).toHaveValue("2");
+  await expect(page.getByLabel("How many?")).toHaveValue("2");
+  await expect(page.getByRole("radio", { name: "Yes — please arrange them" })).toBeChecked();
 
   await signInAs(page, DEV_STAFF_LOGINS.owner);
   const tripPath = await tripPathByTitle(page, SHOP, TRIP);
@@ -67,23 +71,23 @@ test("what a diver arranges on their own page reaches prep and the manifest", as
   await page.goto(`${tripPath}/prep`);
   const prep = page.getByRole("region", { name: "Dive support" });
   await expect(prep).toContainText(diverName);
-  await expect(prep).toContainText("2 support divers in the water");
+  await expect(prep).toContainText("2 support divers to arrange");
+  await expect(prep).toContainText("2 support divers in the water — the shop arranges");
   await expect(prep).toContainText("Help getting aboard");
-  await expect(prep).toContainText("Lift into the water");
+  await expect(prep).toContainText("Lift in and out of the water");
   await expect(prep).toContainText("Briefing in writing");
   await expect(prep).toContainText("Equipment: webbed gloves, short fin");
   await expect(prep).toContainText("Dives with Marisol Vega");
 
   // And the manifest at the rail, where the plan for dive two gets made. On
-  // screen it sits behind the row's own "Contact & gear" disclosure, beside the
-  // rental fit and the pickup — the same door, in the same voice, because it is
-  // the same kind of fact. The printed sheet always carries it.
+  // screen it is inside the row's person panel, beside the rental fit and the
+  // pickup — the same door, in the same voice, because it is the same kind of
+  // fact (ADR 20260827-the-departure-is-two-working-surfaces, decision 2). The
+  // printed sheet always carries it, open or not.
   await page.goto(`${tripPath}/manifest`);
-  const row = page
-    .locator("#roll-call-list li")
-    .filter({ has: page.getByRole("heading", { name: diverName }) });
-  await row.getByText("Contact & gear").click();
-  await expect(row.getByText("2 support divers in the water")).toBeVisible();
+  const row = page.locator("#roll-call-list > ul > li").filter({ hasText: diverName });
+  await openManifestPerson(row);
+  await expect(row.getByText("2 support divers in the water — the shop arranges")).toBeVisible();
   await expect(row.getByText("Dives with Marisol Vega")).toBeVisible();
 
   // The last refusal, checked where it would actually bite: nothing about the
