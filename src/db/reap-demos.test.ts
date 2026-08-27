@@ -1,6 +1,6 @@
 import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { nowMs } from "@/lib/clock";
+import { HOUR_MS, nowMs } from "@/lib/clock";
 import { seededTestDb } from "@/test/db";
 import { issueAccountToken } from "./account-tokens";
 import { DEMO_SHOP_SLUG } from "./dev-credentials";
@@ -136,6 +136,16 @@ describe("createDemoShop", () => {
     try {
       const a = await createDemoShop(db);
       const b = await createDemoShop(db);
+      // Age `a` explicitly. The test clock is frozen (src/test/frozen-clock.ts),
+      // so every mint here shares one `createdAt` and "the oldest" would other-
+      // wise be decided by `enforceMintedDemoCap`'s `id` tiebreak — which is
+      // deterministic but arbitrary, and not the rule this test is about.
+      // Back-dating makes `a` unambiguously the oldest by the column eviction
+      // actually sorts on.
+      await db
+        .update(shops)
+        .set({ createdAt: new Date(nowMs() - HOUR_MS) })
+        .where(eq(shops.slug, a.slug));
       const c = await createDemoShop(db);
 
       // Cap is 2, so minting c evicts the oldest minted demo (a); b and c stay,

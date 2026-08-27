@@ -1,0 +1,176 @@
+{
+  "pages": [
+    {
+      "id": "page-surfaces",
+      "name": "Surfaces"
+    },
+    {
+      "id": "page-flow",
+      "name": "The boat flow"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Trip — desktop",
+      "page": "page-surfaces",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1440
+    },
+    {
+      "file": "Trip.dc.html",
+      "title": "Trip — details open",
+      "page": "page-surfaces",
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 1570
+    },
+    {
+      "file": "Manifest.dc.html",
+      "title": "Manifest — desktop",
+      "page": "page-surfaces",
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 1640
+    },
+    {
+      "file": "TripPhone.dc.html",
+      "title": "Trip — phone",
+      "page": "page-surfaces",
+      "x": 0,
+      "y": 1780,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "System.dc.html",
+      "title": "Design language",
+      "page": "page-surfaces",
+      "x": 1520,
+      "y": 1780,
+      "w": 1180,
+      "h": 1640
+    },
+    {
+      "file": "ManifestPhone.dc.html",
+      "title": "Manifest — on the boat",
+      "page": "page-surfaces",
+      "x": 3040,
+      "y": 1780,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "FlowMap.dc.html",
+      "title": "A day on the boat",
+      "page": "page-flow",
+      "x": 0,
+      "y": 0,
+      "w": 1360,
+      "h": 1360
+    },
+    {
+      "file": "DockComplete.dc.html",
+      "title": "1 · Cast off",
+      "page": "page-flow",
+      "x": 0,
+      "y": 1500,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "IntervalCount.dc.html",
+      "title": "2 · Count as they climb",
+      "page": "page-flow",
+      "x": 470,
+      "y": 1500,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "NotBack.dc.html",
+      "title": "3 · One not back",
+      "page": "page-flow",
+      "x": 940,
+      "y": 1500,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "PersonSheet.dc.html",
+      "title": "4 · The person sheet",
+      "page": "page-flow",
+      "x": 1410,
+      "y": 1500,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "AllBack.dc.html",
+      "title": "5 · Everyone's back",
+      "page": "page-flow",
+      "x": 1880,
+      "y": 1500,
+      "w": 390,
+      "h": 844
+    }
+  ],
+  "annotations": [
+    {
+      "id": "thesis",
+      "page": "page-surfaces",
+      "x": 0,
+      "y": -180,
+      "w": 430,
+      "text": "Round 2 — busier to calmer. Four tabs become three: Overview folds into a Details panel on the trip page, so a departure has two working surfaces — Trip (sell it, clear it) and Manifest (count it, on the boat). Every count is said once; rows at rest are a name and a mark; monograms, filters, and per-row bios are gone."
+    },
+    {
+      "id": "details-idea",
+      "page": "page-surfaces",
+      "x": 1520,
+      "y": -180,
+      "w": 430,
+      "text": "Nothing was lost: the Details panel holds everything Overview carried — plan, conditions, requirements, boat and crew, cadence, print, cancel — as label-value lines with inline edits. It opens over the same page, so config lives with the thing it configures."
+    },
+    {
+      "id": "boat-idea",
+      "page": "page-surfaces",
+      "x": 3040,
+      "y": -180,
+      "w": 430,
+      "text": "The manifest is built for the boat, in tiers: always on screen — names, one big tap each, the count, who's left, the checkpoint; one tap away — a person's sheet (contact as reference, medical, notes, audit) and, behind the top bar's ⋯, the emergency numbers, response plan, and device settings — reached maybe once a year, never in seconds; ashore — blockers (Trip tab) and the log. No call buttons anywhere: a real response starts with the radio and O2, and paper still carries everything."
+    },
+    {
+      "id": "open-questions",
+      "page": "page-surfaces",
+      "x": 0,
+      "y": 2664,
+      "w": 430,
+      "text": "Held for review: folding Overview (and later Prep) into Trip touches the one-home-per-action rule; boat mode hiding the dock; the SOS pill replacing the always-visible number band on phones (the printed sheet and desktop keep the full band). Names and states are demo-seed fiction."
+    },
+    {
+      "id": "rail-notes",
+      "page": "page-surfaces",
+      "x": 3040,
+      "y": 2664,
+      "w": 430,
+      "text": "At the rail: 56px taps, 18px names, 44px count numerals, boat-mode contrast ink, full-screen (no dock). Consequence decides the gesture — aboard is a tap and undoable; not-back is a deliberate two-step from the person's sheet; emergency numbers are buried behind ⋯ and render as reference, never as call buttons, safe from a wet thumb on a rocking deck. Nothing here is optimistic."
+    },
+    {
+      "id": "flow-beats",
+      "page": "page-flow",
+      "x": 2350,
+      "y": 1500,
+      "w": 400,
+      "text": "The five beats, left to right, all on the boat phone. Beat 1 ends the dock: the blocked three were cleared and sailed, Georg stayed ashore. Beats 2–5 are dive 1's count: fresh circles that stay calm while people climb (an open circle just means “not yet”), the alarm appearing only once the crew records Meera not back from her row's sheet, that sheet one tap away (her contact as reference, today's trail, undo), and the earned coral moment when she climbs the ladder. Dive 2 repeats beats 2–5; close-out happens ashore."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-flow"
+  }
+}

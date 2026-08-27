@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #edf2f1; --hairline: #dfe3dd; --border: #e3e0d7;
+      --ink: #062631; --muted: #294851; --faint: #5f7780;
+      --primary: #075985;
+      --success: #166534; --success-tint: #e7f0e9;
+      --warning: #92400e; --warning-tint: #f7ede2;
+      --danger: #991b1b; --danger-tint: #f7e8e8;
+      --shadow-sm: 0 1px 2px rgba(6,38,49,.06);
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.4; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .slabel { font-size: 11px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; color: var(--faint); }
+    .sline { border-top: 1px solid var(--hairline); }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: var(--bg); position: relative; overflow: hidden; box-sizing: border-box;">
+
+  <!-- Dimmed page behind -->
+  <div style="padding: 12px 16px 0; opacity: .35; filter: saturate(.7);">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="#075985" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.5L4.5 7 9 11.5"></path></svg>
+      <span style="flex: 1; min-width: 0; font-size: 15.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Sunrise Two-Tank — Molasses Reef</span>
+      <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--warning); white-space: nowrap;">
+        <span style="width: 6px; height: 6px; border-radius: 999px; background: var(--warning); display: inline-block;"></span>
+        No signal — saved
+      </span>
+    </div>
+    <div style="margin-top: 14px; border: 2px solid var(--danger); background: var(--danger-tint); border-radius: 16px; padding: 15px 16px;">
+      <p style="margin: 0; font-size: 19px; font-weight: 700; color: var(--danger);">Meera Iyer is not back</p>
+      <p style="margin: 3px 0 0; font-size: 13px; font-weight: 600; color: var(--danger);">Team split — her buddy Chinwe is aboard</p>
+    </div>
+    <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 13px;">
+      <span class="tnum" style="font-size: 34px; font-weight: 700; line-height: 1;">9<span style="font-size: 22px; color: var(--faint); font-weight: 600;">/9</span></span>
+      <span style="font-size: 13.5px; color: var(--muted);">recorded ·</span>
+      <span style="font-size: 13.5px; color: var(--danger); font-weight: 700;">checkpoint open</span>
+    </div>
+  </div>
+  <div style="position: absolute; inset: 0; background: rgba(6,38,49,.28);"></div>
+
+  <!-- The person sheet: tier 2, one tap from the row -->
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: 22px 22px 0 0; box-shadow: 0 -12px 40px rgba(6,38,49,.25); padding: 10px 20px 20px; box-sizing: border-box;">
+    <div style="width: 40px; height: 4.5px; border-radius: 999px; background: #cdd6d4; margin: 0 auto;"></div>
+
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-top: 14px;">
+      <div>
+        <h1 style="margin: 0; font-size: 23px; font-weight: 700; letter-spacing: -0.015em;">Meera Iyer</h1>
+        <p style="margin: 4px 0 0; font-size: 13px; color: var(--muted);">Open Water · first trip with you · own gear</p>
+      </div>
+      <span style="display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 11px; font-size: 12px; font-weight: 700; background: var(--danger-tint); color: var(--danger); white-space: nowrap; margin-top: 3px;">Not back</span>
+    </div>
+
+    <!-- Today, as it happened -->
+    <p class="slabel" style="margin: 18px 0 0;">Today</p>
+    <div style="display: flex; align-items: center; gap: 10px; min-height: 40px; margin-top: 6px;">
+      <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="#166534" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M5.8 9.2l2.2 2.2 4.2-4.8"></path></svg>
+      <span style="flex: 1; font-size: 14px;">Boarded at the dock</span>
+      <span class="tnum" style="font-size: 12.5px; color: var(--faint);">6:51 · Dana</span>
+    </div>
+    <div class="sline" style="margin-left: 27px;"></div>
+    <div style="display: flex; align-items: center; gap: 10px; min-height: 40px;">
+      <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="#991b1b" stroke-width="1.8" stroke-linecap="round" style="flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M6 6l6 6M12 6l-6 6"></path></svg>
+      <span style="flex: 1; font-size: 14px; font-weight: 600; color: var(--danger);">Not back after dive 1</span>
+      <span class="tnum" style="font-size: 12.5px; color: var(--faint);">8:29 · Keiko</span>
+    </div>
+
+    <!-- Buddy team -->
+    <p class="slabel" style="margin: 16px 0 0;">Buddy team</p>
+    <div style="display: flex; align-items: center; gap: 10px; min-height: 38px; margin-top: 4px;">
+      <span style="flex: 1; font-size: 14px;">Chinwe Obi</span>
+      <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--success);">
+        <svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="#166534" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5l3.5 3.5L14.5 5"></path></svg>
+        Aboard
+      </span>
+    </div>
+    <div class="sline"></div>
+    <div style="display: flex; align-items: center; gap: 10px; min-height: 38px;">
+      <span style="flex: 1; font-size: 14px; color: var(--muted);">Georg Fischer</span>
+      <span style="font-size: 12.5px; font-weight: 600; color: var(--warning);">Ashore since the dock</span>
+    </div>
+
+    <!-- Reference, not a call button: dialing happens maybe once a year, from any phone -->
+    <p class="slabel" style="margin: 16px 0 0;">Emergency contact</p>
+    <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 6px;">
+      <span style="font-size: 14px; font-weight: 600;">Asha Iyer <span style="font-weight: 400; color: var(--faint);">sister</span></span>
+      <span class="tnum" style="margin-left: auto; font-size: 14px; color: var(--muted); white-space: nowrap;">+1 305 555 0241</span>
+    </div>
+    <p style="margin: 12px 0 0; font-size: 13px; color: var(--muted);">Waiver signed Sep 4 · no medical flags · no staff notes</p>
+
+    <!-- The one act -->
+    <div style="display: flex; align-items: center; justify-content: center; gap: 9px; height: 56px; margin-top: 16px; border: 2px solid var(--success); border-radius: 15px; background: var(--success-tint); font-size: 16px; font-weight: 700; color: var(--success); box-sizing: border-box;">
+      <svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="#166534" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg>
+      Back aboard
+    </div>
+    <div style="display: flex; justify-content: center; margin-top: 12px;">
+      <span style="font-size: 13.5px; font-weight: 600; color: var(--faint);">Add a note</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -39,6 +39,7 @@ const checks = [
   ["db-concurrency", "check-db-concurrency.mjs"],
   ["intl-cache", "check-intl-cache.mjs"],
   ["adrs", "check-adrs.mjs"],
+  ["design-canvases", "check-design-canvases.mjs"],
   ["docs", "check-doc-links.mjs"],
   ["agents", "check-agents.mjs"],
   ["follow-ups", "check-follow-ups.mjs"],

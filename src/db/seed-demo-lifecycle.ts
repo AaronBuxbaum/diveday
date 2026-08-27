@@ -384,6 +384,17 @@ function mintedDemoCap(): number {
  * and every real shop (`isDemo:false`) are excluded, so this can never delete a
  * real tenant. Runs inside the caller's transaction so the eviction and the new
  * mint commit together.
+ *
+ * **`id` breaks the `createdAt` tie, and that second key is load-bearing.** Two
+ * demos minted inside the same clock tick sort equally on `createdAt` alone,
+ * and a query with no total order returns them in whatever sequence the storage
+ * engine finds convenient — so *which tenant this function deletes* was
+ * unspecified whenever timestamps collided. Rare against a live clock, and
+ * permanent under the frozen test clock (src/test/frozen-clock.ts), where every
+ * row a test mints shares one instant by construction: `reap-demos.test.ts`
+ * asserted a specific victim and passed or failed on row order, which surfaced
+ * as a flake only under full-suite load. A deletion is the last place to leave
+ * an order to chance.
  */
 export async function enforceMintedDemoCap(db: DbExecutor): Promise<void> {
   const cap = mintedDemoCap();
@@ -391,7 +402,7 @@ export async function enforceMintedDemoCap(db: DbExecutor): Promise<void> {
     .select({ id: shops.id })
     .from(shops)
     .where(and(eq(shops.isDemo, true), ne(shops.slug, DEMO_SHOP_SLUG)))
-    .orderBy(asc(shops.createdAt));
+    .orderBy(asc(shops.createdAt), asc(shops.id));
   const toEvict = live.length - (cap - 1);
   for (let i = 0; i < toEvict; i++) {
     await deleteDemoShopCascade(db, live[i].id);

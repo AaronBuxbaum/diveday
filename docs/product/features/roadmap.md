@@ -99,6 +99,43 @@ separately. That joint design now exists on paper — the Proposed ADR
 [20260804-boat-resource-model](../../architecture/decisions/20260804-boat-resource-model.md) and its
 [dossier](../../architecture/boat-resource-model-dossier.md) — the deferral itself is unchanged.
 
+### 5. The departure's two working surfaces (design complete)
+
+The trip and manifest redesign, drawn before the code and argued in the Proposed ADR
+[20260827-the-departure-is-two-working-surfaces](../../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md).
+Pictures live in
+[its canvas](../../design/canvases/20260827-the-departure-is-two-working-surfaces/README.md); the
+holistic pass for both surfaces is in [design/surfaces.md](../../design/surfaces.md). Unranked
+against items 1–4 — it is design-ready rather than urgent, and where it sits is an owner call.
+
+Sequenced so each slice ships standing on its own, safest-first. **Each ends with the same
+obligation**, which is what keeps the design and the code from drifting once the canvas closes: the
+component that must not drift names the ADR in its doc comment, and a test fails on the rule (never
+a pixel snapshot).
+
+- **5a. The boat manifest at phone size.** The count leads, rows reduce to name + one tap, the
+  checklist and device housekeeping each collapse to a line. *Pins:* a test that the manifest
+  renders no danger-toned element at a checkpoint with no recorded exception (decision 4), and one
+  that the not-back path is not reachable in a single tap from the list (decision 3).
+- **5b. The person sheet.** One tap from a roll-call row: today's trail, buddy states, emergency
+  contact as reference text, one act. Replaces the two per-row disclosures. *Pins:* a test that the
+  sheet renders no control that can place a call (decision 3's "no call buttons" half).
+- **5c. Emergency numbers become buried reference.** The manifest's standing band moves behind the
+  phone's `⋯` and a desktop footer line; the printed manifest is unchanged. *Pins:* an assertion
+  that the printed sheet still carries every number, since that is the fallback the burial relies
+  on.
+- **5d. The Guests roster becomes one grouped ledger.** Groups carry the state word and the count;
+  a settled row is a name and a mark; blocked rows carry their fix inline. Drops the filter chips
+  and the per-row caret.
+- **5e. Overview folds into Trip's Details panel, four tabs become three.** **Blocked on the owner
+  call below** — it is the one slice that changes where an action lives.
+- **5f. Emoji status marks become drawn SVG** across both surfaces. Mechanically the smallest and
+  independently shippable; `check:repo`'s tinted-ink gate already covers the palette half.
+
+**Two owner calls before 5e** (both recorded in the ADR's Consequences): whether folding Overview
+into Trip is an acceptable reading of one-home-per-action, and whether boat mode should hide the
+phone dock. Both want a `dive-domain-expert` review; 5a–5d and 5f do not depend on either.
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)

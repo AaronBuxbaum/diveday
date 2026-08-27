@@ -1,0 +1,186 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    /* Boat mode, light scheme — full-screen at the rail. One thumb, one glance. */
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #edf2f1; --hairline: #dfe3dd; --border: #e3e0d7;
+      --ink: #062631; --muted: #294851; --faint: #5f7780;
+      --primary: #075985;
+      --success: #166534;
+      --warning: #92400e; --warning-tint: #f7ede2;
+      --danger: #991b1b; --danger-tint: #f7e8e8;
+      --shadow-sm: 0 1px 2px rgba(6,38,49,.06);
+      --shadow-pill: 0 1px 3px rgba(6,38,49,.10);
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.4; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-sm); }
+    .rrow { display: flex; align-items: center; gap: 12px; padding: 10px 14px; min-height: 76px; box-sizing: border-box; }
+    .rline { border-top: 1px solid var(--hairline); margin-left: 44px; }
+    .rname { font-size: 18px; font-weight: 600; line-height: 1.2; }
+    .rsub { font-size: 13px; margin-top: 3px; }
+    .num { width: 22px; font-size: 12.5px; font-weight: 600; color: var(--faint); flex-shrink: 0; }
+    .cap { display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 9px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+    .cap-danger { background: var(--danger-tint); color: var(--danger); }
+    .cap-warning { background: var(--warning-tint); color: var(--warning); }
+    .circle-on { width: 56px; height: 56px; border-radius: 999px; background: var(--success); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .circle-off { width: 56px; height: 56px; border-radius: 999px; border: 2.5px solid rgba(6,38,49,.32); background: var(--surface); box-sizing: border-box; flex-shrink: 0; }
+    .circle-hold { width: 56px; height: 56px; border-radius: 999px; border: 2.5px dashed rgba(6,38,49,.22); background: var(--surface); box-sizing: border-box; flex-shrink: 0; }
+    .circle-ashore { width: 56px; height: 56px; border-radius: 999px; border: 2.5px solid var(--warning); background: var(--warning-tint); display: flex; align-items: center; justify-content: center; box-sizing: border-box; flex-shrink: 0; }
+    .dot { width: 7px; height: 7px; border-radius: 999px; display: inline-block; }
+    .microhead { padding: 8px 14px; background: #f6f4ee; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: var(--bg); position: relative; overflow: hidden; box-sizing: border-box;">
+
+  <!-- Top bar: the way out, the departure, the offline promise -->
+  <div style="padding: 12px 16px 0;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="#075985" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M9 2.5L4.5 7 9 11.5"></path></svg>
+      <span style="flex: 1; min-width: 0; font-size: 15.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Sunrise Two-Tank — Molasses Reef</span>
+      <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--success); white-space: nowrap;">
+        <span class="dot" style="background: var(--success); width: 6px; height: 6px;"></span>
+        Offline-ready
+      </span>
+      <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); flex-shrink: 0;">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="#5f7780"><circle cx="3.2" cy="8" r="1.5"></circle><circle cx="8" cy="8" r="1.5"></circle><circle cx="12.8" cy="8" r="1.5"></circle></svg>
+      </span>
+    </div>
+    <p style="margin: 3px 0 0 25px; font-size: 12px; color: var(--faint);">Fri · 7:00 AM · Mantis II · 12 souls</p>
+  </div>
+
+  <!-- The count, as big as the job -->
+  <div style="padding: 14px 16px 0;">
+    <div style="display: flex; align-items: baseline; gap: 10px;">
+      <span class="tnum" style="font-size: 44px; font-weight: 700; letter-spacing: -0.02em; line-height: 1;">7<span style="font-size: 26px; color: var(--faint); font-weight: 600;">/10</span></span>
+      <span style="font-size: 13.5px; color: var(--muted); font-weight: 500;">recorded before departure</span>
+    </div>
+    <div style="margin-top: 10px; height: 6px; border-radius: 999px; background: #e4e9e3; overflow: hidden;">
+      <div style="width: 70%; height: 100%; border-radius: 999px; background: var(--primary);"></div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 13px; margin-top: 9px; font-size: 13px; font-weight: 600;">
+      <span style="display: inline-flex; align-items: center; gap: 5px;"><span class="dot" style="background: var(--success);"></span><span class="tnum">6 aboard</span></span>
+      <span style="display: inline-flex; align-items: center; gap: 5px;"><span class="dot" style="background: var(--warning);"></span><span class="tnum">1 ashore</span></span>
+      <span style="display: inline-flex; align-items: center; gap: 5px;"><span class="dot" style="border: 1.5px solid rgba(6,38,49,.35); box-sizing: border-box; background: transparent;"></span><span class="tnum">3 divers to call</span></span>
+    </div>
+  </div>
+
+  <!-- Checkpoint -->
+  <nav style="display: flex; gap: 3px; background: var(--sunken); border-radius: 12px; padding: 3px; margin: 13px 16px 0;">
+    <span style="flex: 1; display: flex; align-items: center; justify-content: center; height: 38px; border-radius: 9px; background: var(--surface); box-shadow: var(--shadow-pill); font-size: 12.5px; font-weight: 600; color: var(--primary); white-space: nowrap;">Before departure</span>
+    <span style="flex: 1; display: flex; align-items: center; justify-content: center; height: 38px; border-radius: 9px; font-size: 12.5px; font-weight: 500; color: var(--faint); white-space: nowrap;">After dive 1</span>
+    <span style="flex: 1; display: flex; align-items: center; justify-content: center; height: 38px; border-radius: 9px; font-size: 12.5px; font-weight: 500; color: var(--faint); white-space: nowrap;">After dive 2</span>
+  </nav>
+
+  <!-- Who's left, by name -->
+  <div style="display: flex; align-items: center; gap: 6px; margin: 12px 16px 0; flex-wrap: wrap;">
+    <span style="display: inline-flex; align-items: center; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); font-size: 13px; font-weight: 600;">Amara</span>
+    <span style="display: inline-flex; align-items: center; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); font-size: 13px; font-weight: 600;">Felix</span>
+    <span style="display: inline-flex; align-items: center; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); font-size: 13px; font-weight: 600;">Mateo</span>
+    <span style="display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); font-size: 13px; font-weight: 600;">Sal <span style="font-size: 11px; color: var(--faint); font-weight: 500;">crew</span></span>
+    <span style="font-size: 11.5px; font-weight: 600; color: var(--danger); flex-basis: 100%;">All three divers blocked — clear them on the Trip tab.</span>
+  </div>
+
+  <!-- Roll call -->
+  <section class="card" style="margin: 12px 16px 0; overflow: hidden;">
+    <div class="rrow">
+      <span class="num tnum">01</span>
+      <span class="rname" style="flex: 1;">Kiona Blackfeather</span>
+      <div class="circle-on"><svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+    </div>
+    <div class="rline"></div>
+    <div class="rrow">
+      <span class="num tnum">02</span>
+      <span class="rname" style="flex: 1;">Anders Lindgren</span>
+      <div class="circle-on"><svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+    </div>
+    <div class="rline"></div>
+    <div class="rrow">
+      <span class="num tnum">03</span>
+      <span class="rname" style="flex: 1;">Meera Iyer</span>
+      <div class="circle-on"><svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+    </div>
+    <div class="rline"></div>
+    <div class="rrow" style="background: #fbf3e9;">
+      <span class="num tnum">04</span>
+      <div style="flex: 1; min-width: 0;">
+        <div class="rname">Georg Fischer</div>
+        <div class="rsub" style="color: var(--warning); font-weight: 500;">Ashore — overslept</div>
+      </div>
+      <div class="circle-ashore"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#92400e" stroke-width="2.4" stroke-linecap="round"><path d="M3.5 8h9"></path></svg></div>
+    </div>
+    <div class="rline"></div>
+    <div class="rrow">
+      <span class="num tnum">05</span>
+      <div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;">
+        <span class="rname">Chinwe Obi</span>
+        <span class="cap cap-warning">Minor · 13</span>
+      </div>
+      <div class="circle-on"><svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+    </div>
+    <div class="rline"></div>
+    <div class="rrow">
+      <span class="num tnum">06</span>
+      <span class="rname" style="flex: 1;">Sana Malik</span>
+      <div class="circle-on"><svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+    </div>
+    <div class="rline"></div>
+    <div class="rrow">
+      <span class="num tnum">07</span>
+      <div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;">
+        <span class="rname">Amara Osei</span>
+        <span class="cap cap-danger">Blocked</span>
+      </div>
+      <div class="circle-hold"></div>
+    </div>
+    <div class="rline"></div>
+    <div class="rrow">
+      <span class="num tnum">08</span>
+      <div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;">
+        <span class="rname">Felix Grant</span>
+        <span class="cap cap-danger">Blocked</span>
+      </div>
+      <div class="circle-hold"></div>
+    </div>
+    <div class="rline"></div>
+    <div class="rrow">
+      <span class="num tnum">09</span>
+      <div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;">
+        <span class="rname">Mateo Duarte</span>
+        <span class="cap cap-danger">Blocked</span>
+      </div>
+      <div class="circle-hold"></div>
+    </div>
+    <div class="rline"></div>
+    <div class="rrow">
+      <span class="num tnum">10</span>
+      <span class="rname" style="flex: 1;">Zoe Bennett</span>
+      <div class="circle-on"><svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+    </div>
+    <div class="microhead">Crew</div>
+    <div class="rrow">
+      <span class="num"></span>
+      <span class="rname" style="flex: 1;">Keiko Tanaka</span>
+      <div class="circle-on"><svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8.5"></path></svg></div>
+    </div>
+    <div class="rline"></div>
+    <div class="rrow">
+      <span class="num"></span>
+      <span class="rname" style="flex: 1;">Sal Moretti</span>
+      <div class="circle-off"></div>
+    </div>
+  </section>
+
+</div>
+</x-dc>
+</body>
+</html>
