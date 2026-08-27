@@ -716,7 +716,21 @@
     "hotelPickupPlaceholder": "Nombre del hotel, habitación o punto de referencia",
     "hotelPickupDetail": "{location}",
     "hotelPickupDetailWithTime": "{location} · Recogida a las {time}",
-    "saveHotelPickup": "Guardar ubicación"
+    "saveHotelPickup": "Guardar ubicación",
+    "supportLabel": "¿Hay algo que debamos preparar para ti?",
+    "supportDiversLabel": "Personas que necesitas en el agua contigo",
+    "supportBoardingLegend": "Subir a bordo y entrar al agua",
+    "supportBoardingAssistance": "Una mano o un traslado para subir a bordo",
+    "supportWaterEntryLift": "Un elevador para entrar al agua",
+    "supportBriefingLegend": "Cómo prefieres el briefing",
+    "supportBriefingSign": "En lengua de señas",
+    "supportBriefingWriting": "Por escrito",
+    "supportBriefingSignals": "Señales que acordemos antes",
+    "supportEquipmentLabel": "Equipo que adaptar o traer",
+    "supportDivesWithLabel": "Alguien que deba ir en el mismo barco y equipo que tú",
+    "saveSupport": "Guardar",
+    "supportSaved": "Guardado — la tripulación lo tendrá antes de que llegues.",
+    "supportUnavailable": "No se ha guardado. Inténtalo otra vez o díselo a la tripulación ese día."
   },
   "waiver": {
     "metaTitle": "Completa tu exención de responsabilidad — DiveDay",

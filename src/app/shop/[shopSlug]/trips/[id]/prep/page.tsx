@@ -16,6 +16,7 @@ import { diveRecencyText } from "@/i18n/readiness-labels";
 import { rentalItemLabel, statedSizesText } from "@/i18n/rental-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { supportNeedsLines } from "@/i18n/support-needs-labels";
 import {
   isPrepGrouping,
   type PrepGrouping,
@@ -432,6 +433,54 @@ export default async function TripPrepPage({
                 ))}
               </ul>
             </section>
+          ) : null}
+
+          {/* **What the day has been asked to set up.**
+
+              A neutral panel, deliberately — `SectionCard`'s ordinary border
+              and surface, not the warning tone of the staff-fit block above it.
+              A diver who arranged a lift is a diver this shop is ready for, and
+              a crew reading that as an alert is being told the opposite of what
+              the record exists to say (ADR
+              20260827-support-needs-are-a-record-about-the-dive; the tone
+              standard is `src/lib/dive-recency.ts`'s doc comment).
+
+              The boat's total is stated because it is what a shop reads beside
+              its rostered crew when deciding whether the day is covered. It
+              refuses nothing — a departure short of it sails, and the shop has
+              a conversation. Renders nothing at all when nobody has asked for
+              anything, which is almost every departure. */}
+          {checklist.supportNeeds.divers.length > 0 ? (
+            <SectionCard title={t("trips.prep.supportHeading")} className="mt-8">
+              {checklist.supportNeeds.supportDiversNeeded > 0 ? (
+                <p className="text-sm font-medium">
+                  {t("trips.prep.supportTotal", {
+                    count: checklist.supportNeeds.supportDiversNeeded,
+                  })}
+                </p>
+              ) : null}
+              <ul className="mt-2 flex flex-col gap-2 text-sm">
+                {checklist.supportNeeds.divers.map((diver) => (
+                  <li key={diver.personId}>
+                    <Link
+                      href={`/shop/${shopSlug}/divers/${diver.personId}`}
+                      className="font-medium hover:text-primary hover:underline"
+                    >
+                      {diver.fullName}
+                    </Link>
+                    {/* One line per fact rather than a comma-separated run:
+                        two of them carry the diver's own free text, and a
+                        sentence inside a joined list is where a crew loses
+                        track of which fact is which. */}
+                    <ul className="mt-0.5 flex flex-col text-muted">
+                      {supportNeedsLines(t, diver.needs).map((line) => (
+                        <li key={line}>{line}</li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </SectionCard>
           ) : null}
 
           {hotelPickups.length > 0 ? (

@@ -711,5 +711,17 @@
     "oneToFiveYears": "hace entre uno y cinco años",
     "overFiveYears": "hace más de cinco años",
     "never": "nunca"
+  },
+  "supportNeeds": {
+    "label": "Apoyo en la inmersión",
+    "supportDivers": "{count, plural, one {# acompañante en el agua} other {# acompañantes en el agua}}",
+    "boardingAssistance": "Ayuda para subir a bordo",
+    "waterEntryLift": "Elevador para entrar al agua",
+    "briefingSign": "Briefing en lengua de señas",
+    "briefingWritten": "Briefing por escrito",
+    "briefingSignals": "Señales acordadas",
+    "equipment": "Equipo: {note}",
+    "divesWith": "Bucea con {name}",
+    "departureTotal": "{count, plural, one {# acompañante solicitado} other {# acompañantes solicitados}}"
   }
 }

@@ -536,7 +536,9 @@
     "pickupTimeColumn": "Pickup time",
     "pickupHotelColumn": "Hotel / Lodging",
     "pickupDiverColumn": "Diver",
-    "pickupTimeUnset": "Unscheduled"
+    "pickupTimeUnset": "Unscheduled",
+    "supportHeading": "Dive support",
+    "supportTotal": "{count, plural, one {# support diver asked for across the boat} other {# support divers asked for across the boat}}"
   },
   "guests": {
     "cancelledBadge": "Cancelled",

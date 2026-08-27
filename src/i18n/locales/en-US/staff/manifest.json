@@ -134,5 +134,6 @@
   "rollCallRecordedShort": "{label} · {time} · {name}",
   "rollCallRecordedShortWithNote": "{label} · {time} · {name} · {note}",
   "markBackAboard": "Mark back aboard",
-  "crewMarkBackAboard": "Mark back aboard"
+  "crewMarkBackAboard": "Mark back aboard",
+  "supportNeedsLabel": "Dive support"
 }

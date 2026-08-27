@@ -3967,6 +3967,45 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+      /**
+       * **What one diver arranged, on the surface a crew reads it from.**
+       *
+       * The accessible-dive support-needs record (ADR
+       * 20260827-support-needs-are-a-record-about-the-dive). The `prep` capture
+       * above carries its panel; this is the manifest half, and it needs a
+       * baseline of its own because the marker is inside the person panel —
+       * `manifest` photographs the roster at rest and proves nothing about what
+       * the tap reveals, and `manifest-person-panel` opens whichever row is
+       * first rather than the one with a record on it.
+       *
+       * The tone is what this baseline is actually for. It has to sit in the
+       * same muted voice as the rental fit and the pickup beside it: a fact to
+       * plan around, never a warning. A diver who arranged a lift is a diver
+       * this shop is ready for, and a surface that renders that as an alert is
+       * telling the crew the opposite of what the record exists to say.
+       *
+       * Diego Alvarez by name, because he is the seeded diver who arranged
+       * something (`src/db/seed-support-needs.ts`) and his position on the
+       * roster is not this test's to depend on.
+       */
+      test(`a diver's dive-support record renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await offlineCopySaved(page);
+        const row = page
+          .locator("#roll-call-list > ul > li")
+          .filter({ hasText: "Diego Alvarez" });
+        await openManifestPerson(row);
+        await expect(row.getByText("Dive support")).toBeVisible();
+        // The click leaves the pointer on the summary, which would bank a
+        // hover-underlined name into the baseline.
+        await page.mouse.move(0, 0);
+        await capture(page, "manifest-dive-support", scheme);
+      });
+
+      /**
        * **One person's panel, open** — the "one tap away" tier of ADR
        * 20260827-the-departure-is-two-working-surfaces, decision 2. The
        * `manifest` capture above photographs ten rows at rest, which proves

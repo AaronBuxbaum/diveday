@@ -1,6 +1,6 @@
 # 20260827-support-needs-are-a-record-about-the-dive — Scoping an accessible-dive record
 
-- **Status:** Proposed — design accepted, build deferred
+- **Status:** Accepted — built 2026-08-27 (issue #1043)
 - **Date:** 2026-08-27
 - **Issue:** #691
 - **Relates to:** [20260821-the-ready-page-asks-once](20260821-the-ready-page-asks-once.md), [20260820-shop-divemaster-ratio](20260820-shop-divemaster-ratio.md), [20260821-currency-is-what-catches-people](20260821-currency-is-what-catches-people.md)
@@ -38,9 +38,9 @@ gaps in the industry, and it costs a table and a panel.
 
 ## Decision
 
-**The design below is accepted. The build is deferred to its own focused change**, because it needs a
-`dive-domain-expert` review of whether these are the right questions and a `security-reviewer` review
-of health-adjacent personal data, and because asking badly is worse than not asking.
+**The design below is accepted.** It was written ahead of the build and the build followed it
+(issue #1043, 2026-08-27); what shipped is recorded in "What was built" at the foot of this record,
+including the three places the code and this design deliberately differ.
 
 ### What is recorded
 
@@ -134,3 +134,37 @@ The build should be treated as safety-adjacent in review even though nothing it 
 anyone: a crew that plans around a support requirement is relying on the record being right, and a
 support-diver count silently lost between `/ready` and the manifest is a diver in the water without
 the help they arranged.
+
+## What was built (2026-08-27, issue #1043)
+
+`dive_support_needs`, one row per person per shop beside `rental_fit_profiles`, upserted. The diver
+answers on `/ready/[token]`; the crew reads it on the trip prep list and on the manifest; the
+departure's total in-water support requirement is stated on prep beside nothing that could refuse it.
+`src/lib/support-needs.ts` holds the codes, `src/i18n/support-needs-labels.ts` the words, both
+locales the copy.
+
+**All four refusals hold.** Nothing in `src/lib/readiness.ts`, `src/lib/trip-admission.ts`, or
+`src/lib/course-ratios.ts` reads this record or imports its module; nothing about it appears on the
+public booking form; every column asks about the dive; nothing went in `src/lib/marketing.ts`.
+
+Three deliberate differences from the design above, each because the surface as built already
+answered the question:
+
+**No sixth free-text field.** The table names "anything else — free text" as its last row. `/ready`
+already carries exactly that question one row higher — "Anything else the crew should know?", saved
+to `rental_fit_profiles.note`, whose own schema comment offers "titanium hip, I run heavy" as its
+example. A second free-text box one row apart is the duplication `copy-restraint` deletes. Five
+structured facts plus the note that already existed.
+
+**The named support diver is a name, not a `people` reference.** The design says it is "a scheduling
+and buddy-team constraint, not prose", which is why it is its own column. It is not a foreign key
+because the diver is answering on a bearer-token page about somebody the shop may have no record of
+at all. Resolving it to a booking is the later addition, and is not v1.
+
+**Nothing was added to `src/lib/retention.ts`.** The design lists it beside `export.ts` and
+`anonymize.ts` under "what it owes", and that turns out to be the wrong file. `RETENTION_DAYS` is a
+bounded prune over **append-only trails**, and every window is measured from a row's own event time;
+this is a living preference on a person with no event time and one row per diver, exactly like
+`rental_fit_profiles`, which is also not in it. It is reached by erasure (`anonymize.ts`) and by
+deletion of the shop, which are the paths a preference has. Adding a window would mean quietly
+forgetting what a returning diver told this shop — the failure this record exists to prevent.

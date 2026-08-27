@@ -536,7 +536,9 @@
     "pickupTimeColumn": "Hora de recogida",
     "pickupHotelColumn": "Hotel / Alojamiento",
     "pickupDiverColumn": "Buceador",
-    "pickupTimeUnset": "Sin programar"
+    "pickupTimeUnset": "Sin programar",
+    "supportHeading": "Apoyo en la inmersión",
+    "supportTotal": "{count, plural, one {# acompañante solicitado en todo el barco} other {# acompañantes solicitados en todo el barco}}"
   },
   "guests": {
     "cancelledBadge": "Cancelada",

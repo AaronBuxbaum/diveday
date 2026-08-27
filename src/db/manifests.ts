@@ -37,6 +37,7 @@ import {
   trips,
 } from "./schema";
 import { getShopById } from "./shops";
+import { supportNeedsByTripPerson } from "./support-needs";
 import { getTripRoster, getTripWithBooked } from "./trips";
 import { liveTrip } from "./trips-live";
 
@@ -487,6 +488,7 @@ export async function getTripManifests(
     crew,
     crewRollCalls,
     buddyTeams,
+    supportByPerson,
     ...rollCalls
   ] = await Promise.all([
     getShopById(db, shopId),
@@ -497,6 +499,7 @@ export async function getTripManifests(
     listTripCrew(db, shopId, tripId),
     listLatestCrewRollCalls(db, shopId, tripId),
     listTripBuddyTeams(db, shopId, tripId),
+    supportNeedsByTripPerson(db, shopId, tripId),
     ...checkpoints.map((checkpoint) => listLatestRollCallByBooking(db, shopId, tripId, checkpoint)),
   ]);
   if (!shop) return null;
@@ -582,6 +585,7 @@ export async function getTripManifests(
       minor: person.dateOfBirth ? isMinorOnDate(person.dateOfBirth, tripDate) : false,
       birthday: birthdayCallout(person.dateOfBirth, tripDate),
       depthAdvisory: depthByBooking.get(booking.id),
+      supportNeeds: supportByPerson.get(person.id) ?? null,
       hotelPickupLocation: booking.hotelPickupLocation,
       pickupTime: booking.pickupTime,
       checkedIn: booking.status === "checked_in",

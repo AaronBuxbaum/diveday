@@ -77,6 +77,7 @@ import {
 import { nitroxCardWanted } from "@/lib/rentals";
 import { shopAddressLines, shopMapQuery } from "@/lib/shop-address";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { hasSupportNeeds } from "@/lib/support-needs";
 import {
   cancelMyBookingAction,
   emailFreshReadinessLinkAction,
@@ -88,6 +89,7 @@ import {
   saveNitroxCertificationFromReady,
   saveNoteFromReady,
   saveSpecialtyFromReady,
+  saveSupportNeedsFromReady,
   signWaiverFromReady,
 } from "./actions";
 
@@ -147,6 +149,42 @@ const STATE_STYLE: Record<
     text: "text-muted",
   },
 };
+
+/**
+ * One tick-box in the support-needs question, worded on its right.
+ *
+ * A local helper rather than a `src/components/ui` addition: `form.tsx`'s
+ * vocabulary is stacked fields and controls, and there is exactly one grouped
+ * set of checkboxes in the app. It matches the diver-facing markup already in
+ * `DiveDeclarationFields` — same size, same border token, same `items-start` so
+ * a label that wraps stays aligned to the box rather than centring on it.
+ *
+ * `value="on"` is explicit rather than relied on: the action's schema reads an
+ * unticked box as an absent key, which is how HTML posts one, and a diver
+ * unticking something genuinely retracts it.
+ */
+function CheckboxRow({
+  name,
+  label,
+  defaultChecked,
+}: {
+  name: string;
+  label: string;
+  defaultChecked: boolean;
+}) {
+  return (
+    <label className="flex items-start gap-2 text-base">
+      <input
+        type="checkbox"
+        name={name}
+        value="on"
+        defaultChecked={defaultChecked}
+        className="mt-1 size-4 shrink-0 rounded border-border-strong"
+      />
+      <span>{label}</span>
+    </label>
+  );
+}
 
 function ChecklistRow({
   label,
@@ -794,6 +832,8 @@ const READY_NOTICES: Record<
   "error-cancel": { tone: "danger", key: "ready.cancelUnavailable" },
   "saved-last-dived": { tone: "success", key: "ready.lastDivedSaved" },
   "error-last-dived": { tone: "danger", key: "ready.lastDivedUnavailable" },
+  "saved-support": { tone: "success", key: "ready.supportSaved" },
+  "error-support": { tone: "danger", key: "ready.supportUnavailable" },
 };
 
 /**
@@ -1695,6 +1735,111 @@ export default async function DiverReadinessPage({
                       className={buttonClass({ variant: "secondary", size: "sm" })}
                     >
                       {t("ready.saveNote")}
+                    </SubmitButton>
+                  </div>
+                </form>
+              }
+              t={t}
+            />
+            {/* **What this dive needs set up for you.**
+
+                The accessible-dive record (ADR
+                20260827-support-needs-are-a-record-about-the-dive). Asked here
+                and nowhere else: `/ready` is after the sale and is the diver's
+                own page, where the public booking form is a disclosure to a
+                stranger before a purchase, on a page the shop's competitors can
+                also load.
+
+                Every question is about the *dive* — how many hands in the
+                water, getting aboard, how the briefing reaches you — and none is
+                about the diver. There is no condition to declare and nothing
+                here is medical.
+
+                "optional", like the note above it, and out of the progress
+                figure for the same reason: most divers have nothing to say, and
+                a row reading "Your turn" forever would turn the one question
+                this page asks kindly into a nag. Nothing it records gates
+                anything. */}
+            <ChecklistRow
+              label={t("ready.supportLabel")}
+              state={hasSupportNeeds(data.supportNeeds) ? "done" : "optional"}
+              detail={null}
+              action={
+                <form
+                  action={saveSupportNeedsFromReady.bind(null, token)}
+                  className="flex flex-col gap-4"
+                >
+                  <Field label={t("ready.supportDiversLabel")} htmlFor="support-divers">
+                    <input
+                      id="support-divers"
+                      name="supportDiversNeeded"
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={4}
+                      defaultValue={data.supportNeeds?.supportDiversNeeded ?? ""}
+                      className={`${controlClass} max-w-24`}
+                    />
+                  </Field>
+                  <fieldset className="flex flex-col gap-2">
+                    <legend className="text-sm font-semibold">
+                      {t("ready.supportBoardingLegend")}
+                    </legend>
+                    <CheckboxRow
+                      name="needsBoardingAssistance"
+                      label={t("ready.supportBoardingAssistance")}
+                      defaultChecked={data.supportNeeds?.needsBoardingAssistance ?? false}
+                    />
+                    <CheckboxRow
+                      name="needsWaterEntryLift"
+                      label={t("ready.supportWaterEntryLift")}
+                      defaultChecked={data.supportNeeds?.needsWaterEntryLift ?? false}
+                    />
+                  </fieldset>
+                  <fieldset className="flex flex-col gap-2">
+                    <legend className="text-sm font-semibold">
+                      {t("ready.supportBriefingLegend")}
+                    </legend>
+                    <CheckboxRow
+                      name="briefingInSign"
+                      label={t("ready.supportBriefingSign")}
+                      defaultChecked={data.supportNeeds?.briefingInSign ?? false}
+                    />
+                    <CheckboxRow
+                      name="briefingInWriting"
+                      label={t("ready.supportBriefingWriting")}
+                      defaultChecked={data.supportNeeds?.briefingInWriting ?? false}
+                    />
+                    <CheckboxRow
+                      name="briefingBySignals"
+                      label={t("ready.supportBriefingSignals")}
+                      defaultChecked={data.supportNeeds?.briefingBySignals ?? false}
+                    />
+                  </fieldset>
+                  <Field label={t("ready.supportEquipmentLabel")} htmlFor="support-equipment">
+                    <input
+                      id="support-equipment"
+                      name="equipmentAdaptation"
+                      maxLength={300}
+                      defaultValue={data.supportNeeds?.equipmentAdaptation ?? ""}
+                      className={controlClass}
+                    />
+                  </Field>
+                  <Field label={t("ready.supportDivesWithLabel")} htmlFor="support-dives-with">
+                    <input
+                      id="support-dives-with"
+                      name="divesWithName"
+                      maxLength={120}
+                      defaultValue={data.supportNeeds?.divesWithName ?? ""}
+                      className={controlClass}
+                    />
+                  </Field>
+                  <div>
+                    <SubmitButton
+                      pendingLabel={t("common.saving")}
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                    >
+                      {t("ready.saveSupport")}
                     </SubmitButton>
                   </div>
                 </form>

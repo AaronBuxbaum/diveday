@@ -78,6 +78,7 @@ import {
   calendarFeeds,
   certifications,
   courseInquiries,
+  diveSupportNeeds,
   internalNotes,
   lastMinuteListEntries,
   lastMinuteListUnsubscribeTokens,
@@ -621,6 +622,13 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   await tx
     .delete(rentalFitProfiles)
     .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)));
+  // Support needs go the same way and for the same reason, only more so: it is
+  // the diver's own account of what their dive needs set up, it is evidence of
+  // nothing, and it is the most personal thing in this list. A row of all-nulls
+  // would preserve exactly nothing worth keeping.
+  await tx
+    .delete(diveSupportNeeds)
+    .where(and(eq(diveSupportNeeds.shopId, shopId), eq(diveSupportNeeds.personId, personId)));
   await tx
     .delete(tripWaitlistEntries)
     .where(and(eq(tripWaitlistEntries.shopId, shopId), eq(tripWaitlistEntries.personId, personId)));

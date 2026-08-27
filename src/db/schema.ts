@@ -5346,6 +5346,115 @@ export const rentalFitProfiles = pgTable(
 );
 
 /**
+ * **What this diver's dive needs set up — not what this diver is.**
+ *
+ * The record an accessible dive is planned from (ADR
+ * 20260827-support-needs-are-a-record-about-the-dive). Adaptive diving is a real
+ * and growing line for exactly the shops in the Florida call list, and its
+ * requirements are concrete and knowable a week in advance rather than improvised
+ * at the dock — how many hands in the water, whether getting aboard needs a
+ * transfer, how the briefing has to be delivered. Before this table every one of
+ * those lived in an email, in `rental_fit_profiles.note`, or in the memory of
+ * whoever took the booking.
+ *
+ * It sits beside `rental_fit_profiles` on purpose and copies its shape: one row
+ * per person per shop, upserted, a living preference rather than evidence. It is
+ * shop-scoped for the same reason that one is — `people` is itself shop-scoped,
+ * so "on the person" means *this shop's* record of this person, never a profile
+ * that follows a diver between businesses.
+ *
+ * **Every column asks about the dive.** There is no disability field, no medical
+ * classification, and no HSA/IAHD level, and adding one would be the thing this
+ * design most deliberately refuses: it records what a person *is*, invites a
+ * gate, and reads as an interrogation at the exact moment the product is trying
+ * to say "we already know what you need".
+ *
+ * **Nothing here gates anything.** No readiness blocker, no booking refusal, no
+ * effect on any agency ratio — `src/lib/course-ratios.ts` is untouched and a
+ * diver's support needs may never move one. `src/lib/divemaster-ratio.ts` is the
+ * model for how the support-diver count behaves: shown beside what is rostered,
+ * binding nothing. A shop that cannot accommodate a request has that
+ * conversation with a human.
+ *
+ * The diver answers on `/ready/[token]`, after the sale, on their own page —
+ * never on the public booking form, which is a disclosure to a stranger before a
+ * purchase, on a page a shop's competitors can also load.
+ */
+export const diveSupportNeeds = pgTable(
+  "dive_support_needs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    /**
+     * How many people this diver needs in the water with them.
+     *
+     * A number rather than prose because it is the one fact here that arithmetic
+     * reads: a departure's total support requirement is the sum down its roster,
+     * shown beside the rostered crew the way `divemaster-ratio.ts` shows its
+     * target. Null is "not stated"; a stated **0** is a real answer and means
+     * something different — this diver has told the shop they need nobody, which
+     * is worth being able to say out loud.
+     */
+    supportDiversNeeded: integer("support_divers_needed"),
+    /** Getting aboard: a hand, a transfer from a chair, a seat moved. */
+    needsBoardingAssistance: boolean("needs_boarding_assistance").notNull().default(false),
+    /** Getting into the water: a lift, a hoist, or crew lowering the diver in. */
+    needsWaterEntryLift: boolean("needs_water_entry_lift").notNull().default(false),
+    /**
+     * How the briefing has to be delivered. Three flags rather than one code
+     * because they are not alternatives — a diver may want the briefing in
+     * writing *and* a signal set agreed with their buddy — and because that is
+     * the shape `rental_fit_profiles`'s `rents_*` columns already use for "which
+     * of these apply".
+     */
+    briefingInSign: boolean("briefing_in_sign").notNull().default(false),
+    briefingInWriting: boolean("briefing_in_writing").notNull().default(false),
+    briefingBySignals: boolean("briefing_by_signals").notNull().default(false),
+    /** Kit to adapt or bring, in the diver's own words. */
+    equipmentAdaptation: text("equipment_adaptation"),
+    /**
+     * Somebody who has to be on the same departure and buddy team.
+     *
+     * A name the diver types, not a `people` reference: the diver is answering
+     * on a bearer-token page about a person the shop may have no record of at
+     * all, and asking them to identify a row in a database they cannot see would
+     * be absurd. Its own column rather than prose so the buddy-team builder and
+     * the crew can see it as a constraint (ADR's "not prose"); resolving it to a
+     * booking is a later addition and deliberately not v1.
+     */
+    divesWithName: text("dives_with_name"),
+    /**
+     * When the diver last answered. `rental_fit_profiles.fit_stated_at` is the
+     * model, for a narrower reason: every boolean above defaults to false, so a
+     * row and an all-false row are indistinguishable without it, and a crew
+     * reading "no support needed" wants to know whether anybody was asked.
+     */
+    statedAt: timestamp("stated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("dive_support_needs_shop_person_unique").on(table.shopId, table.personId),
+    index("dive_support_needs_shop_person_idx").on(table.shopId, table.personId),
+    /**
+     * A bound, not a policy. Four in-water supporters for one diver is already
+     * beyond anything an adaptive programme runs, so this catches a typo rather
+     * than expressing a limit — and nothing downstream refuses a departure for
+     * being short of the number anyway.
+     */
+    check(
+      "dive_support_needs_support_divers_range",
+      sql`${table.supportDiversNeeded} is null or (${table.supportDiversNeeded} between 0 and 4)`,
+    ),
+  ],
+);
+
+/**
  * What a tracked unit of rental gear is. Mirrors the prep list's
  * `RentalItemKind` (the seven rentable kinds plus `boots`), keeps mask and fins
  * as separate physical units, and adds the two

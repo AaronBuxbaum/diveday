@@ -716,7 +716,21 @@
     "hotelPickupPlaceholder": "Hotel name, room, or landmark",
     "hotelPickupDetail": "{location}",
     "hotelPickupDetailWithTime": "{location} · Pickup at {time}",
-    "saveHotelPickup": "Save location"
+    "saveHotelPickup": "Save location",
+    "supportLabel": "Anything we should set up for you?",
+    "supportDiversLabel": "People you need in the water with you",
+    "supportBoardingLegend": "Getting aboard and into the water",
+    "supportBoardingAssistance": "A hand or a transfer getting aboard",
+    "supportWaterEntryLift": "A lift into the water",
+    "supportBriefingLegend": "How you'd like the briefing",
+    "supportBriefingSign": "In sign language",
+    "supportBriefingWriting": "In writing",
+    "supportBriefingSignals": "Signals we agree beforehand",
+    "supportEquipmentLabel": "Equipment to adapt or bring",
+    "supportDivesWithLabel": "Someone who should be on the same boat and team as you",
+    "saveSupport": "Save",
+    "supportSaved": "Saved — the crew will have that before you arrive.",
+    "supportUnavailable": "That did not save. Try again, or tell the crew on the day."
   },
   "waiver": {
     "metaTitle": "Complete your waiver — DiveDay",

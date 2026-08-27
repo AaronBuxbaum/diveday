@@ -3,7 +3,7 @@ import { nowDate } from "@/lib/clock";
 import type { PrepDiver } from "@/lib/dive-prep";
 import type { AppDb } from "./client";
 import { verifiedNitroxPersonIds } from "./nitrox";
-import { bookings, people, rentalFitProfiles } from "./schema";
+import { bookings, diveSupportNeeds, people, rentalFitProfiles } from "./schema";
 
 export type RentalFitInput = {
   shopId: string;
@@ -232,7 +232,12 @@ export async function listTripPrepDivers(
   tripId: string,
 ): Promise<PrepDiver[]> {
   const rows = await db
-    .select({ booking: bookings, person: people, fit: rentalFitProfiles })
+    .select({
+      booking: bookings,
+      person: people,
+      fit: rentalFitProfiles,
+      supportNeeds: diveSupportNeeds,
+    })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .leftJoin(
@@ -240,6 +245,18 @@ export async function listTripPrepDivers(
       and(
         eq(rentalFitProfiles.personId, bookings.personId),
         eq(rentalFitProfiles.shopId, bookings.shopId),
+      ),
+    )
+    // Joined here rather than read separately: this function already takes one
+    // round trip per roster and `getTripManifests` beside it fans out under a
+    // strict no-`Promise.all`-on-a-transaction rule, so the cheapest place for
+    // an optional one-row-per-person record is the join that is already
+    // walking the roster.
+    .leftJoin(
+      diveSupportNeeds,
+      and(
+        eq(diveSupportNeeds.personId, bookings.personId),
+        eq(diveSupportNeeds.shopId, bookings.shopId),
       ),
     )
     .where(
@@ -262,6 +279,7 @@ export async function listTripPrepDivers(
     lastDivedBand: row.booking.lastDivedBand,
     hotelPickupLocation: row.booking.hotelPickupLocation,
     pickupTime: row.booking.pickupTime,
+    supportNeeds: row.supportNeeds,
   }));
 }
 

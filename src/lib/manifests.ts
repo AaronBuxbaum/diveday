@@ -4,6 +4,7 @@ import type { RentalFitLine } from "./dive-prep";
 import type { ReadinessResult } from "./readiness";
 import type { RollCallCheckpoint, RollCallRecord } from "./roll-call";
 import { isNotBackAboard } from "./roll-call";
+import type { SupportNeeds } from "./support-needs";
 import type { MedicalWaiverMark } from "./waivers";
 
 /**
@@ -152,6 +153,15 @@ export type ManifestDiverInput = {
    * it).
    */
   medicalWaiver?: MedicalWaiverMark | null;
+  /**
+   * What this diver's dive needs set up, as they answered it on `/ready` (ADR
+   * 20260827-support-needs-are-a-record-about-the-dive). A fact the crew plans
+   * around and **never a gate**: nothing in the readiness engine, the boarding
+   * gate, or any agency ratio reads this. It rides here for the same reason the
+   * depth advisory does — the plan for dive two is made on the boat, from this
+   * list, which is exactly when knowing who arranged a lift is actionable.
+   */
+  supportNeeds?: SupportNeeds | null;
   /**
    * Lodging / hotel location stated by diver on /ready (marker only, not a checkpoint).
    */

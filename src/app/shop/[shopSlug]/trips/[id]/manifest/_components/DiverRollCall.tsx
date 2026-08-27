@@ -19,6 +19,7 @@ import {
 } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { supportNeedsLines } from "@/i18n/support-needs-labels";
 import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
@@ -76,6 +77,7 @@ function DiverFacts({
   columns: 1 | 2;
   t: StaffTranslator;
 }) {
+  const supportLines = supportNeedsLines(t, diver.supportNeeds);
   return (
     <div className={`grid gap-2 text-base${columns === 2 ? " sm:grid-cols-2" : ""}`}>
       <p>
@@ -124,6 +126,21 @@ function DiverFacts({
             {rentalFitLineText(t, locale, diver.rentalFit)}
             {diver.nitroxRequested ? t("manifest.nitroxRequestedSuffix") : ""}
           </span>
+        </p>
+      ) : null}
+      {/* What this diver's dive needs set up. Same voice as the rental fit and
+          the pickup above it — a fact to plan around, in the muted body tone
+          every other marker on this row uses, never a warning. A diver who
+          arranged a lift is a diver this shop is ready for (ADR
+          20260827-support-needs-are-a-record-about-the-dive).
+
+          Only when something was stated: a line reading "nothing needed" down
+          the whole boat is the absence of information formatted as information
+          (principle 9). */}
+      {supportLines.length > 0 ? (
+        <p>
+          <span className="font-bold">{t("manifest.supportNeedsLabel")}</span>
+          <span className="mt-0.5 block text-muted">{supportLines.join(" · ")}</span>
         </p>
       ) : null}
       {diver.hotelPickupLocation ? (

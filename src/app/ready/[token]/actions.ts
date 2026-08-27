@@ -18,6 +18,7 @@ import { getReadyPageData, type ReadyPageData } from "@/db/ready";
 import { refundBookingOnCancellation } from "@/db/refunds";
 import { saveRentalFit, saveRentalFitNote } from "@/db/rental-fit";
 import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/schema";
+import { saveSupportNeeds } from "@/db/support-needs";
 import { issueWaiverRequest } from "@/db/waivers";
 import { diverTranslator } from "@/i18n/messages";
 import { requestFirstHandLocale } from "@/i18n/request";
@@ -140,6 +141,61 @@ export async function saveNoteFromReady(token: string, formData: FormData) {
     note: parsed.data.note,
   });
   revalidateAndRedirect(base(token), `${base(token)}?${saved ? "saved=note" : "error=note"}`);
+}
+
+/**
+ * **What this diver's dive needs set up.**
+ *
+ * Its own action, and its own row on the checklist, for the reason ADR
+ * 20260827-support-needs-are-a-record-about-the-dive gives: this is asked
+ * *after the sale*, on the diver's own page, and never on the public booking
+ * form — which would be a disclosure to a stranger before a purchase, on a page
+ * the shop's competitors can also load.
+ *
+ * Every field is optional and the whole form saves at once, because the diver
+ * answers it as one thought. The checkbox fields arrive only when ticked, which
+ * is how HTML posts a checkbox — so an unticked box is a real `false` rather
+ * than a missing value, and unticking one genuinely retracts it.
+ *
+ * The ceiling matches the `dive_support_needs_support_divers_range` check
+ * constraint. It is a typo guard, not a limit: nothing downstream refuses a
+ * departure for being short of the number.
+ */
+const supportNeedsSchema = z.object({
+  supportDiversNeeded: z
+    .string()
+    .trim()
+    .max(2)
+    .regex(/^\d*$/)
+    .transform((value) => (value === "" ? null : Number(value)))
+    .refine((value) => value === null || (value >= 0 && value <= 4)),
+  needsBoardingAssistance: z.literal("on").optional(),
+  needsWaterEntryLift: z.literal("on").optional(),
+  briefingInSign: z.literal("on").optional(),
+  briefingInWriting: z.literal("on").optional(),
+  briefingBySignals: z.literal("on").optional(),
+  equipmentAdaptation: z.string().trim().max(300),
+  divesWithName: z.string().trim().max(120),
+});
+
+export async function saveSupportNeedsFromReady(token: string, formData: FormData) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  const parsed = supportNeedsSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=support`);
+  const saved = await saveSupportNeeds(ctx.db, {
+    shopId: ctx.data.shop.id,
+    personId: ctx.data.person.id,
+    supportDiversNeeded: parsed.data.supportDiversNeeded,
+    needsBoardingAssistance: parsed.data.needsBoardingAssistance === "on",
+    needsWaterEntryLift: parsed.data.needsWaterEntryLift === "on",
+    briefingInSign: parsed.data.briefingInSign === "on",
+    briefingInWriting: parsed.data.briefingInWriting === "on",
+    briefingBySignals: parsed.data.briefingBySignals === "on",
+    equipmentAdaptation: parsed.data.equipmentAdaptation,
+    divesWithName: parsed.data.divesWithName,
+  });
+  revalidateAndRedirect(base(token), `${base(token)}?${saved ? "saved=support" : "error=support"}`);
 }
 
 const hotelPickupSchema = z.object({
