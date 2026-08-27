@@ -418,10 +418,21 @@ export async function deliverQuickBooksEvent(
   );
   if (item.status !== "ok") return item;
   const operation = event.eventType === "order.paid" ? "sales_receipt" : "refund_receipt";
+  /**
+   * A sales receipt happens once per order, so the order is its identity. A
+   * refund receipt does not: `partly_refunded -> partly_refunded` is a
+   * supported transition (issue #699), `refundOrder` emits one event per slice
+   * carrying that slice's delta, and `quickBooksRefundReceipt` posts the delta.
+   * Keying the guard on the order made the *second* slice look already
+   * delivered, so it was closed as successful with no API call and no error --
+   * the shop's books kept the first refund and silently lost every one after
+   * it. The event's idempotency key is per refund and stable across retries.
+   */
+  const syncSourceId = operation === "refund_receipt" ? event.idempotencyKey : event.entityId;
   const existing = await getIntegrationSyncRecord(db, {
     integrationId: integration.id,
     sourceType: "quickbooks_order",
-    sourceId: event.entityId,
+    sourceId: syncSourceId,
     operation,
   });
   if (existing) return { status: "delivered" };
@@ -449,7 +460,7 @@ export async function deliverQuickBooksEvent(
   await upsertIntegrationSyncRecord(db, {
     integrationId: integration.id,
     sourceType: "quickbooks_order",
-    sourceId: event.entityId,
+    sourceId: syncSourceId,
     operation,
     externalId,
   });
