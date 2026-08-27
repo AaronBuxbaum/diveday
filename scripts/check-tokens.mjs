@@ -89,9 +89,19 @@ const exemptPaths = new Set(["src/app/_og/card.tsx", "src/app/_brand/colors.ts"]
  * A hex color: 3/4/6/8 hex digits, not continuing into an identifier — so
  * `#add-diver` (a fragment href whose first three letters happen to be hex)
  * and `#deadbeefcafe` never match.
+ *
+ * The lookbehind is the other half of that job. Ten of the sixteen hex digits
+ * are decimal, so a three- or four-digit **issue number** is hex-shaped, and
+ * this repository writes one as `issue #722` everywhere it explains why a line
+ * exists. In a comment the stripper below already handles it; in a *string* it
+ * cannot — `ScheduleBuilder.test.tsx`'s `describe("ScheduleBuilder wind line
+ * (issue #722)")` turned main's Repository safeguards job red on 2026-08-26
+ * for naming the ticket it covers. A reference is prose about the tree, never
+ * a colour, so it is excluded where it is written rather than baselined
+ * (a baseline entry would have banked the false positive as debt).
  */
 export const hexColorPattern =
-  /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![0-9a-zA-Z_-])/g;
+  /(?<!\b(?:issue|issues|PR|pull request)\s)#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})(?![0-9a-zA-Z_-])/gi;
 
 const colorPrefixes = [
   "bg",

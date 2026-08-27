@@ -31,6 +31,17 @@ describe("hex colors", () => {
     expect(texts("/* was #0e7490 */ const y = 2;")).toEqual([]);
   });
 
+  it("never flags an issue reference — prose about the tree, not a colour", () => {
+    // The one that turned main's safeguards job red: a `describe` title naming
+    // the ticket it covers, where the comment stripper cannot reach.
+    expect(texts('describe("ScheduleBuilder wind line (issue #722)", () => {});')).toEqual([]);
+    expect(texts('const note = "Issue #722, issues #1024, PR #990, pull request #883";')).toEqual(
+      [],
+    );
+    // ...and the exclusion is that narrow: a hex is still a hex everywhere else.
+    expect(texts('const style = "color:#722";')).toEqual(["raw hex #722"]);
+  });
+
   it("ignores invalid hex lengths and long hashes", () => {
     expect(texts('const sha = "#deadbeefcafe";')).toEqual([]);
     expect(texts('const five = "#abcde";')).toEqual([]);
