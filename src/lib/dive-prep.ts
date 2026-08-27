@@ -306,6 +306,16 @@ export type DivePrepChecklist = {
      */
     supportDiversToArrange: number;
     divers: { personId: string; fullName: string; needs: SupportNeeds }[];
+    /**
+     * Every name on this departure, divers and diving crew, for the "dives
+     * with" line to be checked against (issue #1068).
+     *
+     * Assembled here rather than at each surface so the prep list and the
+     * manifest cannot answer the same question differently — a diver who named
+     * the divemaster they always pair with must not read "on this departure"
+     * the day before and "not booked" at the rail.
+     */
+    rosterNames: string[];
   };
 };
 
@@ -575,6 +585,7 @@ export function buildDivePrepChecklist(input: {
       // the two agree by construction.
       supportDiversToArrange: supportDiversToArrange(input.divers),
       divers: diversWithSupportNeeds.sort((a, b) => a.fullName.localeCompare(b.fullName)),
+      rosterNames: [...input.divers.map((diver) => diver.fullName), ...(input.divingCrew ?? [])],
     },
   };
 }

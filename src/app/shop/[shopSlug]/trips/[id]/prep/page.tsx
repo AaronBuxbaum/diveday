@@ -477,9 +477,11 @@ export default async function TripPrepPage({
                         sentence inside a joined list is where a crew loses
                         track of which fact is which. */}
                     <ul className="mt-0.5 flex flex-col text-muted">
-                      {supportNeedsLines(t, diver.needs).map((line) => (
-                        <li key={line}>{line}</li>
-                      ))}
+                      {supportNeedsLines(t, diver.needs, checklist.supportNeeds.rosterNames).map(
+                        (line) => (
+                          <li key={line}>{line}</li>
+                        ),
+                      )}
                     </ul>
                   </li>
                 ))}

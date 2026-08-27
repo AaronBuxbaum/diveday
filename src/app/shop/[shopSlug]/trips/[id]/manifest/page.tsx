@@ -41,6 +41,7 @@ import { serializeManifests } from "@/lib/offline-manifests";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
+import { divesWithMatch } from "@/lib/support-needs";
 import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
@@ -303,6 +304,25 @@ export default async function TripManifestPage({
     token: `crew:${member.id}`,
     label: member.fullName,
   }));
+  // The "dives with" constraint, per booking, for the one surface that acts on
+  // it (issue #1068). Matched against the whole departure — divers and crew,
+  // since a diver may name the divemaster they always pair with — and worded
+  // here because `BuddyTeamsPanel` has no translator.
+  const rosterNames = [
+    ...manifest.divers.map((diver) => diver.fullName),
+    ...manifest.crew.map((member) => member.fullName),
+  ];
+  const divesWithByBooking = new Map(
+    manifest.divers.flatMap((diver) => {
+      const named = diver.supportNeeds?.divesWithName?.trim();
+      if (!named) return [];
+      const line =
+        divesWithMatch(named, rosterNames) === "not_on_departure"
+          ? t("manifest.buddyDivesWithNotBooked", { name: named })
+          : t("manifest.buddyDivesWith", { name: named });
+      return [[diver.bookingId, line] as const];
+    }),
+  );
   // A count of split *teams*, not of rows wearing an alert: a team of four
   // with three back puts the alert on three rows, and the line says "N teams
   // are split" (`splitBuddyTeamIds`, src/lib/manifests.ts).
@@ -513,6 +533,7 @@ export default async function TripManifestPage({
           screens of context to reach the first name at roll call. */}
       <DiverRollCall
         divers={manifest.divers}
+        crewNames={manifest.crew.map((member) => member.fullName)}
         checkpoint={checkpoint}
         isDeparture={isDeparture}
         shopSlug={shopSlug}
@@ -600,6 +621,7 @@ export default async function TripManifestPage({
         diverOptions={diverOptions}
         crewOptions={crewOptions}
         unteamedDivers={unteamedDivers}
+        divesWithByBooking={divesWithByBooking}
         buddyErrorText={buddyErrorText}
         buddyErrorForm={buddyErrorForm}
         formBuddyTeamAction={formBuddyTeamAction.bind(null, actionContext)}

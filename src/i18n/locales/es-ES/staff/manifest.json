@@ -90,6 +90,8 @@
   "buddyTeamLabel": "Equipo {number, number, ::00}",
   "buddyCancelledName": "{name} (plaza cancelada)",
   "buddyCrewName": "{name} (tripulación)",
+  "buddyDivesWith": "Bucea con {name}",
+  "buddyDivesWithNotBooked": "Bucea con {name} — sin reserva",
   "buddyRecordedBy": "Registrado por {name}",
   "buddyDissolve": "Deshacer equipo",
   "buddyRemoveMember": "Quitar a {name}",

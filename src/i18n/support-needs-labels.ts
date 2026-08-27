@@ -45,7 +45,15 @@ function factText(t: StaffTranslator, fact: SupportNeedFact): string {
     case "equipment":
       return t("shared.supportNeeds.equipment", { note: fact.note });
     case "dives_with":
-      return t("shared.supportNeeds.divesWith", { name: fact.name });
+      // Two words after the name, never a sentence explaining the feature. The
+      // negative is the one that has to be unmissable: a crew reading "Dives
+      // with Omar Haddad" at the rail has been told a constraint holds, and if
+      // Omar was never booked it does not (issue #1068).
+      return fact.match === "on_departure"
+        ? t("shared.supportNeeds.divesWithOnDeparture", { name: fact.name })
+        : fact.match === "not_on_departure"
+          ? t("shared.supportNeeds.divesWithNotOnDeparture", { name: fact.name })
+          : t("shared.supportNeeds.divesWith", { name: fact.name });
   }
 }
 
@@ -60,6 +68,7 @@ function factText(t: StaffTranslator, fact: SupportNeedFact): string {
 export function supportNeedsLines(
   t: StaffTranslator,
   needs: SupportArrangements | null | undefined,
+  roster?: readonly string[],
 ) {
-  return supportNeedFacts(needs).map((fact) => factText(t, fact));
+  return supportNeedFacts(needs, roster).map((fact) => factText(t, fact));
 }

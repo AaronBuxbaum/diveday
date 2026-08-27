@@ -72,6 +72,7 @@ function renderList({
   return render(
     <DiverRollCall
       divers={divers}
+      crewNames={[]}
       checkpoint={checkpoint}
       isDeparture={checkpoint === "departure"}
       shopSlug="blue-mantis"
@@ -272,6 +273,73 @@ describe("a recorded alarm sorts to the top, and paper does not (decision 4)", (
     expect(
       container.querySelector<HTMLElement>("li[id='diver-row-b-1'] > div")?.className,
     ).toContain("border-t-0");
+  });
+});
+
+describe("the person a diver must dive with is checked against this departure", () => {
+  /**
+   * Issue #1068. "Dives with Omar Haddad" at the rail tells a crew a constraint
+   * is in place. If Omar was never booked on this departure it is not — the
+   * same class of error as a stale readiness badge, about the fact the diver is
+   * most relying on. It informs and never gates: the departure sails either
+   * way.
+   */
+  const withBuddy = (name: string) =>
+    diver({
+      bookingId: "b-1",
+      fullName: "Diego Marín",
+      supportNeeds: {
+        supportDiversNeeded: null,
+        supportDiversProvidedBy: null,
+        needsBoardingAssistance: false,
+        needsWaterLift: false,
+        briefingInSign: false,
+        briefingInWriting: false,
+        briefingAloud: false,
+        briefingBySignals: false,
+        equipmentAdaptation: null,
+        divesWithName: name,
+        statedAt: new Date("2026-09-10T09:00:00.000Z"),
+      },
+    });
+
+  it("says so when that person is on the departure, matching loosely", () => {
+    // A first name alone counts: the diver typed what they call him.
+    const { container } = renderList({
+      divers: [withBuddy("Omar"), diver({ bookingId: "b-2", fullName: "Omar Haddad" })],
+    });
+    expect(container.textContent).toContain("Dives with Omar — on this departure");
+  });
+
+  it("counts the crew, who are on the boat but not on the diver list", () => {
+    const { container } = render(
+      <DiverRollCall
+        divers={[withBuddy("Keiko Tanaka")]}
+        crewNames={["Keiko Tanaka"]}
+        checkpoint="after_dive_1"
+        isDeparture={false}
+        shopSlug="blue-mantis"
+        tripId="00000000-0000-4000-8000-0000000000ff"
+        locale="en-US"
+        timezone="America/New_York"
+        notesByBooking={new Map()}
+        rollCallAction={vi.fn(async () => ({ ok: true }) as const)}
+        addPrivateNoteAction={vi.fn(async () => undefined) as never}
+        rollCallButtonCopy={() => ({ errorRefusal: "Try again", blockedMessage: "Still blocked" })}
+        buddyTeamLabel={() => null}
+        t={t}
+      />,
+    );
+    expect(container.textContent).toContain("on this departure");
+    expect(container.textContent).not.toContain("not booked");
+  });
+
+  it("says plainly when they are not booked, and still blocks nothing", () => {
+    const { container } = renderList({ divers: [withBuddy("Omar Haddad")] });
+    expect(container.textContent).toContain("not booked on this departure");
+    // Informs, never gates (the ADR's fourth refusal): no danger tone, and the
+    // row's ordinary controls are untouched.
+    expect(dangerToned(container)).toHaveLength(0);
   });
 });
 

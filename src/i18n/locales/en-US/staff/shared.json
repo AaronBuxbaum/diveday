@@ -708,6 +708,8 @@
     "briefingAloud": "Briefing described aloud",
     "briefingSignals": "Agreed signals",
     "equipment": "Equipment: {note}",
-    "divesWith": "Dives with {name}"
+    "divesWith": "Dives with {name}",
+    "divesWithOnDeparture": "Dives with {name} — on this departure",
+    "divesWithNotOnDeparture": "Dives with {name} — not booked on this departure"
   }
 }

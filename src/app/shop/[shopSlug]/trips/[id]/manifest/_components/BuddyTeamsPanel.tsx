@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -25,6 +26,7 @@ export function BuddyTeamsPanel({
   diverOptions,
   crewOptions,
   unteamedDivers,
+  divesWithByBooking,
   buddyErrorText,
   buddyErrorForm,
   formBuddyTeamAction,
@@ -43,6 +45,16 @@ export function BuddyTeamsPanel({
   diverOptions: BuddyMemberOption[];
   crewOptions: BuddyMemberOption[];
   unteamedDivers: ReadonlyArray<{ fullName: string }>;
+  /**
+   * Per booking, the line saying who this diver must be teamed with — already
+   * matched against the roster and worded (issue #1068).
+   *
+   * This panel is the one surface that *acts* on `dives_with`, and until now it
+   * could not see it: a crew member dragging teams together had no idea Diego
+   * must be with Omar. It informs and nothing more — no refusal, no auto-build.
+   * A team that ignores it still forms, and the shop has a conversation.
+   */
+  divesWithByBooking: ReadonlyMap<string, string>;
   buddyErrorText: string | null;
   /**
    * Which form the refusal answers, so it renders beside that form rather
@@ -165,19 +177,23 @@ export function BuddyTeamsPanel({
                           // stay a team; at two the act is a dissolve, which
                           // has its own button and its own entry on the trail.
                           const removable = team.members.length > 2;
+                          const divesWith =
+                            member.kind === "diver"
+                              ? (divesWithByBooking.get(member.bookingId) ?? null)
+                              : null;
                           return (
-                            <li
-                              key={token}
-                              className={`flex items-center gap-1 rounded-full border border-border bg-surface-sunken font-semibold ${
-                                removable ? "py-0.5 ps-4 pe-1" : "px-3 py-1"
-                              }`}
-                            >
-                              <span>{name}</span>
-                              {removable ? (
-                                <form action={removeBuddyTeamMemberAction} className="flex">
-                                  <input type="hidden" name="teamId" value={team.teamId} />
-                                  <input type="hidden" name="member" value={token} />
-                                  {/* A real target, not a bare "×" glyph: this
+                            <Fragment key={token}>
+                              <li
+                                className={`flex items-center gap-1 rounded-full border border-border bg-surface-sunken font-semibold ${
+                                  removable ? "py-0.5 ps-4 pe-1" : "px-3 py-1"
+                                }`}
+                              >
+                                <span>{name}</span>
+                                {removable ? (
+                                  <form action={removeBuddyTeamMemberAction} className="flex">
+                                    <input type="hidden" name="teamId" value={team.teamId} />
+                                    <input type="hidden" name="member" value={token} />
+                                    {/* A real target, not a bare "×" glyph: this
                                     panel is worked on a moving deck, and the
                                     chip shape is what makes the control read
                                     as a control rather than a typo. `size-11`
@@ -199,18 +215,27 @@ export function BuddyTeamsPanel({
                                     44px circle that a word would burst; the
                                     disabled + `aria-busy` state is what says
                                     the tap landed. */}
-                                  <SubmitButton
-                                    pendingLabel="×"
-                                    ariaLabel={t("manifest.buddyRemoveMember", {
-                                      name: member.fullName,
-                                    })}
-                                    className="flex size-11 cursor-pointer items-center justify-center rounded-full text-lg leading-none text-muted disabled:cursor-wait disabled:opacity-70 hover:bg-danger-tint hover:text-danger"
-                                  >
-                                    <span aria-hidden="true">×</span>
-                                  </SubmitButton>
-                                </form>
+                                    <SubmitButton
+                                      pendingLabel="×"
+                                      ariaLabel={t("manifest.buddyRemoveMember", {
+                                        name: member.fullName,
+                                      })}
+                                      className="flex size-11 cursor-pointer items-center justify-center rounded-full text-lg leading-none text-muted disabled:cursor-wait disabled:opacity-70 hover:bg-danger-tint hover:text-danger"
+                                    >
+                                      <span aria-hidden="true">×</span>
+                                    </SubmitButton>
+                                  </form>
+                                ) : null}
+                              </li>
+                              {/* Beside the chip, in the row where teams are
+                                actually built — muted, never a warning tone:
+                                a departure with the constraint unmet sails
+                                (ADR 20260827-support-needs-are-a-record-about-
+                                the-dive, fourth refusal). The words carry it. */}
+                              {divesWith ? (
+                                <li className="text-sm font-normal text-muted">{divesWith}</li>
                               ) : null}
-                            </li>
+                            </Fragment>
                           );
                         })}
                       </ul>

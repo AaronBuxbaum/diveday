@@ -130,10 +130,31 @@ export type SupportNeedFact =
   | { kind: "briefing_aloud" }
   | { kind: "briefing_signals" }
   | { kind: "equipment"; note: string }
-  | { kind: "dives_with"; name: string };
+  | {
+      kind: "dives_with";
+      name: string;
+      /**
+       * Whether that person appears on the departure's roster, when a roster
+       * was supplied. `null` means nobody checked — a surface with no roster in
+       * hand says the constraint and stops, rather than implying an answer it
+       * does not have.
+       */
+      match: DivesWithMatch | null;
+    };
 
-/** Every stated fact, in reading order. Empty when nothing was stated. */
-export function supportNeedFacts(needs: SupportArrangements | null | undefined): SupportNeedFact[] {
+/**
+ * Every stated fact, in reading order. Empty when nothing was stated.
+ *
+ * `roster` is the departure's names, when the caller has them: it decides
+ * whether the `dives_with` fact can say if that person is aboard (issue #1068).
+ * Omitting it is a legitimate answer, not a degraded one — the offline snapshot
+ * and the diver's own record both state the constraint without a departure to
+ * check it against.
+ */
+export function supportNeedFacts(
+  needs: SupportArrangements | null | undefined,
+  roster?: readonly string[],
+): SupportNeedFact[] {
   if (!needs) return [];
   const facts: SupportNeedFact[] = [];
   // Ordered the way the day runs: who is in the water, then getting aboard and
@@ -158,8 +179,85 @@ export function supportNeedFacts(needs: SupportArrangements | null | undefined):
   const equipment = needs.equipmentAdaptation?.trim();
   if (equipment) facts.push({ kind: "equipment", note: equipment });
   const divesWith = needs.divesWithName?.trim();
-  if (divesWith) facts.push({ kind: "dives_with", name: divesWith });
+  if (divesWith) {
+    facts.push({
+      kind: "dives_with",
+      name: divesWith,
+      match: roster ? divesWithMatch(divesWith, roster) : null,
+    });
+  }
   return facts;
+}
+
+/**
+ * **Is the person this diver must dive with actually on this departure?**
+ *
+ * `dives_with_name` is free text a diver typed on a bearer-token page, about
+ * somebody the shop may hold no record of — so this is a name-to-name match and
+ * can never be anything better. The ADR keeps it that way deliberately: asking a
+ * diver to identify a `people` row they cannot see is the wrong shape.
+ *
+ * **Loose on purpose, and asymmetric on purpose.** Getting this wrong in the
+ * confident direction — telling a crew "not booked on this departure" about
+ * somebody who *is* booked under a different spelling — is worse than saying
+ * nothing, because it reads as a checked fact and invites the shop to stop
+ * looking. So the match normalises case, whitespace and accents, and a
+ * first-name-only hit counts as a hit: "Omar" matches "Omar Haddad", and
+ * "O. Haddad" matches on the surname. A false "yes" costs a glance down the
+ * roster; a false "no" costs the arrangement.
+ *
+ * **It never gates.** Nothing calls this to refuse a booking, hold a departure,
+ * or build a team — a departure with the constraint unmet sails, and the shop
+ * has a conversation (the ADR's fourth refusal). It exists so the person
+ * building buddy teams can see the constraint at the moment they act on it.
+ */
+export type DivesWithMatch = "on_departure" | "not_on_departure";
+
+/** Case, accents, punctuation and runs of whitespace all folded away. */
+function foldName(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^\p{Letter}\p{Number}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** The words of a name, folded — "O. Haddad" → ["o", "haddad"]. */
+function nameParts(value: string): string[] {
+  const folded = foldName(value);
+  return folded ? folded.split(" ") : [];
+}
+
+/**
+ * Whether `named` plausibly refers to somebody on `roster`.
+ *
+ * Returns `null` when the diver named nobody — "no constraint" is a different
+ * answer from "the person they named is not here", and a surface that conflated
+ * the two would put a line on every diver on the boat.
+ */
+export function divesWithMatch(
+  named: string | null | undefined,
+  roster: readonly string[],
+): DivesWithMatch | null {
+  const wanted = nameParts(named ?? "");
+  if (wanted.length === 0) return null;
+  const hit = roster.some((candidate) => {
+    const parts = nameParts(candidate);
+    if (parts.length === 0) return false;
+    const full = parts.join(" ");
+    // The whole typed string against the whole name, first: the ordinary case,
+    // and the only one that needs no charity.
+    if (wanted.join(" ") === full) return true;
+    // Otherwise every word the diver typed has to land somewhere in the name.
+    // A single initial ("O.") matches the word it begins, which is what makes
+    // "O. Haddad" work without letting one stray letter match anybody.
+    return wanted.every((word) =>
+      parts.some((part) => (word.length === 1 ? part.startsWith(word) : part === word)),
+    );
+  });
+  return hit ? "on_departure" : "not_on_departure";
 }
 
 /**
