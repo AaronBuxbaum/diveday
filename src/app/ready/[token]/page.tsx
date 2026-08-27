@@ -1200,16 +1200,17 @@ export default async function DiverReadinessPage({
     getTripWithBooked(db, shop.id, data.trip.id),
     listTripDives(db, shop.id, data.trip.id),
   ]);
+  // What one seat on this departure costs. Null on an unpriced trip, which
+  // then quotes nothing rather than guessing — see `resolvePaymentReceipt`,
+  // which takes the same figure to work out a balance after a deposit.
+  const fullPriceCents = fullTrip ? perDiverBookingPriceCents(fullTrip, fullTrip.course) : null;
+
   // What this booking has been charged, and — only in the minutes after a
   // submit — whether both of its emails actually left the building. Both moved
   // here from the trip page's confirmation branch (ADR
   // 20260820-one-page-after-booking); the receipt is read on every visit,
   // because "what did I pay?" is a question the night before too, while the
   // emails line is only ever true right after booking.
-  // What one seat on this departure costs. Null on an unpriced trip, which
-  // then quotes nothing rather than guessing — see `resolvePaymentReceipt`,
-  // which takes the same figure to work out a balance after a deposit.
-  const fullPriceCents = fullTrip ? perDiverBookingPriceCents(fullTrip, fullTrip.course) : null;
   const [paymentReceipt, emailsOnTheWay] = await Promise.all([
     resolvePaymentReceipt(
       db,
