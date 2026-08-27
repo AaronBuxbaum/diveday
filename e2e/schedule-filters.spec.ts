@@ -248,8 +248,21 @@ test("stating a certification level marks the departures above it without removi
 /**
  * The hard constraint on this filter: it is a *stated preference* and never a
  * gate. A casual tap in a filter row must not become evidence the readiness
- * engine reasons about, so it is not persisted and does not prefill the booking
- * form's own certification select (ADR 20260814-self-declared-cards).
+ * engine reasons about, so it is not persisted and never reaches the booking
+ * form (ADR 20260814-self-declared-cards).
+ *
+ * **What this asserts changed on 2026-08-27, and the rule did not.** The form
+ * used to carry its own per-diver certification select, so the guarantee was
+ * checked by finding that select and reading it back empty. The anonymous
+ * booking form now asks nothing about anyone's diving at all — the question
+ * moved to `/ready/<token>`, which asks the diver whose booking it is rather
+ * than whoever filled the form (`BookingPartyFields`'s own doc comment). So the
+ * check is now the stronger one the move earned: no certification control
+ * exists here for a filter value to reach, and re-adding one to the anonymous
+ * form fails this test.
+ *
+ * The booking form's own submit is asserted visible first, so the absence below
+ * is this form's silence rather than a page that never rendered.
  */
 test("the stated level never reaches the booking form", { tag: READ_ONLY }, async ({ page }) => {
   await page.goto("/s/blue-mantis");
@@ -266,7 +279,7 @@ test("the stated level never reaches the booking form", { tag: READ_ONLY }, asyn
     .click();
   await expect(page).toHaveURL(/\/trips\//);
 
-  const level = page.getByLabel(/Certification level/).first();
-  await expect(level).toBeVisible();
-  await expect(level).toHaveValue("");
+  const booking = page.getByRole("region", { name: "Grab a spot" });
+  await expect(booking.getByRole("button", { name: "Book these spots" })).toBeVisible();
+  await expect(booking.getByLabel(/Certification level/)).toHaveCount(0);
 });
