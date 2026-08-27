@@ -1,6 +1,10 @@
 import { and, eq, lt, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { type DeleteImageResult, deleteStoredImageTracked, isManagedBlobUrl } from "@/lib/storage";
+import {
+  type DeleteImageResult,
+  deleteStoredImageTracked,
+  isManagedStorageUrl,
+} from "@/lib/storage";
 import type { AppDb, DbExecutor } from "./client";
 import { type MediaDeletionAttempt, type MediaDeletionKind, mediaDeletionAttempts } from "./schema";
 
@@ -35,7 +39,7 @@ export async function queueMediaDeletion(
   db: DbExecutor,
   input: QueueMediaDeletionInput,
 ): Promise<MediaDeletionAttempt | null> {
-  if (!isManagedBlobUrl(input.url)) return null;
+  if (!isManagedStorageUrl(input.url)) return null;
   const [attempt] = await db
     .insert(mediaDeletionAttempts)
     .values({ shopId: input.shopId, kind: input.kind, url: input.url })

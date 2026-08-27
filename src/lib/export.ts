@@ -8,7 +8,7 @@
 
 import { strToU8, zipSync } from "fflate";
 import { cachedFormatter } from "./intl-cache";
-import { isManagedBlobUrl } from "./storage";
+import { isManagedStorageUrl } from "./storage";
 
 /** Everything a CSV cell can hold. Dates serialize as ISO 8601 UTC. */
 export type CsvValue = string | number | boolean | Date | null | undefined;
@@ -285,7 +285,7 @@ export function buildExportBundle(input: ExportBundleInput, now: Date): ExportFi
     `Photos and imported documents: any image_url / *_url column above whose link is`,
     `DiveDay's own storage has a byte-identical copy under photos/, at the same`,
     `path as the URL — for example an image_url of`,
-    `https://xyz.public.blob.vercel-storage.com/recap/ab12-photo.jpg is also at`,
+    `https://diveday-media.s3.us-east-1.amazonaws.com/recap/ab12-photo.jpg is also at`,
     `photos/recap/ab12-photo.jpg in this bundle. That copy survives after this`,
     `account closes; the URL itself does not. A link the CSV carries that was`,
     `never stored through DiveDay (an external link, or a bundled template`,
@@ -382,7 +382,7 @@ export function exportPhotoPath(url: string): string {
  * Best-effort fetch of every photo this shop's own blob storage holds, so the
  * bundle carries real image files rather than links that stop resolving once
  * the account closes (ADR 20260724-export-bundled-photos). Only
- * `isManagedBlobUrl` URLs are ever fetched — never an external or
+ * `isManagedStorageUrl` URLs are ever fetched — never an external or
  * staff-pasted link the CSVs might also carry — so this never makes a live
  * request to a host outside DiveDay's own storage. One photo failing to fetch
  * never fails the export; it is simply absent from `photos/`.
@@ -390,8 +390,11 @@ export function exportPhotoPath(url: string): string {
 export async function fetchExportPhotos(
   urls: readonly string[],
   fetchImpl: typeof fetch = fetch,
+  env: Readonly<Record<string, string | undefined>> = process.env,
 ): Promise<ExportPhoto[]> {
-  const unique = [...new Set(urls)].filter(isManagedBlobUrl).sort();
+  // Arrow rather than a bare reference: `filter` passes the index as the
+  // second argument, which would land in the predicate's `env` parameter.
+  const unique = [...new Set(urls)].filter((url) => isManagedStorageUrl(url, env)).sort();
   const results = await Promise.all(
     unique.map(async (url): Promise<ExportPhoto | null> => {
       const controller = new AbortController();

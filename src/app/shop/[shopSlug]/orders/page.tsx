@@ -30,7 +30,7 @@ import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
-import { isManagedBlobUrl } from "@/lib/storage/blob-host";
+import { isManagedStorageUrl } from "@/lib/storage/blob-host";
 import { uuidParam } from "@/lib/uuid";
 import { wallTimeToUtc } from "@/lib/zoned";
 
@@ -81,7 +81,7 @@ const IMPORTED_PAYMENT_DIRECTION_KEYS: Record<"payment" | "refund" | "unknown", 
 /** A source URL is rendered only after import re-stored it, or when it is a same-origin legacy path. */
 function safeImportedDocumentUrl(url: string | null): string | null {
   if (!url) return null;
-  return url.startsWith("/") || isManagedBlobUrl(url) ? url : null;
+  return url.startsWith("/") || isManagedStorageUrl(url) ? url : null;
 }
 
 /**

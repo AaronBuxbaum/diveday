@@ -1175,7 +1175,7 @@ describe("role lens raw material", () => {
       const attempt = await queueMediaDeletion(db, {
         shopId: shop.id,
         kind: "recap_photo",
-        url: "https://example123.public.blob.vercel-storage.com/example/photo.jpg",
+        url: "https://diveday-media.s3.us-east-1.amazonaws.com/example/photo.jpg",
       });
       if (!attempt) throw new Error("expected a managed blob URL to queue");
       await resolveMediaDeletion(db, attempt.id, { status: "failed", error: "network error" });

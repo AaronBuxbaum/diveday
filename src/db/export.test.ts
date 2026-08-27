@@ -868,9 +868,9 @@ describe("full-shop export dataset", () => {
       .returning();
     const template = await getCurrentWaiverTemplate(db, shop.id);
     if (!template) throw new Error("no template");
-    const docUrl = "https://xyz.public.blob.vercel-storage.com/import-waivers/ida-waiver.jpg";
+    const docUrl = "https://diveday-media.s3.us-east-1.amazonaws.com/import-waivers/ida-waiver.jpg";
     const medicalDocUrl =
-      "https://xyz.public.blob.vercel-storage.com/import-waivers/ida-medical.jpg";
+      "https://diveday-media.s3.us-east-1.amazonaws.com/import-waivers/ida-medical.jpg";
     await db.insert(waiverRecords).values({
       shopId: shop.id,
       bookingId: null,
@@ -1231,8 +1231,8 @@ describe("export counts (the settings page's cheap view)", () => {
 describe("photoUrls (ADR 20260724-export-bundled-photos)", () => {
   it("collects every image URL referenced anywhere in the bundle, deduped and sorted", async () => {
     const { db, shop } = await seededShopContext();
-    const managedA = "https://xyz.public.blob.vercel-storage.com/sites/a.jpg";
-    const managedB = "https://xyz.public.blob.vercel-storage.com/sites/b.jpg";
+    const managedA = "https://diveday-media.s3.us-east-1.amazonaws.com/sites/a.jpg";
+    const managedB = "https://diveday-media.s3.us-east-1.amazonaws.com/sites/b.jpg";
     // Dive-site imagery rather than certification cards: a card has carried no
     // photograph since ADR 20260811-retire-the-digital-card dropped the column,
     // so there is no card URL left for this bundle to gather. What is being

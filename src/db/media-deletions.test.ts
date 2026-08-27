@@ -40,7 +40,7 @@ describe("queueMediaDeletion (managed-URL guard, CR-012 review finding)", () => 
     const attempt = await queueMediaDeletion(db, {
       shopId: shop.id,
       kind: "course_photo",
-      url: "https://abc123.public.blob.vercel-storage.com/courses/real.jpg",
+      url: "https://diveday-media.s3.us-east-1.amazonaws.com/courses/real.jpg",
     });
     expect(attempt).not.toBeNull();
   });
@@ -52,7 +52,7 @@ describe("queueMediaDeletion / resolveMediaDeletion", () => {
     const attempt = await queueMediaDeletion(db, {
       shopId: shop.id,
       kind: "recap_photo",
-      url: "https://abc123.public.blob.vercel-storage.com/recap/a.jpg",
+      url: "https://diveday-media.s3.us-east-1.amazonaws.com/recap/a.jpg",
     });
     if (!attempt) throw new Error("setup: expected a queued attempt");
     expect(attempt.status).toBe("pending");
@@ -72,7 +72,7 @@ describe("queueMediaDeletion / resolveMediaDeletion", () => {
     const attempt = await queueMediaDeletion(db, {
       shopId: shop.id,
       kind: "course_photo",
-      url: "https://abc123.public.blob.vercel-storage.com/courses/a.jpg",
+      url: "https://diveday-media.s3.us-east-1.amazonaws.com/courses/a.jpg",
     });
     if (!attempt) throw new Error("setup: expected a queued attempt");
     await resolveMediaDeletion(db, attempt.id, { status: "failed", error: "network error" });
@@ -95,7 +95,7 @@ describe("queueAndAttemptMediaDeletion", () => {
       {
         shopId: shop.id,
         kind: "recap_photo",
-        url: "https://abc123.public.blob.vercel-storage.com/recap/b.jpg",
+        url: "https://diveday-media.s3.us-east-1.amazonaws.com/recap/b.jpg",
       },
       ok,
     );
@@ -110,7 +110,7 @@ describe("queueAndAttemptMediaDeletion", () => {
       {
         shopId: shop.id,
         kind: "recap_photo",
-        url: "https://abc123.public.blob.vercel-storage.com/recap/c.jpg",
+        url: "https://diveday-media.s3.us-east-1.amazonaws.com/recap/c.jpg",
       },
       failing,
     );
@@ -142,7 +142,7 @@ describe("listPendingMediaDeletions", () => {
     await queueMediaDeletion(db, {
       shopId: shop.id,
       kind: "course_photo",
-      url: "https://abc123.public.blob.vercel-storage.com/courses/stuck.jpg",
+      url: "https://diveday-media.s3.us-east-1.amazonaws.com/courses/stuck.jpg",
     });
     // Not yet old enough to count as stuck — the process could still be mid-attempt.
     expect(await listPendingMediaDeletions(db, shop.id, new Date(0))).toEqual([]);
@@ -161,7 +161,7 @@ describe("listPendingMediaDeletions", () => {
       {
         shopId: shop.id,
         kind: "recap_photo",
-        url: "https://abc123.public.blob.vercel-storage.com/recap/d.jpg",
+        url: "https://diveday-media.s3.us-east-1.amazonaws.com/recap/d.jpg",
       },
       ok,
     );
@@ -178,7 +178,7 @@ describe("listPendingMediaDeletions", () => {
     await queueMediaDeletion(db, {
       shopId: otherShop.id,
       kind: "recap_photo",
-      url: "https://abc123.public.blob.vercel-storage.com/recap/e.jpg",
+      url: "https://diveday-media.s3.us-east-1.amazonaws.com/recap/e.jpg",
     });
     expect(await listPendingMediaDeletions(db, shop.id, await dbNowPlus(db, 1000))).toEqual([]);
   });
@@ -192,7 +192,7 @@ describe("retryMediaDeletion", () => {
       {
         shopId: shop.id,
         kind: "recap_photo",
-        url: "https://abc123.public.blob.vercel-storage.com/recap/f.jpg",
+        url: "https://diveday-media.s3.us-east-1.amazonaws.com/recap/f.jpg",
       },
       failing,
     );
@@ -213,7 +213,7 @@ describe("retryMediaDeletion", () => {
     const attempt = await queueMediaDeletion(db, {
       shopId: otherShop.id,
       kind: "recap_photo",
-      url: "https://abc123.public.blob.vercel-storage.com/recap/g.jpg",
+      url: "https://diveday-media.s3.us-east-1.amazonaws.com/recap/g.jpg",
     });
     if (!attempt) throw new Error("setup: expected a queued attempt");
     expect(await retryMediaDeletion(db, shop.id, attempt.id, ok)).toBe(false);
@@ -224,7 +224,7 @@ describe("retryMediaDeletion", () => {
     const attempt = await queueMediaDeletion(db, {
       shopId: shop.id,
       kind: "recap_photo",
-      url: "https://abc123.public.blob.vercel-storage.com/recap/h.jpg",
+      url: "https://diveday-media.s3.us-east-1.amazonaws.com/recap/h.jpg",
     });
     if (!attempt) throw new Error("setup: expected a queued attempt");
     await resolveMediaDeletion(db, attempt.id, { status: "succeeded" });
@@ -247,7 +247,7 @@ describe("retryPendingMediaDeletions (bounded orphan cleanup)", () => {
       {
         shopId: shop.id,
         kind: "recap_photo",
-        url: "https://abc123.public.blob.vercel-storage.com/recap/i.jpg",
+        url: "https://diveday-media.s3.us-east-1.amazonaws.com/recap/i.jpg",
       },
       failing,
     );
@@ -256,7 +256,7 @@ describe("retryPendingMediaDeletions (bounded orphan cleanup)", () => {
       {
         shopId: shop.id,
         kind: "course_photo",
-        url: "https://abc123.public.blob.vercel-storage.com/courses/j.jpg",
+        url: "https://diveday-media.s3.us-east-1.amazonaws.com/courses/j.jpg",
       },
       failing,
     );
@@ -273,7 +273,7 @@ describe("retryPendingMediaDeletions (bounded orphan cleanup)", () => {
         {
           shopId: shop.id,
           kind: "recap_photo",
-          url: `https://abc123.public.blob.vercel-storage.com/recap/bound-${i}.jpg`,
+          url: `https://diveday-media.s3.us-east-1.amazonaws.com/recap/bound-${i}.jpg`,
         },
         failing,
       );
@@ -291,7 +291,7 @@ describe("retryPendingMediaDeletions (bounded orphan cleanup)", () => {
       {
         shopId: shop.id,
         kind: "recap_photo",
-        url: "https://abc123.public.blob.vercel-storage.com/recap/k.jpg",
+        url: "https://diveday-media.s3.us-east-1.amazonaws.com/recap/k.jpg",
       },
       failing,
     );

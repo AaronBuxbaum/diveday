@@ -159,7 +159,7 @@ export async function POST(request: Request) {
   const attempt = await queueMediaDeletion(db, {
     shopId: shop.id,
     kind: "recap_photo",
-    url: "https://e2e.public.blob.vercel-storage.com/recap/stuck-e2e.jpg",
+    url: "https://diveday-media.s3.us-east-1.amazonaws.com/recap/stuck-e2e.jpg",
   });
   if (attempt) {
     // `failed` rather than a stale `pending`: both render, but a failure is the
