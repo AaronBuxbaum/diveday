@@ -38,6 +38,20 @@ their payload is counts only:
 If the comment says no report was published, `reg-suit run` never got far enough to publish one —
 read the `visual-report` job log rather than assuming the pixels held still.
 
+**On any branch, the baseline is your own parent commit — not current `main`.** A branch cut a few
+days ago is compared against the world as it was then, so every PR that merged in between shows up
+in *your* report as changed pixels. That is not a subtle effect: a branch cut four PRs back came
+back with 102 changed surfaces of which **66 belonged to other people**, and the four "new, no
+baseline" items were another PR's brand-new captures. Triaging that honestly means opening diffs
+for surfaces you never touched and attributing each one, which is slow and easy to get wrong in the
+generous direction.
+
+So **rebase onto current `main` before triaging**, and let CI re-run. The report then contains your
+pixels and nothing else, which is the only version of it you can actually account for. If you
+cannot rebase yet — `main` is red, or the fix is still in review — say so in the PR and attribute
+the inherited surfaces explicitly by naming the PR each one came from; a reviewer cannot tell them
+apart from yours by looking.
+
 **On a stacked pull request, read that comment on every layer.** A layer's baseline is the head
 commit of the layer below, whose S3 snapshot exists only if its own four visual shards went green in
 a run that finished first — and a cascading rebase rewrites every commit above the merge point,

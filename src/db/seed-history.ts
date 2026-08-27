@@ -22,6 +22,31 @@ import { reviewedBy } from "./seed-review";
 import { getCurrentWaiverTemplate } from "./waivers";
 
 /**
+ * **What the demo shop's tax line is made of.**
+ *
+ * Monroe County, Florida — 6% state sales tax plus the county's 1.5%
+ * discretionary surtax — because that is where the demo shop is (see the
+ * address in `seed.ts`). The number matters less than its existence: the
+ * monthly report has carried a "Tax collected" tile since Stripe Tax landed,
+ * and over a shop whose entire seeded history was taxless it read $0.00 in
+ * every month, which is indistinguishable from a reporting bug.
+ *
+ * **This is history, not the shop's current setting.** `shops.tax_enabled`
+ * stays off on the demo: it governs what Stripe is asked to do on the *next*
+ * charge, and turning it on would make the staff invoice form demand a customer
+ * billing address on the one shop every other spec drives (see the note at the
+ * top of `e2e/tax.spec.ts` about why that flag is never touched on a shared
+ * fixture). What a report reads is the tax already collected on past payments,
+ * which is this.
+ */
+const DEMO_SALES_TAX_RATE = 0.075;
+
+/** What was collected on top of a net figure, to the cent. */
+export function salesTaxCents(netCents: number): number {
+  return Math.round(netCents * DEMO_SALES_TAX_RATE);
+}
+
+/**
  * The months behind today. Owner reporting ("how's your month") is hollow over a
  * shop that opened yesterday, so this back-fills a realistic trailing quarter:
  * past regulars plus a cohort of divers who only ever appear in history, booked
@@ -608,25 +633,72 @@ export async function seedHistory(
 
   const depositCents = (price: number) => Math.round((price * 0.3) / 100) * 100;
 
+  /**
+   * **The invoices this back-fill raises, decided before anything is written.**
+   *
+   * It used to be worked out inline inside the `orders` insert further down,
+   * which was fine while an invoice was a thing only that insert knew about.
+   * It is not any more: the booking payment has to name the invoice it mirrors
+   * (`providerRef`), and both rows have to agree on the tax, so the two need
+   * one answer rather than two guesses. Keyed by plan index — the same index
+   * `bookingRows` is aligned on.
+   */
+  const invoices = new Map<
+    number,
+    { stripeInvoiceId: string; netCents: number; taxCents: number; kind: "deposit" | "trip_fee" }
+  >();
+  let invoiceSeq = 0;
+  plans.forEach((plan, i) => {
+    if (!bookingRows[i] || !plan.order) return;
+    const isDeposit = plan.payment === "deposit_paid";
+    const netCents = isDeposit ? depositCents(plan.price) : plan.price;
+    invoiceSeq++;
+    invoices.set(i, {
+      // Fabricated, the same convention the tips below use — the demo never
+      // connects an account, which is why the order page disables
+      // Refresh/Void/Refund on a demo shop (orders/[id]/page).
+      stripeInvoiceId: `in_demo_${shopId}_${invoiceSeq}`,
+      netCents,
+      taxCents: salesTaxCents(netCents),
+      kind: isDeposit ? "deposit" : "trip_fee",
+    });
+  });
+
   // Payments: what actually came in. Unpaid leaves no row (an absent row reads
   // as unpaid, exactly as in production); a refund records the reversal.
   const payments = plans
     .map((plan, i) => {
       const booking = bookingRows[i];
       if (!booking || plan.payment === "unpaid") return null;
-      const amount =
+      const net =
         plan.payment === "refunded"
           ? 0
           : plan.payment === "deposit_paid"
             ? depositCents(plan.price)
             : plan.price;
+      // A refund leaves nothing held, so there is no tax on it either.
+      const invoice = net > 0 ? invoices.get(i) : undefined;
       return {
         shopId,
         bookingId: booking.id,
         status: plan.payment,
-        amountCents: amount,
+        // The **collected** total, tax included — a payment row mirrors what
+        // the invoice actually took, which is the listed price plus whatever
+        // Stripe Tax added on top of it (`tax_behavior: "exclusive"`, see
+        // src/lib/payments/invoicing.ts).
+        amountCents: net + (invoice?.taxCents ?? 0),
         currency: "usd",
         provider: "stripe",
+        // **What makes the tax reportable at all.** `monthlyReport` reads an
+        // invoice's tax through `invoiceBookingAmounts`, which joins the order
+        // to its booking payment on `providerRef = orders.stripe_invoice_id`;
+        // and it deliberately drops the order from `invoiceRevenue` whenever
+        // the booking has *any* payment row. So a seeded payment with a null
+        // ref put every one of these invoices in neither bucket — which is why
+        // a demo shop with three hundred paid invoices reported no tax
+        // collected no matter what the orders carried. Production writes this
+        // ref; the seed now does too.
+        providerRef: invoice?.stripeInvoiceId ?? null,
         updatedAt: plan.createdAt,
         createdAt: plan.createdAt,
       };
@@ -707,26 +779,25 @@ export async function seedHistory(
   });
   if (rollCallRows.length > 0) await db.insert(rollCallEvents).values(rollCallRows);
 
-  // Paid invoices, so a diver's profile shows a real billing history. The Stripe
-  // ids are fabricated — the demo never connects an account — which is why the
-  // order page disables Refresh/Void/Refund on a demo shop (orders/[id]/page).
-  let invoiceSeq = 0;
+  // Paid invoices, so a diver's profile shows a real billing history — and, via
+  // the `providerRef` written on their payment rows above, so the monthly
+  // report has some tax to report.
   const orderRows: Array<{
     booking: { id: string; personId: string };
-    total: number;
+    invoice: { stripeInvoiceId: string; netCents: number; taxCents: number };
     kind: "deposit" | "trip_fee";
     title: string;
     date: Date;
   }> = [];
   plans.forEach((plan, i) => {
     const booking = bookingRows[i];
-    if (!booking || !plan.order) return;
-    const isDeposit = plan.payment === "deposit_paid";
+    const invoice = invoices.get(i);
+    if (!booking || !invoice) return;
     orderRows.push({
       booking: { id: booking.id, personId: plan.personId },
-      total: isDeposit ? depositCents(plan.price) : plan.price,
-      kind: isDeposit ? "deposit" : "trip_fee",
-      title: isDeposit ? "Trip deposit" : "Two-tank charter",
+      invoice,
+      kind: invoice.kind,
+      title: invoice.kind === "deposit" ? "Trip deposit" : "Two-tank charter",
       date: plan.createdAt,
     });
   });
@@ -734,27 +805,30 @@ export async function seedHistory(
     const insertedOrders = await db
       .insert(orders)
       .values(
-        orderRows.map((row) => {
-          invoiceSeq++;
-          return {
-            shopId,
-            bookingId: row.booking.id,
-            personId: row.booking.personId,
-            createdByPersonId,
-            status: "paid" as const,
-            currency: "usd",
-            totalCents: row.total,
-            amountPaidCents: row.total,
-            description: row.title,
-            stripeAccountId: "acct_demo",
-            stripeCustomerId: `cus_demo_${shopId}_${invoiceSeq}`,
-            stripeInvoiceId: `in_demo_${shopId}_${invoiceSeq}`,
-            finalizedAt: row.date,
-            paidAt: row.date,
-            createdAt: row.date,
-            updatedAt: row.date,
-          };
-        }),
+        orderRows.map((row, index) => ({
+          shopId,
+          bookingId: row.booking.id,
+          personId: row.booking.personId,
+          createdByPersonId,
+          status: "paid" as const,
+          currency: "usd",
+          // Tax sits **on top of** the listed price and inside the total, which
+          // is what `tax_behavior: "exclusive"` means at Stripe and what every
+          // figure in `monthlyReport` assumes: net revenue is the collected
+          // total minus this column, so carving the tax out of the price
+          // instead would quietly report the shop earning less.
+          totalCents: row.invoice.netCents + row.invoice.taxCents,
+          amountPaidCents: row.invoice.netCents + row.invoice.taxCents,
+          taxCents: row.invoice.taxCents,
+          description: row.title,
+          stripeAccountId: "acct_demo",
+          stripeCustomerId: `cus_demo_${shopId}_${index + 1}`,
+          stripeInvoiceId: row.invoice.stripeInvoiceId,
+          finalizedAt: row.date,
+          paidAt: row.date,
+          createdAt: row.date,
+          updatedAt: row.date,
+        })),
       )
       .returning();
     await db.insert(orderLineItems).values(
@@ -766,7 +840,11 @@ export async function seedHistory(
           kind: source?.kind ?? ("trip_fee" as const),
           description: source?.title ?? "Charter",
           quantity: 1,
-          unitAmountCents: order.totalCents,
+          // The line is what was **sold**, before tax. It used to read
+          // `order.totalCents`, which was the same number until the total grew
+          // a tax component — after which the charter itself would have been
+          // priced at the tax-inclusive figure on the invoice a diver reads.
+          unitAmountCents: source?.invoice.netCents ?? order.totalCents,
         };
       }),
     );

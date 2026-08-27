@@ -421,9 +421,10 @@ test.describe("staff", () => {
     const library = page.getByRole("table", { name: "Saved dive sites" });
     const existing = library.getByRole("link", { name: "Molasses Reef", exact: true });
     const imported = library.getByRole("link", { name: "Molasses Reef 2", exact: true });
-    // The template line is in the row twice — its own column, and folded under
-    // the name for a phone — so these read the first match rather than
-    // tripping strict mode on a pair that says the same thing.
+    // The Template column is gone: the line is now one mark beside the site's
+    // name, carrying the same sentence as its accessible name at every width
+    // rather than once per breakpoint. `.first()` stays because the assertion
+    // is "the library is offering an update", not "exactly one row is".
     const updateReady = library.getByText("Template update v2 ready.").first();
 
     await page.goto("/shop/blue-mantis/dive-sites");

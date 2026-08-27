@@ -156,7 +156,12 @@ test.describe("demo billing history", () => {
       .first()
       .locator("tbody tr")
       .filter({ visible: true })
-      .filter({ hasText: "Open — awaiting payment" })
+      // The index reads the canonical status word, not the order *detail*
+      // page's "Open — awaiting payment": that gloss is a sentence for a page
+      // with room for one, and inside a fifth-of-the-table cell it wrapped
+      // two lines deep inside a rounded pill. `exact` because "Open" is a
+      // substring of half the words on this page.
+      .filter({ has: page.getByText("Open", { exact: true }) })
       .first();
     await expect(row).toBeVisible();
     await expect(row.locator("td").nth(2)).toHaveClass(/align-middle/);

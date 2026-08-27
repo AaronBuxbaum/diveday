@@ -24,8 +24,7 @@
     "table": {
       "site": "Sitio",
       "location": "Ubicación",
-      "requirements": "Requisitos",
-      "template": "Plantilla"
+      "requirements": "Requisitos"
     },
     "pagination": {
       "total": "{count, plural, one {# sitio} other {# sitios}}"

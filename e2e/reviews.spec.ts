@@ -72,11 +72,39 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
   await page.goto("/shop/blue-mantis/reviews");
   const card = page.locator("li").filter({ hasText: comment }).filter({ visible: true });
   await expect(card.getByText("Waiting on you")).toBeVisible();
+
+  // **Neither of these taps throws the staffer back to the top of the list.**
+  //
+  // Every control here used to end in `revalidateAndRedirect(…, noticeUrl(…))`.
+  // That is a soft navigation rather than a document reload, so the giveaway is
+  // not a torn-down `window` — it is the two things `redirect()` does on the
+  // way: it scrolls the destination to the top, and it puts the outcome on the
+  // URL as `?notice=`. On a shop working down a weekend's queue that is one
+  // jump to the top per review published, and the row you were reading moves
+  // every time.
+  //
+  // So this scrolls to the bottom of the list first and asserts the viewport
+  // stayed there. Nothing waits on a duration: the outcome text is the signal,
+  // and the scroll offset is read only after it has rendered.
+  await page.keyboard.press("End");
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  const scrolledTo = await page.evaluate(() => window.scrollY);
+
+  await card.scrollIntoViewIfNeeded();
   await card.getByRole("button", { name: "Publish" }).click();
   await expect(page.getByText("Review published to your schedule page.")).toBeVisible();
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  // And the outcome is not smuggled onto the URL either, which is the other
+  // half of what the redirect used to do.
+  await expect(page).toHaveURL(/\/shop\/blue-mantis\/reviews$/);
+
   await expect(card.getByRole("button", { name: "Mark as standout" })).toBeVisible();
   await card.getByRole("button", { name: "Mark as standout" }).click();
   await expect(page.getByText("Review marked as standout.")).toBeVisible();
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  // The offset the list was actually at, so a page too short to scroll would
+  // fail here rather than passing two vacuous assertions above.
+  expect(scrolledTo).toBeGreaterThan(0);
 
   // Signed out again, the diver-facing schedule now carries it.
   await page.context().clearCookies();
@@ -140,7 +168,13 @@ test.describe("as owner, reviews list", () => {
 
     await toast.getByRole("button", { name: "Undo" }).click();
     await expect(page.getByText("Review published to your schedule page.")).toBeVisible();
-    await expect(published.getByText("Published")).toBeVisible();
+    // The badge, exactly — the same spelling the hide test above uses for
+    // "⚠️Hidden". A bare `getByText("Published")` was unambiguous only while the
+    // outcome lived in a banner at the top of the page: now that the row
+    // reports its own outcome, "Review published to your schedule page." is a
+    // substring match inside this very `<li>` and the loose locator resolves to
+    // two elements.
+    await expect(published.getByText("✅Published", { exact: true })).toBeVisible();
 
     await page.context().clearCookies();
     await page.goto("/s/blue-mantis");

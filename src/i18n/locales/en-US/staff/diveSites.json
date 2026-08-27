@@ -24,8 +24,7 @@
     "table": {
       "site": "Site",
       "location": "Location",
-      "requirements": "Requirements",
-      "template": "Template"
+      "requirements": "Requirements"
     },
     "pagination": {
       "total": "{count, plural, one {# site} other {# sites}}"

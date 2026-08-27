@@ -10,9 +10,9 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard, sectionCardClass } from "@/components/ui/card";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
-import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
+import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { getDb } from "@/db/client";
 import {
   currentGlobalDiveSiteVersions,
@@ -133,21 +133,25 @@ export default async function DiveSitesPage({
         // already the whole page, and it carries these same two doors. Two
         // identical primaries on one screen is what principle 8 forbids — so
         // the card owns them until there is a library to act on.
+        // The primary sits **last**, so it is the rightmost thing in the
+        // header and the last thing a left-to-right scan lands on. Every
+        // action row in the app puts the demoted door before the one it is
+        // demoted against; this pair was the other way round.
         actions={
           librarySize === 0 ? undefined : (
             <>
-              <Link
-                href={`/shop/${shopSlug}/dive-sites/new`}
-                className={buttonClass({ className: "rounded-xl" })}
-              >
-                <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
-              </Link>
               <Link
                 href={catalogHref}
                 scroll={false}
                 className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
               >
                 {t("diveSites.list.browseTemplates")}
+              </Link>
+              <Link
+                href={`/shop/${shopSlug}/dive-sites/new`}
+                className={buttonClass({ className: "rounded-xl" })}
+              >
+                <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
               </Link>
             </>
           )
@@ -169,8 +173,20 @@ export default async function DiveSitesPage({
           // the band has no heading of its own.
           className={sectionCardClass({ className: "mb-6" })}
         >
-          <FieldGrid columns={2}>
-            <Field label={t("diveSites.list.searchLabel")}>
+          {/* One line: box, then the button that acts on it, then the way
+            back. Submit used to sit in a `FieldActions` row, which is
+            `col-span-full` — so "Search" landed on a line of its own *below*
+            the box it belonged to, reading as the band's own action rather
+            than as the box's. `items-end` is what keeps the two buttons on
+            the input's baseline while the caption sits above it; the input
+            stays the only thing that grows. */}
+          <div className="flex flex-wrap items-end gap-2">
+            {/* The `<input>` is `Field`'s direct child on purpose: that is the
+              branch that clones the generated id onto the real control, so
+              "Find a site" stays the box's accessible name. Wrapping the row
+              in the `<label>` instead would hand a caption click to whichever
+              control came first. */}
+            <Field label={t("diveSites.list.searchLabel")} className="min-w-56 flex-1">
               <input
                 type="search"
                 name="q"
@@ -180,26 +196,29 @@ export default async function DiveSitesPage({
                 className={controlClass}
               />
             </Field>
-            <FieldActions>
-              {/* Secondary: the page's one primary is the header's create
-                action (principle 8). */}
-              <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>
-                {t("diveSites.list.searchApply")}
-              </button>
-              {query ? (
-                <Link
-                  href={`/shop/${shopSlug}/dive-sites`}
-                  scroll={false}
-                  className={buttonClass({
-                    variant: "secondary",
-                    size: "sm",
-                  })}
-                >
-                  {t("diveSites.list.searchClear")}
-                </Link>
-              ) : null}
-            </FieldActions>
-          </FieldGrid>
+            {/* Secondary: the page's one primary is the header's create
+              action (principle 8). */}
+            <button type="submit" className={buttonClass({ variant: "secondary" })}>
+              {t("diveSites.list.searchApply")}
+            </button>
+            {query ? (
+              // The glyph a search box clears with everywhere else, through the
+              // shared `size: "icon"` box rather than a hand-spelled square —
+              // 44px, and the same construction as the crew chip's unassign and
+              // the report navigator's arrows. The words survive as the
+              // accessible name, so nothing is lost to a screen reader or to
+              // the e2e spec that clicks it by name.
+              <Link
+                href={`/shop/${shopSlug}/dive-sites`}
+                scroll={false}
+                aria-label={t("diveSites.list.searchClear")}
+                title={t("diveSites.list.searchClear")}
+                className={buttonClass({ variant: "ghost", size: "icon" })}
+              >
+                <span aria-hidden="true">×</span>
+              </Link>
+            ) : null}
+          </div>
         </QueryForm>
       ) : null}
 
@@ -213,19 +232,20 @@ export default async function DiveSitesPage({
               // header drops its actions when the library is empty precisely so
               // this card owns them, and a shop reading "start with a site your
               // crew knows well" can start from that sentence.
+              // Same pair, same order as the header's: the primary last.
               <div className="mt-4 flex flex-wrap justify-center gap-3">
-                <Link
-                  href={`/shop/${shopSlug}/dive-sites/new`}
-                  className={buttonClass({ className: "rounded-xl" })}
-                >
-                  <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
-                </Link>
                 <Link
                   href={catalogHref}
                   scroll={false}
                   className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
                 >
                   {t("diveSites.list.browseTemplates")}
+                </Link>
+                <Link
+                  href={`/shop/${shopSlug}/dive-sites/new`}
+                  className={buttonClass({ className: "rounded-xl" })}
+                >
+                  <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
                 </Link>
               </div>
             )
@@ -249,13 +269,20 @@ export default async function DiveSitesPage({
           <caption className="sr-only">{t("diveSites.list.gridAriaLabel")}</caption>
           <THead>
             <Th>{t("diveSites.list.table.site")}</Th>
-            {/* Location and the template line fold under the site's name on a
-                phone, leaving the name beside the gates — the two a staffer is
-                answering "can this diver go here?" with — rather than four
-                columns to scroll sideways through. */}
+            {/* Location folds under the site's name on a phone, leaving the
+                name beside the gates — the two a staffer is answering "can
+                this diver go here?" with — rather than three columns to
+                scroll sideways through.
+
+                There is no Template column any more. It spent a quarter of a
+                fixed-layout table on provenance most rows do not have, and on
+                a version number nobody reads: what a staffer can act on is
+                *that an update is waiting*, which is one bit. That bit is now
+                the mark beside the site's name, in every size rather than
+                only above `sm`, and the sentence it stood for survives as the
+                mark's accessible name. */}
             <Th hideBelow="sm">{t("diveSites.list.table.location")}</Th>
             <Th>{t("diveSites.list.table.requirements")}</Th>
-            <Th hideBelow="sm">{t("diveSites.list.table.template")}</Th>
           </THead>
           <TBody>
             {sites.map((site) => {
@@ -268,23 +295,53 @@ export default async function DiveSitesPage({
                 : updateReady
                   ? t("diveSites.list.templateUpdateReady", { version: published })
                   : t("diveSites.list.diveDayTemplateVersion", { version: adopted });
-              // An update waiting is the one thing in this column a staffer can
-              // act on, so it is the one thing that carries ink; the version a
-              // site was adopted at is provenance, and stays quiet.
-              const templateTone = updateReady ? "font-medium text-primary" : "text-muted";
+              // An update waiting is the one thing here a staffer can act on,
+              // so it is the one thing that carries ink; the version a site was
+              // adopted at is provenance, and stays quiet.
+              const templateTone = updateReady ? "text-primary" : "text-muted";
               return (
-                <tr key={site.id}>
-                  <Td align="middle">
-                    <Link
-                      href={`/shop/${shopSlug}/dive-sites/${site.id}`}
-                      className="font-medium text-foreground hover:text-primary hover:underline"
-                    >
-                      {site.name}
-                    </Link>
+                <Tr key={site.id}>
+                  {/* `clip={false}` is what lets the name's `RowLink` overlay
+                      out of this cell and across the whole row — the row has
+                      exactly one destination and no other control in it, which
+                      is the condition `Td` attaches to that prop. `break-words`
+                      replaces the clipping it gives up: a shop's own site name
+                      is free text and nothing else stops a long one bleeding
+                      into the Location column. */}
+                  <Td align="middle" clip={false} className="break-words">
+                    <span className="flex items-center gap-1.5">
+                      <RowLink
+                        href={`/shop/${shopSlug}/dive-sites/${site.id}`}
+                        className="font-medium text-foreground group-hover:text-primary hover:underline"
+                      >
+                        {site.name}
+                      </RowLink>
+                      {template ? (
+                        /* The Template column, as one mark on the row's subject.
+                           A **sibling** of the link, never inside it: a link's
+                           accessible name is its text content, so nesting this
+                           renamed every imported site's link to "Molasses Reef
+                           DiveDay template v1" — which is both wrong and what
+                           an `exact: true` locator rightly refused.
+
+                           `aria-hidden` on the glyph with the sentence beside
+                           it in `sr-only`, so a screen reader hears the words
+                           rather than a decorative character, and `title` is
+                           the pointer's version of the same. `z-10` is what
+                           makes that tooltip reachable at all — it lifts the
+                           mark above the row-wide link overlay. The cost is a
+                           glyph-sized spot in the row that informs instead of
+                           navigating, which is the better half of the trade. */
+                        <span
+                          title={template}
+                          className={`relative z-10 shrink-0 text-xs ${templateTone}`}
+                        >
+                          <span aria-hidden="true">{updateReady ? "◆" : "◇"}</span>
+                          <span className="sr-only">{template}</span>
+                        </span>
+                      ) : null}
+                    </span>
                     <div className="text-xs text-muted sm:hidden">{location}</div>
-                    {template ? (
-                      <div className={`mt-1 text-xs sm:hidden ${templateTone}`}>{template}</div>
-                    ) : null}
                   </Td>
                   <Td muted hideBelow="sm" align="middle">
                     {location}
@@ -312,10 +369,7 @@ export default async function DiveSitesPage({
                       ) : null}
                     </div>
                   </Td>
-                  <Td hideBelow="sm" align="middle" className={`text-xs ${templateTone}`}>
-                    {template}
-                  </Td>
-                </tr>
+                </Tr>
               );
             })}
           </TBody>

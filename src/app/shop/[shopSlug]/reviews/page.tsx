@@ -1,22 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
-import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { StarRating } from "@/components/StarRating";
-import { SubmitButton } from "@/components/SubmitButton";
-import { UndoToast } from "@/components/UndoToast";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FilterChips } from "@/components/ui/FilterChips";
-import { FormStatus } from "@/components/ui/form";
 import {
   countReviewsAwaitingModeration,
   getShopReviewAggregate,
   listShopReviewsForStaff,
-  MAX_BULK_PUBLISH,
   REVIEW_MODERATION_REASONS,
   type ReviewModerationReason,
 } from "@/db/reviews";
@@ -28,15 +23,16 @@ import { publicSchedulePath } from "@/lib/public-routes";
 import { ratingIsWithheld, reviewsToRepublishForRating } from "@/lib/reviews";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { shopPath } from "@/lib/staff-notices";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import {
+  type BulkPublishCopy,
   PublishSelectedButton,
+  PublishSelectedStatus,
   ReviewSelectCheckbox,
   ReviewSelectionProvider,
 } from "./_components/ReviewBulkPublish";
-import { ReviewHideForm } from "./_components/ReviewHideForm";
-import { setReviewPublishedAction, setReviewStandoutAction } from "./actions";
+import { ReviewRowActions, type ReviewRowCopy } from "./_components/ReviewRowActions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -66,29 +62,19 @@ const REVIEW_REASON_KEYS: Record<ReviewModerationReason, StaffMessageKey> = {
   other: "reviews.hideReason.other",
 };
 
-const NOTICES: Record<string, { tone: "success" | "danger"; key: StaffMessageKey }> = {
-  published: { tone: "success", key: "reviews.notice.published" },
-  hidden: { tone: "success", key: "reviews.notice.hidden" },
-  "none-selected": { tone: "danger", key: "reviews.notice.noneSelected" },
-  "reason-required": { tone: "danger", key: "reviews.notice.reasonRequired" },
-  "note-required": { tone: "danger", key: "reviews.notice.noteRequired" },
-  "note-too-long": { tone: "danger", key: "reviews.notice.noteTooLong" },
-  standout: { tone: "success", key: "reviews.notice.standout" },
-  "standout-removed": { tone: "success", key: "reviews.notice.standoutRemoved" },
-  error: { tone: "danger", key: "reviews.notice.error" },
-};
-
-/**
- * How many a "Publish selected" actually released, read back off the redirect.
- * Parsed and clamped rather than echoed: `?published=` is as attacker-craftable
- * as `?notice=`, and a hostile link must not be able to paint its own number
- * into a success banner.
+/*
+ * **This page has no `?notice=` map any more, and nothing here redirects.**
+ *
+ * Every outcome on this list used to arrive as a query parameter on a fresh
+ * navigation — publish, hide, standout, bulk publish and their four refusals —
+ * which meant a full-page bounce per tap and a staffer working down a queue
+ * being thrown back to the top of it each time. The controls now settle in
+ * place and report beside themselves (`ReviewRowActions`,
+ * `PublishSelectedStatus`), so the map, the `?published=` count it had to
+ * defend against tampering, and the page banner they fed are all gone with the
+ * redirects that wrote them. The one banner left is `ratingWithheld`, which is
+ * a fact about the page rather than the outcome of a tap.
  */
-function publishedCount(value: string | undefined): number {
-  const parsed = Number.parseInt(value ?? "", 10);
-  if (!Number.isFinite(parsed) || parsed < 1) return 1;
-  return Math.min(parsed, MAX_BULK_PUBLISH);
-}
 
 export default async function ReviewsPage({
   params,
@@ -96,15 +82,12 @@ export default async function ReviewsPage({
 }: {
   params: Promise<{ shopSlug: string }>;
   searchParams: Promise<{
-    notice?: string;
-    undo?: string;
     page?: string;
     filter?: string;
-    published?: string;
   }>;
 }) {
   const { shopSlug } = await params;
-  const { notice, undo, page, filter, published } = await searchParams;
+  const { page, filter } = await searchParams;
   const onlyWaiting = filter === "waiting";
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
@@ -133,22 +116,50 @@ export default async function ReviewsPage({
   // a shop with no reviews at all is also not representative and has nothing
   // to be told about (src/lib/reviews.ts).
   const ratingWithheld = ratingIsWithheld(aggregate);
-  const banner = noticeFromParam(notice, NOTICES);
   const t = staffTranslator(locale);
-  // Three of these are the bulk control's own outcome and belong on the list
-  // it changed (see the header row below); the other two come from a
-  // per-review toggle and keep the page banner.
-  const bulkStatus =
-    notice === "published-many"
-      ? {
-          tone: "success" as const,
-          text: t("reviews.notice.publishedMany", { count: publishedCount(published) }),
-        }
-      : (notice === "none-selected" || notice === "error") && banner
-        ? { tone: banner.tone, text: t(banner.key) }
-        : undefined;
-  const pageBanner = bulkStatus ? undefined : banner;
   const base = shopPath(shopSlug, "reviews");
+  /**
+   * The words every row's action bar reports with, translated once for the
+   * whole page rather than per row — a staff client component cannot
+   * translate, so it takes them as props (ADR 20260730-staff-copy-localization).
+   */
+  const rowCopy: ReviewRowCopy = {
+    publish: t("reviews.publish"),
+    saving: t("reviews.saving"),
+    hide: t("reviews.hide"),
+    hideConfirm: t("reviews.hideConfirm"),
+    hideReasonLabel: t("reviews.hideReasonLabel"),
+    hideReasonPlaceholder: t("reviews.hideReasonPlaceholder"),
+    hideNoteLabel: t("reviews.hideNoteLabel"),
+    markStandout: t("reviews.markStandout"),
+    removeStandout: t("reviews.removeStandout"),
+    hiddenToast: t("reviews.notice.hiddenToast"),
+    undo: t("shared.undoToast.undo"),
+    undoPending: t("shared.undoToast.pendingLabel"),
+    published: t("reviews.notice.published"),
+    standout: t("reviews.notice.standout"),
+    standoutRemoved: t("reviews.notice.standoutRemoved"),
+    reasonRequired: t("reviews.notice.reasonRequired"),
+    noteRequired: t("reviews.notice.noteRequired"),
+    noteTooLong: t("reviews.notice.noteTooLong"),
+    error: t("reviews.notice.error"),
+  };
+  /** The reason list, worded once for every row's picker. */
+  const hideReasons = REVIEW_MODERATION_REASONS.map((reason) => ({
+    value: reason,
+    label: t(REVIEW_REASON_KEYS[reason]),
+  }));
+  /**
+   * `t.raw`, not `t`: these carry a `{count}` whose value is only known on the
+   * client, after the action answers. Formatting them here would look for an
+   * argument that by definition is not there yet (src/i18n/fill.ts).
+   */
+  const bulkCopy: BulkPublishCopy = {
+    publishedManyOne: t.raw("reviews.notice.publishedManyOne"),
+    publishedManyOther: t.raw("reviews.notice.publishedManyOther"),
+    noneSelected: t("reviews.notice.noneSelected"),
+    error: t("reviews.notice.error"),
+  };
   /** This page's URL with the tab kept and only `page` swapped. */
   const pageHref = (target: number) => {
     const query = new URLSearchParams();
@@ -167,9 +178,6 @@ export default async function ReviewsPage({
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      {/* `published` travels with `notice=published-many` and is stripped with
-          it, so a reload never re-reads a count whose banner has already gone. */}
-      <FlashParams params={["notice", "undo", "published"]} />
       <ShopPageHeader
         eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.reviews)}
         title={t("reviews.title")}
@@ -185,18 +193,6 @@ export default async function ReviewsPage({
           </Link>
         }
       />
-
-      {notice === "hidden" && undo ? (
-        <UndoToast
-          message={t("reviews.notice.hiddenToast")}
-          action={setReviewPublishedAction}
-          fields={{ reviewId: undo, publish: "true" }}
-          pendingLabel={t("shared.undoToast.pendingLabel")}
-          undoLabel={t("shared.undoToast.undo")}
-        />
-      ) : pageBanner ? (
-        <StaffNoticeBanner tone={pageBanner.tone}>{t(pageBanner.key)}</StaffNoticeBanner>
-      ) : null}
 
       <section
         aria-label={t("reviews.overviewLabel")}
@@ -258,7 +254,7 @@ export default async function ReviewsPage({
         <div className="mb-6" />
       )}
 
-      <ReviewSelectionProvider>
+      <ReviewSelectionProvider showingWaitingOnly={onlyWaiting}>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           {/* A filter is a view of the list, not the page's action — these
               used to be two buttons with the active one wearing primary
@@ -304,10 +300,11 @@ export default async function ReviewsPage({
               the only place the confirmation could have rendered — a
               publish-everything pass would have answered with silence, which
               is the bug this whole change exists to remove, wearing a
-              different hat. */}
-          <FormStatus tone={bulkStatus?.tone} className="basis-full">
-            {bulkStatus?.text}
-          </FormStatus>
+              different hat.
+
+              The state behind it lives in `ReviewSelectionProvider` for that
+              same reason — see its comment. */}
+          <PublishSelectedStatus copy={bulkCopy} className="basis-full" />
         </div>
 
         {total === 0 ? (
@@ -437,67 +434,23 @@ export default async function ReviewsPage({
                       ) : null}
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-start gap-2 border-t border-border pt-3">
-                    {!review.isHidden ? (
-                      /* Hiding states a case, so it cannot be a bare button any
-                       more (ADR 20260813-review-moderation-has-a-floor). The
-                       picker waits behind a disclosure: the shop that opens
-                       this is already sure, and the reason list is the whole
-                       point — a shop that finds none of them true is telling
-                       itself something. This is available before publication
-                       as well: hiding a waiting review records the decision
-                       and keeps it out of the public set. */
-                      <details>
-                        <summary
-                          className={`${buttonClass({
-                            variant: "secondary",
-                          })} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
-                        >
-                          {t("reviews.hide")}
-                        </summary>
-                        <ReviewHideForm
-                          reviewId={review.id}
-                          action={setReviewPublishedAction}
-                          reasons={REVIEW_MODERATION_REASONS.map((reason) => ({
-                            value: reason,
-                            label: t(REVIEW_REASON_KEYS[reason]),
-                          }))}
-                          reasonLabel={t("reviews.hideReasonLabel")}
-                          reasonPlaceholder={t("reviews.hideReasonPlaceholder")}
-                          noteLabel={t("reviews.hideNoteLabel")}
-                          hideLabel={t("reviews.hideConfirm")}
-                          savingLabel={t("reviews.saving")}
-                        />
-                      </details>
-                    ) : null}
-                    {!review.isPublished ? (
-                      <form action={setReviewPublishedAction} className="shrink-0">
-                        <input type="hidden" name="reviewId" value={review.id} />
-                        <input type="hidden" name="publish" value="true" />
-                        <SubmitButton pendingLabel={t("reviews.saving")} className={buttonClass()}>
-                          {t("reviews.publish")}
-                        </SubmitButton>
-                      </form>
-                    ) : null}
-                    {review.isPublished && review.comment ? (
-                      <form action={setReviewStandoutAction} className="shrink-0">
-                        <input type="hidden" name="reviewId" value={review.id} />
-                        <input
-                          type="hidden"
-                          name="standout"
-                          value={review.isStandout ? "false" : "true"}
-                        />
-                        <SubmitButton
-                          pendingLabel={t("reviews.saving")}
-                          className={buttonClass({ variant: "secondary", size: "sm" })}
-                        >
-                          {review.isStandout
-                            ? t("reviews.removeStandout")
-                            : t("reviews.markStandout")}
-                        </SubmitButton>
-                      </form>
-                    ) : null}
-                  </div>
+                  {/* The row's whole action bar, as one client control: the
+                      three buttons share one action so one status region can
+                      outlive whichever of them the tap removes, and none of
+                      them navigates any more (see `reviewRowAction`). */}
+                  <ReviewRowActions
+                    reviewId={review.id}
+                    isPublished={review.isPublished}
+                    isHidden={review.isHidden}
+                    isStandout={review.isStandout}
+                    /* A bare rating has no words to feature, so there is
+                       nothing to mark — the same condition this bar has always
+                       carried. */
+                    canStandout={review.isPublished && Boolean(review.comment)}
+                    reasons={hideReasons}
+                    showingWaitingOnly={onlyWaiting}
+                    copy={rowCopy}
+                  />
                 </li>
               );
             })}

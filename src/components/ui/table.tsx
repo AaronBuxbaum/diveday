@@ -257,6 +257,10 @@ export function Tr({ className = "", children, ...rest }: React.ComponentPropsWi
  * **The focus ring is on the overlay, not the text**, so it traces the target a
  * pointer actually has; `outline-offset-[-2px]` pulls it just inside the cell's
  * edge.
+ *
+ * **To win the whole row**, the cell holding this says `clip={false}` — see
+ * `Td`, which carries the two conditions that come with it. The dive-site
+ * library is the first table to take it.
  */
 export function RowLink({
   href,
@@ -287,6 +291,7 @@ export function Td({
   hideBelow,
   align = "top",
   pad = true,
+  clip = true,
   className = "",
   children,
 }: {
@@ -303,14 +308,38 @@ export function Td({
    * like a grid keeps the default.
    */
   pad?: boolean;
+  /**
+   * **Let this cell's `RowLink` overlay reach the rest of the row.**
+   *
+   * `overflow-hidden` is the default because `table-layout: fixed` lets a long
+   * unbreakable token bleed sideways into the next column. It also clips
+   * `RowLink`'s `after:inset-0` — which is why that component's own doc says
+   * the overlay makes the whole *cell* the target and not the row, and calls
+   * winning the rest of the row "a change to every table in the app" that
+   * "belongs on its own". This is that change, opted into one cell at a time
+   * rather than taken from every table at once.
+   *
+   * The overlay positions against `Tr`'s `relative`, so dropping the clip on
+   * the cell that holds the link stretches it across the full row. Two
+   * conditions, both the caller's to meet:
+   *
+   * - **The row has exactly one destination.** The overlay covers every other
+   *   cell, so a second link or button anywhere in the row becomes
+   *   unreachable — and so does selecting the row's text.
+   * - **The cell's own content still wraps.** Nothing clips it any more, so
+   *   pair this with `break-words` on a cell holding free text a shop typed.
+   */
+  clip?: boolean;
   className?: string;
   children?: React.ReactNode;
 }) {
   return (
     <td
-      className={`overflow-hidden bg-clip-padding ${align === "middle" ? "align-middle" : "align-top"} ${pad ? "px-4 py-3" : ""} ${
+      className={`${clip ? "overflow-hidden" : ""} bg-clip-padding ${align === "middle" ? "align-middle" : "align-top"} ${pad ? "px-4 py-3" : ""} ${
         numeric ? "text-right whitespace-nowrap tabular-nums" : ""
-      } ${muted ? "text-muted" : ""} ${hideBelow ? HIDE_BELOW[hideBelow] : ""} ${className}`.trim()}
+      } ${muted ? "text-muted" : ""} ${hideBelow ? HIDE_BELOW[hideBelow] : ""} ${className}`
+        .replace(/\s+/g, " ")
+        .trim()}
     >
       {children}
     </td>

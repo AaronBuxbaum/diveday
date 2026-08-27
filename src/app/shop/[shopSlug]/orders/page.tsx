@@ -18,11 +18,10 @@ import { listShopOrders, ORDER_DEFAULT_RANGE_DAYS } from "@/db/orders";
 import { listStuckPaymentOperations } from "@/db/payment-operations";
 import { getShopPersonName } from "@/db/people";
 import { listOwedShopCancellationRefunds } from "@/db/refunds";
-import type { OrderStatus } from "@/db/schema";
 import { orderStatus } from "@/db/schema";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getShopTripTitle } from "@/db/trips";
-import { ORDER_STATUS_TONES } from "@/i18n/order-labels";
+import { ORDER_STATUS_KEYS, ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
@@ -45,21 +44,23 @@ export const instant = true;
 
 export const metadata: Metadata = { title: "Orders — DiveDay" };
 
-/**
- * Keyed by the enum, not by `string`: the filter below maps over
- * `orderStatus.enumValues`, so a missing entry renders the raw database value
- * as a dropdown option. That is exactly what happened when `partly_refunded`
- * arrived (issue #699) — a compile error is the only thing that catches it,
- * since the lookup has a fallback and the fallback looks like a word.
+/*
+ * **The index reads the canonical status words** (`ORDER_STATUS_KEYS`), not the
+ * order *detail* page's longer phrasing, which is what it used to import.
+ *
+ * On a page with room for a sentence, "Open — awaiting payment" is a helpful
+ * gloss. In a `table-layout: fixed` cell one fifth of the table wide it is
+ * three words wrapping inside a `rounded-full` pill — a badge two lines tall
+ * with its text off-centre against the curve, and the widest thing in a column
+ * whose other rows are a single word. The word is "Open"; what it means is what
+ * the detail page is for.
+ *
+ * `ORDER_STATUS_KEYS` keeps the property the local copy existed for: it is
+ * keyed by the enum, not by `string`, and the filter below maps over
+ * `orderStatus.enumValues` — so a status added to the column is a compile error
+ * rather than a dropdown option rendering the raw database value, which is
+ * exactly what happened when `partly_refunded` arrived (issue #699).
  */
-const STATUS_KEYS: Record<OrderStatus, StaffMessageKey> = {
-  open: "orders.detail.status.open",
-  paid: "orders.detail.status.paid",
-  void: "orders.detail.status.void",
-  uncollectible: "orders.detail.status.uncollectible",
-  partly_refunded: "orders.detail.status.partlyRefunded",
-  refunded: "orders.detail.status.refunded",
-};
 
 /**
  * Which Stripe call an unconfirmed operation was. Without an entry here the
@@ -452,7 +453,7 @@ export default async function OrdersIndexPage({
               <option value="">{t("orders.index.filters.statusAll")}</option>
               {orderStatus.enumValues.map((value) => (
                 <option key={value} value={value}>
-                  {STATUS_KEYS[value] ? t(STATUS_KEYS[value]) : value}
+                  {ORDER_STATUS_KEYS[value] ? t(ORDER_STATUS_KEYS[value]) : value}
                 </option>
               ))}
             </select>
@@ -586,8 +587,13 @@ export default async function OrdersIndexPage({
             <Th>{t("orders.index.table.diver")}</Th>
             <Th hideBelow="sm">{t("orders.index.table.trip")}</Th>
             {/* Below sm the status folds under the diver's name (only when
-                exceptional), so Date and Amount stay on screen at 390px. */}
-            <Th hideBelow="sm">{t("orders.index.table.status")}</Th>
+                exceptional), so Date and Amount stay on screen at 390px.
+                `width` above that: under fixed layout an unnamed column takes
+                an equal share, so a column holding one short pill was claiming
+                as much room as the diver's name. */}
+            <Th hideBelow="sm" width="8rem">
+              {t("orders.index.table.status")}
+            </Th>
             <Th>{t("orders.index.table.date")}</Th>
             <Th numeric>{t("orders.index.table.amount")}</Th>
           </THead>
@@ -601,9 +607,12 @@ export default async function OrdersIndexPage({
               // there instead of absent here.
               const statusBadge =
                 row.order.status === "paid" ? null : (
-                  <Badge tone={ORDER_STATUS_TONES[row.order.status] ?? "neutral"}>
-                    {STATUS_KEYS[row.order.status]
-                      ? t(STATUS_KEYS[row.order.status])
+                  <Badge
+                    tone={ORDER_STATUS_TONES[row.order.status] ?? "neutral"}
+                    className="whitespace-nowrap"
+                  >
+                    {ORDER_STATUS_KEYS[row.order.status]
+                      ? t(ORDER_STATUS_KEYS[row.order.status])
                       : row.order.status}
                   </Badge>
                 );
@@ -683,27 +692,26 @@ export default async function OrdersIndexPage({
                       >
                         {person.fullName}
                       </RowLink>
-                      <div className="mt-1 sm:hidden">
-                        <Badge tone="warning">{t("orders.index.importedHistory.unverified")}</Badge>
-                      </div>
                       <div className="mt-1 text-base text-muted sm:hidden">
                         {history.title ?? history.sourceReference ?? "—"}
                       </div>
                     </Td>
+                    {/* Three things, where there were five.
+                        `Unverified import` was on every row of this table and
+                        again under every diver's name on a phone — a badge
+                        stating the one fact the section's own heading badge
+                        already states about all of it, repeated once per row
+                        down a warning-toned column. And the receipt was two
+                        items, a reference and a link to the same document; they
+                        are now one link wearing the reference as its name, so a
+                        row carrying every field is a title, a source, and a
+                        receipt rather than a paragraph in a cell. */}
                     <Td muted hideBelow="sm" align="middle">
                       <div className="text-base sm:text-sm">
                         {history.title ?? history.sourceReference ?? "—"}
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-                        <Badge tone="warning">{t("orders.index.importedHistory.unverified")}</Badge>
                         {history.sourceLabel ? <span>{history.sourceLabel}</span> : null}
-                        {history.receiptReference ? (
-                          <span>
-                            {t("orders.index.importedHistory.receiptReference", {
-                              reference: history.receiptReference,
-                            })}
-                          </span>
-                        ) : null}
                         {receiptDocumentUrl ? (
                           <a
                             href={receiptDocumentUrl}
@@ -711,8 +719,18 @@ export default async function OrdersIndexPage({
                             rel="noreferrer"
                             className="font-medium text-primary underline underline-offset-2"
                           >
-                            {t("orders.index.importedHistory.openReceipt")}
+                            {history.receiptReference
+                              ? t("orders.index.importedHistory.receiptReference", {
+                                  reference: history.receiptReference,
+                                })
+                              : t("orders.index.importedHistory.openReceipt")}
                           </a>
+                        ) : history.receiptReference ? (
+                          <span>
+                            {t("orders.index.importedHistory.receiptReference", {
+                              reference: history.receiptReference,
+                            })}
+                          </span>
                         ) : null}
                       </div>
                     </Td>
