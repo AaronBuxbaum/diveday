@@ -198,7 +198,7 @@ export default async function IncidentExportPage({
         <p className="mt-1 max-w-prose text-sm text-muted">
           {t("incidentExport.rosterDescription")}
         </p>
-        <Table minWidth="40rem" shellClassName="mt-3">
+        <Table minWidth="56rem" shellClassName="mt-3">
           <THead>
             <Th>{t("incidentExport.colDiver")}</Th>
             <Th>{t("incidentExport.colEmergencyContact")}</Th>
@@ -215,10 +215,22 @@ export default async function IncidentExportPage({
                     {String(index + 1).padStart(2, "0")} {diver.fullName}
                   </span>
                 </Td>
+                {/* The name may wrap; the number may not. This is the one
+                    document a shop hands an insurer or an authority, and a
+                    phone number broken across lines at its hyphens is a number
+                    somebody has to reassemble while reading it aloud in a
+                    hurry (issue #1035). `Td numeric` would nowrap it, but it
+                    would also right-align the whole cell and make a name a
+                    figure — so the rule goes on the number itself. */}
                 <Td muted>
-                  {diver.emergencyContactName && diver.emergencyContactPhone
-                    ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
-                    : t("incidentExport.notOnFile")}
+                  {diver.emergencyContactName && diver.emergencyContactPhone ? (
+                    <>
+                      {diver.emergencyContactName} ·{" "}
+                      <span className="whitespace-nowrap">{diver.emergencyContactPhone}</span>
+                    </>
+                  ) : (
+                    t("incidentExport.notOnFile")
+                  )}
                 </Td>
                 <Td muted>
                   {diver.buddy ? (
@@ -266,7 +278,7 @@ export default async function IncidentExportPage({
         {doc.crew.length === 0 ? (
           <p className="mt-3 text-sm text-muted">{t("incidentExport.crewNone")}</p>
         ) : (
-          <Table minWidth="40rem" shellClassName="mt-3">
+          <Table minWidth="56rem" shellClassName="mt-3">
             <THead>
               <Th>{t("incidentExport.colCrewMember")}</Th>
               <Th>{t("incidentExport.colRoles")}</Th>
