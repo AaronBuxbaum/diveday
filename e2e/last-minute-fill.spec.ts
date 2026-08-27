@@ -307,19 +307,45 @@ test("a self-declared card cannot be certified without verified evidence", async
  * **Geometry, and pinned to one branch.** The gap is a handful of pixels either
  * way — exactly the size of difference a monochrome capture and a reviewer's
  * eye both wave through — so it is measured rather than photographed. The panel
- * legitimately flips *above* its trigger when it would not fit below, and this
- * first went red on CI for that reason alone (a shorter runner viewport, gap
- * -105): the viewport and the scroll position are fixed here so the "below"
- * branch is the one under test, rather than the assertion accepting both and
- * proving less.
+ * legitimately flips *above* its trigger when it would not fit below, so the
+ * "below" branch is fixed as the one under test rather than the assertion
+ * accepting both and proving less.
+ *
+ * **Pinning it took two goes, and the first one only looked like a pin.**
+ * Setting an explicit 1280x900 viewport and centring the trigger was not
+ * enough: `scrollIntoView({block: "center"})` clamps at the end of the
+ * document, and this trigger sits near the foot of the page, so "centred"
+ * quietly became "as low as the page will go". How much room was left beneath
+ * it was then whatever the content above happened to add up to — 370px here,
+ * and on CI not enough, which is the gap of -105 that went red on `main`
+ * (run 33102223519). The measurement that settled it: `window.scrollY` came
+ * back *equal to* the maximum scroll, so the centring had never happened at
+ * all and the test had been passing on luck.
+ *
+ * Two things hold it now. The body gets a viewport's worth of trailing padding,
+ * so the scroll is no longer clamped and the trigger genuinely lands
+ * mid-viewport on any runner; and the room below is **asserted** before the gap
+ * is, so losing it again fails as itself rather than as a large negative number
+ * that reads like a placement bug.
  */
 test("the certification hint opens beside the mark, not beside its tap target", async ({
   page,
 }) => {
-  // Tall enough, and the trigger parked mid-page, so the panel always has room
-  // below it — see the note above.
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/s/blue-mantis");
+  // **Make the centring real.** `scrollIntoView({block: "center"})` below is
+  // best-effort: it clamps at the end of the document, and this trigger sits
+  // near the foot of the page — so "centred" silently becomes "as low as the
+  // page will go", and how much room is left under it is whatever the content
+  // above happens to add up to. That is not a pin, it is a coincidence, and it
+  // broke on CI with a gap of -105 (the panel correctly flipping *above*,
+  // having no room below) while passing here with 370px to spare.
+  //
+  // A viewport's worth of trailing room means the scroll is no longer clamped,
+  // so the trigger really does land mid-viewport on any runner. It changes
+  // nothing the code under test reads: `place()` measures the trigger's own
+  // viewport rect, not the document's height.
+  await page.addStyleTag({ content: "body { padding-bottom: 100vh; }" });
   const dealList = page.locator("#last-minute-list");
   await dealList.locator("summary").click();
   // By its accessible name, never "the first disclosure in here" — a
@@ -351,10 +377,20 @@ test("the certification hint opens beside the mark, not beside its tap target", 
       dx: panel.left - mark.left,
       markWidth: mark.width,
       targetWidth: target.width,
+      // The precondition, measured rather than assumed — see the assertion.
+      spaceBelow: window.innerHeight - target.bottom,
+      panelHeight: panel.height,
     };
   }, panelId ?? "");
 
   expect(geometry.open).toBe("visible");
+  // **The branch under test is the one that actually ran.** `place()` flips the
+  // panel above its trigger whenever it would not fit below, which is correct
+  // behaviour and a different measurement — so if the room ever disappears
+  // again, this fails saying *that*, instead of the gap assertions below
+  // reporting a large negative number and sending the next reader after a
+  // placement bug that is not there.
+  expect(geometry.spaceBelow).toBeGreaterThan(geometry.panelHeight + 8);
   // The mark really is the small dot and the target really is the 44px box —
   // the whole reason measuring the wrong one moved the panel.
   expect(geometry.markWidth).toBeLessThan(24);
