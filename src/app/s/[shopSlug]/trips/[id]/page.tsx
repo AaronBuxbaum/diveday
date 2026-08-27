@@ -320,11 +320,6 @@ export default async function TripDetailPage({
   const requirementNote = combinedRequirement
     ? tripRequirementList(t, combinedRequirement, locale)
     : null;
-  // The bare level code, for the per-diver warning under each certification
-  // select. A property of the *trip*, exactly like `requirementNote` above, so
-  // it is safe to send to an anonymous page — it says nothing about any reader.
-  const requiredLevel = combinedRequirement?.minimumCertificationLevel ?? undefined;
-
   // The embed's short confirmation needs exactly one fact beyond the booking
   // itself: whether both emails went. Everything the old in-page confirmation
   // read — the payment panel, readiness, rental fit, the nitrox card, the
@@ -533,7 +528,6 @@ export default async function TripDetailPage({
             tripRef={tripRef}
             remaining={remaining}
             errorMessage={errorMessage}
-            minimumCertificationLevel={requiredLevel}
             requirementHeading={requirementNote ? t("trip.requirementHeading") : undefined}
             requirementNote={
               requirementNote ? t("trip.requirementNote", { list: requirementNote }) : undefined

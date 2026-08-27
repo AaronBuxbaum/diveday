@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BoardingBar } from "@/components/BoardingBar";
+import { BoardingSeats } from "@/components/BoardingBar";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 
 export type TripPulseFact = {
@@ -13,74 +13,6 @@ export type TripPulseFact = {
   /** Marks the facts that hold the boat up; the words already say so too. */
   tone?: "danger";
 };
-
-/**
- * Past this many seats the strip stops drawing one cell per seat and falls
- * back to the continuous bar: sixty 8px slivers stop reading as seats.
- * Capacity is capped at 60 (the Details form's own max), so the fallback is
- * the rare big boat, not the norm.
- */
-const SEAT_CELL_MAX_CAPACITY = 40;
-
-const SEAT_CELL_CLASS = {
-  /** Recorded aboard at the departure checkpoint — same hue as BoardingBar. */
-  boarded: "bg-primary",
-  ready: "bg-success/70",
-  blocked: "bg-danger",
-  open: "border border-border bg-surface-sunken",
-} as const;
-
-type SeatCellState = keyof typeof SEAT_CELL_CLASS;
-
-/**
- * The boat drawn as its own seats: one cell per seat, in the same state order
- * and hues as {@link BoardingBar} — boarded, then clear to board, then
- * blocked, with the open seats as empty cells at the end. A staffer thinks in
- * seats, not percentages, and at trip-page scale ("how is *this* boat doing")
- * ten discrete cells answer "two seats open" before the caption is read.
- * Today's departure board keeps the continuous bar deliberately: at h-2 in a
- * dense list, cells would be noise — the grammar (order, hues, words) is
- * shared, only the drawing scale differs.
- *
- * `aria-hidden`, like BoardingBar: the caption beside it carries every number
- * in words, so the strip never carries meaning by color alone (principle 6).
- */
-function SeatStrip({
-  boarded,
-  ready,
-  blocked,
-  capacity,
-}: {
-  boarded: number;
-  ready: number;
-  blocked: number;
-  capacity: number;
-}) {
-  const cells: SeatCellState[] = [];
-  for (const [state, count] of [
-    ["boarded", boarded],
-    ["ready", ready],
-    ["blocked", blocked],
-  ] as const) {
-    // Clamped at capacity so a mid-mutation over-count can never draw a
-    // phantom eleventh seat on a ten-seat boat.
-    for (let seat = 0; seat < count && cells.length < capacity; seat += 1) {
-      cells.push(state);
-    }
-  }
-  while (cells.length < capacity) cells.push("open");
-  return (
-    <div aria-hidden="true" className="flex gap-1">
-      {cells.map((state, index) => (
-        <span
-          // biome-ignore lint/suspicious/noArrayIndexKey: cells are positional by definition — seat N is index N.
-          key={index}
-          className={`h-3.5 max-w-8 flex-1 rounded ${SEAT_CELL_CLASS[state]}`}
-        />
-      ))}
-    </div>
-  );
-}
 
 /**
  * The state of the boat, answered before anything asks to be configured.
@@ -124,7 +56,6 @@ export function TripPulse({
   facts: TripPulseFact[];
 }) {
   const ready = Math.max(0, booked - blocked - boarded);
-  const drawSeatCells = capacity <= SEAT_CELL_MAX_CAPACITY;
   return (
     <section className="mt-8">
       <p
@@ -135,11 +66,7 @@ export function TripPulse({
         {caption}
       </p>
       <div className="mt-3">
-        {drawSeatCells ? (
-          <SeatStrip boarded={boarded} ready={ready} blocked={blocked} capacity={capacity} />
-        ) : (
-          <BoardingBar boarded={boarded} ready={ready} blocked={blocked} capacity={capacity} />
-        )}
+        <BoardingSeats boarded={boarded} ready={ready} blocked={blocked} capacity={capacity} />
       </div>
       {facts.length > 0 ? (
         <div className="mt-2 flex flex-col">

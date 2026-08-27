@@ -169,6 +169,8 @@
     "holdOnSummary": "Conditions hold is on — new bookings are paused",
     "publishedAt": "Published {date}",
     "visibilityFact": "{value} visibility",
+    "automatedWater": "Water {value}",
+    "automatedSeas": "Seas {height} {direction}",
     "automatedWind": "{speed} kt {direction}{hasGusts, select, yes { (gusts {gusts} kt)} other {}}",
     "automatedCurrent": "Current {velocity} kt {direction}",
     "automatedSun": "Sunrise {sunrise} · Sunset {sunset}",

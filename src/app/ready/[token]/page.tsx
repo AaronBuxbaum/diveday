@@ -1206,6 +1206,10 @@ export default async function DiverReadinessPage({
   // 20260820-one-page-after-booking); the receipt is read on every visit,
   // because "what did I pay?" is a question the night before too, while the
   // emails line is only ever true right after booking.
+  // What one seat on this departure costs. Null on an unpriced trip, which
+  // then quotes nothing rather than guessing — see `resolvePaymentReceipt`,
+  // which takes the same figure to work out a balance after a deposit.
+  const fullPriceCents = fullTrip ? perDiverBookingPriceCents(fullTrip, fullTrip.course) : null;
   const [paymentReceipt, emailsOnTheWay] = await Promise.all([
     resolvePaymentReceipt(
       db,
@@ -1216,7 +1220,7 @@ export default async function DiverReadinessPage({
       // (`payFromReady`'s). Both are the moment the webhook may still be in
       // flight; every other arrival is not.
       justBooked || pay === "paid",
-      fullTrip ? perDiverBookingPriceCents(fullTrip, fullTrip.course) : null,
+      fullPriceCents,
       toShopCurrency(shop.currency),
     ),
     justBooked
@@ -1261,6 +1265,25 @@ export default async function DiverReadinessPage({
     items.find((item) => actionButtonKind(item, data.canPay) !== null) ?? null;
   const ready = detail.readiness.status === "ready";
   /**
+   * **A balance nobody named.** "There's a balance to settle" is the one row on
+   * this checklist whose whole subject is a number, and it carried none — the
+   * amount lived on the receipt panel above, which exists only once something
+   * has *already* settled. So the diver being asked to pay was the one reader
+   * who could not see the figure.
+   *
+   * The trip's own list price, in the shop's currency. This row is raised only
+   * on an unpaid or refunded booking — `PAYMENT_CLEARED` clears a part-paid
+   * deposit, so a fare is either owed whole or not owed here at all — and an
+   * unpriced departure quotes nothing rather than a guess. A *settled* payment
+   * keeps its generic line: the receipt above states what was actually
+   * charged, which is evidence and outranks a list price that may have moved
+   * since (ADR 20260731-shop-currency reasons the same way about currency).
+   */
+  const amountDueText =
+    fullPriceCents !== null && fullPriceCents > 0
+      ? formatMoneyCents(fullPriceCents, toShopCurrency(shop.currency), locale)
+      : null;
+  /**
    * The rung this departure actually demands — the stricter of what the shop
    * set on the trip and what the sites it visits impose
    * (`combineCertRequirements`, the same fold the readiness engine gates on).
@@ -1274,6 +1297,21 @@ export default async function DiverReadinessPage({
   const requiredLevel = detail.requirement
     ? combineCertRequirements(detail.requirement, detail.siteRequirement).minimumCertificationLevel
     : null;
+  /** One checklist row's sentence, with the two rows that say more than the generic one. */
+  const rowDetail = (item: DiverChecklistItem): string => {
+    // The certification row says which rung, on every state including "done" —
+    // a diver reading a settled row still wants to know what it settled
+    // against (issue 627).
+    if (item.category === "certification" && requiredLevel) {
+      return `${checklistDetailText(t, item)} ${t("ready.certMinimumLevel", {
+        level: t(DIVER_CERTIFICATION_LEVEL_KEYS[requiredLevel]),
+      })}`;
+    }
+    if (item.category === "payment" && item.state === "action" && amountDueText) {
+      return t("ready.checklistDetail.paymentDueAmount", { amount: amountDueText });
+    }
+    return checklistDetailText(t, item);
+  };
   // A rental fit is on file — the diver has answered the gear question at least
   // once, whatever they answered. "Bringing my own" is a complete answer, so
   // this asks whether the row was filled in, never whether anything was rented.
@@ -1522,16 +1560,7 @@ export default async function DiverReadinessPage({
                 key={item.category}
                 label={checklistCategoryText(t, item.category)}
                 state={item.state}
-                detail={
-                  // The certification row says which rung, on every state
-                  // including "done" — a diver reading a settled row still
-                  // wants to know what it settled against (issue 627).
-                  item.category === "certification" && requiredLevel
-                    ? `${checklistDetailText(t, item)} ${t("ready.certMinimumLevel", {
-                        level: t(DIVER_CERTIFICATION_LEVEL_KEYS[requiredLevel]),
-                      })}`
-                    : checklistDetailText(t, item)
-                }
+                detail={rowDetail(item)}
                 action={itemAction(
                   item,
                   token,
@@ -1671,9 +1700,15 @@ export default async function DiverReadinessPage({
               }
               t={t}
             />
-            {/* **Where are you staying — lodging / hotel pickup.**
-                Optional free text for shops that run van transfers from hotels.
-                A diver answers once; staff can assign a pickup time. */}
+            {/* **The hotel pickup row.** Optional free text for shops that run
+                van transfers from hotels; a diver answers once and staff assign
+                a pickup time from the prep list.
+
+                The row asks about the *service*, not the address. "Where are
+                you staying?" on a checklist of things a diver owes their shop
+                reads as a records question — the one answer nobody volunteers
+                is their hotel room to a form that has not said why it wants
+                it. The field under it keeps the address label. */}
             <ChecklistRow
               label={t("ready.hotelPickupLabel")}
               state={data.hotelPickupLocation ? "done" : "optional"}
@@ -1696,7 +1731,7 @@ export default async function DiverReadinessPage({
                     type="text"
                     name="hotelPickupLocation"
                     maxLength={300}
-                    aria-label={t("ready.hotelPickupLabel")}
+                    aria-label={t("ready.hotelPickupFieldLabel")}
                     placeholder={t("ready.hotelPickupPlaceholder")}
                     defaultValue={data.hotelPickupLocation ?? ""}
                     className={controlClass}

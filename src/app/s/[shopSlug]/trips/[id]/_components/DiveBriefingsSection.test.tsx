@@ -68,26 +68,41 @@ function briefingWithSpecies(diveId: string): DiveBriefing {
 
 /**
  * **The only photography on the page a diver buys from** sat inside a
- * default-closed disclosure, whose summary read "What to look for down there ·
- * 3 landmarks · 8 species" (issue #760). It leads for a diver who is still
- * deciding and stays folded for one who has already paid — the split the page
- * comment about the seat coming first was actually arguing for.
+ * default-closed disclosure whose summary read "What to look for down there ·
+ * 3 landmarks · 8 species" — nothing there named it (issue #760). For a diver
+ * still deciding it now gets a disclosure of its own, named and counted;
+ * for one who has already paid it stays folded in with the landmarks.
+ *
+ * **Both are closed** (product owner, 2026-08-27). Rendering the grid open
+ * pushed the dive plan and the depth below the fold on every card.
  */
 describe("the field guide", () => {
-  it("leads, outside the disclosure, for a diver who has not booked", () => {
+  it("gets its own named, counted door for a diver who has not booked", () => {
     renderSection([briefingWithSpecies("d1")], true);
 
-    const heading = screen.getByRole("heading", { name: "A few faces to learn" });
-    expect(heading.closest("details")).toBeNull();
-    // And the disclosure does not advertise species it no longer holds.
-    expect(screen.queryByText(/1 species/)).not.toBeInTheDocument();
+    const summary = screen.getByText("A few faces to learn");
+    const guide = summary.closest("details");
+    expect(guide).not.toBeNull();
+    // Closed, and saying what is behind it before anyone taps.
+    expect(guide?.open).toBe(false);
+    expect(summary.closest("summary")?.textContent).toContain("1 likely sighting");
+    // Its own door, named for what is in it — never the landmarks disclosure,
+    // which this fixture (species, no landmarks, no moment) does not even
+    // render, and which stopped advertising species when the guide left it.
+    expect(guide?.querySelector("summary")?.textContent).not.toContain(
+      "What to look for down there",
+    );
   });
 
-  it("stays folded for a diver who has already paid", () => {
+  it("stays folded in with the landmarks for a diver who has already paid", () => {
     renderSection([briefingWithSpecies("d1")], false);
 
     const heading = screen.getByRole("heading", { name: "A few faces to learn" });
-    expect(heading.closest("details")).not.toBeNull();
+    const disclosure = heading.closest("details");
+    expect(disclosure).not.toBeNull();
+    expect(disclosure?.querySelector("summary")?.textContent).toContain(
+      "What to look for down there",
+    );
   });
 });
 

@@ -7,12 +7,18 @@ import type { CertificationLevel } from "./readiness";
  * **What an anonymous joiner is allowed to say about their own diving**, and
  * the only shape of it the server will accept.
  *
- * Three public forms ask — the shop-wide last-minute-deal list, a full trip's
- * wait list, and the trip booking form — and between them they collect an
- * optional certification level, an optional agency and card number, and an
- * optional nitrox tick (`DiveDeclarationFields`). They post to different actions
- * in different route segments and all parse through here, so there is one answer
- * to "what can a stranger write".
+ * Two public forms ask — the shop-wide last-minute-deal list and a full trip's
+ * wait list — and between them they collect an optional certification level, an
+ * optional agency and card number, and an optional nitrox tick
+ * (`DiveDeclarationFields`). They post to different actions in different route
+ * segments and both parse through here, so there is one answer to "what can a
+ * stranger write".
+ *
+ * The trip booking form asked too, per diver, between 2026-08-20 and
+ * 2026-08-27. It no longer asks, and its per-index reader is gone with the
+ * fields rather than left standing: an action that accepts what no form
+ * renders is a route a hand-crafted POST has and an honest diver does not.
+ * `/ready/<token>` asks the diver whose booking it is instead.
  *
  * Two properties this file exists to guarantee:
  *
@@ -143,30 +149,6 @@ export function diveDeclarationInput(formData: FormData) {
     certificationAgency: formData.get("certificationAgency") || undefined,
     certificationNumber: formData.get("certificationNumber") || undefined,
     nitroxCertified: formData.get("nitroxCertified") || undefined,
-  };
-}
-
-/**
- * The same answer, read for one diver in a party.
- *
- * The booking form asks the certification question inside every diver's own
- * fieldset (`certificationLevel-0`…`certificationLevel-5`), because a party of
- * four is four different cards and asking the booker once left three seats
- * unscreened. The wait lists still ask one person and use the bare-name reader
- * above.
- *
- * **No nitrox field, at any index.** The nitrox tick is rendered on no form in
- * the product, and the booking action has refused to honour a hand-crafted one
- * since the tamper asymmetry was found (ADR
- * 20260820-attested-at-booking-verified-at-boarding). Not reading it here is
- * that refusal made structural rather than remembered.
- */
-export function diveDeclarationInputAt(formData: FormData, index: number) {
-  return {
-    certificationLevel: formData.get(`certificationLevel-${index}`) || undefined,
-    certificationAgency: formData.get(`certificationAgency-${index}`) || undefined,
-    certificationNumber: formData.get(`certificationNumber-${index}`) || undefined,
-    nitroxCertified: undefined,
   };
 }
 

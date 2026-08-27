@@ -1,8 +1,70 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, signOut } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, findTripOnBoard, signOut } from "./helpers";
 
 test.describe("staff-prepared trip", () => {
   signedInAsOwner();
+
+  /**
+   * **The two rows on this checklist whose subject the words never named.**
+   *
+   * "There's a balance to settle" is the one row whose whole subject is a
+   * number, and it carried none — the amount lived on the receipt panel above,
+   * which exists only once something has *already* settled, so the diver being
+   * asked to pay was the one reader who could not see the figure. And "Where
+   * are you staying?", on a checklist of things a diver owes their shop, reads
+   * as a records question: nobody volunteers their hotel room to a form that
+   * has not said why it wants it.
+   */
+  test("the checklist names the fare it is asking for, and says what the hotel is for", async ({
+    page,
+  }) => {
+    // A priced trip that gates on payment, then a public booking against it —
+    // two multi-navigation journeys plus a sign-out.
+    test.setTimeout(60_000);
+    const title = `Fare Named Run ${e2eNow().getTime()}`;
+
+    await createTrip(page, {
+      title,
+      date: daysFromNow(4),
+      departsAt: "08:00",
+      returnsAt: "11:00",
+      capacity: 6,
+      price: 145,
+    });
+    // The seeded shop's default gate does not ask for payment, so this trip
+    // has to say so itself — the row under test only exists on a departure
+    // that gates on it.
+    await (await findTripOnBoard(page, "blue-mantis", title)).click();
+    await page.getByRole("heading", { name: "Readiness requirements" }).waitFor();
+    const requirements = page
+      .locator("section")
+      .filter({ has: page.getByRole("heading", { name: "Readiness requirements" }) });
+    await requirements.getByText("Edit requirements").click();
+    await requirements.getByLabel("Require payment to board").check();
+    await requirements.getByRole("button", { name: "Save requirements" }).click();
+    await signOut(page);
+
+    await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
+    await page
+      .getByRole("list", { name: "Upcoming trips" })
+      .locator("li")
+      .filter({ hasText: title })
+      .getByRole("link")
+      .click();
+    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+    await page.getByLabel("Name", { exact: true }).fill("Wren Halloway");
+    await page.getByLabel("Email", { exact: true }).fill(`fare-${e2eNow().getTime()}@example.com`);
+    await page.getByRole("button", { name: /^Book/ }).click();
+    await expect(page).toHaveURL(/\/ready\//);
+
+    // The fare, in the shop's own currency, on the row that is asking for it.
+    await expect(page.getByText("$145.00 to settle.")).toBeVisible();
+
+    // And the lodging row asks about the *service*; the field under it keeps
+    // the address label.
+    await expect(page.getByRole("heading", { name: "Want a morning pickup?" })).toBeVisible();
+    await expect(page.getByLabel("Where you’re staying")).toBeVisible();
+  });
 
   test("a booked diver's readiness page lets them act, answers its questions, and releases the seat", async ({
     page,

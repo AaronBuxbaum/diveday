@@ -220,8 +220,6 @@
     "departureBoard": {
       "crewingBadge": "Formas parte de la tripulación",
       "courseSession": "Sesión de curso · {title}",
-      "bookedOfCapacityOne": "{booked} de {capacity} reservado",
-      "bookedOfCapacityOther": "{booked} de {capacity} reservados",
       "boarding": "Embarcar buceadores",
       "openGuests": "Ver invitados",
       "assignCrewMemberAria": "Asignar tripulante a {title}",

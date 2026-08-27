@@ -13,13 +13,20 @@ import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
  */
 export function StaffNoticeBanner({
   tone,
+  className = "",
   children,
 }: {
   tone: NoticeTone;
+  /**
+   * Spacing above the banner, for a page that answers a tap *mid*-page rather
+   * than at the top of one. The `mb-6` below is the banner's own and is not
+   * negotiable; this is the gap to whatever it follows.
+   */
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-6">
+    <div className={`mb-6 ${className}`.trim()}>
       <ShopNotice tone={tone} role={noticeRole(tone)}>
         {children}
       </ShopNotice>

@@ -238,7 +238,10 @@
     },
     "optionServiceOverdue": "mantenimiento vencido",
     "optionServiceDueSoon": "mantenimiento por vencer",
-    "pickUnit": "Elige una unidad…"
+    "pickUnit": "Elige una unidad…",
+    "groupExactSize": "Talla {size}",
+    "groupOtherSizes": "Otras tallas libres",
+    "groupFree": "Libres para estas fechas"
   },
   "ticket": {
     "eyebrow": "Alquiler",

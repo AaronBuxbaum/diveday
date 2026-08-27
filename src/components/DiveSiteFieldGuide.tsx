@@ -16,6 +16,7 @@ export function DiveSiteFieldGuide({
   summary,
   highlights,
   tipsHeading,
+  showHeading = true,
   t,
 }: {
   creatures: FieldGuideCreature[];
@@ -28,6 +29,12 @@ export function DiveSiteFieldGuide({
    * three words above them.
    */
   tipsHeading?: string | null;
+  /**
+   * Off when a disclosure's own summary already carries the heading and the
+   * sightings count — otherwise the two say the same thing four pixels apart,
+   * one of them inside the box the other opens.
+   */
+  showHeading?: boolean;
   t: DiverTranslator;
 }) {
   if (creatures.length === 0 && !summary && !highlights) return null;
@@ -35,28 +42,34 @@ export function DiveSiteFieldGuide({
 
   return (
     <section className="mt-6 first:mt-0 first:pt-2">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium tracking-widest text-primary uppercase">
-            {t("site.fieldGuideEyebrow")}
-          </p>
-          <h3 className="mt-2 text-xl font-semibold tracking-tight">
-            {t("site.fieldGuideHeading")}
-          </h3>
+      {showHeading ? (
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium tracking-widest text-primary uppercase">
+              {t("site.fieldGuideEyebrow")}
+            </p>
+            <h3 className="mt-2 text-xl font-semibold tracking-tight">
+              {t("site.fieldGuideHeading")}
+            </h3>
+          </div>
+          {creatures.length ? (
+            <p className="text-sm tabular-nums text-muted">
+              {t("site.likelySightings", { count: creatures.length })}
+            </p>
+          ) : null}
         </div>
-        {creatures.length ? (
-          <p className="text-sm tabular-nums text-muted">
-            {t("site.likelySightings", { count: creatures.length })}
-          </p>
-        ) : null}
-      </div>
-      {highlights ? (
-        <p className="mt-4 text-sm font-semibold leading-relaxed text-primary">{highlights}</p>
       ) : null}
-      {summary ? <p className="mt-2 max-w-2xl leading-relaxed text-muted">{summary}</p> : null}
+      {highlights ? (
+        <p className="mt-4 text-sm font-semibold leading-relaxed text-primary first:mt-0">
+          {highlights}
+        </p>
+      ) : null}
+      {summary ? (
+        <p className="mt-2 max-w-2xl leading-relaxed text-muted first:mt-0">{summary}</p>
+      ) : null}
 
       {creatures.length ? (
-        <div className="mt-6 grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-x-3 gap-y-6 first:mt-0 sm:grid-cols-4">
           {creatures.map((creature) => (
             <figure key={creature.id} className="min-w-0">
               {/* Every catalog species ships a bundled photo, so there is no

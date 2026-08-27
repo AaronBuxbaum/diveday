@@ -288,3 +288,63 @@ test("a self-declared card cannot be certified without verified evidence", async
   await expect(certified).not.toContainText("Rescue");
   await expect(certified).not.toContainText("Self-declared — no certification number yet");
 });
+
+/**
+ * **The hint panel belongs to the mark you are pointing at.**
+ *
+ * `InfoHint`'s trigger is a 44px box around a 12px glyph (`-m-3 size-11 p-3`,
+ * the tap-target floor from principles.md §2) and the panel was placed from
+ * that box — so it opened 16px below and 16px left of the dot under the
+ * pointer, reading as a note about nothing in particular rather than about the
+ * question it hangs off. This is the one ⓘ a diver meets on a public page: the
+ * "why are you asking me this?" beside the certification question.
+ *
+ * Geometry rather than a screenshot: the gap is a handful of pixels either
+ * way, which is exactly the size of difference a monochrome capture and a
+ * reviewer's eye both wave through.
+ */
+test("the certification hint opens beside the mark, not beside its tap target", async ({
+  page,
+}) => {
+  await page.goto("/s/blue-mantis");
+  const dealList = page.locator("#last-minute-list");
+  await dealList.locator("summary").click();
+  // By its accessible name, never "the first disclosure in here" — a
+  // `<summary>` and an `EditDisclosure` wear the same attributes.
+  const trigger = dealList.getByRole("button", { name: "Why we ask about certification" });
+  await trigger.waitFor();
+  // Read the id *before* the hover. The panel is `fixed` and placed by
+  // measurement, so it is dismissed by any scroll — and a locator action after
+  // the hover can scroll the page to reach its own target, which would move
+  // the trigger out from under a panel that stayed put and make this measure a
+  // gap nobody would ever see.
+  const panelId = await trigger.getAttribute("aria-controls");
+  await trigger.hover();
+
+  const geometry = await page.evaluate((id) => {
+    const note = document.getElementById(id);
+    const button = document.querySelector(`button[aria-controls="${id}"]`);
+    const glyph = button?.querySelector("span");
+    if (!note || !button || !glyph) throw new Error("no hint on the page");
+    const mark = glyph.getBoundingClientRect();
+    const panel = note.getBoundingClientRect();
+    return {
+      open: getComputedStyle(note).visibility,
+      gap: panel.top - mark.bottom,
+      dx: panel.left - mark.left,
+      markWidth: mark.width,
+      targetWidth: button.getBoundingClientRect().width,
+    };
+  }, panelId ?? "");
+
+  expect(geometry.open).toBe("visible");
+  // The mark really is the small dot and the target really is the 44px box —
+  // the whole reason measuring the wrong one moved the panel.
+  expect(geometry.markWidth).toBeLessThan(24);
+  expect(geometry.targetWidth).toBeGreaterThanOrEqual(40);
+  // `PANEL_GAP` is 8; a couple of pixels of slack for sub-pixel layout.
+  expect(geometry.gap).toBeGreaterThanOrEqual(6);
+  expect(geometry.gap).toBeLessThanOrEqual(12);
+  // Left-aligned to the mark wherever there is room for it.
+  expect(Math.abs(geometry.dx)).toBeLessThanOrEqual(2);
+});

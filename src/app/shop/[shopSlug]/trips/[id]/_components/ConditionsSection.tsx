@@ -3,7 +3,12 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { type DepthUnit, depthInUnit, maxEnteredVisibility } from "@/lib/depth-units";
+import {
+  type DepthUnit,
+  depthInUnit,
+  maxEnteredVisibility,
+  waveHeightInUnit,
+} from "@/lib/depth-units";
 import { formatDateTimeTz, formatTime } from "@/lib/format";
 import { type AutomatedMarineForecast, hasCrewPrediction } from "@/lib/marine-forecast";
 import type { FormNotice } from "@/lib/staff-notices";
@@ -51,6 +56,19 @@ export function ConditionsSection({
   );
   const depthUnitLabel = t(depthUnit === "feet" ? "shared.depth.feet" : "shared.depth.meters");
   const published = hasCrewPrediction(trip);
+  /**
+   * Whether the marine model said anything at all. Every reading it can carry,
+   * not the three it used to be asked about — a forecast holding only water
+   * temperature is still a forecast.
+   */
+  const hasAutomatedOutlook = Boolean(
+    automatedForecast &&
+      (automatedForecast.waterTemperatureC !== null ||
+        automatedForecast.surface ||
+        automatedForecast.wind ||
+        automatedForecast.current ||
+        automatedForecast.sun),
+  );
   // The published read, said back as facts — what a crew member checks at a
   // glance without opening the form. Each piece renders only when recorded.
   const publishedFacts = [
@@ -97,13 +115,48 @@ export function ConditionsSection({
       ) : (
         <p className="text-sm text-muted">{t("trips.conditions.description")}</p>
       )}
-      {automatedForecast?.wind || automatedForecast?.current || automatedForecast?.sun ? (
+      {/* **The model's read, whether or not the crew has published theirs.**
+          This block used to render only when the forecast carried wind,
+          current or sun — so a model answering with the two readings the crew
+          themselves record, water temperature and the sea surface, rendered
+          nothing at all. It is also the half a crew most wants beside their
+          own: publishing a prediction never used to hide this, but there was
+          nothing here to compare a published water temp against. Both
+          readings now show, on both states. */}
+      {hasAutomatedOutlook ? (
         <div className="mt-3 rounded-lg bg-surface-sunken p-3 text-xs text-muted">
           <p className="font-medium text-foreground">
             {t("trips.conditions.automatedOutlookHeading")}
           </p>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
-            {automatedForecast.wind ? (
+            {automatedForecast?.waterTemperatureC !== null &&
+            automatedForecast?.waterTemperatureC !== undefined ? (
+              <span>
+                {t("trips.conditions.automatedWater", {
+                  value: `${temperatureInUnit(automatedForecast.waterTemperatureC, temperatureUnit)} ${temperatureUnitLabel}`,
+                })}
+              </span>
+            ) : null}
+            {automatedForecast?.surface ? (
+              // Significant wave height as the model publishes it, in the
+              // shop's own depth unit. The diver-facing page turns this into a
+              // band ("light chop") on purpose — a captain reads the number,
+              // and this is the captain's page.
+              //
+              // `waveHeightInUnit`, never `depthInUnit`: that one rounds to
+              // whole units because a site's maximum depth is a briefing
+              // figure, and every ordinary day on a reef boat is under a metre
+              // — it would render flat calm, pleasant and rough as 0, 1 and 1.
+              <span>
+                {t("trips.conditions.automatedSeas", {
+                  height: `${waveHeightInUnit(automatedForecast.surface.waveHeightMeters, depthUnit)} ${depthUnitLabel}`,
+                  direction: automatedForecast.surface.waveDirection
+                    ? automatedForecast.surface.waveDirection.toUpperCase()
+                    : "",
+                })}
+              </span>
+            ) : null}
+            {automatedForecast?.wind ? (
               <span>
                 {t("trips.conditions.automatedWind", {
                   speed: automatedForecast.wind.speedKnots,
@@ -119,7 +172,7 @@ export function ConditionsSection({
                 })}
               </span>
             ) : null}
-            {automatedForecast.current ? (
+            {automatedForecast?.current ? (
               <span>
                 {t("trips.conditions.automatedCurrent", {
                   velocity: automatedForecast.current.velocityKnots,
@@ -129,7 +182,7 @@ export function ConditionsSection({
                 })}
               </span>
             ) : null}
-            {automatedForecast.sun?.sunrise && automatedForecast.sun?.sunset ? (
+            {automatedForecast?.sun?.sunrise && automatedForecast.sun?.sunset ? (
               <span>
                 {t("trips.conditions.automatedSun", {
                   sunrise: formatTime(automatedForecast.sun.sunrise, locale, timezone),
