@@ -515,6 +515,47 @@ export function needsCardSighting(card: {
   );
 }
 
+/**
+ * Why undoing a "Mark certified" tap was refused — never a silent no-op, since
+ * the whole promise of the toast is that the card went back.
+ */
+export type CardUnreviewRefusal = "not_found" | "not_reviewed" | "sighted_card";
+
+/**
+ * **What a card should look like once its review is taken back.**
+ *
+ * The one-tap review is a pure status flip: a staffer already held the card and
+ * typed its number, and the tap only records that the number checked out. So
+ * its inverse is a pure status flip too — clear the review stamp, and drop the
+ * card back to `pending` unless it arrived `verified` from an import
+ * (ADR 20260724-import-verified-cards), where the review was a confirmation
+ * rather than the thing that cleared it.
+ *
+ * **A card that needed a sighting is refused outright**, and that is the whole
+ * reason this is a decision rather than an `update`. Certifying a
+ * self-declaration or a shop-issued specialty *rewrites* the row from the card
+ * in the staffer's hand — agency, number, and for a level card the rung — and
+ * those previous values are gone. Reverting the status alone would leave a
+ * pending row wearing a sighted number with none of the marks that say a diver
+ * typed it, which is precisely the laundering `selfDeclaredAt` exists to
+ * prevent. Those reviews are taken back by deleting the card, which is
+ * reversible and says what it did.
+ *
+ * Structural rather than over a row type, like the two predicates above, so all
+ * three certification tables go through one definition.
+ */
+export function unreviewedCardState(card: {
+  status: "pending" | "verified";
+  reviewedAt?: Date | string | null;
+  selfDeclaredAt?: Date | string | null;
+  issuedByShopAt?: Date | string | null;
+  importedAt?: Date | string | null;
+}): { ok: true; status: "pending" | "verified" } | { ok: false; reason: CardUnreviewRefusal } {
+  if (card.selfDeclaredAt || card.issuedByShopAt) return { ok: false, reason: "sighted_card" };
+  if (!card.reviewedAt) return { ok: false, reason: "not_reviewed" };
+  return { ok: true, status: card.importedAt ? "verified" : "pending" };
+}
+
 /** Shared rank check for course admission and final trip readiness. */
 export function hasVerifiedCertificationAtLeast(
   certifications: readonly Certification[],

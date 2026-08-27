@@ -270,6 +270,18 @@ describe("resolveDiverNotice", () => {
     expect(resolve("captured", { form: "specialty-cards" })?.form).toBe("specialty-cards");
   });
 
+  /**
+   * The same treatment, and the same reason: the card row visibly changes to
+   * "certified". Only the card-sighting form still redirects with this code —
+   * the one-tap review posts in place and answers with an undo toast — so
+   * "Certification marked verified. It counts toward readiness." is gone,
+   * along with the sentence explaining a status word the row already wore.
+   */
+  it("withholds verified's text too, now that the row is the confirmation", () => {
+    expect(resolve("verified")).toMatchObject({ form: "cards", tone: "success", silent: true });
+    expect(resolve("verified")?.text).toBe("");
+  });
+
   it("puts the refusals that belong to one box on that box", () => {
     // These two the server can point at exactly, so they render on the control
     // rather than beside the button (`Field`'s `error`).

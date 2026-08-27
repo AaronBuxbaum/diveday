@@ -27,6 +27,7 @@ import {
   deleteNitroxCertification,
   restoreNitroxCertification,
   reviewNitroxCertification,
+  unreviewNitroxCertification,
 } from "@/db/nitrox";
 import { addDiverNote, deleteDiverNote } from "@/db/operations";
 import { refundOrder } from "@/db/orders";
@@ -42,6 +43,8 @@ import {
   restoreSpecialtyCertification,
   reviewCertification,
   reviewSpecialtyCertification,
+  unreviewCertification,
+  unreviewSpecialtyCertification,
 } from "@/db/readiness";
 import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
 import { certificationAgency, certificationLevel, people } from "@/db/schema";
@@ -731,6 +734,7 @@ export async function deleteSpecialtyAction(
 }
 
 const cardTypeSchema = z.enum(["level", "specialty", "nitrox"]);
+type CardType = z.infer<typeof cardTypeSchema>;
 
 /**
  * Undo a card archive from the land-then-undo toast. Dispatches by the card
@@ -759,6 +763,115 @@ export async function restoreCardAction(shopSlug: string, personId: string, form
     base,
     backTo(base, restored ? "card-restored" : "card-restore-conflict", form),
   );
+}
+
+/**
+ * What the one-tap review did, for the control that posted it. A **value**,
+ * not a redirect: see {@link markCertifiedAction}.
+ */
+export type MarkCertifiedResult =
+  | null
+  | {
+      ok: true;
+      /**
+       * `certified` promoted a pending card; `confirmed` cleared an imported
+       * card's gate; `undone` is the toast's own Undo landing.
+       */
+      effect: "certified" | "confirmed" | "undone";
+      /**
+       * The card to hand back to Undo — absent when this review cannot be
+       * taken back (see `unreviewedCardState`), so a toast is never offered
+       * with an Undo the server would refuse.
+       */
+      undo?: { certificationId: string; cardType: CardType };
+    }
+  | { ok: false; reason: "invalid" | "sighting-required" | "duplicate-card" | "not-undoable" };
+
+/**
+ * **Mark certified, in place — and take it back.**
+ *
+ * Every other write on this record redirects, which is right for a form whose
+ * outcome is a sentence beside it. This one is a **row-level tap in a list**,
+ * and a redirect made it the most expensive act on the page: the route's own
+ * `loading.tsx` painted over a ~6,400px record, the `#cards` anchor threw the
+ * viewport somewhere the staffer had not asked to be, and a desk working down
+ * a stack of cards paid that for every single one. So it revalidates and
+ * returns; the row settles where it is (`ReviewRowActions` on the reviews queue
+ * is the same shape, for the same reason).
+ *
+ * Returning also buys the thing the banner could not: an **Undo**. "Certification
+ * marked verified. It counts toward readiness." was a sentence explaining a
+ * status word the row already wears — and it left a mis-tap on the wrong row
+ * with no way back but deleting the card. The toast says less and offers more.
+ *
+ * `intent=undo` routes to the un-review writers, which refuse a card whose
+ * review was a *sighting*: that rewrites the row from the card in the staffer's
+ * hand and there is nothing to put back. Those cards never reach this action —
+ * they wear `CardSightingForm` instead — and the server refuses regardless,
+ * because a posted form is caller-controlled.
+ */
+export async function markCertifiedAction(
+  shopSlug: string,
+  personId: string,
+  _previous: MarkCertifiedResult,
+  formData: FormData,
+): Promise<MarkCertifiedResult> {
+  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
+  personId = context.personId;
+  const { base, db, staff } = context;
+  const certificationId = cardIdFromForm(formData);
+  const cardType = cardTypeSchema.safeParse(formData.get("cardType"));
+  if (!certificationId || !cardType.success) return { ok: false, reason: "invalid" };
+  const input = { shopId: staff.user.shopId, certificationId };
+
+  if (formData.get("intent") === "undo") {
+    const undone =
+      cardType.data === "level"
+        ? await unreviewCertification(db, input)
+        : cardType.data === "specialty"
+          ? await unreviewSpecialtyCertification(db, input)
+          : await unreviewNitroxCertification(db, input);
+    revalidatePath(base);
+    return undone.ok ? { ok: true, effect: "undone" } : { ok: false, reason: "not-undoable" };
+  }
+
+  // No `sighting` on any branch: this action is the one-tap path only. A row
+  // that needs a card in the staffer's hand is refused below with the same
+  // `card_sighting_required` its own form would have raised.
+  const reviewed = {
+    ...input,
+    status: "verified",
+    reviewedByPersonId: staff.user.personId,
+  } as const;
+  const outcome =
+    cardType.data === "level"
+      ? await reviewCertification(db, reviewed)
+      : cardType.data === "specialty"
+        ? await reviewSpecialtyCertification(db, reviewed)
+        : await reviewNitroxCertification(db, reviewed);
+  revalidatePath(base);
+  if (!outcome.ok) {
+    return {
+      ok: false,
+      reason:
+        outcome.reason === "card_sighting_required"
+          ? "sighting-required"
+          : outcome.reason === "duplicate_card"
+            ? "duplicate-card"
+            : "invalid",
+    };
+  }
+  const card = outcome.certification;
+  return {
+    ok: true,
+    // An imported card was already `verified` on arrival; this tap confirmed
+    // it rather than certifying it, and the two must not claim the same thing.
+    effect: card.importedAt ? "confirmed" : "certified",
+    undo:
+      card.selfDeclaredAt || card.issuedByShopAt
+        ? undefined
+        : { certificationId, cardType: cardType.data },
+  };
 }
 
 export async function saveProfileAction(shopSlug: string, personId: string, formData: FormData) {

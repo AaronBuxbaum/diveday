@@ -186,6 +186,18 @@ export default async function DiverDetailPage({
         personId={personId}
         locale={locale}
         status={detailsStatus}
+        // Beside "Edit details" rather than on its own line under the header:
+        // both are doors onto the record itself, and the export is one of the
+        // roles' answers to a subject-access request, not a page banner.
+        downloadRecord={
+          canExport ? (
+            <DownloadDiverExportButton
+              href={`/shop/${shopSlug}/divers/${personId}/export`}
+              idleLabel={t("divers.export.downloadButton.idle")}
+              acknowledgedLabel={t("divers.export.downloadButton.acknowledged")}
+            />
+          ) : null
+        }
         // Only ever set by the roster's "Add a diver" form, which lands here
         // with a name and little else. `FlashParams` strips it from the URL
         // straight away, so a reload or a shared link is the ordinary
@@ -196,15 +208,6 @@ export default async function DiverDetailPage({
         // remains visible above the editor.
         editOpen={edit === "1" || detailsStatus?.tone === "danger"}
       />
-      {canExport ? (
-        <div className="mt-4">
-          <DownloadDiverExportButton
-            href={`/shop/${shopSlug}/divers/${personId}/export`}
-            idleLabel={t("divers.export.downloadButton.idle")}
-            acknowledgedLabel={t("divers.export.downloadButton.acknowledged")}
-          />
-        </div>
-      ) : null}
       {removed ? (
         <RestoreDiver
           shopSlug={shopSlug}

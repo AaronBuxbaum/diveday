@@ -8,6 +8,7 @@ import { rentalFitLine } from "@/lib/dive-prep";
 import { offeredRentableItems } from "@/lib/rentals";
 import { saveProfileAction, setNeedsStaffFitAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
+import { RentalFitFields, type RentalFitSize } from "./RentalFitFields";
 import type { DiverProfile } from "./shared";
 
 export function RentalFit({
@@ -40,6 +41,42 @@ export function RentalFit({
   const mayEdit = canOverride || !profile;
   const offered = offeredRentableItems(rentalItems);
   const offers = new Set(offered.map((item) => item.kind));
+  // Only sizes the shop can actually hand over. `requires` is the second half
+  // of that question — which ticks make this size worth asking for — and it is
+  // the client component's to answer, since it changes as the staffer types.
+  const sizes: RentalFitSize[] = [
+    offers.has("bcd") && {
+      name: "bcdSize",
+      label: t("divers.rentalFit.bcdSizeLabel"),
+      placeholder: t("divers.rentalFit.bcdSizePlaceholder"),
+      defaultValue: profile?.bcdSize ?? "",
+      requires: ["bcd"],
+    },
+    offers.has("wetsuit") && {
+      name: "wetsuitSize",
+      label: t("divers.rentalFit.wetsuitSizeLabel"),
+      placeholder: t("divers.rentalFit.wetsuitSizePlaceholder"),
+      defaultValue: profile?.wetsuitSize ?? "",
+      requires: ["wetsuit"],
+    },
+    // One shoe-size answer covers fins and boots — the two fields asked the
+    // same question, and the save writes it to both columns. Which is also why
+    // either tick brings it back.
+    (offers.has("mask_fins") || offers.has("wetsuit")) && {
+      name: "finSize",
+      label: t("divers.rentalFit.finSizeLabel"),
+      placeholder: t("divers.rentalFit.finSizePlaceholder"),
+      defaultValue: profile?.finSize ?? profile?.bootSize ?? "",
+      requires: ["maskFins", "wetsuit"],
+    },
+    offers.has("weights") && {
+      name: "weightPreference",
+      label: t("divers.rentalFit.weightPreferenceLabel"),
+      placeholder: t("divers.rentalFit.weightPreferencePlaceholder"),
+      defaultValue: profile?.weightPreference ?? "",
+      requires: ["weights"],
+    },
+  ].filter((size) => size !== false);
   return (
     <section className="mt-10 border-t border-border pt-8" aria-labelledby="rental-fit-heading">
       <div>
@@ -73,69 +110,17 @@ export function RentalFit({
           // the fallback form below it wears.
           className={sectionCardClass({ padding: "lg", className: "mt-4" })}
         >
-          {offered.length > 0 ? (
-            <fieldset className="sm:col-span-2">
-              <legend className="text-sm font-medium">{t("divers.rentalFit.rentsFromShop")}</legend>
-              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                {offered.map(({ kind, name, field, defaultRented }) => (
-                  <label
-                    key={name}
-                    className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 text-sm"
-                  >
-                    <input
-                      name={name}
-                      type="checkbox"
-                      defaultChecked={profile?.[field] ?? defaultRented}
-                      className="size-4 accent-primary"
-                    />
-                    {rentableItemLabel(t, kind)}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          ) : null}
-          {offers.has("bcd") ? (
-            <Field label={t("divers.rentalFit.bcdSizeLabel")}>
-              <input
-                name="bcdSize"
-                defaultValue={profile?.bcdSize ?? ""}
-                placeholder={t("divers.rentalFit.bcdSizePlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-          ) : null}
-          {offers.has("wetsuit") ? (
-            <Field label={t("divers.rentalFit.wetsuitSizeLabel")}>
-              <input
-                name="wetsuitSize"
-                defaultValue={profile?.wetsuitSize ?? ""}
-                placeholder={t("divers.rentalFit.wetsuitSizePlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-          ) : null}
-          {/* One shoe-size answer covers fins and boots — the two fields asked
-              the same question, and the save writes it to both columns. */}
-          {offers.has("mask_fins") || offers.has("wetsuit") ? (
-            <Field label={t("divers.rentalFit.finSizeLabel")}>
-              <input
-                name="finSize"
-                defaultValue={profile?.finSize ?? profile?.bootSize ?? ""}
-                placeholder={t("divers.rentalFit.finSizePlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-          ) : null}
-          {offers.has("weights") ? (
-            <Field label={t("divers.rentalFit.weightPreferenceLabel")}>
-              <input
-                name="weightPreference"
-                defaultValue={profile?.weightPreference ?? ""}
-                placeholder={t("divers.rentalFit.weightPreferencePlaceholder")}
-                className={controlClass}
-              />
-            </Field>
-          ) : null}
+          <RentalFitFields
+            legend={t("divers.rentalFit.rentsFromShop")}
+            toggles={offered.map(({ kind, name, field, defaultRented }) => ({
+              name,
+              label: rentableItemLabel(t, kind),
+              defaultChecked: profile?.[field] ?? defaultRented,
+            }))}
+            /* The shop's catalog decides which sizes exist at all; the ticks
+               above decide which of them are asked for. */
+            sizes={sizes}
+          />
           <FieldActions>
             <SubmitButton
               pendingLabel={t("divers.rentalFit.saving")}

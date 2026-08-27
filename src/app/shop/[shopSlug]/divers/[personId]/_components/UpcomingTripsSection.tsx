@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/EmptyState";
 import { sectionCardClass } from "@/components/ui/card";
 import { diveRecencyText } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -61,6 +62,8 @@ export function UpcomingTripsSection({
         <h2 id="upcoming-trips-heading" className="text-lg font-semibold">
           {t("divers.upcoming.heading")}
         </h2>
+        {/* The third bare heading on this record; see `ShopHistory`. */}
+        <EmptyState title={t("divers.upcoming.empty")} titleAs="h3" className="mt-4" />
       </section>
     );
   }
@@ -78,17 +81,22 @@ export function UpcomingTripsSection({
         className={sectionCardClass({ padding: "none", className: "mt-3 divide-y divide-border" })}
       >
         {upcoming.map(({ booking, trip, course }) => (
-          // The row is no longer one big `<Link>`: it carries a billing link of
-          // its own now, and an anchor inside an anchor is invalid markup that
-          // keyboard and screen-reader users pay for first.
+          // **The whole row opens the manifest, and there is still exactly one
+          // anchor doing it.** The row cannot be wrapped in a `<Link>` — it
+          // carries a billing link of its own, and an anchor inside an anchor
+          // is invalid markup that keyboard and screen-reader users pay for
+          // first. So the title's anchor stretches over the row with an
+          // `::after` overlay instead: one link, one accessible name, one tab
+          // stop, and a tap anywhere on the row lands on it. The money cell is
+          // lifted back above that overlay so its own button still wins.
           <li
             key={trip.id}
-            className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+            className="relative flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-surface-sunken focus-within:bg-surface-sunken sm:flex-row sm:items-center sm:justify-between sm:gap-4"
           >
             <div className="min-w-0">
               <Link
                 href={`/shop/${shopSlug}/trips/${trip.id}/manifest`}
-                className="font-medium hover:text-primary hover:underline"
+                className="font-medium after:absolute after:inset-0 hover:text-primary hover:underline"
               >
                 {trip.title}
               </Link>
@@ -129,15 +137,19 @@ export function UpcomingTripsSection({
                 </p>
               ) : null}
             </div>
-            <BookingMoneyCell
-              diver={diver}
-              bookingId={booking.id}
-              shopSlug={shopSlug}
-              personId={personId}
-              paymentsConnected={paymentsConnected}
-              showNoOrderBadge={false}
-              t={t}
-            />
+            {/* Above the stretched anchor's overlay, so "Open payment" is
+                still its own destination rather than a hole in the row link. */}
+            <div className="relative">
+              <BookingMoneyCell
+                diver={diver}
+                bookingId={booking.id}
+                shopSlug={shopSlug}
+                personId={personId}
+                paymentsConnected={paymentsConnected}
+                showNoOrderBadge={false}
+                t={t}
+              />
+            </div>
           </li>
         ))}
       </ul>

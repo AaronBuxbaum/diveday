@@ -576,12 +576,17 @@ describe("DiverList level cell", () => {
    * looked exactly like the "Open Water" repeated above and below it. Asserted
    * on the class rather than through a screenshot because it is a *relative*
    * claim: what matters is that the two differ, in both layouts.
+   *
+   * The difference is **ink and not weight**: bolding it as well turned one
+   * cell of a column staff scan into the loudest thing on the row, which is
+   * the attention column's job. So the missing case is plain foreground and
+   * the held one is muted, and neither is bold.
    */
   it("renders a missing certification in fuller ink than a level a diver holds", () => {
     renderList({ page: rosterPage({ certificationLevel: null }) });
     for (const cell of screen.getAllByText("No current certification")) {
-      expect(cell).toHaveClass("font-medium");
       expect(cell).not.toHaveClass("text-muted");
+      expect(cell).not.toHaveClass("font-medium");
     }
 
     cleanup();
