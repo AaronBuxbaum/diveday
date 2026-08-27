@@ -4,10 +4,11 @@ import type {
   RollCallButtonCopy,
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/RollCallButton";
 import { type PrivateNoteAction, PrivateNoteForm } from "@/components/PrivateNoteForm";
+import { RollCallMark } from "@/components/RollCallMark";
 import { Badge } from "@/components/ui/badge";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { birthdayText } from "@/i18n/birthday-labels";
+import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
@@ -18,7 +19,7 @@ import {
 } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatDateTimeTz, formatShortDate } from "@/lib/format";
+import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
   type ManifestBuddyTeam,
@@ -27,12 +28,14 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { SHARED_FACT_MIN } from "../../_components/shared-facts";
-import { BuddyTeamChip } from "./BuddyTeamChip";
 import {
   ROLL_CALL_ROW_TONE,
   ROW_DISCLOSURE_PANEL_CLASS,
   ROW_DISCLOSURE_SUMMARY_CLASS,
-  RollCallControls,
+  RollCallBackAboardControl,
+  RollCallExceptionControl,
+  RollCallMarkButton,
+  rollCallMarkState,
   rollCallRecordedTone,
   rollCallRowState,
   rollCallScrollMargin,
@@ -44,7 +47,7 @@ import {
  * one tap, and these facts have their moment either before the boat leaves
  * (Prep owns chasing gaps) or when something has gone wrong (one tap away, and
  * always on the paper the boat carries). Rendered twice per row: inside the
- * screen-only disclosure, and in a print-only block — a closed `<details>`
+ * screen-only person panel, and in a print-only block — a closed `<details>`
  * contributes nothing to print, and the printed manifest is the document a
  * coastguard reads, so it keeps every fact without asking paper to disclose.
  */
@@ -62,9 +65,8 @@ function DiverFacts({
    * How much width these facts have, which differs by a factor of two between
    * the two places they render — and the answer is not the same in both.
    *
-   * `1` is the on-screen disclosure, one of two panels sharing the row's
-   * width: a second column there wrapped "Asha Sharma (sister) ·
-   * +1-305-555-0231" mid-number.
+   * `1` is the on-screen panel, inset inside the row: a second column there
+   * wrapped "Asha Sharma (sister) · +1-305-555-0231" mid-number.
    *
    * `2` is paper, which has the whole page and no disclosure beside it. Single
    * column there leaves the right half of a US-Letter sheet blank and stretches
@@ -83,11 +85,17 @@ function DiverFacts({
             columns === 1 ? (
               <>
                 {diver.emergencyContactName} ·{" "}
-                {/* The number never breaks across lines *here*. In the
-                    half-width panel it wrapped at its own hyphens — "+1-305-"
-                    / "555-0241" — and a number a crew member reads aloud in an
-                    emergency is the last string on this page that should be
-                    reassembled by eye.
+                {/* Reference text, never a `tel:` link — there are no call
+                    buttons anywhere on the boat (ADR
+                    20260827-the-departure-is-two-working-surfaces, decision 3):
+                    a control that can dial by accident buys nothing on a path
+                    used less than once a year and costs a false alarm the one
+                    time it misfires.
+                    The number never breaks across lines *here*. In the narrow
+                    panel it wrapped at its own hyphens — "+1-305-" / "555-0241"
+                    — and a number a crew member reads aloud in an emergency is
+                    the last string on this page that should be reassembled by
+                    eye.
                     Only here: the `<span>` splits one text run into two, which
                     the browser then shapes independently, and on paper that
                     re-drew every phone number a few sub-pixels over for a wrap
@@ -146,29 +154,6 @@ function DiverFacts({
 }
 
 /**
- * The two disclosures a diver's row carries — "Contact & gear" and "Add a
- * note" — as one set of class strings.
- *
- * **Side by side from `sm`, stacked on a phone, and the summary never moves.**
- * They are peers, so they share one line where the width allows and each
- * panel opens down its own grid column (an `auto`-flowed row would have pushed
- * the neighbour sideways as one opened, and a wrapped flex row would move the
- * second summary out from under the finger as the first panel grew). On a
- * phone the half-columns are too narrow for the labels — "Add a private note"
- * wrapped mid-label — so there they stack, each keeping its full width. And
- * the panel treatment belongs to the *panel*: hung on the
- * `<details>` as `open:` variants it grew the element's own margin and padding
- * at the instant of the tap, so the summary line jumped ~20px down the screen
- * out from under the finger that opened it.
- *
- * The grid is diver-specific (a crew row carries one disclosure, not a
- * pair) and stays here; the summary/panel treatment it wraps is shared with
- * `CrewRollCall.tsx` and lives in `RollCallControls.tsx`.
- */
-const ROW_DISCLOSURE_GRID_CLASS =
-  "mt-1 grid items-start gap-x-6 print:hidden sm:max-w-4xl sm:grid-cols-2";
-
-/**
  * Staff notes that belong on a diver's row, rather than in separate desk and
  * diver-record stacks. Booking notes come from the Guests tab; diver notes
  * come from the Diver record and follow the person onto every booking.
@@ -177,9 +162,9 @@ const ROW_DISCLOSURE_GRID_CLASS =
  * written before a booking existed or for one particular departure. Both are
  * context, and both read here, on the row they are about.
  *
- * The notes list is read-only here, while the collapsed form below writes the
- * same booking-scoped record used by Guests. Historical roll-call notes remain
- * on their append-only roll-call event and are still rendered with the result.
+ * The notes list is read-only here, while the form below writes the same
+ * booking-scoped record used by Guests. Historical roll-call notes remain on
+ * their append-only roll-call event and are still rendered with the result.
  *
  * `print:hidden`, unlike every other fact on this row. The printed manifest is
  * the sheet that goes ashore with the dock and into a coastguard's hands; a
@@ -201,7 +186,7 @@ function StaffNotes({
   return (
     <section
       aria-label={t("manifest.diverNotesHeading")}
-      className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 print:hidden"
+      className="mt-3 rounded-lg bg-surface px-3 py-2 print:hidden"
     >
       <h3 className="text-sm font-semibold">{t("manifest.diverNotesHeading")}</h3>
       <ul className="mt-1 flex flex-col gap-1.5">
@@ -269,10 +254,10 @@ export function DiverRollCall({
   // one fact about the plan, not nine facts about nine divers (principle 9) —
   // on the seeded wreck trip the identical 40-word paragraph rendered inside
   // nine of ten rows. Said once here, naming its divers; each of their rows
-  // wears a two-word chip instead. A diver whose advisory *differs* (a junior
-  // cap, no card at all) keeps the full sentence on their row, and **paper
+  // wears a two-word capsule instead. A diver whose advisory *differs* (a junior
+  // cap, no card at all) keeps the full sentence in their panel, and **paper
   // keeps every row's full advisory** — the printed manifest goes ashore, and
-  // a chip pointing at a strip is a reference paper cannot follow.
+  // a capsule pointing at a strip is a reference paper cannot follow.
   const advisoryDivers = new Map<string, string[]>();
   for (const diver of divers) {
     if (diver.depthAdvisory?.status !== "exceeds") continue;
@@ -284,30 +269,25 @@ export function DiverRollCall({
   );
   const sharedAdvisoryTexts = new Set(sharedAdvisories.map(([text]) => text));
   return (
-    <section id="roll-call-list" tabIndex={-1} className="mt-9 outline-none">
+    <section id="roll-call-list" tabIndex={-1} className="mt-8 outline-none">
       {/* No "Shop time: Eastern Daylight Time" beside the heading. Every time
           on this page is already the shop's own — that is the app's rule
           everywhere (`shops.timezone`, `pnpm check:timezone`), not a property
           of this screen — and a crew reading a roll call at their own dock has
-          no second zone to confuse it with. It named the one thing on the page
-          nobody was in doubt about. */}
-      <div>
-        <h2 className="text-lg font-semibold">
-          {t("manifest.checkpointRollCallHeading", {
-            checkpoint: rollCallCheckpointText(t, checkpoint),
-          })}
-        </h2>
-        {/* The control that isn't "Boarded" means something different once
-            the boat is out, and the crew tapping it in the dark should be
-            told which one they are looking at (DOM-H3). */}
-        {isDeparture ? null : (
-          <p className="mt-1 max-w-prose text-base font-semibold text-warning-strong">
-            {t("manifest.notBackAboardDescription")}
-          </p>
-        )}
-      </div>
+          no second zone to confuse it with.
+          No standing caption under it either. "After a dive, 'not back aboard'
+          means this diver has not returned to the boat" was a permanent warning
+          sentence explaining a control that is no longer on the row — and a
+          standing warning at a checkpoint where nothing has been recorded is
+          exactly what decision 4 exists to stop. The control names itself,
+          inside the panel where it lives. */}
+      <h2 className="text-lg font-semibold">
+        {t("manifest.checkpointRollCallHeading", {
+          checkpoint: rollCallCheckpointText(t, checkpoint),
+        })}
+      </h2>
       {sharedAdvisories.length > 0 ? (
-        <div className="mt-4 flex flex-col gap-2 print:hidden">
+        <div className="mt-3 flex flex-col gap-2 print:hidden">
           {sharedAdvisories.map(([text, names]) => (
             <div
               key={text}
@@ -332,7 +312,7 @@ export function DiverRollCall({
       <ul
         className={sectionCardClass({
           padding: "none",
-          className: "mt-4 divide-y divide-border overflow-hidden",
+          className: "mt-3 divide-y divide-border overflow-hidden",
         })}
       >
         {divers.map((diver, index) => {
@@ -340,12 +320,9 @@ export function DiverRollCall({
           const ready = diverStatus === "ready";
           const rc = diver.rollCall;
           // One derivation of what a roll-call record means, shared with the
-          // crew list and the button stack (`rollCallRowState`). `recordedHere`
-          // is whether a human has said something about this diver *at this
-          // checkpoint* — the two buttons already carry that answer in words,
-          // so the status pill would only repeat them.
+          // crew list and the mark (`rollCallRowState`).
           const rowState = rollCallRowState(checkpoint, rc);
-          const { impliedNotBoarded, recordedHere } = rowState;
+          const { impliedNotBoarded } = rowState;
           // Each roll-call state gets its own fill (`ROLL_CALL_ROW_TONE`) so
           // staff can tell at a glance who has been handled — aboard green,
           // left ashore amber, not back aboard red, nothing said yet slate.
@@ -355,299 +332,179 @@ export function DiverRollCall({
           // they board, so the row says so. After a dive it is not — roll call
           // there is a physical head count that readiness never gates, and a
           // danger-tinted row for a paperwork state would compete with the one
-          // red on the page that means somebody is in the water (DD9).
+          // red on the page that means somebody is in the water (DD9), which is
+          // also decision 4's rule: an alarm is earned by a recorded fact.
           const recordedTone = rollCallRecordedTone(rowState);
-          const untouchedTone =
-            ready || !isDeparture ? ROLL_CALL_ROW_TONE.awaiting : ROLL_CALL_ROW_TONE.blocked;
-          // Every row is a jump target — the summary panel's chips link to any
+          const blockedAtDock = !ready && isDeparture;
+          const untouchedTone = blockedAtDock
+            ? ROLL_CALL_ROW_TONE.blocked
+            : ROLL_CALL_ROW_TONE.awaiting;
+          // Every row is a jump target — the count panel's chips link to any
           // uncalled person — so every row carries the scroll margin that keeps
-          // its name clear of the sticky checkpoint panel. Shared with the crew
-          // rows, which are jump targets for the same chips: see
-          // `rollCallScrollMargin` for what the two sizes are measured against.
-          const rowClass = `border-l-4 px-4 py-4 sm:px-5 ${rollCallScrollMargin(isDeparture)} ${
+          // its name clear of the sticky panel. Shared with the crew rows.
+          const rowClass = `border-l-4 ${rollCallScrollMargin(isDeparture)} ${
             recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : untouchedTone
           }`;
-          // The pill is dropped only when something else on the row is
-          // already saying the same word. Two cases where nothing is
-          // (dive-domain review 20260804):
-          //
-          //  - **On paper.** The button column is `print:hidden`, so on the
-          //    document the boat actually carries, deleting the pill would
-          //    move every diver's status to a muted audit line at the foot of
-          //    their row. It stays, screen-hidden and print-visible.
-          //  - **When the board button isn't rendered.** It only appears for
-          //    `ready || !isDeparture`, so a diver boarded at departure whose
-          //    readiness later flipped to blocked would show a green row, a
-          //    red "Blocked" badge, a lone "Mark not boarded" button, and
-          //    nothing anywhere near their name saying they are aboard.
+          // A diver only boards at the dock once readiness clears them. Their
+          // row then carries a *static* held ring rather than a tap: the act
+          // that unblocks them is ashore on the Trip tab, and offering a tap
+          // that the server would refuse is a control that lies.
           const boardingControlShown = ready || !isDeparture;
-          // An untouched row's pill repeats a control too: an un-tapped "Mark
-          // boarded" beside the name already says nothing has been recorded,
-          // so "Awaiting roll call" on the same line is the affordance
-          // restated as a badge (principle 9). The carried-forward pill stays
-          // — no control on the row says "not boarded at the dock".
-          const pillRepeatsAControl = (recordedHere || !rc) && boardingControlShown;
-          // Not a Badge: "carried forward from the dock" needs a fill of its
-          // own, a distinction the app's five standard Badge tones don't carry.
-          const rollCallPillClass = impliedNotBoarded
-            ? "rounded-full bg-warning/15 px-3 py-1 text-sm font-medium text-warning-strong"
-            : "rounded-full bg-surface px-3 py-1 text-sm font-medium text-muted";
+          // **At most one capsule, and only for an exception** (ADR
+          // 20260827-the-departure-is-two-working-surfaces, decision 1). A row
+          // at rest is a name and a mark; the expected state is quiet. This is
+          // the priority when a diver is several things at once, loudest first
+          // — a split buddy team outranks a desk blocker outranks the crew's
+          // duty of care to a minor outranks an advisory outranks a birthday.
+          // Everything not chosen here still reaches the reader: it is in the
+          // panel one tap away, and unconditionally on paper.
+          // Which of the five the capsule ended up being, so the printed block
+          // below can say the *other* four without repeating this one. Paper
+          // carries every fact the screen tucks away; it does not carry the
+          // same fact twice.
+          const capsuleKind = diver.buddyAlert
+            ? "buddy"
+            : blockedAtDock
+              ? "blocked"
+              : diver.minor && diver.age !== null && diver.age !== undefined
+                ? "minor"
+                : diver.depthAdvisory?.status === "exceeds"
+                  ? "depth"
+                  : diver.birthday
+                    ? "birthday"
+                    : null;
+          const capsule =
+            diver.buddyAlert && diver.buddyTeam ? (
+              <Badge tone={diver.buddyAlert === "separated_after_dive" ? "danger" : "warning"}>
+                {buddyAlertText(t, diver.buddyAlert)}
+              </Badge>
+            ) : blockedAtDock ? (
+              <Badge tone={readinessStatusTone(diverStatus)}>
+                {readinessStatusText(t, diverStatus)}
+              </Badge>
+            ) : diver.minor && diver.age !== null && diver.age !== undefined ? (
+              <Badge tone="warning" tabularNums>
+                {t("manifest.minorAge", { age: diver.age })}
+              </Badge>
+            ) : diver.depthAdvisory?.status === "exceeds" ? (
+              <Badge tone="warning">{t("manifest.depthChip")}</Badge>
+            ) : diver.birthday ? (
+              <Badge tone="primary">{birthdayCalloutText(t, diver.birthday)}</Badge>
+            ) : null;
+          // The one line under the name: **who said what, and when.** Roll call
+          // is never optimistic and every result keeps its who-and-when, so the
+          // moment a row is anything but "to call" it says so in words — which
+          // is also what keeps every colour-carried state carrying a word
+          // (decision 5). Nothing said yet renders nothing: an untouched row is
+          // a name and an empty ring, and that is the whole message.
+          //
+          // **Time, not a timestamp.** "Boarded Aug 27, 2:52 PM EDT by Sal
+          // Moretti" wrapped to three lines under every settled name, which put
+          // 60px of date between one diver and the next on a phone — and every
+          // roll call for a departure happens on that departure's own day, so
+          // the date was the one part nobody could be in doubt about. The full
+          // timestamp is not lost: it prints, below, on the sheet that goes
+          // ashore and may be read months later.
+          const auditLabel = rollCallLabelText(t, rollCallLabel(checkpoint, rc));
+          const supportLine =
+            rc && !rc.implied
+              ? rc.note
+                ? t("manifest.rollCallRecordedShortWithNote", {
+                    label: auditLabel,
+                    time: formatTime(rc.occurredAt, locale, timezone),
+                    name: rc.recordedByName,
+                    note: rc.note,
+                  })
+                : t("manifest.rollCallRecordedShort", {
+                    label: auditLabel,
+                    time: formatTime(rc.occurredAt, locale, timezone),
+                    name: rc.recordedByName,
+                  })
+              : impliedNotBoarded
+                ? // The only thing that carries forward is a departure result:
+                  // this diver never left the dock (DOM-H3). Boarding after a
+                  // dive is a head count, so it never depends on readiness.
+                  t("manifest.carriedForwardFromDock")
+                : null;
+          const bookingNotes = notesByBooking.get(diver.bookingId) ?? [];
+          const teamLabel = buddyTeamLabel(diver.buddyTeam ? [diver.buddyTeam] : []);
           return (
-            <li
-              key={diver.bookingId}
-              id={`diver-row-${diver.bookingId}`}
-              className={`${rowClass} transition-all`}
-            >
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4">
-                {/* `md:flex-1` so this column is the same width on every row.
-                    Left to size itself, a flex child takes its content's width
-                    — and since the row's content is a name plus however many
-                    badges that diver happens to carry, every row got a
-                    different one. The two disclosures below split this column
-                    in half, so "Add a note" then started at a different x on
-                    each of nine rows, wandering left and right down the
-                    roster. `md`, not `lg`: the control cluster is one line
-                    now, narrow enough to sit beside the name column from
-                    tablet width up instead of stacking under it. */}
-                <div className="min-w-0 md:flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-sunken text-sm font-bold tabular-nums">
+            <li key={diver.bookingId} id={`diver-row-${diver.bookingId}`} className={rowClass}>
+              <div className="flex items-start">
+                {/* The name column *is* the disclosure. One tap on the person
+                    opens everything the rail does not need this second — the
+                    "one tap away" tier of decision 2 — which is what lets the
+                    row at rest be a name and a mark instead of the name, two
+                    badges, a blocker list, a link, a note thread and two
+                    summary lines it used to be. */}
+                <details className="group/person min-w-0 flex-1">
+                  <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
+                    <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-sm font-bold tabular-nums">
                       {String(index + 1).padStart(2, "0")}
                     </span>
-                    <h3 className="text-lg font-semibold">{diver.fullName}</h3>
-                    {/* The one readiness vocabulary (src/i18n/readiness-labels.ts).
-                        The manifest is where "Blocked" was already the word,
-                        which is why it is the word everywhere now. Only the
-                        exception is worth a chip: a "Ready" badge on most of
-                        a healthy roster is noise that makes the two rows that
-                        are *not* ready harder to find, and the blocker list
-                        below already spells out why. */}
-                    {ready ? null : (
-                      <Badge tone={readinessStatusTone(diverStatus)}>
-                        {readinessStatusText(t, diverStatus)}
-                      </Badge>
-                    )}
-                    {/* Counter check-in and boat roll call are different
-                        questions — arrived vs. aboard — and `checked_in`
-                        used to have exactly one reader in the app, the
-                        check-in page itself (task 149, UX persona lens 17).
-                        This is informational only: it never gates roll
-                        call. */}
-                    {diver.checkedIn ? (
-                      <Badge tone="neutral">{t("manifest.checkedInPill")}</Badge>
-                    ) : null}
-                    {diver.hotelPickupLocation ? (
-                      <Badge tone="neutral">
-                        <span aria-hidden="true">🏨</span>
-                        <span className="ms-1">
-                          {diver.hotelPickupLocation}
-                          {diver.pickupTime ? ` · ${diver.pickupTime}` : ""}
+                    <span className="min-w-0 flex-1">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="text-lg font-semibold group-hover/summary:underline">
+                          {diver.fullName}
                         </span>
-                      </Badge>
-                    ) : null}
-                    {/* The captain reading the boarding list has no other way
-                        to know a booked diver is 12 (H-21). Words, not colour
-                        alone — this is read in sunlight on a moving boat. An
-                        *adult's* age is a fact, not a flag: on screen it was a
-                        chip repeating down the whole roster (principle 9), so
-                        it now shows on paper only, where the manifest is the
-                        record. The minor badge stays on screen — it is the
-                        exception the crew is being told about. */}
-                    {diver.age !== null && diver.age !== undefined ? (
-                      diver.minor ? (
-                        <Badge tone="warning" tabularNums>
-                          {t("manifest.minorAge", { age: diver.age })}
-                        </Badge>
-                      ) : (
-                        <span className="hidden print:inline-flex">
-                          <Badge tone="neutral" tabularNums>
-                            {t("manifest.age", { age: diver.age })}
-                          </Badge>
-                        </span>
-                      )
-                    ) : null}
-                    {diver.birthday ? (
-                      <Badge tone="primary">
-                        <span aria-hidden="true">🎂</span>
-                        <span className="sr-only">{t("shared.birthday.label")}</span>
-                        <span className="ms-1">{birthdayText(t, diver.birthday)}</span>
-                      </Badge>
-                    ) : null}
-                    <span
-                      className={
-                        pillRepeatsAControl
-                          ? `hidden print:inline-flex ${rollCallPillClass}`
-                          : rollCallPillClass
-                      }
-                    >
-                      {rollCallLabelText(t, rollCallLabel(checkpoint, rc))}
+                        {capsule}
+                      </span>
+                      {supportLine ? (
+                        <span className="mt-0.5 block text-sm text-muted">{supportLine}</span>
+                      ) : null}
                     </span>
-                    <BuddyTeamChip
-                      label={buddyTeamLabel(diver.buddyTeam ? [diver.buddyTeam] : [])}
-                      alertText={diver.buddyAlert ? buddyAlertText(t, diver.buddyAlert) : null}
-                      alert={diver.buddyAlert}
-                    />
-                  </div>
-                  {/* The plan for dive two is made here, on the boat, during
-                      the surface interval — so the depth advisory has to be
-                      here too, not only on the desk-side roster. Warning
-                      tone, never a gate (H-08). An advisory the strip above
-                      already states for this diver by name shrinks to its
-                      chip on screen — and stays a full sentence on paper,
-                      which cannot follow a chip to a strip. */}
-                  {diver.depthAdvisory?.status === "exceeds" ? (
-                    sharedAdvisoryTexts.has(depthWarningText(t, diver.depthAdvisory)) ? (
+                    {/* The caret is the only thing on the summary that says
+                        "this opens" — the label is the person's own name, which
+                        cannot also be a verb. Screen readers get the word. */}
+                    <DisclosureCaret className="group-open/person:rotate-90 print:hidden" />
+                    <span className="sr-only">{t("manifest.personDetails")}</span>
+                  </summary>
+                  <div className={ROW_DISCLOSURE_PANEL_CLASS}>
+                    {/* Blockers, and their one fix, at the dock only. After a
+                        dive readiness gates nothing — the diver is already
+                        aboard — so a red list here would be worrying about a
+                        paperwork state at the checkpoint where the only thing
+                        that matters is bodies (decision 4). The count panel
+                        still says the follow-up happens ashore. */}
+                    {!ready && isDeparture ? (
                       <>
-                        <span className="mt-2 inline-flex print:hidden">
-                          <Badge tone="warning">{t("manifest.depthChip")}</Badge>
-                        </span>
-                        <p className="mt-2 hidden gap-2 rounded-lg bg-warning-tint px-3 py-2 text-base text-warning-strong print:flex">
-                          <span aria-hidden="true">▲</span>
-                          <span>{depthWarningText(t, diver.depthAdvisory)}</span>
-                        </p>
+                        <ul className="flex flex-col gap-1 text-base text-danger">
+                          {/* Keyed on the sentence, not the code: a trip
+                              requiring two specialties yields two blockers with
+                              one code and different params. */}
+                          {diver.readiness.blockers.map((blocker) => {
+                            const text = readinessBlockerText(t, blocker);
+                            return <li key={text}>• {text}</li>;
+                          })}
+                        </ul>
+                        {/* `?rf=blocked` as well as the anchor: the Guests
+                            roster renders every diver on the boat, so landing
+                            on the anchor alone dropped a captain into the
+                            middle of a long list with no sign of why they were
+                            there or who else still needed the same errand. This
+                            link only renders for a diver whose readiness *is*
+                            blocked, so the filter it asks for can never hide
+                            the row it scrolls to. */}
+                        <Link
+                          href={`/shop/${shopSlug}/trips/${tripId}/guests?rf=blocked#booking-${diver.bookingId}`}
+                          className="mt-2 inline-flex min-h-11 items-center text-base font-semibold text-primary hover:underline"
+                        >
+                          {t("manifest.resolveBlockersLink")}
+                        </Link>
+                        <hr className="my-3 border-border" />
                       </>
-                    ) : (
-                      <p className="mt-2 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-base text-warning-strong">
+                    ) : null}
+                    {/* A diver whose advisory the strip above does not already
+                        state by name keeps the full sentence — here, where the
+                        plan for dive two is read during the surface interval.
+                        Warning tone, never a gate (H-08). */}
+                    {diver.depthAdvisory?.status === "exceeds" &&
+                    !sharedAdvisoryTexts.has(depthWarningText(t, diver.depthAdvisory)) ? (
+                      <p className="mb-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-base text-warning-strong">
                         <span aria-hidden="true">▲</span>
                         <span>{depthWarningText(t, diver.depthAdvisory)}</span>
                       </p>
-                    )
-                  ) : null}
-                  {!ready ? (
-                    <>
-                      <ul className="mt-3 flex flex-col gap-1 text-base text-danger">
-                        {/* Keyed on the sentence, not the code: a trip
-                            requiring two specialties yields two blockers with
-                            one code and different params. */}
-                        {diver.readiness.blockers.map((blocker) => {
-                          const text = readinessBlockerText(t, blocker);
-                          return <li key={text}>• {text}</li>;
-                        })}
-                      </ul>
-                      {/* At departure this unblocks boarding; after a dive the
-                          diver is aboard, so it's a shore follow-up on their record.
-
-                          `?rf=blocked` as well as the anchor: the Guests roster
-                          renders every diver on the boat as a ~200px card, so
-                          landing on the anchor alone dropped a captain into the
-                          middle of a long list with no sign of why they were
-                          there or who else still needed the same errand. The
-                          chip is the roster's own "blocked" filter, and this
-                          link only renders for a diver whose readiness *is*
-                          `blocked` (the one non-ready status there is), so the
-                          filter it asks for can never hide the row it scrolls
-                          to (2026-08-06 review). */}
-                      <Link
-                        href={`/shop/${shopSlug}/trips/${tripId}/guests?rf=blocked#booking-${diver.bookingId}`}
-                        className="mt-2 inline-flex min-h-11 items-center text-base font-semibold text-primary hover:underline print:hidden"
-                      >
-                        {t("manifest.resolveBlockersLink")}
-                      </Link>
-                    </>
-                  ) : null}
-                  {/* What the desk already knows about this diver, where the
-                      crew reading the roll call can see it. */}
-                  <StaffNotes
-                    notes={notesByBooking.get(diver.bookingId) ?? []}
-                    locale={locale}
-                    timezone={timezone}
-                    t={t}
-                  />
-                  {/* Print-only, and deliberately kept here rather than beside
-                      the screen disclosure it mirrors below: paper has no
-                      collapsed state to open, so this is simply where the
-                      fact sits on the sheet, ahead of the audit line below —
-                      the same order the row has always printed in. Moving it
-                      to follow the screen reorder would have silently
-                      reordered what the printed manifest says, on the one
-                      surface where "trustworthy by inspection" (principle 6)
-                      means the order on the page too. */}
-                  <div className="mt-3 hidden print:block">
-                    <DiverFacts
-                      diver={diver}
-                      locale={locale}
-                      timezone={timezone}
-                      columns={2}
-                      t={t}
-                    />
-                  </div>
-                  {rc && !rc.implied ? (
-                    <p className="mt-3 text-sm text-muted">
-                      {rc.note
-                        ? t("manifest.rollCallRecordedByWithNote", {
-                            label: rollCallLabelText(t, rollCallLabel(checkpoint, rc)),
-                            date: formatDateTimeTz(rc.occurredAt, locale, timezone),
-                            name: rc.recordedByName,
-                            note: rc.note,
-                          })
-                        : t("manifest.rollCallRecordedByPlain", {
-                            label: rollCallLabelText(t, rollCallLabel(checkpoint, rc)),
-                            date: formatDateTimeTz(rc.occurredAt, locale, timezone),
-                            name: rc.recordedByName,
-                          })}
-                    </p>
-                  ) : impliedNotBoarded ? (
-                    // The only thing that carries forward is a departure result:
-                    // this diver never left the dock (DOM-H3). Boarding after a
-                    // dive is a head count, so it never depends on readiness.
-                    <p className="mt-3 text-sm text-muted">
-                      {t("manifest.carriedForwardFromDock")}
-                    </p>
-                  ) : null}
-                </div>
-                <RollCallControls
-                  kind="diver"
-                  subjectId={diver.bookingId}
-                  checkpoint={checkpoint}
-                  isDeparture={isDeparture}
-                  rollCall={rc}
-                  action={rollCallAction}
-                  copy={rollCallButtonCopy(diver.bookingId)}
-                  showBoardControl={boardingControlShown}
-                  noteDraftFor={{ bookingId: diver.bookingId, checkpoint }}
-                  t={t}
-                />
-              </div>
-              {/* The row's two rare paths, on one line — and *below* the
-                  roll-call controls, not between the name and the tap: on a
-                  phone the row reads name → state → act, top to bottom, and
-                  these two disclosure lines used to sit in the middle of
-                  that, ~90px of dock-prep chrome between every name and its
-                  button. Reference facts are disclosed on demand — nine
-                  emergency contacts and six rental lists at permanent height
-                  were break-glass reference standing between the captain and
-                  the next name (principles 9 and 10). One tap opens them;
-                  paper always carries them, unconditionally, in the
-                  print-only block above (beside the name, ahead of the
-                  audit line) — a closed details here contributes nothing to
-                  print, which is why that block does not live here too. */}
-              <div className={ROW_DISCLOSURE_GRID_CLASS}>
-                <details className="group/facts">
-                  {/* Muted, not action-blue: two of these per row down a
-                      nine-diver roster is eighteen links' worth of primary
-                      ink for rare paths, drowning the one link that earns
-                      it ("Resolve blockers"). The label names everything
-                      behind it — a door marked "Contact & gear" with a
-                      medical line behind it is a mislabeled door on a
-                      safety surface (design review 20260810). */}
-                  <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
-                    {/* The caret is what tells these lines apart from the
-                        "Resolve blockers" navigation link above them:
-                        these disclose in place, that one leaves the page.
-                        It is the app's drawn chevron rather than the `+`
-                        that used to sit *after* the label — rotated 45° to
-                        a ✕ on open, that glyph took the summary's own
-                        `hover:underline` around with it, which is the
-                        underline-at-an-angle a review caught under an open
-                        "Contact & gear". Only the label underlines now. */}
-                    <DisclosureCaret className="group-open/facts:rotate-90" />
-                    <span className="group-hover/summary:underline">
-                      {diver.medicalWaiver
-                        ? t("manifest.diverFactsSummaryWithMedical")
-                        : t("manifest.diverFactsSummary")}
-                    </span>
-                  </summary>
-                  <div className={ROW_DISCLOSURE_PANEL_CLASS}>
+                    ) : null}
                     <DiverFacts
                       diver={diver}
                       locale={locale}
@@ -655,39 +512,212 @@ export function DiverRollCall({
                       columns={1}
                       t={t}
                     />
-                  </div>
-                </details>
-                {/* Closed, this is one quiet line — the same grammar as the
-                    facts disclosure beside it. The private note is a desk
-                    context write, not a boarding control, so it is available
-                    before any roll-call result exists and stays collapsed
-                    at rest. */}
-                <details className="group/note">
-                  <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
-                    <DisclosureCaret className="group-open/note:rotate-90" />
-                    <span className="group-hover/summary:underline">
-                      {t("trips.roster.addFirstNoteSummary")}
-                    </span>
-                  </summary>
-                  <div className={ROW_DISCLOSURE_PANEL_CLASS}>
-                    <PrivateNoteForm
-                      action={addPrivateNoteAction}
-                      hiddenFields={{ bookingId: diver.bookingId }}
-                      resetKey={
-                        notesByBooking
-                          .get(diver.bookingId)
-                          ?.filter((note) => note.scope === "booking").length ?? 0
-                      }
-                      rows={2}
-                      copy={{
-                        label: t("trips.roster.addNoteLabel"),
-                        placeholder: t("shared.rollCallNote.notePlaceholder"),
-                        add: t("trips.roster.addPrivateNote"),
-                        adding: t("trips.roster.adding"),
-                      }}
+                    {/* The facts the row's one capsule could not carry — who
+                        this diver is paired with, the counter's arrival, the age
+                        the crew is entitled to know. Quiet, in words, one tap
+                        away: a team label is not an exception, so it does not
+                        earn the row's single capsule, but "who am I supposed to
+                        be with?" is a question asked at the rail and the answer
+                        has to be on the screen as well as on paper. */}
+                    <ul className="mt-3 flex flex-wrap gap-2">
+                      {teamLabel ? (
+                        <li>
+                          {/* The team, and — when the row's capsule is
+                              shouting about it — *who* is unaccounted for.
+                              The capsule can only carry the alert; this is
+                              where a crew member finds the name behind it. */}
+                          <Badge tone={diver.buddyAlert ? "danger" : "neutral"}>
+                            {diver.buddyAlert
+                              ? `${teamLabel} · ${buddyAlertText(t, diver.buddyAlert)}`
+                              : teamLabel}
+                          </Badge>
+                        </li>
+                      ) : null}
+                      {diver.checkedIn ? (
+                        <li>
+                          <Badge tone="neutral">{t("manifest.checkedInPill")}</Badge>
+                        </li>
+                      ) : null}
+                      {/* The age, and — when something louder took the row's
+                          one capsule — **the minor flag with it**. A blocked
+                          diver and a split team are exactly the cases where a
+                          13-year-old is most likely to be on the row that lost
+                          it, and the captain reading the boarding list has no
+                          other way to know a booked diver is 12 (H-21). Gated
+                          on which capsule the row actually rendered, never on
+                          `minor` itself (dive-domain review, slice 5a). */}
+                      {diver.age !== null && diver.age !== undefined && capsuleKind !== "minor" ? (
+                        <li>
+                          <Badge tone={diver.minor ? "warning" : "neutral"} tabularNums>
+                            {diver.minor
+                              ? t("manifest.minorAge", { age: diver.age })
+                              : t("manifest.age", { age: diver.age })}
+                          </Badge>
+                        </li>
+                      ) : null}
+                    </ul>
+                    <StaffNotes notes={bookingNotes} locale={locale} timezone={timezone} t={t} />
+                    {/* `print:hidden` like the notes above it: an unsaved
+                        sentence a staffer was mid-way through typing about a
+                        customer is the last thing that should ride the sheet
+                        that goes ashore, and the packet's own stylesheet only
+                        covers the packet (security review, slice 5a). */}
+                    <div className="mt-3 print:hidden">
+                      <PrivateNoteForm
+                        action={addPrivateNoteAction}
+                        hiddenFields={{ bookingId: diver.bookingId }}
+                        resetKey={bookingNotes.filter((note) => note.scope === "booking").length}
+                        rows={2}
+                        copy={{
+                          label: t("trips.roster.addNoteLabel"),
+                          placeholder: t("shared.rollCallNote.notePlaceholder"),
+                          add: t("trips.roster.addPrivateNote"),
+                          adding: t("trips.roster.adding"),
+                        }}
+                      />
+                    </div>
+                    {/* Both directions out of a stated "not back aboard", at
+                        the same cost: "Mark back aboard" here, and the
+                        retraction on the settled control below it. Neither is
+                        on the row (ADR 20260815-offline-can-unsay-a-missing-diver
+                        — retracting a mark may never be harder than making
+                        one, and asserting aboard over a missing mark is not a
+                        thumb-under-a-list act). */}
+                    {rowState.notBackAboard ? (
+                      <RollCallBackAboardControl
+                        kind="diver"
+                        subjectId={diver.bookingId}
+                        checkpoint={checkpoint}
+                        subjectName={diver.fullName}
+                        action={rollCallAction}
+                        copy={rollCallButtonCopy(diver.bookingId)}
+                        t={t}
+                      />
+                    ) : null}
+                    {/* The deliberate second step. It is here, and nowhere
+                        else on this page, because reaching it has to cost a
+                        tap on the person's own name first (decision 3). */}
+                    <RollCallExceptionControl
+                      kind="diver"
+                      subjectId={diver.bookingId}
+                      checkpoint={checkpoint}
+                      isDeparture={isDeparture}
+                      rollCall={rc}
+                      action={rollCallAction}
+                      copy={rollCallButtonCopy(diver.bookingId)}
+                      noteDraftFor={{ bookingId: diver.bookingId, checkpoint }}
+                      t={t}
                     />
                   </div>
                 </details>
+                {/* The row's one tap, at the trailing edge where every row's
+                    mark lands. `pt-2.5` centres the 56px circle against the
+                    76px summary line rather than against the panel below it,
+                    which would walk the mark down the row as it opens. */}
+                <div className="shrink-0 pt-2.5 ps-3 pe-3 print:hidden">
+                  {rowState.notBackAboard ? (
+                    <RollCallMark state="notBack" />
+                  ) : boardingControlShown ? (
+                    <RollCallMarkButton
+                      kind="diver"
+                      subjectId={diver.bookingId}
+                      checkpoint={checkpoint}
+                      rollCall={rc}
+                      action={rollCallAction}
+                      copy={rollCallButtonCopy(diver.bookingId)}
+                      markState={rollCallMarkState(rowState)}
+                      noteDraftFor={{ bookingId: diver.bookingId, checkpoint }}
+                      t={t}
+                    />
+                  ) : (
+                    <RollCallMark state="held" />
+                  )}
+                </div>
+              </div>
+              {/* **Paper keeps everything the screen tucks away** (decision 2).
+                  A closed `<details>` contributes nothing to print, so every
+                  fact behind the tap above is restated here unconditionally:
+                  the recorded state as a word, the exceptions the one capsule
+                  could not carry, the blockers at any checkpoint, the full
+                  depth advisory, and the contact block. The summary line above
+                  prints as it stands, so the name, the capsule and the
+                  who-and-when are already on the sheet and are not repeated. */}
+              <div className="hidden px-4 pb-4 print:block">
+                <p className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={
+                      impliedNotBoarded
+                        ? "rounded-full bg-warning-tint px-3 py-1 text-sm font-medium text-warning-strong"
+                        : "rounded-full bg-surface px-3 py-1 text-sm font-medium text-muted"
+                    }
+                  >
+                    {rollCallLabelText(t, rollCallLabel(checkpoint, rc))}
+                  </span>
+                  {ready || capsuleKind === "blocked" ? null : (
+                    <Badge tone={readinessStatusTone(diverStatus)}>
+                      {readinessStatusText(t, diverStatus)}
+                    </Badge>
+                  )}
+                  {diver.checkedIn ? (
+                    <Badge tone="neutral">{t("manifest.checkedInPill")}</Badge>
+                  ) : null}
+                  {diver.hotelPickupLocation ? (
+                    <Badge tone="neutral">
+                      {diver.hotelPickupLocation}
+                      {diver.pickupTime ? ` · ${diver.pickupTime}` : ""}
+                    </Badge>
+                  ) : null}
+                  {diver.age !== null && diver.age !== undefined && capsuleKind !== "minor" ? (
+                    <Badge tone={diver.minor ? "warning" : "neutral"} tabularNums>
+                      {diver.minor
+                        ? t("manifest.minorAge", { age: diver.age })
+                        : t("manifest.age", { age: diver.age })}
+                    </Badge>
+                  ) : null}
+                  {diver.birthday && capsuleKind !== "birthday" ? (
+                    <Badge tone="primary">{birthdayCalloutText(t, diver.birthday)}</Badge>
+                  ) : null}
+                  {teamLabel ? (
+                    <Badge tone="neutral">
+                      {teamLabel}
+                      {diver.buddyAlert ? ` · ${buddyAlertText(t, diver.buddyAlert)}` : ""}
+                    </Badge>
+                  ) : null}
+                </p>
+                {ready ? null : (
+                  <ul className="mt-2 flex flex-col gap-1 text-base">
+                    {diver.readiness.blockers.map((blocker) => {
+                      const text = readinessBlockerText(t, blocker);
+                      return <li key={text}>• {text}</li>;
+                    })}
+                  </ul>
+                )}
+                {diver.depthAdvisory?.status === "exceeds" ? (
+                  <p className="mt-2 text-base">▲ {depthWarningText(t, diver.depthAdvisory)}</p>
+                ) : null}
+                {/* The audit line **in full** — the screen's compact
+                    "Boarded · 7:12 AM · Sal Moretti" is a same-day reading on
+                    the boat; the sheet that goes ashore may be read months
+                    later, so it carries the date and the zone. */}
+                {rc && !rc.implied ? (
+                  <p className="mt-2 text-sm">
+                    {rc.note
+                      ? t("manifest.rollCallRecordedByWithNote", {
+                          label: auditLabel,
+                          date: formatDateTimeTz(rc.occurredAt, locale, timezone),
+                          name: rc.recordedByName,
+                          note: rc.note,
+                        })
+                      : t("manifest.rollCallRecordedByPlain", {
+                          label: auditLabel,
+                          date: formatDateTimeTz(rc.occurredAt, locale, timezone),
+                          name: rc.recordedByName,
+                        })}
+                  </p>
+                ) : null}
+                <div className="mt-2">
+                  <DiverFacts diver={diver} locale={locale} timezone={timezone} columns={2} t={t} />
+                </div>
               </div>
             </li>
           );

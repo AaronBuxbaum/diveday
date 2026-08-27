@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { openTripFromBoard, openTripTab } from "./helpers";
+import { manifestRow, openManifestPerson, openTripFromBoard, openTripTab } from "./helpers";
 
 signedInAsOwner();
 
@@ -45,24 +45,32 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   await page.getByRole("checkbox", { name: "Omar Haddad" }).check();
   await page.getByRole("checkbox", { name: "Sam Whitfield" }).check();
   await page.getByRole("button", { name: "Form buddy team" }).click();
+  // The form redirects back with `?buddies=open`; wait for that navigation to
+  // land before touching a row, or the disclosure opened below is opened on a
+  // DOM the redirect is about to replace.
+  await expect(page).toHaveURL(/buddies=open/);
   await expect(teamRow("Omar Haddad")).toContainText("Sam Whitfield");
 
-  // Their rows now wear the quiet chip, both ways round. Each row is
-  // anchored on its own <h3> name — a bare `li hasText` would also match the
-  // *other* row once the chip text ("Buddy team: Sam Whitfield") lands in it,
-  // and `.first()` then asserts against whichever row the roster orders first
-  // (exactly how this spec's first CI run misread Omar's row as Sam's).
-  const diverRow = (name: string) =>
-    page
-      .locator("#roll-call-list li")
-      .filter({ has: page.getByRole("heading", { name, exact: true }) });
-  const omarRow = diverRow("Omar Haddad");
-  const samRow = diverRow("Sam Whitfield");
+  // Their rows carry the team, one tap away. A team label is not an exception,
+  // so it does not earn the row's single capsule (ADR
+  // 20260827-the-departure-is-two-working-surfaces, decision 1) — it reads in
+  // the person's own panel, and unconditionally on the printed sheet. Rows are
+  // scoped to `> ul > li` so a name can only match the row it belongs to: a
+  // bare `li hasText` also matched the *other* row once the chip text landed in
+  // it, which is how this spec's first CI run misread Omar's row as Sam's.
+  const omarRow = manifestRow(page, "Omar Haddad");
+  const samRow = manifestRow(page, "Sam Whitfield");
+  await openManifestPerson(omarRow);
   await expect(omarRow.getByText("Buddy team: Sam Whitfield")).toBeVisible();
+  await openManifestPerson(samRow);
   await expect(samRow.getByText("Buddy team: Omar Haddad")).toBeVisible();
 
-  // After dive 1: Omar is recorded back aboard, Sam has no result yet — the
-  // exact state a deck watches for, and the page must raise it unprompted.
+  // After dive 1: Omar is recorded back aboard while Sam has no result yet.
+  // **That is not a split** — an alarm is earned by a recorded fact, never by
+  // the absence of one (ADR 20260827-the-departure-is-two-working-surfaces,
+  // decision 4). A crew starts the surface-interval count believing everyone is
+  // back, so the first diver counted in must not paint their buddy red before
+  // anybody has said a word about them.
   await page
     .getByRole("link", { name: "After dive 1" })
     .evaluate((link: HTMLElement) => link.click());
@@ -73,6 +81,17 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   // The settled control's accessible name is its undo-bearing aria-label
   // (PR #607 review), which replaces "Boarded ☑️" rather than extending it.
   await expect(omarRow.getByRole("button", { name: "Boarded — tap again to undo" })).toBeVisible();
+  await expect(page.getByText("buddy team is split", { exact: false })).toHaveCount(0);
+
+  // A human records Sam not back aboard — from his own panel, the deliberate
+  // two-step (decision 3) — and *now* the split is the loudest thing on the
+  // page, on the row of the diver who is aboard.
+  await openManifestPerson(samRow);
+  const samNotBack = samRow.getByRole("button", { name: "Mark not back aboard" });
+  await samNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
+  await samNotBack.click();
+  await expect(samRow.getByRole("button", { name: "Not back aboard", exact: true })).toBeVisible();
+  await openManifestPerson(omarRow);
   await expect(
     omarRow.getByText("Buddy team: Sam Whitfield · Someone unaccounted for"),
   ).toBeVisible();
@@ -88,12 +107,19 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
       .filter({ hasText: "Awaiting" }),
   ).toBeVisible();
 
-  // Sam comes back aboard, and the team settles without anyone dismissing
-  // anything.
-  const boardSam = samRow.getByRole("button", { name: "Mark boarded" });
+  // Sam climbs the ladder. Asserting he is aboard over a stated missing-diver
+  // mark is recorded from his own panel, never from the row — ADR
+  // 20260815-offline-can-unsay-a-missing-diver calls it "the one tap on this
+  // surface that turns the loudest row the product has into green", and the
+  // retraction beside it costs exactly the same two gestures. His row carries
+  // no tap at all while the mark stands.
+  await expect(samRow.getByRole("button", { name: "Mark boarded" })).toHaveCount(0);
+  await openManifestPerson(samRow);
+  const boardSam = samRow.getByRole("button", { name: /^Mark back aboard/ });
   await boardSam.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await boardSam.click();
   await expect(samRow.getByRole("button", { name: "Boarded — tap again to undo" })).toBeVisible();
+  await openManifestPerson(omarRow);
   await expect(omarRow.getByText("Buddy team: Sam Whitfield", { exact: true })).toBeVisible();
   await expect(omarRow.getByText("Someone unaccounted for")).toHaveCount(0);
   await expect(page.getByText("buddy team is split", { exact: false })).toHaveCount(0);
@@ -158,10 +184,7 @@ test("a team grows, a member leaves, and dissolving is the explicit act", async 
   await expect(page.getByRole("checkbox", { name: "Lena Fischer" })).toBeVisible();
   // Same h3-anchored row shape as the first test: Tom's row must not be
   // found via some other row's chip text.
-  await expect(
-    page
-      .locator("#roll-call-list li")
-      .filter({ has: page.getByRole("heading", { name: "Tom Okafor", exact: true }) })
-      .getByText("Buddy team:", { exact: false }),
-  ).toHaveCount(0);
+  const tomRow = manifestRow(page, "Tom Okafor");
+  await openManifestPerson(tomRow);
+  await expect(tomRow.getByText("Buddy team:", { exact: false })).toHaveCount(0);
 });

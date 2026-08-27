@@ -1,5 +1,5 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { openTripFromBoard, openTripTab } from "./helpers";
+import { offlineCopySaved, openTripFromBoard, openTripTab } from "./helpers";
 
 signedInAsOwner();
 
@@ -22,7 +22,7 @@ test("one tap from close-out opens the departure log with the recorded facts", a
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
-  await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+  await offlineCopySaved(page);
 
   // Put one recorded fact on the departure so the document carries a real
   // timeline entry (the per-test DB reset contains the write).
@@ -163,7 +163,7 @@ test.describe("the log is the owner's to produce", () => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
     await openTripTab(page, "Manifest");
-    await page.getByRole("link", { name: "Open offline roll call" }).waitFor();
+    await offlineCopySaved(page);
     const tripUrl = new URL(page.url());
 
     // Close-out is theirs to run; this one door is not on any of its rows.

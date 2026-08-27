@@ -557,21 +557,29 @@ describe("buddy teams (in-memory PGlite)", () => {
         checkpoint: "after_dive_1",
       });
 
-    // Two of three back: both loud, because one teammate is unaccounted for.
+    // Two of three back and nothing said about the third: **quiet**. An alarm
+    // is earned by a recorded fact, never by the absence of one (ADR
+    // 20260827-the-departure-is-two-working-surfaces, decision 4) — the crew is
+    // mid-count and an uncalled teammate means "not yet".
     await board(a.booking.id);
     await board(b.booking.id);
     let manifest = await getTripManifest(db, shop.id, trip.id, "after_dive_1");
+    expect(manifest?.divers.map((entry) => entry.buddyAlert)).toEqual([null, null, null]);
+
+    // A human says the third did not come back, and both teammates who are
+    // aboard read as separated. The missing member's own row carries their own
+    // state; the team alert renders on whoever is back, where the deck looks.
+    await board(c.booking.id, "not_boarded");
+    manifest = await getTripManifest(db, shop.id, trip.id, "after_dive_1");
     expect(manifest?.divers.find((e) => e.bookingId === a.booking.id)?.buddyAlert).toBe(
       "separated_after_dive",
     );
     expect(manifest?.divers.find((e) => e.bookingId === b.booking.id)?.buddyAlert).toBe(
       "separated_after_dive",
     );
-    // The unaccounted member's own row carries their own state; the team alert
-    // renders on whoever is back, where the deck looks.
     expect(manifest?.divers.find((e) => e.bookingId === c.booking.id)?.buddyAlert).toBeNull();
 
-    // The last member boards, and the whole team settles.
+    // She climbs the ladder, and the whole team settles.
     await board(c.booking.id);
     manifest = await getTripManifest(db, shop.id, trip.id, "after_dive_1");
     expect(manifest?.divers.map((entry) => entry.buddyAlert)).toEqual([null, null, null]);
@@ -621,11 +629,23 @@ describe("buddy teams (in-memory PGlite)", () => {
       status: "boarded",
       checkpoint: "after_dive_1",
     });
-    // The DM has no result at this checkpoint: unaccounted for, so the diver
-    // who is back reads as separated. This is the case the old model could not
-    // express at all — a diver placed with a DM looked identical to a diver
-    // nobody paired.
+    // The DM has no result at this checkpoint yet — mid-count, so quiet
+    // (decision 4).
     let manifest = await getTripManifest(db, shop.id, trip.id, "after_dive_1");
+    expect(manifest?.divers.find((e) => e.bookingId === a.booking.id)?.buddyAlert).toBeNull();
+
+    // Recorded not back, and the diver who is aboard reads as separated. This
+    // is the case the old model could not express at all — a diver placed with
+    // a DM looked identical to a diver nobody paired.
+    await recordCrewRollCall(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      personId: staff.id,
+      recordedByPersonId: staff.id,
+      status: "not_boarded",
+      checkpoint: "after_dive_1",
+    });
+    manifest = await getTripManifest(db, shop.id, trip.id, "after_dive_1");
     expect(manifest?.divers.find((e) => e.bookingId === a.booking.id)?.buddyAlert).toBe(
       "separated_after_dive",
     );

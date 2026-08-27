@@ -699,9 +699,9 @@ new domain concept, define it here in the same PR.
   waiver **status** (state, date, template version — never the medical questionnaire's answers),
   the **buddy pair** staff recorded for the departure — a stable team number, the buddy's name,
   and who recorded the pairing when, since a pairing decided at the dock and one typed in that
-  night are different facts (the live manifest's split-pair alert is deliberately not restated,
-  because it reads a merely-unrecorded buddy the same as one a human stated was not back aboard)
-  — crew and crew counts, and generation metadata. It reports
+  night are different facts (the live manifest's split-team alert is deliberately not restated: it
+  is a *reading* of the roll call at one moment, and this document reports recorded facts) — crew
+  and crew counts, and generation metadata. It reports
   recorded facts with timestamps and
   computes no safety judgment; every absence is stated ("Awaiting", "No certification evidence on
   file") rather than left blank. A SHA-256 **integrity code** over the printed facts sits in the
@@ -752,7 +752,12 @@ new domain concept, define it here in the same PR.
   own event so the correction stays in the audit trail rather than deleting history. **Cleared is
   emitted offline too**, and it is the reason it has to be: without it the only way to take back a
   mis-tapped "not back aboard" was to tap "aboard" — a positive claim that a person is back on the
-  boat, which nobody had made. **A retraction is scoped twice.** A device may only retract a statement
+  boat, which nobody had made. **On the live manifest neither direction is the cheap one**: since
+  the boat manifest became an instrument, both "mark back aboard" and the retraction are recorded
+  from the person's own panel, which costs the same two deliberate gestures either way and takes
+  both off the row a thumb runs down
+  ([20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md),
+  decision 3). **A retraction is scoped twice.** A device may only retract a statement
   *that same device queued*; a mark that arrived on the saved copy says so instead, because the
   device cannot know what the crew who recorded it saw. And the queued retraction **names the
   statement it undoes**, so the server applies it only while that statement is still the one
@@ -767,6 +772,14 @@ new domain concept, define it here in the same PR.
   being typed is also mirrored to the crew's own device and cleared once it syncs, so a dropped
   connection never loses it; that device draft is transient and unencrypted — separate from, and not
   protected like, the encrypted **offline manifest snapshot**.
+- **Held** — a roll-call *mark*, not a roll-call event: the dashed ring a diver's row wears when
+  nobody has recorded anything about them **and readiness has not cleared them to board**. It exists
+  only at the dock, because readiness gates boarding there and nowhere else — after a dive roll call
+  is a physical head count, and a blocked diver counts back aboard like anyone else. A held row
+  carries no tap at all: the act that clears it is ashore, on the Trip tab, and offering a tap the
+  server would refuse is a control that lies. It is not a state anything is stored as — the row is
+  simply *awaiting* with a readiness blocker (see **Readiness**), drawn so a captain can tell at a
+  glance which empty circles are theirs to close.
 - **Crew roll-call event** — the crew half of a head count: a named staff member said one **assigned crew
   member** is aboard, not aboard, or cleared, at one checkpoint. Same append-only history, same
   supersession, and the same two meanings of "not boarded" as a diver's roll-call event; the subject
@@ -803,7 +816,14 @@ new domain concept, define it here in the same PR.
   departure log renders it in the roll-call timeline. The split-team state (`separated_dock` as a
   boarding heads-up, `separated_after_dive` as the loud one) **informs and never acts** — it plays
   no part in readiness, admission, capacity, or whether a checkpoint reads complete, and it messages
-  nobody. The offline manifest shows teams read-only by name and states that the split-team read
+  nobody. **The loud one is earned by a recorded fact.** After a dive it reads only when a human has
+  recorded a teammate *not back aboard*; a teammate nobody has called yet is "not yet", not a split.
+  It used to fire on the merely-uncalled, which meant the first diver counted back painted their
+  buddy's row red before anyone had said a word about them — on every row of every surface interval,
+  which is how a crew learns to stop reading an alert
+  ([20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md),
+  decision 4). At the dock the heads-up keeps its old reading: there the crew is *assembling* a
+  boat, so anyone not yet aboard is genuinely still to gather. The offline manifest shows teams read-only by name and states that the split-team read
   belongs to the live roll call — a saved snapshot cannot know who came back.
   See [ADR 20260804-buddy-teams](../architecture/decisions/20260804-buddy-teams.md).
 - **Per-trip crew role** — what a crew member is rostered to *do on one sailing*

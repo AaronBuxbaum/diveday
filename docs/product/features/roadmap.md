@@ -113,10 +113,12 @@ obligation**, which is what keeps the design and the code from drifting once the
 component that must not drift names the ADR in its doc comment, and a test fails on the rule (never
 a pixel snapshot).
 
-- **5a. The boat manifest at phone size.** The count leads, rows reduce to name + one tap, the
-  checklist and device housekeeping each collapse to a line. *Pins:* a test that the manifest
-  renders no danger-toned element at a checkpoint with no recorded exception (decision 4), and one
-  that the not-back path is not reachable in a single tap from the list (decision 3).
+- **5a. The boat manifest at phone size — shipped 2026-08-27.** See
+  [shipped.md](../shipped.md#the-boat-manifest-becomes-an-instrument-delivered-2026-08-27). Two
+  things the later slices should know: the emergency band is still a standing panel (it moved below
+  the roll call rather than behind the `⋯`, which is 5c's job, and its numbers are still `tel:`
+  links), and the executed-dive log still stands open on the boat although the ADR's tier list puts
+  the dive log ashore.
 - **5b. The person sheet.** One tap from a roll-call row: today's trail, buddy states, emergency
   contact as reference text, one act. Replaces the two per-row disclosures. *Pins:* a test that the
   sheet renders no control that can place a call (decision 3's "no call buttons" half).

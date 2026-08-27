@@ -59,7 +59,7 @@ with their dependencies, are in
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
-| 5a — the boat manifest at phone size | open | — | — |
+| 5a — the boat manifest at phone size | shipped | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/RollCallControls.tsx` | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCall.test.tsx` |
 | 5b — the person sheet | open | — | — |
 | 5c — emergency numbers become buried reference | open | — | — |
 | 5d — the roster becomes one grouped ledger | open | — | — |

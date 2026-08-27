@@ -476,7 +476,7 @@
       "manifest-buddy-divergence",
       "manifest-buddy-teams-panel",
       "manifest-not-back-aboard",
-      "manifest-row-disclosures"
+      "manifest-person-panel"
     ]
   },
   "/shop/[shopSlug]/trips/[id]/prep": {

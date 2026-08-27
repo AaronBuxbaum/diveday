@@ -68,7 +68,10 @@
     "label": "Cumpleaños",
     "today": "hoy",
     "soon": "en {days, plural, one {# día} other {# días}}",
-    "recent": "hace {days, plural, one {# día} other {# días}}"
+    "recent": "hace {days, plural, one {# día} other {# días}}",
+    "calloutToday": "Cumpleaños hoy",
+    "calloutSoon": "Cumpleaños en {days, plural, one {# día} other {# días}}",
+    "calloutRecent": "Cumpleaños hace {days, plural, one {# día} other {# días}}"
   },
   "printButton": {
     "label": "Imprimir / guardar PDF",

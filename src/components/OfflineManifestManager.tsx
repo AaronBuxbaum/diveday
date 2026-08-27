@@ -1,10 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
 import { buttonClass } from "@/components/ui/button";
+import { sectionCardClass } from "@/components/ui/card";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { fill, pluralForm } from "@/i18n/fill";
 import { requestBackgroundFlush } from "@/lib/background-flush";
 import { formatDateTimeTz } from "@/lib/format";
@@ -57,17 +59,37 @@ export interface OfflineManifestManagerCopy {
   refreshingLabel: string;
   refreshNowLabel: string;
   openOfflineRollCall: string;
+  /**
+   * The heading of the whole "On this phone" group this component now *is* —
+   * the disclosure it renders holds every per-device concern, not only the
+   * offline copy. See the render below.
+   */
+  groupHeading: string;
 }
 
 export function OfflineManifestManager({
   payload,
   locale,
   copy,
+  children,
 }: {
   payload: OfflineManifestPayload;
   /** Negotiated request locale (see requestLocale) — never hard-coded, per AGENTS.md. */
   locale: string;
   copy: OfflineManifestManagerCopy;
+  /**
+   * The rest of the "On this phone" group — the push opt-in and the device
+   * toggles — rendered inside this component's disclosure.
+   *
+   * They are passed in rather than imported because they are per-*surface*
+   * concerns this component has no business knowing about, while the
+   * disclosure itself has to live here: the summary line carries the live
+   * connectivity and freshness state, and that state has exactly one owner.
+   * Handing the collapse to the page instead would mean a second reader of the
+   * offline store, which is the drift that gave the offline view its own wrong
+   * copy of the row tones once already.
+   */
+  children?: ReactNode;
 }) {
   const router = useRouter();
   const tripId = payload.manifests[0]?.trip.id ?? "";
@@ -439,23 +461,44 @@ export function OfflineManifestManager({
           </div>
         </div>
       ) : null}
-      {/* No card chrome and no top margin of its own: this is the first member
-          of the manifest page's "On this phone" group, which owns the border,
-          the padding and the rhythm the three per-device concerns share (see
-          the group in `trips/[id]/manifest/page.tsx`). It was a bordered card
-          with a lone spray-guard checkbox floating underneath it, which read as
-          two unrelated leftovers rather than one quiet group. */}
-      <section className="print:hidden" aria-labelledby="offline-heading">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="max-w-2xl">
-            {/* h3, under the group's own h2 — and the freshness state below is
-                never behind a disclosure: a stale copy must never be able to
-                look current (docs/design/principles.md). */}
-            <h3 id="offline-heading" className="font-semibold">
-              {copy.heading}
-            </h3>
-            <p className="mt-1 text-sm leading-6 text-muted">{copy.body}</p>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
+      {/* **The whole "On this phone" group, as one line at rest** (ADR
+          20260827-the-departure-is-two-working-surfaces, decision 2: device
+          settings and offline detail are "ashore, not here"). Everything this
+          *device* does — hold an offline copy, wake itself for a refresh,
+          ignore spray on the glass, buzz — is one per-phone concern rather than
+          anything about this departure, and at full height it spent the foot of
+          every manifest on preferences nobody changes twice.
+
+          **The state is not what collapses.** A stale copy that looks current
+          is the failure mode this whole mechanism exists to prevent
+          (docs/design/principles.md), so the connectivity chip and the
+          freshness pill ride the *summary* — readable without a tap, exactly as
+          before. What went behind the tap is the prose, the two buttons and the
+          toggles. That is also why this component owns the disclosure rather
+          than the page wrapping it in one: the line that must stay visible is
+          computed here, and there is one reader of the store.
+
+          Still a backstop rather than the way in: the shop-wide auto-prime
+          already saves the near-term board on any /shop page visit (ADR
+          20260726-shopwide-offline-manifest-priming), and once a boat is truly
+          out of signal this live page does not load at all —
+          /offline-manifest is what a captain opens. */}
+      <section
+        className={sectionCardClass({ padding: "none", className: "mt-8 print:hidden" })}
+        aria-labelledby="offline-heading"
+      >
+        <details className="group/phone">
+          <summary className="group/summary flex min-h-14 cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 select-none [&::-webkit-details-marker]:hidden">
+            <DisclosureCaret className="group-open/phone:rotate-90" />
+            {/* A deliberate eyebrow rather than a section heading, which is a
+                scale `SectionCard`'s own `title` does not render. */}
+            <h2
+              id="offline-heading"
+              className="text-xs font-semibold tracking-widest text-muted uppercase group-hover/summary:underline"
+            >
+              {copy.groupHeading}
+            </h2>
+            <span className="flex flex-wrap items-center gap-2">
               <ConnectivityStatus
                 offlineLabel={saved ? copy.connectivityOfflineWithCopy : copy.connectivityOffline}
                 copy={{
@@ -467,51 +510,69 @@ export function OfflineManifestManager({
               {freshness ? (
                 <OfflineFreshnessPill freshness={freshness}>{freshnessLabel}</OfflineFreshnessPill>
               ) : null}
+            </span>
+          </summary>
+          <div className="px-4 pb-4">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="max-w-2xl">
+                <h3 className="font-semibold">{copy.heading}</h3>
+                <p className="mt-1 text-sm leading-6 text-muted">{copy.body}</p>
+                {/* The live region stays mounted whether or not it currently has
+                    anything to say, so an announcement is heard when one
+                    arrives. */}
+                <p className={message ? "mt-2 text-sm font-medium" : ""} aria-live="polite">
+                  {message}
+                </p>
+                {saved ? (
+                  <p className="mt-1 text-xs text-muted">
+                    {fill(copy.savedSummary, {
+                      date: formatDateTimeTz(
+                        new Date(saved.snapshot.savedAt),
+                        locale,
+                        payload.shop.timezone,
+                      ),
+                      pending: String(pending),
+                      rejected: String(rejected),
+                    })}
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => refresh({ manual: true })}
+                  className={buttonClass({ variant: "secondary" })}
+                >
+                  {busy ? copy.refreshingLabel : copy.refreshNowLabel}
+                </button>
+                {saved ? (
+                  // `secondary`, deliberately: this is the standby door to the
+                  // fallback viewer, on a panel whose chips already say the copy
+                  // maintains itself — as `primary` it was the strongest control
+                  // on the whole manifest, outshouting the roll call above it
+                  // (principle 8; design review 2026-08-21). Still boat-sized:
+                  // the moment it is needed is the moment of wet hands.
+                  <a
+                    href={`/offline-manifest?trip=${tripId}`}
+                    className={buttonClass({ variant: "secondary", size: "boat" })}
+                  >
+                    {copy.openOfflineRollCall}
+                  </a>
+                ) : null}
+              </div>
             </div>
-            {/* The live region stays mounted whether or not it currently has
-              anything to say, so an announcement is heard when one arrives. */}
-            <p className={message ? "mt-2 text-sm font-medium" : ""} aria-live="polite">
-              {message}
-            </p>
-            {saved ? (
-              <p className="mt-1 text-xs text-muted">
-                {fill(copy.savedSummary, {
-                  date: formatDateTimeTz(
-                    new Date(saved.snapshot.savedAt),
-                    locale,
-                    payload.shop.timezone,
-                  ),
-                  pending: String(pending),
-                  rejected: String(rejected),
-                })}
-              </p>
-            ) : null}
+            {/* `empty:hidden` because the rows the surface passes in render
+                *nothing* under ordinary conditions — the push opt-in while it is
+                still checking the device and on any deployment with no VAPID
+                keys, the spray-guard toggle until it has read this device's
+                stored preference — and a separator above nothing is a rule
+                across an empty band. */}
+            <div className="mt-4 space-y-4 border-t border-border pt-4 empty:hidden">
+              {children}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => refresh({ manual: true })}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {busy ? copy.refreshingLabel : copy.refreshNowLabel}
-            </button>
-            {saved ? (
-              // `secondary`, deliberately: this is the standby door to the
-              // fallback viewer, on a panel whose chips already say the copy
-              // maintains itself — as `primary` it was the strongest control
-              // on the whole manifest, outshouting the roll call above it
-              // (principle 8; design review 2026-08-21). Still boat-sized:
-              // the moment it is needed is the moment of wet hands.
-              <a
-                href={`/offline-manifest?trip=${tripId}`}
-                className={buttonClass({ variant: "secondary", size: "boat" })}
-              >
-                {copy.openOfflineRollCall}
-              </a>
-            ) : null}
-          </div>
-        </div>
+        </details>
       </section>
     </>
   );
