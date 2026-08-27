@@ -704,10 +704,18 @@ describe("wrapEmailHtml", () => {
     expect(body).toContain("#008080");
   });
 
-  it("renders the inlined bubble mark in the email header", () => {
+  // Issue #770: an inline <svg> mark is stripped outright by Outlook's Word
+  // rendering engine, so the mark is table cells — border-radius and
+  // background-color, the same survival property emailButton() above already
+  // leans on — rather than SVG or a remote <img> (which the "never a logo
+  // image" test above already refuses for the same reason: a client that
+  // blocks images by default shows a broken placeholder, not the mark).
+  it("renders the bubble mark as table cells, not svg or an image", () => {
     const html = wrapEmailHtml("<p>Body</p>", { shopName: "Blue Mantis", locale: "en-US" });
-    expect(html).toContain("<svg");
-    expect(html).toContain('fill="#008080"');
-    expect(html).toContain('fill="#ff6b6b"');
+    expect(html).not.toContain("<svg");
+    expect(html).not.toContain("<img");
+    expect(html).toContain("background-color: #008080");
+    expect(html).toContain("background-color: #ff6b6b");
+    expect(html).toContain("border-radius: 50%");
   });
 });
