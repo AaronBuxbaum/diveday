@@ -80,6 +80,26 @@ describe("BookingPartyFields", () => {
     expect(screen.queryByText(/bringing more than/i)).not.toBeInTheDocument();
   });
 
+  it("renders a name and email box for every seat the diver picked", async () => {
+    // The regression this exists for: `diverSlots` was a six-name tuple, so
+    // raising MAX_PUBLIC_PARTY_SIZE silently left the *form* capped at six
+    // while the select offered twenty. A party of nine rendered six fieldsets
+    // and submitted three blank names for boxes nobody was shown — and the
+    // validator, which loops the submitted size, would point at fields that do
+    // not exist. Asserted at the cap, since that is where a fixed-length list
+    // would fail.
+    renderDiver(<BookingPartyFields maxPartySize={MAX_PUBLIC_PARTY_SIZE} />);
+    fireEvent.change(screen.getByRole("combobox", { name: /number of divers/i }), {
+      target: { value: String(MAX_PUBLIC_PARTY_SIZE) },
+    });
+    expect(document.querySelectorAll('input[name^="fullName-"]')).toHaveLength(
+      MAX_PUBLIC_PARTY_SIZE,
+    );
+    expect(
+      document.querySelector(`input[name="fullName-${MAX_PUBLIC_PARTY_SIZE - 1}"]`),
+    ).not.toBeNull();
+  });
+
   it("offers every seat up to the measured cap when the boat has room", () => {
     renderDiver(<BookingPartyFields maxPartySize={MAX_PUBLIC_PARTY_SIZE} />);
     const options = screen.getAllByRole("option");
