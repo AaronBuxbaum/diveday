@@ -1186,10 +1186,14 @@ exports.handler = async (event) => {
     };
     const mediaDistribution = new cloudfront.Distribution(this, "MediaDistribution", {
       comment: "DiveDay media (AWS-8) -- public prefixes only",
-      // An origin nothing is allowed to reach. Every request that does not match
-      // one of the four behaviours below lands here and is refused at the edge,
-      // so `import-waivers/` and `import-receipts/` have no route out of this
-      // bucket at all.
+      // An origin that does not exist, on a reserved TLD that can never resolve.
+      // Every request not matching one of the four behaviours below lands here,
+      // so it never reaches the bucket -- `import-waivers/` and
+      // `import-receipts/` have no route out of it at all. The viewer gets a
+      // gateway error rather than a tidy 403, which is the trade for keeping
+      // this a configuration rather than a CloudFront Function to maintain: the
+      // property being bought is that the object is not served, and nobody
+      // legitimate ever lands here.
       defaultBehavior: {
         origin: new origins.HttpOrigin("diveday-media-no-public-default.invalid", {
           customHeaders: { "x-diveday-blocked": "1" },
@@ -1208,7 +1212,7 @@ exports.handler = async (event) => {
     new cdk.CfnOutput(this, "MediaDistributionDomain", {
       value: mediaDistribution.distributionDomainName,
       description:
-        "CloudFront domain serving the four public media prefixes (courses, recap, dive-sites, shop-logos). import-* is refused at the edge -- see AWS-8 in docs/architecture/aws-migration-dossier.md.",
+        "CloudFront domain serving the four public media prefixes (courses, recap, dive-sites, shop-logos). Any other path reaches no origin, so import-* is never served -- see AWS-8 in docs/architecture/aws-migration-dossier.md.",
     });
 
     const mediaUploaderKey = mintAccessKey("MediaUploaderUserAccessKey", mediaUploaderUser);
