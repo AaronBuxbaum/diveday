@@ -213,12 +213,21 @@ export async function getMonthlyReport(
   // where the payment ledger cannot, and `nullif` keeps a zero-total checkout
   // (nothing to recover) out of the sum instead of dividing by zero.
   const recoveredDepositCents = sql<string>`coalesce(sum(round(
-    (${bookingCheckouts.amountPerDiverCents} + ${bookingCheckoutBookings.gearCents})
+    (${bookingCheckouts.amountPerDiverCents} + ${bookingCheckoutBookings.gearCents} + ${bookingCheckoutBookings.passThroughCents})
+      * coalesce(${bookingCheckouts.settledTotalCents}, ${bookingCheckouts.totalCents})::numeric
+      / nullif(${bookingCheckouts.totalCents}, 0)
+  )), 0)`;
+  const recoveredPassThroughCents = sql<string>`coalesce(sum(round(
+    ${bookingCheckoutBookings.passThroughCents}
       * coalesce(${bookingCheckouts.settledTotalCents}, ${bookingCheckouts.totalCents})::numeric
       / nullif(${bookingCheckouts.totalCents}, 0)
   )), 0)`;
   const [recoveredDeposits] = await db
-    .select({ total: recoveredDepositCents, tax: sum(bookingCheckoutBookings.taxCents) })
+    .select({
+      total: recoveredDepositCents,
+      tax: sum(bookingCheckoutBookings.taxCents),
+      passThrough: recoveredPassThroughCents,
+    })
     .from(bookingCheckouts)
     .innerJoin(
       bookingCheckoutBookings,
@@ -276,12 +285,45 @@ export async function getMonthlyReport(
     )
     .where(and(inWindow, inArray(bookingPayments.status, [...COLLECTED_PAYMENT_STATUSES])));
 
+  // The pass-through line is collected with the checkout but is not the
+  // shop's revenue. Match it to the current booking payment by Stripe session
+  // id so manual payments remain untouched.
+  const [currentPassThrough] = await db
+    .select({ total: sum(bookingCheckoutBookings.passThroughCents) })
+    .from(bookingCheckoutBookings)
+    .innerJoin(
+      bookingCheckouts,
+      and(
+        eq(bookingCheckouts.id, bookingCheckoutBookings.checkoutId),
+        eq(bookingCheckouts.shopId, shopId),
+        eq(bookingCheckouts.status, "completed"),
+      ),
+    )
+    .innerJoin(
+      bookings,
+      and(eq(bookings.id, bookingCheckoutBookings.bookingId), eq(bookings.shopId, shopId)),
+    )
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .innerJoin(
+      bookingPayments,
+      and(
+        eq(bookingPayments.bookingId, bookingCheckoutBookings.bookingId),
+        eq(bookingPayments.shopId, shopId),
+        eq(bookingPayments.providerRef, bookingCheckouts.stripeSessionId),
+      ),
+    )
+    .where(and(inWindow, inArray(bookingPayments.status, [...COLLECTED_PAYMENT_STATUSES])));
+
   // Older/demo data can contain a paid invoice without the booking-payment
   // mirror (the invoice is still the authoritative collected amount). Use it
   // only when no current payment row exists, avoiding double counting the
   // normal webhook/manual-payment path above.
   const [invoiceRevenue] = await db
-    .select({ total: sum(orders.amountPaidCents), tax: sum(orders.taxCents) })
+    .select({
+      total: sum(orders.amountPaidCents),
+      tax: sum(orders.taxCents),
+      passThrough: sum(orders.passThroughCents),
+    })
     .from(orders)
     .innerJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -314,11 +356,11 @@ export async function getMonthlyReport(
 
   // A paid staff invoice normally mirrors its collected total into
   // `booking_payments`, so the revenue query above deliberately excludes it.
-  // Its tax still belongs in the separate tax line, matched by providerRef so
-  // an unrelated manual payment on the same booking cannot subtract tax that
-  // was not part of the amount being reported.
-  const [invoiceBookingTax] = await db
-    .select({ total: sum(orders.taxCents) })
+  // Its tax and pass-through allocation still belong in separate report lines,
+  // matched by providerRef so an unrelated manual payment on the same booking
+  // cannot subtract amounts that were not part of the invoice being reported.
+  const [invoiceBookingAmounts] = await db
+    .select({ total: sum(orders.taxCents), passThrough: sum(orders.passThroughCents) })
     .from(orders)
     .innerJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
@@ -405,17 +447,28 @@ export async function getMonthlyReport(
     Number(baseRevenue?.total ?? 0) +
     Number(recoveredDeposits?.total ?? 0) +
     Number(invoiceRevenue?.total ?? 0);
+  const passThroughCents =
+    Number(currentPassThrough?.total ?? 0) +
+    Number(recoveredDeposits?.passThrough ?? 0) +
+    Number(invoiceRevenue?.passThrough ?? 0) +
+    Number(invoiceBookingAmounts?.passThrough ?? 0);
   const taxCents =
     Number(currentCheckoutTax?.total ?? 0) +
     Number(recoveredDeposits?.tax ?? 0) +
     Number(invoiceRevenue?.tax ?? 0) +
-    Number(invoiceBookingTax?.total ?? 0);
+    Number(invoiceBookingAmounts?.total ?? 0);
   const importedPaymentCents = Number(importedFinancialTotals?.payments ?? 0);
   const importedRefundCents = Number(importedFinancialTotals?.refunds ?? 0);
 
   return {
     trips: reportTrips,
-    revenueCents: currentRevenueCents - taxCents + importedPaymentCents - importedRefundCents,
+    revenueCents:
+      currentRevenueCents -
+      taxCents -
+      passThroughCents +
+      importedPaymentCents -
+      importedRefundCents,
+    passThroughCents,
     taxCents,
     importedPaymentCents,
     importedRefundCents,

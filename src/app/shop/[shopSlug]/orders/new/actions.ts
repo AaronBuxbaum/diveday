@@ -13,6 +13,7 @@ import {
   type InvoiceCustomerAddress,
   isUsableInvoiceCustomerAddress,
 } from "@/lib/payments/invoicing";
+import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { LINE_ITEM_ROWS } from "./order-form";
@@ -73,6 +74,9 @@ export async function createOrderAction(formData: FormData) {
   // further than the refusal warrants.
   if (!(await canPersonManageOrders(db, session.user.shopId, session.user.personId))) {
     revalidateAndRedirect(orders, noticeUrl(orders, "not-authorized"));
+  }
+  if (!(await hasRequiredStepUp(db, session, "money"))) {
+    redirect(stepUpChallengeUrl(session.user.shopSlug, "money", newOrder));
   }
 
   const parsedPersonId = personIdSchema.safeParse(String(formData.get("personId") ?? ""));

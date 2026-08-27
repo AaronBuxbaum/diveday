@@ -14,6 +14,7 @@ import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { DECLARABLE_CERTIFICATION_LEVELS, NO_CERTIFICATION_ANSWER } from "@/lib/dive-declaration";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
+import type { PassThroughFee } from "@/lib/pass-through-fee";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { type CertificationLevel, certificationRank } from "@/lib/readiness";
 import { hasAnyRentalPricing, type RentalPricing } from "@/lib/rentals";
@@ -290,6 +291,7 @@ export function BookSpotSection({
   contactPhone,
   rentalItems,
   rentalPricing,
+  passThroughFee,
   terms,
 }: {
   trip: Trip;
@@ -327,6 +329,8 @@ export function BookSpotSection({
   /** The shop's rental catalog and price list — a gear step only renders when both offer something priced. */
   rentalItems: string[];
   rentalPricing: RentalPricing;
+  /** A shop-configured third-party charge, shown separately from shop fare. */
+  passThroughFee?: PassThroughFee | null;
   /**
    * The money fine print (`TripTerms`), server-rendered by the page and
    * placed here beside the button it qualifies — deposit split, cancellation
@@ -391,6 +395,7 @@ export function BookSpotSection({
     [minimumCertificationLevel, tRoot],
   );
   const showGearFields = payAtBooking && hasAnyRentalPricing(rentalPricing);
+  const passThroughTotalCents = (passThroughFee?.amountCents ?? 0) * partySize;
   // Shrinking the party leaves a stale subtotal behind for the dropped slot
   // (BookingGearFields unmounts, but its last report stays in state) — sum
   // only the indexes still in play.
@@ -428,7 +433,7 @@ export function BookSpotSection({
         <span className="text-sm font-medium text-primary tabular-nums">{capacityText}</span>
       }
       description={
-        payAtBooking && perDiverPriceCents
+        payAtBooking && perDiverPriceCents !== null && perDiverPriceCents > 0
           ? t("paidSecurely", { price: money(perDiverPriceCents) })
           : undefined
       }
@@ -474,18 +479,28 @@ export function BookSpotSection({
               the other three ran the gate with nothing. It now lives inside
               each diver's own fieldset in `BookingPartyFields`, which is where
               a person's own answer belongs. */}
-          {perDiverPriceCents && gearTotalCents > 0 ? (
+          {perDiverPriceCents !== null && (gearTotalCents > 0 || passThroughTotalCents > 0) ? (
             <p className="-mt-2 text-sm font-medium tabular-nums">
               {t("totalDueAtCheckout", {
-                total: money(partySize * perDiverPriceCents + gearTotalCents),
+                total: money(
+                  partySize * perDiverPriceCents + gearTotalCents + passThroughTotalCents,
+                ),
               })}
             </p>
-          ) : partySize > 1 && perDiverPriceCents ? (
+          ) : partySize > 1 && perDiverPriceCents !== null ? (
             <p className="-mt-2 text-sm font-medium tabular-nums">
               {t("partyTotal", {
                 count: partySize,
                 price: money(perDiverPriceCents),
-                total: money(partySize * perDiverPriceCents),
+                total: money(partySize * perDiverPriceCents + passThroughTotalCents),
+              })}
+            </p>
+          ) : null}
+          {passThroughFee ? (
+            <p className="-mt-2 text-sm text-muted tabular-nums">
+              {t("passThroughFee", {
+                name: passThroughFee.name,
+                price: money(passThroughFee.amountCents),
               })}
             </p>
           ) : null}

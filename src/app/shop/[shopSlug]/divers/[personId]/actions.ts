@@ -55,6 +55,7 @@ import { isValidCalendarDate } from "@/lib/calendar-date";
 import { isPlausibleCardNumber } from "@/lib/card-number";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
+import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
@@ -910,6 +911,9 @@ export async function refundPaymentAction(shopSlug: string, personId: string, fo
   if (!(await canPersonRefund(db, staff.user.shopId, staff.user.personId))) {
     revalidateAndRedirect(base, backTo(base, "not-authorized-refund", "payments"));
     return;
+  }
+  if (!(await hasRequiredStepUp(db, staff, "money"))) {
+    redirect(stepUpChallengeUrl(staff.user.shopSlug, "money", base));
   }
   // A demo shop's orders carry fabricated Stripe ids; refunding one would hit
   // live Stripe and fail. The button is rendered disabled to match (PaymentsSection).

@@ -101,6 +101,8 @@ export const diveSiteFormSchema = z.object({
   ]),
   currentNote: z.string().trim().max(500),
   divePlan: z.string().trim().max(1_200),
+  /** Optional shop-stated conservation note; never a DiveDay verification. */
+  conservationNote: z.string().trim().max(600).optional().default(""),
   /**
    * Which fit reading the briefing shows, or `""` for "work it out from the
    * facts" — the default, and what every site said before the shop could
@@ -113,7 +115,6 @@ export const diveSiteFormSchema = z.object({
     z.enum(["welcoming", "demanding", "unknown"]).nullable(),
   ),
   fitNote: z.string().trim().max(400).optional().default(""),
-  conservationNote: z.string().trim().max(1_200).optional().default(""),
   fieldGuideTipsHeading: z.string().trim().max(80).optional().default(""),
   /**
    * Landmarks and field-guide species arrive as one JSON string each, from

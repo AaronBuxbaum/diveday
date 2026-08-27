@@ -7,6 +7,7 @@ import {
   fetchExportPhotos,
   zipExportBundle,
 } from "@/lib/export";
+import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 
 /**
@@ -16,13 +17,20 @@ import { requireStaffSession } from "@/lib/session";
  * owner/manager, re-checked against the database rather than the session's
  * JWT so a demoted or disabled manager loses access immediately.
  */
-export async function GET() {
+export async function GET(request: Request) {
   const session = await requireStaffSession();
   const db = await getDb();
   if (!(await canPersonExportShopData(db, session.user.shopId, session.user.personId))) {
     return new Response("The data export is limited to the shop's owner or manager.", {
       status: 403,
     });
+  }
+  const returnTo = new URL(request.url).pathname;
+  if (!(await hasRequiredStepUp(db, session, "export"))) {
+    return Response.redirect(
+      new URL(stepUpChallengeUrl(session.user.shopSlug, "export", returnTo), request.url),
+      303,
+    );
   }
   const now = nowDate();
   const input = await loadShopExportBundleInput(db, session.user.shopId, now);

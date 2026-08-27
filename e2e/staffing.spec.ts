@@ -65,7 +65,10 @@ test("an owner schedules a shift, narrows the window past it, and takes it back 
   // The seeded shift is today, so it is inside the default window.
   await expect(keiko.getByText("Demo schedule")).toBeVisible();
 
-  await page.getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
+  await page
+    .getByRole("region", { name: "Add a working shift" })
+    .getByLabel("Staff member")
+    .selectOption({ label: "Keiko Tanaka" });
   await page.getByLabel("Date").fill(shiftDay);
   await page.getByLabel("Starts").fill("06:30");
   await page.getByLabel("Ends").fill("14:45");

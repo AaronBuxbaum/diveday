@@ -11,6 +11,7 @@ import {
 import { canPersonExportIncidentRecord } from "./authz";
 import { listTripBuddyTeamEvents, listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb } from "./client";
+import { listExecutedDives } from "./executed-dives";
 import { getTripManifests } from "./manifests";
 import { latestPreDepartureChecksForTrip, listChecklistItemsForTrip } from "./pre-departure-check";
 import { listTripReadiness } from "./readiness";
@@ -51,44 +52,46 @@ export async function getIncidentExport(
   if (!manifests || manifests.length === 0) return null;
 
   const recorders = alias(people, "recorders");
-  const [shop, readinessRows, generator, diverEventRows, crewEventRows] = await Promise.all([
-    getShopById(db, shopId),
-    listTripReadiness(db, shopId, tripId, generatedAt),
-    db
-      .select({ fullName: people.fullName })
-      .from(people)
-      .where(and(eq(people.id, generatedByPersonId), eq(people.shopId, shopId)))
-      .limit(1),
-    // The full history, oldest first — not the latest-per-subject reduction
-    // the live manifest shows. An incident document is the audit trail.
-    db
-      .select({ event: rollCallEvents, subject: people, recorder: recorders })
-      .from(rollCallEvents)
-      .innerJoin(bookings, eq(bookings.id, rollCallEvents.bookingId))
-      .innerJoin(people, eq(people.id, bookings.personId))
-      .innerJoin(recorders, eq(recorders.id, rollCallEvents.recordedByPersonId))
-      .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, tripId)))
-      // `seq` last, for a reason sharper here than anywhere else: this
-      // document is hashed, so two orderings of the same events produce two
-      // different SHA-256 integrity codes for one departure. A tie on
-      // transaction time would make the hash a coin toss.
-      .orderBy(
-        asc(rollCallEvents.occurredAt),
-        asc(rollCallEvents.createdAt),
-        asc(rollCallEvents.seq),
-      ),
-    db
-      .select({ event: rollCallCrewEvents, subject: people, recorder: recorders })
-      .from(rollCallCrewEvents)
-      .innerJoin(people, eq(people.id, rollCallCrewEvents.personId))
-      .innerJoin(recorders, eq(recorders.id, rollCallCrewEvents.recordedByPersonId))
-      .where(and(eq(rollCallCrewEvents.shopId, shopId), eq(rollCallCrewEvents.tripId, tripId)))
-      .orderBy(
-        asc(rollCallCrewEvents.occurredAt),
-        asc(rollCallCrewEvents.createdAt),
-        asc(rollCallCrewEvents.seq),
-      ),
-  ]);
+  const [shop, readinessRows, generator, diverEventRows, crewEventRows, executedDiveRows] =
+    await Promise.all([
+      getShopById(db, shopId),
+      listTripReadiness(db, shopId, tripId, generatedAt),
+      db
+        .select({ fullName: people.fullName })
+        .from(people)
+        .where(and(eq(people.id, generatedByPersonId), eq(people.shopId, shopId)))
+        .limit(1),
+      // The full history, oldest first — not the latest-per-subject reduction
+      // the live manifest shows. An incident document is the audit trail.
+      db
+        .select({ event: rollCallEvents, subject: people, recorder: recorders })
+        .from(rollCallEvents)
+        .innerJoin(bookings, eq(bookings.id, rollCallEvents.bookingId))
+        .innerJoin(people, eq(people.id, bookings.personId))
+        .innerJoin(recorders, eq(recorders.id, rollCallEvents.recordedByPersonId))
+        .where(and(eq(rollCallEvents.shopId, shopId), eq(rollCallEvents.tripId, tripId)))
+        // `seq` last, for a reason sharper here than anywhere else: this
+        // document is hashed, so two orderings of the same events produce two
+        // different SHA-256 integrity codes for one departure. A tie on
+        // transaction time would make the hash a coin toss.
+        .orderBy(
+          asc(rollCallEvents.occurredAt),
+          asc(rollCallEvents.createdAt),
+          asc(rollCallEvents.seq),
+        ),
+      db
+        .select({ event: rollCallCrewEvents, subject: people, recorder: recorders })
+        .from(rollCallCrewEvents)
+        .innerJoin(people, eq(people.id, rollCallCrewEvents.personId))
+        .innerJoin(recorders, eq(recorders.id, rollCallCrewEvents.recordedByPersonId))
+        .where(and(eq(rollCallCrewEvents.shopId, shopId), eq(rollCallCrewEvents.tripId, tripId)))
+        .orderBy(
+          asc(rollCallCrewEvents.occurredAt),
+          asc(rollCallCrewEvents.createdAt),
+          asc(rollCallCrewEvents.seq),
+        ),
+      listExecutedDives(db, shopId, tripId),
+    ]);
   if (!shop) return null;
   const generatedByName = generator[0]?.fullName;
   if (!generatedByName) return null;
@@ -185,7 +188,12 @@ export async function getIncidentExport(
   }));
 
   return buildIncidentExport({
-    shop: { name: shop.name, slug: shop.slug, timezone: shop.timezone },
+    shop: {
+      name: shop.name,
+      slug: shop.slug,
+      timezone: shop.timezone,
+      depthUnit: shop.depthUnit,
+    },
     manifests,
     diverEvidence: readinessRows.map((row) => ({
       bookingId: row.booking.id,
@@ -216,6 +224,17 @@ export async function getIncidentExport(
         : null,
     })),
     events,
+    executedDives: executedDiveRows.map(({ executed, actualSite, recorder }) => ({
+      diveNumber: executed.diveNumber,
+      actualSiteName: actualSite?.name ?? null,
+      enteredAt: executed.enteredAt?.toISOString() ?? null,
+      exitedAt: executed.exitedAt?.toISOString() ?? null,
+      maxDepthMeters: executed.maxDepthMeters,
+      observedConditions: executed.observedConditions,
+      notRecorded: executed.notRecorded,
+      recordedByName: recorder?.name ?? null,
+      surfaceIntervalMinutes: null,
+    })),
     buddyTeams,
     buddyTeamEvents,
     preDepartureCheck: checklistItems.map((item) => {

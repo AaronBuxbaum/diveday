@@ -16,9 +16,12 @@ import { sectionCardClass } from "@/components/ui/card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
+import { listDiveSites } from "@/db/dive-sites";
+import { listExecutedDives } from "@/db/executed-dives";
 import { getTripManifests } from "@/db/manifests";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
+import { listTripDives } from "@/db/trips";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
@@ -42,6 +45,7 @@ import { TripPageHeader } from "../_components/TripPageHeader";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CrewRollCall } from "./_components/CrewRollCall";
 import { DiverRollCall, type ManifestNote } from "./_components/DiverRollCall";
+import { ExecutedDiveLog } from "./_components/ExecutedDiveLog";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
 import { SummaryPanel } from "./_components/SummaryPanel";
 import {
@@ -56,6 +60,7 @@ import {
   preDepartureCheckAction,
   removeBuddyTeamMemberAction,
   rollCallAction,
+  saveExecutedDiveAction,
   subscribePushAction,
   unsubscribePushAction,
 } from "./actions";
@@ -104,6 +109,9 @@ export default async function TripManifestPage({
     diverNotes,
     checklistItems,
     checklistChecks,
+    plannedDives,
+    executedDives,
+    liveDiveSites,
   ] = await Promise.all([
     getTripManifests(db, shop.id, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
@@ -119,14 +127,17 @@ export default async function TripManifestPage({
     listDiverNotesForTrip(db, shop.id, tripId),
     listChecklistItems(db, shop.id),
     latestPreDepartureChecksForTrip(db, shop.id, tripId),
+    listTripDives(db, shop.id, tripId),
+    listExecutedDives(db, shop.id, tripId),
+    listDiveSites(db, shop.id),
   ]);
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
 
-  const plannedDives = departureManifest.trip.plannedDives;
-  const checkpoints = rollCallCheckpoints(plannedDives);
+  const plannedDiveCount = departureManifest.trip.plannedDives;
+  const checkpoints = rollCallCheckpoints(plannedDiveCount);
   const checkpoint: RollCallCheckpoint =
-    requestedCheckpoint && isRollCallCheckpoint(requestedCheckpoint, plannedDives)
+    requestedCheckpoint && isRollCallCheckpoint(requestedCheckpoint, plannedDiveCount)
       ? requestedCheckpoint
       : "departure";
   const manifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
@@ -157,6 +168,7 @@ export default async function TripManifestPage({
   // The note carries its own checkpoint and the action re-proves it, so this
   // one takes the narrower context that has none.
   const boundAddPrivateNoteAction = addManifestPrivateNoteAction.bind(null, { shopSlug, tripId });
+  const boundSaveExecutedDiveAction = saveExecutedDiveAction.bind(null, actionContext);
   // Same narrower context as the note above: the checklist is checkpoint-
   // independent, so its action re-proves nothing about which one was open.
   const boundPreDepartureCheckAction = preDepartureCheckAction.bind(null, { shopSlug, tripId });
@@ -452,6 +464,22 @@ export default async function TripManifestPage({
         buddyTeamLabel={buddyTeamLabel}
         t={t}
       />
+
+      {!isDeparture ? (
+        <ExecutedDiveLog
+          planned={plannedDives.map(({ dive, diveSite }) => ({
+            diveNumber: dive.diveNumber,
+            diveSite: diveSite ? { id: diveSite.id, name: diveSite.name } : null,
+          }))}
+          executed={executedDives}
+          liveDiveSites={liveDiveSites.map((site) => ({ id: site.id, name: site.name }))}
+          action={boundSaveExecutedDiveAction}
+          t={t}
+          timeZone={shop.timezone}
+          depthUnit={shop.depthUnit}
+          checkpoint={checkpoint}
+        />
+      ) : null}
 
       {/* Buddy teams are dock/desk prep, not mid-roll-call work: grouping
           people happens before the boat leaves, while the lists above are

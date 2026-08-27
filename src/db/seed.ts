@@ -7,7 +7,9 @@ import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
 import {
+  accountSecurity,
   accountSessions,
+  accountStepUps,
   accountTokens,
   activityEvents,
   boats,
@@ -28,6 +30,7 @@ import {
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
+  executedDives,
   gearItems,
   gearReservations,
   gearServiceEvents,
@@ -64,6 +67,7 @@ import {
   shopStripeAccounts,
   shops,
   specialtyCertifications,
+  staffCredentials,
   staffShifts,
   tips,
   tripAssignments,
@@ -843,6 +847,7 @@ export async function resetDemoSchedule(
   // test's fixture (regression tests live in seed.test.ts).
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
   await db.delete(rollCallEvents).where(eq(rollCallEvents.shopId, shopId));
+  await db.delete(executedDives).where(eq(executedDives.shopId, shopId));
   // These records can contain order/customer payloads and point at schedule
   // data that is about to be replaced, so they must not survive a demo reset.
   // Keep the provider connections themselves: they are shop settings, not
@@ -1021,6 +1026,7 @@ export async function resetDemoSchedule(
   await db.delete(certifications).where(eq(certifications.shopId, shopId));
   await db.delete(specialtyCertifications).where(eq(specialtyCertifications.shopId, shopId));
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
+  await db.delete(staffCredentials).where(eq(staffCredentials.shopId, shopId));
 
   // Everyone except the staff seeded once at shop creation (`staffDefs`, by
   // full name since canonical and minted shops give them different emails) —
@@ -1091,6 +1097,10 @@ export async function resetDemoSchedule(
     ).map((row) => row.id);
     if (purgeAccountIds.length > 0) {
       await db.delete(accountTokens).where(inArray(accountTokens.userAccountId, purgeAccountIds));
+      await db.delete(accountStepUps).where(inArray(accountStepUps.userAccountId, purgeAccountIds));
+      await db
+        .delete(accountSecurity)
+        .where(inArray(accountSecurity.userAccountId, purgeAccountIds));
       // Better Auth sessions reference the login row, so they must be cleared
       // before user_accounts for the same purged people. Stable staff sessions
       // stay intact because purgeAccountIds contains only non-staff people.

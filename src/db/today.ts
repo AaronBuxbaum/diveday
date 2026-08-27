@@ -26,6 +26,7 @@ import {
   openPrepListActionText,
   openReviewsActionText,
   openRollCallActionText,
+  openStaffingActionText,
   openTripActionText,
   openUnitsActionText,
   overRatioDetailText,
@@ -34,6 +35,7 @@ import {
   reviewsPendingDetailText,
   reviewsPendingSubjectText,
   rollCallGapDetailText,
+  staffCredentialDueDetailText,
   stuckOperationKindText,
   stuckPaymentOperationDetailText,
   uncrewedDepartureDetailText,
@@ -103,6 +105,7 @@ import {
   trips,
   tripWaitlistEntries,
 } from "./schema";
+import { listStaffCredentials } from "./staff-credentials";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { countShopTrips, listStaff } from "./trips";
@@ -1133,6 +1136,7 @@ export async function getTodayWork(
     fullName: s.person.fullName,
     roles: s.roles,
   }));
+  const credentialRows = await listStaffCredentials(db, shopId);
 
   const tripIds = todayTrips.map((t) => t.id);
   const assignments =
@@ -1825,6 +1829,29 @@ export async function getTodayWork(
       }),
       actionLabel: openGearUnitActionText(t),
       href: `/shop/${shopSlug}/gear/${row.gearItemId}`,
+      dueAt,
+    });
+  }
+
+  const credentialHorizon = now.getTime() + 30 * 24 * HOUR_MS;
+  for (const row of credentialRows) {
+    if (!row.credential.renewsAt) continue;
+    const dueAt = new Date(`${row.credential.renewsAt}T00:00:00.000Z`);
+    if (Number.isNaN(dueAt.getTime()) || dueAt.getTime() > credentialHorizon) continue;
+    const overdue = dueAt.getTime() < now.getTime();
+    actions.push({
+      id: `staff-credential:${row.credential.id}`,
+      kind: "staff_credential_due",
+      urgency: overdue ? "now" : urgencyFor(dueAt, now),
+      subject: row.person.fullName,
+      context: null,
+      detail: staffCredentialDueDetailText(t, {
+        credential: row.credential.name,
+        dueOn: formatCalendarDate(row.credential.renewsAt, locale),
+        overdue,
+      }),
+      actionLabel: openStaffingActionText(t),
+      href: `/shop/${shopSlug}/staffing#credentials`,
       dueAt,
     });
   }

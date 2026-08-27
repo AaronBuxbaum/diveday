@@ -117,7 +117,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Complete rental gear",
         "One shallow open-water dive",
       ],
-      excludes: ["Photos and video", "Marine park fees where they apply"],
+      excludes: ["Photos and video"],
       scheduleDays: [
         {
           title: "Your afternoon",
@@ -191,7 +191,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Four open-water training dives",
         "Light lunch on full days",
       ],
-      excludes: ["Marine park fees", "Underwater photos"],
+      excludes: ["Underwater photos"],
       scheduleDays: [
         {
           title: "Day 1 — classroom and confined water",
@@ -297,7 +297,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Five supervised adventure dives",
         "Tanks, weights, and boat",
       ],
-      excludes: ["Personal gear rental", "Marine park fees", "Specialty gear for optional dives"],
+      excludes: ["Personal gear rental", "Specialty gear for optional dives"],
       scheduleDays: [
         {
           title: "Day 1 — deep and navigation",
@@ -379,11 +379,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Rescue scenarios and skills sessions",
         "Tanks, weights, and boat",
       ],
-      excludes: [
-        "Emergency First Response course, if you need it",
-        "Personal gear rental",
-        "Marine park fees",
-      ],
+      excludes: ["Emergency First Response course, if you need it", "Personal gear rental"],
       scheduleDays: [
         {
           title: "Day 1 — knowledge and self-rescue",
@@ -468,7 +464,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Complete rental gear for the session",
         "Confined-water skills session",
       ],
-      excludes: ["Open-water dives afterwards", "Marine park fees", "Photos and video"],
+      excludes: ["Open-water dives afterwards", "Photos and video"],
       scheduleDays: [
         {
           title: "Your morning",
@@ -612,7 +608,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Two training dives",
         "Tanks, weights, and boat",
       ],
-      excludes: ["Personal gear rental", "Marine park fees", "Underwater photos"],
+      excludes: ["Personal gear rental", "Underwater photos"],
       scheduleDays: [
         {
           title: "Course day",
@@ -686,7 +682,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Primary and backup dive lights",
         "Tanks, weights, and boat",
       ],
-      excludes: ["Personal gear rental", "Marine park fees", "Dinner between dives"],
+      excludes: ["Personal gear rental", "Dinner between dives"],
       scheduleDays: [
         {
           title: "Evening 1 — dusk and dark",
@@ -777,12 +773,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Safety cylinder and line",
         "Tanks, weights, and boat",
       ],
-      excludes: [
-        "Nitrox fills",
-        "Personal gear rental",
-        "Marine park fees",
-        "Dive computer rental",
-      ],
+      excludes: ["Nitrox fills", "Personal gear rental", "Dive computer rental"],
       scheduleDays: [
         {
           title: "Day 1 — planning and the first two dives",
@@ -871,7 +862,6 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       excludes: [
         "Personal gear rental",
         "Dive light — bring your own or rent one from us; you need one for the penetration dive.",
-        "Marine park fees",
         "Nitrox fills",
       ],
       scheduleDays: [
@@ -961,11 +951,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Compass, slate, and marker floats",
         "Tanks, weights, and boat",
       ],
-      excludes: [
-        "Personal gear rental",
-        "Marine park fees",
-        "A compass of your own, if you buy one",
-      ],
+      excludes: ["Personal gear rental", "A compass of your own, if you buy one"],
       scheduleDays: [
         {
           title: "Day 1 — compass work",
@@ -1048,7 +1034,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "A camera and housing to borrow, if you do not have one",
         "Tanks, weights, and boat",
       ],
-      excludes: ["Personal gear rental", "Marine park fees", "Memory cards", "Editing software"],
+      excludes: ["Personal gear rental", "Memory cards", "Editing software"],
       scheduleDays: [
         {
           title: "Course day",
@@ -1128,11 +1114,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Surface marker buoy and reel",
         "Tanks, weights, and boat",
       ],
-      excludes: [
-        "Personal gear rental",
-        "Marine park fees",
-        "A marker buoy of your own, if you buy one",
-      ],
+      excludes: ["Personal gear rental", "A marker buoy of your own, if you buy one"],
       scheduleDays: [
         {
           title: "Course day",
@@ -1209,12 +1191,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Two dives from the boat",
         "Tanks, weights, and the boat day",
       ],
-      excludes: [
-        "Personal gear rental",
-        "Marine park fees",
-        "Seasickness medication",
-        "Crew gratuity",
-      ],
+      excludes: ["Personal gear rental", "Seasickness medication", "Crew gratuity"],
       scheduleDays: [
         {
           title: "Course day",
@@ -1292,11 +1269,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Lift bags, lines, reels, and marker floats",
         "Tanks, weights, and boat",
       ],
-      excludes: [
-        "Personal gear rental",
-        "Marine park fees",
-        "Actual salvage work, which we quote separately",
-      ],
+      excludes: ["Personal gear rental", "Actual salvage work, which we quote separately"],
       scheduleDays: [
         {
           title: "Day 1 — search patterns",
@@ -1386,7 +1359,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "One confined-water session and three open-water dives",
         "Weights and boat",
       ],
-      excludes: ["A harness or regulators of your own", "Personal gear rental", "Marine park fees"],
+      excludes: ["A harness or regulators of your own", "Personal gear rental"],
       scheduleDays: [
         {
           title: "Day 1 — fitting and confined water",
@@ -1473,7 +1446,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Slates and a local field guide to borrow",
         "Tanks, weights, and boat",
       ],
-      excludes: ["Personal gear rental", "Marine park fees", "A field guide of your own"],
+      excludes: ["Personal gear rental", "A field guide of your own"],
       scheduleDays: [
         {
           title: "Course day",
@@ -1822,7 +1795,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         "Underwater slates and identification guides",
         "Tanks and weights",
       ],
-      excludes: ["Personal gear rental", "Marine park conservation wristband"],
+      excludes: ["Personal gear rental"],
       scheduleDays: [
         {
           title: "Naturalist Day",

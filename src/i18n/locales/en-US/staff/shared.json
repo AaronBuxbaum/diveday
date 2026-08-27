@@ -334,6 +334,7 @@
       "gearOverdue": "Gear overdue",
       "gearDueBack": "Gear due back",
       "gearServiceDue": "Gear service",
+      "staffCredentialDue": "Credential",
       "unitsUnconfirmed": "Setup"
     },
     "blockerAction": {
@@ -439,6 +440,7 @@
       "openReviews": "Open reviews",
       "openGearRegister": "Open gear register",
       "openGearUnit": "Open unit record",
+      "openStaffing": "Open staffing",
       "openUnits": "Open units"
     },
     "summary": {
@@ -494,6 +496,10 @@
       "serviceDueDetail": "{clockLabel} is due {dueOn}.",
       "serviceOverdueDetail": "{clockLabel} was due {dueOn}.",
       "neverPickedUpDetail": "{unitLabel} was reserved until {dueOn} and never picked up — release it."
+    },
+    "staffCredential": {
+      "dueDetail": "{credential} for this staff member renews {dueOn}.",
+      "overdueDetail": "{credential} for this staff member expired {dueOn} — update the record."
     }
   },
   "tripDiveFields": {

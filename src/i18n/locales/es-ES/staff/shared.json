@@ -334,6 +334,7 @@
       "gearOverdue": "Equipo atrasado",
       "gearDueBack": "Devolución hoy",
       "gearServiceDue": "Mantenimiento",
+      "staffCredentialDue": "Credencial",
       "unitsUnconfirmed": "Configuración"
     },
     "blockerAction": {
@@ -439,6 +440,7 @@
       "openReviews": "Ver reseñas",
       "openGearRegister": "Abrir registro de equipo",
       "openGearUnit": "Abrir ficha de la unidad",
+      "openStaffing": "Abrir personal",
       "openUnits": "Abrir unidades"
     },
     "summary": {
@@ -494,6 +496,10 @@
       "serviceDueDetail": "{clockLabel} vence el {dueOn}.",
       "serviceOverdueDetail": "{clockLabel} venció el {dueOn}.",
       "neverPickedUpDetail": "{unitLabel} estaba reservado hasta el {dueOn} y nunca se recogió — libéralo."
+    },
+    "staffCredential": {
+      "dueDetail": "La renovación de {credential} para esta persona es el {dueOn}.",
+      "overdueDetail": "{credential} para esta persona venció el {dueOn} — actualiza el registro."
     }
   },
   "tripDiveFields": {

@@ -38,6 +38,40 @@
     "submit": "Añadir turno",
     "saving": "Guardando…"
   },
+  "credentials": {
+    "heading": "Credenciales del personal",
+    "description": "Mantén visibles las titulaciones, seguros y credenciales de seguridad. Son avisos informativos, nunca un bloqueo automático de asignaciones.",
+    "empty": "Todavía no hay credenciales registradas.",
+    "person": "Miembro del personal",
+    "choosePerson": "Elige una persona",
+    "kind": "Tipo de credencial",
+    "name": "Nombre de la credencial",
+    "issuer": "Entidad emisora",
+    "identifier": "Número de referencia",
+    "issuedAt": "Fecha de emisión",
+    "renewsAt": "Fecha de renovación",
+    "renews": "renueva el {date}",
+    "issuerUnknown": "Entidad emisora no registrada",
+    "pending": "Pendiente de revisión",
+    "verified": "Revisada",
+    "overdue": "Vencida",
+    "dueSoon": "Vence en 30 días",
+    "markVerified": "Marcar revisada",
+    "markPending": "Marcar pendiente",
+    "remove": "Quitar",
+    "removing": "Quitando…",
+    "saving": "Guardando…",
+    "add": "Añadir credencial",
+    "kinds": {
+      "instructor_rating": "Titulación de instructor",
+      "divemaster_rating": "Titulación de divemaster",
+      "liability_insurance": "Seguro de responsabilidad",
+      "first_aid_cpr": "Primeros auxilios / RCP",
+      "oxygen_provider": "Proveedor de oxígeno",
+      "captains_licence": "Licencia de patrón",
+      "other": "Otra"
+    }
+  },
   "crewGaps": {
     "needCrew": "{count, plural, one {# salida de este periodo sigue sin tripulación suficiente.} other {# salidas de este periodo siguen sin tripulación suficiente.}}",
     "allCrewed": "Todas las salidas de este periodo tienen su tripulación.",
@@ -49,6 +83,10 @@
     "overlap": "Esa persona ya tiene un turno solapado.",
     "staffNotFound": "Esa persona ya no forma parte del equipo de este centro.",
     "invalid": "Revisa la fecha y las horas del turno e inténtalo de nuevo.",
-    "notAuthorized": "Solo los propietarios y gerentes pueden cambiar turnos."
+    "notAuthorized": "Solo los propietarios y gerentes pueden cambiar turnos.",
+    "credentialSaved": "Credencial añadida.",
+    "credentialReviewed": "Revisión de credencial actualizada.",
+    "credentialDeleted": "Credencial eliminada.",
+    "credentialInvalid": "No se pudo guardar la credencial. Revisa la persona y las fechas."
   }
 }

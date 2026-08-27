@@ -40,6 +40,7 @@ const EXPECTED_FILES = [
   "trip_requirements.csv",
   "trip_assignments.csv",
   "staff_shifts.csv",
+  "staff_credentials.csv",
   "bookings.csv",
   "waitlist_entries.csv",
   "trip_invitations.csv",
@@ -49,6 +50,7 @@ const EXPECTED_FILES = [
   "booking_payment_events.csv",
   "booking_checkouts.csv",
   "booking_checkout_bookings.csv",
+  "executed_dives.csv",
   "roll_call_events.csv",
   "roll_call_crew_events.csv",
   "buddy_pairs.csv",
@@ -103,10 +105,12 @@ const EXPORTED_TABLES = [
   "trip_requirements",
   "trip_assignments",
   "staff_shifts",
+  "staff_credentials",
   "bookings",
   "booking_payment_events",
   "booking_checkouts",
   "booking_checkout_bookings",
+  "executed_dives",
   "internal_notes",
   "activity_events",
   "notification_deliveries",
@@ -222,6 +226,8 @@ const EXCLUDED_TABLES = [
   "booking_capabilities", // bearer credentials, never exported — same reasoning as user_accounts
   "account_tokens", // bearer credentials (email verify / password reset), never exported
   "account_sessions", // a live sign-in session — more sensitive than a bearer token, never exported
+  "account_security", // TOTP seeds and recovery-code hashes are credentials
+  "account_step_ups", // short-lived second-factor grants are credentials
   // better-auth adapter scaffolding, functionally unused (no OAuth, no
   // built-in email/password flow — src/lib/auth.ts) but still credential-
   // shaped by name, same reasoning as user_accounts.
@@ -278,6 +284,8 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   dive_packages: ["shop_id"],
   dive_package_entitlements: ["shop_id"],
   staff_shifts: ["shop_id"],
+  staff_credentials: ["shop_id"],
+  executed_dives: ["shop_id"],
   review_moderation_events: ["shop_id"],
   people: [
     "shop_id",

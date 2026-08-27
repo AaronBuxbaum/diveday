@@ -1,5 +1,6 @@
 import { and, eq, exists, gt, isNull, or, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import type { ConservationCommitmentCode } from "@/lib/conservation-commitments";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DockDayRhythm } from "@/lib/diver-planning";
 import type { EmergencyReference } from "@/lib/emergency-reference";
@@ -91,6 +92,34 @@ export async function setShopTimezone(db: AppDb, shopId: string, timezone: strin
 /** Turns Stripe Tax on or off for charges created after this setting is saved. */
 export async function setShopTaxEnabled(db: AppDb, shopId: string, taxEnabled: boolean) {
   const [shop] = await db.update(shops).set({ taxEnabled }).where(eq(shops.id, shopId)).returning();
+  return shop ?? null;
+}
+
+/** Saves the shop's named per-diver pass-through fee; null disables it. */
+export async function setShopPassThroughFee(
+  db: AppDb,
+  shopId: string,
+  fee: { name: string; amountCents: number } | null,
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({ passThroughFee: fee })
+    .where(eq(shops.id, shopId))
+    .returning();
+  return shop ?? null;
+}
+
+/** Stores the shop's own conservation claims without presenting them as verified. */
+export async function setShopConservationCommitments(
+  db: AppDb,
+  shopId: string,
+  conservationCommitments: ConservationCommitmentCode[],
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({ conservationCommitments })
+    .where(eq(shops.id, shopId))
+    .returning();
   return shop ?? null;
 }
 
@@ -463,22 +492,6 @@ export async function setShopProfile(
       ...(profile.description !== undefined ? { description: clean(profile.description) } : {}),
       ...(profile.logoUrl !== undefined ? { logoUrl: clean(profile.logoUrl) } : {}),
     })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
-/**
- * Replaces the shop-configured conservation commitments after validation.
- */
-export async function setShopConservationCommitments(
-  db: AppDb,
-  shopId: string,
-  conservationCommitments: string[],
-) {
-  const [shop] = await db
-    .update(shops)
-    .set({ conservationCommitments })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;

@@ -54,6 +54,7 @@ import { EMERGENCY_LINE_SLOTS, hasEmergencyReference } from "@/lib/emergency-ref
 import { formatHourOfDay, formatMoneyScanned, formatShortDate } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
+import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { CONNECT_CLIENT_ID } from "@/lib/payments/connect";
 import { SUPPORT_EMAIL, UPGRADE_EMAIL } from "@/lib/platform-mail";
 import { RENTABLE_ITEMS, SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/rentals";
@@ -83,6 +84,7 @@ import {
   saveDockDayRhythmAction,
   saveEmergencyReferenceAction,
   savePackingAction,
+  savePassThroughFeeAction,
   saveProfileAction,
   saveRentalItemsAction,
   saveRentalPricingAction,
@@ -123,6 +125,8 @@ function noticeMessages(
     "units-invalid": { tone: "danger", text: t("settings.main.notice.unitsInvalid") },
     "tax-saved": { tone: "success", text: t("settings.main.notice.taxSaved") },
     "tax-invalid": { tone: "danger", text: t("settings.main.notice.taxInvalid") },
+    "pass-through-saved": { tone: "success", text: t("settings.main.notice.passThroughSaved") },
+    "pass-through-invalid": { tone: "danger", text: t("settings.main.notice.passThroughInvalid") },
     "rentals-saved": { tone: "success", text: t("settings.main.notice.rentalsSaved") },
     "rental-prices-saved": { tone: "success", text: t("settings.main.notice.rentalPricesSaved") },
     "rental-prices-invalid": {
@@ -400,6 +404,7 @@ const SECTION_IDS = [
   "rentalPricing",
   "divePackages",
   "tax",
+  "passThrough",
   "stripe",
 ] as const;
 type SectionId = (typeof SECTION_IDS)[number];
@@ -610,6 +615,10 @@ export default async function SettingsPage({
   const taxValue = t(
     shop.taxEnabled ? "settings.main.tax.enabledValue" : "settings.main.tax.disabledValue",
   );
+  const passThroughFee = parsePassThroughFee(shop.passThroughFee);
+  const passThroughValue = passThroughFee
+    ? `${passThroughFee.name} · ${formatMoneyScanned(passThroughFee.amountCents, shopCurrency, locale)} / diver`
+    : notSet;
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -659,6 +668,11 @@ export default async function SettingsPage({
               href={`/shop/${shopSlug}/settings/safety-checklist`}
               heading={t("settings.main.safetyChecklist.heading")}
               description={t("settings.main.safetyChecklist.description")}
+            />
+            <SettingsDoorRow
+              href={`/shop/${shopSlug}/settings/security`}
+              heading={t("settings.main.security.heading")}
+              description={t("settings.main.security.description")}
             />
 
             {/* First editable row, because it is the setting every other date
@@ -1875,6 +1889,46 @@ export default async function SettingsPage({
                       className={buttonClass({ variant: "secondary", className: "mt-3" })}
                     >
                       {t("settings.main.tax.submit")}
+                    </SubmitButton>
+                  </form>
+                </SettingsRow>
+
+                <SettingsRow
+                  heading={t("settings.main.passThrough.heading")}
+                  value={passThroughValue}
+                  description={t("settings.main.passThrough.description")}
+                  detail={t("settings.main.passThrough.detail")}
+                  open={activeSection === "passThrough"}
+                >
+                  <SectionNotice banner={banner} section="passThrough" active={activeSection} />
+                  <form action={savePassThroughFeeAction} className="mt-4">
+                    <FieldGrid columns={2}>
+                      <Field label={t("settings.main.passThrough.nameLabel")}>
+                        <input
+                          name="passThroughName"
+                          defaultValue={passThroughFee?.name ?? ""}
+                          maxLength={120}
+                          className={controlClass}
+                          placeholder={t("settings.main.passThrough.namePlaceholder")}
+                        />
+                      </Field>
+                      <PriceField
+                        name="passThroughAmount"
+                        label={t("settings.main.passThrough.amountLabel")}
+                        hint={t("settings.main.passThrough.amountHint")}
+                        cents={passThroughFee?.amountCents ?? null}
+                        currency={shopCurrency}
+                        locale={locale}
+                      />
+                    </FieldGrid>
+                    <p className="mt-3 text-sm text-muted">
+                      {t("settings.main.passThrough.clearHint")}
+                    </p>
+                    <SubmitButton
+                      pendingLabel={t("settings.main.passThrough.submitting")}
+                      className={buttonClass({ variant: "secondary", className: "mt-3" })}
+                    >
+                      {t("settings.main.passThrough.submit")}
                     </SubmitButton>
                   </form>
                 </SettingsRow>

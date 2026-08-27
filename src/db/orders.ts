@@ -240,6 +240,11 @@ export async function createOrder(
 
   const status = mapStripeStatus(result.stripeStatus);
   const now = nowDate();
+  const passThroughCents = input.lineItems.reduce(
+    (total, item) =>
+      total + (item.kind === "pass_through_fee" ? item.quantity * item.unitAmountCents : 0),
+    0,
+  );
 
   const order = await db.transaction(async (tx) => {
     const [created] = await tx
@@ -252,6 +257,7 @@ export async function createOrder(
         status,
         currency,
         totalCents: result.totalCents,
+        passThroughCents,
         taxCents: result.taxCents,
         amountPaidCents: status === "paid" ? result.totalCents : 0,
         description: input.description ?? null,

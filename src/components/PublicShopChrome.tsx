@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { LanguagePicker, type LanguagePickerCopy } from "@/components/LanguagePicker";
 import { PublicShopNav, type PublicShopNavItem } from "@/components/PublicShopNav";
-import type { DiverTranslator } from "@/i18n/messages";
+import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
+import { type ConservationCommitment, parseConservationCommitments } from "@/lib/conservation";
 import { mailtoHref, telHref } from "@/lib/contact-links";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { shopAddressLines, shopMapQuery } from "@/lib/shop-address";
@@ -90,6 +91,7 @@ export function PublicShopFooter({
     addressRegion: string | null;
     addressPostalCode: string | null;
     addressCountry: string | null;
+    conservationCommitments?: readonly string[] | null;
   };
   /**
    * Pre-formatted, already-joined ("Deutsch, 日本語"), or null when no active
@@ -123,6 +125,15 @@ export function PublicShopFooter({
   // iframe is a page the diver already trusts.
   const mapQuery = shopMapQuery(shop.name, address);
   const addressText = addressLines.join(", ");
+  const commitmentKeys: Record<ConservationCommitment, DiverMessageKey> = {
+    aware_partner: "shopChrome.conservationCommitmentAwarePartner",
+    green_fins_member: "shopChrome.conservationCommitmentGreenFinsMember",
+    reef_cleanup: "shopChrome.conservationCommitmentReefCleanup",
+    mooring_buoys: "shopChrome.conservationCommitmentMooringBuoys",
+    no_gloves: "shopChrome.conservationCommitmentNoGloves",
+    wildlife_distance: "shopChrome.conservationCommitmentWildlifeDistance",
+  };
+  const commitments = parseConservationCommitments(shop.conservationCommitments);
   // Built above the JSX rather than nested in it: `check:copy` reads a ternary
   // chain inside an element as prose, and this one is three deep.
   const addressNode =
@@ -149,6 +160,21 @@ export function PublicShopFooter({
           <p>{t("shopChrome.footerLine", { shop: shop.name })}</p>
           {spokenLanguagesLine ? (
             <p>{t("shopChrome.spokenLanguages", { languages: spokenLanguagesLine })}</p>
+          ) : null}
+          {commitments.length > 0 ? (
+            <div className="mt-3">
+              <p className="font-medium text-foreground">
+                {t("shopChrome.conservationCommitmentsHeading")}
+              </p>
+              <p className="mt-1 text-xs text-muted">
+                {t("shopChrome.conservationCommitmentsDisclaimer")}
+              </p>
+              <ul className="mt-1 list-inside list-disc">
+                {commitments.map((commitment) => (
+                  <li key={commitment}>{t(commitmentKeys[commitment])}</li>
+                ))}
+              </ul>
+            </div>
           ) : null}
         </div>
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1">

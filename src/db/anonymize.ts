@@ -65,6 +65,7 @@ import { queueMediaDeletion } from "./media-deletions";
 import { attemptProcessorErasures, recordProcessorErasureObligations } from "./processor-erasure";
 import type { ProcessorErasureObligation } from "./schema";
 import {
+  accountSecurity,
   accountSessions,
   accountTokens,
   activityEvents,
@@ -93,6 +94,7 @@ import {
   rentalFitProfiles,
   rollCallEvents,
   specialtyCertifications,
+  staffCredentials,
   tripReviews,
   tripWaitlistEntries,
   userAccounts,
@@ -402,6 +404,29 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // an erased record as an active one of any kind.
   await tx.delete(personRoles).where(eq(personRoles.personId, personId));
 
+  // Credentials belong to the staff member's operational record, but their
+  // names and identifiers are still personal data when the target was later
+  // entered as a diver. Retire those rows without leaving a credential tied
+  // to an erased identity.
+  await tx
+    .update(staffCredentials)
+    .set({
+      name: REDACTED_TEXT,
+      issuingBody: null,
+      identifier: null,
+      reviewNote: null,
+      deletedAt: now,
+      deletedByPersonId: ctx.actorPersonId,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(staffCredentials.shopId, shopId),
+        eq(staffCredentials.personId, personId),
+        isNull(staffCredentials.deletedAt),
+      ),
+    );
+
   // --- waiver records: strip, retire the link, re-seal under version 2 ------
   const waiverRows = await tx
     .select()
@@ -609,6 +634,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     .limit(1);
   if (account) {
     await tx.delete(accountTokens).where(eq(accountTokens.userAccountId, account.id));
+    await tx.delete(accountSecurity).where(eq(accountSecurity.userAccountId, account.id));
     // Revoke any session issued before this instant — status alone
     // (`disabled` below) is not read by the session lookup itself, so a
     // live sign-in would otherwise keep working until it naturally expires.

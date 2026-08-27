@@ -18,7 +18,7 @@ import { joinLastMinuteList } from "./last-minute-list";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { bookingCheckoutBookings, bookingCheckouts } from "./schema";
 import { createShopPromoCode } from "./shop-promos";
-import { setShopCurrency, setShopTaxEnabled } from "./shops";
+import { setShopCurrency, setShopPassThroughFee, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getActiveTripPromoByCode, sendLastMinuteDealBlast } from "./trip-promos";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
@@ -153,6 +153,35 @@ function startInput(shopId: string, tripId: string, bookingIds: string[]) {
 }
 
 describe("startBookingCheckout", () => {
+  it("charges a pass-through fee for a zero-priced trip", async () => {
+    const { db, shop, reef, bookingIds } = await checkoutContext();
+    await updateTrip(db, shop.id, reef.id, {
+      title: reef.title,
+      startsAt: reef.startsAt,
+      endsAt: reef.endsAt,
+      capacity: reef.capacity,
+      plannedDives: reef.plannedDives,
+      priceCents: 0,
+    });
+    await setShopPassThroughFee(db, shop.id, { name: "Park fee", amountCents: 1_500 });
+    const seen = recordingCheckout();
+
+    const outcome = await startBookingCheckout(
+      db,
+      startInput(shop.id, reef.id, bookingIds),
+      seen.provider,
+    );
+
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.checkout.amountPerDiverCents).toBe(0);
+    expect(outcome.checkout.totalCents).toBe(3_000);
+    expect(outcome.checkout.passThroughCents).toBe(3_000);
+    expect(seen.requests[0]?.lineItems).toEqual([
+      { description: "Park fee", unitAmountCents: 1_500, quantity: 2 },
+    ]);
+  });
+
   it("creates one session for a party and snapshots the per-diver price", async () => {
     const { db, shop, reef, bookingIds } = await checkoutContext();
     const outcome = await startBookingCheckout(

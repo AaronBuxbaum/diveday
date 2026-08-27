@@ -5,6 +5,7 @@ import type {
   SpecialtyCertification,
   WaiverRecord,
 } from "@/db/schema";
+import type { DepthUnit } from "./depth-units";
 import {
   type RollCallCheckpoint,
   type RollCallLabel,
@@ -203,6 +204,19 @@ export type IncidentCrewEntry = {
   buddyTeamNumbers: number[];
 };
 
+export type IncidentExecutedDive = {
+  diveNumber: number;
+  actualSiteName: string | null;
+  enteredAt: string | null;
+  exitedAt: string | null;
+  maxDepthMeters: number | null;
+  observedConditions: Record<string, unknown> | null;
+  notRecorded: string[];
+  recordedByName: string | null;
+  /** Derived from the previous dive's exit and this dive's entry. */
+  surfaceIntervalMinutes?: number | null;
+};
+
 /** One line of the shop's own pre-departure safety checklist, and its answer. */
 export type IncidentPreDepartureCheckEntry = {
   label: string;
@@ -256,6 +270,7 @@ export type IncidentExportDocument = {
     shopName: string;
     shopSlug: string;
     timezone: string;
+    depthUnit: DepthUnit;
     tripId: string;
     tripTitle: string;
     tripStartsAt: string;
@@ -275,6 +290,8 @@ export type IncidentExportDocument = {
   };
   roster: IncidentRosterEntry[];
   crew: IncidentCrewEntry[];
+  /** Post-dive execution evidence, including fields staff explicitly left unknown. */
+  executedDives: IncidentExecutedDive[];
   /**
    * The shop's own pre-departure line, in the shop's reading order, each with
    * its answer at generation time (ADR 20260824-pre-departure-safety-check).
@@ -326,12 +343,13 @@ export type IncidentDiverEvidenceInput = {
 };
 
 export type IncidentExportInput = {
-  shop: { name: string; slug: string; timezone: string };
+  shop: { name: string; slug: string; timezone: string; depthUnit?: DepthUnit };
   /** Every checkpoint's manifest for the trip, in sailing order (`getTripManifests`). */
   manifests: readonly TripManifest[];
   /** Per-diver held evidence, keyed by booking id. A missing entry states absence. */
   diverEvidence: readonly IncidentDiverEvidenceInput[];
   events: readonly IncidentTimelineEventInput[];
+  executedDives?: readonly IncidentExecutedDive[];
   /**
    * The teams standing on this departure, in pairing order
    * (`listTripBuddyTeams`). One entry per team, not per member: the roster
@@ -603,11 +621,29 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
     .sort(timelineOrder)
     .map(({ entry }) => entry);
 
+  const executedDives = [...(input.executedDives ?? [])]
+    .sort((a, b) => a.diveNumber - b.diveNumber)
+    .map((dive, index, dives) => {
+      const previous = dives[index - 1];
+      const surfaceIntervalMinutes =
+        previous?.exitedAt && dive.enteredAt
+          ? Math.max(
+              0,
+              Math.round(
+                (new Date(dive.enteredAt).getTime() - new Date(previous.exitedAt).getTime()) /
+                  60_000,
+              ),
+            )
+          : null;
+      return { ...dive, surfaceIntervalMinutes };
+    });
+
   const body = {
     meta: {
       shopName: input.shop.name,
       shopSlug: input.shop.slug,
       timezone: input.shop.timezone,
+      depthUnit: input.shop.depthUnit ?? "meters",
       tripId: departure.trip.id,
       tripTitle: departure.trip.title,
       tripStartsAt: departure.trip.startsAt.toISOString(),
@@ -626,6 +662,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
     },
     roster,
     crew,
+    executedDives,
     preDepartureCheck: (input.preDepartureCheck ?? []).map((item) => ({
       label: item.label,
       checked: item.check !== undefined,
@@ -659,6 +696,7 @@ export function incidentExportContentHash(
     departureSummary: body.departureSummary,
     roster: body.roster.map(({ bookingId: _bookingId, ...entry }) => entry),
     crew: body.crew,
+    executedDives: body.executedDives,
     preDepartureCheck: body.preDepartureCheck,
     timeline: body.timeline,
   };

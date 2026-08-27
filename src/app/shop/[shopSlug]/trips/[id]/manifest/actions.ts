@@ -13,6 +13,7 @@ import {
   removeBuddyTeamMember,
 } from "@/db/buddy-pairs";
 import { getDb } from "@/db/client";
+import { upsertExecutedDive } from "@/db/executed-dives";
 import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
 import { addInternalNote } from "@/db/operations";
 import { recordPreDepartureCheck } from "@/db/pre-departure-check";
@@ -22,13 +23,16 @@ import {
   isDeviceSubscribedAnywhere,
   savePushSubscription,
 } from "@/db/push-subscriptions";
+import { getShopById } from "@/db/shops";
 import { trackEvent } from "@/lib/analytics";
+import { depthToMeters, MAX_ENTERED_DEPTH_METERS } from "@/lib/depth-units";
 import type { RollCallCheckpoint } from "@/lib/manifests";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { isAllowedPushEndpoint } from "@/lib/notifications/web-push";
 import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { UUID_SOURCE } from "@/lib/uuid";
+import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 /* -------------------------------------------------------------------------- *
  * The boat manifest's mutations
@@ -103,6 +107,60 @@ const rollCallSchema = z.object({
   status: z.enum(["boarded", "not_boarded", "cleared"]),
   note: z.string().trim().max(300).optional(),
 });
+
+const executedDiveSchema = z.object({
+  diveNumber: z.coerce.number().int().min(1).max(20),
+  actualSiteId: z.union([z.literal(""), z.string().uuid()]),
+  enteredAt: z.string().optional(),
+  exitedAt: z.string().optional(),
+  maxDepthMeters: z.union([z.literal(""), z.coerce.number().finite().min(0)]),
+  visibility: z.string().trim().max(120).optional(),
+  current: z.string().trim().max(120).optional(),
+});
+
+/** Record what actually happened after a dive, including an honest unknown. */
+export async function saveExecutedDiveAction(ctx: ManifestActionContext, formData: FormData) {
+  const staff = await requireStaffSession();
+  const parsed = executedDiveSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return;
+  const checkpointDive = /^after_dive_(\d+)$/.exec(ctx.checkpoint)?.[1];
+  if (!checkpointDive || Number(checkpointDive) !== parsed.data.diveNumber) return;
+  const shop = await getShopById(await getDb(), staff.user.shopId);
+  if (!shop) return;
+  const dateOrNull = (value: string | undefined) => {
+    if (!value) return null;
+    const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})$/.exec(value);
+    if (!match) return null;
+    const wall = parseWallTime(match[1], match[2]);
+    return wall ? wallTimeToUtc(wall, shop.timezone) : null;
+  };
+  const enteredAt = dateOrNull(parsed.data.enteredAt);
+  const exitedAt = dateOrNull(parsed.data.exitedAt);
+  if (parsed.data.enteredAt && !enteredAt) return;
+  if (parsed.data.exitedAt && !exitedAt) return;
+  const notRecorded = formData.getAll("notRecorded").map(String);
+  const maxDepthMeters =
+    notRecorded.includes("depth") || parsed.data.maxDepthMeters === ""
+      ? null
+      : depthToMeters(parsed.data.maxDepthMeters, shop.depthUnit);
+  if (maxDepthMeters !== null && maxDepthMeters > MAX_ENTERED_DEPTH_METERS) return;
+  const saved = await upsertExecutedDive(await getDb(), {
+    shopId: staff.user.shopId,
+    tripId: ctx.tripId,
+    diveNumber: parsed.data.diveNumber,
+    actualSiteId: parsed.data.actualSiteId || null,
+    enteredAt,
+    exitedAt,
+    maxDepthMeters,
+    observedConditions: {
+      visibility: parsed.data.visibility || null,
+      current: parsed.data.current || null,
+    },
+    notRecorded,
+    recordedByPersonId: staff.user.personId,
+  });
+  if (saved) revalidatePath(manifestPath(ctx));
+}
 
 /**
  * The endpoint is a URL the *browser* supplies that this server later POSTs to,

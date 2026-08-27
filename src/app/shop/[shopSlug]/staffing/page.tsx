@@ -11,6 +11,8 @@ import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
 import { canPersonManageStaffAccounts } from "@/db/authz";
+import type { staffCredentials } from "@/db/schema";
+import { listStaffCredentials } from "@/db/staff-credentials";
 import { getStaffingView } from "@/db/staffing";
 import { listStaff } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
@@ -26,7 +28,13 @@ import { formatTimeRangeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
 import { parseWallTime, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
-import { createShiftAction, deleteShiftAction } from "./actions";
+import {
+  createShiftAction,
+  deleteShiftAction,
+  deleteStaffCredentialAction,
+  reviewStaffCredentialAction,
+  saveStaffCredentialAction,
+} from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -52,6 +60,10 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
   "staff-not-found": { tone: "danger", key: "staffing.notice.staffNotFound" },
   invalid: { tone: "danger", key: "staffing.notice.invalid" },
   "not-authorized": { tone: "danger", key: "staffing.notice.notAuthorized" },
+  "credential-saved": { tone: "success", key: "staffing.notice.credentialSaved" },
+  "credential-reviewed": { tone: "success", key: "staffing.notice.credentialReviewed" },
+  "credential-deleted": { tone: "success", key: "staffing.notice.credentialDeleted" },
+  "credential-invalid": { tone: "danger", key: "staffing.notice.credentialInvalid" },
 };
 
 /**
@@ -64,6 +76,19 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
  * sees the form at all.
  */
 const ADD_SHIFT_NOTICES = new Set(["shift-saved", "overlap", "staff-not-found", "invalid"]);
+
+const CREDENTIAL_KIND_KEYS: Record<
+  (typeof staffCredentials.kind.enumValues)[number],
+  StaffMessageKey
+> = {
+  instructor_rating: "staffing.credentials.kinds.instructor_rating",
+  divemaster_rating: "staffing.credentials.kinds.divemaster_rating",
+  liability_insurance: "staffing.credentials.kinds.liability_insurance",
+  first_aid_cpr: "staffing.credentials.kinds.first_aid_cpr",
+  oxygen_provider: "staffing.credentials.kinds.oxygen_provider",
+  captains_licence: "staffing.credentials.kinds.captains_licence",
+  other: "staffing.credentials.kinds.other",
+};
 
 export default async function StaffingPage({
   params,
@@ -86,19 +111,25 @@ export default async function StaffingPage({
   // baseline and an e2e fixture that drifts out from under itself. In
   // production `nowDate()` is the native call, unchanged.
   const today = calendarDateInTimezone(nowDate(), shop.timezone);
+  const dueSoonThrough = new Date(`${today}T00:00:00.000Z`);
+  dueSoonThrough.setUTCDate(dueSoonThrough.getUTCDate() + 30);
+  const dueSoonThroughDate = dueSoonThrough.toISOString().slice(0, 10);
   const fromValue = query.from && isValidCalendarDate(query.from) ? query.from : today;
   const toValue =
     query.to && isValidCalendarDate(query.to) ? query.to : shiftCalendarDate(fromValue, 6);
   const fromWall = parseWallTime(fromValue, "00:00");
   const toWall = parseWallTime(shiftCalendarDate(toValue, 1), "00:00");
   if (!fromWall || !toWall) redirect(shopPath(shopSlug, "staffing"));
-  const view = await getStaffingView(
-    db,
-    shop.id,
-    wallTimeToUtc(fromWall, shop.timezone),
-    wallTimeToUtc(toWall, shop.timezone),
-  );
-  const staff = await listStaff(db, shop.id);
+  const [view, staff, credentials] = await Promise.all([
+    getStaffingView(
+      db,
+      shop.id,
+      wallTimeToUtc(fromWall, shop.timezone),
+      wallTimeToUtc(toWall, shop.timezone),
+    ),
+    listStaff(db, shop.id),
+    listStaffCredentials(db, shop.id),
+  ]);
   const canManage = await canPersonManageStaffAccounts(db, shop.id, session.user.personId);
   const notice = noticeFromParam(query.notice, notices);
   // The shift form answers for itself; only what is genuinely about the page
@@ -363,6 +394,153 @@ export default async function StaffingPage({
             </FieldActions>
           </FieldGrid>
         </SectionCard>
+      ) : null}
+
+      {canManage ? (
+        <section className="mt-8" aria-labelledby="credentials-heading">
+          <h2 id="credentials-heading" className="text-lg font-semibold">
+            {t("staffing.credentials.heading")}
+          </h2>
+          <p className="mt-1 text-sm text-muted">{t("staffing.credentials.description")}</p>
+          {credentials.length > 0 ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {credentials.map(({ credential, person }) => (
+                <SectionCard as="article" key={credential.id}>
+                  {(() => {
+                    const renewalState = !credential.renewsAt
+                      ? "not-recorded"
+                      : credential.renewsAt < today
+                        ? "overdue"
+                        : credential.renewsAt <= dueSoonThroughDate
+                          ? "due-soon"
+                          : "current";
+                    return (
+                      <>
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h3 className="font-semibold">{credential.name}</h3>
+                            <p className="text-sm text-muted">
+                              {person.fullName} · {t(CREDENTIAL_KIND_KEYS[credential.kind])}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Badge tone={credential.status === "verified" ? "success" : "warning"}>
+                              {credential.status === "verified"
+                                ? t("staffing.credentials.verified")
+                                : t("staffing.credentials.pending")}
+                            </Badge>
+                            {renewalState === "overdue" ? (
+                              <Badge tone="danger">{t("staffing.credentials.overdue")}</Badge>
+                            ) : renewalState === "due-soon" ? (
+                              <Badge tone="warning">{t("staffing.credentials.dueSoon")}</Badge>
+                            ) : null}
+                          </div>
+                        </div>
+                        <p className="mt-2 text-sm text-muted">
+                          {credential.issuingBody ?? t("staffing.credentials.issuerUnknown")}
+                          {credential.renewsAt
+                            ? ` · ${t("staffing.credentials.renews", { date: credential.renewsAt })}`
+                            : ""}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <form action={reviewStaffCredentialAction}>
+                            <input type="hidden" name="credentialId" value={credential.id} />
+                            <input
+                              type="hidden"
+                              name="status"
+                              value={credential.status === "verified" ? "pending" : "verified"}
+                            />
+                            <SubmitButton
+                              pendingLabel={t("staffing.credentials.saving")}
+                              className={buttonClass({ variant: "secondary", size: "sm" })}
+                            >
+                              {credential.status === "verified"
+                                ? t("staffing.credentials.markPending")
+                                : t("staffing.credentials.markVerified")}
+                            </SubmitButton>
+                          </form>
+                          <form action={deleteStaffCredentialAction}>
+                            <input type="hidden" name="credentialId" value={credential.id} />
+                            <SubmitButton
+                              pendingLabel={t("staffing.credentials.removing")}
+                              className={buttonClass({ variant: "ghost", size: "sm" })}
+                            >
+                              {t("staffing.credentials.remove")}
+                            </SubmitButton>
+                          </form>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </SectionCard>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-muted">{t("staffing.credentials.empty")}</p>
+          )}
+          {staff.length > 0 ? (
+            <SectionCard className="mt-4" padding="lg">
+              <FieldGrid as="form" action={saveStaffCredentialAction} columns={2}>
+                <Field label={t("staffing.credentials.person")}>
+                  <select name="personId" required className={controlClass}>
+                    <option value="">{t("staffing.credentials.choosePerson")}</option>
+                    {staff.map(({ person }) => (
+                      <option key={person.id} value={person.id}>
+                        {person.fullName}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label={t("staffing.credentials.kind")}>
+                  <select name="kind" required className={controlClass}>
+                    <option value="instructor_rating">
+                      {t("staffing.credentials.kinds.instructor_rating")}
+                    </option>
+                    <option value="divemaster_rating">
+                      {t("staffing.credentials.kinds.divemaster_rating")}
+                    </option>
+                    <option value="liability_insurance">
+                      {t("staffing.credentials.kinds.liability_insurance")}
+                    </option>
+                    <option value="first_aid_cpr">
+                      {t("staffing.credentials.kinds.first_aid_cpr")}
+                    </option>
+                    <option value="oxygen_provider">
+                      {t("staffing.credentials.kinds.oxygen_provider")}
+                    </option>
+                    <option value="captains_licence">
+                      {t("staffing.credentials.kinds.captains_licence")}
+                    </option>
+                    <option value="other">{t("staffing.credentials.kinds.other")}</option>
+                  </select>
+                </Field>
+                <Field label={t("staffing.credentials.name")}>
+                  <input name="name" required maxLength={160} className={controlClass} />
+                </Field>
+                <Field label={t("staffing.credentials.issuer")}>
+                  <input name="issuingBody" maxLength={160} className={controlClass} />
+                </Field>
+                <Field label={t("staffing.credentials.identifier")}>
+                  <input name="identifier" maxLength={120} className={controlClass} />
+                </Field>
+                <Field label={t("staffing.credentials.issuedAt")}>
+                  <input name="issuedAt" type="date" className={controlClass} />
+                </Field>
+                <Field label={t("staffing.credentials.renewsAt")}>
+                  <input name="renewsAt" type="date" className={controlClass} />
+                </Field>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("staffing.credentials.saving")}
+                    className={buttonClass()}
+                  >
+                    {t("staffing.credentials.add")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SectionCard>
+          ) : null}
+        </section>
       ) : null}
     </main>
   );

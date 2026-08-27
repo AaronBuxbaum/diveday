@@ -91,6 +91,7 @@ export type TodayActionKind =
   | "gear_overdue"
   | "gear_due_back"
   | "gear_service_due"
+  | "staff_credential_due"
   | "units_unconfirmed";
 
 /**
@@ -177,13 +178,14 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   gear_overdue: 27,
   gear_due_back: 28,
   gear_service_due: 29,
+  staff_credential_due: 30,
   // Bottom of the queue, and rightly: this is a question nobody has answered
   // rather than anything that has gone wrong. It is here at all because the
   // first-run checklist that asked it stops rendering at the shop's first
   // departure — step 4 of that same checklist — so a shop that scheduled a
   // trip before opening the Units row would never be asked again, and currency
   // decides what a diver's card is charged in (issue #835).
-  units_unconfirmed: 30,
+  units_unconfirmed: 31,
 };
 
 /**
@@ -224,6 +226,7 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   gear_overdue: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   gear_due_back: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   gear_service_due: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
+  staff_credential_due: ["owner", "manager"],
   units_unconfirmed: ["owner", "manager"],
 };
 
@@ -301,6 +304,7 @@ export const ACTION_KIND_META = {
   gear_overdue: { tone: "warning" },
   gear_due_back: { tone: "neutral" },
   gear_service_due: { tone: "neutral" },
+  staff_credential_due: { tone: "warning" },
   // Neutral, not warning: the shop is trading on a derived default that is
   // probably right. It wants confirming, not alarming about.
   units_unconfirmed: { tone: "neutral" },

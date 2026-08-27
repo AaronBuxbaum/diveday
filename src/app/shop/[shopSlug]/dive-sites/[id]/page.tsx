@@ -226,6 +226,7 @@ export default async function EditDiveSitePage({
         expectedBottomTimeMinutes: parsed.expectedBottomTimeMinutes,
         currentNote: parsed.fields.currentNote,
         divePlan: parsed.fields.divePlan,
+        conservationNote: parsed.fields.conservationNote,
         fitTone: parsed.fields.fitTone,
         fitNote: parsed.fields.fitNote,
         fieldGuideTipsHeading: parsed.fields.fieldGuideTipsHeading,

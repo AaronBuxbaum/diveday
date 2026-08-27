@@ -51,6 +51,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   gear_overdue: "shared.today.actionKind.gearOverdue",
   gear_due_back: "shared.today.actionKind.gearDueBack",
   gear_service_due: "shared.today.actionKind.gearServiceDue",
+  staff_credential_due: "shared.today.actionKind.staffCredentialDue",
   units_unconfirmed: "shared.today.actionKind.unitsUnconfirmed",
 };
 
@@ -592,6 +593,22 @@ export function openGearRegisterActionText(t: StaffTranslator): string {
 
 export function openGearUnitActionText(t: StaffTranslator): string {
   return t("shared.today.actionLabel.openGearUnit");
+}
+
+export function staffCredentialDueDetailText(
+  t: StaffTranslator,
+  input: { credential: string; dueOn: string; overdue: boolean },
+): string {
+  return t(
+    input.overdue
+      ? "shared.today.staffCredential.overdueDetail"
+      : "shared.today.staffCredential.dueDetail",
+    { credential: input.credential, dueOn: input.dueOn },
+  );
+}
+
+export function openStaffingActionText(t: StaffTranslator): string {
+  return t("shared.today.actionLabel.openStaffing");
 }
 
 /** The one-line "how's my day?" headline, resolved from `summarizeDay`'s code. */

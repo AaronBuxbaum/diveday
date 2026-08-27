@@ -1,7 +1,8 @@
-import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { checkoutCharge } from "@/lib/deposits";
 import { log } from "@/lib/log";
+import { parsePassThroughFee, passThroughTotalCents } from "@/lib/pass-through-fee";
 import { capturedPaymentStatuses } from "@/lib/payment-source";
 import {
   type CheckoutProvider,
@@ -30,6 +31,7 @@ import {
   trips,
 } from "./schema";
 import { getShopPromoCodeById, recordShopPromoRedemption } from "./shop-promos";
+import { getShopById } from "./shops";
 import {
   canAcceptPayments,
   getShopCurrency,
@@ -142,7 +144,14 @@ export async function startBookingCheckout(
     .where(and(eq(trips.id, input.tripId), eq(trips.shopId, input.shopId), liveTrip()))
     .limit(1);
   if (!tripRow) return { ok: false, reason: "invalid" };
-  const charge = checkoutCharge(tripRow.trip, tripRow.course);
+  const shop = await getShopById(db, input.shopId);
+  const passThroughFee = parsePassThroughFee(shop?.passThroughFee);
+  // A zero-priced trip can still have a real third-party fee to collect. In
+  // that case the fee is the checkout's only line; a truly free, fee-free
+  // booking still falls back to the ordinary no-payment flow.
+  const charge =
+    checkoutCharge(tripRow.trip, tripRow.course) ??
+    (passThroughFee ? { amountCents: 0, isDeposit: false, balanceDueCents: 0 } : null);
   if (charge === null) return { ok: false, reason: "unpriced" };
   const amountPerDiverCents = charge.amountCents;
   // The shop's own currency, never the connected account's and never a
@@ -151,7 +160,6 @@ export async function startBookingCheckout(
   // Stripe unchanged — there is no divisor anywhere on this path.
   const currency = await getShopCurrency(db, input.shopId);
   const taxEnabled = await getShopTaxEnabled(db, input.shopId);
-
   const bookingRows = await db
     .select({ id: bookings.id })
     .from(bookings)
@@ -225,8 +233,11 @@ export async function startBookingCheckout(
         : null
     : null;
 
+  const passThroughCents = passThroughTotalCents(passThroughFee, input.bookingIds.length);
   const totalCents =
-    [...tripCentsByBooking.values()].reduce((sum, cents) => sum + cents, 0) + gearTotalCents;
+    [...tripCentsByBooking.values()].reduce((sum, cents) => sum + cents, 0) +
+    gearTotalCents +
+    passThroughCents;
   if (totalCents === 0) return { ok: false, reason: "already_paid" };
   const tripLineQuantities = new Map<number, number>();
   for (const cents of tripCentsByBooking.values()) {
@@ -252,6 +263,7 @@ export async function startBookingCheckout(
         isDeposit: charge.isDeposit,
         currency,
         taxEnabled,
+        passThroughCents,
         appliedDiscountPercent: appliedPromo?.discountPercent ?? null,
         promoResolved: input.promotionCode !== undefined,
       })
@@ -313,6 +325,15 @@ export async function startBookingCheckout(
           unitAmountCents: line.amountCents,
           quantity: 1,
         })),
+        ...(passThroughFee
+          ? [
+              {
+                description: stripeLineDescription(passThroughFee.name),
+                unitAmountCents: passThroughFee.amountCents,
+                quantity: input.bookingIds.length,
+              },
+            ]
+          : []),
       ],
       customerEmail: input.customerEmail,
       successUrl: input.successUrl,
@@ -362,6 +383,7 @@ export async function startBookingCheckout(
           taxCents: null,
           amountPerDiverCents,
           totalCents,
+          passThroughCents,
           isDeposit: charge.isDeposit,
           expiresAt: session.expiresAt,
           // At most one source is ever recorded (the table's
@@ -382,6 +404,7 @@ export async function startBookingCheckout(
           bookingId,
           tripCents: tripCentsByBooking.get(bookingId) ?? 0,
           gearCents: gearCentsByBooking.get(bookingId) ?? 0,
+          passThroughCents: passThroughFee?.amountCents ?? 0,
         })),
       );
       return row;
@@ -405,6 +428,7 @@ type CurrentCharge = {
   isDeposit: boolean;
   currency: string;
   taxEnabled: boolean;
+  passThroughCents: number;
   /** The percent this attempt would hand Stripe, or null for no discount. */
   appliedDiscountPercent: number | null;
   /**
@@ -448,6 +472,7 @@ type CurrentCharge = {
  */
 function stillQuotesCurrentCharge(existing: BookingCheckout, current: CurrentCharge): boolean {
   if (!quotesCurrentTripCharge(existing, current)) return false;
+  if (existing.passThroughCents !== current.passThroughCents) return false;
   if (existing.totalCents !== current.totalCents) return false;
   if (!current.promoResolved) return true;
   return existing.appliedDiscountPercent === current.appliedDiscountPercent;
@@ -461,13 +486,17 @@ function stillQuotesCurrentCharge(existing: BookingCheckout, current: CurrentCha
  */
 function quotesCurrentTripCharge(
   existing: BookingCheckout,
-  current: Pick<CurrentCharge, "amountPerDiverCents" | "isDeposit" | "currency" | "taxEnabled">,
+  current: Pick<
+    CurrentCharge,
+    "amountPerDiverCents" | "isDeposit" | "currency" | "taxEnabled" | "passThroughCents"
+  >,
 ): boolean {
   return (
     existing.amountPerDiverCents === current.amountPerDiverCents &&
     existing.isDeposit === current.isDeposit &&
     existing.currency === current.currency &&
-    existing.taxEnabled === current.taxEnabled
+    existing.taxEnabled === current.taxEnabled &&
+    existing.passThroughCents === current.passThroughCents
   );
 }
 
@@ -512,12 +541,20 @@ export async function retirePendingCheckoutIfRepriced(
 
   const currency = await getShopCurrency(db, shopId);
   const taxEnabled = await getShopTaxEnabled(db, shopId);
+  const [{ diverCount }] = await db
+    .select({ diverCount: sql<number>`count(*)` })
+    .from(bookingCheckoutBookings)
+    .where(eq(bookingCheckoutBookings.checkoutId, existing.id));
   if (
     quotesCurrentTripCharge(existing, {
       amountPerDiverCents: charge.amountCents,
       isDeposit: charge.isDeposit,
       currency,
       taxEnabled,
+      passThroughCents: passThroughTotalCents(
+        parsePassThroughFee((await getShopById(db, shopId))?.passThroughFee),
+        Number(diverCount ?? 0),
+      ),
     })
   ) {
     return existing;
@@ -818,6 +855,7 @@ export async function markCheckoutPaidBySessionId(
         bookingId: bookingCheckoutBookings.bookingId,
         tripCents: bookingCheckoutBookings.tripCents,
         gearCents: bookingCheckoutBookings.gearCents,
+        passThroughCents: bookingCheckoutBookings.passThroughCents,
       })
       .from(bookingCheckoutBookings)
       .where(eq(bookingCheckoutBookings.checkoutId, checkout.id));
@@ -828,8 +866,8 @@ export async function markCheckoutPaidBySessionId(
     // and the settled total is split back across them in proportion, so a
     // promo discount lands on everyone it discounted and gear money is
     // attributed to the diver who rented it (PAY-H1/H2).
-    const askedCentsFor = (tripCents: number | null, gearCents: number) =>
-      (tripCents ?? checkout.amountPerDiverCents) + gearCents;
+    const askedCentsFor = (tripCents: number | null, gearCents: number, passThroughCents: number) =>
+      (tripCents ?? checkout.amountPerDiverCents) + gearCents + passThroughCents;
     // The one figure every per-booking amount is derived from. Stripe's own
     // settled total whenever there is one; otherwise the most this session can
     // have captured, worked out locally (PAY-M3, `attributableTotalCents`).
@@ -841,14 +879,14 @@ export async function markCheckoutPaidBySessionId(
     const allocation = allocateSettledTotal(
       linked.map((row) => ({
         key: row.bookingId,
-        askedCents: askedCentsFor(row.tripCents, row.gearCents),
+        askedCents: askedCentsFor(row.tripCents, row.gearCents, row.passThroughCents),
       })),
       attributableCents,
     );
     const taxAllocation = allocateSettledTotal(
       linked.map((row) => ({
         key: row.bookingId,
-        askedCents: askedCentsFor(row.tripCents, row.gearCents),
+        askedCents: askedCentsFor(row.tripCents, row.gearCents, row.passThroughCents),
       })),
       updated.taxCents ?? 0,
     );
@@ -917,6 +955,7 @@ export async function markCheckoutPaidBySessionId(
           askedCentsFor(
             linked.find((row) => row.bookingId === bookingId)?.tripCents ?? null,
             gearCents,
+            linked.find((row) => row.bookingId === bookingId)?.passThroughCents ?? 0,
           ),
         currency: checkout.currency,
         provider: "stripe",

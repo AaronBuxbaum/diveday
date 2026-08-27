@@ -34,6 +34,7 @@ import {
 } from "@/lib/dive-declaration";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import {
   DIVER_NAME_MAX,
   DIVER_PHONE_MAX,
@@ -242,11 +243,16 @@ export async function bookSpot(
   const perDiverPriceForGear = tripForGear
     ? perDiverBookingPriceCents(tripForGear, tripForGear.course)
     : null;
-  const stripeAccountForGear = perDiverPriceForGear
+  const passThroughFeeForGear = parsePassThroughFee(shopNow.passThroughFee);
+  const payablePerDiverCentsForGear =
+    perDiverPriceForGear === null
+      ? null
+      : perDiverPriceForGear + (passThroughFeeForGear?.amountCents ?? 0);
+  const stripeAccountForGear = payablePerDiverCentsForGear
     ? await getShopStripeAccount(dbi, shopNow.id)
     : null;
   const payAtBookingForGear = Boolean(
-    perDiverPriceForGear && canAcceptPayments(stripeAccountForGear) && publicAppUrl(),
+    payablePerDiverCentsForGear && canAcceptPayments(stripeAccountForGear) && publicAppUrl(),
   );
   const offersGearAtCheckout = payAtBookingForGear && hasAnyRentalPricing(shopNow.rentalPricing);
   const offeredGearItems = offeredRentableItems(shopNow.rentalItems);

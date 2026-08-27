@@ -45,6 +45,7 @@ import {
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
+  executedDives,
   gearItems,
   gearReservations,
   gearServiceEvents,
@@ -69,6 +70,7 @@ import {
   shopPromoRedemptions,
   shops,
   specialtyCertifications,
+  staffCredentials,
   staffShifts,
   tips,
   tripAssignments,
@@ -385,6 +387,12 @@ export async function loadShopExportBundleInput(
         .where(eq(staffShifts.shopId, shopId))
         .orderBy(asc(staffShifts.startsAt), asc(staffShifts.id));
 
+      const staffCredentialRows = await tx
+        .select()
+        .from(staffCredentials)
+        .where(eq(staffCredentials.shopId, shopId))
+        .orderBy(asc(staffCredentials.createdAt), asc(staffCredentials.id));
+
       const bookingRows = await tx
         .select()
         .from(bookings)
@@ -425,6 +433,12 @@ export async function loadShopExportBundleInput(
         .from(bookingCheckouts)
         .where(eq(bookingCheckouts.shopId, shopId))
         .orderBy(asc(bookingCheckouts.createdAt), asc(bookingCheckouts.id));
+
+      const executedDiveRows = await tx
+        .select()
+        .from(executedDives)
+        .where(eq(executedDives.shopId, shopId))
+        .orderBy(asc(executedDives.tripId), asc(executedDives.diveNumber));
 
       // Which seats each of those attempts was paying for. Ordered by checkout
       // then booking so a reader walking the file stays inside one attempt.
@@ -705,6 +719,8 @@ export async function loadShopExportBundleInput(
             // a bare 13000 is $130.00 or ¥13,000 depending on it.
             "currency",
             "tax_enabled",
+            "pass_through_fee",
+            "conservation_commitments",
             "medical_jurisdiction",
             "depth_unit",
             "temperature_unit",
@@ -766,6 +782,8 @@ export async function loadShopExportBundleInput(
               shop.defaultLocale,
               shop.currency,
               shop.taxEnabled,
+              JSON.stringify(shop.passThroughFee),
+              JSON.stringify(shop.conservationCommitments),
               shop.jurisdiction,
               shop.depthUnit,
               shop.temperatureUnit,
@@ -1374,6 +1392,48 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["staff_shifts.csv"],
         },
         {
+          file: "staff_credentials.csv",
+          header: [
+            "id",
+            "person_id",
+            "person_name",
+            "kind",
+            "name",
+            "issuing_body",
+            "identifier",
+            "issued_at",
+            "renews_at",
+            "status",
+            "review_note",
+            "reviewed_at",
+            "reviewed_by_person_id",
+            "deleted_at",
+            "deleted_by_person_id",
+            "created_at",
+            "updated_at",
+          ],
+          rows: staffCredentialRows.map((row) => [
+            row.id,
+            row.personId,
+            personName.get(row.personId),
+            row.kind,
+            row.name,
+            row.issuingBody,
+            row.identifier,
+            row.issuedAt,
+            row.renewsAt,
+            row.status,
+            row.reviewNote,
+            row.reviewedAt,
+            row.reviewedByPersonId,
+            row.deletedAt,
+            row.deletedByPersonId,
+            row.createdAt,
+            row.updatedAt,
+          ]),
+          note: EXPORT_FILE_NOTES["staff_credentials.csv"],
+        },
+        {
           file: "bookings.csv",
           header: [
             "id",
@@ -1618,6 +1678,7 @@ export async function loadShopExportBundleInput(
             "currency",
             "amount_per_diver_cents",
             "total_cents",
+            "pass_through_cents",
             "tax_enabled",
             "tax_cents",
             "settled_total_cents",
@@ -1643,6 +1704,7 @@ export async function loadShopExportBundleInput(
             row.currency,
             row.amountPerDiverCents,
             row.totalCents,
+            row.passThroughCents,
             row.taxEnabled,
             row.taxCents,
             row.settledTotalCents,
@@ -1664,6 +1726,7 @@ export async function loadShopExportBundleInput(
             "person_name",
             "trip_cents",
             "gear_cents",
+            "pass_through_cents",
             "tax_cents",
           ],
           rows: checkoutBookingRows.map((row) => {
@@ -1675,10 +1738,49 @@ export async function loadShopExportBundleInput(
               personId ? personName.get(personId) : null,
               row.tripCents,
               row.gearCents,
+              row.passThroughCents,
               row.taxCents,
             ];
           }),
           note: EXPORT_FILE_NOTES["booking_checkout_bookings.csv"],
+        },
+        {
+          file: "executed_dives.csv",
+          header: [
+            "id",
+            "trip_id",
+            "trip_title",
+            "dive_number",
+            "actual_site_id",
+            "actual_site_name",
+            "entered_at",
+            "exited_at",
+            "max_depth_meters",
+            "observed_conditions",
+            "not_recorded",
+            "recorded_by_person_id",
+            "deleted_at",
+            "created_at",
+            "updated_at",
+          ],
+          rows: executedDiveRows.map((row) => [
+            row.id,
+            row.tripId,
+            tripTitle.get(row.tripId),
+            row.diveNumber,
+            row.actualSiteId,
+            row.actualSiteId ? siteName.get(row.actualSiteId) : null,
+            row.enteredAt,
+            row.exitedAt,
+            row.maxDepthMeters,
+            JSON.stringify(row.observedConditions),
+            JSON.stringify(row.notRecorded),
+            row.recordedByPersonId,
+            row.deletedAt,
+            row.createdAt,
+            row.updatedAt,
+          ]),
+          note: EXPORT_FILE_NOTES["executed_dives.csv"],
         },
         {
           file: "roll_call_events.csv",
@@ -2323,6 +2425,7 @@ export async function loadShopExportBundleInput(
             "status",
             "currency",
             "total_cents",
+            "pass_through_cents",
             "tax_cents",
             "amount_paid_cents",
             "refunded_cents",
@@ -2346,6 +2449,7 @@ export async function loadShopExportBundleInput(
             row.status,
             row.currency,
             row.totalCents,
+            row.passThroughCents,
             row.taxCents,
             row.amountPaidCents,
             row.refundedCents,
@@ -2427,6 +2531,7 @@ export async function loadShopExportBundleInput(
             "expected_bottom_time_minutes",
             "current_note",
             "dive_plan",
+            "conservation_note",
             "fit_tone",
             "fit_note",
             "conservation_note",
@@ -2464,6 +2569,7 @@ export async function loadShopExportBundleInput(
             row.expectedBottomTimeMinutes,
             row.currentNote,
             row.divePlan,
+            row.conservationNote,
             row.fitTone,
             row.fitNote,
             row.conservationNote,
@@ -4055,6 +4161,9 @@ export async function loadShopExportCounts(
     "staff_shifts.csv": await countOf(
       db.select({ n: count() }).from(staffShifts).where(eq(staffShifts.shopId, shopId)),
     ),
+    "staff_credentials.csv": await countOf(
+      db.select({ n: count() }).from(staffCredentials).where(eq(staffCredentials.shopId, shopId)),
+    ),
     "bookings.csv": await countOf(
       db.select({ n: count() }).from(bookings).where(eq(bookings.shopId, shopId)),
     ),
@@ -4072,6 +4181,9 @@ export async function loadShopExportCounts(
         .select({ n: count() })
         .from(bookingCheckoutBookings)
         .where(eq(bookingCheckoutBookings.shopId, shopId)),
+    ),
+    "executed_dives.csv": await countOf(
+      db.select({ n: count() }).from(executedDives).where(eq(executedDives.shopId, shopId)),
     ),
     "internal_notes.csv": await countOf(
       db.select({ n: count() }).from(internalNotes).where(eq(internalNotes.shopId, shopId)),

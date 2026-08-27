@@ -49,11 +49,15 @@ async function authenticate(formData: FormData) {
       body: {
         email: String(formData.get("email") ?? ""),
         password: String(formData.get("password") ?? ""),
+        totpCode: String(formData.get("totpCode") ?? "").trim() || undefined,
       },
       headers: await headers(),
     });
   } catch (error) {
     if (error instanceof APIError) {
+      if (error.message === "two_factor_required" || error.message === "invalid_two_factor") {
+        redirect("/sign-in?error=two-factor");
+      }
       redirect("/sign-in?error=1");
     }
     throw error;
@@ -94,6 +98,7 @@ export default function SignInPage({
 async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearchParams> }) {
   const { error, session, callbackUrl } = await searchParams;
   const t = diverTranslator(await requestLocale());
+  const secondFactorRequired = error === "two-factor";
   // A diver who followed a `/shop/<slug>/…` link lands here with no way back to
   // the thing they wanted. `callbackUrl` names the shop; if it doesn't — no
   // parameter, a repeated one, or anything that isn't a `/shop/<slug>` path —
@@ -148,6 +153,22 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
               className={controlClass}
             />
           </Field>
+          {secondFactorRequired ? (
+            <Field
+              label={t("account.signIn.twoFactorCode")}
+              hint={t("account.signIn.twoFactorHint")}
+            >
+              <input
+                name="totpCode"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9A-Za-z-]{6,32}"
+                maxLength={32}
+                required
+                className={controlClass}
+              />
+            </Field>
+          ) : null}
         </FieldGrid>
         {/* The link claims a full touch target (dock test); negative margins
             keep the visual rhythm of the stack it sits in. */}
@@ -166,9 +187,14 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
         </SubmitButton>
         {/* The refusal renders beside the control that earned it, not in a
             banner above the page (docs/design/forms-and-controls.md). */}
-        {error ? (
+        {error && !secondFactorRequired ? (
           <FormStatus tone="danger" className="justify-center">
             {t("account.signIn.error")}
+          </FormStatus>
+        ) : null}
+        {secondFactorRequired ? (
+          <FormStatus tone="danger" className="justify-center">
+            {t("account.signIn.twoFactorRequired")}
           </FormStatus>
         ) : null}
         {/* `?session=ended`: requireStaffSession() (src/lib/session.ts)

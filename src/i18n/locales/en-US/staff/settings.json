@@ -11,6 +11,9 @@
       "unitsInvalid": "Choose a depth unit, a water temperature unit, and a currency from the lists.",
       "taxSaved": "Tax setting saved.",
       "taxInvalid": "That tax setting couldn't be saved.",
+      "passThroughSaved": "Pass-through fee saved.",
+      "passThroughInvalid": "Enter both a fee name and a positive amount, or leave both blank to disable it.",
+      "conservationSaved": "Conservation commitments saved.",
       "rentalsSaved": "Rental catalog saved.",
       "rentalPricesSaved": "Rental prices saved.",
       "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
@@ -25,7 +28,6 @@
       "reviewUrlInvalid": "Enter a full https:// link, or empty the box to stop asking for reviews.",
       "searchListingOn": "Your public pages are listed in search engines.",
       "searchListingOff": "Your public pages are hidden from search engines. Anything already indexed can take a few weeks to drop out.",
-      "conservationSaved": "Conservation commitments saved.",
       "conservationInvalid": "Check your conservation commitments selection.",
       "connected": "Stripe account connected.",
       "connectFailed": "The Stripe connection didn't complete. Try connecting again.",
@@ -238,6 +240,18 @@
       "submit": "Save tax setting",
       "submitting": "Saving…"
     },
+    "passThrough": {
+      "heading": "Marine park or conservation fee",
+      "description": "Optionally add a per-diver fee collected for a named third party.",
+      "detail": "It is shown as its own line at checkout and kept separate from shop revenue reports.",
+      "nameLabel": "Fee name",
+      "namePlaceholder": "Marine park fee",
+      "amountLabel": "Amount per diver",
+      "amountHint": "Leave both fields blank to disable this fee.",
+      "clearHint": "This is a pass-through charge, not a markup on the dive price.",
+      "submit": "Save pass-through fee",
+      "submitting": "Saving…"
+    },
     "paymentsGate": {
       "notice": "The rental catalog, rental prices, and Stripe connection are limited to owners and managers. The settings above are open to all staff."
     },
@@ -340,6 +354,10 @@
     "safetyChecklist": {
       "heading": "Pre-departure checklist",
       "description": "What your crew confirms before a boat leaves the dock."
+    },
+    "security": {
+      "heading": "Account security",
+      "description": "Protect your sign-in with two-factor authentication and manage active sessions."
     },
     "promos": {
       "heading": "Promo codes",
@@ -790,6 +808,51 @@
       "cellTooLongHeader": "A cell in the header row is longer than {limit} characters — check for a pasted document instead of a spreadsheet.",
       "cellTooLongRow": "A cell in row {row} is longer than {limit} characters — check for a pasted document instead of a spreadsheet.",
       "noNameColumn": "No name column found. The file needs a full name, or first and last name, to import people."
+    }
+  },
+  "security": {
+    "eyebrow": "Settings",
+    "title": "Account security",
+    "description": "Protect your staff account with a second factor and review active sessions.",
+    "twoFactorHeading": "Two-factor authentication",
+    "twoFactorDescription": "Use an authenticator app for sensitive account actions. Disabling it removes the stored secret.",
+    "enabled": "Enabled",
+    "notEnabled": "Not enabled",
+    "start": "Start setup",
+    "starting": "Starting…",
+    "disable": "Disable two-factor",
+    "disabling": "Disabling…",
+    "secretLabel": "Add this secret to your authenticator app, then enter the current six-digit code:",
+    "codeLabel": "Authenticator code",
+    "enable": "Enable",
+    "enabling": "Enabling…",
+    "recoveryHeading": "Recovery codes",
+    "recoveryDescription": "Save these codes somewhere safe. Each one works once if you lose access to your authenticator app.",
+    "recoveryWarning": "These codes disappear after setup or in ten minutes. DiveDay cannot show them again.",
+    "sessionsHeading": "Active sessions",
+    "sessionsDescription": "Revoke a device you no longer recognize, or sign out everywhere.",
+    "unknownDevice": "Unknown device",
+    "unknownIp": "Unknown network",
+    "revoke": "Revoke",
+    "revoking": "Revoking…",
+    "revokeAll": "Sign out everywhere",
+    "revokingAll": "Signing out…",
+    "lastSeen": "last seen {date}",
+    "stepUpHeading": "Confirm this sensitive action",
+    "stepUpDescription": "Enter a current authenticator code or a recovery code. This approval lasts 15 minutes in this browser.",
+    "stepUpCodeLabel": "Authenticator or recovery code",
+    "stepUpCodeHint": "Recovery codes can be used once.",
+    "stepUpVerify": "Verify and continue",
+    "stepUpVerifying": "Verifying…",
+    "notice": {
+      "enrollmentStarted": "Enrollment started. Save the secret before enabling two-factor.",
+      "enabled": "Two-factor authentication enabled.",
+      "disabled": "Two-factor authentication disabled.",
+      "sessionRevoked": "Session revoked.",
+      "codeInvalid": "That code was not accepted.",
+      "stepUpRequired": "Verify with your authenticator before continuing.",
+      "unavailable": "Security setup is unavailable until the deployment encryption key is configured.",
+      "invalid": "That security change could not be completed."
     }
   },
   "embed": {

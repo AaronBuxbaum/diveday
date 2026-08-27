@@ -13,6 +13,7 @@ import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-label
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { depthInUnit } from "@/lib/depth-units";
 import {
   formatDateTimeTz,
   formatShortDate,
@@ -393,6 +394,77 @@ export default async function IncidentExportPage({
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="mt-8" aria-labelledby="incident-executed-dive-heading">
+        <h2 id="incident-executed-dive-heading" className="text-lg font-semibold">
+          {t("incidentExport.executedDiveHeading")}
+        </h2>
+        <p className="mt-1 max-w-prose text-sm text-muted">
+          {t("incidentExport.executedDiveDescription")}
+        </p>
+        {doc.executedDives.length === 0 ? (
+          <p className="mt-3 text-sm font-semibold">{t("incidentExport.executedDiveEmpty")}</p>
+        ) : (
+          <Table className="mt-3">
+            <THead>
+              <Th>{t("incidentExport.executedDiveNumber")}</Th>
+              <Th>{t("incidentExport.executedDiveSite")}</Th>
+              <Th>{t("incidentExport.executedDiveTimes")}</Th>
+              <Th>{t("incidentExport.executedDiveDepth")}</Th>
+              <Th>{t("incidentExport.executedDiveConditions")}</Th>
+              <Th>{t("incidentExport.executedDiveSurfaceInterval")}</Th>
+              <Th>{t("incidentExport.executedDiveRecordedBy")}</Th>
+            </THead>
+            <TBody>
+              {doc.executedDives.map((dive) => (
+                <tr key={dive.diveNumber}>
+                  <Th scope="row">
+                    {t("incidentExport.executedDive", { number: dive.diveNumber })}
+                  </Th>
+                  <Td>{dive.actualSiteName ?? t("incidentExport.notOnFile")}</Td>
+                  <Td>
+                    {dive.enteredAt
+                      ? dateTime(dive.enteredAt)
+                      : t("incidentExport.executedDiveTimesMissing")}{" "}
+                    –{" "}
+                    {dive.exitedAt
+                      ? dateTime(dive.exitedAt)
+                      : t("incidentExport.executedDiveTimesMissing")}
+                  </Td>
+                  <Td>
+                    {dive.maxDepthMeters == null
+                      ? t("incidentExport.executedDiveFieldNotRecorded")
+                      : `${depthInUnit(dive.maxDepthMeters, "meters")} m / ${depthInUnit(dive.maxDepthMeters, "feet")} ft`}
+                  </Td>
+                  <Td>
+                    {typeof dive.observedConditions?.visibility === "string" ||
+                    typeof dive.observedConditions?.current === "string"
+                      ? t("incidentExport.executedDiveConditionValue", {
+                          visibility:
+                            typeof dive.observedConditions?.visibility === "string"
+                              ? dive.observedConditions.visibility
+                              : t("incidentExport.executedDiveFieldNotRecorded"),
+                          current:
+                            typeof dive.observedConditions?.current === "string"
+                              ? dive.observedConditions.current
+                              : t("incidentExport.executedDiveFieldNotRecorded"),
+                        })
+                      : t("incidentExport.executedDiveFieldNotRecorded")}
+                  </Td>
+                  <Td>
+                    {dive.surfaceIntervalMinutes == null
+                      ? t("incidentExport.executedDiveFieldNotRecorded")
+                      : t("incidentExport.executedDiveSurfaceIntervalValue", {
+                          minutes: dive.surfaceIntervalMinutes,
+                        })}
+                  </Td>
+                  <Td>{dive.recordedByName ?? t("incidentExport.notOnFile")}</Td>
+                </tr>
+              ))}
+            </TBody>
+          </Table>
+        )}
       </section>
 
       <section className="mt-8" aria-labelledby="incident-timeline-heading">

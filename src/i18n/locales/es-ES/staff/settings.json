@@ -11,6 +11,9 @@
       "unitsInvalid": "Elige una unidad de profundidad, una unidad de temperatura del agua y una moneda de las listas.",
       "taxSaved": "Configuración de impuestos guardada.",
       "taxInvalid": "No se pudo guardar la configuración de impuestos.",
+      "passThroughSaved": "Cuota repercutida guardada.",
+      "passThroughInvalid": "Introduce el nombre y un importe positivo, o deja ambos vacíos para desactivarla.",
+      "conservationSaved": "Compromisos de conservación guardados.",
       "rentalsSaved": "Catálogo de alquiler guardado.",
       "rentalPricesSaved": "Precios de alquiler guardados.",
       "rentalPricesInvalid": "Introduce cada precio como una cantidad en dólares (o deja el campo vacío), entre $0 y $100.000.",
@@ -25,7 +28,6 @@
       "reviewUrlInvalid": "Introduce un enlace https:// completo, o vacía el campo para dejar de pedir reseñas.",
       "searchListingOn": "Tus páginas públicas aparecen en los buscadores.",
       "searchListingOff": "Tus páginas públicas están ocultas para los buscadores. Lo que ya esté indexado puede tardar unas semanas en desaparecer.",
-      "conservationSaved": "Compromisos de conservación guardados.",
       "conservationInvalid": "Revisa la selección de compromisos de conservación.",
       "connected": "Cuenta de Stripe conectada.",
       "connectFailed": "La conexión con Stripe no se completó. Inténtalo de nuevo.",
@@ -238,6 +240,18 @@
       "submit": "Guardar configuración de impuestos",
       "submitting": "Guardando…"
     },
+    "passThrough": {
+      "heading": "Cuota del parque marino o de conservación",
+      "description": "Añade opcionalmente una cuota por buceador para un tercero identificado.",
+      "detail": "Se muestra como una línea propia en el checkout y se mantiene fuera de los ingresos del centro.",
+      "nameLabel": "Nombre de la cuota",
+      "namePlaceholder": "Cuota del parque marino",
+      "amountLabel": "Importe por buceador",
+      "amountHint": "Deja ambos campos vacíos para desactivarla.",
+      "clearHint": "Es un cargo repercutido, no un recargo sobre el precio de la inmersión.",
+      "submit": "Guardar cuota repercutida",
+      "submitting": "Guardando…"
+    },
     "paymentsGate": {
       "notice": "El catálogo de alquiler, sus precios y la conexión con Stripe están limitados a propietarios y gerentes. Los ajustes de arriba están abiertos a todo el equipo."
     },
@@ -340,6 +354,10 @@
     "safetyChecklist": {
       "heading": "Lista de comprobación previa a la salida",
       "description": "Lo que tu tripulación confirma antes de que el barco zarpe."
+    },
+    "security": {
+      "heading": "Seguridad de la cuenta",
+      "description": "Protege tu acceso con autenticación de dos factores y gestiona las sesiones activas."
     },
     "promos": {
       "heading": "Códigos promocionales",
@@ -790,6 +808,51 @@
       "cellTooLongHeader": "Una celda de la fila de encabezado tiene más de {limit} caracteres — revisa que no sea un documento pegado en vez de una hoja de cálculo.",
       "cellTooLongRow": "Una celda de la fila {row} tiene más de {limit} caracteres — revisa que no sea un documento pegado en vez de una hoja de cálculo.",
       "noNameColumn": "No se encontró columna de nombre. El archivo necesita un nombre completo, o nombre y apellido, para importar personas."
+    }
+  },
+  "security": {
+    "eyebrow": "Ajustes",
+    "title": "Seguridad de la cuenta",
+    "description": "Protege tu cuenta del personal con un segundo factor y revisa las sesiones activas.",
+    "twoFactorHeading": "Autenticación en dos pasos",
+    "twoFactorDescription": "Usa una aplicación de autenticación para las acciones sensibles. Al desactivarla se elimina el secreto guardado.",
+    "enabled": "Activada",
+    "notEnabled": "No activada",
+    "start": "Iniciar configuración",
+    "starting": "Iniciando…",
+    "disable": "Desactivar dos pasos",
+    "disabling": "Desactivando…",
+    "secretLabel": "Añade este secreto a tu aplicación de autenticación y escribe el código actual de seis cifras:",
+    "codeLabel": "Código de autenticación",
+    "enable": "Activar",
+    "enabling": "Activando…",
+    "recoveryHeading": "Códigos de recuperación",
+    "recoveryDescription": "Guarda estos códigos en un lugar seguro. Cada uno funciona una vez si pierdes el acceso a tu aplicación de autenticación.",
+    "recoveryWarning": "Estos códigos desaparecen al terminar la configuración o en diez minutos. DiveDay no puede volver a mostrarlos.",
+    "sessionsHeading": "Sesiones activas",
+    "sessionsDescription": "Revoca un dispositivo que ya no reconozcas o cierra sesión en todas partes.",
+    "unknownDevice": "Dispositivo desconocido",
+    "unknownIp": "Red desconocida",
+    "revoke": "Revocar",
+    "revoking": "Revocando…",
+    "revokeAll": "Cerrar sesión en todas partes",
+    "revokingAll": "Cerrando sesión…",
+    "lastSeen": "última actividad {date}",
+    "stepUpHeading": "Confirma esta acción sensible",
+    "stepUpDescription": "Escribe un código actual de tu aplicación o un código de recuperación. Esta aprobación dura 15 minutos en este navegador.",
+    "stepUpCodeLabel": "Código de autenticación o recuperación",
+    "stepUpCodeHint": "Los códigos de recuperación se pueden usar una vez.",
+    "stepUpVerify": "Verificar y continuar",
+    "stepUpVerifying": "Verificando…",
+    "notice": {
+      "enrollmentStarted": "Configuración iniciada. Guarda el secreto antes de activar los dos pasos.",
+      "enabled": "Autenticación en dos pasos activada.",
+      "disabled": "Autenticación en dos pasos desactivada.",
+      "sessionRevoked": "Sesión revocada.",
+      "codeInvalid": "No se aceptó ese código.",
+      "stepUpRequired": "Verifica con tu aplicación de autenticación para continuar.",
+      "unavailable": "La configuración de seguridad no está disponible hasta configurar la clave de cifrado del despliegue.",
+      "invalid": "No se pudo completar ese cambio de seguridad."
     }
   },
   "embed": {
