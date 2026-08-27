@@ -17,7 +17,7 @@ the ADR carries the decisions, these are the pictures drawn to argue them.
 
 | File | What it shows |
 | --- | --- |
-| `System.dc.html` | The Clearwater language: the stance, the two grouped anatomies (and the retired card stack), the closed type ramp, tone discipline, row anatomy, the one chip, the chrome spec, the elevation ladder |
+| `System.dc.html` | The Clearwater language: the stance, the two grouped anatomies (and the retired card stack), the closed type ramp, tone discipline, row anatomy, the one badge, the chrome spec, the elevation ladder |
 
 **Page 2 — The staff app**
 
@@ -44,7 +44,7 @@ the ADR carries the decisions, these are the pictures drawn to argue them.
 
 One shop, one day, one week. **Blue Mantis Divers**, Key Largo (100 Ocean Drive · +1 305 555 0142
 · hello@demo.invalid), ★4.3 across 83 reviews, boats *Mantis II* and *Skiff*, default crew Keiko
-Tanaka and Sal Moretti; Dana Reyes owns the desk. The day is **Thursday, August 27, 2026**:
+Tanaka and Sal Moretti; Marcus Webb teaches the courses; Dana Reyes owns the desk. The day is **Thursday, August 27, 2026**:
 
 - **7:00–10:30 AM · Two-Tank Reef — Molasses & French** · Molasses Reef · Mantis II · $95 ·
   10 of 12 booked. Work: Grace Mensah's certification awaits verification (blocks boarding), Priya
@@ -60,10 +60,10 @@ By 11:25 PM all three boats are home — 23 out, 23 back (10 by 10:26 AM, 10 by 
 10:58 PM); the morning recap is sent, the afternoon's is ready; Priya's waiver and one waiting
 review carry to tomorrow. The week (Mon Aug 24 – Sun Aug 30): Mon 11:30 AM Benwood & Elbow (sailed,
 9 of 12) · Tue 2:00 PM Discover Scuba (sailed, 2 of 4) · Wed 7:00 AM Molasses & French (sailed, 12
-of 12) · Thu as above · Fri 7:00 AM Morning Two-Tank — Molasses Reef ($95, 8 of 12, price not set
-on the staff board) and 8:00 AM Deep Wreck Charter — the Duane on EANx ($195, 1 of 8) · Sat 11:00
-AM Two-Tank — French Reef ($95, 8 of 10) · Sun 11:30 AM Two-Tank Reef — Christ of the Abyss ($95,
-0 of 12) · **Open Water Diver — three-day course** spanning Fri–Sun ($595, 4 of 5). Orders: today
+of 12) · Thu as above · Fri 7:00 AM Morning Two-Tank — Molasses Reef ($95, 8 of 12) and
+8:00 AM Deep Wreck Charter — the Duane on EANx ($195, 1 of 8) · Sat 11:00 AM Two-Tank — French
+Reef ($95, 8 of 10) · Sun 11:30 AM Two-Tank Reef — Christ of the Abyss (0 of 12, no price set on
+the staff board, so the public page shows no price) · **Open Water Diver — three-day course** spanning Fri–Sun ($595, 4 of 5). Orders: today
 $148.00 (Amara Osei, counter sale), $120.00 open (Diego Alvarez, night dive), $144.75 (Kenji
 Watanabe); Wednesday's eight total $916.43 (Bjorn Aasen, Marisol Vega, Priscilla Adeyemi, Lars
 Petersen $41.93, Yara Halabi, Sofia Marchetti, Dominic Rossi at $139.75 each; June Park's nitrox
