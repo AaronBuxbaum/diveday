@@ -1937,6 +1937,22 @@ exports.handler = async (event) => {
         note: "The wrapper requires you to type the resolved account id; in a non-interactive terminal pass --confirm-account <12-digit-account-id>. It does not require a root-user credential: programmatic root credentials are a security regression. The account-level Block Public Access change permits public buckets but does not itself make any bucket public; an AWS Organizations policy can still prohibit it. If you bootstrap with --qualifier, infra-stack.ts S5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value -- set it to match, or the deployer's AssumeRole silently matches nothing. --cloudformation-execution-policies defaults to empty, so pass scoped policies here to avoid an administrator-equivalent deployer credential.",
       },
       {
+        id: "cloudfront-account-verification",
+        title: "Get the account verified for CloudFront",
+        category: "Prerequisites",
+        when: "once per account, before the first deploy, on any account that has never held a CloudFront distribution",
+        why: "CloudFront holds accounts with no distribution history behind an anti-abuse verification gate that only a human-reviewed AWS Support case lifts. There is no API, and it is not an IAM condition -- the deployer can hold cloudfront:* and CreateDistribution still answers 403 AccessDenied, so nothing in this stack or its roles can be edited to get past it.",
+        run: [
+          "AWS Support -> Create case -> Account and billing, service CloudFront, quoting the CreateDistribution error and its Request ID verbatim.",
+        ],
+        produces:
+          "MediaDistribution (infra-stack.ts S11b) can be created. Until then every deploy of this stack fails at that resource and rolls back.",
+        verify: ["aws cloudfront list-distributions --query DistributionList.Quantity"],
+        onFailure:
+          "Clear the rolled-back stack before retrying: a first-ever deploy lands in ROLLBACK_COMPLETE, which CloudFormation cannot update, so aws cloudformation delete-stack --stack-name DiveDay first. A later deploy lands in UPDATE_ROLLBACK_COMPLETE and is retryable as-is.",
+        note: "File it early -- an account-and-billing case carries no support-plan charge, so Basic Support can raise it, but the review takes hours to days and nothing else in the checklist shortens that wait. Unlike the SES sandbox and the SNS spend cap, skipping this is loud rather than silent: it takes the whole deploy down instead of quietly disabling one feature. There is also nothing to fall back to, which is why the stack does not offer a flag to skip the distribution -- MEDIA_PUBLIC_URL_BASE is derived from its domain, and the media bucket blocks all public access with no second read path, so a deploy without it serves 403 for every course photo, recap photo, dive-site image and shop logo (issue #1013).",
+      },
+      {
         id: "github-actions-cdk-oidc",
         title: "Authorize GitHub Actions to run cdk diff/deploy",
         category: "Credentials",
@@ -2261,6 +2277,14 @@ exports.handler = async (event) => {
       new Set([
         "aws-cli-admin-profile",
         "cdk-bootstrap",
+        // The one entry here whose absence fails the deploy outright rather
+        // than quietly capping a feature: CloudFront refuses CreateDistribution
+        // on an unverified account, so S11b's MediaDistribution never creates
+        // and the stack rolls back. It earns the short list on lead time as
+        // much as on class -- the Support case is reviewed by a human over
+        // hours to days, so a reader who meets it only after their first failed
+        // deploy has already lost that time.
+        "cloudfront-account-verification",
         "cost-explorer-enabled",
         // The three non-AWS cost guardrails (ADR
         // 20260806-provider-usage-guardrails). They belong in the short list

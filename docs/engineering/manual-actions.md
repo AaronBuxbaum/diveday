@@ -30,13 +30,22 @@ this file is the checklist, not the argument.
              aws s3control get-public-access-block --account-id <12-digit-account-id> --query PublicAccessBlockConfiguration
     note     The wrapper requires you to type the resolved account id; in a non-interactive terminal pass --confirm-account <12-digit-account-id>. It does not require a root-user credential: programmatic root credentials are a security regression. The account-level Block Public Access change permits public buckets but does not itself make any bucket public; an AWS Organizations policy can still prohibit it. If you bootstrap with --qualifier, infra-stack.ts S5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value -- set it to match, or the deployer's AssumeRole silently matches nothing. --cloudformation-execution-policies defaults to empty, so pass scoped policies here to avoid an administrator-equivalent deployer credential.
 
-[3] Enable Cost Explorer
+[3] Get the account verified for CloudFront
+    when     once per account, before the first deploy, on any account that has never held a CloudFront distribution
+    why      CloudFront holds accounts with no distribution history behind an anti-abuse verification gate that only a human-reviewed AWS Support case lifts. There is no API, and it is not an IAM condition -- the deployer can hold cloudfront:* and CreateDistribution still answers 403 AccessDenied, so nothing in this stack or its roles can be edited to get past it.
+    run      AWS Support -> Create case -> Account and billing, service CloudFront, quoting the CreateDistribution error and its Request ID verbatim.
+    produces MediaDistribution (infra-stack.ts S11b) can be created. Until then every deploy of this stack fails at that resource and rolls back.
+    verify   aws cloudfront list-distributions --query DistributionList.Quantity
+    if not   Clear the rolled-back stack before retrying: a first-ever deploy lands in ROLLBACK_COMPLETE, which CloudFormation cannot update, so aws cloudformation delete-stack --stack-name DiveDay first. A later deploy lands in UPDATE_ROLLBACK_COMPLETE and is retryable as-is.
+    note     File it early -- an account-and-billing case carries no support-plan charge, so Basic Support can raise it, but the review takes hours to days and nothing else in the checklist shortens that wait. Unlike the SES sandbox and the SNS spend cap, skipping this is loud rather than silent: it takes the whole deploy down instead of quietly disabling one feature. There is also nothing to fall back to, which is why the stack does not offer a flag to skip the distribution -- MEDIA_PUBLIC_URL_BASE is derived from its domain, and the media bucket blocks all public access with no second read path, so a deploy without it serves 403 for every course photo, recap photo, dive-site image and shop logo (issue #1013).
+
+[4] Enable Cost Explorer
     when     once per account
     why      The Cost Anomaly Detection monitor (infra-stack.ts S7) depends on Cost Explorer, which is a one-time console opt-in with no API, and produces no findings until it has accumulated spend history. The AWS::Budgets::Budget alongside it needs nothing.
     run      Billing and Cost Management console -> Cost Explorer -> enable.
     verify   aws ce get-anomaly-monitors --query 'AnomalyMonitors[].MonitorName'
 
-[4] Set a spend cap or usage alert in the Vercel, Neon, and Sentry consoles
+[5] Set a spend cap or usage alert in the Vercel, Neon, and Sentry consoles
     when     once per provider account, and again after changing plan
     why      AWS Budgets (infra-stack.ts S7) can only see the AWS bill, which is the smallest one DiveDay pays. Vercel, Neon, and Sentry each bill on their own console with their own limits, and none of them exposes an API for setting one. The in-app monitor (src/app/api/cron/usage) polls usage and emails; it deliberately cannot stop spending, so the vendor-side cap is the only hard stop that exists.
     run      Vercel -> Settings -> Billing -> Spend Management: set an amount and an email notification.
@@ -49,7 +58,7 @@ this file is the checklist, not the argument.
 ## Credentials
 
 ```text
-[5] Mint a GitHub token for the CI deploy job's own gh CLI calls
+[6] Mint a GitHub token for the CI deploy job's own gh CLI calls
     when     once, before the first CI-run post-deploy wizard, and again if the token expires or is revoked
     why      The default GITHUB_TOKEN a workflow run receives cannot manage repository secrets or variables -- those need the Secrets/Variables permissions, which are not among the ones the `permissions:` key in a workflow file can grant it (its whole list is actions, artifact-metadata, attestations, checks, code-quality, contents, deployments, discussions, id-token, issues, packages, pages, pull-requests, security-events, statuses, vulnerability-alerts). The wizard's GitHub steps that run in CI (sync-github-secrets.mjs, sync-github-cdk-ci-vars.mjs) use the gh CLI, which needs a token that actually holds those scopes -- and minting one is an account-level action no CLI can perform on its own behalf.
     run      GitHub -> Settings -> Developer settings -> Fine-grained tokens -> Generate new token, scoped to this repository only, with Secrets (read/write) and Variables (read/write) repository permissions -- not Actions, which none of the wizard's gh calls use, and deliberately not Administration: the one step that would need it (the infra-deploy environment sync) is workstation-only and skipped in CI, ADR 20260812-env-sync-is-workstation-only.
@@ -59,7 +68,7 @@ this file is the checklist, not the argument.
     verify   Actions -> Infra -> Run workflow, command: deploy -- after approval, confirm the run's log shows the wizard's GitHub steps succeeding rather than gh reporting 403/Resource not accessible.
     note     This token is a materially broader credential than AWS_CDK_DIFF_ROLE_ARN/AWS_CDK_DEPLOY_ROLE_ARN (identifiers, not secrets) -- it can rewrite this repository's Actions secrets, variables, and environment protection rules. It is reachable only from the deploy job, which is itself gated by the infra-deploy environment's required-reviewer approval (ADR 20260811-ci-deploy-full-wizard).
 
-[6] Mint a Vercel token and link the project for the CI deploy job
+[7] Mint a Vercel token and link the project for the CI deploy job
     when     once, before the first CI-run post-deploy wizard, and again if the token is revoked
     why      The wizard's Vercel steps (import-vercel-env.mjs, `vercel --prod --archive=tgz`, the SES DNS records) shell out to the Vercel CLI, which needs both a token and to know which Vercel project/org it is acting on. A workstation operator supplies both by having run `vercel login` and `vercel link` once, interactively, out of band -- neither has an unattended CLI equivalent.
     run      Vercel -> Account Settings -> Tokens -> Create, scoped to the team that owns the project.
@@ -70,7 +79,7 @@ this file is the checklist, not the argument.
     verify   Actions -> Infra -> Run workflow, command: deploy -- after approval, confirm the wizard's Vercel steps push/deploy rather than the CLI reporting 'no project linked'.
     note     A revoked or expired token fails the wizard's Vercel steps loudly (a nonzero `vercel` exit code fails the job) rather than silently skipping them, since scripts/infra-deploy.mjs propagates the wizard's own exit status.
 
-[7] Give the weekly database dump its connection string
+[8] Give the weekly database dump its connection string
     when     once, before the first Monday after this stack is deployed, and again if the Neon connection string changes
     why      The dump is the only backup layer that can restore a login -- the per-shop export bundles exclude user_accounts, account_tokens and calendar_feeds by design -- and it needs Neon's direct (non-pooled) connection string, which is another vendor's credential this stack has no identity to mint or read. It deploys holding the literal 'unset' and refuses to run until this is done, rather than writing a zero-byte object every week.
     run      aws secretsmanager put-secret-value --secret-id diveday/database-url-unpooled --secret-string '<the DATABASE_URL_UNPOOLED value from Neon -- the direct endpoint, not -pooler>'
@@ -81,7 +90,7 @@ this file is the checklist, not the argument.
              AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-database-dumps/dumps/ --recursive
     note     A transaction-mode pooler is unreliable for pg_dump, the same reason migrations use the direct connection. The resulting file holds every password hash and every medical answer in the platform, which is why it lives in its own bucket that nothing holding Vercel-resident credentials can touch, why everything in that bucket is deleted after 35 days while the export bundles never expire, and why the job's own role is write-only. Restoring one is a deliberate human act with the admin profile.
 
-[8] Mint the Vercel and Neon usage read tokens
+[9] Mint the Vercel and Neon usage read tokens
     when     once, before the usage monitor can measure anything, and again after rotating either
     why      Both are another vendor's account credentials -- this stack has no identity on either platform and no API that could mint one. Nothing else in DiveDay needs them, so they exist only for the daily usage poll.
     run      Vercel -> Account Settings -> Tokens -> Create: scope it to the team that holds the billing account, read access only.
@@ -94,14 +103,14 @@ this file is the checklist, not the argument.
 ## AWS account
 
 ```text
-[9] Request SES production access
+[10] Request SES production access
     when     once, before sending to anyone who has not verified their address
     why      A human-reviewed AWS Support case. There is no API.
     run      SES console -> Account dashboard -> Request production access.
     produces Sending to arbitrary recipients. Until then SES is in the sandbox: pre-verified addresses and the mailbox simulator only.
     verify   aws sesv2 get-account --query ProductionAccessEnabled
 
-[10] Leave the SMS sandbox, raise the spend limit, register an origination identity
+[11] Leave the SMS sandbox, raise the spend limit, register an origination identity
     when     once, before sending SMS to a diver
     why      All three are account-level SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US origination identity (10DLC or toll-free) is a vetted registration with the carriers. The SetSMSAttributes custom resource (infra-stack.ts S10) deliberately touches none of them -- it sets delivery-status logging and nothing else.
     run      SNS console -> Text messaging (SMS) -> Exit SMS sandbox (a Support case).
@@ -110,7 +119,7 @@ this file is the checklist, not the argument.
     verify   aws sns get-sms-attributes --attributes MonthlySpendLimit
     note     Skipping this does not fail anything visibly: the pipeline reads healthy end to end while sends are capped or dropped.
 
-[11] Confirm the observability alarm subscription email
+[12] Confirm the observability alarm subscription email
     when     once per alert address, and again if the address changes
     why      An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts S13) transitions correctly and notifies nobody, which is the failure mode the alarms exist to prevent.
     run      Open the 'AWS Notification - Subscription Confirmation' mail sent to the alert address and click Confirm subscription.
@@ -123,7 +132,7 @@ this file is the checklist, not the argument.
 ## Verification
 
 ```text
-[12] Confirm the usage monitor reports numbers and reaches a real inbox
+[13] Confirm the usage monitor reports numbers and reaches a real inbox
     when     after minting the tokens, and after changing OPS_ALERT_EMAIL
     why      Every failure mode of this monitor is silent by construction. A wrong token, a revoked scope, a renamed provider field, or an unreachable alert mailbox all leave a cron that runs green and reports nothing, which is indistinguishable from a month with no cost problem.
     run      curl -s -H "Authorization: Bearer $CRON_SECRET" <webhookHost>/api/cron/usage | jq '.evaluations[] | {ceilingId, level, value}'
