@@ -44,7 +44,11 @@ export type DiverMergeResult =
  * re-enter, not history: a fit profile is the diver's sizes today, and a
  * last-minute-list entry is a standing "tell me when a seat frees".
  */
-const SINGLETON_PER_PERSON_TABLES = ["rental_fit_profiles", "last_minute_list_entries"] as const;
+const SINGLETON_PER_PERSON_TABLES = [
+  "rental_fit_profiles",
+  "dive_support_needs",
+  "last_minute_list_entries",
+] as const;
 
 export const DIVER_HISTORY_TABLES = [
   "course_inquiries",
@@ -63,6 +67,11 @@ export const DIVER_HISTORY_TABLES = [
   "prior_visits",
   "imported_payment_history",
   "rental_fit_profiles",
+  // The arrangements a diver stated for their dives, one row per person like
+  // the fit beside it. Left behind, the survivor's prep page and manifest say
+  // nothing about a hoist the diver asked for -- the silently-lost arrangement
+  // the support-needs ADR names as this record's failure mode.
+  "dive_support_needs",
   // A bookingless counter rental names the diver directly (the other shape
   // names a booking, which this merge moves anyway). Leaving it behind put the
   // unit on a removed diver's record: the survivor's prep page showed no gear

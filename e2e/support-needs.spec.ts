@@ -55,8 +55,12 @@ test("what a diver arranges on their own page reaches prep and the manifest", as
   await page
     .getByLabel("Someone who should be on the same boat and team as you")
     .fill("Marisol Vega");
-  await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByRole("status")).toContainText("the crew will have that");
+  await page.getByRole("button", { name: "Save arrangements" }).click();
+  // Filtered, not bare: the readiness page carries a second live region (the
+  // gear match indicator), so the save's own confirmation is named.
+  await expect(
+    page.getByRole("status").filter({ hasText: "the crew will have that" }),
+  ).toBeVisible();
 
   // Answered once: the diver's own page reads it back rather than asking again.
   await expect(page.getByLabel("How many?")).toHaveValue("2");
@@ -90,7 +94,16 @@ test("what a diver arranges on their own page reaches prep and the manifest", as
   await expect(row.getByText("2 support divers in the water — the shop arranges")).toBeVisible();
   await expect(row.getByText("Dives with Marisol Vega")).toBeVisible();
 
-  // The last refusal, checked where it would actually bite: nothing about the
-  // record holds this diver up. They board like anybody else.
-  await expect(row.getByText("Blocked")).toHaveCount(0);
+  // The last refusal, checked where it would actually bite. This diver was
+  // booked minutes ago, so they carry the two blockers anybody in that state
+  // carries — an unsigned waiver and no certification on file. What is pinned
+  // here is that nothing they *arranged* ever joins that list: no support
+  // count, no lift, no briefing, no named buddy (ADR
+  // 20260827-support-needs-are-a-record-about-the-dive, fourth refusal —
+  // nothing here gates).
+  const blockers = row.getByRole("listitem");
+  await expect(blockers).not.toHaveCount(0);
+  for (const reason of await blockers.allInnerTexts()) {
+    expect(reason).not.toMatch(/support|lift|aboard|briefing|adapt|Marisol/i);
+  }
 });

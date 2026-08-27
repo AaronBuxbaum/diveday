@@ -723,7 +723,7 @@
     "supportDiversFromShop": "Sí — organízalos, por favor",
     "supportDiversOwn": "Vienen conmigo",
     "supportDiversCountLabel": "¿Cuántos?",
-    "supportDiversCountHint": "Hasta 4 aquí. Si necesitas más, dilo abajo y la tripulación te llamará.",
+    "supportDiversCountHint": "Hasta 4 aquí — pide abajo si necesitas más.",
     "supportDiversSeatNote": "Quien venga contigo necesita su propia plaza — resérvala como cualquier otra.",
     "supportBoardingLegend": "Subir a bordo y entrar al agua",
     "supportBoardingAssistance": "Una mano o un traslado para subir a bordo",
@@ -735,7 +735,7 @@
     "supportBriefingSignals": "Señales que acordemos antes",
     "supportEquipmentLabel": "Equipo que adaptar o traer",
     "supportDivesWithLabel": "Alguien que deba ir en el mismo barco y equipo que tú",
-    "saveSupport": "Guardar",
+    "saveSupport": "Guardar preparativos",
     "supportSaved": "Guardado — la tripulación lo tendrá antes de que llegues.",
     "supportUnavailable": "No se ha guardado. Inténtalo otra vez o díselo a la tripulación ese día."
   },

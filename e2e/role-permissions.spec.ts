@@ -226,7 +226,11 @@ test.describe("H-14 role permissions", () => {
       await expect(page.getByRole("button", { name: "Put it on the board" })).toBeVisible();
 
       await page.goto(await firstDiverDetailHref(page));
-      await expect(page.getByRole("heading", { name: "Delete", exact: true })).toBeVisible();
+      // The delete disclosure carries no heading of its own — "Delete" above a
+      // summary reading "Delete <name>" named the same act twice (issue #779) —
+      // so it is anchored by the name the record's own `<h1>` states.
+      const diverName = (await page.getByRole("heading", { level: 1 }).first().innerText()).trim();
+      await expect(page.getByText(`Delete ${diverName}`)).toBeVisible();
       // Erasure is deliberately *not* asserted here any more. It moved behind
       // `people.deleted_at` on 2026-08-21, so it is absent on a live record for
       // everyone including the owner, and this test is READ_ONLY — it cannot

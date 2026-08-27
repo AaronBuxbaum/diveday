@@ -723,7 +723,7 @@
     "supportDiversFromShop": "Yes — please arrange them",
     "supportDiversOwn": "They're coming with me",
     "supportDiversCountLabel": "How many?",
-    "supportDiversCountHint": "Up to 4 here. If you need more, say so below and the crew will call you.",
+    "supportDiversCountHint": "Up to 4 here — ask below if you need more.",
     "supportDiversSeatNote": "Anyone coming with you needs their own seat — book it like any other.",
     "supportBoardingLegend": "Getting aboard and into the water",
     "supportBoardingAssistance": "A hand or a transfer getting aboard",
@@ -735,7 +735,7 @@
     "supportBriefingSignals": "Signals we agree beforehand",
     "supportEquipmentLabel": "Equipment to adapt or bring",
     "supportDivesWithLabel": "Someone who should be on the same boat and team as you",
-    "saveSupport": "Save",
+    "saveSupport": "Save arrangements",
     "supportSaved": "Saved — the crew will have that before you arrive.",
     "supportUnavailable": "That did not save. Try again, or tell the crew on the day."
   },
