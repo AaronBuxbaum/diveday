@@ -801,23 +801,33 @@ export default async function TripPrepPage({
                               .filter(Boolean)
                               .join(" · "),
                           }));
+                        // **Nothing falls between the bands.** The first band
+                        // is headed by the size it matches, so it can only
+                        // exist where there is a size to name — and a unit
+                        // sorted into it without one would otherwise be in
+                        // neither band and reachable from no picker, which on
+                        // this page means a staffer cannot assign a unit that
+                        // is genuinely free. `groupUnitsForSize` does not
+                        // produce that pair today; this makes it structural
+                        // rather than something the next reader has to trace.
+                        const named = exact.length > 0 && item.size ? item.size : null;
+                        const exactBand = named ? exact : [];
+                        const restBand = named ? rest : [...exact, ...rest];
                         const groups = [
-                          exact.length > 0 && item.size
+                          named
                             ? {
                                 key: "exact",
-                                label: t("gear.prep.groupExactSize", { size: item.size }),
-                                options: optionsFor(exact),
+                                label: t("gear.prep.groupExactSize", { size: named }),
+                                options: optionsFor(exactBand),
                               }
                             : null,
-                          rest.length > 0
+                          restBand.length > 0
                             ? {
                                 key: "rest",
                                 label: t(
-                                  exact.length > 0
-                                    ? "gear.prep.groupOtherSizes"
-                                    : "gear.prep.groupFree",
+                                  named ? "gear.prep.groupOtherSizes" : "gear.prep.groupFree",
                                 ),
-                                options: optionsFor(rest),
+                                options: optionsFor(restBand),
                               }
                             : null,
                         ].filter((group) => group !== null);
