@@ -102,6 +102,19 @@ const CONTROL_TAGS = new Set(["input", "select", "textarea"]);
  *   description inside it. A caller-supplied `htmlFor`/matching child `id`
  *   is preserved as-is; otherwise `Field` mints one with `useId()`.
  *
+ * **The minted id is checked, not assumed.** Issue #1022 reported two `Field`s
+ * on the gear unit page sharing one `useId()` value under `cacheComponents` —
+ * which would make a screen reader announce a merged name built from both
+ * labels, while the DOM, the screenshots and every existing assertion stayed
+ * correct. It does not reproduce: 229 renders were swept (32 static staff
+ * routes, 160 dynamic staff routes, all 37 gear units) on both a dev server and
+ * a production PPR build, with zero duplicate ids, so nothing here was changed
+ * on a theory. What the sweep did change is that nobody has to sweep again —
+ * `expectNoA11yViolations` in e2e/a11y.spec.ts now fails on any duplicate DOM
+ * id, across all 38 surfaces it scans. axe cannot do this itself: it dropped
+ * `duplicate-id`/`duplicate-id-active` in 4.9 and the surviving
+ * `duplicate-id-aria` never fires on a plain `<label for>`.
+ *
  * A `children` that isn't a single element (rare — the documented contract is
  * "pass the control itself") falls back to the original wrap-everything
  * shape, so nothing breaks; it just doesn't get the two behaviors above.
