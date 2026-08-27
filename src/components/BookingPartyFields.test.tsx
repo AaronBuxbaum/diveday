@@ -2,6 +2,7 @@
 
 import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { renderDiver } from "@/test/intl";
 import { BookingPartyFields } from "./BookingPartyFields";
 
@@ -60,7 +61,7 @@ describe("BookingPartyFields", () => {
     expect(document.querySelector('[name^="certificationNumber"]')).toBeNull();
   });
 
-  it("shows the big-group escape hatch once the party cap is below 6 (task 24)", () => {
+  it("shows the big-group escape hatch once the party cap is below the maximum (task 24)", () => {
     renderDiver(
       <BookingPartyFields maxPartySize={3} contactEmail="dive@example.com" contactPhone={null} />,
     );
@@ -72,7 +73,19 @@ describe("BookingPartyFields", () => {
   });
 
   it("hides the big-group escape hatch when the full party size is still selectable", () => {
-    renderDiver(<BookingPartyFields maxPartySize={6} />);
+    // Against the constant, not a literal: the cap moved from 6 to 20 once
+    // `createBookingParty`'s cost was measured (issue #725), and a test that
+    // hard-codes it stops testing the thing it names the moment it moves again.
+    renderDiver(<BookingPartyFields maxPartySize={MAX_PUBLIC_PARTY_SIZE} />);
     expect(screen.queryByText(/bringing more than/i)).not.toBeInTheDocument();
+  });
+
+  it("offers every seat up to the measured cap when the boat has room", () => {
+    renderDiver(<BookingPartyFields maxPartySize={MAX_PUBLIC_PARTY_SIZE} />);
+    const options = screen.getAllByRole("option");
+    expect(options).toHaveLength(MAX_PUBLIC_PARTY_SIZE);
+    // A dive club of nine and a family of eight are the cases the old cap of
+    // six turned into two unrelated parties.
+    expect(options.at(-1)).toHaveTextContent(String(MAX_PUBLIC_PARTY_SIZE));
   });
 });

@@ -52,6 +52,7 @@ import {
   type RentableItemKind,
 } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
+import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 import { ERROR_MESSAGE_KEYS, type ErrorCode } from "./_components/types";
 
 /** Stands in for a trip with no requirement row of its own, so its dive sites' gates still compose. */
@@ -124,7 +125,14 @@ export async function bookSpot(
   const t = diverTranslator(locale);
   const ip = await clientIp();
 
-  const partySize = z.coerce.number().int().min(1).max(6).safeParse(formData.get("partySize"));
+  // Bounded, and the bound is measured — see MAX_PUBLIC_PARTY_SIZE for the
+  // numbers and for why the lock, not the row count, is what decides it.
+  const partySize = z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_PUBLIC_PARTY_SIZE)
+    .safeParse(formData.get("partySize"));
   if (!partySize.success) return { error: t(ERROR_MESSAGE_KEYS.invalid) };
 
   // Validate per field so the form can point at the exact box that is wrong,

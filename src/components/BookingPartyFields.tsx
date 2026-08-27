@@ -6,6 +6,7 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { mailtoHref, telHref } from "@/lib/contact-links";
 import { suggestEmailTypo } from "@/lib/email-typo";
 import { loadReturningDiver, type ReturningDiver } from "@/lib/returning-diver";
+import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 
 const diverSlots = ["one", "two", "three", "four", "five", "six"] as const;
 
@@ -77,7 +78,7 @@ export function BookingPartyFields({
   // member opted in — see src/db/bookings.ts and its "rolls back the whole
   // party" test).
   const [useLeadEmail, setUseLeadEmail] = useState<Record<number, boolean>>({});
-  const limit = Math.max(1, Math.min(6, maxPartySize));
+  const limit = Math.max(1, Math.min(MAX_PUBLIC_PARTY_SIZE, maxPartySize));
   useEffect(() => setHydrated(true), []);
   useEffect(() => onSizeChange?.(size), [size, onSizeChange]);
 
@@ -118,11 +119,11 @@ export function BookingPartyFields({
           </select>
         </Field>
       </FieldGrid>
-      {/* The select tops out at `limit` (either the absolute party cap of 6
-          or however many seats remain) — a bigger group has no way to book
-          itself here, so it needs an explicit way out rather than a dead end
-          at the last option (task 24). */}
-      {limit < 6 ? (
+      {/* The select tops out at `limit` (either MAX_PUBLIC_PARTY_SIZE or
+          however many seats remain) — a bigger group has no way to book itself
+          here, so it needs an explicit way out rather than a dead end at the
+          last option (task 24). */}
+      {limit < MAX_PUBLIC_PARTY_SIZE ? (
         <p className="-mt-2 text-sm text-muted">
           {contactEmail
             ? t.rich("party.bigGroupContactEmail", {
