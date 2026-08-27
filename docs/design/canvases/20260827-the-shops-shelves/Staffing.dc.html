@@ -1,0 +1,162 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;650;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7; --border-strong: #8a8577;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+      --warning: #b45309; --warning-tint: #f8eee6;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--primary); }
+    .tab { font-size: 14px; font-weight: 500; color: var(--muted); padding: 6px 12px; border-radius: 10px; white-space: nowrap; }
+    .shift { display: inline-flex; flex-direction: column; gap: 1px; border-radius: 8px; background: var(--sunken); padding: 6px 9px; font-size: 11.5px; font-weight: 600; }
+    .daycol { border-left: 1px solid var(--border); }
+    .crow { display: flex; align-items: center; gap: 12px; min-height: 48px; border-top: 1px solid var(--border); }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 840px; background: var(--bg); box-sizing: border-box; overflow: hidden;">
+
+  <div style="height: 56px; display: flex; align-items: center; gap: 20px; padding: 0 32px; background: rgba(250,249,246,.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); box-sizing: border-box;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 28px; height: 28px; border-radius: 8px; background: var(--primary); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">BM</div>
+      <span style="font-size: 15px; font-weight: 650; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"></path></svg>
+    </div>
+    <div style="display: flex; align-items: center; gap: 2px; margin-left: 16px;">
+      <span class="tab">Today</span>
+      <span class="tab">Check-in</span>
+      <span class="tab">Divers</span>
+      <span class="tab">Board</span>
+      <span class="tab" style="background: var(--primary-tint); color: var(--primary); font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">More
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"></path></svg>
+      </span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 10px; padding: 7px 12px; background: var(--surface);">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="4.6"></circle><path d="M10.6 10.6L13.6 13.6"></path></svg>
+      <span style="font-size: 13px; color: var(--muted);">Search</span>
+      <span style="font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px;">&#8984;K</span>
+    </div>
+  </div>
+
+  <div style="width: 1152px; margin: 0 auto; padding: 44px 0 40px; box-sizing: border-box;">
+
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;">
+      <div>
+        <p class="eyebrow" style="margin: 0;">Staffing</p>
+        <h1 style="margin: 8px 0 0; font-size: 34px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.1;">Who&#8217;s working</h1>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding-bottom: 4px;">
+        <span style="display: inline-flex; align-items: center; min-height: 42px; padding: 0 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); font-size: 13.5px; font-weight: 600;">+ Add a shift</span>
+      </div>
+    </div>
+
+    <!-- Week toolbar -->
+    <div style="margin-top: 26px; display: flex; align-items: center; gap: 10px;">
+      <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface);">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#0c2a35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5L5.5 8 10 12.5"></path></svg>
+      </span>
+      <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface);">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#0c2a35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </span>
+      <span class="tnum" style="font-size: 16px; font-weight: 650; letter-spacing: -0.01em; margin-left: 6px;">Aug 24 – 30, 2026</span>
+    </div>
+
+    <!-- People × days -->
+    <div style="margin-top: 18px; border-top: 1px solid var(--border);">
+      <div style="display: grid; grid-template-columns: 150px repeat(7, 1fr);">
+        <div style="padding: 10px 8px;"></div>
+        <div class="daycol" style="padding: 10px 8px;"><span class="glabel" style="font-size: 10.5px; opacity: .6;">Mon 24</span></div>
+        <div class="daycol" style="padding: 10px 8px;"><span class="glabel" style="font-size: 10.5px; opacity: .6;">Tue 25</span></div>
+        <div class="daycol" style="padding: 10px 8px;"><span class="glabel" style="font-size: 10.5px; opacity: .6;">Wed 26</span></div>
+        <div class="daycol" style="padding: 10px 8px;"><span class="glabel" style="font-size: 10.5px; color: var(--primary);">Thu 27</span></div>
+        <div class="daycol" style="padding: 10px 8px;"><span class="glabel" style="font-size: 10.5px;">Fri 28</span></div>
+        <div class="daycol" style="padding: 10px 8px;"><span class="glabel" style="font-size: 10.5px;">Sat 29</span></div>
+        <div class="daycol" style="padding: 10px 8px;"><span class="glabel" style="font-size: 10.5px;">Sun 30</span></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 150px repeat(7, 1fr); border-top: 1px solid var(--border);">
+        <div style="padding: 12px 8px;"><span style="font-size: 14px; font-weight: 600;">Keiko Tanaka</span><span style="display: block; font-size: 11.5px; color: var(--muted);">divemaster</span></div>
+        <div class="daycol" style="padding: 10px 6px; opacity: .55;"><span class="shift"><span class="tnum">6:30 – 12:00</span></span></div>
+        <div class="daycol" style="padding: 10px 6px; opacity: .55;"></div>
+        <div class="daycol" style="padding: 10px 6px; opacity: .55;"><span class="shift"><span class="tnum">6:30 – 12:00</span></span></div>
+        <div class="daycol" style="padding: 10px 6px;"><span class="shift"><span class="tnum">6:30 – 23:30</span><span style="font-weight: 500; color: var(--muted);">all three boats</span></span></div>
+        <div class="daycol" style="padding: 10px 6px;"><span class="shift"><span class="tnum">6:30 – 14:00</span></span></div>
+        <div class="daycol" style="padding: 10px 6px;"><span class="shift"><span class="tnum">10:00 – 15:30</span></span></div>
+        <div class="daycol" style="padding: 10px 6px;"></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 150px repeat(7, 1fr); border-top: 1px solid var(--border);">
+        <div style="padding: 12px 8px;"><span style="font-size: 14px; font-weight: 600;">Sal Moretti</span><span style="display: block; font-size: 11.5px; color: var(--muted);">captain</span></div>
+        <div class="daycol" style="padding: 10px 6px; opacity: .55;"><span class="shift"><span class="tnum">6:30 – 16:00</span></span></div>
+        <div class="daycol" style="padding: 10px 6px; opacity: .55;"><span class="shift"><span class="tnum">12:00 – 18:00</span></span></div>
+        <div class="daycol" style="padding: 10px 6px; opacity: .55;"><span class="shift"><span class="tnum">6:30 – 12:00</span></span></div>
+        <div class="daycol" style="padding: 10px 6px;"><span class="shift"><span class="tnum">6:30 – 23:30</span></span></div>
+        <div class="daycol" style="padding: 10px 6px;"><span class="shift"><span class="tnum">6:30 – 14:00</span></span></div>
+        <div class="daycol" style="padding: 10px 6px;"><span class="shift"><span class="tnum">10:00 – 15:30</span></span></div>
+        <div class="daycol" style="padding: 10px 6px;"></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 150px repeat(7, 1fr); border-top: 1px solid var(--border);">
+        <div style="padding: 12px 8px;"><span style="font-size: 14px; font-weight: 600;">Marcus Webb</span><span style="display: block; font-size: 11.5px; color: var(--muted);">instructor</span></div>
+        <div class="daycol" style="padding: 10px 6px; opacity: .55;"></div>
+        <div class="daycol" style="padding: 10px 6px; opacity: .55;"><span class="shift"><span class="tnum">13:00 – 17:30</span></span></div>
+        <div class="daycol" style="padding: 10px 6px; opacity: .55;"></div>
+        <div class="daycol" style="padding: 10px 6px;"></div>
+        <div class="daycol" style="padding: 10px 6px;"><span class="shift"><span class="tnum">7:30 – 17:00</span><span style="font-weight: 500; color: var(--muted);">OW course d1</span></span></div>
+        <div class="daycol" style="padding: 10px 6px;"><span class="shift"><span class="tnum">7:30 – 17:00</span><span style="font-weight: 500; color: var(--muted);">OW course d2</span></span></div>
+        <div class="daycol" style="padding: 10px 6px;"><span class="shift"><span class="tnum">7:30 – 17:00</span><span style="font-weight: 500; color: var(--muted);">OW course d3</span></span></div>
+      </div>
+
+      <!-- The gap carries its act, in the day it lives -->
+      <div style="display: grid; grid-template-columns: 150px repeat(7, 1fr); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+        <div style="padding: 12px 8px;"><span style="font-size: 14px; font-weight: 600; color: var(--muted);">Needs crew</span></div>
+        <div class="daycol" style="padding: 10px 6px;"></div>
+        <div class="daycol" style="padding: 10px 6px;"></div>
+        <div class="daycol" style="padding: 10px 6px;"></div>
+        <div class="daycol" style="padding: 10px 6px;">
+          <span style="display: inline-flex; flex-direction: column; gap: 2px; border-radius: 8px; background: var(--warning-tint); padding: 6px 9px; font-size: 11.5px; font-weight: 650; color: var(--warning);">
+            <span style="display: inline-flex; align-items: center; gap: 4px;">
+              <svg width="10" height="10" viewBox="0 0 18 18" fill="none" stroke="#b45309" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.4L16.6 15.2H1.4L9 2.4z"></path><path d="M9 7.2v3.4"></path></svg>
+              1:00 PM no divemaster
+            </span>
+            <span style="font-weight: 600; color: var(--primary);">Assign &#8250;</span>
+          </span>
+        </div>
+        <div class="daycol" style="padding: 10px 6px;"></div>
+        <div class="daycol" style="padding: 10px 6px;"></div>
+        <div class="daycol" style="padding: 10px 6px;"></div>
+      </div>
+    </div>
+
+    <!-- Credentials: a quiet clock, never a gate -->
+    <p class="glabel" style="margin: 34px 0 0;">Credentials</p>
+    <div style="margin-top: 6px;">
+      <div class="crow">
+        <span style="width: 260px; font-size: 14.5px; font-weight: 600;">Keiko Tanaka &middot; EFR Instructor</span>
+        <span style="flex: 1; font-size: 13.5px; color: var(--muted);">verified &middot; renews Oct 12</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="crow" style="border-bottom: 1px solid var(--border);">
+        <span style="width: 260px; font-size: 14.5px; font-weight: 600;">Sal Moretti &middot; Captain&#8217;s license</span>
+        <span style="flex: 1; font-size: 13.5px; font-weight: 600; color: var(--warning);">renews in 21 days</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

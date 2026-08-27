@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;650;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7; --border-strong: #8a8577;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+      --success: #15803d;
+      --warning: #b45309; --warning-tint: #f8eee6;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--primary); }
+    .tab { font-size: 14px; font-weight: 500; color: var(--muted); padding: 6px 12px; border-radius: 10px; white-space: nowrap; }
+    .grow { display: flex; align-items: center; gap: 14px; min-height: 50px; border-top: 1px solid var(--border); }
+    .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); font-size: 13px; font-weight: 600; color: var(--muted); }
+    .mono { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 13px; font-weight: 600; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; background: var(--bg); box-sizing: border-box; overflow: hidden;">
+
+  <div style="height: 56px; display: flex; align-items: center; gap: 20px; padding: 0 32px; background: rgba(250,249,246,.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); box-sizing: border-box;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 28px; height: 28px; border-radius: 8px; background: var(--primary); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">BM</div>
+      <span style="font-size: 15px; font-weight: 650; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"></path></svg>
+    </div>
+    <div style="display: flex; align-items: center; gap: 2px; margin-left: 16px;">
+      <span class="tab">Today</span>
+      <span class="tab">Check-in</span>
+      <span class="tab">Divers</span>
+      <span class="tab">Board</span>
+      <span class="tab" style="background: var(--primary-tint); color: var(--primary); font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">More
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"></path></svg>
+      </span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 10px; padding: 7px 12px; background: var(--surface);">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="4.6"></circle><path d="M10.6 10.6L13.6 13.6"></path></svg>
+      <span style="font-size: 13px; color: var(--muted);">Search</span>
+      <span style="font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px;">&#8984;K</span>
+    </div>
+  </div>
+
+  <div style="width: 1024px; margin: 0 auto; padding: 44px 0 40px; box-sizing: border-box;">
+
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;">
+      <div>
+        <p class="eyebrow" style="margin: 0;">Gear</p>
+        <h1 style="margin: 8px 0 0; font-size: 34px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.1;">The register</h1>
+      </div>
+      <div style="padding-bottom: 4px;">
+        <span style="display: inline-flex; align-items: center; min-height: 42px; padding: 0 18px; border-radius: 10px; background: var(--primary); color: #ffffff; font-size: 13.5px; font-weight: 600;">+ Add a unit</span>
+      </div>
+    </div>
+
+    <!-- One filter row; the states are the groups below, not tiles above -->
+    <div style="margin-top: 26px; display: flex; align-items: center; gap: 8px;">
+      <span class="chip" style="background: var(--primary-tint); border-color: rgba(14,116,144,.25); color: var(--primary);">All &middot; 24</span>
+      <span class="chip">BCDs &middot; 8</span>
+      <span class="chip">Regulators &middot; 6</span>
+      <span class="chip">Wetsuits &middot; 7</span>
+      <span class="chip">Tanks &middot; 3</span>
+      <span class="chip" style="margin-left: auto;">Deleted</span>
+    </div>
+
+    <!-- Out -->
+    <p class="glabel" style="margin: 32px 0 0;">Out — 2</p>
+    <div style="margin-top: 6px;">
+      <div class="grow">
+        <span class="mono" style="width: 90px;">BCD-07</span>
+        <span style="flex: 1; font-size: 14px;">Zeagle Ranger &middot; M</span>
+        <span style="font-size: 13.5px; color: var(--muted);">with Noor Rahman &middot; due back today 3:00 PM</span>
+        <span style="display: inline-flex; align-items: center; min-height: 38px; padding: 0 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); font-size: 13px; font-weight: 600;">Mark returned</span>
+      </div>
+      <div class="grow" style="border-bottom: 1px solid var(--border);">
+        <span class="mono" style="width: 90px;">WET-11</span>
+        <span style="flex: 1; font-size: 14px;">Bare 3mm &middot; ML long</span>
+        <span style="font-size: 13.5px; color: var(--muted);">with Noor Rahman &middot; due back today 3:00 PM</span>
+        <span style="display: inline-flex; align-items: center; min-height: 38px; padding: 0 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); font-size: 13px; font-weight: 600;">Mark returned</span>
+      </div>
+    </div>
+
+    <!-- Due back / overdue -->
+    <p class="glabel" style="margin: 28px 0 0;">Due back — 1</p>
+    <div style="margin-top: 6px;">
+      <div class="grow" style="border-bottom: 1px solid var(--border);">
+        <span class="mono" style="width: 90px;">REG-03</span>
+        <span style="flex: 1; font-size: 14px;">Apeks XTX50</span>
+        <span style="display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 650; background: var(--warning-tint); color: var(--warning);">
+          <svg width="11" height="11" viewBox="0 0 18 18" fill="none" stroke="#b45309" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.4L16.6 15.2H1.4L9 2.4z"></path><path d="M9 7.2v3.4"></path></svg>
+          Overdue — due Wed
+        </span>
+        <span style="font-size: 13.5px; color: var(--muted);">with Dominic Rossi</span>
+        <span style="display: inline-flex; align-items: center; min-height: 38px; padding: 0 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); font-size: 13px; font-weight: 600;">Mark returned</span>
+      </div>
+    </div>
+
+    <!-- On the wall -->
+    <p class="glabel" style="margin: 28px 0 0;">On the wall — 21</p>
+    <div style="margin-top: 6px;">
+      <div class="grow">
+        <span class="mono" style="width: 90px;">BCD-02</span>
+        <span style="flex: 1; font-size: 14px;">Zeagle Ranger &middot; S</span>
+        <span style="font-size: 13.5px; color: var(--muted);">reserved for Sat &middot; Grace Mensah</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="grow">
+        <span class="mono" style="width: 90px;">REG-01</span>
+        <span style="flex: 1; font-size: 14px;">Apeks XTX50</span>
+        <span style="font-size: 13.5px; font-weight: 600; color: var(--warning);">Annual service due in 12 days</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="grow">
+        <span class="mono" style="width: 90px;">TNK-02</span>
+        <span style="flex: 1; font-size: 14px;">AL80 &middot; nitrox clean</span>
+        <span style="font-size: 13.5px; color: var(--muted);"></span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="grow" style="border-bottom: 1px solid var(--border);">
+        <span class="mono" style="width: 90px;">WET-04</span>
+        <span style="flex: 1; font-size: 14px;">Bare 3mm &middot; L</span>
+        <span style="font-size: 13.5px; color: var(--muted);"></span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <p style="margin: 10px 0 0; font-size: 13.5px; color: var(--muted);">and 17 more</p>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

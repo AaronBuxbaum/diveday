@@ -1,0 +1,93 @@
+# The shop's shelves — canvas
+
+- **Status:** Live (its ADR is Proposed — this canvas may still be edited)
+- **Date:** 2026-08-27
+- **ADR:** [20260827-the-shops-shelves](../../../architecture/decisions/20260827-the-shops-shelves.md)
+- **Published:** https://claude.ai/code/artifact/a6d6dfa5-0c90-4a5f-a13f-d64937af7b5d
+
+The fifth design canvas, completing the Clearwater stack's app-wide pass: the catalog and setup
+surfaces. Conventions: [design-artifacts.md](../../design-artifacts.md). **Nothing here is
+normative** — the ADR decides; [SPEC.md](SPEC.md) carries journeys, acceptance tests and
+interface contracts.
+
+## Artboards
+
+| File | What it shows |
+| --- | --- |
+| `Main.dc.html` | The library pattern on dive sites: one ledger grouped by the collection's own fact, requirement words on the rows that carry one, the DiveDay catalog as a quiet door at the tail |
+| `Editor.dc.html` | The long-form editor pattern on the Open Water course: a sticky section rail beside unboxed sections, the depth-marker hint inline, one Save |
+| `Gear.dc.html` | The register as one story: Out / Due back / On the wall as the groups, kind chips as the filter, service facts as per-row sentences only where they speak |
+| `Staffing.dc.html` | Staffing as a week: people × days, shifts as quiet chips, the crew gap in its day cell carrying its act, credentials as a quiet clock beneath |
+| `Reports.dc.html` | Reports with its chrome shed: five unboxed figures over hairlines, the departures ledger with the remainder-carries-attention waiver meter |
+
+`canvas.json` places them and sets the launch view.
+
+## The fiction every board holds to
+
+The same Blue Mantis week. The site library holds nine sites split reefs/wrecks (Molasses, French,
+Christ of the Abyss; Spiegel Grove, USCGC Duane, Benwood, City of Washington among them), with the
+demanding wrecks carrying their requirement words (Advanced · Deep, plus Nitrox on the Duane) and
+the catalog door offering 34 Florida sites. The course editor shows Open Water Diver ($595, five
+per instructor, three days, eLearning included, `{depth18}` marker in the pitch). Gear, Saturday
+midday: Noor Rahman's BCD-07 and WET-11 out until 3:00 PM, REG-03 overdue with Dominic Rossi (due
+Wednesday), BCD-02 reserved for Grace Saturday, REG-01's annual service due in 12 days, 24 units
+total. Staffing shows the Aug 24–30 week: Keiko and Sal cover Thursday's three boats 6:30–23:30,
+Marcus Webb teaches the OW course Friday–Sunday, and Thursday's 1:00 PM still needs a divemaster —
+the gap that Today and the record also tell. Reports, August so far: $12,480.50 revenue (up 18%),
+$640 tips across 31, 214 seats over 24 departures, 78% fill (6 at capacity), 96% waivers signed
+with 3 unsigned — the Benwood row carrying the amber remainder (7 of 9).
+
+Every name, number and time is demo-seed fiction. Nothing here is real customer data.
+
+## Slices
+
+**A canvas has authority over a surface only while that surface's slice is `open`**
+([design-artifacts.md](../../design-artifacts.md)). Slice bodies and pins: [SPEC.md](SPEC.md) and
+[roadmap.md](../../../product/features/roadmap.md#9-the-shops-shelves-design-complete).
+
+| Slice | Status | Lands in | Pinned by |
+| --- | --- | --- | --- |
+| 9a — the dive-site library and the catalog door | open | — | — |
+| 9b — the editor rail on the course editor | open | — | — |
+| 9c — the editor rail on the site form | open | — | — |
+| 9d — the gear register's one story | open | — | — |
+| 9e — staffing as a week | open | — | — |
+| 9f — reports sheds its chrome | open | — | — |
+| 9g — the mapped surfaces (courses roster, promos, team, add-booking) | open | — | — |
+
+## Implementing a slice
+
+Load the [`design-implementation`](../../../../.claude/skills/design-implementation/SKILL.md) skill
+first. The prompt below is self-contained; replace the slice id.
+
+```
+Implement slice 9d of the DiveDay shops-shelves redesign.
+
+Start by loading the `design-implementation` skill, then read, in this order:
+  1. docs/architecture/decisions/20260827-the-shops-shelves.md — normative
+  2. docs/architecture/decisions/20260827-clearwater-surface-language.md — the language
+  3. the slice's entry in docs/product/features/roadmap.md (section 9)
+  4. the slice table in docs/design/canvases/20260827-the-shops-shelves/README.md
+  5. the code for every surface the slice touches, as it exists today
+  6. the slice's section of SPEC.md in that canvas directory
+  7. the artboards, last — they argue, they do not decide
+
+Non-negotiable, from the ADRs:
+  - Shipped code outranks the canvas; the ADR outranks both.
+  - One ledger at every width; the catalog is a door, never a second surface style.
+  - State is said once: no stat tile may restate what a group heading already says.
+  - The gear exclusion-constraint truth, progression order, H-59's inform-only credential
+    clocks, promo lifecycles, and every permission gate are contracts — rendering moves only.
+  - Every colour-carried state also carries a word; drawn SVG, never emoji, on anything new.
+
+Build to this repo's standards (tokens, primitives, bundles in every locale, clock and timezone
+rules, loading.tsx + instant = true). Close the loop in the same PR: doc comment names the ADR, a
+rule test pins the behavior, the slice table updates, the roadmap slice moves on ship. Verify:
+pnpm check, light+dark screenshots at phone and desktop, the design-review pass, e2e + visual
+coverage. Account for every visual diff.
+```
+
+## Working on it
+
+Plain HTML with inline styles — open any board in a browser. Rebuild and republish with the
+`/design` skill's helper to the **same URL** above.

@@ -241,6 +241,32 @@ unranked. `security-reviewer` before 8b and 8e merge.
 - **8f. Requests in the language.** Day groups own count and advice; soft matches are ink, not
   tint.
 
+### 9. The shop's shelves (design complete)
+
+The catalog and setup surfaces — dive sites, the long-form editors, gear, staffing, reports, and
+the mapped rest — argued in the Proposed ADR
+[20260827-the-shops-shelves](../../architecture/decisions/20260827-the-shops-shelves.md), drawn in
+[its canvas](../../design/canvases/20260827-the-shops-shelves/README.md), specified in
+[its SPEC](../../design/canvases/20260827-the-shops-shelves/SPEC.md). Completes the Clearwater
+stack's app-wide pass (items 6–9 + the departure's own item 5). Unranked.
+
+- **9a. The dive-site library and the catalog door.** One ledger; the catalog a door at the tail;
+  the provenance glyph retires. *Pins:* requirement words only above Open Water.
+- **9b/9c. The editor rail** on the course editor, then the site form. Sticky rail, unboxed
+  sections, one Save; `ConflictGuardedForm`, depth markers, template-update flows untouched.
+  *Pins:* every section reachable from the rail; refusal anchors land.
+- **9d. The gear register's one story.** Out / Due back / On the wall as the groups; tiles and
+  the Returns panel fold in (H-49); 23P01 truth untouched. *Pins:* a unit renders in exactly one
+  group.
+- **9e. Staffing as a week.** People × days; the gap carries its act in its day; credentials stay
+  inform-only (H-59). *Pins:* no control gated by a lapse.
+- **9f. Reports sheds its chrome.** Unboxed figures; the ledger keeps the remainder-attention
+  waiver meter via the shared `ProgressBar`. *Pins:* the remainder carries the tone, never the
+  fill.
+- **9g. The mapped surfaces.** Courses roster, promos, team, add-booking onto the patterns; the
+  one behavior change is Team's per-row role saves replacing the page-level bulk Save. *Pins:*
+  per-row save round-trip.
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)

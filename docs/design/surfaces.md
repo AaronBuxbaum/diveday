@@ -209,6 +209,48 @@ H-01/H-03's.
 - **Remove first:** nothing — the release must stay fully presented.
 - **Composition:** three steps under a quiet rail; the sign card is the page's one worked-in card.
 
+### The gear register — `/shop/[shopSlug]/gear`
+
+**Redesign proposed** — ADR
+[20260827-the-shops-shelves](../architecture/decisions/20260827-the-shops-shelves.md) (Proposed),
+drawn in [its canvas](canvases/20260827-the-shops-shelves/README.md).
+
+- **One idea:** where every unit is, said once.
+- **The question it arrives with:** "what's out, and what's coming back?" — answered by the Out
+  and Due back groups before any scrolling.
+- **Controls that dissolved:** the three stat tiles and the Returns panel (the groups are the
+  state); per-row acts ride the rows.
+- **Remove first:** the service sentence on healthy units — it already renders only when it has
+  something to say.
+- **Composition:** one grouped ledger because reservation state is the register's whole subject,
+  and three renderings of it were two too many.
+
+### Staffing — `/shop/[shopSlug]/staffing`
+
+**Redesign proposed** — same ADR and canvas.
+
+- **One idea:** the week's crew, and the one hole in it.
+- **The question it arrives with:** "is every boat covered?" — answered by the Needs-crew row's
+  day cells, which render nothing when the answer is yes.
+- **Controls that dissolved:** the two standing add-forms (doors now); the inline credential
+  badge stack (one renewal word).
+- **Remove first:** nothing — the week grid is already the minimum that shows coverage.
+- **Composition:** people × days, because coverage is a grid question; the gap carries its act in
+  the day it lives (H-59 keeps credentials inform-only).
+
+### Reports — `/shop/[shopSlug]/reports`
+
+**Redesign proposed** — same ADR and canvas.
+
+- **One idea:** how the month is going, in five figures and the boats behind them.
+- **The question it arrives with:** "how are we doing, and what needs chasing?" — the figures
+  answer the first; the amber waiver remainders answer the second.
+- **Controls that dissolved:** six bordered tiles (figures over hairlines); the CSV link joins
+  one quiet line with tax.
+- **Remove first:** the second imported-history apparatus, already folded by the orders ledger's
+  precedent.
+- **Composition:** figures then a ledger — the shape it always had, with the chrome removed.
+
 ### The diver record — `/shop/[shopSlug]/divers/[personId]`
 
 **Answered 2026-08-27, redesign proposed** — ADR
