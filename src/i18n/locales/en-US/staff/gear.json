@@ -142,6 +142,7 @@
     "imported": "Imported {events} service events across {units} new units, plus {assignments} historical assignments. {skipped} duplicate service events and {assignmentSkipped} unmatched or duplicate assignments were left alone."
   },
   "import": {
+    "eyebrow": "Settings",
     "title": "Import gear history",
     "description": "Bring your fleet and its dated service records across from another system.",
     "help": "One row per unit, service event, or historical rental. Units match by tag first, then serial number; assignments match an existing diver by email or exact name, stay display-only, and never affect current availability.",
@@ -186,6 +187,15 @@
       "nextDue": "next due {dueOn}",
       "recordedBy": "Logged by {name}"
     },
+    "notes": {
+      "title": "Notes",
+      "empty": "No notes yet.",
+      "addLabel": "Add a note",
+      "placeholder": "Fin strap feels loose, replace next visit",
+      "add": "Add note",
+      "adding": "Adding…",
+      "writtenBy": "{name} · {date}"
+    },
     "rentals": {
       "title": "Rental history",
       "importedAssignment": "Historical assignment to {name}"
@@ -202,6 +212,7 @@
       "pulling": "Pulling…",
       "pullNote": "Why it's coming off the wall",
       "pullNotePlaceholder": "Inflator sticks",
+      "pullCancel": "Never mind",
       "reinstate": "Return to service",
       "reinstating": "Returning…",
       "delete": "Delete unit",

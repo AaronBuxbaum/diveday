@@ -2222,6 +2222,13 @@ export default async function SettingsPage({
                 description={t("settings.main.dataImport.description")}
               />
             ) : null}
+            {canImport ? (
+              <SettingsDoorRow
+                href={`/shop/${shopSlug}/settings/gear-import`}
+                heading={t("gear.import.title")}
+                description={t("settings.main.gearImport.description")}
+              />
+            ) : null}
             {canExport ? (
               <SettingsDoorRow
                 href={`/shop/${shopSlug}/settings/export`}

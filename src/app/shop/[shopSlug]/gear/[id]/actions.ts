@@ -93,9 +93,12 @@ export async function setGearItemStatusAction(formData: FormData) {
 const serviceSchema = z.object({
   kind: z.enum(SERVICE_KINDS),
   servicedOn: z.string().trim().min(1).max(10),
-  nextDueOn: z.string().trim().max(10),
-  nextDueDives: z.string().trim().max(4),
-  note: z.string().trim().max(500),
+  // Optional in shape as well as in meaning: the Notes section's slimmer form
+  // (kind fixed to "note") never renders these fields at all, so the keys
+  // themselves are absent from that submission, not merely empty.
+  nextDueOn: z.string().trim().max(10).optional(),
+  nextDueDives: z.string().trim().max(4).optional(),
+  note: z.string().trim().max(500).optional(),
 });
 
 export async function recordGearServiceAction(formData: FormData) {

@@ -364,6 +364,10 @@
     "e2e": ["a11y.spec.ts", "backup.spec.ts", "export.spec.ts", "tenant-isolation.spec.ts"],
     "visual": ["settings-export"]
   },
+  "/shop/[shopSlug]/settings/gear-import": {
+    "e2e": ["gear.spec.ts"],
+    "visual": ["settings-gear-import"]
+  },
   "/shop/[shopSlug]/settings/import": {
     "e2e": ["import.spec.ts"],
     "visual": ["settings-import"]

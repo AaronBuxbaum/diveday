@@ -33,6 +33,7 @@
     "settingsNotAuthorized": "La configuración del centro la gestionan el propietario o un gerente. Tu suscripción al calendario sigue siendo tuya.",
     "teamNotAuthorized": "La gestión del equipo está limitada a propietarios y gerentes.",
     "importNotAuthorized": "La importación escribe datos personales y médicos de los buceadores, así que está limitada a propietarios y gerentes.",
+    "gearImportNotAuthorized": "Importar el historial del equipo está limitado a propietarios y gerentes.",
     "backupNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de respaldo.",
     "whatsappNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de WhatsApp.",
     "promosNotAuthorized": "Los códigos promocionales están limitados a propietarios y gerentes.",

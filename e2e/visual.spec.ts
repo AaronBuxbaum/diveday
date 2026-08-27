@@ -3445,6 +3445,16 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-import", scheme);
       });
 
+      // The gear-history CSV importer, moved here from the gear register
+      // (previously untested visually since it never had a route of its own).
+      test(`the gear-history import page renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/settings/gear-import");
+        await page.getByRole("link", { name: "Download gear CSV template" }).waitFor();
+        await capture(page, "settings-gear-import", scheme);
+      });
+
       /**
        * Settings' "Data & integrations" group when the shop owes work it has
        * not finished: photos removed from the app but still in storage, and an
