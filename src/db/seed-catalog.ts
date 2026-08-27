@@ -1,8 +1,53 @@
 import { eq } from "drizzle-orm";
 import { courseSlug } from "@/lib/courses";
 import type { DbExecutor } from "./client";
-import { COURSE_TEMPLATES, courseTemplateSnapshot } from "./course-templates";
+import { COURSE_TEMPLATES, type CourseTemplate, courseTemplateSnapshot } from "./course-templates";
 import { courses } from "./schema";
+
+/**
+ * **One display title per course, disambiguated by agency where two agencies
+ * teach the same one.**
+ *
+ * A course's public URL is minted from its title (`courseSlug`), and the
+ * title-only staff and session helpers look a course up by name — so two rows
+ * called "Rescue Diver" is not a cosmetic problem, it is a slug collision and
+ * an ambiguous lookup.
+ *
+ * This was a single hard-coded exception for `ssi-open-water-diver`, because
+ * that was the only clash in the tree. Adding SDI brought nine more at once —
+ * Rescue Diver, Divemaster, Deep Diver, Wreck, Drift, Boat, Dry Suit,
+ * Equipment Specialist and Sidemount all exist under PADI too — which is more
+ * exceptions than a list of exceptions can honestly hold.
+ *
+ * **The first template to claim a title keeps it bare; every later one wears
+ * its agency.** The templates are in agency order, so PADI keeps the
+ * unqualified names it already has and this reproduces the old hard-coded
+ * result exactly: SSI's is still "SSI Open Water Diver" and nothing else moves.
+ * A template's own `title` is untouched — that stays the agency's official
+ * name, which is what the course page itself reads.
+ *
+ * Exported because the seed is not the only reader: `courses.test.ts` asserts
+ * every template reaches the catalog under the right name, and a second copy of
+ * this rule in the test would pass while disagreeing with the seed.
+ */
+const DISPLAY_TITLE_BY_SLUG = new Map<string, string>();
+{
+  const claimed = new Set<string>();
+  for (const template of COURSE_TEMPLATES) {
+    DISPLAY_TITLE_BY_SLUG.set(
+      template.slug,
+      claimed.has(template.title)
+        ? `${template.agency.toUpperCase()} ${template.title}`
+        : template.title,
+    );
+    claimed.add(template.title);
+  }
+}
+
+/** What a template is called in a shop's own catalog — see the map above. */
+export function courseTemplateDisplayTitle(template: CourseTemplate): string {
+  return DISPLAY_TITLE_BY_SLUG.get(template.slug) ?? template.title;
+}
 
 /**
  * What the shop teaches: its course catalog and the page content each course
@@ -19,13 +64,6 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
     COURSE_TEMPLATES.map((template) => [templateKey(template.agency, template.title), template]),
   );
   const templateBySlug = new Map(COURSE_TEMPLATES.map((template) => [template.slug, template]));
-  // The seeded SSI row keeps the agency in its display title so the two
-  // agency tabs can both contain an "Open Water Diver" without making the
-  // title-only staff/session helpers ambiguous. Its template keeps the
-  // official title, so match that one by the slug minted from the display
-  // title below.
-  const templateDisplayTitle = (template: (typeof COURSE_TEMPLATES)[number]) =>
-    template.slug === "ssi-open-water-diver" ? "SSI Open Water Diver" : template.title;
   // Catalog baselines: DSD/OW welcome uncertified students; continuing
   // education admits only a verified card at the stated level.
   const baseCourseRows = [
@@ -179,11 +217,11 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
   );
   const missingTemplateRows = COURSE_TEMPLATES.filter(
     (template) =>
-      !seededCourseKeys.has(templateKey(template.agency, templateDisplayTitle(template))),
+      !seededCourseKeys.has(templateKey(template.agency, courseTemplateDisplayTitle(template))),
   ).map((template) => ({
     shopId,
     agency: template.agency,
-    title: templateDisplayTitle(template),
+    title: courseTemplateDisplayTitle(template),
     description: template.description,
     // A template is a complete, bookable catalog entry. Prices remain shop
     // editable; these conservative defaults keep the new rows useful in the

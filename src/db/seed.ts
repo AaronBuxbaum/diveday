@@ -447,6 +447,33 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string) {
           // exactly this reason.
           contactEmail: identity.emailFor("hello"),
           contactPhone: "+1 305 555 0142",
+          // The canonical demo's own address, and for the canonical demo's own
+          // reason: a real street exercises the address end to end (structured
+          // data, the settings form, the site catalog's distance sort) without
+          // publishing anything a search engine could act on for a fixture.
+          //
+          // A minted shop used to have none, which is not the same kind of gap
+          // as the unconfirmed units above. Units are a *question the shop has
+          // not answered yet*, and the setup queue exists to ask it. An absent
+          // address is a **wall**: `dive-sites?view=catalog` cannot sort
+          // DiveDay's published sites by distance from nowhere, so it renders
+          // "Shop location required" instead of the catalog — and every visitor
+          // who minted a demo to look around hit that instead of the feature.
+          // It is also the shop's own detail rather than the demo data's, so
+          // `/api/test/reset` leaves it alone (`RESET_KEEPS`).
+          //
+          // Key Largo, not the shop's timezone guessed into a city: minting
+          // writes a shop the seed already knows everything about, which is the
+          // opposite of the case `shops.address_street`'s comment protects —
+          // a *real* shop still fills its own address in and never has one
+          // guessed on its behalf.
+          addressStreet: "100 Ocean Drive",
+          addressLocality: "Key Largo",
+          addressRegion: "FL",
+          addressPostalCode: "33037",
+          addressCountry: "US",
+          latitude: 25.0865,
+          longitude: -80.4473,
           rentalItems: [
             "bcd",
             "regulator",

@@ -42,7 +42,17 @@ export type CourseTemplate = {
   slug: string;
   version: number;
   title: string;
-  agency: "padi" | "ssi";
+  /**
+   * Which agency's standards the prose below is quoting.
+   *
+   * Not the same list as `certification_agency` (the enum a *diver's card* is
+   * recorded against, which carries ten): this is the set DiveDay has actually
+   * written starter pages for. A shop that teaches under any other agency
+   * writes its own courses — the templates are a starting point, never a
+   * gate — and the diver-facing catalog builds one tab per agency a shop
+   * teaches (`activeCourseAgencies` in src/db/courses.ts).
+   */
+  agency: "padi" | "ssi" | "sdi";
   description: string;
   minimumCertificationLevel: CertificationLevel | null;
   content: CourseContent;
@@ -2503,6 +2513,1081 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
           question: "What is the difference between Dive Guide and Divemaster in SSI?",
           answer:
             "An SSI Dive Guide who also completes the SSI Science of Diving specialty earns the prestigious rating of SSI Divemaster.",
+        },
+      ],
+    },
+  },
+  /* ------------------------------------------------------------------ *
+   * SDI (Scuba Diving International)
+   *
+   * The third agency DiveDay ships starter pages for, and the one whose
+   * ladder differs most from the two above it: SDI certifies to computer use
+   * from the first course rather than to tables, folds nitrox in early, and
+   * owns Solo Diver, which neither of the others teaches at all.
+   *
+   * Every rung below maps onto the four levels DiveDay can record
+   * (`CertificationLevel`), and where SDI's own prerequisite is finer than
+   * that — Advanced Adventure Diver is not literally "Advanced Open Water" —
+   * the note says so in the shop's voice rather than quietly rounding a
+   * diver up or down. Same rule the PADI entries follow for Adventure Diver
+   * and Scuba Diver: the gate is ours, and a diver on the rung between is
+   * told to talk to us instead of being refused by a page.
+   * ------------------------------------------------------------------ */
+  {
+    slug: "sdi-scuba-discovery",
+    version: 1,
+    title: "Scuba Discovery",
+    agency: "sdi",
+    description: "A guided first breath underwater, with an instructor at arm's reach.",
+    minimumCertificationLevel: null,
+    content: {
+      ...blank,
+      isIntroCourse: true,
+      summary: "Find out whether breathing underwater is for you, in one afternoon",
+      overview:
+        "SDI Scuba Discovery is not a certification. It is the session where you find out what scuba actually feels like, with an instructor beside you the whole time and nothing to pass.\n\nYou will start in shallow, confined water: how the gear works, how to clear a mask, how to get a regulator back. When you are comfortable — and only then — you can make a shallow open-water dive on the reef.\n\nIf you love it, the skills count toward your Open Water Scuba Diver course. If you do not, you have lost an afternoon and gained an answer.",
+      heroImageUrl: bundledImage("Blue Tangs Molasses Reef 1999.jpg"),
+      galleryPhotos: bundledGallery(
+        "French Angelfish Molasses Reef 20080309.jpg",
+        "Stoplight parrotfish Pickles Reef.jpg",
+      ),
+      durationText: "Half a day · about 3 hours",
+      groupSizeText: "Small groups, with an instructor in the water throughout",
+      minimumAge: 10,
+      prerequisiteNote:
+        "No certification and no experience. You will complete a medical questionnaire first; some answers require a physician's sign-off before you can dive, so tell us early if that may apply to you.",
+      includes: [
+        "All scuba equipment",
+        "Instructor-led confined-water session",
+        "One shallow open-water dive, if you are ready for it",
+      ],
+      excludes: ["Photos and video", "Transport to the site"],
+      scheduleDays: [
+        {
+          title: "Discovery session",
+          startTime: "09:00",
+          endTime: "12:00",
+          items: [
+            "Briefing: how the gear works and what the water will feel like",
+            "Confined water: breathing, mask clearing, regulator recovery",
+            "Optional shallow reef dive with your instructor",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "How deep will I go?",
+          answer: "No deeper than {depth12}, and only as deep as you are comfortable going.",
+        },
+        {
+          question: "Do I get a certification card?",
+          answer:
+            "No — this is an experience, not a course. What you learn here can be credited toward the Open Water Scuba Diver course if you decide to carry on.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-open-water-scuba-diver",
+    version: 1,
+    title: "Open Water Scuba Diver",
+    agency: "sdi",
+    description: "SDI's entry-level certification — computer-based from the first dive.",
+    minimumCertificationLevel: null,
+    content: {
+      ...blank,
+      summary: "Certify to dive with a buddy, worldwide, to {depth18}",
+      overview:
+        "SDI Open Water Scuba Diver is the certification that lets you rent gear, book a boat, and dive with a buddy anywhere in the world.\n\nWhat sets it apart from the other agencies' entry-level courses is the computer. SDI teaches dive planning on a personal dive computer from the start rather than on printed tables, because that is what you will actually use on every dive afterwards. You still learn how decompression works — you just learn it on the device that will be on your wrist.\n\nYou will cover the academics, practise the skills in confined water until they are dull, and then make four open-water dives on the reef with your instructor.",
+      heroImageUrl: bundledImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
+      galleryPhotos: bundledGallery(
+        "Brain coral 2 Molasses Reef 20080309.jpg",
+        "Blue Tang Pickles 20080310.jpg",
+        "Sponge 06 Molasses Reef 20230714.jpg",
+      ),
+      durationText: "Three to four days · four open-water dives",
+      groupSizeText: "Small groups, so nobody waits on the line for a turn",
+      minimumAge: 10,
+      prerequisiteNote:
+        "No certification needed. Divers aged 10 to 14 certify as Junior Open Water Scuba Divers and dive with an adult certified diver, within shallower limits. You will need to be comfortable in the water and complete a medical questionnaire; some answers require a physician's sign-off before you can dive, so tell us early if that may apply to you.",
+      includes: [
+        "SDI eLearning and digital certification card",
+        "All scuba equipment for the course",
+        "Confined-water training sessions",
+        "Four open-water training dives",
+      ],
+      excludes: ["Personal mask, fins and snorkel", "Transport to the site"],
+      scheduleDays: [
+        {
+          title: "Day one — academics and confined water",
+          startTime: "09:00",
+          endTime: "16:00",
+          items: [
+            "Knowledge review with your instructor, and your dive computer set up",
+            "Gear assembly, buddy checks, and entries",
+            "Confined water: mask, regulator, buoyancy, and out-of-air drills",
+          ],
+        },
+        {
+          title: "Day two — first two open-water dives",
+          startTime: "08:00",
+          endTime: "14:00",
+          items: [
+            "Reef dive one: descent, buoyancy, and skills at depth",
+            "Reef dive two: navigation basics and a controlled ascent",
+          ],
+        },
+        {
+          title: "Day three — final two dives and certification",
+          startTime: "08:00",
+          endTime: "14:00",
+          items: [
+            "Reef dives three and four, planned on your own computer",
+            "Final skill checks and your digital card issued",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "How deep does this certify me to dive?",
+          answer:
+            "{depth18}, which is where the reef life is anyway. Divers aged 10 to 14 keep a shallower limit that comes with the junior certification.",
+        },
+        {
+          question: "Why a computer instead of tables?",
+          answer:
+            "Because a computer is what you will dive with. SDI teaches planning on the device you will actually use, so nothing has to be unlearned later.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-advanced-adventure-diver",
+    version: 1,
+    title: "Advanced Adventure Diver",
+    agency: "sdi",
+    description: "Five dives that open up depth, navigation, and whatever you pick next.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Five guided dives — deep and navigation, plus three you choose",
+      overview:
+        "Advanced Adventure Diver is SDI's next rung, and it is deliberately not a classroom course. You dive five times with an instructor, each one the first dive of a different specialty.\n\nTwo are fixed: a deep dive, and an underwater navigation dive. The other three are yours to pick — night, wreck, drift, boat, photography, whatever this coast is good for and you are curious about.\n\nEach counts toward the full specialty if you decide to finish it later. Most divers leave this course knowing which two they want.",
+      heroImageUrl: bundledImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
+      galleryPhotos: bundledGallery(
+        "Elkhorn coral 8 Molasses Reef 20080309.jpg",
+        "Grouper 2 Molasses Reef 1999.jpg",
+      ),
+      durationText: "Two days · five dives",
+      groupSizeText: "Small groups, matched to the electives you choose",
+      prerequisiteNote:
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency — we verify the certification record before the first dive. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+      includes: [
+        "SDI digital certification card",
+        "Five instructor-led dives",
+        "Tanks and weights",
+      ],
+      excludes: ["Personal gear rental", "Specialty gear for some electives"],
+      scheduleDays: [
+        {
+          title: "Day one — deep and navigation",
+          startTime: "08:00",
+          endTime: "15:00",
+          items: [
+            "Deep dive: gas planning, narcosis awareness, and a real ascent profile",
+            "Navigation dive: natural references, compass headings, and finding the line again",
+          ],
+        },
+        {
+          title: "Day two — your three electives",
+          startTime: "08:00",
+          endTime: "16:00",
+          items: [
+            "Three dives from the specialties this coast is best at",
+            "Debrief on which ones are worth finishing",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "How deep is the deep dive?",
+          answer:
+            "No deeper than {depth30}, and shallower if that is where the dive is better. It is a supervised introduction to depth, not a depth record.",
+        },
+        {
+          question: "Is this the same as Advanced Open Water?",
+          answer:
+            "It is SDI's equivalent rung and it is recognised as such. Our system records certification levels rather than each agency's own names, so it is stored as an advanced certification.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-rescue-diver",
+    version: 1,
+    title: "Rescue Diver",
+    agency: "sdi",
+    description: "Spot a problem early, and know exactly what to do when you cannot.",
+    minimumCertificationLevel: "advanced_open_water",
+    content: {
+      ...blank,
+      summary: "The course that changes how you watch everyone else on the boat",
+      overview:
+        "Every diver who has taken this one says the same thing: it is the course where you stop being a passenger.\n\nYou will learn to read stress before it becomes panic, to manage a tired diver on the surface, to bring up an unresponsive diver and give rescue breaths on the way to the boat, and to run the first ten minutes of an emergency while somebody else calls it in.\n\nIt is demanding and it is not a relaxing weekend. It is also the reason a crew is glad to have you aboard.",
+      heroImageUrl: bundledImage("FGBNMS - nurse shark (27551309652).jpg"),
+      galleryPhotos: bundledGallery(
+        "Dasyatis americana NOAA.jpg",
+        "French Angelfish Pickles Reef 20230713.jpg",
+      ),
+      durationText: "Two to three days · confined water and open-water scenarios",
+      groupSizeText: "Small groups — every scenario is run by every diver",
+      minimumAge: 18,
+      prerequisiteNote:
+        "SDI Advanced Adventure Diver or higher, or an equivalent advanced certification from another agency, plus current CPR and first-aid training — we can run that alongside if you do not hold it. That is where we set this course; if you hold a rung between Open Water and Advanced, talk to us before you book — the gate is ours, not the agency's. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+      includes: [
+        "SDI digital certification card",
+        "Confined-water rescue skills sessions",
+        "Open-water rescue scenarios",
+        "Tanks, weights, and rescue equipment",
+      ],
+      excludes: ["CPR and first-aid certification, if you need it", "Personal gear rental"],
+      scheduleDays: [
+        {
+          title: "Day one — self-rescue and recognition",
+          startTime: "08:30",
+          endTime: "16:30",
+          items: [
+            "Reading stress and fatigue before they become an incident",
+            "Self-rescue skills and surface support for a tired diver",
+            "Confined-water practice: approaches, tows, and equipment removal",
+          ],
+        },
+        {
+          title: "Day two — scenarios in open water",
+          startTime: "08:00",
+          endTime: "16:00",
+          items: [
+            "Missing-diver search patterns from the boat",
+            "Unresponsive diver: ascent, rescue breaths, and exit",
+            "Running the first ten minutes: oxygen, handover, and what you tell the shore",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Do I need first-aid training first?",
+          answer:
+            "You need current CPR and first-aid certification before the card is issued. If you do not hold one, tell us when you book and we will run it alongside the course.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-divemaster",
+    version: 1,
+    title: "Divemaster",
+    agency: "sdi",
+    description: "The first professional rating — leading divers, not just diving with them.",
+    minimumCertificationLevel: "rescue",
+    content: {
+      ...blank,
+      summary: "Turn diving into the job: guide, supervise, and run the boat's dive day",
+      overview:
+        "SDI Divemaster is where diving stops being a hobby and starts being work you get paid for. It is the longest course we run and the one with the most time in the water.\n\nYou will refine your own skills until they are demonstration-quality, learn to plan and supervise dives for people who are not as comfortable as you are, run briefings that people actually remember, and handle the parts of a dive day nobody sees — the boat, the paperwork, the diver who is quietly not okay.\n\nMuch of it happens alongside our real courses and charters, because there is no substitute for doing it with actual customers.",
+      heroImageUrl: bundledImage("AtlanticGoliathGrouper.jpg"),
+      galleryPhotos: bundledGallery(
+        "Yellowtail Snappers Molasses Reef 1999.jpg",
+        "Grouper 2 Molasses Reef 1999.jpg",
+      ),
+      durationText: "Four to eight weeks, depending on your schedule",
+      groupSizeText: "One-to-one and small-group mentoring with our instructors",
+      minimumAge: 18,
+      prerequisiteNote:
+        "SDI Rescue Diver or an equivalent rescue certification, current CPR and first-aid training, and a logged dive history — SDI asks for 40 logged dives to begin and 60 by certification. A diving medical examination signed by a physician is required for professional-level training; talk to us early, because it can take time to arrange.",
+      includes: [
+        "SDI Divemaster digital materials and certification card",
+        "Mentored training dives and skill circuits",
+        "Supervised experience on real courses and charters",
+        "Tanks and weights throughout",
+      ],
+      excludes: [
+        "SDI professional membership and insurance",
+        "Personal gear, which you will want your own of by now",
+        "Diving medical examination",
+      ],
+      scheduleDays: [
+        {
+          title: "Phase one — your own diving",
+          startTime: "08:00",
+          endTime: "16:00",
+          items: [
+            "Demonstration-quality skill circuit",
+            "Watermanship assessments and rescue review",
+            "Dive planning, gas management, and site assessment",
+          ],
+        },
+        {
+          title: "Phase two — leading other people",
+          startTime: "08:00",
+          endTime: "17:00",
+          items: [
+            "Briefings, guiding, and managing a group in current",
+            "Assisting on real Open Water and continuing-education courses",
+            "Boat handling, manifests, and emergency management",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "How many dives do I need?",
+          answer:
+            "SDI asks for 40 logged dives to start and 60 by the time you certify. If you are short, we will get you the rest during the course.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-solo-diver",
+    version: 1,
+    title: "Solo Diver",
+    agency: "sdi",
+    description: "SDI's own course: self-reliance, redundancy, and honest self-assessment.",
+    minimumCertificationLevel: "advanced_open_water",
+    content: {
+      ...blank,
+      summary: "Learn to be your own buddy — properly equipped and properly honest about it",
+      overview:
+        "SDI wrote the first recreational solo-diving course, and it is still the one the industry benchmarks against. Neither of the other agencies we teach offers an equivalent.\n\nThe course is far less about diving alone than the name suggests. It is about redundancy — a second gas supply you can actually reach, a second computer, a second cutting tool — and about the honest arithmetic of gas planning when nobody is coming to share theirs.\n\nMost divers who take it never dive alone. They take it because it makes them a substantially better buddy.",
+      heroImageUrl: bundledImage("Sponge 06 Molasses Reef 20230714.jpg"),
+      galleryPhotos: bundledGallery(
+        "Brain coral 2 Molasses Reef 20080309.jpg",
+        "Blue Tangs Molasses Reef 1999.jpg",
+      ),
+      durationText: "One to two days · at least three dives",
+      groupSizeText: "Very small groups — this course is mostly one-to-one",
+      minimumAge: 21,
+      prerequisiteNote:
+        "SDI Advanced Adventure Diver or an equivalent advanced certification, and a substantial logged dive history — SDI asks for 100 logged dives. Bring your own well-fitted gear: this course is about equipment you know, and a redundant gas supply is required. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+      includes: [
+        "SDI digital certification card",
+        "At least three training dives",
+        "Redundant gas supply for the course, if you do not own one",
+      ],
+      excludes: ["Personal gear rental", "Redundant computer"],
+      scheduleDays: [
+        {
+          title: "Solo Diver",
+          startTime: "08:00",
+          endTime: "16:00",
+          items: [
+            "Gas planning without a buddy's reserve in the arithmetic",
+            "Redundancy: configuring and drilling a second gas supply",
+            "Dives: self-rescue, valve and regulator failures, and honest turn-pressure discipline",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Is this course only for people who want to dive alone?",
+          answer:
+            "No, and most people who take it do not. The self-reliance and gas planning make you a better buddy on every dive you do with one.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-computer-nitrox-diver",
+    version: 1,
+    title: "Computer Nitrox Diver",
+    agency: "sdi",
+    description: "Longer bottom times on enriched air, planned on your own computer.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "More time on the reef, less time on the surface waiting",
+      overview:
+        "Enriched air is more oxygen and less nitrogen, which means longer no-decompression limits at the depths this coast actually dives. On a two-tank morning it is often the difference between a rushed second dive and an unhurried one.\n\nSDI teaches it the way you will dive it: on a computer set for the mix, not from a second set of printed tables. You will learn what the mix does, what the oxygen limits are and why they matter, and how to analyse and log every cylinder yourself before it goes on your back.\n\nAnalysing your own gas is not a formality. It is the one check nobody else can do for you.",
+      heroImageUrl: bundledImage("Blue Tang Pickles 20080310.jpg"),
+      galleryPhotos: bundledGallery(
+        "Stoplight parrotfish Pickles Reef.jpg",
+        "French Angelfish Molasses Reef 20080309.jpg",
+      ),
+      durationText: "One day · academics plus two optional dives",
+      groupSizeText: "Small groups around the analyser",
+      prerequisiteNote:
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+      includes: [
+        "SDI digital materials and certification card",
+        "Analyser use and cylinder logging practice",
+        "Two enriched-air dives, if you take the in-water option",
+      ],
+      excludes: ["Enriched-air fills after the course", "Personal gear rental"],
+      scheduleDays: [
+        {
+          title: "Computer Nitrox Diver",
+          startTime: "09:00",
+          endTime: "16:00",
+          items: [
+            "What the mix changes, and what it does not",
+            "Oxygen exposure limits and the depth ceiling your mix carries",
+            "Analysing, labelling and logging a cylinder — every time",
+            "Setting your computer for the mix, and two dives on it",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Does enriched air let me dive deeper?",
+          answer:
+            "No — the opposite. A richer mix carries a shallower ceiling because of oxygen exposure. What it buys you is time at the depths you already dive.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-deep-diver",
+    version: 1,
+    title: "Deep Diver",
+    agency: "sdi",
+    description: "Plan, manage and enjoy the deeper end of recreational diving.",
+    minimumCertificationLevel: "advanced_open_water",
+    content: {
+      ...blank,
+      summary: "The wrecks and walls that start where the reef stops",
+      overview:
+        "Below {depth30} everything changes: the light goes flat, gas disappears faster than the gauge feels like it should, and narcosis arrives quietly enough that you will not notice it without having practised noticing it.\n\nThis course is about planning for all three. Gas management with a real reserve, ascent profiles you commit to before you descend, and a frank look at how you personally behave at depth.\n\nIt is what the deeper wrecks and the outer wall require, and it is where most divers finally get honest about their air consumption.",
+      heroImageUrl: bundledImage("Grouper 2 Molasses Reef 1999.jpg"),
+      galleryPhotos: bundledGallery(
+        "AtlanticGoliathGrouper.jpg",
+        "Elkhorn coral 8 Molasses Reef 20080309.jpg",
+      ),
+      durationText: "Two days · four dives",
+      groupSizeText: "Small groups, because depth shortens everyone's dive",
+      prerequisiteNote:
+        "SDI Advanced Adventure Diver or an equivalent advanced certification, and enriched-air training is strongly recommended for the deeper dives. That is where we set this course; if you hold a rung between Open Water and Advanced, talk to us before you book — the gate is ours, not the agency's. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+      includes: [
+        "SDI digital certification card",
+        "Four progressively deeper training dives",
+        "Tanks, weights, and a hang line with contingency gas",
+      ],
+      excludes: ["Enriched-air fills", "Personal gear rental"],
+      scheduleDays: [
+        {
+          title: "Day one — planning and the first two dives",
+          startTime: "08:00",
+          endTime: "15:00",
+          items: [
+            "Gas planning, reserves, and turn pressures you actually hold to",
+            "Narcosis: recognising it on yourself and on your buddy",
+            "Two dives building depth with a controlled, planned ascent",
+          ],
+        },
+        {
+          title: "Day two — the deeper pair",
+          startTime: "08:00",
+          endTime: "15:00",
+          items: [
+            "Two dives toward the recreational limit, with a contingency plan briefed",
+            "Debrief: consumption rates, timings, and what you would change",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "How deep does this take me?",
+          answer:
+            "To {depth40}, the recreational limit. Past that is technical diving, which is a different training path with different gear.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-underwater-navigation",
+    version: 1,
+    title: "Underwater Navigation",
+    agency: "sdi",
+    description: "Know where you are, and get back to the boat without surfacing to check.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Natural references, compass work, and finding the mooring line again",
+      overview:
+        "Navigation is the skill that quietly makes every other dive better. A diver who knows where the boat is spends the dive looking at the reef instead of at the surface.\n\nYou will learn to read the reef itself — depth contours, ripple direction, the way the light falls — and to back that up with a compass when the visibility closes in. Then you will run patterns: out and back, squares, and the search-shaped ones that matter when something is lost.\n\nBy the end you will be the one the group follows.",
+      heroImageUrl: bundledImage("Brain coral 2 Molasses Reef 20080309.jpg"),
+      galleryPhotos: bundledGallery(
+        "Elkhorn coral 8 Molasses Reef 20080309.jpg",
+        "Blue Tang Pickles 20080310.jpg",
+      ),
+      durationText: "One day · two dives",
+      groupSizeText: "Small groups, each diver running their own patterns",
+      prerequisiteNote:
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+      includes: ["SDI digital certification card", "Two navigation dives", "Compass and slate"],
+      excludes: ["Personal gear rental"],
+      scheduleDays: [
+        {
+          title: "Underwater Navigation",
+          startTime: "08:30",
+          endTime: "15:00",
+          items: [
+            "Natural navigation: contours, ripples, light, and surge direction",
+            "Compass work: headings, reciprocals, and kick-cycle distance",
+            "Dive one: out-and-back and square patterns",
+            "Dive two: navigating to a target and returning to the line",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Is a compass enough on its own?",
+          answer:
+            "Rarely. A compass gives you a heading; the reef gives you position. This course teaches both because each covers what the other misses.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-night-limited-visibility-diver",
+    version: 1,
+    title: "Night & Limited Visibility Diver",
+    agency: "sdi",
+    description: "The same reef after dark, and the skills for water that has gone green.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "A different reef entirely, once the sun goes down",
+      overview:
+        "The reef changes shift at dusk. Parrotfish wrap themselves in mucus and sleep, octopus come out to hunt, and coral polyps open into something the daytime never shows you.\n\nYou will learn light discipline — where to point a torch and, more importantly, where not to — the signals that replace hand shapes in the dark, and how to stay found: with your buddy, with the group, and with the boat.\n\nThe same skills carry into limited visibility by day, which on this coast is the more common reason to need them.",
+      heroImageUrl: bundledImage("Sponge 06 Molasses Reef 20230714.jpg"),
+      galleryPhotos: bundledGallery(
+        "French Angelfish Pickles Reef 20230713.jpg",
+        "Stoplight parrotfish Pickles Reef.jpg",
+      ),
+      durationText: "Two evenings · two to three dives",
+      groupSizeText: "Small groups — nobody dives out of torchlight",
+      prerequisiteNote:
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+      includes: [
+        "SDI digital certification card",
+        "Primary and backup torches",
+        "Two to three dives after dark",
+      ],
+      excludes: ["Personal gear rental", "Photography lighting"],
+      scheduleDays: [
+        {
+          title: "Night & Limited Visibility Diver",
+          startTime: "17:00",
+          endTime: "22:00",
+          items: [
+            "Torch handling, light signals, and marking the line and the boat",
+            "Entries, descents, and staying together in the dark",
+            "Dives: navigation by torchlight, and what comes out after sunset",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "What if my torch fails?",
+          answer:
+            "You carry a backup, and the course drills the failure before it happens. A lost light is an inconvenience you have practised, not an emergency.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-wreck-diver",
+    version: 1,
+    title: "Wreck Diver",
+    agency: "sdi",
+    description: "Survey a wreck properly, and understand exactly where the outside ends.",
+    minimumCertificationLevel: "advanced_open_water",
+    content: {
+      ...blank,
+      summary: "How to dive a wreck as a structure, not just swim past one",
+      overview:
+        "A wreck is a building that fell into the sea, and it rewards being read like one. You will learn to survey from the outside in: orientation, the current running over and around it, where the fish stack up, and which openings are as inviting as they are dangerous.\n\nThis is a recreational wreck course. It covers the hazards of overhead environments and how to recognise the line you do not cross — entanglement, silt-out, and the fact that a ceiling means the surface is no longer above you.\n\nWhat you get is the confidence to dive our wrecks well and the judgement to know what a penetration course would still require.",
+      heroImageUrl: bundledImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
+      galleryPhotos: bundledGallery(
+        "AtlanticGoliathGrouper.jpg",
+        "Yellowtail Snappers Molasses Reef 1999.jpg",
+      ),
+      durationText: "Two days · four dives",
+      groupSizeText: "Small groups, because a wreck is easy to lose people on",
+      prerequisiteNote:
+        "SDI Advanced Adventure Diver or an equivalent advanced certification. That is where we set this course; if you hold a rung between Open Water and Advanced, talk to us before you book — the gate is ours, not the agency's. Our wrecks sit deep enough that deep training is worth having first. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+      includes: [
+        "SDI digital certification card",
+        "Four wreck dives",
+        "Reels, lines and lights for the course",
+      ],
+      excludes: ["Personal gear rental", "Enriched-air fills"],
+      scheduleDays: [
+        {
+          title: "Day one — reading the structure",
+          startTime: "08:00",
+          endTime: "15:00",
+          items: [
+            "Wreck history, orientation, and the hazards a hull collects",
+            "Two dives: surveying the outside, and mapping what you found",
+          ],
+        },
+        {
+          title: "Day two — lines, silt, and judgement",
+          startTime: "08:00",
+          endTime: "15:00",
+          items: [
+            "Reel and line technique, and finning that does not destroy the visibility",
+            "Two dives at the openings, and an honest look at where recreational stops",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Will I go inside the wreck?",
+          answer:
+            "Not beyond the light zone. This course teaches you to dive a wreck well from the outside and to understand what full penetration training would still demand of you.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-drift-diver",
+    version: 1,
+    title: "Drift Diver",
+    agency: "sdi",
+    description: "Let the current do the work, and stay findable while it does.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "The easiest diving there is, once you stop fighting the water",
+      overview:
+        "A drift dive is the laziest and often the best diving on this coast: you roll in, the current carries you along the reef, and the boat follows your bubbles.\n\nThe skills are all about being findable and staying together. Entries timed to the group, buoyancy that holds a line without kicking, deploying a surface marker from depth, and the discipline of ascending as a group rather than as five separate surprises for the captain.\n\nDivers who take it stop dreading current and start choosing it.",
+      heroImageUrl: bundledImage("Blue Tangs Molasses Reef 1999.jpg"),
+      galleryPhotos: bundledGallery(
+        "Dasyatis americana NOAA.jpg",
+        "Blue Tang Pickles 20080310.jpg",
+      ),
+      durationText: "One day · two dives",
+      groupSizeText: "Small groups the boat can keep in one piece of water",
+      prerequisiteNote:
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+      includes: [
+        "SDI digital certification card",
+        "Two drift dives",
+        "Surface marker buoy and reel",
+      ],
+      excludes: ["Personal gear rental"],
+      scheduleDays: [
+        {
+          title: "Drift Diver",
+          startTime: "08:30",
+          endTime: "15:00",
+          items: [
+            "Reading current, planning a live-boat drift, and negative entries",
+            "Deploying a surface marker from depth without going up with it",
+            "Two drifts, ascending and surfacing as one group",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "What happens if I get separated?",
+          answer:
+            "You deploy your marker and surface — which is exactly what the course drills. The boat is following markers, so a solo ascent is a pickup rather than a search.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-boat-diver",
+    version: 1,
+    title: "Boat Diver",
+    agency: "sdi",
+    description: "Be the diver a captain is glad to have aboard.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Entries, exits, and knowing where to put your kit",
+      overview:
+        "Almost every dive on this coast starts on a boat, and a boat is a small space with a schedule. The divers who make it easy are the ones who know where their gear goes, when to be ready, and how to get in and out without holding up eleven other people.\n\nYou will cover the vocabulary a briefing assumes you already know, entries and exits in a bit of swell, tag boards and roll calls, and what to do when you surface behind the boat rather than beside it.\n\nIt is not a glamorous course. It is the one that makes every charter you ever book better.",
+      heroImageUrl: bundledImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
+      galleryPhotos: bundledGallery(
+        "Grouper 2 Molasses Reef 1999.jpg",
+        "Sponge 06 Molasses Reef 20230714.jpg",
+      ),
+      durationText: "One day · two dives",
+      groupSizeText: "Small groups aboard a working charter",
+      prerequisiteNote:
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+      includes: ["SDI digital certification card", "Two boat dives", "Tanks and weights"],
+      excludes: ["Personal gear rental", "Seasickness remedies"],
+      scheduleDays: [
+        {
+          title: "Boat Diver",
+          startTime: "07:30",
+          endTime: "15:00",
+          items: [
+            "Boat vocabulary, gear stowage, and where not to stand",
+            "Giant stride, back roll, and getting back up a ladder in swell",
+            "Roll calls, tag boards, and the surfaced-behind-the-boat problem",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "I get seasick. Is this a bad idea?",
+          answer:
+            "Tell us when you book. Remedies work far better taken the night before than on the water, and where you sit and what you look at both matter more than people expect.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-search-and-recovery-diver",
+    version: 1,
+    title: "Search & Recovery Diver",
+    agency: "sdi",
+    description: "Find what went over the side, and bring it up without hurting anyone.",
+    minimumCertificationLevel: "advanced_open_water",
+    content: {
+      ...blank,
+      summary: "Search patterns that work, and lifting that does not run away with you",
+      overview:
+        "Phones, cameras, outboards, anchors, wedding rings. Things go over the side constantly, and finding them is a methodical skill rather than a lucky one.\n\nYou will run the standard patterns — circular, jackstay, expanding square — and learn which one suits the bottom, the visibility, and the size of what you are looking for. Then the recovery half: knots that hold under load, and lift bags, which are the genuinely dangerous part of this course and are treated that way.\n\nAn uncontrolled lift takes a diver to the surface with it. The whole second half is about not being that diver.",
+      heroImageUrl: bundledImage("Dasyatis americana NOAA.jpg"),
+      galleryPhotos: bundledGallery(
+        "Brain coral 2 Molasses Reef 20080309.jpg",
+        "FGBNMS - nurse shark (27551309652).jpg",
+      ),
+      durationText: "Two days · four dives",
+      groupSizeText: "Small groups, each diver running a full pattern",
+      prerequisiteNote:
+        "SDI Advanced Adventure Diver or an equivalent advanced certification, and navigation training is genuinely useful beforehand — a search pattern is navigation with a purpose. That is where we set this course; if you hold a rung between Open Water and Advanced, talk to us before you book. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+      includes: [
+        "SDI digital certification card",
+        "Four dives",
+        "Reels, lines, and lift bags for the course",
+      ],
+      excludes: ["Personal gear rental"],
+      scheduleDays: [
+        {
+          title: "Day one — finding it",
+          startTime: "08:00",
+          endTime: "15:00",
+          items: [
+            "Choosing a pattern for the bottom and the visibility you have",
+            "Two dives: circular and jackstay searches with a real target",
+          ],
+        },
+        {
+          title: "Day two — bringing it up",
+          startTime: "08:00",
+          endTime: "15:00",
+          items: [
+            "Knots and rigging that hold under load",
+            "Lift-bag technique, and why an uncontrolled ascent is the hazard here",
+            "Two dives: a controlled recovery from start to surface",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "How heavy can we lift?",
+          answer:
+            "Within the bags we carry and the training you have. The judgement of what to leave for a professional salvage crew is part of the course.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-underwater-photography",
+    version: 1,
+    title: "Underwater Photography",
+    agency: "sdi",
+    description: "Bring back images that look like the dive actually looked.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Get close, add light, and hold still — the three things that fix everything",
+      overview:
+        "Almost every disappointing underwater photograph has the same three causes: too far away, no light, and a photographer who was moving.\n\nThis course fixes all three. You will learn how water eats colour with depth and what a strobe or video light gives back, how close you actually need to be, and — the part nobody expects — how much of underwater photography is buoyancy control.\n\nWe will shoot, review the frames together, and shoot again. Bring whatever camera you own; the principles are the same from a phone housing to a full rig.",
+      heroImageUrl: bundledImage("French Angelfish Molasses Reef 20080309.jpg"),
+      galleryPhotos: bundledGallery(
+        "Stoplight parrotfish Pickles Reef.jpg",
+        "Elkhorn coral 8 Molasses Reef 20080309.jpg",
+      ),
+      durationText: "One to two days · two to three dives with review sessions",
+      groupSizeText: "Small groups, so every diver's frames get looked at",
+      prerequisiteNote:
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency, and your own camera and housing. Steady buoyancy matters more here than the camera does. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+      includes: [
+        "SDI digital certification card",
+        "Two to three photo dives",
+        "Image review sessions with your instructor",
+      ],
+      excludes: ["Camera, housing and lighting", "Personal gear rental"],
+      scheduleDays: [
+        {
+          title: "Underwater Photography",
+          startTime: "08:30",
+          endTime: "16:00",
+          items: [
+            "How depth eats colour, and what artificial light puts back",
+            "Composition, distance, and the backscatter that ruins a good frame",
+            "Dives: shoot, review together, adjust, shoot again",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Do I need an expensive camera?",
+          answer:
+            "No. Everything taught here — getting close, adding light, holding still — improves a phone in a housing as much as it improves a full rig.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-dry-suit-diver",
+    version: 1,
+    title: "Dry Suit Diver",
+    agency: "sdi",
+    description: "Dive warm, and control a suit that is now part of your buoyancy.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Stay warm on long dives — and learn the one skill a wetsuit never taught you",
+      overview:
+        "A dry suit keeps you warm enough to enjoy a second and third dive that a wetsuit would have ended. It also adds a second air space to manage, and that is the whole reason this course exists.\n\nYou will learn to vent on ascent, to keep gas out of your boots, and to recover from an inverted position calmly — because a suit full of air at your ankles is a runaway ascent if you have never practised it.\n\nBy the end the suit is something you stop thinking about, which is the point.",
+      heroImageUrl: bundledImage("Blue Tang Pickles 20080310.jpg"),
+      galleryPhotos: bundledGallery(
+        "Brain coral 2 Molasses Reef 20080309.jpg",
+        "Sponge 06 Molasses Reef 20230714.jpg",
+      ),
+      durationText: "One day · confined water plus two dives",
+      groupSizeText: "Small groups, with suits fitted before the water",
+      prerequisiteNote:
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+      includes: [
+        "SDI digital certification card",
+        "Dry suit and undersuit for the course",
+        "Confined-water session and two open-water dives",
+      ],
+      excludes: ["Personal gear rental", "Dry suit purchase or fitting"],
+      scheduleDays: [
+        {
+          title: "Dry Suit Diver",
+          startTime: "08:30",
+          endTime: "16:00",
+          items: [
+            "Suit types, seals, valves, and getting the undersuit right",
+            "Confined water: inflation, venting, and recovering from an inverted position",
+            "Two dives with the suit as part of your buoyancy, not fighting it",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Is it worth it in warm water?",
+          answer:
+            "For a single dive, rarely. For a three-dive day, a long surface interval in wind, or anywhere with a thermocline, it is the difference between finishing the day and cutting it short.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-equipment-specialist",
+    version: 1,
+    title: "Equipment Specialist",
+    agency: "sdi",
+    description: "Understand your kit well enough to fix the small things yourself.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "Know what everything does, and sort the small failures on the boat",
+      overview:
+        "A blown o-ring, a stuck inflator, a fin strap that let go on the ladder — every one of these ends a dive for someone who cannot fix it and delays a dive by two minutes for someone who can.\n\nYou will go through the whole kit: how a regulator actually delivers gas, what a BCD's valves do, why cylinders get inspected on the schedule they do, and how to run a proper pre-dive check that catches things before the boat leaves.\n\nThis is not a repair-technician course, and it deliberately stops short of servicing anything sealed. What it gives you is the field fixes and the vocabulary to tell a technician what is actually wrong.",
+      heroImageUrl: bundledImage("Elkhorn coral 8 Molasses Reef 20080309.jpg"),
+      galleryPhotos: bundledGallery(
+        "Grouper 2 Molasses Reef 1999.jpg",
+        "Blue Tangs Molasses Reef 1999.jpg",
+      ),
+      durationText: "One day · workshop, with an optional dive",
+      groupSizeText: "Small groups around the bench",
+      prerequisiteNote:
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency. Bring your own gear if you have it — the course is far more useful on the kit you actually dive.",
+      includes: [
+        "SDI digital certification card",
+        "Workshop session with tools and spares",
+        "O-ring and fin-strap kit to take away",
+      ],
+      excludes: ["Regulator servicing", "Parts for your own repairs"],
+      scheduleDays: [
+        {
+          title: "Equipment Specialist",
+          startTime: "09:00",
+          endTime: "16:00",
+          items: [
+            "How a regulator, BCD and cylinder valve each work",
+            "Field fixes: o-rings, straps, mouthpieces, and inflator troubleshooting",
+            "Service intervals, inspections, and rinsing that actually helps",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Can I service my own regulator afterwards?",
+          answer:
+            "No — that needs a manufacturer-trained technician and the right parts. This course covers what you can safely do yourself and where the line is.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-sidemount-diver",
+    version: 1,
+    title: "Sidemount Diver",
+    agency: "sdi",
+    description: "Cylinders on your hips — easier on your back, and every valve in reach.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "A trim, balanced rig you can carry to the water in two trips",
+      overview:
+        "Sidemount moves your cylinders from your back to your hips. Divers come to it for three reasons: a back that has had enough of walking down a jetty under a full rig, trim that is genuinely easier to hold flat, and valves you can see and reach yourself.\n\nYou will get the harness set up for your body — which takes longer than anyone expects and matters more than anything else in the course — and then dive it until the rig disappears.\n\nThis is the recreational course. It is not an overhead or technical qualification, and it does not change the depth limit your certification already carries.",
+      heroImageUrl: bundledImage("Sponge 06 Molasses Reef 20230714.jpg"),
+      galleryPhotos: bundledGallery(
+        "Yellowtail Snappers Molasses Reef 1999.jpg",
+        "French Angelfish Pickles Reef 20230713.jpg",
+      ),
+      durationText: "Two days · confined water plus three dives",
+      groupSizeText: "Very small groups — rig setup is one-to-one work",
+      prerequisiteNote:
+        "SDI Open Water Scuba Diver or an equivalent certification from another agency. This is the recreational sidemount course: it is not a technical or overhead qualification, and it does not extend the depth limit your certification already carries. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
+      includes: [
+        "SDI digital certification card",
+        "Sidemount harness and cylinders for the course",
+        "Confined-water session and three open-water dives",
+      ],
+      excludes: ["Personal gear rental", "Sidemount harness purchase"],
+      scheduleDays: [
+        {
+          title: "Day one — the rig",
+          startTime: "09:00",
+          endTime: "16:00",
+          items: [
+            "Harness setup, bungee tension, and cylinder trim for your body",
+            "Confined water: valve drills, gas switching, and staying flat",
+          ],
+        },
+        {
+          title: "Day two — diving it",
+          startTime: "08:00",
+          endTime: "15:00",
+          items: [
+            "Three dives, adjusting the rig between each",
+            "Entries, exits and ladder work with cylinders off",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Does this let me dive deeper or in caves?",
+          answer:
+            "No. It changes how your cylinders are carried, not what you are qualified to dive. Overhead and technical diving are separate training paths.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-marine-ecosystems-awareness",
+    version: 1,
+    title: "Marine Ecosystems Awareness",
+    agency: "sdi",
+    description: "Understand the reef you are diving, and dive it without damaging it.",
+    minimumCertificationLevel: null,
+    content: {
+      ...blank,
+      summary: "Know what you are looking at, and leave it exactly as you found it",
+      overview:
+        "A reef stops being scenery once you can read it. Which fish is cleaning which, why that coral is bleached and that one is not, what the sponges are doing, and which of the day's animals were only there because of the tide.\n\nThe second half is about impact, and it is blunt: a fin tip on a coral head undoes decades, sunscreen matters, and touching almost anything is worse for it than it is for you.\n\nOpen to divers and snorkellers alike — the knowledge half needs no certification at all.",
+      heroImageUrl: bundledImage("French Angelfish Pickles Reef 20230713.jpg"),
+      galleryPhotos: bundledGallery(
+        "Stoplight parrotfish Pickles Reef.jpg",
+        "Brain coral 2 Molasses Reef 20080309.jpg",
+      ),
+      durationText: "Half a day of academics, plus an optional dive",
+      groupSizeText: "Any size for the classroom; small groups in the water",
+      prerequisiteNote:
+        "No certification needed for the knowledge session. If you want to add the dive, an Open Water certification from any recognised agency and a medical questionnaire are required; some answers need a physician's sign-off before you can dive.",
+      includes: ["SDI digital certification card", "Reef identification session and slate"],
+      excludes: ["The optional dive", "Personal gear rental"],
+      scheduleDays: [
+        {
+          title: "Marine Ecosystems Awareness",
+          startTime: "09:00",
+          endTime: "13:00",
+          items: [
+            "How a coral reef is actually put together, and what keeps it alive",
+            "Who eats whom: the relationships behind what you have been swimming past",
+            "Diver impact — contact, sunscreen, feeding, and anchoring",
+            "Optional dive: identification in the water",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "Do I need to be a diver?",
+          answer:
+            "Not for the knowledge session — snorkellers and non-divers are welcome. The optional dive needs an Open Water certification.",
+        },
+      ],
+    },
+  },
+  {
+    slug: "sdi-inactive-diver-scuba-refresher",
+    version: 1,
+    title: "Inactive Diver Scuba Refresher",
+    agency: "sdi",
+    description: "Back in the water after a gap, without pretending the gap did not happen.",
+    minimumCertificationLevel: "open_water",
+    content: {
+      ...blank,
+      summary: "A patient tune-up so your first dive back is a good one",
+      overview:
+        "Certifications do not expire, but skills fade and confidence fades faster. If it has been a year — or ten — this is the session that gets you back without spending your first dive back working out where everything went.\n\nWe will rebuild the gear assembly and buddy check from scratch, run the skills in confined water until they feel automatic again, and go over what has changed since you last dived, which for most people is computers.\n\nNo test, no pressure, and nobody watching the clock.",
+      heroImageUrl: bundledImage("Grouper 2 Molasses Reef 1999.jpg"),
+      galleryPhotos: bundledGallery(
+        "French Angelfish Pickles Reef 20230713.jpg",
+        "Blue Tang Pickles 20080310.jpg",
+      ),
+      durationText: "Half a day · confined water, with an optional reef dive",
+      groupSizeText: "Small groups, or one-to-one if you would rather",
+      prerequisiteNote:
+        "An Open Water certification from any recognised agency, however long ago. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive, and a gap in diving is a good moment to check.",
+      includes: [
+        "All scuba equipment for the session",
+        "Confined-water skills review",
+        "Updated logbook entry",
+      ],
+      excludes: ["The optional reef dive", "A new certification card — you keep the one you have"],
+      scheduleDays: [
+        {
+          title: "Refresher session",
+          startTime: "09:00",
+          endTime: "13:00",
+          items: [
+            "Gear assembly, buddy checks, and what has changed since you last dived",
+            "Confined water: mask, regulator, buoyancy, and out-of-air drills",
+            "Optional reef dive to put it back together",
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: "How long is too long between dives?",
+          answer:
+            "There is no rule, and no shame in either answer. If you are wondering whether you need this, that is usually the answer.",
         },
       ],
     },

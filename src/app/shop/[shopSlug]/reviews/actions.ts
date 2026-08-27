@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
 import {
   REVIEW_MODERATION_REASONS,
@@ -8,74 +9,105 @@ import {
   setReviewStandout,
   setReviewsPublished,
 } from "@/db/reviews";
-import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
-import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { shopPath } from "@/lib/staff-notices";
 import { isUuid } from "@/lib/uuid";
 
+/* -------------------------------------------------------------------------- *
+ * The moderation queue's mutations, answered **in place**.
+ *
+ * Every one of these used to end in `revalidateAndRedirect(reviews, noticeUrl(…))`,
+ * so publishing one review was a navigation: the whole list re-fetched, the
+ * page landed back at scroll top with a `?notice=` on the URL, and the row a
+ * staffer had just acted on was somewhere below the fold. On a weekend's worth
+ * of held reviews that is one full-page bounce per tap, and the thing you were
+ * reading moves every time.
+ *
+ * The shape is the one the boat manifest already uses (`rollCallAction` in
+ * trips/[id]/manifest/actions.ts): `revalidatePath` so the write is visible,
+ * then **return** the outcome instead of redirecting, and let a `useActionState`
+ * control settle the row it belongs to. Nothing about the writes themselves
+ * changed — the shop still comes from the session and is re-checked inside
+ * every query, so a form replayed against another shop's review id still
+ * changes nothing.
+ * -------------------------------------------------------------------------- */
+
+/** What a tap on one review's controls did. `null` is "nothing yet". */
+export type ReviewActionResult =
+  | {
+      ok: true;
+      effect: "published" | "hidden" | "standout" | "standout-removed";
+      /** Set on a hide: the review the land-then-undo toast offers to put back. */
+      undoReviewId?: string;
+    }
+  | { ok: false; reason: "reason-required" | "note-required" | "note-too-long" | "error" }
+  | null;
+
+/** What a "Publish selected" pass did. `null` is "nothing yet". */
+export type BulkPublishResult =
+  | { ok: true; published: number }
+  | { ok: false; reason: "none-selected" | "error" }
+  | null;
+
 /**
- * Publish or hide one diver review. The shop is taken from the staff session
- * and re-checked inside the query, so a form replayed against another shop's
- * review id changes nothing (`setReviewPublished` is shop-scoped).
+ * One review's controls, behind one action.
  *
- * **A hide states a reason**, chosen from the short list in
- * `review_moderation_reason` (ADR 20260813-review-moderation-has-a-floor), and
- * `other` states it in the shop's own words. The reason is recorded with the
- * act; it is refused here rather than defaulted, because a default reason is a
- * sentence DiveDay would be putting in the shop's mouth.
- *
- * Hiding still needs no confirm dialog: publishing the same review again is a
- * full undo. A successful hide carries the review id back in the redirect as
- * `undo`, and the page renders a land-then-undo `<UndoToast>` whose Undo button
- * posts straight back to this action (divers/[personId]/actions.ts's
- * `deleteCertificationAction`/`restoreCardAction` precedent, docs/design/principles.md #7).
+ * Publish, hide and standout are **one** action rather than three because the
+ * control that reports an outcome has to survive that outcome. Publishing a
+ * waiting review re-renders the row as published, which unmounts the Publish
+ * button and mounts the standout toggle — so a per-button `useActionState`
+ * would take its own confirmation down with it at the exact moment it had
+ * something to say. That is the bug the bulk control's status row already
+ * exists to prevent, one scale down: one action, one state, one status region
+ * that outlives every button in the row.
  */
-export async function setReviewPublishedAction(formData: FormData) {
+export async function reviewRowAction(
+  _prev: ReviewActionResult,
+  formData: FormData,
+): Promise<ReviewActionResult> {
   const session = await requireStaffSession();
   // `shopPath`, not a template: the slug rides in on the session but is still
-  // an ordinary string being spliced into a redirect target, and every segment
-  // it builds is escaped (src/lib/staff-notices.ts).
+  // an ordinary string being spliced into a path, and every segment it builds
+  // is escaped (src/lib/staff-notices.ts).
   const reviews = shopPath(session.user.shopSlug, "reviews");
   const reviewId = String(formData.get("reviewId") ?? "");
-  const publish = formData.get("publish") === "true";
-  if (!isUuid(reviewId)) revalidateAndRedirect(reviews, noticeUrl(reviews, "error"));
+  if (!isUuid(reviewId)) return { ok: false, reason: "error" };
 
+  if (formData.get("intent") === "standout") {
+    const standout = formData.get("standout") === "true";
+    const outcome = await setReviewStandout(await getDb(), session.user.shopId, reviewId, standout);
+    if (outcome !== true) return { ok: false, reason: "error" };
+    revalidatePath(reviews);
+    return { ok: true, effect: standout ? "standout" : "standout-removed" };
+  }
+
+  /*
+   * **A hide states a reason**, chosen from the short list in
+   * `review_moderation_reason` (ADR 20260813-review-moderation-has-a-floor),
+   * and `other` states it in the shop's own words. The reason is recorded with
+   * the act; it is refused here rather than defaulted, because a default reason
+   * is a sentence DiveDay would be putting in the shop's mouth.
+   *
+   * Hiding still needs no confirm dialog: publishing the same review again is a
+   * full undo. A successful hide names the review in its result, and the row
+   * renders a land-then-undo `<UndoToast>` whose Undo posts straight back to
+   * this action (docs/design/principles.md #7).
+   */
+  const publish = formData.get("publish") === "true";
   const outcome = await setReviewPublished(await getDb(), session.user.shopId, reviewId, publish, {
     recordedByPersonId: session.user.personId,
     reason: parseReviewModerationReason(formData.get("reason")),
     reasonNote: String(formData.get("reasonNote") ?? ""),
   });
-  if (outcome === "not_found") revalidateAndRedirect(reviews, noticeUrl(reviews, "error"));
-  if (outcome === "not_published") revalidateAndRedirect(reviews, noticeUrl(reviews, "error"));
-  // The `#review-<id>` fragment goes on the path handed to `noticeUrl`, which
-  // merges the notice into the query *ahead* of it — the refused row is still
-  // what the browser lands on.
-  if (outcome === "reason_required") {
-    revalidateAndRedirect(reviews, noticeUrl(`${reviews}#review-${reviewId}`, "reason-required"));
-  }
-  if (outcome === "note_required") {
-    revalidateAndRedirect(reviews, noticeUrl(`${reviews}#review-${reviewId}`, "note-required"));
-  }
-  if (outcome === "note_too_long") {
-    revalidateAndRedirect(reviews, noticeUrl(`${reviews}#review-${reviewId}`, "note-too-long"));
-  }
-  revalidateAndRedirect(
-    reviews,
-    publish ? noticeUrl(reviews, "published") : noticeUrl(reviews, "hidden", { undo: reviewId }),
-  );
-}
+  if (outcome === "reason_required") return { ok: false, reason: "reason-required" };
+  if (outcome === "note_required") return { ok: false, reason: "note-required" };
+  if (outcome === "note_too_long") return { ok: false, reason: "note-too-long" };
+  if (outcome !== true) return { ok: false, reason: "error" };
 
-/** Mark or unmark a published review for the public standout selection. */
-export async function setReviewStandoutAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const reviews = shopPath(session.user.shopSlug, "reviews");
-  const reviewId = String(formData.get("reviewId") ?? "");
-  const standout = formData.get("standout") === "true";
-  if (!isUuid(reviewId)) revalidateAndRedirect(reviews, noticeUrl(reviews, "error"));
-
-  const outcome = await setReviewStandout(await getDb(), session.user.shopId, reviewId, standout);
-  if (outcome !== true) revalidateAndRedirect(reviews, noticeUrl(reviews, "error"));
-  revalidateAndRedirect(reviews, noticeUrl(reviews, standout ? "standout" : "standout-removed"));
+  revalidatePath(reviews);
+  return publish
+    ? { ok: true, effect: "published" }
+    : { ok: true, effect: "hidden", undoReviewId: reviewId };
 }
 
 /** A posted value narrowed to a real reason code, or null — never a coerced one. */
@@ -92,21 +124,24 @@ function parseReviewModerationReason(
  * Release every ticked review in one go — the queue's answer to a weekend that
  * left eight reviews waiting and only a per-row button to clear them with.
  *
- * Publish-only, deliberately: the same shop-scoping as the single toggle above
+ * Publish-only, deliberately: the same shop-scoping as the row action above
  * (`setReviewsPublished` re-checks the session's shop, so ids belonging to
  * another shop change nothing and come back as a refusal), but no bulk *hide*.
  * Taking words down is the destructive direction and keeps its per-review undo.
- * An empty tick list is refused with its own notice rather than silently
- * redirecting to a page that looks unchanged.
+ * An empty tick list is refused with its own result rather than answering with
+ * a list that looks unchanged.
  */
-export async function publishReviewsAction(formData: FormData) {
+export async function publishReviewsAction(
+  _prev: BulkPublishResult,
+  formData: FormData,
+): Promise<BulkPublishResult> {
   const session = await requireStaffSession();
   const reviews = shopPath(session.user.shopSlug, "reviews");
   const reviewIds = formData
     .getAll("reviewIds")
     .map((value) => String(value))
     .filter(Boolean);
-  if (reviewIds.length === 0) revalidateAndRedirect(reviews, noticeUrl(reviews, "none-selected"));
+  if (reviewIds.length === 0) return { ok: false, reason: "none-selected" };
 
   const published = await setReviewsPublished(
     await getDb(),
@@ -114,6 +149,7 @@ export async function publishReviewsAction(formData: FormData) {
     reviewIds,
     session.user.personId,
   );
-  if (published === 0) revalidateAndRedirect(reviews, noticeUrl(reviews, "error"));
-  revalidateAndRedirect(reviews, noticeUrl(reviews, "published-many", { published }));
+  if (published === 0) return { ok: false, reason: "error" };
+  revalidatePath(reviews);
+  return { ok: true, published };
 }

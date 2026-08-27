@@ -1,7 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { DAY_MS, nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { getTripManifest } from "./manifests";
+import { getMonthlyReport } from "./reporting";
 import { tripRequirements, trips as tripsTable } from "./schema";
 import { resetDemoSchedule } from "./seed";
 
@@ -70,5 +72,43 @@ describe("seeded history manifests", () => {
       ).length;
     }
     expect(carried).toBeGreaterThan(0);
+  });
+
+  /**
+   * The monthly report has carried a "Tax collected" tile since Stripe Tax
+   * landed, and over the demo shop it read $0.00 in every month — three hundred
+   * paid invoices and not a cent of tax on any of them, which from the buyer's
+   * side of the screen is indistinguishable from a broken report.
+   *
+   * Two things had to be true and only one of them was obvious. The invoices
+   * needed a `tax_cents`; they also needed their booking payments to name them
+   * (`provider_ref`), because `getMonthlyReport` reads an invoice's tax through
+   * the `provider_ref = orders.stripe_invoice_id` join and drops that invoice
+   * from its other bucket the moment the booking has any payment row at all.
+   * With a null ref the tax landed in neither, so seeding `tax_cents` alone
+   * would have changed nothing on the page — which is why this asserts on the
+   * report rather than on the column.
+   */
+  it("reports the tax it collected, without moving net revenue", async () => {
+    const { db, shop } = await seededShopContext();
+    await resetDemoSchedule(db, shop.id, { history: true });
+
+    // A wide window over the whole back-fill, so this does not depend on which
+    // day of the month the suite happens to run on.
+    const report = await getMonthlyReport(
+      db,
+      shop.id,
+      new Date(nowDate().getTime() - 200 * DAY_MS),
+      new Date(nowDate().getTime() + DAY_MS),
+      { currency: "usd", timeZone: shop.timezone ?? "UTC" },
+    );
+
+    expect(report.taxCents).toBeGreaterThan(0);
+    // Tax rides on top of the listed price rather than being carved out of it,
+    // so what the shop earns is untouched by collecting it. The seed puts the
+    // same figure on the invoice total and on `tax_cents`, and the report
+    // subtracts the latter from the former — so a tax seeded *inside* the price
+    // would show up here as revenue that had quietly shrunk.
+    expect(report.revenueCents).toBeGreaterThan(report.taxCents);
   });
 });

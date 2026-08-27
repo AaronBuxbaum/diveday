@@ -31,6 +31,7 @@ import {
   tripAssignments,
   tripRequirements,
 } from "./schema";
+import { courseTemplateDisplayTitle } from "./seed-catalog";
 import { listShopsForSitemap } from "./shops";
 import {
   createTrip,
@@ -108,7 +109,7 @@ async function listCourses(db: AppDb, shopId: string) {
 }
 
 describe("course catalog and sessions (in-memory PGlite)", () => {
-  it("seeds every published PADI and SSI course template into the catalog", async () => {
+  it("seeds every published course template into the catalog, under its own name", async () => {
     const { db, shop } = await seededShopContext();
     const catalog = await listActiveCourses(db, shop.id);
 
@@ -118,8 +119,12 @@ describe("course catalog and sessions (in-memory PGlite)", () => {
       COURSE_TEMPLATES.length,
     );
     for (const template of COURSE_TEMPLATES) {
-      const displayTitle =
-        template.slug === "ssi-open-water-diver" ? "SSI Open Water Diver" : template.title;
+      // Read from the seed's own rule rather than restated here. This used to
+      // carry its own copy of the `ssi-open-water-diver` exception, which was
+      // fine while there was one — three agencies later, a second copy of the
+      // disambiguation rule is a test that can pass while disagreeing with the
+      // thing it is testing.
+      const displayTitle = courseTemplateDisplayTitle(template);
       expect(
         catalog.find((course) => course.sourceTemplateSlug === template.slug),
         `${template.slug} is missing from the seeded catalog`,
@@ -1098,7 +1103,11 @@ describe("progression order (in-memory PGlite)", () => {
 describe("agency tabs (in-memory PGlite)", () => {
   it("names only the agencies the shop's own catalog holds", async () => {
     const { db, shop } = await seededShopContext();
-    expect(await courseAgencies(db, shop.id)).toEqual(["padi", "ssi"]);
+    // Three since SDI's starter pages landed. The demo shop publishes every
+    // template DiveDay ships, so this list is "which agencies have templates"
+    // rather than a claim about what one real shop teaches — what it pins is
+    // that the tab strip is derived from the catalog and not a hard-coded pair.
+    expect(await courseAgencies(db, shop.id)).toEqual(["padi", "sdi", "ssi"]);
   });
 
   it("narrows the roster to one agency, count and rows agreeing", async () => {
