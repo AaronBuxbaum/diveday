@@ -211,7 +211,19 @@ H-01/H-03's.
 
 ### The diver record — `/shop/[shopSlug]/divers/[personId]`
 
-**Unanswered, and known to be.** Its honest answer to "what is this surface's one idea?" is
-"everything about this person", which is a container rather than an idea — which is what issue #780
-is about. Left here deliberately: an entry that says "we do not know yet" is worth more than no entry,
-because it stops the next reviewer concluding the question was never asked.
+**Answered 2026-08-27, redesign proposed** — ADR
+[20260827-people-not-lists](../architecture/decisions/20260827-people-not-lists.md) (Proposed),
+drawn in [its canvas](canvases/20260827-people-not-lists/README.md). This entry replaces the
+"unanswered, and known to be" record that stood here since issue #780; the shipped code governs
+until slice 8b ships.
+
+- **One idea:** this diver, ready or not — and the one fix if not.
+- **The question it arrives with:** "can they dive with us, and is anything in the way?" — answered
+  by the status ledger under the masthead, which renders *nothing* when they are clear.
+- **Controls that dissolved:** the jump nav (the page got short), the ten per-section notice slots
+  (one router convention), the stat tiles (each figure lives in its group), three of the four
+  primary-weight buttons (Book is the one primary).
+- **Remove first:** the merge panel's standing card — it earns its place only while candidates
+  exist, and the redesign keeps it conditional.
+- **Composition:** status, story, file — a person is a readiness question, a history, and a set of
+  facts, in that order; ten co-equal sections answered no question first.

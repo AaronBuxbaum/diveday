@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;650;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7; --border-strong: #8a8577;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+      --success: #15803d; --success-tint: #e8f2ec;
+      --warning: #b45309; --warning-tint: #f8eee6;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--primary); }
+    .tab { font-size: 14px; font-weight: 500; color: var(--muted); padding: 6px 12px; border-radius: 10px; white-space: nowrap; }
+    .srow { display: flex; align-items: center; gap: 12px; min-height: 48px; border-top: 1px solid var(--border); }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 1150px; background: var(--bg); box-sizing: border-box; overflow: hidden;">
+
+  <div style="height: 56px; display: flex; align-items: center; gap: 20px; padding: 0 32px; background: rgba(250,249,246,.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); box-sizing: border-box;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 28px; height: 28px; border-radius: 8px; background: var(--primary); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">BM</div>
+      <span style="font-size: 15px; font-weight: 650; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"></path></svg>
+    </div>
+    <div style="display: flex; align-items: center; gap: 2px; margin-left: 16px;">
+      <span class="tab">Today</span>
+      <span class="tab">Check-in</span>
+      <span class="tab">Divers</span>
+      <span class="tab">Board</span>
+      <span class="tab" style="background: var(--primary-tint); color: var(--primary); font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">More
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"></path></svg>
+      </span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 10px; padding: 7px 12px; background: var(--surface);">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="4.6"></circle><path d="M10.6 10.6L13.6 13.6"></path></svg>
+      <span style="font-size: 13px; color: var(--muted);">Search</span>
+      <span style="font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px;">&#8984;K</span>
+    </div>
+  </div>
+
+  <div style="width: 896px; margin: 0 auto; padding: 44px 0 40px; box-sizing: border-box;">
+
+    <p class="eyebrow" style="margin: 0;">Waivers</p>
+    <h1 style="margin: 8px 0 0; font-size: 34px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.1;">Waiver</h1>
+
+    <!-- The release: one worked-in card; materiality is a choice, then one act -->
+    <div style="margin-top: 28px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px 22px; box-sizing: border-box;">
+      <div style="display: flex; align-items: baseline; gap: 12px;">
+        <p style="margin: 0; font-size: 18px; font-weight: 650; letter-spacing: -0.012em;">Release text</p>
+        <span class="tnum" style="margin-left: auto; font-size: 12.5px; color: var(--muted);">version 4 &middot; published Aug 12</span>
+      </div>
+      <div style="margin-top: 14px; border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); padding: 12px 14px; font-size: 14px; line-height: 1.6; color: var(--muted); min-height: 120px;">I acknowledge that scuba diving carries inherent risks, including but not limited to decompression sickness, embolism, and the hazards of boat travel. I confirm that the information I provide about my health and certification is accurate&hellip;<span style="display: inline-block; width: 1.5px; height: 16px; background: var(--primary); vertical-align: -3px;"></span></div>
+
+      <p class="glabel" style="margin: 18px 0 8px;">This edit is</p>
+      <label style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border);">
+        <span style="width: 18px; height: 18px; border-radius: 999px; border: 5.5px solid var(--primary); box-sizing: border-box; flex-shrink: 0; margin-top: 1px; background: var(--surface);"></span>
+        <span>
+          <span style="font-size: 14.5px; font-weight: 600;">A correction — wording only</span>
+          <span style="display: block; font-size: 13px; color: var(--muted); margin-top: 2px;">Every standing signature stays current.</span>
+        </span>
+      </label>
+      <label style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border);">
+        <span style="width: 18px; height: 18px; border-radius: 999px; border: 2px solid var(--border-strong); box-sizing: border-box; flex-shrink: 0; margin-top: 1px;"></span>
+        <span>
+          <span style="font-size: 14.5px; font-weight: 600;">A material change</span>
+          <span style="display: block; font-size: 13px; color: var(--muted); margin-top: 2px;">Asks all <span class="tnum" style="font-weight: 650; color: var(--warning);">27 standing signatures</span> to re-sign — <span class="tnum">4</span> of them board within 14 days.</span>
+        </span>
+      </label>
+      <div style="margin-top: 14px; display: flex; align-items: center; gap: 14px;">
+        <span style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; border-radius: 10px; background: var(--primary); color: #ffffff; font-size: 14px; font-weight: 600;">Publish</span>
+      </div>
+    </div>
+
+    <!-- The log -->
+    <p class="glabel" style="margin: 36px 0 8px;">Signed — Thu, Aug 27</p>
+    <div>
+      <div class="srow">
+        <span style="width: 200px; font-size: 15px; font-weight: 600;">Yara Halabi</span>
+        <span style="flex: 1; font-size: 13.5px; color: var(--muted);">Two-Tank — French Reef &middot; Sat</span>
+        <span class="tnum" style="font-size: 12.5px; color: var(--muted);">9:41 PM</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="srow" style="border-bottom: 1px solid var(--border);">
+        <span style="width: 200px; font-size: 15px; font-weight: 600;">Noor Rahman</span>
+        <span style="flex: 1; font-size: 13.5px; color: var(--muted);">Two-Tank — French Reef &middot; Sat</span>
+        <span style="display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 650; background: var(--warning-tint); color: var(--warning);">
+          <svg width="11" height="11" viewBox="0 0 18 18" fill="none" stroke="#b45309" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.4L16.6 15.2H1.4L9 2.4z"></path><path d="M9 7.2v3.4"></path></svg>
+          Medical — one answer flagged
+        </span>
+        <span class="tnum" style="font-size: 12.5px; color: var(--muted);">10:07 PM</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+    </div>
+
+    <p class="glabel" style="margin: 28px 0 8px;">Signed — Wed, Aug 26</p>
+    <div>
+      <div class="srow">
+        <span style="width: 200px; font-size: 15px; font-weight: 600;">Grace Mensah</span>
+        <span style="flex: 1; font-size: 13.5px; color: var(--muted);">Two-Tank Reef — Molasses &amp; French &middot; Thu</span>
+        <span class="tnum" style="font-size: 12.5px; color: var(--muted);">4:18 PM</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="srow" style="border-bottom: 1px solid var(--border);">
+        <span style="width: 200px; font-size: 15px; font-weight: 600;">Lena Fischer</span>
+        <span style="flex: 1; font-size: 13.5px; color: var(--muted);">signed on paper at the counter &middot; recorded by Dana</span>
+        <span style="display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 650; background: var(--warning-tint); color: var(--warning);">
+          <svg width="11" height="11" viewBox="0 0 18 18" fill="none" stroke="#b45309" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.4L16.6 15.2H1.4L9 2.4z"></path><path d="M9 7.2v3.4"></path></svg>
+          Not sealed
+        </span>
+        <span class="tnum" style="font-size: 12.5px; color: var(--muted);">11:52 AM</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+    </div>
+
+    <div style="margin-top: 30px; display: flex; align-items: center; justify-content: center; gap: 14px;">
+      <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); opacity: .45;">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#0c2a35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5L5.5 8 10 12.5"></path></svg>
+      </span>
+      <span class="tnum" style="font-size: 13px; color: var(--muted);">Page 1 of 9</span>
+      <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface);">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#0c2a35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </span>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

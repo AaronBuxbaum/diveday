@@ -158,16 +158,19 @@ export function buildThreadSteps(input: {
   progress-wave bar, the receipt panel, the emails line and the per-row Done chips delete; the
   receipt's facts fold into the Pay step's settled line ("$235 · Thu evening"); `?booked=1` keeps
   its single earned moment; all-set keeps its line.
-- Day-of details absorbs recency, note, hotel pickup (each keeps its action); the packing list and
-  dock call render above the spine on dive day (`ready.dockCallLine` exists). The cancellation
-  window renders in the Pay step's fine print (closing ADR 20260820's dead `cancellationOnly`).
+- Day-of details absorbs recency, note, hotel pickup; **the step counts, and settles when the
+  recency question is answered** (pickup and note stay optional within it), so the figure can
+  always fill. The packing list and dock call render above the spine on dive day
+  (`ready.dockCallLine` exists). The cancellation window renders in the Pay step's fine print
+  while the step is open (closing ADR 20260820's dead `cancellationOnly`); once Pay settles, the
+  footer's cancel door carries it.
 - Party claims, self-cancel, `ShopCard` (flat) keep their footer order.
 
 **Tests.**
 
 | Test | Pins |
 | --- | --- |
-| `buildThreadSteps`: countable excludes optional rows; a bar/figure can always reach M | decision 3 / §6 |
+| `buildThreadSteps`: every step counts; Day-of settles on the recency answer; the figure can always reach M | decision 3 / §6 |
 | At most one open step at rest; deep link opens its step | decision 3 |
 | The page renders exactly one status statement (unit: one element matches the status test-id) | decision 3 |
 | Earned moment renders only for `?booked=1` and all-set | decision 6 |

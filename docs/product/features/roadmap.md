@@ -215,6 +215,32 @@ suite — every slice keeps it green.
   fully presented; signature/medical semantics untouched (H-01/H-03). *Pins:* one primary;
   banners through one component.
 
+### 8. People, not lists (design complete)
+
+The staff people surfaces — the diver record (whose one idea issue #780 recorded as unanswered),
+the roster, reviews, waivers, requests — argued in the Proposed ADR
+[20260827-people-not-lists](../../architecture/decisions/20260827-people-not-lists.md), drawn in
+[its canvas](../../design/canvases/20260827-people-not-lists/README.md), specified in
+[its SPEC](../../design/canvases/20260827-people-not-lists/SPEC.md). Speaks Clearwater (item 6);
+unranked. `security-reviewer` before 8b and 8e merge.
+
+- **8a. The shared person-row vocabulary.** `CertificationCardRow`, `WaiverStateRow`,
+  `BookingStoryRow` — one spelling for the rows every people surface repeats. *Pins:* verified
+  renders no badge; every state carries a word.
+- **8b. The diver record recomposition.** Status ledger leads and renders nothing when clear; the
+  story is one ledger; the file is inset groups; Book is the one primary; the jump nav, the
+  514-line notice router and the twin certification components delete (H-49). Closes issue #780.
+  *Pins:* empty-status renders nothing; exactly one primary.
+- **8c. The roster ledger.** One rendering at all widths, letter groups, exceptional badges only.
+  *Pins:* a clear diver's row carries no badge.
+- **8d. Reviews as a worklist.** "Waiting on you" leads; the stat tiles collapse to one aggregate
+  line; the floor's arithmetic untouched. *Pins:* one aggregate rendering.
+- **8e. The waiver surface.** Materiality as a recorded choice then one Publish (H-54 semantics
+  unchanged); the signature log as a day-grouped ledger with integrity badges only when not valid.
+  *Pins:* no submit without a choice while signatures stand.
+- **8f. Requests in the language.** Day groups own count and advice; soft matches are ink, not
+  tint.
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)
