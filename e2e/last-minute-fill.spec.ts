@@ -2,6 +2,57 @@ import { expect, test } from "./fixtures";
 import { seededTripId, signInAsOwner } from "./helpers";
 
 /**
+ * `requestAnimationFrame` is not a promise the page owes you, and neither is a
+ * page-side `setTimeout` racing it: when a renderer wedges it takes both with
+ * it, so no escape hatch written *inside* an evaluate can be the one that
+ * fires. `e2e/visual.spec.ts` learned that twice over — read the note on
+ * `PAINT_STALL_MS` there — and the conclusion is the same here. The wait
+ * Playwright leaves unbounded is `page.evaluate` itself, which takes no
+ * timeout of its own, so that is the one that gets the bound.
+ *
+ * What a stall means here is *not* what it means in the visual suite. There,
+ * degrading is right: a shot with an unpainted band beats a wedged renderer
+ * failing the shard. This is a geometry test, and a measurement taken on a
+ * page that never finished settling is a wrong number, not a blurry picture.
+ * So a stall is warned about and the test carries straight on to its
+ * assertions, where the `spaceBelow` precondition catches the un-scrolled page
+ * and fails saying exactly that.
+ */
+const SETTLE_BUDGET_MS = 20_000;
+
+async function withPageSideBound(
+  what: string,
+  budgetMs: number,
+  work: Promise<unknown>,
+): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  // Both outcomes are folded into a value rather than left as a rejection: the
+  // losing arm of the race stays pending, and a `page.evaluate` that rejects
+  // later — when the context is torn down at end of test — would otherwise
+  // surface as an unhandled rejection in whatever test is running by then.
+  const settled = work.then(
+    () => ({ state: "done" as const }),
+    (error: unknown) => ({ state: "failed" as const, error }),
+  );
+  const outcome = await Promise.race([
+    settled,
+    new Promise<{ state: "stalled" }>((resolve) => {
+      timer = setTimeout(() => resolve({ state: "stalled" }), budgetMs);
+    }),
+  ]);
+  clearTimeout(timer);
+  // An evaluate that *throws* is a broken page, not a stalled one, and must not
+  // be swallowed here.
+  if (outcome.state === "failed") throw outcome.error;
+  if (outcome.state === "stalled") {
+    console.warn(
+      `last-minute-fill: ${what} did not return within ${budgetMs}ms — the trigger may not have ` +
+        "been scrolled into place; expect the spaceBelow precondition below to say so.",
+    );
+  }
+}
+
+/**
  * Fill-the-boat: a diver opts into the shop-wide last-minute list, staff see
  * a Today nudge on the under-capacity trip departing today (the seeded
  * "Two-Tank Reef — Molasses & French", same trip today.test.ts anchors on),
@@ -311,7 +362,7 @@ test("a self-declared card cannot be certified without verified evidence", async
  * "below" branch is fixed as the one under test rather than the assertion
  * accepting both and proving less.
  *
- * **Pinning it took two goes, and the first one only looked like a pin.**
+ * **Pinning it took three goes, and the first two only looked like pins.**
  * Setting an explicit 1280x900 viewport and centring the trigger was not
  * enough: `scrollIntoView({block: "center"})` clamps at the end of the
  * document, and this trigger sits near the foot of the page, so "centred"
@@ -322,11 +373,20 @@ test("a self-declared card cannot be certified without verified evidence", async
  * back *equal to* the maximum scroll, so the centring had never happened at
  * all and the test had been passing on luck.
  *
- * Two things hold it now. The body gets a viewport's worth of trailing padding,
- * so the scroll is no longer clamped and the trigger genuinely lands
- * mid-viewport on any runner; and the room below is **asserted** before the gap
- * is, so losing it again fails as itself rather than as a large negative number
- * that reads like a placement bug.
+ * Trailing padding fixed the clamping and the test went red again anyway, at
+ * `spaceBelow` of **-0.28** (run 33108101290). Clamping was never the only way
+ * to lose the position: a scroll is a measurement taken at one instant, and a
+ * web font swapping in or a deal card's image arriving *afterwards* slides the
+ * trigger back down before the hover reads it. So the scroll no longer happens
+ * until the fonts and the images have settled, and it is a `scrollBy` off the
+ * measured rect rather than a `scrollIntoView` — there is no
+ * `scrollIntoView({block: "center"})` in this test any more.
+ *
+ * Three things hold it now. The body gets a viewport's worth of trailing
+ * padding, so the scroll is not clamped; the scroll waits for the two things
+ * that actually move the trigger, so it is not stale; and the room below is
+ * **asserted** before the gap is, so losing it a fourth way fails as itself
+ * rather than as a large negative number that reads like a placement bug.
  */
 test("the certification hint opens beside the mark, not beside its tap target", async ({
   page,
@@ -359,26 +419,30 @@ test("the certification hint opens beside the mark, not beside its tap target", 
   // `spaceBelow` of **-0.28** (run 33108101290), which reads as a placement bug
   // and is nothing of the sort. Waiting for the fonts and the images is waiting
   // for the two things that actually move it, rather than for a duration.
-  await trigger.evaluate(async (el) => {
-    await document.fonts.ready;
-    await Promise.all(
-      Array.from(document.images)
-        .filter((img) => !img.complete)
-        .map(
-          (img) =>
-            new Promise((resolve) => {
-              img.addEventListener("load", resolve, { once: true });
-              img.addEventListener("error", resolve, { once: true });
-            }),
-        ),
-    );
-    // Only now is the rect worth reading, so one scroll is enough — and it is
-    // `scrollBy` off the measured rect rather than `scrollIntoView`, which
-    // clamps at the end of the document and would put the trigger wherever the
-    // page happened to end.
-    window.scrollBy(0, el.getBoundingClientRect().top - 300);
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  });
+  await withPageSideBound(
+    "the settle-then-scroll pass",
+    SETTLE_BUDGET_MS,
+    trigger.evaluate(async (el) => {
+      await document.fonts.ready;
+      await Promise.all(
+        Array.from(document.images)
+          .filter((img) => !img.complete)
+          .map(
+            (img) =>
+              new Promise((resolve) => {
+                img.addEventListener("load", resolve, { once: true });
+                img.addEventListener("error", resolve, { once: true });
+              }),
+          ),
+      );
+      // Only now is the rect worth reading, so one scroll is enough — and it
+      // is `scrollBy` off the measured rect rather than `scrollIntoView`,
+      // which clamps at the end of the document and would put the trigger
+      // wherever the page happened to end.
+      window.scrollBy(0, el.getBoundingClientRect().top - 300);
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    }),
+  );
   // Read the id *before* the hover. The panel is placed by measurement and is
   // dismissed by any scroll, so a locator action after the hover could scroll
   // the page to reach its own target and leave this measuring a gap nobody
