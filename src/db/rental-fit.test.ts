@@ -97,6 +97,30 @@ describe("saveRentalFit / getRentalFit", () => {
     expect(fetched?.bootSize).toBe("10");
   });
 
+  it("leaves a size the caller never posted alone, and still clears one sent empty", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+
+    await saveRentalFit(db, baseFitInput(shopId, personId));
+
+    // A shop that has turned weights off in its rental catalog renders no
+    // weight box, so its form posts no `weightPreference` key at all. The
+    // save must go through, and must not blank what the diver already gave
+    // -- re-adding the item would otherwise show an empty box (issue #1062).
+    const { weightPreference: _dropped, ...withoutWeights } = baseFitInput(shopId, personId);
+    const saved = await saveRentalFit(db, { ...withoutWeights, bcdSize: "L" });
+    expect(saved).not.toBeNull();
+
+    const fetched = await getRentalFit(db, shopId, personId);
+    expect(fetched?.weightPreference).toBe("12 lbs");
+    expect(fetched?.bcdSize).toBe("L");
+
+    // Absent and empty stay different answers: a box the shop *does* render,
+    // emptied on purpose, is the diver taking the size back.
+    await saveRentalFit(db, { ...baseFitInput(shopId, personId), weightPreference: "  " });
+    expect((await getRentalFit(db, shopId, personId))?.weightPreference).toBeNull();
+  });
+
   it("clears the note when the caller explicitly sends an empty note", async () => {
     const { db, shopId, tripId } = await context();
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");

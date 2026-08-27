@@ -154,10 +154,19 @@ const profileSchema = z.object({
   weights: z.string().optional(),
   diveComputer: z.string().optional(),
   gopro: z.string().optional(),
-  bcdSize: z.string().trim().max(40),
-  wetsuitSize: z.string().trim().max(40),
-  finSize: z.string().trim().max(40),
-  weightPreference: z.string().trim().max(120),
+  // Optional, not required, and deliberately not `.default("")`. The form
+  // renders a size box only for an item `offeredRentableItems(shop.rentalItems)`
+  // says the shop offers, so a shop that has dropped weights from its catalog
+  // posts no `weightPreference` key at all -- and a required field failed on
+  // `undefined`, refusing every save that shop could make with "Check the
+  // details and try again." on a form where every visible box was right
+  // (issue #1062). `.default("")` parses, and then blanks a stored size for
+  // every item the shop does not currently offer, which is the destructive
+  // half of the same bug; `saveRentalFit` leaves an absent size alone instead.
+  bcdSize: z.string().trim().max(40).optional(),
+  wetsuitSize: z.string().trim().max(40).optional(),
+  finSize: z.string().trim().max(40).optional(),
+  weightPreference: z.string().trim().max(120).optional(),
 });
 
 /**
