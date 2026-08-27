@@ -260,12 +260,6 @@ function noCertificationStamp(
   };
 }
 
-function newestDate(left: Date | null, right: Date | null): Date | null {
-  if (!left) return right;
-  if (!right) return left;
-  return left >= right ? left : right;
-}
-
 function oldestDate(left: Date | null, right: Date | null): Date | null {
   if (!left) return right;
   if (!right) return left;

@@ -22,6 +22,7 @@ import {
   personRoles,
   priorVisits,
   rentalFitProfiles,
+  shops,
   trips,
 } from "./schema";
 
@@ -376,5 +377,77 @@ describe("merging the no-certification stamp", () => {
     expect(merged?.noCertificationDeclaredAt).toEqual(new Date("2026-08-20T00:00:00.000Z"));
     expect(merged?.noCertificationClearedAt).toEqual(new Date("2026-08-22T00:00:00.000Z"));
     expect(merged?.noCertificationClearedByPersonId).toBe(owner.id);
+  });
+});
+
+/**
+ * The one tenant check in a rewrite that repoints twenty-one tables. Every
+ * other refusal is about the state of the two rows; this is the one that stops
+ * a staffer folding another shop's diver into their own roster, and it had no
+ * test.
+ */
+describe("merge tenant isolation", () => {
+  it("refuses a survivor that belongs to another shop", async () => {
+    const { db, shop, owner, source } = await mergeFixtures();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ slug: `other-${source.id.slice(0, 8)}`, name: "Other Shop", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!otherShop) throw new Error("second shop insert failed");
+    const [foreign] = await db
+      .insert(people)
+      .values({ shopId: otherShop.id, fullName: "Maya Rivera" })
+      .returning();
+    if (!foreign) throw new Error("foreign person insert failed");
+    await db.insert(personRoles).values({ personId: foreign.id, role: "diver" });
+
+    expect(
+      await mergeDiverRecords({
+        db,
+        shopId: shop.id,
+        personId: source.id,
+        survivorId: foreign.id,
+        actorPersonId: owner.id,
+      }),
+    ).toEqual({ ok: false, reason: "not_found" });
+
+    // Neither row moved.
+    const [sourceAfter] = await db.select().from(people).where(eq(people.id, source.id));
+    const [foreignAfter] = await db.select().from(people).where(eq(people.id, foreign.id));
+    expect(sourceAfter?.mergedIntoPersonId).toBeNull();
+    expect(foreignAfter?.mergedIntoPersonId).toBeNull();
+  });
+
+  it("refuses when the caller names a shop neither person belongs to", async () => {
+    const { db, owner, source, survivor } = await mergeFixtures();
+
+    expect(
+      await mergeDiverRecords({
+        db,
+        shopId: crypto.randomUUID(),
+        personId: source.id,
+        survivorId: survivor.id,
+        actorPersonId: owner.id,
+      }),
+    ).toEqual({ ok: false, reason: "not_authorized" });
+  });
+
+  /** The candidate list is the door to the merge, and never crosses a shop. */
+  it("never offers another shop's diver as a duplicate", async () => {
+    const { db, shop, source } = await mergeFixtures();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ slug: `other2-${source.id.slice(0, 8)}`, name: "Other Shop 2", timezone: "UTC" })
+      .returning({ id: shops.id });
+    if (!otherShop) throw new Error("second shop insert failed");
+    const [foreign] = await db
+      .insert(people)
+      .values({ shopId: otherShop.id, fullName: "Maya Rivera", phone: "+1 (305) 555-0142" })
+      .returning();
+    if (!foreign) throw new Error("foreign person insert failed");
+    await db.insert(personRoles).values({ personId: foreign.id, role: "diver" });
+
+    const candidates = await listDiverMergeCandidates(db, shop.id, source.id);
+    expect(candidates.map((candidate) => candidate.id)).not.toContain(foreign.id);
   });
 });

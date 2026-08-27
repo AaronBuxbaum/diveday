@@ -5,8 +5,8 @@ import {
   matchTotpStep,
   normalizeRecoveryCode,
   recoveryCodeHashes,
-  totpCode,
   TOTP_STEP_SECONDS,
+  totpCode,
   verifyTotpCode,
 } from "./totp";
 

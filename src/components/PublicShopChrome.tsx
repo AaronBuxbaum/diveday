@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { LanguagePicker, type LanguagePickerCopy } from "@/components/LanguagePicker";
 import { PublicShopNav, type PublicShopNavItem } from "@/components/PublicShopNav";
-import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
+import type { DiverTranslator } from "@/i18n/messages";
 import {
   conservationCommitmentLabel,
   parseConservationCommitments,
