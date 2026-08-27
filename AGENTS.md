@@ -196,7 +196,9 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   branch off `main`: nothing of yours is open (`git fetch origin main` first, every time — it decides
   the shape), a fix that must merge now (a red `main`, a hotfix, a spec race you did not cause), a
   stack already about six layers deep (every layer pays the full CI gate and pays again above every
-  rebase), and a branch that belongs to another session. See the **stacked-prs** skill and ADR
+  rebase — CI runs a stack in priority order, bottom then top then the middles, which spreads that
+  cost without removing it: ADR 20260827-stack-ci-priority), and a branch that belongs to another
+  session. See the **stacked-prs** skill and ADR
   20260821-stacked-pull-requests.
 - Before fixing a failing or flaky test, search open PRs for one that already touches the same
   spec or test name. Two sessions independently patching the same broken test race each other and
