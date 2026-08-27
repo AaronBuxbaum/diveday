@@ -352,3 +352,76 @@ describePostgres("createBookingParty under real concurrency", () => {
     expect(await seatsTaken(pg.db, nightTripId)).toBe(1);
   });
 });
+
+/**
+ * **How long an atomic party holds the trip row, and how that scales.**
+ *
+ * The public form's party cap was six, with no ADR and no comment saying why
+ * (issue #725). Six is below several ordinary group sizes — a dive club books
+ * eight or ten, a family is seven — and a group that has to book twice becomes
+ * two unrelated parties: two lead bookers, two `party_lead_booking_id` chains,
+ * two seat-claim sets, two checkouts, two refunds, and nothing in the data
+ * saying those people are together.
+ *
+ * The reason to be careful about raising it is not the row count, it is the
+ * **lock**. `createBookingRecord` opens with `SELECT ... FOR UPDATE` on the
+ * trip row, and `createBookingParty` loops every request inside one
+ * transaction, so the first seat takes that lock and the last seat releases
+ * it: hold time is the whole party's work, and every other booking on that
+ * departure queues behind it. A cap raised without measuring is how a Saturday
+ * morning booking rush starts serialising behind one slow party.
+ *
+ * So this measures rather than asserts a wall-clock threshold. A timing
+ * assertion on a shared CI runner is a flake generator, and the number that
+ * matters is not any single duration but whether **cost per seat stays flat**
+ * as the party grows — flat is linear work, which a bound can be set against;
+ * rising per-seat cost is quadratic work hiding in the loop, which no bound is
+ * safe with. The numbers print to the job log; the assertions here are the
+ * ones that can be made honestly: every seat lands, atomically, at each size.
+ */
+describePostgres("createBookingParty — cost of an atomic party", () => {
+  it("holds the trip row for a time that scales flat per seat", async () => {
+    const pg = await postgresTestDb();
+    const sizes = [6, 12, 20];
+    const measured: Array<{ size: number; totalMs: number; perSeatMs: number }> = [];
+
+    for (const size of sizes) {
+      // A fresh departure per size, sized exactly to the party, so the last
+      // seat is always the one that fills the boat — the most expensive shape,
+      // since every capacity check has counted the seats before it.
+      const { shopId, tripId } = await tripWithSeats(pg.db, size);
+      const party = Array.from({ length: size }, (_, seat) => ({
+        actor: "public" as const,
+        shopId,
+        tripId,
+        fullName: `Party Diver ${seat + 1}`,
+        email: `party-${seat + 1}@example.invalid`,
+        // Declared, because a declaration is the per-seat write that costs the
+        // most: it resolves the person, takes their row lock, and reads what
+        // the shop already holds. A party of silent seats would measure the
+        // cheap path and flatter the number.
+        declared: { level: "rescue" as const },
+        admissionGate: "advise" as const,
+      }));
+
+      const startedAt = performance.now();
+      const outcome = await createBookingParty(pg.connect(), party);
+      const totalMs = performance.now() - startedAt;
+
+      expect(outcome.ok).toBe(true);
+      expect(await seatsTaken(pg.db, tripId)).toBe(size);
+      measured.push({ size, totalMs, perSeatMs: totalMs / size });
+    }
+
+    // The whole point of the test — read these off the job log, and put them in
+    // the PR that changes the cap.
+    console.log(
+      `createBookingParty cost: ${measured
+        .map(
+          ({ size, totalMs, perSeatMs }) =>
+            `${size} seats ${totalMs.toFixed(0)}ms (${perSeatMs.toFixed(1)}ms/seat)`,
+        )
+        .join(" | ")}`,
+    );
+  }, 120_000);
+});
