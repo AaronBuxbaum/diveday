@@ -153,6 +153,19 @@ describe("the rail as it renders", () => {
     );
   });
 
+  it("holds its own width, so an absent rail costs the pane nothing", () => {
+    // `/settings/calendar` is a staffer's own feed and takes no permission
+    // gate, so an ordinary staffer reaches the settings frame while this rail
+    // — drawn only for someone who may manage the shop — renders nothing
+    // beside them. The frame is a flex row for that reader's sake: the rail
+    // carries its own fixed width when it exists, rather than the frame
+    // reserving a track that auto-places the pane into 264px when it does not.
+    renderRail();
+    const nav = screen.getByRole("navigation", { name: "Settings sections" }).className;
+    expect(nav).toContain("lg:w-[264px]");
+    expect(nav).toContain("lg:shrink-0");
+  });
+
   it("marks the current row, and only that one", () => {
     pathname = `${BASE}/settings/team`;
     renderRail();
@@ -293,8 +306,17 @@ describe("the rows the pane is made of", () => {
 describe("the frame", () => {
   const layout = readFileSync(join(SETTINGS_DIR, "layout.tsx"), "utf8");
 
-  it("splits into a rail and a pane from lg up", () => {
-    expect(layout).toContain("lg:grid-cols-[264px_1fr]");
+  it("splits into a rail and a pane from lg up, without reserving a track for one", () => {
+    // A flex row rather than a two-track grid. `/settings/calendar` is a
+    // staffer's own feed and takes no permission gate, so an ordinary staffer
+    // reaches this frame while the rail beside it renders nothing — and under
+    // `grid-cols-[264px_1fr]` their pane was auto-placed into the *first*
+    // track, 264px wide with an empty column beside it. Flex has no track to
+    // fall into: the rail carries its own width, and its absence gives the
+    // pane the row.
+    expect(layout).toContain("lg:flex");
+    expect(layout).not.toContain("lg:grid-cols-");
+    expect(layout).toContain("lg:flex-1");
   });
 
   it("awaits nothing above its children", () => {

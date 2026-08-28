@@ -35,18 +35,27 @@ export default function SettingsLayout({
   params: Promise<{ shopSlug: string }>;
 }) {
   return (
-    <div className="mx-auto w-full max-w-6xl lg:grid lg:grid-cols-[264px_1fr] lg:gap-8 lg:px-6">
+    /* **Flex, not grid, and the reason is a reader rather than a taste.**
+       `/settings/calendar` is a staffer's own feed and takes no permission
+       gate, so an ordinary staffer reaches this frame while the map beside it
+       is drawn only for someone who may manage the shop. Under
+       `grid-cols-[264px_1fr]` that reader's pane was auto-placed into the
+       *first* track — 264px wide at desktop, on a page with a whole empty
+       column beside it. A flex row has no track to fall into: the rail is a
+       fixed-width sibling when it exists, and when it does not the pane simply
+       takes the width. */
+    <div className="mx-auto w-full max-w-6xl lg:flex lg:gap-8 lg:px-6">
       <Suspense fallback={<SettingsRailSkeleton />}>
         <SettingsRailPanel params={params} />
       </Suspense>
-      <div className="min-w-0">{children}</div>
+      <div className="min-w-0 lg:flex-1">{children}</div>
     </div>
   );
 }
 
 function SettingsRailSkeleton() {
   return (
-    <div className="hidden lg:block" aria-hidden="true">
+    <div className="hidden lg:block lg:w-[264px] lg:shrink-0" aria-hidden="true">
       <div className="sticky top-20 animate-pulse space-y-6 py-10 pe-2">
         {[0, 1, 2].map((group) => (
           <div key={group} className="space-y-2">

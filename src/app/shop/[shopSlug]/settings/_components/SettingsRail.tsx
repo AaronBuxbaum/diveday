@@ -67,7 +67,7 @@ export function SettingsRail({
   const onHub = pathname === hubPath;
 
   return (
-    <nav aria-label={ariaLabel} className="hidden lg:block">
+    <nav aria-label={ariaLabel} className="hidden lg:block lg:w-[264px] lg:shrink-0">
       {/* Sticky, and scrollable in its own right: the map is longer than a
           laptop viewport, and a rail that scrolled the page away with it would
           be a map you have to leave to read. */}
