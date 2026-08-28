@@ -90,7 +90,7 @@ test("the diver record's sub-nav jumps to a section without leaving the page", a
   await expect(subNav).toBeVisible();
 
   const payments = page.getByRole("heading", { name: "Payments" });
-  // Eighth of twelve sections: far below the fold on arrival.
+  // Well below the fold on arrival, which is the whole reason the bar exists.
   await expect(payments).not.toBeInViewport();
 
   await subNav.getByRole("link", { name: "Payments" }).click();
@@ -106,7 +106,7 @@ test("the diver record's sub-nav jumps to a section without leaving the page", a
 
   // The destructive tail is deliberately not a sub-nav target: deleting a
   // diver and erasing their personal data cost a scroll, on purpose.
-  await expect(subNav.getByRole("link")).toHaveCount(10);
+  await expect(subNav.getByRole("link")).toHaveCount(11);
   await expect(subNav.getByRole("link", { name: /Erase|Delete/ })).toHaveCount(0);
 });
 

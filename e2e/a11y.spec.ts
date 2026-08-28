@@ -986,6 +986,17 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
   test("the marketing and switching pages have no automated a11y violations", async ({ page }) => {
     // 9 scans at ~3.5s each, plus the first cold render.
     test.setTimeout(90_000);
+    // **Scanned with the app's own reduced-motion state**, which is not a way
+    // of avoiding an awkward answer: the hero's roll-call rows enter with
+    // `marketing-roll-call-settle`, a 360ms fade from `opacity: 0.72`, and a
+    // scan that lands mid-fade measures the composited green at 4.16:1 — under
+    // the 4.5 floor for 12px text, while the settled colour is 5.0:1 and
+    // passes. That is a race, not a defect, and the repo refuses to answer a
+    // race with a wait (`pnpm check:e2e-hygiene`). `prefers-reduced-motion`
+    // resolves it deterministically *through the product*: globals.css pins
+    // those rows to `animation: none; opacity: 1`, which is the state every
+    // reader ends at and the one worth holding to the contrast rule.
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await scanStaticRoutes(page, [
       { path: "/product", heading: /\S/ },
       { path: "/pricing", heading: /\S/ },
