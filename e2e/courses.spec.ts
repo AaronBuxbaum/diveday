@@ -59,8 +59,12 @@ test("a signed-out visitor browses the public course catalog, with the editor st
 }) => {
   await page.goto("/s/blue-mantis/courses");
   await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toBeVisible();
+  // Rows are h3 under the prerequisite group's own h2 ("Start here",
+  // "Requires Open Water or higher") — the ladder grouping from the
+  // 2026-08-28 diver-views review, finding 13.
+  await expect(page.getByRole("heading", { level: 2, name: "Start here" })).toBeVisible();
   await expect(
-    page.getByRole("heading", { level: 2, name: "Open Water Diver", exact: true }),
+    page.getByRole("heading", { level: 3, name: "Open Water Diver", exact: true }),
   ).toBeVisible();
   // No staff affordance renders at all — not disabled, absent (AGENTS.md
   // hard rule: gate by not rendering).

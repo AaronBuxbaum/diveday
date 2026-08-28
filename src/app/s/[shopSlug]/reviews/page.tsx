@@ -132,9 +132,13 @@ export default async function PublicReviewsPage({
               const ratingCount = distribution.get(rating) ?? 0;
               return (
                 <li key={rating} className="flex items-center gap-3 text-sm tabular-nums">
-                  <span className="w-6 text-end">
+                  {/* The row a screen reader hears: "5 out of 5 stars · 28".
+                      The numeral+dingbat is presentation. */}
+                  <span className="sr-only">{t("reviews.ratingOption", { rating })}</span>
+                  <span className="w-6 text-end" aria-hidden="true">
                     {rating}
-                    <span aria-hidden="true">★</span>
+                    {/* i18n-exempt: the star dingbat is a symbol, identical in every language */}
+                    <span>★</span>
                   </span>
                   <ProgressBar
                     aria-hidden="true"
@@ -154,15 +158,14 @@ export default async function PublicReviewsPage({
           </ul>
         ) : null}
 
-        {reviewPage.total === 0 ? (
-          // Only a shop with no released ratings at all is empty. With bare
-          // ratings and no written words the distribution above already
-          // accounts for everything, and an "empty" card under it would
-          // contradict the counts it sits below.
-          average === null ? (
-            <EmptyState title={t("reviews.allEmptyHeading")} className="mt-4" />
-          ) : null
-        ) : (
+        {/* Only a shop with no released ratings at all is empty. With bare
+            ratings and no written words, the distribution above already
+            accounts for everything — an "empty" card under it would
+            contradict the counts it sits below. */}
+        {reviewPage.total === 0 && average === null ? (
+          <EmptyState title={t("reviews.allEmptyHeading")} className="mt-4" />
+        ) : null}
+        {reviewPage.total > 0 ? (
           <ReviewLedger
             reviews={reviewPage.reviews}
             locale={locale}
@@ -170,7 +173,7 @@ export default async function PublicReviewsPage({
             t={t}
             showTrip={false}
           />
-        )}
+        ) : null}
       </section>
 
       {reviewPage.pageCount > 1 ? (
