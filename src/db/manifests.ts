@@ -794,6 +794,85 @@ export type RecordRollCallOutcome =
     };
 
 /**
+ * The newest roll-call result standing at one subject and checkpoint, as the
+ * state alone. Read only when a note accompanies a `boarded` or `cleared`
+ * event — the one case `rollCallNoteAllowed` cannot settle from the payload —
+ * so an ordinary roll call still costs exactly one insert.
+ *
+ * `implied` is never stored: carry-forward is derived at read time
+ * (`carryForwardNotBoarded`), so a persisted `not_boarded` at an after-dive
+ * checkpoint is always an explicit "did not come back". A `cleared` newest is
+ * returned as *nothing standing*, which is what it means.
+ */
+async function standingDiverRollCall(
+  tx: Parameters<Parameters<AppDb["transaction"]>[0]>[0],
+  keys: { shopId: string; tripId: string; bookingId: string; checkpoint: string },
+): Promise<Pick<RollCallRecord, "state"> | undefined> {
+  const [newest] = await tx
+    .select({ status: rollCallEvents.status })
+    .from(rollCallEvents)
+    .where(
+      and(
+        eq(rollCallEvents.shopId, keys.shopId),
+        eq(rollCallEvents.tripId, keys.tripId),
+        eq(rollCallEvents.bookingId, keys.bookingId),
+        eq(rollCallEvents.checkpoint, keys.checkpoint),
+      ),
+    )
+    .orderBy(
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
+    )
+    .limit(1);
+  return newest && newest.status !== "cleared" ? { state: newest.status } : undefined;
+}
+
+/** The crew half of {@link standingDiverRollCall}. */
+async function standingCrewRollCall(
+  tx: Parameters<Parameters<AppDb["transaction"]>[0]>[0],
+  keys: { shopId: string; tripId: string; personId: string; checkpoint: string },
+): Promise<Pick<RollCallRecord, "state"> | undefined> {
+  const [newest] = await tx
+    .select({ status: rollCallCrewEvents.status })
+    .from(rollCallCrewEvents)
+    .where(
+      and(
+        eq(rollCallCrewEvents.shopId, keys.shopId),
+        eq(rollCallCrewEvents.tripId, keys.tripId),
+        eq(rollCallCrewEvents.personId, keys.personId),
+        eq(rollCallCrewEvents.checkpoint, keys.checkpoint),
+      ),
+    )
+    .orderBy(
+      desc(rollCallCrewEvents.occurredAt),
+      desc(rollCallCrewEvents.createdAt),
+      desc(rollCallCrewEvents.seq),
+    )
+    .limit(1);
+  return newest && newest.status !== "cleared" ? { state: newest.status } : undefined;
+}
+
+/**
+ * The note this event may carry, after the domain rule. A typed sentence that
+ * the rule refuses is **dropped, not written** — every surface that offers the
+ * box already restricts it to the acts that take one, so anything else is a
+ * hand-crafted post at the append-only safety trail.
+ */
+async function acceptedRollCallNote(
+  note: string | null | undefined,
+  checkpoint: RollCallCheckpoint,
+  status: "boarded" | "not_boarded" | "cleared",
+  standing: () => Promise<Pick<RollCallRecord, "state"> | undefined>,
+): Promise<string | null> {
+  const typed = note?.trim();
+  if (!typed) return null;
+  // Raising the alarm needs no read; only a retraction depends on what stands.
+  const current = status === "not_boarded" ? undefined : await standing();
+  return rollCallNoteAllowed(checkpoint, status, current) ? typed : null;
+}
+
+/**
  * Roll call is append-only operational history. At departure, a boarded event
  * has an additional hard gate: the shared readiness service must prove the diver
  * ready at the moment staff board them. After-dive checkpoints are a physical
@@ -936,7 +1015,14 @@ export async function recordRollCall(
         source,
         clientEventId: source === "offline" ? input.clientEventId : null,
         offlineSnapshotSavedAt: source === "offline" ? input.offlineSnapshotSavedAt : null,
-        note: rollCallNoteAllowed(checkpoint) ? input.note?.trim() || null : null,
+        note: await acceptedRollCallNote(input.note, checkpoint, input.status, () =>
+          standingDiverRollCall(tx, {
+            shopId: input.shopId,
+            tripId: input.tripId,
+            bookingId: booking.id,
+            checkpoint,
+          }),
+        ),
         occurredAt,
       })
       .returning({ id: rollCallEvents.id });
@@ -1160,7 +1246,14 @@ export async function recordCrewRollCall(
         // evidence of which snapshot supplied the *readiness* it boarded on,
         // and a crew member has no readiness to evidence. It is still an input
         // above, where the staleness bound is computed from it.
-        note: rollCallNoteAllowed(checkpoint) ? input.note?.trim() || null : null,
+        note: await acceptedRollCallNote(input.note, checkpoint, input.status, () =>
+          standingCrewRollCall(tx, {
+            shopId: input.shopId,
+            tripId: input.tripId,
+            personId: input.personId,
+            checkpoint,
+          }),
+        ),
         occurredAt,
       })
       .returning({ id: rollCallCrewEvents.id });

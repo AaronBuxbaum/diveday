@@ -193,6 +193,19 @@ export type OfflineManifestPayload = {
             recordedByName: string;
             /** Carried forward from an earlier checkpoint, not recorded here. */
             implied?: boolean;
+            /**
+             * What the crew observed about someone unaccounted for (ADR
+             * 20260828-a-missing-diver-gets-a-sentence). Optional and additive,
+             * so a snapshot written before the field parses unchanged and no
+             * `OFFLINE_MANIFEST_RECORD_VERSION` bump is owed — a bump purges
+             * every roll call a captain has queued and not synced.
+             *
+             * Carried so the dock copy can *show* a sentence already on the
+             * record. Without it a crew member offshore meets an empty box on
+             * an alarmed row and writes the same observation twice, while the
+             * live manifest and the departure log show the first one.
+             */
+            note?: string | null;
           };
         }
       >;
@@ -306,6 +319,19 @@ export type OfflineManifestPayload = {
             recordedByName: string;
             /** Carried forward from an earlier checkpoint, not recorded here. */
             implied?: boolean;
+            /**
+             * What the crew observed about someone unaccounted for (ADR
+             * 20260828-a-missing-diver-gets-a-sentence). Optional and additive,
+             * so a snapshot written before the field parses unchanged and no
+             * `OFFLINE_MANIFEST_RECORD_VERSION` bump is owed — a bump purges
+             * every roll call a captain has queued and not synced.
+             *
+             * Carried so the dock copy can *show* a sentence already on the
+             * record. Without it a crew member offshore meets an empty box on
+             * an alarmed row and writes the same observation twice, while the
+             * live manifest and the departure log show the first one.
+             */
+            note?: string | null;
           };
         }
       >;
@@ -659,6 +685,9 @@ export function serializeManifests(
               occurredAt: member.rollCall.occurredAt.toISOString(),
               recordedByName: member.rollCall.recordedByName,
               implied: member.rollCall.implied ?? false,
+              // Absent when nobody wrote one, so a snapshot of a departure with
+              // nothing to say serializes to exactly what it did before.
+              ...(member.rollCall.note ? { note: member.rollCall.note } : {}),
             }
           : undefined,
       })),
@@ -710,6 +739,8 @@ export function serializeManifests(
               // Preserve the carried-forward default so it never reads as an
               // explicit dock-side result the crew did not actually record.
               implied: diver.rollCall.implied ?? false,
+              // See the crew half above: absent rather than null.
+              ...(diver.rollCall.note ? { note: diver.rollCall.note } : {}),
             }
           : undefined,
       })),
@@ -1038,6 +1069,13 @@ export type OfflineRollCallResult = {
   pending: boolean;
   implied: boolean;
   /**
+   * What the crew observed about someone unaccounted for, from whichever
+   * statement this reading came from — this device's queued event or the saved
+   * snapshot (ADR 20260828-a-missing-diver-gets-a-sentence). Absent on a
+   * carried-forward result, which nobody wrote.
+   */
+  note?: string | null;
+  /**
    * This reading comes from an event **this device queued**, rather than from
    * the saved snapshot — i.e. somebody tapped it here.
    *
@@ -1099,6 +1137,9 @@ function recordedResult(event: OfflineRollCallEvent): OfflineRollCallResult | nu
     pending: event.syncStatus === "pending",
     implied: false,
     local: true,
+    // Omitted rather than carried as null when nobody wrote one, so a result
+    // with nothing to say is the same object it was before the field existed.
+    ...(event.note ? { note: event.note } : {}),
     // Carried so a retraction of this reading can name the statement it undoes.
     // Set here, in the one function both readers build a local result through,
     // for the same reason the tie-break is: the diver and crew halves of one
@@ -1321,7 +1362,14 @@ function offlineRollCallAt(
 
 /** The saved result a snapshot holds for one subject at one checkpoint, or nothing. */
 function savedResult(
-  saved: { state: "boarded" | "not_boarded"; occurredAt: string; implied?: boolean } | undefined,
+  saved:
+    | {
+        state: "boarded" | "not_boarded";
+        occurredAt: string;
+        implied?: boolean;
+        note?: string | null;
+      }
+    | undefined,
 ): OfflineRollCallResult | undefined {
   return saved
     ? {
@@ -1330,6 +1378,10 @@ function savedResult(
         pending: false,
         implied: saved.implied ?? false,
         local: false,
+        // A snapshot written before the field simply has none, which reads the
+        // same as a result nobody wrote a sentence on — so the key is absent
+        // either way rather than present and null.
+        ...(saved.note ? { note: saved.note } : {}),
       }
     : undefined;
 }

@@ -38,6 +38,7 @@ import {
   rollCallCheckpoints,
   rollCallCompleteness,
   rollCallLabel,
+  rollCallNoteAllowed,
   rollCallRecordedTone,
   rollCallRowState,
 } from "@/lib/manifests";
@@ -1101,6 +1102,15 @@ export function OfflineManifestView() {
   async function record(
     subject: { bookingId: string } | { crewPersonId: string },
     statement: OfflineStatement,
+    /**
+     * What stands at this row right now, so the device applies the *same*
+     * rule the server does (`rollCallNoteAllowed`). Without it the shared
+     * per-row draft would ride whichever control was tapped, including an
+     * ordinary "aboard" — one surface writing observations onto the safety
+     * trail that the other refuses is the divergence issue #1058 was
+     * reacting to.
+     */
+    standing?: Pick<OfflineRollCallResult, "state" | "implied">,
   ) {
     // Whatever this tap turns out to be, no confirmation is left armed behind
     // it — including the refusals below, which end the act just as finally as a
@@ -1111,6 +1121,9 @@ export function OfflineManifestView() {
       return;
     }
     const subjectId = "bookingId" in subject ? subject.bookingId : subject.crewPersonId;
+    const sentNote = rollCallNoteAllowed(checkpoint, statement.status, standing)
+      ? noteDrafts[subjectId]?.trim() || undefined
+      : undefined;
     setBusyBooking(subjectId);
     try {
       const next = await appendOfflineRollCall(tripId, {
@@ -1118,16 +1131,18 @@ export function OfflineManifestView() {
         ...statement,
         checkpoint,
         // The sentence rides the same queued event as the mark, so there is no
-        // second write to lose offshore. The server keeps it only at an
-        // after-dive checkpoint (`rollCallNoteAllowed`), which is also the only
-        // place the box below renders.
-        note: noteDrafts[subjectId]?.trim() || undefined,
+        // second write to lose offshore.
+        note: sentNote,
       });
-      setNoteDrafts((drafts) => {
-        if (!(subjectId in drafts)) return drafts;
-        const { [subjectId]: _sent, ...rest } = drafts;
-        return rest;
-      });
+      // Cleared **only if it went**. A draft the rule refused stays in the box
+      // rather than vanishing on a tap that did not carry it.
+      if (sentNote) {
+        setNoteDrafts((drafts) => {
+          if (!(subjectId in drafts)) return drafts;
+          const { [subjectId]: _sent, ...rest } = drafts;
+          return rest;
+        });
+      }
       dispatchSaved({ type: "loaded", envelope: next });
       setMessage(t("shared.offlineManifest.single.record.saved"));
       if (navigator.onLine) await reconcile();
@@ -1516,6 +1531,7 @@ export function OfflineManifestView() {
                                 void record(
                                   { crewPersonId },
                                   reTap(member.state, member.state?.state === "boarded", "boarded"),
+                                  member.state,
                                 );
                               }}
                               aria-busy={busyBooking === crewPersonId}
@@ -1570,6 +1586,7 @@ export function OfflineManifestView() {
                                   // retraction is never aimed at a snapshot
                                   // result and never leaves its target unsaid.
                                   reTap(member.state, crewRecordedNotBoarded, "not_boarded"),
+                                  member.state,
                                 )
                               }
                               aria-busy={busyBooking === crewPersonId}
@@ -1606,7 +1623,15 @@ export function OfflineManifestView() {
                           </div>
                         )}
                       </div>
-                      {isDeparture || expired || !crewPersonId ? null : (
+                      {/* The crew half of both — the sentence already on the
+                        record, then the box for a new one. */}
+                      {member.state?.note ? (
+                        <p className="mt-1 text-sm">{member.state.note}</p>
+                      ) : null}
+                      {isDeparture ||
+                      expired ||
+                      !crewPersonId ||
+                      !(member.state === undefined || missingCrew) ? null : (
                         <div className="mt-2">
                           <OfflineRollCallNote
                             subjectId={crewPersonId}
@@ -1640,7 +1665,9 @@ export function OfflineManifestView() {
                             <button
                               type="button"
                               disabled={busyBooking === crewPersonId}
-                              onClick={() => record({ crewPersonId }, { status: "boarded" })}
+                              onClick={() =>
+                                record({ crewPersonId }, { status: "boarded" }, member.state)
+                              }
                               aria-busy={busyBooking === crewPersonId}
                               className={`${OFFLINE_BOAT_TARGET_CLASS} border border-warning bg-warning/15 font-bold`}
                             >
@@ -1761,6 +1788,14 @@ export function OfflineManifestView() {
                           note above the list). */}
                         <OfflineBuddyTeamChip t={t} locale={locale} names={diver.buddyTeamNames} />
                       </div>
+                      {/* What is already on the record about this person, from
+                        whichever statement this row is showing — the saved
+                        snapshot or this device's own queued event. Without it a
+                        crew member offshore meets an empty box on an alarmed
+                        row and writes the same observation twice, while the
+                        live manifest and the departure log carry the first
+                        one. */}
+                      {state?.note ? <p className="mt-1 text-sm">{state.note}</p> : null}
                       {/* The live manifest's "Contact & gear" disclosure, in the
                         same clothes and under the same words — this copy and
                         that one are read minutes apart by the same captain, and
@@ -1884,6 +1919,7 @@ export function OfflineManifestView() {
                                   // its opposite. Only ever **this device's own**
                                   // statement — see `OfflineRollCallResult.local`.
                                   reTap(state, state?.state === "boarded", "boarded"),
+                                  state,
                                 );
                               }}
                               aria-busy={busyBooking === diver.bookingId}
@@ -1943,6 +1979,7 @@ export function OfflineManifestView() {
                                 // device has superseded since it synced (ADR
                                 // 20260815-an-offline-retraction-names-its-target).
                                 reTap(state, recordedNotBoarded, "not_boarded"),
+                                state,
                               )
                             }
                             aria-busy={busyBooking === diver.bookingId}
@@ -1996,7 +2033,13 @@ export function OfflineManifestView() {
                                   ? t("shared.offlineManifest.single.markNotBoarded")
                                   : t("shared.offlineManifest.single.markNotBackAboard")}
                           </button>
-                          {isDeparture ? null : (
+                          {/* The box only where the row's next act can take a
+                            sentence: while nothing is recorded (the exception
+                            control is about to raise the alarm) or while one
+                            stands (either control retracts it). On a settled
+                            "aboard" row there is nothing to observe, and a box
+                            there would offer a sentence the rule then drops. */}
+                          {isDeparture || !(state === undefined || missing) ? null : (
                             <OfflineRollCallNote
                               subjectId={diver.bookingId}
                               label={t("manifest.rollCallNoteLabel")}
@@ -2032,6 +2075,7 @@ export function OfflineManifestView() {
                                       // this control asserts the diver is aboard
                                       // over a stated "not back aboard".
                                       { status: "boarded" },
+                                      state,
                                     )
                                   }
                                   aria-busy={busyBooking === diver.bookingId}

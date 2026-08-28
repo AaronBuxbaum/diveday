@@ -116,18 +116,30 @@ export const ROLL_CALL_NOTE_MAX = 300;
  * Runner" and "left early, signed out with Marisol" — are both benign, and
  * without this the printed manifest carried neither.
  *
- * It is a checkpoint rule rather than a status rule because the same status
- * means different things either side of the tap: `boarded` after a dive is both
- * the ordinary "came back" and the retraction of a stated alarm, and no
- * (checkpoint, status) pair can tell them apart without re-reading the row. The
- * surfaces are what narrow it further — the field renders on the exception
- * control, on its retraction, and on "Mark back aboard", never on an ordinary
- * boarded tap. This predicate is the floor beneath that: both writers apply it,
- * so a note posted at departure is dropped rather than written to the
- * append-only trail.
+ * Three conditions, and the third is why this takes the standing result rather
+ * than only the checkpoint. `boarded` after a dive is **two different acts** —
+ * the ordinary "came back", which is most of a roll call and has nothing to
+ * say, and the retraction of a stated alarm, which is the sighting most worth
+ * describing. Nothing in the payload tells them apart, so the row's current
+ * state has to. Leaving it at "after a dive" let a note ride an ordinary
+ * boarded tap onto the append-only trail from any surface that offered a box,
+ * which is the same "which surface a crew happened to hold decided whether
+ * their sentence went ashore" failure issue #1058 was reacting to.
+ *
+ * `standing` is the newest result at this subject and checkpoint, and it is
+ * only consulted when the caller is not raising the alarm — so an ordinary
+ * "not back aboard" costs no extra read.
  */
-export function rollCallNoteAllowed(checkpoint: RollCallCheckpoint): boolean {
-  return checkpoint !== "departure";
+export function rollCallNoteAllowed(
+  checkpoint: RollCallCheckpoint,
+  status: "boarded" | "not_boarded" | "cleared",
+  standing: Pick<RollCallRecord, "state" | "implied"> | undefined,
+): boolean {
+  if (checkpoint === "departure") return false;
+  // Raising it: this event *is* the statement that somebody is unaccounted for.
+  if (status === "not_boarded") return true;
+  // Unsaying one that stands — the positive sighting, and the mis-tap undo.
+  return isNotBackAboard(checkpoint, standing);
 }
 
 export function isNotBackAboard(
