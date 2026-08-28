@@ -28,9 +28,15 @@ test.describe("owner", () => {
     await expect(nav.getByRole("link")).toHaveText([/Today/, "Check-in", "Divers", "Board"]);
     await expect(nav.getByRole("link", { name: "Close-out" })).toHaveCount(0);
 
-    await nav.getByRole("link", { name: "Divers" }).click();
+    // **`exact`, because Today's badge now says "divers" too.** Its accessible
+    // name is "Today 20 divers blocked", and a role query matches by substring,
+    // so an inexact match resolves to two links and Playwright refuses it.
+    await nav.getByRole("link", { name: "Divers", exact: true }).click();
     await expect(page).toHaveURL(/\/divers$/);
-    await expect(nav.getByRole("link", { name: "Divers" })).toHaveAttribute("aria-current", "page");
+    await expect(nav.getByRole("link", { name: "Divers", exact: true })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
 
     await page.goto("/shop/blue-mantis");
     // The More menu holds every other *place*, in two named groups — the
@@ -163,13 +169,10 @@ test.describe("phone dock", () => {
     await page.goto("/shop/blue-mantis");
 
     const dock = page.getByRole("navigation", { name: "Primary" }).filter({ visible: true });
-    await expect(dock.getByRole("link")).toHaveText([
-      /Today/,
-      "Check-in",
-      "Divers",
-      "Board",
-      "Close",
-    ]);
+    // Four, not five: "Close" left the dock on 2026-08-28 with the evening
+    // (H-62), the same removal the header test above asserts. The freed slot is
+    // deliberately unspent — the sixth is always More.
+    await expect(dock.getByRole("link")).toHaveText([/Today/, "Check-in", "Divers", "Board"]);
 
     // The header's own copy of the strip is gone from view on a phone.
     await expect(
