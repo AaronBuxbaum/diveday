@@ -3,8 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { AgencyTabs } from "@/components/AgencyTabs";
+import { CourseWavePlaceholder } from "@/components/CourseWavePlaceholder";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { StoredPhoto } from "@/components/StoredPhoto";
+import { GroupLabel } from "@/components/ui/ledger";
 import { getDb } from "@/db/client";
 import { activeCourseAgencies, listActiveCourses } from "@/db/courses";
 import { getShopBySlug } from "@/db/shops";
@@ -15,6 +18,7 @@ import { courseTotalCents, resolveCourseContentDepths } from "@/lib/courses";
 import { formatMoneyScanned } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicCoursePath, publicCoursesPath } from "@/lib/public-routes";
+import { type CertificationLevel, certificationRank } from "@/lib/readiness";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -23,6 +27,30 @@ import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 // and `next build` fails if that ever stops being true.
 // See ADR 20260804-instant-navigation.
 export const instant = true;
+
+/**
+ * The catalog partitioned by the card each rung requires, groups in rank order
+ * (no card first), progression order kept within each group. Grouping is what
+ * lets the shared prerequisite live in one header instead of repeating down
+ * the rows, and what makes the ladder visible as a ladder.
+ */
+function certificationGroups<T extends { minimumCertificationLevel: CertificationLevel | null }>(
+  courseList: readonly T[],
+): { level: CertificationLevel | null; courses: T[] }[] {
+  const groups = new Map<CertificationLevel | null, T[]>();
+  for (const course of courseList) {
+    const key = course.minimumCertificationLevel;
+    const group = groups.get(key);
+    if (group) group.push(course);
+    else groups.set(key, [course]);
+  }
+  return [...groups.entries()]
+    .map(([level, courses]) => ({ level, courses }))
+    .sort(
+      (a, b) =>
+        (a.level ? certificationRank(a.level) : -1) - (b.level ? certificationRank(b.level) : -1),
+    );
+}
 
 /** Per-shop title, description, and canonical URL for the public catalog. */
 export async function generateMetadata({
@@ -94,8 +122,9 @@ export default async function PublicCoursesPage({
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      {/* No eyebrow: it read "COURSES" over "Courses" — a caption restating
+          its own heading (the public nav already marks Courses current). */}
       <ShopPageHeader
-        eyebrow={t("courses.index.eyebrow")}
         title={t("courses.index.title")}
         description={t("courses.index.description")}
       />
@@ -118,51 +147,69 @@ export default async function PublicCoursesPage({
           body={t("courses.index.noCoursesBody")}
         />
       ) : (
-        // The ladder, not a card pile: one agency's courses in progression
-        // order read as a single hairline ledger, and row ink is spent only on
-        // what differs between rungs — the name, the pitch, the time it takes,
-        // the card it requires, the price (design principle 9). A course with
-        // no prerequisite says nothing about prerequisites: "None" is not a
-        // status, and on this list "no certification required" was rendering
-        // on almost every row.
-        <ul className="mt-8 divide-y divide-border border-y border-border">
-          {courseList.map((course) => {
-            const totalCents = courseTotalCents(course);
-            const detailLine = [
-              course.durationText,
-              course.minimumCertificationLevel
-                ? t("courses.index.requires", {
-                    level: t(DIVER_CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel]),
-                  })
-                : null,
-            ].filter((part): part is string => Boolean(part));
-            return (
-              <li key={course.id}>
-                <Link
-                  href={publicCoursePath(shopSlug, course.slug)}
-                  className="group -mx-3 flex flex-col gap-2 rounded-2xl px-3 py-5 transition-colors hover:bg-surface-sunken sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
-                >
-                  <div className="min-w-0">
-                    <h2 className="text-lg font-semibold group-hover:text-primary">
-                      {course.title}
-                    </h2>
-                    {course.summary ? (
-                      <p className="mt-1 max-w-xl text-sm text-muted">{course.summary}</p>
-                    ) : null}
-                    {detailLine.length > 0 ? (
-                      <p className="mt-2 text-sm text-muted">{detailLine.join(" · ")}</p>
-                    ) : null}
-                  </div>
-                  {totalCents !== null ? (
-                    <p className="shrink-0 text-base font-semibold tabular-nums">
-                      {formatMoneyScanned(totalCents, currency, locale)}
-                    </p>
-                  ) : null}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        // The ladder, *visibly* a ladder: rungs grouped by the card each one
+        // requires, in rank order, so a newcomer can see which rung they are
+        // on and what unlocks next. The shared prerequisite is said once in
+        // each group's header — "Requires Open Water or higher" used to
+        // re-type itself down fourteen of twenty-two rows (principle 9;
+        // 2026-08-28 diver-views review, finding 13). Progression order
+        // survives within each group.
+        certificationGroups(courseList).map(({ level, courses }) => (
+          <section key={level ?? "start"} className="mt-8">
+            <GroupLabel as="h2">
+              {level
+                ? t("courses.index.requires", { level: t(DIVER_CERTIFICATION_LEVEL_KEYS[level]) })
+                : t("courses.index.groupStart")}
+            </GroupLabel>
+            <ul className="mt-2 divide-y divide-border border-y border-border">
+              {courses.map((course) => {
+                const totalCents = courseTotalCents(course);
+                return (
+                  <li key={course.id}>
+                    <Link
+                      href={publicCoursePath(shopSlug, course.slug)}
+                      className="group -mx-3 flex gap-4 rounded-2xl px-3 py-5 transition-colors hover:bg-surface-sunken"
+                    >
+                      {/* The course's own face, decorative (`alt=""` — the
+                          title beside it names the course). A course with no
+                          photo wears the same drawn swell the storefront shelf
+                          uses, so the ladder keeps one left edge instead of a
+                          ragged mix of indented and flush rows. */}
+                      {course.heroImageUrl ? (
+                        <StoredPhoto
+                          src={course.heroImageUrl}
+                          alt=""
+                          className="size-16 shrink-0 rounded-xl"
+                          sizes="64px"
+                        />
+                      ) : (
+                        <CourseWavePlaceholder className="size-16 shrink-0 rounded-xl" />
+                      )}
+                      <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
+                        <div className="min-w-0">
+                          <h3 className="text-lg font-semibold group-hover:text-primary">
+                            {course.title}
+                          </h3>
+                          {course.summary ? (
+                            <p className="mt-1 max-w-xl text-sm text-muted">{course.summary}</p>
+                          ) : null}
+                          {course.durationText ? (
+                            <p className="mt-2 text-sm text-muted">{course.durationText}</p>
+                          ) : null}
+                        </div>
+                        {totalCents !== null ? (
+                          <p className="shrink-0 text-base font-semibold tabular-nums">
+                            {formatMoneyScanned(totalCents, currency, locale)}
+                          </p>
+                        ) : null}
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))
       )}
     </main>
   );

@@ -44,7 +44,7 @@ describe("MoneyBlock — one figure", () => {
     renderDiver(<MoneyBlock {...props({ partySize: 2, gearCents: 4_500 })} />);
 
     expect(screen.getByText("Due now")).toBeInTheDocument();
-    expect(loudFigures()).toEqual(["$235"]);
+    expect(loudFigures()).toEqual(["$235.00"]);
   });
 
   it("states exactly one figure at total scale when the shop is paid at the counter", () => {
@@ -52,7 +52,7 @@ describe("MoneyBlock — one figure", () => {
 
     expect(screen.getByText("Due at the shop")).toBeInTheDocument();
     expect(screen.queryByText("Due now")).not.toBeInTheDocument();
-    expect(loudFigures()).toEqual(["$285"]);
+    expect(loudFigures()).toEqual(["$285.00"]);
   });
 
   it("renders nothing at all for an unpriced departure", () => {
@@ -127,7 +127,7 @@ describe("MoneyBlock — the deposit split", () => {
     );
 
     // $30 × 2 now…
-    expect(loudFigures()).toEqual(["$60"]);
+    expect(loudFigures()).toEqual(["$60.00"]);
     // …and $65 × 2 at the dock, on the departure's own day.
     expect(screen.getByText(/\$130\.00 at the dock on Sat, Aug 29/)).toBeInTheDocument();
   });
@@ -146,6 +146,6 @@ describe("MoneyBlock — the deposit split", () => {
     );
 
     expect(screen.queryByText(/at the dock on/)).not.toBeInTheDocument();
-    expect(loudFigures()).toEqual(["$95"]);
+    expect(loudFigures()).toEqual(["$95.00"]);
   });
 });

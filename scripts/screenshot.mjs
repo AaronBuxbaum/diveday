@@ -223,6 +223,32 @@ async function waitPastTheSkeleton(page, target) {
         );
       }),
   );
+  // **The third hole: photos that were never asked for.** `next/image` lazy-loads
+  // everything below the first viewport, and a stitched `fullPage` capture does
+  // not scroll the page — so every below-the-fold photo screenshots as a white
+  // void where a picture belongs. One session read that as "the course cards are
+  // blank" and went looking for a rendering bug that did not exist. Sweep the
+  // page once so the browser requests them, then wait for every <img> to settle
+  // — bounded, and a photo that genuinely 404s is captured as the broken state
+  // it is rather than hanging the run.
+  await page.evaluate(async () => {
+    const step = window.innerHeight;
+    for (let y = 0; y < document.body.scrollHeight; y += step) {
+      window.scrollTo(0, y);
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    window.scrollTo(0, 0);
+    const settled = (img) =>
+      img.complete ||
+      new Promise((resolve) => {
+        img.addEventListener("load", resolve, { once: true });
+        img.addEventListener("error", resolve, { once: true });
+      });
+    await Promise.race([
+      Promise.all(Array.from(document.images, settled)),
+      new Promise((resolve) => setTimeout(resolve, 10_000)),
+    ]);
+  });
 }
 
 try {

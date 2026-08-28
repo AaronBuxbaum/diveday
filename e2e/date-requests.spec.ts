@@ -38,14 +38,14 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
   // and refuses to send until it is answered.
   await page.getByLabel("Your email").fill("wreck.fan.e2e@example.com");
   await page.getByLabel("Where you are up to").selectOption("certified");
-  await page.getByRole("button", { name: "Send inquiry" }).click();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect(page.getByText("Tell us what you’d like to dive before sending.")).toBeVisible();
 
   await page.getByLabel("What would you like to dive?").fill("Two dives on the Duane");
   await page.getByLabel("Date you’d like").fill(PREFERRED);
   await page.getByLabel("Or this date").fill(ALTERNATE);
-  await page.getByRole("button", { name: "Send inquiry" }).click();
-  await expect(page.getByText("Inquiry sent")).toBeVisible();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(page.getByText("Sent", { exact: true })).toBeVisible();
 
   // A second diver whose *first* choice is the later day — so the earlier
   // group holds them only as a fallback, and the later one as a firm ask.
@@ -56,8 +56,8 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
   await page.getByLabel("Where you are up to").selectOption("lapsed");
   await page.getByLabel("Date you’d like").fill(ALTERNATE);
   await page.getByLabel("Or this date").fill(PREFERRED);
-  await page.getByRole("button", { name: "Send inquiry" }).click();
-  await expect(page.getByText("Inquiry sent")).toBeVisible();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(page.getByText("Sent", { exact: true })).toBeVisible();
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/requests");
@@ -97,8 +97,8 @@ test("a request with no date at all sits in its own group at the foot", async ({
   await page.getByLabel("Your phone").fill("+1 305 555 0777");
   await page.getByLabel("Where you are up to").selectOption("never");
   await page.getByLabel("When suits you").fill("Some week in October, flights not booked");
-  await page.getByRole("button", { name: "Send inquiry" }).click();
-  await expect(page.getByText("Inquiry sent")).toBeVisible();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(page.getByText("Sent", { exact: true })).toBeVisible();
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/requests");
@@ -116,8 +116,8 @@ test("a course page's request names the course, and reaches the same list", asyn
   await page.getByLabel("Your email").fill("course.date.e2e@example.com");
   await page.getByLabel("Where you are up to").selectOption("never");
   await page.getByLabel("Date you’d like").fill(PREFERRED);
-  await page.getByRole("button", { name: "Send inquiry" }).click();
-  await expect(page.getByText("Inquiry sent")).toBeVisible();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(page.getByText("Sent", { exact: true })).toBeVisible();
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/requests");
@@ -143,8 +143,8 @@ test("the builder opened from a day's requests reads as finished sentences", asy
   await page.getByLabel("Your email").fill("drift.fan.e2e@example.com");
   await page.getByLabel("Where you are up to").selectOption("certified");
   await page.getByLabel("Date you’d like").fill(PREFERRED);
-  await page.getByRole("button", { name: "Send inquiry" }).click();
-  await expect(page.getByText("Inquiry sent")).toBeVisible();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(page.getByText("Sent", { exact: true })).toBeVisible();
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/requests");

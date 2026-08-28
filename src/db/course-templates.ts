@@ -194,7 +194,10 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       groupSizeText: "Maximum 8 students per instructor",
       minimumAge: 10,
       prerequisiteNote:
-        "No certification required. Divers aged 10–11 certify as Junior Open Water Divers, dive to a maximum of {depth12}, and must dive with a PADI Professional or a certified parent or guardian; divers aged 12–14 dive to {depth18} with any certified adult. Those restrictions lift at 15. Every student completes a medical questionnaire first; some answers need a physician's sign-off before getting in the water.",
+        // No "No certification required." opener: the admission line directly
+        // above this note already states it, and the page read the same
+        // sentence twice in a row (2026-08-28 diver-views review, finding 16).
+        "Divers aged 10–11 certify as Junior Open Water Divers, dive to a maximum of {depth12}, and must dive with a PADI Professional or a certified parent or guardian; divers aged 12–14 dive to {depth18} with any certified adult. Those restrictions lift at 15. Every student completes a medical questionnaire first; some answers need a physician's sign-off before getting in the water.",
       includes: [
         "All PADI learning materials and certification fees",
         "Complete rental gear for the whole course",

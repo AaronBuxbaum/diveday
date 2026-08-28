@@ -4,7 +4,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { formatMoneyScanned, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
-import { publicCoursePath } from "@/lib/public-routes";
+import { publicCoursePath, publicSchedulePath } from "@/lib/public-routes";
 import type { Shop, Trip, TripMeetingDay } from "./types";
 
 /**
@@ -22,6 +22,7 @@ export function TripHeader({
   trip,
   meetingDays,
   locale,
+  embed,
 }: {
   shop: Shop;
   trip: Trip;
@@ -34,6 +35,17 @@ export function TripHeader({
    */
   meetingDays: TripMeetingDay[];
   locale: string;
+  /**
+   * Who carries the shop's identity. Outside the frame the chrome bar above
+   * already names the shop, so a brand block *and* a shop-name eyebrow under
+   * it named the shop three times in 150px, with the tagline floating between
+   * them and a fourth element — a hand-rolled "← All trips" link — as the way
+   * up (2026-08-28 diver-views review, finding 8). There the eyebrow is now
+   * the one way back (principle 10's single grammar for up) and the brand
+   * block stands down. Inside the frame there is no chrome above, which is
+   * the one place the brand block earns its keep.
+   */
+  embed: boolean;
 }) {
   // Every figure in the hero is a list price, so it follows the shop's own
   // currency (docs ADR 20260731-shop-currency) — never a hardcoded "usd".
@@ -48,13 +60,18 @@ export function TripHeader({
   return (
     <div className="mt-4">
       <ShopPageHeader
-        eyebrow={shop.name}
+        eyebrow={embed ? shop.name : t("trip.backToAllTrips")}
+        {...(embed ? {} : { eyebrowHref: publicSchedulePath(shop.slug) })}
         title={trip.title}
-        brand={{
-          logoUrl: shop.logoUrl,
-          tagline: shop.tagline,
-          description: shop.description,
-        }}
+        {...(embed
+          ? {
+              brand: {
+                logoUrl: shop.logoUrl,
+                tagline: shop.tagline,
+                description: shop.description,
+              },
+            }
+          : {})}
         meta={
           <>
             {/* The one line on the one page where a diver decides to buy a

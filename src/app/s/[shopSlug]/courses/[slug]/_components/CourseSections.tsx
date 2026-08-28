@@ -5,7 +5,7 @@ import { StoredPhoto } from "@/components/StoredPhoto";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import type { Course } from "@/db/schema";
-import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
+import type { DiverTranslator } from "@/i18n/messages";
 import {
   type CourseFaq,
   type CourseGalleryPhoto,
@@ -32,34 +32,6 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
  * page's one primary action (principle 8). Everything else is type, space,
  * and hairlines.
  */
-
-/**
- * The known certification agencies' full names, for one first-mention
- * expansion on the course hero (task 5) — a newcomer meets "PADI" with no
- * idea it's an acronym, let alone what it stands for. Anything outside this
- * short list falls back to the bare code, same as before — `courses.agency` is
- * free text a shop types, so this is a lookup with a fallback and never a gate.
- *
- * **Not a mirror of the `certification_agency` enum, and it must not become
- * one.** That enum is which *card* a diver may be recorded as holding; this is
- * a word on a public sales page. DOM-L1's widening was read as licence to add
- * the new agencies here too, and the effect on the hero is a polished, official-
- * looking expansion for an agency DiveDay does nothing else for — a non-intro
- * entry-level session under RAID, GUE or BSAC still carries no in-water ratio
- * cap (`src/lib/course-ratios.ts`, PADI-only by deliberate choice). The bare
- * code is the honest fallback; growing this map is a *product* decision about
- * what the page is claiming, taken on its own terms.
- */
-const AGENCY_FULL_NAME_KEYS: Record<string, DiverMessageKey> = {
-  padi: "course.agencyFullNames.padi",
-  ssi: "course.agencyFullNames.ssi",
-  naui: "course.agencyFullNames.naui",
-  sdi: "course.agencyFullNames.sdi",
-  tdi: "course.agencyFullNames.tdi",
-  cmas: "course.agencyFullNames.cmas",
-  raid: "course.agencyFullNames.raid",
-  gue: "course.agencyFullNames.gue",
-};
 
 export function CourseHero({
   course,
@@ -113,13 +85,15 @@ export function CourseHero({
       <div className="p-6 sm:p-8">
         <ShopPageHeader
           eyebrow={t("course.agencyCourse", {
-            // First mention on the page expands the acronym (task 5) — "PADI"
-            // means nothing to a diver who has never heard of a certification
-            // agency; an unrecognized/shop-typed-"other" agency falls back to
-            // the bare code, same as before this.
-            agency: AGENCY_FULL_NAME_KEYS[course.agency]
-              ? t(AGENCY_FULL_NAME_KEYS[course.agency])
-              : course.agency.toUpperCase(),
+            // The bare code, deliberately: this eyebrow spent a while expanding
+            // the acronym ("PADI (Professional Association of Diving
+            // Instructors) course", task 5), and a forty-character legal name
+            // in tracking-wide caps was the loudest line on the card while
+            // changing no reader's decision — a newcomer learns what PADI is
+            // from the shop, not from a certification body's full name
+            // (2026-08-28 diver-views design review). `courses.agency` is free
+            // text a shop types, so uppercase is a rendering, never a gate.
+            agency: course.agency.toUpperCase(),
           })}
           title={course.title}
           description={course.summary ?? undefined}

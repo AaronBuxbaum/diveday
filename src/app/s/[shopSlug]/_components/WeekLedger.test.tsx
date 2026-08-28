@@ -159,12 +159,16 @@ describe("the requirement slot's silence", () => {
     expect(metaLine(item)).toBe(
       "Molasses Reef and French Reef · Advanced Open Water or higher · Above your level",
     );
-    expect(item.querySelector(".opacity-60")).not.toBeNull();
+    // Quiet is *measured* ink on the title, never a wrapper opacity — an
+    // `opacity-60` over the row dims every token below its measured contrast
+    // (principles.md, tokens; 2026-08-28 diver-views review finding 1).
+    expect(item.querySelector(".opacity-60")).toBeNull();
+    expect(screen.getByRole("heading", { level: 3 }).className).toContain("text-muted");
   });
 });
 
 describe("seat state and price", () => {
-  it("dims a full row and marks it with a neutral badge", () => {
+  it("quiets a full row in measured ink and marks it with a neutral badge", () => {
     render(
       <WeekLedger
         rows={[row({ capacityText: "Full", capacityTone: "full" })]}
@@ -174,7 +178,10 @@ describe("seat state and price", () => {
     );
 
     const item = screen.getByRole("listitem");
-    expect(item.querySelector(".opacity-60")).not.toBeNull();
+    // `text-muted` on the title, never `opacity-60` on the wrapper — the
+    // full boat is the wait-list candidate somebody still wants to read.
+    expect(item.querySelector(".opacity-60")).toBeNull();
+    expect(screen.getByRole("heading", { level: 3 }).className).toContain("text-muted");
     const badge = screen.getByText("Full");
     expect(badge.className).toContain("bg-surface-sunken");
     expect(badge.className).not.toContain("bg-warning-tint");

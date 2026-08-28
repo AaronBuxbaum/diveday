@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import { TripDayPlan, TripLookFor, TripSiteNotes } from "./TripDayPlan";
+import { TripDayPlan, TripLookFor, TripMoments, TripSiteNotes } from "./TripDayPlan";
 import type { DiveBriefing } from "./types";
 
 /**
@@ -61,11 +61,12 @@ describe("TripDayPlan", () => {
 });
 
 describe("TripLookFor", () => {
+  const creatures = [
+    { id: "c1", name: "Stoplight parrotfish", imageUrl: "/marine-life/stoplight-parrotfish.jpg" },
+    { id: "c2", name: "Green turtle", imageUrl: "/marine-life/green-turtle.jpg" },
+  ] as unknown as DiveBriefing["creatures"];
+
   it("names the species once each, however many dives share a site", () => {
-    const creatures = [
-      { id: "c1", name: "Stoplight parrotfish" },
-      { id: "c2", name: "Green turtle" },
-    ] as unknown as DiveBriefing["creatures"];
     render(
       <TripLookFor
         briefings={[briefing({ creatures }), briefing({ creatures })]}
@@ -78,9 +79,54 @@ describe("TripLookFor", () => {
     expect(screen.getAllByText("Green turtle")).toHaveLength(1);
   });
 
+  it("shows each species' face as a decorative photo beside its name", () => {
+    render(<TripLookFor briefings={[briefing({ creatures })]} locale={DEFAULT_DIVER_LOCALE} />);
+    // The visible name is the content; the bundled catalog photo beside it is
+    // decorative (alt=""), so a screen reader hears each species exactly once.
+    const images = screen.getAllByRole("presentation");
+    expect(images).toHaveLength(2);
+    for (const image of images) expect(image).toHaveAttribute("alt", "");
+  });
+
   it("renders nothing when no site names a species", () => {
     const { container } = render(
       <TripLookFor briefings={[briefing()]} locale={DEFAULT_DIVER_LOCALE} />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
+/**
+ * The diver photos a staffer published for the day's sites finally reach the
+ * page (they were fetched and rendered nowhere from slice 7c until the
+ * 2026-08-28 diver-views design review). Capped, deduplicated by site, silent
+ * when there are none.
+ */
+describe("TripMoments", () => {
+  const moments = [
+    { id: "m1", caption: "A ray disappearing into the blue.", imageUrl: "/dive-sites/ray.jpg" },
+    { id: "m2", caption: "The winch at 12 m.", imageUrl: null },
+  ] as unknown as DiveBriefing["moments"];
+
+  it("shows each published photo once with its caption, skipping photoless rows", () => {
+    render(
+      // The same site on both tanks: its moments must not double.
+      <TripMoments
+        briefings={[briefing({ moments }), briefing({ moments })]}
+        locale={DEFAULT_DIVER_LOCALE}
+      />,
+    );
+    expect(screen.getByText("Moments from divers")).toBeInTheDocument();
+    expect(screen.getAllByText("A ray disappearing into the blue.")).toHaveLength(1);
+    // A moment with no photo is a caption about nothing here; it stays off.
+    expect(screen.queryByText("The winch at 12 m.")).not.toBeInTheDocument();
+    // The caption is the accessible content; the photo is decorative.
+    expect(screen.getByRole("presentation")).toHaveAttribute("alt", "");
+  });
+
+  it("renders nothing when no site has a published photo", () => {
+    const { container } = render(
+      <TripMoments briefings={[briefing()]} locale={DEFAULT_DIVER_LOCALE} />,
     );
     expect(container).toBeEmptyDOMElement();
   });
@@ -108,7 +154,7 @@ describe("TripSiteNotes", () => {
     landmarks: [{ name: "The Christ statue", kind: "underwaterMonument", note: "Bronze, at 8 m." }],
   };
 
-  it("renders every field the staff form writes", () => {
+  it("renders every field the staff form writes, with no canned filler between them", () => {
     render(
       <TripSiteNotes
         briefings={[briefing({ diveSite: site } as unknown as Partial<DiveBriefing>)]}
@@ -116,7 +162,14 @@ describe("TripSiteNotes", () => {
       />,
     );
 
-    expect(screen.getByText("Welcoming dive")).toBeInTheDocument();
+    expect(screen.getByText(/Welcoming dive/)).toBeInTheDocument();
+    // The tone's standing explainer sentence is gone (2026-08-28 design
+    // review): the fit word states the fit, and every sentence under it is the
+    // shop's own.
+    expect(screen.queryByText(/approachable crew-led day/)).not.toBeInTheDocument();
+    // So are the captions that restated the prose beneath them.
+    expect(screen.queryByText("How the dive unfolds")).not.toBeInTheDocument();
+    expect(screen.queryByText("Water movement")).not.toBeInTheDocument();
     expect(screen.getByText(site.fitNote)).toBeInTheDocument();
     expect(screen.getByText(site.divePlan)).toBeInTheDocument();
     expect(screen.getByText(site.currentNote)).toBeInTheDocument();

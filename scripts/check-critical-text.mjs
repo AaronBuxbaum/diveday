@@ -58,6 +58,16 @@ for (const needle of [
   if (!schedule.includes(needle))
     failures.push("public schedule date chips must be 16px on phones");
 }
+// A row's seat state and price are what a diver decides on — critical text by
+// principle 2's own definition (a status word, a money amount), pinned at the
+// 16px floor the same way the orders ledger's amounts are (2026-08-28
+// diver-views review, findings 1–2).
+for (const [needle, label] of [
+  ["text-base text-muted tabular-nums", "public schedule seat counts"],
+  ["text-base font-semibold tabular-nums", "public schedule row prices"],
+]) {
+  if (!schedule.includes(needle)) failures.push(`${label} must be 16px on phones`);
+}
 
 if (failures.length) {
   console.error(failures.map((failure) => `critical-text: ${failure}`).join("\n"));

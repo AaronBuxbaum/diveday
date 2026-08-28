@@ -65,7 +65,13 @@ import { ConditionsLine } from "./_components/ConditionsLine";
 import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
 import { StaffPreviewBar } from "./_components/StaffPreviewBar";
 import { TripActions } from "./_components/TripActions";
-import { TripDayPlan, TripLookFor, TripRoutes, TripSiteNotes } from "./_components/TripDayPlan";
+import {
+  TripDayPlan,
+  TripLookFor,
+  TripMoments,
+  TripRoutes,
+  TripSiteNotes,
+} from "./_components/TripDayPlan";
 import { TripHeader } from "./_components/TripHeader";
 import { TripTerms } from "./_components/TripTerms";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
@@ -430,17 +436,16 @@ export default async function TripDetailPage({
         {structuredData ? <JsonLd data={structuredData} /> : null}
         <FlashParams params={["error", "pay"]} />
         {staffPreviewBar}
-        {isEmbed ? null : (
-          <Link
-            href={publicSchedulePath(shopSlug)}
-            className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary hover:underline"
-          >
-            <DiveDayIcon name="arrow-left" className="size-4" />
-            {t("trip.backToAllTrips")}
-          </Link>
-        )}
-
-        <TripHeader shop={shop} trip={trip} meetingDays={meetingDays} locale={locale} />
+        {/* No standalone "← All trips" link: the header's own eyebrow is the
+            way up outside the frame (2026-08-28 diver-views review, finding
+            8 — see TripHeader). */}
+        <TripHeader
+          shop={shop}
+          trip={trip}
+          meetingDays={meetingDays}
+          locale={locale}
+          embed={isEmbed}
+        />
         {/* The hero's two conveniences, inside the hero rather than as a row of
             buttons under it. */}
         {isEmbed ? null : <TripActions calendarUrl={publicTripCalendarPath(shopSlug, tripId)} />}
@@ -509,6 +514,7 @@ export default async function TripDetailPage({
         <TripDayPlan briefings={diveBriefings} locale={locale} />
         <TripRoutes briefings={diveBriefings} locale={locale} />
         <TripLookFor briefings={diveBriefings} locale={locale} />
+        <TripMoments briefings={diveBriefings} locale={locale} />
         <TripSiteNotes briefings={diveBriefings} locale={locale} />
         <ConditionsLine
           shop={shop}

@@ -351,14 +351,25 @@ export type PublicReviewPage = {
   total: number;
 };
 
-/** Every public review, paged so the archive cannot make a page unbounded. */
+/**
+ * The archive's *written* reviews, paged so it cannot make a page unbounded.
+ *
+ * Bare ratings are deliberately not rows any more: the archive used to render
+ * every comment-less rating as its own stars-name-date row, which restated the
+ * aggregate one rating at a time across five pages (2026-08-28 diver-views
+ * review, finding 14). They stay fully accounted for — the aggregate's count
+ * and `getShopRatingDistribution`'s per-star rows carry every released rating
+ * — and the paged list keeps only the reviews with something to read. The
+ * count shares the row query's exact scope, or the pager promises pages that
+ * render nothing.
+ */
 export async function listPublishedShopReviewsPage(
   db: DbExecutor,
   shopId: string,
   options: { page?: number; limit?: number } = {},
 ): Promise<PublicReviewPage> {
   const pageSize = options.limit ?? PUBLIC_REVIEW_ARCHIVE_PAGE_SIZE;
-  const scope = publishedReviewScope(shopId);
+  const scope = publicWrittenReviewScope(shopId);
   const paged = await offsetPage({
     page: options.page,
     pageSize,
@@ -370,7 +381,7 @@ export async function listPublishedShopReviewsPage(
       fetchPublicReviewRows(db, shopId, {
         limit,
         offset,
-        includeBareRatings: true,
+        includeBareRatings: false,
       }),
   });
   return {
@@ -383,6 +394,23 @@ export async function listPublishedShopReviewsPage(
     pageSize: paged.pageSize,
     total: paged.total,
   };
+}
+
+/**
+ * Every released rating counted per star — where the archive's bare ratings
+ * live now (see `listPublishedShopReviewsPage`). Missing stars are simply
+ * absent from the map; the surface decides whether a zero row is worth a line.
+ */
+export async function getShopRatingDistribution(
+  db: DbExecutor,
+  shopId: string,
+): Promise<Map<number, number>> {
+  const rows = await db
+    .select({ rating: tripReviews.rating, total: count() })
+    .from(tripReviews)
+    .where(publishedReviewScope(shopId))
+    .groupBy(tripReviews.rating);
+  return new Map(rows.map((row) => [row.rating, row.total]));
 }
 
 export type StaffReview = {
