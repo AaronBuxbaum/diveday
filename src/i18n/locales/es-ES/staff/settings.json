@@ -606,7 +606,7 @@
       },
       "nitrox": {
         "what": "Nitrox",
-        "detail": "Se importa como una certificación de nitrox verificada, marcada como importada — pero el buceador recibe aire normal hasta que el personal la confirme; el embarque nunca espera."
+        "detail": "Llega con la ficha del buceador, marcada como importada. Hasta que el personal la confirme con un toque, ese buceador recibe aire normal — el embarque nunca espera por eso."
       },
       "signedWaivers": {
         "what": "Exenciones firmadas y aptitud médica",

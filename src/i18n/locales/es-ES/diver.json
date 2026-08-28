@@ -1916,7 +1916,7 @@
         }
       },
       "moveTitle": "Cómo funciona el cambio",
-      "moveIntro": "Cada paso lo llevas tú, a tu ritmo.",
+      "moveIntro": "Cada paso lo llevas tú, a tu ritmo. ¿Prefieres delegarlo? Envíanos el archivo y una persona trae a tus buceadores contigo, gratis.",
       "scopeTableTitle": "Qué se traslada — y qué no",
       "scopeTableDescription": "La misma tabla que DiveDay te muestra antes de importar una sola fila.",
       "comesAcross": "Se traslada",
@@ -1963,7 +1963,7 @@
       "eyebrow": "Vienes de una hoja de cálculo",
       "title": "La hoja de cálculo te trajo hasta aquí.",
       "heroLede": "No marcará una certificación sin verificar, no perseguirá una exención sin firmar ni dejará que un buceador reserve plaza un domingo por la noche. DiveDay lee la hoja que ya llevas y se encarga del resto.",
-      "wedgeIntro1": "Una hoja de cálculo es buena memoria y mal compañero de equipo. Guarda nombres y números, pero no el trabajo que mantiene el día de buceo en calma — la parte que ahora haces a mano.",
+      "wedgeIntro1": "Una hoja de cálculo lo recuerda todo y no verifica nada. Guarda los nombres y los números; verificar — tarjetas, exenciones, quién sigue sin estar listo — es lo que ahora haces a mano.",
       "wedgeIntro2": "Ese es el cambio que hace que valga la pena. No una lista más bonita — los trabajos que una lista no puede sostener:",
       "wedge": {
         "cardsChecked": {
@@ -2048,6 +2048,7 @@
           "detail": "Un CSV separado trae las unidades etiquetadas y sus registros fechados de mantenimiento, inspección y estado."
         }
       },
+      "parallelRunNote": "Sigue usando la hoja todo el tiempo que quieras. Una reimportación reconoce a los buceadores por correo y los actualiza en vez de duplicarlos, así que el día que dejes de mantenerla lo eliges tú.",
       "closingTitle": "Míralo antes de cambiar nada.",
       "closingDescription": "Recorre la demo en vivo como propietario, capitán o buceador — sin registro, solo el centro funcionando.",
       "otherSystems": "Cambiar desde otro software →"
@@ -2386,6 +2387,10 @@
         "cutover": {
           "heading": "Un cambio sin dramas",
           "intro": "Dejar un sistema que has llevado durante años no tiene por qué significar un fin de semana parado.",
+          "crewFirst": {
+            "title": "Deja que tu equipo recorra primero sus pantallas",
+            "detail": "El centro de demostración funciona con los mismos roles que tu muelle. Haz que el capitán pase lista y que la recepción vea quién no está listo antes de mover una sola ficha."
+          },
           "step1": {
             "title": "Lleva los dos sistemas durante un ciclo de salidas",
             "detail": "Importa a DiveDay y empieza a llevar salidas reales con él — exenciones, lista de buceadores, listado — mientras mantienes tu sistema antiguo funcionando en paralelo. Nada obliga a un corte en seco el primer día."
@@ -2457,7 +2462,7 @@
           },
           "nitrox": {
             "what": "Nitrox",
-            "detail": "Se importa como una certificación de nitrox verificada, marcada como importada — pero el buceador recibe aire normal hasta que el personal la confirme; el embarque nunca espera."
+            "detail": "Llega con la ficha del buceador, marcada como importada. Hasta que el personal la confirme con un toque, ese buceador recibe aire normal — el embarque nunca espera por eso."
           },
           "signedWaivers": {
             "what": "Exenciones firmadas y aptitud médica",
@@ -2499,7 +2504,7 @@
         "metaDescription": "¿Dejas EVE? Una guía paso a paso para exportar tus clientes y certificaciones de EVE y traerlos a DiveDay — qué se traslada, qué no, y por qué.",
         "heroEyebrow": "Cambiarte a DiveDay",
         "heroTitle": "Sacar tu centro de EVE",
-        "heroLede": "EVE guarda tus buceadores y sus registros de certificación en un PC con Windows en la trastienda. Aquí tienes cómo sacar esos datos de EVE tú mismo y traer a tu gente, sus registros de certificación y sus tallas de alquiler a DiveDay — con una cuenta clara de qué hace el viaje y qué se queda atrás.",
+        "heroLede": "Años de buceadores y sus registros de certificación están en una base de datos en un solo PC de la trastienda — y los centros cuentan que el historial es lo difícil de sacar limpio. Aquí tienes cómo sacar tu archivo de EVE tú mismo, y una cuenta clara de qué hace el viaje y qué se queda atrás.",
         "context": {
           "item1": "EVE (de Integrated Scuba Systems) es el sistema de gestión de escritorio que los centros PADI llevaron durante años, y DiveShop360 lo adquirió en 2023. Si planeas dejarlo, esta guía va de la parte práctica: sacar a tu gente y sus registros de certificación de EVE y traerlos a DiveDay.",
           "item2": "La parte que hace que irse dé vértigo es real: EVE guarda sus datos en una base de datos en tu propio PC, y hay centros que cuentan que años de historial de compras y de taller son difíciles de extraer limpiamente. La importación de DiveDay no intenta mover todo eso. Mueve lo que necesitas el primer día — tu lista de buceadores, sus registros de certificación y sus tallas de alquiler — para que tu gente esté lista para salir desde la primera reserva, y el historial se queda donde ya está.",
@@ -2545,7 +2550,7 @@
         "metaDescription": "¿Dejas DiveShop360? Una guía paso a paso para exportar tus clientes y tus datos de certificación como CSV y traerlos a DiveDay — qué se traslada, qué no, y por qué.",
         "heroEyebrow": "Cambiarte a DiveDay",
         "heroTitle": "Sacar tu centro de DiveShop360",
-        "heroLede": "DiveShop360 guarda tus clientes y sus registros de certificación en la nube, y sus propias páginas de ayuda nombran los conjuntos de datos que puedes exportar como CSV. Aquí tienes cómo sacar a tu gente y sus certificaciones y traerlas a DiveDay — con una cuenta clara de qué hace el viaje y qué se queda atrás.",
+        "heroLede": "Tus clientes y sus registros de certificación viven en la nube de DiveShop360, y la salida son los cuatro CSV que nombran sus propias preguntas frecuentes — descargados de uno en uno, sin exportación masiva y sin API. Necesitas dos de ellos. Aquí tienes el camino entero, con una cuenta clara de qué hace el viaje y qué se queda atrás.",
         "context": {
           "item1": "DiveShop360 nació de un sistema de punto de venta minorista, y ahí es donde es más fuerte — cajas, inventario, catálogos de proveedores. Su propia FAQ nombra cuatro exportaciones a CSV: clientes, inventario, informes de ventas y datos de certificación. Un cambio a DiveDay necesita dos — los clientes y los datos de certificación.",
           "item2": "No venimos a sustituir tu punto de venta. DiveDay lleva el agua — reservas, preparación, el barco — así que “trae tu POS, nosotros llevamos el día de buceo” es un reparto de trabajo real, no un eslogan. Por eso solo pedimos los archivos de clientes y certificaciones.",

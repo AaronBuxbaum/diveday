@@ -811,6 +811,97 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute("content", "noindex");
 });
 
+test("help arrives before the homework on a switching guide", async ({ page }) => {
+  // The 2026-08-27 conversion review's third diagnosis: the concierge — free,
+  // personal, product-owner authorized — sat about 80% down every guide, under
+  // the rail that makes switching look like a project, and `/about` spent its
+  // strongest impulse on a mailto. This test is the placement half of the fix,
+  // which is the half no copy review can see: every sentence below already
+  // existed somewhere on these pages, and the change is entirely about which
+  // screen a reader meets them on.
+  await page.goto("/switching/eve");
+
+  // The lede leads with the wedge the page itself documents rather than with a
+  // neutral description of where the data lives. "Shops report" is the same
+  // attribution the third context paragraph carries — the compressed form may
+  // not sharpen past its citation (marketing.md's claims policy).
+  const eveMain = page.getByRole("main");
+  await expect(eveMain.getByText(/database on one back-office PC/)).toBeVisible();
+  await expect(eveMain.getByText(/shops report the history is the hard part/)).toBeVisible();
+
+  // The move rail's opening line now carries the alternative to running it
+  // yourself, in the same breath as the work.
+  const moveTitle = page.getByRole("heading", { name: "How the move works" });
+  await expect(moveTitle).toBeVisible();
+  const moveIntro = eveMain.getByText(/Rather hand it off\?/);
+  await expect(moveIntro).toBeVisible();
+  await expect(moveIntro).toContainText("a person brings your divers in with you, free");
+
+  // …and it is *above* the full offer, not a replacement for it. The
+  // `SwitchingConcierge` block stays on every switching page (marketing.md's
+  // claims policy); this is the compressed form arriving first.
+  const conciergeHeading = page.getByRole("heading", {
+    name: /switch you on — and off — ourselves/,
+  });
+  await expect(conciergeHeading).toBeVisible();
+  const introBox = await moveIntro.boundingBox();
+  const conciergeBox = await conciergeHeading.boundingBox();
+  expect(introBox?.y ?? 0).toBeLessThan(conciergeBox?.y ?? 0);
+
+  // The fifth cutover step reads first, because its own words place it there
+  // ("before you move a single record"). The rail renders `steps` in array
+  // order, so an edit that appends it instead lands here.
+  const cutoverPhase = page
+    .locator("li")
+    .filter({ has: page.getByRole("heading", { name: "Cutover without drama" }) })
+    .first();
+  const cutoverSteps = await cutoverPhase.getByRole("heading", { level: 4 }).allInnerTexts();
+  expect(cutoverSteps).toHaveLength(5);
+  expect(cutoverSteps[0]).toBe("Let the crew walk their screens first");
+  await expect(cutoverPhase.getByText(/the same roles your dock does/)).toBeVisible();
+
+  // The owner call the review recorded and left open: a leave-it guide carries
+  // no forward link to /pricing. The single allowed one lives in the coexist
+  // guides' leave-path box (marketing.md, decided 2026-08-14), and these guides
+  // have no coexist block — so this renders nothing, deliberately, until
+  // somebody decides otherwise. Scoped to <main>: the nav and footer carry
+  // their own pricing links on every marketing page.
+  await expect(eveMain.locator('a[href^="/pricing"]')).toHaveCount(0);
+
+  // The second leave-it lede, same rule: DiveShop360's opens on the export
+  // limit its own FAQ documents, and every clause is on the page below it.
+  await page.goto("/switching/diveshop360");
+  const dsMain = page.getByRole("main");
+  await expect(dsMain.getByText(/the four CSVs its own FAQ names/)).toBeVisible();
+  await expect(dsMain.getByText(/no bulk export, no API/).first()).toBeVisible();
+  await expect(dsMain.locator('a[href^="/pricing"]')).toHaveCount(0);
+
+  // The spreadsheet guide has no incumbent to cut over from, so it renders no
+  // cutover rail at all — and with it, none of the parallel-run answer that
+  // rail's steps give. That is why the note lives on its import phase instead.
+  await page.goto("/switching/spreadsheet");
+  await expect(page.getByRole("heading", { name: "Cutover without drama" })).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Let the crew walk their screens first" }),
+  ).toHaveCount(0);
+  const importPhase = page
+    .locator("li")
+    .filter({ has: page.getByRole("heading", { name: "Bring the file into DiveDay" }) })
+    .first();
+  await expect(importPhase.getByText(/Keep the sheet going as long as you like/)).toBeVisible();
+  await expect(importPhase.getByText(/matches divers by email/)).toBeVisible();
+
+  // The tone fix on the wedge that opens this guide: the sheet is described by
+  // what it does, never judged. The retired sentence is pinned out by name, the
+  // way the apologetics list below is, because it shipped as a line its author
+  // thought was charming.
+  const sheetMain = page.getByRole("main");
+  await expect(
+    sheetMain.getByText(/A spreadsheet remembers everything and checks nothing/),
+  ).toBeVisible();
+  await expect(sheetMain.getByText(/bad teammate/)).toHaveCount(0);
+});
+
 test("the homepage's spreadsheet door survives, tagged, and lands on the columns it promises", async ({
   page,
 }) => {
