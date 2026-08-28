@@ -268,7 +268,12 @@ export function TripSiteNotes({
               {landmarks.length > 0 ? (
                 <div className="mt-3">
                   <p className="text-sm font-medium">{t("trip.siteLandmarksHeading")}</p>
-                  <ul className="mt-1 space-y-2">
+                  {/* More air than the other notes get: every other label is
+                      followed by muted prose, so the weight change does the
+                      separating. Here the label is followed by another
+                      `font-medium` line — a landmark's own name — and without
+                      the gap the two read as one run-on sentence. */}
+                  <ul className="mt-2 space-y-3">
                     {landmarks.map((landmark) => (
                       <li key={landmark.name} className="text-sm">
                         <span className="font-medium">{landmark.name}</span>
