@@ -34,6 +34,7 @@ import {
   type ManifestBuddyTeam,
   type RollCallCheckpoint,
   rollCallCheckpoints,
+  rollCallRowState,
   splitBuddyTeamIds,
 } from "@/lib/manifests";
 import { webPushPublicKey } from "@/lib/notifications/web-push";
@@ -334,6 +335,16 @@ export default async function TripManifestPage({
   // The crew half of the same question. Crew reached the panel only as a count
   // before this — see `uncalledCrew` on `SummaryPanel`.
   const uncalledCrew = manifest.crew.filter((member) => !member.rollCall);
+  // The other half of the same question, and the graver one: who has a stated
+  // "did not come back" against their name. Read through `rollCallRowState`,
+  // the one predicate the rows, the completeness verdict and the work queue
+  // all share, so the panel's names and its counts can never disagree.
+  const missingDivers = manifest.divers.filter(
+    (diver) => rollCallRowState(checkpoint, diver.rollCall).notBackAboard,
+  );
+  const missingCrew = manifest.crew.filter(
+    (member) => rollCallRowState(checkpoint, member.rollCall).notBackAboard,
+  );
   // "Buddy team: Ana and Ben" — names de-duplicated (a divemaster on two teams
   // with one diver in common is still one body to look for) and joined through
   // `Intl.ListFormat` in the negotiated locale, never a hard-coded ", ".
@@ -481,6 +492,14 @@ export default async function TripManifestPage({
           blocked: diver.readiness.status === "blocked",
         }))}
         uncalledCrew={uncalledCrew.map((member) => ({
+          id: member.id,
+          fullName: member.fullName,
+        }))}
+        notBackAboardDivers={missingDivers.map((diver) => ({
+          bookingId: diver.bookingId,
+          fullName: diver.fullName,
+        }))}
+        notBackAboardCrew={missingCrew.map((member) => ({
           id: member.id,
           fullName: member.fullName,
         }))}

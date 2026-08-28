@@ -41,6 +41,8 @@ export function SummaryPanel({
   separatedTeams,
   uncalled,
   uncalledCrew,
+  notBackAboardDivers,
+  notBackAboardCrew,
   t,
 }: {
   checkpoint: RollCallCheckpoint;
@@ -82,6 +84,24 @@ export function SummaryPanel({
    * screens above the row that says who they are.
    */
   uncalledCrew: ReadonlyArray<{ id: string; fullName: string }>;
+  /**
+   * The divers a human has recorded as **not back aboard** at this checkpoint,
+   * and the crew alongside them. Both halves, because the danger lines they
+   * answer only ever carried counts: "1 crew member is not back aboard" named
+   * nobody, on the half of the boat most reliably in the water, whose rows sit
+   * below the entire diver roster with no way to reach them.
+   *
+   * The diver rows also float to the top of their own list (`order-first` in
+   * `DiverRollCall`), and that is paint order only — DOM, tab and
+   * screen-reader order are untouched, and a safety surface is the one place
+   * `docs/design/accessibility-tradeoffs.md` refuses a visual-only
+   * affordance. These chips are the mechanism that actually reaches everyone:
+   * they are in the pinned half that cannot scroll away, they are keyboard
+   * and AT reachable, and they cover crew, which no reordering of the diver
+   * list can. Ordering is the nicety on top (dive-domain review 20260828).
+   */
+  notBackAboardDivers: ReadonlyArray<{ bookingId: string; fullName: string }>;
+  notBackAboardCrew: ReadonlyArray<{ id: string; fullName: string }>;
   t: StaffTranslator;
 }) {
   // Who among the named crew is still unaccounted for at this checkpoint. Read
@@ -180,6 +200,23 @@ export function SummaryPanel({
   // settled and only the crew are open, the muted line says "2 crew members
   // still to call" and this is the one surface that can say which two.
   const rollCallStarted = summary.awaiting < summary.totalDivers;
+  // Who the two danger lines are about. One list for both halves, for the same
+  // reason `stillToCall` merges them: at the rail the question is "who is
+  // still in the water?", and splitting the answer by whether the person holds
+  // a booking makes a captain read two lists to answer one question. Divers
+  // first, crew marked "(crew)" in the words the buddy panel already uses.
+  const missing: Array<{ key: string; href: string; label: string }> = [
+    ...notBackAboardDivers.map((diver) => ({
+      key: `missing-diver-${diver.bookingId}`,
+      href: `#diver-row-${diver.bookingId}`,
+      label: diver.fullName,
+    })),
+    ...notBackAboardCrew.map((member) => ({
+      key: `missing-crew-${member.id}`,
+      href: `#crew-row-${member.id}`,
+      label: t("manifest.buddyCrewName", { name: member.fullName }),
+    })),
+  ];
   const stillToCall: Array<{ key: string; href: string; label: string; blocked: boolean }> = [
     ...uncalled.map((diver) => ({
       key: `diver-${diver.bookingId}`,
@@ -293,6 +330,31 @@ export function SummaryPanel({
           <p className="mt-2 text-base font-bold text-danger" role="status">
             {t("manifest.crewNotBackAboard", { count: crewCounts.crewNotBackAboard })}
           </p>
+        ) : null}
+        {/* The names behind the two counts above, each a link to that person's
+            own row. Pinned rather than in the scrolling half, and never gated
+            on `rollCallStarted`: a stated "did not come back" is the one fact
+            on this page that has to be reachable at any moment, and the chip
+            is what makes it reachable by keyboard, by screen reader, and for
+            crew — whose rows are below the whole diver roster. The glossary
+            makes the argument for naming: a number that named nobody could not
+            help anyone find a missing person. */}
+        {missing.length > 0 ? (
+          <ul
+            className="mt-2 flex flex-wrap gap-2"
+            aria-label={t("manifest.notBackAboardListLabel")}
+          >
+            {missing.map((person) => (
+              <li key={person.key}>
+                <a
+                  href={person.href}
+                  className="inline-flex min-h-11 items-center rounded-full border border-danger/60 bg-surface px-4 text-base font-semibold text-danger hover:bg-surface-sunken"
+                >
+                  {person.label}
+                </a>
+              </li>
+            ))}
+          </ul>
         ) : null}
         {/* Buddy teams that came back split — someone aboard, someone not
             (ADR 20260804-buddy-teams). Its own line, never folded into the

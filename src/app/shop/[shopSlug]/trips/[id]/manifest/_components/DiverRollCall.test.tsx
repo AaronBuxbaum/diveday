@@ -259,6 +259,56 @@ describe("a recorded alarm sorts to the top, and paper does not (decision 4)", (
     expect(rule("b-3")).toContain("print:border-t");
   });
 
+  it("holds the printed order in block layout, not on the cascade", () => {
+    const { container } = renderList({ divers: roster() });
+    const list = container.querySelector<HTMLElement>("ul");
+    // `order` is inert outside a flex or grid container, so `print:block` is
+    // what makes the DOM order the printed order by construction. Without it
+    // the sheet a coastguard reads depends on Tailwind emitting the
+    // `print:order-none` variant after `order-first` at equal specificity —
+    // true today, and not something a manifest should rest on (dive-domain
+    // review 20260828).
+    expect(list?.className).toContain("flex");
+    expect(list?.className).toContain("print:block");
+  });
+
+  it("keeps each row whole across a page break", () => {
+    // The printed manifest goes ashore. A diver's name split down the middle
+    // by a page boundary is a defect in the record, not a layout nit — the
+    // printed tables carry the same class for the same reason.
+    const { container } = renderList({ divers: roster() });
+    for (const row of container.querySelectorAll<HTMLElement>("li[id^='diver-row-']")) {
+      expect(row.className).toContain("break-inside-avoid");
+    }
+  });
+
+  it("keeps two alarmed rows in manifest order among themselves", () => {
+    // Equal `order` values fall back to document order, so a second alarm does
+    // not reshuffle the first. Worth pinning: a boat with two divers still in
+    // the water is the moment a list that reorders under a thumb costs a
+    // miscount, and nothing else in the suite states this.
+    const { container } = renderList({
+      divers: [
+        diver({ bookingId: "b-1", fullName: "Ana Ruiz" }),
+        diver({ bookingId: "b-2", fullName: "Diego Marín", rollCall: notBackAt() }),
+        diver({ bookingId: "b-3", fullName: "Priya Sharma", rollCall: notBackAt() }),
+      ],
+    });
+    const rows = [...container.querySelectorAll<HTMLElement>("li[id^='diver-row-']")];
+    expect(rows.map((row) => row.id)).toEqual(["diver-row-b-1", "diver-row-b-2", "diver-row-b-3"]);
+    for (const id of ["diver-row-b-2", "diver-row-b-3"]) {
+      expect(rows.find((row) => row.id === id)?.className).toContain("order-first");
+    }
+    // Diego is the first row on screen, so he carries no top rule and Ana --
+    // still first in the document -- gains one.
+    const rule = (bookingId: string) =>
+      container.querySelector<HTMLElement>(`li[id='diver-row-${bookingId}'] > div`)?.className ??
+      "";
+    expect(rule("b-2")).toContain("border-t-0");
+    expect(rule("b-3")).toMatch(/(^|\s)border-t(\s|$)/);
+    expect(rule("b-1")).toMatch(/(^|\s)border-t(\s|$)/);
+  });
+
   it("moves nothing when the only records are ordinary ones", () => {
     const { container } = renderList({
       divers: [

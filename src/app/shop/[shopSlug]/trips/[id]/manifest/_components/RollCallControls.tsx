@@ -38,8 +38,8 @@ import {
  *
  * Everything that is *safety* behaviour still lives in one place — the shared
  * `RollCallButton` underneath both: the instant pending state, the
- * server-authoritative confirm, the `role="alert"` refusal, the note draft that
- * rides whichever result lands, and the remount-on-checkpoint key contract.
+ * server-authoritative confirm, the `role="alert"` refusal, and the
+ * remount-on-checkpoint key contract.
  */
 
 /**
@@ -212,11 +212,6 @@ export function RollCallMarkButton({
   action: RollCallAction;
   copy: RollCallButtonCopy;
   markState: RollCallMarkState;
-  /**
-   * The row whose unsaved note draft this submit should carry, so a note typed
-   * before anybody was called rides the result that creates it. Divers only;
-   * crew rows take no note.
-   */
   t: StaffTranslator;
 }) {
   const { boarded } = rollCallRowState(checkpoint, rollCall);

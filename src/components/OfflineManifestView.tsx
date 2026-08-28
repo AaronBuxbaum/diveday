@@ -1373,8 +1373,7 @@ export function OfflineManifestView() {
               </p>
             ) : null}
             {/* Who, not just how many — and now with the controls to answer for
-              each one, the same two the diver rows carry. Crew take no note
-              field, here or on the live manifest. */}
+              each one, the same two the diver rows carry. */}
             {crewAssigned > 0 ? (
               // Ided like the diver list below it, and for the same reason: both
               // are now lists of rows with roll-call controls on them, so
