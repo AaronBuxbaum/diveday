@@ -64,10 +64,16 @@ tamper-evident document. An unexplained missing-diver mark reads far worse than 
    tap: the common case, where everybody came back, stays a single tap with nothing to type. Two
    boxes asking one question, side by side on an alarmed row, is what the rule avoids.
 
-4. **It rides the offline queue and prints.** A diver who did not surface is the case where the
-   boat is offshore, so the note is part of the queued offline event, not a server action layered
-   on top. It renders in the departure log's timeline, inside the document the integrity hash
-   covers.
+4. **It rides the offline queue, prints, and reads back.** A diver who did not surface is the case
+   where the boat is offshore, so the note is part of the queued offline event, not a server action
+   layered on top. It renders in the departure log's timeline, inside the document the integrity
+   hash covers. The snapshot carries it too, so the dock copy can *show* a sentence already on the
+   record rather than offering an empty box on an alarmed row — writing without reading is how one
+   observation becomes two. That addition is additive and optional, so no
+   `OFFLINE_MANIFEST_RECORD_VERSION` bump is owed: a bump is a **purge** of every roll call a
+   captain has queued and not synced. Where nobody wrote a sentence the key is absent rather than
+   null, so a snapshot and a result with nothing to say are byte-for-byte what they were before the
+   field existed.
 
 ## Alternatives considered
 

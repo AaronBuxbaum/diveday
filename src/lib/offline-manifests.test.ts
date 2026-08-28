@@ -1302,6 +1302,69 @@ describe("offline manifest policy", () => {
  * still in the water. Every refusal below holds the checkpoint open; none of
  * them closes it.
  */
+describe("the dock copy carries what the crew observed", () => {
+  /**
+   * ADR 20260828-a-missing-diver-gets-a-sentence. The device could write a note
+   * before it could read one: the snapshot never carried the column, so a crew
+   * member offshore met an empty box on an alarmed row and wrote the same
+   * observation twice while the live manifest and the departure log showed the
+   * first one.
+   */
+  const alarmWithNote = (note: string) => ({
+    clientEventId: "event-missing",
+    snapshotId: "snapshot-1",
+    snapshotSavedAt: "2026-07-20T11:00:00.000Z",
+    tripId: "trip-1",
+    bookingId: "ready",
+    checkpoint: "after_dive_1" as const,
+    status: "not_boarded" as const,
+    note,
+    occurredAt: "2026-07-20T14:00:00.000Z",
+    syncStatus: "pending" as const,
+  });
+
+  it("shows a sentence this device queued", () => {
+    const saved = snapshot();
+    const result = latestOfflineRollCall(
+      saved,
+      [alarmWithNote("Surfaced 200 m north, picked up by Reef Runner at 14:31.")],
+      "ready",
+      "after_dive_1",
+    );
+    expect(result?.note).toBe("Surfaced 200 m north, picked up by Reef Runner at 14:31.");
+  });
+
+  it("shows a sentence the snapshot brought back from the server", () => {
+    const saved = snapshot();
+    const afterDive = saved.manifests.find((entry) => entry.checkpoint === "after_dive_1");
+    const diver = afterDive?.divers.find((entry) => entry.bookingId === "ready");
+    if (!diver) throw new Error("fixture diver missing");
+    diver.rollCall = {
+      state: "not_boarded",
+      occurredAt: "2026-07-20T14:00:00.000Z",
+      recordedByName: "Captain Sol",
+      note: "Left early, signed out with Marisol at the dock.",
+    };
+    const result = latestOfflineRollCall(saved, [], "ready", "after_dive_1");
+    expect(result?.note).toBe("Left early, signed out with Marisol at the dock.");
+  });
+
+  it("reads a snapshot written before the field as simply having none", () => {
+    // Additive, so no `OFFLINE_MANIFEST_RECORD_VERSION` bump is owed — and a
+    // bump is a purge of every roll call a captain has queued and not synced.
+    const saved = snapshot();
+    const afterDive = saved.manifests.find((entry) => entry.checkpoint === "after_dive_1");
+    const diver = afterDive?.divers.find((entry) => entry.bookingId === "ready");
+    if (!diver) throw new Error("fixture diver missing");
+    diver.rollCall = {
+      state: "not_boarded",
+      occurredAt: "2026-07-20T14:00:00.000Z",
+      recordedByName: "Captain Sol",
+    };
+    expect(latestOfflineRollCall(saved, [], "ready", "after_dive_1")).not.toHaveProperty("note");
+  });
+});
+
 describe("offline crew roll call", () => {
   it("refuses every crew member on a copy saved before crew ids, so the checkpoint stays open", () => {
     const old = crewSnapshot({ withIds: false });

@@ -1958,6 +1958,54 @@ describe("a roll-call note is kept where a person can be unaccounted for", () =>
     expect(diver?.rollCall?.note).toBeNull();
   });
 
+  it("drops a note on an ordinary boarded tap, where nobody is unaccounted for", async () => {
+    // The hole the first cut of this left: enforcing only the checkpoint let a
+    // note ride the common after-dive "everybody came back" tap onto the
+    // append-only trail from any surface that offered a box.
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "boarded",
+      checkpoint: "after_dive_1",
+      note: "should not be written",
+    });
+    const manifest = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
+    const diver = manifest?.divers.find((entry) => entry.bookingId === booking.booking.id);
+    expect(diver?.rollCall?.state).toBe("boarded");
+    expect(diver?.rollCall?.note).toBeNull();
+  });
+
+  it("keeps the sighting that takes a stated alarm back", async () => {
+    // The other half of the same rule, and the reason it reads the row rather
+    // than the payload: this `boarded` is the retraction of a standing "did
+    // not come back", which is the observation most worth recording.
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "not_boarded",
+      checkpoint: "after_dive_1",
+    });
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "boarded",
+      checkpoint: "after_dive_1",
+      note: "Eyes on her at the ladder, came up 200 m north.",
+    });
+    const manifest = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
+    const diver = manifest?.divers.find((entry) => entry.bookingId === booking.booking.id);
+    expect(diver?.rollCall?.state).toBe("boarded");
+    expect(diver?.rollCall?.note).toBe("Eyes on her at the ladder, came up 200 m north.");
+  });
+
   it("leaves an ordinary result with nothing to say", async () => {
     const { db, shop, reef, booking, staff } = await manifestContext();
     await recordRollCall(db, {
