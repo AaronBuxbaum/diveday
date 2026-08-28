@@ -26,7 +26,12 @@ import { CheckInActionForm } from "../CheckInActionForm";
  *
  * - **A blocked row never carries a check-in control.** Readiness is the gate;
  *   offering the tap beside the reasons would be offering an act the server
- *   will refuse. The fix is the only control on the row.
+ *   will refuse. The fix is the only control on the row. That holds for a diver
+ *   who has *already* checked in and gone blocked since: the row keeps its
+ *   drawn mark so nobody re-asks them for a card they handed over, wears the
+ *   Blocked badge and every reason, and offers the fix rather than an undo —
+ *   un-checking somebody does not clear a blocker, and their arrival is a fact
+ *   that happened.
  * - **The tap is unchanged.** `CheckInActionForm` and `QueueRowButton` still
  *   own the optimistic swap, the re-tap undo and the row-local failure
  *   message; this file composes them and asks them for nothing new. The
@@ -44,11 +49,13 @@ function DiverIdentity({
   row,
   name,
   showEmail,
+  showFirstVisit,
   t,
 }: {
   row: QueueRow;
   name: React.ReactNode;
   showEmail: boolean;
+  showFirstVisit: boolean;
   t: StaffTranslator;
 }) {
   const meta = [
@@ -56,7 +63,11 @@ function DiverIdentity({
     // **Quiet text, never a badge.** A badge marks an exceptional state
     // somebody has to act on; a first visit is a fact a staffer can be warmer
     // for, and boxing it would put it at the same volume as "Blocked".
-    row.firstVisit ? t("checkIn.row.firstVisit") : null,
+    //
+    // And only where it marks somebody out — `firstVisitMarksAnException`
+    // (`src/lib/check-in.ts`). On a shop's first season everybody is a first
+    // visit, and a line under all nine names is nine rows taller for nothing.
+    row.firstVisit && showFirstVisit ? t("checkIn.row.firstVisit") : null,
   ].filter((part): part is string => Boolean(part));
   return (
     <>
@@ -83,6 +94,7 @@ export function CounterQueueRow({
   row,
   shopSlug,
   showEmail,
+  showFirstVisit,
   checkInAction,
   undoAction,
   waiverAction,
@@ -92,6 +104,12 @@ export function CounterQueueRow({
   shopSlug: string;
   /** Only where two visible divers share a name — see the page's own note. */
   showEmail: boolean;
+  /**
+   * Only where a first visit marks somebody out from the rest of the visible
+   * queue (`firstVisitMarksAnException`, `src/lib/check-in.ts`). The page owns
+   * the judgement, because the scope it is judged over is the whole screen.
+   */
+  showFirstVisit: boolean;
   checkInAction: (formData: FormData) => Promise<{ ok: true }>;
   undoAction: (formData: FormData) => Promise<{ ok: true }>;
   waiverAction: (formData: FormData) => Promise<void>;
@@ -100,7 +118,7 @@ export function CounterQueueRow({
   const checkedIn = row.bookingStatus === "checked_in";
   const ready = row.readiness.status === "ready";
 
-  if (checkedIn) {
+  if (checkedIn && ready) {
     return (
       <LedgerRow as="article" size="lg">
         <CheckInActionForm
@@ -123,7 +141,22 @@ export function CounterQueueRow({
             </span>
           }
         >
-          <span className="block truncate text-base text-muted">{row.personName}</span>
+          {/* **A settled row still says who this is.** It carried the bare name
+              for one release, which quietly dropped the Boarded badge from the
+              case that actually happens — boarding is recorded at the rail
+              *after* the counter, so `boarded && checked_in` is the ordinary
+              path (task 149) — along with the contact gap and the first visit.
+              At the rail it also left the undo sitting on a row that no longer
+              said the diver was aboard, which is the one fact a crew member
+              correcting a mis-tap needs. Muted name: the row has sunk, it has
+              not gone silent. */}
+          <DiverIdentity
+            row={row}
+            showEmail={showEmail}
+            showFirstVisit={showFirstVisit}
+            t={t}
+            name={<span className="block truncate text-base text-muted">{row.personName}</span>}
+          />
         </CheckInActionForm>
       </LedgerRow>
     );
@@ -169,6 +202,7 @@ export function CounterQueueRow({
           <DiverIdentity
             row={row}
             showEmail={showEmail}
+            showFirstVisit={showFirstVisit}
             t={t}
             name={<span className="block truncate text-lg font-semibold">{row.personName}</span>}
           />
@@ -195,6 +229,7 @@ export function CounterQueueRow({
           <DiverIdentity
             row={row}
             showEmail={showEmail}
+            showFirstVisit={showFirstVisit}
             t={t}
             name={
               // Only the blocked row keeps a name link — its job is the fix,
@@ -210,11 +245,20 @@ export function CounterQueueRow({
             }
           />
         </div>
-        {/* The one readiness vocabulary and tone (src/i18n/readiness-labels.ts)
-            — for a blocked diver the badge is the state. */}
-        <Badge tone={readinessStatusTone(row.readiness.status)}>
-          {readinessStatusText(t, row.readiness.status)}
-        </Badge>
+        <div className="flex shrink-0 items-center gap-3">
+          {/* Already through the counter, and blocked since. The mark is the
+              same one the settled group wears, so the row says both facts in
+              the vocabulary the surface already speaks: this diver arrived,
+              and they still cannot board. */}
+          {checkedIn ? (
+            <SettledCheck settled label={t("checkIn.checkedInCheck")} className="text-sm" />
+          ) : null}
+          {/* The one readiness vocabulary and tone (src/i18n/readiness-labels.ts)
+              — for a blocked diver the badge is the state. */}
+          <Badge tone={readinessStatusTone(row.readiness.status)}>
+            {readinessStatusText(t, row.readiness.status)}
+          </Badge>
+        </div>
       </div>
       {/* The one blocked-diver presentation, shared with the by-departure view.
           It shows *every* blocker; a single sayable reason sits open on the row

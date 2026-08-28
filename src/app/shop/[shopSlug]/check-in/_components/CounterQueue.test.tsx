@@ -38,12 +38,13 @@ function row(name: string, overrides: Partial<CheckInQueueRow> = {}): CheckInQue
 
 const settled = (name: string) => row(name, { bookingStatus: "checked_in" });
 
-function renderQueue(rows: CheckInQueueRow[], settledOpen = false) {
+function renderQueue(rows: CheckInQueueRow[], settledOpen = false, showFirstVisit = true) {
   return render(
     <CounterQueue
       rows={rows}
       shopSlug="blue-mantis"
       isAmbiguousName={() => false}
+      showFirstVisit={showFirstVisit}
       checkInAction={vi.fn().mockResolvedValue({ ok: true })}
       undoAction={vi.fn().mockResolvedValue({ ok: true })}
       waiverAction={vi.fn().mockResolvedValue(undefined)}
@@ -88,14 +89,22 @@ describe("the settled group", () => {
     expect(container.querySelector("details")?.open).toBe(true);
   });
 
-  it("counts the rest beyond three rather than listing forty receipts", () => {
+  /**
+   * The group used to slice itself to three and print "and 2 more" as inert
+   * text with no control to reveal the rest — so on a boat with twelve aboard,
+   * opening the receipts showed three names and a number. Worse, the three it
+   * kept were the alphabetically first, while its own comment claimed they were
+   * the ones a mis-tap is most likely to be about. Folding at rest is what the
+   * forty-receipts problem actually needed; nothing is withheld once it opens.
+   */
+  it("lists every settled row once the group is open, never a truncated preview", () => {
     renderQueue(
       ["Ines Costa", "June Park", "Lena Fischer", "Marisol Vega", "Omar Haddad"].map(settled),
       true,
     );
     expect(screen.getByText("Checked in — 5")).toBeInTheDocument();
-    expect(screen.getByText("and 2 more")).toBeInTheDocument();
-    expect(screen.queryByText("Omar Haddad")).not.toBeInTheDocument();
+    expect(screen.getByText("Omar Haddad")).toBeInTheDocument();
+    expect(screen.queryByText(/and \d+ more/)).not.toBeInTheDocument();
   });
 
   it("renders nothing at all when nobody has checked in", () => {
@@ -104,8 +113,28 @@ describe("the settled group", () => {
     expect(screen.queryByText(/Checked in —/)).not.toBeInTheDocument();
   });
 
-  it("says nothing about a remainder when every settled row is shown", () => {
-    renderQueue([settled("Ines Costa"), settled("June Park")], true);
-    expect(screen.queryByText(/and \d+ more/)).not.toBeInTheDocument();
+  /**
+   * **The counter's most dangerous silence.** Readiness is re-read on every
+   * render and a check-in does not freeze it, so a refund landing or a captain
+   * moving the second tank to a deeper site blocks a diver who came through the
+   * door an hour ago. That row used to sink into the folded group wearing no
+   * badge and no reasons, and the instrument above it painted green. The
+   * manifest would still refuse them at the rail; catching it ashore, while the
+   * diver is standing in front of somebody, is this surface's whole job.
+   */
+  it("keeps a checked-in diver who has gone blocked in the working list", () => {
+    const { container } = renderQueue([
+      settled("Ines Costa"),
+      row("Amara Osei", {
+        bookingStatus: "checked_in",
+        readiness: { status: "blocked", blockers: [{ code: "payment_due" }] },
+      }),
+    ]);
+    const details = container.querySelector("details");
+    expect(details?.textContent).not.toContain("Amara Osei");
+    expect(details?.querySelector("summary")?.textContent).toContain("Checked in — 1");
+    // Out here with its badge and its reason, where a staffer can act on it.
+    expect(screen.getByText("Blocked")).toBeInTheDocument();
+    expect(screen.getByText("Payment is outstanding for this trip.")).toBeInTheDocument();
   });
 });

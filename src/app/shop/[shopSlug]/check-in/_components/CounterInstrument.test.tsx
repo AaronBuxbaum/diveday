@@ -30,6 +30,19 @@ describe("the counter instrument", () => {
     expect(screen.getByText("3 to come · 2 can’t board yet")).toBeInTheDocument();
   });
 
+  /**
+   * ADR 20260827-clearwater-surface-language, decision 3: every count sets
+   * `tabular-nums`, and this is the number it says should lead. Only the
+   * leading figure carried it, so "of 10" re-flowed as the count climbed past
+   * a 1 — a jitter on the one figure a staffer watches all morning.
+   */
+  it("sets tabular figures on the whole count phrase, not only the figure", () => {
+    const { container } = renderInstrument();
+    const line = screen.getByText("7 of 10 here").closest("p");
+    expect(line?.className).toContain("tabular-nums");
+    expect(container.querySelector("p.tabular-nums")).not.toBeNull();
+  });
+
   it("says nothing where there is no remainder to say", () => {
     renderInstrument({ here: 10, expected: 10, cantBoard: 0, cleared: true, remainder: null });
     expect(screen.queryByText(/to come/)).not.toBeInTheDocument();

@@ -140,6 +140,16 @@ export async function listCheckInQueue(
  * migration carried across. A seat is a first visit when the diver has exactly
  * one booking at or before this departure and no imported history at all.
  *
+ * **Counting booking rows here is counting departures.** `bookings` carries a
+ * unique index on `(trip_id, person_id)`, so a diver holds at most one seat on
+ * any one boat: a party is one row per *person* — every seat a name the
+ * organizer typed, resolved to its own `people` row (ADR
+ * 20260804-seat-claim-links) — and never several rows riding under the
+ * organizer's id. So a family of four on their first day is four divers with one
+ * booking each, and every one of them is greeted. A 2026-08-28 review read the
+ * count the other way and proposed a distinct-departure count to fix it; that is
+ * the same number, and `check-in.test.ts` pins the constraint it rests on.
+ *
  * **Deliberately looser than `src/db/recap.ts` in one direction only.** Recap
  * places an imported visit against the trip's *shop-local* day
  * (`visitedOn <= tripLocalDay`) before counting it; this counts any imported

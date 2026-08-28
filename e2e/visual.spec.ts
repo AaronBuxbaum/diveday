@@ -2351,13 +2351,22 @@ for (const scheme of ["light", "dark"] as const) {
 
       // The counter's settled state, which is now a whole reading of the
       // surface rather than one row's styling: a departure that has already
-      // sailed arrives with its receipts open under the count, and this one is
-      // complete, so the earned line — the counter's single sanctioned coral
-      // moment (ADR 20260827-clearwater-surface-language, decision 11) — is on
-      // screen too. Reached through its own chip, because the instrument
+      // sailed says so beside its hours, and arrives with its receipts open
+      // under the count. Reached through its own chip, because the instrument
       // defaults to the next boat still to sail. Reading the seeded state keeps
       // this capture independent of the mutable check-in action while the
       // functional spec covers the toggle itself.
+      //
+      // **No earned line in this frame, and that is the point of it.** Every
+      // diver on this boat is `checked_in`, which used to be the whole
+      // condition for the counter's one coral moment (ADR
+      // 20260827-clearwater-surface-language, decision 11) — so the shipped
+      // capture showed the instrument painting all-clear over three divers
+      // readiness will not clear. What it holds now is the honest reading: a
+      // red band on the meter, "3 divers can't board yet", and those three
+      // still out in the working list with their badges and their reasons. The
+      // coral moment itself is pinned by `CounterInstrument.test.tsx`, which
+      // can put a genuinely clear boat in front of it.
       test(`counter check-in's settled boat renders true to the design (${scheme})`, async ({
         page,
       }) => {

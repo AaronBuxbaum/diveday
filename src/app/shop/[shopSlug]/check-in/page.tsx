@@ -19,9 +19,9 @@ import { upcomingScheduleStats } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
-import { allDiversCheckedIn } from "@/lib/check-in";
+import { counterIsClear, counterTally, firstVisitMarksAnException } from "@/lib/check-in";
 import { nowDate } from "@/lib/clock";
-import { formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
+import { formatDayParts, formatTime } from "@/lib/format";
 import { ARRIVALS_AHEAD_HOURS, ARRIVALS_LOOKBACK_HOURS } from "@/lib/operational-window";
 import { requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
@@ -29,10 +29,11 @@ import { type NoticeCodeOf, noticeFromParam, noticeRole } from "@/lib/staff-noti
 import { CounterInstrument } from "./_components/CounterInstrument";
 import { CounterQueue } from "./_components/CounterQueue";
 import { DepartureChips } from "./_components/DepartureChips";
+import { DepartureMeta } from "./_components/DepartureMeta";
 import { checkInAction, markWaiverInPersonFromCheckIn, undoCheckInAction } from "./actions";
 import { CheckInQueueRefresh } from "./CheckInQueueRefresh";
 import { CheckInSearch } from "./CheckInSearch";
-import { hasDeparted, selectFocusedDeparture } from "./focus";
+import { counterQueuePath, hasDeparted, selectFocusedDeparture } from "./focus";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -217,7 +218,10 @@ export default async function CheckInPage({
         )
         .limit(5)
     : [];
-  const openDepartures = query ? await listWalkInTrips(db, shop.id) : [];
+  // The page's own clock, not a second reading of the wall — everything above
+  // this line is anchored to `now`, and a picker offering a boat the queue has
+  // already written off is the drift that costs.
+  const openDepartures = query ? await listWalkInTrips(db, shop.id, now) : [];
 
   // One departure, said once. The queue arrives ordered by departure then
   // name, so grouping is a single pass — and the group header is where the
@@ -261,16 +265,19 @@ export default async function CheckInPage({
   const undo = undoCheckInAction.bind(null, shopSlug, focusedTripId);
   const recordPaperWaiver = markWaiverInPersonFromCheckIn.bind(null, shopSlug, focusedTripId);
 
-  const here = focus ? focus.rows.filter((row) => row.bookingStatus === "checked_in").length : 0;
-  const expected = focus?.rows.length ?? 0;
-  const cantBoard = focus
-    ? focus.rows.filter(
-        (row) => row.bookingStatus !== "checked_in" && row.readiness.status !== "ready",
-      ).length
-    : 0;
+  // **Three groups, and every seat is in exactly one of them** — the figure,
+  // the remainder words, the meter's bands and the queue's own split all read
+  // off one tally (`src/lib/check-in.ts`), so nobody has to subtract to check.
+  //
+  // `here` is *through* the counter, which is checked in **and** still cleared.
+  // A diver who checked in an hour ago and has gone blocked since — a refund
+  // landing, a card corrected, a deeper second site — leaves this figure and
+  // joins `cantBoard`, so the count goes visibly backwards and the row returns
+  // to the working list rather than sitting green in a folded receipt.
+  const { here, expected, cantBoard, toCome } = counterTally(focus?.rows ?? []);
   const remainder = focus
     ? [
-        expected - here > 0 ? t("checkIn.instrument.toCome", { count: expected - here }) : null,
+        toCome > 0 ? t("checkIn.instrument.toCome", { count: toCome }) : null,
         cantBoard > 0 ? t("checkIn.instrument.cantBoard", { count: cantBoard }) : null,
       ]
         .filter(Boolean)
@@ -298,6 +305,26 @@ export default async function CheckInPage({
   }
   const nameIsAmbiguous = (personName: string) =>
     (namesSeen.get(personName.trim().toLocaleLowerCase()) ?? 0) > 1;
+
+  // **"First visit" only where it marks somebody out**, judged over the whole
+  // visible queue for the same reason the email is: a staffer reads down the
+  // page. On a shop's first season every diver is a first visit, so the line
+  // rendered under all nine names at once — a row taller each, at exactly the
+  // queue length where this surface's promise is a name and one tap, marking
+  // nobody. See `firstVisitMarksAnException` (`src/lib/check-in.ts`).
+  const showFirstVisit = firstVisitMarksAnException(queue);
+
+  /** One line, two call sites — see `DepartureMeta` for why the word matters. */
+  const departureMeta = (startsAt: Date, endsAt: Date) => (
+    <DepartureMeta
+      startsAt={startsAt}
+      endsAt={endsAt}
+      now={now}
+      locale={locale}
+      timeZone={shop.timezone}
+      departedLabel={t("checkIn.departed")}
+    />
+  );
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -369,6 +396,15 @@ export default async function CheckInPage({
           departures={departures.map((departure) => ({
             tripId: departure.tripId,
             time: formatTime(departure.startsAt, locale, shop.timezone),
+            // **Which day, on any chip that is not the shop's today.** The
+            // arrivals window holds thirty-six hours forward, so from about
+            // 21:00 it carries tomorrow's 8:00 boat beside today's — and below
+            // `sm` the chip is only its time, which made those two identical
+            // pills. Calendar data, not copy: `Intl` knows the weekday in every
+            // locale the app negotiates, in the shop's own zone.
+            day: departure.today
+              ? null
+              : formatDayParts(departure.startsAt, locale, shop.timezone).weekday,
             title: departure.first.tripTitle,
           }))}
         />
@@ -387,14 +423,13 @@ export default async function CheckInPage({
             </Link>
           </h2>
           <p className="mt-0.5 text-sm text-muted">
-            {formatShortDate(focus.startsAt, locale, shop.timezone)} ·{" "}
-            {formatTimeRange(focus.startsAt, focus.first.endsAt, locale, shop.timezone)}
+            {departureMeta(focus.startsAt, focus.first.endsAt)}
           </p>
           <CounterInstrument
             here={here}
             expected={expected}
             cantBoard={cantBoard}
-            cleared={allDiversCheckedIn(focus.rows)}
+            cleared={counterIsClear(focus.rows)}
             remainder={remainder}
             clearedLabel={t("checkIn.clearedTitle")}
             figure={t.rich("checkIn.instrument.hereOf", {
@@ -416,6 +451,11 @@ export default async function CheckInPage({
           of divers waiting in front of it (design principle 10). */}
       <CheckInSearch
         query={query}
+        // The focus rides through the search box. Without it the counter's most
+        // frequent gesture — type a name, read the row, clear the box — dropped
+        // `?trip=` and re-pointed the instrument at whatever
+        // `selectFocusedDeparture` picks, one head count for a different boat.
+        trip={trip}
         copy={{
           label: t("checkIn.search.label"),
           placeholder: t("checkIn.search.placeholder"),
@@ -462,7 +502,9 @@ export default async function CheckInPage({
               action={
                 query ? (
                   <Link
-                    href={`/shop/${shopSlug}/check-in`}
+                    // Clearing the search returns to the boat the staffer was
+                    // working, not to whichever one the default rule picks.
+                    href={counterQueuePath(shopSlug, trip ?? null)}
                     scroll={false}
                     className={buttonClass({
                       variant: "secondary",
@@ -493,6 +535,7 @@ export default async function CheckInPage({
               rows={focus.rows}
               shopSlug={shopSlug}
               isAmbiguousName={nameIsAmbiguous}
+              showFirstVisit={showFirstVisit}
               checkInAction={checkIn}
               undoAction={undo}
               waiverAction={recordPaperWaiver}
@@ -515,22 +558,23 @@ export default async function CheckInPage({
                     </Link>
                   </h3>
                   <p className="mt-0.5 mb-2 text-sm text-muted">
-                    {formatShortDate(departure.startsAt, locale, shop.timezone)} ·{" "}
-                    {formatTimeRange(
-                      departure.startsAt,
-                      departure.first.endsAt,
-                      locale,
-                      shop.timezone,
-                    )}
+                    {departureMeta(departure.startsAt, departure.first.endsAt)}
                   </p>
                   <CounterQueue
                     rows={departure.rows}
                     shopSlug={shopSlug}
                     isAmbiguousName={nameIsAmbiguous}
+                    showFirstVisit={showFirstVisit}
                     checkInAction={checkIn}
                     undoAction={undo}
                     waiverAction={recordPaperWaiver}
-                    settledOpen={hasDeparted(departure.startsAt, now)}
+                    // **A search is a lookup, so nothing it found is folded
+                    // away.** This branch renders only while `query` is set,
+                    // and the row a staffer typed a name to reach is very often
+                    // the settled one they are about to correct — arriving
+                    // collapsed made the correction another tap away for
+                    // exactly the gesture the counter is built around.
+                    settledOpen
                     settledHeadingLevel="h4"
                     t={t}
                   />

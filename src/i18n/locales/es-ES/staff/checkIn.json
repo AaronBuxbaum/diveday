@@ -2,7 +2,6 @@
   "title": "Check-in de mostrador",
   "queueAriaLabel": "Cola de check-in",
   "searchResultsFor": "Resultados de búsqueda para “{query}”.",
-  "todaysDepartures": "Las salidas de hoy y el próximo barco",
   "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
   "emptyTitle": "Nadie coincide con ese escaneo",
   "emptyDescription": "Prueba con el nombre, el correo o el ID de reserva completo del buceador.",
@@ -13,20 +12,19 @@
   "emptyNoTripsTitle": "No hay salidas en el calendario",
   "emptyScheduleDeparture": "Programar una salida",
   "clearedTitle": "Todos registrados",
-  "clearedAction": "Abrir Hoy",
   "boardedBadge": "Embarcado",
   "departuresNavLabel": "Elige una salida",
+  "departed": "Ya salió",
   "instrument": {
     "hereOf": "<figure>{here}</figure> de {expected} aquí",
     "toCome": "{count} por llegar",
-    "cantBoard": "{count, plural, one {# no puede embarcar todavía} other {# no pueden embarcar todavía}}"
+    "cantBoard": "{count, plural, one {# buceador todavía no puede embarcar} other {# buceadores todavía no pueden embarcar}}"
   },
   "row": {
     "firstVisit": "Primera visita",
     "missingEmergencyContact": "Sin contacto de emergencia"
   },
   "settledGroup": "Registrados — {count}",
-  "settledMore": "y {count} más",
   "checkInButton": "Registrar",
   "checkInAriaLabel": "Registrar a {name}",
   "checkingIn": "Registrando…",
@@ -40,7 +38,6 @@
   "checkedInCheck": "Registrado",
   "undoAriaLabel": "Deshacer el check-in de {name}",
   "undoing": "Deshaciendo…",
-  "departureProgress": "{checkedIn} de {total, plural, one {# registrado} other {# registrados}}",
   "walkInAction": "Añadir un walk-in",
   "otherDiversHeading": "Buceadores conocidos",
   "otherDiversDescription": "Personas del registro del centro que no están reservadas en las salidas de hoy",

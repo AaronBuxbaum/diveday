@@ -36,12 +36,17 @@ function row(overrides: Partial<CheckInQueueRow> = {}): CheckInQueueRow {
   };
 }
 
-function renderRow(overrides: Partial<CheckInQueueRow> = {}, showEmail = false) {
+function renderRow(
+  overrides: Partial<CheckInQueueRow> = {},
+  showEmail = false,
+  showFirstVisit = true,
+) {
   return render(
     <CounterQueueRow
       row={row(overrides)}
       shopSlug="blue-mantis"
       showEmail={showEmail}
+      showFirstVisit={showFirstVisit}
       checkInAction={vi.fn().mockResolvedValue({ ok: true })}
       undoAction={vi.fn().mockResolvedValue({ ok: true })}
       waiverAction={vi.fn().mockResolvedValue(undefined)}
@@ -65,6 +70,26 @@ describe("a blocked row", () => {
     expect(screen.getByText("Waiver has not been sent.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Check in / })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Undo check-in / })).not.toBeInTheDocument();
+  });
+
+  /**
+   * A diver who came through the counter and has been blocked since — a refund
+   * landing, a card corrected — is not a receipt. The row says both facts in
+   * the vocabulary the surface already speaks: the drawn mark for the arrival
+   * that happened, the badge and the reasons for the gate that has closed. No
+   * undo: un-checking somebody does not clear a blocker, and the rule that a
+   * blocked row carries no check-in control does not bend for this case.
+   */
+  it("says a checked-in diver has gone blocked, without offering the tap back", () => {
+    renderRow({
+      bookingStatus: "checked_in",
+      readiness: { status: "blocked", blockers: [{ code: "payment_due" }] },
+    });
+    expect(screen.getByText("Blocked")).toBeInTheDocument();
+    expect(screen.getByText("Checked in")).toBeInTheDocument();
+    expect(screen.getByText("Payment is outstanding for this trip.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Undo check-in / })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Check in / })).not.toBeInTheDocument();
   });
 
   it("keeps the diver's record as a door and shows every reason it has", () => {
@@ -96,6 +121,28 @@ describe("an unblocked row", () => {
     expect(container.querySelector("svg")).not.toBeNull();
     expect(container.textContent).not.toMatch(/[☑✅\uD83C-\uDBFF]/u);
   });
+
+  /**
+   * **A settled row still says who this is.** It carried the bare name for one
+   * release, which dropped the Boarded badge from the case that actually
+   * happens — boarding is recorded at the rail *after* counter check-in, so
+   * `boarded && checked_in` is the ordinary path (task 149) — along with the
+   * contact gap and the first visit. At the rail that also left the undo
+   * sitting on a row that no longer said the diver was aboard, which is the one
+   * fact a crew member correcting a mis-tap needs.
+   */
+  it("keeps the badges and the quiet facts once the row has settled", () => {
+    renderRow({
+      bookingStatus: "checked_in",
+      boarded: true,
+      missingEmergencyContact: true,
+      firstVisit: true,
+    });
+    const undo = screen.getByRole("button", { name: "Undo check-in for Nadia Petrov" });
+    expect(undo).toHaveTextContent("Boarded");
+    expect(undo).toHaveTextContent("No emergency contact");
+    expect(undo).toHaveTextContent("First visit");
+  });
 });
 
 describe("the quiet facts a row carries", () => {
@@ -124,6 +171,20 @@ describe("the quiet facts a row carries", () => {
   it("renders nothing for a diver who has been before", () => {
     renderRow({ firstVisit: false });
     expect(screen.queryByText("First visit")).not.toBeInTheDocument();
+  });
+
+  /**
+   * **A word every name carries marks nobody.** On a shop's first season every
+   * diver in the queue is a first visit, so the line rendered under all nine
+   * names at once — a row taller each, at exactly the queue length where this
+   * surface's promise is a name and one tap. The page judges it over the whole
+   * visible queue (`firstVisitMarksAnException`) and the row obeys.
+   */
+  it("renders nothing when a first visit would not single anybody out", () => {
+    renderRow({ firstVisit: true }, false, false);
+    expect(screen.queryByText("First visit")).not.toBeInTheDocument();
+    // The row is otherwise untouched — this is a word dropped, not a state.
+    expect(screen.getByRole("button", { name: "Check in Nadia Petrov" })).toBeInTheDocument();
   });
 
   it("carries a first visit on a blocked row too", () => {

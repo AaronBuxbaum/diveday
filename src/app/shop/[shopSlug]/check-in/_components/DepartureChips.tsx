@@ -31,6 +31,15 @@ import { counterQueuePath } from "../focus";
  * row of times, which is what a staffer scans for anyway. The focused boat's
  * title is the heading immediately beneath.
  *
+ * **Any chip that is not today's wears its weekday.** The arrivals window runs
+ * six hours back and thirty-six forward, so from about 21:00 on a Monday it
+ * holds Tuesday's 08:00 boat and Wednesday's — and with the title hidden below
+ * `sm`, those were two identical "8:00 AM" pills on a phone, one tap apart, with
+ * a plausible head count behind the wrong one. A weekday is unambiguous across a
+ * span that short and arrives already localized (`formatDayParts`, in the shop's
+ * own zone), so this needs no copy of its own; the page decides which chips get
+ * one, because "the shop's today" is a question about the shop's timezone.
+ *
  * The separator lives inside the title's own text rather than in a CSS gap,
  * because a gap is not a space: split into two flex children the accessible
  * name came out "7:00 AMMolasses & French". The gap beside it is a margin,
@@ -45,8 +54,12 @@ export function DepartureChips({
 }: {
   ariaLabel: string;
   shopSlug: string;
-  /** Every departure the queue holds, in clock order, already worded. */
-  departures: readonly { tripId: string; time: string; title: string }[];
+  /**
+   * Every departure the queue holds, in clock order, already worded. `day` is
+   * the localized weekday for a boat that is not on the shop's today, and null
+   * for one that is.
+   */
+  departures: readonly { tripId: string; time: string; day: string | null; title: string }[];
   focusedTripId: string;
 }) {
   if (departures.length < 2) return null;
@@ -62,6 +75,9 @@ export function DepartureChips({
         key: departure.tripId,
         label: (
           <span className="flex min-w-0 items-baseline">
+            {/* A margin rather than a trailing space, for the reason the title
+                below uses one: whitespace at the edge of a flex item collapses. */}
+            {departure.day ? <span className="me-1">{departure.day}</span> : null}
             <span className="tabular-nums">{departure.time}</span>
             <span className="sr-only sm:not-sr-only sm:ms-1 sm:truncate">{`· ${departure.title}`}</span>
           </span>

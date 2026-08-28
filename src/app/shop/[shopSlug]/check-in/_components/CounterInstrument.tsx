@@ -11,6 +11,14 @@ import { CounterClearedLine } from "./CounterClearedLine";
  * departure's own rows — nothing is stored, and nothing on this block is a
  * control.
  *
+ * **The three counts are disjoint and sum to `expected`**, which is what makes
+ * the words and the meter one statement rather than two: `here` is through the
+ * counter and cleared, `cantBoard` is everyone readiness refuses (checked in or
+ * not), and the remainder is who has yet to walk up. They used to overlap — the
+ * words said "3 to come · 2 can't board yet" over a meter drawing three bands
+ * of 7, 2 and 1 — and the whole point of a figure is that nobody subtracts.
+ * The page owns that arithmetic (`src/lib/check-in.ts`); this draws it.
+ *
  * **Exactly one coral element, and it is not the figure.** When the last diver
  * is through, the sanctioned moment is the cleared line (decision 11's table,
  * row "The counter") — reusing the shipped `checkIn.clearedTitle` words. The
@@ -29,16 +37,17 @@ export function CounterInstrument({
   remainder,
   clearedLabel,
 }: {
-  /** Checked in on the focused departure. */
+  /** Through the counter on the focused departure: checked in and still cleared. */
   here: number;
   /** Everyone booked on it. */
   expected: number;
-  /** Of those still to come, how many readiness will not clear yet. */
+  /** How many readiness will not clear — whether or not they have checked in. */
   cantBoard: number;
   /**
-   * Everyone expected is here. The page decides it through
-   * `allDiversCheckedIn` (`src/lib/check-in.ts`), which is the one place that
-   * predicate lives — this component draws the moment, it does not define it.
+   * Everyone expected is here and nobody is blocked. The page decides it
+   * through `counterIsClear` (`src/lib/check-in.ts`), which is the one place
+   * that predicate lives — this component draws the moment, it does not define
+   * it.
    */
   cleared: boolean;
   /** "7 of 10 here", already worded and wearing its own figure scale. */
@@ -51,7 +60,10 @@ export function CounterInstrument({
   return (
     <div className="mt-6">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <p className="text-base text-muted">{figure}</p>
+        {/* Tabular on the whole phrase, not only on the leading figure: "of
+            10" jitters as the count climbs otherwise, on the one number ADR
+            decision 3 says should lead. */}
+        <p className="text-base text-muted tabular-nums">{figure}</p>
         {remainder ? <p className="text-sm text-muted tabular-nums">{remainder}</p> : null}
       </div>
       <ProgressBar

@@ -2,7 +2,6 @@
   "title": "Counter check-in",
   "queueAriaLabel": "Check-in queue",
   "searchResultsFor": "Search results for “{query}”.",
-  "todaysDepartures": "Today’s departures and the next boat",
   "diverCount": "{count, plural, one {# diver} other {# divers}}",
   "emptyTitle": "No one matches that scan",
   "emptyDescription": "Try the diver’s name, email, or full booking ID.",
@@ -13,20 +12,19 @@
   "emptyNoTripsTitle": "No departures on the board",
   "emptyScheduleDeparture": "Schedule a trip",
   "clearedTitle": "Everyone’s checked in",
-  "clearedAction": "Open Today",
   "boardedBadge": "Boarded",
   "departuresNavLabel": "Choose a departure",
+  "departed": "Departed",
   "instrument": {
     "hereOf": "<figure>{here}</figure> of {expected} here",
     "toCome": "{count} to come",
-    "cantBoard": "{count} can’t board yet"
+    "cantBoard": "{count, plural, one {# diver can’t board yet} other {# divers can’t board yet}}"
   },
   "row": {
     "firstVisit": "First visit",
     "missingEmergencyContact": "No emergency contact"
   },
   "settledGroup": "Checked in — {count}",
-  "settledMore": "and {count} more",
   "checkInButton": "Check in",
   "checkInAriaLabel": "Check in {name}",
   "checkingIn": "Checking in…",
@@ -40,7 +38,6 @@
   "checkedInCheck": "Checked in",
   "undoAriaLabel": "Undo check-in for {name}",
   "undoing": "Undoing…",
-  "departureProgress": "{checkedIn} of {total} checked in",
   "walkInAction": "Add a walk-in",
   "otherDiversHeading": "Known divers",
   "otherDiversDescription": "People in the shop record who are not booked on today’s departures",

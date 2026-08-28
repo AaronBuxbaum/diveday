@@ -1,11 +1,12 @@
 import { LedgerGroup } from "@/components/ui/ledger";
 import type { CheckInQueueRow as QueueRow } from "@/db/check-in";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { isSettledAtCounter } from "@/lib/check-in";
 import { CounterQueueRow } from "./CounterQueueRow";
 
 /**
- * **One departure's divers: who is still to come, then who has settled** — ADR
- * 20260827-clearwater-surface-language, decision 9.
+ * **One departure's divers: who still needs something, then who has settled** —
+ * ADR 20260827-clearwater-surface-language, decision 9.
  *
  * The working list is only the people a staffer can still do something about.
  * Everyone already through sinks into one collapsed group, which is 6a's one
@@ -15,21 +16,23 @@ import { CounterQueueRow } from "./CounterQueueRow";
  * twenty-six-name morning unreadable, because the rows a staffer had to act on
  * were spread through the rows they had already dealt with.
  *
- * **Beyond three, the group truncates to "and N more".** A settled row is a
- * receipt, and forty of them under a queue of two is the same problem again.
- * The rows that stay are the ones a mis-tap is most likely to be about; a
- * correction further down is one search away, which is the counter's primary
- * gesture anyway — a search for that diver renders their settled row in a
- * group of one, with its undo.
+ * **Settled is checked in *and* cleared** (`isSettledAtCounter`,
+ * `src/lib/check-in.ts`). A diver who came through the door and has gone
+ * blocked since — a refund landing, a card corrected — is work, not a receipt,
+ * and stays out here in the working list wearing their badge and their reasons.
+ * Folding that row away was the counter's most dangerous silence: the manifest
+ * would still refuse them at the rail, but catching it ashore while the diver
+ * is standing there is this surface's entire job.
+ *
+ * **The group is not truncated.** It is folded at rest, which is what the
+ * forty-receipts problem actually needed; slicing it to three also hid whichever
+ * rows happened to sort last, and there was no control to reveal them.
  */
-
-/** How many settled rows stay visible before the group counts the rest. */
-export const SETTLED_PREVIEW_COUNT = 3;
-
 export function CounterQueue({
   rows,
   shopSlug,
   isAmbiguousName,
+  showFirstVisit,
   checkInAction,
   undoAction,
   waiverAction,
@@ -42,12 +45,21 @@ export function CounterQueue({
   shopSlug: string;
   /** Whether two visible divers share this name — the email is a disambiguator. */
   isAmbiguousName: (personName: string) => boolean;
+  /**
+   * Whether a first visit marks anybody out on this screen at all
+   * (`firstVisitMarksAnException`, `src/lib/check-in.ts`). Judged by the page
+   * over the whole visible queue, never per departure: a staffer reads down the
+   * page, and a word every name carries singles out nobody.
+   */
+  showFirstVisit: boolean;
   checkInAction: (formData: FormData) => Promise<{ ok: true }>;
   undoAction: (formData: FormData) => Promise<{ ok: true }>;
   waiverAction: (formData: FormData) => Promise<void>;
   /**
    * Open the settled group on arrival. True for a boat that has already
-   * sailed, where the receipts *are* what the counter is for.
+   * sailed, where the receipts *are* what the counter is for, and true under a
+   * search, where the row somebody typed a name to reach may well be one of
+   * them.
    */
   settledOpen: boolean;
   /**
@@ -59,10 +71,8 @@ export function CounterQueue({
   settledHeadingLevel: "h3" | "h4";
   t: StaffTranslator;
 }) {
-  const waiting = rows.filter((row) => row.bookingStatus !== "checked_in");
-  const settled = rows.filter((row) => row.bookingStatus === "checked_in");
-  const shown = settled.slice(0, SETTLED_PREVIEW_COUNT);
-  const hidden = settled.length - shown.length;
+  const settled = rows.filter(isSettledAtCounter);
+  const waiting = rows.filter((row) => !isSettledAtCounter(row));
 
   return (
     <>
@@ -74,6 +84,7 @@ export function CounterQueue({
               row={row}
               shopSlug={shopSlug}
               showEmail={isAmbiguousName(row.personName)}
+              showFirstVisit={showFirstVisit}
               checkInAction={checkInAction}
               undoAction={undoAction}
               waiverAction={waiverAction}
@@ -93,29 +104,25 @@ export function CounterQueue({
             // span, so the existing 150ms `fade-in` plays on the number that
             // just changed and on nothing else. Reduced motion zeroes it and
             // the number alone carries the fact.
-            <span key={settled.length} className="animate-fade-in">
+            <span key={settled.length} className="animate-fade-in tabular-nums">
               {t("checkIn.settledGroup", { count: settled.length })}
             </span>
           }
         >
           <div className="opacity-70">
-            {shown.map((row) => (
+            {settled.map((row) => (
               <CounterQueueRow
                 key={row.bookingId}
                 row={row}
                 shopSlug={shopSlug}
                 showEmail={isAmbiguousName(row.personName)}
+                showFirstVisit={showFirstVisit}
                 checkInAction={checkInAction}
                 undoAction={undoAction}
                 waiverAction={waiverAction}
                 t={t}
               />
             ))}
-            {hidden > 0 ? (
-              <p className="border-t border-b border-border py-3 text-sm text-muted tabular-nums">
-                {t("checkIn.settledMore", { count: hidden })}
-              </p>
-            ) : null}
           </div>
         </LedgerGroup>
       ) : null}

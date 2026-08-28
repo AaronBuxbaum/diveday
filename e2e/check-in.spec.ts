@@ -114,7 +114,12 @@ test("a ready diver checks in with one tap, sinks into the settled group, and a 
   });
   await expect(page.getByRole("button", { name: "Check in Diego Alvarez" })).toHaveCount(0);
 
-  await settled.locator("summary").click();
+  // **Under a search the receipts arrive open**, so there is no summary to tap
+  // first. A search is a lookup rather than the instrument, and the row a
+  // staffer typed a name to reach is very often the settled one they are about
+  // to correct — folding it away put the correction one more tap behind exactly
+  // the gesture this surface is built around.
+  await expect(settled).toHaveJSProperty("open", true);
   const undo = page.getByRole("button", { name: "Undo check-in for Diego Alvarez" });
   await expect(undo).toBeVisible();
   await expect(undo).toContainText("Checked in");
@@ -162,15 +167,28 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
   // search.
   await expect(queue.getByRole("link", { name: "Add a walk-in" })).toBeVisible();
 
-  // A boat that has already sailed: its receipts are the point, so the settled
-  // group arrives open — and this one is complete, so the counter's one
-  // sanctioned coral moment is on screen.
+  // A boat that has already sailed says so beside its hours, and its receipts
+  // are the point, so the settled group arrives open.
   await chipLinks.filter({ hasText: "Dawn Two-Tank — Molasses Reef" }).click();
   await expect(page).toHaveURL(/\/check-in\?trip=[0-9a-f-]{36}$/);
-  await expect(page.getByRole("status").filter({ hasText: "Everyone’s checked in" })).toBeVisible();
+  await expect(page.getByText("Departed")).toBeVisible();
   await expect(page.getByRole("heading", { name: /^Checked in — \d+$/ })).toBeVisible();
-  // No emoji left in the celebration — the coral and the drawn marks carry it.
-  await expect(page.getByText("Everyone’s checked in 🎉")).toHaveCount(0);
+
+  // **And it is not all-clear, because three of the eight aboard are blocked.**
+  // Every diver on this boat is `checked_in`, which used to be the whole
+  // condition for the coral line — so the instrument painted the earned moment
+  // over divers readiness will not clear, on the one surface whose job is to
+  // catch that ashore. The line now needs "nobody blocked" as well, the count
+  // says how many cannot board, and those rows stay out in the working list
+  // with their reasons instead of sinking into the receipts (ADR
+  // 20260827-clearwater-surface-language, decision 9).
+  await expect(page.getByRole("status").filter({ hasText: "Everyone’s checked in" })).toHaveCount(
+    0,
+  );
+  await expect(page.getByText(/can’t board yet/)).toBeVisible();
+  await expect(
+    page.locator("article").filter({ hasText: "❌Blocked" }).filter({ visible: true }).first(),
+  ).toBeVisible();
 });
 
 test("a counter walk-in books straight onto a boat with no email required", async ({ page }) => {
@@ -314,6 +332,20 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
     .filter({ hasText: "Priya Sharma" })
     .filter({ visible: true });
   await expect(card.getByText("❌Blocked")).toBeVisible();
+  // **Wait for the counter to actually be in search mode before touching a row
+  // on it**, which is the one assertion that distinguishes the two: Priya's row
+  // is on screen in *either* mode, because her boat is also the one the
+  // instrument focuses. Open the paper-waiver form while the search navigation
+  // is still in flight and the queue re-renders under it in the other mode —
+  // rows move from the focused `CounterQueue` into the per-departure list — so
+  // React rebuilds the row and `PaperWaiverControl`'s open state, which is
+  // client state on a component that was just unmounted, goes with it. That is
+  // the queue doing its job (a search replaces the list), not a defect: the
+  // only thing that switches the mode is the staffer typing in this very box,
+  // and nobody fills a form on a row with the same hand. The spec has to say
+  // which render it is acting on. See `searchIsShowing` below.
+  const searchIsShowing = page.getByRole("heading", { name: /Search results for .Priya Sharma./ });
+  await expect(searchIsShowing).toBeVisible();
 
   await card.getByText("Mark signed on paper").click();
   // The medical attestation is the control, not a buried confirm. The
@@ -334,9 +366,14 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
   ).toBeVisible();
 
   // A refusal is the one outcome here that still navigates, and it lands on the
-  // bare queue — so the search has to be retyped to get back to her.
+  // bare queue — so the search has to be retyped to get back to her, and waited
+  // for again for the reason above. This is the step that timed out on CI: the
+  // form was opened against the instrument's render, the search landed, the row
+  // was rebuilt, and `check()` sat waiting on a checkbox that had closed behind
+  // a "Mark signed on paper" button again.
   await search.fill("Priya Sharma");
   await search.press("Enter");
+  await expect(searchIsShowing).toBeVisible();
   await card.getByText("Mark signed on paper").click();
   await card
     .getByLabel("I have this diver's signed release on file", { exact: false })
