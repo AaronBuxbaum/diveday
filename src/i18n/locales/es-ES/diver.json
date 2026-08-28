@@ -2805,7 +2805,7 @@
     "product": {
       "eyebrow": "El producto",
       "heroTitle": "Desde la primera reserva hasta el último recuento.",
-      "heroDescription": "DiveDay se organiza en torno al propio viaje: cada reserva, exención, certificación, pago y recuento queda vinculado a las personas que salen en el barco.",
+      "heroDescription": "Cada reserva, exención, certificación, pago y recuento queda vinculado al viaje al que pertenece — así nada se pregunta dos veces y nada se pasa por alto ni una vez.",
       "arcTitle": "Un día de buceo",
       "bookingEyebrow": "Días antes",
       "bookingTitle": "Los buceadores reservan solos. El barco no se sobrevende.",
@@ -2848,7 +2848,7 @@
       "yourAccountBody": "Los pagos, disputas e historial permanecen en la cuenta de Stripe que ya controlas — y no hay comisión por reserva sobre el precio fijo.",
       "pricedTitle": "Con el pago resuelto antes de embarcar",
       "pricedBody": "El pago forma parte de la misma respuesta de preparación que la exención y la certificación. Nadie embarca dando por hecho que otro ya pagó.",
-      "pricingLink": "Lo que cuesta DiveDay →",
+      "pricingLink": "Un precio único de {price} {cadence} — mira todo lo que cubre →",
       "boxEyebrow": "Todo incluido",
       "boxTitle": "La lista completa, sin rodeos.",
       "boxDescription": "Sin niveles, sin extras, nada reservado para un plan superior. Cada una de estas {count, plural, one {# línea} other {# líneas}} es algo que puedes hacer ahora mismo en la demo en vivo.",

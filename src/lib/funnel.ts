@@ -13,12 +13,12 @@ import { publicSchedulePath } from "./public-routes";
  * arrives off a request is clamped back to it by `eventSource`.
  *
  * A page that offers the same action from more than one place splits its tag by
- * position (`home-hero` / `home-closing`, `product` / `product-mid`,
- * `pricing` / `pricing-close`) — otherwise a mid-page door added to answer "one
- * CTA at the bottom of ten sections" folds into the page total and can never be
- * shown to have earned its place. The unsuffixed tag stays the page's original
- * one so attribution history doesn't break when a new position is added beside
- * it.
+ * position (`home-hero` / `home-closing`, `product` / `product-mid` /
+ * `product-index`, `pricing` / `pricing-close`) — otherwise a mid-page door
+ * added to answer "one CTA at the bottom of ten sections" folds into the page
+ * total and can never be shown to have earned its place. The unsuffixed tag
+ * stays the page's original one so attribution history doesn't break when a new
+ * position is added beside it.
  *
  * A tag stays registered after its door is removed, so the history it collected
  * still reads — but a retired tag is **not** free to reuse, because new traffic
@@ -44,10 +44,21 @@ const FIXED_SOURCES = [
   "nav",
   "product",
   "product-mid",
+  // The door under `/product`'s capability index. Its band's lede — "every one
+  // of these lines is something you can go and do in the live demo right now" —
+  // makes the page's most explicit dare, and until 2026-08-28 the reader who
+  // took it had nothing to act on for another two bands
+  // (docs/product/marketing-review-20260827.md, "the dare gets a door"). It is
+  // a third *position* for the same action rather than a different one, so it
+  // suffixes `product` the way `product-mid` does: a reader convinced by the
+  // inventory is a different moment from one convinced by the dock story, and
+  // folded together neither could be read on its own.
+  "product-index",
   // The in-page switching doors on `/product` and `/about` — one each, so they
   // take the page's name rather than a position suffix (the split above is for
-  // one *action* offered from several places, which is `product`/`product-mid`
-  // and `home-records`/`home-records-arriving`). They are named apart from those
+  // one *action* offered from several places, which is
+  // `product`/`product-mid`/`product-index` and
+  // `home-records`/`home-records-arriving`). They are named apart from those
   // demo/trial tags because they are a different action: the reader is going to
   // read about moving, not to open the demo. Untagged until 2026-08-15, which
   // left `/switching/spreadsheet` with one measurable inbound door and one
