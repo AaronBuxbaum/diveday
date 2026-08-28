@@ -2805,7 +2805,7 @@
     "product": {
       "eyebrow": "The product",
       "heroTitle": "From the first booking to the last head count.",
-      "heroDescription": "DiveDay is organized around the trip itself: every booking, waiver, certification, payment, and head count stays attached to the people going out on the boat.",
+      "heroDescription": "Every booking, waiver, certification, payment, and head count stays attached to the trip it belongs to — so nothing gets asked twice and nothing gets missed once.",
       "arcTitle": "One dive day",
       "bookingEyebrow": "Days before",
       "bookingTitle": "Divers book themselves. The boat can't be oversold.",
@@ -2848,7 +2848,7 @@
       "yourAccountBody": "Payouts, disputes, and history stay in the Stripe account you already control — and there is no per-booking cut on top of the flat price.",
       "pricedTitle": "Priced before they board",
       "pricedBody": "Payment is part of the same readiness answer as the waiver and the certification. Nobody boards on an assumption that someone else already settled up.",
-      "pricingLink": "What DiveDay itself costs →",
+      "pricingLink": "One flat {price} {cadence} — see everything it covers →",
       "boxEyebrow": "Everything in the box",
       "boxTitle": "The whole list, plainly.",
       "boxDescription": "No tiers, no add-ons, nothing held back for a bigger plan. Every one of these {count, plural, one {# line} other {# lines}} is something you can go and do in the live demo right now.",

@@ -40,8 +40,19 @@ function marketingMessages(locale: (typeof DIVER_LOCALES)[number]): Record<strin
  * both render it the same way.
  */
 describe("the price is interpolated, never spelled out in a bundle", () => {
-  /** The two sentences that carry the figure — the hero and the closing band of `/`. */
-  const priceSentenceKeys = ["marketing.home.heroPriceLine", "marketing.home.priceLine"] as const;
+  /**
+   * The sentences that carry the figure: the hero and the closing band of `/`,
+   * and — since 2026-08-28 — `/product`'s money band, whose link stopped
+   * parking the number behind itself and now states it in its own words
+   * (docs/product/marketing-review-20260827.md, "the dare gets a door").
+   * Each addition here is the point: a fourth surface that shows the price
+   * must interpolate it or this list is where it fails.
+   */
+  const priceSentenceKeys = [
+    "marketing.home.heroPriceLine",
+    "marketing.home.priceLine",
+    "marketing.product.pricingLink",
+  ] as const;
 
   for (const locale of DIVER_LOCALES) {
     it(`keeps every marketing message in ${locale} free of a currency figure`, () => {

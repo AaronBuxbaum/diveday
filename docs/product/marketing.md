@@ -334,6 +334,11 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   measured at two positions (the price hero, and the closing band tagged `pricing-close`). The
   nav's single door stays secondary weight so it never competes, and the CTA hides entirely on
   `/onboard`, where it would link to the page it's on.
+  `/product` is where the budget is easiest to lose — the longest page on the site, offering the
+  demo from four positions inside its body, each added by a different review answering a different
+  objection. `e2e/marketing.spec.ts` counts the primary in *every* band of that page rather than
+  only at the door most recently added, which is the shape that let the homepage hero reach nine
+  choices before it was cut back.
   **The homepage hero is the scarcest screen on the site and is capped at one primary plus one
   secondary** — it once offered around nine choices (a five-chip role picker, a diver-preview link,
   demo, trial), which is a menu, not an ask. Cutting a hero control never means deleting the
@@ -348,6 +353,14 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   owes a reader a fact at a door: state it, do not open a third one. The closing band keeps the
   two-year lock and the door to `/pricing`, so the figure now renders on two bands of `/` and both
   interpolate it.
+  **`/product`'s money band is the same move made on a door that already existed** (2026-08-28).
+  The one band on that page about money read "What DiveDay itself costs →" — it raised the cost
+  question and parked our own half of the answer behind a click, which is what a burned buyer reads
+  as a card wall. The figure now stands in the link's own words ("One flat {price} {cadence} — see
+  everything it covers →"), so the band spends no new control and the reader learns the number
+  where the question is asked. Three sentences now interpolate `earlyAccessPrice` rather than one;
+  their keys are pinned in `src/lib/marketing.test.ts`, and a fourth that spells the number out
+  instead fails there.
   The internal positioning pillars ("easy to try", "safe to leave") are argument structure, not
   user-facing labels. **A label a reader sees names a thing, not a strategy** — and after the
   2026-08-13 redesign the homepage names things in two idioms, deliberately: an uppercase eyebrow
@@ -438,7 +451,8 @@ first; an untagged link is a conversion we can't attribute. Read the pair per su
 demo entries and no trials is telling you something different from a page with neither.
 
 **A page that offers the same action from more than one place splits its tag by position** —
-`home-hero` / `home-closing`, `product` / `product-mid`, `pricing` / `pricing-close`, and the
+`home-hero` / `home-closing`, `product` / `product-mid` / `product-index`, `pricing` /
+`pricing-close`, and the
 switching guides' `switching-<slug>` / `switching-<slug>-mid` / `switching-<slug>-close` (with the
 spreadsheet guide using the same three-position shape).
 Mid-page and closing doors exist because
@@ -450,6 +464,16 @@ can also be retired: the homepage's `home-mid` came out on 2026-08-13 when the p
 consecutive banded CTAs merged into one close (the 2026-08-13 homepage redesign), which moved the
 closing door a full band nearer; the tag stays registered in `funnel.ts` so any history it
 accumulated still reads.
+
+`product-index` (2026-08-28) is the newest of these and the clearest case for splitting: the band
+it sits under makes the site's most explicit dare — *every one of these lines is something you can
+go and do in the live demo right now* — and until that date the reader who took it had two more
+bands to scroll before anything let them act
+([marketing-review-20260827.md](marketing-review-20260827.md), "the dare gets a door"). A reader
+convinced by the inventory is a different moment from one convinced by the dock story that
+`product-mid` sits under, and folded together neither could be read on its own. The door carries no
+words of its own: the band's lede is its caption, and a heading there would restate the sentence
+directly above the list it closes.
 
 **Not every tagged door is a conversion.** Some links carry a tag without firing either event: the
 diver-preview link into the demo shop's public schedule (`scheduleAttributionHref`) and **every
