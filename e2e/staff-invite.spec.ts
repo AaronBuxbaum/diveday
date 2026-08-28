@@ -111,7 +111,67 @@ test.describe("as owner", () => {
       .filter({ hasText: "Talia Reyes" })
       .filter({ visible: true });
     await expect(restoredRow.getByText("Active")).toBeVisible();
-    await expect(restoredRow.getByLabel("Instructor")).toBeChecked();
+    // The row reads its roles as words now that they are a per-row disclosure
+    // (ADR 20260827-the-shops-shelves, slice 9h).
+    await expect(
+      restoredRow.getByRole("button", { name: "Edit roles for Talia Reyes" }),
+    ).toContainText("Instructor");
+  });
+
+  /**
+   * Slice 9h end to end: a row's disclosure closes to save, Undo takes it
+   * back in one tap, Escape abandons an edit, and a refusal reopens the row
+   * with its words *on that row* rather than in a banner above eleven people
+   * (ADR 20260827-the-shops-shelves). Driven on a freshly invited teammate so
+   * no seeded staffer's roles leak into the next spec sharing this worker.
+   */
+  test("a row's roles save when the row closes, undo in one tap, and refuse on the row", async ({
+    page,
+  }) => {
+    await page.goto(`/shop/${SHOP}/settings/team`);
+
+    const email = `row-roles-${Date.now()}@example.com`;
+    const inviteSection = page.locator("section").filter({ hasText: "Invite someone" });
+    await inviteSection.getByLabel("Full name").fill("Rosa Delgado");
+    await inviteSection.getByLabel("Email").fill(email);
+    await inviteSection.getByLabel("Instructor").check();
+    await inviteSection.getByRole("button", { name: "Send invite" }).click();
+    await expect(page.getByText("Invite sent.")).toBeVisible();
+
+    const row = page.locator("li").filter({ hasText: "Rosa Delgado" }).filter({ visible: true });
+    const roles = row.getByRole("button", { name: "Edit roles for Rosa Delgado" });
+    await expect(roles).toContainText("Instructor");
+
+    // Close is the save — there is no Save button on the row at all.
+    await roles.click();
+    await row.getByLabel("Divemaster").check();
+    await roles.click();
+    await expect(roles).toContainText("Divemaster");
+    await expect(row.getByText("Team changes saved.")).toBeVisible();
+
+    // Undo is one re-save, and offers nothing to undo back.
+    await row.getByRole("button", { name: "Undo the role change for Rosa Delgado" }).click();
+    await expect(roles).not.toContainText("Divemaster");
+    await expect(
+      row.getByRole("button", { name: "Undo the role change for Rosa Delgado" }),
+    ).toHaveCount(0);
+
+    // Escape abandons the edit: the row closes and nothing is written.
+    await roles.click();
+    await row.getByLabel("Captain").check();
+    await page.keyboard.press("Escape");
+    await expect(roles).toHaveAttribute("aria-expanded", "false");
+    await expect(roles).not.toContainText("Captain");
+
+    // A refusal reopens the row and says so beside the checkboxes. Exactly one
+    // rendering, and it is inside this person's row — never a page banner.
+    await roles.click();
+    await row.getByLabel("Instructor").uncheck();
+    await roles.click();
+    await expect(row.getByText("Check at least one role before saving.")).toBeVisible();
+    await expect(page.getByText("Check at least one role before saving.")).toHaveCount(1);
+    await expect(roles).toHaveAttribute("aria-expanded", "true");
+    await expect(roles).toContainText("Instructor");
   });
 
   test("the last-owner guard refuses removing the shop's sole owner", async ({ page }) => {
@@ -119,13 +179,19 @@ test.describe("as owner", () => {
 
     const ownerRow = page.locator("li").filter({ hasText: DEV_STAFF_LOGINS.owner.email });
     // Delete is intentionally only offered after an account is disabled. A sole
-    // owner cannot be disabled, so exercise the same last-owner guard via the
-    // page-level Save changes button that batches every row's role checkboxes.
+    // owner cannot be disabled, so exercise the same last-owner guard through
+    // their own roles disclosure: unticking Owner and closing the row is the
+    // save (ADR 20260827-the-shops-shelves, slice 9h).
     await expect(ownerRow.getByRole("button", { name: /^Delete/ })).toHaveCount(0);
+    const ownerRoles = ownerRow.getByRole("button", { name: /^Edit roles for / });
+    await ownerRoles.click();
     await ownerRow.getByLabel("Owner").uncheck();
-    await page.getByRole("button", { name: "Save changes" }).click();
+    await ownerRoles.click();
 
-    await expect(page.getByText("the shop needs at least one owner")).toBeVisible();
+    // On the row that produced it, once — the page banner never carries it.
+    await expect(ownerRow.getByText("the shop needs at least one owner")).toBeVisible();
+    await expect(page.getByText("the shop needs at least one owner")).toHaveCount(1);
+    await expect(ownerRoles).toHaveAttribute("aria-expanded", "true");
     await expect(
       page
         .locator("li")

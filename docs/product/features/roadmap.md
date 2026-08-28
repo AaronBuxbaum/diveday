@@ -272,10 +272,6 @@ stack's app-wide pass (items 6–9 + the departure's own item 5). Unranked.
   fill.
 - **9g. The mapped surfaces.** Courses roster, promos, add-booking onto the patterns — mechanical
   restyles, no behavior change.
-- **9h. Team's per-row roles.** Per-row disclosures that save on close, Escape aborts, refusal
-  reopens field-side, Undo one re-save; replaces the page-level bulk Save. *Pins:* per-row save
-  round-trip; refusal never a page banner.
-
 ### 10. First light (design complete)
 
 The doors — sign-in, onboard, the reset/verify/invite family, claim, unsubscribe — and the shop's

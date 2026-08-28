@@ -7,6 +7,25 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Team's roles are edited a row at a time (delivered 2026-08-28)
+
+Slice 9h of [20260827-the-shops-shelves](../architecture/decisions/20260827-the-shops-shelves.md).
+The team page's page-level "Save changes" — one button batching every teammate's role checkboxes
+into a single all-or-nothing write, so one row left blank refused every other row's edit — is gone.
+Each row's roles now read as words and open in place: **closing the row is the save**, Escape
+abandons the edit and puts the boxes back, a refusal reopens that row with its words beside the
+checkboxes (never a banner above a roster of eleven people), and Undo is one re-save that offers
+nothing to undo back. Enable, Disable and Delete stay the immediate acts they always were, so the
+page finally carries one mental model instead of two. The `?notice=` routing behind it is one
+table (`settings/team/notices.ts`) read through `noticeForForm`, which is what makes "this refusal
+belongs to that row" a fact a test can hold rather than a habit — and a per-row answer whose row is
+no longer on the roster is demoted back to the page banner rather than swallowed.
+
+The write carries the roles the row was rendered with, so two people with this page open cannot
+revert each other: a close (or an Undo left on screen) whose baseline no longer matches refuses and
+writes nothing, the answer `ConflictGuardedForm` already gives the course editor (issue #820), on
+the one surface where what would be reverted is who may reach every other gated surface in the shop.
+
 ## The shared person-row vocabulary (delivered 2026-08-28)
 
 Slice 8a of [20260827-people-not-lists](../architecture/decisions/20260827-people-not-lists.md),

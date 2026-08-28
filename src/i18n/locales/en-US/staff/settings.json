@@ -453,6 +453,7 @@
       "restoreFailed": "Couldn't restore that person's access — check their account first.",
       "inviteInvalid": "Enter a name, a valid email, and check at least one role.",
       "rolesInvalid": "Check at least one role before saving.",
+      "rolesConflict": "Somebody else changed these roles while you had the row open, so nothing was saved. Reload to see where they stand now.",
       "inviteAlreadyOnTeam": "That person already has an account here.",
       "inviteEmailTaken": "That email isn’t available here. Invite this teammate at a different address.",
       "inviteEmailReserved": "That email address is reserved and can't receive mail. Invite this teammate at an address they can read.",
@@ -469,6 +470,10 @@
       "disabled": "Disabled"
     },
     "rolesLegend": "Roles",
+    "roles": {
+      "editAriaLabel": "Edit roles for {name}",
+      "undoAriaLabel": "Undo the role change for {name}"
+    },
     "roleLabels": {
       "owner": "Owner",
       "manager": "Manager",
@@ -492,11 +497,9 @@
     },
     "current": {
       "heading": "Current team",
-      "description": "Enable, disable, and delete take effect immediately. Role changes below wait for Save changes.",
+      "description": "Role changes save when you close a row. Enable, disable, and delete take effect immediately.",
       "empty": "No staff invited yet.",
-      "emptyAction": "Invite a teammate",
-      "save": "Save changes",
-      "saving": "Saving…"
+      "emptyAction": "Invite a teammate"
     },
     "staffRow": {
       "resendInvite": "Resend invite",

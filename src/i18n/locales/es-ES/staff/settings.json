@@ -453,6 +453,7 @@
       "restoreFailed": "No se pudo restaurar el acceso de esa persona — revisa su cuenta primero.",
       "inviteInvalid": "Introduce un nombre, un correo válido y marca al menos un rol.",
       "rolesInvalid": "Marca al menos un rol antes de guardar.",
+      "rolesConflict": "Alguien más cambió estos roles mientras tenías la fila abierta, así que no se guardó nada. Recarga para ver cómo están ahora.",
       "inviteAlreadyOnTeam": "Esa persona ya tiene una cuenta aquí.",
       "inviteEmailTaken": "Ese correo no está disponible aquí. Invita a esta persona en otra dirección.",
       "inviteEmailReserved": "Esa dirección de correo está reservada y no puede recibir mensajes. Invita a esta persona en una dirección que pueda leer.",
@@ -469,6 +470,10 @@
       "disabled": "Deshabilitado"
     },
     "rolesLegend": "Roles",
+    "roles": {
+      "editAriaLabel": "Editar los roles de {name}",
+      "undoAriaLabel": "Deshacer el cambio de roles de {name}"
+    },
     "roleLabels": {
       "owner": "Propietario",
       "manager": "Gerente",
@@ -492,11 +497,9 @@
     },
     "current": {
       "heading": "Equipo actual",
-      "description": "Habilitar, deshabilitar y eliminar surten efecto de inmediato. Los cambios de rol de abajo esperan a Guardar cambios.",
+      "description": "Los cambios de rol se guardan al cerrar una fila. Habilitar, deshabilitar y eliminar surten efecto de inmediato.",
       "empty": "Todavía no se ha invitado a nadie.",
-      "emptyAction": "Invitar a un compañero",
-      "save": "Guardar cambios",
-      "saving": "Guardando…"
+      "emptyAction": "Invitar a un compañero"
     },
     "staffRow": {
       "resendInvite": "Reenviar invitación",

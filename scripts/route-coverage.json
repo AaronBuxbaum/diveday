@@ -430,7 +430,7 @@
   },
   "/shop/[shopSlug]/settings/team": {
     "e2e": ["settings-findability.spec.ts", "staff-invite.spec.ts"],
-    "visual": ["settings-team"],
+    "visual": ["settings-team", "team-role-disclosure"],
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/settings/whatsapp": {
