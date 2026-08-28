@@ -55,6 +55,10 @@ Every name, number and time is demo-seed fiction. Nothing here is real customer 
 | 9e — staffing as a week | open | — | — |
 | 9f — reports sheds its chrome | open | — | — |
 | 9g — the mapped surfaces (courses roster, promos, team, add-booking) | open | — | — |
+| 9h — Team's per-row roles | shipped | `src/app/shop/[shopSlug]/settings/team/_components/StaffRolesDisclosure.tsx` | `StaffRolesDisclosure.test.tsx`, `notices.test.ts`, `actions.authz.test.ts`, `e2e/staff-invite.spec.ts` |
+
+9h's server half is `saveStaffRolesAction` in that folder's `actions.ts` and the notice router in
+its `notices.ts`; the page-level bulk Save it replaced is gone.
 
 ## Implementing a slice
 

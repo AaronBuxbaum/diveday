@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid, PriceField } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
+import { GroupLabel, InsetGroup } from "@/components/ui/ledger";
 import {
   canPersonErasePersonalData,
   canPersonManagePaymentSettings,
@@ -66,7 +67,7 @@ import {
   DEFAULT_TIMEZONE,
 } from "@/lib/timezones";
 import { isTrialExpired, trialDaysRemaining, trialEndsAt } from "@/lib/trial";
-import { SettingsDoorRow, SettingsRow, SettingsRowList } from "./_components/SettingsRows";
+import { SettingsDoorRow, SettingsRow } from "./_components/SettingsRows";
 import { AddressSearch } from "./AddressSearch";
 import {
   createBoatAction,
@@ -96,7 +97,7 @@ import {
   saveUnitsAction,
   updateBoatAction,
 } from "./actions";
-import { SETTINGS_GROUPS } from "./settings-groups";
+import { SECTION_IDS, SETTINGS_GROUPS, type SectionId } from "./settings-groups";
 
 export const metadata: Metadata = { title: "Shop settings — DiveDay" };
 
@@ -262,7 +263,7 @@ function StatusRow({
 
 // Re-exported so the page test reads the same section registry the page uses,
 // rather than carrying a second list of settings groups.
-export { SETTINGS_GROUPS };
+export { SECTION_IDS, SETTINGS_GROUPS };
 
 type SettingsGroupSpec = (typeof SETTINGS_GROUPS)[number];
 
@@ -367,47 +368,13 @@ export function SettingsGroup({
 }) {
   return (
     <div>
-      <h2
-        id={group.id}
-        className="mb-3 scroll-mt-24 text-xs font-semibold tracking-[0.14em] text-muted uppercase"
-      >
+      <GroupLabel as="h2" id={group.id} className="mb-3 scroll-mt-24">
         {label}
-      </h2>
+      </GroupLabel>
       {children}
     </div>
   );
 }
-
-/**
- * The eleven forms on this page each carry their own section id through
- * `?saved=<id>` (set by the action that redirects back here), so the row that
- * changed comes back *open*, with the notice rendered inside it — a closed
- * disclosure hiding a refusal would be a form the staffer cannot see failed
- * (the same rule `EditDisclosure` states on the trip Overview).
- */
-const SECTION_IDS = [
-  "timezone",
-  "contact",
-  "profile",
-  "address",
-  "reviewLink",
-  "searchListing",
-  "conservation",
-  "packing",
-  "dockCall",
-  "sendWindow",
-  "units",
-  "divingOptions",
-  "emergency",
-  "boats",
-  "rentals",
-  "rentalPricing",
-  "divePackages",
-  "tax",
-  "passThrough",
-  "stripe",
-] as const;
-type SectionId = (typeof SECTION_IDS)[number];
 
 function SectionNotice({
   banner,
@@ -634,7 +601,7 @@ export default async function SettingsPage({
           (docs/design/forms-and-controls.md). */}
       <div className="space-y-10">
         <SettingsGroup group={YOUR_SHOP_GROUP} label={t(YOUR_SHOP_GROUP.labelKey)}>
-          <SettingsRowList>
+          <InsetGroup>
             {/* Who works here comes first: an owner opening Settings to add a
               colleague used to find no door to Team anywhere on this page — only
               the nav's "Set up" menu and ⌘K knew it existed. */}
@@ -642,7 +609,6 @@ export default async function SettingsPage({
               <SettingsDoorRow
                 href={`/shop/${shopSlug}/settings/team`}
                 heading={t("settings.main.team.heading")}
-                description={t("settings.main.team.description")}
               />
             ) : null}
 
@@ -655,24 +621,20 @@ export default async function SettingsPage({
             <SettingsDoorRow
               href={`/shop/${shopSlug}/dive-sites`}
               heading={t("settings.main.diveSites.heading")}
-              description={t("settings.main.diveSites.description")}
             />
             {canManageWaivers ? (
               <SettingsDoorRow
                 href={`/shop/${shopSlug}/waivers`}
                 heading={t("settings.main.waivers.heading")}
-                description={t("settings.main.waivers.description")}
               />
             ) : null}
             <SettingsDoorRow
               href={`/shop/${shopSlug}/settings/safety-checklist`}
               heading={t("settings.main.safetyChecklist.heading")}
-              description={t("settings.main.safetyChecklist.description")}
             />
             <SettingsDoorRow
               href={`/shop/${shopSlug}/settings/security`}
               heading={t("settings.main.security.heading")}
-              description={t("settings.main.security.description")}
             />
 
             {/* First editable row, because it is the setting every other date
@@ -689,7 +651,8 @@ export default async function SettingsPage({
               heading={t("settings.main.timezone.heading")}
               value={timezoneValue}
               detail={t("settings.main.timezone.detail")}
-              open={activeSection === "timezone"}
+              sectionId="timezone"
+              activeSection={activeSection}
             >
               <SectionNotice banner={banner} section="timezone" active={activeSection} />
               <FieldGrid as="form" action={saveTimezoneAction} columns={1} className="mt-4">
@@ -739,11 +702,8 @@ export default async function SettingsPage({
               value={contactValue}
               description={t("settings.main.contact.description")}
               detail={t("settings.main.contact.detail")}
-              open={activeSection === "contact"}
-              // The first-run checklist's "Add contact details" lands here — a
-              // link that promises a form must arrive with the row open.
-              openOnHash="contact"
-              anchorId="contact"
+              sectionId="contact"
+              activeSection={activeSection}
             >
               <SectionNotice banner={banner} section="contact" active={activeSection} />
               <FieldGrid as="form" action={saveContactAction} columns={2} className="mt-4">
@@ -788,9 +748,8 @@ export default async function SettingsPage({
               value={profileValue}
               description={t("settings.main.profile.description")}
               detail={t("settings.main.profile.detail")}
-              open={activeSection === "profile"}
-              openOnHash="profile"
-              anchorId="profile"
+              sectionId="profile"
+              activeSection={activeSection}
             >
               <SectionNotice banner={banner} section="profile" active={activeSection} />
               <FieldGrid as="form" action={saveProfileAction} columns={1} className="mt-4">
@@ -860,7 +819,8 @@ export default async function SettingsPage({
               heading={t("settings.main.address.heading")}
               value={addressValue}
               detail={t("settings.main.address.detail")}
-              open={activeSection === "address"}
+              sectionId="address"
+              activeSection={activeSection}
             >
               <SectionNotice banner={banner} section="address" active={activeSection} />
               <AddressSearch
@@ -902,9 +862,8 @@ export default async function SettingsPage({
               value={reviewLinkValue}
               description={t("settings.main.reviewLink.description")}
               detail={t("settings.main.reviewLink.detail")}
-              open={activeSection === "reviewLink"}
-              openOnHash="review-link"
-              anchorId="review-link"
+              sectionId="reviewLink"
+              activeSection={activeSection}
             >
               <SectionNotice banner={banner} section="reviewLink" active={activeSection} />
               <FieldGrid as="form" action={saveReviewUrlAction} columns={1} className="mt-4">
@@ -945,9 +904,8 @@ export default async function SettingsPage({
                   : t("settings.main.searchListing.valueListed")
               }
               detail={t("settings.main.searchListing.detail")}
-              open={activeSection === "searchListing"}
-              openOnHash="search-listing"
-              anchorId="search-listing"
+              sectionId="searchListing"
+              activeSection={activeSection}
             >
               <SectionNotice banner={banner} section="searchListing" active={activeSection} />
               <FieldGrid as="form" action={saveSearchListingAction} columns={1} className="mt-4">
@@ -976,9 +934,8 @@ export default async function SettingsPage({
               value={conservationValue}
               description={t("settings.main.conservation.description")}
               detail={t("settings.main.conservation.detail")}
-              open={activeSection === "conservation"}
-              openOnHash="conservation"
-              anchorId="conservation"
+              sectionId="conservation"
+              activeSection={activeSection}
             >
               <SectionNotice banner={banner} section="conservation" active={activeSection} />
               <FieldGrid
@@ -1016,7 +973,8 @@ export default async function SettingsPage({
               heading={t("settings.main.packing.heading")}
               value={packingValue}
               description={t("settings.main.packing.description")}
-              open={activeSection === "packing"}
+              sectionId="packing"
+              activeSection={activeSection}
             >
               <SectionNotice banner={banner} section="packing" active={activeSection} />
               <FieldGrid as="form" action={savePackingAction} columns={1} className="mt-4">
@@ -1045,7 +1003,8 @@ export default async function SettingsPage({
               value={dockCallValue}
               description={t("settings.main.dockCall.description")}
               detail={t("settings.main.dockCall.detail")}
-              open={activeSection === "dockCall"}
+              sectionId="dockCall"
+              activeSection={activeSection}
             >
               <SectionNotice banner={banner} section="dockCall" active={activeSection} />
               {/* Six numbers, one save. The day used to come out of the single
@@ -1168,7 +1127,8 @@ export default async function SettingsPage({
               heading={t("settings.main.sendWindow.heading")}
               value={sendWindowValue}
               description={t("settings.main.sendWindow.description")}
-              open={activeSection === "sendWindow"}
+              sectionId="sendWindow"
+              activeSection={activeSection}
             >
               <SectionNotice banner={banner} section="sendWindow" active={activeSection} />
               <FieldGrid
@@ -1215,7 +1175,8 @@ export default async function SettingsPage({
             <SettingsRow
               heading={t("settings.main.units.heading")}
               value={unitsValue}
-              open={activeSection === "units"}
+              sectionId="units"
+              activeSection={activeSection}
               // The setup checklist's currency-and-depth step links to
               // `settings#units`, and for as long as this row carried neither
               // of these that link did **nothing**: the page loaded at the top
@@ -1225,8 +1186,6 @@ export default async function SettingsPage({
               // *inside* it (`anchorId`) or `AutoOpenDetails` opens it on a
               // client navigation (`openOnHash`) — which is why the three rows
               // that already had deep links have both.
-              openOnHash="units"
-              anchorId="units"
             >
               <SectionNotice banner={banner} section="units" active={activeSection} />
               {/* What Stripe reports for the connected account is advisory, so a
@@ -1328,7 +1287,8 @@ export default async function SettingsPage({
             <SettingsRow
               heading={t("boats.divingOptionsHeading")}
               value={divingOptionsValue}
-              open={activeSection === "divingOptions"}
+              sectionId="divingOptions"
+              activeSection={activeSection}
             >
               <SectionNotice banner={banner} section="divingOptions" active={activeSection} />
               <FieldGrid as="form" action={saveDivingOptionsAction} columns={1} className="mt-4">
@@ -1415,7 +1375,8 @@ export default async function SettingsPage({
             <SettingsRow
               heading={t("settings.main.emergency.heading")}
               value={emergencyValue}
-              open={activeSection === "emergency"}
+              sectionId="emergency"
+              activeSection={activeSection}
             >
               <SectionNotice banner={banner} section="emergency" active={activeSection} />
               <form action={saveEmergencyReferenceAction} className="mt-4 flex flex-col gap-4">
@@ -1486,7 +1447,8 @@ export default async function SettingsPage({
               <SettingsRow
                 heading={t("boats.heading")}
                 value={boatsValue}
-                open={activeSection === "boats"}
+                sectionId="boats"
+                activeSection={activeSection}
               >
                 <SectionNotice banner={banner} section="boats" active={activeSection} />
                 <div className="space-y-4 mt-4">
@@ -1609,11 +1571,11 @@ export default async function SettingsPage({
                 </div>
               </SettingsRow>
             ) : null}
-          </SettingsRowList>
+          </InsetGroup>
         </SettingsGroup>
 
         <SettingsGroup group={MONEY_GROUP} label={t(MONEY_GROUP.labelKey)}>
-          <SettingsRowList>
+          <InsetGroup>
             {/* First row in "Money" — what DiveDay itself costs, before what the
               shop charges divers. Soft expiry by product decision: a trial past
               its window keeps working exactly as before, so this is purely
@@ -1656,7 +1618,6 @@ export default async function SettingsPage({
               <SettingsDoorRow
                 href={`/shop/${shopSlug}/promos`}
                 heading={t("settings.main.promos.heading")}
-                description={t("settings.main.promos.description")}
               />
             ) : null}
 
@@ -1670,7 +1631,8 @@ export default async function SettingsPage({
                   heading={t("settings.main.rentals.heading")}
                   value={rentalsValue}
                   detail={t("settings.main.rentals.detail")}
-                  open={activeSection === "rentals"}
+                  sectionId="rentals"
+                  activeSection={activeSection}
                 >
                   <SectionNotice banner={banner} section="rentals" active={activeSection} />
                   <form action={saveRentalItemsAction} className="mt-4">
@@ -1707,7 +1669,8 @@ export default async function SettingsPage({
                   value={rentalPricingValue}
                   description={t("settings.main.rentalPricing.description")}
                   detail={t("settings.main.rentalPricing.detail")}
-                  open={activeSection === "rentalPricing"}
+                  sectionId="rentalPricing"
+                  activeSection={activeSection}
                 >
                   <SectionNotice banner={banner} section="rentalPricing" active={activeSection} />
                   <form action={saveRentalPricingAction} className="mt-4">
@@ -1761,7 +1724,8 @@ export default async function SettingsPage({
                   heading={t("settings.main.divePackages.heading")}
                   value={divePackagesValue}
                   description={t("settings.main.divePackages.description")}
-                  open={activeSection === "divePackages"}
+                  sectionId="divePackages"
+                  activeSection={activeSection}
                 >
                   <SectionNotice banner={banner} section="divePackages" active={activeSection} />
                   {shopPackages.length > 0 ? (
@@ -1870,7 +1834,8 @@ export default async function SettingsPage({
                   value={taxValue}
                   description={t("settings.main.tax.description")}
                   detail={t("settings.main.tax.detail")}
-                  open={activeSection === "tax"}
+                  sectionId="tax"
+                  activeSection={activeSection}
                 >
                   <SectionNotice banner={banner} section="tax" active={activeSection} />
                   <form action={saveTaxAction} className="mt-4">
@@ -1898,7 +1863,8 @@ export default async function SettingsPage({
                   value={passThroughValue}
                   description={t("settings.main.passThrough.description")}
                   detail={t("settings.main.passThrough.detail")}
-                  open={activeSection === "passThrough"}
+                  sectionId="passThrough"
+                  activeSection={activeSection}
                 >
                   <SectionNotice banner={banner} section="passThrough" active={activeSection} />
                   <form action={savePassThroughFeeAction} className="mt-4">
@@ -1953,7 +1919,9 @@ export default async function SettingsPage({
                     )
                   }
                   detail={!account ? t("settings.main.stripe.notConnectedDetail") : undefined}
-                  open={activeSection === "stripe" || !account || !ready}
+                  sectionId="stripe"
+                  activeSection={activeSection}
+                  forceOpen={!account || !ready}
                 >
                   <SectionNotice banner={banner} section="stripe" active={activeSection} />
                   {!account ? (
@@ -2047,7 +2015,7 @@ export default async function SettingsPage({
                 </SettingsRow>
               </>
             ) : null}
-          </SettingsRowList>
+          </InsetGroup>
 
           {canPayments ? null : (
             <div className="mt-6">
@@ -2174,21 +2142,18 @@ export default async function SettingsPage({
             </section>
           ) : null}
 
-          <SettingsRowList>
+          <InsetGroup>
             <SettingsDoorRow
               href={`/shop/${shopSlug}/settings/embed`}
               heading={t("settings.main.embed.heading")}
-              description={t("settings.main.embed.description")}
             />
             <SettingsDoorRow
               href={`/shop/${shopSlug}/settings/calendar`}
               heading={t("settings.main.calendar.heading")}
-              description={t("settings.main.calendar.description")}
             />
             <SettingsDoorRow
               href={`/shop/${shopSlug}/settings/integrations`}
               heading={t("settings.main.integrations.heading")}
-              description={t("settings.main.integrations.description")}
             />
             {/* Owner/manager only, like the payment rows above: the credential it
               stores can send messages as the business. */}
@@ -2196,7 +2161,6 @@ export default async function SettingsPage({
               <SettingsDoorRow
                 href={`/shop/${shopSlug}/settings/whatsapp`}
                 heading={t("settings.main.whatsapp.heading")}
-                description={t("settings.main.whatsapp.description")}
               />
             ) : null}
             {/* Owner/manager only, like the export row below it feeds: the
@@ -2212,31 +2176,27 @@ export default async function SettingsPage({
               <SettingsDoorRow
                 href={`/shop/${shopSlug}/settings/export#backups`}
                 heading={t("settings.main.backup.heading")}
-                description={t("settings.main.backup.description")}
               />
             ) : null}
             {canImport ? (
               <SettingsDoorRow
                 href={`/shop/${shopSlug}/settings/import`}
                 heading={t("settings.import.title")}
-                description={t("settings.main.dataImport.description")}
               />
             ) : null}
             {canImport ? (
               <SettingsDoorRow
                 href={`/shop/${shopSlug}/settings/gear-import`}
                 heading={t("gear.import.title")}
-                description={t("settings.main.gearImport.description")}
               />
             ) : null}
             {canExport ? (
               <SettingsDoorRow
                 href={`/shop/${shopSlug}/settings/export`}
                 heading={t("settings.export.title")}
-                description={t("settings.main.dataExport.description")}
               />
             ) : null}
-          </SettingsRowList>
+          </InsetGroup>
         </SettingsGroup>
       </div>
 

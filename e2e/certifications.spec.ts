@@ -6,24 +6,22 @@ import {
   daysFromNow,
   e2eNow,
   findTripOnBoard,
+  openThreadStep,
   signInAsOwner,
   signOut,
 } from "./helpers";
 
 signedInAsOwner();
 
-/** The diver detail page has two capture forms; scope by the form's own submit button. */
-function levelForm(page: Page) {
+/**
+ * The record has **one** capture form now — every card kind is one group with
+ * one add flow, and the card itself is the question (ADR
+ * 20260827-people-not-lists). Scoped by the form's own submit button.
+ */
+function captureForm(page: Page) {
   return page
     .locator("form", {
       has: page.getByRole("button", { name: "Capture for review", exact: true }),
-    })
-    .filter({ visible: true });
-}
-function specialtyForm(page: Page) {
-  return page
-    .locator("form", {
-      has: page.getByRole("button", { name: "Capture specialty for review" }),
     })
     .filter({ visible: true });
 }
@@ -43,13 +41,15 @@ test("staff captures and verifies level and specialty certifications before eith
 
   // Level certification: capture lands as pending, only an explicit verify trusts it.
   await page.getByText("Add certification", { exact: true }).click(); // open the collapsed capture form
-  const form = levelForm(page);
+  const form = captureForm(page);
   // No photo picker on either capture form: a card is trusted because a
   // staffer looked its number up with the issuing agency ("Mark certified"),
   // which a snapshot of the plastic never established.
   await expect(form.locator('input[name="cardImage"]')).toHaveCount(0);
   await form.locator('select[name="agency"]').selectOption("padi");
-  await form.locator('select[name="level"]').selectOption("advanced_open_water");
+  // One select, two option groups: the ladder and the specialties, with the
+  // value carrying its own kind.
+  await form.locator('select[name="card"]').selectOption("level:advanced_open_water");
   await form.getByLabel("Certification number").fill(`PADI-AOW-${e2eNow().getTime()}`);
   await form.getByRole("button", { name: "Capture for review", exact: true }).click();
 
@@ -69,14 +69,15 @@ test("staff captures and verifies level and specialty certifications before eith
   await expect(certifiedToast).toBeVisible();
   await expect(certifiedToast.getByRole("button", { name: "Undo" })).toBeVisible();
 
-  // Specialty certification: gated exactly the same way, on the same record.
-  await page.getByText("Add specialty", { exact: true }).click(); // open the collapsed capture form
+  // Specialty certification: gated exactly the same way, through the same one
+  // form on the same record.
+  await page.getByText("Add certification", { exact: true }).click();
   const cardNo = `PADI-WRECK-${e2eNow().getTime()}`;
-  const specialty = specialtyForm(page);
+  const specialty = captureForm(page);
   await specialty.locator('select[name="agency"]').selectOption("padi");
-  await specialty.locator('select[name="specialty"]').selectOption("wreck");
+  await specialty.locator('select[name="card"]').selectOption("specialty:wreck");
   await specialty.getByLabel("Certification number").fill(cardNo);
-  await specialty.getByRole("button", { name: "Capture specialty for review" }).click();
+  await specialty.getByRole("button", { name: "Capture for review", exact: true }).click();
 
   // Scope to this card's row by its unique number; the specialty card shows
   // "<agency> · <specialty>", not the literal word "specialty".
@@ -295,10 +296,12 @@ test("a diver types their card in from the readiness page, and staff verify it t
   await page.getByRole("button", { name: /^Book/ }).click();
   await expect(page).toHaveURL(/\/ready\//);
 
-  // The blocker now carries the form that answers it — collapsed, because a
-  // diver short several cards gets one disclosure per card rather than a stack
-  // of open forms.
-  const cardEntry = page
+  // The blocker carries the form that answers it, inside the spine's own
+  // certification step (ADR 20260827-the-divers-thread, decision 3) — and
+  // collapsed within it, because a diver short several cards gets one
+  // disclosure per card rather than a stack of open forms.
+  const certification = await openThreadStep(page, "certification");
+  const cardEntry = certification
     .locator("details")
     .filter({ has: page.getByText("Add your certification", { exact: true }) });
   await expect(cardEntry).toBeVisible();
@@ -315,10 +318,13 @@ test("a diver types their card in from the readiness page, and staff verify it t
 
   // Capture, never clearance: the row must not report itself as cleared, and
   // the same number typed again is recognised rather than refused.
+  // Scoped to the step and read without a visibility filter: the offer is gone
+  // from the DOM once the card is on file, and a closed step would make a
+  // visible-only assertion pass for the wrong reason.
   await expect(
     page
-      .locator("details")
-      .filter({ has: page.getByText("Add your certification", { exact: true }) }),
+      .locator('[data-thread-step="certification"]')
+      .getByText("Add your certification", { exact: true }),
   ).toHaveCount(0);
 
   // Staff find it waiting for review on the diver's own record, and verify it.

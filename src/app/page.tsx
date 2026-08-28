@@ -21,7 +21,12 @@ import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import { scheduleAttributionHref, switchingHref } from "@/lib/funnel";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { earlyAccessPrice, earlyAccessPriceAmount, fullShopExport } from "@/lib/marketing";
+import {
+  earlyAccessPrice,
+  earlyAccessPriceAmount,
+  fullShopExport,
+  midSeasonCutover,
+} from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { openGraphSite } from "@/lib/site-metadata";
@@ -141,6 +146,7 @@ function HomeBodySkeleton() {
               <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-44" />
             </div>
             <div className="mt-4 h-4 w-72 max-w-full rounded bg-surface-sunken" />
+            <div className="mt-2 h-4 w-64 max-w-full rounded bg-surface-sunken" />
           </div>
           {/* The captain's phone, and the card that overlaps its lower edge. */}
           <div className="mx-auto w-full max-w-sm lg:max-w-md">
@@ -157,8 +163,7 @@ function HomeBodySkeleton() {
       <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
         <div className="max-w-2xl">
           <div className="h-9 w-full max-w-lg rounded bg-surface-sunken" />
-          <div className="mt-5 h-5 w-full rounded bg-surface-sunken" />
-          <div className="mt-2 h-5 w-3/4 rounded bg-surface-sunken" />
+          <div className="mt-3 h-9 w-3/4 max-w-md rounded bg-surface-sunken" />
         </div>
         <div className="mt-14 grid items-center gap-8 lg:mt-20 lg:grid-cols-11 lg:gap-14">
           <div className="lg:col-span-5">
@@ -235,8 +240,17 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
     MIGRATION_GUIDES.map((guide) => guide.competitor),
   );
   // The day the hero's dock screen completes: a diver books days before, the
-  // front desk clears the boat that morning. Alternating full-width rows —
-  // the screen is the claim, so each row gives the mockup the wider column.
+  // front desk clears the boat that morning, and the diver goes home with
+  // something worth sending their buddy. Alternating full-width rows — the
+  // screen is the claim, so each row gives the mockup the wider column.
+  //
+  // Three rows rather than two since 2026-08-28: the day used to end at 8 a.m.,
+  // which left the product's own thesis — the shop gets remembered — with no
+  // home on `/` at all (docs/product/marketing-review-20260827.md, "A third
+  // moment: the evening"). The evening row is also the one row that argues
+  // revenue rather than administration, and it carries no link: the recap is
+  // something a shop's divers do, not a screen a visitor is asked to go poke,
+  // so the page's demo-door count is exactly what it was.
   // `id` is the message-bundle namespace, never a rendered string: it is this
   // list's React key, and every other field here is localized copy. Keying on
   // the title would make a language switch look like two different components
@@ -266,6 +280,15 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
       link: null,
       mockupLabel: t("marketing.home.moments.frontDesk.mockupLabel"),
       mockup: marketingMockups.frontDeskReadiness,
+    },
+    {
+      id: "recap",
+      when: t("marketing.home.moments.recap.when"),
+      title: t("marketing.home.moments.recap.title"),
+      description: t("marketing.home.moments.recap.description"),
+      link: null,
+      mockupLabel: t("marketing.home.moments.recap.mockupLabel"),
+      mockup: marketingMockups.recap,
     },
   ] as const;
   // What a shop gets back on the way out, listed rather than described — the
@@ -298,6 +321,19 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                 door, where the decision is actually made. The closing band
                 repeats the door, not the note. */}
             <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
+            {/* The terms, standing at the door rather than four bands below it
+                (docs/product/marketing-review-20260827.md, diagnosis 2). It is
+                deliberately a sentence and not a third CTA: the hero's decision
+                density is pinned at one primary and one secondary, and a
+                "See pricing" link here would spend that budget to answer a
+                question this line already answers. The closing band keeps the
+                two-year-lock detail and the door to /pricing. */}
+            <p className="mt-2 text-sm text-muted">
+              {t("marketing.home.heroPriceLine", {
+                price: earlyAccessPrice.price,
+                cadence: t(earlyAccessPrice.cadenceKey),
+              })}
+            </p>
           </div>
 
           <MarketingHeroMotion>
@@ -321,12 +357,14 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
       <MarketingReveal>
         <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
           <div className="max-w-2xl">
+            {/* One sentence, not two: the h2 and its lede said the same thing
+                in the same words ("what the front desk clears in the morning is
+                exactly what the captain sees at the dock"), so the lede was
+                deleted and the sentence promoted into the heading
+                (docs/product/marketing-review-20260827.md). */}
             <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
               {t("marketing.home.momentsTitle")}
             </h2>
-            <p className="mt-4 text-lg leading-8 text-pretty text-muted">
-              {t("marketing.home.momentsDescription")}
-            </p>
           </div>
 
           <div className="mt-14 space-y-16 lg:mt-20 lg:space-y-24">
@@ -404,6 +442,15 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             <div className="flex flex-col gap-5 lg:pr-14">
               <SectionMarker as="h3">{t("marketing.home.arrivingLabel")}</SectionMarker>
               <p className="leading-7 text-muted">{t("marketing.home.exportDescription1")}</p>
+              {/* The mid-season objection, answered in the column where it is
+                actually raised: a shop reading "bring your records in" in
+                August is doing the arithmetic of a switch mid-season, and the
+                four-phase move rail that answers it lives several thousand
+                pixels away on a switching guide this reader may never open
+                (docs/product/marketing-review-20260827.md). It renders the
+                guides' own shared key rather than a homepage wording of the
+                same promise — see `midSeasonCutover`. */}
+              <p className="leading-7 text-muted">{t(midSeasonCutover.claimKey)}</p>
               <MarketingMockup
                 label={t("marketing.home.importMockupLabel")}
                 className="shadow-xl shadow-foreground/5"

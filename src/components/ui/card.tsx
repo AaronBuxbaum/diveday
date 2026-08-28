@@ -9,11 +9,28 @@ import { type ReactNode, useId } from "react";
  * `rounded-3xl`) and six paddings, with `shadow-sm` on only 26 of them — so
  * identically-shaped cards sat at two different elevations on one page, and
  * two sibling settings routes one tap apart rendered the same panel at two
- * different corner radii.
+ * different corner radii. (That shadow has since retired from every one of
+ * them; see "Flat at rest" below.)
  *
  * The canonical spelling is the one `ShopStat` and the `<Table>` shell already
- * share: `rounded-2xl border border-border bg-surface shadow-sm`. A card, a
- * stat tile and a table shell are the same object, so they read as one.
+ * share: `rounded-2xl border border-border bg-surface`. A card, a stat tile and
+ * a table shell are the same object, so they read as one.
+ *
+ * ## Flat at rest
+ *
+ * **There is no shadow and no `elevated` prop** (ADR
+ * 20260827-clearwater-surface-language, decision 1: elevation is earned). A
+ * panel sitting in the page is `bg-surface` and a 1px hairline; a shadow says
+ * "this floats above the page" and therefore belongs to menus, sheets, dialogs
+ * and toasts alone, which carry `shadow-lg`/`shadow-2xl` at their own call
+ * sites. The `elevated={false}` escape hatch went with it: it existed so a card
+ * nested inside another card could stop stacking surface on surface, and with
+ * no shadow at rest there is nothing left to stack.
+ *
+ * The rule reaches the panels this component does not own, too: `card.test.tsx`
+ * fails the build on any class string in `src/` that wears `rounded-2xl` and
+ * `shadow-sm` together, so a hand-rolled panel cannot end up the only raised
+ * thing on a page of flat ones.
  *
  * There is deliberately **no `radius` prop**. A prop that lets every call site
  * keep the radius it happens to have today would preserve the drift behind an
@@ -111,16 +128,12 @@ export type SectionCardPadding = keyof typeof PADDING;
  */
 export function sectionCardClass({
   padding = "md",
-  elevated = true,
   className = "",
 }: {
   padding?: SectionCardPadding;
-  elevated?: boolean;
   className?: string;
 } = {}): string {
-  return `rounded-2xl border border-border bg-surface ${elevated ? "shadow-sm" : ""} ${
-    PADDING[padding]
-  } ${className}`
+  return `rounded-2xl border border-border bg-surface ${PADDING[padding]} ${className}`
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -166,7 +179,6 @@ export function SectionCard({
   description,
   actions,
   padding = "md",
-  elevated = true,
   id,
   className = "",
   ariaLabel,
@@ -184,12 +196,6 @@ export function SectionCard({
   /** Buttons, a `Badge`, a status — pinned to the heading's right, wrapping below it on a phone. */
   actions?: ReactNode;
   padding?: SectionCardPadding;
-  /**
-   * Elevation follows containment, the rule `Table` and `ShopStat` already
-   * keep: a card on the page is raised; a card that has to sit *inside*
-   * another one drops its shadow so surface never stacks on surface.
-   */
-  elevated?: boolean;
   /** A fragment target (`#backups`, `#invite`). Pair it with `scroll-mt-*` in `className`. */
   id?: string;
   className?: string;
@@ -252,7 +258,7 @@ export function SectionCard({
       // a screen reader announce the heading twice.
       aria-labelledby={headingId != null && Tag !== "li" ? headingId : undefined}
       aria-label={resolvedAriaLabel}
-      className={sectionCardClass({ padding, elevated, className })}
+      className={sectionCardClass({ padding, className })}
     >
       {hasHeader ? (
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">

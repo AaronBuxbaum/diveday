@@ -47,18 +47,32 @@ export const EARNED_MOMENT_SURFACE = "rise-in rounded-2xl border border-accent/4
  * One earned line inside a working surface. `role="status"` because these all
  * appear in response to something the user just did — the last diver boarding,
  * the last set of fins coming back — on a page that does not reload.
+ *
+ * `animate={false}` drops the `rise-in` entrance for the one case that
+ * entrance is wrong: a page that *loads* already carrying the moment. A boat
+ * cleared an hour ago is a fact on arrival, not a thing that just happened,
+ * and re-playing the celebration on every visit is what makes it stop meaning
+ * anything (ADR 20260827-clearwater-surface-language, decision 11 — every
+ * moment is earned and transient). The caller owns that judgement because only
+ * it can tell a first paint from a transition; see
+ * `check-in/_components/CounterClearedLine.tsx` for the guard.
  */
 export function EarnedMomentLine({
   children,
+  animate = true,
   className = "",
 }: {
   children: React.ReactNode;
+  /** Play the `rise-in` entrance. Off for a moment that was already true on arrival. */
+  animate?: boolean;
   className?: string;
 }) {
   return (
     <p
       role="status"
-      className={`rise-in rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm font-semibold ${className}`.trim()}
+      className={`${
+        animate ? "rise-in " : ""
+      }rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm font-semibold ${className}`.trim()}
     >
       {children}
     </p>

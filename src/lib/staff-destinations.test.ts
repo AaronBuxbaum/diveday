@@ -33,25 +33,22 @@ const crew: StaffDestinationGates = {
 describe("the staff destination registry", () => {
   it("gives every destination a unique id and a unique URL", () => {
     const ids = STAFF_DESTINATIONS.map((destination) => destination.id);
-    // Suffix *plus* view query: Today and its by-departure view share a path
-    // and are told apart by `?view=`, which is the whole point of a view. Two
-    // destinations resolving to the same full URL would still be a bug.
     const urls = STAFF_DESTINATIONS.map(staffDestinationSuffix);
     expect(new Set(ids).size).toBe(ids.length);
     expect(new Set(urls).size).toBe(urls.length);
   });
 
-  it("only lets a view — never a page — share another destination's path", () => {
+  /**
+   * **No destination is a *view* of another page any more.** Exactly one ever
+   * was — "Not ready", behind `?view=departures` on the shop home — and it went
+   * when the home became one chronological spine (ADR
+   * 20260827-clearwater-surface-language, decision 4). A registry entry whose
+   * URL is a query string on somebody else's page is a second palette row
+   * landing where the first one already goes.
+   */
+  it("declares no destination as a query on another destination's path", () => {
     for (const destination of STAFF_DESTINATIONS) {
-      const twins = STAFF_DESTINATIONS.filter(
-        (other) => other.suffix === destination.suffix && other.id !== destination.id,
-      );
-      for (const twin of twins) {
-        expect(
-          Boolean(destination.query) || Boolean(twin.query),
-          `${destination.id} and ${twin.id} share a path with no view query`,
-        ).toBe(true);
-      }
+      expect(destination.suffix, destination.id).not.toContain("?");
     }
   });
 
@@ -220,13 +217,13 @@ describe("what each consumer derives", () => {
   });
 
   it("keeps only non-places out of the nav", () => {
-    // `navGroup: null` is not a demotion — it is the statement that the
-    // entry is an action (addBooking), a way into a page (walkIn), or a view
-    // of one (blockers), not a place a menu should list.
+    // `navGroup: null` is not a demotion — it is the statement that the entry
+    // is an action (addBooking) or a way into a page (walkIn), not a place a
+    // menu should list.
     const outOfNav = STAFF_DESTINATIONS.filter((destination) => destination.navGroup === null).map(
       (destination) => destination.id,
     );
-    expect(outOfNav).toEqual(["blockers", "addBooking", "walkIn"]);
+    expect(outOfNav).toEqual(["addBooking", "walkIn"]);
   });
 
   it("puts Settings last in the whole registry, so no consumer can list it mid-menu", () => {
@@ -244,11 +241,11 @@ describe("what each consumer derives", () => {
   });
 
   it("offers the palette everything in the nav, plus the nav-free surfaces", () => {
-    // Walk-in and the by-departure view are palette-only; everything in the
-    // nav is also in the palette.
+    // Walk-in and Add-a-booking are palette-only; everything in the nav is
+    // also in the palette.
     const palette = staffPaletteDestinations(owner).map((d) => d.id);
     expect(palette).toContain("walkIn");
-    expect(palette).toContain("blockers");
+    expect(palette).toContain("addBooking");
     for (const destination of STAFF_DESTINATIONS) {
       if (destination.navGroup !== null) expect(palette).toContain(destination.id);
     }
@@ -297,16 +294,17 @@ describe("what each consumer derives", () => {
     expect(blocked.map((d) => d.id)).toEqual(["today"]);
   });
 
-  it("still reaches the by-departure view by name and by keystroke", () => {
-    // Not ready is off the header, so the palette row is the only way left to
-    // ask for it by name — and it must carry the view query, or it lands on
-    // the urgency view and quietly does nothing.
-    const blockers = STAFF_DESTINATIONS.find((destination) => destination.id === "blockers");
-    if (!blockers) throw new Error("registry lost the by-departure view");
-    expect(blockers.navGroup).toBeNull();
-    expect(blockers.inPalette).toBe(true);
-    expect(staffDestinationHref(staffShopRoot("blue-mantis"), blockers)).toBe(
-      "/shop/blue-mantis?view=departures",
+  it("keeps no Not-ready entry now that the home is the day spine", () => {
+    // It was a page, then a view of Today, and it is now neither: a diver who
+    // cannot board is a row on the station of the boat waiting for them (ADR
+    // 20260827-clearwater-surface-language, decision 4). Today carries the
+    // blocked badge, and there is one row in the palette for one URL.
+    expect(STAFF_DESTINATIONS.some((destination) => destination.id === ("blockers" as never))).toBe(
+      false,
+    );
+    const today = STAFF_DESTINATIONS.find((destination) => destination.id === "today");
+    expect(staffDestinationHref(staffShopRoot("blue-mantis"), today ?? ({} as never))).toBe(
+      "/shop/blue-mantis",
     );
   });
 });

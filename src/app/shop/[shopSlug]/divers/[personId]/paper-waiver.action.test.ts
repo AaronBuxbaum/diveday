@@ -1,7 +1,16 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
-import { bookings, people, personRoles, waiverRecords } from "@/db/schema";
+import {
+  bookings,
+  certifications,
+  nitroxCertifications,
+  orders,
+  people,
+  personRoles,
+  specialtyCertifications,
+  waiverRecords,
+} from "@/db/schema";
 import { seededShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -77,6 +86,28 @@ async function context() {
   return { db, shop, personId: await diverOwingASignature(db, shop.id) };
 }
 
+/**
+ * **The record's one earned moment, and the condition under it.**
+ *
+ * `markWaiverInPersonAction` answers with `diver-clear` instead of its ordinary
+ * success code when the act left `buildDiverStatus` empty (ADR
+ * 20260827-people-not-lists's "the last thing clears"). Both halves are pinned:
+ * the seeded divers above all still have something outstanding, so every test
+ * in this file asserts the *ordinary* code, and this one strips the record bare
+ * first to prove the swap fires only when nothing is waiting.
+ */
+async function clearEverythingElse(db: AppDb, shopId: string, personId: string) {
+  await db.delete(certifications).where(eq(certifications.personId, personId));
+  await db.delete(specialtyCertifications).where(eq(specialtyCertifications.personId, personId));
+  await db.delete(nitroxCertifications).where(eq(nitroxCertifications.personId, personId));
+  await db.delete(orders).where(eq(orders.personId, personId));
+  await db.delete(bookings).where(eq(bookings.personId, personId));
+  await db
+    .update(people)
+    .set({ emergencyContactName: "Kojo Mensah", emergencyContactPhone: "+13055550177" })
+    .where(and(eq(people.id, personId), eq(people.shopId, shopId)));
+}
+
 function attested() {
   const formData = new FormData();
   formData.set("medicalAttested", "on");
@@ -87,6 +118,55 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+/**
+ * Both tests here declare 40s rather than taking the file's 20s default. They
+ * pay for two things the rest of the file does not: six extra writes to strip
+ * the seeded record bare, and the post-mutation `diverRecordIsClear` read that
+ * the earned moment is derived from (a whole `getDiverProfile` plus the next
+ * booking's readiness). Neither is a race — the work is real and sequential,
+ * and a ceiling only ever bounds a *failure* (playwright.config.ts states the
+ * same rule for the e2e side).
+ */
+const CLEARING_TIMEOUT_MS = 40_000;
+
+describe("the last thing clearing", () => {
+  it(
+    "answers with the earned moment only when nothing else is waiting",
+    async () => {
+      const { db, shop, personId } = await context();
+      await clearEverythingElse(db, shop.id, personId);
+
+      const to = await redirectedTo(() =>
+        markWaiverInPersonAction(shop.slug, personId, attested()),
+      );
+
+      // No `&form=`: the moment belongs to the masthead, which is where
+      // `NOTICE_KEYS` files `diver-clear`.
+      expect(to).toBe(`/shop/${shop.slug}/divers/${personId}?notice=diver-clear`);
+    },
+    CLEARING_TIMEOUT_MS,
+  );
+
+  it(
+    "keeps the ordinary success code while anything is still open",
+    async () => {
+      const { db, shop, personId } = await context();
+      await clearEverythingElse(db, shop.id, personId);
+      // One thing left undone is enough — the moment is about the whole record.
+      await db.update(people).set({ emergencyContactPhone: "" }).where(eq(people.id, personId));
+
+      const to = await redirectedTo(() =>
+        markWaiverInPersonAction(shop.slug, personId, attested()),
+      );
+
+      expect(to).toBe(
+        `/shop/${shop.slug}/divers/${personId}?notice=waiver-paper-recorded&form=waiver#waiver`,
+      );
+    },
+    CLEARING_TIMEOUT_MS,
+  );
+});
+
 describe("recording a paper waiver from the diver record", () => {
   it("files the release against the diver and no seat", async () => {
     const { db, shop, personId } = await context();
@@ -94,7 +174,7 @@ describe("recording a paper waiver from the diver record", () => {
     const to = await redirectedTo(() => markWaiverInPersonAction(shop.slug, personId, attested()));
 
     expect(to).toBe(
-      `/shop/${shop.slug}/divers/${personId}?notice=waiver-paper-recorded&form=waiver`,
+      `/shop/${shop.slug}/divers/${personId}?notice=waiver-paper-recorded&form=waiver#waiver`,
     );
     const [record] = await completedWaivers(db, shop.id, personId);
     // The whole point: a signature is a fact about a person and a shop, so the
@@ -125,7 +205,7 @@ describe("recording a paper waiver from the diver record", () => {
     const to = await redirectedTo(() => markWaiverInPersonAction(shop.slug, person.id, attested()));
 
     expect(to).toBe(
-      `/shop/${shop.slug}/divers/${person.id}?notice=waiver-paper-recorded&form=waiver`,
+      `/shop/${shop.slug}/divers/${person.id}?notice=waiver-paper-recorded&form=waiver#waiver`,
     );
     expect(await completedWaivers(db, shop.id, person.id)).toHaveLength(1);
   });
@@ -138,7 +218,7 @@ describe("recording a paper waiver from the diver record", () => {
     );
 
     expect(to).toBe(
-      `/shop/${shop.slug}/divers/${personId}?notice=waiver-medical-attestation&form=waiver`,
+      `/shop/${shop.slug}/divers/${personId}?notice=waiver-medical-attestation&form=waiver#waiver`,
     );
     expect(await completedWaivers(db, shop.id, personId)).toHaveLength(0);
   });
@@ -152,7 +232,7 @@ describe("recording a paper waiver from the diver record", () => {
     // Idempotent, and it still reports success: the shop's question ("is this
     // diver's release on file?") is answered either way.
     expect(to).toBe(
-      `/shop/${shop.slug}/divers/${personId}?notice=waiver-paper-recorded&form=waiver`,
+      `/shop/${shop.slug}/divers/${personId}?notice=waiver-paper-recorded&form=waiver#waiver`,
     );
     expect(await completedWaivers(db, shop.id, personId)).toHaveLength(1);
   });
@@ -173,7 +253,9 @@ describe("recording a paper waiver from the diver record", () => {
       markWaiverInPersonAction(shop.slug, removed.id, attested()),
     );
 
-    expect(to).toBe(`/shop/${shop.slug}/divers/${removed.id}?notice=waiver-error&form=waiver`);
+    expect(to).toBe(
+      `/shop/${shop.slug}/divers/${removed.id}?notice=waiver-error&form=waiver#waiver`,
+    );
     expect(await completedWaivers(db, shop.id, removed.id)).toHaveLength(0);
   });
 
@@ -185,7 +267,7 @@ describe("recording a paper waiver from the diver record", () => {
     const to = await redirectedTo(() => markWaiverInPersonAction(shop.slug, personId, attested()));
 
     expect(to).toBe(
-      `/shop/${shop.slug}/divers/${personId}?notice=not-authorized-waiver&form=waiver`,
+      `/shop/${shop.slug}/divers/${personId}?notice=not-authorized-waiver&form=waiver#waiver`,
     );
     expect(await completedWaivers(db, shop.id, personId)).toHaveLength(0);
   });

@@ -196,7 +196,18 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      // **1279, not Desktop Chrome's 1280 — one pixel below the week board's
+      // `xl` floor.** From that width up the staff board composes as a
+      // seven-column week and the vertical day stream is `display:none`
+      // (H-63, ADR 20260827-clearwater-surface-language). The stream is the
+      // composition every flow spec in this suite is written against — it
+      // carries the add panel, the row menu and the cursor pager, and it is
+      // what tablets and phones get — so the functional fleet drives the app
+      // at the widest width the stream renders. The board's own spec sets
+      // 1280 explicitly to read the week, and e2e/visual.spec.ts sets its own
+      // 390 / 820 / 1280 viewports, so both compositions are still
+      // photographed and exercised.
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1279, height: 720 } },
     },
   ],
   // One precompiled `next start` server per worker. Playwright waits for all of

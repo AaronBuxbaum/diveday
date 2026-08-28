@@ -18,10 +18,12 @@ import {
   missingContactDetailText,
   missingContactNamedDetailText,
   missingFitDetailText,
+  openCrewActionText,
   openDataSettingsActionText,
   openGearRegisterActionText,
   openGearUnitActionText,
   openGuestsActionText,
+  openLastMinuteDealActionText,
   openOrdersActionText,
   openPrepListActionText,
   openReviewsActionText,
@@ -99,6 +101,7 @@ import { listStuckPaymentOperations, STALE_AFTER_MS } from "./payment-operations
 import { listOwedShopCancellationRefunds, OWED_REFUND_STALE_AFTER_MS } from "./refunds";
 import { readReviewsAwaitingModeration } from "./reviews";
 import {
+  boats,
   bookings,
   nitroxCertifications,
   people,
@@ -212,6 +215,22 @@ export type DepartureSummary = {
    */
   blockedAboardGroups: { kind: AboardBlockerKind; names: string[] }[];
   courseTitle: string | null;
+  /**
+   * The three facts the day spine's station line says about a departure — site
+   * · boat · price (ADR 20260827-clearwater-surface-language, decision 4). They
+   * are read here, in the one departures pass, rather than by the surface: a
+   * station is a *rendering* of this row, and a second query at the page would
+   * be a second answer about the same boat.
+   *
+   * `siteName` is `trips.dive_site_id`'s name — the compatibility pointer to
+   * the first dive's site that readiness and the forecast already read — and
+   * `boatName` is `boats.name` through `trips.boat_id`. All three are null for
+   * a departure that has not been given one: a shop may price at the counter,
+   * run a shore dive, or not own a hull.
+   */
+  siteName: string | null;
+  boatName: string | null;
+  priceCents: number | null;
   crew: { id: string; fullName: string; roles: string[] }[];
   /**
    * **The crew half of "is this checkpoint closed", from the one authority.**
@@ -1145,6 +1164,24 @@ export async function getTodayWork(
   const credentialRows = await listStaffCredentials(db, shopId);
 
   const tripIds = todayTrips.map((t) => t.id);
+  // The hull each of today's departures sails on, for the station's meta line.
+  // A bounded lookup keyed on the trips already in hand rather than a join
+  // widened into `pagedUpcomingTripsWithCounts`: that reader also feeds the
+  // public schedule and the booking picker, neither of which has any business
+  // knowing a boat's name.
+  const boatIds = [
+    ...new Set(todayTrips.map((trip) => trip.boatId).filter((id): id is string => Boolean(id))),
+  ];
+  const boatNames = new Map(
+    boatIds.length > 0
+      ? (
+          await db
+            .select({ id: boats.id, name: boats.name })
+            .from(boats)
+            .where(and(eq(boats.shopId, shopId), inArray(boats.id, boatIds)))
+        ).map((row) => [row.id, row.name] as const)
+      : [],
+  );
   const assignments =
     tripIds.length > 0
       ? await db
@@ -1327,7 +1364,7 @@ export async function getTodayWork(
               ? overRatioIntroDetailText(t, crewGap.booked, crewGap.capacity)
               : overRatioDetailText(t, crewGap.booked, crewGap.capacity)
             : instructorMissingDetailText(t),
-        actionLabel: openTripActionText(t),
+        actionLabel: openCrewActionText(t),
         // The trip's crew editor, not the bare Overview it used to land on
         // (Lens 17 task 139) — the fix for either gap lives right there.
         href: `${tripHref}#crew`,
@@ -1381,7 +1418,7 @@ export async function getTodayWork(
           departure,
           aboutDeparture: true,
           detail: uncrewedDepartureDetailText(t, ratioGap.divers),
-          actionLabel: openTripActionText(t),
+          actionLabel: openCrewActionText(t),
           href: `${tripHref}#crew`,
           dueAt: trip.startsAt,
         });
@@ -1400,7 +1437,7 @@ export async function getTodayWork(
             ratioGap.divemasterCount,
             diversPerDivemaster,
           ),
-          actionLabel: openTripActionText(t),
+          actionLabel: openCrewActionText(t),
           href: `${tripHref}#crew`,
           dueAt: trip.startsAt,
         });
@@ -1497,7 +1534,7 @@ export async function getTodayWork(
         departure,
         aboutDeparture: true,
         detail: lastMinuteFillDetailText(t, openSeats),
-        actionLabel: openTripActionText(t),
+        actionLabel: openLastMinuteDealActionText(t),
         href: `${tripHref}/guests#last-minute-deal`,
         dueAt: trip.startsAt,
       });
@@ -1933,6 +1970,9 @@ export async function getTodayWork(
       blockedAshore: ashoreBlocked.length,
       blockedAshoreNames: ashoreBlocked.map((row) => row.person.fullName),
       courseTitle: trip.course?.title ?? null,
+      siteName: trip.diveSite?.name ?? null,
+      boatName: trip.boatId ? (boatNames.get(trip.boatId) ?? null) : null,
+      priceCents: trip.priceCents,
       crew: tripCrew,
       crewAccountedFor: completeness.crewAccountedFor,
       crewReason: completeness.crewReason,

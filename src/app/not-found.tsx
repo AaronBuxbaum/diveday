@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
+import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
@@ -41,7 +43,7 @@ import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 export default function NotFound() {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-6 py-16 text-center">
-      <p className="text-sm font-medium tracking-widest text-primary uppercase">DiveDay</p>
+      <p className={EYEBROW_CLASS}>DiveDay</p>
       <Suspense fallback={<NotFoundCopy locale={DEFAULT_DIVER_LOCALE} />}>
         <LocalizedNotFoundCopy />
       </Suspense>
@@ -58,9 +60,7 @@ function NotFoundCopy({ locale }: { locale: Parameters<typeof diverTranslator>[0
   const t = diverTranslator(locale);
   return (
     <>
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight text-balance">
-        {t("notFound.heading")}
-      </h1>
+      <h1 className={`mt-2 ${SHELL_TITLE_CLASS} text-balance`}>{t("notFound.heading")}</h1>
       <p className="mt-3 text-muted">{t("notFound.body")}</p>
       <Link href="/" className={buttonClass({ className: "mt-6" })}>
         {t("notFound.backHome")}

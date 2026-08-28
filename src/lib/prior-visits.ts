@@ -105,11 +105,13 @@ export function mergeShopHistory<TBooking, TVisit>(
 }
 
 /**
- * How many entries the profile shows before collapsing the rest.
+ * How many entries behind the diver the record's story shows before folding
+ * the rest.
  *
  * A ten-year regular's imported history is hundreds of rows, and a wall of them
- * buries the cards, sizes, and payment state a staffer opened the page for. The
- * recent ones are the ones anyone reads; the rest stay one click away rather
- * than being dropped.
+ * buries the cards, sizes and open items a staffer opened the page for. The
+ * recent ones are the ones anyone reads; the rest stay one tap away rather than
+ * being dropped. Everything still *ahead* of the diver is always shown — a boat
+ * they are on is never folded away (ADR 20260827-people-not-lists).
  */
-export const SHOP_HISTORY_PREVIEW_COUNT = 8;
+export const SHOP_HISTORY_PREVIEW_COUNT = 10;

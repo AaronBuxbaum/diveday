@@ -327,6 +327,15 @@ export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
  * useful dive facts, a crew note, and the diver's own photos. It gives the
  * product page a concrete picture of the memory the trip creates after the
  * operational work is finished.
+ *
+ * **Two callers now, and both describe this screen in their own aria-label**:
+ * `/product`'s after-trip chapter, and the homepage's evening moment row
+ * (docs/product/marketing-review-20260827.md, "A third moment: the evening").
+ * So a redraw of this component — the keepsake card of roadmap slice 7d, per
+ * [20260827-the-divers-thread](../../docs/architecture/decisions/20260827-the-divers-thread.md)
+ * — has to carry `marketing.product.recapMockupLabel` and
+ * `marketing.home.moments.recap.{mockupLabel,description}` with it, in both
+ * locales, or the label stops naming what the reader is looking at.
  */
 export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);

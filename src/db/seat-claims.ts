@@ -4,6 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
+import { waiverState } from "@/lib/waivers";
 import {
   type IssuedCapability,
   issueBookingCapability,
@@ -388,6 +389,15 @@ export type PartySeatClaim = {
   seatName: string;
   claimed: boolean;
   /**
+   * Their waiver is signed. **One booking-scoped fact, never readiness**: the
+   * organizer paid for this seat and is the person who will notice it is not
+   * ready, so "has this seat signed?" is theirs to know — but a card sitting
+   * with the shop for verification is the shop's move, not the party's, and
+   * nothing here says a word about it. The thread renders this only as the
+   * party's own aggregate line (`thread.partyAllSet`), never per seat.
+   */
+  waiverSigned: boolean;
+  /**
    * A fresh claim capability for an unclaimed seat, or null for a claimed one
    * (nothing left to hand out) — and null when issuing failed, which the
    * panel renders as the seat's name with no link rather than an error.
@@ -415,10 +425,17 @@ export async function issuePartySeatClaims(
 ): Promise<PartySeatClaim[]> {
   const now = input.now ?? nowDate();
   const rows = await db
-    .select({ booking: bookings, person: people, trip: trips })
+    .select({ booking: bookings, person: people, trip: trips, waiver: waiverRecords })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
+    // The seat's current waiver and no other — a superseded record is a
+    // replaced one, and counting it would report a seat as signed on paperwork
+    // the shop has already withdrawn.
+    .leftJoin(
+      waiverRecords,
+      and(eq(waiverRecords.bookingId, bookings.id), isNull(waiverRecords.supersededAt)),
+    )
     .where(
       and(
         eq(bookings.shopId, input.shopId),
@@ -434,6 +451,7 @@ export async function issuePartySeatClaims(
       bookingId: row.booking.id,
       seatName: row.person.fullName,
       claimed: row.booking.claimedAt !== null,
+      waiverSigned: waiverState(row.waiver, now) === "complete",
       claim: claimable
         ? await issueBookingCapability(db, {
             shopId: input.shopId,

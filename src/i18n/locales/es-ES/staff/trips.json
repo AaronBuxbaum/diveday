@@ -192,7 +192,11 @@
     "roleInstructor": "Instructor/a",
     "roleDivemaster": "Divemaster",
     "roleCaptain": "Patrón/patrona",
-    "roleCrew": "Tripulación de cubierta"
+    "roleCrew": "Tripulación de cubierta",
+    "assignLabel": "Asignar tripulante",
+    "assignOption": "Asignar tripulante…",
+    "unassignAria": "Quitar a {name}",
+    "assignFailed": "No se ha guardado — verifica tu conexión o inténtalo de nuevo."
   },
   "recapNote": {
     "heading": "Nota de resumen post-salida",

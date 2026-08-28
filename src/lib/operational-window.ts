@@ -1,21 +1,20 @@
 /**
  * One time-window model for the shop's readiness surfaces.
  *
- * Today, Not ready, and Check-in all read the same evidence — who can't board
- * yet — and used to slice it on three unrelated, page-side horizons: "the next
- * 7 days", "the nearest 40 departures", and "−6h → +36h". A diver cleared on
- * one list still showed on another, and no staffer could hold one mental model
- * of what any of the three was promising.
+ * The shop home, the "Not ready" queue and Check-in all read the same
+ * evidence — who can't board yet — and used to slice it on three unrelated,
+ * page-side horizons: "the next 7 days", "the nearest 40 departures", and
+ * "−6h → +36h". A diver cleared on one list still showed on another, and no
+ * staffer could hold one mental model of what any of the three was promising.
  *
  * This module is that model. Every readiness surface derives its bounds from
  * here, so the three horizons agree *by construction* rather than by anyone
  * remembering to keep three constants in step:
  *
  * - **The operational horizon** (`operationalWindow`) — now through
- *   {@link OPERATIONAL_HORIZON_DAYS} days out. The shop's working week. Today
- *   ranks the work inside it by urgency, and its by-departure view ("Not
- *   ready") groups the same people by the boat they hold up. Anything further
- *   out is Schedule's job, not a triage list's.
+ *   {@link OPERATIONAL_HORIZON_DAYS} days out. The shop's working week. The
+ *   home files the work inside it onto the boat each job holds up, and
+ *   everything further out is Schedule's job rather than a triage list's.
  * - **The shop day** (`shopDayWindow`) — the coarse scan that finds "today's
  *   boat" before a timezone is applied. Not a readiness lens at all: it exists
  *   only so a *calendar-day* question can be answered without reading every
@@ -27,16 +26,18 @@
  *   up to a counter for a boat that has already sailed, and the front desk needs
  *   that row. Forwards it never outruns the horizon — see
  *   `arrivalsWindowIsInsideHorizon`, which is what guarantees the counter can
- *   never show a departure that Not ready has already dropped.
+ *   never show a departure the home has already dropped.
  *
  * Reports is deliberately *not* here. A calendar month is genuinely its job.
  *
  * Codes and numbers only — the sentence that discloses the window lives in
  * the staff bundle under `shared.operationalWindow`, parameterised from the
- * constants below so the words can never drift from the query. It now names two
- * *pages* rather than three, because Not ready became Today's by-departure view
- * (ADR 20260803-not-ready-is-a-view); the three *lenses* on the window are
- * unchanged, and so is everything in this module.
+ * constants below so the words can never drift from the query. It names the
+ * counter alone now: "Not ready" became a view of the shop home
+ * (ADR 20260803-not-ready-is-a-view) and then stopped being a view at all when
+ * the home became one chronological spine (ADR
+ * 20260827-clearwater-surface-language, decision 4). The *lenses* on the window
+ * are unchanged, and so is everything in this module.
  */
 
 import { DAY_MS, HOUR_MS } from "@/lib/clock";
@@ -87,19 +88,6 @@ export const SHOP_DAY_SCAN_HOURS = 26;
  */
 export const OPERATIONAL_MAX_TRIPS = 60;
 
-/**
- * Departure groups per page on the Not ready queue. Blocker lists never
- * silently truncate (persona "Chloe"), so the horizon's tail is paged, never
- * dropped: 26 departures once rendered as one unbroken ~10,700px scroll.
- *
- * **Deliberately not a `PAGE_SIZE` tier** (`src/db/paging.ts`, issue 763). The
- * unit here is a departure *group* carrying its whole blocked roster beneath
- * it, not a row — ten of those is already the ~10,700px problem above at a
- * quarter scale, and twenty would put it straight back. A tier set is only
- * honest between lists whose unit is the same size.
- */
-export const BLOCKERS_TRIPS_PER_PAGE = 10;
-
 /** A half-open-in-spirit interval of departure times. Both bounds inclusive. */
 export type OperationalWindow = {
   from: Date;
@@ -107,8 +95,8 @@ export type OperationalWindow = {
 };
 
 /**
- * The horizon Today and Not ready share: departures from this moment through
- * {@link OPERATIONAL_HORIZON_DAYS} days out.
+ * The horizon every readiness surface shares: departures from this moment
+ * through {@link OPERATIONAL_HORIZON_DAYS} days out.
  */
 export function operationalWindow(now: Date): OperationalWindow {
   return { from: now, to: new Date(now.getTime() + OPERATIONAL_HORIZON_MS) };
@@ -154,29 +142,10 @@ export function withinWindow(window: OperationalWindow, at: Date): boolean {
 /**
  * The containment invariant the three surfaces rest on: anything the counter
  * shows *ahead of now* is inside the operational horizon, so a departure can
- * never reach Check-in without also being visible on Today and Not ready. The
+ * never reach Check-in without also being visible on the home. The
  * arrivals window's lookback intentionally sits outside it — see the module
  * note.
  */
 export function arrivalsWindowIsInsideHorizon(now: Date): boolean {
   return arrivalsWindow(now).to.getTime() <= operationalWindow(now).to.getTime();
-}
-
-export type Page<T> = {
-  /** The clamped, 1-based page actually shown. */
-  page: number;
-  pageCount: number;
-  items: T[];
-};
-
-/**
- * One page of a queue, clamped. A hand-typed `?page=0`, `?page=-3`, or
- * non-numeric value reads as page 1; anything past the last page clamps to it
- * rather than rendering an empty list while work still exists elsewhere in the
- * queue.
- */
-export function pageOf<T>(items: readonly T[], requested: number, pageSize: number): Page<T> {
-  const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
-  const page = Math.min(pageCount, Math.max(1, Number.isFinite(requested) ? requested : 1));
-  return { page, pageCount, items: items.slice((page - 1) * pageSize, page * pageSize) };
 }

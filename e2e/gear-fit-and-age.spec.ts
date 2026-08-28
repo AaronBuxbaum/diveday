@@ -70,6 +70,12 @@ test.describe("staff", () => {
     await expect(page.getByRole("status")).toContainText("packs from their stated sizes again");
 
     // Editing the stated fit is allowed for an owner (canOverrideGearRequest).
+    // The form is behind the Gear-and-sizes group's one disclosure now, which
+    // is what lets the two facts lead (ADR 20260827-people-not-lists).
+    await page
+      .getByRole("region", { name: "Gear and sizes" })
+      .getByText("Edit", { exact: true })
+      .click();
     await page.getByLabel("BCD size").fill("M");
     await page.getByRole("button", { name: "Save rental fit" }).click();
     await expect(page.getByRole("status")).toContainText("Rental fit profile saved");

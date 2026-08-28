@@ -31,12 +31,16 @@ test("the command palette finds a diver by name and ⌘K jumps to a page shortcu
   await page.keyboard.press("ControlOrMeta+k");
   const reopened = page.getByRole("combobox", { name: /Search divers/ });
   await expect(reopened).toBeFocused();
+  // "Not ready" is not a destination any more — it was a page, then Today's
+  // by-departure view, and the shop home is now one chronological spine where a
+  // blocked diver is a row on their boat's station (ADR
+  // 20260827-clearwater-surface-language, decision 4). The palette offers no
+  // second row landing on Today's own URL.
   await reopened.fill("Not ready");
-  await page.getByRole("option", { name: "Not ready" }).click();
-  // Not ready is Today's by-departure *view* since it folded into the shop
-  // home, so the palette row carries the view query rather than a route of its
-  // own — the registry is still the one place that decides where it points.
-  await expect(page).toHaveURL(/\?view=departures$/);
+  await expect(page.getByRole("option", { name: "Not ready" })).toHaveCount(0);
+  await reopened.fill("Today");
+  await page.getByRole("option", { name: "Today" }).first().click();
+  await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
 });
 
 test("the command palette also finds dive sites, courses, and every gated nav destination", {

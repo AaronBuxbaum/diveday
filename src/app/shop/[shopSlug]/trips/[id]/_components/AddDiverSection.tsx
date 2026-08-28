@@ -155,7 +155,7 @@ export function AddDiverSection({
                 seatAction={addExistingDiverAction}
                 inviteAction={inviteAction}
                 personHref={(personId) => `/shop/${shopSlug}/divers/${personId}`}
-                rowClassName="bg-surface shadow-sm"
+                rowClassName="bg-surface"
                 // "Same as last time": the fit already on file carries onto the
                 // trip, so staff confirm rather than re-enter.
                 extraLine={({ rentalFit }) => (

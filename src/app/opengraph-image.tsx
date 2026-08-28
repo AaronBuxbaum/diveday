@@ -11,7 +11,7 @@ import { allowSvgRasterization } from "@/lib/og-rasterizer";
  * hex rather than semantic tokens.
  */
 export const alt =
-  "DiveDay — dive shop software for the whole dive day, from booking to head count.";
+  "DiveDay — dive shop software: who's booked, who's cleared, who's on the boat, one answer all day.";
 
 export const size = { width: 1200, height: 630 };
 
@@ -39,7 +39,7 @@ export default async function OpenGraphImage() {
             maxWidth: 980,
           }}
         >
-          Run the whole dive day, from booking to head count.
+          Who's booked, who's cleared, who's on the boat — one answer, all day.
         </div>
         <div style={{ display: "flex", fontSize: 34, color: OG_COLORS.muted }}>
           Bookings · Waivers · Cert checks · Trip prep · The boat

@@ -1,17 +1,5 @@
-import type {
-  ChecklistCategory,
-  ChecklistDetailCode,
-  DiverChecklistItem,
-} from "@/lib/readiness-summary";
+import type { ChecklistDetailCode, DiverChecklistItem } from "@/lib/readiness-summary";
 import type { DiverMessageKey, DiverTranslator } from "./messages";
-
-/** Where each checklist category's word lives in the diver bundle. */
-export const CHECKLIST_CATEGORY_KEYS: Record<ChecklistCategory, DiverMessageKey> = {
-  waiver: "ready.checklistCategoryWaiver",
-  certification: "ready.checklistCategoryCertification",
-  payment: "ready.checklistCategoryPayment",
-  setup: "ready.checklistCategorySetup",
-};
 
 /**
  * Every `ChecklistDetailCode` `buildDiverChecklist` can produce, to its
@@ -47,10 +35,6 @@ export const CHECKLIST_DETAIL_KEYS: Record<ChecklistDetailCode, DiverMessageKey>
   certification_multiple_needed: "ready.checklistDetail.certificationMultipleNeeded",
   setup_generic: "ready.checklistDetail.setupGeneric",
 };
-
-export function checklistCategoryText(t: DiverTranslator, category: ChecklistCategory): string {
-  return t(CHECKLIST_CATEGORY_KEYS[category]);
-}
 
 export function checklistDetailText(t: DiverTranslator, item: DiverChecklistItem): string {
   return t(CHECKLIST_DETAIL_KEYS[item.detailCode]);

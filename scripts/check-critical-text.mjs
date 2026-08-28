@@ -22,6 +22,18 @@ if ((tabBar.match(/text-base font-medium leading-tight/g) ?? []).length < 2) {
   failures.push("phone tab bar labels must remain 16px");
 }
 
+// The shopfront's own destinations, for the same reason as the dock's: a
+// destination label is a control's own label. This read `text-sm sm:text-base`
+// until 2026-08-28, with a comment arguing that navigation is not critical
+// text — which is why the rule is mechanical here now rather than remembered.
+const publicNav = read("src/components/PublicShopNav.tsx");
+if (!/const linkClass =\s*\n?\s*"[^"]*\btext-base\b/.test(publicNav)) {
+  failures.push("shopfront nav labels must be 16px at every width");
+}
+if (/const linkClass =\s*\n?\s*"[^"]*\btext-sm\b/.test(publicNav)) {
+  failures.push("shopfront nav labels must not drop to 14px on phones");
+}
+
 const orders = read("src/app/shop/[shopSlug]/orders/page.tsx");
 for (const [needle, label] of [
   ["text-base font-medium text-foreground", "orders person names"],
@@ -31,7 +43,10 @@ for (const [needle, label] of [
   if (!orders.includes(needle)) failures.push(`${label} must be 16px on phones`);
 }
 
-const schedule = read("src/app/s/[shopSlug]/page.tsx");
+// The public schedule's day rule moved into the week ledger when the
+// storefront recomposed (ADR 20260827-clearwater-surface-language, slice 6i);
+// the 16px floor on the date chips travelled with it.
+const schedule = read("src/app/s/[shopSlug]/_components/WeekLedger.tsx");
 for (const needle of [
   "text-base font-bold tracking-[0.18em] uppercase",
   "text-base font-medium tracking-[0.18em] text-muted uppercase",

@@ -1,7 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { staffTranslator } from "@/i18n/staff-messages";
+import type { StaffTranslator } from "@/i18n/staff-messages";
 import { restorePersonAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 
@@ -24,14 +24,13 @@ export function RestoreDiver({
   shopSlug,
   personId,
   canRestore,
-  locale,
+  t,
   status,
 }: {
   shopSlug: string;
   personId: string;
   /** Owner/manager, same gate as removal. The action re-checks regardless. */
   canRestore: boolean;
-  locale: string;
   /**
    * This card's own outcome. A restore that was refused — an active diver now
    * holds this one's email — has to answer the button that tried it, and this
@@ -39,12 +38,12 @@ export function RestoreDiver({
    * is looking at when they press it.
    */
   status?: DiverNotice;
+  t: StaffTranslator;
 }) {
-  const t = staffTranslator(locale);
   return (
     <section
       aria-labelledby="removed-heading"
-      className="mt-6 scroll-mt-24 rounded-lg border border-warning/40 bg-warning/5 p-5"
+      className="mt-6 scroll-mt-24 rounded-2xl border border-warning/40 bg-warning/5 p-5"
     >
       <div className="flex flex-wrap items-center gap-3">
         <Badge tone="warning">{t("divers.removed.badge")}</Badge>
@@ -61,12 +60,12 @@ export function RestoreDiver({
           <SubmitButton pendingLabel={t("divers.removed.restoring")} className={buttonClass()}>
             {t("divers.removed.restore")}
           </SubmitButton>
-          <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} />
+          <DiverFormStatus status={status} />
         </form>
       ) : (
         <>
           <p className="mt-3 text-sm text-muted">{t("divers.removed.restoreRestricted")}</p>
-          <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} className="mt-3" />
+          <DiverFormStatus status={status} className="mt-3" />
         </>
       )}
     </section>

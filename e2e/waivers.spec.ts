@@ -3,6 +3,7 @@ import {
   openTripFromBoard,
   openTripTab,
   sendWaiverForFirstDiver,
+  threadStatus,
   waiverLinkFromResult,
   waiverLinkFromToast,
 } from "./helpers";
@@ -179,10 +180,12 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // Signing sends the diver straight to "what's left" instead of stopping on
   // the signed-waiver page, whose only forward path used to be one more link.
   await expect(page).toHaveURL(/\/ready\//);
-  // The greeting lives inside the checklist card's own header now (the page's
-  // one spine), as body text under the "Your pre-trip checklist" heading —
-  // not a heading of its own.
-  await expect(page.getByText(/Almost there, Priya\./)).toBeVisible();
+  // The greeting went with the checklist card that carried it: the thread
+  // states its status exactly once, as a figure and the next step (ADR
+  // 20260827-the-divers-thread, decision 3).
+  await expect(threadStatus(page)).toBeVisible();
+  // And the medical answer that needs a look is the Sign step's own line —
+  // still on the page, still in the shop's hands rather than the diver's.
   // The copy uses a typographic apostrophe (U+2019), not a straight one.
   await expect(page.getByText(/doctor’s sign-off may be required/)).toBeVisible();
 
@@ -446,16 +449,14 @@ test("a paper release is recorded from the diver's own record, not just from a d
   await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
   await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
   await expect(page.getByRole("heading", { name: "Priya Sharma", level: 1 })).toBeVisible();
-  // The Waiver card is what sends anyone looking for this control, and it offers
-  // every route to a signature as a peer of the others rather than one send
-  // button with the rest folded away behind a disclosure.
+  // The Waiver group leads with where the release stands; the four routes to a
+  // signature are its one row's actions, disclosed together as peers rather
+  // than one send button with the rest ranked behind it.
   await expect(page.getByText("Not signed")).toBeVisible();
-  const waiverCard = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Waiver" }) })
-    .filter({ visible: true });
-  await expect(waiverCard.getByRole("button", { name: "Email waiver" })).toBeVisible();
-  await expect(waiverCard.getByRole("button", { name: "Copy link" })).toBeVisible();
+  const waiverGroup = page.getByRole("region", { name: "Waiver" });
+  await waiverGroup.getByText("Send options", { exact: true }).click();
+  await expect(waiverGroup.getByRole("button", { name: "Email waiver" })).toBeVisible();
+  await expect(waiverGroup.getByRole("button", { name: "Copy link" })).toBeVisible();
 
   await page.getByRole("button", { name: "Mark signed on paper" }).click();
   // The medical attestation is the control, not a buried confirm. The browser's
@@ -481,8 +482,8 @@ test("a paper release is recorded from the diver's own record, not just from a d
   await page.getByRole("button", { name: "Record paper signature" }).click();
 
   // The same immutable record a self-service signature produces, read back
-  // person-wide: the stat card flips, and the control retires because there is
-  // nothing left for it to do.
+  // person-wide: the row's state word flips, and every send route retires
+  // because there is nothing left for it to do.
   await expect(page.getByText("Not signed")).toHaveCount(0);
   await expect(page.getByText(/Good until/)).toBeVisible();
   await expect(page.getByText("Mark signed on paper")).toHaveCount(0);
@@ -511,6 +512,10 @@ test("a diver without a booking can receive an independent waiver from their rec
   await expect(
     page.getByRole("heading", { name: `Unscheduled E2E Diver ${stamp}`, level: 1 }),
   ).toBeVisible();
+  // The four routes are one row behind the waiver group's "Send options"
+  // disclosure (ADR 20260827-people-not-lists): what a record leads with is
+  // where the release stands, not four ways to chase it.
+  await page.getByText("Send options", { exact: true }).click();
   // A diver with both an address and a textable number is offered both, beside
   // the link every record always carries.
   await expect(page.getByRole("button", { name: "Email waiver" })).toBeVisible();
@@ -599,7 +604,7 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
   // rather than a hunt.
   await expect(page.getByRole("link", { name: "Send them by departure" })).toHaveAttribute(
     "href",
-    /\?view=departures$/,
+    /\/shop\/[a-z0-9-]+$/,
   );
 
   // The current card advances to the next version.

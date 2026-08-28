@@ -266,11 +266,25 @@ const COEXIST_RUNS_IN_DIVEDAY: { title: DiverMessageKey; detail: DiverMessageKey
  * re-import claim matches `findOrCreatePerson`'s email-match update-in-place
  * (src/db/import.ts) and `priorVisitDedupeKey`'s idempotent history key
  * (src/lib/import.ts).
+ *
+ * `crewFirst` leads, and is deliberately not called `step5` even though it is
+ * the fifth step this section grew (the 2026-08-27 conversion review, "help
+ * arrives before the homework"). It answers the question an owner asks before
+ * any of the others — what does my crew have to learn — and its own words place
+ * it: "before you move a single record". Read fifth, after four steps about
+ * moving records, it would contradict itself; read first, it is the review's
+ * whole diagnosis applied to the section that carries it. The key is named for
+ * what it says rather than where it sits so the next step added here does not
+ * have to renumber four others in two locales.
  */
 const CUTOVER_SECTION: CutoverSection = {
   heading: "marketing.guides.shared.cutover.heading",
   intro: "marketing.guides.shared.cutover.intro",
   steps: [
+    {
+      title: "marketing.guides.shared.cutover.crewFirst.title",
+      detail: "marketing.guides.shared.cutover.crewFirst.detail",
+    },
     {
       title: "marketing.guides.shared.cutover.step1.title",
       detail: "marketing.guides.shared.cutover.step1.detail",

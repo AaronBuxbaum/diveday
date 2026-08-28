@@ -29,9 +29,9 @@ import {
  * produces the notice staff actually see — deleting it turns these tests red on
  * the notice (`erase-refused` instead of `not-authorized-erase`) while the diver's
  * data survives, which is precisely what defense in depth is supposed to look
- * like. Refund and removal have no such second layer: `refundOrder` and
- * `deleteDiver` write whatever they are handed, so for those two the assertions
- * below are the only thing standing behind the gate line.
+ * like. Removal has no such second layer: `deleteDiver` writes whatever it is
+ * handed, so for that one the assertions below are the only thing standing
+ * behind the gate line.
  */
 
 vi.mock("next/navigation", () => ({
@@ -46,19 +46,9 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
-// The one write that leaves the database — `refundOrder` calls Stripe. Mocked so
-// the refusal tests can assert the money never moved, at the seam it moves
-// through; the rest of the module stays real (the erase path reads orders).
-vi.mock("@/db/orders", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/db/orders")>();
-  return { ...actual, refundOrder: vi.fn() };
-});
-
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { refundOrder } = await import("@/db/orders");
-const { deletePersonAction, erasePersonAction, refundPaymentAction, saveSupportNeedsAction } =
-  await import("./actions");
+const { deletePersonAction, erasePersonAction, saveSupportNeedsAction } = await import("./actions");
 
 /**
  * A seeded diver — someone with no *staff* role. `anonymizeDiver` refuses to
@@ -132,44 +122,15 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("refunding a diver's payment", () => {
-  it("refuses a captain — money out is owner/manager work", async () => {
-    const { shop, diver, captain } = await context();
-    signIn(shop, captain);
-    const formData = new FormData();
-    formData.set("orderId", "11111111-1111-4111-8111-111111111111");
-
-    const to = await redirectedTo(() => refundPaymentAction(shop.slug, diver, formData));
-
-    // `&form=`/`#anchor`: the refusal renders beside the refund control and the
-    // redirect puts that control on screen (`backTo`, actions.ts).
-    expect(to).toBe(
-      `/shop/${shop.slug}/divers/${diver}?notice=not-authorized-refund&form=payments#payments`,
-    );
-    // Nothing reached Stripe: the gate runs before the order is even looked up.
-    expect(refundOrder).not.toHaveBeenCalled();
-  });
-
-  it("lets an owner through to the refund itself", async () => {
-    const { shop, diver, owner } = await context();
-    signIn(shop, owner);
-    vi.mocked(refundOrder).mockResolvedValue(true as never);
-    const orderId = "11111111-1111-4111-8111-111111111111";
-    const formData = new FormData();
-    formData.set("orderId", orderId);
-
-    const to = await redirectedTo(() => refundPaymentAction(shop.slug, diver, formData));
-
-    // The seeded shop is a demo tenant, whose orders carry fabricated Stripe
-    // ids — the action stops at that guard, *after* the role gate. A captain
-    // never reaches this notice, which is the point: the two refusals are
-    // distinguishable, and only one of them is about authorization.
-    expect(to).toBe(
-      `/shop/${shop.slug}/divers/${diver}?notice=demo-disabled&form=payments#payments`,
-    );
-  });
-});
-
+/**
+ * **There is no refund control on this record any more** (ADR
+ * 20260827-people-not-lists: "Orders remain first-class on the Orders ledger;
+ * here they are the row's money facts"). The block that used to stand here
+ * covered `refundPaymentAction`'s owner/manager gate; the act moved whole to
+ * `/shop/[slug]/orders/[id]`, whose own `refundAction` re-checks
+ * `canPersonRefund` against live roles before it looks the order up, and which
+ * can send back a partial amount this one never could.
+ */
 describe("removing a diver from the roster", () => {
   it("refuses a captain and leaves the person on the roster", async () => {
     const { db, shop, diver, captain } = await context();
@@ -178,7 +139,7 @@ describe("removing a diver from the roster", () => {
     const to = await redirectedTo(() => deletePersonAction(shop.slug, diver, new FormData()));
 
     expect(to).toBe(
-      `/shop/${shop.slug}/divers/${diver}?notice=not-authorized-delete&form=remove#remove-heading`,
+      `/shop/${shop.slug}/divers/${diver}?notice=not-authorized-delete&form=remove#remove`,
     );
     expect((await personRow(db, diver)).deletedAt).toBeNull();
   });

@@ -7,16 +7,29 @@ import { getDb } from "@/db/client";
 import { recordInPersonWaiver } from "@/db/waivers";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
-import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { noticeUrl } from "@/lib/staff-notices";
+import { counterQueuePath } from "./focus";
 
-export async function checkInAction(shopSlug: string, formData: FormData): Promise<{ ok: true }> {
+/**
+ * **Every refusal lands back on the boat the staffer was working.**
+ *
+ * The counter is one instrument pointed at one departure (ADR
+ * 20260827-clearwater-surface-language, decision 9), and the focus lives in
+ * the URL as `?trip=`. So the path these three actions redirect to has to
+ * carry it: without it a `not-ready` refusal re-points the instrument at the
+ * morning boat while the diver it is about is standing at the desk for the
+ * afternoon one. `counterQueuePath` (./focus.ts) is the one place that path is
+ * built — including its `shopPath` escaping, since `shopSlug` reaches an
+ * action as an ordinary caller-supplied argument.
+ */
+export async function checkInAction(
+  shopSlug: string,
+  focusTripId: string | null,
+  formData: FormData,
+): Promise<{ ok: true }> {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
-  // `shopPath`, not a template literal: `shopSlug` is an ordinary argument to
-  // this action, so a caller chooses it, and an unescaped one makes the rest of
-  // the path — and the query the notice lands in — theirs to write
-  // (src/lib/staff-notices.ts).
-  const back = shopPath(shopSlug, "check-in");
+  const back = counterQueuePath(shopSlug, focusTripId);
   if (!bookingId) redirect(noticeUrl(back, "invalid"));
 
   const outcome = await checkInBooking(await getDb(), {
@@ -25,12 +38,12 @@ export async function checkInAction(shopSlug: string, formData: FormData): Promi
     recordedByPersonId: session.user.personId,
   });
   if (outcome.ok) {
-    // No success banner: the diver's own settled row — "Checked in ☑️" where
-    // the finger just was — is the confirmation, beside the control that
-    // produced it (docs/design/forms-and-controls.md; design principle 9). A
-    // duplicate tap lands on the same settled row, which already says
-    // everything a banner would. Refusals below keep their notices — they
-    // have no row state to land on.
+    // No success banner: the diver's row sinking into the settled group,
+    // wearing its drawn check where the finger just was, is the confirmation
+    // (docs/design/forms-and-controls.md; design principle 9). A duplicate tap
+    // lands on the same settled row, which already says everything a banner
+    // would. Refusals below keep their notices — they have no row state to
+    // land on.
     //
     // Nothing is carried back about *which* row settled, because nothing on
     // the page needs it any more: the row used to wear a "tap again to undo"
@@ -56,18 +69,19 @@ export async function checkInAction(shopSlug: string, formData: FormData): Promi
 }
 
 /**
- * The re-tap half of the queue's one-tap row: a settled "Checked in ☑️" row
+ * The re-tap half of the queue's one-tap row: a settled "Checked in" row
  * tapped again reopens the arrival queue (design principle 7 — a
  * high-frequency toggle gets re-tap undo, never a blocking confirm). The
  * correction lands in the activity trail as its own event.
  */
 export async function undoCheckInAction(
   shopSlug: string,
+  focusTripId: string | null,
   formData: FormData,
 ): Promise<{ ok: true }> {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
-  const back = shopPath(shopSlug, "check-in");
+  const back = counterQueuePath(shopSlug, focusTripId);
   if (!bookingId) redirect(noticeUrl(back, "invalid"));
 
   const outcome = await undoCheckInBooking(await getDb(), {
@@ -96,10 +110,14 @@ export async function undoCheckInAction(
  * medical attestation is required there, not here, and a missing checkbox
  * comes back as its own notice rather than a generic failure.
  */
-export async function markWaiverInPersonFromCheckIn(shopSlug: string, formData: FormData) {
+export async function markWaiverInPersonFromCheckIn(
+  shopSlug: string,
+  focusTripId: string | null,
+  formData: FormData,
+) {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
-  const back = shopPath(shopSlug, "check-in");
+  const back = counterQueuePath(shopSlug, focusTripId);
   if (!bookingId) redirect(noticeUrl(back, "invalid"));
 
   const outcome = await recordInPersonWaiver(await getDb(), {

@@ -147,7 +147,7 @@ describe("NoticeBanner", () => {
      * trip.
      */
     it("belongs to the booking form, not to the page", () => {
-      expect(resolve("trip-prerequisite")?.form).toBe("book-activity");
+      expect(resolve("trip-prerequisite")?.form).toBe("book");
     });
   });
 
@@ -161,7 +161,10 @@ describe("NoticeBanner", () => {
     it("explains why the invoice door refused, beside the door", () => {
       renderStatus("payment-not-connected");
       expect(screen.getByRole("status")).toHaveTextContent(/Payments aren't connected yet/i);
-      expect(resolve("payment-not-connected")?.form).toBe("payments");
+      // The story is where the invoice door lives now — the `payments`
+      // section it used to sit beside folded into it (ADR
+      // 20260827-people-not-lists).
+      expect(resolve("payment-not-connected")?.form).toBe("story");
     });
 
     it("keeps its link to the settings section that fixes it, wherever it renders", () => {
@@ -181,11 +184,14 @@ describe("NoticeBanner", () => {
 });
 
 /**
- * **The routing half.** This record is nine independent forms on one ~6,400px
- * scroll — details, level cards, specialty cards, rental fit, payments, book an
- * activity, remove, erase — and every one of their outcomes used to resolve
- * into a single banner under the `<h1>`. Save a rental fit halfway down the
- * page and the confirmation appeared off-screen above you.
+ * **The routing half.** The record is several independent forms on one page —
+ * the details editor, the certification group, the waiver, gear and sizes, the
+ * Book disclosure, and the quiet foot's three — and every one of their outcomes
+ * used to resolve into a single banner under the `<h1>`. Save a fit halfway
+ * down and the confirmation appeared off-screen above you. The form names
+ * collapsed with the sections in the 8b recomposition (ADR
+ * 20260827-people-not-lists): `specialty-cards` folded into `cards`,
+ * `payments` into `story`, and `book-activity` shortened to `book`.
  */
 describe("resolveDiverNotice", () => {
   it("sends each code home to the form that produced it", () => {
@@ -194,18 +200,15 @@ describe("resolveDiverNotice", () => {
     expect(resolve("profile-saved")?.form).toBe("fit");
     expect(resolve("fit-flagged")?.form).toBe("fit");
     expect(resolve("not-authorized-fit")?.form).toBe("fit");
-    expect(resolve("refunded")?.form).toBe("payments");
-    expect(resolve("refund-failed")?.form).toBe("payments");
-    // A second tap refused locally while the first refund is still at Stripe
-    // (PAY-L3) — a warning beside the payments form, never a page banner.
-    expect(resolve("refund-in-progress")?.form).toBe("payments");
-    expect(resolve("refund-in-progress")?.tone).toBe("warning");
-    // Warning, never danger: a refund Stripe already paid out must not read as
-    // a failure, which is an invitation to press again (issue #699).
-    expect(resolve("refund-needs-reconciliation")?.form).toBe("payments");
-    expect(resolve("refund-needs-reconciliation")?.tone).toBe("warning");
-    expect(resolve("booked")?.form).toBe("book-activity");
-    expect(resolve("course-min-age")?.form).toBe("book-activity");
+    // Every refund code is gone with the control: money out is the Orders
+    // ledger's act now, and its refusals answer there (ADR
+    // 20260827-people-not-lists).
+    expect(resolve("refunded")).toBeUndefined();
+    expect(resolve("refund-failed")).toBeUndefined();
+    expect(resolve("refund-in-progress")).toBeUndefined();
+    expect(resolve("refund-needs-reconciliation")).toBeUndefined();
+    expect(resolve("booked")?.form).toBe("book");
+    expect(resolve("course-min-age")?.form).toBe("book");
     expect(resolve("not-authorized-delete")?.form).toBe("remove");
     // A successful restore unmounts the restore card — the diver stops being
     // removed — so its confirmation has to live on the page or nobody sees it.
@@ -240,10 +243,10 @@ describe("resolveDiverNotice", () => {
     // The level-card form and the specialty form emit the same codes; only the
     // action that ran knows which list the staffer was looking at.
     expect(resolve("verified")?.form).toBe("cards");
-    expect(resolve("verified", { form: "specialty-cards" })?.form).toBe("specialty-cards");
-    expect(resolve("card-restore-conflict", { form: "specialty-cards" })?.form).toBe(
-      "specialty-cards",
-    );
+    // Every card kind lives in one group now, so `specialty-cards` names no
+    // form on this page and degrades to the code's own home.
+    expect(resolve("verified", { form: "specialty-cards" })?.form).toBe("cards");
+    expect(resolve("verified", { form: "waiver" })?.form).toBe("waiver");
     // `invalid` has no home of its own — half a dozen actions emit it.
     expect(resolve("invalid")?.form).toBe("page");
     expect(resolve("invalid", { form: "fit" })?.form).toBe("fit");
@@ -267,7 +270,7 @@ describe("resolveDiverNotice", () => {
   it("keeps captured's routing but withholds its text", () => {
     expect(resolve("captured")).toMatchObject({ form: "cards", tone: "success", silent: true });
     expect(resolve("captured")?.text).toBe("");
-    expect(resolve("captured", { form: "specialty-cards" })?.form).toBe("specialty-cards");
+    expect(resolve("captured", { form: "waiver" })?.form).toBe("waiver");
   });
 
   /**
@@ -300,9 +303,7 @@ describe("resolveDiverNotice", () => {
 
 describe("DiverFormStatus", () => {
   it("renders nothing at rest, so a form's action row keeps its layout", () => {
-    const { container } = render(
-      <DiverFormStatus status={undefined} shopSlug="reef-shop" locale="en-US" />,
-    );
+    const { container } = render(<DiverFormStatus status={undefined} />);
     expect(container).toBeEmptyDOMElement();
   });
 

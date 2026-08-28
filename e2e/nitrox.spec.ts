@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { acceptAgeAttestation, e2eNow, openSettingsRow } from "./helpers";
+import { acceptAgeAttestation, e2eNow, openSettingsRow, openThreadStep } from "./helpers";
 
 async function openWreckTrip(page: Page) {
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -24,19 +24,19 @@ test.describe("staff", () => {
     await page.goto("/shop/blue-mantis/divers");
     await page.getByRole("searchbox", { name: "Search divers" }).fill("June Park");
     await page.getByRole("link", { name: /June Park/ }).click();
-    await page.getByText("Add specialty", { exact: true }).click();
-    // The diver page has two capture forms (level card, specialty card), both
-    // with name="identifier"/name="specialty" inputs; scope to the specialty
-    // form so the selectors resolve unambiguously under strict mode.
-    const specialtyForm = page.locator("form", {
-      has: page.getByRole("button", { name: "Capture specialty for review" }),
+    await page.getByText("Add certification", { exact: true }).click();
+    // One capture form for every card kind now (ADR 20260827-people-not-lists);
+    // the card itself is the question, and nitrox is its own option because it
+    // is its own table and its own gas gate.
+    const captureForm = page.locator("form", {
+      has: page.getByRole("button", { name: "Capture for review", exact: true }),
     });
-    await specialtyForm
-      .locator('select[name="specialty"]')
+    await captureForm
+      .locator('select[name="card"]')
       .filter({ visible: true })
       .selectOption("nitrox");
-    await specialtyForm.locator('input[name="identifier"]').filter({ visible: true }).fill(cardNo);
-    await page.getByRole("button", { name: "Capture specialty for review" }).click();
+    await captureForm.locator('input[name="identifier"]').filter({ visible: true }).fill(cardNo);
+    await page.getByRole("button", { name: "Capture for review", exact: true }).click();
 
     const card = page.locator("li").filter({ hasText: cardNo });
     await card.getByRole("button", { name: "Mark certified" }).click();
@@ -116,8 +116,11 @@ test.describe("a shop that stops filling nitrox", () => {
     await expect(anon.getByRole("heading", { name: /You’re on the boat, Priya/ })).toBeVisible();
 
     // The card first, because the request is gated on it now — filed from the
-    // certification checklist, which is the only place this page takes one.
-    const nitroxCard = anon
+    // spine's certification step, which is the only place this page takes one.
+    // At most one step is open at rest, so the step opens before the
+    // disclosure inside it (ADR 20260827-the-divers-thread, decision 3).
+    const certification = await openThreadStep(anon, "certification");
+    const nitroxCard = certification
       .locator("details")
       .filter({ has: anon.getByText("Add your nitrox card", { exact: true }) });
     await nitroxCard.getByText("Add your nitrox card", { exact: true }).click();
@@ -126,9 +129,14 @@ test.describe("a shop that stops filling nitrox", () => {
     await nitroxCard.getByRole("button", { name: "Add my certification" }).click();
     await expect(anon.getByRole("status").filter({ hasText: "Certification added" })).toBeVisible();
 
-    await anon.locator('input[name="nitrox"]').filter({ visible: true }).check();
+    // The request box lives in the gear step, which opening the certification
+    // step closed — the spine is one native `<details name>` accordion.
+    const gear = await openThreadStep(anon, "gear");
+    await gear.locator('input[name="nitrox"]').check();
     await anon.getByRole("button", { name: "Save rental fit" }).click();
-    await expect(anon.locator('input[name="nitrox"]').filter({ visible: true })).toBeChecked();
+    await expect(
+      (await openThreadStep(anon, "gear")).locator('input[name="nitrox"]'),
+    ).toBeChecked();
     // The diver's own readiness page, which is where they came back to.
     const bookingUrl = anon.url();
 
@@ -277,13 +285,18 @@ test("the nitrox request is hidden until the diver files a nitrox card, then app
   await expect(page.getByRole("heading", { name: /You’re on the boat, Nora/ })).toBeVisible();
 
   // Nothing on file, so there is no request box at all — and no sentence
-  // pointing at one either.
-  await expect(page.locator('input[name="nitrox"]').filter({ visible: true })).toHaveCount(0);
+  // pointing at one either. Scoped to the gear step and read without a
+  // visibility filter: a step closed at rest would make a visible-only
+  // assertion pass for the wrong reason.
+  await expect(
+    page.locator('[data-thread-step="gear"]').locator('input[name="nitrox"]'),
+  ).toHaveCount(0);
   await expect(page.getByText(/Add your nitrox card above/)).toHaveCount(0);
-  // What there *is* is the card itself, in the certification row with the other
-  // cards, marked as the optional offer it is — and the explanation of what
-  // nitrox even is now lives inside it, where a diver meets the word.
-  const nitroxCard = page
+  // What there *is* is the card itself, in the certification step with the
+  // other cards, marked as the optional offer it is — and the explanation of
+  // what nitrox even is now lives inside it, where a diver meets the word.
+  const certification = await openThreadStep(page, "certification");
+  const nitroxCard = certification
     .locator("details")
     .filter({ has: page.getByText("Add your nitrox card", { exact: true }) });
   await expect(nitroxCard).toHaveCount(1);
@@ -303,16 +316,16 @@ test("the nitrox request is hidden until the diver files a nitrox card, then app
 
   // The card is on the record — pending, never verified, since only a staffer
   // can sight one — and that is enough for the request to appear.
-  const request = page.locator('input[name="nitrox"]').filter({ visible: true });
+  const request = (await openThreadStep(page, "gear")).locator('input[name="nitrox"]');
   await expect(request).toBeEnabled();
   await request.check();
   await page.getByRole("button", { name: "Save rental fit" }).click();
-  await expect(page.locator('input[name="nitrox"]').filter({ visible: true })).toBeChecked();
+  await expect((await openThreadStep(page, "gear")).locator('input[name="nitrox"]')).toBeChecked();
   // The offer is answered, so the page stops making it.
   await expect(
     page
-      .locator("details")
-      .filter({ has: page.getByText("Add your nitrox card", { exact: true }) }),
+      .locator('[data-thread-step="certification"]')
+      .getByText("Add your nitrox card", { exact: true }),
   ).toHaveCount(0);
 });
 

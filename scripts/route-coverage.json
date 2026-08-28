@@ -1,5 +1,5 @@
 {
-  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `a11y` names the specs that run an axe scan on it, `exempt` states why a route warrants less than both. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose — see scripts/check-route-coverage.mjs.",
+  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `a11y` names the specs that run an axe scan on it, `exempt` states why a route warrants less than both. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose \u2014 see scripts/check-route-coverage.mjs.",
   "/": {
     "e2e": ["demo.spec.ts", "manifest.spec.ts", "marketing.spec.ts", "seo.spec.ts"],
     "visual": ["landing"],
@@ -70,6 +70,7 @@
       "booking.spec.ts",
       "certifications.spec.ts",
       "courses.spec.ts",
+      "dock-day-rhythm.spec.ts",
       "gear-fit-and-age.spec.ts",
       "nitrox.spec.ts",
       "promo-codes.spec.ts",
@@ -77,14 +78,19 @@
       "refunds.spec.ts",
       "rentals.spec.ts",
       "returning-diver.spec.ts",
+      "schedule-embed.spec.ts",
       "seat-claim.spec.ts",
-      "trip-admission.spec.ts"
+      "support-needs.spec.ts",
+      "trip-admission.spec.ts",
+      "waivers.spec.ts"
     ],
     "visual": [
       "booking-confirmed",
+      "dock-day-legs",
       "expired-link-readiness",
       "party-organizer-confirmation",
-      "readiness"
+      "readiness",
+      "thread-prep-current-step"
     ],
     "a11y": ["a11y.spec.ts"]
   },
@@ -144,6 +150,7 @@
       "a11y.spec.ts",
       "booking.spec.ts",
       "courses.spec.ts",
+      "crew-languages.spec.ts",
       "dive-sites.spec.ts",
       "first-ten-minutes.spec.ts",
       "next-departure.spec.ts",
@@ -155,7 +162,8 @@
       "returning-diver.spec.ts",
       "schedule-embed.spec.ts",
       "seat-claim.spec.ts",
-      "trip-admission.spec.ts"
+      "trip-admission.spec.ts",
+      "trips.spec.ts"
     ],
     "visual": [
       "booking-confirmed-embed",
@@ -167,8 +175,8 @@
   },
   "/shop/[shopSlug]": {
     "e2e": [
-      "blockers.spec.ts",
       "boat-loop.spec.ts",
+      "day-spine.spec.ts",
       "first-ten-minutes.spec.ts",
       "last-minute-fill.spec.ts",
       "onboard.spec.ts",
@@ -180,12 +188,10 @@
       "tenant-isolation.spec.ts"
     ],
     "visual": [
-      "blockers",
       "nav-more-menu",
       "nav-more-sheet",
       "today",
       "today-empty",
-      "today-empty-departures",
       "today-first-bookable",
       "today-orientation-line"
     ],
@@ -260,9 +266,12 @@
   },
   "/shop/[shopSlug]/divers/[personId]": {
     "e2e": [
+      "add-diver.spec.ts",
       "certifications.spec.ts",
       "divers.spec.ts",
       "gear-fit-and-age.spec.ts",
+      "import.spec.ts",
+      "nitrox.spec.ts",
       "orders-demo.spec.ts",
       "waivers.spec.ts"
     ],
@@ -272,7 +281,8 @@
       "diver-profile-imported",
       "diver-profile-not-certified",
       "diver-profile-paper-waiver",
-      "diver-profile-payments"
+      "diver-profile-payments",
+      "diver-record-clear"
     ]
   },
   "/shop/[shopSlug]/divers/new": {
@@ -430,7 +440,7 @@
   },
   "/shop/[shopSlug]/settings/team": {
     "e2e": ["settings-findability.spec.ts", "staff-invite.spec.ts"],
-    "visual": ["settings-team"],
+    "visual": ["settings-team", "team-role-disclosure"],
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/settings/whatsapp": {

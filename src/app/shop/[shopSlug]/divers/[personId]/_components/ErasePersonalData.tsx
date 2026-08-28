@@ -88,9 +88,7 @@ export function ErasePersonalData({
           </SubmitButton>
           {/* The name mismatch already renders on the box above; anything else
               this section can say lands here, beside the button. */}
-          {status?.field ? null : (
-            <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} />
-          )}
+          {status?.field ? null : <DiverFormStatus status={status} />}
         </form>
       </details>
       {status?.field ? <FieldErrorFocus key={status.text} field={status.field} /> : null}

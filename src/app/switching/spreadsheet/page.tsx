@@ -250,7 +250,21 @@ async function SpreadsheetBody({
           </ul>
         </MovePhase>
         <ScopePhase locale={locale} number={2} />
-        <ImportPhase locale={locale} number={3}>
+        {/* `importerNote` is the one slot a guide tailors the shared import
+            phase with, and this is the spreadsheet shop's tailoring: they have
+            no vendor to cut over from, so the three phases here stop before the
+            incumbent guides' cutover rail — and with it the parallel-run answer
+            its first step gives ("Run both systems for one trip cycle"). A shop
+            still keeping a sheet needs that answer more than an EVE shop does,
+            not less: nothing here asks them to stop. Deliberately not a second
+            copy of the cutover step — this one is about the sheet staying, and
+            it says the re-import mechanics `findOrCreatePerson` actually
+            implements (match on email, update in place). */}
+        <ImportPhase
+          locale={locale}
+          number={3}
+          importerNote={t("switching.spreadsheet.parallelRunNote")}
+        >
           <Suspense fallback={null}>{importCta}</Suspense>
         </ImportPhase>
       </MovePath>

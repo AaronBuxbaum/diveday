@@ -112,8 +112,16 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   data back *out* just as personally.** It lives on **every** `/switching` page as the shared
   `SwitchingConcierge` block, routed to the `switch@dive.day` inbox. Phrase these as a human
   commitment ("we'll map it with you", "we'll help you carry it out"), never as an automated product
-  capability, and never promise a turnaround time. A new service claim needs product-owner sign-off
-  the same way the price does. **Founder-direct support retired 2026-08-05 (Aaron Buxbaum,
+  capability, and never promise a turnaround time. **It is offered twice on a guide, and the compressed
+  form comes first** (2026-08-28): `switching.common.moveIntro`, the line that opens
+  the move rail, ends "Rather hand it off? Send us the file and a person brings your divers in with
+  you, free." The full block used to be the offer's only appearance and sat about 80% down every
+  guide — *below* the four-phase rail whose whole job is to show a reader how much work switching is
+  ([marketing-review-20260827.md](marketing-review-20260827.md)'s third diagnosis, "help arrives
+  after the homework"). The reader deciding whether they can face this now meets the alternative in
+  the same breath as the work. Compressed at the top, authored once, never re-worded — the same
+  shape `midSeasonCutover` uses for the cutover steps and `GUIDE_FACTS.back` uses for the export
+  claim. A new service claim needs product-owner sign-off the same way the price does. **Founder-direct support retired 2026-08-05 (Aaron Buxbaum,
   [human-decisions.md](human-decisions.md#decision-register), H-12/H-26).** From 2026-07-27 through
   that date a general founder-direct contact line, routed to `aaron@dive.day`, was authorized here —
   the same promise the "You can reach the founder" section on `/about` made in prose. It is
@@ -182,10 +190,13 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
 - **The price renders only from `src/lib/marketing.ts`.** Never restate the figure in prose, docs,
   JSON-LD literals, or images — every copy is a future stale claim. The product owner has **approved
   the price for now** (H-12, 2026-07-24; early-access and still moving), so it may be shown from
-  `marketing.ts` as today's price. H-12 also closed two commercial terms, now published as
+  `marketing.ts` as today's price. `src/lib/marketing.test.ts` enforces the single source where it
+  is easiest to break — no `marketing.*` message in either locale may carry a currency figure, and
+  the two sentences that show the price must carry `{price}` and `{cadence}`. H-12 also closed two
+  commercial terms, now published as
   founding-shop claims (the price hero's "What the price covers" list + FAQ in
-  `src/app/pricing/page.tsx`, closing band in
-  `src/app/page.tsx`, both sourced from `earlyAccessPrice` in `marketing.ts`): **price locked for
+  `src/app/pricing/page.tsx`, hero and closing band in
+  `src/app/page.tsx`, all sourced from `earlyAccessPrice` in `marketing.ts`): **price locked for
   two years for the founding cohort** and **founder-direct support** for the founding cohort.
   **H-26 (2026-08-02) confirmed DiveDay's posture is deliberately lifestyle-scale, not
   venture-scale** (see [vision.md](vision.md#what-kind-of-business-this-is)) and dropped the
@@ -206,6 +217,17 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   there — with the limits of that protection named alongside it. Nowhere else. The capability
   index on `/product` sells the outcome ("a head count with no signal, matching the counter's once
   you're back"), never the snapshot.
+- **What the export withholds is stated scoped, never as an absolute** (2026-08-28). The honest
+  short answer to "what stays behind" is *credentials* — passwords and per-device push keys, which
+  no other system could use anyway — and that is what `/pricing`'s `dataExit.securityNote` and the
+  export mockup say. But it is only true of the shop's **records**: the bundle also leaves out
+  notification retry queues, provider linkage, DiveDay's own reconciliation ledgers, and the
+  close-out and buddy-team trails, which is why the real Settings screen names all of them
+  (`settings.export.notIncluded.text`, and `EXCLUDED_TABLES` in `src/db/export.test.ts`). So the
+  marketing sentence carries its scope and the mockup lists without claiming to be the whole list —
+  "the only thing held back is credentials", said flat, would be a fabricated-proof failure wearing
+  a security badge. `src/lib/marketing.test.ts` pins the scope; the Settings screen's own wording is
+  the source of truth and does not bend to the marketing page.
 - **Safety-adjacent copy** (readiness, manifests, medical, cert gating, nitrox) gets
   `dive-domain-expert` review before merge, same as safety-critical code.
 - Multi-location operation and unconfigured provider integrations are out of scope and must not be
@@ -298,18 +320,55 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   not the homepage close — because that is where the decision is made; a reader who scrolls past it
   has already read it. Deleting it from a page entirely is a different change and not an allowed
   one: `e2e/marketing.spec.ts` asserts it on `/`.
+  **This rule governs `demoNote` only, and `/pricing`'s trial note diverges from it deliberately
+  (2026-08-28).** `marketing.pricing.trialNote` — free, three weeks, no card, and the soft expiry
+  `src/lib/trial.ts` implements — stands at *both* of that page's CTA pairs, the price hero and the
+  `pricing-close` band. The demo note's argument does not carry across: it answers a question the
+  reader has already answered by the time they scroll, whereas the trial's terms are the objection
+  itself, and the closing band is a second point of decision rather than a repetition of the first —
+  a reader who has just read five thousand pixels of objections is being asked to commit *there*,
+  and that band carried no terms at all until this landed. It stays a sentence at both positions,
+  never a third door (the budget note below). A third placement would be a new divergence and needs
+  its own line here.
+  **Both notes at a door carry the same weight** (`font-medium`), which on `/pricing` means the
+  trial note matches the demo note rather than sitting a step under it. They are one kind of object
+  — terms at a door — and the trial is the door with the higher friction, so setting only the demo's
+  terms in medium put the heavier ink on the easier ask. `/` is not this case and does not change:
+  the regular-weight line under its medium demo note is a *price line*, context beside terms rather
+  than terms of its own.
 - **One primary CTA per screen.** The demo leads everywhere through the shared `FunnelCtas`
   pair (the 2026-08-22 two-doors decision above — this bullet said "the trial on `/pricing`"
   until 2026-08-27, a leftover from before that decision); `/pricing`'s trial door is simply
   measured at two positions (the price hero, and the closing band tagged `pricing-close`). The
   nav's single door stays secondary weight so it never competes, and the CTA hides entirely on
   `/onboard`, where it would link to the page it's on.
+  `/product` is where the budget is easiest to lose — the longest page on the site, offering the
+  demo from four positions inside its body, each added by a different review answering a different
+  objection. `e2e/marketing.spec.ts` counts the primary in *every* band of that page rather than
+  only at the door most recently added, which is the shape that let the homepage hero reach nine
+  choices before it was cut back.
   **The homepage hero is the scarcest screen on the site and is capped at one primary plus one
   secondary** — it once offered around nine choices (a five-chip role picker, a diver-preview link,
   demo, trial), which is a menu, not an ask. Cutting a hero control never means deleting the
   destination: the roles moved into the in-demo switcher, the diver preview into the daily-moments
   row it illustrates, and both are still reachable and still tagged. `e2e/marketing.spec.ts` counts
   the hero's enabled controls so the budget can't quietly grow back.
+  **The budget binds controls, not facts.** The 2026-08-27 conversion review's second diagnosis is
+  that the terms never stand at the doors, and the flat price reached the homepage hero on
+  2026-08-28 as a consequence — as a muted *sentence* under the demo note ("One flat price — {price}
+  {cadence}. No cut of your bookings."), never a "See pricing" link, which would have spent the
+  budget to answer a question the sentence already answers. That is the general move when a page
+  owes a reader a fact at a door: state it, do not open a third one. The closing band keeps the
+  two-year lock and the door to `/pricing`, so the figure now renders on two bands of `/` and both
+  interpolate it.
+  **`/product`'s money band is the same move made on a door that already existed** (2026-08-28).
+  The one band on that page about money read "What DiveDay itself costs →" — it raised the cost
+  question and parked our own half of the answer behind a click, which is what a burned buyer reads
+  as a card wall. The figure now stands in the link's own words ("One flat {price} {cadence} — see
+  everything it covers →"), so the band spends no new control and the reader learns the number
+  where the question is asked. Three sentences now interpolate `earlyAccessPrice` rather than one;
+  their keys are pinned in `src/lib/marketing.test.ts`, and a fourth that spells the number out
+  instead fails there.
   The internal positioning pillars ("easy to try", "safe to leave") are argument structure, not
   user-facing labels. **A label a reader sees names a thing, not a strategy** — and after the
   2026-08-13 redesign the homepage names things in two idioms, deliberately: an uppercase eyebrow
@@ -400,7 +459,8 @@ first; an untagged link is a conversion we can't attribute. Read the pair per su
 demo entries and no trials is telling you something different from a page with neither.
 
 **A page that offers the same action from more than one place splits its tag by position** —
-`home-hero` / `home-closing`, `product` / `product-mid`, `pricing` / `pricing-close`, and the
+`home-hero` / `home-closing`, `product` / `product-mid` / `product-index`, `pricing` /
+`pricing-close`, and the
 switching guides' `switching-<slug>` / `switching-<slug>-mid` / `switching-<slug>-close` (with the
 spreadsheet guide using the same three-position shape).
 Mid-page and closing doors exist because
@@ -412,6 +472,16 @@ can also be retired: the homepage's `home-mid` came out on 2026-08-13 when the p
 consecutive banded CTAs merged into one close (the 2026-08-13 homepage redesign), which moved the
 closing door a full band nearer; the tag stays registered in `funnel.ts` so any history it
 accumulated still reads.
+
+`product-index` (2026-08-28) is the newest of these and the clearest case for splitting: the band
+it sits under makes the site's most explicit dare — *every one of these lines is something you can
+go and do in the live demo right now* — and until that date the reader who took it had two more
+bands to scroll before anything let them act
+([marketing-review-20260827.md](marketing-review-20260827.md), "the dare gets a door"). A reader
+convinced by the inventory is a different moment from one convinced by the dock story that
+`product-mid` sits under, and folded together neither could be read on its own. The door carries no
+words of its own: the band's lede is its caption, and a heading there would restate the sentence
+directly above the list it closes.
 
 **Not every tagged door is a conversion.** Some links carry a tag without firing either event: the
 diver-preview link into the demo shop's public schedule (`scheduleAttributionHref`) and **every
@@ -503,6 +573,18 @@ stacked under "Going out". The inventory also lost its card border and became a 
 a second rounded box beside the import mockup read as the mockup's twin, when the two halves are a
 picture and a list.
 
+**The arriving column answers mid-season, in the guides' own words** (2026-08-28). A shop reading
+"bring your records in clean" in August is not asking whether an import works — it is doing the
+arithmetic of switching with a season's bookings already on the books, and the four-phase move rail
+that answers it lives several thousand pixels away on a switching guide this reader may never open.
+One sentence now sits under the arriving lede, and it renders
+`marketing.guides.shared.cutover.midSeason` through `midSeasonCutover` in `src/lib/marketing.ts`
+rather than a homepage wording of the same promise: the guides walk the cutover step by step (five
+of them since 2026-08-28), `/` compresses it to one, and both live in the same block of the bundle
+so an editor rewriting either is reading the other. This is the export claim's rule applied to a
+second claim. The guides do not additionally render the summary — beside the steps it compresses,
+it would be a caption restating its own section.
+
 **The band carries two links, and they are not the same door twice.** The 2026-08-13 redesign merged
 two stacked link CTAs under the section copy — one to `/switching`, one straight to
 `/switching/spreadsheet` — into a single hub link, on the reasoning that the hub already forks and
@@ -589,6 +671,7 @@ structure* live; none of them may contain an English sentence:
 | Feature claims shared across pages | `src/lib/marketing.ts` (`productFeatureGroups`, key registry) | `marketing.features.*` in the bundles |
 | Price, plan name, included list | `src/lib/marketing.ts` (`earlyAccessPrice`) — the `$99` figure is the only literal, and the only place it exists | `marketing.price.*` in the bundles |
 | Export claim shared by home + pricing | `src/lib/marketing.ts` (`fullShopExport`) | `marketing.export.*` in the bundles |
+| Mid-season cutover claim shared by home + the guides | `src/lib/marketing.ts` (`midSeasonCutover`) | `marketing.guides.shared.cutover.*` in the bundles |
 | Shared link-preview card fields every page's `openGraph` needs | `src/lib/marketing.ts` (`sharedLinkCard`) | none — URLs and dimensions, no words |
 | Capability index on `/product` | `src/lib/marketing.ts` (`productCapabilityIndex`) | `marketing.capabilities.*` in the bundles |
 | Page-specific narrative copy | The page file (`src/app/{page,product/page,pricing/page}.tsx`) | `marketing.home/product/pricing.*` in the bundles |
@@ -608,7 +691,11 @@ decision exists, because a single canonical URL serves one `<head>` to every cra
 A switching guide is a live page only — no roadmap or "coming soon" entries (claims policy).
 
 **A switching guide may carry exactly one forward link to `/pricing`, and it sits under the coexist
-section's leave-path box** (decided 2026-08-14). Two of the guides argue hard on an incumbent's
+section's leave-path box** (decided 2026-08-14; **still the rule as of 2026-08-28** — the
+2026-08-27 review recommends extending the same destination-not-claim link to the leave-it guides'
+`bothWays` block and records it as an open owner call, so `/switching/eve`,
+`/switching/diveshop360` and `/switching/smartwaiver` carry no forward pricing link at all and
+`e2e/marketing.spec.ts` asserts they render none. Adding one is a decision, not an edit). Two of the guides argue hard on an incumbent's
 per-booking fee — FareHarbor's, Rezdy's — and then gave the reader nowhere to learn what DiveDay
 costs except the nav tab several thousand pixels above them. The link is worded as a destination
 (`switching.common.seePricing`), never as a claim: no figure, no "flat price", no comparison and no
@@ -662,7 +749,11 @@ channels get a guide next.
 
 The one non-incumbent guide is `/switching/spreadsheet` ("Coming from a spreadsheet"). A shop on a
 spreadsheet has no vendor to leave, so the page has no incumbent context, no export click-path to
-reverse-engineer, and no `sources`; it lives as its own static route rather than a
+reverse-engineer, no `sources`, and no cutover phase — which is why the parallel-run answer the
+incumbent guides give as a cutover step rides its **import** phase instead (2026-08-28): the reader
+still keeping a sheet is the one likeliest to be asking whether they have to stop, and this guide
+was the only one that never answered. It is its own sentence about the sheet staying, not the
+cutover step's words moved; it lives as its own static route rather than a
 `migration-guides.ts` entry (a static segment wins over the sibling `[competitor]` one). It still
 renders `IMPORT_HONESTY_TABLE` verbatim like every guide — the shared honesty invariant — and it
 carries the shared `SwitchingConcierge` offer like every switching page. Its wedge is not

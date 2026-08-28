@@ -1,14 +1,18 @@
-import Link from "next/link";
-import { buttonClass } from "@/components/ui/button";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { CrewedSessionSummary } from "@/db/today";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTime } from "@/lib/format";
 
 /**
- * The instructor's lens over Today (20260721-role-aware-landing): the course
- * sessions they teach this week, each with student readiness at a glance.
- * Renders nothing when the person teaches nothing this week — the lens never
- * adds an empty section.
+ * The instructor's lens over the day spine (20260721-role-aware-landing): the
+ * course sessions they teach this week, each with student readiness at a
+ * glance. Renders nothing when the person teaches nothing this week — the lens
+ * never adds an empty section.
+ *
+ * It is its own labeled group between the summary sentence and the first
+ * station, in the spine's own grammar rather than a stack of sunken cards (ADR
+ * 20260827-clearwater-surface-language, decision 2).
  */
 export function YourSessions({
   sessions,
@@ -24,30 +28,25 @@ export function YourSessions({
   if (sessions.length === 0) return null;
   const t = staffTranslator(locale);
   return (
-    <section aria-labelledby="your-sessions-heading" className="mb-8">
-      {/* No standing subtitle: the rows themselves say what the section is —
-          a class, a date, and where each student stands. */}
-      <h2 id="your-sessions-heading" className="text-lg font-semibold">
-        {t("shared.today.yourSessions.heading")}
-      </h2>
-      <ul className="mt-4 flex flex-col gap-3">
+    <LedgerGroup as="h2" id="your-sessions-heading" label={t("shared.today.yourSessions.heading")}>
+      <ul className="mt-3">
         {sessions.map((session) => (
-          <li
+          <LedgerRow
             key={session.tripId}
-            // A session row is a sunken inset in the instructor lens, not a
-            // page section: the lens itself already owns the section heading.
-            className="flex flex-col gap-4 rounded-2xl border border-border bg-surface-sunken p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5"
+            href={`/shop/${shopSlug}/trips/${session.tripId}`}
+            linkLabel={t("shared.today.yourSessions.openRoster")}
+            trailing={
+              <DiveDayIcon name="chevron-right" className="size-4 text-muted" aria-hidden="true" />
+            }
           >
-            <div className="min-w-0">
-              <p className="font-semibold">{session.title}</p>
-              {session.courseTitle ? (
-                <p className="text-sm font-medium text-primary">{session.courseTitle}</p>
-              ) : null}
-              <p className="mt-1 text-sm text-muted">
+            <div className="min-w-0 py-2">
+              <p className="font-medium">{session.title}</p>
+              <p className="mt-0.5 text-sm text-muted tabular-nums">
                 {formatShortDate(session.startsAt, locale, timeZone)} ·{" "}
                 {formatTime(session.startsAt, locale, timeZone)}
+                {session.courseTitle ? ` · ${session.courseTitle}` : ""}
               </p>
-              <p className="mt-2 text-sm tabular-nums">
+              <p className="mt-1 text-sm tabular-nums">
                 {t("shared.today.yourSessions.studentsCount", { count: session.booked })}
                 {session.booked > 0 ? (
                   <>
@@ -63,17 +62,9 @@ export function YourSessions({
                 ) : null}
               </p>
             </div>
-            <div className="shrink-0">
-              <Link
-                href={`/shop/${shopSlug}/trips/${session.tripId}`}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {t("shared.today.yourSessions.openRoster")}
-              </Link>
-            </div>
-          </li>
+          </LedgerRow>
         ))}
       </ul>
-    </section>
+    </LedgerGroup>
   );
 }

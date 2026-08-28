@@ -1,26 +1,8 @@
 {
-  "subNav": {
-    "ariaLabel": "Diver record",
-    "cards": "Certifications",
-    "specialty": "Specialty certifications",
-    "waiver": "Waiver",
-    "notes": "Notes",
-    "fit": "Fit",
-    "payments": "Payments",
-    "bookActivity": "Book activity",
-    "trips": "Trips",
-    "history": "History",
-    "activity": "Activity",
-    "support": "Dive support"
-  },
   "activity": {
     "heading": "Activity",
     "empty": "No staff activity recorded yet.",
     "total": "{count, plural, one {# entry} other {# entries}}"
-  },
-  "upcoming": {
-    "heading": "Upcoming trips",
-    "empty": "No upcoming trips — book one above."
   },
   "shared": {
     "agencies": {
@@ -59,14 +41,13 @@
   },
   "certifications": {
     "heading": "Certification records",
-    "description": "Only verified certifications affect readiness.",
     "addCard": "Add certification",
     "agency": "Agency",
     "level": "Level",
     "cardNumber": "Certification number",
     "capturing": "Capturing…",
     "captureForReview": "Capture for review",
-    "empty": "No level certifications yet — add their first certification above.",
+    "empty": "No certification records yet.",
     "importedLabel": "imported",
     "importedWithSource": "imported · {source}",
     "confirming": "Confirming…",
@@ -91,7 +72,10 @@
     "clearingNoCertification": "Clearing…",
     "noCertificationClearedNote": "A “not certified yet” answer was cleared from this record by {name} on {date}.",
     "noCertificationClearedByUnknown": "a staff member",
-    "noCertificationRestated": "Staff cleared this answer once before and it has been given again on a public form since. Anyone who knows this diver's name and email can leave it."
+    "noCertificationRestated": "Staff cleared this answer once before and it has been given again on a public form since. Anyone who knows this diver's name and email can leave it.",
+    "cardLabel": "Certification",
+    "cardKindLevel": "Level",
+    "cardKindSpecialty": "Specialty"
   },
   "page": {
     "eyebrow": "Front desk",
@@ -159,8 +143,6 @@
     }
   },
   "header": {
-    "backToAllDivers": "← All divers",
-    "eyebrow": "Front desk",
     "noContactDetails": "No contact details yet",
     "diveInsurancePrefix": "Dive insurance: ",
     "editDetails": "Edit details",
@@ -175,29 +157,20 @@
     "emergencyContactNameLabel": "Emergency contact name",
     "emergencyContactPhoneLabel": "Emergency contact phone",
     "saving": "Saving…",
-    "saveDetails": "Save details"
+    "saveDetails": "Save details",
+    "visits": "{count, plural, one {# visit} other {# visits}}"
   },
   "bookActivity": {
-    "heading": "Book an activity",
     "courseOrDiveLabel": "Course or dive",
     "chooseActivity": "Choose an available activity",
     "booking": "Booking…",
     "bookActivityButton": "Book activity",
     "noOpenActivities": "No open activities are available right now.",
-    "noEmailNote": "No email on file — hand this diver their waiver link in person, or add an address to their record."
+    "noEmailNote": "No email on file — hand this diver their waiver link in person, or add an address to their record.",
+    "bookDeparture": "Book a departure"
   },
   "payments": {
-    "heading": "Payments",
-    "newPayment": "New payment",
-    "noPaymentsYet": "No payments yet.",
-    "openPayment": "Open payment",
-    "createOrder": "Create order",
-    "noOrder": "No order",
-    "shopPaymentFallback": "Shop payment",
-    "refund": "Refund",
-    "refunding": "Refunding…",
-    "demoRefundHint": "Demo orders aren't backed by a live Stripe invoice, so refunds are disabled here.",
-    "showOlderPayments": "{count, plural, one {Show # older payment} other {Show # older payments}}"
+    "shopPaymentFallback": "Shop payment"
   },
   "remove": {
     "removePersonSummary": "Delete {name}",
@@ -289,17 +262,13 @@
     "changeRestricted": "Changing what a diver stated is limited to owners, managers, instructors, and divemasters."
   },
   "history": {
-    "heading": "Shop history",
-    "importedVisitsText": "{count, plural, one {# visit} other {# visits}} came across from your previous system. Those lines are booking records, not dive records.",
-    "noTripsYet": "Nothing here yet — past trips and imported visits show up here.",
     "imported": "Imported",
     "bookingFallback": "Booking",
-    "showOlderEntries": "{count, plural, one {Show # older entry} other {Show # older entries}}"
+    "importedVisitsText": "{count, plural, one {# visit} other {# visits}} came across from your previous system. Those lines are booking records, not dive records."
   },
   "notes": {
     "heading": "Diver notes",
     "description": "Staff-only context about this diver, shared with crew on their boat manifest.",
-    "empty": "No notes yet.",
     "fromTrip": "From {trip} · {date}",
     "appliesEverywhere": "Applies across this diver’s departures",
     "addLabel": "Add a note",
@@ -311,27 +280,11 @@
     "writtenBy": "{name} · {date}"
   },
   "specialty": {
-    "heading": "Specialty certifications",
-    "addSpecialty": "Add specialty",
-    "specialtyLabel": "Specialty",
     "nitroxOption": "Nitrox",
-    "captureForReview": "Capture specialty for review",
-    "emptyState": "No specialty certifications yet — add one above when they earn it.",
     "nitroxAgencyLine": "{agency} · Nitrox",
     "nitroxLine": "Nitrox"
   },
   "stats": {
-    "cards": "Certifications",
-    "needingLook": "{count} needing a look",
-    "notes": "Notes",
-    "rentalFit": "Rental fit",
-    "saved": "Saved",
-    "needed": "Needed",
-    "partial": "Partial",
-    "fitMissingSizes": "No size on file for {items}",
-    "fitNeedsStaffFit": "Flagged for hands-on fitting at check-in",
-    "unpaidBookings": "{count, plural, one {# booking still owes money} other {# bookings still owe money}}",
-    "importedCount": "{count, plural, one {# booking imported from a prior system} other {# bookings imported from a prior system}}",
     "waiver": "Waiver",
     "waiverSend": "Send / resend waiver and get link",
     "waiverNotSent": "Not sent",
@@ -350,8 +303,7 @@
     "waiverChannelSent": "Sent",
     "waiverChannelCopied": "Copied",
     "waiverChannelFailed": "Didn’t go out",
-    "waiverChannelUnavailable": "Not set up",
-    "bookings": "Bookings"
+    "waiverChannelUnavailable": "Not set up"
   },
   "notices": {
     "cardCertifiedToast": "Marked certified.",
@@ -366,7 +318,6 @@
     "fitFlagged": "Flagged for hands-on fitting.",
     "fitCleared": "Fit flag cleared — this diver packs from their stated sizes again.",
     "duplicate": "Another diver already uses that email in this shop.",
-    "refunded": "Payment refunded — the trip now shows as unpaid for this diver.",
     "booked": "Activity booked. Review it below, then create and send the invoice.",
     "bookedWaiverUndelivered": "Activity booked — but their waiver wasn’t emailed. Open the trip’s guest list to send it or share the link.",
     "tripFull": "That activity just filled up. Choose another.",
@@ -378,16 +329,10 @@
     "tripPrerequisite": "This diver's certifications on file don't reach what that trip and its dive sites require. Open the trip to see what it asks for.",
     "tripUnavailable": "Add an email and choose an available activity.",
     "bookingInvalid": "Add an email and choose an available activity.",
-    "refundFailed": "That payment could not be refunded. It may not be paid, or Stripe may need attention.",
-    "refundInProgress": "A refund for this order is already going through. Give it a moment, then refresh — don't send it again.",
-    "refundNeedsReconciliation": "Stripe already sent a refund for this order that we never finished recording. Check it against your Stripe dashboard before sending any more — this order is on the stuck payments list.",
-    "demoDisabled": "This is a demo order — it can't be refunded.",
     "deleted": "Diver deleted.",
     "restored": "Diver restored.",
     "restoreRefused": "Couldn't restore this diver — an active diver now uses their email. Change that email, then try again.",
     "removedReadOnly": "Restore this diver before changing their details.",
-    "paymentNotConnected": "Payments aren't connected yet — connect them to charge this diver.",
-    "notAuthorizedRefund": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
     "notAuthorizedDelete": "Deleting a diver is limited to owners and managers — ask one of them to do it.",
     "notAuthorizedErase": "Erasing a diver's personal data is limited to the shop owner — ask them to do it.",
     "eraseNameMismatch": "The name you typed doesn't match this diver's, so nothing was erased. Type it exactly as it appears above.",
@@ -419,12 +364,54 @@
     "mergeBookingConflict": "These records are both booked on the same trip. Resolve that booking first; nothing was moved.",
     "mergeRecordConflict": "These records have conflicting history that cannot be combined safely. Nothing was moved.",
     "supportSaved": "Dive support saved.",
-    "notAuthorizedSupport": "Changing what a diver stated about their dive support is limited to owners, managers, instructors, and divemasters."
+    "notAuthorizedSupport": "Changing what a diver stated about their dive support is limited to owners, managers, instructors, and divemasters.",
+    "paymentNotConnected": "Payments aren't connected yet — connect them to charge this diver.",
+    "cleared": "That was the last thing — nothing is waiting on {name}."
   },
   "export": {
     "downloadButton": {
       "idle": "Download record",
       "acknowledged": "On its way — check your downloads"
     }
+  },
+  "status": {
+    "ariaLabel": "Open items",
+    "kind": {
+      "certification": "Certification",
+      "waiver": "Waiver",
+      "payment": "Payment",
+      "contact": "Emergency contact"
+    },
+    "cardsWaiting": "{count, plural, one {A certification record is waiting for verification.} other {# certification records are waiting for verification.}}",
+    "waiverMissing": "No signed release on file.",
+    "waiverExpired": "The signed release has lapsed.",
+    "waiverHeld": "A medical answer is with a doctor for sign-off.",
+    "openBalance": "{count, plural, one {One seat still owes money.} other {# seats still owe money.}}",
+    "noEmergencyContact": "No emergency contact on file.",
+    "onDeparture": "On {when}.",
+    "acts": {
+      "verify": "Verify it",
+      "sendWaiver": "Send the waiver",
+      "collect": "Collect",
+      "editContact": "Add one"
+    }
+  },
+  "story": {
+    "heading": "The story",
+    "empty": "No visits yet.",
+    "sailed": "sailed",
+    "waiverSigned": "waiver signed",
+    "showAll": "Show all {count}",
+    "newInvoice": "+ New invoice"
+  },
+  "file": {
+    "gearHeading": "Gear and sizes",
+    "rentsFromUs": "Rents from us",
+    "sizes": "Sizes",
+    "noSizes": "No sizes on file",
+    "editSizes": "Edit"
+  },
+  "waiver": {
+    "sendOptions": "Send options"
   }
 }

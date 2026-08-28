@@ -61,10 +61,10 @@ export function orientationTourText(
  *
  * Every one of those pages is resolved from `staff-destinations.ts`, the one
  * place a staff destination may be declared, rather than spelled out here. The
- * divemaster's prompt is why: it pointed at `/shop/<slug>/blockers`, which has
- * been a 308 to Today's by-departure view since ADR
- * 20260803-not-ready-is-a-view. The registry knew the one-hop URL — including
- * the `?view=` that selects it — and this file did not.
+ * divemaster's prompt is why: it pointed at `/shop/<slug>/blockers`, a 308 to a
+ * surface that had already moved twice. It points at Today now, which is where
+ * a diver who cannot board is a row on their boat's station (ADR
+ * 20260827-clearwater-surface-language, decision 4).
  */
 export function orientationTourHref(
   shopSlug: string,
@@ -81,7 +81,7 @@ export function orientationTourHref(
     case "instructor":
       return hrefFor("divers");
     case "divemaster":
-      return hrefFor("blockers");
+      return hrefFor("today");
     case "captain":
       // Falls back to the operations board when no boat is out today — the
       // manifest route needs a real trip id, and there is no "today's

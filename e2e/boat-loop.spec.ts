@@ -2,8 +2,8 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 import { openOnThisPhone } from "./helpers";
 
 /**
- * Not READ_ONLY, despite neither test submitting anything: both start by
- * clicking "Board divers" off Today's queue, which only renders while
+ * Not READ_ONLY, despite neither test submitting anything: both start from a
+ * station on Today's day spine, which only renders while
  * blue-mantis has a departure scheduled today. That's a claim about seeded
  * *state*, not about writes, and READ_ONLY only ever promises the latter — a
  * read-only test skips its own reset and inherits whatever the previous
@@ -19,8 +19,16 @@ signedInAsOwner();
 test("the trip sub-nav reaches all four surfaces", async ({ page }) => {
   await page.goto("/shop/blue-mantis");
 
-  // Today's departure card drops staff straight onto the manifest's boarding pass.
-  await page.getByRole("link", { name: "Board divers" }).first().click();
+  // A station's title is the door to its departure; the trip's own sub-nav is
+  // where the manifest's boarding pass lives (ADR
+  // 20260827-clearwater-surface-language, decision 4 — the station carries the
+  // day's work, not a second set of destination buttons).
+  await page.locator("ol li h3 a").first().click();
+  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
+  await page
+    .getByRole("navigation", { name: "Trip" })
+    .getByRole("link", { name: "Manifest" })
+    .click();
   await expect(page).toHaveURL(/\/manifest/);
 
   // Every per-device preference rests behind the "On this phone" line (ADR
@@ -78,11 +86,8 @@ test("staff can view or copy a trip's public booking page from its overview", as
 }) => {
   await context.grantPermissions(["clipboard-write", "clipboard-read"]);
   await page.goto("/shop/blue-mantis");
-  await page.getByRole("link", { name: "Board divers" }).first().click();
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Overview" })
-    .click();
+  await page.locator("ol li h3 a").first().click();
+  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
 
   // The booking page stays on screen for a staffer now — it used to redirect
   // straight back to the management view, which made this button impossible to

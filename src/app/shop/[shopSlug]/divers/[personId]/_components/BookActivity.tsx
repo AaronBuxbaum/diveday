@@ -2,30 +2,35 @@ import { seatExistingDiverAction } from "@/app/actions/seat-diver";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { staffTranslator } from "@/i18n/staff-messages";
+import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate, groupByLocalDay } from "@/lib/calendar-date";
 import { formatTime } from "@/lib/format";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile, Shop, UpcomingTrip } from "./shared";
 
 /**
- * "Book them on an upcoming trip", from the diver's own record.
+ * **"Book a departure" — the record's one primary act**, and the picker it
+ * discloses in place (ADR 20260827-people-not-lists, decision 1).
  *
- * Books by identity (`personId`), not by re-submitting a name and email — the
- * person is already open on screen, and re-entering them risked a second
- * person row for the same human. That is also why the form no longer demands
- * an email: a diver on file with no address is exactly the counter walk-in
- * `createBooking` already supports (src/db/bookings.ts), and refusing to book
- * them here was a dead end with no way out but editing the record first.
- * Through the shared `seatExistingDiverAction`, this door now owes the same
- * consequences as every other — including the waiver-on-join it used to skip
- * entirely, which sent divers booked from here to the dock unsigned.
+ * It used to be a section of its own two thirds of the way down a ~6,400px
+ * scroll, under a heading, above a second list of the same bookings. The form
+ * itself is unchanged: it books by identity (`personId`), not by re-submitting
+ * a name and email — the person is already open on screen, and re-entering
+ * them risked a second person row for the same human. Through the shared
+ * `seatExistingDiverAction`, this door owes the same consequences as every
+ * other, including the waiver-on-join it used to skip entirely.
+ *
+ * The disclosure's `<summary>` is the page's **only** primary-weight control;
+ * the submit inside it is secondary, because once the picker is open the
+ * choice — not the button — is the work.
  */
 export function BookActivity({
   diver,
   shop,
   locale,
+  t,
   status,
   upcoming,
   shopSlug,
@@ -34,34 +39,35 @@ export function BookActivity({
   diver: DiverProfile;
   shop: Shop;
   locale: string;
+  t: StaffTranslator;
   /**
-   * This section's own outcome: the seat that landed, or the gate that refused
-   * it. A cert refusal in particular is the one a staffer most needs beside the
-   * picker they just used, since the next move is choosing a different trip.
+   * This form's own outcome: the seat that landed, or the gate that refused
+   * it. A cert refusal in particular is the one a staffer most needs beside
+   * the picker they just used, since the next move is choosing a different
+   * trip. A notice also holds the disclosure open — an answer inside a shut
+   * one is invisible.
    */
   status?: DiverNotice;
   upcoming: UpcomingTrip[];
   shopSlug: string;
   personId: string;
 }) {
-  const t = staffTranslator(locale);
   return (
-    <section className="mt-10 border-t border-border pt-8" aria-labelledby="book-activity-heading">
+    <details open={Boolean(status)} className="group open:w-full">
+      <summary
+        id="book-departure"
+        className={buttonClass({
+          className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+        })}
+      >
+        {t("divers.bookActivity.bookDeparture")}
+        <DisclosureCaret direction="down" className="group-open:rotate-180" />
+      </summary>
       <form
         action={seatExistingDiverAction.bind(null, "diver-record", shopSlug)}
-        className={sectionCardClass()}
+        className={sectionCardClass({ className: "mt-3 w-full" })}
       >
-        {/* One card, one subject, so the heading belongs inside it — but this
-            card is the `<form>` itself, and `SectionCard`'s element set
-            deliberately excludes `<form>`, so it cannot take a `title`. Hence
-            the one place the h2 scale is spelled by hand on this page: it is
-            `TITLE_CLASS.h2` from `@/components/ui/card`, and it moves when that
-            does. See "Where a heading goes" in
-            docs/design/forms-and-controls.md. */}
-        <h2 id="book-activity-heading" className="text-lg font-semibold">
-          {t("divers.bookActivity.heading")}
-        </h2>
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <input type="hidden" name="personId" value={personId} />
           <FieldGrid columns={1} className="flex-1">
             <Field label={t("divers.bookActivity.courseOrDiveLabel")}>
@@ -73,10 +79,7 @@ export function BookActivity({
                  * Grouped by departure day, not one flat list. Staff seating a
                  * diver are working from a date the person just said out loud
                  * ("Saturday"), and a flat list repeated that date on every row
-                 * while giving them nothing to scan *by* — several boats on one
-                 * day looked identical until you read to the end of each line.
-                 * The day is now the group heading, so each row only has to say
-                 * what the outing is and what time it leaves.
+                 * while giving them nothing to scan *by*.
                  */}
                 {groupByLocalDay(upcoming, shop.timezone, (trip) => trip.startsAt).map((group) => (
                   <optgroup key={group.day} label={formatCalendarDate(group.day, locale)}>
@@ -95,22 +98,22 @@ export function BookActivity({
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <SubmitButton
               pendingLabel={t("divers.bookActivity.booking")}
-              className={buttonClass({ size: "lg" })}
+              className={buttonClass({ variant: "secondary" })}
             >
               {t("divers.bookActivity.bookActivityButton")}
             </SubmitButton>
-            <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} />
+            <DiverFormStatus status={status} />
           </div>
         </div>
+        {/* Not a refusal — a heads-up. The seat is real either way; the waiver
+            link just has nowhere to be emailed, so somebody has to hand it over. */}
+        {diver.person.email ? null : (
+          <p className="mt-3 text-sm text-muted">{t("divers.bookActivity.noEmailNote")}</p>
+        )}
+        {upcoming.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">{t("divers.bookActivity.noOpenActivities")}</p>
+        ) : null}
       </form>
-      {/* Not a refusal — a heads-up. The seat is real either way; the waiver
-          link just has nowhere to be emailed, so somebody has to hand it over. */}
-      {diver.person.email ? null : (
-        <p className="mt-3 text-sm text-muted">{t("divers.bookActivity.noEmailNote")}</p>
-      )}
-      {upcoming.length === 0 ? (
-        <p className="mt-3 text-sm text-muted">{t("divers.bookActivity.noOpenActivities")}</p>
-      ) : null}
-    </section>
+    </details>
   );
 }

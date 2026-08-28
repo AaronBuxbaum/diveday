@@ -131,7 +131,7 @@ describe("a card sighting whose number is not a card number", () => {
     // `sighted-identifier` field, so the sighting form re-opens with the error
     // on the box that was wrong.
     expect(to).toBe(
-      `/shop/${shop.slug}/divers/${personId}?notice=card-number-implausible&form=cards#cards`,
+      `/shop/${shop.slug}/divers/${personId}?notice=card-number-implausible&form=cards#certifications`,
     );
     // And nothing was written: the claim is still a claim.
     const [after] = await db.select().from(certifications).where(eq(certifications.id, card.id));
@@ -158,7 +158,7 @@ describe("a card sighting whose number is not a card number", () => {
     );
 
     expect(to).toBe(
-      `/shop/${shop.slug}/divers/${personId}?notice=card-number-implausible&form=specialty-cards#cards`,
+      `/shop/${shop.slug}/divers/${personId}?notice=card-number-implausible&form=cards#certifications`,
     );
     const [after] = await db
       .select()
@@ -184,7 +184,9 @@ describe("a card sighting whose number is not a card number", () => {
       ),
     );
 
-    expect(to).toBe(`/shop/${shop.slug}/divers/${personId}?notice=verified&form=cards#cards`);
+    expect(to).toBe(
+      `/shop/${shop.slug}/divers/${personId}?notice=verified&form=cards#certifications`,
+    );
     const [after] = await db.select().from(certifications).where(eq(certifications.id, card.id));
     expect(after?.status).toBe("verified");
     expect(after?.identifier).toBe("SSI-4471");
@@ -215,7 +217,7 @@ describe("a card sighting whose number is not a card number", () => {
     );
 
     expect(to).toBe(
-      `/shop/${shop.slug}/divers/${personId}?notice=card-sighting-required&form=cards#cards`,
+      `/shop/${shop.slug}/divers/${personId}?notice=card-sighting-required&form=cards#certifications`,
     );
     const [after] = await db.select().from(certifications).where(eq(certifications.id, card.id));
     // Not the posted agency, not the posted number, not `verified`: a partial
@@ -240,7 +242,9 @@ describe("a card id that is not a uuid", () => {
       reviewAction(shop.slug, personId, sighting("../../etc", {})),
     );
 
-    expect(to).toBe(`/shop/${shop.slug}/divers/${personId}?notice=invalid&form=cards#cards`);
+    expect(to).toBe(
+      `/shop/${shop.slug}/divers/${personId}?notice=invalid&form=cards#certifications`,
+    );
   });
 
   it("refuses the delete instead of raising", async () => {
@@ -250,7 +254,9 @@ describe("a card id that is not a uuid", () => {
       deleteCertificationAction(shop.slug, personId, sighting("42", {})),
     );
 
-    expect(to).toBe(`/shop/${shop.slug}/divers/${personId}?notice=invalid&form=cards#cards`);
+    expect(to).toBe(
+      `/shop/${shop.slug}/divers/${personId}?notice=invalid&form=cards#certifications`,
+    );
   });
 
   it("refuses the specialty review instead of raising", async () => {
@@ -261,7 +267,7 @@ describe("a card id that is not a uuid", () => {
     );
 
     expect(to).toBe(
-      `/shop/${shop.slug}/divers/${personId}?notice=invalid&form=specialty-cards#cards`,
+      `/shop/${shop.slug}/divers/${personId}?notice=invalid&form=cards#certifications`,
     );
   });
 });

@@ -11,6 +11,7 @@ import {
   type BuilderPriceInput,
   ScheduleBuilder,
 } from "./ScheduleBuilder";
+import type { BuilderWeek, WeekEntry, WeekSpan } from "./WeekBoard";
 
 // The board route has no dynamic id, so `usePathname()` is what
 // ScheduleBuilder keys its disarm-on-revisit effect on (see the component's
@@ -1449,4 +1450,514 @@ describe("ScheduleBuilder request plan: copy composed on the client", () => {
       expect(panel.textContent).not.toContain("{");
     });
   }
+});
+
+/**
+ * **The week, at `xl` and up** — ADR 20260827-clearwater-surface-language,
+ * decision 5, and the width floor H-63 set on 2026-08-27.
+ *
+ * The floor itself is a real-viewport fact and is pinned where a viewport
+ * exists (`e2e/schedule-builder.spec.ts`, "the board is the stream below
+ * 1280px and the week at 1280"). What is pinned here is everything jsdom can
+ * answer: that the two compositions declare the floor at all, that a course
+ * spanning three days is drawn once, and the silences the design depends on.
+ */
+describe("ScheduleBuilder week board", () => {
+  const DAY_ISOS = [
+    "2026-08-24",
+    "2026-08-25",
+    "2026-08-26",
+    "2026-08-27",
+    "2026-08-28",
+    "2026-08-29",
+    "2026-08-30",
+  ] as const;
+
+  function weekEntry(overrides: Partial<WeekEntry> & { tripId: string; dateIso: string }) {
+    return {
+      startTime: "07:00",
+      title: "Two-Tank Reef",
+      time: "7:00 AM",
+      meta: "10 of 12 · $95",
+      dayCount: 1,
+      status: "upcoming" as const,
+      unpriced: false,
+      rollCallOpen: null,
+      ref: "Two-Tank Reef, Thu, Aug 27 7:00 AM – 10:30 AM",
+      ...overrides,
+    };
+  }
+
+  function weekSpan(overrides: Partial<WeekSpan> & { tripId: string }): WeekSpan {
+    return {
+      title: "Open Water Diver — three-day course",
+      meta: "4 of 5 · $595 · Marcus Webb",
+      dateIso: "2026-08-28",
+      startTime: "08:00",
+      dayCount: 3,
+      status: "upcoming" as const,
+      unpriced: false,
+      rollCallOpen: null,
+      ref: "Open Water Diver — three-day course, Aug 28 – 30, 2026",
+      startColumn: 5,
+      columnSpan: 3,
+      ...overrides,
+    };
+  }
+
+  function week(overrides: Partial<BuilderWeek> = {}): BuilderWeek {
+    return {
+      ariaLabel: "The week",
+      rangeLabel: "Aug 24 – 30, 2026",
+      previousHref: "/shop/blue-mantis/schedule/board?week=2026-08-17",
+      nextHref: "/shop/blue-mantis/schedule/board?week=2026-08-31",
+      thisWeekHref: null,
+      allUnpriced: false,
+      nextDeparture: null,
+      words: {
+        previous: "Previous week",
+        next: "Next week",
+        thisWeek: "This week",
+        today: "Today",
+      },
+      days: DAY_ISOS.map((dateIso, index) => ({
+        dateIso,
+        weekday: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index] ?? "",
+        dayNumber: String(24 + index),
+        label: `Day ${24 + index}`,
+        isToday: dateIso === "2026-08-27",
+        isPast: dateIso < "2026-08-27",
+        boatWarning: null,
+        entries: [],
+      })),
+      spans: [],
+      ...overrides,
+    };
+  }
+
+  function board(weekProps: BuilderWeek | null, canConfigure = true) {
+    const days: BuilderDay[] = [
+      {
+        dateIso: "2026-08-27",
+        label: "Thu, Aug 27",
+        parts: { weekday: "Thu", day: "27", month: "Aug" },
+        trips: [baseTrip()],
+      },
+    ];
+    return render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        loadOptions={loadOptions}
+        price={PRICE}
+        actions={actions}
+        defaultDateIso="2026-08-27"
+        canConfigure={canConfigure}
+        copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
+        week={weekProps}
+      />,
+    );
+  }
+
+  /** The one grid on the page, whatever else shares its words. */
+  const grid = () => screen.getByRole("region", { name: "The week" });
+
+  it("declares the xl floor on both compositions, so only one is ever on screen", () => {
+    const { container } = board(week());
+
+    // **Exact class tokens, never a substring.** `toContain("xl:block")` is
+    // satisfied by `2xl:block`, so the floor could have moved from 1280 to
+    // 1536 with this test still green. jsdom evaluates no media query, so
+    // *where* the floor sits is pinned in e2e (schedule-builder.spec.ts, "the
+    // board is the day stream below 1280px"); what this pins is that the two
+    // compositions declare complementary halves of one breakpoint and can
+    // never be on screen together.
+    expect(grid().classList.contains("hidden")).toBe(true);
+    expect(grid().classList.contains("xl:block")).toBe(true);
+    // … and the stream stops exactly where it starts. Without the second
+    // half the two would render at once at desktop, which is the whole
+    // failure the floor exists to prevent.
+    const stream = container.querySelector("[data-day-stream]");
+    expect(stream).not.toBeNull();
+    expect(stream?.classList.contains("xl:hidden")).toBe(true);
+    expect(stream?.textContent).toContain("Two-Tank Reef");
+  });
+
+  it("renders no grid at all on a board with nothing upcoming", () => {
+    // The terminal empty state is the whole page at every width; seven empty
+    // columns beneath it would be the same nothing said twice.
+    board(null);
+
+    expect(screen.queryByRole("region", { name: "The week" })).toBeNull();
+  });
+
+  it("draws a multi-day course once, as a bar, and never in the days it covers", () => {
+    board(week({ spans: [weekSpan({ tripId: "course-1" })] }));
+
+    const bars = within(grid()).getAllByRole("link", {
+      name: "Open Water Diver — three-day course",
+    });
+    expect(bars).toHaveLength(1);
+    expect(bars[0]).toHaveAttribute("href", "/shop/blue-mantis/trips/course-1");
+    // Fri, Sat and Sun — the three days the bar covers — carry the bar and
+    // nothing else. A course drawn as a bar *and* three entries is the same
+    // fact said four times.
+    expect(within(grid()).queryAllByRole("listitem")).toHaveLength(0);
+  });
+
+  it("says nothing in a day with no departures", () => {
+    board(week());
+
+    // No per-cell empty copy anywhere: an empty column is the information
+    // this grid exists to show.
+    expect(within(grid()).queryAllByRole("listitem")).toHaveLength(0);
+    // What an empty day still ahead does carry is its own way to fill it —
+    // and a day already behind carries none, because a departure is put on
+    // the board and the board is ahead. Aug 27 is "today" in this fixture, so
+    // four of the seven can take one.
+    expect(
+      within(grid()).getAllByRole("button", { name: /^Add a departure on Day / }),
+    ).toHaveLength(4);
+    for (const past of ["Day 24", "Day 25", "Day 26"]) {
+      expect(
+        within(grid()).queryByRole("button", { name: `Add a departure on ${past}` }),
+      ).toBeNull();
+    }
+  });
+
+  it("offers a boat already home no move, copy, remove or price warning", () => {
+    board(
+      week({
+        days: week().days.map((day) =>
+          day.dateIso === "2026-08-24"
+            ? {
+                ...day,
+                entries: [
+                  weekEntry({
+                    tripId: "sailed-1",
+                    dateIso: "2026-08-24",
+                    title: "Benwood & Elbow",
+                    status: "sailed",
+                    unpriced: true,
+                    meta: "Sailed · 9 of 12",
+                    ref: "Benwood & Elbow, Mon, Aug 24 11:30 AM – 3:00 PM",
+                  }),
+                ],
+              }
+            : day,
+        ),
+      }),
+    );
+
+    expect(within(grid()).getByText("Sailed · 9 of 12")).toBeTruthy();
+    // Every one of the three is refused by src/db/trips-schedule.ts for a
+    // departure that has already sailed, so none of them is offered.
+    expect(
+      within(grid()).queryByRole("button", { name: /^Move, copy, or remove Benwood/ }),
+    ).toBeNull();
+    // And the price flag is silent: an unpriced boat that has already sailed
+    // cannot be booked, so its missing price is nobody's morning.
+    expect(within(grid()).queryByText("No price set")).toBeNull();
+  });
+
+  it("carries the price warning, with its own drawn mark, on a departure still to sail", async () => {
+    board(
+      week({
+        days: week().days.map((day) =>
+          day.dateIso === "2026-08-30"
+            ? {
+                ...day,
+                entries: [
+                  weekEntry({
+                    tripId: "sunday-1",
+                    dateIso: "2026-08-30",
+                    title: "Christ of the Abyss",
+                    unpriced: true,
+                    meta: "0 of 12",
+                    ref: "Christ of the Abyss, Sun, Aug 30 11:30 AM – 3:00 PM",
+                  }),
+                ],
+              }
+            : day,
+        ),
+      }),
+    );
+
+    // J5: Dana sees Sunday's unpriced entry on the week and opens it through
+    // the departure's own editor — the panel that already exists.
+    const flag = within(grid()).getByRole("link", {
+      name: "Set a price for Christ of the Abyss, Sun, Aug 30 11:30 AM – 3:00 PM",
+    });
+    expect(flag).toHaveAttribute("href", "/shop/blue-mantis/trips/sunday-1#details");
+    expect(flag.textContent).toContain("No price set");
+    expect(flag.querySelector("svg")).not.toBeNull();
+  });
+
+  it("opens move, copy and remove from a cell, keyed apart from the stream's own", async () => {
+    const user = userEvent.setup();
+    board(
+      week({
+        days: week().days.map((day) =>
+          day.dateIso === "2026-08-27"
+            ? {
+                ...day,
+                entries: [
+                  weekEntry({ tripId: "trip-1", dateIso: "2026-08-27", title: "Two-Tank Reef" }),
+                ],
+              }
+            : day,
+        ),
+      }),
+    );
+
+    // The stream renders the same departure; only one of the two can ever be
+    // on screen, and each hands focus back to its own control.
+    await user.click(
+      within(grid()).getByRole("button", { name: /^Move, copy, or remove Two-Tank Reef/ }),
+    );
+    await user.click(screen.getByRole("button", { name: /^Move Two-Tank Reef/ }));
+    // A move form is two date/time fields; it opens full width beneath the
+    // grid rather than inside a 160px column.
+    expect(screen.getByLabelText("New date")).toHaveValue("2026-08-27");
+    expect(screen.getByLabelText("New departure time")).toHaveValue("07:00");
+  });
+
+  it("opens move, copy and remove from a multi-day course bar too", async () => {
+    // **The bar replaces the entries for the days it covers.** So if it did
+    // not carry the same "⋯" a day cell does, the desktop board would be the
+    // one place in the app where a multi-day course cannot be moved, copied or
+    // removed at all — a capability the stream underneath still has. The panels
+    // are the shared ones, opened with the course's own first day, its
+    // departure time and how many days move together.
+    const user = userEvent.setup();
+    board(
+      week({
+        spans: [
+          weekSpan({
+            tripId: "course-1",
+            dateIso: "2026-08-28",
+            startTime: "08:00",
+            dayCount: 3,
+          }),
+        ],
+      }),
+    );
+
+    await user.click(
+      within(grid()).getByRole("button", { name: /^Move, copy, or remove Open Water Diver/ }),
+    );
+    await user.click(screen.getByRole("button", { name: /^Move Open Water Diver/ }));
+    expect(screen.getByLabelText("New date")).toHaveValue("2026-08-28");
+    expect(screen.getByLabelText("New departure time")).toHaveValue("08:00");
+    // Three days move together, and the form says so — the same note the
+    // stream's own move panel carries for a course.
+    expect(screen.getByText("All 3 days move together, keeping their gaps.")).toBeTruthy();
+
+    // Copy and remove reach the course from the same menu.
+    await user.click(
+      within(grid()).getByRole("button", { name: /^Move, copy, or remove Open Water Diver/ }),
+    );
+    await user.click(screen.getByRole("button", { name: /^Copy Open Water Diver/ }));
+    expect(screen.getByLabelText("Copy to")).toHaveValue("2026-09-04");
+
+    await user.click(
+      within(grid()).getByRole("button", { name: /^Move, copy, or remove Open Water Diver/ }),
+    );
+    await user.click(screen.getByRole("button", { name: /^Remove Open Water Diver/ }));
+    expect(
+      screen.getByText("Take “Open Water Diver — three-day course” off the board for good?"),
+    ).toBeTruthy();
+  });
+
+  it("offers a course already finished no move, copy or remove", () => {
+    // Same refusal as a boat already home: src/db/trips-schedule.ts declines
+    // all three, so the bar is offered none of them.
+    board(week({ spans: [weekSpan({ tripId: "course-1", status: "sailed" })] }));
+
+    expect(
+      within(grid()).queryByRole("button", { name: /^Move, copy, or remove Open Water Diver/ }),
+    ).toBeNull();
+  });
+
+  it("carries the price warning on an unpriced course bar", () => {
+    // The bar is a departure like any other: unpriced, still to run, and
+    // divers can already see it. Without this the one shape that *replaces*
+    // its day entries is also the one shape that says nothing about a missing
+    // price.
+    board(
+      week({
+        spans: [weekSpan({ tripId: "course-1", unpriced: true, meta: "4 of 5 · Marcus Webb" })],
+      }),
+    );
+
+    const flag = within(grid()).getByRole("link", {
+      name: "Set a price for Open Water Diver — three-day course, Aug 28 – 30, 2026",
+    });
+    expect(flag).toHaveAttribute("href", "/shop/blue-mantis/trips/course-1#details");
+    expect(flag.textContent).toContain("No price set");
+    expect(flag.querySelector("svg")).not.toBeNull();
+  });
+
+  it("pages by week, and never mixes a cursor into that URL", () => {
+    board(week({ thisWeekHref: "/shop/blue-mantis/schedule/board" }));
+
+    const previous = within(grid()).getByRole("link", { name: "Previous week" });
+    const next = within(grid()).getByRole("link", { name: "Next week" });
+    expect(previous).toHaveAttribute("href", "/shop/blue-mantis/schedule/board?week=2026-08-17");
+    expect(next).toHaveAttribute("href", "/shop/blue-mantis/schedule/board?week=2026-08-31");
+    // The stream's keyset cursor is a different reading of the same rows and
+    // keeps its own parameters; a week link that carried one would make the
+    // two argue about where the board is.
+    for (const link of [previous, next]) {
+      expect(link.getAttribute("href")).not.toContain("after=");
+      expect(link.getAttribute("href")).not.toContain("back=");
+    }
+    expect(within(grid()).getByRole("link", { name: "This week" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/schedule/board",
+    );
+  });
+
+  it("hides the week's own controls from a staffer who cannot schedule", () => {
+    board(
+      week({
+        days: week().days.map((day) =>
+          day.dateIso === "2026-08-27"
+            ? {
+                ...day,
+                entries: [
+                  weekEntry({ tripId: "trip-1", dateIso: "2026-08-27", title: "Two-Tank Reef" }),
+                ],
+              }
+            : day,
+        ),
+      }),
+      false,
+    );
+
+    // Trip definition is owner/manager/instructor work (H-14); the crew read
+    // the week and run the day from each departure's own page.
+    expect(within(grid()).queryAllByRole("button", { name: /^Add a departure on / })).toHaveLength(
+      0,
+    );
+    expect(within(grid()).queryByRole("button", { name: /^Move, copy, or remove / })).toBeNull();
+    expect(within(grid()).getByRole("link", { name: "Two-Tank Reef" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/trip-1",
+    );
+  });
+
+  /** One helper for "a week whose Thursday holds these departures". */
+  function weekWithThursday(entries: WeekEntry[], rest: Partial<BuilderWeek> = {}) {
+    return week({
+      days: week().days.map((day) => (day.dateIso === "2026-08-27" ? { ...day, entries } : day)),
+      ...rest,
+    });
+  }
+
+  it("carries an open roll call into the week, where the stream cannot be seen", () => {
+    // **The loudest thing the board can say** (DOM-H3): the boat is back and
+    // somebody on its list was never counted. It shouted in the stream and
+    // rendered nowhere at all from 1280px up, which made the desktop board
+    // the quietest place in the app to notice an uncounted diver.
+    board(
+      weekWithThursday([
+        weekEntry({
+          tripId: "trip-home",
+          dateIso: "2026-08-27",
+          title: "Dawn Two-Tank",
+          status: "sailed",
+          rollCallOpen: { diveNumber: 2, uncounted: 3 },
+        }),
+      ]),
+    );
+
+    const flag = within(grid()).getByRole("link", {
+      name: "Finish the dive 2 roll call for Two-Tank Reef, Thu, Aug 27 7:00 AM – 10:30 AM",
+    });
+    expect(flag).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/trip-home/manifest?checkpoint=after_dive_2",
+    );
+    // Never hue alone: the count is in the words, not only in the ink.
+    expect(flag).toHaveTextContent("Roll call · 3 not counted");
+  });
+
+  it("lets the open roll call outrank the price flag rather than stacking two marks", () => {
+    // One slot, one grammar (issue 758) — the same call the stream made. In a
+    // 150px column two stacked marks are two alarms competing.
+    board(
+      weekWithThursday([
+        weekEntry({
+          tripId: "trip-home",
+          dateIso: "2026-08-27",
+          status: "sailed",
+          unpriced: true,
+          rollCallOpen: { diveNumber: 1, uncounted: 2 },
+        }),
+      ]),
+    );
+
+    expect(within(grid()).getByText("Roll call · 2 not counted")).toBeInTheDocument();
+    expect(within(grid()).queryByText("No price set")).toBeNull();
+  });
+
+  it("asks each column the board's own question: more departures than boats", () => {
+    // The collision the ADR calls the board's whole question. It was computed
+    // for the stream's days only, so it vanished with the stream at desktop.
+    board(
+      week({
+        days: week().days.map((day) =>
+          day.dateIso === "2026-08-27"
+            ? { ...day, boatWarning: "Reef Runner is on two departures at once." }
+            : day,
+        ),
+      }),
+    );
+
+    expect(within(grid()).getByText("Reef Runner is on two departures at once.")).toBeVisible();
+    // Only on the day it is about — a warning repeated under all seven
+    // numerals would name nothing.
+    expect(within(grid()).getAllByText(/is on two departures at once\./)).toHaveLength(1);
+  });
+
+  it("names the next departure when the week on screen has none, instead of dead-ending", () => {
+    // The stream that would have listed them is display:none at this width,
+    // so seven blank columns and a "›" is the whole affordance without this.
+    board(
+      week({
+        nextDeparture: {
+          label: "Nothing this week — the next departure is Thu, Sep 10.",
+          href: "/shop/blue-mantis/schedule/board?week=2026-09-10",
+        },
+      }),
+    );
+
+    expect(
+      within(grid()).getByRole("link", {
+        name: "Nothing this week — the next departure is Thu, Sep 10.",
+      }),
+    ).toHaveAttribute("href", "/shop/blue-mantis/schedule/board?week=2026-09-10");
+  });
+
+  it("says nothing about a next departure while the week has departures of its own", () => {
+    // The page decides this once, over the whole week; the grid never
+    // second-guesses it. Pinning the silence is the point: a line reading
+    // "nothing this week" above a full week is worse than no line.
+    board(weekWithThursday([weekEntry({ tripId: "trip-1", dateIso: "2026-08-27" })]));
+
+    expect(within(grid()).queryByText(/next departure/)).toBeNull();
+  });
+
+  it("names each day's list by its own column header, not seven anonymous lists", () => {
+    board(weekWithThursday([weekEntry({ tripId: "trip-1", dateIso: "2026-08-27" })]));
+
+    // A screen reader walking the grid reads "Mon 24 … Sun 30" and then seven
+    // lists; without this, none of them says which day it belongs to.
+    const list = within(grid()).getByRole("list", { name: "Day 27" });
+    expect(within(list).getByRole("link", { name: "Two-Tank Reef" })).toBeInTheDocument();
+  });
 });

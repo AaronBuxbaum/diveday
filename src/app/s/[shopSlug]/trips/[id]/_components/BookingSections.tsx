@@ -9,6 +9,7 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
@@ -18,6 +19,7 @@ import { hasAnyRentalPricing, type RentalPricing } from "@/lib/rentals";
 import { capacityLabel } from "@/lib/trips";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
 import { BookingGearFields } from "./BookingGearFields";
+import { MoneyBlock } from "./MoneyBlock";
 import type { Trip } from "./types";
 
 /**
@@ -272,13 +274,30 @@ const INITIAL_BOOKING_STATE: BookingFormState = {};
 /** Stable per-slot keys for the gear fieldsets — mirrors `BookingPartyFields`'s `diverSlots`. */
 const GEAR_SLOTS = ["gear-one", "gear-two", "gear-three", "gear-four", "gear-five", "gear-six"];
 
+/**
+ * **The form, terminal** — the last thing on the page, with the money resolved
+ * once directly above the button (ADR 20260827-the-divers-thread, decision 2).
+ *
+ * Three things this composition is not allowed to drift back into:
+ *
+ * - **No nested boxes.** Party, gear and the rest are hairline-separated steps
+ *   of one sheet. The card is the only edge; every bordered fieldset inside it
+ *   read as a second frame around a third.
+ * - **One figure.** `MoneyBlock` owns every amount this card states, and it
+ *   states exactly one at or above `text-lg`. The card description that quoted
+ *   the price under the heading is gone with the party total, the running
+ *   checkout total, the fee line and the tax line — the hero says the price
+ *   once, this block says the total once, and nothing in between says it again.
+ * - **Nothing under the button but fine print.** The free-cancellation sentence
+ *   (`TripTerms`), then the full terms behind one disclosure. The requirement
+ *   note that used to sit *inside* this card in a sunken box is the page's now,
+ *   above the form, where a diver reads it before starting to type.
+ */
 export function BookSpotSection({
   trip,
   tripRef,
   remaining,
   errorMessage,
-  requirementHeading,
-  requirementNote,
   payAtBooking,
   perDiverPriceCents,
   currency,
@@ -289,24 +308,17 @@ export function BookSpotSection({
   rentalPricing,
   passThroughFee,
   taxEnabled,
+  courseFeeCents,
+  eLearningFeeCents,
+  depositCents,
+  balanceDueAt,
+  timeZone,
   terms,
 }: {
   trip: Trip;
   tripRef: TripRef;
   remaining: number;
   errorMessage?: string;
-  /**
-   * What the trip asks of anybody, already composed and translated by the page
-   * (`tripRequirementList`) — a property of the *trip*, never of the reader, so
-   * it is safe on an anonymous page. Undefined when the trip demands nothing.
-   *
-   * It is stated here, above the form, because it used to be stated nowhere
-   * until after the seat was bought: a diver who could not clear the gate read
-   * "4 spots left", paid, and met the requirement for the first time at the
-   * dock (DOM-M6).
-   */
-  requirementHeading?: string;
-  requirementNote?: string;
   payAtBooking: boolean;
   perDiverPriceCents: number | null;
   /** The shop's currency — this is a list price, so it follows the shop, not a payment row. */
@@ -330,19 +342,36 @@ export function BookSpotSection({
    */
   taxEnabled?: boolean;
   /**
-   * The money fine print (`TripTerms`), server-rendered by the page and
-   * placed here beside the button it qualifies — deposit split, cancellation
-   * window, course-fee breakdown. Null when the trip has no terms to state.
+   * A course session's two priced halves, per diver (`courseCharges`), resolved
+   * by the page so the arithmetic stays server-side. Null on an ordinary
+   * charter, and each hides its own line in `MoneyBlock`.
+   */
+  courseFeeCents?: number | null;
+  eLearningFeeCents?: number | null;
+  /**
+   * The per-diver deposit this checkout takes (`checkoutCharge`), or null when
+   * it charges the full fare. Read only when the diver is paying now.
+   */
+  depositCents?: number | null;
+  /** When the remainder is owed — the departure's own day. */
+  balanceDueAt?: Date | null;
+  /** The shop's zone. A date rendered without one reads in the host's (UTC). */
+  timeZone: string;
+  /**
+   * The one sentence of fine print under the button (`TripTerms`) — the free
+   * cancellation window, server-rendered by the page. Null when the shop
+   * states none. Every *figure* moved into `MoneyBlock`.
    */
   terms?: React.ReactNode;
 }) {
   const t = useTranslations("booking");
   const tRoot = useTranslations();
+  const tTrip = useTranslations("trip");
   const money = (cents: number) => formatMoneyCents(cents, currency, locale);
   const [state, formAction] = useActionState(bookSpot.bind(null, tripRef), INITIAL_BOOKING_STATE);
-  // Task 18: "3 divers × $120 = $360" above the submit button once the party
-  // grows past one — `BookingPartyFields` owns the size selector, so it
-  // reports changes back up rather than this section duplicating that state.
+  // `BookingPartyFields` owns the party-count control, so it reports changes
+  // back up rather than this section duplicating that state — `MoneyBlock`
+  // multiplies the fare by it.
   const [partySize, setPartySize] = useState(1);
   // Per-diver gear subtotal, reported up by each `BookingGearFields` slot
   // (docs ADR 20260801-checkout-upsells-rental-gear) — summed into the running
@@ -391,93 +420,55 @@ export function BookSpotSection({
       actions={
         <span className="text-sm font-medium text-primary tabular-nums">{capacityText}</span>
       }
-      description={
-        payAtBooking && perDiverPriceCents !== null && perDiverPriceCents > 0
-          ? t("paidSecurely", { price: money(perDiverPriceCents) })
-          : undefined
-      }
     >
-      <div className="flex flex-col gap-4">
-        {requirementNote ? (
-          <div className="rounded-lg border border-border bg-surface-sunken p-3 text-sm">
-            {requirementHeading ? (
-              <h3 className="font-semibold text-foreground">{requirementHeading}</h3>
-            ) : null}
-            <p className="mt-1 text-muted">{requirementNote}</p>
-          </div>
-        ) : null}
-        <form action={formAction} className="flex flex-col gap-4">
-          <BookingPartyFields
-            maxPartySize={remaining}
-            leadPhone
-            fieldErrors={state.fieldErrors}
-            remember={!tripRef.embed}
-            onSizeChange={setPartySize}
-            contactEmail={contactEmail}
-            contactPhone={contactPhone}
-          />
-          {showGearFields
-            ? Array.from({ length: partySize }, (_, index) => (
-                <BookingGearFields
-                  key={GEAR_SLOTS[index]}
-                  index={index}
-                  showDiverLabel={partySize > 1}
-                  rentalItems={rentalItems}
-                  course={trip.course}
-                  pricing={rentalPricing}
-                  plannedDives={trip.plannedDives}
-                  currency={currency}
-                  onSubtotalChange={onGearSubtotalChange}
-                />
-              ))
-            : null}
-          {/* **The certification question is not asked here at all.** It was,
-              per diver, until 2026-08-27 (product owner) — and asking a
-              stranger for a rung before they have paid bought a sale-time
-              warning and a self-declared claim written onto a named person's
-              record from an anonymous form. `/ready/<token>` asks the same
-              question of the diver whose booking it is, after the sale, with
-              the agency and number beside it. The departure's own requirement
-              is still stated above this form, which is the half a deciding
-              diver needs. */}
-          {perDiverPriceCents !== null && (gearTotalCents > 0 || passThroughTotalCents > 0) ? (
-            <p className="-mt-2 text-sm font-medium tabular-nums">
-              {t("totalDueAtCheckout", {
-                total: money(
-                  partySize * perDiverPriceCents + gearTotalCents + passThroughTotalCents,
-                ),
-              })}
-            </p>
-          ) : partySize > 1 && perDiverPriceCents !== null ? (
-            <p className="-mt-2 text-sm font-medium tabular-nums">
-              {t("partyTotal", {
-                count: partySize,
-                price: money(perDiverPriceCents),
-                total: money(partySize * perDiverPriceCents + passThroughTotalCents),
-              })}
-            </p>
-          ) : null}
-          {passThroughFee ? (
-            <p className="-mt-2 text-sm text-muted tabular-nums">
-              {t("passThroughFee", {
-                name: passThroughFee.name,
-                price: money(passThroughFee.amountCents),
-              })}
-            </p>
-          ) : null}
-          {taxEnabled && perDiverPriceCents !== null ? (
-            <p className="-mt-2 text-sm text-muted">{t("taxAddedAtCheckout")}</p>
-          ) : null}
-          {/* Self-declared only (task 23) — this checkbox is not persisted and
+      {/* No `description` any more. It quoted the per-diver price under the
+          heading — the second of the five places this card said the money, on a
+          page whose hero had already said it at figure scale. */}
+      <form action={formAction} className="flex flex-col gap-4">
+        <BookingPartyFields
+          maxPartySize={remaining}
+          leadPhone
+          fieldErrors={state.fieldErrors}
+          remember={!tripRef.embed}
+          onSizeChange={setPartySize}
+          contactEmail={contactEmail}
+          contactPhone={contactPhone}
+        />
+        {showGearFields
+          ? Array.from({ length: partySize }, (_, index) => (
+              <BookingGearFields
+                key={GEAR_SLOTS[index]}
+                index={index}
+                showDiverLabel={partySize > 1}
+                rentalItems={rentalItems}
+                course={trip.course}
+                pricing={rentalPricing}
+                plannedDives={trip.plannedDives}
+                currency={currency}
+                onSubtotalChange={onGearSubtotalChange}
+              />
+            ))
+          : null}
+        {/* **The certification question is not asked here at all.** It was,
+            per diver, until 2026-08-27 (product owner) — and asking a
+            stranger for a rung before they have paid bought a sale-time
+            warning and a self-declared claim written onto a named person's
+            record from an anonymous form. `/ready/<token>` asks the same
+            question of the diver whose booking it is, after the sale, with
+            the agency and number beside it. The departure's own requirement
+            is stated by the page above this form, which is the half a
+            deciding diver needs. */}
+        {/* Self-declared only (task 23) — this checkbox is not persisted and
             does not gate the booking transaction; full enforcement (a birth
             date on file, a hard refusal) is deliberately out of scope, see
             docs/product/human-decisions.md H-08/H-22. */}
-          {trip.course?.minimumAge ? (
-            <label className="flex min-h-11 items-start gap-2 text-sm">
-              <input type="checkbox" name="ageAttestation" required className="mt-0.5 size-4" />
-              {t("ageAttestation", { age: trip.course.minimumAge })}
-            </label>
-          ) : null}
+        {trip.course?.minimumAge ? (
+          <label className="flex min-h-11 items-start gap-2 border-t border-border pt-4 text-sm">
+            <input type="checkbox" name="ageAttestation" required className="mt-0.5 size-4" />
+            {t("ageAttestation", { age: trip.course.minimumAge })}
+          </label>
+        ) : null}
+        <div className="flex flex-col gap-4 border-t border-border pt-4">
           <FieldGrid columns={1}>
             <Field label={t("preferenceLabel")} hint={t("preferenceHint")}>
               <textarea
@@ -492,9 +483,9 @@ export function BookSpotSection({
           {payAtBooking ? (
             <FieldGrid columns={1} className="max-w-64">
               {/* A shop-wide code and a trip-scoped last-minute deal are typed
-                into the same box — the diver has no idea which kind they were
-                handed, and the server resolves both (docs ADR
-                20260729-shop-promo-codes). */}
+                  into the same box — the diver has no idea which kind they were
+                  handed, and the server resolves both (docs ADR
+                  20260729-shop-promo-codes). */}
               <Field
                 label={t("promoLabel")}
                 hint={t("promoHint")}
@@ -513,30 +504,72 @@ export function BookSpotSection({
               </Field>
             </FieldGrid>
           ) : null}
-          <div className="mt-1">
-            <SubmitButton
-              pendingLabel={payAtBooking ? t("headingToPayment") : t("booking")}
-              className={buttonClass({ className: "px-6 py-3 text-base disabled:opacity-70" })}
-            >
-              {bookLabel}
-            </SubmitButton>
-            {/* The scariest hop on hotel wifi (task 19) — said once, up front,
-              rather than only after the tap commits the diver to it. */}
-            {payAtBooking ? <p className="mt-2 text-xs text-muted">{t("stripeHint")}</p> : null}
-            {/* The money fine print, right under the button it qualifies —
-              deposit split, cancellation window, course-fee breakdown. It
-              lived in the masthead before, a whole page away from the tap it
-              was written for. */}
-            {terms}
-            {/* The refusal used to render above the whole form — above the party
+        </div>
+        {/* The money, said once, immediately above the button that commits to
+            it. Five `text-sm` siblings scattered through this form did this job
+            before — see `MoneyBlock`. */}
+        {perDiverPriceCents === null ? null : (
+          <MoneyBlock
+            className="border-t border-border pt-4"
+            fareCents={perDiverPriceCents}
+            partySize={partySize}
+            gearCents={gearTotalCents}
+            courseFeeCents={courseFeeCents ?? null}
+            eLearningFeeCents={eLearningFeeCents ?? null}
+            passThroughFeeLine={
+              passThroughFee
+                ? t("passThroughFee", {
+                    name: passThroughFee.name,
+                    price: money(passThroughFee.amountCents),
+                  })
+                : null
+            }
+            passThroughTotalCents={passThroughTotalCents}
+            // Only where there *is* a checkout for Stripe to add tax at. On a
+            // book-now-pay-later seat the sentence used to render anyway, under
+            // a total labelled "Due at the shop" — a page telling a diver about
+            // a checkout step that does not exist for them (issue #1019's line,
+            // read in the wrong branch).
+            taxLine={taxEnabled && payAtBooking ? "checkout" : "none"}
+            dueNow={payAtBooking ? "checkout" : "at_shop"}
+            depositCents={depositCents ?? null}
+            balanceDueAt={balanceDueAt ?? null}
+            currency={currency}
+            locale={locale}
+            timeZone={timeZone}
+          />
+        )}
+        <div className="mt-1">
+          <SubmitButton
+            pendingLabel={payAtBooking ? t("headingToPayment") : t("booking")}
+            className={buttonClass({ className: "px-6 py-3 text-base disabled:opacity-70" })}
+          >
+            {bookLabel}
+          </SubmitButton>
+          {/* The scariest hop on hotel wifi (task 19) — said once, up front,
+              rather than only after the tap commits the diver to it. Only when
+              there is a checkout to hop to. */}
+          {payAtBooking ? <p className="mt-2 text-xs text-muted">{t("stripeHint")}</p> : null}
+          {/* The one sentence still ahead of a diver who has decided. */}
+          {terms}
+          {/* Everything else that qualifies the tap, behind one door. It was a
+              standalone paragraph of reassurance under the button — a second
+              body-weight sentence competing with the terms above it for a
+              reader who had already committed. */}
+          <details className="group/terms mt-2">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-medium text-primary [&::-webkit-details-marker]:hidden">
+              {tTrip("fullTermsLabel")}
+              <DisclosureCaret direction="down" className="size-4 group-open/terms:rotate-180" />
+            </summary>
+            <p className="text-sm text-muted">{t("noAccountNeeded")}</p>
+          </details>
+          {/* The refusal used to render above the whole form — above the party
               fields, the gear fields, and the promo box. On a phone that is
               several thumb-scrolls from the button the diver just tapped, so a
               refused booking read as a button that did nothing. */}
-            <ErrorNotice message={state.error ?? errorMessage} />
-          </div>
-          <p className="text-sm text-muted">{t("noAccountNeeded")}</p>
-        </form>
-      </div>
+          <ErrorNotice message={state.error ?? errorMessage} />
+        </div>
+      </form>
     </SectionCard>
   );
 }

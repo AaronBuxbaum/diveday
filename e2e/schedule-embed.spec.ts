@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, openTripInEmbed, signOut } from "./helpers";
+import { daysFromNow, e2eNow, openTripInEmbed, signOut, threadStatus } from "./helpers";
 
 /**
  * The embed widget (docs ADR 20260726-schedule-embed): a shop pastes the
@@ -14,6 +14,21 @@ test("the schedule embed renders without page chrome and allows framing", async 
   // of the policy, which used to be nothing at all (issue #718).
   expect(response?.headers()["content-security-policy"]).not.toContain("frame-ancestors");
   await expect(page.getByRole("heading", { name: "Schedule", exact: true })).not.toBeVisible();
+
+  // **The shopfront stops at the frame** (ADR
+  // 20260827-clearwater-surface-language, decision 8). `?embed=1` keeps the
+  // list-first window issue #805 made it: no identity band, no next-boat card,
+  // and neither shelf — every one of which would spend a third of a 900px
+  // frame on something the shop's own page around it already says.
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Next boat out" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Courses" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "What divers say" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "All reviews" })).toHaveCount(0);
+  // The list itself is still there, and still the whole point.
+  await expect(
+    page.getByRole("list", { name: "Upcoming trips" }).getByRole("listitem").first(),
+  ).toBeVisible();
 });
 
 test("a non-embed page still denies framing", async ({ page }) => {
@@ -94,7 +109,7 @@ test.describe("as owner", () => {
     // route just issued, and it opens the readiness page rather than the
     // "this link isn't available" notice a dead capability would render.
     await expect(page).toHaveURL(/\/ready\/[^/?]+$/);
-    await expect(page.getByRole("heading", { name: "Your pre-trip checklist" })).toBeVisible();
+    await expect(threadStatus(page)).toBeVisible();
   });
 });
 

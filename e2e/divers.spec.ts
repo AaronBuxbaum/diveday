@@ -36,78 +36,82 @@ test("staff opens a diver from their avatar and can reach them from the header",
   await expect(header.locator('a[href^="tel:"]').filter({ visible: true })).toBeVisible();
 });
 
-test("a diver's record shows their still-scheduled trips, linked straight to the manifest", async ({
+/**
+ * The story is one ledger: a seat appears exactly once, soonest first, and a
+ * departure still ahead opens the manifest — which is where the work about a
+ * boat that has not left happens (ADR 20260827-people-not-lists).
+ */
+test("a diver's record tells one story, and a departure still ahead opens the manifest", async ({
   page,
 }) => {
   await page.goto("/shop/blue-mantis/divers");
   await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
   await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
 
-  const upcoming = page.getByRole("region", { name: "Upcoming trips" });
-  await expect(upcoming).toBeVisible();
-  const firstRow = upcoming.getByRole("link").first();
-  await firstRow.click();
+  const story = page.getByRole("region", { name: "The story" });
+  await expect(story).toBeVisible();
+  await story.getByRole("link").first().click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+\/manifest$/);
 });
 
 /**
- * Currency, on the surface that shows the whole answer rather than a flag (ADR
- * 20260821-currency-is-what-catches-people).
- *
- * Priya dived **this season** — one of the three bands the roster deliberately
- * stays quiet about, so this line existing at all is the thing being asserted:
- * it is the difference between the diver record and every other surface. It
- * rides on the booking rather than the person, so it is read inside the
- * upcoming-trips row it was answered for.
- *
- * Nothing gates on it and nothing may start to; there is no state to drive
- * here, only a render.
+ * The story leads with what is still ahead. A diver with a seat on a departure
+ * this shop has not yet run reads that row first, above everything behind
+ * them — the ledger is one chronological run, not two lists.
  */
-test("a diver's record states how long it has been, even when the roster would not", async ({
-  page,
-}) => {
+test("a diver's record puts the boat they are on at the top of the story", async ({ page }) => {
   await page.goto("/shop/blue-mantis/divers?q=Priya");
   await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
   await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
 
-  const upcoming = page.getByRole("region", { name: "Upcoming trips" });
-  await expect(upcoming.getByText("Last dived this season").first()).toBeVisible();
+  const story = page.getByRole("region", { name: "The story" });
+  await expect(story.getByRole("link").first()).toBeVisible();
 });
 
 /**
- * The diver record is one ~6,400px scroll on a phone. Payments — the section a
- * staffer opens this page for when somebody is standing at the counter with a
- * bill — used to sit seventh, below "Book an activity", reachable only by
- * flicking. The sub-nav is the way down, and it is a plain hash jump: no route
- * change, no refetch, the whole record stays loaded behind it.
+ * **The record's one idea, and its one primary** (ADR
+ * 20260827-people-not-lists, decision 1). The jump nav that used to lead this
+ * page is gone with the ten sections it indexed: the record is a masthead, a
+ * status ledger, a story and four inset groups, and the only filled control on
+ * it is Book a departure.
+ *
+ * The status ledger's fix is a fragment onto the control that does the work,
+ * so "Verify it" both scrolls to and focuses the Verify button — no JavaScript,
+ * no route change.
  */
-test("the diver record's sub-nav jumps to a section without leaving the page", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/divers?q=Talia");
-  await page.getByRole("row").filter({ hasText: "Talia Rosen" }).getByText("TR").click();
-  await expect(page.getByRole("heading", { level: 1, name: "Talia Rosen" })).toBeVisible();
+test("the record leads with what is open, and offers exactly one primary act", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/divers?q=Priya");
+  await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
+  await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
 
-  const subNav = page.getByRole("navigation", { name: "Diver record" });
-  await expect(subNav).toBeVisible();
+  // The retired spine, in both of its spellings.
+  await expect(page.getByRole("navigation", { name: "Diver record" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Payments" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Specialty certifications" })).toHaveCount(0);
 
-  const payments = page.getByRole("heading", { name: "Payments" });
-  // Well below the fold on arrival, which is the whole reason the bar exists.
-  await expect(payments).not.toBeInViewport();
+  // One primary, and it discloses the picker in place rather than navigating.
+  const book = page.getByText("Book a departure", { exact: true });
+  await expect(book).toBeVisible();
+  await expect(page.getByLabel("Course or dive")).toBeHidden();
+  await book.click();
+  await expect(page.getByLabel("Course or dive")).toBeVisible();
+});
 
-  await subNav.getByRole("link", { name: "Payments" }).click();
-  await expect(page).toHaveURL(/\/divers\/[a-f0-9-]+#payments$/);
-  await expect(payments).toBeInViewport();
-  // Same document, not a navigation — the header never re-rendered away.
-  await expect(page.getByRole("heading", { level: 1, name: "Talia Rosen" })).toBeAttached();
+/**
+ * **S1 — fix a diver before the boat.** The status ledger names the open item
+ * and carries the one fix beside it; taking that fix lands on the control in
+ * the certifications group.
+ */
+test("the status ledger's fix lands on the control that clears it", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/divers?filter=needs_attention");
+  await page.getByRole("row").filter({ hasText: /\S/ }).nth(1).getByRole("link").first().click();
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
-  // And back up, so the bar is a spine rather than a one-way trip.
-  await subNav.getByRole("link", { name: "Certifications", exact: true }).click();
-  await expect(page).toHaveURL(/#cards$/);
-  await expect(page.getByRole("heading", { name: "Certification records" })).toBeInViewport();
-
-  // The destructive tail is deliberately not a sub-nav target: deleting a
-  // diver and erasing their personal data cost a scroll, on purpose.
-  await expect(subNav.getByRole("link")).toHaveCount(11);
-  await expect(subNav.getByRole("link", { name: /Erase|Delete/ })).toHaveCount(0);
+  const fix = page.getByRole("link", { name: "Verify it" });
+  await expect(fix).toBeVisible();
+  await expect(fix).toHaveAttribute("href", "#card-awaiting");
+  await fix.click();
+  await expect(page.locator("#card-awaiting")).toBeInViewport();
 });
 
 test("a diver note is shared with the live boat manifest", async ({ page }) => {
@@ -122,7 +126,7 @@ test("a diver note is shared with the live boat manifest", async ({ page }) => {
   await notes.getByRole("button", { name: "Add note" }).click();
   await expect(notes).toContainText(note);
 
-  await page.getByRole("region", { name: "Upcoming trips" }).getByRole("link").first().click();
+  await page.getByRole("region", { name: "The story" }).getByRole("link").first().click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+\/manifest$/);
   // The desk's note reads in the person's own panel, one tap from the row
   // (ADR 20260827-the-departure-is-two-working-surfaces, decision 2).
@@ -439,37 +443,35 @@ test("a diver's record carries the shop's activity about them, paged", async ({ 
   await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
   await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
 
-  const activity = page.getByRole("region", { name: "Activity", exact: true });
-  await expect(activity).toBeVisible();
+  // Folded: it is the reference a staffer scrolls to, not the errand that
+  // brought them here (ADR 20260827-people-not-lists). The fold is a native
+  // `<details>`, so opening it is a tap on its own summary and nothing else.
+  const activity = page.locator("details").filter({ hasText: "Activity" }).last();
+  await activity.getByText("Activity", { exact: true }).click();
   // Seeded lines name the staffer and the diver, the shape `recordTripActivity`
   // writes — so the trail reads the same whether a row was seeded or earned.
   await expect(activity.getByRole("listitem").first()).toContainText("Priya Sharma");
 
-  // The sub-nav reaches it without leaving the page — it is last on a very
-  // long scroll.
-  const nav = page.getByRole("navigation", { name: "Diver record" });
-  await expect(nav.getByRole("link", { name: "Activity", exact: true })).toHaveAttribute(
-    "href",
-    "#activity",
-  );
-
   const firstLine = await activity.getByRole("listitem").first().textContent();
   await activity.getByRole("link", { name: "Next" }).click();
   await expect(page).toHaveURL(/activity=2/);
+  // Page two arrives with the group already open — the pager's links carry
+  // `#activity`, and landing on a shut disclosure would hide the page the
+  // reader just asked for.
   await expect(
-    page.getByRole("region", { name: "Activity", exact: true }).getByRole("listitem").first(),
+    page.locator("details").filter({ hasText: "Activity" }).last().getByRole("listitem").first(),
   ).not.toHaveText(firstLine ?? "");
 });
 
 /**
  * **An outcome belongs beside the control that earned it.**
  *
- * The diver record is nine independent forms on one ~6,400px scroll, and every
- * one of their outcomes used to resolve into a single banner under the `<h1>`:
- * you saved a rental fit halfway down the page and the confirmation appeared
- * off-screen above you. Each section now renders its own (`resolveDiverNotice`
- * + `FormStatus`), which is a claim about *where* the text is, so the assertion
- * has to be about containment rather than mere presence.
+ * The record is several independent forms on one page, and every one of their
+ * outcomes used to resolve into a single banner under the `<h1>`: you saved a
+ * fit halfway down and the confirmation appeared off-screen above you. Each
+ * group now renders its own (`resolveDiverNotice` + `FormStatus`), which is a
+ * claim about *where* the text is, so the assertion has to be about
+ * containment rather than mere presence.
  */
 test("a section's outcome renders inside that section, not in a banner at the top", async ({
   page,
@@ -480,17 +482,20 @@ test("a section's outcome renders inside that section, not in a banner at the to
   await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
   await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
 
-  const rentalFit = page.getByRole("region", { name: "Rental fit" });
-  await rentalFit.scrollIntoViewIfNeeded();
-  await rentalFit.getByLabel("BCD size").fill("M");
-  await rentalFit.getByRole("button", { name: "Save rental fit" }).click();
+  const gear = page.getByRole("region", { name: "Gear and sizes" });
+  await gear.scrollIntoViewIfNeeded();
+  // The two facts lead; the nine-control form is behind the group's one
+  // disclosure (ADR 20260827-people-not-lists, "edit in place").
+  await gear.getByText("Edit", { exact: true }).click();
+  await gear.getByLabel("BCD size").fill("M");
+  await gear.getByRole("button", { name: "Save rental fit" }).click();
 
   // Scoped to the region: the same text anywhere else on the page would not
   // satisfy this, which is the whole point of the change.
-  await expect(rentalFit.getByText("Rental fit profile saved.")).toBeVisible();
+  await expect(gear.getByText("Rental fit profile saved.")).toBeVisible();
   // And it is genuinely where the staffer is looking, not merely inside the
   // right DOM subtree.
-  await expect(rentalFit.getByText("Rental fit profile saved.")).toBeInViewport();
+  await expect(gear.getByText("Rental fit profile saved.")).toBeInViewport();
 
   // A refusal lands on the box it is about, not beside the button and not at
   // the top: this email belongs to another active diver in the demo shop.

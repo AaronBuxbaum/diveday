@@ -1,5 +1,6 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
+  choosePartySize,
   createTrip,
   daysFromNow,
   e2eNow,
@@ -7,6 +8,7 @@ import {
   openTripActivity,
   signInAsOwner,
   signOut,
+  threadStatus,
 } from "./helpers";
 
 test.describe("staff", () => {
@@ -56,10 +58,16 @@ test.describe("staff", () => {
     // "$120", not "$120.00": a price a diver is *scanning* drops minor units it
     // does not have (`formatMoneyScanned`, issue #769). The order this booking
     // becomes still reconciles in two decimals.
-    await expect(page.getByText("$120", { exact: true })).toBeVisible();
-    const partySize = page.getByLabel("Number of divers");
-    await expect(partySize).toHaveAttribute("data-hydrated", "true");
-    await partySize.selectOption("2");
+    //
+    // The page states the figure exactly twice, and that is the composition
+    // rather than a duplication: the hero says it once at figure scale, and the
+    // card's one money block resolves what this party owes directly above the
+    // button (ADR 20260827-the-divers-thread, decision 2). Asserted as the pair
+    // it is — a page-wide unique match became a strict-mode failure the moment
+    // the second figure arrived.
+    await expect(page.getByText("$120", { exact: true })).toHaveCount(2);
+    await expect(page.getByLabel("Grab a spot").getByText("$120", { exact: true })).toBeVisible();
+    await choosePartySize(page, 2);
     await page.getByLabel("Name", { exact: true }).fill("Nora Quinn");
     await page.getByLabel("Email", { exact: true }).fill(`nora-${e2eNow().getTime()}@example.com`);
     await page.getByLabel("Diver 2 name").fill("Sam Quinn");
@@ -94,7 +102,7 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Sign your waiver" }).click();
     await expect(page).toHaveURL(/\/waivers\//);
     await page.goBack();
-    await expect(page.getByRole("heading", { name: "Your pre-trip checklist" })).toBeVisible();
+    await expect(threadStatus(page)).toBeVisible();
 
     // Both named spots are held atomically.
     await page.goto("/s/blue-mantis");
@@ -434,6 +442,37 @@ test("a tampered readiness token reveals nothing, and ?booking= no longer opens 
   await page.goto(`${tripUrl}?booking=${realToken}`);
   await expect(page.getByRole("heading", { name: /You’re on the boat/ })).not.toBeVisible();
   await expect(page.getByRole("heading", { name: "Grab a spot" })).toBeVisible();
+});
+
+/**
+ * **J6 — a diver finds the shop** (ADR
+ * 20260827-clearwater-surface-language, decision 8; the canvas SPEC's journey
+ * table). On a phone the shopfront stacks: the shop's own name and line, then
+ * the next boat as a bookable object with the page's one primary, then the
+ * week at one line per departure. One tap gets a diver into the booking form
+ * they would otherwise have had to find by reading fifteen stacked cards.
+ */
+test.describe("the shopfront on a phone", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("leads with the shop, then the next boat, then the booking form", async ({ page }) => {
+    await page.goto("/s/blue-mantis");
+
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Blue Mantis Divers");
+    await expect(
+      page.getByText("Small-boat reef and wreck diving out of Key Largo."),
+    ).toBeVisible();
+
+    const card = page.getByRole("region", { name: "Next boat out" });
+    await expect(card).toBeVisible();
+    // The page's one primary — every week row below it is a link.
+    const primaries = page.getByRole("link", { name: "Book this boat" });
+    await expect(primaries).toHaveCount(1);
+    await primaries.click();
+
+    await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}#book$/);
+    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  });
 });
 
 /**

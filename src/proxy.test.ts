@@ -114,3 +114,52 @@ describe("proxy CSP handling", () => {
     vi.unstubAllEnvs();
   });
 });
+
+/**
+ * **The shop home answers to no query any more.**
+ *
+ * `?view=` chose between the urgency and by-departure renderings of one work
+ * queue, and `?page=` paged the second of them. The home is a single
+ * chronological spine now (ADR 20260827-clearwater-surface-language, decision
+ * 4), so neither selects anything — and a bookmark carrying one must land on
+ * the page rather than on a URL that quietly means nothing.
+ *
+ * It happens at the edge because that is the only layer that can answer a real
+ * **308**: under `cacheComponents` a redirect thrown from a page body answers
+ * 200 with the hop resolving inside the streamed payload, which a browser
+ * follows and a bookmark manager, a crawler and a `curl` do not.
+ */
+describe("proxy retired-query redirects", () => {
+  it("308s the shop home's ?view= and ?page= away, keeping everything else", async () => {
+    for (const [from, to] of [
+      ["/shop/blue-mantis?view=departures", "/shop/blue-mantis"],
+      ["/shop/blue-mantis?view=urgency&page=3", "/shop/blue-mantis"],
+      ["/shop/blue-mantis?page=2", "/shop/blue-mantis"],
+      ["/shop/blue-mantis?view=departures&created=Reef", "/shop/blue-mantis?created=Reef"],
+    ] as const) {
+      const res = await run(request(from));
+      expect(res.status, from).toBe(308);
+      // Absolute, because Next's middleware adapter parses this header through
+      // `NextURL` and a relative value there has no base to resolve against —
+      // it throws and the request answers 500. The origin is the request's
+      // own, which is what stops the hop pinning a visitor to whichever host
+      // the proxy happened to resolve (the trap `/blockers` documents).
+      const location = new URL(res.headers.get("location") ?? "", "http://x");
+      expect(location.origin, from).toBe(new URL(request(from).url).origin);
+      expect(`${location.pathname}${location.search}`, from).toBe(to);
+    }
+  });
+
+  it("leaves a home with no retired query, and every page below it, alone", async () => {
+    // `?page=` is a live parameter on plenty of staff lists — the strip is the
+    // home's own, not a rule about the word.
+    for (const path of [
+      "/shop/blue-mantis",
+      "/shop/blue-mantis?created=Reef",
+      "/shop/blue-mantis/orders?page=2",
+      "/shop/blue-mantis/divers?view=all",
+    ]) {
+      expect((await run(request(path))).status, path).not.toBe(308);
+    }
+  });
+});

@@ -1,49 +1,49 @@
-import { sectionCardClass } from "@/components/ui/card";
+import { THREAD_MEASURE_CLASS } from "@/components/thread/ThreadShell";
 
 /**
- * Body-shaped skeleton for /ready (design principle 1) — the token lookup and
- * readiness summary have no loading state to show meanwhile, and this is a
- * page divers often open on hotel wifi the night before a trip. Shaped like
- * the page it stands in for: a short eyebrow, the trip title, three meta lines,
- * then the one spine card — a header block with its progress bar over the
- * divided checklist rows, the last of which is the gear row and stands as tall
- * as the rental form it opens with.
+ * Body-shaped skeleton for `/ready` (design principle 1) — the token lookup
+ * and readiness read have no loading state to show meanwhile, and this is a
+ * page divers open on hotel wifi the night before a trip.
+ *
+ * Shaped like what replaces it, which changed in slice 7c (ADR
+ * 20260827-the-divers-thread, decision 3): the header, then the status
+ * figure, then the step spine as hairline rows on the page background — no
+ * card, because the spine is not one any more. The third row stands tall
+ * because one step is open at rest with its form inline, and a skeleton of
+ * five equal rows would collapse the instant the real one arrived.
  */
 export default function ReadyLoading() {
   return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
+    <main className={THREAD_MEASURE_CLASS}>
       <div className="animate-pulse">
         <div className="h-4 w-32 rounded bg-surface-sunken" />
-        <div className="mt-3 h-9 w-72 max-w-full rounded bg-surface-sunken" />
+        <div className="mt-2 h-9 w-72 max-w-full rounded bg-surface-sunken" />
         <div className="mt-3 h-5 w-56 max-w-full rounded bg-surface-sunken" />
         <div className="mt-2 h-5 w-64 max-w-full rounded bg-surface-sunken" />
         <div className="mt-3 h-4 w-full max-w-sm rounded bg-surface-sunken" />
-        {/* The card's shell comes from the same place the page's own cards do,
-            so the skeleton cannot drift from what replaces it. */}
-        <div className={sectionCardClass({ padding: "none", className: "mt-8 overflow-hidden" })}>
-          <div className="p-5 sm:p-6">
-            <div className="h-6 w-48 rounded bg-surface-sunken" />
-            <div className="mt-3 h-5 w-full rounded bg-surface-sunken" />
-            <div className="mt-4 h-3 w-full rounded-full bg-surface-sunken" />
-          </div>
-          <div className="divide-y divide-border border-t border-border">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="flex items-start gap-4 px-4 py-4 sm:px-5">
-                <div className="size-10 shrink-0 rounded-xl bg-surface-sunken" />
-                <div className="min-w-0 flex-1">
-                  <div className="h-5 w-40 max-w-full rounded bg-surface-sunken" />
-                  <div className="mt-2 h-4 w-full rounded bg-surface-sunken" />
-                  {/* The gear row carries the rental form as its action, so it
-                      is several times the height of the rows above it — a
-                      skeleton that ended in four equal rows would collapse the
-                      moment the real one arrived. */}
-                  {i === 3 ? (
-                    <div className="mt-3 h-40 w-full rounded-xl bg-surface-sunken" />
-                  ) : null}
-                </div>
+        {/* The one status statement: a figure, and what is next. */}
+        <div className="mt-8 flex items-baseline gap-3">
+          <div className="h-8 w-10 rounded bg-surface-sunken" />
+          <div className="h-5 w-24 rounded bg-surface-sunken" />
+          <div className="ms-auto h-4 w-32 rounded bg-surface-sunken" />
+        </div>
+        <div className="mt-6">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="border-t border-border py-4 last:border-b">
+              <div className="flex items-center gap-3">
+                <div className="size-5 shrink-0 rounded-full bg-surface-sunken" />
+                <div className="h-5 w-40 max-w-full rounded bg-surface-sunken" />
               </div>
-            ))}
-          </div>
+              {i === 2 ? <div className="mt-4 h-40 w-full rounded-xl bg-surface-sunken" /> : null}
+            </div>
+          ))}
+        </div>
+        {/* What to pack, below the spine. */}
+        <div className="mt-10 h-6 w-48 rounded bg-surface-sunken" />
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-24 rounded bg-surface-sunken" />
+          ))}
         </div>
       </div>
     </main>

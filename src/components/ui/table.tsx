@@ -133,7 +133,7 @@ export function Table({
   return (
     <div
       className={`overflow-hidden print:overflow-visible ${
-        flush ? "" : "rounded-2xl border border-border bg-surface shadow-sm"
+        flush ? "" : "rounded-2xl border border-border bg-surface"
       } ${shellClassName}`
         .replace(/\s+/g, " ")
         .trim()}

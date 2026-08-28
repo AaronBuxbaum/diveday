@@ -95,12 +95,20 @@ export const earlyAccessPrice = {
   price: "$99", // i18n-exempt: currency figure, the H-12 single source — never restate elsewhere
   nameKey: "marketing.price.name",
   cadenceKey: "marketing.price.cadence",
+  // Five things the price covers, every one of them a thing rather than a
+  // reassurance. `item5` ("no surprise increases while you help shape what
+  // ships next") was retired on 2026-08-28: under a heading reading "What the
+  // price covers" it was the one negation among positives, and once the
+  // two-year lock moved under the figure (`marketing.pricing.lockNote`) what
+  // it still carried was a founding-cohort rationale rather than something the
+  // price buys — `faq.whyFounding` says that whole. The numbering is
+  // deliberately not resequenced: `item6` keeps naming the string it has
+  // always named.
   includedKeys: [
     "marketing.price.item1",
     "marketing.price.item2",
     "marketing.price.item3",
     "marketing.price.item4",
-    "marketing.price.item5",
     "marketing.price.item6",
   ],
 } as const satisfies {
@@ -129,6 +137,30 @@ export const fullShopExport = {
   claimKey: "marketing.export.claim",
   termsKey: "marketing.export.terms",
 } as const satisfies { claimKey: DiverMessageKey; termsKey: DiverMessageKey };
+
+/**
+ * The mid-season answer, rendered on the homepage's records band
+ * (docs/product/marketing-review-20260827.md, "Mid-season answered where it
+ * disqualifies"). One claim, told at two lengths: the switching guides walk it
+ * as the steps of `guides.shared.cutover.*`, and `/` compresses the same
+ * promise to a sentence for a reader who will never open a guide.
+ *
+ * So the key deliberately lives in the **guides'** namespace rather than the
+ * homepage's, and this constant is what makes that legible at the call site:
+ * every clause in the sentence is a compression of
+ * `guides.shared.cutover.step1`, `step3` and `step4`, so an editor rewriting
+ * that cutover rail is reading the homepage's sentence in the same
+ * block of the bundle and cannot leave it behind. Two wordings of one promise
+ * is the failure this prevents — the rule marketing.md states one namespace
+ * over for the export claim ("Never let a surface restate the export claim in
+ * its own words"), which is why this reads like `fullShopExport` above.
+ *
+ * The guides do **not** additionally render this sentence: beside the steps
+ * it summarizes, it would be a caption restating its own section.
+ */
+export const midSeasonCutover = {
+  claimKey: "marketing.guides.shared.cutover.midSeason",
+} as const satisfies { claimKey: DiverMessageKey };
 
 export interface CapabilityAreaKeys {
   title: DiverMessageKey;

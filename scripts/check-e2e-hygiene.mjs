@@ -54,6 +54,12 @@ export const rules = [
       "per-spec retries hide the flake this suite's retries: 0 policy exists to surface. Root-cause the race (see the debug skill) instead of retrying past it.",
   },
   {
+    id: "include-hidden",
+    pattern: /\bincludeHidden\s*:/,
+    message:
+      "`includeHidden` on a role query does nothing here: e2e/fixtures.ts wraps getByRole/getByText/getByLabel/getByPlaceholder in `.filter({ visible: true })`, so the option is discarded without a word and the query stays visible-only. That is worse than an error — a fix written with it looks right, passes review, and changes nothing (it cost one CI round on the schedule board's hidden cursor pager). Reach for a hidden element with `page.locator(...)`, which the fixture leaves alone, and give it an attribute to aim at.",
+  },
+  {
     id: "retry-loop",
     pattern:
       /\b(?:for|while)\s*\(\s*(?:let|const|var)?\s*(?:attempts?|retry|retries|retryCount|tries|tryCount)\b/i,

@@ -1,25 +1,24 @@
 import { ActivityLog, type ActivityLogEntry } from "@/components/ActivityLog";
-import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
-import { SectionCard } from "@/components/ui/card";
+import { LedgerGroup } from "@/components/ui/ledger";
 import type { OffsetPage } from "@/db/paging";
-import { staffTranslator } from "@/i18n/staff-messages";
+import type { StaffTranslator } from "@/i18n/staff-messages";
 import { shopPath } from "@/lib/staff-notices";
 
 /**
- * **What has been done about this person**, on their own record.
+ * **What has been done about this person**, on their own record — the shop's
+ * activity trail filtered to them (`pagedDiverActivity`), rendered by the same
+ * `ActivityLog` the Guests tab uses.
  *
- * The shop's activity trail has always existed, and until now the only door to
- * it was a departure: the Guests tab's collapsed log, one boat at a time. So
- * the question a staffer actually arrives with — "what happened with *this*
- * diver?" — could only be answered by remembering which trips they were on and
- * opening each one.
+ * Last on the record and **folded**, because it is the reference a staffer
+ * scrolls to rather than the errand that brought them here (ADR
+ * 20260827-people-not-lists: "the existing paged audit trail, restyled as a
+ * collapsed `GroupLabel` disclosure, pagination unchanged"). The fold is the
+ * app's one disclosure spelling — a native `<details>`, so a JS failure still
+ * leaves the trail one tap away.
  *
- * The same rows, filtered to them (`pagedDiverActivity`), rendered by the same
- * `ActivityLog` the Guests tab uses. Last on the record, below the shop
- * history, because it is the reference a staffer scrolls to rather than the
- * errand that brought them here — and paged, because a returning diver's trail
- * grows for as long as they keep diving.
+ * A record with no trail renders **nothing at all** rather than a heading over
+ * an empty state: a group label only ever appears over rows.
  */
 export function ActivitySection({
   page,
@@ -27,51 +26,54 @@ export function ActivitySection({
   personId,
   locale,
   timezone,
+  t,
 }: {
   page: OffsetPage<ActivityLogEntry>;
   shopSlug: string;
   personId: string;
   locale: string;
   timezone: string;
+  t: StaffTranslator;
 }) {
-  const t = staffTranslator(locale);
-  if (page.total === 0) {
-    return (
-      <section className="mt-10" aria-labelledby="activity-heading">
-        <h2 id="activity-heading" className="text-lg font-semibold">
-          {t("divers.activity.heading")}
-        </h2>
-        {/* Not a bare heading: see the note in `ShopHistory`, which had the
-            same hole and is fixed the same way. */}
-        <EmptyState title={t("divers.activity.empty")} titleAs="h3" className="mt-4" />
-      </section>
-    );
-  }
+  if (page.total === 0) return null;
   return (
-    <SectionCard title={t("divers.activity.heading")} className="mt-10">
-      <ActivityLog
-        events={page.rows}
-        locale={locale}
-        timeZone={timezone}
-        emptyText={t("divers.activity.empty")}
-      />
-      <Pager
-        page={page.page}
-        pageCount={page.pageCount}
-        // The record's own URL with only the activity page swapped, landing
-        // back on this section rather than at the top of a ~6,400px scroll.
-        // Built through `shopPath`, which escapes each segment — the same
-        // reason every staff redirect goes through it rather than a template
-        // string over a client-supplied slug.
-        href={(target) =>
-          `${shopPath(shopSlug, "divers", personId)}${
-            target > 1 ? `?activity=${target}` : ""
-          }#activity`
-        }
-        total={t("divers.activity.total", { count: page.total })}
-        t={t}
-        className="mt-4"
-      />
-    </SectionCard>
+    <LedgerGroup
+      as="h2"
+      id="activity"
+      // Folded on arrival, open for a reader who has paged into it: the
+      // pager's own links carry `#activity`, and landing on a shut disclosure
+      // would scroll to a summary with the page they asked for hidden behind
+      // it. Whether a group folds is the caller's rule (`LedgerGroup`).
+      folded={page.page === 1}
+      label={t("divers.activity.heading")}
+      meta={t("divers.activity.total", { count: page.total })}
+      className="mt-10 scroll-mt-24"
+    >
+      <div className="mt-3">
+        <ActivityLog
+          events={page.rows}
+          locale={locale}
+          timeZone={timezone}
+          emptyText={t("divers.activity.empty")}
+        />
+        <Pager
+          page={page.page}
+          pageCount={page.pageCount}
+          // The record's own URL with only the activity page swapped, landing
+          // back on this group rather than at the top of the record. Built
+          // through `shopPath`, which escapes each segment — the same reason
+          // every staff redirect goes through it rather than a template string
+          // over a client-supplied slug.
+          href={(target) =>
+            `${shopPath(shopSlug, "divers", personId)}${
+              target > 1 ? `?activity=${target}` : ""
+            }#activity`
+          }
+          total={t("divers.activity.total", { count: page.total })}
+          t={t}
+          className="mt-4"
+        />
+      </div>
+    </LedgerGroup>
   );
 }

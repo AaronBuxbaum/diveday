@@ -1,26 +1,8 @@
 {
-  "subNav": {
-    "ariaLabel": "Ficha del buceador",
-    "cards": "Titulaciones",
-    "specialty": "Certificaciones de especialidad",
-    "waiver": "Exención",
-    "notes": "Notas",
-    "fit": "Tallas",
-    "payments": "Pagos",
-    "bookActivity": "Reservar actividad",
-    "trips": "Salidas",
-    "history": "Historial",
-    "activity": "Actividad",
-    "support": "Apoyo"
-  },
   "activity": {
     "heading": "Actividad",
     "empty": "Todavía no hay actividad del personal registrada.",
     "total": "{count, plural, one {# entrada} other {# entradas}}"
-  },
-  "upcoming": {
-    "heading": "Próximas salidas",
-    "empty": "No hay próximas salidas — reserva una arriba."
   },
   "shared": {
     "agencies": {
@@ -59,14 +41,13 @@
   },
   "certifications": {
     "heading": "Registros de certificación",
-    "description": "Solo las certificaciones verificadas afectan a la preparación.",
     "addCard": "Añadir certificación",
     "agency": "Agencia",
     "level": "Nivel",
     "cardNumber": "Número de certificación",
     "capturing": "Capturando…",
     "captureForReview": "Capturar para revisión",
-    "empty": "Aún no hay certificaciones de nivel — añade la primera arriba.",
+    "empty": "Todavía no hay registros de certificación.",
     "importedLabel": "importado",
     "importedWithSource": "importado · {source}",
     "confirming": "Confirmando…",
@@ -91,7 +72,10 @@
     "clearingNoCertification": "Corrigiendo…",
     "noCertificationClearedNote": "El {date}, {name} corrigió en esta ficha una respuesta de “aún sin certificación”.",
     "noCertificationClearedByUnknown": "un miembro del personal",
-    "noCertificationRestated": "El personal ya corrigió esta respuesta una vez y desde entonces se ha vuelto a dar en un formulario público. Cualquiera que sepa el nombre y el correo de este buceador puede dejarla."
+    "noCertificationRestated": "El personal ya corrigió esta respuesta una vez y desde entonces se ha vuelto a dar en un formulario público. Cualquiera que sepa el nombre y el correo de este buceador puede dejarla.",
+    "cardLabel": "Certificación",
+    "cardKindLevel": "Nivel",
+    "cardKindSpecialty": "Especialidad"
   },
   "page": {
     "eyebrow": "Recepción",
@@ -159,8 +143,6 @@
     }
   },
   "header": {
-    "backToAllDivers": "← Todos los buceadores",
-    "eyebrow": "Recepción",
     "noContactDetails": "Aún sin datos de contacto",
     "diveInsurancePrefix": "Seguro de buceo: ",
     "editDetails": "Editar datos",
@@ -175,29 +157,20 @@
     "emergencyContactNameLabel": "Nombre del contacto de emergencia",
     "emergencyContactPhoneLabel": "Teléfono del contacto de emergencia",
     "saving": "Guardando…",
-    "saveDetails": "Guardar datos"
+    "saveDetails": "Guardar datos",
+    "visits": "{count, plural, one {# visita} other {# visitas}}"
   },
   "bookActivity": {
-    "heading": "Reservar una actividad",
     "courseOrDiveLabel": "Curso o inmersión",
     "chooseActivity": "Elige una actividad disponible",
     "booking": "Reservando…",
     "bookActivityButton": "Reservar actividad",
     "noOpenActivities": "No hay actividades abiertas disponibles ahora mismo.",
-    "noEmailNote": "Sin correo registrado — entrégale el enlace del consentimiento en persona o añade una dirección a su ficha."
+    "noEmailNote": "Sin correo registrado — entrégale el enlace del consentimiento en persona o añade una dirección a su ficha.",
+    "bookDeparture": "Reservar una salida"
   },
   "payments": {
-    "heading": "Pagos",
-    "newPayment": "Nuevo pago",
-    "noPaymentsYet": "Aún no hay pagos.",
-    "openPayment": "Abrir pago",
-    "createOrder": "Crear pedido",
-    "noOrder": "Sin pedido",
-    "shopPaymentFallback": "Pago del centro",
-    "refund": "Reembolsar",
-    "refunding": "Reembolsando…",
-    "demoRefundHint": "Los pedidos de demostración no están respaldados por una factura real de Stripe, así que los reembolsos están deshabilitados aquí.",
-    "showOlderPayments": "{count, plural, one {Mostrar # pago anterior} other {Mostrar # pagos anteriores}}"
+    "shopPaymentFallback": "Pago del centro"
   },
   "remove": {
     "removePersonSummary": "Eliminar a {name}",
@@ -289,17 +262,13 @@
     "changeRestricted": "Cambiar lo que indicó el buceador está limitado a propietarios, gerentes, instructores y divemasters."
   },
   "history": {
-    "heading": "Historial en el centro",
-    "importedVisitsText": "{count, plural, one {# visita} other {# visitas}} llegaron de tu sistema anterior. Esas líneas son registros de reserva, no de inmersión.",
-    "noTripsYet": "Aquí no hay nada todavía — las salidas pasadas y las visitas importadas aparecen aquí.",
     "imported": "Importado",
     "bookingFallback": "Reserva",
-    "showOlderEntries": "{count, plural, one {Mostrar # entrada anterior} other {Mostrar # entradas anteriores}}"
+    "importedVisitsText": "{count, plural, one {# visita} other {# visitas}} llegaron desde tu sistema anterior. Esas líneas son registros de reserva, no registros de inmersión."
   },
   "notes": {
     "heading": "Notas del buceador",
     "description": "Contexto solo para el personal sobre este buceador, compartido con la tripulación en el manifiesto de su barco.",
-    "empty": "Aún no hay notas.",
     "fromTrip": "De {trip} · {date}",
     "appliesEverywhere": "Se aplica a todas las salidas de este buceador",
     "addLabel": "Añadir una nota",
@@ -311,27 +280,11 @@
     "writtenBy": "{name} · {date}"
   },
   "specialty": {
-    "heading": "Certificaciones de especialidad",
-    "addSpecialty": "Añadir especialidad",
-    "specialtyLabel": "Especialidad",
     "nitroxOption": "Nitrox",
-    "captureForReview": "Capturar especialidad para revisión",
-    "emptyState": "Aún no hay certificaciones de especialidad — añade una arriba cuando la obtengan.",
     "nitroxAgencyLine": "{agency} · Nitrox",
     "nitroxLine": "Nitrox"
   },
   "stats": {
-    "cards": "Certificaciones",
-    "needingLook": "{count} necesitan revisión",
-    "notes": "Notas",
-    "rentalFit": "Ajuste de alquiler",
-    "saved": "Guardado",
-    "needed": "Necesario",
-    "partial": "Incompleto",
-    "fitMissingSizes": "Sin talla registrada para {items}",
-    "fitNeedsStaffFit": "Marcado para ajuste en persona al registrarse",
-    "unpaidBookings": "{count, plural, one {# reserva sigue debiendo dinero} other {# reservas siguen debiendo dinero}}",
-    "importedCount": "{count, plural, one {# reserva importada de un sistema anterior} other {# reservas importadas de un sistema anterior}}",
     "waiver": "Exención",
     "waiverSend": "Enviar / reenviar exención y obtener enlace",
     "waiverNotSent": "No enviada",
@@ -350,8 +303,7 @@
     "waiverChannelSent": "Enviada",
     "waiverChannelCopied": "Copiado",
     "waiverChannelFailed": "No salió",
-    "waiverChannelUnavailable": "Sin configurar",
-    "bookings": "Reservas"
+    "waiverChannelUnavailable": "Sin configurar"
   },
   "notices": {
     "cardCertifiedToast": "Marcada como certificada.",
@@ -366,7 +318,6 @@
     "fitFlagged": "Marcado para ajuste manual.",
     "fitCleared": "Marca de ajuste despejada — este buceador vuelve a prepararse con sus tallas indicadas.",
     "duplicate": "Otro buceador ya usa ese correo en este centro.",
-    "refunded": "Pago reembolsado — la salida ahora aparece como no pagada para este buceador.",
     "booked": "Actividad reservada. Revísala abajo, luego crea y envía la factura.",
     "bookedWaiverUndelivered": "Actividad reservada, pero no se envió su exención por correo. Abre la lista de invitados de la salida para enviarla o compartir el enlace.",
     "tripFull": "Esa actividad acaba de llenarse. Elige otra.",
@@ -378,16 +329,10 @@
     "tripPrerequisite": "Las titulaciones registradas de este buceador no alcanzan lo que exigen esa salida y sus puntos de inmersión. Abre la salida para ver qué pide.",
     "tripUnavailable": "Añade un correo electrónico y elige una actividad disponible.",
     "bookingInvalid": "Añade un correo electrónico y elige una actividad disponible.",
-    "refundFailed": "Ese pago no se pudo reembolsar. Puede que no esté pagado, o que Stripe necesite atención.",
-    "refundInProgress": "Ya hay un reembolso de este pedido en curso. Espera un momento y actualiza la página — no lo envíes de nuevo.",
-    "refundNeedsReconciliation": "Stripe ya envió un reembolso de este pedido que no llegamos a registrar. Compruébalo en tu panel de Stripe antes de enviar más — este pedido está en la lista de pagos atascados.",
-    "demoDisabled": "Este es un pedido de demostración — no se puede reembolsar.",
     "deleted": "Buceador eliminado.",
     "restored": "Buceador restaurado.",
     "restoreRefused": "No se pudo restaurar a este buceador: un buceador activo usa ahora su correo. Cambia ese correo e inténtalo de nuevo.",
     "removedReadOnly": "Restaura a este buceador antes de cambiar sus datos.",
-    "paymentNotConnected": "Los pagos aún no están conectados — conéctalos para cobrar a este buceador.",
-    "notAuthorizedRefund": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que emita este reembolso.",
     "notAuthorizedDelete": "Eliminar a un buceador está limitado a propietarios y gerentes; pide a uno de ellos que lo haga.",
     "notAuthorizedErase": "Borrar los datos personales de un buceador está limitado al propietario del centro — pídeselo a esa persona.",
     "eraseNameMismatch": "El nombre que escribiste no coincide con el de este buceador, así que no se borró nada. Escríbelo exactamente como aparece arriba.",
@@ -419,12 +364,54 @@
     "mergeBookingConflict": "Ambos registros tienen una reserva en la misma salida. Resuelve primero esa reserva; no se movió nada.",
     "mergeRecordConflict": "Estos registros tienen un historial en conflicto que no se puede combinar con seguridad. No se movió nada.",
     "supportSaved": "Apoyo en la inmersión guardado.",
-    "notAuthorizedSupport": "Cambiar lo que indicó el buceador sobre su apoyo en la inmersión está limitado a propietarios, gerentes, instructores y divemasters."
+    "notAuthorizedSupport": "Cambiar lo que indicó el buceador sobre su apoyo en la inmersión está limitado a propietarios, gerentes, instructores y divemasters.",
+    "paymentNotConnected": "Los pagos aún no están conectados — conéctalos para cobrar a este buceador.",
+    "cleared": "Eso era lo último: no queda nada pendiente de {name}."
   },
   "export": {
     "downloadButton": {
       "idle": "Descargar registro",
       "acknowledged": "En camino — revisa tus descargas"
     }
+  },
+  "status": {
+    "ariaLabel": "Asuntos pendientes",
+    "kind": {
+      "certification": "Certificación",
+      "waiver": "Exención",
+      "payment": "Pago",
+      "contact": "Contacto de emergencia"
+    },
+    "cardsWaiting": "{count, plural, one {Un registro de certificación espera verificación.} other {# registros de certificación esperan verificación.}}",
+    "waiverMissing": "No hay ninguna exención firmada archivada.",
+    "waiverExpired": "La exención firmada ya caducó.",
+    "waiverHeld": "Una respuesta médica espera la firma de un médico.",
+    "openBalance": "{count, plural, one {Un lugar todavía debe dinero.} other {# lugares todavía deben dinero.}}",
+    "noEmergencyContact": "No hay contacto de emergencia archivado.",
+    "onDeparture": "En {when}.",
+    "acts": {
+      "verify": "Verificar",
+      "sendWaiver": "Enviar la exención",
+      "collect": "Cobrar",
+      "editContact": "Agregar uno"
+    }
+  },
+  "story": {
+    "heading": "La historia",
+    "empty": "Todavía no hay visitas.",
+    "sailed": "zarpó",
+    "waiverSigned": "exención firmada",
+    "showAll": "Ver las {count}",
+    "newInvoice": "+ Nueva factura"
+  },
+  "file": {
+    "gearHeading": "Equipo y tallas",
+    "rentsFromUs": "Renta con nosotros",
+    "sizes": "Tallas",
+    "noSizes": "Sin tallas archivadas",
+    "editSizes": "Editar"
+  },
+  "waiver": {
+    "sendOptions": "Opciones de envío"
   }
 }

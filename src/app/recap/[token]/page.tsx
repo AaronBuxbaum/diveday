@@ -9,7 +9,7 @@ import { RecapMap } from "@/components/RecapMap";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StarRatingInput } from "@/components/StarRatingInput";
 import { SubmitButton } from "@/components/SubmitButton";
-import { TokenPageHeader } from "@/components/TokenPageHeader";
+import { ThreadShell } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, FormStatus } from "@/components/ui/form";
@@ -340,24 +340,28 @@ export default async function DiveRecapPage({
       timeZone={shop.timezone}
       namespaces={["recap", "common", "booking", "reviews", "trip"]}
     >
-      <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
-        <TokenPageHeader eyebrow={shop.name} title={trip.title}>
-          <p className="mt-1 text-base text-muted">{when}</p>
-          {/* Same share-then-clipboard-fallback affordance TripActions gives a
-              trip page — `recap-links.ts` already calls this link shareable,
-              this is what makes it actually be that (task 59). */}
-          <div className="mt-4 flex flex-wrap items-center gap-2 print:hidden">
-            <RecapShareButton
-              shareTitle={trip.title}
-              shareText={t("recap.shareRecapText", { shop: shop.name })}
-              label={t("recap.shareRecap")}
-              copiedLabel={t("recap.linkCopied")}
-              copiedAnnouncement={t("recap.linkCopiedAnnouncement")}
-              failedLabel={t("recap.linkCopyFailed")}
-            />
-          </div>
-        </TokenPageHeader>
-
+      <ThreadShell
+        shopName={shop.name}
+        title={trip.title}
+        meta={
+          <>
+            <p className="mt-1 text-base text-muted">{when}</p>
+            {/* Same share-then-clipboard-fallback affordance TripActions gives a
+                trip page — `recap-links.ts` already calls this link shareable,
+                this is what makes it actually be that (task 59). */}
+            <div className="mt-4 flex flex-wrap items-center gap-2 print:hidden">
+              <RecapShareButton
+                shareTitle={trip.title}
+                shareText={t("recap.shareRecapText", { shop: shop.name })}
+                label={t("recap.shareRecap")}
+                copiedLabel={t("recap.linkCopied")}
+                copiedAnnouncement={t("recap.linkCopiedAnnouncement")}
+                failedLabel={t("recap.linkCopyFailed")}
+              />
+            </div>
+          </>
+        }
+      >
         {/* ——— Act I: relive. Memory before the ask — the coral moment, the
             crew's words, the route, the water. Everything here is unboxed:
             hierarchy comes from type and space, so the one accent card stays
@@ -795,7 +799,7 @@ export default async function DiveRecapPage({
             ) : null}
           </div>
         </footer>
-      </main>
+      </ThreadShell>
     </DiverIntlProvider>
   );
 }

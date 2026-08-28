@@ -13,7 +13,6 @@ import {
   inviteStaffMember,
   listShopStaff,
   removeStaffMember,
-  type StaffMutationResult,
   setStaffAccountStatus,
   setStaffEmergencyContact,
   setStaffLanguages,
@@ -54,6 +53,11 @@ async function teamManagementBlock(session: {
 
 function rolesFromFormData(formData: FormData): Role[] {
   return STAFF_ROLES.filter((role) => formData.get(`role_${role}`) === "on");
+}
+
+/** One set of roles as a value two requests can compare — order-free. */
+function rolesKey(roles: readonly string[]): string {
+  return [...roles].sort().join(",");
 }
 
 // No message arguments. A Zod message is a sentence in the language whoever
@@ -193,44 +197,81 @@ export async function resendInviteAction(formData: FormData) {
 }
 
 /**
- * Every staff card's role checkboxes are associated (via the HTML `form`
- * attribute, not DOM nesting) to one page-level form, named
- * `role_<personId>_<role>` per checkbox — see team/page.tsx. This is the
- * "Save changes" button at the bottom of the page: it walks the shop's whole
- * roster and applies each member's checked roles in one submit. Enable/
- * Disable/Delete are separate, immediate actions (setStaffStatusAction,
- * removeStaffAction below) — they never wait for this button.
+ * **One teammate's roles, saved when their row's disclosure closes** — ADR
+ * 20260827-the-shops-shelves, slice 9h. It replaced `saveAllStaffRolesAction`,
+ * a page-level "Save changes" that walked the whole roster in one submit: an
+ * all-or-nothing write nobody asked for (one row left blank refused every
+ * other row's edit), and a second mental model beside the immediate
+ * Enable/Disable/Delete already on each row.
+ *
+ * Every answer names the row it is about — `rolesFor`, plus the `#staff-<id>`
+ * fragment — so a refusal lands beside the checkboxes that caused it and never
+ * as a banner above a roster of eleven people. `priorRoles` carries the
+ * pre-save roles back for the row's one-tap Undo; an undo's own save posts
+ * `undo=1` and hands nothing back, because Undo is a single re-save and not a
+ * chain to walk up.
+ *
+ * The write is guarded by the `baseline` the row was rendered with, so a close
+ * — or an Undo left on screen while somebody else edited the same person —
+ * refuses rather than reverts. See the comment at that check.
+ *
+ * Enable/Disable/Delete stay separate immediate actions below, exactly as they
+ * were — they never waited for the retired button and do not wait for this.
  */
-export async function saveAllStaffRolesAction(formData: FormData) {
+export async function saveStaffRolesAction(formData: FormData) {
   const session = await requireStaffSession();
   const path = teamPath(session.user.shopSlug);
   await teamManagementBlock(session);
 
+  const personId = String(formData.get("personId") ?? "");
+  if (!personId) redirect(path);
+  const rowPath = `${path}#staff-${personId}`;
+
+  const roles = rolesFromFormData(formData);
+  if (roles.length === 0) {
+    redirect(noticeUrl(rowPath, "roles-invalid", { rolesFor: personId }));
+  }
+
   const db = await getDb();
-  const staff = await listShopStaff(db, session.user.shopId);
+  // Snapshotted before the write, and only the `STAFF_ROLES` subset — exactly
+  // what `setStaffRoles` replaces, so an Undo hands back the same shape.
+  const before = await getStaffRoles(db, session.user.shopId, personId);
 
-  // Validate every member's checked roles before writing any of them — a
-  // save is all-or-nothing, so one blank row can't leave earlier rows
-  // written but the redirect skipping revalidation (Sourcery review, PR 242).
-  const memberRoles = staff.map((member) => ({
-    member,
-    roles: STAFF_ROLES.filter((role) => formData.get(`role_${member.personId}_${role}`) === "on"),
-  }));
-  if (memberRoles.some(({ roles }) => roles.length === 0)) {
-    redirect(noticeUrl(path, "roles-invalid"));
+  // The roles the row was rendered with, posted back by the disclosure (and by
+  // its Undo). `setStaffRoles` is a delete-then-insert of the whole staff
+  // subset, so without this a second writer's close silently reverts whatever
+  // the first one added — the lost update the course editor already refuses
+  // rather than performs (`ConflictGuardedForm`, issue #820). Roles are the
+  // higher-stakes copy of that surface: what is being overwritten is who may
+  // reach every other gated surface in the shop.
+  //
+  // Absent means unchecked, and deliberately so: this is a concurrency guard,
+  // not an authorization one — `teamManagementBlock` above is what a hand-made
+  // post has to get past, and a caller who omits the field only forfeits being
+  // told that somebody moved first.
+  const baseline = formData.get("baseline");
+  if (
+    typeof baseline === "string" &&
+    rolesKey(baseline.split(",").filter(Boolean)) !== rolesKey(before)
+  ) {
+    redirect(noticeUrl(rowPath, "roles-conflict", { rolesFor: personId }));
   }
 
-  let failureReason: Extract<StaffMutationResult, { ok: false }>["reason"] | null = null;
-  for (const { member, roles } of memberRoles) {
-    const result = await setStaffRoles(db, {
-      shopId: session.user.shopId,
-      personId: member.personId,
-      roles,
-    });
-    if (!result.ok) failureReason = result.reason;
+  const result = await setStaffRoles(db, { shopId: session.user.shopId, personId, roles });
+  if (!result.ok) {
+    revalidateAndRedirect(path, noticeUrl(rowPath, result.reason, { rolesFor: personId }));
+    return;
   }
 
-  revalidateAndRedirect(path, noticeUrl(path, failureReason ?? "changes-saved"));
+  const isUndo = formData.get("undo") === "1";
+  const changed = rolesKey(before) !== rolesKey(roles);
+  revalidateAndRedirect(
+    path,
+    noticeUrl(rowPath, "changes-saved", {
+      rolesFor: personId,
+      priorRoles: isUndo || !changed ? undefined : before.join(","),
+    }),
+  );
 }
 
 /**

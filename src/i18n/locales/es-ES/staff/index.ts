@@ -22,7 +22,6 @@
 // file is imported here, so a stray or orphaned namespace cannot ship.
 
 import backup from "./backup.json";
-import blockers from "./blockers.json";
 import blowout from "./blowout.json";
 import boats from "./boats.json";
 import bookings from "./bookings.json";
@@ -73,7 +72,6 @@ const staff = {
   tripSeries,
   manifest,
   settings,
-  blockers,
   checkIn,
   closeout,
   waiversStaff,

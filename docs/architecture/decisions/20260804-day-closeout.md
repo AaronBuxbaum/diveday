@@ -71,8 +71,9 @@ here, which quietly taught staff that tomorrow's work cannot be touched until mo
 [20260803-not-ready-is-a-view](20260803-not-ready-is-a-view.md)'s finding at section scale: a
 surface re-rendering another's evidence is a view of it, not an owner of it.
 
-The section now states **how much** is waiting (total, plus a count per kind using the queue's own
-`KindChip`) and offers one link to Today, which is the surface that can act on those rows. Nothing
+The section now states **how much** is waiting (total, plus a count per kind in the queue's own
+kind words — a `KindChip` until ADR 20260827-clearwater-surface-language retired the pill, and
+`RowKind` since) and offers one link to Today, which is the surface that can act on those rows. Nothing
 else about the route changes: the departures list, the leftovers' carry/dismiss choice, the
 acknowledgement checkbox, and the append-only close are untouched, and the close-out keeps its own
 route for the reasons above. `TOMORROW_GLANCE_LIMIT` is gone with the rows it bounded — a count

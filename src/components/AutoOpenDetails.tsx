@@ -18,6 +18,7 @@ export function AutoOpenDetails({
   openOnHash,
   open,
   id,
+  name,
   className,
   children,
 }: {
@@ -32,6 +33,12 @@ export function AutoOpenDetails({
    * below is what opens it (the native reveal only opens a target's
    * ancestors). */
   id?: string;
+  /**
+   * The exclusive-accordion group (the native `<details name>`): opening one
+   * member closes the rest, with no listener and no state. The diver's thread
+   * uses it so at most one step is ever open — see `/ready/[token]/page.tsx`.
+   */
+  name?: string;
   className?: string;
   children: ReactNode;
 }) {
@@ -54,7 +61,7 @@ export function AutoOpenDetails({
   }, [openOnHash]);
 
   return (
-    <details ref={ref} id={id} open={open} className={className}>
+    <details ref={ref} id={id} name={name} open={open} className={className}>
       {children}
     </details>
   );

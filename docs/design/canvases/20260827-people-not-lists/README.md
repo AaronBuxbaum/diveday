@@ -62,8 +62,8 @@ Every name, number and time is demo-seed fiction. Nothing here is real customer 
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
-| 8a — the shared person-row vocabulary | open | — | — |
-| 8b — the diver record recomposition | open | — | — |
+| 8a — the shared person-row vocabulary | shipped | `src/components/person/rows.tsx` | `src/components/person/rows.test.tsx` |
+| 8b — the diver record recomposition | shipped | `src/app/shop/[shopSlug]/divers/[personId]/page.tsx` | `[personId]/_lib/status.test.ts`, `_lib/record-primaries.test.ts`, `_components/DiverStatusLedger.test.tsx`, `_components/DiverStory.test.tsx` |
 | 8c — the roster ledger | open | — | — |
 | 8d — reviews as a worklist | open | — | — |
 | 8e — the waiver surface | open | — | — |

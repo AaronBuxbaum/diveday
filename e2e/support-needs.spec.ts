@@ -1,6 +1,6 @@
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
 import { expect, test } from "./fixtures";
-import { e2eNow, openManifestPerson, signInAs, tripPathByTitle } from "./helpers";
+import { e2eNow, openManifestPerson, openThreadStep, signInAs, tripPathByTitle } from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
 const TRIP = "Two-Tank Reef — Christ of the Abyss";
@@ -40,7 +40,10 @@ test("what a diver arranges on their own page reaches prep and the manifest", as
 
   // The question is optional and asked here and nowhere else: after the sale,
   // on the diver's own page. It is never on the public booking form, which is
-  // why the form above never showed it.
+  // why the form above never showed it. It rides inside the spine's Day-of
+  // details step and gates nothing — that step settles on the recency question
+  // alone (ADR 20260827-the-divers-thread, decision 3).
+  await openThreadStep(page, "dayof");
   const support = page.getByRole("heading", { name: "Anything we should set up for you?" });
   await expect(support).toBeVisible();
 

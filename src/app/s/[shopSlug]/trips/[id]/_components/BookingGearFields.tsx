@@ -94,132 +94,138 @@ export function BookingGearFields({
   if (!hasAnyRentalPricing(pricing) || (offered.length === 0 && !nitroxOffered)) return null;
 
   return (
-    <fieldset className="rise-in rounded-xl border border-border p-4">
-      <legend className="px-1 text-sm font-semibold text-muted">
-        {showDiverLabel
-          ? t("bookingGear.diverNHeading", { number: index + 1 })
-          : t("bookingGear.heading")}
-      </legend>
-      <label className="mt-1 flex min-h-11 items-center gap-3 text-sm font-medium">
-        <input
-          type="checkbox"
-          checked={wantsGear}
-          onChange={(event) => {
-            setWantsGear(event.target.checked);
-            // Turning the question back off clears the picks outright, so a
-            // subtotal from a moment ago can never survive as a charge the
-            // diver can no longer see.
-            if (!event.target.checked) {
-              setRentedKinds(new Set());
-              setNitroxRequested(false);
-            }
-          }}
-          className="size-4 accent-primary"
-        />
-        <span>{t("bookingGear.needGear")}</span>
-      </label>
-      <p className="mt-1 text-sm text-muted">
-        {wantsGear ? t("bookingGear.introBody") : t("bookingGear.skipBody")}
-      </p>
-      {!wantsGear ? null : (
-        <>
-          {offered.length > 0 ? (
-            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {offered.map(({ kind, name }) => {
-                const priceCents = pricing.perItemCents[kind];
-                const hintKey = RENTABLE_ITEM_HINT_KEYS[kind];
-                const itemLabel = t(RENTABLE_ITEM_LABEL_KEYS[kind]);
-                return (
-                  // The hint stays outside the `<label>` — see the same shape
-                  // in `RentalFitForm` for why.
-                  <div
-                    key={name}
-                    className="flex min-h-11 items-center gap-2 rounded-lg border border-border pr-3"
-                  >
-                    <label className="flex min-h-11 flex-1 items-center gap-3 pl-3 text-sm">
-                      <input
-                        name={`gear-${index}-${name}`}
-                        type="checkbox"
-                        checked={rentedKinds.has(kind)}
-                        onChange={(event) => {
-                          setRentedKinds((current) => {
-                            const next = new Set(current);
-                            if (event.target.checked) next.add(kind);
-                            else next.delete(kind);
-                            return next;
-                          });
-                        }}
-                        className="size-4 accent-primary"
-                      />
-                      <span className="flex-1">{itemLabel}</span>
-                    </label>
-                    {hintKey ? (
-                      <InfoHint
-                        label={t("rental.jargonHintLabel", { item: itemLabel })}
-                        detail={t(hintKey)}
-                      />
-                    ) : null}
-                    {priceCents !== undefined ? (
-                      <span className="text-sm text-muted">
-                        {formatMoneyCents(priceCents, currency, locale)}
-                      </span>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
-          {nitroxOffered ? (
-            <div className="mt-3 flex min-h-11 items-center gap-2 rounded-lg border border-border pr-3">
-              <label className="flex min-h-11 flex-1 items-center gap-3 pl-3 text-sm">
-                <input
-                  name={`nitrox-${index}`}
-                  type="checkbox"
-                  checked={nitroxRequested}
-                  onChange={(event) => setNitroxRequested(event.target.checked)}
-                  className="size-4 accent-primary"
-                />
-                <span className="flex-1">
-                  {pricing.nitroxCents !== null
-                    ? t("rental.nitroxReserveWithPrice", {
-                        price: formatMoneyCents(pricing.nitroxCents, currency, locale),
-                      })
-                    : t("rental.nitroxReserveNoPrice")}
-                </span>
-              </label>
-              <InfoHint
-                label={t("rental.jargonHintLabel", { item: t("rental.nitroxLegend") })}
-                detail={t("rental.jargonHints.nitrox")}
-              />
-            </div>
-          ) : null}
-          {quote.subtotalCents > 0 ? (
-            <p className="mt-2 text-sm tabular-nums">
-              <RentalQuoteAmount
-                totalLabel={t("bookingGear.gearTotal", {
-                  price: formatMoneyCents(quote.subtotalCents, currency, locale),
+    // A step of one sheet, not a box inside the booking card's box (ADR
+    // 20260827-the-divers-thread, decision 2). The hairline sits on a wrapper
+    // rather than on the `<fieldset>` because a `<legend>` is laid out in its
+    // fieldset's block-start border and would punch a gap through the rule.
+    <div className="rise-in border-t border-border pt-4">
+      <fieldset>
+        <legend className="text-sm font-semibold text-muted">
+          {showDiverLabel
+            ? t("bookingGear.diverNHeading", { number: index + 1 })
+            : t("bookingGear.heading")}
+        </legend>
+        <label className="mt-1 flex min-h-11 items-center gap-3 text-sm font-medium">
+          <input
+            type="checkbox"
+            checked={wantsGear}
+            onChange={(event) => {
+              setWantsGear(event.target.checked);
+              // Turning the question back off clears the picks outright, so a
+              // subtotal from a moment ago can never survive as a charge the
+              // diver can no longer see.
+              if (!event.target.checked) {
+                setRentedKinds(new Set());
+                setNitroxRequested(false);
+              }
+            }}
+            className="size-4 accent-primary"
+          />
+          <span>{t("bookingGear.needGear")}</span>
+        </label>
+        <p className="mt-1 text-sm text-muted">
+          {wantsGear ? t("bookingGear.introBody") : t("bookingGear.skipBody")}
+        </p>
+        {!wantsGear ? null : (
+          <>
+            {offered.length > 0 ? (
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {offered.map(({ kind, name }) => {
+                  const priceCents = pricing.perItemCents[kind];
+                  const hintKey = RENTABLE_ITEM_HINT_KEYS[kind];
+                  const itemLabel = t(RENTABLE_ITEM_LABEL_KEYS[kind]);
+                  return (
+                    // The hint stays outside the `<label>` — see the same shape
+                    // in `RentalFitForm` for why.
+                    <div
+                      key={name}
+                      className="flex min-h-11 items-center gap-2 rounded-lg border border-border pr-3"
+                    >
+                      <label className="flex min-h-11 flex-1 items-center gap-3 pl-3 text-sm">
+                        <input
+                          name={`gear-${index}-${name}`}
+                          type="checkbox"
+                          checked={rentedKinds.has(kind)}
+                          onChange={(event) => {
+                            setRentedKinds((current) => {
+                              const next = new Set(current);
+                              if (event.target.checked) next.add(kind);
+                              else next.delete(kind);
+                              return next;
+                            });
+                          }}
+                          className="size-4 accent-primary"
+                        />
+                        <span className="flex-1">{itemLabel}</span>
+                      </label>
+                      {hintKey ? (
+                        <InfoHint
+                          label={t("rental.jargonHintLabel", { item: itemLabel })}
+                          detail={t(hintKey)}
+                        />
+                      ) : null}
+                      {priceCents !== undefined ? (
+                        <span className="text-sm text-muted">
+                          {formatMoneyCents(priceCents, currency, locale)}
+                        </span>
+                      ) : null}
+                    </div>
+                  );
                 })}
-                beforeDiscountLabel={t("rental.beforeDiscountLabel")}
-                struckPrice={
-                  quote.setSavingsCents > 0
-                    ? formatMoneyCents(quote.listSubtotalCents, currency, locale)
-                    : null
-                }
-              />
-              {quote.setSavingsCents > 0 ? (
-                <span // `-strong`: this line sits inside the sunken price box, where the
-                  // raw hue measures 4.36:1 (issue #793).
-                  className="mt-1 block font-medium text-success-strong"
-                >
-                  {t("rental.fullSetSavings", {
-                    price: formatMoneyCents(quote.setSavingsCents, currency, locale),
+              </div>
+            ) : null}
+            {nitroxOffered ? (
+              <div className="mt-3 flex min-h-11 items-center gap-2 rounded-lg border border-border pr-3">
+                <label className="flex min-h-11 flex-1 items-center gap-3 pl-3 text-sm">
+                  <input
+                    name={`nitrox-${index}`}
+                    type="checkbox"
+                    checked={nitroxRequested}
+                    onChange={(event) => setNitroxRequested(event.target.checked)}
+                    className="size-4 accent-primary"
+                  />
+                  <span className="flex-1">
+                    {pricing.nitroxCents !== null
+                      ? t("rental.nitroxReserveWithPrice", {
+                          price: formatMoneyCents(pricing.nitroxCents, currency, locale),
+                        })
+                      : t("rental.nitroxReserveNoPrice")}
+                  </span>
+                </label>
+                <InfoHint
+                  label={t("rental.jargonHintLabel", { item: t("rental.nitroxLegend") })}
+                  detail={t("rental.jargonHints.nitrox")}
+                />
+              </div>
+            ) : null}
+            {quote.subtotalCents > 0 ? (
+              <p className="mt-2 text-sm tabular-nums">
+                <RentalQuoteAmount
+                  totalLabel={t("bookingGear.gearTotal", {
+                    price: formatMoneyCents(quote.subtotalCents, currency, locale),
                   })}
-                </span>
-              ) : null}
-            </p>
-          ) : null}
-        </>
-      )}
-    </fieldset>
+                  beforeDiscountLabel={t("rental.beforeDiscountLabel")}
+                  struckPrice={
+                    quote.setSavingsCents > 0
+                      ? formatMoneyCents(quote.listSubtotalCents, currency, locale)
+                      : null
+                  }
+                />
+                {quote.setSavingsCents > 0 ? (
+                  <span // `-strong`: this line sits inside the sunken price box, where the
+                    // raw hue measures 4.36:1 (issue #793).
+                    className="mt-1 block font-medium text-success-strong"
+                  >
+                    {t("rental.fullSetSavings", {
+                      price: formatMoneyCents(quote.setSavingsCents, currency, locale),
+                    })}
+                  </span>
+                ) : null}
+              </p>
+            ) : null}
+          </>
+        )}
+      </fieldset>
+    </div>
   );
 }

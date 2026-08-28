@@ -9,7 +9,8 @@ import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 /**
  * A notice that names something the staffer can go and fix carries the link to
  * it, rather than describing a place and leaving them to find it. Only the
- * refusals that have somewhere to send someone get one.
+ * refusals that have somewhere to send someone get one, which since the
+ * record's recomposition is exactly one.
  */
 type NoticeLink = { key: StaffMessageKey; href: (shopSlug: string) => string };
 
@@ -179,41 +180,17 @@ const NOTICE_KEYS: Record<
     key: "divers.notices.notAuthorizedWaiver",
   },
 
-  // Payments.
-  refunded: { form: "payments", tone: "success", key: "divers.notices.refunded" },
-  "refund-failed": { form: "payments", tone: "danger", key: "divers.notices.refundFailed" },
-  // A second tap while the first refund is still at Stripe. Refused locally
-  // (PAY-L3) — "wait, don't press again", not "it failed".
-  "refund-in-progress": {
-    form: "payments",
-    tone: "warning",
-    key: "divers.notices.refundInProgress",
-  },
-  // Stripe already paid out on an attempt whose local write never landed. Like
-  // the one above this is "don't press again" rather than "it failed" — and for
-  // the same reason it must not read as a failure: a retry issues a *second*
-  // real reversal (issue #699 security review).
-  "refund-needs-reconciliation": {
-    form: "payments",
-    tone: "warning",
-    key: "divers.notices.refundNeedsReconciliation",
-  },
-  "demo-disabled": { form: "payments", tone: "warning", key: "divers.notices.demoDisabled" },
-  "not-authorized-refund": {
-    form: "payments",
-    tone: "danger",
-    key: "divers.notices.notAuthorizedRefund",
-  },
-  // `orders/new` refuses to open at all until the shop can accept payments and
-  // bounces back here. Without an entry this code rendered nothing, so the
-  // "New payment" button read as simply broken — the click went nowhere and
-  // said nothing. The link is the whole point: the fix is one screen away.
+  // Money. Refunds and the invoice itself live on the Orders ledger (ADR
+  // 20260827-people-not-lists: "here they are the row's money facts"), so the
+  // only money outcome that still lands back on this record is the bounce from
+  // `orders/new` when the shop cannot take money yet. It keeps its link: the
+  // *CTA* left the person page with the ADR, but a refusal that names
+  // something the staffer can go and fix still carries the way there.
   "payment-not-connected": {
-    form: "payments",
+    form: "story",
     tone: "warning",
     key: "divers.notices.paymentNotConnected",
   },
-
   // Diver-record notes are staff context shared with the boat manifest. The
   // normal add path revalidates in place, while delete/undo uses these codes
   // when a redirect is needed to carry the undo text.
@@ -268,42 +245,42 @@ const NOTICE_KEYS: Record<
 
   // Book an activity. Every code below is emitted only by the seating path, so
   // none of them needs an explicit `?form=` to find its way home.
-  booked: { form: "book-activity", tone: "success", key: "divers.notices.booked" },
+  booked: { form: "book", tone: "success", key: "divers.notices.booked" },
   "booked-waiver-undelivered": {
-    form: "book-activity",
+    form: "book",
     tone: "warning",
     key: "divers.notices.bookedWaiverUndelivered",
   },
-  "trip-full": { form: "book-activity", tone: "danger", key: "divers.notices.tripFull" },
-  "already-booked": { form: "book-activity", tone: "danger", key: "divers.notices.alreadyBooked" },
+  "trip-full": { form: "book", tone: "danger", key: "divers.notices.tripFull" },
+  "already-booked": { form: "book", tone: "danger", key: "divers.notices.alreadyBooked" },
   "course-unstaffed": {
-    form: "book-activity",
+    form: "book",
     tone: "danger",
     key: "divers.notices.courseUnstaffed",
   },
   "course-prerequisite": {
-    form: "book-activity",
+    form: "book",
     tone: "danger",
     key: "divers.notices.coursePrerequisite",
   },
   "course-ratio-full": {
-    form: "book-activity",
+    form: "book",
     tone: "danger",
     key: "divers.notices.courseRatioFull",
   },
-  "course-min-age": { form: "book-activity", tone: "danger", key: "divers.notices.courseMinAge" },
+  "course-min-age": { form: "book", tone: "danger", key: "divers.notices.courseMinAge" },
   "trip-prerequisite": {
-    form: "book-activity",
+    form: "book",
     tone: "danger",
     key: "divers.notices.tripPrerequisite",
   },
   "trip-unavailable": {
-    form: "book-activity",
+    form: "book",
     tone: "danger",
     key: "divers.notices.tripUnavailable",
   },
   "booking-invalid": {
-    form: "book-activity",
+    form: "book",
     tone: "danger",
     key: "divers.notices.bookingInvalid",
   },
@@ -349,6 +326,17 @@ const NOTICE_KEYS: Record<
     key: "divers.notices.eraseRequiresDelete",
   },
 
+  /**
+   * **That was the last thing.** Emitted in place of an ordinary success code
+   * when the act a staffer just took left `buildDiverStatus` empty — the
+   * record's one earned moment (20260827-clearwater-surface-language, decision
+   * 11's table). `"details"`, so `noticeForForm` routes it to the masthead
+   * slot; the page renders it as an `EarnedMomentLine` rather than a status
+   * line, on the `code`. Condition-derived, never stored, and `FlashParams`
+   * strips the query straight away so a reload cannot re-celebrate it.
+   */
+  "diver-clear": { form: "details", tone: "success", key: "divers.notices.cleared" },
+
   // Emitted by half a dozen actions, so it has no single home of its own; each
   // one stamps a `?form=` and this default is only reached without one.
   invalid: { form: "page", tone: "danger", key: "divers.notices.invalid" },
@@ -364,11 +352,11 @@ const DIVER_FORMS = new Set([
   "page",
   "details",
   "cards",
-  "specialty-cards",
   "waiver",
   "fit",
-  "payments",
-  "book-activity",
+  "support",
+  "story",
+  "book",
   "notes",
   "merge",
   "remove",
@@ -385,14 +373,25 @@ function diverNoticeForm(param: string | undefined, fallback: string): string {
  * things this page's notices carry that the shared shape does not — a link to
  * the screen that fixes it, and the id of the control it belongs on.
  */
-export type DiverNotice = FormNotice & { link?: NoticeLink; field?: string; silent?: true };
-
-/** Only `payment-not-connected` has somewhere to send someone. */
+/** The one code with somewhere to send someone. */
 const NOTICE_LINKS: Record<string, NoticeLink> = {
   "payment-not-connected": {
     key: "shared.payments.connect",
     href: (shopSlug) => `/shop/${shopSlug}/settings#money`,
   },
+};
+
+export type DiverNotice = FormNotice & {
+  /** Where the refusal can be fixed, when it names somewhere. */
+  link?: NoticeLink;
+  /**
+   * The `?notice=` code itself, so a surface can recognise the one outcome
+   * that is not a sentence in a status row — `diver-clear`, the record's
+   * earned moment (ADR 20260827-clearwater-surface-language, decision 11).
+   */
+  code?: string;
+  field?: string;
+  silent?: true;
 };
 
 /**
@@ -450,6 +449,7 @@ export function resolveDiverNotice({
       : refusal
         ? tripAdmissionRefusalText(t, refusal, locale)
         : t(banner.key as StaffMessageKey),
+    code: notice,
     link: notice === undefined ? undefined : NOTICE_LINKS[notice],
     field: banner.field,
     silent: banner.silent,
@@ -471,20 +471,20 @@ export function DiverFormStatus({
   className = "",
 }: {
   status?: DiverNotice;
-  shopSlug: string;
-  locale: string;
+  /** Only needed by the one notice that carries a link. */
+  shopSlug?: string;
+  locale?: string;
   className?: string;
 }) {
   if (!status || status.silent) return null;
-  const t = staffTranslator(locale);
   return (
     <FormStatus tone={status.tone} className={className}>
       {status.text}
-      {status.link ? (
+      {status.link && shopSlug ? (
         <>
           {" "}
           <Link href={status.link.href(shopSlug)} className="underline underline-offset-2">
-            {t(status.link.key)}
+            {staffTranslator(locale)(status.link.key)}
           </Link>
         </>
       ) : null}
@@ -505,19 +505,18 @@ export function NoticeBanner({
   locale,
 }: {
   notice?: DiverNotice;
-  shopSlug: string;
-  locale: string;
+  shopSlug?: string;
+  locale?: string;
 }) {
   if (!notice || notice.silent) return null;
-  const t = staffTranslator(locale);
   return (
     <ShopNotice tone={notice.tone} role={noticeRole(notice.tone)} className="mt-6">
       {notice.text}
-      {notice.link ? (
+      {notice.link && shopSlug ? (
         <>
           {" "}
           <Link href={notice.link.href(shopSlug)} className="underline underline-offset-2">
-            {t(notice.link.key)}
+            {staffTranslator(locale)(notice.link.key)}
           </Link>
         </>
       ) : null}

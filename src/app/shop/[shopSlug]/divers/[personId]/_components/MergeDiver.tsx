@@ -2,7 +2,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import type { DiverMergeCandidate } from "@/db/diver-merge";
-import { staffTranslator } from "@/i18n/staff-messages";
+import type { StaffTranslator } from "@/i18n/staff-messages";
 import { mergeDiverAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 
@@ -14,18 +14,17 @@ export function MergeDiver({
   candidates,
   shopSlug,
   personId,
-  locale,
+  t,
   status,
 }: {
   candidates: DiverMergeCandidate[];
   shopSlug: string;
   personId: string;
-  locale: string;
+  t: StaffTranslator;
   status?: DiverNotice;
 }) {
-  const t = staffTranslator(locale);
   if (candidates.length === 0) {
-    return <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} className="mt-6" />;
+    return <DiverFormStatus status={status} className="mt-6" />;
   }
   /**
    * Candidates only. The record being viewed used to head this list, checked by
@@ -43,10 +42,12 @@ export function MergeDiver({
   }));
 
   return (
-    <section
-      aria-labelledby="merge-heading"
-      className={sectionCardClass({ className: "mt-6 border-warning/40 bg-warning/5" })}
-    >
+    /* Flat, per 20260827-clearwater-surface-language decision 1: the panel
+       keeps its condition (it renders only when a candidate exists) and loses
+       its tinted fill — the warning line inside it is what carries the tone,
+       and a tint under a box that only appears when something is wrong is the
+       same fact twice. */
+    <section id="merge" aria-labelledby="merge-heading" className={sectionCardClass()}>
       <h2 id="merge-heading" className="text-lg font-semibold">
         {t("divers.merge.heading")}
       </h2>
@@ -101,7 +102,7 @@ export function MergeDiver({
           >
             {t("divers.merge.submit")}
           </SubmitButton>
-          <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} />
+          <DiverFormStatus status={status} />
         </div>
       </form>
     </section>

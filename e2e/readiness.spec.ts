@@ -1,5 +1,13 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, findTripOnBoard, signOut } from "./helpers";
+import {
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  findTripOnBoard,
+  openThreadStep,
+  signOut,
+  threadStatus,
+} from "./helpers";
 
 test.describe("staff-prepared trip", () => {
   signedInAsOwner();
@@ -15,7 +23,7 @@ test.describe("staff-prepared trip", () => {
    * as a records question: nobody volunteers their hotel room to a form that
    * has not said why it wants it.
    */
-  test("the checklist names the fare it is asking for, and says what the hotel is for", async ({
+  test("the spine names the fare it is asking for, and says what the hotel is for", async ({
     page,
   }) => {
     // A priced trip that gates on payment, then a public booking against it —
@@ -57,11 +65,14 @@ test.describe("staff-prepared trip", () => {
     await page.getByRole("button", { name: /^Book/ }).click();
     await expect(page).toHaveURL(/\/ready\//);
 
-    // The fare, in the shop's own currency, on the row that is asking for it.
+    // The fare, in the shop's own currency, on the step that is asking for it
+    // — and on its summary line, so a diver reads it without opening anything.
     await expect(page.getByText("$145.00 to settle.")).toBeVisible();
 
-    // And the lodging row asks about the *service*; the field under it keeps
-    // the address label.
+    // And the lodging question asks about the *service*; the field under it
+    // keeps the address label. Both ride inside Day-of details, which gates on
+    // neither (ADR 20260827-the-divers-thread, decision 3).
+    await openThreadStep(page, "dayof");
     await expect(page.getByRole("heading", { name: "Want a morning pickup?" })).toBeVisible();
     await expect(page.getByLabel("Where you’re staying")).toBeVisible();
   });
@@ -105,23 +116,34 @@ test.describe("staff-prepared trip", () => {
     await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toBeVisible();
 
     await expect(page).toHaveURL(/\/ready\//);
-    await expect(page.getByRole("heading", { name: "Your pre-trip checklist" })).toBeVisible();
-    // Gear is a checklist row like the rest now, not a section under its own
-    // heading further down the page.
-    await expect(page.getByRole("heading", { name: "Gear and setup" })).toBeVisible();
+    // **The status is said once** (ADR 20260827-the-divers-thread, decision 3):
+    // a figure and the next step, and nothing else on the page states it.
+    await expect(threadStatus(page)).toHaveCount(1);
+    await expect(threadStatus(page)).toContainText("Next:");
+    // Gear is a step of the spine, in the divemaster's words rather than a
+    // checkpoint's.
+    await expect(page.getByText("Gear and sizes")).toBeVisible();
+    // **At most one step is open at rest.** The waiver is the first thing on
+    // this diver, so its step is the open one and every other body is shut.
+    await expect(page.locator("[data-thread-step] details[open]")).toHaveCount(1);
+    await expect(page.getByRole("button", { name: "Sign your waiver" })).toBeVisible();
     // The emergency contact is the waiver's question, and only the waiver's
     // (issue 627). Asking twice for one fact is how a diver ends up correcting
     // the copy the crew is not reading.
     await expect(page.getByRole("heading", { name: "Emergency contact" })).toHaveCount(0);
 
-    // The diver's own words to the crew: its own category, saved on its own, so
-    // it cannot blank the sizes beside it (issue 627).
+    // The diver's own words to the crew: inside Day-of details, saved on its
+    // own action, so it cannot blank the sizes beside it (issue 627).
+    await openThreadStep(page, "dayof");
     await page.getByLabel("Anything else the crew should know?").fill("Titanium hip, I run heavy.");
     await page.getByRole("button", { name: "Save note" }).click();
     await expect(
       page.getByRole("status").filter({ hasText: "Saved — the crew will see that" }),
     ).toBeVisible();
     // Read back off the control itself, which is what the diver comes back to.
+    // Re-opened first, because the save is a redirect: the fresh render puts
+    // the open step back on whatever is first on the diver, not on this one.
+    await openThreadStep(page, "dayof");
     await expect(page.getByLabel("Anything else the crew should know?")).toHaveValue(
       "Titanium hip, I run heavy.",
     );
@@ -150,6 +172,7 @@ test.describe("staff-prepared trip", () => {
     // The question no form asked until 2026-08-21 (ADR
     // 20260821-currency-is-what-catches-people). It gates nothing, so what is
     // worth proving is that the answer round-trips and the row settles.
+    await openThreadStep(page, "dayof");
     await page
       .getByLabel("When did you last dive?")
       .selectOption({ label: "More than five years ago" });
@@ -157,6 +180,9 @@ test.describe("staff-prepared trip", () => {
     await expect(
       page.getByRole("status").filter({ hasText: "Thanks — the crew will see that" }),
     ).toBeVisible();
+    // The answer is the Day-of step's settled line now, so it reads without
+    // opening anything — and the step has moved the figure, which is the
+    // whole point of counting only steps a diver can finish.
     await expect(page.getByText("More than five years ago")).toBeVisible();
 
     // The diver releases their own seat (ADR
@@ -227,17 +253,18 @@ test("a tampered readiness token reveals nothing", async ({ page }) => {
  * The readiness page carries the day itself, not just what is left to do.
  *
  * The link a shop actually sends the night before is this one, and it used to
- * answer "what's outstanding?" and nothing else — no packing list, and a strip
- * of site names where the public trip page had a briefing per tank. A diver had
- * to go and find the trip page for the two things they read on the drive down
- * (2026-08-06 review). The checklist is still the page's job; this rides below
- * it, and the thin site peek it duplicated is gone.
+ * answer "what's outstanding?" and nothing else — no packing list, so a diver
+ * had to go and find the trip page for the one thing they read on the drive
+ * down (2026-08-06 review).
+ *
+ * The dive briefings that used to ride below it are gone as of slice 7c: "what
+ * you'll see down there" is the trip page's pitch and, once the boat is home,
+ * the keepsake's; what to *bring* is preparation, and preparation is this
+ * page's whole job (ADR 20260827-the-divers-thread, decisions 2 and 3).
  */
-test("a booked diver's readiness page carries the packing list and the dive briefings", async ({
-  page,
-}) => {
+test("a booked diver's thread carries the packing list, and no briefing deck", async ({ page }) => {
   test.setTimeout(60_000);
-  // A seeded two-tank charter, so there are real dives at real sites to brief.
+  // A seeded two-tank charter, so there are real dives at real sites.
   await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
   await page
     .getByRole("list", { name: "Upcoming trips" })
@@ -252,18 +279,57 @@ test("a booked diver's readiness page carries the packing list and the dive brie
   await page.getByRole("button", { name: /^Book/ }).click();
   await expect(page).toHaveURL(/\/ready\//);
 
-  // What to put in the bag, and what each tank actually dives.
+  // What to put in the bag.
   await expect(page.getByRole("heading", { name: "Pack with confidence" })).toBeVisible();
-  // Including the suit. This page renders no conditions card — it is rental
-  // fit and paperwork — so if the packing list stays quiet, the page a diver
-  // reads the morning they sail says nothing about the water they are getting
-  // into. The booking page states it under the reading instead; here it has
-  // nowhere else to go (src/app/s/[shopSlug]/trips/[id]/_components/PackingSection.tsx).
+  // Including the suit. This page renders no conditions card — it is sizes and
+  // paperwork — so if the packing list stays quiet, the page a diver reads the
+  // morning they sail says nothing about the water they are getting into. The
+  // booking page states it under the reading instead; here it has nowhere else
+  // to go (src/app/s/[shopSlug]/trips/[id]/_components/PackingSection.tsx).
   await expect(page.getByText(/most divers are comfortable in a 3 mm/i)).toBeVisible();
-  await expect(page.getByText("Dive briefings")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Your two-tank plan" })).toBeVisible();
-  await expect(page.getByText("Molasses Reef").first()).toBeVisible();
+  // And no deck of site briefings under it.
+  await expect(page.getByText("Dive briefings")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Your two-tank plan" })).toHaveCount(0);
 
-  // And the checklist is still the page's own job, above all of it.
-  await expect(page.getByRole("heading", { name: "Your pre-trip checklist" })).toBeVisible();
+  // The spine is still the page's own job, above all of it.
+  await expect(threadStatus(page)).toHaveCount(1);
+});
+
+/**
+ * **A deep link opens the step it names.**
+ *
+ * The spine's steps are one native `<details name>` accordion, so at most one
+ * is open at rest — which means a link into a step (a reminder pointing at
+ * "your gear sizes") lands on a closed disclosure unless something opens it.
+ * `AutoOpenDetails` is that something, and a client-side route change is
+ * exactly the case the browser's own reveal algorithm does not cover.
+ */
+test("a link into one step of the thread opens that step", async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
+  await page
+    .getByRole("list", { name: "Upcoming trips" })
+    .locator("li")
+    .filter({ hasText: "Two-Tank Reef — Molasses & French" })
+    .getByRole("link")
+    .first()
+    .click();
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Name", { exact: true }).fill("Deep Linker");
+  await page.getByLabel("Email", { exact: true }).fill(`deep-${e2eNow().getTime()}@example.com`);
+  await page.getByRole("button", { name: /^Book/ }).click();
+  await expect(page).toHaveURL(/\/ready\//);
+
+  const bare = new URL(page.url()).pathname;
+  await page.goto(bare);
+  // At rest: the waiver is what is on this diver, so its step is the open one.
+  await expect(page.locator("[data-thread-step] details[open]")).toHaveCount(1);
+  await expect(page.locator('[data-thread-step="gear"] details')).not.toHaveAttribute("open", "");
+
+  await page.goto(`${bare}#step-gear`);
+  await expect(page.locator('[data-thread-step="gear"] details')).toHaveAttribute("open", "");
+  // Still one open step: opening one member of a `<details name>` group closes
+  // the rest, which is what keeps the promise true after a tap as well as
+  // before one.
+  await expect(page.locator("[data-thread-step] details[open]")).toHaveCount(1);
 });

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { MergeDiver } from "./MergeDiver";
 
 vi.mock("../actions", () => ({
@@ -40,7 +41,7 @@ describe("the merge-diver panel", () => {
         candidates={candidates}
         shopSlug="blue-mantis"
         personId="33333333-3333-4333-8333-333333333333"
-        locale="en-US"
+        t={staffTranslator("en-US")}
       />,
     );
 
@@ -57,7 +58,7 @@ describe("the merge-diver panel", () => {
         candidates={candidates}
         shopSlug="blue-mantis"
         personId="33333333-3333-4333-8333-333333333333"
-        locale="en-US"
+        t={staffTranslator("en-US")}
       />,
     );
 
@@ -72,7 +73,7 @@ describe("the merge-diver panel", () => {
         candidates={[]}
         shopSlug="blue-mantis"
         personId="33333333-3333-4333-8333-333333333333"
-        locale="en-US"
+        t={staffTranslator("en-US")}
       />,
     );
     expect(screen.queryAllByRole("radio")).toHaveLength(0);

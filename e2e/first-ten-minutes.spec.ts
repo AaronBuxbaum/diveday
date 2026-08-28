@@ -56,8 +56,11 @@ test("a brand-new shop is bookable within the four-screen budget, and is shown t
 
   // ── Screen 2: Today, which owns "what do I do next" ─────────────────────
   await page.waitForURL(new RegExp(`/shop/${unique}$`));
-  arrive("today (first-run checklist)");
+  arrive("today (the first morning's setup ledger)");
   await expect(page.getByRole("heading", { name: "Get your shop ready" })).toBeVisible();
+  // Exactly one open step carries the page's one primary (ADR
+  // 20260827-first-light, decision 6).
+  await expect(page.locator('[data-first-run-primary="true"]')).toHaveCount(1);
   await page.getByRole("link", { name: "Schedule a trip" }).click();
 
   // ── Screen 3: the board's add panel — four required fields, everything
@@ -196,16 +199,17 @@ test("a shop with a departure today is not treated as a shop with no departures"
   await expect(page.getByText("Afternoon Two-Tank").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Get your shop ready" })).toHaveCount(0);
 
-  // **And the queue the checklist was suppressing is back, carrying the one
-  // question the checklist did not get answered before it left.**
+  // **And the work the setup ledger was suppressing is back, carrying the one
+  // question it did not get answered before it left.**
   //
   // This shop is the exact case issue #835 is about: it put a trip on the
-  // board without opening the Units row, so the checklist that was asking is
-  // gone and the derived currency has never been confirmed. The queue picks the
-  // question up rather than letting it vanish — which is why this asserts a
-  // real row rather than "Nothing is waiting on you", the empty state it used
-  // to reach here.
-  await page.getByText("This week", { exact: true }).click();
+  // board without opening the Units row, so the ledger that was asking is gone
+  // and the derived currency has never been confirmed. The row picks the
+  // question up rather than letting it vanish — which is why this asserts real
+  // work rather than "Nothing is waiting on you", the empty state it used to
+  // reach here. It hangs off no boat, so it files under the desk group, in the
+  // open (ADR 20260827-clearwater-surface-language, decision 4).
+  await expect(page.getByText("At the desk")).toBeVisible();
   await expect(page.getByText(/currency and depth unit/)).toBeVisible();
   await expect(page.getByRole("link", { name: /Open units/ })).toBeVisible();
 });

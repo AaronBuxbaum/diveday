@@ -24,6 +24,18 @@ describe("EarnedMomentLine", () => {
     expect(line.className).toContain("bg-accent/10");
   });
 
+  it("drops the entrance for a moment that was already true on arrival", () => {
+    // The first-paint guard a caller owns (the counter's `CounterClearedLine`
+    // is the one in the tree): a boat cleared an hour ago is a fact, not a
+    // thing that just happened, and replaying the celebration on every visit
+    // is what makes it stop meaning anything. The accent stays; only the
+    // motion goes.
+    render(<EarnedMomentLine animate={false}>All home</EarnedMomentLine>);
+    const line = screen.getByRole("status");
+    expect(line.className).not.toContain("rise-in");
+    expect(line.className).toContain("bg-accent/10");
+  });
+
   it("merges a caller's className rather than replacing the line's own", () => {
     render(<EarnedMomentLine className="mt-4">All home</EarnedMomentLine>);
     expect(screen.getByRole("status").className).toContain("mt-4");

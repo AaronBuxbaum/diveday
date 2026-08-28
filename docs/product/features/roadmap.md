@@ -152,16 +152,6 @@ Sequenced so the language lands before the recompositions that speak it. **Each 
 standing obligation**: the component that must not drift names the ADR in its doc comment, and a
 test pins the rule (never a pixel snapshot).
 
-- **6a. The language mechanics.** Flat-at-rest panels (shadow retires from resting cards), the
-  open-ledger and inset-group primitives, `Badge` as the only pill, the closed type ramp, tabular
-  figures. *Pins:* a test that `sectionCardClass` emits no shadow at rest, and that the group-label
-  spelling is single-sourced.
-- **6b. One chrome spec.** The 56px translucent header bar shared by both shells, its height a
-  token no child hard-codes. *Pins:* a test that no `top-[68px]`-style literal survives outside the
-  chrome component.
-- **6c. The home as the day's spine** (morning reading). Stations in clock order carrying their own
-  work rows; the desk group; collapsed horizons; the view switch dissolves. *Pins:* a test that a
-  departure's facts render once — no queue row repeats a station's title at equal weight.
 - **6d. The home's evening reading, and the fold (H-62).** The spine settles station by station —
   a state, never a mode — and the closing block (leftovers with per-row Dismiss per H-57, then the
   one closing act) appears once the day's departures have ended, with the standing one-hour buffer.
@@ -169,16 +159,11 @@ test pins the rule (never a pixel snapshot).
   `closeOut` registry entry goes, and the dock drops to four destinations plus More. *Pins:* a test
   that no acknowledgement gate stands on the closing act, and one that the closing block never
   renders while a departure is still out.
-- **6e. The week board (H-63).** Seven columns from `xl` (1280px) up, spans for multi-day courses;
-  tablets and phones keep the stream. *Pins:* a test that widths below `xl` render the stream.
 - **6f. The orders day ledger.** Day groups own date and subtotal; toolbar filters; imported
   history as one disclosure. *Pins:* a test that no row repeats its group's date.
-- **6g. Settings rail and pane.** Desktop two-pane; phone keeps grouped lists; standing captions
-  retire behind disclosure.
-- **6h. The counter instrument.** Count-led boarding queue, settled rows sink, ≥56px targets at
-  tablet. Safety-adjacent: `dive-domain-expert` review.
-- **6i. The storefront.** Identity hero, next-boat object, one-line week rows, courses and reviews
-  shelves. Conversion surface: `conversion-reviewer` pass.
+
+**6a, 6b, 6c, 6e, 6g, 6h and 6i shipped 2026-08-28** ([shipped.md](../shipped.md)); 6d and 6f
+above are what is left of the section.
 
 **Both of this section's owner calls are decided** — H-62 (the fold) and H-63 (desktop-only week)
 in [../human-decisions.md](../human-decisions.md), 2026-08-27 — so no slice here waits on a human.
@@ -189,17 +174,24 @@ of this context. Start any slice from the canvas README's "Implementing a slice"
 **Build order across items 6–10** — the dependency graph a scheduler of sessions needs, stated
 once (each SPEC's preamble points here). Everything not listed is independent:
 
-- **6a first, almost always.** The ledger primitives (`GroupLabel`/`LedgerRow`/`InsetGroup`),
-  flat-at-rest, and `SettledCheck` are consumed by 6c, 6f, 6h, 7a, 7b, 8a, 8c, 8f, 9a, 9d–9g,
-  10a and 10d. A session handed a downstream slice first lands 6a's primitives beneath it, in
-  the same stack.
-- **6b → 6c** (the chrome height token); **6c → 6d and 10d** (they extend the spine 6c builds;
-  8b's S1 journey also starts from 6c's station row); **6e → 9e** (the `?week=` grammar — 9e
-  introduces it itself if 6e has not landed, per its cross-reference).
-- **7a → 7b–7e, 10a and 10c** (the thread shell and the EntryShell type-ramp land in 7a; claim's
-  recomposition and the door restyle build on them). **7b and 7c ship together, or 7c first** —
-  packing must have a destination on the thread before the trip page deletes it.
-- **8a → 8b and 8c**, and 9g's add-booking step consumes 8a's person rows.
+- **6a, 6g, 6h and 6i have shipped** ([shipped.md](../shipped.md)), so the ledger primitives
+  (`GroupLabel`/`LedgerGroup`/`LedgerRow`/`RowKind`/`InsetGroup`), flat-at-rest and `SettledCheck`
+  are already in the tree for 6f, 8c, 8f, 9a, 9d–9g, 10a and 10d to build on.
+- **6b has landed** — `--chrome-h` and `ChromeBar` are in the tree. **6c has shipped**
+  ([shipped.md](../shipped.md)), so `assembleDaySpine`, `DaySpine.tsx` and `DayStation.tsx` are
+  what **6d** settles station by station, what **10d** extends for day zero, and where 8b's S1
+  journey starts. **6e → 9e** (the `?week=` grammar — 9e introduces it itself if 6e has not
+  landed, per its cross-reference).
+- **7a, 7b and 7c have shipped** ([shipped.md](../shipped.md)), so `ThreadShell`, the thread's
+  `max-w-xl` measure, the `EntryShell` type-ramp and the spine's own vocabulary
+  (`src/lib/thread-steps.ts`, `ThreadStatus`/`ThreadSpine`) are already in the tree for 7d, 7e,
+  10a and 10c to build on. 7c answered the choice 7b handed it: `PackingSection` stays and comes
+  down to the section heading scale, and `DiveBriefingsSection` — with `DiveBriefingCard`,
+  `DiveSiteFieldGuide`, `DiveSiteMap` and `DiveSiteLandmarks` under it — is **deleted**, so a
+  diver's only reading of what a day dives is the trip page's "The day" / "Look for".
+- **8a has shipped** ([shipped.md](../shipped.md)), so `CertificationCardRow`, `WaiverStateRow`
+  and `BookingStoryRow` (`src/components/person/rows.tsx`) are in the tree for 8b, 8c and 9g's
+  add-booking step to adopt.
 
 ### 7. The diver's thread (design complete)
 
@@ -210,17 +202,6 @@ One link from booking to afterglow, in the Clearwater grammar — argued in the 
 unranked against them. The regression floor is the existing booking/readiness/waiver/recap e2e
 suite — every slice keeps it green.
 
-- **7a. The thread shell and measure.** One shell (shop eyebrow, title, state slot) and one
-  `max-w-xl` measure for every page a booked diver walks; `EntryDone`/`ExpiredLinkCard` restyle
-  flat inside it. Chrome only, no behavior. *Pins:* shell renders shop-name eyebrow + one h1.
-- **7b. The trip page sells, then closes.** Hero (price once) → pitch → one-line requirement →
-  the terminal form with the money as one block; packing moves to the thread; briefings collapse
-  into the pitch. *Pins:* one due-now figure; the form is the last section; packing absent.
-  `conversion-reviewer` pass.
-- **7c. The thread page's step spine.** Five steps, one open at rest, one status statement; the
-  progress figure counts only finishable steps; the cancellation window lands in the Pay step
-  (closing ADR 20260820's dead `cancellationOnly`). *Pins:* one status statement; the figure can
-  always fill.
 - **7d. The after-state and the recap fold.** After endsAt + the standing buffer, the same link
   renders the keepsake, one review ask, and quiet doors; `/recap/[token]` renders the same surface
   (links and emails keep working); the duplicate facts delete (H-49). Closes the concept-model
@@ -238,15 +219,8 @@ the roster, reviews, waivers, requests — argued in the Proposed ADR
 [20260827-people-not-lists](../../architecture/decisions/20260827-people-not-lists.md), drawn in
 [its canvas](../../design/canvases/20260827-people-not-lists/README.md), specified in
 [its SPEC](../../design/canvases/20260827-people-not-lists/SPEC.md). Speaks Clearwater (item 6);
-unranked. `security-reviewer` before 8b and 8e merge.
+unranked. `security-reviewer` before 8e merges (8b already had one).
 
-- **8a. The shared person-row vocabulary.** `CertificationCardRow`, `WaiverStateRow`,
-  `BookingStoryRow` — one spelling for the rows every people surface repeats. *Pins:* verified
-  renders no badge; every state carries a word.
-- **8b. The diver record recomposition.** Status ledger leads and renders nothing when clear; the
-  story is one ledger; the file is inset groups; Book is the one primary; the jump nav, the
-  514-line notice router and the twin certification components delete (H-49). Closes issue #780.
-  *Pins:* empty-status renders nothing; exactly one primary.
 - **8c. The roster ledger.** One rendering at all widths, letter groups, exceptional badges only.
   *Pins:* a clear diver's row carries no badge.
 - **8d. Reviews as a worklist.** "Waiting on you" leads; the stat tiles collapse to one aggregate
@@ -281,10 +255,6 @@ stack's app-wide pass (items 6–9 + the departure's own item 5). Unranked.
   fill.
 - **9g. The mapped surfaces.** Courses roster, promos, add-booking onto the patterns — mechanical
   restyles, no behavior change.
-- **9h. Team's per-row roles.** Per-row disclosures that save on close, Escape aborts, refusal
-  reopens field-side, Undo one re-save; replaces the page-level bulk Save. *Pins:* per-row save
-  round-trip; refusal never a page banner.
-
 ### 10. First light (design complete)
 
 The doors — sign-in, onboard, the reset/verify/invite family, claim, unsubscribe — and the shop's
@@ -298,9 +268,6 @@ first morning, argued in the Proposed ADR
   `EntryDone`'s emoji glyph becomes the closed drawn set (`DoorGlyphId`); the dead-link law's two
   tiers become normative. *Pins:* no emoji literal in `account/` components; a door renders one
   primary.
-- **10b. Onboard is the shop's first form.** Group labels replace the h2 rules; the four-sentence
-  reassurance collapses to one; the slug hint reads as the storefront URL, live. Enumeration
-  safety, error routing and analytics untouched. *Pins:* the hint yields to the field error.
 - **10c. Claim joins the thread.** `/claim/[token]` adopts `ThreadShell` (its success already
   lands on `/ready`); a readable dead claim becomes booking-tier and names the shop. *Pins:* a
   readable dead token names the shop; an unreadable one does not.
@@ -385,31 +352,11 @@ homework) and every replacement sentence written out, claims-policy-clean. Each 
 both locales in the same change. Unranked, but 12a and 12c aim directly at "owners aren't
 starting trials."
 
-- **12a. The homepage says the morning.** Hero triad + de-jargoned description; the flat-price
-  line reaches the hero (text, not a control — the pinned control budget holds); the moments
-  band's redundancy cuts; the four-card summaries rewritten in the owner's-day voice. *Pins:*
-  the hero still counts its controls; the price renders only via interpolation.
-- **12b. The day gets its evening.** The third moment row ("That evening", `RecapPageFallback`)
-  and the mid-season sentence in the records band via a shared key. The delight thesis's first
-  appearance on `/`. When thread slice 7d ships, `RecapPageFallback` re-draws as the keepsake
-  card (dive record, crew line, review ask); whichever of 12b/7d lands second carries the
-  reconciliation in its PR.
-- **12c. The trial's terms stand at its doors.** `/pricing`: the trial-terms note at both CTA
-  pairs, the two-year lock under the cadence line (item5 trims), the fee-anchor rewrite, the
-  two new FAQ rows (crew, setup time), the November fold-in, the offline row cut; `/onboard`'s
-  day-22 clause rides first-light 10b. *Pins:* the trial note names free/3 weeks/no card/soft
-  expiry; no billing terms beyond `faq.trialMeaning`'s.
-- **12d. The product page's dare gets a door.** The money band renders the figure; a demo door
-  under the capability index (new `product-index` tag registered first); the hero description
-  rewrite. *Pins:* one primary per screen holds across the page's screens.
-- **12e. Help arrives before the homework.** `switching.common.moveIntro` carries the
-  concierge; the DiveShop360 and EVE ledes lead with their documented wedges; the fifth shared
-  cutover step (the crew walks their screens in the demo); the spreadsheet guide's parallel-run
-  note and `wedgeIntro1` tone fix; the nitrox scope-table rewording (verify against
-  `src/lib/import.ts`, `dive-domain-expert` before merge). The leave-it guides' pricing link
-  waits on the owner call recorded in the review.
 - **12f. `/about` spends the impulse it creates.** The `FunnelCtas` pair under the four-rules
   grid; the support mailto demotes to secondary; `leaveTitle` matches its section.
+
+**12a–12e shipped 2026-08-28** ([shipped.md](../shipped.md)); 12f is what is left. The leave-it
+guides' pricing link stays where the review left it — an owner call, not a slice.
 
 ## Concept-model simplification (proposed — each row needs an owner decision)
 

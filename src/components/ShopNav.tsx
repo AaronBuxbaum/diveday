@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { ChromeBar } from "@/components/chrome/ChromeBar";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { ShopIdentityMenu } from "@/components/ShopIdentityMenu";
 import { gearStatusLabels } from "@/i18n/gear-labels";
@@ -111,94 +112,47 @@ export function ShopNav({
   };
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-border bg-surface px-4 py-3 shadow-sm backdrop-blur-xl supports-[backdrop-filter]:bg-surface/95 print:hidden sm:px-6">
-        {/*
-         * One row, always. Below `lg` the primary destinations live in the
-         * phone dock (StaffTabBar, fixed to the bottom edge where a thumb
-         * actually is) rather than wrapping into extra header rows, so the
-         * header keeps to identity, search, and sign-out on every width; from
-         * `lg` up the tab strip joins the row via the `order` utilities.
-         */}
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-3 gap-y-2">
-          {/* The identity block is this reader's own disclosure — language
-              and Sign out — rather than standing in permanent chrome: the
-              rarest controls in the header do not get all-day screen time
-              (principle 10). Places in the shop (Settings included) live in
-              the nav's More groups instead. Home stays one tap away as
-              Today, in the tabs and the dock. */}
-          {/* Below `lg` it is also the row's one flexible item, so a long shop
-              name gets the width the tabs vacated. `flex-1` rather than a bare
-              `min-w-0`: this row wraps, and wrapping is decided on an item's
-              *hypothetical* size, which a zero minimum doesn't shrink — an
-              uncapped name pushed the header into a second row at 360px
-              instead of ellipsing, where a zero flex basis has nothing to push
-              with. The inner `flex` keeps the button content-sized, so a short
-              name leaves no header-wide tap target. From `lg` the tab strip is
-              the flexible one and this sits at its own width again. */}
-          {/* `lg:flex-initial`, not `lg:flex-none`: at `lg` this sizes to the
-              name rather than to a share of the row, but it must still be
-              *able* to shrink, because the name itself no longer carries a
-              max-width clamp (see ShopIdentityMenu). `flex-none` pins
-              `flex-shrink: 0`, which would let a long shop name push the tab
-              strip instead of ellipsing. */}
-          <div className="flex min-w-0 flex-1 lg:order-1 lg:flex-initial">
-            <ShopIdentityMenu
-              shopName={shopName}
-              logoUrl={logoUrl}
-              signOutAction={signOutAction}
-              locale={locale}
-              languages={languages}
-              setLocaleAction={setLocale}
-              copy={{
-                language: t("shared.shopNav.language"),
-                signOut: t("shared.shopNav.signOut"),
-                signOutConfirm: t("shared.shopNav.signOutConfirm"),
-                signOutPending: t("shared.shopNav.signOutPending"),
-              }}
-            />
-          </div>
-          {/* Trips are created from the Schedule, where the surrounding week is visible. */}
-          <div className="ml-auto flex shrink-0 items-center gap-2 lg:order-3 lg:ml-0 lg:gap-3">
-            <CommandPalette
-              shopSlug={shopSlug}
-              boatBoardingHref={boatBoardingHref}
-              gates={navGates}
-              locale={locale}
-              languages={languages}
-              setLocaleAction={setLocale}
-              signOutAction={signOutAction}
-              createDiverAction={createDiverAction}
-              copy={{
-                language: t("shared.shopNav.language"),
-                groupSession: t("shared.commandPalette.groupSession"),
-                signOut: t("shared.shopNav.signOut"),
-                search: t("shared.commandPalette.search"),
-                dialogAriaLabel: t("shared.commandPalette.dialogAriaLabel"),
-                comboboxAriaLabel: t("shared.commandPalette.comboboxAriaLabel"),
-                placeholder: t("shared.commandPalette.placeholder"),
-                emptyShort: t("shared.commandPalette.emptyShort"),
-                emptyNoMatches: t("shared.commandPalette.emptyNoMatches"),
-                groupDivers: t("shared.commandPalette.groupDivers"),
-                addDiver: t("shared.commandPalette.addDiver"),
-                groupTrips: t("shared.commandPalette.groupTrips"),
-                groupDiveSites: t("shared.commandPalette.groupDiveSites"),
-                groupCourses: t("shared.commandPalette.groupCourses"),
-                groupOrders: t("shared.commandPalette.groupOrders"),
-                groupGear: t("shared.commandPalette.groupGear"),
-                // Every status worded here, where the translator is: `src/db`
-                // returns the code (`src/i18n/gear-labels.ts` owns the words).
-                gearStatuses: gearStatusLabels(t),
-                groupGoTo: t("shared.commandPalette.groupGoTo"),
-                destinationLabels,
-                destinationTitles,
-                goToBoarding: t("shared.commandPalette.goToBoarding"),
-                goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
-                hintMove: t("shared.commandPalette.hintMove"),
-                hintOpen: t("shared.commandPalette.hintOpen"),
-                hintClose: t("shared.commandPalette.hintClose"),
-              }}
-            />
-          </div>
+      {/*
+       * The one bar both shells wear — 56px, the page background behind a
+       * blur, one hairline, no shadow (ADR
+       * 20260827-clearwater-surface-language, decision 10). Below `lg` the
+       * primary destinations live in the phone dock (StaffTabBar, fixed to the
+       * bottom edge where a thumb actually is) rather than wrapping into extra
+       * header rows, so the bar keeps to identity and search on every width;
+       * from `lg` up the tab strip joins it in the centre slot, which is where
+       * the `order` utilities used to put it.
+       *
+       * The bar is a fixed height now, so nothing in it may wrap: every slot
+       * shrinks instead, and a long shop name ellipses (see ShopIdentityMenu,
+       * whose button and label both carry `min-w-0`).
+       */}
+      <ChromeBar
+        leading={
+          /* The identity block is this reader's own disclosure — language and
+             Sign out — rather than standing in permanent chrome: the rarest
+             controls in the header do not get all-day screen time (principle
+             10). Places in the shop (Settings included) live in the nav's More
+             groups instead. Home stays one tap away as Today, in the tabs and
+             the dock. */
+          <ShopIdentityMenu
+            shopName={shopName}
+            logoUrl={logoUrl}
+            signOutAction={signOutAction}
+            locale={locale}
+            languages={languages}
+            setLocaleAction={setLocale}
+            copy={{
+              language: t("shared.shopNav.language"),
+              signOut: t("shared.shopNav.signOut"),
+              signOutConfirm: t("shared.shopNav.signOutConfirm"),
+              signOutPending: t("shared.shopNav.signOutPending"),
+            }}
+          />
+        }
+        center={
+          /* `w-full` inside the bar's centre slot: the strip's own nav is the
+             flexible item within it, so the "More" door lands at the slot's
+             right edge and the tabs stay hugging the shop's name. */
           <ShopNavLinks
             root={root}
             gates={navGates}
@@ -216,10 +170,53 @@ export function ShopNav({
                 badgeLabels,
               } satisfies ShopNavLinksCopy
             }
-            className="hidden lg:order-2 lg:flex lg:w-auto lg:flex-1"
+            className="hidden w-full lg:flex"
           />
-        </div>
-      </header>
+        }
+        trailing={
+          /* Trips are created from the Schedule, where the surrounding week is
+             visible. */
+          <CommandPalette
+            shopSlug={shopSlug}
+            boatBoardingHref={boatBoardingHref}
+            gates={navGates}
+            locale={locale}
+            languages={languages}
+            setLocaleAction={setLocale}
+            signOutAction={signOutAction}
+            createDiverAction={createDiverAction}
+            copy={{
+              language: t("shared.shopNav.language"),
+              groupSession: t("shared.commandPalette.groupSession"),
+              signOut: t("shared.shopNav.signOut"),
+              search: t("shared.commandPalette.search"),
+              dialogAriaLabel: t("shared.commandPalette.dialogAriaLabel"),
+              comboboxAriaLabel: t("shared.commandPalette.comboboxAriaLabel"),
+              placeholder: t("shared.commandPalette.placeholder"),
+              emptyShort: t("shared.commandPalette.emptyShort"),
+              emptyNoMatches: t("shared.commandPalette.emptyNoMatches"),
+              groupDivers: t("shared.commandPalette.groupDivers"),
+              addDiver: t("shared.commandPalette.addDiver"),
+              groupTrips: t("shared.commandPalette.groupTrips"),
+              groupDiveSites: t("shared.commandPalette.groupDiveSites"),
+              groupCourses: t("shared.commandPalette.groupCourses"),
+              groupOrders: t("shared.commandPalette.groupOrders"),
+              groupGear: t("shared.commandPalette.groupGear"),
+              // Every status worded here, where the translator is: `src/db`
+              // returns the code (`src/i18n/gear-labels.ts` owns the words).
+              gearStatuses: gearStatusLabels(t),
+              groupGoTo: t("shared.commandPalette.groupGoTo"),
+              destinationLabels,
+              destinationTitles,
+              goToBoarding: t("shared.commandPalette.goToBoarding"),
+              goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
+              hintMove: t("shared.commandPalette.hintMove"),
+              hintOpen: t("shared.commandPalette.hintOpen"),
+              hintClose: t("shared.commandPalette.hintClose"),
+            }}
+          />
+        }
+      />
       <StaffTabBar
         root={root}
         gates={navGates}
