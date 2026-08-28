@@ -229,10 +229,17 @@ test("a diver record keeps card refusals visible and clears a wrong no-card stam
   // No banner: the row itself changed, which is the whole outcome. A sighting
   // rewrites the card from what the staffer read off it, so unlike the one-tap
   // review beside it there is nothing to undo and no toast to offer one.
-  await expect(page.getByText("PADI-ROWAN-2026", { exact: true })).toBeVisible();
-  await expect(
-    cards.locator("li").filter({ hasText: "PADI-ROWAN-2026" }).filter({ visible: true }),
-  ).toContainText("certified");
+  //
+  // The number now shares its line with who sighted it and when, so it is read
+  // as part of that sentence rather than as a string of its own — and the row
+  // wears **no badge at all**, because being certified is the state the shop
+  // wants and a badge marks the exceptional one (ADR
+  // 20260827-people-not-lists, decision 6). The attribution is what says it.
+  const sighted = cards
+    .locator("li")
+    .filter({ hasText: "PADI-ROWAN-2026" })
+    .filter({ visible: true });
+  await expect(sighted).toContainText(/Certified by .+ on /);
 
   // Nadia is the test-only uncarded state. Clearing it removes the warning
   // rather than turning the record into a certified one, and the confirmation
@@ -347,9 +354,12 @@ test("a diver types their card in from the readiness page, and staff verify it t
   // 20260820-attested-at-booking-verified-at-boarding, amended).
   const card = page.locator("li").filter({ hasText: cardNumber }).filter({ visible: true }).last();
   await expect(card).toBeVisible();
-  // Pending, not trusted: the diver typed it, so it reaches the same review a
-  // staff-captured card does and clears nothing until someone confirms it.
-  await expect(card).toContainText("pending");
+  // Not trusted: the diver typed it, so it reaches the same review a
+  // staff-captured card does and clears nothing until someone confirms it. The
+  // row says which weak state it is in rather than the bare "pending" it used
+  // to wear — one badge per row, and every non-certified state carries a word
+  // (ADR 20260827-people-not-lists, decision 6).
+  await expect(card).toContainText("Self-declared");
 
   // And the confirm is **not** the one-tap promote a staff-captured card gets.
   // A diver-typed row wears `self_declared_at`, so `reviewCertification` refuses

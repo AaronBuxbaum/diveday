@@ -143,10 +143,6 @@ export function ReviewRowActions({
 }) {
   const { result, run: formAction } = useReviewRow();
   const status = statusOf(result, reviewId, copy);
-  const undoReviewId =
-    result?.ok && result.reviewId === reviewId && result.effect === "hidden"
-      ? result.undoReviewId
-      : undefined;
 
   return (
     <>
@@ -223,17 +219,37 @@ export function ReviewRowActions({
           </FormStatus>
         ) : null}
       </div>
-      {undoReviewId ? (
-        /* Undo posts back through this same action, so putting the review back
-           lands in this row's own status region rather than anywhere else. */
-        <UndoToast
-          message={copy.hiddenToast}
-          action={formAction}
-          fields={{ reviewId: undoReviewId, publish: "true" }}
-          pendingLabel={copy.undoPending}
-          undoLabel={copy.undo}
-        />
-      ) : null}
     </>
+  );
+}
+
+/**
+ * **The hide's land-then-undo toast, rendered once above the lists.**
+ *
+ * It used to live inside the row, and a hide is precisely the act that takes
+ * that row off the page: the review leaves the Published group, and on a shop
+ * with more moderated reviews than fit one page it leaves this *page* — so
+ * there was no row left to render the toast, and the Undo that is the whole
+ * point of announcing a hide could not be offered at all. Hoisting the state
+ * into `ReviewRowProvider` was not enough on its own; the element had to come
+ * out too.
+ *
+ * A toast is page furniture anyway — fixed to the bottom of the viewport, not
+ * part of any row — so this is also where it belonged. Same shape and same
+ * reasoning as `PublishAllStatus` directly above it.
+ */
+export function ReviewRowUndoToast({ copy }: { copy: ReviewRowCopy }) {
+  const { result, run } = useReviewRow();
+  if (!result?.ok || result.effect !== "hidden" || !result.undoReviewId) return null;
+  return (
+    /* Undo posts back through the same action, so putting the review back lands
+       in that row's own status region rather than anywhere else. */
+    <UndoToast
+      message={copy.hiddenToast}
+      action={run}
+      fields={{ reviewId: result.undoReviewId, publish: "true" }}
+      pendingLabel={copy.undoPending}
+      undoLabel={copy.undo}
+    />
   );
 }

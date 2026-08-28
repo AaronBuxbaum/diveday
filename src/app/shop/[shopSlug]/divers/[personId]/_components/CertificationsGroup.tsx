@@ -126,8 +126,17 @@ export function CertificationsGroup({
   // A refused card *number* belongs on the box it names, not in the group's
   // action row — and emphatically not opening the add-a-card form, which is a
   // different form entirely and had nothing to do with the submit.
+  //
+  // **On one box, not on every box of that kind.** A diver can hold two
+  // self-declared cards, and `field` says only which *kind* of box the refusal
+  // is about — so this opened every sighting disclosure on the record and
+  // printed the same red sentence under each. `numberErrorFor` compares the id
+  // the action refused (`?card=`); a refusal that names none is the older link
+  // shape and still lands on the group's row rather than nowhere.
   const numberError = status?.field === "sighted-identifier" ? status.text : undefined;
-  const groupStatus = numberError ? undefined : status;
+  const numberErrorFor = (cardId: string) =>
+    numberError && status?.cardId === cardId ? numberError : undefined;
+  const groupStatus = numberError && status?.cardId ? undefined : status;
   const markCertified = markCertifiedCopy(t);
   const markCertify = markCertifiedAction.bind(null, shopSlug, personId);
   const deleteLevel = deleteCertificationAction.bind(null, shopSlug, personId);
@@ -223,7 +232,7 @@ export function CertificationsGroup({
                 action={reviewAction.bind(null, shopSlug, personId)}
                 certificationId={card.id}
                 claimedLevel={card.level}
-                numberError={numberError}
+                numberError={numberErrorFor(card.id)}
               />
             ) : (
               /* Rendered for a settled card too, where it draws no button: the
@@ -273,7 +282,7 @@ export function CertificationsGroup({
                 t={t}
                 action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
                 certificationId={card.id}
-                numberError={numberError}
+                numberError={numberErrorFor(card.id)}
               />
             ) : (
               <MarkCertifiedControl
@@ -321,7 +330,7 @@ export function CertificationsGroup({
                 action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
                 certificationId={card.id}
                 cardType="nitrox"
-                numberError={numberError}
+                numberError={numberErrorFor(card.id)}
               />
             ) : (
               <MarkCertifiedControl

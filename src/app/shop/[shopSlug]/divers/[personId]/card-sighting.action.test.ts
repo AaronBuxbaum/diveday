@@ -129,9 +129,11 @@ describe("a card sighting whose number is not a card number", () => {
 
     // Its own code, not `card-sighting-required`. `NoticeBanner` maps it to the
     // `sighted-identifier` field, so the sighting form re-opens with the error
-    // on the box that was wrong.
+    // on the box that was wrong — and `card=` names *which* box, since a diver
+    // can hold two self-declared cards and both would otherwise open with the
+    // same red sentence under each.
     expect(to).toBe(
-      `/shop/${shop.slug}/divers/${personId}?notice=card-number-implausible&form=cards#certifications`,
+      `/shop/${shop.slug}/divers/${personId}?notice=card-number-implausible&form=cards&card=${card.id}#certifications`,
     );
     // And nothing was written: the claim is still a claim.
     const [after] = await db.select().from(certifications).where(eq(certifications.id, card.id));
@@ -158,7 +160,7 @@ describe("a card sighting whose number is not a card number", () => {
     );
 
     expect(to).toBe(
-      `/shop/${shop.slug}/divers/${personId}?notice=card-number-implausible&form=cards#certifications`,
+      `/shop/${shop.slug}/divers/${personId}?notice=card-number-implausible&form=cards&card=${card.id}#certifications`,
     );
     const [after] = await db
       .select()

@@ -3,7 +3,12 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReviewActionResult } from "../actions";
-import { ReviewRowActions, type ReviewRowCopy, ReviewRowProvider } from "./ReviewRowActions";
+import {
+  ReviewRowActions,
+  type ReviewRowCopy,
+  ReviewRowProvider,
+  ReviewRowUndoToast,
+} from "./ReviewRowActions";
 
 /**
  * The real action is a server action; what this file is about is which
@@ -11,11 +16,12 @@ import { ReviewRowActions, type ReviewRowCopy, ReviewRowProvider } from "./Revie
  * the review it was posted for.
  */
 vi.mock("../actions", () => ({
-  reviewRowAction: async (_previous: ReviewActionResult, formData: FormData) => ({
-    ok: true as const,
-    reviewId: String(formData.get("reviewId") ?? ""),
-    effect: "published" as const,
-  }),
+  reviewRowAction: async (_previous: ReviewActionResult, formData: FormData) => {
+    const reviewId = String(formData.get("reviewId") ?? "");
+    return formData.get("publish") === "true"
+      ? { ok: true as const, reviewId, effect: "published" as const }
+      : { ok: true as const, reviewId, effect: "hidden" as const, undoReviewId: reviewId };
+  },
 }));
 
 afterEach(cleanup);
@@ -64,6 +70,7 @@ function bar(reviewId: string, isPublished: boolean) {
 function page({ waiting, published }: { waiting: string[]; published: string[] }) {
   return (
     <ReviewRowProvider>
+      <ReviewRowUndoToast copy={copy} />
       <ul>
         {waiting.map((id) => (
           <li key={id}>{bar(id, false)}</li>
@@ -111,5 +118,27 @@ describe("the review row's outcome", () => {
     await userEvent.click(buttons[1]);
 
     expect(await screen.findAllByText(copy.published)).toHaveLength(1);
+  });
+});
+
+/**
+ * A hide takes its own row off the group, and off the *page* entirely once a
+ * shop has more moderated reviews than fit one — so the toast that offers Undo
+ * cannot live in the row. Hoisting the state was not enough on its own.
+ */
+describe("the hide's undo toast", () => {
+  it("renders above the lists, where the hidden row no longer is", async () => {
+    const { rerender } = render(page({ waiting: [], published: [A] }));
+    // The reason picker waits behind a disclosure; the act is the button inside
+    // it (ADR 20260813-review-moderation-has-a-floor).
+    await userEvent.click(screen.getByText(copy.hide));
+    await userEvent.selectOptions(screen.getByLabelText(copy.hideReasonLabel), "spam");
+    await userEvent.click(screen.getByRole("button", { name: copy.hideConfirm }));
+
+    // The revalidated page: this shop's moderated list is longer than one page,
+    // so the review it just hid is not on the page at all any more.
+    rerender(page({ waiting: [], published: [] }));
+    expect(screen.getByText(copy.hiddenToast)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: copy.undo })).toBeInTheDocument();
   });
 });

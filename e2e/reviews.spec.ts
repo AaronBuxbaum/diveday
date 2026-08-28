@@ -178,13 +178,20 @@ test.describe("as owner, reviews list", () => {
     await published.getByLabel("Why are you taking it down?").selectOption("spam");
     await published.getByRole("button", { name: "Hide this review" }).click();
     await expect(page.getByRole("status").getByText("Review hidden.")).toBeVisible();
-    // The row moves into the Hidden group on the revalidate — no page bounce,
-    // no badge, and the group header is what now says it.
+    // The row leaves the Published group on the revalidate — no page bounce and
+    // no badge, and the toast above is what says what happened.
+    //
+    // It does not appear in a Hidden group *on this page*: the moderated list
+    // sorts every published review ahead of every hidden one so the two groups
+    // cannot interleave across a page boundary (`listShopReviewsForStaff`), and
+    // this shop has 82 published reviews, so the row it just hid is now on the
+    // last page. That is why the toast has to outlive the row — it is the only
+    // confirmation the staffer gets, and the only Undo.
     await expect(
-      group(page, /^Hidden/)
+      group(page, /^Published/)
         .locator("li")
         .filter({ hasText: comment }),
-    ).toHaveCount(1);
+    ).toHaveCount(0);
 
     await page.context().clearCookies();
     await page.goto("/s/blue-mantis");

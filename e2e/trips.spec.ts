@@ -77,11 +77,21 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
     .click();
   // The pitch, above the form: the run of dives in plan order (ADR
   // 20260827-the-divers-thread, decision 2). The swipeable briefing deck this
-  // replaced is `/ready`'s now — reading for the night before, not the pitch.
+  // replaced is gone; what a diver reads about a *site* is the "The site" beat
+  // below this one, which on a two-site day names each site over its own words.
+  //
+  // The second tank's site is read inside its own dive row for exactly that
+  // reason: "French Reef" is on this page twice, here and over that site's
+  // notes below, and both are the design rather than a duplicate.
   await expect(page.getByRole("heading", { name: "The day" })).toBeVisible();
   await expect(page.getByText("Dive 1", { exact: true })).toBeVisible();
   await expect(page.getByText("Dive 2", { exact: true })).toBeVisible();
-  await expect(page.getByText("French Reef", { exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByRole("listitem")
+      .filter({ hasText: "Dive 2" })
+      .getByText("French Reef", { exact: true }),
+  ).toBeVisible();
 });
 
 /**
