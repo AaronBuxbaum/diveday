@@ -146,9 +146,17 @@ export function MedicalQuestionnaireFields({
   function answer(id: string, value: boolean) {
     setResponses((previous) => {
       const next = { ...previous, [id]: value };
-      // A branch that is closed is not applicable; clear stale child values so
-      // a changed answer can never carry a hidden yes into the result.
-      if (value === false) {
+      // A branch that is *closing* is not applicable; clear stale child values
+      // so a changed answer can never carry a hidden yes into the result.
+      //
+      // `previous[id] === true` is the whole rule: only a branch that was open
+      // has children the diver has seen. Without it, every no on a page-one
+      // question wrote a no into the children of a Box that had never been
+      // opened — answering no to all ten primaries silently filled Box B's four
+      // questions, so `medicalProgress` counted zero follow-ups remaining, the
+      // outcome line read `outcomeClear`, and four answers the diver never read
+      // went into the signed record.
+      if (value === false && previous[id] === true) {
         for (const child of questionnaire.questions.filter(
           (question) => question.parentId === id,
         )) {

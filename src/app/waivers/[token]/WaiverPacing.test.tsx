@@ -153,6 +153,39 @@ describe("the count as the diver moves through the form", () => {
     expect(screen.getByText(COPY.outcomeClear)).toBeInTheDocument();
   });
 
+  it("leaves a Box the diver never opened blank, so a later yes asks its questions", async () => {
+    // **The defect this pins is invisible to a seeded render.** `answer()`
+    // cleared a question's children on every no, not only on a no that *closed*
+    // an open branch — so working down the page-one list saying no wrote a no
+    // into the four Box B questions nobody had ever seen. A later, honest yes
+    // to "over 45" then opened Box B with all four already answered: the rail
+    // said the medical step was done, the outcome line read `outcomeClear`, and
+    // four answers the diver never read submitted into the signed record.
+    //
+    // Only a clicked run can catch it. Seeding `initialResponses` skips
+    // `answer()` entirely, which is why every existing case here passed.
+    render(pacing({ initialAnswered: [], initialFollowUpsRemaining: 0, responses: {} }));
+    const rail = screen.getByTestId(WAIVER_RAIL_TEST_ID);
+    for (const question of PRIMARY) {
+      await userEvent.click(
+        within(screen.getByRole("group", { name: question.prompt })).getByRole("radio", {
+          name: "No",
+        }),
+      );
+    }
+    await waitFor(() => expect(rail).toHaveTextContent("2 of 3 done"));
+
+    await userEvent.click(
+      within(screen.getByRole("group", { name: OVER_45 })).getByRole("radio", { name: "Yes" }),
+    );
+
+    const boxB = screen.getByRole("heading", { name: /BOX B/ }).parentElement;
+    if (!boxB) throw new Error("Box B did not open under the question that opens it");
+    expect(within(boxB).queryAllByRole("radio", { checked: true })).toHaveLength(0);
+    await waitFor(() => expect(rail).toHaveTextContent("1 of 3 done"));
+    expect(screen.getByText(COPY.outcomeFollowUpsOpen)).toBeInTheDocument();
+  });
+
   it("counts the page-one list only, so answering honestly never lengthens the form", async () => {
     // The other half of the same rule: the *denominator* stays the ten
     // questions the diver was handed. A Box answer moves the settle mark, never
