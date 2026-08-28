@@ -100,6 +100,9 @@ describe("reviewRowAction", () => {
 
     expect(await reviewRowAction(null, form({ reviewId: REVIEW_A, publish: "true" }))).toEqual({
       ok: true,
+      // Which review the outcome is about: the state serving the list is one
+      // state, so a row reports only its own result (`ReviewRowProvider`).
+      reviewId: REVIEW_A,
       effect: "published",
     });
     expect(revalidatePath).toHaveBeenCalledWith(REVIEWS_PATH);
@@ -110,7 +113,7 @@ describe("reviewRowAction", () => {
 
     expect(
       await reviewRowAction(null, form({ reviewId: REVIEW_A, publish: "false", reason: "spam" })),
-    ).toEqual({ ok: true, effect: "hidden", undoReviewId: REVIEW_A });
+    ).toEqual({ ok: true, reviewId: REVIEW_A, effect: "hidden", undoReviewId: REVIEW_A });
   });
 
   it("reports a hide refused for want of a reason, on the row that asked", async () => {
@@ -118,6 +121,7 @@ describe("reviewRowAction", () => {
 
     expect(await reviewRowAction(null, form({ reviewId: REVIEW_A, publish: "false" }))).toEqual({
       ok: false,
+      reviewId: REVIEW_A,
       reason: "reason-required",
     });
     expect(setReviewPublished).toHaveBeenCalledWith(
@@ -156,7 +160,7 @@ describe("reviewRowAction", () => {
         null,
         form({ intent: "standout", reviewId: REVIEW_A, standout: "true" }),
       ),
-    ).toEqual({ ok: true, effect: "standout" });
+    ).toEqual({ ok: true, reviewId: REVIEW_A, effect: "standout" });
     expect(setReviewStandout).toHaveBeenCalledWith({}, SHOP_ID, REVIEW_A, true);
 
     expect(
@@ -164,13 +168,14 @@ describe("reviewRowAction", () => {
         null,
         form({ intent: "standout", reviewId: REVIEW_A, standout: "false" }),
       ),
-    ).toEqual({ ok: true, effect: "standout-removed" });
+    ).toEqual({ ok: true, reviewId: REVIEW_A, effect: "standout-removed" });
     expect(setReviewStandout).toHaveBeenCalledWith({}, SHOP_ID, REVIEW_A, false);
   });
 
   it("refuses a review id that is not a uuid before reaching the database", async () => {
     expect(await reviewRowAction(null, form({ reviewId: "../../etc", publish: "true" }))).toEqual({
       ok: false,
+      reviewId: "../../etc",
       reason: "error",
     });
     expect(setReviewPublished).not.toHaveBeenCalled();
@@ -184,6 +189,7 @@ describe("reviewRowAction", () => {
 
     expect(await reviewRowAction(null, form({ reviewId: REVIEW_B, publish: "true" }))).toEqual({
       ok: false,
+      reviewId: REVIEW_B,
       reason: "error",
     });
     expect(revalidatePath).not.toHaveBeenCalled();

@@ -94,17 +94,13 @@ function CardRow({
       detail={detail}
       state={state}
       imported={imported}
-      actions={
-        anchor ? (
-          // `tabIndex` so a fragment link both scrolls here *and* puts the
-          // cursor beside the control — the status ledger's whole promise.
-          <span id={AWAITING_ANCHOR} tabIndex={-1} className="flex flex-wrap items-center gap-2">
-            {actions}
-          </span>
-        ) : (
-          actions
-        )
-      }
+      actions={actions}
+      // The anchor is an attribute on the row's own action group, never a
+      // wrapper around it: a wrapper that appears and disappears as the anchor
+      // moves changes the subtree's element type, and React unmounts the
+      // controls under it. Marking a card verified is what moves the anchor, so
+      // that took the success toast and its Undo down with it.
+      actionsId={anchor ? AWAITING_ANCHOR : undefined}
     />
   );
 }

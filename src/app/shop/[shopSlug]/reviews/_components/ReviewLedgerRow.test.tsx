@@ -5,6 +5,7 @@ import type { StaffReview } from "@/db/reviews";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { ReviewLedgerRow } from "./ReviewLedgerRow";
 import type { ReviewRowCopy } from "./ReviewRowActions";
+import { ReviewRowProvider } from "./ReviewRowActions";
 
 // The row mounts the client action bar, whose only job here is to render its
 // labels — the writes themselves are covered in `actions.test.ts` and against a
@@ -67,19 +68,24 @@ const BASE: StaffReview = {
 
 function row(review: Partial<StaffReview>, group: "waiting" | "published" | "hidden" = "waiting") {
   return render(
-    <ul>
-      <ReviewLedgerRow
-        review={{ ...BASE, ...review }}
-        group={group}
-        shopSlug="blue-mantis"
-        locale="en-US"
-        timezone="America/Cancun"
-        t={t}
-        reasonKeys={REASON_KEYS}
-        reasons={[{ value: "spam", label: "Spam or a test" }]}
-        copy={copy}
-      />
-    </ul>,
+    // The row's action state lives above the three lists a review moves
+    // between, so a row rendered without its provider is a row that could not
+    // exist on the page (`ReviewRowProvider`).
+    <ReviewRowProvider>
+      <ul>
+        <ReviewLedgerRow
+          review={{ ...BASE, ...review }}
+          group={group}
+          shopSlug="blue-mantis"
+          locale="en-US"
+          timezone="America/Cancun"
+          t={t}
+          reasonKeys={REASON_KEYS}
+          reasons={[{ value: "spam", label: "Spam or a test" }]}
+          copy={copy}
+        />
+      </ul>
+    </ReviewRowProvider>,
   );
 }
 

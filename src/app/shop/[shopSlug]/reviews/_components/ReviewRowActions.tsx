@@ -1,7 +1,7 @@
 // i18n-exempt-file: every visible label arrives as an already-translated prop.
 "use client";
 
-import { useActionState } from "react";
+import { createContext, useActionState, useContext } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
@@ -50,9 +50,11 @@ export type ReviewRowCopy = {
  */
 function statusOf(
   result: ReviewActionResult,
+  reviewId: string,
   copy: ReviewRowCopy,
 ): { tone: NoticeTone; text: string } | undefined {
-  if (!result) return undefined;
+  // One state serves the whole list, so a row reports only its own outcome.
+  if (!result || result.reviewId !== reviewId) return undefined;
   if (result.ok) {
     if (result.effect === "hidden") return undefined;
     const text =
@@ -72,6 +74,39 @@ function statusOf(
           ? copy.noteTooLong
           : copy.error;
   return { tone: "danger", text };
+}
+
+/**
+ * **The row action's state, held above the list rather than inside a row.**
+ *
+ * The same reasoning as `PublishAllProvider`, one scale up, and the reason the
+ * row's own `useActionState` had to leave: this page renders three independent
+ * `<ul>`s — waiting, published, hidden — and the *whole point* of every control
+ * in the bar is to move a review from one of them to another. React reparents
+ * nothing; it unmounts the row from the list it left and mounts a new one in
+ * the list it joined. So a state living in the row was destroyed by exactly the
+ * act it existed to report: publish a waiting review and the confirmation, the
+ * refusal and the hide's Undo all vanished with the `<li>`, silently, on the
+ * three surfaces a moderator uses most.
+ *
+ * Hoisted here it outlives the move. One state serves every row, so each row
+ * matches `result.reviewId` against its own before saying anything — see
+ * `statusOf`.
+ */
+const ReviewRowContext = createContext<{
+  result: ReviewActionResult;
+  run: (formData: FormData) => void;
+} | null>(null);
+
+export function ReviewRowProvider({ children }: { children: React.ReactNode }) {
+  const [result, run] = useActionState(reviewRowAction, null);
+  return <ReviewRowContext.Provider value={{ result, run }}>{children}</ReviewRowContext.Provider>;
+}
+
+function useReviewRow() {
+  const context = useContext(ReviewRowContext);
+  if (!context) throw new Error("Review row controls used outside their provider");
+  return context;
 }
 
 /**
@@ -106,9 +141,12 @@ export function ReviewRowActions({
   reasons: readonly { value: string; label: string }[];
   copy: ReviewRowCopy;
 }) {
-  const [result, formAction] = useActionState(reviewRowAction, null);
-  const status = statusOf(result, copy);
-  const undoReviewId = result?.ok && result.effect === "hidden" ? result.undoReviewId : undefined;
+  const { result, run: formAction } = useReviewRow();
+  const status = statusOf(result, reviewId, copy);
+  const undoReviewId =
+    result?.ok && result.reviewId === reviewId && result.effect === "hidden"
+      ? result.undoReviewId
+      : undefined;
 
   return (
     <>

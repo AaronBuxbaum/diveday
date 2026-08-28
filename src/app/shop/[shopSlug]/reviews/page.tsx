@@ -31,7 +31,7 @@ import {
   PublishAllStatus,
 } from "./_components/ReviewBulkPublish";
 import { type ReviewGroup, ReviewLedgerRow } from "./_components/ReviewLedgerRow";
-import type { ReviewRowCopy } from "./_components/ReviewRowActions";
+import { type ReviewRowCopy, ReviewRowProvider } from "./_components/ReviewRowActions";
 import { ReviewsAggregateLine } from "./_components/ReviewsAggregateLine";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -265,50 +265,57 @@ export default async function ReviewsPage({
               off the page, and that is exactly the pass most worth a sentence. */}
           <PublishAllStatus copy={bulkCopy} className="mb-4" />
 
+          {/* The same reasoning per row, and for the same reason: publishing or
+              hiding a review moves its `<li>` between these three lists, which
+              unmounts it. A `useActionState` inside the row was destroyed by
+              the act it existed to report. */}
+
           {/* One rhythm between groups, the page-section spacing every staff
               surface uses — never a per-section `mt-*` that drifts. */}
-          <div className="space-y-10">
-            {waitingPage.reviews.length > 0 ? (
-              <section aria-labelledby="reviews-waiting">
-                <div className="flex items-baseline justify-between gap-3">
-                  <GroupLabel as="h2" id="reviews-waiting">
-                    {t("reviews.group.waiting", { count: waitingPage.total })}
-                  </GroupLabel>
-                  {/* With one review waiting there is nothing a header act does
+          <ReviewRowProvider>
+            <div className="space-y-10">
+              {waitingPage.reviews.length > 0 ? (
+                <section aria-labelledby="reviews-waiting">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <GroupLabel as="h2" id="reviews-waiting">
+                      {t("reviews.group.waiting", { count: waitingPage.total })}
+                    </GroupLabel>
+                    {/* With one review waiting there is nothing a header act does
                       that the row's own Publish does not, so it does not
                       render: two buttons one tap apart, doing the same thing,
                       is the second door principle 8 exists to close. */}
-                  {waitingIds.length > 1 ? (
-                    <PublishAllButton
-                      reviewIds={waitingIds}
-                      label={t("reviews.publishAll", { count: waitingIds.length })}
-                      pendingLabel={t("reviews.saving")}
-                      className={buttonClass({ variant: "link", size: "sm", flush: true })}
-                    />
-                  ) : null}
-                </div>
-                <ul className="mt-2">{rows(waitingPage.reviews, "waiting")}</ul>
-              </section>
-            ) : null}
+                    {waitingIds.length > 1 ? (
+                      <PublishAllButton
+                        reviewIds={waitingIds}
+                        label={t("reviews.publishAll", { count: waitingIds.length })}
+                        pendingLabel={t("reviews.saving")}
+                        className={buttonClass({ variant: "link", size: "sm", flush: true })}
+                      />
+                    ) : null}
+                  </div>
+                  <ul className="mt-2">{rows(waitingPage.reviews, "waiting")}</ul>
+                </section>
+              ) : null}
 
-            {published.length > 0 ? (
-              <section aria-labelledby="reviews-published">
-                <GroupLabel as="h2" id="reviews-published">
-                  {t("reviews.group.published", { count: groups.published })}
-                </GroupLabel>
-                <ul className="mt-2">{rows(published, "published")}</ul>
-              </section>
-            ) : null}
+              {published.length > 0 ? (
+                <section aria-labelledby="reviews-published">
+                  <GroupLabel as="h2" id="reviews-published">
+                    {t("reviews.group.published", { count: groups.published })}
+                  </GroupLabel>
+                  <ul className="mt-2">{rows(published, "published")}</ul>
+                </section>
+              ) : null}
 
-            {hidden.length > 0 ? (
-              <section aria-labelledby="reviews-hidden">
-                <GroupLabel as="h2" id="reviews-hidden">
-                  {t("reviews.group.hidden", { count: groups.hidden })}
-                </GroupLabel>
-                <ul className="mt-2">{rows(hidden, "hidden")}</ul>
-              </section>
-            ) : null}
-          </div>
+              {hidden.length > 0 ? (
+                <section aria-labelledby="reviews-hidden">
+                  <GroupLabel as="h2" id="reviews-hidden">
+                    {t("reviews.group.hidden", { count: groups.hidden })}
+                  </GroupLabel>
+                  <ul className="mt-2">{rows(hidden, "hidden")}</ul>
+                </section>
+              ) : null}
+            </div>
+          </ReviewRowProvider>
         </PublishAllProvider>
       )}
 

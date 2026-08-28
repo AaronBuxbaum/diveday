@@ -107,6 +107,52 @@ describe("CertificationCardRow — the state→badge table", () => {
   });
 });
 
+/**
+ * **The status ledger's "Verify it" anchor, and why it is an attribute.**
+ *
+ * It used to be a `<span id>` the caller wrapped `actions` in only on the first
+ * card awaiting somebody. Marking that card verified is precisely what moves
+ * the anchor to the next one — so the wrapper vanished, the subtree's element
+ * type changed, React unmounted the control under it, and the `useActionState`
+ * result inside was destroyed by its own success. The staffer saw the row flip
+ * to "Certified" and lost both the confirmation and the Undo that came with it,
+ * on the one act where a mis-tap has no other way back.
+ */
+describe("CertificationCardRow — the ledger's anchor", () => {
+  it("moves the anchor without unmounting the control it points at", () => {
+    const button = <button type="button">Mark certified</button>;
+    const { container, rerender } = render(
+      <CertificationCardRow
+        as="div"
+        t={t}
+        title="PADI Enriched Air"
+        state="pending"
+        actions={button}
+        actionsId="card-awaiting"
+      />,
+    );
+    const anchored = container.querySelector("#card-awaiting");
+    expect(anchored).toHaveAttribute("tabindex", "-1");
+    const control = container.querySelector("button");
+
+    // The card settles: it is no longer what is awaiting somebody, so the
+    // anchor moves on. The control has to still be the same DOM node — that
+    // identity is the whole assertion, since a new node means React tore the
+    // old one down and everything it was holding with it.
+    rerender(
+      <CertificationCardRow
+        as="div"
+        t={t}
+        title="PADI Enriched Air"
+        state="verified"
+        actions={button}
+      />,
+    );
+    expect(container.querySelector("#card-awaiting")).toBeNull();
+    expect(container.querySelector("button")).toBe(control);
+  });
+});
+
 describe("CertificationCardRow — provenance", () => {
   it("marks an imported card in words, on the line that carries its small print", () => {
     const { container } = render(

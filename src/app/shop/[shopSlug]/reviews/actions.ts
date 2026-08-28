@@ -36,11 +36,21 @@ import { isUuid } from "@/lib/uuid";
 export type ReviewActionResult =
   | {
       ok: true;
+      /**
+       * Which review this outcome is about. The state lives above the list now
+       * (`ReviewRowProvider`), so the row that reports it has to recognise its
+       * own result rather than assume every result is hers.
+       */
+      reviewId: string;
       effect: "published" | "hidden" | "standout" | "standout-removed";
       /** Set on a hide: the review the land-then-undo toast offers to put back. */
       undoReviewId?: string;
     }
-  | { ok: false; reason: "reason-required" | "note-required" | "note-too-long" | "error" }
+  | {
+      ok: false;
+      reviewId: string;
+      reason: "reason-required" | "note-required" | "note-too-long" | "error";
+    }
   | null;
 
 /** What a "Publish all" pass did. `null` is "nothing yet". */
@@ -57,6 +67,12 @@ export type BulkPublishResult = { ok: true; published: number } | { ok: false } 
  * something to say. That is the bug the bulk control's status row already
  * exists to prevent, one scale down: one action, one state, one status region
  * that outlives every button in the row.
+ *
+ * The same reasoning went one scale further on 2026-08-28, because the page
+ * renders three independent `<ul>`s and every one of these acts moves a review
+ * between them — which unmounts the whole row, status region included. The
+ * state lives above the lists in `ReviewRowProvider` now, and every result
+ * names its `reviewId` so a row can tell its own outcome from its neighbour's.
  */
 export async function reviewRowAction(
   _prev: ReviewActionResult,
@@ -68,14 +84,14 @@ export async function reviewRowAction(
   // is escaped (src/lib/staff-notices.ts).
   const reviews = shopPath(session.user.shopSlug, "reviews");
   const reviewId = String(formData.get("reviewId") ?? "");
-  if (!isUuid(reviewId)) return { ok: false, reason: "error" };
+  if (!isUuid(reviewId)) return { ok: false, reviewId, reason: "error" };
 
   if (formData.get("intent") === "standout") {
     const standout = formData.get("standout") === "true";
     const outcome = await setReviewStandout(await getDb(), session.user.shopId, reviewId, standout);
-    if (outcome !== true) return { ok: false, reason: "error" };
+    if (outcome !== true) return { ok: false, reviewId, reason: "error" };
     revalidatePath(reviews);
-    return { ok: true, effect: standout ? "standout" : "standout-removed" };
+    return { ok: true, reviewId, effect: standout ? "standout" : "standout-removed" };
   }
 
   /*
@@ -96,15 +112,15 @@ export async function reviewRowAction(
     reason: parseReviewModerationReason(formData.get("reason")),
     reasonNote: String(formData.get("reasonNote") ?? ""),
   });
-  if (outcome === "reason_required") return { ok: false, reason: "reason-required" };
-  if (outcome === "note_required") return { ok: false, reason: "note-required" };
-  if (outcome === "note_too_long") return { ok: false, reason: "note-too-long" };
-  if (outcome !== true) return { ok: false, reason: "error" };
+  if (outcome === "reason_required") return { ok: false, reviewId, reason: "reason-required" };
+  if (outcome === "note_required") return { ok: false, reviewId, reason: "note-required" };
+  if (outcome === "note_too_long") return { ok: false, reviewId, reason: "note-too-long" };
+  if (outcome !== true) return { ok: false, reviewId, reason: "error" };
 
   revalidatePath(reviews);
   return publish
-    ? { ok: true, effect: "published" }
-    : { ok: true, effect: "hidden", undoReviewId: reviewId };
+    ? { ok: true, reviewId, effect: "published" }
+    : { ok: true, reviewId, effect: "hidden", undoReviewId: reviewId };
 }
 
 /** A posted value narrowed to a real reason code, or null — never a coerced one. */
