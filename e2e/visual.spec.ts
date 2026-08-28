@@ -1543,12 +1543,13 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "booking-confirmed-embed", scheme);
       });
 
-      // The seeded reef trip's public page: hero, "The day", "Look for", the
-      // conditions line, the one-line requirement, and the form last (ADR
-      // 20260827-the-divers-thread, decision 2). The terrain map, landmarks and
-      // swipeable field-guide deck it used to photograph are gone from the
-      // product as of slice 7c — the pitch names the species and nothing more,
-      // and the thread is preparation.
+      // The seeded reef trip's public page: hero, "The day", the route, "Look
+      // for", the site's own words, the conditions line, the one-line
+      // requirement, and the form last (ADR 20260827-the-divers-thread,
+      // decision 2). The swipeable field-guide deck it used to photograph is
+      // gone as of slice 7c; the shop's authored prose came back beneath the
+      // pitch as `TripSiteNotes`, because deleting the deck had left eight
+      // columns the staff form writes reaching no diver at all.
       //
       // Reached from the *standalone* schedule, never the embed: a schedule
       // loaded with `embed=1` carries the flag forward on its trip links, and
