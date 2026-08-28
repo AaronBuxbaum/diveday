@@ -48,7 +48,7 @@ Every name, number and time is demo-seed fiction. Nothing here is real customer 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
 | 10a — the door speaks Clearwater | open | — | — |
-| 10b — onboard is the shop's first form | open | — | — |
+| 10b — onboard is the shop's first form | shipped | `src/app/onboard/page.tsx` | `src/components/SuggestShopLink.test.tsx`, `src/app/onboard/copy.test.ts`, `src/app/onboard/actions.instrumentation.test.ts` |
 | 10c — claim joins the thread | open | — | — |
 | 10d — the first morning | open | — | — |
 

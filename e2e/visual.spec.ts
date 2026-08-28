@@ -1352,8 +1352,10 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "pricing", scheme);
       });
 
-      // Where the trial actually starts: the form plus the reassurance block a
-      // skeptical owner reads before typing a password.
+      // Where the trial actually starts: two group labels over six fields, the
+      // storefront address written under the shop link, and the one sentence a
+      // skeptical owner reads before typing a password (ADR
+      // 20260827-first-light, decision 1).
       test(`the onboarding form renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/onboard");
         // This route owns a loading.tsx, and `goto` resolves on the document

@@ -7,6 +7,29 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Onboard is the shop's first form (delivered 2026-08-28)
+
+Slice 10b of [20260827-first-light](../architecture/decisions/20260827-first-light.md). `/onboard`
+stops speaking a pre-Clearwater grammar: its two `text-lg` h2s over `border-b` hairlines become the
+program's one **group label** spelling ("Your shop" / "You" — the element stays an `<h2>`, so the
+outline a screen reader walks is unchanged), and the four-sentence reassurance under the primary
+collapses to **one** — *"Free for 3 weeks, no card — and nothing switches off when the window
+ends."* That sentence is also the marketing review's day-22 answer
+([marketing-review-20260827.md](marketing-review-20260827.md), the `/onboard` half of slice 12c):
+the old line said "free for 3 weeks" and never said what happens on the 22nd day, which a burned
+buyer reads as a card wall. Soft expiry is real — `src/lib/trial.ts` switches nothing off.
+
+The shop-link field's description is no longer a sentence about what the field is for; it is the
+**storefront address the box produces, written live as the owner types** — "Your schedule will live
+at dive.day/s/torchlight", normalized (a capital or a trailing hyphen never renders as a broken
+address) and built from the configured `APP_HOST` rather than a literal. `SuggestShopLink` owns
+both halves and mounts in that description slot; it renders **nothing** while the field carries a
+refusal, because a cheerful address under "that link is taken" argues with the refusal. Field
+order, names, the timezone picker, error routing, value echo, the `trial_started` event and the
+`after()` alert fan-out are all untouched — the last of those now pinned, along with the sign-up
+form's deliberate "this address is already registered" exception to the account doors'
+enumeration silence.
+
 ## The boat manifest becomes an instrument (delivered 2026-08-27)
 
 Slice 5a of [20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md),

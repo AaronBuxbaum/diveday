@@ -14,6 +14,7 @@ import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i
 import { requestLocale } from "@/i18n/request";
 import { eventSource } from "@/lib/funnel";
 import { sharedLinkCard } from "@/lib/marketing";
+import { APP_ORIGIN, publicAppUrl } from "@/lib/notifications";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, type OnboardErrorCode } from "@/lib/onboarding";
 import {
   type CuratedTimeZone,
@@ -28,6 +29,21 @@ import { onboardAction } from "./actions";
 // and `next build` fails if that ever stops being true.
 // See ADR 20260804-instant-navigation.
 export const instant = true;
+
+/**
+ * The Clearwater group label — the one spelling of it
+ * ([20260827-clearwater-surface-language](../../../docs/architecture/decisions/20260827-clearwater-surface-language.md),
+ * decision 3), and the grammar this form's two sections wear as of ADR
+ * 20260827-first-light, decision 1.
+ *
+ * It replaced a pair of `text-lg` h2s over `border-b` hairlines. Those rules
+ * cut the one column of a door into two documents and gave "Your shop" and
+ * "You" the weight of page headings, which is not what they are: they are the
+ * two piles the six fields fall into, and the label's job is to say so and get
+ * out of the way. The element stays an `<h2>` — the visual weight changes, the
+ * document outline a screen reader walks does not.
+ */
+const GROUP_LABEL_CLASS = "text-xs font-semibold tracking-[0.14em] text-muted uppercase";
 
 /**
  * Every code `onboardAction`'s `backToForm` can hand back, resolved to a
@@ -225,6 +241,13 @@ export default async function OnboardPage({
   const errorField = error ? onboardErrorField(error) : undefined;
   const fieldError = (field: (typeof ONBOARD_ERROR_FIELDS)[keyof typeof ONBOARD_ERROR_FIELDS]) =>
     errorField === field ? errorText : undefined;
+  // The storefront address the shop link produces, minus the scheme: the owner
+  // is reading an address, not following a link, and `https://` in front of it
+  // is four characters of noise in a line whose whole job is the last word.
+  // Never a literal — a fork, a staging deploy and the e2e fleet each run on
+  // their own `APP_HOST`, and a hard-coded `dive.day` would tell all three the
+  // wrong thing (ADR 20260827-first-light, decision 1).
+  const storefrontHost = new URL(publicAppUrl() ?? APP_ORIGIN).host;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -258,9 +281,7 @@ export default async function OnboardPage({
         <form action={onboardAction} className="flex flex-col gap-5">
           <input type="hidden" name="source" value={source} />
           <section className="flex flex-col gap-4">
-            <h2 className="text-lg font-semibold border-b border-border pb-1">
-              {t("account.onboard.shopSectionTitle")}
-            </h2>
+            <h2 className={GROUP_LABEL_CLASS}>{t("account.onboard.shopSectionTitle")}</h2>
             <FieldGrid columns={2}>
               <Field label={t("account.onboard.shopNameLabel")} error={fieldError("shopName")}>
                 <input
@@ -283,7 +304,24 @@ export default async function OnboardPage({
                 // pushed the label five lines tall, leaving a ~100px hole above
                 // "Shop name" beside it and floating the required `*` at the
                 // end of a paragraph (issue #784).
-                description={t("account.onboard.shopLinkHint")}
+                //
+                // The description is now the storefront URL the box produces,
+                // written live as the owner types, and `SuggestShopLink` mounts
+                // *here* rather than beside the grid because that is the one
+                // slot under this control — it is still the component that
+                // fills the box from the shop's name, and it renders nothing at
+                // all while the box carries a refusal (the error wins; never
+                // both).
+                description={
+                  <SuggestShopLink
+                    nameId="shop-name"
+                    slugId="shop-slug"
+                    initialSlug={shopSlug ?? ""}
+                    urlLead={t("account.onboard.shopLinkUrlHint")}
+                    urlHost={storefrontHost}
+                    fieldError={fieldError("shopSlug")}
+                  />
+                }
                 error={fieldError("shopSlug")}
               >
                 <input
@@ -298,10 +336,6 @@ export default async function OnboardPage({
                   className={controlClass}
                 />
               </Field>
-              {/* Outside the Field slots (see the DetectTimezone note below)
-                    and rendering nothing: writes the link the shop's name
-                    implies into the slug box until the owner types their own. */}
-              <SuggestShopLink nameId="shop-name" slugId="shop-slug" />
             </FieldGrid>
             <FieldGrid columns={1}>
               <Field label={t("account.onboard.timezoneLabel")} error={fieldError("timezone")}>
@@ -349,10 +383,8 @@ export default async function OnboardPage({
             </FieldGrid>
           </section>
 
-          <section className="flex flex-col gap-4 mt-2">
-            <h2 className="text-lg font-semibold border-b border-border pb-1">
-              {t("account.onboard.youSectionTitle")}
-            </h2>
+          <section className="mt-2 flex flex-col gap-4">
+            <h2 className={GROUP_LABEL_CLASS}>{t("account.onboard.youSectionTitle")}</h2>
             <FieldGrid columns={1}>
               <Field label={t("account.onboard.fullNameLabel")} error={fieldError("ownerName")}>
                 <input
@@ -399,21 +431,20 @@ export default async function OnboardPage({
           >
             {t("account.onboard.submit")}
           </SubmitButton>
-          {/* The reassurance, as one quiet line at the moment of commitment
-              instead of the boxed checklist + scattered footnotes this form
-              used to stack. The three leads are shipped, checkable claims
-              (docs/product/marketing.md's claims inventory points here), and
-              asking for a password is the moment of maximum hesitation — so
-              they stay with the form (e2e/marketing.spec.ts pins them), just
-              at footnote weight: the claim survives, the paragraph explaining
-              it lives on the marketing pages the visitor came from. */}
+          {/* **One sentence, not four** (ADR 20260827-first-light, decision 1).
+              This line used to concatenate "Free for 3 weeks." with three more
+              claims — no card, your records, real support — which read as a
+              vendor listing its virtues at exactly the moment a buyer is
+              deciding whether to type a password. A person about to sign up
+              needs one fact, and the review that named it
+              (docs/product/marketing-review-20260827.md) named the missing
+              half too: the old line said "free for 3 weeks" and never answered
+              day 22. It does now, and soft expiry is real — `src/lib/trial.ts`
+              switches nothing off. The other three claims are shipped and
+              checkable, and they keep their paragraphs on the marketing pages
+              the visitor came from; a door repeats none of them. */}
           <p className="mx-auto max-w-prose text-center text-sm text-muted">
-            {[
-              t("account.onboard.trialMeaning"),
-              t("account.onboard.reassurance.noCard.lead"),
-              t("account.onboard.reassurance.yourRecords.lead"),
-              t("account.onboard.reassurance.supportLine.lead"),
-            ].join(" ")}
+            {t("account.onboard.trialNote")}
           </p>
           {errorField === "form" ? (
             <FormStatus tone="danger" className="justify-center">

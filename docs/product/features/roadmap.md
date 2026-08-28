@@ -298,9 +298,6 @@ first morning, argued in the Proposed ADR
   `EntryDone`'s emoji glyph becomes the closed drawn set (`DoorGlyphId`); the dead-link law's two
   tiers become normative. *Pins:* no emoji literal in `account/` components; a door renders one
   primary.
-- **10b. Onboard is the shop's first form.** Group labels replace the h2 rules; the four-sentence
-  reassurance collapses to one; the slug hint reads as the storefront URL, live. Enumeration
-  safety, error routing and analytics untouched. *Pins:* the hint yields to the field error.
 - **10c. Claim joins the thread.** `/claim/[token]` adopts `ThreadShell` (its success already
   lands on `/ready`); a readable dead claim becomes booking-tier and names the shop. *Pins:* a
   readable dead token names the shop; an unreadable one does not.
@@ -396,9 +393,10 @@ starting trials."
   reconciliation in its PR.
 - **12c. The trial's terms stand at its doors.** `/pricing`: the trial-terms note at both CTA
   pairs, the two-year lock under the cadence line (item5 trims), the fee-anchor rewrite, the
-  two new FAQ rows (crew, setup time), the November fold-in, the offline row cut; `/onboard`'s
-  day-22 clause rides first-light 10b. *Pins:* the trial note names free/3 weeks/no card/soft
-  expiry; no billing terms beyond `faq.trialMeaning`'s.
+  two new FAQ rows (crew, setup time), the November fold-in, the offline row cut. `/onboard`'s
+  day-22 clause **already shipped** with first-light 10b (`account.onboard.trialNote`, both
+  locales, 2026-08-28) — this slice matches `/pricing` to it rather than rewording it. *Pins:* the
+  trial note names free/3 weeks/no card/soft expiry; no billing terms beyond `faq.trialMeaning`'s.
 - **12d. The product page's dare gets a door.** The money band renders the figure; a demo door
   under the capability index (new `product-index` tag registered first); the hero description
   rewrite. *Pins:* one primary per screen holds across the page's screens.

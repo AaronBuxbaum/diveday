@@ -309,11 +309,20 @@ test("the sign-up form answers the hesitation it creates", async ({ page }) => {
   // that's actually on screen.
   await expect(page.getByRole("main").locator('input[name="source"]')).toHaveValue("pricing");
 
-  // Asking for a password is the moment of maximum hesitation, so the three
-  // reassurances sit with the form, not on a page the visitor already left.
-  await expect(page.getByText("No card, no setup fee.")).toBeVisible();
-  await expect(page.getByText("Your records are ready from day one.")).toBeVisible();
-  await expect(page.getByText("Real support, one email away.")).toBeVisible();
+  // Asking for a password is the moment of maximum hesitation, so the door
+  // answers it — in one sentence, not the four claims this line used to join
+  // together (ADR 20260827-first-light, decision 1). The half that earns it is
+  // the second: "free for 3 weeks" alone never says what happens on day 22,
+  // and a buyer who has been burned reads an unanswered window as a card wall
+  // (docs/product/marketing-review-20260827.md).
+  await expect(
+    page.getByText("Free for 3 weeks, no card — and nothing switches off when the window ends."),
+  ).toBeVisible();
+  // The three claims it replaced keep their paragraphs on the marketing pages
+  // the visitor came from; the door repeats none of them.
+  await expect(page.getByText("No card, no setup fee.")).toHaveCount(0);
+  await expect(page.getByText("Your records are ready from day one.")).toHaveCount(0);
+  await expect(page.getByText("Real support, one email away.")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Create shop & start trial" })).toBeVisible();
 
   // An unrecognized tag is bucketed rather than echoed into the funnel.

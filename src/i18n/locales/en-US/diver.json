@@ -1813,7 +1813,7 @@
       "shopNameLabel": "Shop name",
       "shopNamePlaceholder": "e.g. Green Lagoon Divers",
       "shopLinkLabel": "Shop link",
-      "shopLinkHint": "Your shop's public web address — the page divers open to book.",
+      "shopLinkUrlHint": "Your schedule will live at",
       "shopLinkPlaceholder": "e.g. green-lagoon",
       "shopLinkTitle": "Lowercase letters, numbers, and hyphens — this becomes your shop's web address",
       "timezoneLabel": "Timezone",
@@ -1855,22 +1855,11 @@
       "fullNamePlaceholder": "e.g. Dana Reyes",
       "emailPlaceholder": "e.g. owner@example.com",
       "passwordPlaceholder": "At least 8 characters",
-      "reassurance": {
-        "noCard": {
-          "lead": "No card, no setup fee."
-        },
-        "yourRecords": {
-          "lead": "Your records are ready from day one."
-        },
-        "supportLine": {
-          "lead": "Real support, one email away."
-        }
-      },
       "demoNote": "Want to explore a sample shop first?",
       "tryLiveDemo": "Try the live demo",
       "settingUp": "Setting up your shop…",
       "submit": "Create shop & start trial",
-      "trialMeaning": "Free for 3 weeks.",
+      "trialNote": "Free for 3 weeks, no card — and nothing switches off when the window ends.",
       "alreadyHaveShop": "Already have a shop?",
       "signIn": "Sign in",
       "errors": {
