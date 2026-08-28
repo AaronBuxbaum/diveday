@@ -127,6 +127,29 @@ export function summarizeMonth(input: MonthlyReportInput): MonthlyReport {
   };
 }
 
+/**
+ * Whether the month has anything to report at all — the one fork the report
+ * page takes before it renders a single figure (ADR
+ * 20260827-the-shops-shelves: "a month with zero departures renders no figure
+ * row and no ledger").
+ *
+ * Two things count, and the second is easy to forget: a month with no DiveDay
+ * departure can still hold imported payments and refunds, which are real
+ * financial facts by their own source calendar date (ADR
+ * 20260816-imported-payment-history-is-evidence). A shop's first month after a
+ * migration is exactly that month, and rendering it as "nothing happened"
+ * would be wrong about its money.
+ *
+ * Named here rather than left inline at the page so the rule has somewhere to
+ * be asserted: five zero figures over an empty ledger is the failure this
+ * guards against, and it is invisible in a diff.
+ */
+export function monthHasActivity(
+  report: Pick<MonthlyReport, "tripCount" | "importedFinancialRecordCount">,
+): boolean {
+  return report.tripCount > 0 || report.importedFinancialRecordCount > 0;
+}
+
 /** "82%" for a ratio in [0, 1]; an em dash when there is nothing to measure. */
 export function formatPercent(ratio: number | null): string {
   if (ratio === null) return "—";

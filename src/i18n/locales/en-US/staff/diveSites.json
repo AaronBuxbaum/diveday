@@ -4,8 +4,8 @@
     "title": "Dive-site library",
     "description": "Save a place once, then attach it to any dive on any trip.",
     "createSite": "Create a site",
-    "browseTemplates": "Browse templates",
-    "gridAriaLabel": "Saved dive sites",
+    "browseTemplates": "Browse the DiveDay catalog",
+    "catalogSiteCount": "{count, plural, one {# published site} other {# published sites}}",
     "siteDeletedNotice": "Site deleted.",
     "emptyHeading": "Start with a site your crew knows well",
     "emptyBody": "Add a location, a map or route image, and the life divers may encounter.",
@@ -17,14 +17,9 @@
     "searchClear": "Clear search",
     "noMatchHeading": "No sites match that search",
     "templateUpdateReady": "Template update v{version} ready.",
-    "diveDayTemplateVersion": "DiveDay template v{version}",
     "nitroxBadge": "Nitrox",
-    "oneRequiredSpecialty": "1 required specialty",
-    "manyRequiredSpecialties": "{count} required specialties",
-    "table": {
-      "site": "Site",
-      "location": "Location",
-      "requirements": "Requirements"
+    "groups": {
+      "unrated": "Unrated"
     },
     "pagination": {
       "total": "{count, plural, one {# site} other {# sites}}"
@@ -36,7 +31,6 @@
     "templateVersion": "Template v{version}",
     "importing": "Importing…",
     "importToLibrary": "Import to my library",
-    "preview": "Read it first",
     "backToCatalog": "← All templates",
     "previewNote": "Everything below is copied into your own library on import — and everything is yours to rewrite afterwards.",
     "preview_location": "Where it is",
@@ -58,6 +52,14 @@
     }
   },
   "form": {
+    "sections": {
+      "about": "The site",
+      "underwater": "What's down there",
+      "dive": "The dive"
+    },
+    "sectionsLabel": "On this page",
+    "unsavedInSection": "Unsaved changes in {section}",
+    "unsavedInSections": "{count, plural, one {Unsaved changes in # section} other {Unsaved changes in # sections}}",
     "nameLabel": "Name",
     "namePlaceholder": "Molasses Reef",
     "forecastLegend": "GPS location",
@@ -131,7 +133,7 @@
     "fitNoteLabel": "Say it in your own words",
     "fitNotePlaceholder": "Shallow, sheltered, and a good first ocean dive after a pool course.",
     "landmarks": {
-      "legend": "Landmarks that tell the story",
+      "legend": "Landmarks",
       "description": "A landmark with no note is still worth listing — divers look for the name.",
       "nameLabel": "Landmark",
       "namePlaceholder": "Molasses Reef Light",
@@ -153,7 +155,7 @@
       "full": "{max, plural, one {That's the most landmarks one site can carry (#).} other {That's the most landmarks one site can carry (#).}}"
     },
     "fieldGuide": {
-      "legend": "Field guide — a few faces to learn",
+      "legend": "Field guide",
       "description": "Each card is written for you, in the language the diver is reading.",
       "searchLabel": "Find a species",
       "searchPlaceholder": "Stoplight parrotfish, or Sparisoma viride",

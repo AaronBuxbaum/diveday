@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
+import { EditorRail, UnsavedSections } from "@/components/editor/EditorRail";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -49,6 +50,7 @@ import {
   marineLifeCatalogEntries,
 } from "../_components/site-editor-copy";
 import { siteFormErrorMessages } from "../_components/site-form-errors";
+import { siteFormSections, siteFormUnsavedCopy } from "../_components/site-form-sections";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -315,8 +317,14 @@ export default async function EditDiveSitePage({
     );
   }
 
+  const sections = siteFormSections(t);
+
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    // Wider from `lg` up than the 3xl it was: the rail takes a column of its
+    // own beside the form rather than out of it, so the fields keep the
+    // measure they had (ADR 20260827-the-shops-shelves, the long-form editor
+    // pattern).
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl">
       {/* Without this, `?notice=saved` stayed put and replayed "Saved" on every
           refresh and back-navigation — the same one-shot rule the rest of
           `/shop/**` follows. */}
@@ -438,43 +446,51 @@ export default async function EditDiveSitePage({
           </ul>
         </SectionCard>
       ) : null}
-      <SiteFormShell
-        action={saveAction}
-        errorMessages={siteFormErrorMessages(t, "diveSites.edit.errorInvalid")}
-        savedMessage={notice === "saved" ? t("diveSites.edit.savedNotice") : undefined}
-      >
-        {/* The row's edit generation as this render saw it, posted back so the
-            save can refuse rather than quietly overwrite a colleague's briefing
-            (issue #820). A site nobody has saved since the column arrived has a
-            null `updated_at`, and `created_at` stands in for it — those are the
-            rows two people are most likely to open at once. */}
-        <input type="hidden" name="expectedVersion" value={String(site.rowVersion)} />
-        <SiteFields
-          t={t}
-          depthUnit={depthUnit}
-          values={{
-            ...site,
-            // Both lists are normalised for the editors rather than handed over
-            // raw: a row written before landmarks carried notes holds plain
-            // strings, and the guide lives in its own table.
-            landmarks: parseDiveSiteLandmarks(site.landmarks),
-            creatures: creatures.map((creature) => creature.catalogSlug ?? "").filter(Boolean),
-          }}
-          routeCopy={routeEditorCopy(t)}
-          landmarkCopy={landmarkEditorCopy(t)}
-          fieldGuideCopy={fieldGuideEditorCopy(t)}
-          marineLifeCatalog={marineLifeCatalogEntries(diverT)}
-          siteId={site.id}
-          certificationDescription={t("diveSites.edit.certificationDescription")}
-          requiredSpecialtiesLabel={t("diveSites.edit.requiredSpecialties")}
-        />
-        <SubmitButton
-          pendingLabel={t("diveSites.form.saving")}
-          className={buttonClass({ size: "lg", className: "mt-2 self-start text-base" })}
-        >
-          {t("diveSites.edit.saveBriefing")}
-        </SubmitButton>
-      </SiteFormShell>
+      <div className="mt-8 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">
+        <EditorRail sections={sections} navLabel={t("diveSites.form.sectionsLabel")} />
+        <div className="min-w-0">
+          <SiteFormShell
+            action={saveAction}
+            errorMessages={siteFormErrorMessages(t, "diveSites.edit.errorInvalid")}
+            savedMessage={notice === "saved" ? t("diveSites.edit.savedNotice") : undefined}
+            actions={
+              <>
+                <SubmitButton pendingLabel={t("diveSites.form.saving")} className={buttonClass()}>
+                  {t("diveSites.edit.saveBriefing")}
+                </SubmitButton>
+                <UnsavedSections sections={sections} copy={siteFormUnsavedCopy(t)} />
+              </>
+            }
+          >
+            {/* The row's edit generation as this render saw it, posted back so
+                the save can refuse rather than quietly overwrite a colleague's
+                briefing (issue #820). A site nobody has saved since the column
+                arrived has a null `updated_at`, and `created_at` stands in for
+                it — those are the rows two people are most likely to open at
+                once. */}
+            <input type="hidden" name="expectedVersion" value={String(site.rowVersion)} />
+            <SiteFields
+              t={t}
+              depthUnit={depthUnit}
+              values={{
+                ...site,
+                // Both lists are normalised for the editors rather than handed
+                // over raw: a row written before landmarks carried notes holds
+                // plain strings, and the guide lives in its own table.
+                landmarks: parseDiveSiteLandmarks(site.landmarks),
+                creatures: creatures.map((creature) => creature.catalogSlug ?? "").filter(Boolean),
+              }}
+              routeCopy={routeEditorCopy(t)}
+              landmarkCopy={landmarkEditorCopy(t)}
+              fieldGuideCopy={fieldGuideEditorCopy(t)}
+              marineLifeCatalog={marineLifeCatalogEntries(diverT)}
+              siteId={site.id}
+              certificationDescription={t("diveSites.edit.certificationDescription")}
+              requiredSpecialtiesLabel={t("diveSites.edit.requiredSpecialties")}
+            />
+          </SiteFormShell>
+        </div>
+      </div>
       <details
         open={Boolean(error)}
         className="mt-10 rounded-2xl border border-danger/30 bg-danger/5"

@@ -109,17 +109,16 @@
       "notAuthorized": "Enviar una factura está limitado a propietarios y gerentes — pide a uno de ellos que le facture a este buceador."
     },
     "filters": {
+      "searchLabel": "Buscar pedidos",
+      "searchPlaceholder": "Buscar buceador o salida",
       "statusLabel": "Estado",
       "statusAll": "Todos los estados",
-      "diverLabel": "Buceador",
-      "diverPlaceholder": "Buscar por nombre",
       "rangeLabel": "Rango de fechas",
       "rangeRecent": "{days, plural, one {Último # día} other {Últimos # días}}",
       "rangeAll": "Todos los pedidos",
       "rangeCustom": "Fechas personalizadas",
       "fromLabel": "Desde",
       "toLabel": "Hasta",
-      "apply": "Aplicar filtros",
       "clear": "Borrar filtros"
     },
     "filteredByDiver": "Mostrando los pedidos de {name}.",
@@ -128,10 +127,14 @@
     "emptyAll": "Todavía no hay pedidos de DiveDay.",
     "emptyFiltered": "Ningún pedido de DiveDay coincide con estos filtros.",
     "emptyNoPayments": "Todavía no hay pedidos de DiveDay — conecta los pagos y recepción podrá enviar su primer pedido desde aquí.",
+    "ledger": {
+      "today": "Hoy · {date}",
+      "continued": "{day}, continuación",
+      "dayMeta": "{count, plural, one {# pedido} other {# pedidos}} · {subtotal}",
+      "rowLabel": "{name} — {amount}"
+    },
     "table": {
       "diver": "Buceador",
-      "trip": "Salida",
-      "status": "Estado",
       "date": "Fecha",
       "amount": "Importe"
     },

@@ -285,6 +285,18 @@ test("the global Add-booking door seats a diver on a departure chosen from scrat
   await expect(page).toHaveURL(/\/bookings\/new/);
   await expect(page.getByRole("heading", { level: 1, name: "Add a booking" })).toBeVisible();
 
+  // Slice 9g of ADR 20260827-the-shops-shelves: the picker is one ledger
+  // grouped by day. The date is the group heading — said once, above the run
+  // it describes — rather than repeated on every row, which is what a flat
+  // list has to do because it has nothing to hang it from.
+  const firstDay = page.getByRole("heading", { level: 3 }).first();
+  await expect(firstDay).toBeVisible();
+  const dayLabel = ((await firstDay.textContent()) ?? "").trim();
+  expect(dayLabel).not.toBe("");
+  await expect(
+    page.getByRole("list", { name: dayLabel }).getByRole("listitem").first(),
+  ).not.toContainText(dayLabel);
+
   // ...and the command palette is the other one, for a staffer already typing.
   // Opened by the nav button rather than ⌘K, which only works once the page
   // has hydrated (search.spec.ts takes the same care).

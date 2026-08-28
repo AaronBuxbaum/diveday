@@ -3,23 +3,23 @@ import { revalidatePath } from "next/cache";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { AgencyTabs } from "@/components/AgencyTabs";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
 import { canPersonConfigureTrips } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { courseAgencies, pagedCourses, setCourseVisibility } from "@/db/courses";
+import { pagedCourses, setCourseVisibility } from "@/db/courses";
 import { getShopBySlug } from "@/db/shops";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { formatMoneyScanned } from "@/lib/format";
+import { toShopCurrency } from "@/lib/money";
 import { publicCoursesPath } from "@/lib/public-routes";
 import { requireStaffSession } from "@/lib/session";
+import { CourseRoster, type CourseRosterRow } from "./_components/CourseRoster";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -35,24 +35,31 @@ export const metadata: Metadata = {
 };
 
 /**
- * The staff course roster: every course including the hidden ones. Each row
- * opens its course's editor; the rail carries only the two list-level acts
- * (Schedule, Hide/Show), and the header holds the one door to the diver-facing
- * catalog. Staff-only, like everything else under `/shop/**` — that catalog is
- * `/s/[shopSlug]/courses`, which this page used to render as its other half
- * behind a session check (ADR 20260803-public-shop-namespace).
+ * The staff course roster: every course including the hidden ones, as one
+ * ledger grouped by agency (ADR 20260827-the-shops-shelves, decision 1 — the
+ * library pattern). Each row opens its course's editor; the two list-level
+ * acts (Schedule, Hide/Show) ride the row, and the header holds the one door
+ * to the diver-facing catalog. Staff-only, like everything else under
+ * `/shop/**` — that catalog is `/s/[shopSlug]/courses`, which this page used
+ * to render as its other half behind a session check (ADR
+ * 20260803-public-shop-namespace).
+ *
+ * The `?agency=` tab strip retired with the grouping: it showed one agency at
+ * a time, so a shop teaching two ladders could not see its catalog, and each
+ * tab paged separately. Agency is a fact every row in a run shares, and a
+ * shared fact belongs to the group header.
  */
 export default async function CoursesPage({
   params,
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ page?: string; agency?: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   await connection(); // visibility can change between requests — render per request
   const session = await requireStaffSession();
   const { shopSlug } = await params;
-  const { page, agency } = await searchParams;
+  const { page } = await searchParams;
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) notFound();
@@ -69,7 +76,7 @@ export default async function CoursesPage({
   const locale = await requestLocale(shop.defaultLocale);
   const st = staffTranslator(locale);
 
-  // No redirect: the icon and the "Hidden" badge already show the new state
+  // No redirect: the badge and the act's own verb already show the new state
   // in place, and a same-page redirect after a form submit resets scroll to
   // the top, which reads as the page jumping for a one-click toggle.
   async function visibilityAction(formData: FormData) {
@@ -81,21 +88,12 @@ export default async function CoursesPage({
     revalidatePath(`/shop/${staff.user.shopSlug}/courses`);
   }
 
-  const agencies = await courseAgencies(db, shop.id);
-  // An unknown `?agency=` reads as the first agency rather than as an empty
-  // catalog: the value is attacker- (and typo-) supplied, and a roster that
-  // silently shows nothing is indistinguishable from a shop that has no
-  // courses. Null only when the shop has no courses at all — there is no
-  // unfiltered view any more (see `AgencyTabs`).
-  const requestedAgency = agency?.trim().toLowerCase();
-  const selectedAgency =
-    requestedAgency && agencies.includes(requestedAgency) ? requestedAgency : (agencies[0] ?? null);
-
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
-  // range so a bookmarked page past the end lands on the last real one.
+  // range so a bookmarked page past the end lands on the last real one. The
+  // rows arrive agency-major, then in progression order — the sort the ledger's
+  // groups are cut from.
   const coursePage = await pagedCourses(db, shop.id, {
     page: Number.parseInt(page ?? "", 10),
-    ...(selectedAgency ? { agency: selectedAgency } : {}),
   });
   const courseList = coursePage.courses;
   // Scheduling is owner/manager/instructor work, so the button is absent — not
@@ -103,21 +101,74 @@ export default async function CoursesPage({
   // new-trip page re-checks against live roles either way.
   const canSchedule = await canPersonConfigureTrips(db, shop.id, session.user.personId);
   const base = `/shop/${shopSlug}/courses`;
-  const withParams = (params: Record<string, string>) => {
-    const query = new URLSearchParams(params).toString();
-    return query ? `${base}?${query}` : base;
-  };
-  // A tab change drops `?page=`: page 3 of one agency's ladder is rarely page 3
-  // of another's, and landing on an empty page reads as a broken tab. The
-  // shop's first agency is the default, so its tab keeps the bare URL
-  // canonical.
-  const agencyHref = (target: string) =>
-    withParams(target === agencies[0] ? {} : { agency: target });
-  const pageHref = (target: number) =>
-    withParams({
-      ...(selectedAgency ? { agency: selectedAgency } : {}),
-      ...(target > 1 ? { page: String(target) } : {}),
-    });
+  const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
+
+  /**
+   * The row's quiet line: who it is open to, how long it runs, what it costs.
+   *
+   * Duration is the shop's own words (`duration_text`); the price is a figure
+   * a reader is *scanning* rather than reconciling, so it drops the `.00` that
+   * would otherwise repeat down every row (`formatMoneyScanned`). Either can
+   * be missing — a course a shop has not priced yet says nothing about price
+   * rather than saying nothing at all.
+   */
+  const metaLine = (course: (typeof courseList)[number]) =>
+    [
+      course.minimumCertificationLevel
+        ? st("courses.list.orHigher", {
+            level: st(CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel]),
+          })
+        : st("courses.list.openToUncertified"),
+      course.durationText?.trim() || null,
+      course.priceCents === null
+        ? null
+        : formatMoneyScanned(course.priceCents, toShopCurrency(shop.currency), locale),
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
+  const rows: CourseRosterRow[] = courseList.map((course) => ({
+    id: course.id,
+    agency: course.agency,
+    title: course.title,
+    href: `/shop/${shop.slug}/courses/${course.slug}/edit`,
+    linkLabel: st("courses.list.editSrLabel", { title: course.title }),
+    meta: <span className="tabular-nums">{metaLine(course)}</span>,
+    ...(course.isActive ? {} : { hiddenLabel: st("courses.list.hidden") }),
+    actions: (
+      <div className="flex items-center gap-1">
+        {/* The catalog's whole point is that a course gets taught. This hands
+            the board's add panel (`?course=` opens it with the course
+            preselected and shapes the title) the one fact staff would
+            otherwise re-pick from a dropdown — never a second trip-creation
+            path of its own. */}
+        {canSchedule ? (
+          <Link
+            href={`/shop/${shopSlug}/schedule/board?course=${course.id}`}
+            aria-label={st("courses.list.scheduleSrLabel", { title: course.title })}
+            className={buttonClass({ variant: "ghost", size: "sm" })}
+          >
+            {st("courses.list.schedule")}
+          </Link>
+        ) : null}
+        <form action={visibilityAction}>
+          <input type="hidden" name="courseId" value={course.id} />
+          <input type="hidden" name="visible" value={course.isActive ? "false" : "true"} />
+          <SubmitButton
+            pendingLabel="…"
+            ariaLabel={st("courses.list.hideShowSrLabel", {
+              action: course.isActive ? st("courses.list.hide") : st("courses.list.show"),
+              title: course.title,
+            })}
+            className={buttonClass({ variant: "ghost", size: "sm" })}
+          >
+            {course.isActive ? st("courses.list.hide") : st("courses.list.show")}
+          </SubmitButton>
+        </form>
+      </div>
+    ),
+  }));
+
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
@@ -140,34 +191,10 @@ export default async function CoursesPage({
         }
       />
 
-      <AgencyTabs
-        agencies={agencies}
-        current={selectedAgency}
-        hrefFor={agencyHref}
-        copy={{ label: st("courses.list.agencyTabsLabel") }}
-      />
-
-      {/* Progression order, not alphabetical: the list reads the way a shop
-          teaches — a taster, then the entry certification, then everything it
-          opens (src/db/courses.ts `progressionOrder`).
-
-          The row itself is the door to the course's page — the page's own
-          description says what a row is for ("Open a course to edit its page
-          and pricing"), so opening it is the row's tap, not one button among
-          four. What used to trail every row — Edit, plus three icon-only ghost
-          buttons whose names lived in sr-only spans — is down to the two acts
-          that are genuinely *list-level* work, each wearing its verb: Schedule
-          (a catalog exists to be taught) and Hide/Show (thinning the catalog
-          to what the shop offers is a walk down this list, and the roster is
-          deliberately the one place visibility changes — the editor's own
-          toggle was removed for it). The per-row Preview icon moved onto the
-          destination it duplicated: the editor's header names and links the
-          course's live URL. */}
       {courseList.length === 0 ? (
-        // The roster's shell is a bordered, shadowed card, so rendering it
-        // around nothing gave a shop with no courses an empty box and no
-        // sentence — the one paged staff list with no empty branch. The door is
-        // the same act every row carries: a catalog exists to be taught, and a
+        // The roster used to render its card shell around nothing, giving a
+        // shop with no courses an empty box and no sentence. The door is the
+        // same act every row carries: a catalog exists to be taught, and a
         // shop with nothing in it can still put a departure on the board.
         <EmptyState
           title={st("courses.list.emptyTitle")}
@@ -185,84 +212,7 @@ export default async function CoursesPage({
           className="mt-6"
         />
       ) : (
-        <SectionCard as="div" padding="none" className="mt-6 overflow-hidden">
-          <ul className="divide-y divide-border">
-            {courseList.map((course) => (
-              <li
-                key={course.id}
-                className={`group relative flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-surface-sunken sm:px-5 ${
-                  course.isActive ? "" : "text-muted"
-                }`}
-              >
-                <div className="min-w-0 flex-1">
-                  <span className="flex flex-wrap items-center gap-2">
-                    {/* Stretched over the whole row (same grammar as the divers
-                    table): the title is the visible name, the label says what
-                    the tap does. */}
-                    <Link
-                      href={`/shop/${shop.slug}/courses/${course.slug}/edit`}
-                      aria-label={st("courses.list.editSrLabel", { title: course.title })}
-                      className="font-semibold text-foreground after:absolute after:inset-0 group-hover:text-primary focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary"
-                    >
-                      {course.title}
-                      <DiveDayIcon
-                        name="arrow-right"
-                        className="ml-1 inline-block size-4 align-[-0.15em] opacity-0 transition-opacity group-hover:opacity-100"
-                      />
-                    </Link>
-                    {course.isActive ? null : (
-                      <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-xs font-semibold text-muted">
-                        {st("courses.list.hidden")}
-                      </span>
-                    )}
-                  </span>
-                  <p className="mt-1 text-sm text-muted">
-                    {course.minimumCertificationLevel
-                      ? st("courses.list.orHigher", {
-                          level: st(CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel]),
-                        })
-                      : st("courses.list.openToUncertified")}
-                  </p>
-                </div>
-                {/* Above the stretched link, so the rail's own taps win. */}
-                <div className="relative z-10 flex items-center gap-1">
-                  {/* The catalog's whole point is that a course gets taught. This
-                  hands the board's add panel (`?course=` opens it with the
-                  course preselected and shapes the title) the one fact staff
-                  would otherwise re-pick from a dropdown — never a second
-                  trip-creation path of its own. */}
-                  {canSchedule ? (
-                    <Link
-                      href={`/shop/${shopSlug}/schedule/board?course=${course.id}`}
-                      aria-label={st("courses.list.scheduleSrLabel", { title: course.title })}
-                      className={buttonClass({ variant: "ghost", size: "sm" })}
-                    >
-                      {st("courses.list.schedule")}
-                    </Link>
-                  ) : null}
-                  <form action={visibilityAction}>
-                    <input type="hidden" name="courseId" value={course.id} />
-                    <input
-                      type="hidden"
-                      name="visible"
-                      value={course.isActive ? "false" : "true"}
-                    />
-                    <SubmitButton
-                      pendingLabel="…"
-                      ariaLabel={st("courses.list.hideShowSrLabel", {
-                        action: course.isActive ? st("courses.list.hide") : st("courses.list.show"),
-                        title: course.title,
-                      })}
-                      className={buttonClass({ variant: "ghost", size: "sm" })}
-                    >
-                      {course.isActive ? st("courses.list.hide") : st("courses.list.show")}
-                    </SubmitButton>
-                  </form>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </SectionCard>
+        <CourseRoster rows={rows} className="mt-8" />
       )}
       <Pager
         page={coursePage.page}
@@ -270,7 +220,7 @@ export default async function CoursesPage({
         href={pageHref}
         total={st("courses.list.pagination.total", { count: coursePage.total })}
         t={st}
-        className="mt-4"
+        className="mt-6"
       />
     </main>
   );

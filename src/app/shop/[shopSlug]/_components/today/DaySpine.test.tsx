@@ -12,8 +12,17 @@ import { assembleDaySpine, type SpineDeparture, type TodayAction } from "@/lib/t
 vi.mock("@/app/actions/invoices", () => ({ resendInvoiceAction: vi.fn() }));
 vi.mock("@/app/actions/notifications", () => ({ resendConfirmationAction: vi.fn() }));
 vi.mock("@/app/actions/waivers", () => ({ sendWaiversAction: vi.fn() }));
+// The closing block binds the evening's own acts, which live in the home's
+// sibling `actions.ts` — a `"use server"` module whose imports reach
+// better-auth and the database. Same reason as the three above.
+vi.mock("@/app/shop/[shopSlug]/actions", () => ({
+  closeDayAction: vi.fn(),
+  setLeftoverDecisionAction: vi.fn(),
+}));
 
-import { DaySpine, type SpineInviteAction } from "./DaySpine";
+import type { FirstBooking } from "@/db/first-booking";
+import { assembleEveningClose, type CloseoutDeparture } from "@/lib/closeout";
+import { DaySpine, type EveningReading, type SpineInviteAction } from "./DaySpine";
 
 afterEach(() => {
   cleanup();
@@ -61,6 +70,51 @@ function departure(overrides: Partial<SpineDeparture> = {}): SpineDeparture {
 
 const boat = (tripId: string, label = "Two-Tank Reef · 7:00 AM") => ({ tripId, label });
 
+/**
+ * One of the day's departures as the closing state sees it — the shape
+ * `assembleDayCloseout` hands `assembleEveningClose`. Built here rather than
+ * run through the whole assembly so an evening case can state the one fact it
+ * is about.
+ */
+function closed(overrides: Partial<CloseoutDeparture> & { tripId: string }): CloseoutDeparture {
+  return {
+    title: "Two-Tank Reef",
+    startsAt: hoursFromNow(-6),
+    endsAt: hoursFromNow(-3),
+    booked: 10,
+    status: "all_home",
+    gapReason: null,
+    diveNumber: 0,
+    uncounted: 0,
+    recapShoutout: null,
+    recapSentAt: null,
+    recapAutoSendPaused: false,
+    recapAutoSendAt: null,
+    recapFailed: false,
+    ended: true,
+    photos: [],
+    crewPhotos: [],
+    ...overrides,
+  };
+}
+
+function evening(
+  departures: CloseoutDeparture[],
+  overrides: Partial<Omit<EveningReading, "close">> = {},
+): EveningReading {
+  return {
+    close: assembleEveningClose(departures, NOW),
+    headCountCloses: new Map(),
+    recapEditors: new Map(),
+    canOpenLog: true,
+    leftovers: [],
+    latest: null,
+    closeCount: 0,
+    firstEver: false,
+    ...overrides,
+  };
+}
+
 function renderSpine({
   departures = [departure()],
   actions = [],
@@ -74,6 +128,9 @@ function renderSpine({
   showPaymentsRow?: boolean;
   crewedTripIds?: string[];
   sessions?: React.ReactNode;
+  firstRun?: React.ReactNode;
+  firstBooking?: FirstBooking | null;
+  evening?: EveningReading;
 } = {}) {
   return render(
     <DaySpine
@@ -372,6 +429,97 @@ describe("the good-news moments", () => {
   });
 });
 
+/**
+ * **Day zero is a state of this spine, never a wizard** — ADR
+ * 20260827-first-light, decision 6. The setup ledger leads the same column of
+ * work every other morning is, rather than replacing the page with a mode.
+ */
+describe("the first morning", () => {
+  const ledger = <p data-testid="first-run">First morning</p>;
+
+  it("leads the spine, above everything else on it", () => {
+    // A station under it purely so there is something for the group to be
+    // *above*: the shop this composition is for has no departures at all, and
+    // what is being pinned here is the spine's own order.
+    const { container } = renderSpine({ firstRun: ledger });
+    const group = screen.getByTestId("first-run");
+    const stations = container.querySelector("ol");
+    expect(stations).not.toBeNull();
+    expect(
+      group.compareDocumentPosition(stations as Node) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("stands the queue's own good-news state down: this shop has no roster to praise", () => {
+    // "Nothing is waiting on you" is a claim about a week of divers. A shop
+    // that has never had a departure has none, and it read directly beneath
+    // the step telling it to schedule its first trip (issue #711).
+    renderSpine({ firstRun: ledger, departures: [], actions: [] });
+    expect(screen.queryByText("Nothing is waiting on you")).toBeNull();
+  });
+
+  it("still renders the queue's good-news state for a shop past its first run", () => {
+    renderSpine({ departures: [], actions: [] });
+    expect(screen.getByText("Nothing is waiting on you")).toBeInTheDocument();
+  });
+});
+
+/**
+ * **The shop's first booking ever, and then never again** — ADR
+ * 20260827-first-light, decision 6, taking the coral budget's "the home, once
+ * ever" row (20260827-clearwater-surface-language, decision 11).
+ *
+ * Whether the moment is *live* is `shopFirstBooking`'s question and is pinned
+ * in `src/db/first-booking.test.ts`; what this file owns is the surface's own
+ * rule — one coral element at a time, and which one wins when two are true.
+ */
+describe("the first booking ever", () => {
+  const mark: FirstBooking = {
+    bookingId: "b1",
+    tripId: "t9",
+    tripTitle: "Two-Tank — Alligator Reef",
+    startsAt: hoursFromNow(96),
+    diverName: "Ravi Chandra",
+  };
+
+  it("says the moment in words beside the coral, and puts the seat under it", () => {
+    renderSpine({ firstBooking: mark, actions: [action({ id: "b", departure: boat("t1") })] });
+    expect(screen.getByText("Your first booking")).toBeInTheDocument();
+    expect(screen.getByText("Ravi Chandra")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Two-Tank — Alligator Reef" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/t9",
+    );
+  });
+
+  it("renders nothing at all once the moment has passed", () => {
+    renderSpine({ firstBooking: null, actions: [action({ id: "b", departure: boat("t1") })] });
+    expect(screen.queryByText("Your first booking")).toBeNull();
+  });
+
+  it("outranks the morning all-clear: one happens once, the other on a good Tuesday", () => {
+    renderSpine({
+      firstBooking: mark,
+      actions: [
+        action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
+        action({ id: "later", kind: "waiver", departure: boat("t9") }),
+      ],
+    });
+    expect(screen.getByText("Your first booking")).toBeInTheDocument();
+    expect(screen.queryByText("Today's boats are all clear 🤙")).toBeNull();
+  });
+
+  it("yields to the evening: a boat that came home is the later moment", () => {
+    renderSpine({
+      firstBooking: mark,
+      departures: [],
+      evening: evening([closed({ tripId: "t1" })]),
+    });
+    expect(screen.getByText(/All boats are home/)).toBeInTheDocument();
+    expect(screen.queryByText("Your first booking")).toBeNull();
+  });
+});
+
 describe("the role lens", () => {
   it("keeps the withheld-work line under the summary sentence, above the first station", () => {
     const { container } = renderSpine({
@@ -646,5 +794,230 @@ describe("the words on the spine", () => {
     });
     const text = container.textContent ?? "";
     expect(text).not.toMatch(/\b(she|he|her|hers|his|him|they|them|their|theirs)\b/i);
+  });
+});
+
+/**
+ * **The evening reading** — ADR 20260827-clearwater-surface-language, decision
+ * 4, and H-62, which removed `/close-out` in the same change that shipped
+ * this.
+ *
+ * Two of these are the slice's named pins: the closing block never renders
+ * while a departure is still out, and no acknowledgement gate stands on the
+ * closing act. The rest hold the coral budget's one-element rule and the log
+ * door's owner gate.
+ */
+describe("the evening reading", () => {
+  it("never renders the closing block while a departure is still out", () => {
+    // **The pin.** One boat home, one due back in an hour. Nothing on this
+    // page may suggest the day is over — no leftovers group, no closing act.
+    renderSpine({
+      departures: [],
+      evening: evening([
+        closed({ tripId: "home" }),
+        closed({
+          tripId: "out",
+          title: "Night Dive",
+          status: "still_out",
+          startsAt: hoursFromNow(-2),
+          endsAt: hoursFromNow(1),
+          ended: false,
+        }),
+      ]),
+    });
+
+    expect(screen.queryByRole("button", { name: "Close the day" })).toBeNull();
+    expect(screen.queryByText("Still open — carries to tomorrow")).toBeNull();
+    // The station itself is there, and says which state it is in — in words,
+    // never in colour alone.
+    expect(screen.getByText("Still out")).toBeInTheDocument();
+  });
+
+  it("renders the closing block once every departure of the day has settled", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1" }), closed({ tripId: "t2", title: "Wreck Trip" })], {
+        leftovers: [action({ id: "leftover-1", subject: "Lena Fischer" })],
+      }),
+    });
+
+    expect(screen.getByRole("button", { name: "Close the day" })).toBeInTheDocument();
+    expect(screen.getByText("Still open — carries to tomorrow")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
+  });
+
+  it("puts no acknowledgement control on the closing act, at any leftover count", () => {
+    // **The pin.** The surface this replaced made a staffer tick "I have seen
+    // the open head count" before it would record the act — a confirm on
+    // something reversible, re-asking a decision H-57 has the shop making per
+    // row. There is no checkbox here at any count, and none when the day's
+    // own head count is the thing still open.
+    for (const leftovers of [
+      [],
+      [action({ id: "l1" })],
+      [action({ id: "l1" }), action({ id: "l2" })],
+    ]) {
+      cleanup();
+      renderSpine({
+        departures: [],
+        evening: evening(
+          [
+            closed({
+              tripId: "t1",
+              status: "unreconciled",
+              gapReason: "missing_diver",
+              diveNumber: 1,
+              uncounted: 1,
+            }),
+          ],
+          { leftovers },
+        ),
+      });
+      expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+      expect(screen.getByRole("button", { name: "Close the day" })).toBeInTheDocument();
+    }
+  });
+
+  it("offers the departure log only to a reader who may generate one", () => {
+    renderSpine({ departures: [], evening: evening([closed({ tripId: "t1" })]) });
+    expect(screen.getByRole("link", { name: "Generate log" })).toBeInTheDocument();
+
+    cleanup();
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1" })], { canOpenLog: false }),
+    });
+    // Absent, never disabled — the gate is the render (AGENTS.md).
+    expect(screen.queryByRole("link", { name: "Generate log" })).toBeNull();
+  });
+
+  it("offers it on a departure that has not come home, which is when it is wanted", () => {
+    // ADR 20260804-incident-export-owner-gate's 2026-08-12 amendment, verbatim:
+    // *offered on every departure row, not only the ones that are back, because
+    // the moment a shop most needs a departure's recorded facts is while the
+    // departure is still happening.* Moving the door onto the evening's station
+    // in 6d dropped it from the live one, which put an owner whose boat is
+    // overdue in the one place they could not reach the record of who is on it.
+    renderSpine({
+      departures: [departure({ tripId: "t1" })],
+      evening: evening([closed({ tripId: "t2", title: "Dawn Wall" })]),
+    });
+    const live = screen.getByRole("link", { name: "Two-Tank Reef" }).closest("li");
+    if (!live) throw new Error("the live departure did not render a station");
+    expect(within(live).getByRole("link", { name: "Generate log" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/t1/log",
+    );
+
+    cleanup();
+    renderSpine({
+      departures: [departure({ tripId: "t1" })],
+      evening: evening([closed({ tripId: "t2", title: "Dawn Wall" })], { canOpenLog: false }),
+    });
+    expect(screen.queryByRole("link", { name: "Generate log" })).toBeNull();
+  });
+
+  it("says how the head count ended, once, on the station that owns it", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1", booked: 10 })], {
+        headCountCloses: new Map([
+          ["t1", { closedAt: hoursFromNow(-3), closedBy: "Keiko Tanaka" }],
+        ]),
+      }),
+    });
+
+    expect(screen.getByText("All home")).toBeInTheDocument();
+    expect(screen.getByText(/10 of 10 back by/)).toBeInTheDocument();
+    expect(screen.getByText("head count closed by Keiko Tanaka")).toBeInTheDocument();
+  });
+
+  it("marks the day's homecoming once, and only when every count closed clean", () => {
+    renderSpine({ departures: [], evening: evening([closed({ tripId: "t1", booked: 10 })]) });
+
+    const line = screen.getAllByText("All boats are home — 10 out, 10 back.");
+    expect(line).toHaveLength(1);
+    expect(line[0]).toHaveAttribute("role", "status");
+  });
+
+  it("keeps the accent unspent when a diver did not come back", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([
+        closed({
+          tripId: "t1",
+          booked: 10,
+          status: "unreconciled",
+          gapReason: "missing_diver",
+          diveNumber: 2,
+          uncounted: 1,
+        }),
+      ]),
+    });
+
+    expect(screen.queryByText(/All boats are home/)).toBeNull();
+    expect(screen.queryByText(/Your first boat is home/)).toBeNull();
+  });
+
+  it("words the moment as a first, once ever, and never again after that day", () => {
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1", booked: 3 })], { firstEver: true }),
+    });
+    expect(screen.getByText("Your first boat is home — 3 out, 3 back.")).toBeInTheDocument();
+    expect(screen.queryByText(/All boats are home/)).toBeNull();
+  });
+
+  it("never renders two coral elements: the recorded close takes the line's place", () => {
+    // The coral table allows a surface exactly one moment at a time, and the
+    // record of the close *is* the homecoming, kept. The line stands down for
+    // it rather than sitting above it.
+    renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1", booked: 10 })], {
+        latest: {
+          id: "close-1",
+          shopDay: "2026-08-27",
+          closedAt: hoursFromNow(-1),
+          actorName: "Dana Reyes",
+          outstanding: { departures: [], leftovers: [], adminTasks: [] },
+        },
+        closeCount: 1,
+      }),
+    });
+
+    expect(screen.queryByText(/All boats are home/)).toBeNull();
+    expect(screen.getByText(/Closed by Dana Reyes at/)).toBeInTheDocument();
+    // The panel is coral, so it says its state in words too.
+    expect(screen.getByText("Nothing was outstanding.")).toBeInTheDocument();
+    // A record is not a lock: the act is still there, worded as a repeat.
+    expect(screen.getByRole("button", { name: "Close the day again" })).toBeInTheDocument();
+  });
+
+  it("holds a settled station's place in clock order among the boats still ahead", () => {
+    // The spine's own stations are read forward and a settled one is read
+    // back; merged, the column of times still reads top to bottom.
+    renderSpine({
+      departures: [departure({ tripId: "later", title: "Night Dive", startsAt: hoursFromNow(6) })],
+      evening: evening([
+        closed({ tripId: "dawn", title: "Dawn Two-Tank" }),
+        closed({
+          tripId: "later",
+          title: "Night Dive",
+          status: "not_departed",
+          startsAt: hoursFromNow(6),
+          endsAt: hoursFromNow(9),
+          ended: false,
+        }),
+      ]),
+    });
+
+    const titles = screen
+      .getAllByRole("heading", { level: 3 })
+      .map((heading) => heading.textContent);
+    expect(titles).toEqual(["Dawn Two-Tank", "Night Dive"]);
+    // The live station won the trip it shares with the closing list — one
+    // departure is one station, never two.
+    expect(screen.getAllByText("Night Dive")).toHaveLength(1);
   });
 });

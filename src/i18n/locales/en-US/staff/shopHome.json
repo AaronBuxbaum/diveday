@@ -1,11 +1,4 @@
 {
-  "closeOut": {
-    "heading": "The last boat is in",
-    "body": "Every departure today is back at the dock. One pass through the close-out — how each boat ended, what is still open, what tomorrow opens with — and you can go home.",
-    "headingBoatStillOut": "The close-out is open",
-    "bodyBoatStillOut": "Not every boat is back yet — you can write up the departures that are home now.",
-    "action": "Close out the day"
-  },
   "createdNotice": {
     "single": "“{title}” is on the board. 🤙",
     "series": "“{title}” is on the board — {count, plural, one {# trip} other {# trips}} scheduled. 🤙"
@@ -77,7 +70,7 @@
     }
   },
   "firstRun": {
-    "heading": "Get your shop ready",
+    "groupLabel": "First morning",
     "subtitle": "{count, plural, one {# step} other {# steps}} and divers can start booking.",
     "progress": "{done} of {total} done",
     "contactTitle": "Add your contact details",
@@ -137,6 +130,14 @@
     "aboardReasonCertification": "a certification this dive asks for that we have not seen.",
     "aboardReasonUnknown": "nothing on file that clears them. An unsigned waiver is no medical declaration.",
     "aboardReasonPayment": "payment still owed. It is in the list below.",
-    "crewRollCallOpen": "Every diver is aboard — the crew roll call is still open."
+    "crewRollCallOpen": "Every diver is aboard — the crew roll call is still open.",
+    "allHome": "All boats are home — {out} out, {back} back.",
+    "firstBoatHome": "Your first boat is home — {out} out, {back} back.",
+    "firstBooking": "Your first booking",
+    "close": {
+      "back": "{back} of {booked} back",
+      "backBy": "{back} of {booked} back by {time}",
+      "closedBy": "head count closed by {name}"
+    }
   }
 }

@@ -8,10 +8,10 @@ exists today.
 This document is the living rulebook for those pages: the positioning they argue, the claims they
 may make, the voice they use, and the maintenance loop that keeps them true. The dated case for the
 current direction is [archive/marketing-review-20260723.md](archive/marketing-review-20260723.md)
-(fully delivered, kept for rationale); the conversion pass
-[marketing-review-20260827.md](marketing-review-20260827.md) is **nearly delivered** — slices
-12a–12e landed 2026-08-28 (PR #1115), 12f remains open;
-the step-by-step editing procedure is the `marketing-page` skill.
+(fully delivered, kept for rationale); so is the conversion pass argued in
+[marketing-review-20260827.md](marketing-review-20260827.md), whose slices 12a–12f all landed on
+2026-08-28 — what is left of it is one owner call, the leave-it guides' pricing link, which was
+never a slice; the step-by-step editing procedure is the `marketing-page` skill.
 
 **These pages are product surface.** DiveDay is developed exclusively by AI sessions, so marketing
 has no separate team, tooling, or CMS: copy is code, reviewed like code, tested like code
@@ -256,6 +256,16 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   shop's own Stripe account, the export ZIP, roll call with no signal). **The lesson that outlived
   all four:** on this page the headline's job is to say something true about *the buyer's* position,
   not to characterize DiveDay — as a vendor, as a size, or as an attitude.
+  **And the test binds every h2 on that page, not only its h1** (2026-08-28). Slice 12f fixed the
+  "From day one" band's heading — the band carrying the export terms, the plan terms and who
+  answers, which is the page's best material and the answer to the buyer's strongest objection — by
+  replacing a heading about *us* with the metaphor "What you're standing on.", and shipped a fifth
+  failure of the same test: a rival could paste it unchanged. The heading is now **"Month to month,
+  and the export is one button."** — the plan terms printed six inches beneath it, and the export
+  the rules band dares the reader to go and run. `/about`'s headings are the only part of that page
+  a skimmer reads, so one that argues nothing costs the band it stands over.
+  `src/app/about/copy.test.ts` makes the test mechanical for that heading: some clause of it has to
+  appear in the band's own published prose, which no metaphor can satisfy.
 - **Concede the facts; never apologize for them.** This is the rule the page-level version of the
   claims policy kept losing. "DiveDay is new", "it doesn't do everything", and "it's still moving"
   are honesty the policy requires, and they stay. What is banned is the register that grew up around them — by
@@ -321,6 +331,13 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   not the homepage close — because that is where the decision is made; a reader who scrolls past it
   has already read it. Deleting it from a page entirely is a different change and not an allowed
   one: `e2e/marketing.spec.ts` asserts it on `/`.
+  **`/about` carried it nowhere at all until 2026-08-28**, which is the failure this rule is worded
+  to catch and did not: the page had one demo door, in its closing band, and no note under it. When
+  slice 12f moved the first door up to the four-rules band the gap became the expensive kind — a
+  page that has just dared a burned buyer to go and check four things, offering an unlabeled button
+  at the moment of maximum impulse. The note stands under `about-rules` now, in `/product`'s hero
+  shape, and the closing band repeats the door and not the note. The spec asserts both halves there:
+  present in the rules band, and exactly once in `<main>`.
   **This rule governs `demoNote` only, and `/pricing`'s trial note diverges from it deliberately
   (2026-08-28).** `marketing.pricing.trialNote` — free, three weeks, no card, and the soft expiry
   `src/lib/trial.ts` implements — stands at *both* of that page's CTA pairs, the price hero and the
@@ -347,7 +364,9 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   demo from four positions inside its body, each added by a different review answering a different
   objection. `e2e/marketing.spec.ts` counts the primary in *every* band of that page rather than
   only at the door most recently added, which is the shape that let the homepage hero reach nine
-  choices before it was cut back.
+  choices before it was cut back. **`/about` is counted the same way** since 2026-08-28, when the
+  band holding its four checkable rules gained the pair (`about-rules`) and the support mailto two
+  bands below it demoted to secondary — a page with two doors is a page that can grow a third.
   **The homepage hero is the scarcest screen on the site and is capped at one primary plus one
   secondary** — it once offered around nine choices (a five-chip role picker, a diver-preview link,
   demo, trial), which is a menu, not an ask. Cutting a hero control never means deleting the
@@ -367,9 +386,16 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   question and parked our own half of the answer behind a click, which is what a burned buyer reads
   as a card wall. The figure now stands in the link's own words ("One flat {price} {cadence} — see
   everything it covers →"), so the band spends no new control and the reader learns the number
-  where the question is asked. Three sentences now interpolate `earlyAccessPrice` rather than one;
-  their keys are pinned in `src/lib/marketing.test.ts`, and a fourth that spells the number out
-  instead fails there.
+  where the question is asked.
+  **`/about`'s pricing door went the same way on the same day**, and it was the worse offender: that
+  page raises the cost question three times — the "One price, no seats." rule sends the reader to
+  the pricing page to *check it*, the "How it's run" heading promises straightforward pricing, and
+  the paragraph beneath it says the whole of it is on one page — and then offered "See what it
+  costs", which on a page whose entire argument is that nothing here is hidden reads as *they won't
+  say*. It now reads "One flat {price} {cadence} — see the whole list", closing the loop the rules
+  card opened. Four sentences now interpolate `earlyAccessPrice` rather than one; their keys are
+  pinned in `src/lib/marketing.test.ts`, and a fifth that spells the number out instead fails
+  there.
   The internal positioning pillars ("easy to try", "safe to leave") are argument structure, not
   user-facing labels. **A label a reader sees names a thing, not a strategy** — and after the
   2026-08-13 redesign the homepage names things in two idioms, deliberately: an uppercase eyebrow
@@ -461,7 +487,7 @@ demo entries and no trials is telling you something different from a page with n
 
 **A page that offers the same action from more than one place splits its tag by position** —
 `home-hero` / `home-closing`, `product` / `product-mid` / `product-index`, `pricing` /
-`pricing-close`, and the
+`pricing-close`, `about-rules` / `about-closing`, and the
 switching guides' `switching-<slug>` / `switching-<slug>-mid` / `switching-<slug>-close` (with the
 spreadsheet guide using the same three-position shape).
 Mid-page and closing doors exist because
@@ -483,6 +509,22 @@ convinced by the inventory is a different moment from one convinced by the dock 
 `product-mid` sits under, and folded together neither could be read on its own. The door carries no
 words of its own: the band's lede is its caption, and a heading there would restate the sentence
 directly above the list it closes.
+
+`about-rules` (2026-08-28) is the same argument on the trust page, and the one where the door was
+furthest from the impulse. `/about`'s four operating rules each end in the demo action that proves
+them — *save a manifest to your phone, turn the network off, and run roll call anyway* — and the
+nearest thing a convinced reader could act on was a primary-weight `mailto:` two bands down, with
+the demo waiting past the founder story, the concessions and the export terms
+([marketing-review-20260827.md](marketing-review-20260827.md), "help arrives after the homework").
+The pair now closes the band that makes the dare, wordless for the same reason `product-index` is:
+the four "Check it" lines above it are its caption. The demo note stands beneath the pair, because
+this is now the page's first door and the terms belong at the first one (the once-per-page rule
+above). **The support mailto demoted to secondary in
+the same change** — it is a real offer and stays on the page, level with the pricing door beside it,
+but "email a stranger and wait" is a slower answer than the one the rules had just earned, and
+primary weight on it made it the heaviest thing on the page. `/about` now spends its budget where
+`/product` and `/pricing` spend theirs: one primary per screen, pinned in `e2e/marketing.spec.ts`
+band by band.
 
 **Not every tagged door is a conversion.** Some links carry a tag without firing either event: the
 diver-preview link into the demo shop's public schedule (`scheduleAttributionHref`) and **every

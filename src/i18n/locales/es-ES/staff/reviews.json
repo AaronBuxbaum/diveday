@@ -1,14 +1,11 @@
 {
   "title": "Lo que dicen los buceadores",
-  "description": "Cada reseña aquí viene de alguien que estuvo en el barco. Una valoración sola se publica de inmediato; cualquiera con palabras espera tu revisión.",
   "viewPublicPage": "Ver página pública",
   "notice": {
     "published": "Reseña publicada en tu página de calendario.",
-    "hidden": "Reseña oculta — ya no cuenta para tu valoración.",
     "hiddenToast": "Reseña oculta.",
     "publishedManyOne": "{count} reseña publicada en tu página de calendario.",
     "publishedManyOther": "{count} reseñas publicadas en tu página de calendario.",
-    "noneSelected": "Marca primero las reseñas que quieres publicar.",
     "error": "No se pudo actualizar esa reseña. Inténtalo de nuevo.",
     "reasonRequired": "Elige un motivo antes de ocultar una reseña.",
     "noteRequired": "Cuenta en pocas palabras qué pasó cuando el motivo es «Otro motivo».",
@@ -16,26 +13,12 @@
     "standout": "Reseña marcada como destacada.",
     "standoutRemoved": "Reseña quitada de las destacadas."
   },
-  "overviewLabel": "Resumen de valoraciones",
-  "publicRating": "Valoración pública",
-  "noneYet": "Nada publicado todavía",
-  "fromPublished": "De tus reseñas publicadas",
-  "published": "Publicado",
-  "publishedDetail": "Se muestra en tu página de calendario",
-  "hidden": "Oculta",
-  "waitingOnYou": "Esperando tu revisión",
-  "waitingDetail": "Reseñas con palabras por leer",
-  "hiddenStat": "Ocultas",
-  "hiddenStatDetail": "No se muestra en tu página de calendario",
   "ratingWithheld": "Tu valoración sigue apareciendo en tu propia página de calendario, pero DiveDay ha dejado de publicarla en los buscadores: ahora está oculta más de una de cada cinco reseñas que has revisado. Volver a publicar {count, plural, one {# reseña oculta} other {# reseñas ocultas}} la recupera.",
-  "thisMonthStat": "Este mes: media de {rating}★ de {count, plural, one {# reseña} other {# reseñas}}",
-  "standout": "⭐ Reseña destacada",
+  "standout": "Destacada",
   "markStandout": "Marcar como destacada",
   "removeStandout": "Quitar de destacadas",
   "emptyHeading": "Todavía no hay reseñas",
   "emptyDetail": "A los buceadores se les pide una en su página de resumen después de una salida.",
-  "emptyWaitingHeading": "Nada esperando tu revisión",
-  "emptyWaitingDetail": "Las nuevas reseñas aparecerán aquí en cuanto un buceador deje una.",
   "emptyReviewLinkBody": "Aquí no hay nada que activar: una reseña llega cuando un buceador abre su resumen. Lo que sí decides tú es adónde va después alguien contento.",
   "emptyReviewLinkAction": "Configurar tu enlace de reseñas",
   "ratingOnly": "Solo valoración.",
@@ -43,14 +26,7 @@
   "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
   "hide": "Ocultar",
   "publish": "Publicar",
-  "publishSelected": "Publicar seleccionadas",
-  "selectToPublishAriaLabel": "Seleccionar la reseña de {name} para publicarla",
   "saving": "Guardando…",
-  "filterLabel": "Filtrar reseñas",
-  "filter": {
-    "all": "Todas las reseñas",
-    "waiting": "Esperando tu revisión"
-  },
   "pagination": {
     "total": "{count, plural, one {# reseña} other {# reseñas}}"
   },
@@ -67,5 +43,14 @@
     "wrongSubject": "Habla de otra salida o de otro centro",
     "spam": "Spam o una prueba",
     "other": "Otro motivo"
-  }
+  },
+  "aggregate": "media de {rating} en {count, plural, one {# reseña publicada} other {# reseñas publicadas}}",
+  "aggregateMonth": "este mes {rating} de {count, plural, one {# reseña} other {# reseñas}}",
+  "group": {
+    "waiting": "Esperando tu revisión — {count}",
+    "published": "Publicadas — {count}",
+    "hidden": "Ocultas — {count}"
+  },
+  "publishAll": "{count, plural, =2 {Publicar ambas} other {Publicar las #}}",
+  "republish": "Volver a publicar"
 }

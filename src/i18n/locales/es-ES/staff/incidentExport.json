@@ -2,7 +2,7 @@
   "title": "Registro de la salida",
   "openLink": "Generar registro",
   "ownerOnlyNotice": "Solo un propietario puede generar el registro de una salida. Todo lo que recoge — recuento, cronología, estado de cada buceador — está en el manifiesto de esa salida.",
-  "backToCloseOut": "Volver al cierre del día",
+  "backToToday": "Volver a Hoy",
   "description": "Lo registrado en esta salida — embarque, cronología del recuento, evidencia de titulaciones, estado de exenciones — redactado como un solo documento, listo para imprimir si alguna vez lo piden las autoridades o las aseguradoras.",
   "factsOnly": "Este documento presenta hechos registrados con su fecha y hora. No evalúa, certifica ni implica juicio alguno de seguridad.",
   "generatedLine": "Generado el {date} por {name}",

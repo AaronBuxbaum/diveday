@@ -29,6 +29,7 @@ import {
   markOrderVoidedByInvoiceId,
   maxLineItemUnitAmountCents,
   openOrdersForBookings,
+  pagedOrdersByDay,
   refreshOrderStatus,
   refundOrder,
   resendOrderInvoice,
@@ -36,7 +37,7 @@ import {
 } from "./orders";
 import { startPaymentOperation } from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
-import { orders, paymentOperationIntents, shops } from "./schema";
+import { orders, paymentOperationIntents, people, shops } from "./schema";
 import { setShopCurrency, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
@@ -2007,5 +2008,188 @@ describe("orders — a partial refund", () => {
     const outcomes = [first.status, second.status].sort();
     expect(outcomes).toEqual(["in_progress", "refunded"]);
     expect(calls).toBe(1);
+  });
+});
+
+/**
+ * The day ledger's arithmetic — ADR 20260827-clearwater-surface-language,
+ * decision 7. A group header states three things a row no longer repeats (the
+ * date, the day's count, the day's money), and every one of them has to hold
+ * under the same filter and across a page boundary, or the header is a
+ * confident wrong number on a money screen.
+ */
+describe("pagedOrdersByDay", () => {
+  /** New York, because that is where the seeded shop is and the day is *its* day. */
+  const SHOP_TZ = "America/New_York";
+
+  async function ledgerFixture() {
+    const { db, shop } = await seededShopContext();
+    const staff = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
+    const [diver] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.shopId, shop.id))
+      .limit(1);
+    if (!diver) throw new Error("the seeded shop has no people");
+
+    let counter = 0;
+    async function invoice(patch: {
+      createdAt: Date;
+      totalCents?: number;
+      status?: "open" | "paid" | "void" | "partly_refunded";
+      refundedCents?: number;
+    }) {
+      counter += 1;
+      await db.insert(orders).values({
+        shopId: shop.id,
+        personId: diver.id,
+        createdByPersonId: staff,
+        status: patch.status ?? "paid",
+        currency: "usd",
+        totalCents: patch.totalCents ?? 10_000,
+        amountPaidCents: 0,
+        refundedCents: patch.refundedCents ?? 0,
+        stripeAccountId: "acct_ledger",
+        stripeCustomerId: "cus_ledger",
+        stripeInvoiceId: `in_ledger_${counter}`,
+        createdAt: patch.createdAt,
+        updatedAt: patch.createdAt,
+      });
+    }
+    return { db, shop, invoice };
+  }
+
+  it("files each order under the day the shop was in, not the day UTC was in", async () => {
+    const { db, shop, invoice } = await ledgerFixture();
+    // 02:00Z on the 27th is 22:00 on the 26th in New York. A ledger grouped by
+    // the server's day would file this under Thursday and show the shop an
+    // order it has no memory of taking that morning.
+    await invoice({ createdAt: new Date("2026-08-27T02:00:00Z") });
+    await invoice({ createdAt: new Date("2026-08-27T13:00:00Z") });
+    await invoice({ createdAt: new Date("2026-08-27T15:00:00Z") });
+
+    const ledger = await pagedOrdersByDay(db, shop.id, SHOP_TZ, {}, { pageSize: 20 });
+    expect(ledger.groups.map((group) => group.day)).toEqual(["2026-08-27", "2026-08-26"]);
+    expect(ledger.groups.map((group) => group.count)).toEqual([2, 1]);
+    expect(ledger.groups.flatMap((group) => group.orders)).toHaveLength(3);
+  });
+
+  it("gives a day the subtotal of exactly the rows the filter left it", async () => {
+    const { db, shop, invoice } = await ledgerFixture();
+    const day = "2026-08-27T14:00:00Z";
+    await invoice({ createdAt: new Date(day), status: "open", totalCents: 12_000 });
+    await invoice({ createdAt: new Date(day), status: "paid", totalCents: 9_000 });
+
+    const everything = await pagedOrdersByDay(db, shop.id, SHOP_TZ, {}, { pageSize: 20 });
+    expect(everything.groups[0]?.count).toBe(2);
+    expect(everything.groups[0]?.subtotalCents).toBe(21_000);
+
+    // The pager-scope rule of ADR 20260803-one-pagination-model, applied to a
+    // subtotal: a header summing rows the filter removed is the same lie as a
+    // pager promising pages that render nothing.
+    const openOnly = await pagedOrdersByDay(
+      db,
+      shop.id,
+      SHOP_TZ,
+      { status: "open" },
+      { pageSize: 20 },
+    );
+    expect(openOnly.groups[0]?.count).toBe(1);
+    expect(openOnly.groups[0]?.subtotalCents).toBe(12_000);
+  });
+
+  it("drops a void order out of the money and counts a refund at its net", async () => {
+    const { db, shop, invoice } = await ledgerFixture();
+    const day = "2026-08-27T14:00:00Z";
+    await invoice({ createdAt: new Date(day), status: "paid", totalCents: 10_000 });
+    await invoice({ createdAt: new Date(day), status: "void", totalCents: 50_000 });
+    await invoice({
+      createdAt: new Date(day),
+      status: "partly_refunded",
+      totalCents: 20_000,
+      refundedCents: 5_000,
+    });
+
+    const ledger = await pagedOrdersByDay(db, shop.id, SHOP_TZ, {}, { pageSize: 20 });
+    // Three rows on screen, and the day is worth what it actually kept:
+    // 10,000 + 0 + 15,000. The question a day's foot answers is "what came
+    // in", so an invoice that was cancelled is worth nothing and one that gave
+    // money back is worth what is left.
+    expect(ledger.groups[0]?.count).toBe(3);
+    expect(ledger.groups[0]?.subtotalCents).toBe(25_000);
+  });
+
+  it("restates a split day on the next page, with the whole day's money either side", async () => {
+    const { db, shop, invoice } = await ledgerFixture();
+    await invoice({ createdAt: new Date("2026-08-27T16:00:00Z"), totalCents: 10_000 });
+    await invoice({ createdAt: new Date("2026-08-27T15:00:00Z"), totalCents: 20_000 });
+    await invoice({ createdAt: new Date("2026-08-27T14:00:00Z"), totalCents: 30_000 });
+
+    const first = await pagedOrdersByDay(db, shop.id, SHOP_TZ, {}, { page: 1, pageSize: 2 });
+    expect(first.groups).toHaveLength(1);
+    expect(first.groups[0]?.orders).toHaveLength(2);
+    expect(first.groups[0]?.continued).toBe(false);
+
+    const second = await pagedOrdersByDay(db, shop.id, SHOP_TZ, {}, { page: 2, pageSize: 2 });
+    expect(second.groups).toHaveLength(1);
+    expect(second.groups[0]?.orders).toHaveLength(1);
+    // The header comes back rather than leaving page 2 opening on rows under
+    // nothing — and it says so, because the subtotal beside it is the day's,
+    // not the page slice's, and must not read as new money.
+    expect(second.groups[0]?.continued).toBe(true);
+    expect(second.groups[0]?.count).toBe(3);
+    expect(second.groups[0]?.subtotalCents).toBe(60_000);
+    expect(first.groups[0]?.subtotalCents).toBe(60_000);
+  });
+
+  it("searches what a row shows — the diver's name and the departure it names", async () => {
+    const { db, shop, reef, entry, staff } = await orderContext();
+    const raisedAt = await dbNow(db);
+    await db.insert(orders).values({
+      shopId: shop.id,
+      bookingId: entry.booking.id,
+      personId: entry.person.id,
+      createdByPersonId: staff,
+      status: "open",
+      currency: "usd",
+      totalCents: 12_000,
+      amountPaidCents: 0,
+      stripeAccountId: "acct_search",
+      stripeCustomerId: "cus_search",
+      stripeInvoiceId: "in_search_seat",
+      createdAt: raisedAt,
+      updatedAt: raisedAt,
+    });
+
+    // The muted middle column of that row renders the departure's title, so a
+    // box captioned "Search diver or trip" that could not find it would read
+    // as broken.
+    const byTrip = await pagedOrdersByDay(
+      db,
+      shop.id,
+      SHOP_TZ,
+      { q: reef.title.slice(0, 9) },
+      { pageSize: 20 },
+    );
+    expect(byTrip.page.total).toBe(1);
+
+    const byDiver = await pagedOrdersByDay(
+      db,
+      shop.id,
+      SHOP_TZ,
+      { q: entry.person.fullName.slice(0, 4) },
+      { pageSize: 20 },
+    );
+    expect(byDiver.page.total).toBe(1);
+
+    const byNeither = await pagedOrdersByDay(
+      db,
+      shop.id,
+      SHOP_TZ,
+      { q: "nothing here" },
+      { pageSize: 20 },
+    );
+    expect(byNeither.page.total).toBe(0);
+    expect(byNeither.groups).toEqual([]);
   });
 });

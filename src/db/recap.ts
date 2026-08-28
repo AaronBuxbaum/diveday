@@ -53,13 +53,17 @@ import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 export type RecapPhotoView = { id: string; imageUrl: string; caption: string | null };
 
 /**
- * The post-trip recap: a single shareable page per diver per trip, generated
+ * The post-trip recap: one reading of the day per diver per trip, generated
  * from the same source-of-truth trip and dive-site data the staff and booking
  * surfaces use. This is brainstorm C's "word-of-mouth window, weaponized" — the
  * highest-leverage marketing moment a shop has is the hours after a great dive,
- * and today it's unused. The page (`/recap/[token]`) is public via a signed
- * booking token; `sendDueRecaps` delivers the link no earlier than four hours
- * after the trip ends.
+ * and today it's unused.
+ *
+ * Since slice 7d it is not a page of its own: it is the thread's **after-state**
+ * (`src/app/ready/[token]/_components/AfterState.tsx`), which `/recap/[token]`
+ * renders from its own signed booking token and `/ready/[token]` renders from
+ * the diver's own readiness link once the day is over. `sendDueRecaps`
+ * delivers the `/recap` link no earlier than four hours after the trip ends.
  */
 
 /** A site the trip dived, as the recap page names it. */
@@ -75,6 +79,13 @@ export type RecapSite = {
 
 export type RecapPageData = {
   shop: {
+    /**
+     * The shop this booking belongs to. Carried so the thread's after-state
+     * can ask one more question of the same tenant — "what is your next public
+     * departure?" — without re-resolving the shop from its slug (ADR
+     * 20260827-the-divers-thread, decision 4).
+     */
+    id: string;
     name: string;
     slug: string;
     logoUrl: string | null;
@@ -146,10 +157,27 @@ export const MAX_CREW_RECAP_PHOTOS_PER_TRIP = 24;
 export const MAX_RECAP_CAPTION_LENGTH = 140;
 
 /**
- * Everything the recap page renders for one booking, or null when the booking
- * is missing or cancelled — a cancelled diver never dived, so there's no recap.
- * Sites are de-duplicated by name in dive order, so a two-tank day on one site
- * reads as one site, not two.
+ * Everything the recap page renders for one booking, or null when there was no
+ * day to look back on. Sites are de-duplicated by name in dive order, so a
+ * two-tank day on one site reads as one site, not two.
+ *
+ * **Three ways there is no day**, and the third was missing until a review
+ * caught it (2026-08-28). A **cancelled booking** never held a seat and a
+ * **no-show** never boarded; both have been refused here since the surface
+ * existed. A **cancelled departure** is the third, and it is the one nothing
+ * downstream catches: `callTripBlowout` sets `trips.status = 'cancelled'` and
+ * deliberately leaves every booking active, because whether each seat is
+ * refunded stays a per-booking staff decision (src/db/blowouts.ts), and
+ * `getTripWithBooked` filters `liveTrip()` — the soft-delete predicate — not
+ * the status. So on the afternoon a captain called it off, the divers who
+ * drove to the dock and were sent home still held an active booking on an
+ * ended trip, and this reader handed their page a boat, a crew, a dive count
+ * and a tip ask.
+ *
+ * The recap *email* never had that bug: `sendRecaps` filters
+ * `eq(trips.status, "scheduled")`. Folding the surface onto the readiness link
+ * removed the only guard, so the guard moves here — one answer to "was there a
+ * day" for the send path and both reading paths alike.
  */
 export async function getRecapPageData(
   db: AppDb,
@@ -191,6 +219,10 @@ export async function getRecapPageData(
 
   const trip = await getTripWithBooked(db, row.shopId, row.tripId);
   if (!trip) return null;
+  // The departure itself was called off. Read the doc comment above before
+  // relaxing this: an active booking on a cancelled trip is the *normal*
+  // shape of a blow-out, not an inconsistency to tolerate.
+  if (trip.status !== "scheduled") return null;
 
   const [dives, boat, crewMap, nativeBookings, priorVisitRows, photos, stripeAccount, latestTip] =
     await Promise.all([
@@ -210,6 +242,17 @@ export async function getRecapPageData(
             eq(bookings.personId, row.personId),
             ne(bookings.status, "cancelled"),
             ne(bookings.status, "no_show"),
+            // **A blown-out departure is not a dive day.** A cancellation
+            // leaves its bookings active by design, so without this the count
+            // includes days nobody dived — and the imported half of the same
+            // merge already refuses exactly that (`priorVisitStanding(...) !==
+            // "did_not_happen"`, below). `visitMilestone` is exact equality on
+            // {1, 10, 25, 50, 100}, so one phantom day does not blur a
+            // milestone, it skips it permanently: a first-timer whose first
+            // trip blew out and who rebooked would reach their real first dive
+            // counted as their second, and never see the "First dive day"
+            // stamp at all.
+            eq(trips.status, "scheduled"),
             liveTrip(),
             lte(trips.startsAt, trip.startsAt),
           ),
@@ -266,6 +309,7 @@ export async function getRecapPageData(
 
   return {
     shop: {
+      id: row.shopId,
       name: row.shopName,
       slug: row.slug,
       logoUrl: row.logoUrl,

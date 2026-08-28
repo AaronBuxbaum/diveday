@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
+import { EditorRail } from "@/components/editor/EditorRail";
+import { EditorSection, type EditorSectionRef } from "@/components/editor/EditorSection";
 import { FlashParams } from "@/components/FlashParams";
 import { ImageFileInput } from "@/components/ImageFileInput";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
@@ -87,7 +89,7 @@ export default async function EditCoursePage({
   };
   const errors: Record<string, string> = {
     invalid: t("courses.edit.errorInvalid"),
-    // Specific, because "something was invalid" on a nine-section form is a
+    // Specific, because "something was invalid" on an eight-section form is a
     // scavenger hunt — and a half-filled pair is the one thing this editor
     // refuses that the writer cannot see from the boxes.
     "faq-incomplete": t("courses.edit.errorFaqIncomplete"),
@@ -116,6 +118,24 @@ export default async function EditCoursePage({
       : t("courses.edit.openToUncertified")) +
     (course.minimumAge ? t("courses.edit.ageSuffix", { age: course.minimumAge }) : "");
 
+  // **The editor's sections, once.** The rail's entries, the anchors it jumps
+  // to, and the sentence naming which one holds unsaved work all read this one
+  // list, so a section cannot exist without a way back to it (ADR
+  // 20260827-the-shops-shelves, decision 2). `scheduleDaysJson` keeps the id it
+  // has always had: `saveCourseContentAction` names it in `?field=` when the
+  // day-by-day payload is refused, and `FieldErrorFocus` resolves that by id.
+  const sections: EditorSectionRef[] = [
+    { id: "pitch", label: t("courses.edit.pitchLegend") },
+    { id: "pricing", label: t("courses.edit.pricingLegend") },
+    { id: "photos", label: t("courses.edit.photosLegend") },
+    { id: "glance", label: t("courses.edit.glanceLegend") },
+    { id: "enroll", label: t("courses.edit.enrollLegend") },
+    { id: "fee-covers", label: t("courses.edit.feeCoversLegend") },
+    { id: "scheduleDaysJson", label: t("courses.edit.dayByDayLegend") },
+    { id: "faq", label: t("courses.edit.faqLegend") },
+  ];
+  const [pitch, pricing, photos, glance, enroll, feeCovers, dayByDay, faq] = sections;
+
   const templateFieldLabels: Record<CourseTemplateField, string> = {
     title: t("courses.edit.templateUpdates.fields.title"),
     agency: t("courses.edit.templateUpdates.fields.agency"),
@@ -135,7 +155,9 @@ export default async function EditCoursePage({
   };
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    // Wider than the form alone needs, because the rail takes the first 220px
+    // of it and the fields keep roughly the column they had.
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl">
       {/* One-shot, like every other staff notice: without this, `?notice=saved`
           stayed in the URL and replayed "Saved" on every refresh and every
           back-navigation, long after the save. `field` rides along because it
@@ -226,286 +248,310 @@ export default async function EditCoursePage({
           fallback (first aria-invalid control) must not fire on a clean load. */}
       {error ? <FieldErrorFocus field={field} /> : null}
 
-      {/* Above the form, not buried in one field's hint: a depth marker may be
-          typed into any prose box on this page, and it is the one piece of
-          syntax this editor asks a shop to learn. */}
-      <p className="mt-6 rounded-xl border border-border bg-surface-sunken px-4 py-3 text-sm text-muted">
-        {t.rich("courses.edit.depthMarkersHint", {
-          marker: (chunks) => (
-            <code className="rounded bg-surface px-1 font-mono text-xs text-foreground">
-              {chunks}
-            </code>
-          ),
-        })}
-      </p>
+      {/* The rail and the form it names. Below `lg` the rail collapses to a
+          jump-row above the sections and this is ordinary block flow, which is
+          also what lets the rail stick on a phone (a one-column grid gives its
+          nav a row of its own, and a sticky element with no travel never
+          moves). ADR 20260827-the-shops-shelves, decision 2. */}
+      <div className="mt-6 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">
+        <EditorRail navLabel={t("courses.edit.sectionsLabel")} sections={sections} />
 
-      <UnsavedChangesGuard storageKey={`course-draft:${course.id}`}>
-        <ConflictGuardedForm
-          action={saveAction}
-          conflictMessage={t("courses.edit.conflictMessage")}
-          reloadLabel={t("courses.edit.conflictReload")}
-          className="mt-6 flex flex-col gap-6"
-        >
-          {/* The row's edit generation, as this render saw it. The save
+        <UnsavedChangesGuard storageKey={`course-draft:${course.id}`}>
+          <ConflictGuardedForm
+            action={saveAction}
+            conflictMessage={t("courses.edit.conflictMessage")}
+            reloadLabel={t("courses.edit.conflictReload")}
+            className="min-w-0"
+          >
+            {/* The row's edit generation, as this render saw it. The save
               compares it and refuses rather than reverting somebody else's
               page (issue #820). `createdAt` when the row has never been saved
               since the column arrived, which is what stops the protection
               switching itself off for a course nobody has edited yet — the
               comparison coalesces the same way. */}
-          <input type="hidden" name="expectedVersion" value={String(course.rowVersion)} />
-          {/* These panels are fieldsets, not SectionCards: each legend is the
-              accessible name of a control group, and SectionCard deliberately
-              has no `fieldset` element. */}
-          <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
-            <legend className="px-1 text-sm font-semibold">{t("courses.edit.pitchLegend")}</legend>
-            <FieldGrid columns={1} className="mt-3 gap-y-5">
-              <Field
-                label={t("courses.edit.subheadLabel")}
-                description={t("courses.edit.subheadDescription")}
-              >
-                <input
-                  id="summary"
-                  name="summary"
-                  maxLength={200}
-                  defaultValue={course.summary ?? ""}
-                  className={controlClass}
-                />
-              </Field>
-              <Field
-                label={t("courses.edit.overviewLabel")}
-                description={t("courses.edit.overviewDescription")}
-              >
-                <textarea
-                  id="overview"
-                  name="overview"
-                  rows={8}
-                  maxLength={6000}
-                  defaultValue={course.overview ?? ""}
-                  className={controlClass}
-                />
-              </Field>
-            </FieldGrid>
-          </fieldset>
-
-          <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
-            <legend className="px-1 text-sm font-semibold">
-              {t("courses.edit.pricingLegend")}
-            </legend>
-            <p className="mt-1 text-sm text-muted">{t("courses.edit.pricingDescription")}</p>
-            <FieldGrid columns={2} className="mt-4 gap-y-5">
-              <PriceField
-                id="price"
-                name="price"
-                label={t("courses.edit.instructionFeeLabel")}
-                cents={course.priceCents}
-                currency={currency}
-                locale={locale}
-              />
-              <PriceField
-                id="eLearningPrice"
-                name="eLearningPrice"
-                label={t("courses.edit.eLearningFeeLabel")}
-                hint={t("courses.edit.eLearningFeeHint")}
-                cents={course.eLearningPriceCents}
-                currency={currency}
-                locale={locale}
-              />
-              <PriceField
-                id="privatePrice"
-                name="privatePrice"
-                label={t("courses.edit.privatePriceLabel")}
-                hint={t("courses.edit.privatePriceHint")}
-                cents={course.privatePriceCents}
-                currency={currency}
-                locale={locale}
-              />
-            </FieldGrid>
-          </fieldset>
-
-          <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
-            <legend className="px-1 text-sm font-semibold">{t("courses.edit.photosLegend")}</legend>
-            <p className="mt-1 text-sm text-muted">{t("courses.edit.photosDescription")}</p>
-            <FieldGrid columns={1} className="mt-4 gap-y-5">
-              <Field
-                label={t("courses.edit.heroPhotoLabel")}
-                hint={t("courses.edit.heroPhotoHint")}
-                htmlFor="course-hero-photo"
-              >
-                {course.heroImageUrl ? (
-                  <div className="mb-2 flex items-center gap-3">
-                    <StoredPhoto
-                      src={course.heroImageUrl}
-                      alt=""
-                      className="h-16 w-24 shrink-0 rounded-lg border border-border"
-                      sizes="96px"
+            <input type="hidden" name="expectedVersion" value={String(course.rowVersion)} />
+            {/* Sections, not cards: each keeps its `<fieldset>`/`<legend>` pair —
+              the legend is still the accessible name of a control group — and
+              loses its border, which is the whole of the change the ADR asks
+              for here. Each draws the hairline above itself; `lead` is what
+              keeps a rule off the top of the first, where it would be a box
+              lid rather than a separator. */}
+            <div className="flex flex-col">
+              <EditorSection id={pitch.id} label={pitch.label} as="fieldset" lead>
+                <FieldGrid columns={1} className="gap-y-5">
+                  <Field
+                    label={t("courses.edit.subheadLabel")}
+                    description={t("courses.edit.subheadDescription")}
+                  >
+                    <input
+                      id="summary"
+                      name="summary"
+                      maxLength={200}
+                      defaultValue={course.summary ?? ""}
+                      className={controlClass}
                     />
-                    <label className="flex min-h-11 items-center gap-2 text-sm">
-                      <input type="checkbox" name="removeHero" value="true" className="size-4" />
-                      {t("courses.edit.removeCurrentPhoto")}
-                    </label>
-                  </div>
-                ) : null}
-                <ImageFileInput
-                  id="course-hero-photo"
-                  name="heroImageFile"
-                  copy={{
-                    choose: t("shared.imageInput.choose"),
-                    chooseAnother: t("shared.imageInput.chooseAnother"),
-                    wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
-                    tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
-                  }}
-                />
-              </Field>
-              {course.heroImageUrl ? (
-                <Field
-                  label={t("courses.edit.photoCaptionLabel")}
-                  hint={t("courses.edit.photoCaptionHint")}
-                  className="max-w-sm"
-                >
-                  <input
-                    name="heroImageAlt"
-                    type="text"
-                    maxLength={200}
-                    defaultValue={course.heroImageAlt ?? ""}
-                    placeholder={t("courses.edit.photoCaptionPlaceholder", { n: 1 })}
-                    className={controlClass}
-                  />
-                </Field>
-              ) : null}
-              <Field
-                label={t("courses.edit.galleryPhotosLabel")}
-                hint={t("courses.edit.galleryPhotosHint", {
-                  max: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
-                })}
-                htmlFor="course-gallery-photos"
+                  </Field>
+                  <Field
+                    label={t("courses.edit.overviewLabel")}
+                    description={t("courses.edit.overviewDescription")}
+                  >
+                    <textarea
+                      id="overview"
+                      name="overview"
+                      rows={8}
+                      maxLength={6000}
+                      defaultValue={course.overview ?? ""}
+                      className={controlClass}
+                    />
+                  </Field>
+                  {/* Beside the boxes it governs rather than in a panel above the
+                  whole form: a depth marker is typed into this section's prose,
+                  and it is the one piece of syntax this editor asks a shop to
+                  learn. Unboxed, like everything else in a section now. */}
+                  <p className="text-sm text-muted">
+                    {t.rich("courses.edit.depthMarkersHint", {
+                      marker: (chunks) => (
+                        <code className="rounded bg-surface-sunken px-1 font-mono text-xs text-foreground">
+                          {chunks}
+                        </code>
+                      ),
+                    })}
+                  </p>
+                </FieldGrid>
+              </EditorSection>
+
+              <EditorSection
+                as="fieldset"
+                id={pricing.id}
+                label={pricing.label}
+                description={t("courses.edit.pricingDescription")}
               >
-                {course.galleryPhotos.length > 0 ? (
-                  <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {course.galleryPhotos.map(({ url, alt }, index) => (
-                      <div key={url} className="flex flex-col gap-1.5">
-                        {/* The whole cell is one label wrapping its own checkbox, so a
-                            tap on the photo toggles *that* photo — not the first one. */}
-                        <label className="relative block cursor-pointer">
+                <FieldGrid columns={2} className="gap-y-5">
+                  <PriceField
+                    id="price"
+                    name="price"
+                    label={t("courses.edit.instructionFeeLabel")}
+                    cents={course.priceCents}
+                    currency={currency}
+                    locale={locale}
+                  />
+                  <PriceField
+                    id="eLearningPrice"
+                    name="eLearningPrice"
+                    label={t("courses.edit.eLearningFeeLabel")}
+                    hint={t("courses.edit.eLearningFeeHint")}
+                    cents={course.eLearningPriceCents}
+                    currency={currency}
+                    locale={locale}
+                  />
+                  <PriceField
+                    id="privatePrice"
+                    name="privatePrice"
+                    label={t("courses.edit.privatePriceLabel")}
+                    hint={t("courses.edit.privatePriceHint")}
+                    cents={course.privatePriceCents}
+                    currency={currency}
+                    locale={locale}
+                  />
+                </FieldGrid>
+              </EditorSection>
+
+              <EditorSection
+                as="fieldset"
+                id={photos.id}
+                label={photos.label}
+                description={t("courses.edit.photosDescription")}
+              >
+                <FieldGrid columns={1} className="gap-y-5">
+                  <Field
+                    label={t("courses.edit.heroPhotoLabel")}
+                    hint={t("courses.edit.heroPhotoHint")}
+                    htmlFor="course-hero-photo"
+                  >
+                    {course.heroImageUrl ? (
+                      <div className="mb-2 flex items-center gap-3">
+                        <StoredPhoto
+                          src={course.heroImageUrl}
+                          alt=""
+                          className="h-16 w-24 shrink-0 rounded-lg border border-border"
+                          sizes="96px"
+                        />
+                        <label className="flex min-h-11 items-center gap-2 text-sm">
                           <input
                             type="checkbox"
-                            name="removeGalleryUrls"
-                            value={url}
-                            className="peer sr-only"
+                            name="removeHero"
+                            value="true"
+                            className="size-4"
                           />
-                          <StoredPhoto
-                            src={url}
-                            alt=""
-                            className="h-24 w-full rounded-lg border-2 border-border transition peer-checked:border-danger peer-checked:opacity-50"
-                            sizes="(min-width: 640px) 25vw, 50vw"
-                          />
-                          <span
-                            aria-hidden="true"
-                            // diveday:allow-tinted-ink: the tick is `text-transparent` until the box is checked, and `text-danger` on `danger/15` measures 5.01:1 over `--surface` — this sits on a card (issue #874)
-                            className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-full border border-border-strong bg-surface/90 text-sm text-transparent shadow-sm transition peer-checked:border-danger peer-checked:bg-danger/15 peer-checked:text-danger"
-                          >
-                            <DiveDayIcon name="check" className="size-4" strokeWidth={2.2} />
-                          </span>
-                          <span className="mt-1 block text-xs font-medium text-muted transition peer-checked:text-danger">
-                            {t("courses.edit.removeLabel")}
-                          </span>
+                          {t("courses.edit.removeCurrentPhoto")}
                         </label>
-                        <input type="hidden" name="galleryAltUrls" value={url} />
-                        <Field
-                          label={t("courses.edit.photoCaptionLabel")}
-                          className="text-xs"
-                          htmlFor={`gallery-alt-${index}`}
-                        >
-                          <input
-                            id={`gallery-alt-${index}`}
-                            name="galleryAltValues"
-                            type="text"
-                            maxLength={200}
-                            defaultValue={alt}
-                            placeholder={t("courses.edit.photoCaptionPlaceholder", {
-                              n: index + 2,
-                            })}
-                            className={`${controlClass} text-xs`}
-                          />
-                        </Field>
                       </div>
-                    ))}
-                  </div>
-                ) : null}
-                <ImageFileInput
-                  id="course-gallery-photos"
-                  name="galleryImageFiles"
-                  multiple
-                  maxFiles={MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION}
-                  copy={{
-                    choose: t("shared.imageInput.choose"),
-                    chooseAnother: t("shared.imageInput.chooseAnother"),
-                    tooMany: t("shared.imageInput.tooMany", {
-                      count: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
-                    }),
-                    wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
-                    tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
-                  }}
-                />
-              </Field>
-            </FieldGrid>
-          </fieldset>
+                    ) : null}
+                    <ImageFileInput
+                      id="course-hero-photo"
+                      name="heroImageFile"
+                      copy={{
+                        choose: t("shared.imageInput.choose"),
+                        chooseAnother: t("shared.imageInput.chooseAnother"),
+                        wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+                        tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+                      }}
+                    />
+                  </Field>
+                  {course.heroImageUrl ? (
+                    <Field
+                      label={t("courses.edit.photoCaptionLabel")}
+                      hint={t("courses.edit.photoCaptionHint")}
+                      className="max-w-sm"
+                    >
+                      <input
+                        name="heroImageAlt"
+                        type="text"
+                        maxLength={200}
+                        defaultValue={course.heroImageAlt ?? ""}
+                        placeholder={t("courses.edit.photoCaptionPlaceholder", { n: 1 })}
+                        className={controlClass}
+                      />
+                    </Field>
+                  ) : null}
+                  <Field
+                    label={t("courses.edit.galleryPhotosLabel")}
+                    hint={t("courses.edit.galleryPhotosHint", {
+                      max: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
+                    })}
+                    htmlFor="course-gallery-photos"
+                  >
+                    {course.galleryPhotos.length > 0 ? (
+                      <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        {course.galleryPhotos.map(({ url, alt }, index) => (
+                          <div key={url} className="flex flex-col gap-1.5">
+                            {/* The whole cell is one label wrapping its own checkbox, so a
+                            tap on the photo toggles *that* photo — not the first one. */}
+                            <label className="relative block cursor-pointer">
+                              <input
+                                type="checkbox"
+                                name="removeGalleryUrls"
+                                value={url}
+                                className="peer sr-only"
+                              />
+                              <StoredPhoto
+                                src={url}
+                                alt=""
+                                className="h-24 w-full rounded-lg border-2 border-border transition peer-checked:border-danger peer-checked:opacity-50"
+                                sizes="(min-width: 640px) 25vw, 50vw"
+                              />
+                              <span
+                                aria-hidden="true"
+                                // diveday:allow-tinted-ink: the tick is `text-transparent` until the box is checked, and `text-danger` on `danger/15` measures 5.01:1 over `--surface` — this sits on a card (issue #874)
+                                className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-full border border-border-strong bg-surface/90 text-sm text-transparent shadow-sm transition peer-checked:border-danger peer-checked:bg-danger/15 peer-checked:text-danger"
+                              >
+                                <DiveDayIcon name="check" className="size-4" strokeWidth={2.2} />
+                              </span>
+                              <span className="mt-1 block text-xs font-medium text-muted transition peer-checked:text-danger">
+                                {t("courses.edit.removeLabel")}
+                              </span>
+                            </label>
+                            <input type="hidden" name="galleryAltUrls" value={url} />
+                            <Field
+                              label={t("courses.edit.photoCaptionLabel")}
+                              className="text-xs"
+                              htmlFor={`gallery-alt-${index}`}
+                            >
+                              <input
+                                id={`gallery-alt-${index}`}
+                                name="galleryAltValues"
+                                type="text"
+                                maxLength={200}
+                                defaultValue={alt}
+                                placeholder={t("courses.edit.photoCaptionPlaceholder", {
+                                  n: index + 2,
+                                })}
+                                className={`${controlClass} text-xs`}
+                              />
+                            </Field>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                    <ImageFileInput
+                      id="course-gallery-photos"
+                      name="galleryImageFiles"
+                      multiple
+                      maxFiles={MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION}
+                      copy={{
+                        choose: t("shared.imageInput.choose"),
+                        chooseAnother: t("shared.imageInput.chooseAnother"),
+                        tooMany: t("shared.imageInput.tooMany", {
+                          count: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
+                        }),
+                        wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+                        tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+                      }}
+                    />
+                  </Field>
+                </FieldGrid>
+              </EditorSection>
 
-          <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
-            <legend className="px-1 text-sm font-semibold">{t("courses.edit.glanceLegend")}</legend>
-            <p className="mt-1 text-sm text-muted">{t("courses.edit.glanceDescription")}</p>
-            <FieldGrid columns={2} className="mt-4 gap-y-5">
-              <Field label={t("courses.edit.durationLabel")}>
-                <input
-                  id="durationText"
-                  name="durationText"
-                  maxLength={120}
-                  defaultValue={course.durationText ?? ""}
-                  placeholder={t("courses.edit.durationPlaceholder")}
-                  className={controlClass}
-                />
-              </Field>
-              <Field label={t("courses.edit.groupSizeLabel")}>
-                <input
-                  id="groupSizeText"
-                  name="groupSizeText"
-                  maxLength={120}
-                  defaultValue={course.groupSizeText ?? ""}
-                  placeholder={t("courses.edit.groupSizePlaceholder")}
-                  className={controlClass}
-                />
-              </Field>
-            </FieldGrid>
-            {/* Filed with how the course *runs* rather than with who may take
+              <EditorSection
+                as="fieldset"
+                id={glance.id}
+                label={glance.label}
+                description={t("courses.edit.glanceDescription")}
+              >
+                <FieldGrid columns={2} className="gap-y-5">
+                  <Field label={t("courses.edit.durationLabel")}>
+                    <input
+                      id="durationText"
+                      name="durationText"
+                      maxLength={120}
+                      defaultValue={course.durationText ?? ""}
+                      placeholder={t("courses.edit.durationPlaceholder")}
+                      className={controlClass}
+                    />
+                  </Field>
+                  <Field label={t("courses.edit.groupSizeLabel")}>
+                    <input
+                      id="groupSizeText"
+                      name="groupSizeText"
+                      maxLength={120}
+                      defaultValue={course.groupSizeText ?? ""}
+                      placeholder={t("courses.edit.groupSizePlaceholder")}
+                      className={controlClass}
+                    />
+                  </Field>
+                </FieldGrid>
+                {/* Filed with how the course *runs* rather than with who may take
                 it: this answers "do we teach this one on enriched air", which
                 is the shop's own call about its own gas, not an agency
-                admission rule like the two facts in the next box. Unticked, no
+                admission rule like the facts in the next section. Unticked, no
                 session of this course offers the nitrox box at all — on the
                 booking page or on the pre-trip form — however much nitrox the
                 shop fills (`nitroxAvailableOn`, src/lib/rentals.ts). */}
-            <label className="mt-5 flex min-h-11 items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="nitroxCompatible"
-                value="true"
-                defaultChecked={course.nitroxCompatible}
-                className="size-4"
-              />
-              {t("courses.edit.nitroxCompatibleLabel")}
-            </label>
-            <p className="mt-1 text-sm text-muted">{t("courses.edit.nitroxCompatibleHint")}</p>
-          </fieldset>
+                <label className="mt-5 flex min-h-11 items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="nitroxCompatible"
+                    value="true"
+                    defaultChecked={course.nitroxCompatible}
+                    className="size-4"
+                  />
+                  {t("courses.edit.nitroxCompatibleLabel")}
+                </label>
+                <p className="mt-1 text-sm text-muted">{t("courses.edit.nitroxCompatibleHint")}</p>
+              </EditorSection>
 
-          <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
-            <legend className="px-1 text-sm font-semibold">{t("courses.edit.enrollLegend")}</legend>
-            <p className="mt-1 text-sm text-muted">
-              {t.rich("courses.edit.enrollDescription", {
-                levelAge,
-                strong: (chunks: ReactNode) => (
-                  <strong className="font-medium text-foreground">{chunks}</strong>
-                ),
-              })}
-            </p>
-            {/* No "this is a taster session" tick box. Which courses are
+              <EditorSection
+                as="fieldset"
+                id={enroll.id}
+                label={enroll.label}
+                description={t.rich("courses.edit.enrollDescription", {
+                  levelAge,
+                  strong: (chunks: ReactNode) => (
+                    <strong className="font-medium text-foreground">{chunks}</strong>
+                  ),
+                })}
+              >
+                {/* No "this is a taster session" tick box. Which courses are
                 tasters is not something a shop tells DiveDay — DiveDay ships
                 the catalogue and already knows (`isIntroCourse` on the
                 published templates, src/db/course-templates.ts): Discover
@@ -516,133 +562,133 @@ export default async function EditCoursePage({
                 cap off on a course full of people who have never breathed
                 underwater. The column stays; the way to set it is to be one of
                 those courses. */}
-            <FieldGrid columns={1} className="mt-4 gap-y-5">
-              <Field label={t("courses.edit.prerequisiteLabel")}>
-                <textarea
-                  id="prerequisiteNote"
-                  name="prerequisiteNote"
-                  rows={4}
-                  maxLength={400}
-                  defaultValue={course.prerequisiteNote ?? ""}
-                  placeholder={t("courses.edit.prerequisitePlaceholder")}
-                  className={controlClass}
-                />
-              </Field>
-            </FieldGrid>
-          </fieldset>
+                <FieldGrid columns={1} className="gap-y-5">
+                  <Field label={t("courses.edit.prerequisiteLabel")}>
+                    <textarea
+                      id="prerequisiteNote"
+                      name="prerequisiteNote"
+                      rows={4}
+                      maxLength={400}
+                      defaultValue={course.prerequisiteNote ?? ""}
+                      placeholder={t("courses.edit.prerequisitePlaceholder")}
+                      className={controlClass}
+                    />
+                  </Field>
+                </FieldGrid>
+              </EditorSection>
 
-          <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
-            <legend className="px-1 text-sm font-semibold">
-              {t("courses.edit.feeCoversLegend")}
-            </legend>
-            <FieldGrid columns={2} className="mt-3 gap-y-5">
-              <Field
-                label={t("courses.edit.includedLabel")}
-                description={t("courses.edit.oneItemPerLine")}
-              >
-                <textarea
-                  id="includes"
-                  name="includes"
-                  rows={6}
-                  maxLength={2000}
-                  defaultValue={course.includes.join("\n")}
-                  placeholder={t("courses.edit.includedPlaceholder")}
-                  className={controlClass}
-                />
-              </Field>
-              <Field
-                label={t("courses.edit.notIncludedLabel")}
-                description={t("courses.edit.oneItemPerLine")}
-              >
-                <textarea
-                  id="excludes"
-                  name="excludes"
-                  rows={6}
-                  maxLength={2000}
-                  defaultValue={course.excludes.join("\n")}
-                  placeholder={t("courses.edit.notIncludedPlaceholder")}
-                  className={controlClass}
-                />
-              </Field>
-            </FieldGrid>
-          </fieldset>
+              <EditorSection id={feeCovers.id} label={feeCovers.label} as="fieldset">
+                <FieldGrid columns={2} className="gap-y-5">
+                  <Field
+                    label={t("courses.edit.includedLabel")}
+                    description={t("courses.edit.oneItemPerLine")}
+                  >
+                    <textarea
+                      id="includes"
+                      name="includes"
+                      rows={6}
+                      maxLength={2000}
+                      defaultValue={course.includes.join("\n")}
+                      placeholder={t("courses.edit.includedPlaceholder")}
+                      className={controlClass}
+                    />
+                  </Field>
+                  <Field
+                    label={t("courses.edit.notIncludedLabel")}
+                    description={t("courses.edit.oneItemPerLine")}
+                  >
+                    <textarea
+                      id="excludes"
+                      name="excludes"
+                      rows={6}
+                      maxLength={2000}
+                      defaultValue={course.excludes.join("\n")}
+                      placeholder={t("courses.edit.notIncludedPlaceholder")}
+                      className={controlClass}
+                    />
+                  </Field>
+                </FieldGrid>
+              </EditorSection>
 
-          <fieldset id="scheduleDaysJson" className="rounded-2xl border border-border p-4 sm:p-5">
-            <legend className="px-1 text-sm font-semibold">
-              {t("courses.edit.dayByDayLegend")}
-            </legend>
-            <div className="mt-4">
-              <DayByDayEditor
-                initialDays={course.scheduleDays}
-                storageKey={`course-draft:${course.id}`}
-                copy={{
-                  dayLabel: t.raw("courses.dayByDay.dayLabel"),
-                  removeDay: t("courses.dayByDay.removeDay"),
-                  dayTitleLabel: t.raw("courses.dayByDay.dayTitleLabel"),
-                  dayTitlePlaceholder: t("courses.dayByDay.dayTitlePlaceholder"),
-                  startTimeLabel: t.raw("courses.dayByDay.startTimeLabel"),
-                  endTimeLabel: t.raw("courses.dayByDay.endTimeLabel"),
-                  timeNoteLabel: t.raw("courses.dayByDay.timeNoteLabel"),
-                  timeNoteDescription: t("courses.dayByDay.timeNoteDescription"),
-                  timeNoteTitle: t("courses.dayByDay.timeNoteTitle"),
-                  timeNotePlaceholder: t("courses.dayByDay.timeNotePlaceholder"),
-                  whatHappens: t.raw("courses.dayByDay.whatHappens"),
-                  whatHappensHint: t("courses.edit.oneItemPerLine"),
-                  itemsPlaceholder: t("courses.dayByDay.itemsPlaceholder"),
-                  itemsOverMaxOne: t.raw("courses.dayByDay.itemsOverMaxOne"),
-                  itemsOverMaxOther: t.raw("courses.dayByDay.itemsOverMaxOther"),
-                  daysMaxOne: t.raw("courses.dayByDay.daysMaxOne"),
-                  daysMaxOther: t.raw("courses.dayByDay.daysMaxOther"),
-                  addDay: t("courses.dayByDay.addDay"),
-                }}
-              />
+              <EditorSection id={dayByDay.id} label={dayByDay.label} as="fieldset">
+                <DayByDayEditor
+                  initialDays={course.scheduleDays}
+                  storageKey={`course-draft:${course.id}`}
+                  copy={{
+                    dayLabel: t.raw("courses.dayByDay.dayLabel"),
+                    removeDay: t("courses.dayByDay.removeDay"),
+                    dayTitleLabel: t.raw("courses.dayByDay.dayTitleLabel"),
+                    dayTitlePlaceholder: t("courses.dayByDay.dayTitlePlaceholder"),
+                    startTimeLabel: t.raw("courses.dayByDay.startTimeLabel"),
+                    endTimeLabel: t.raw("courses.dayByDay.endTimeLabel"),
+                    timeNoteLabel: t.raw("courses.dayByDay.timeNoteLabel"),
+                    timeNoteDescription: t("courses.dayByDay.timeNoteDescription"),
+                    timeNoteTitle: t("courses.dayByDay.timeNoteTitle"),
+                    timeNotePlaceholder: t("courses.dayByDay.timeNotePlaceholder"),
+                    whatHappens: t.raw("courses.dayByDay.whatHappens"),
+                    whatHappensHint: t("courses.edit.oneItemPerLine"),
+                    itemsPlaceholder: t("courses.dayByDay.itemsPlaceholder"),
+                    itemsOverMaxOne: t.raw("courses.dayByDay.itemsOverMaxOne"),
+                    itemsOverMaxOther: t.raw("courses.dayByDay.itemsOverMaxOther"),
+                    daysMaxOne: t.raw("courses.dayByDay.daysMaxOne"),
+                    daysMaxOther: t.raw("courses.dayByDay.daysMaxOther"),
+                    addDay: t("courses.dayByDay.addDay"),
+                  }}
+                />
+              </EditorSection>
+
+              <EditorSection id={faq.id} label={faq.label} as="fieldset">
+                <FaqEditor
+                  initialFaqs={course.faqs}
+                  storageKey={`course-draft:${course.id}`}
+                  copy={{
+                    questionLabel: t.raw("courses.faq.questionLabel"),
+                    questionPlaceholder: t("courses.faq.questionPlaceholder"),
+                    answerLabel: t("courses.faq.answerLabel"),
+                    answerPlaceholder: t("courses.faq.answerPlaceholder"),
+                    removeFaq: t.raw("courses.faq.removeFaq"),
+                    addFaq: t("courses.faq.addFaq"),
+                    faqsMaxOne: t.raw("courses.faq.faqsMaxOne"),
+                    faqsMaxOther: t.raw("courses.faq.faqsMaxOther"),
+                    empty: t("courses.faq.empty"),
+                  }}
+                />
+              </EditorSection>
             </div>
-          </fieldset>
 
-          <fieldset className="rounded-2xl border border-border p-4 sm:p-5">
-            <legend className="px-1 text-sm font-semibold">{t("courses.edit.faqLegend")}</legend>
-            <div className="mt-4">
-              <FaqEditor
-                initialFaqs={course.faqs}
-                storageKey={`course-draft:${course.id}`}
-                copy={{
-                  questionLabel: t.raw("courses.faq.questionLabel"),
-                  questionPlaceholder: t("courses.faq.questionPlaceholder"),
-                  answerLabel: t("courses.faq.answerLabel"),
-                  answerPlaceholder: t("courses.faq.answerPlaceholder"),
-                  removeFaq: t.raw("courses.faq.removeFaq"),
-                  addFaq: t("courses.faq.addFaq"),
-                  faqsMaxOne: t.raw("courses.faq.faqsMaxOne"),
-                  faqsMaxOther: t.raw("courses.faq.faqsMaxOther"),
-                  empty: t("courses.faq.empty"),
-                }}
-              />
-            </div>
-          </fieldset>
-
-          {/* One control, not two. "Preview" opened the same page the "Live
+            {/* One control, not two. "Preview" opened the same page the "Live
               at" link in the header already points at, and a second
               button-shaped thing beside Save competes with the only action
               this form has (design principles #8). */}
-          {/* The refusal belongs beside the button that earned it, not in a
+            {/* The refusal belongs beside the button that earned it, not in a
               banner thirty lines above the first field: this editor runs to
-              five fieldsets, so a staffer who pressed Save at the bottom saw
+              eight sections, so a staffer who pressed Save at the bottom saw
               nothing happen at all. `FieldErrorFocus` above still carries them
               on to the offending box when the server named one. */}
-          {/* Sticky, because this form is nine sections and four thousand
-              pixels tall and Save used to live only at the far end of it. */}
-          <StickyFormActions>
-            <SubmitButton pendingLabel={t("courses.edit.saving")} className={buttonClass()}>
-              {t("courses.edit.savePage")}
-            </SubmitButton>
-            <UnsavedChangesNote
-              unsavedLabel={t("courses.edit.unsavedChanges")}
-              restoredLabel={t("courses.edit.draftRestored")}
-            />
-            <FormStatus tone="danger">{errorText}</FormStatus>
-          </StickyFormActions>
-        </ConflictGuardedForm>
-      </UnsavedChangesGuard>
+            {/* Sticky, because this form is eight sections and four thousand
+              pixels tall and Save used to live only at the far end of it. The
+              note beside it names the section holding the unsaved work — the
+              rail is what makes that answer actionable. */}
+            <StickyFormActions className="mt-8">
+              <SubmitButton pendingLabel={t("courses.edit.saving")} className={buttonClass()}>
+                {t("courses.edit.savePage")}
+              </SubmitButton>
+              <UnsavedChangesNote
+                unsavedLabel={t("courses.edit.unsavedChanges")}
+                restoredLabel={t("courses.edit.draftRestored")}
+                sections={sections.map((section) => ({
+                  id: section.id,
+                  unsavedSentence: t("courses.edit.unsavedInSection", { section: section.label }),
+                }))}
+                countSentences={sections.map((_, index) =>
+                  t("courses.edit.unsavedInSections", { count: index + 1 }),
+                )}
+              />
+              <FormStatus tone="danger">{errorText}</FormStatus>
+            </StickyFormActions>
+          </ConflictGuardedForm>
+        </UnsavedChangesGuard>
+      </div>
     </main>
   );
 }

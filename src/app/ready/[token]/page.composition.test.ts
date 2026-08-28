@@ -111,3 +111,110 @@ describe("what the thread no longer carries", () => {
     expect(SOURCE).toContain("<PackingSection");
   });
 });
+
+/**
+ * **The thread's third state** — ADR 20260827-the-divers-thread, decision 4
+ * (slice 7d). The behavioural rules are pinned where they can be rendered
+ * (`_components/AfterState.test.tsx`) and where the switch itself lives
+ * (`src/lib/thread-steps.test.ts`); what only the route can say is *where the
+ * branch sits* and *which token the recap actions are handed*.
+ */
+describe("after the dive", () => {
+  it("decides the state before it composes any of the prep page", () => {
+    // Everything below the branch — the party's claim panel, the trip read the
+    // packing list needs, the payment receipt — is about a day that has not
+    // happened yet. Composing it and then throwing it away would be several
+    // queries and one long file's worth of reasoning spent on a diver who is
+    // already home.
+    const after = positionOf("<AfterState");
+    expect(after).toBeGreaterThan(-1);
+    expect(after).toBeLessThan(positionOf("<ThreadStatus"));
+  });
+
+  it("switches on the shared rule rather than a literal of its own", () => {
+    // Both timings live in `src/lib/thread-steps.ts` — the standing one-hour
+    // late-arrival buffer and the four-hour recap floor. A literal
+    // `60 * 60 * 1000` here is how "has it sailed" and "is it over" drift an
+    // hour apart.
+    expect(SOURCE).toContain("isAfterTheDive({ endsAt: detail.trip.endsAt, boarded })");
+    expect(SOURCE).not.toContain("60 * 60 * 1000");
+  });
+
+  it("asks the crew's own roll call before it says anybody dived", () => {
+    // The switch was the clock alone until a review caught it (2026-08-28): a
+    // diver who never boarded — overslept, or held at the desk on a medical
+    // hold — opened the durable link already in their inbox an hour after the
+    // boat was back and got "Welcome back", a printable dive record for the
+    // day, and an invitation to tip the crew who dived without them.
+    // `roll_call_events` is the only direct evidence DiveDay holds about who
+    // got on the boat, and the page consults it before composing the afterglow.
+    const rollCall = positionOf("departureRollCallForBooking(");
+    expect(rollCall).toBeGreaterThan(-1);
+    expect(rollCall).toBeLessThan(positionOf("isAfterTheDive("));
+    // Only once the boat is scheduled home: an ordinary night-before page load
+    // never pays for the query.
+    expect(SOURCE).toContain("theBoatIsHome({ endsAt: detail.trip.endsAt })");
+  });
+
+  it("answers a cancelled departure on the branch a cancelled departure reaches", () => {
+    // A blow-out cancels the *trip* and deliberately leaves every booking
+    // active (src/db/blowouts.ts), so `detail.cancelled` is false for every
+    // diver a cancellation stranded — and this page read only that. Before the
+    // boat was due back it handed them a packing list; an hour after it, the
+    // afterglow.
+    //
+    // **This assertion used to be a source *position*, and that is precisely
+    // how the fix for it shipped broken.** It proved the branch was written
+    // above the afterglow; it could not prove the branch was reachable, and it
+    // was not: `verifyBookingCapability` fails closed on a cancelled trip
+    // (`src/db/booking-capabilities.ts`), so a page that read
+    // `data.departureCancelled` only *after* that call had already returned
+    // told every stranded diver their link had expired. The e2e spec was the
+    // one thing in the repository that could catch it.
+    //
+    // So the rule is where the answer sits relative to the gate, not relative
+    // to the afterglow: it is inside the `!capability` block, which is the only
+    // place a cancelled departure's token ever arrives.
+    const gate = positionOf("const capability = await verifyBookingCapability");
+    const deadEnd = positionOf("if (!capability) {");
+    const departure = positionOf("data.departureCancelled");
+    const liveShop = positionOf("const shopContact = {");
+    for (const marker of [gate, deadEnd, departure, liveShop]) {
+      expect(marker).toBeGreaterThan(-1);
+    }
+    expect(deadEnd).toBeGreaterThan(gate);
+    expect(departure).toBeGreaterThan(deadEnd);
+    expect(departure).toBeLessThan(liveShop);
+    // And it resolves the token the relaxed way, since the strict one is the
+    // thing that refused it.
+    expect(SOURCE).toContain(
+      'const stranded = await resolveRevokedBookingCapability(db, { token, purpose: "readiness" });',
+    );
+  });
+
+  it("names the shop on both of its live-token dead ends", () => {
+    // A cancelled departure and a no-show are not expired links: the token
+    // verified, the shop is already in scope, and the reader's question is
+    // *who do I ask*. Issue #801 gave the expired branch the shop's name and
+    // contact details for exactly that reason; these two named nobody.
+    // One now, not two: the cancelled-departure card moved into the
+    // `!capability` block, where the shop is not yet in scope and it builds its
+    // own contact object from the booking it resolved.
+    expect(countOf("shop={shopContact}")).toBe(1);
+    expect(SOURCE).toContain('t("recap.noShowHeading")');
+    // And never the pair of sentences it replaced — "This readiness link isn't
+    // available" over "This booking didn't sail" — both false for this reader.
+    expect(SOURCE).not.toContain('t("recap.didNotDiveBody")');
+  });
+
+  it("binds the recap actions to a recap token, never to this page's own", () => {
+    // `/ready`'s token is a bearer capability that can cancel the booking and
+    // move its refund; the recap actions verify a *recap* token, and the two
+    // are domain-separated on purpose (src/lib/recap-links.ts). Widening
+    // either side would hand a review form the power to release a seat.
+    expect(SOURCE).toContain("signRecapToken(bookingId)");
+    for (const action of ["submitReviewAction", "uploadRecapPhotoAction", "startTipAction"]) {
+      expect(SOURCE).not.toContain(`${action}.bind(null, token)`);
+    }
+  });
+});

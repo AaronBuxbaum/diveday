@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * The auth gate on the six `seed-*` test routes, one table for all of them
+ * The auth gate on the seven `seed-*` test routes, one table for all of them
  * (`reset` has its own colocated route.test.ts, which also covers its success
  * path). Every case here is a *refusal*: the shared guard
  * (`src/lib/e2e-test-routes.ts`) must close these routes before they touch the
@@ -28,6 +28,7 @@ const seedLastMinute = await import("./seed-last-minute-unsubscribe-token/route"
 const seedCourtesyEmail = await import("./seed-courtesy-email-unsubscribe-token/route");
 const seedTroubleStates = await import("./seed-trouble-states/route");
 const seedPrivateShop = await import("./seed-private-shop/route");
+const seedEvening = await import("./seed-evening/route");
 
 const secret = "e2e-test-secret";
 
@@ -78,6 +79,17 @@ const routes: SeedRoute[] = [
     // intent, an owed refund and two erasure obligations, so a route that
     // answered on a misconfigured deployment would be writing that into a real
     // shop's tables.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
+    slug: "seed-evening",
+    POST: seedEvening.POST,
+    // Same shape as the two above: no body, so reaching the database is what
+    // proves the guard let it through. This one rewrites the departure times
+    // of a whole shop day, so a route that answered on a misconfigured
+    // deployment would be moving a real shop's boats.
     expectPastTheGuard: async () => {
       expect(getDb).toHaveBeenCalled();
     },

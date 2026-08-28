@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
@@ -7,7 +8,18 @@ import { signInAsOwner } from "./helpers";
  * The verified-review loop end to end (docs ADR 20260729-verified-diver-reviews):
  * a diver rates from their own recap link, staff moderate what carries words,
  * and only released reviews reach the public schedule.
+ *
+ * The staff half reads as a worklist: three groups, "Waiting on you" first, and
+ * the group header is the only place a review's state is written (ADR
+ * 20260827-people-not-lists, decision 3). So "is this review published?" is
+ * asked here as "which group is it in?" — the pill it used to wear is gone, and
+ * a row moving between groups is what a publish or a hide *is*.
  */
+
+/** One of the three groups, by the heading that names it. */
+function group(page: Page, name: RegExp) {
+  return page.getByRole("region", { name });
+}
 
 test("a diver's bare rating publishes straight away and reaches the public page", async ({
   page,
@@ -74,7 +86,13 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/reviews");
   const card = page.locator("li").filter({ hasText: comment }).filter({ visible: true });
-  await expect(card.getByText("Waiting on you")).toBeVisible();
+  // The group says it is waiting; the row does not repeat it.
+  await expect(
+    group(page, /^Waiting on you/)
+      .locator("li")
+      .filter({ hasText: comment }),
+  ).toHaveCount(1);
+  await expect(card.getByText("Waiting on you")).toHaveCount(0);
 
   // **Neither of these taps throws the staffer back to the top of the list.**
   //
@@ -107,6 +125,19 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
   // half of what the redirect used to do.
   await expect(page).toHaveURL(/\/shop\/blue-mantis\/reviews$/);
 
+  // And it has moved groups: publishing is exactly that, on a page whose
+  // groups carry the state.
+  await expect(
+    group(page, /^Published/)
+      .locator("li")
+      .filter({ hasText: comment }),
+  ).toHaveCount(1);
+  await expect(
+    group(page, /^Waiting on you/)
+      .locator("li")
+      .filter({ hasText: comment }),
+  ).toHaveCount(0);
+
   await expect(card.getByRole("button", { name: "Mark as standout" })).toBeVisible();
   await card.getByRole("button", { name: "Mark as standout" }).click();
   await expect(page.getByText("Review marked as standout.")).toBeVisible();
@@ -131,7 +162,11 @@ test.describe("as owner, reviews list", () => {
     // bare ratings are never listed there in the first place.
     const comment = "Vis was unreal and the crew found us a turtle on the second tank.";
     const published = page.locator("li").filter({ hasText: comment }).filter({ visible: true });
-    await expect(published.getByText("Published")).toBeVisible();
+    await expect(
+      group(page, /^Published/)
+        .locator("li")
+        .filter({ hasText: comment }),
+    ).toHaveCount(1);
     await expect(published.getByRole("button", { name: "Hide this review" })).toHaveCount(0);
     // Hiding states a case (ADR 20260813-review-moderation-has-a-floor): the
     // reason picker waits behind the Hide disclosure, and the act is recorded
@@ -143,7 +178,20 @@ test.describe("as owner, reviews list", () => {
     await published.getByLabel("Why are you taking it down?").selectOption("spam");
     await published.getByRole("button", { name: "Hide this review" }).click();
     await expect(page.getByRole("status").getByText("Review hidden.")).toBeVisible();
-    await expect(published.getByText("⚠️Hidden", { exact: true })).toBeVisible();
+    // The row leaves the Published group on the revalidate — no page bounce and
+    // no badge, and the toast above is what says what happened.
+    //
+    // It does not appear in a Hidden group *on this page*: the moderated list
+    // sorts every published review ahead of every hidden one so the two groups
+    // cannot interleave across a page boundary (`listShopReviewsForStaff`), and
+    // this shop has 82 published reviews, so the row it just hid is now on the
+    // last page. That is why the toast has to outlive the row — it is the only
+    // confirmation the staffer gets, and the only Undo.
+    await expect(
+      group(page, /^Published/)
+        .locator("li")
+        .filter({ hasText: comment }),
+    ).toHaveCount(0);
 
     await page.context().clearCookies();
     await page.goto("/s/blue-mantis");
@@ -151,12 +199,13 @@ test.describe("as owner, reviews list", () => {
   });
 
   test("a waiting review can be hidden with a recorded reason", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/reviews?filter=waiting");
-    const waiting = page
+    // No filter to reach for: the worklist leads the page, so a staffer opening
+    // Reviews is already looking at everything waiting on them.
+    await page.goto("/shop/blue-mantis/reviews");
+    const waiting = group(page, /^Waiting on you/)
       .locator("li")
       .filter({ hasText: "A warm, patient crew and a brilliant final drift over the reef." })
       .filter({ visible: true });
-    await expect(waiting.getByText("Waiting on you")).toBeVisible();
     await expect(waiting.getByRole("button", { name: "Publish" })).toBeVisible();
     await expect(waiting.getByText("Hide", { exact: true })).toBeVisible();
   });
@@ -174,13 +223,14 @@ test.describe("as owner, reviews list", () => {
 
     await toast.getByRole("button", { name: "Undo" }).click();
     await expect(page.getByText("Review published to your schedule page.")).toBeVisible();
-    // The badge, exactly — the same spelling the hide test above uses for
-    // "⚠️Hidden". A bare `getByText("Published")` was unambiguous only while the
-    // outcome lived in a banner at the top of the page: now that the row
-    // reports its own outcome, "Review published to your schedule page." is a
-    // substring match inside this very `<li>` and the loose locator resolves to
-    // two elements.
-    await expect(published.getByText("✅Published", { exact: true })).toBeVisible();
+    // Back in the Published group, which is the only place this page writes
+    // that word — asked of the group rather than of the row, because the row
+    // deliberately says nothing about its own state.
+    await expect(
+      group(page, /^Published/)
+        .locator("li")
+        .filter({ hasText: comment }),
+    ).toHaveCount(1);
 
     await page.context().clearCookies();
     await page.goto("/s/blue-mantis");
@@ -199,47 +249,49 @@ test("a weekend's held reviews can be cleared in one pass, not one button at a t
   await page.getByRole("button", { name: "Leave my review" }).click();
 
   await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis/reviews?filter=waiting");
-  const waiting = page.getByRole("checkbox", { name: /Select .+'s review to publish/ });
-  await expect(waiting.first()).toBeVisible();
-  const count = await waiting.count();
+  await page.goto("/shop/blue-mantis/reviews");
+  // **No selection to make.** The tick boxes retired with the filter chips: the
+  // waiting group *is* the selection, and its header carries the one act that
+  // clears it (ADR 20260827-people-not-lists, decision 3). "Publish both" at
+  // two, "Publish all N" above that.
+  const waitingGroup = group(page, /^Waiting on you/);
+  const waitingRows = waitingGroup.locator("li");
+  await expect(waitingRows.first()).toBeVisible();
+  const count = await waitingRows.count();
   expect(count).toBeGreaterThanOrEqual(2);
-  for (const box of await waiting.all()) await box.check();
+  await expect(page.getByRole("checkbox")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Publish selected" }).click();
+  const clearAll = page.getByRole("button", {
+    name: count === 2 ? "Publish both" : `Publish all ${count}`,
+  });
+  await clearAll.click();
+
   const outcome = page.getByText(`${count} reviews published to your schedule page.`);
   await expect(outcome).toBeVisible();
-  // It lands back on the whole list — so you see what you just released — and
-  // nothing on it is still waiting: no row carries a tick box any more.
-  await expect(page.getByRole("checkbox", { name: /review to publish/ })).toHaveCount(0);
-  // And the confirmation is on the list it changed, not in a banner at the top
-  // of the page. A bulk publish has no single control to sit beside — what
-  // moved is N rows — so its home is the list's own header row: below the
-  // rating tiles, immediately above the first review. Asserted on where it
-  // actually renders, because the bug this replaced was purely one of
-  // position: the sentence was correct and nobody could see it.
+  // Nothing is waiting any more, so the group and the act it carried are both
+  // gone — which is exactly the case that used to swallow this sentence whole.
+  await expect(waitingGroup).toHaveCount(0);
+  // And what it released is on screen underneath, in the group that now owns it.
+  await expect(
+    group(page, /^Published/)
+      .locator("li")
+      .filter({ hasText: comment }),
+  ).toHaveCount(1);
+
+  // The confirmation is on the list it changed, not in a banner at the top of
+  // the page: below the title, above the first group. Asserted on where it
+  // actually renders, because the bug this replaced was purely one of position —
+  // the sentence was correct and nobody could see it.
   //
-  // Clearing the last waiting review also takes the "Publish selected" button
-  // off the page, which is exactly the case that used to swallow this sentence
-  // whole — the header row survives that, the button does not.
-  // **Measured after the reveal lands, and all three in one frame.**
-  //
-  // `useRevealPublished` answers a publish from the "waiting" tab with a
-  // `router.replace` onto the unfiltered list — same shell, no document
-  // teardown, but the rows underneath change and the page re-lays-out. Three
-  // separate `boundingBox()` calls straddled that: the overview was measured on
-  // one render and the outcome on the next, so the assertion compared
-  // coordinates from two different pages and reported the sentence 92px *above*
-  // a block it sits below in the DOM. It went red on `main` the day the reveal
-  // landed and is not a flake — it fails every run.
-  //
-  // Waiting for the URL to lose its filter is the deterministic gate for that
-  // (`pnpm check:e2e-hygiene` refuses the timing guess), and reading the three
-  // rects inside one `evaluate` is what makes them comparable: nothing can
-  // scroll or re-render between them. Document-relative, so a scroll before the
-  // measurement cannot skew it either.
-  await expect(page).toHaveURL(/\/reviews$/);
-  const overviewEl = await page.getByRole("region", { name: "Rating overview" }).elementHandle();
+  // The three rects are read inside one `evaluate` so nothing can scroll or
+  // re-render between them; an earlier version took three separate
+  // `boundingBox()` calls that straddled a re-render and compared coordinates
+  // from two different pages. Document-relative, so a scroll before the
+  // measurement cannot skew it either. The waits above are the deterministic
+  // gate (`pnpm check:e2e-hygiene` refuses the timing guess).
+  const titleEl = await page
+    .getByRole("heading", { level: 1, name: "What divers said" })
+    .elementHandle();
   const outcomeEl = await outcome.elementHandle();
   // A known review row, not "the first `<li>` on the page" — the staff nav is
   // a list too, and its items sit above everything here.
@@ -251,18 +303,18 @@ test("a weekend's held reviews can be cleared in one pass, not one button at a t
     .elementHandle();
   const layout = await page.evaluate(
     (nodes) => {
-      const [overviewNode, outcomeNode, rowNode] = nodes;
+      const [titleNode, outcomeNode, rowNode] = nodes;
       const top = (node: Element) => node.getBoundingClientRect().top + window.scrollY;
       const bottom = (node: Element) => node.getBoundingClientRect().bottom + window.scrollY;
       return {
-        overviewBottom: bottom(overviewNode),
+        titleBottom: bottom(titleNode),
         outcomeTop: top(outcomeNode),
         rowTop: top(rowNode),
       };
     },
-    [overviewEl, outcomeEl, reviewRowEl],
+    [titleEl, outcomeEl, reviewRowEl],
   );
-  expect(layout.outcomeTop).toBeGreaterThan(layout.overviewBottom);
+  expect(layout.outcomeTop).toBeGreaterThan(layout.titleBottom);
   expect(layout.outcomeTop).toBeLessThan(layout.rowTop);
 
   await page.context().clearCookies();
@@ -270,30 +322,55 @@ test("a weekend's held reviews can be cleared in one pass, not one button at a t
   await expect(page.getByText(comment)).toBeVisible();
 });
 
-test.describe("as owner, bulk publish", () => {
+test.describe("as owner, the worklist leads", () => {
   signedInAsOwner();
 
-  test("publishing with nothing ticked says so rather than pretending to work", async ({
-    page,
-  }) => {
-    await page.goto("/shop/blue-mantis/reviews?filter=waiting");
-    await page.getByRole("button", { name: "Publish selected" }).click();
-    await expect(page.getByText("Tick the reviews you want to publish first.")).toBeVisible();
-    // Nothing moved: the held review is still held.
-    await expect(
-      page.getByRole("checkbox", { name: /Select .+'s review to publish/ }).first(),
-    ).toBeVisible();
+  /**
+   * The page's shape, pinned: the work comes first, and the record is quiet
+   * beneath it (ADR 20260827-people-not-lists, decision 3).
+   */
+  test("puts what is waiting above what is already published", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/reviews");
+    const waitingEl = await group(page, /^Waiting on you/).elementHandle();
+    const publishedEl = await group(page, /^Published/).elementHandle();
+    const order = await page.evaluate(
+      (nodes) => {
+        const [waitingNode, publishedNode] = nodes;
+        const top = (node: Element) => node.getBoundingClientRect().top + window.scrollY;
+        return { waitingTop: top(waitingNode), publishedTop: top(publishedNode) };
+      },
+      [waitingEl, publishedEl],
+    );
+    expect(order.waitingTop).toBeLessThan(order.publishedTop);
   });
 
-  test("a published review carries no tick box — the bulk control only publishes", async ({
-    page,
-  }) => {
+  /**
+   * **One aggregate rendering.** Four stat tiles said the rating, the published
+   * count, the waiting count and the hidden count above a queue that then said
+   * three of the four again. The counts moved into the group labels that own
+   * them, and the rating is one line under the title — said once.
+   */
+  test("says how the shop is rated exactly once", async ({ page }) => {
     await page.goto("/shop/blue-mantis/reviews");
-    const published = page
-      .locator("li")
-      .filter({ hasText: "Vis was unreal and the crew found us a turtle on the second tank." })
-      .filter({ visible: true });
-    await expect(published.getByRole("checkbox")).toHaveCount(0);
+    await page.getByRole("heading", { level: 1, name: "What divers said" }).waitFor();
+    await expect(page.getByText(/average across \d+ published review/)).toHaveCount(1);
+    // The tiles, and the region that grouped them, are gone.
+    await expect(page.getByRole("region", { name: "Rating overview" })).toHaveCount(0);
+    await expect(page.getByText("Public rating")).toHaveCount(0);
+    // And so is the filter row: the groups are the filter.
+    await expect(page.getByRole("link", { name: "All reviews" })).toHaveCount(0);
+  });
+
+  test("a published review carries no state pill — its group says so", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/reviews");
+    const comment = "Vis was unreal and the crew found us a turtle on the second tank.";
+    const published = page.locator("li").filter({ hasText: comment }).filter({ visible: true });
+    await expect(published.getByText("Published", { exact: true })).toHaveCount(0);
+    await expect(
+      group(page, /^Published/)
+        .locator("li")
+        .filter({ hasText: comment }),
+    ).toHaveCount(1);
     await expect(published.getByText("Hide", { exact: true })).toBeVisible();
   });
 });

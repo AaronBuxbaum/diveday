@@ -21,18 +21,16 @@
     "previousMonthFallback": "{trend}vs {baseline} in {month} (no year-ago data yet)"
   },
   "downloadCsv": "Download CSV",
+  "taxLine": "Tax collected {amount}",
   "metrics": {
     "revenueLabel": "Net revenue",
-    "revenueDetail": "Payments and deposits after Stripe Tax on this month's trips",
     "revenueDetailWithImported": "Current-trip payments and deposits after Stripe Tax, plus {count, plural, one {# unverified imported source record} other {# unverified imported source records}}: {payments} payments and {refunds} refunds.",
-    "taxLabel": "Tax collected",
-    "taxDetail": "Stripe Tax included in this month's verified payments",
-    "bookingsLabel": "Bookings",
+    "bookingsLabel": "Seats",
     "bookingsThisMonth": "{count, plural, one {# trip} other {# trips}} on the books so far",
     "bookingsOther": "across {count, plural, one {# trip} other {# trips}}",
-    "seatFillLabel": "Seat fill",
+    "seatFillLabel": "Fill",
     "seatFillDetail": "{booked} of {offered} seats · {count, plural, one {# boat} other {# boats}} full",
-    "waiversLabel": "Waivers signed",
+    "waiversLabel": "Waivers",
     "waiversOutstanding": "{count} still to collect",
     "waiversAllIn": "Everyone's paperwork is in",
     "revenueViewOrders": "View orders",
@@ -49,16 +47,11 @@
     "viewOrders": "Review imported history in Orders"
   },
   "tripsThisMonth": "Trips this month",
-  "table": {
-    "trip": "Trip",
-    "seats": "Seats",
-    "fill": "Fill",
-    "crew": "Crew",
-    "waivers": "Waivers"
+  "row": {
+    "seats": "{booked} of {capacity, plural, one {# seat} other {# seats}}",
+    "crew": "{count, plural, one {# crew} other {# crew}}",
+    "waivers": "{complete} of {total, plural, one {# waiver} other {# waivers}}"
   },
-  "seatsMobile": "{booked}/{capacity, plural, one {# seat} other {# seats}}",
-  "fillLabel": "{booked} of {capacity, plural, one {# seat} other {# seats}} booked",
-  "waiversRowLabel": "{complete} of {total, plural, one {# waiver} other {# waivers}} signed",
   "pagination": {
     "total": "{count, plural, one {# trip} other {# trips}}"
   }

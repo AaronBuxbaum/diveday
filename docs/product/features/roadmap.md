@@ -152,46 +152,23 @@ Sequenced so the language lands before the recompositions that speak it. **Each 
 standing obligation**: the component that must not drift names the ADR in its doc comment, and a
 test pins the rule (never a pixel snapshot).
 
-- **6d. The home's evening reading, and the fold (H-62).** The spine settles station by station —
-  a state, never a mode — and the closing block (leftovers with per-row Dismiss per H-57, then the
-  one closing act) appears once the day's departures have ended, with the standing one-hour buffer.
-  The same slice removes the destination: `/close-out` 308s to the home, its notices re-home, the
-  `closeOut` registry entry goes, and the dock drops to four destinations plus More. *Pins:* a test
-  that no acknowledgement gate stands on the closing act, and one that the closing block never
-  renders while a departure is still out.
-- **6f. The orders day ledger.** Day groups own date and subtotal; toolbar filters; imported
-  history as one disclosure. *Pins:* a test that no row repeats its group's date.
+**Every slice of this section shipped 2026-08-28** ([shipped.md](../shipped.md)) — 6a–6i, the
+last of them 6d (the home's evening reading and the fold) and 6f. Both of the section's owner calls
+were decided before the build: H-62 (the fold) and H-63 (desktop-only week) in
+[../human-decisions.md](../human-decisions.md), 2026-08-27. The ADR is what code obeys now; the
+canvas and [its implementation spec](../../design/canvases/20260827-clearwater-surface-language/SPEC.md)
+stand as the dated argument.
 
-**6a, 6b, 6c, 6e, 6g, 6h and 6i shipped 2026-08-28** ([shipped.md](../shipped.md)); 6d and 6f
-above are what is left of the section.
-
-**Both of this section's owner calls are decided** — H-62 (the fold) and H-63 (desktop-only week)
-in [../human-decisions.md](../human-decisions.md), 2026-08-27 — so no slice here waits on a human.
-The canvas carries [an implementation spec](../../design/canvases/20260827-clearwater-surface-language/SPEC.md)
-— journeys, acceptance tests, and interface contracts per slice — written for a session with none
-of this context. Start any slice from the canvas README's "Implementing a slice" prompt.
-
-**Build order across items 6–10** — the dependency graph a scheduler of sessions needs, stated
-once (each SPEC's preamble points here). Everything not listed is independent:
-
-- **6a, 6g, 6h and 6i have shipped** ([shipped.md](../shipped.md)), so the ledger primitives
-  (`GroupLabel`/`LedgerGroup`/`LedgerRow`/`RowKind`/`InsetGroup`), flat-at-rest and `SettledCheck`
-  are already in the tree for 6f, 8c, 8f, 9a, 9d–9g, 10a and 10d to build on.
-- **6b has landed** — `--chrome-h` and `ChromeBar` are in the tree. **6c has shipped**
-  ([shipped.md](../shipped.md)), so `assembleDaySpine`, `DaySpine.tsx` and `DayStation.tsx` are
-  what **6d** settles station by station, what **10d** extends for day zero, and where 8b's S1
-  journey starts. **6e → 9e** (the `?week=` grammar — 9e introduces it itself if 6e has not
-  landed, per its cross-reference).
-- **7a, 7b and 7c have shipped** ([shipped.md](../shipped.md)), so `ThreadShell`, the thread's
-  `max-w-xl` measure, the `EntryShell` type-ramp and the spine's own vocabulary
-  (`src/lib/thread-steps.ts`, `ThreadStatus`/`ThreadSpine`) are already in the tree for 7d, 7e,
-  10a and 10c to build on. 7c answered the choice 7b handed it: `PackingSection` stays and comes
-  down to the section heading scale, and `DiveBriefingsSection` — with `DiveBriefingCard`,
-  `DiveSiteFieldGuide`, `DiveSiteMap` and `DiveSiteLandmarks` under it — is **deleted**, so a
-  diver's only reading of what a day dives is the trip page's "The day" / "Look for".
-- **8a has shipped** ([shipped.md](../shipped.md)), so `CertificationCardRow`, `WaiverStateRow`
-  and `BookingStoryRow` (`src/components/person/rows.tsx`) are in the tree for 8b, 8c and 9g's
-  add-booking step to adopt.
+**The build-order graph across items 6–10 is spent** — every slice it sequenced has landed, so
+what it described as arriving is simply in the tree: the ledger primitives
+(`GroupLabel`/`LedgerGroup`/`LedgerRow`/`RowKind`/`InsetGroup`), `--chrome-h` and `ChromeBar`,
+`assembleDaySpine`/`DaySpine`/`DayStation`, the `?week=` grammar, `ThreadShell` and the thread's
+own vocabulary (`src/lib/thread-steps.ts`), the person rows
+(`src/components/person/rows.tsx`), and the long-form editor pattern
+(`src/components/editor/`). One deletion from it is worth carrying forward, because it is a
+subtraction rather than an addition: 7c deleted `DiveBriefingsSection` and the card deck under it,
+so a diver's reading of what a day dives is the trip page's "The day", "The route" and "Look for"
+and nothing else.
 
 ### 7. The diver's thread (design complete)
 
@@ -202,15 +179,10 @@ One link from booking to afterglow, in the Clearwater grammar — argued in the 
 unranked against them. The regression floor is the existing booking/readiness/waiver/recap e2e
 suite — every slice keeps it green.
 
-- **7d. The after-state and the recap fold.** After endsAt + the standing buffer, the same link
-  renders the keepsake, one review ask, and quiet doors; `/recap/[token]` renders the same surface
-  (links and emails keep working); the duplicate facts delete (H-49). Closes the concept-model
-  row's "folding recap into the same link" half; the second booking-time email stays an owner
-  call. The keepsake's unprompted-share artifact (save-as-image, no bearer URL) is
-  deliberately not in this slice — issue #1081 carries it. *Pins:* the day's facts render once; prep-vs-after switches on the buffer rule.
-- **7e. The waiver paces itself.** Step rail, one notice grammar, one primary; the release stays
-  fully presented; signature/medical semantics untouched (H-01/H-03). *Pins:* one primary;
-  banners through one component.
+**Every slice of this section shipped 2026-08-28** ([shipped.md](../shipped.md)) — 7a–7e, the
+last of them 7d (the after-state and the recap fold) and 7e. Two things the section deliberately did
+not carry are still open and are not slices: the keepsake's unprompted-share artifact, which issue
+#1081 holds, and the second booking-time email, which stays an owner call.
 
 ### 8. People, not lists (design complete)
 
@@ -218,18 +190,11 @@ The staff people surfaces — the diver record (whose one idea issue #780 record
 the roster, reviews, waivers, requests — argued in the Proposed ADR
 [20260827-people-not-lists](../../architecture/decisions/20260827-people-not-lists.md), drawn in
 [its canvas](../../design/canvases/20260827-people-not-lists/README.md), specified in
-[its SPEC](../../design/canvases/20260827-people-not-lists/SPEC.md). Speaks Clearwater (item 6);
-unranked. `security-reviewer` before 8e merges (8b already had one).
+[its SPEC](../../design/canvases/20260827-people-not-lists/SPEC.md). Speaks Clearwater (item 6).
 
-- **8c. The roster ledger.** One rendering at all widths, letter groups, exceptional badges only.
-  *Pins:* a clear diver's row carries no badge.
-- **8d. Reviews as a worklist.** "Waiting on you" leads; the stat tiles collapse to one aggregate
-  line; the floor's arithmetic untouched. *Pins:* one aggregate rendering.
-- **8e. The waiver surface.** Materiality as a recorded choice then one Publish (H-54 semantics
-  unchanged); the signature log as a day-grouped ledger with integrity badges only when not valid.
-  *Pins:* no submit without a choice while signatures stand.
-- **8f. Requests in the language.** Day groups own count and advice; soft matches are ink, not
-  tint.
+**Every slice of this section shipped 2026-08-28** ([shipped.md](../shipped.md)) — 8a–8f. 8b and 8e
+each had the `security-reviewer` pass their surfaces require.
+
 
 ### 9. The shop's shelves (design complete)
 
@@ -240,21 +205,11 @@ the mapped rest — argued in the Proposed ADR
 [its SPEC](../../design/canvases/20260827-the-shops-shelves/SPEC.md). Completes the Clearwater
 stack's app-wide pass (items 6–9 + the departure's own item 5). Unranked.
 
-- **9a. The dive-site library and the catalog door.** One ledger; the catalog a door at the tail;
-  the provenance glyph retires. *Pins:* requirement words only above Open Water.
-- **9b/9c. The editor rail** on the course editor, then the site form. Sticky rail, unboxed
-  sections, one Save; `ConflictGuardedForm`, depth markers, template-update flows untouched.
-  *Pins:* every section reachable from the rail; refusal anchors land.
-- **9d. The gear register's one story.** Out / Overdue / On the wall as the groups; tiles and
-  the Returns panel fold in (H-49); 23P01 truth untouched. *Pins:* a unit renders in exactly one
-  group.
-- **9e. Staffing as a week.** People × days; the gap carries its act in its day; credentials stay
-  inform-only (H-59). *Pins:* no control gated by a lapse.
-- **9f. Reports sheds its chrome.** Unboxed figures; the ledger keeps the remainder-attention
-  waiver meter via the shared `ProgressBar`. *Pins:* the remainder carries the tone, never the
-  fill.
-- **9g. The mapped surfaces.** Courses roster, promos, add-booking onto the patterns — mechanical
-  restyles, no behavior change.
+**Every slice of this section shipped 2026-08-28** ([shipped.md](../shipped.md)) — 9a–9h, the
+last of them the editor rail (9b on the course editor, 9c on the site form) and 9g's mapped
+surfaces. The rail is a shared module now, `src/components/editor/`, rather than a shape either
+editor owns.
+
 ### 10. First light (design complete)
 
 The doors — sign-in, onboard, the reset/verify/invite family, claim, unsubscribe — and the shop's
@@ -262,20 +217,10 @@ first morning, argued in the Proposed ADR
 [20260827-first-light](../../architecture/decisions/20260827-first-light.md), drawn in
 [its canvas](../../design/canvases/20260827-first-light/README.md), specified in
 [its SPEC](../../design/canvases/20260827-first-light/SPEC.md). Closes the route-coverage hole the
-2026-08-27 sweep found: the pages a person meets *before* items 6–9's surfaces. Unranked.
+2026-08-27 sweep found: the pages a person meets *before* items 6–9's surfaces.
 
-- **10a. The door speaks Clearwater.** `EntryShell`/`EntryDone` converge on the language;
-  `EntryDone`'s emoji glyph becomes the closed drawn set (`DoorGlyphId`); the dead-link law's two
-  tiers become normative. *Pins:* no emoji literal in `account/` components; a door renders one
-  primary.
-- **10c. Claim joins the thread.** `/claim/[token]` adopts `ThreadShell` (its success already
-  lands on `/ready`); a readable dead claim becomes booking-tier and names the shop. *Pins:* a
-  readable dead token names the shop; an unreadable one does not.
-- **10d. The first morning.** `FirstRunChecklist` recomposes onto the ledger primitives as the
-  spine's leading group — its facts, condition, `FIRST_RUN_STEP_COUNT` and test hooks unchanged,
-  its nested step boxes gone; the first booking ever carries the coral mark (a coral-budget
-  entry, Clearwater ADR decision 11). Depends on 6a and 6c. *Pins:* the group never co-renders
-  with the quiet-day composition; two bookings ever means no mark.
+**Every slice of this section shipped 2026-08-28** ([shipped.md](../shipped.md)) — 10a–10d.
+
 
 ### 11. Product ideas from the sweep (each needs an owner's nod)
 
@@ -352,11 +297,8 @@ homework) and every replacement sentence written out, claims-policy-clean. Each 
 both locales in the same change. Unranked, but 12a and 12c aim directly at "owners aren't
 starting trials."
 
-- **12f. `/about` spends the impulse it creates.** The `FunnelCtas` pair under the four-rules
-  grid; the support mailto demotes to secondary; `leaveTitle` matches its section.
-
-**12a–12e shipped 2026-08-28** ([shipped.md](../shipped.md)); 12f is what is left. The leave-it
-guides' pricing link stays where the review left it — an owner call, not a slice.
+**12a–12f all shipped 2026-08-28** ([shipped.md](../shipped.md)). What is left of the review is
+not a slice: the leave-it guides' pricing link stays where the review left it, an owner call.
 
 ## Concept-model simplification (proposed — each row needs an owner decision)
 

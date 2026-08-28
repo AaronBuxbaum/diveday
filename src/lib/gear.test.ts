@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { shiftCalendarDateMonths } from "./calendar-date";
 import {
@@ -5,8 +7,11 @@ import {
   GEAR_SERVICE_DUE_SOON_DAYS,
   GEAR_SERVICE_DUE_SOON_DIVES,
   GEAR_SERVICE_KINDS_FOR,
+  type GearRegisterGroupName,
   gearAssignmentNeeds,
   gearKindRank,
+  gearRegisterGroup,
+  gearServiceIsDue,
   gearServiceState,
   groupUnitsForSize,
   pickDisplayReservation,
@@ -324,6 +329,161 @@ describe("reservationPhase", () => {
         today,
       ),
     ).toBe("returned");
+  });
+});
+
+/**
+ * **The pin the roadmap names for slice 9d** (ADR 20260827-the-shops-shelves):
+ * a unit appears in exactly one of the register's three groups. The phase
+ * table in that canvas's SPEC is this test — every phase, plus the one
+ * distinction the phase vocabulary does not carry on its own (whether a
+ * `reserved` window has begun yet).
+ */
+describe("gearRegisterGroup", () => {
+  const today = "2026-08-20";
+  const base = { reservedFrom: "2026-08-18", checkedOutAt: null, returnedAt: null };
+  const handedOver = new Date("2026-08-18T13:00:00Z");
+
+  it("files every phase in exactly one group", () => {
+    const cases: Array<[GearRegisterGroupName, Parameters<typeof gearRegisterGroup>[0]]> = [
+      // Out: with a diver, or waiting on the desk to hand it over today.
+      ["out", { ...base, reservedUntil: "2026-08-25", checkedOutAt: handedOver }],
+      ["out", { ...base, reservedUntil: today, checkedOutAt: handedOver }],
+      ["out", { ...base, reservedUntil: today }],
+      ["out", { ...base, reservedUntil: "2026-08-25" }],
+      // Overdue: a lapsed window still open — both of the ways it can lapse.
+      ["overdue", { ...base, reservedUntil: "2026-08-19", checkedOutAt: handedOver }],
+      ["overdue", { ...base, reservedUntil: "2026-08-19" }],
+      // On the wall: nothing claimed, or a claim that is already settled.
+      ["onWall", null],
+      ["onWall", { ...base, reservedUntil: "2026-08-19", returnedAt: handedOver }],
+    ];
+    for (const [group, reservation] of cases) {
+      expect(gearRegisterGroup(reservation, today)).toBe(group);
+    }
+  });
+
+  it("keeps a window that has not begun on the wall, and moves it out the day it opens", () => {
+    const upcoming = {
+      reservedFrom: "2026-08-29",
+      reservedUntil: "2026-08-30",
+      checkedOutAt: null,
+      returnedAt: null,
+    };
+    expect(gearRegisterGroup(upcoming, today)).toBe("onWall");
+    expect(gearRegisterGroup(upcoming, "2026-08-29")).toBe("out");
+  });
+
+  it("files a never-collected lapsed window under overdue, keeping its own word", () => {
+    const lapsed = { ...base, reservedUntil: "2026-08-19" };
+    // The word and the act still split on the handover stamp; the group does not.
+    expect(reservationPhase(lapsed, today)).toBe("never_picked_up");
+    expect(gearRegisterGroup(lapsed, today)).toBe("overdue");
+  });
+});
+
+/**
+ * **The glossary owes the register's vocabulary a definition** — AGENTS.md's
+ * "New domain concept → glossary" hard rule, and the one case it most obviously
+ * names: slice 9d files both lapsed phases under a heading that says
+ * **Overdue**, which is deliberately wider than the phase word the unit page's
+ * badge and Today's rows still use in its narrow sense. Two live meanings of
+ * one word need the shared definition to say so, or a manager reads
+ * "Overdue — 3" as three units in divers' hands when two are hanging on the
+ * shop's own wall — a phone call, or a loss note, about kit the shop is
+ * standing next to.
+ *
+ * A text scan, in the spirit of `src/app/instant-coverage.test.ts`: it cannot
+ * judge prose, and it is not trying to. It fails when the entry is missing
+ * altogether or has been rewritten past the one distinction it exists to carry
+ * — which is exactly the change that would go unnoticed.
+ */
+describe("the glossary's register-group entry", () => {
+  it("defines all three groups and says the Overdue group takes both lapsed phases", async () => {
+    const glossary = await readFile(path.join(process.cwd(), "docs/product/glossary.md"), "utf8");
+    const entry = glossary
+      .split(/^- \*\*/m)
+      .find((block) => block.startsWith("Gear register groups**"));
+    expect(entry, "docs/product/glossary.md has no **Gear register groups** entry").toBeDefined();
+    const text = entry ?? "";
+    for (const group of ["**Out**", "**Overdue**", "**On the wall**"]) {
+      expect(text).toContain(group);
+    }
+    // The widening itself, and the words the rows keep underneath it.
+    expect(text).toMatch(/Overdue group takes both lapsed phases/);
+    expect(text).toContain("**Never picked up**");
+  });
+
+  it("sends a reader of the narrow phase words on to the group that widens them", async () => {
+    const glossary = await readFile(path.join(process.cwd(), "docs/product/glossary.md"), "utf8");
+    const reservation = glossary
+      .split(/^- \*\*/m)
+      .find((block) => block.startsWith("Gear reservation**"));
+    expect(reservation).toContain("gear register groups");
+  });
+});
+
+/**
+ * The register says "this unit wants the bench" in two places — the row's
+ * service sentence and the Service-due view's list — and this predicate is
+ * both of them, so they cannot become two different sets (`serviceFact` in
+ * `GearRegisterLedger.tsx`, `listGearServiceDueRows` in `src/db/gear.ts`).
+ */
+describe("gearServiceIsDue", () => {
+  const working = { status: "in_service" } as const;
+
+  it("speaks for a unit already off the wall, whatever its clocks say", () => {
+    expect(gearServiceIsDue({ status: "needs_service" }, { state: "no_clock" })).toBe(true);
+    expect(
+      gearServiceIsDue(
+        { status: "needs_service" },
+        { state: "ok", kind: "service", nextDueOn: "2027-01-01" },
+      ),
+    ).toBe(true);
+  });
+
+  it("speaks for a clock that has run out or is running out", () => {
+    expect(
+      gearServiceIsDue(working, {
+        state: "overdue",
+        kind: "visual_inspection",
+        nextDueOn: "2026-07-01",
+        daysOverdue: 50,
+      }),
+    ).toBe(true);
+    expect(
+      gearServiceIsDue(working, {
+        state: "due_soon",
+        kind: "visual_inspection",
+        nextDueOn: "2026-09-10",
+        daysLeft: 21,
+      }),
+    ).toBe(true);
+  });
+
+  it("stays silent for a working unit whose clocks are in date", () => {
+    expect(gearServiceIsDue(working, { state: "no_clock" })).toBe(false);
+    expect(
+      gearServiceIsDue(working, { state: "ok", kind: "service", nextDueOn: "2027-08-01" }),
+    ).toBe(false);
+  });
+
+  /**
+   * The month is the register's, not Today's. `gearServiceState` has already
+   * spent `GEAR_SERVICE_DUE_SOON_DAYS` deciding what "due soon" means, and a
+   * tank three weeks from its visual inspection is the case the whole view
+   * exists for — Today's six-day queue never mentions it.
+   */
+  it("carries the whole due-soon window the register plans over", () => {
+    expect(GEAR_SERVICE_DUE_SOON_DAYS).toBe(30);
+    expect(
+      gearServiceIsDue(working, {
+        state: "due_soon",
+        kind: "hydro_test",
+        nextDueOn: "2026-09-18",
+        daysLeft: GEAR_SERVICE_DUE_SOON_DAYS,
+      }),
+    ).toBe(true);
   });
 });
 

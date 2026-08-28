@@ -16,7 +16,7 @@ const SHOP = DEMO_SHOP_SLUG;
 
 signedInAsOwner();
 
-test("staff opens a diver from their avatar and can reach them from the header", async ({
+test("staff opens a diver from the roster row and can reach them from the header", async ({
   page,
 }) => {
   await page.goto("/shop/blue-mantis/divers");
@@ -24,10 +24,9 @@ test("staff opens a diver from their avatar and can reach them from the header",
   // search for her rather than assume she's on the unfiltered first page.
   await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
 
-  // The whole person cell is one link, so the initials avatar opens the diver
-  // just like the name does.
-  const row = page.getByRole("row").filter({ hasText: "Priya Sharma" });
-  await row.getByText("PS", { exact: true }).click();
+  // The row *is* the door (ADR 20260827-people-not-lists): one stretched link
+  // named for the diver, so a tap anywhere along the row opens their record.
+  await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
 
   // Contact details are one tap from the front desk: mail the diver or call them.
@@ -46,7 +45,7 @@ test("a diver's record tells one story, and a departure still ahead opens the ma
 }) => {
   await page.goto("/shop/blue-mantis/divers");
   await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
-  await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
+  await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
 
   const story = page.getByRole("region", { name: "The story" });
   await expect(story).toBeVisible();
@@ -61,7 +60,7 @@ test("a diver's record tells one story, and a departure still ahead opens the ma
  */
 test("a diver's record puts the boat they are on at the top of the story", async ({ page }) => {
   await page.goto("/shop/blue-mantis/divers?q=Priya");
-  await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
+  await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
 
   const story = page.getByRole("region", { name: "The story" });
@@ -81,7 +80,7 @@ test("a diver's record puts the boat they are on at the top of the story", async
  */
 test("the record leads with what is open, and offers exactly one primary act", async ({ page }) => {
   await page.goto("/shop/blue-mantis/divers?q=Priya");
-  await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
+  await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
 
   // The retired spine, in both of its spellings.
@@ -104,7 +103,7 @@ test("the record leads with what is open, and offers exactly one primary act", a
  */
 test("the status ledger's fix lands on the control that clears it", async ({ page }) => {
   await page.goto("/shop/blue-mantis/divers?filter=needs_attention");
-  await page.getByRole("row").filter({ hasText: /\S/ }).nth(1).getByRole("link").first().click();
+  await page.locator("main ul li a").first().click();
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
   const fix = page.getByRole("link", { name: "Verify it" });
@@ -118,7 +117,7 @@ test("a diver note is shared with the live boat manifest", async ({ page }) => {
   const note = `Briefing note ${e2eNow().getTime()}`;
 
   await page.goto(`/shop/${SHOP}/divers?q=Priya`);
-  await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
+  await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
 
   const notes = page.getByRole("region", { name: "Diver notes" });
@@ -272,12 +271,14 @@ test("the roster pages both ways, and back one page is the page you came from", 
   await expect(pager).toBeVisible();
   await expect(pager).toContainText(/Page 1 of \d+/);
 
-  const firstName = await page.getByRole("row").nth(1).getByRole("link").first().textContent();
+  // The row's link carries the diver's name as its accessible name — the row
+  // text itself sits behind the stretched overlay (`LedgerRow`).
+  const firstName = await page.locator("main ul li a").first().getAttribute("aria-label");
 
   await pager.getByRole("link", { name: "Next" }).click();
   await expect(page).toHaveURL(/page=2/);
   await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
-  const secondName = await page.getByRole("row").nth(1).getByRole("link").first().textContent();
+  const secondName = await page.locator("main ul li a").first().getAttribute("aria-label");
   expect(secondName).not.toBe(firstName);
 
   // Forward once more, then back one — page 2 again, not page 1 and not the top.
@@ -288,41 +289,39 @@ test("the roster pages both ways, and back one page is the page you came from", 
     .getByRole("link", { name: "Previous" })
     .click();
   await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
-  expect(await page.getByRole("row").nth(1).getByRole("link").first().textContent()).toBe(
-    secondName,
-  );
+  expect(await page.locator("main ul li a").first().getAttribute("aria-label")).toBe(secondName);
 
   // A search resets to the first page rather than stranding the reader on a
   // page the narrowed result set does not have.
   await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
-  await expect(page.getByRole("row").filter({ hasText: "Priya Sharma" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Priya Sharma", exact: true })).toBeVisible();
   await expect(page).not.toHaveURL(/page=/);
 });
 
 test.describe("on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  // The table hides sideways columns behind a scroll on a 390px screen, so
-  // the list swaps to stacked cards there — everything readable, no scroll.
-  test("the divers list stacks into cards and still opens the diver", async ({ page }) => {
+  /**
+   * **One rendering at every width** (ADR 20260827-people-not-lists, decision
+   * 2). The roster used to draw a stacked card list under `sm` and a
+   * three-column table above it: the same page of divers twice in the DOM, one
+   * copy CSS-hidden, and every assertion about the roster obliged to say which
+   * one it meant. So this test's job changed from "the phone gets the other
+   * layout" to "there is no other layout" — the ledger at 390 is the ledger at
+   * 1440, and the row is still the door.
+   */
+  test("the roster is one ledger at 390, and the row still opens the diver", async ({ page }) => {
     await page.goto("/shop/blue-mantis/divers");
     await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
 
-    const card = page.getByRole("link", { name: /Priya Sharma/ });
-    await expect(card).toBeVisible();
-    // The card stacks the same two facts the table's columns carry, so the
-    // second one has to be on it: the diver's certification level, or the
-    // words that stand in when no unexpired card is on file. Matched as a set
-    // rather than pinned to one level — this test is about the phone layout
-    // carrying the column, not about which card this seeded diver holds.
-    await expect(
-      card.getByText(
-        /Open Water|Advanced Open Water|Rescue Diver|Divemaster|Instructor|No current certification/,
-      ),
-    ).toBeVisible();
-    await expect(page.getByRole("table")).toBeHidden();
+    const row = page.getByRole("link", { name: "Priya Sharma", exact: true });
+    await expect(row).toHaveCount(1);
+    await expect(page.getByRole("table")).toHaveCount(0);
+    // Her letter heads the run she is in, and states itself once — the shared
+    // fact belongs to the group header, never to the rows.
+    await expect(page.getByRole("heading", { level: 2, name: "P", exact: true })).toHaveCount(1);
 
-    await card.click();
+    await row.click();
     await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
   });
 });
@@ -370,7 +369,7 @@ test("staff delete a diver, find them again in the Deleted view, and restore the
   // The Deleted view is where they are, and search works inside it.
   await page.getByRole("link", { name: "Deleted", exact: true }).click();
   await expect(page).toHaveURL(/filter=removed/);
-  const row = page.getByRole("row").filter({ hasText: diverName });
+  const row = page.getByRole("listitem").filter({ hasText: diverName });
   await expect(row).toBeVisible();
   // And the row carries nothing to press. Every action on a diver lives on the
   // diver's own record; a list a staffer scans holds no consequential writes.
@@ -386,7 +385,7 @@ test("staff delete a diver, find them again in the Deleted view, and restore the
   await expect(page.getByRole("status").filter({ hasText: "Diver restored" })).toBeVisible();
   await page.goto(`/shop/${SHOP}/divers`);
   await page.getByRole("searchbox", { name: "Search divers" }).fill(diverName);
-  await expect(page.getByRole("row").filter({ hasText: diverName })).toBeVisible();
+  await expect(page.getByRole("link", { name: diverName, exact: true })).toBeVisible();
 });
 
 /**
@@ -424,7 +423,7 @@ test("erase is absent on a live diver's record and appears once they are deleted
 
   // Deleted: the record says so, and now offers the erase.
   await page.goto(`/shop/${SHOP}/divers?filter=removed&q=${encodeURIComponent(diverName)}`);
-  await page.getByRole("row").filter({ hasText: diverName }).getByRole("link").first().click();
+  await page.getByRole("link", { name: diverName, exact: true }).click();
   await expect(page.getByText("This diver is deleted")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Erase personal data" })).toBeVisible();
 });
@@ -440,7 +439,7 @@ test("erase is absent on a live diver's record and appears once they are deleted
  */
 test("a diver's record carries the shop's activity about them, paged", async ({ page }) => {
   await page.goto(`/shop/${SHOP}/divers?q=Priya`);
-  await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
+  await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
 
   // Folded: it is the reference a staffer scrolls to, not the errand that
@@ -479,7 +478,7 @@ test("a section's outcome renders inside that section, not in a banner at the to
   test.setTimeout(30_000);
 
   await page.goto(`/shop/${SHOP}/divers?q=Priya`);
-  await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
+  await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
 
   const gear = page.getByRole("region", { name: "Gear and sizes" });

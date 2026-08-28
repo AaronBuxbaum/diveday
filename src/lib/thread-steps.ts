@@ -1,6 +1,7 @@
 import { calendarDateInTimezone } from "./calendar-date";
 import { nowDate } from "./clock";
 import type { ChecklistState, DiverChecklistItem } from "./readiness-summary";
+import { RECAP_AUTOMATIC_DELAY_MS } from "./recap-schedule";
 
 /**
  * **The diver's thread as a spine of steps** — ADR 20260827-the-divers-thread,
@@ -213,11 +214,77 @@ export function isDiveDay(input: {
   now?: Date;
 }): boolean {
   const now = input.now ?? nowDate();
-  if (now.getTime() > input.endsAt.getTime() + DEPARTURE_BUFFER_MS) return false;
+  if (theBoatIsHome({ endsAt: input.endsAt, now })) return false;
   return (
     calendarDateInTimezone(input.startsAt, input.timeZone) ===
     calendarDateInTimezone(now, input.timeZone)
   );
+}
+
+/**
+ * **The boat is scheduled home**, allowing for the standing one-hour
+ * late-arrival buffer (AGENTS.md).
+ *
+ * A moment rather than a calendar date, and the trip's *end* rather than its
+ * start: a diver reading their page on the surface interval is still on their
+ * day. This is the clock question and the whole of what a clock can answer —
+ * "has the day finished", never "did this person dive it". {@link isDiveDay}
+ * stops exactly here, and {@link isAfterTheDive} starts from here.
+ */
+export function theBoatIsHome(input: { endsAt: Date; now?: Date }): boolean {
+  const now = input.now ?? nowDate();
+  return now.getTime() > input.endsAt.getTime() + DEPARTURE_BUFFER_MS;
+}
+
+/**
+ * What the shop recorded at the dock for this booking — the newest
+ * `roll_call_events` row at the `departure` checkpoint, or null where the crew
+ * recorded nothing (`departureRollCallForBooking`, src/db/manifests.ts).
+ */
+export type DepartureRollCall = "boarded" | "not_boarded" | null;
+
+/**
+ * **The diver dived**, which is the condition that turns the thread page from
+ * its prep state into its after-state (ADR 20260827-the-divers-thread,
+ * decision 4, slice 7d).
+ *
+ * It opened on the clock alone until a review caught it (2026-08-28): the
+ * one-hour late-arrival buffer above, and nothing else. That buffer is the
+ * right rule for *has it sailed* and the wrong one for *did this person dive*,
+ * because the only thing standing between a diver who never boarded and a page
+ * saying "Welcome back" was `bookings.status = 'no_show'` — a staff act
+ * performed during close-out, which is an evening ritual and "a recorded act,
+ * never a gate" (docs/product/glossary.md). An hour after the boat tied up it
+ * has almost never happened yet. So the diver who overslept, or who was held at
+ * the desk on a medical hold and never left the dock, opened the durable link
+ * already sitting in their inbox and got a printable dive record for a day they
+ * spent on land, and an invitation to tip the crew who dived without them.
+ *
+ * Three answers, in the order the evidence deserves:
+ *
+ * - **`not_boarded` never sees the afterglow.** The crew wrote down that this
+ *   person did not get on the boat; no clock overrides that.
+ * - **`boarded` opens it at the buffer**, because the shop has recorded that
+ *   they were aboard — the clock is no longer asserting anything on its own.
+ * - **No roll call at all waits for the recap floor**
+ *   (`RECAP_AUTOMATIC_DELAY_HOURS`, four hours). It is the delay the recap
+ *   *send* has always used before it asserts the same thing by email, and a
+ *   shop that does not run roll call should not have a second, looser rule
+ *   invented for it here.
+ *
+ * Still deliberately blind to cancellation — of the booking or of the departure
+ * — which are terminal notices the page decides before it ever asks this.
+ */
+export function isAfterTheDive(input: {
+  endsAt: Date;
+  /** The dock's own record, where a shop kept one. */
+  boarded?: DepartureRollCall;
+  now?: Date;
+}): boolean {
+  if (input.boarded === "not_boarded") return false;
+  const now = input.now ?? nowDate();
+  if (input.boarded === "boarded") return theBoatIsHome({ endsAt: input.endsAt, now });
+  return now.getTime() > input.endsAt.getTime() + RECAP_AUTOMATIC_DELAY_MS;
 }
 
 /** The standing late-arrival buffer: trips run late, so nothing is "past" for an hour. */

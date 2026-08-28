@@ -1,15 +1,23 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { connection } from "next/server";
+import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import {
   ThreadSpine,
   type ThreadSpineStep,
   ThreadStatus,
 } from "@/app/ready/[token]/_components/ThreadSpine";
+import { buildAfterStateProps } from "@/app/ready/[token]/_lib/after-state-data";
+import {
+  startTipAction,
+  submitReviewAction,
+  uploadRecapPhotoAction,
+} from "@/app/recap/[token]/actions";
 import { PackingSection } from "@/app/s/[shopSlug]/trips/[id]/_components/PackingSection";
 import { RentalFitForm } from "@/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm";
 import { TripActions } from "@/app/s/[shopSlug]/trips/[id]/_components/TripActions";
 import { TripTerms } from "@/app/s/[shopSlug]/trips/[id]/_components/TripTerms";
-import { EntryDone } from "@/components/account/EntryShell";
+import { type DoorGlyphId, EntryDone } from "@/components/account/EntryShell";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { FlashParams } from "@/components/FlashParams";
@@ -33,8 +41,10 @@ import {
 } from "@/db/booking-capabilities";
 import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
 import { getDb } from "@/db/client";
+import { departureRollCallForBooking } from "@/db/manifests";
 import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
+import { getRecapPageData } from "@/db/recap";
 import {
   certificationAgency,
   certificationLevel,
@@ -69,13 +79,21 @@ import {
 import { googleMapEmbedUrl, googleMapsUrl } from "@/lib/maps";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
-import { publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
+import { publicSchedulePath, publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
 import { combineCertRequirements, type ReadinessBlockerCode } from "@/lib/readiness";
 import { buildDiverChecklist, type DiverChecklistItem } from "@/lib/readiness-summary";
+import { signRecapToken } from "@/lib/recap-links";
 import { nitroxCardWanted } from "@/lib/rentals";
 import { shopAddressLines, shopMapQuery } from "@/lib/shop-address";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
-import { buildThreadSteps, isDiveDay, partyIsAllSet, type ThreadStep } from "@/lib/thread-steps";
+import {
+  buildThreadSteps,
+  isAfterTheDive,
+  isDiveDay,
+  partyIsAllSet,
+  type ThreadStep,
+  theBoatIsHome,
+} from "@/lib/thread-steps";
 import {
   cancelMyBookingAction,
   emailFreshReadinessLinkAction,
@@ -244,11 +262,20 @@ type PaymentReceipt = {
  * card of its own instead, which is how three token pages ended up with three
  * different boxes saying the same kind of thing.
  *
- * The glyph is decorative. `⏳` is the app-wide "this link has run out" mark;
- * a cancelled booking gets `🗓️` instead, because the link is fine and telling
+ * The mark is drawn and decorative (ADR 20260827-first-light, decision 2).
+ * `expired` is the app-wide "this link has run out" clock; a cancelled booking
+ * gets the `cancelled` calendar instead, because the link is fine and telling
  * that diver to ask for a fresh one would send them the wrong way.
  */
-function Notice({ title, text, glyph = "⏳" }: { title: string; text: string; glyph?: string }) {
+function Notice({
+  title,
+  text,
+  glyph = "expired",
+}: {
+  title: string;
+  text: string;
+  glyph?: DoorGlyphId;
+}) {
   return <EntryDone glyph={glyph} title={title} text={text} />;
 }
 
@@ -783,7 +810,7 @@ function cancelledNotice(
   const refundKey = verifiedCancelNotice(paymentStatus);
   return (
     <Notice
-      glyph="🗓️"
+      glyph="cancelled"
       title={t("ready.cancelledHeading")}
       text={
         refundKey
@@ -1188,6 +1215,57 @@ export default async function DiverReadinessPage({
         }
       }
     }
+    /**
+     * **The departure was called off, which is why this token stopped
+     * verifying at all.**
+     *
+     * `verifyBookingCapability` fails closed on `trips.status = 'cancelled'`
+     * (`src/db/booking-capabilities.ts`) — rightly, since an outstanding
+     * capability must not keep paying, rental-fit or cancel authority for a
+     * trip that no longer runs. But this page reaches for the same call as its
+     * *identity* lookup, so a blow-out took the diver's link out from under
+     * them: the branch written below for exactly this case sat behind a guard
+     * (`trip_status` has two values, so `departureCancelled` **is** the
+     * condition that already returned null) that could never be reached, and
+     * every diver a cancellation stranded was told the one thing that is
+     * false — that their link had run out — with no door back and a "send me
+     * a fresh one" button that fails the same check.
+     *
+     * Resolved the relaxed way the diver's-own-cancel path above resolves, and
+     * used only to *say* what happened: the hash must still match an unexpired
+     * capability genuinely issued for this purpose, and what it renders is a
+     * terminal card with no form on it, so it authorizes nothing. A genuinely
+     * aged-out link resolves nothing here and keeps the honest expired notice
+     * below.
+     */
+    const stranded = await resolveRevokedBookingCapability(db, { token, purpose: "readiness" });
+    if (stranded) {
+      const data = await getReadyPageData(db, stranded.bookingId);
+      // A cancelled *booking* keeps its own path above; this is the diver whose
+      // seat is still live under a departure that is not (`callTripBlowout`
+      // cancels the trip and leaves every booking active, because whether each
+      // seat is refunded stays a per-booking staff decision).
+      if (data && data.departureCancelled && !data.detail.cancelled) {
+        const strandedT = diverTranslator(await requestLocale(data.shop.defaultLocale));
+        return (
+          <ExpiredLinkCard
+            glyph="cancelled"
+            title={strandedT("booking.cancelledHeading")}
+            text={strandedT("ready.tripCancelledBody")}
+            shop={{
+              name: data.detail.shop.name,
+              contactEmail: data.shop.contactEmail,
+              contactPhone: data.shop.contactPhone,
+            }}
+            t={strandedT}
+          >
+            <Link href={publicSchedulePath(data.shop.slug)} className={buttonClass()}>
+              {strandedT("recap.seeWhatsNext")}
+            </Link>
+          </ExpiredLinkCard>
+        );
+      }
+    }
     // **Name the shop where the token still tells us which one it is.**
     //
     // `/ready` is the link in the 24-hour trip reminder, so every ordinary way
@@ -1271,6 +1349,99 @@ export default async function DiverReadinessPage({
     // row, never from anything on the URL.
     const payment = await getBookingPayment(db, data.shop.id, bookingId);
     return cancelledNotice(payment?.status, detail.trip.title, detail.shop.name, t);
+  }
+
+  /**
+   * The shop's own published identity, in the shape the two terminal notices
+   * below hand to `ExpiredLinkCard`. A live token has already resolved the
+   * shop, and a diver holding a phone on a day that went wrong needs somebody
+   * to ask (issue #801).
+   */
+  const shopContact = {
+    name: detail.shop.name,
+    contactEmail: shop.contactEmail,
+    contactPhone: shop.contactPhone,
+  };
+
+  /**
+   * **After the dive, the same link** (ADR 20260827-the-divers-thread,
+   * decision 4). Once this diver's day is over, everything below this point —
+   * the spine, the packing list, the self-cancel door — is about a day that
+   * has already happened. The page becomes the afterglow instead: the
+   * keepsake, one review ask, and quiet doors. `/recap/[token]` renders
+   * exactly this, from its own token.
+   *
+   * **Whose day, not just what time it is.** The switch used to be the clock
+   * alone, and the clock cannot tell whether this diver was on the boat — so
+   * the crew's own departure roll call decides it wherever a shop kept one,
+   * and the four-hour recap floor decides it where none exists
+   * (`isAfterTheDive`, src/lib/thread-steps.ts). The read only happens once
+   * the boat is scheduled home, so an ordinary night-before page load never
+   * pays for it.
+   *
+   * The three recap actions are bound to a **recap** token minted here, never
+   * to this page's readiness token: the two capabilities are domain-separated
+   * on purpose (`src/lib/recap-links.ts`), and widening the recap actions to
+   * accept a readiness token would hand a review form the power to cancel a
+   * booking. The cost is that acting on one of them lands the diver on the
+   * `/recap` URL, which renders this same surface.
+   */
+  const boarded = theBoatIsHome({ endsAt: detail.trip.endsAt })
+    ? await departureRollCallForBooking(db, shop.id, detail.trip.id, bookingId)
+    : null;
+  if (isAfterTheDive({ endsAt: detail.trip.endsAt, boarded })) {
+    const recap = await getRecapPageData(db, bookingId);
+    if (!recap) {
+      /**
+       * **A no-show, said plainly and with somebody to ask.**
+       *
+       * Both cancellations — the booking's and the departure's — are answered
+       * above, so `getRecapPageData`'s uniform null means
+       * `bookings.status = 'no_show'` here (or a cancellation that landed in
+       * the microseconds between the two reads, which this notice's contact
+       * line covers either way).
+       *
+       * It used to render "This readiness link isn't available" over "This
+       * booking didn't sail" — two sentences, both false for this reader: the
+       * token had just verified, and the boat sailed without them. A diver
+       * being charged a no-show fee, holding DiveDay's own page telling them
+       * the trip never ran, is where a chargeback argument starts.
+       */
+      return (
+        <ExpiredLinkCard
+          glyph="cancelled"
+          title={t("recap.noShowHeading")}
+          text={t("recap.noShowBody", { shop: detail.shop.name })}
+          shop={shopContact}
+          t={t}
+        />
+      );
+    }
+    const recapToken = signRecapToken(bookingId);
+    const after = await buildAfterStateProps({
+      db,
+      data: recap,
+      bookingId,
+      locale,
+      t,
+      // This route carries none of the three: each action redirects to
+      // `/recap/<token>`, which is where its notice is read.
+      params: {},
+      actions: {
+        submitReview: submitReviewAction.bind(null, recapToken),
+        uploadPhoto: uploadRecapPhotoAction.bind(null, recapToken),
+        startTip: startTipAction.bind(null, recapToken),
+      },
+    });
+    return (
+      <DiverIntlProvider
+        locale={locale}
+        timeZone={detail.shop.timezone}
+        namespaces={["recap", "common", "booking", "reviews", "trip"]}
+      >
+        <AfterState {...after} />
+      </DiverIntlProvider>
+    );
   }
 
   // The organizer's claim panel, when this booking leads a party (docs ADR

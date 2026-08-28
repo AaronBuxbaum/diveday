@@ -34,7 +34,7 @@ import { uuidParam } from "@/lib/uuid";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — the claim every trips/[id] sibling makes (ADR
-// 20260804-instant-navigation): arriving from close-out, the staff shell is
+// 20260804-instant-navigation): arriving from the home, the staff shell is
 // already mounted and this segment's `loading.tsx` is what paints while the
 // document assembles.
 export const instant = true;
@@ -66,15 +66,16 @@ const BUDDY_TEAM_ACTION_KEYS: Record<
  * one. It is what a shop hands to authorities or insurers if a departure is
  * ever asked about.
  *
- * **Generated from close-out, not from the manifest.** It used to sit in the
+ * **Generated from the evening, not from the manifest.** It used to sit in the
  * manifest header, which is the surface a crew works *during* a departure —
  * an "incident-ready export" button beside "Mark boarded" reads as something
  * the day might need, on a page nobody should be reading prose on. Writing the
- * day's log is an evening act, so its door is the evening surface (ADR
- * 20260804-day-closeout), one row per departure, beside the recap note.
+ * day's log is an evening act, so its door is a settled station on the shop
+ * home (ADR 20260804-day-closeout; ADR 20260827-clearwater-surface-language,
+ * decision 4), one per departure, beside the recap note.
  *
  * **Owner-only** (`canExportIncidentRecord`, src/lib/authz.ts), unlike the
- * manifest and the close-out page it is reached from: the crew run the roll
+ * manifest and the home it is reached from: the crew run the roll
  * call, but producing the shop's account of a departure — and having their own
  * name stamped on it as its generator — is the owner's call. Read-only:
  * nothing on this page mutates anything. Print-first: chrome is
@@ -95,12 +96,12 @@ export default async function IncidentExportPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   // Checked against the database, not the JWT, so a demoted owner loses this
-  // immediately. Close-out hides the link for everyone else, but this is the
-  // gate — the page refuses however it was reached. The landing is close-out
-  // with a reason on it: a refusal that teleports you somewhere silently reads
-  // as a broken button (task 82).
+  // immediately. A settled station hides the door for everyone else, but this
+  // is the gate — the page refuses however it was reached. The landing is the
+  // shop home with a reason on it: a refusal that teleports you somewhere
+  // silently reads as a broken button (task 82).
   if (!(await canPersonExportIncidentRecord(db, shop.id, session.user.personId))) {
-    redirect(noticeUrl(shopPath(shopSlug, "close-out"), "log-not-authorized"));
+    redirect(noticeUrl(shopPath(shopSlug), "log-not-authorized"));
   }
   // Tenancy is the session's shop, never the URL: another shop's trip id — or
   // a stale slug — resolves to null and 404s.
@@ -153,11 +154,8 @@ export default async function IncidentExportPage({
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-3 print:hidden">
-            <Link
-              href={shopPath(shopSlug, "close-out")}
-              className={buttonClass({ variant: "ghost" })}
-            >
-              {t("incidentExport.backToCloseOut")}
+            <Link href={shopPath(shopSlug)} className={buttonClass({ variant: "ghost" })}>
+              {t("incidentExport.backToToday")}
             </Link>
             <PrintButton label={t("shared.printButton.label")} />
           </div>

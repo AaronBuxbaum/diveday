@@ -377,6 +377,7 @@ export function InsetGroup({
   label,
   meta,
   as = "p",
+  bodyAs = "div",
   id,
   className = "",
   children,
@@ -384,6 +385,13 @@ export function InsetGroup({
   label?: ReactNode;
   meta?: ReactNode;
   as?: GroupLabelElement;
+  /**
+   * `"ul"` where the rows are one record each, so the shell announces its own
+   * length to a screen reader and each row is a real `<li>`. Configuration
+   * rows — settings, a form's fields — stay `"div"`: they are one object seen
+   * from several sides, not a list of things.
+   */
+  bodyAs?: "div" | "ul";
   id?: string;
   className?: string;
   children: ReactNode;
@@ -395,7 +403,7 @@ export function InsetGroup({
           {label}
         </GroupLabel>
       ) : null}
-      <SectionCard as="div" padding="none" className="divide-y divide-border overflow-hidden">
+      <SectionCard as={bodyAs} padding="none" className="divide-y divide-border overflow-hidden">
         {children}
       </SectionCard>
     </div>

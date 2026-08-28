@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
+import { buttonClass } from "@/components/ui/button";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatTime } from "@/lib/format";
 import type { AboardBlockerKind } from "@/lib/readiness";
@@ -48,6 +49,7 @@ export function DayStation({
   timeZone,
   currency,
   crewed = false,
+  canOpenLog = false,
   t,
   children,
 }: {
@@ -58,6 +60,12 @@ export function DayStation({
   currency: string;
   /** The signed-in staffer crews this boat — the one badge a station may wear. */
   crewed?: boolean;
+  /**
+   * `canPersonExportIncidentRecord`; the log door is simply absent for
+   * everyone else (ADR 20260804-incident-export-owner-gate, decision 3 — hide,
+   * don't explain).
+   */
+  canOpenLog?: boolean;
   t: StaffTranslator;
   /** This station's work rows, already composed by the spine. */
   children?: React.ReactNode;
@@ -170,6 +178,27 @@ export function DayStation({
           <p className="mt-3 text-sm font-medium text-warning">
             {t("shopHome.spine.crewRollCallOpen")}
           </p>
+        ) : null}
+
+        {/* **A departure that has not come home still has a log** — ADR
+            20260804-incident-export-owner-gate's 2026-08-12 amendment says it
+            in as many words: *offered on every departure row, not only the ones
+            that are back, because the moment a shop most needs a departure's
+            recorded facts is while the departure is still happening.* The
+            document has always reported what is on record so far.
+
+            6d moved the door onto the evening's station and left the live one
+            without it, which put an owner whose boat is overdue exactly one
+            place they cannot reach the record of who is on it. */}
+        {canOpenLog ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              href={`/shop/${shopSlug}/trips/${station.tripId}/log`}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {t("incidentExport.openLink")}
+            </Link>
+          </div>
         ) : null}
 
         {children}

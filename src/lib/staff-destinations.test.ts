@@ -184,18 +184,22 @@ describe("permission gating", () => {
 });
 
 describe("what each consumer derives", () => {
-  it("lays the nav out as five primary tabs plus the two More groups", () => {
-    // The five tabs are the places a shop lives in *during a dive day*; the
-    // dock has no room for a sixth destination (its sixth slot is spent on
-    // the More sheet). Everything else that is a *place* files under "Run
-    // the shop" (the operational cadence) or "Set up" (configuration), with
-    // Settings closing the menu (ADR 20260813-more-is-the-shops-other-door).
+  it("lays the nav out as four primary tabs plus the two More groups", () => {
+    // The tabs are the places a shop lives in *during a dive day*; the dock
+    // has room for five and its sixth slot is spent on the More sheet.
+    // Everything else that is a *place* files under "Run the shop" (the
+    // operational cadence) or "Set up" (configuration), with Settings closing
+    // the menu (ADR 20260813-more-is-the-shops-other-door).
+    //
+    // **Four, since H-62.** Close-out left the dock on 2026-08-28 when the
+    // evening became a state of the shop home rather than a destination (ADR
+    // 20260827-clearwater-surface-language, decision 4), and the room it freed
+    // is deliberately unspent.
     expect(staffNavDestinations("primary", owner).map((d) => d.id)).toEqual([
       "today",
       "checkIn",
       "divers",
       "board",
-      "closeOut",
     ]);
     expect(staffNavDestinations("daily", owner).map((d) => d.id)).toEqual([
       "staffing",
@@ -232,10 +236,16 @@ describe("what each consumer derives", () => {
     expect(staffNavDestinations("setup", owner).at(-1)?.id).toBe("settings");
   });
 
-  it("puts Close-out in the header and Orders in More", () => {
-    const closeOut = STAFF_DESTINATIONS.find((destination) => destination.id === "closeOut");
+  it("has no Close-out destination at all, and keeps Orders in More", () => {
+    // The evening is a state the shop home settles into, not a place to go
+    // (H-62). An entry pointing at the bare home would be a second row landing
+    // on Today's own URL — the duplicate control principle 8 forbids — so the
+    // palette answers "close the day" with a command carrying an anchor
+    // instead, and this registry holds nothing for it.
+    expect(STAFF_DESTINATIONS.some((destination) => destination.suffix === "/close-out")).toBe(
+      false,
+    );
     const orders = STAFF_DESTINATIONS.find((destination) => destination.id === "orders");
-    expect(closeOut?.navGroup).toBe("primary");
     expect(orders?.navGroup).toBe("daily");
     expect(orders?.inPalette).toBe(true);
   });
@@ -328,7 +338,6 @@ describe("currentStaffNavDestinationId", () => {
   });
 
   it("lights a destination for its own subtree", () => {
-    expect(current(`${root}/close-out`)).toBe("closeOut");
     expect(current(`${root}/reviews`)).toBe("reviews");
     expect(current(`${root}/requests`)).toBe("requests");
     expect(current(`${root}/reports`)).toBe("reports");
@@ -391,7 +400,7 @@ describe("the calendar subscription survives the settings gate", () => {
 
 describe("one destination by id", () => {
   it("resolves, and throws on an id the registry lost", () => {
-    expect(staffDestination("closeOut").suffix).toBe("/close-out");
+    expect(staffDestination("checkIn").suffix).toBe("/check-in");
     expect(() => staffDestination("gone" as StaffDestinationId)).toThrow(/unregistered/);
   });
 });

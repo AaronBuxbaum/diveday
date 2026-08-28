@@ -9,6 +9,7 @@ import {
   formatReportMoney,
   type MonthlyReport,
   type MonthlyReportInput,
+  monthHasActivity,
   type ReportTrip,
   summarizeMonth,
   tripFillRate,
@@ -159,6 +160,23 @@ describe("summarizeMonth", () => {
       input({ trips: [trip({ activeBookings: 3, waiverComplete: 5 })] }),
     );
     expect(report.waiverOutstanding).toBe(0);
+  });
+});
+
+describe("monthHasActivity — slice 9f of ADR 20260827-the-shops-shelves", () => {
+  it("is true for a month that has departures", () => {
+    expect(monthHasActivity({ tripCount: 3, importedFinancialRecordCount: 0 })).toBe(true);
+  });
+
+  it("is true for a month whose only record is imported financial history", () => {
+    // The migration month: no DiveDay departure, but real money by its own
+    // source calendar date. Reading that month as "nothing happened" would be
+    // wrong about the shop's books.
+    expect(monthHasActivity({ tripCount: 0, importedFinancialRecordCount: 12 })).toBe(true);
+  });
+
+  it("is false for a month with neither, which is what stops five zero figures rendering", () => {
+    expect(monthHasActivity({ tripCount: 0, importedFinancialRecordCount: 0 })).toBe(false);
   });
 });
 

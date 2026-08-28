@@ -31,11 +31,12 @@ import {
   priorVisits,
   recapPhotos,
   shops,
+  trips,
 } from "./schema";
 import { setShopCurrency, setShopReviewUrl } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { startTipCheckout } from "./tips";
-import { listStaff, upcomingTripsWithCounts } from "./trips";
+import { createTrip, listStaff, upcomingTripsWithCounts } from "./trips";
 
 const ORIGIN = "https://diveday.test";
 
@@ -114,6 +115,83 @@ describe("getRecapPageData", () => {
     await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, bookingId));
 
     expect(await getRecapPageData(db, bookingId)).toBeNull();
+  });
+
+  it("returns null for a cancelled departure, whose bookings stay active by design (review, 2026-08-28)", async () => {
+    // The third way there is no day, and the one nothing downstream caught.
+    // `callTripBlowout` sets `trips.status = 'cancelled'` and deliberately
+    // leaves every booking `booked` — refunds are a per-booking staff decision
+    // — and `getTripWithBooked` filters `liveTrip()` (the soft-delete
+    // predicate) rather than the status. So an hour after a blown-out
+    // departure's scheduled return, every stranded diver's own link greeted
+    // them "Welcome back" with a dive record, a review ask and a tip ask for a
+    // dive that never left the dock. The recap *email* never had this bug —
+    // `sendRecaps` filters `eq(trips.status, "scheduled")` — so the fix is that
+    // same filter, one layer down, where both reading paths share it.
+    const { db, reef, bookingId } = await recapContext();
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, reef.id));
+
+    // The booking itself is untouched: this is the shape a blow-out leaves.
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
+    expect(booking?.status).toBe("booked");
+    expect(await getRecapPageData(db, bookingId)).toBeNull();
+  });
+
+  it("counts a blown-out departure as no dive day at all", async () => {
+    const { db, shop, reef, bookingId } = await recapContext();
+    // **Booked ahead, then moved into the past — the order life puts them in.**
+    // `visitCount` counts the diver's dive days *up to* the departure the recap
+    // is for, so the second day has to sit before the reef trip. But the reef
+    // trip is itself still ahead of the frozen clock (that is what makes it
+    // bookable in `recapContext`), so a departure 24 hours earlier is in the
+    // past, and `createBookingParty` refuses one — `trip_unavailable`, the
+    // standing one-hour buffer. So: create it where a diver could actually book
+    // it, take the seat, and then let the day pass.
+    const dayAfter = new Date(reef.startsAt.getTime() + 24 * 60 * 60 * 1000);
+    const other = await createTrip(db, {
+      shopId: shop.id,
+      title: "First-Timer Two-Tank",
+      startsAt: dayAfter,
+      endsAt: new Date(dayAfter.getTime() + 3 * 60 * 60 * 1000),
+      capacity: 12,
+      plannedDives: 2,
+    });
+    if (!other) throw new Error("test setup: the second departure could not be created");
+
+    // The same diver on that earlier departure — `createBookingParty` resolves
+    // a person by (shop, email), so this is one diver holding two seats.
+    const party = await createBookingParty(db, [
+      {
+        actor: "staff",
+        shopId: shop.id,
+        tripId: other.id,
+        fullName: "Rae Recap",
+        email: "recap-rae@example.com",
+      },
+    ]);
+    if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+
+    // The day passes. Only the departure moves — the booking is untouched,
+    // which is the shape a diver's history actually has.
+    const dayBefore = new Date(reef.startsAt.getTime() - 24 * 60 * 60 * 1000);
+    await db
+      .update(trips)
+      .set({ startsAt: dayBefore, endsAt: new Date(dayBefore.getTime() + 3 * 60 * 60 * 1000) })
+      .where(eq(trips.id, other.id));
+
+    // Two seats, two live departures, two days.
+    expect((await getRecapPageData(db, bookingId))?.visitCount).toBe(2);
+
+    // The captain calls the other one off. Nothing about the booking changes
+    // — that is the whole point of the cascade — and until this fix the count
+    // kept the day anyway, while the *imported* half of the same merge already
+    // refused one (`priorVisitStanding(...) !== "did_not_happen"`).
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, other.id));
+
+    // Their real first dive day, and the one the "First dive day" stamp exists
+    // for: `visitMilestone` is exact equality on {1, 10, 25, 50, 100}, so a
+    // phantom day does not blur a milestone — it skips it permanently.
+    expect((await getRecapPageData(db, bookingId))?.visitCount).toBe(1);
   });
 
   it("hides tipping for a phone-only diver — startTipCheckout has no email to hand Stripe (Codex finding)", async () => {

@@ -74,19 +74,23 @@ export const STAFF_DESTINATION_BADGE_TONES: Record<StaffDestinationBadge, "prima
  * principle 8, fewer controls). What stays `null` now is only what is not a
  * *place*: an action (`addBooking`) and a way into a page (`walkIn`).
  *
- * **The dock holds five destination tabs; the sixth slot is More, and that is
- * the ceiling.** The phone dock renders every `primary` destination at ~65px
- * per tab at 390px; the sixth slot is spent — permanently — on the "More"
- * sheet that carries the `daily`/`setup` groups, so a seventh place never
- * means a growing bar. Promoting a destination to `primary` means demoting
- * another into one of these groups, never squeezing.
+ * **The dock holds at most five destination tabs; the sixth slot is More, and
+ * that is the ceiling.** The phone dock renders every `primary` destination at
+ * ~65px per tab at 390px; the sixth slot is spent — permanently — on the
+ * "More" sheet that carries the `daily`/`setup` groups, so a seventh place
+ * never means a growing bar. Promoting a destination to `primary` means
+ * demoting another into one of these groups, never squeezing.
+ *
+ * It currently holds **four**: Today, Check-in, Divers, Board. Close-out left
+ * on 2026-08-28 (H-62) when the evening became a state of the home rather than
+ * a destination, and the room it freed is deliberately not spent — the ceiling
+ * is a ceiling, not a target.
  */
 export type StaffNavGroup = "primary" | "daily" | "setup";
 
 export type StaffDestinationId =
   | "today"
   | "checkIn"
-  | "closeOut"
   | "walkIn"
   | "divers"
   | "board"
@@ -142,7 +146,6 @@ export type StaffDestinationTitles = Partial<Record<StaffDestinationId, string>>
 export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessageKey> = {
   today: "shared.shopNavLinks.today",
   checkIn: "shared.shopNavLinks.checkIn",
-  closeOut: "shared.shopNavLinks.closeOut",
   walkIn: "shared.shopNavLinks.walkIn",
   divers: "shared.shopNavLinks.divers",
   board: "shared.shopNavLinks.board",
@@ -209,9 +212,14 @@ export type StaffDestination = {
  */
 export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // Carries the blocked-diver badge because Today is now where blocked divers
-  // are read — both ways of reading them (ADR 20260803-not-ready-is-a-view).
-  // Close-out has its own primary row, so its page is never borrowed by Today
-  // or represented only by the More menu.
+  // are read — both ways of reading them (ADR 20260803-not-ready-is-a-view) —
+  // and, since H-62, where the day is closed as well. **There is no Close-out
+  // destination**: the evening is a state this page settles into, not a place
+  // to go (ADR 20260827-clearwater-surface-language, decision 4). An entry
+  // pointing at the bare home would be a second row landing on Today's own
+  // URL, which this registry's unique-URL invariant refuses outright — so the
+  // palette answers "close the day" with a command carrying an anchor, not
+  // with a destination.
   {
     id: "today",
     suffix: "",
@@ -240,10 +248,6 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     // too — it has its own "Run the shop" row now, and lights that instead.)
     alsoMatch: ["/trips"],
   },
-  // The end-of-day ritual (ADR 20260804-day-closeout) is a top-level working
-  // surface: it is the one place staff return to after the boat is home, so it
-  // earns the fifth destination tab and the sixth-slot ceiling remains intact.
-  { id: "closeOut", suffix: "/close-out", navGroup: "primary", inPalette: true },
   // The global "seat a diver" door. It is an action rather than a place, so it
   // stays out of the header — the board hosts its own button and the palette
   // answers for it everywhere else. It is *here* because the registry is the

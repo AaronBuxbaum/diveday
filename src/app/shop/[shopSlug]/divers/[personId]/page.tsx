@@ -102,6 +102,8 @@ export default async function DiverDetailPage({
     gate?: string | string[];
     /** Which form on this page the notice answers — see `resolveDiverNotice`. */
     form?: string;
+    /** Which card a box-level refusal is about — see `DiverNotice.cardId`. */
+    card?: string;
     edit?: string;
     /** The deleted diver note's text, carried by the land-then-undo redirect. */
     noteBody?: string;
@@ -114,7 +116,8 @@ export default async function DiverDetailPage({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(personId)) notFound();
-  const { notice, undo, cardType, by, gate, form, edit, noteBody, activity } = await searchParams;
+  const { notice, undo, cardType, by, gate, form, card, edit, noteBody, activity } =
+    await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -198,7 +201,7 @@ export default async function DiverDetailPage({
    * bounced the staffer here from somewhere else, or one whose group this
    * staffer's role means the page never rendered.
    */
-  const diverNotice = resolveDiverNotice({ notice, form, gate, personId, locale });
+  const diverNotice = resolveDiverNotice({ notice, form, gate, card, personId, locale });
   const detailsStatus = noticeForForm(diverNotice, "details");
   const pageNotice = noticeForForm(diverNotice, "page");
   // A card deletion with its undo capability has one outcome: the toast. The

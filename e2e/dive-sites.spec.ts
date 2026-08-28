@@ -28,6 +28,7 @@ test.describe("staff", () => {
       .getByLabel("Underwater briefing")
       .fill("Look along the sandy edge for turtles resting below the coral heads.");
     await page.getByRole("button", { name: "Save dive site" }).click();
+    // Saving lands on the site's own page, whose header is its name.
     await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
 
     await page.goto("/shop/blue-mantis/schedule/board?add=full");
@@ -76,19 +77,26 @@ test.describe("staff", () => {
       .filter({ hasText: tripTitle })
       .getByRole("link")
       .click();
-    await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
-    // **One tap, and it is the field guide's own.** Marine life used to fold
-    // behind the per-dive "look for" disclosure, which named landmarks rather
-    // than species (issue #760); it has a door of its own now, named and
-    // counted — and closed, because eight photographs open pushed the dive
-    // plan and the depth off the first screenful (product owner, 2026-08-27).
-    // This site carries no landmarks, so the "look for" fold is absent
-    // entirely and this is the only disclosure on the card.
-    await page.getByText("A few faces to learn").click();
+    // **No tap at all now.** The day's reading is a run of ledger beats rather
+    // than a swipeable deck of photo cards behind a door (slice 7c): "The day"
+    // names the dives and their sites, and the shop's own words about each site
+    // follow it. The site names itself in a `<span>` inside its ledger row, so
+    // it is read as text.
+    await expect(page.getByRole("heading", { name: "The day" })).toBeVisible();
+    await expect(page.getByText(siteName)).toBeVisible();
+    // What the staffer typed into "What might divers see?" and "Underwater
+    // briefing" above. This is the assertion that matters in this spec: a shop
+    // writes a site's briefing once and every departure at that site carries it
+    // (ADR 20260813-dive-site-briefings-are-the-shops-own-words).
     await expect(page.getByText("Green turtles · spotted eagle rays")).toBeVisible();
-    await expect(page.getByText("27°C", { exact: true })).toBeVisible();
-    await expect(page.getByText("18 m")).toBeVisible();
-    await expect(page.getByText("Crew prediction")).toBeVisible();
+    await expect(
+      page.getByText("Look along the sandy edge for turtles resting below the coral heads."),
+    ).toBeVisible();
+    // Each reading is one span carrying its own noun ("27°C water"), so an
+    // exact match on the number alone finds nothing. That the crew's numbers
+    // and not the model's are on the page is what the note below asserts.
+    await expect(page.getByText("27°C water")).toBeVisible();
+    await expect(page.getByText("18 m visibility")).toBeVisible();
     // **To the minute, not the second.** This line used to build its own
     // timestamp with a bare `toLocaleString`, whose default field set carries
     // seconds — so the sentence a diver reads to decide what to pack said
@@ -127,8 +135,11 @@ test.describe("staff", () => {
     // round-trips with their own settles — the same aggregate-cost reasoning
     // as the tour above, not one slow step.
     test.setTimeout(30_000);
-    const library = page.getByRole("table", { name: "Saved dive sites" });
-    const rows = library.locator("tbody tr");
+    // The library is one grouped ledger now (ADR 20260827-the-shops-shelves),
+    // so a row is a list item on the page rather than a table row. `<main>` is
+    // the scope: the staff chrome's own menus sit outside it.
+    const library = page.getByRole("main");
+    const rows = library.getByRole("listitem");
     const search = page.getByLabel("Find a site");
     // Scoped to the band itself: the staff chrome's ⌘K trigger is also a
     // button named "Search", so an unscoped locator resolves to both.
@@ -146,7 +157,7 @@ test.describe("staff", () => {
     const seededCount = await rows.count();
     expect(seededCount).toBeGreaterThan(1);
 
-    // A name search narrows the table to the one row and says so in the URL,
+    // A name search narrows the ledger to the one row and says so in the URL,
     // so a found site is a link a staffer can send to a colleague.
     await search.fill("spiegel");
     await submit.click();
@@ -160,7 +171,12 @@ test.describe("staff", () => {
     // case-sensitive and whole-string, so the old lower-case "advanced open
     // water" fails it. (A bare `getByText` would not — Playwright's default is
     // a case-insensitive substring match, and the old rendering passes that.)
-    await expect(library.getByText("Advanced Open Water", { exact: true })).toBeVisible();
+    //
+    // Whole-string also pins the shape the ledger gave these: the level word
+    // (above Open Water, so it speaks) and the specialty word, joined — where
+    // the table wore a level badge beside a "1 required specialty" count that
+    // never named the specialty.
+    await expect(library.getByText("Advanced Open Water · Deep", { exact: true })).toBeVisible();
 
     // Location is searchable too: "Pennekamp" appears in no site's *name*.
     await search.fill("pennekamp");
@@ -211,11 +227,44 @@ test.describe("staff", () => {
     await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
 
     await page.goto(`/shop/blue-mantis/dive-sites?q=${encodeURIComponent(siteName)}`);
-    const row = page.getByRole("table", { name: "Saved dive sites" }).locator("tbody tr");
+    const row = page.getByRole("main").getByRole("listitem");
     await expect(row).toHaveCount(1);
-    // Twice in the row's markup — once in the Location column, once folded
-    // under the name for a phone — so `.first()` rather than a strict match.
-    await expect(row.getByText("Location to add").first()).toBeVisible();
+    // Once, on the row's one meta line — the ledger has no second, phone-only
+    // copy of it the way the table's folded Location column did.
+    await expect(row.getByText("Location to add")).toBeVisible();
+  });
+
+  test("the rail says where you are in a briefing, and Save says what is unsaved", async ({
+    page,
+  }) => {
+    // ADR 20260827-the-shops-shelves, the long-form editor pattern. The
+    // briefing was fourteen unlabelled blocks in four bordered fieldsets with
+    // no way to know where you were in four thousand pixels of it, and one
+    // Save at the far end that said nothing about what it still owed.
+    await page.goto("/shop/blue-mantis/dive-sites");
+    await page.getByRole("link", { name: "Molasses Reef", exact: true }).first().click();
+    await page.getByRole("heading", { level: 1, name: "Molasses Reef" }).waitFor();
+
+    // Nothing typed, nothing claimed.
+    await expect(page.getByText(/Unsaved changes/)).toHaveCount(0);
+
+    // Every rail entry is an anchor onto a section of this form — the desktop
+    // rail and the phone jump row render the same list, and 1279px is the
+    // rail. Jumping marks it, which is the whole of "tracking position".
+    const photos = page
+      .getByRole("link", { name: "Photos", exact: true })
+      .filter({ visible: true });
+    await photos.click();
+    await expect(page).toHaveURL(/#briefing-photos$/);
+    await expect(photos).toHaveAttribute("aria-current", "true");
+    // The section it landed on is a group with a name and no box.
+    await expect(page.locator("fieldset#briefing-photos")).toBeVisible();
+
+    // One edit names its section by name; a second stops naming and counts.
+    await page.getByLabel("Location").fill("Key Largo National Marine Sanctuary");
+    await expect(page.getByText("Unsaved changes in The site")).toBeVisible();
+    await page.getByLabel("Depth range").fill("20-45 ft");
+    await expect(page.getByText("Unsaved changes in 2 sections")).toBeVisible();
   });
 
   test("a shop draws the route it swims, and a diver reads it on the briefing", async ({
@@ -402,23 +451,33 @@ test.describe("staff", () => {
     // tailor" action does. Before that, this exact button — the catalog's only
     // action, on the state every demo shop ships in — raised an unhandled 23505
     // and crashed the page into its error boundary.
-    // The library rows are a table now (issue #608), so a site is named by the
-    // link in its first cell rather than by a card's `<h2>`.
-    const library = page.getByRole("table", { name: "Saved dive sites" });
+    // The library is one grouped ledger now (ADR 20260827-the-shops-shelves),
+    // so a site is named by its row's own stretched link rather than by a
+    // table cell or a card's `<h2>`.
+    const library = page.getByRole("main");
     const existing = library.getByRole("link", { name: "Molasses Reef", exact: true });
     const imported = library.getByRole("link", { name: "Molasses Reef 2", exact: true });
-    // The Template column is gone: the line is now one mark beside the site's
-    // name, carrying the same sentence as its accessible name at every width
-    // rather than once per breakpoint. `.first()` stays because the assertion
-    // is "the library is offering an update", not "exactly one row is".
+    // What a staffer can act on is the only provenance left on the library: the
+    // `◆`/`◇` glyph pair and the adopted-version line went back to the site
+    // page. `.first()` stays because the assertion is "the library is offering
+    // an update", not "exactly one row is".
     const updateReady = library.getByText("Template update v2 ready.").first();
 
     await page.goto("/shop/blue-mantis/dive-sites");
     await expect(existing).toHaveCount(1);
     await expect(imported).toHaveCount(0);
     await expect(updateReady).toBeVisible();
+    // A site sitting at the published version says nothing about where it came
+    // from — that is the site page's line, not the library's.
+    await expect(library.getByText(/DiveDay template v/)).toHaveCount(0);
 
-    await page.getByRole("link", { name: "Browse templates" }).click();
+    // The catalog is a door at the ledger's tail now, carrying the size of what
+    // sits behind it; the header's secondary action retired with its arrival,
+    // so there is exactly one way in from here.
+    const catalogDoor = page.getByRole("link", { name: "Browse the DiveDay catalog" });
+    await expect(catalogDoor).toHaveCount(1);
+    await expect(page.getByText(/\d+ published sites/)).toBeVisible();
+    await catalogDoor.click();
     await expect(
       page.getByRole("heading", { level: 1, name: "DiveDay common dive sites" }),
     ).toBeVisible();
@@ -442,7 +501,6 @@ test.describe("staff", () => {
     // shop's own tailored v1 copy is untouched and still offered the update.
     await expect(existing).toHaveCount(1);
     await expect(imported).toHaveCount(1);
-    await expect(library.getByText("DiveDay template v2").first()).toBeVisible();
     await expect(updateReady).toBeVisible();
   });
 
@@ -652,7 +710,9 @@ test("a shop writes its own landmarks and picks its own field guide", async ({ p
   // the new row is the last one — `.last()` throughout, and the round-trip
   // assertions below read that same row back after the save.
   await page.getByRole("button", { name: "Add a landmark" }).click();
-  const landmarks = page.locator('fieldset:has-text("Landmarks that tell the story")');
+  // The section's legend is its name now, not a sentence — the editor rail
+  // beside the form says the same word (ADR 20260827-the-shops-shelves).
+  const landmarks = page.locator('fieldset:has-text("Landmarks")');
   await landmarks.getByRole("textbox", { name: "Landmark" }).last().fill("The barrel casks");
   await landmarks
     .getByRole("textbox", { name: "What to say about it" })
@@ -675,12 +735,18 @@ test("a shop writes its own landmarks and picks its own field guide", async ({ p
 
 test("a template can be read in full before it is imported", async ({ page }) => {
   await signInAsOwner(page);
-  await page.goto("/shop/blue-mantis/dive-sites?view=catalog");
-  // The catalog pages, ordered by slug — this one is on the first page and
+  // Journey L5 of the shelves canvas, from its first step: the catalog is
+  // reached through the door at the library ledger's tail (ADR
+  // 20260827-the-shops-shelves), never a peer destination.
+  await page.goto("/shop/blue-mantis/dive-sites");
+  await page.getByRole("link", { name: "Browse the DiveDay catalog" }).click();
+  await expect(page).toHaveURL(/\/dive-sites\?view=catalog$/);
+  // The catalog pages, ordered by distance — this one is on the first page and
   // carries both of the things a one-tap import used to hand a shop sight
-  // unseen: a cert gate, and a field guide.
-  const card = page.locator("li").filter({ hasText: "Eagle Wreck" });
-  await card.getByRole("link", { name: "Read it first" }).click();
+  // unseen: a cert gate, and a field guide. The row **is** the preview door
+  // now, so it is the row's own link that opens it rather than a button beside
+  // an Import the shop had not decided on yet.
+  await page.getByRole("link", { name: "Eagle Wreck", exact: true }).click();
   await page.waitForURL(/template=eagle-wreck/);
 
   await expect(page.getByRole("heading", { name: "Eagle Wreck", level: 1 })).toBeVisible();
@@ -695,4 +761,16 @@ test("a template can be read in full before it is imported", async ({ page }) =>
   await expect(
     page.locator('fieldset:has-text("Field guide")').getByText("Goliath grouper"),
   ).toBeVisible();
+
+  // L5's last step: the site is now a row in her own ledger, filed under the
+  // difficulty the template published, and its words are hers to edit.
+  await page.getByRole("link", { name: "Dive-site library" }).click();
+  await expect(page).toHaveURL(/\/dive-sites$/);
+  const row = page.getByRole("link", { name: "Eagle Wreck", exact: true });
+  await expect(row).toHaveCount(1);
+  await expect(page.getByRole("heading", { level: 2, name: "Advanced" })).toBeVisible();
+  // Advanced Open Water is above the floor, so the row says so; a site asking
+  // only for Open Water says nothing at all (pinned in
+  // `SiteLibraryLedger.test.tsx`).
+  await expect(page.getByText(/Advanced Open Water/).first()).toBeVisible();
 });

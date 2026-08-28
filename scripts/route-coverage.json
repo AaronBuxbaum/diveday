@@ -176,7 +176,9 @@
   "/shop/[shopSlug]": {
     "e2e": [
       "boat-loop.spec.ts",
+      "day-close.spec.ts",
       "day-spine.spec.ts",
+      "departure-log.spec.ts",
       "first-ten-minutes.spec.ts",
       "last-minute-fill.spec.ts",
       "onboard.spec.ts",
@@ -192,6 +194,8 @@
       "nav-more-sheet",
       "today",
       "today-empty",
+      "today-evening",
+      "today-evening-closed",
       "today-first-bookable",
       "today-orientation-line"
     ],
@@ -220,14 +224,9 @@
     "e2e": ["check-in.spec.ts", "trip-admission.spec.ts"],
     "visual": ["check-in-walk-in-diver"]
   },
-  "/shop/[shopSlug]/close-out": {
-    "e2e": ["a11y.spec.ts", "closeout.spec.ts"],
-    "visual": ["close-out", "close-out-closed", "close-out-quiet"],
-    "a11y": ["a11y.spec.ts"]
-  },
   "/shop/[shopSlug]/courses": {
     "e2e": ["courses.spec.ts"],
-    "visual": ["courses-list", "courses-list-agency"],
+    "visual": ["courses-list", "courses-list-page-two"],
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/courses/[slug]/edit": {
@@ -561,12 +560,7 @@
   },
   "/shop/[shopSlug]/waivers": {
     "e2e": ["role-permissions.spec.ts", "tenant-isolation.spec.ts", "waivers.spec.ts"],
-    "visual": ["staff-waivers"],
-    "a11y": ["a11y.spec.ts"]
-  },
-  "/shop/[shopSlug]/waivers/signatures": {
-    "e2e": ["role-permissions.spec.ts", "waivers.spec.ts"],
-    "visual": ["staff-waivers-signatures"],
+    "visual": ["staff-waivers", "staff-waivers-record", "waiver-materiality-choice"],
     "a11y": ["a11y.spec.ts"]
   },
   "/sign-in": {

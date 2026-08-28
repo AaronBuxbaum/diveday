@@ -88,23 +88,19 @@ function CardRow({
 }) {
   return (
     <CertificationCardRow
-      as="div"
+      as="li"
       t={t}
       title={title}
       detail={detail}
       state={state}
       imported={imported}
-      actions={
-        anchor ? (
-          // `tabIndex` so a fragment link both scrolls here *and* puts the
-          // cursor beside the control — the status ledger's whole promise.
-          <span id={AWAITING_ANCHOR} tabIndex={-1} className="flex flex-wrap items-center gap-2">
-            {actions}
-          </span>
-        ) : (
-          actions
-        )
-      }
+      actions={actions}
+      // The anchor is an attribute on the row's own action group, never a
+      // wrapper around it: a wrapper that appears and disappears as the anchor
+      // moves changes the subtree's element type, and React unmounts the
+      // controls under it. Marking a card verified is what moves the anchor, so
+      // that took the success toast and its Undo down with it.
+      actionsId={anchor ? AWAITING_ANCHOR : undefined}
     />
   );
 }
@@ -130,8 +126,17 @@ export function CertificationsGroup({
   // A refused card *number* belongs on the box it names, not in the group's
   // action row — and emphatically not opening the add-a-card form, which is a
   // different form entirely and had nothing to do with the submit.
+  //
+  // **On one box, not on every box of that kind.** A diver can hold two
+  // self-declared cards, and `field` says only which *kind* of box the refusal
+  // is about — so this opened every sighting disclosure on the record and
+  // printed the same red sentence under each. `numberErrorFor` compares the id
+  // the action refused (`?card=`); a refusal that names none is the older link
+  // shape and still lands on the group's row rather than nowhere.
   const numberError = status?.field === "sighted-identifier" ? status.text : undefined;
-  const groupStatus = numberError ? undefined : status;
+  const numberErrorFor = (cardId: string) =>
+    numberError && status?.cardId === cardId ? numberError : undefined;
+  const groupStatus = numberError && status?.cardId ? undefined : status;
   const markCertified = markCertifiedCopy(t);
   const markCertify = markCertifiedAction.bind(null, shopSlug, personId);
   const deleteLevel = deleteCertificationAction.bind(null, shopSlug, personId);
@@ -227,7 +232,7 @@ export function CertificationsGroup({
                 action={reviewAction.bind(null, shopSlug, personId)}
                 certificationId={card.id}
                 claimedLevel={card.level}
-                numberError={numberError}
+                numberError={numberErrorFor(card.id)}
               />
             ) : (
               /* Rendered for a settled card too, where it draws no button: the
@@ -277,7 +282,7 @@ export function CertificationsGroup({
                 t={t}
                 action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
                 certificationId={card.id}
-                numberError={numberError}
+                numberError={numberErrorFor(card.id)}
               />
             ) : (
               <MarkCertifiedControl
@@ -325,7 +330,7 @@ export function CertificationsGroup({
                 action={reviewSpecialtyAction.bind(null, shopSlug, personId)}
                 certificationId={card.id}
                 cardType="nitrox"
-                numberError={numberError}
+                numberError={numberErrorFor(card.id)}
               />
             ) : (
               <MarkCertifiedControl
@@ -353,6 +358,11 @@ export function CertificationsGroup({
     <section className="mt-10" aria-labelledby="certifications">
       <InsetGroup
         as="h2"
+        // A list of cards is a list: each row is one record a staffer can act
+        // on, so the shell is a `<ul>` and every row a real `<li>`. A screen
+        // reader gets the count before it starts reading, which a run of
+        // `<div>`s cannot give it.
+        bodyAs="ul"
         id="certifications"
         label={t("divers.certifications.heading")}
         className="scroll-mt-24"
@@ -370,7 +380,7 @@ export function CertificationsGroup({
              takes the record to *silence*, never to "certified". The phrase
              comes from `shared.certificationSummary.notCertified` and is never
              respelled here. */
-          <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <li className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div className="min-w-0">
               <p className="font-medium text-warning-strong">
                 {t("shared.certificationSummary.notCertified")}
@@ -398,26 +408,33 @@ export function CertificationsGroup({
                 {t("divers.certifications.clearNoCertification")}
               </SubmitButton>
             </form>
-          </div>
+          </li>
         ) : null}
         {rows.length === 0 && !noCertificationDeclared ? (
-          <p className="px-5 py-4 text-sm text-muted sm:px-6">{t("divers.certifications.empty")}</p>
+          <li className="px-5 py-4 text-sm text-muted sm:px-6">
+            {t("divers.certifications.empty")}
+          </li>
         ) : null}
         {/* **A correction that leaves no mark is not a correction.** The panel
             above unmounts the moment it succeeds, so without this line the next
             staffer cannot see that this diver ever gave that answer, or that a
             colleague overrode it. */}
         {!noCertificationDeclared && diver.person.noCertificationClearedAt ? (
-          <p className="px-5 py-4 text-sm text-muted sm:px-6">
+          <li className="px-5 py-4 text-sm text-muted sm:px-6">
             {t("divers.certifications.noCertificationClearedNote", {
               date: formatShortDate(diver.person.noCertificationClearedAt, locale, shop.timezone),
               name:
                 diver.noCertificationClearedByName ??
                 t("divers.certifications.noCertificationClearedByUnknown"),
             })}
-          </p>
+          </li>
         ) : null}
-        <div className="px-5 py-3 sm:px-6">
+        {/* `<li>`, not `<div>`: the shell above is a `<ul>`, and a list that
+            directly contains anything but a list item is a serious axe
+            violation (`only-listitems`) — the count a screen reader is given
+            before it starts reading is exactly what stops being true. Every
+            non-row block in this group is one for the same reason. */}
+        <li className="px-5 py-3 sm:px-6">
           <details className="group">
             <summary
               className={buttonClass({
@@ -485,7 +502,7 @@ export function CertificationsGroup({
             </FieldGrid>
           </details>
           <DiverFormStatus status={groupStatus} className="mt-3" />
-        </div>
+        </li>
       </InsetGroup>
     </section>
   );

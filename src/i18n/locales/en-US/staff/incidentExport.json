@@ -2,7 +2,7 @@
   "title": "Departure log",
   "openLink": "Generate log",
   "ownerOnlyNotice": "Only an owner can generate a departure's log. Everything it draws on — roll call, timeline, each diver's status — is on that departure's manifest.",
-  "backToCloseOut": "Back to close-out",
+  "backToToday": "Back to Today",
   "description": "What was recorded for this departure — boarding, roll-call timeline, certification evidence, waiver status — written up as one document, ready to print if authorities or insurers ever ask.",
   "factsOnly": "This document reports recorded facts with their timestamps. It does not assess, certify, or imply any safety judgment.",
   "generatedLine": "Generated {date} by {name}",

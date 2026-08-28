@@ -1,6 +1,6 @@
 # The diver's thread — canvas
 
-- **Status:** Live (its ADR is Proposed — this canvas may still be edited)
+- **Status:** Shipped (its ADR is Accepted — this canvas is the dated argument, superseded rather than freshened)
 - **Date:** 2026-08-27
 - **ADR:** [20260827-the-divers-thread](../../../architecture/decisions/20260827-the-divers-thread.md)
 - **Published:** https://claude.ai/code/artifact/4393533c-ccf3-49c7-b58d-36388528148f
@@ -56,8 +56,8 @@ Every name, number and time is demo-seed fiction. Nothing here is real customer 
 | 7a — the thread shell and measure | shipped | `src/components/thread/ThreadShell.tsx` | `src/components/thread/ThreadShell.test.tsx` |
 | 7b — the trip page sells, then closes | shipped | `src/app/s/[shopSlug]/trips/[id]/_components/MoneyBlock.tsx` | `src/app/s/[shopSlug]/trips/[id]/page.composition.test.ts` |
 | 7c — the thread page's step spine | shipped | `src/lib/thread-steps.ts` | `src/lib/thread-steps.test.ts`, `src/app/ready/[token]/page.composition.test.ts` |
-| 7d — the after-state and the recap fold | open | — | — |
-| 7e — the waiver paces itself | open | — | — |
+| 7d — the after-state and the recap fold | shipped | `src/app/ready/[token]/_components/AfterState.tsx` | `src/app/ready/[token]/_components/AfterState.test.tsx`, `src/lib/thread-steps.test.ts`, `src/db/recap.test.ts`, `e2e/blowout.spec.ts` |
+| 7e — the waiver paces itself | shipped | `src/app/waivers/[token]/WaiverStepRail.tsx` | `src/app/waivers/[token]/WaiverStepRail.test.tsx`, `src/app/waivers/[token]/WaiverPacing.test.tsx`, `src/app/waivers/[token]/page.composition.test.ts` |
 
 ## Implementing a slice
 

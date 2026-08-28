@@ -37,7 +37,7 @@ export default async function ForgotPasswordPage({
         // The send is the whole outcome — the page has nothing left to ask,
         // so it reads as a terminal state rather than a form with a banner.
         <EntryDone
-          glyph="📬"
+          glyph="sent"
           title={t("account.forgotPassword.sentTitle")}
           text={t("account.forgotPassword.sent")}
           action={

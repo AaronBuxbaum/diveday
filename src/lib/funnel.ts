@@ -14,11 +14,11 @@ import { publicSchedulePath } from "./public-routes";
  *
  * A page that offers the same action from more than one place splits its tag by
  * position (`home-hero` / `home-closing`, `product` / `product-mid` /
- * `product-index`, `pricing` / `pricing-close`) — otherwise a mid-page door
- * added to answer "one CTA at the bottom of ten sections" folds into the page
- * total and can never be shown to have earned its place. The unsuffixed tag
- * stays the page's original one so attribution history doesn't break when a new
- * position is added beside it.
+ * `product-index`, `pricing` / `pricing-close`, `about-rules` / `about-closing`)
+ * — otherwise a mid-page door added to answer "one CTA at the bottom of ten
+ * sections" folds into the page total and can never be shown to have earned its
+ * place. The unsuffixed tag stays the page's original one so attribution
+ * history doesn't break when a new position is added beside it.
  *
  * A tag stays registered after its door is removed, so the history it collected
  * still reads — but a retired tag is **not** free to reuse, because new traffic
@@ -76,6 +76,18 @@ const FIXED_SOURCES = [
   "product-spreadsheet",
   "pricing",
   "pricing-close",
+  // `/about`'s two demo positions, split for the same reason as the three
+  // above. The four checkable rules are where that page manufactures its
+  // impulse — every card ends in the demo action that proves it, and the band
+  // is headed "Four rules, and you can check every one" — and until 2026-08-28
+  // the nearest thing to act on was a primary-weight mailto two bands further
+  // down (docs/product/marketing-review-20260827.md, "help arrives after the
+  // homework"). A reader who moved at the proof is a different moment from one
+  // who read the concessions, the founder and the export terms and arrived at
+  // the closing band; folded together neither could be read on its own.
+  // `about-closing` stays the page's original tag so its history spans the
+  // change.
+  "about-rules",
   "about-closing",
   "about-switching",
   "sign-in",

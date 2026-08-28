@@ -287,7 +287,9 @@ test.describe("schedule builder", () => {
     // width and is still asked at 1280.
     for (const [surface, url, ready, widths] of [
       ["the schedule board", BOARD, "Board", [390, 768, 1279]],
-      ["the public schedule", `/s/${SHOP}`, "Schedule", [390, 768, 1280]],
+      // The shopfront's h1 is the shop's own name now, not the word
+      // "Schedule" over a DiveDay-branded bar (slice 7a's hero).
+      ["the public schedule", `/s/${SHOP}`, "Blue Mantis Divers", [390, 768, 1280]],
     ] as const) {
       await page.goto(url);
       // The destination's own h1 — what makes the measurement below wait on
@@ -342,7 +344,7 @@ test.describe("schedule builder", () => {
     // does not — that is what `truncate` is for, and a shop can always pick a
     // longer name than any width can hold.
     await page.goto(`/s/${SHOP}`);
-    await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Blue Mantis Divers", level: 1 })).toBeVisible();
 
     for (const width of [390, 430]) {
       await page.setViewportSize({ width, height: 800 });

@@ -605,9 +605,11 @@ export default async function TripPrepPage({
                 {/* Phone: stacked cards. Four columns at 390px put a
                     comma-joined diver list against three other columns and the
                     names win — the item, size, and count a staffer is actually
-                    pulling gear by get squeezed to a character or two. Same
-                    split as the roster (`DiverList`): cards under `sm`, the
-                    table above. `print:` pins each half explicitly so the
+                    pulling gear by get squeezed to a character or two. Cards
+                    under `sm`, the table above — the split the diver roster
+                    also carried until it became one ledger at every width (ADR
+                    20260827-people-not-lists); this list is the departure
+                    surfaces' own call and stays. `print:` pins each half explicitly so the
                     printed packing list is the table at any paper width, not a
                     breakpoint coincidence. */}
                 <ul className="mt-3 flex flex-col gap-3 sm:hidden print:hidden">

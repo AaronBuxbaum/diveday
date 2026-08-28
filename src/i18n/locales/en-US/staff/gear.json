@@ -42,28 +42,13 @@
     "returned": "Returned",
     "neverPickedUp": "Never picked up"
   },
-  "overviewAriaLabel": "Fleet overview",
-  "stats": {
-    "outNow": "Out with divers",
-    "outNowDetail": "Checked out and not yet home",
-    "dueBack": "Due back",
-    "dueBackDetail": "Windows ending today",
-    "dueBackOverdueDetail": "{count, plural, one {# already overdue} other {# already overdue}}",
-    "serviceDue": "Service due",
-    "serviceDueDetail": "Clocks running out within {days, plural, one {# day} other {# days}}"
-  },
   "returns": {
-    "title": "Due back",
-    "description": "Everything that should come through the door today — close each one out as it comes home.",
     "holder": "With {name}",
     "holderWithTrip": "With {name} · {tripTitle}",
-    "wasDue": "Was due {dueOn}",
-    "dueToday": "Due today",
     "checkOut": "Check out",
     "checkingOut": "Checking out…",
     "markReturned": "Mark returned",
-    "returning": "Marking returned…",
-    "neverPickedUp": "Never picked up · was due {dueOn}"
+    "returning": "Marking returned…"
   },
   "empty": {
     "heading": "No gear on the register yet"
@@ -73,19 +58,30 @@
     "filterAriaLabel": "Filter by kind",
     "filterAll": "All ({count})",
     "filterKind": "{label} ({count})",
-    "columns": {
-      "unit": "Unit",
-      "size": "Size",
-      "service": "Service",
-      "where": "Where it is"
-    },
-    "outWith": "Out with {name} · due back {dueOn}",
-    "overdueWith": "Out with {name} · was due {dueOn}",
+    "outWith": "With {name} · due back {dueOn}",
+    "overdueWith": "With {name} · was due {dueOn}",
     "reservedFor": "Reserved for {name} · from {from}",
     "pagination": {
       "total": "{count, plural, one {# unit} other {# units}}"
     },
-    "neverPickedUp": "Reserved for {name} · never picked up"
+    "neverPickedUp": "Never picked up · {name} · was due {dueOn}",
+    "groups": {
+      "out": "Out — {count}",
+      "overdue": "Overdue — {count}",
+      "onWall": "On the wall — {count}"
+    },
+    "outWithToday": "With {name} · due back today",
+    "outWithTime": "With {name} · due back today {time}",
+    "notCollected": "Not collected · reserved for {name}",
+    "serviceDue": {
+      "filter": "Service due ({count})",
+      "title": "Service due"
+    },
+    "acts": {
+      "markReturnedUnit": "Mark returned — {label}",
+      "checkOutUnit": "Check out — {label}",
+      "releaseUnit": "Release — {label}"
+    }
   },
   "deleted": {
     "filter": "Deleted ({count})",

@@ -102,6 +102,15 @@ export type CommandPaletteCopy = {
   destinationTitles: StaffDestinationTitles;
   /** Today's departure — a live href, not a fixed destination. */
   goToBoarding: string;
+  /**
+   * "Close the day" — a **command**, not a destination.
+   *
+   * The evening is a state the shop home settles into, so there is no page to
+   * go to any more (H-62; ADR 20260827-clearwater-surface-language, decision
+   * 4). But a phrase a shop has typed for a year must keep answering, so the
+   * palette carries the words and lands them on the home's closing block.
+   */
+  goToCloseDay: string;
   /** The per-device offline snapshot, which is not shop-scoped. */
   goToOfflineRollCall: string;
 };
@@ -223,6 +232,19 @@ export function CommandPalette({
         label: copy.goToBoarding,
         href: boatBoardingHref,
         icon: <PaletteGlyph name="boarding" />,
+      });
+    }
+    // The one row here that is an *act* rather than a place. It lands on the
+    // home's `#close-day` anchor, which is where the closing block renders
+    // once every departure of the shop day has settled — and on a day still
+    // being dived it lands on the spine that will hold it, which is the
+    // honest answer to "close the day" at 11 a.m.
+    if (q === "" || "close the day".includes(q) || "closeout".includes(q)) {
+      goto.push({
+        key: "goto:close-day",
+        label: copy.goToCloseDay,
+        href: `${root}#close-day`,
+        icon: <PaletteGlyph name="closeDay" />,
       });
     }
     // Not shop-scoped (the offline snapshot lives per-device, not per-shop

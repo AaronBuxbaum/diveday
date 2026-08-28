@@ -109,17 +109,16 @@
       "notAuthorized": "Sending an invoice is limited to owners and managers — ask one of them to bill this diver."
     },
     "filters": {
+      "searchLabel": "Search orders",
+      "searchPlaceholder": "Search diver or trip",
       "statusLabel": "Status",
       "statusAll": "All statuses",
-      "diverLabel": "Diver",
-      "diverPlaceholder": "Search by name",
       "rangeLabel": "Date range",
       "rangeRecent": "Last {days, plural, one {# day} other {# days}}",
       "rangeAll": "All orders",
       "rangeCustom": "Custom dates",
       "fromLabel": "From",
       "toLabel": "To",
-      "apply": "Apply filters",
       "clear": "Clear filters"
     },
     "filteredByDiver": "Showing orders for {name}.",
@@ -128,10 +127,14 @@
     "emptyAll": "No DiveDay orders yet.",
     "emptyFiltered": "No DiveDay orders match these filters.",
     "emptyNoPayments": "No DiveDay orders yet — connect payments and the front desk can send its first order from here.",
+    "ledger": {
+      "today": "Today · {date}",
+      "continued": "{day}, continued",
+      "dayMeta": "{count, plural, one {# order} other {# orders}} · {subtotal}",
+      "rowLabel": "{name} — {amount}"
+    },
     "table": {
       "diver": "Diver",
-      "trip": "Trip",
-      "status": "Status",
       "date": "Date",
       "amount": "Amount"
     },

@@ -8,8 +8,12 @@ import { signInAsOwner } from "./helpers";
  *
  * The dates are the point of the flow. A request that names one lands in that
  * day's group; the second diver here names the same day as their *alternate*,
- * which keeps both requests in the group while the individual cards retain
+ * which keeps both requests in the group while the individual rows retain
  * their preferred/alternate explanation.
+ *
+ * The day group owns the count and the act (ADR 20260827-people-not-lists,
+ * decision 5), so "how many groups could make the 6th?" is read off that
+ * group's own heading rather than off a line repeated inside it.
  */
 
 /** Two dates well clear of the frozen clock, so the grouping is only ours. */
@@ -59,25 +63,28 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
   await page.goto("/shop/blue-mantis/requests");
   await expect(page.getByRole("heading", { name: "Requested dates" })).toBeVisible();
 
-  // Both date groups carry both requests, while each card retains the
-  // preferred/alternate detail that explains why it is present.
-  // Scoped by each group's own heading, never by the date *text*: a fallback
-  // badge inside one group names the other group's date, so a hasText filter
-  // matches both sections.
-  const dayGroup = (heading: string) =>
-    page.locator("section").filter({ has: page.getByRole("heading", { level: 2, name: heading }) });
+  // Both date groups carry both requests, while each row retains the
+  // preferred/alternate detail that explains why it is present. Scoped by each
+  // group's own accessible name, never by the date *text*: a fallback inside
+  // one group names the other group's date, so a hasText filter matches both
+  // sections. Case-insensitive because the group label is set in small caps.
+  const dayGroup = (date: string) =>
+    page.getByRole("region", { name: new RegExp(`^${date} —`, "i") });
   const firstDay = dayGroup("Mar 6, 2027");
-  await expect(firstDay.getByText("2 groups could make this day")).toBeVisible();
+  // The group header owns the shared facts: how many groups could make the day
+  // and roughly how many divers that is. No row repeats them.
+  await expect(firstDay.getByRole("heading", { level: 2 })).toHaveText(/2 groups · 2 divers/i);
   await expect(firstDay.getByText("Wants to dive: Two dives on the Duane")).toBeVisible();
-  // The group that named the 13th first is here as a fallback, and says so.
+  // The group that named the 13th first is here as a fallback, and says so — in
+  // the row's own words rather than in a badge on a tinted card.
   await expect(firstDay.getByText("Wants to dive: A shallow reef morning")).toBeVisible();
-  await expect(firstDay.getByText("First choice Mar 13, 2027")).toBeVisible();
+  await expect(firstDay.getByText(/First choice Mar 13, 2027/)).toBeVisible();
 
   const secondDay = dayGroup("Mar 13, 2027");
-  await expect(secondDay.getByText("2 groups could make this day")).toBeVisible();
+  await expect(secondDay.getByRole("heading", { level: 2 })).toHaveText(/2 groups · 2 divers/i);
 
   // The act the count exists for: the schedule builder, opened on that day.
-  await expect(firstDay.getByRole("link", { name: "Put a departure on this day" })).toHaveAttribute(
+  await expect(firstDay.getByRole("link", { name: "Add a departure" })).toHaveAttribute(
     "href",
     new RegExp(`/shop/blue-mantis/schedule/board\\?add=full&date=${PREFERRED}(?:&|$)`),
   );
@@ -95,10 +102,10 @@ test("a request with no date at all sits in its own group at the foot", async ({
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/requests");
-  const noDate = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { level: 2, name: "No date named" }) });
+  const noDate = page.getByRole("region", { name: /^No date named/i });
   await expect(noDate.getByText("Wants to dive: Whatever runs in October")).toBeVisible();
+  // A tail with a count and no act: there is no day here to put a boat on.
+  await expect(noDate.getByRole("link", { name: "Add a departure" })).toHaveCount(0);
   await expect(
     noDate.getByText("When suits: Some week in October, flights not booked"),
   ).toBeVisible();
@@ -141,10 +148,8 @@ test("the builder opened from a day's requests reads as finished sentences", asy
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/requests");
-  const day = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { level: 2, name: "Mar 6, 2027" }) });
-  await day.getByRole("link", { name: "Put a departure on this day" }).click();
+  const day = page.getByRole("region", { name: /^Mar 6, 2027 —/i });
+  await day.getByRole("link", { name: "Add a departure" }).click();
 
   const plan = page.getByRole("group", { name: "Starting from requests" });
   await expect(plan).toBeVisible();

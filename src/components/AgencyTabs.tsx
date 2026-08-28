@@ -1,10 +1,15 @@
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 
 /**
- * Which agency's half of the catalog is showing — worn by the staff roster
- * (`/shop/<slug>/courses`) and the diver-facing catalog (`/s/<slug>/courses`)
- * alike, because a diver deciding between a PADI and an SSI shop is asking the
- * same question of the same list.
+ * Which agency's half of the catalog is showing — the diver-facing catalog
+ * (`/s/<slug>/courses`).
+ *
+ * The staff roster wore this too until slice 9g of ADR
+ * 20260827-the-shops-shelves: a shop looking at its own catalog is looking for
+ * everything it teaches, so agency became a *group heading* over one ledger
+ * there rather than a filter that hides the other ladder. A diver is choosing
+ * between ladders rather than surveying them, so the tabs stay on the public
+ * page.
  *
  * This replaced a per-row PADI/SSI pill. A pill on every row spent a badge of
  * visual weight repeating what is, in a shop's catalog, one of two answers —
@@ -35,9 +40,8 @@ export function AgencyTabs({
   copy,
 }: {
   /**
-   * The agencies present in the catalog this strip sits above — the whole
-   * catalog for the staff roster (`courseAgencies`), the publicly visible part
-   * of it for the diver page (`activeCourseAgencies`). Never a constant pair:
+   * The agencies present in the catalog this strip sits above — the publicly
+   * visible part of it (`activeCourseAgencies`). Never a constant pair:
    * `courses.agency` is free text a CSV import can carry anything into.
    */
   agencies: string[];

@@ -8,15 +8,18 @@ import { canPersonDeleteDiver, loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { listDiverMergeDuplicateIds } from "@/db/diver-merge";
 import { isDiverFilter, listDiverSummaries, restoreDiver } from "@/db/divers";
-import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
+import { rosterFacts } from "@/db/roster-facts";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { canDeleteDiver, canImportShopData, canMergeDiver } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
+import { formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import type { CertificationLevel } from "@/lib/readiness";
+import type { AboardBlockerKind } from "@/lib/readiness";
+import { rosterLetter, rosterRowFact } from "@/lib/roster-rows";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
-import { DiverList } from "./_components/DiverList";
+import { DiverList, type RosterBadge, type RosterRow } from "./_components/DiverList";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -101,6 +104,7 @@ export default async function DiversPage({
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
   // range, so a search that narrows the roster never strands the reader on a
   // page the new result set does not have.
+  const now = nowDate();
   const [diverPage, possibleDuplicateIds] = await Promise.all([
     listDiverSummaries(db, shop.id, {
       query,
@@ -108,9 +112,20 @@ export default async function DiversPage({
       filter,
       // "Diving today" is the shop's own calendar day, not the server's.
       timeZone: shop.timezone,
+      now,
     }),
     canMerge ? listDiverMergeDuplicateIds(db, shop.id) : Promise.resolve([]),
   ]);
+  // Second, because it takes the ids the first one just returned: the four
+  // roster facts are all `inArray`-bounded to this page rather than read over
+  // the whole roster (`rosterFacts`, src/db/roster-facts.ts).
+  const duplicateIds = new Set<string>(possibleDuplicateIds);
+  const facts = await rosterFacts(
+    db,
+    shop.id,
+    diverPage.divers.map((diver) => diver.id),
+    { now },
+  );
   /** The roster's URL with the search and view kept and only `page` swapped. */
   const pageHref = (target: number) => {
     const search = new URLSearchParams();
@@ -136,21 +151,76 @@ export default async function DiversPage({
     revalidateAndRedirect(roster, noticeUrl(roster, restored ? "restored" : "restore-refused"));
   }
 
-  /**
-   * The shop's one level vocabulary, resolved once and handed to the roster as
-   * plain strings: it names a diver's level with the same words the diver
-   * record and a trip's requirements do. Every word still comes from the one
-   * `CERTIFICATION_LEVEL_KEYS` map (src/i18n/readiness-labels.ts) — never a
-   * second mapping here — and the `Record<CertificationLevel, string>` type
-   * makes a new rung of the ladder a compile error rather than a blank cell.
-   */
-  const certificationLevels: Record<CertificationLevel, string> = {
-    open_water: t(CERTIFICATION_LEVEL_KEYS.open_water),
-    advanced_open_water: t(CERTIFICATION_LEVEL_KEYS.advanced_open_water),
-    rescue: t(CERTIFICATION_LEVEL_KEYS.rescue),
-    divemaster: t(CERTIFICATION_LEVEL_KEYS.divemaster),
-    instructor: t(CERTIFICATION_LEVEL_KEYS.instructor),
+  /** What a diver is blocked on, as a badge word — one key per kind. */
+  const BLOCKED_LABELS: Record<AboardBlockerKind, StaffMessageKey> = {
+    medical: "divers.list.blocked.medical",
+    unknown: "divers.list.blocked.unknown",
+    certification: "divers.list.blocked.certification",
+    payment: "divers.list.blocked.payment",
   };
+
+  /**
+   * **The row's badges, and there are only ever three kinds** (ADR
+   * 20260827-people-not-lists, decision 2: "only exceptional badges").
+   *
+   * Worst first, and every one of them is a thing a staffer has to do
+   * something about: this diver cannot board a departure they are on, an
+   * invoice against them is standing open, or two records look like one
+   * person. A clear diver's row carries none — the silence is what makes the
+   * three readable in a scan of a hundred names, and it is what
+   * `DiverList.test.tsx` pins.
+   *
+   * The certification counts the row used to carry are deliberately not here.
+   * A card awaiting a look is real work, but it is the *whole* content of the
+   * "Needs attention" view, whose chip already says so; badging it on every
+   * row of that view is the same fact at two volumes.
+   */
+  const badgesFor = (personId: string): RosterBadge[] => {
+    const row = facts.get(personId);
+    const badges: RosterBadge[] = [];
+    if (row?.blocker) {
+      badges.push({ tone: "danger", label: t(BLOCKED_LABELS[row.blocker]) });
+    }
+    if (row?.openBalance) {
+      badges.push({ tone: "warning", label: t("divers.list.openBalanceLabel") });
+    }
+    if (duplicateIds.has(personId)) {
+      badges.push({ tone: "warning", label: t("divers.list.possibleDuplicateLabel") });
+    }
+    return badges;
+  };
+
+  /**
+   * The row's one quiet fact, worded here because this is the only layer that
+   * knows both the reader's language and the shop's zone. Which fact a row
+   * gets is `rosterRowFact`'s call (`src/lib/roster-rows.ts`); this only
+   * spells it.
+   */
+  const factFor = (personId: string): string | null => {
+    const row = facts.get(personId);
+    if (!row) return null;
+    const fact = rosterRowFact(row);
+    if (!fact) return null;
+    if (fact.kind === "imported") return t("divers.list.importedOnly");
+    if (fact.kind === "lastAboard") {
+      return t("divers.list.lastAboard", {
+        date: formatShortDate(fact.at, locale, shop.timezone),
+      });
+    }
+    return t("divers.list.bookedOn", {
+      date: formatShortDate(fact.at, locale, shop.timezone),
+      time: formatTime(fact.at, locale, shop.timezone),
+    });
+  };
+
+  const rows: RosterRow[] = diverPage.divers.map((diver) => ({
+    personId: diver.id,
+    fullName: diver.fullName,
+    href: shopPath(shopSlug, "divers", diver.id),
+    letter: rosterLetter(diver.fullName),
+    badges: badgesFor(diver.id),
+    fact: factFor(diver.id),
+  }));
 
   const banner = noticeFromParam(notice, NOTICES);
   const noticeText = banner ? t(banner.key) : null;
@@ -167,7 +237,7 @@ export default async function DiversPage({
   const undoRemoval = notice === "deleted" && deleted ? deleted : null;
 
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       {/* `deleted` goes with `notice`: it carries the id the undo toast acts on,
           and a person id left sitting in the address bar after the toast has
           been read is nobody's business and nothing's input. */}
@@ -189,11 +259,11 @@ export default async function DiversPage({
       ) : null}
 
       <DiverList
-        page={diverPage}
+        rows={rows}
+        total={diverPage.total}
         shopSlug={shopSlug}
         query={query}
         filter={filter}
-        possibleDuplicateIds={possibleDuplicateIds}
         importHref={canImport ? `/shop/${shopSlug}/settings/import` : null}
         canRestore={canDelete}
         quickAddAction={createDiverFromSearchAction}
@@ -204,7 +274,7 @@ export default async function DiversPage({
             href={pageHref}
             total={t("divers.list.pagination.total", { count: diverPage.total })}
             t={t}
-            className="mt-4"
+            className="mt-8"
           />
         }
         copy={{
@@ -216,13 +286,14 @@ export default async function DiversPage({
           viewRemoved: t("divers.list.viewRemoved"),
           viewsAriaLabel: t("divers.list.viewsAriaLabel"),
           removedNote: t("divers.list.removedNote"),
-          peopleHeading: t("divers.list.peopleHeading"),
-          // The badge's digit is announced with the noun the count belongs to,
-          // and with whether it is a match count or the whole roster.
-          peopleCountLabel: query
+          // How many people the list below holds, under whichever view is on —
+          // and while a search is on, how many of them matched it. Quiet text
+          // beside the box rather than a badge on a "People" heading: the count
+          // is a fact about the list, not a status, and the heading it hung off
+          // named the thing the page is already called.
+          countLabel: query
             ? t("divers.page.matchingCount", { count: diverPage.total })
-            : t("divers.page.onFileCount", { count: diverPage.total }),
-          searchHintText: t("divers.list.searchHintText"),
+            : t("divers.list.pagination.total", { count: diverPage.total }),
           searchDiversLabel: t("divers.list.searchDiversLabel"),
           searchPlaceholder: t("divers.list.searchPlaceholder"),
           noDiversMatchView: t("divers.list.noDiversMatchView"),
@@ -231,15 +302,7 @@ export default async function DiversPage({
           emptyShowAll: t("divers.list.emptyShowAll"),
           emptyImportBody: t("divers.list.emptyImportBody"),
           emptyImportAction: t("divers.list.emptyImportAction"),
-          noContactDetails: t("divers.list.noContactDetails"),
-          certificationLevels,
-          noCertificationLevel: t("divers.list.noCertificationLevel"),
-          pendingReviewText: t.raw("divers.list.pendingReviewText"),
-          toConfirmText: t.raw("divers.list.toConfirmText"),
-          tableHeaderPerson: t("divers.list.tableHeaderPerson"),
-          tableHeaderLevel: t("divers.list.tableHeaderLevel"),
-          tableHeaderAttention: t("divers.list.tableHeaderAttention"),
-          possibleDuplicateLabel: t("divers.list.possibleDuplicateLabel"),
+          letterOther: t("divers.list.letterOther"),
         }}
       />
     </main>

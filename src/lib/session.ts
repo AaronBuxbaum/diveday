@@ -94,7 +94,7 @@ export type ShopSurfaceOptions =
       /**
        * `notice` is the code the destination's map resolves to words. `landing`
        * names the surface to bounce to, as path segments *under this shop* —
-       * `["close-out"]` for the departure log's owner-only gate. It defaults to
+       * `["orders"]` for a payment gate, say. It defaults to
        * the shop's Today page, which already renders `shopHome.notice.*` codes
        * and is the nearest surface every staff role can see.
        *

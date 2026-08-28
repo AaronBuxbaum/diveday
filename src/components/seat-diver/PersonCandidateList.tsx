@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { LedgerRow } from "@/components/ui/ledger";
 import type { BookableDiver } from "@/db/divers";
 
 /**
@@ -14,6 +15,16 @@ import type { BookableDiver } from "@/db/divers";
  * in: whether the name links to the diver's record, an extra line under the
  * contact line (the Guests tab's "rental fit on file"), and the row's surface
  * tone.
+ *
+ * **The row is a `LedgerRow`** (ADR 20260827-the-shops-shelves, slice 9g, in
+ * the grammar of ADR 20260827-clearwater-surface-language, decision 2). It was
+ * a `rounded-xl` box on a sunken fill, one per person, stacked with a gap —
+ * container-shaped chrome around a list of names that floats above nothing,
+ * and the reason a person read as one kind of object here and another on every
+ * other people surface (`src/components/person/rows.tsx`, slice 8a). Hairlines
+ * instead. Nothing about the flow, the actions or their labels moves;
+ * `rowClassName` survives for a caller that genuinely wants a fill behind the
+ * row, and now defaults to none.
  */
 export function PersonCandidateList({
   candidates,
@@ -29,7 +40,7 @@ export function PersonCandidateList({
   invitePendingLabel,
   invitePersonAriaLabel,
   noEmailOnFile,
-  rowClassName = "bg-surface-sunken",
+  rowClassName = "",
   className = "",
 }: {
   candidates: BookableDiver[];
@@ -58,13 +69,48 @@ export function PersonCandidateList({
   className?: string;
 }) {
   return (
-    <ul className={`grid gap-2 ${className}`}>
+    <ul className={className || undefined}>
       {candidates.map((candidate) => {
         const { person } = candidate;
         return (
-          <li
+          <LedgerRow
             key={person.id}
-            className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border px-4 py-3 ${rowClassName}`}
+            className={`py-3 ${rowClassName}`.trim()}
+            trailing={
+              <div className="flex flex-wrap items-center gap-2">
+                {inviteAction && inviteLabel ? (
+                  <form action={inviteAction}>
+                    <input type="hidden" name="tripId" value={tripId} />
+                    <input type="hidden" name="personId" value={person.id} />
+                    <SubmitButton
+                      pendingLabel={invitePendingLabel ?? "Inviting…"}
+                      ariaLabel={
+                        invitePersonAriaLabel
+                          ? invitePersonAriaLabel(person.fullName)
+                          : `Invite ${person.fullName}`
+                      }
+                      disabled={!person.email}
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                    >
+                      {inviteLabel}
+                    </SubmitButton>
+                  </form>
+                ) : null}
+                {seatAction && addLabel && pendingLabel && addPersonAriaLabel ? (
+                  <form action={seatAction}>
+                    <input type="hidden" name="tripId" value={tripId} />
+                    <input type="hidden" name="personId" value={person.id} />
+                    <SubmitButton
+                      pendingLabel={pendingLabel}
+                      ariaLabel={addPersonAriaLabel(person.fullName)}
+                      className={buttonClass({ size: "sm" })}
+                    >
+                      {addLabel}
+                    </SubmitButton>
+                  </form>
+                ) : null}
+              </div>
+            }
           >
             <div className="min-w-0">
               {personHref ? (
@@ -80,40 +126,7 @@ export function PersonCandidateList({
               <p className="text-sm text-muted">{person.email ?? noEmailOnFile}</p>
               {extraLine?.(candidate)}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {inviteAction && inviteLabel ? (
-                <form action={inviteAction}>
-                  <input type="hidden" name="tripId" value={tripId} />
-                  <input type="hidden" name="personId" value={person.id} />
-                  <SubmitButton
-                    pendingLabel={invitePendingLabel ?? "Inviting…"}
-                    ariaLabel={
-                      invitePersonAriaLabel
-                        ? invitePersonAriaLabel(person.fullName)
-                        : `Invite ${person.fullName}`
-                    }
-                    disabled={!person.email}
-                    className={buttonClass({ variant: "secondary", size: "sm" })}
-                  >
-                    {inviteLabel}
-                  </SubmitButton>
-                </form>
-              ) : null}
-              {seatAction && addLabel && pendingLabel && addPersonAriaLabel ? (
-                <form action={seatAction}>
-                  <input type="hidden" name="tripId" value={tripId} />
-                  <input type="hidden" name="personId" value={person.id} />
-                  <SubmitButton
-                    pendingLabel={pendingLabel}
-                    ariaLabel={addPersonAriaLabel(person.fullName)}
-                    className={buttonClass({ size: "sm" })}
-                  >
-                    {addLabel}
-                  </SubmitButton>
-                </form>
-              ) : null}
-            </div>
-          </li>
+          </LedgerRow>
         );
       })}
     </ul>

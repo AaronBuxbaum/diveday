@@ -21,7 +21,12 @@ import {
   trips,
   waiverRecords,
 } from "./schema";
-import { claimPartySeat, getClaimPageData, issuePartySeatClaims } from "./seat-claims";
+import {
+  claimPartySeat,
+  getClaimPageData,
+  getClaimPageState,
+  issuePartySeatClaims,
+} from "./seat-claims";
 import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "./trips";
 import { issueWaiverRequest } from "./waivers";
 
@@ -205,6 +210,24 @@ describe("issuePartySeatClaims", () => {
     });
     expect(seats.every((seat) => seat.claim === null)).toBe(true);
     expect(seats.find((seat) => seat.bookingId === memberOne.bookingId)?.claimed).toBe(true);
+  });
+
+  it("mints nothing once the shop calls the departure off", async () => {
+    // The other half of what a dead claim page may promise: for a cancelled
+    // departure there is no link to ask the organizer for, because this is the
+    // only place one is ever minted and `claimableNow` refuses a trip that
+    // isn't scheduled. A dead card telling that diver to ask for a fresh one
+    // sends them to a panel that shows names and no links.
+    const { db, shop, open } = await seededContext();
+    const { lead } = await bookParty(db, shop.id, open.id);
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, open.id));
+
+    const seats = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(seats.length).toBeGreaterThan(0);
+    expect(seats.every((seat) => seat.claim === null)).toBe(true);
   });
 
   it("walks nothing for a lead booking id presented against the wrong shop", async () => {
@@ -647,5 +670,153 @@ describe("claimPartySeat", () => {
     expect(
       await verifyBookingCapability(db, { token: readiness.token, purpose: "readiness" }),
     ).toBeNull();
+  });
+});
+
+/**
+ * **The dead-link law's booking tier, on the claim link** (ADR
+ * 20260827-first-light, decisions 3 and 4).
+ *
+ * The rule, not the pixels: a claim token that still resolves to a capability
+ * row *this app issued* may name the shop that issued it, because the party
+ * member holding a dead URL from a group chat has exactly one question and it
+ * is who to ask. A token that resolves to nothing at all may name nothing —
+ * the guarantee the whole capability model rests on is that a bearer token
+ * reveals only its own record, and an unresolvable token has no record.
+ *
+ * Note what "readable" does *not* mean: it is not "verifiable". A live token
+ * over a boat that has already sailed verifies fine, can claim nothing, and
+ * still earns the shop's hand — which is the case a diver is likeliest to be
+ * holding.
+ */
+describe("getClaimPageState (what a dead claim link may name)", () => {
+  it("renders the form while the seat can still change hands", async () => {
+    const { db, shop, open } = await seededContext();
+    const { lead, memberOne } = await bookParty(db, shop.id, open.id);
+    const token = await claimTokenFor(db, shop.id, lead.bookingId, memberOne.bookingId);
+
+    const state = await getClaimPageState(db, token);
+    expect(state.kind).toBe("claimable");
+    if (state.kind !== "claimable") throw new Error("unreachable");
+    expect(state.data.shopName).toBe(shop.name);
+    expect(state.data.seatName).toBe("Milo Member");
+  });
+
+  it("names the shop on a spent link — the ordinary dead claim", async () => {
+    const { db, shop, open } = await seededContext();
+    const { lead, memberOne } = await bookParty(db, shop.id, open.id);
+    const token = await claimTokenFor(db, shop.id, lead.bookingId, memberOne.bookingId);
+    // Claiming revokes every capability on the booking, including this one.
+    expect(
+      await claimPartySeat(db, { token, fullName: "Milo Actual", email: "milo@example.com" }),
+    ).toMatchObject({ ok: true });
+
+    const state = await getClaimPageState(db, token);
+    expect(state).toEqual({
+      kind: "dead",
+      shop: {
+        name: shop.name,
+        contactEmail: shop.contactEmail,
+        contactPhone: shop.contactPhone,
+        defaultLocale: shop.defaultLocale,
+      },
+    });
+  });
+
+  it("names the shop on an expired link", async () => {
+    const { db, shop, open } = await seededContext();
+    const { lead, memberOne } = await bookParty(db, shop.id, open.id);
+    const token = await claimTokenFor(db, shop.id, lead.bookingId, memberOne.bookingId);
+    await db
+      .update(bookingCapabilities)
+      .set({ expiresAt: new Date(nowMs() - 60 * 60 * 1000) })
+      .where(eq(bookingCapabilities.bookingId, memberOne.bookingId));
+
+    const state = await getClaimPageState(db, token);
+    expect(state.kind).toBe("dead");
+    if (state.kind !== "dead") throw new Error("unreachable");
+    expect(state.shop.name).toBe(shop.name);
+  });
+
+  it("names the shop on a live link whose boat has already sailed", async () => {
+    // "Readable" is not "verifiable": this token verifies fine and the seat
+    // simply cannot change hands any more. The diver still deserves the hand.
+    const { db, shop, open } = await seededContext();
+    const { lead, memberOne } = await bookParty(db, shop.id, open.id);
+    const token = await claimTokenFor(db, shop.id, lead.bookingId, memberOne.bookingId);
+    await db
+      .update(trips)
+      .set({
+        startsAt: new Date(nowMs() - 2 * 60 * 60 * 1000),
+        endsAt: new Date(nowMs() - 60 * 60 * 1000),
+      })
+      .where(eq(trips.id, open.id));
+
+    expect(await getClaimPageData(db, token)).toBeNull();
+    const state = await getClaimPageState(db, token);
+    expect(state.kind).toBe("dead");
+    if (state.kind !== "dead") throw new Error("unreachable");
+    expect(state.shop.name).toBe(shop.name);
+  });
+
+  /**
+   * **The two causes that decide what the sentence may say.**
+   *
+   * A shop calls Saturday off for weather, or takes one seat off the boat.
+   * `verifyBookingCapability` fails closed on both — cancelling the trip
+   * revokes nothing and simply stops verifying, cancelling the seat revokes
+   * every link over it — so both land here, in the same arm as a spent link,
+   * and every party member who taps the URL the organizer forwarded into the
+   * group chat reads whatever that arm says. They are the reason it may not say
+   * the seat is safe or offer a fresh link: for these two the seat is gone, and
+   * the organizer's panel has nothing left to hand out (the
+   * `issuePartySeatClaims` test above).
+   */
+  it("names the shop when the shop called the departure off", async () => {
+    const { db, shop, open } = await seededContext();
+    const { lead, memberOne } = await bookParty(db, shop.id, open.id);
+    const token = await claimTokenFor(db, shop.id, lead.bookingId, memberOne.bookingId);
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, open.id));
+
+    expect(await getClaimPageData(db, token)).toBeNull();
+    const state = await getClaimPageState(db, token);
+    expect(state.kind).toBe("dead");
+    if (state.kind !== "dead") throw new Error("unreachable");
+    expect(state.shop.name).toBe(shop.name);
+  });
+
+  it("names the shop when the seat itself was cancelled", async () => {
+    const { db, shop, open } = await seededContext();
+    const { lead, memberOne } = await bookParty(db, shop.id, open.id);
+    const token = await claimTokenFor(db, shop.id, lead.bookingId, memberOne.bookingId);
+    await cancelBooking(db, shop.id, memberOne.bookingId);
+
+    expect(await getClaimPageData(db, token)).toBeNull();
+    const state = await getClaimPageState(db, token);
+    expect(state.kind).toBe("dead");
+    if (state.kind !== "dead") throw new Error("unreachable");
+    expect(state.shop.name).toBe(shop.name);
+  });
+
+  it("names nothing at all for a token that was never ours", async () => {
+    const { db } = await seededContext();
+    // `toEqual` on the whole answer, not a property check: the assertion that
+    // matters is that no shop reaches the caller by any route.
+    expect(await getClaimPageState(db, "not-a-real-token")).toEqual({ kind: "unknown" });
+  });
+
+  it("names nothing when the token was issued for a different purpose", async () => {
+    // Purpose binding is part of "ours": a readiness link is not a claim link,
+    // and holding one must not turn the claim page into a shop oracle.
+    const { db, shop, open } = await seededContext();
+    const { memberOne } = await bookParty(db, shop.id, open.id);
+    const readiness = await issueBookingCapability(db, {
+      shopId: shop.id,
+      bookingId: memberOne.bookingId,
+      purpose: "readiness",
+    });
+    if (!readiness) throw new Error("readiness capability setup failed");
+
+    expect(await getClaimPageState(db, readiness.token)).toEqual({ kind: "unknown" });
   });
 });

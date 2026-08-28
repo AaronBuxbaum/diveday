@@ -14,8 +14,6 @@ import type { RouteEditorCopy } from "./RouteEditor";
  */
 export function routeEditorCopy(t: StaffTranslator): RouteEditorCopy {
   return {
-    legend: t("diveSites.form.route.legend"),
-    description: t("diveSites.form.route.description"),
     needsCoordinates: t("diveSites.form.route.needsCoordinates"),
     labelLabel: t("diveSites.form.route.labelLabel"),
     labelPlaceholder: t("diveSites.form.route.labelPlaceholder"),

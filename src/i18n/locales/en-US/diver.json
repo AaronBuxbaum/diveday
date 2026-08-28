@@ -128,6 +128,7 @@
     "fullTermsLabel": "Full terms",
     "theDay": "The day",
     "lookFor": "Look for",
+    "theRoute": "{count, plural, one {The route} other {The routes}}",
     "conditionsWater": "{value} water",
     "conditionsVisibility": "{value} visibility",
     "conditionsLanguages": "{languages} aboard",
@@ -173,7 +174,6 @@
     "meetingPointWithAddress": "{label} — {address}",
     "diveNumber": "Dive {number}",
     "siteToBeConfirmed": "Site to be confirmed",
-    "crewPrediction": "Crew prediction",
     "automatedOutlook": "Automated marine outlook",
     "waterTemperature": "Water temperature",
     "visibility": "Visibility",
@@ -248,7 +248,13 @@
       "breezy": "A breezy morning; expect some chop and motion on the boat.",
       "windy": "Strong winds and a bumpy ride. The crew may adjust dive sites for sheltered water.",
       "gale_warning": "High winds. The crew will assess conditions and make the final weather call."
-    }
+    },
+    "theSite": "{count, plural, one {The site} other {The sites}}",
+    "siteHowItUnfolds": "How the dive unfolds",
+    "siteWaterMovement": "Water movement",
+    "siteWhatToLookFor": "What to look for down there",
+    "siteLandmarksHeading": "Landmarks that tell the story",
+    "siteConservationHeading": "Conservation note"
   },
   "booking": {
     "heading": "Grab a spot",
@@ -469,7 +475,7 @@
     "submitting": "Sending…",
     "savedPublished": "Thanks — your rating is up.",
     "savedPending": "Thanks — the shop will read your words before they go up.",
-    "savedDidNotDive": "There’s no dive to rate — this booking never sailed. Contact the shop if that’s not right.",
+    "savedDidNotDive": "There’s no dive to rate on this booking. Contact the shop if that’s not right.",
     "savedError": "That didn’t save — pick a rating and try again.",
     "yourRating": "You rated this {rating} out of 5.",
     "average": "{average} out of 5",
@@ -486,38 +492,32 @@
   },
   "recap": {
     "metaTitle": "Your dive recap — DiveDay",
-    "eyebrow": "That’s a wrap",
-    "greeting": "Nice diving, {name}.",
     "namelessFallback": "diver",
     "externalReviewHeading": "Share it on Google too",
     "externalReviewBody": "We copied what you wrote below — paste it into a public review and help other divers find {shop}.",
     "externalReviewBodyNoComment": "A quick rating on Google helps other divers find {shop}.",
     "externalReviewCta": "Leave a public review",
     "commentCopied": "Copied — paste it in when you get there",
-    "whereYouDived": "Where you dived",
     "conditionsOnTheDay": "Conditions on the day",
-    "lookFor": "Look for:",
     "yourPhotos": "Your photos",
     "captionLabel": "Add a caption (optional)",
     "tipCrew": "Tip your crew",
-    "bringABuddy": "Bring a buddy next time",
     "unavailableHeading": "This recap link isn’t available",
     "unavailableBody": "Ask your dive shop for a fresh link.",
-    "didNotDiveBody": "This booking didn’t sail, so there’s no recap to rate or add a photo to.",
+    "didNotDiveBody": "There’s no recap for this booking to rate or add a photo to.",
+    "noShowHeading": "This booking is marked as a no-show",
+    "noShowBody": "{shop} recorded that you didn’t make this departure, so there’s no day to look back on.",
     "photoAdded": "Added to your recap — thanks for sharing!",
     "photoMissing": "Pick a photo first, then add it.",
     "photoUnsupported": "Photo uploads aren’t set up for this shop yet — no worries, tag them when you post.",
     "photoFailed": "That photo didn’t upload — try a JPEG or PNG under 5 MB.",
-    "photoCancelled": "This booking didn’t sail, so there’s no recap to add a photo to.",
+    "photoCancelled": "There’s no recap for this booking to add a photo to.",
     "tipCancelled": "No worries — the tip wasn’t charged.",
     "tipRange": "Enter a tip amount between $1 and $500.",
     "tipFailed": "That didn’t go through — try again in a moment.",
     "tipThanksNotice": "Thanks for tipping your crew! 🤿",
     "tipConfirming": "Just confirming your payment — this usually takes a few seconds. Refresh if it doesn’t update.",
     "photoLimit": "That’s the most photos one recap holds ({max}).",
-    "loggedAt": "You logged {count, plural, one {a dive} other {# dives}} at {where}.",
-    "loggedToday": "You logged {count, plural, one {a dive} other {# dives}} today.",
-    "hopeWaterTreatedYou": "We hope the water treated you well.",
     "tipPaid": "Thanks — your tip goes straight to {shop}. They’ll make sure the crew hears about it.",
     "tipAllGoes": "100% goes to {shop} — nothing held back, no account needed.",
     "tipFinish": "Finish your {amount} tip",
@@ -534,39 +534,24 @@
     "photoTooMany": "Pick up to {max, plural, one {# photo} other {# photos}} at a time.",
     "addingPhoto": "Adding…",
     "addToMyRecap": "Add to my recap",
-    "buddyBody": "Diving’s better with someone you know.",
     "seeWhatsNext": "See what’s next",
-    "messageTheShop": "Message the shop",
     "tipAmountLegend": "Tip amount",
     "otherTipPlaceholder": "Other",
     "otherTipAriaLabel": "Other tip amount",
-    "shareRecap": "Share this recap",
-    "shareRecapText": "Here’s my dive recap from {shop} — take a look.",
-    "linkCopied": "Link copied",
-    "linkCopiedAnnouncement": "Recap link copied to clipboard.",
-    "linkCopyFailed": "Couldn’t copy — copy it from the address bar instead.",
-    "mapAriaLabel": "Stylized recap navigation map of your dive sites",
-    "charterPath": "CHARTER PATH",
-    "boatTrack": "Boat Track",
-    "theDock": "The Dock",
-    "reconstructedPath": "📍 Reconstructed boat path visiting {count, plural, one {# dive site} other {# dive sites}}",
     "crewQuote": "“{words}”",
     "logbookHeading": "Dive log entry",
-    "logbookEyebrow": "Your keepsake",
     "printRecord": "Print log entry",
-    "saveRecordHint": "Save or print this entry to keep in your logbook.",
     "diverLabel": "Diver",
     "dateLabel": "Date",
     "vesselLabel": "Vessel",
-    "shoreOrCharter": "Shore dive",
     "crewLabel": "Crew",
-    "unassignedCrew": "Shop crew",
-    "sitesLabel": "Sites & depths",
-    "maxDepthLabel": "Max depth: {depth}",
+    "sitesLabel": "Sites",
     "visitMilestone": "Your {ordinal} dive day with {shopName}",
-    "visitMilestoneFirst": "Your 1st dive day with {shopName}",
-    "verifiedRecord": "Verified log entry from {shopName}",
-    "diveCountSummary": "{count, plural, one {# dive logged} other {# dives logged}}"
+    "recordedBy": "Recorded by {shopName}",
+    "milestoneStampFirst": "First dive day",
+    "milestoneStamp": "{ordinal} dive day",
+    "printNotes": "Notes",
+    "printSignature": "Divemaster"
   },
   "ready": {
     "metaTitle": "Your trip readiness — DiveDay",
@@ -608,6 +593,7 @@
     "freshWaiverLink": "Get a fresh waiver link",
     "payForTrip": "Pay for this trip",
     "cancelledSeatReleased": "Your seat on {trip} is no longer held. If that’s a surprise, get in touch with {shop}.",
+    "tripCancelledBody": "Your seat is released, and there’s nothing you need to do.",
     "checklistDetail": {
       "setupGeneric": "Your shop is still finalizing this trip’s details.",
       "readinessUnavailable": "Your shop is confirming your readiness. Check back shortly.",
@@ -713,7 +699,8 @@
     "stepGear": "Gear and sizes",
     "stepDayOf": "Day-of details",
     "diveDayLine": "Today’s the day.",
-    "partyAllSet": "Everyone’s set — see you at the dock."
+    "partyAllSet": "Everyone’s set — see you at the dock.",
+    "afterGreeting": "Welcome back, {name}."
   },
   "waiver": {
     "metaTitle": "Complete your waiver — DiveDay",
@@ -775,7 +762,12 @@
     "signatureNote": "Your typed name, agreement, and completion time are saved with this exact version of the waiver.",
     "saveForLater": "Save and finish later",
     "signButton": "Sign waiver",
-    "englishOnlyNotice": "This waiver and medical form are only available in English right now. If you're not comfortable reading English legal or medical text, bring someone who can help you read it, or ask the shop first — don't sign anything you don't understand."
+    "englishOnlyNotice": "This waiver and medical form are only available in English right now. If you're not comfortable reading English legal or medical text, bring someone who can help you read it, or ask the shop first — don't sign anything you don't understand.",
+    "railRelease": "Release",
+    "railMedical": "Medical",
+    "railSign": "Sign",
+    "railProgressOne": "{done} of {total} done",
+    "railProgressOther": "{done} of {total} done"
   },
   "checkoutLine": {
     "deposit": "Deposit — {tripTitle}",
@@ -801,6 +793,7 @@
     "privacyNote": "Only you and the shop see what you enter here — your organizer just sees that the seat is claimed.",
     "unavailableHeading": "This link isn’t available",
     "unavailableBody": "It may already have been used, replaced with a newer link, or expired. Ask your organizer for a fresh link, or contact the shop.",
+    "expiredBody": "Whoever sent you this link can tell you what’s happened with the seat.",
     "errors": {
       "checkFields": "Check the highlighted fields and try again.",
       "alreadyBooked": "You already have your own spot on this trip, so this seat stays with your organizer.",
@@ -883,6 +876,7 @@
     "bigGroupContactGeneric": "Bringing more than {count}? Contact the shop."
   },
   "site": {
+    "terrainMapTitle": "Terrain map of {site}",
     "openMap": "Open map ↗",
     "landmarkKinds": {
       "navigationMark": "Navigation mark",
@@ -2057,19 +2051,20 @@
     "full": "Full",
     "recap": {
       "label": "Dive recap",
-      "eyebrow": "That’s a wrap",
       "greeting": "Nice diving, Priya.",
       "tripLine": "Two-Tank Reef · Saturday · Jun 14",
       "completed": "Completed",
-      "depth": "Max depth",
       "visibility": "Visibility",
       "water": "Water",
       "crewNoteLabel": "From your crew",
       "crewNote": "A calm first dive, then a brilliant drift over the reef. Thanks for diving with us.",
-      "photos": "Your photos",
-      "photoCount": "2 photos",
-      "share": "Share recap",
-      "addPhoto": "Add a photo"
+      "recordHeading": "Dive log entry",
+      "visits": "Your 3rd dive day",
+      "boatLabel": "Boat",
+      "sitesLabel": "Sites",
+      "conditionsLabel": "Conditions",
+      "reviewAsk": "How was your day?",
+      "reviewSubmit": "Leave my review"
     },
     "import": {
       "label": "Import preview",
@@ -2198,7 +2193,7 @@
           "when": "That evening",
           "title": "Divers go home with a page worth sharing",
           "description": "Their dives, a note from the crew, room for their own photos — with your shop's name on the thing they send their buddy.",
-          "mockupLabel": "A diver's recap page with the dive's depth, visibility and water temperature, a note from the crew, and their own photos."
+          "mockupLabel": "A diver's recap page with the day's dive record, a note from the crew, and one review ask."
         }
       },
       "productTitle": "Instead of a whiteboard, a clipboard, and three apps that don't talk to each other.",
@@ -2410,11 +2405,11 @@
           },
           "certificationCard": {
             "what": "Certification record",
-            "detail": "Imported verified and flagged imported — staff give it a one-tap confirm; unrecognized levels need manual entry."
+            "detail": "Comes across with the diver's record, marked imported, and clears the level gate — unless your file says the card was never verified, and then it waits for staff. Unrecognized levels need manual entry."
           },
           "specialtyCards": {
             "what": "Specialty certifications (deep, wreck, night, drysuit)",
-            "detail": "Imported as verified specialty certifications, flagged imported; each one still needs a staff confirm before the dive that requires it."
+            "detail": "Come across with the diver's record, marked imported. Each one's gate stays shut until staff give it a one-tap confirm, whatever your file says."
           },
           "nitrox": {
             "what": "Nitrox",
@@ -2705,7 +2700,7 @@
       "runP1": "Write in about a bad morning at the counter, a bug, or a question — a real person reads it and helps, not a form that asks you to attach a screenshot before anyone looks.",
       "runP2": "Pricing works the same way: the whole of it is on one page, and you can read every line of it without talking to anyone here first.",
       "emailCta": "Email {email}",
-      "seeCost": "See what it costs",
+      "seeCost": "One flat {price} {cadence} — see the whole list",
       "seeProduct": "See what it does →",
       "rulesEyebrow": "What we hold it to",
       "rulesTitle": "Four rules, and you can check every one.",
@@ -2750,7 +2745,7 @@
         }
       },
       "leaveEyebrow": "From day one",
-      "leaveTitle": "Who you're actually buying from.",
+      "leaveTitle": "Month to month, and the export is one button.",
       "leaveP1": "These are the records that get your divers on a boat, so here's what matters as you get started — how they stay useful to your team and how our people help you bring them across.",
       "leaveP2": "{terms} If you are bringing over an existing export or spreadsheet, a person will sit with it and bring your divers across with you.",
       "switchingLink": "How switching works, both directions →",
@@ -2800,7 +2795,7 @@
       "recapEyebrow": "After the boat is back",
       "recapTitle": "The day ends with a recap divers want to share.",
       "recapDescription": "The paperwork is DiveDay's job; the memory is the diver's. After the trip, each diver gets their own page to keep and share — and the shop gets remembered.",
-      "recapMockupLabel": "A diver's post-trip recap page with dive facts, a crew note, photos, and sharing controls.",
+      "recapMockupLabel": "A diver's post-trip recap page with the day's dive record, a note from the crew, and one review ask.",
       "afterTripBody": "The sites they dived, a shout-out from the crew, and room for their own photos — with a nudge to bring a buddy next time.",
       "paymentEyebrow": "Getting paid",
       "paymentTitle": "The money runs through your Stripe account, not ours.",

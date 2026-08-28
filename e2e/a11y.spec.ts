@@ -312,7 +312,7 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
     await expect(page.getByRole("heading", { name: "Roll call" })).toBeVisible();
     await expectNoA11yViolations(page);
 
-    // The document that leaves the building. One tap from close-out turns the
+    // The document that leaves the building. One tap from a settled station turns the
     // departure into the print-ready record of who was aboard, the roll-call
     // timeline and the certification evidence — the page a shop hands an
     // insurer or an authority after something goes wrong, and the one
@@ -442,7 +442,7 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       { path: "/shop/blue-mantis/reports", heading: "How's your month" },
       { path: "/shop/blue-mantis/staffing", heading: "Staffing" },
       { path: "/shop/blue-mantis/courses", heading: "Courses" },
-      { path: "/shop/blue-mantis/waivers", heading: "Waiver template" },
+      { path: "/shop/blue-mantis/waivers", heading: "The release" },
       { path: "/shop/blue-mantis/dive-sites", heading: "Dive-site library" },
       { path: "/shop/blue-mantis/dive-sites/catalog", heading: "DiveDay common dive sites" },
     ]);
@@ -483,7 +483,8 @@ test.describe("automated accessibility scans of the static staff routes", () => 
    *
    * `/settings/security` and `/settings/gear-import` are both forms a shop
    * fills in once and gets wrong quietly if a field has no label, and the gear
-   * register is the densest table in the product after the orders index.
+   * register is the densest ledger in the product after the orders index —
+   * grouped rows, each carrying its own act (ADR 20260827-the-shops-shelves).
    */
   test("the gear, request and remaining settings surfaces have no automated a11y violations", async ({
     page,
@@ -646,21 +647,27 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
     await expect(page).toHaveURL(/\/orders\/[^/]+$/);
     await expectNoA11yViolations(page);
 
-    // The signature log — the one `/waivers` sub-route the static table misses,
-    // and a legal record a shop is expected to be able to read back.
-    await page.goto("/shop/blue-mantis/waivers/signatures", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toBeVisible();
+    // The signature log with one record open: the disclosure's own contents —
+    // the doors and any flagged medical prompt — are markup nothing scans while
+    // every row is shut, and this is a legal record a shop is expected to be
+    // able to read back. It shares `/waivers` now (ADR
+    // 20260827-people-not-lists), whose closed state the static table above
+    // already scans.
+    await page.goto("/shop/blue-mantis/waivers", { waitUntil: "domcontentloaded" });
+    await page.locator('details[id^="waiver-record-"]').first().locator("summary").click();
+    await expect(page.locator('details[id^="waiver-record-"][open]').first()).toBeVisible();
     await expectNoA11yViolations(page);
   });
 
   test("the catalog editors have no automated a11y violations", async ({ page }) => {
     // 6 scans at ~3.5s each.
     test.setTimeout(90_000);
-    // The staff roster first — its agency tab strip is the one control on the
-    // page a keyboard or screen-reader user has to get through to reach the
-    // course they want (ADR 20260805-remove-certification-paths).
+    // The staff roster first — one ledger, an `<h2>` per agency over the run it
+    // describes, with every ladder on one pager (ADR 20260827-the-shops-shelves,
+    // slice 9g). The agency tab strip it replaced is gone, so a group heading is
+    // what proves the rows are in the DOM before axe reads them.
     await page.goto("/shop/blue-mantis/courses", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("navigation", { name: "Filter courses by agency" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "PADI" })).toBeVisible();
     await expectNoA11yViolations(page);
 
     // The course editor: the longest form in the product (content blocks,
@@ -694,36 +701,37 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
     ]);
   });
 
-  test("the end-of-day close-out has no automated a11y violations, open and closed", async ({
+  test("the home's evening reading has no automated a11y violations, open and closed", async ({
     page,
+    request,
   }) => {
-    // 2 scans at ~3.5s each, plus the close-the-day round trip.
+    // 2 scans at ~3.5s each, plus the seed and the close-the-day round trip.
     test.setTimeout(70_000);
-    // The ritual that ends every working day (ADR 20260804-day-closeout), and a
-    // page the static table could have reached by URL all along and never did.
-    // Its body is a decision form: one radio group per leftover, defaulting to
-    // carry, above a single act that records every choice at once. A radio
-    // group with no accessible grouping is exactly the defect that leaves a
-    // keyboard user unable to tell which departure they are answering for.
-    await page.goto("/shop/blue-mantis/close-out", { waitUntil: "domcontentloaded" });
+    // The ritual that ends every working day (ADR 20260804-day-closeout), which
+    // is a *state of the shop home* rather than a page of its own since H-62
+    // (ADR 20260827-clearwater-surface-language, decision 4). The static route
+    // table reaches the home in its morning reading; this is the DOM that only
+    // exists once every station has settled — the settled stations with their
+    // marks, the leftovers group with a Dismiss on every row, and the one
+    // closing act. `seed-evening` moves the day's boats behind the frozen
+    // clock, which is process-wide and cannot be moved per test.
+    await request.post("/api/test/seed-evening");
+    await page.goto("/shop/blue-mantis", { waitUntil: "domcontentloaded" });
     await expect(
-      page.getByRole("heading", {
-        level: 1,
-        name: /Everyone is home|A few things are still open|A quiet day at the dock/,
-      }),
-      "/shop/blue-mantis/close-out never rendered its <h1>",
+      page.getByText("Still open — carries to tomorrow"),
+      "/shop/blue-mantis never rendered its closing block",
     ).toBeVisible();
     await expectNoA11yViolations(page);
 
     // And the state after the act. Closing appends a record and re-renders the
-    // page with a section that did not exist a moment ago — who closed it, when,
-    // and what they decided about each leftover — while nothing locks. A render
-    // that only exists after a write is the kind no route-level scan reaches.
+    // page with a panel that did not exist a moment ago — who closed it, when,
+    // and what was outstanding — while nothing locks. A render that only exists
+    // after a write is the kind no route-level scan reaches.
     await page
       .getByRole("button", { name: /^Close the day( again)?$/ })
       .first()
       .click();
-    await expect(page.getByRole("heading", { name: "Day closed" })).toBeVisible();
+    await expect(page.getByText(/Closed by Dana Reyes at/)).toBeVisible();
     await expectNoA11yViolations(page);
   });
 
@@ -836,7 +844,7 @@ test.describe("automated accessibility scans of the diver bearer-token surfaces"
     // photos: a star-rating control, a file input and a free-text form, all of
     // them hand-rolled markup no other scan in this file covers.
     await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
-    await expect(page.getByRole("heading", { name: /Nice diving/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
     await expectNoA11yViolations(page);
   });
 });

@@ -1,5 +1,11 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
+import {
+  bookASeatAndOpenThread,
+  daysFromNow,
+  e2eNow,
+  openTripFromBoard,
+  seededTripId,
+} from "./helpers";
 
 /**
  * The weather blow-out cascade (docs ADR 20260804-blowout-cascade): staff tap
@@ -102,5 +108,52 @@ test.describe("weather blow-out cascade", () => {
     await expect(
       page.getByText("No divers were booked when the blow-out was called."),
     ).toBeVisible();
+  });
+
+  test("the stranded diver's own link says the trip was cancelled, not 'welcome back'", async ({
+    page,
+  }) => {
+    // **The other side of the cascade**, and the half nothing looked at until a
+    // review did (2026-08-28). A blow-out cancels the *trip* and deliberately
+    // leaves every booking active — refunds stay a per-booking staff decision —
+    // so the diver's own `/ready` link, the durable one in their confirmation
+    // and in every reminder, read a booking that was still perfectly fine. It
+    // handed them a packing list before the boat was due back and, an hour
+    // after it was due back, "Welcome back" with a dive record naming the boat
+    // and the crew, a request to rate the day and an invitation to tip them.
+    //
+    // The seeded reef charter, for the same reasons the first test in this file
+    // uses it: it is known publicly bookable (e2e/schedule-trip.spec.ts takes a
+    // seat on it) and known blow-out-able. Each test resets the schedule before
+    // it runs, so cancelling it here is nobody else's problem.
+    const tripId = await seededTripId(page, SHOP, REEF_TRIP);
+
+    // A diver takes a seat and keeps the link they land on — this is the URL
+    // that lives in their inbox for the rest of the season.
+    await page.goto(`/s/${SHOP}/trips/${tripId}`);
+    await bookASeatAndOpenThread(page, "Stranded Reader");
+    const threadUrl = page.url();
+    await expect(page.getByRole("heading", { name: "Pack with confidence" })).toBeVisible();
+
+    // The captain calls it off.
+    await page.goto(`/shop/${SHOP}/schedule/board`);
+    await openTripFromBoard(page, REEF_TRIP);
+    await page.getByRole("link", { name: "Weather blow-out…" }).click();
+    // Wait on what the confirm page itself renders before clicking through it
+    // — the click is a navigation, not an in-place toggle.
+    await expect(page.getByRole("heading", { level: 1, name: "Call a blow-out?" })).toBeVisible();
+    await page.getByRole("button", { name: "Call the blow-out" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Blow-out cascade" })).toBeVisible();
+
+    // The same link, unchanged, opened again.
+    await page.goto(threadUrl);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "This trip was cancelled" }),
+    ).toBeVisible();
+    // Nothing left to prepare for, a way back to the shop's schedule, and the
+    // shop's own name — a diver reading this needs somebody to ask (issue #801).
+    await expect(page.getByRole("heading", { name: "Pack with confidence" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /See what.s next/ })).toBeVisible();
+    await expect(page.getByText(/Blue Mantis Divers/).first()).toBeVisible();
   });
 });

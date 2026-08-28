@@ -24,6 +24,11 @@
     "trips": "Trips only",
     "courses": "Courses only"
   },
+  "group": {
+    "live": "Live",
+    "scheduled": "Scheduled",
+    "ended": "Ended"
+  },
   "newCode": {
     "heading": "New code",
     "detail": "Leave the dates or the cap empty for no limit."
@@ -49,7 +54,6 @@
   },
   "creating": "Creating…",
   "createCode": "Create code",
-  "yourCodes": "Your codes",
   "empty": {
     "heading": "No codes yet",
     "detail": "Send a one-trip deal from a departure's page when a boat needs filling.",
@@ -58,9 +62,7 @@
   "status": {
     "failed": "Failed at Stripe",
     "pending": "Never finished",
-    "live": "Live",
-    "disabled": "Switched off",
-    "notLive": "Not live right now"
+    "disabled": "Switched off"
   },
   "discountOff": "{percent}% off",
   "fromDate": "from {date}",

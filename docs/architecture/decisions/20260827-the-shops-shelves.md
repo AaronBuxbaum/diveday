@@ -1,6 +1,6 @@
 # 20260827-the-shops-shelves — Libraries, editors and instruments: three patterns for the catalog surfaces
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-08-27
 - **Design:** [the canvas](../../design/canvases/20260827-the-shops-shelves/README.md) — five
   artboards: the library pattern (dive sites), the long-form editor pattern (the course editor),
@@ -65,9 +65,17 @@ tile restating a group — not the counter's count-led anatomy.
 
 - **Gear** is one story: the register's groups are the states — Out (with due-back), Overdue
   (carrying the warning word), On the wall — with the kind filter above and service facts
-  as per-row sentences only where they have something to say. The three stat tiles and the
-  separate Returns panel fold into the groups they duplicated. The unit page keeps its inset
+  as per-row sentences only where they have something to say. The out-now and due-back tiles and
+  the separate Returns panel fold into the groups they duplicated. The unit page keeps its inset
   groups.
+  - *Amended 2026-08-28, during slice 9d's review.* The **service-due** tile duplicated nothing,
+    so it had no group to fold into, and deleting it with the other two left the register able to
+    answer "what is due for service?" only for the fifty units on the current wall page — while
+    the page's own description still promised the whole fleet. It survives instead as the band's
+    fourth chip, opening a complete unpaged list of what the bench owes, soonest deadline first
+    (`listGearServiceDueRows`). Today's queue keeps the urgent six days; the register keeps the
+    month, which is the distance a tank's hydro and visual inspection — clocks a fill station
+    enforces — are actually planned over.
 - **Staffing** reads as a week: people as rows, days as columns, shifts as quiet chips; a
   departure needing crew renders in its day cell with the warning word **and its act** (Assign →
   the trip's crew section). Credentials are a quiet ledger beneath (renewal words, never gates —

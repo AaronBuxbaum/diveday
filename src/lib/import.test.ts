@@ -959,12 +959,77 @@ describe("IMPORT_HONESTY_TABLE", () => {
     expect(waiver.detail).toMatch(/imported/i);
   });
 
-  it("marks certifications as coming across verified and flagged imported", () => {
+  /**
+   * **All three card rows state what always happens and leave the status to the
+   * file** — levelled onto the nitrox row's shape on 2026-08-28 (issue #1107),
+   * once the fact behind them was established rather than assumed.
+   *
+   * The fact: `prepareContactImport` resolves **one** `cardStatus` per source
+   * row and hands the same value to the level card, every specialty and the
+   * nitrox card ("Same answer for every card kind on the row: only the source's
+   * own status can downgrade one"). So there is no path on which a level or a
+   * specialty card lands verified while nitrox does not, and the two rows that
+   * still said "imported verified" were carrying the exact over-claim the
+   * nitrox row had just shed. Stacked, they were worse than that: nitrox being
+   * the only row phrased conditionally invited a reader to infer a difference
+   * in behaviour that does not exist.
+   *
+   * What *does* differ between them is the **gate**, and that is real, so each
+   * row names its own:
+   *
+   *  - a level card clears the level gate the moment it lands verified —
+   *    `certificationBlocker` reads `status` through `validVerifiedCertification`
+   *    and has no `importedAt` term, so the one-tap confirm is a record-keeping
+   *    act rather than a gate;
+   *  - a specialty card does not — `specialtyBlocker` requires
+   *    `verified AND (importedAt is null OR reviewedAt is not null)`, so an
+   *    imported one answers `specialty_import_unconfirmed` until a staffer taps
+   *    it, and a downgraded one answers `specialty_pending`. Both shut, which is
+   *    why the row can say "whatever your file says" without qualifying it.
+   */
+  it("states the certification row as one state: imported, clearing the level gate unless the file downgrades it", () => {
     const cert = row("certificationCard");
     expect(cert.what).toBe("Certification record");
     expect(cert.scope).toBe("included");
-    expect(cert.detail).toMatch(/verified/i);
-    expect(cert.detail).toMatch(/imported/i);
+    expect(cert.detail).toMatch(/marked imported/i);
+    expect(cert.detail).toMatch(/level gate/i);
+    // The condition, named — not an unqualified promise about the outcome.
+    expect(cert.detail).toMatch(/unless your file says the card was never verified/i);
+    expect(cert.detail).toMatch(/unrecognized levels/i);
+  });
+
+  it("never promises the imported level card lands verified — the source file can say otherwise", () => {
+    // As with nitrox: "verified" survives as the file's own verdict being
+    // reported, never as an outcome DiveDay is claiming.
+    expect(row("certificationCard").detail).not.toMatch(/imported verified/i);
+    expect(row("certificationCard").detail).not.toMatch(/imported as verified/i);
+
+    const downgraded = prepareContactImport(
+      [
+        "full_name,certification_status,certification_level,certification_number",
+        "A Diver,not verified,Open Water,OW-9",
+      ].join("\n"),
+    ).rows[0];
+    expect(downgraded.cert?.status).toBe("pending");
+  });
+
+  it("states the specialty row as one state: imported, with its own gate shut until a staffer taps it", () => {
+    const specialty = row("specialtyCards");
+    expect(specialty.scope).toBe("included");
+    expect(specialty.detail).toMatch(/marked imported/i);
+    expect(specialty.detail).toMatch(/one-tap confirm/i);
+    // Unconditional about the *gate*, because both statuses shut it — and
+    // therefore silent about which status the card lands in.
+    expect(specialty.detail).toMatch(/whatever your file says/i);
+    expect(specialty.detail).not.toMatch(/as verified/i);
+
+    const downgraded = prepareContactImport(
+      [
+        "full_name,certification_status,specialty,specialty_certification_number",
+        "A Diver,not verified,Deep,SP-9",
+      ].join("\n"),
+    ).rows[0];
+    expect(downgraded.specialties[0]?.status).toBe("pending");
   });
 
   /**
@@ -1070,7 +1135,13 @@ describe("IMPORT_HONESTY_TABLE", () => {
     const specialty = row("specialtyCards");
     expect(specialty.what).toMatch(/^Specialty certifications/);
     expect(specialty.scope).toBe("included");
-    expect(specialty.detail).toMatch(/verified/i);
+    // **No longer `/verified/`, and that is the point** (issue #1107). This
+    // asserted the row promised the card arrives verified, which the importer
+    // does not promise: one `cardStatus` serves every card kind on a row, and a
+    // source file's own status column downgrades all of them together. The
+    // block below pins what replaced it — what always happens, with the status
+    // left to the file.
+    //
     // The gate rule is the whole reason this row can be honest — it must be
     // stated on the row itself, not buried in a page's surrounding prose.
     expect(specialty.detail).toMatch(/confirm/i);

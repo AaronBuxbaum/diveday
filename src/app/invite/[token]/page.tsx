@@ -62,7 +62,7 @@ export default async function InvitePage({
   if (!check) {
     return (
       <EntryDone
-        glyph="⏳"
+        glyph="expired"
         title={t("account.invite.unavailableTitle")}
         text={t("account.invite.unavailableText")}
         action={

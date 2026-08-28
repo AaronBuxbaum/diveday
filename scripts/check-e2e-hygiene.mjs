@@ -21,10 +21,16 @@ import { pathToFileURL } from "node:url";
  *   more), each time by moving the same race one layer down, before the fix
  *   that asserted what the page shows rather than how long it took.
  *
- * Every banned shape below encodes a guess about timing. The passing form is
- * always the same: an auto-retrying `expect(locator)` assertion on content
+ * Most of the banned shapes below encode a guess about timing. The passing form
+ * is always the same: an auto-retrying `expect(locator)` assertion on content
  * that exists only after the awaited work completed — never a sleep, never a
  * loop, never "the network went quiet" (which streaming SSR keeps busy).
+ *
+ * Two rules here are not about timing at all but about **locators that report
+ * nothing when they find nothing**, which is the same failure wearing different
+ * clothes: a fix that looks right, passes review, and changes nothing.
+ * `include-hidden` is one (the option is silently discarded by this suite's own
+ * fixture wrapper) and `empty-all` is the other.
  *
  * Escape hatch: a line (or the line above it) carrying
  * `diveday:allow-e2e-hygiene <rule>: <why>` passes. The why must name the
@@ -60,6 +66,21 @@ export const rules = [
       "`includeHidden` on a role query does nothing here: e2e/fixtures.ts wraps getByRole/getByText/getByLabel/getByPlaceholder in `.filter({ visible: true })`, so the option is discarded without a word and the query stays visible-only. That is worse than an error — a fix written with it looks right, passes review, and changes nothing (it cost one CI round on the schedule board's hidden cursor pager). Reach for a hidden element with `page.locator(...)`, which the fixture leaves alone, and give it an attribute to aim at.",
   },
   {
+    id: "empty-all",
+    pattern: /\.all\s*\(\s*\)/,
+    /**
+     * Satisfied by a count assertion on the locator in the few lines above —
+     * `toHaveCount` is the only shape that *proves* the list is not empty, and
+     * `not.toHaveCount(0)` reads as the floor it is. A window rather than an
+     * identifier match: the locator is usually built over two or three lines,
+     * and a scanner that tried to follow the variable would be guessing.
+     */
+    precededBy: /toHaveCount\s*\(/,
+    window: 6,
+    message:
+      "an empty `.all()` is silent — it is a no-op loop, not an error, so a loop that finds nothing acts on nothing and reports nothing. Two of these were vacuous passes: `for (const chip of await chipLinks.all()) expect(height).toBeGreaterThanOrEqual(44)` proves exactly as much about zero chips as about ten. It compounds with `getByRole` matching an accessible name by **substring** — a spec waited on a level-3 heading as its arrival gate, the page it was *leaving* carried a row whose name contained it, and the two `.all()` loops after that snapshotted the wrong page, clicked nothing and returned clean. The failure surfaced eleven lines later as a missing element (issue #1111). Prove the list is not empty first — `await expect(locator).not.toHaveCount(0)` — or acknowledge the loop, naming what makes acting on nothing correct.",
+  },
+  {
     id: "retry-loop",
     pattern:
       /\b(?:for|while)\s*\(\s*(?:let|const|var)?\s*(?:attempts?|retry|retries|retryCount|tries|tryCount)\b/i,
@@ -85,9 +106,16 @@ export function findHygieneViolations(source) {
       line.includes(ACKNOWLEDGEMENT) || (index > 0 && lines[index - 1].includes(ACKNOWLEDGEMENT));
     if (acknowledged) return;
     for (const rule of rules) {
-      if (rule.pattern.test(line)) {
-        violations.push({ rule: rule.id, line: index + 1, text: line.trim() });
+      if (!rule.pattern.test(line)) continue;
+      // A rule may name a proof that makes the shape sound — see `empty-all`.
+      // The window looks back only: a proof written *after* the loop it is
+      // meant to guard has already let the loop run on nothing.
+      if (rule.precededBy) {
+        const from = Math.max(0, index - rule.window);
+        const before = lines.slice(from, index + 1).join("\n");
+        if (rule.precededBy.test(before)) continue;
       }
+      violations.push({ rule: rule.id, line: index + 1, text: line.trim() });
     }
   });
   return violations;

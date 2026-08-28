@@ -57,7 +57,7 @@ test("a brand-new shop is bookable within the four-screen budget, and is shown t
   // ── Screen 2: Today, which owns "what do I do next" ─────────────────────
   await page.waitForURL(new RegExp(`/shop/${unique}$`));
   arrive("today (the first morning's setup ledger)");
-  await expect(page.getByRole("heading", { name: "Get your shop ready" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "First morning" })).toBeVisible();
   // Exactly one open step carries the page's one primary (ADR
   // 20260827-first-light, decision 6).
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveCount(1);
@@ -183,7 +183,7 @@ test("a shop with a departure today is not treated as a shop with no departures"
     .fill("trial-pass-123");
   await page.getByRole("button", { name: "Create shop & start trial" }).click();
   await page.waitForURL(new RegExp(`/shop/${unique}$`));
-  await expect(page.getByRole("heading", { name: "Get your shop ready" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "First morning" })).toBeVisible();
 
   // Today, late enough in the day that it has not sailed yet under the frozen
   // clock — the ordinary case of a shop opening its own home page mid-morning.
@@ -197,7 +197,7 @@ test("a shop with a departure today is not treated as a shop with no departures"
 
   await page.goto(`/shop/${unique}`);
   await expect(page.getByText("Afternoon Two-Tank").first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Get your shop ready" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "First morning" })).toHaveCount(0);
 
   // **And the work the setup ledger was suppressing is back, carrying the one
   // question it did not get answered before it left.**

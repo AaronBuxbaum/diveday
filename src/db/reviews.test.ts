@@ -6,6 +6,7 @@ import { anonymizeDiver } from "./anonymize";
 import { createBookingParty } from "./bookings";
 import {
   countReviewsAwaitingModeration,
+  countStaffReviewGroups,
   getReviewForBooking,
   getShopReviewAggregate,
   listPublishedShopReviews,
@@ -360,7 +361,7 @@ describe("setReviewPublished", () => {
       }),
     ).toBe(true);
     expect(await countReviewsAwaitingModeration(db, shop.id)).toBe(0);
-    expect(await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true })).toMatchObject({
+    expect(await listShopReviewsForStaff(db, shop.id, { scope: "waiting" })).toMatchObject({
       reviews: [],
       total: 0,
     });
@@ -503,7 +504,7 @@ describe("setReviewsPublished", () => {
     for (const [index, bookingId] of bookingIds.entries()) {
       await submitTripReview(db, { bookingId, rating: 4, comment: `Words ${index}` });
     }
-    const waiting = (await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true })).reviews;
+    const waiting = (await listShopReviewsForStaff(db, shop.id, { scope: "waiting" })).reviews;
     expect(waiting).toHaveLength(3);
 
     expect(
@@ -536,7 +537,7 @@ describe("setReviewsPublished", () => {
   it("refuses another shop's ids, an empty selection, and anything not uuid-shaped", async () => {
     const { db, shop, ownerId, bookingIds } = await reviewContext();
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 2, comment: "Held" });
-    const [review] = (await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true })).reviews;
+    const [review] = (await listShopReviewsForStaff(db, shop.id, { scope: "waiting" })).reviews;
 
     expect(await setReviewsPublished(db, OTHER_SHOP_ID, [review.id], ownerId)).toBe(0);
     expect(await setReviewsPublished(db, shop.id, [], ownerId)).toBe(0);
@@ -552,7 +553,7 @@ describe("setReviewsPublished", () => {
   });
 });
 
-describe("listShopReviewsForStaff onlyWaiting filter", () => {
+describe("listShopReviewsForStaff waiting scope", () => {
   it("narrows the queue to unpublished reviews and its total along with it", async () => {
     const { db, shop, bookingIds } = await reviewContext(["Diver One", "Diver Two"]);
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 5 }); // bare rating, publishes
@@ -565,7 +566,7 @@ describe("listShopReviewsForStaff onlyWaiting filter", () => {
     const all = await listShopReviewsForStaff(db, shop.id);
     expect(all.total).toBe(2);
 
-    const waiting = await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true });
+    const waiting = await listShopReviewsForStaff(db, shop.id, { scope: "waiting" });
     expect(waiting.total).toBe(1);
     expect(waiting.reviews.every((r) => !r.isPublished)).toBe(true);
     expect(waiting.reviews.map((r) => r.comment)).toEqual(["Waiting on a read"]);
@@ -574,10 +575,10 @@ describe("listShopReviewsForStaff onlyWaiting filter", () => {
   it("comes back empty once every review with words has been moderated", async () => {
     const { db, shop, ownerId, bookingIds } = await reviewContext();
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 4, comment: "All caught up" });
-    const [review] = (await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true })).reviews;
+    const [review] = (await listShopReviewsForStaff(db, shop.id, { scope: "waiting" })).reviews;
     await setReviewPublished(db, shop.id, review.id, true, { recordedByPersonId: ownerId });
 
-    const waiting = await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true });
+    const waiting = await listShopReviewsForStaff(db, shop.id, { scope: "waiting" });
     expect(waiting).toEqual({
       reviews: [],
       page: 1,
@@ -585,6 +586,101 @@ describe("listShopReviewsForStaff onlyWaiting filter", () => {
       pageSize: STAFF_REVIEW_PAGE_SIZE,
       total: 0,
     });
+  });
+});
+
+/**
+ * The two halves the moderation page renders as separate groups. The sort is
+ * load-bearing, not cosmetic: the page pages this scope, so a published row
+ * arriving after a hidden one would split "Hidden" across page boundaries
+ * (ADR 20260827-people-not-lists, decision 3).
+ */
+describe("listShopReviewsForStaff moderated scope", () => {
+  it("pages only what has been ruled on, published run before hidden", async () => {
+    const { db, shop, ownerId, bookingIds } = await reviewContext([
+      "Diver One",
+      "Diver Two",
+      "Diver Three",
+    ]);
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 5, comment: "Published words" });
+    await submitTripReview(db, { bookingId: bookingIds[1], rating: 2, comment: "Taken down" });
+    await submitTripReview(db, { bookingId: bookingIds[2], rating: 4, comment: "Still waiting" });
+
+    const waiting = await listShopReviewsForStaff(db, shop.id, { scope: "waiting" });
+    const published = waiting.reviews.find((r) => r.comment === "Published words");
+    const hiddenOne = waiting.reviews.find((r) => r.comment === "Taken down");
+    if (!published || !hiddenOne) throw new Error("seeded reviews missing");
+    await setReviewPublished(db, shop.id, published.id, true, { recordedByPersonId: ownerId });
+    await setReviewPublished(db, shop.id, hiddenOne.id, false, {
+      recordedByPersonId: ownerId,
+      reason: "spam",
+    });
+
+    const moderated = await listShopReviewsForStaff(db, shop.id, { scope: "moderated" });
+    expect(moderated.total).toBe(2);
+    expect(moderated.reviews.map((r) => r.comment)).toEqual(["Published words", "Taken down"]);
+    expect(moderated.reviews.map((r) => r.isPublished)).toEqual([true, false]);
+    expect(moderated.reviews.map((r) => r.isHidden)).toEqual([false, true]);
+    // And the review still waiting is in neither: the two scopes partition the shop.
+    expect(moderated.reviews.some((r) => r.comment === "Still waiting")).toBe(false);
+  });
+});
+
+/**
+ * Each group label states a total for the rows beneath it, so each count is
+ * taken over that group's own membership test — the pager rule, applied to a
+ * group header (ADR 20260827-people-not-lists).
+ */
+describe("countStaffReviewGroups", () => {
+  it("counts each group over its own scope, and never counts a review twice", async () => {
+    const { db, shop, ownerId, bookingIds } = await reviewContext([
+      "Diver One",
+      "Diver Two",
+      "Diver Three",
+    ]);
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 5, comment: "Goes up" });
+    await submitTripReview(db, { bookingId: bookingIds[1], rating: 1, comment: "Comes down" });
+    await submitTripReview(db, { bookingId: bookingIds[2], rating: 4, comment: "Unread" });
+    expect(await countStaffReviewGroups(db, shop.id)).toEqual({
+      waiting: 3,
+      published: 0,
+      hidden: 0,
+    });
+
+    const waiting = await listShopReviewsForStaff(db, shop.id, { scope: "waiting" });
+    const up = waiting.reviews.find((r) => r.comment === "Goes up");
+    const down = waiting.reviews.find((r) => r.comment === "Comes down");
+    if (!up || !down) throw new Error("seeded reviews missing");
+    await setReviewPublished(db, shop.id, up.id, true, { recordedByPersonId: ownerId });
+    await setReviewPublished(db, shop.id, down.id, false, {
+      recordedByPersonId: ownerId,
+      reason: "spam",
+    });
+
+    const counts = await countStaffReviewGroups(db, shop.id);
+    expect(counts).toEqual({ waiting: 1, published: 1, hidden: 1 });
+    // The moderated page is exactly the published and hidden groups together —
+    // what the pager counts and what the two labels claim cannot disagree.
+    const moderated = await listShopReviewsForStaff(db, shop.id, { scope: "moderated" });
+    expect(moderated.total).toBe(counts.published + counts.hidden);
+    // And a republished review leaves the hidden group rather than sitting in both.
+    await setReviewPublished(db, shop.id, down.id, true, { recordedByPersonId: ownerId });
+    expect(await countStaffReviewGroups(db, shop.id)).toEqual({
+      waiting: 1,
+      published: 2,
+      hidden: 0,
+    });
+  });
+
+  it("counts only this shop", async () => {
+    const { db, shop, bookingIds } = await reviewContext();
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 4, comment: "Unread" });
+    expect(await countStaffReviewGroups(db, OTHER_SHOP_ID)).toEqual({
+      waiting: 0,
+      published: 0,
+      hidden: 0,
+    });
+    expect((await countStaffReviewGroups(db, shop.id)).waiting).toBe(1);
   });
 });
 
@@ -708,7 +804,7 @@ describe("review moderation is recorded", () => {
     const { db, shop, ownerId, bookingIds } = await reviewContext(["A Diver", "B Diver"]);
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 5 });
     await submitTripReview(db, { bookingId: bookingIds[1], rating: 1, comment: "Rough day" });
-    const [held] = (await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true })).reviews;
+    const [held] = (await listShopReviewsForStaff(db, shop.id, { scope: "waiting" })).reviews;
 
     // Waiting on a read is not suppression — nobody has ruled on it yet.
     expect((await getShopReviewAggregate(db, shop.id)).suppressedCount).toBe(0);
@@ -763,7 +859,7 @@ describe("review moderation is recorded", () => {
     for (const bookingId of bookingIds) {
       await submitTripReview(db, { bookingId, rating: 4, comment: "A day on the reef." });
     }
-    const held = (await listShopReviewsForStaff(db, shop.id, { onlyWaiting: true })).reviews;
+    const held = (await listShopReviewsForStaff(db, shop.id, { scope: "waiting" })).reviews;
     expect(held).toHaveLength(10);
     for (const review of held) {
       await setReviewPublished(db, shop.id, review.id, true, { recordedByPersonId: ownerId });

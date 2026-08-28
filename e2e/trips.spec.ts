@@ -77,11 +77,21 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
     .click();
   // The pitch, above the form: the run of dives in plan order (ADR
   // 20260827-the-divers-thread, decision 2). The swipeable briefing deck this
-  // replaced is `/ready`'s now — reading for the night before, not the pitch.
+  // replaced is gone; what a diver reads about a *site* is the "The site" beat
+  // below this one, which on a two-site day names each site over its own words.
+  //
+  // The second tank's site is read inside its own dive row for exactly that
+  // reason: "French Reef" is on this page twice, here and over that site's
+  // notes below, and both are the design rather than a duplicate.
   await expect(page.getByRole("heading", { name: "The day" })).toBeVisible();
   await expect(page.getByText("Dive 1", { exact: true })).toBeVisible();
   await expect(page.getByText("Dive 2", { exact: true })).toBeVisible();
-  await expect(page.getByText("French Reef", { exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByRole("listitem")
+      .filter({ hasText: "Dive 2" })
+      .getByText("French Reef", { exact: true }),
+  ).toBeVisible();
 });
 
 /**
@@ -208,11 +218,12 @@ test.describe("trip pulse", () => {
     const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
 
     // Unfiltered — every open invoice the shop is carrying, which is what the
-    // pulse's link used to land on. The table's presence is the barrier: rows
-    // and the filter line stream in together, and `count()` never auto-waits.
+    // pulse's link used to land on. A row's presence is the barrier: the day
+    // ledger and the filter line stream in together, and `count()` never
+    // auto-waits.
     await page.goto("/shop/blue-mantis/orders?status=open&range=all");
-    const rows = page.locator("tbody tr");
-    await expect(page.getByRole("table").first()).toBeVisible();
+    const rows = page.locator('ul[aria-labelledby^="orders-day-"] > li');
+    await expect(rows.first()).toBeVisible();
     const shopWide = await rows.count();
     expect(shopWide).toBeGreaterThan(1);
 
@@ -236,10 +247,12 @@ test.describe("trip pulse", () => {
     );
     await expect(page.getByRole("link", { name: "Clear filters" }).first()).toBeVisible();
 
-    // Applying another filter keeps the departure: the form carries it, so a
-    // staffer narrowing by date does not silently widen back to every boat.
-    await page.getByLabel("From").fill("2020-01-01");
-    await page.getByRole("button", { name: "Apply filters" }).click();
+    // Applying another filter keeps the departure: the toolbar carries it as a
+    // hidden rider, so a staffer narrowing the range does not silently widen
+    // back to every boat. The toolbar applies on change, so wait for the
+    // handler to be live before touching the select.
+    await page.locator('#orders-search[data-hydrated="true"]').waitFor();
+    await page.getByLabel("Date range").selectOption("recent");
     await expect(page).toHaveURL(new RegExp(`tripId=${tripId}`));
     await expect(
       page.getByText("Showing orders for Two-Tank Reef — Molasses & French."),

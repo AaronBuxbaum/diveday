@@ -20,12 +20,13 @@ const DIVER_WITH_UNFLAGGED_FIT = "Priya Sharma";
 
 async function goToDiver(page: Page, name: string) {
   await page.goto(`/shop/${SHOP}/divers?q=${encodeURIComponent(name)}`);
-  const href = await page
-    .locator(`a[href^="/shop/${SHOP}/divers/"]`)
-    .filter({ hasText: name })
-    .filter({ visible: true })
-    .first()
-    .getAttribute("href");
+  // **By accessible name, not by text.** Since the roster became one ledger
+  // (slice 8c) a row's door is `LedgerRow`'s stretched `<Link>` — an empty
+  // anchor laid over the whole row, whose name comes from `aria-label` and
+  // whose text content is therefore "". `hasText` cannot see it; `getByRole`
+  // reads the label. `exact` because a role query matches by substring, and one
+  // diver's name can sit inside another's.
+  const href = await page.getByRole("link", { name, exact: true }).first().getAttribute("href");
   if (!href) throw new Error(`no diver link for ${name}`);
   await page.goto(href);
 }
@@ -84,7 +85,15 @@ test.describe("staff", () => {
     await page.getByLabel("What’s short").fill("No M BCD today");
     await page.getByRole("button", { name: "Flag for staff fit" }).click();
     await expect(page.getByRole("status")).toContainText("Flagged for hands-on fitting");
-    await expect(page.getByText("No M BCD today")).toBeVisible();
+    // Scoped to the group: since the status ledger leads the record (ADR
+    // 20260827-people-not-lists), a raised fit flag is *also* a ledger row —
+    // "Needs staff fit — No M BCD today" — so the shop's note is on the page
+    // twice, and both are the design.
+    await expect(
+      page.getByRole("region", { name: "Gear and sizes" }).getByText("No M BCD today", {
+        exact: true,
+      }),
+    ).toBeVisible();
 
     await page.getByRole("button", { name: /Fit resolved/ }).click();
     await expect(page.getByRole("status")).toContainText("packs from their stated sizes again");
@@ -120,7 +129,9 @@ test.describe("deck crew", () => {
     page,
   }) => {
     await goToDiver(page, DIVER_WITH_FIT);
-    const flaggedHeading = page.getByRole("heading", { name: "Flagged for hands-on fitting" });
+    // A `<p>` now, not a heading: the fallback is one line inside the gear
+    // group rather than a boxed panel with a heading of its own (slice 8b).
+    const flaggedHeading = page.getByText("Flagged for hands-on fitting", { exact: true });
     await expect(flaggedHeading).toBeVisible();
 
     // The form is still on the page for a captain — only its submit button is

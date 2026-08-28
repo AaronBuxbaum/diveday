@@ -10,9 +10,7 @@ import {
   BookingRequestContext,
   RelevantBookingRequests,
 } from "@/components/seat-diver/BookingRequestCards";
-import { TripPickerList } from "@/components/seat-diver/TripPickerList";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
 import {
   type DateRequestRow,
   listDateRequestsByIds,
@@ -23,12 +21,18 @@ import { canPersonViewShopReports } from "@/db/reporting";
 import { offsetUpcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
+import {
+  calendarDateInTimezone,
+  formatCalendarDate,
+  groupByLocalDay,
+  shiftCalendarDate,
+} from "@/lib/calendar-date";
 import { dateRequestMatchFor, FLEXIBLE_WINDOW_DAYS } from "@/lib/date-requests";
-import { formatShortDate, formatTimeRange } from "@/lib/format";
+import { formatTimeRange } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
+import { DeparturePicker, type DeparturePickerDay } from "./_components/DeparturePicker";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. Not a claim of a static shell: the staff shell layout declares
@@ -160,20 +164,38 @@ export default async function NewBookingPage({
           ];
         })
     : [];
-  const tripMeta = (trip: (typeof trips)[number]) => {
-    const date = calendarDateInTimezone(trip.startsAt, shop.timezone);
-    const requestCount = relevantRequestsByDate.get(date)?.length ?? 0;
-    return (
-      <span className="flex flex-col items-end gap-0.5">
-        <span>{t("bookings.new.seatsLeft", { count: spotsRemaining(trip) })}</span>
-        {requestCount > 0 ? (
-          <span className="text-xs text-primary">
-            {t("bookings.new.requestsCount", { count: requestCount })}
-          </span>
-        ) : null}
-      </span>
-    );
-  };
+  /**
+   * The days, and the departures inside each. `groupByLocalDay` buckets the
+   * instants in the **shop's** zone, not the server's — on a UTC box a 9:00 PM
+   * Key Largo departure is stored on tomorrow's date, so a host-zone read
+   * would file a shop's evening under the wrong heading and no test on a UTC
+   * runner could see it. The rows already arrive in `startsAt` order, so the
+   * days come back consecutive and the Pager cannot split one across a page
+   * boundary out of order.
+   */
+  const pickerDays: DeparturePickerDay[] = groupByLocalDay(
+    trips,
+    shop.timezone,
+    (trip) => trip.startsAt,
+  ).map((group) => ({
+    day: group.day,
+    label: formatCalendarDate(group.day, locale),
+    rows: group.items.map((trip) => {
+      const requestCount = relevantRequestsByDate.get(group.day)?.length ?? 0;
+      return {
+        id: trip.id,
+        href: bookingPath(selectedRequest?.id, trip.id),
+        title: trip.title,
+        time: formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone),
+        // Seats left, not "booked/capacity": the question at this moment is
+        // whether this diver fits.
+        seats: t("bookings.new.seatsLeft", { count: spotsRemaining(trip) }),
+        ...(requestCount > 0
+          ? { requests: t("bookings.new.requestsCount", { count: requestCount }) }
+          : {}),
+      };
+    }),
+  }));
   const self = `/shop/${shopSlug}/bookings/new`;
   const pageHref = (target: number) => (target > 1 ? `${self}?page=${target}` : self);
 
@@ -213,65 +235,46 @@ export default async function NewBookingPage({
         items={relevantRequestItems}
       />
 
-      <div className="mt-6">
-        <SectionCard
-          title={t("bookings.new.tripHeading")}
-          description={t("bookings.new.fullExcluded")}
-          padding="lg"
-        >
-          {/* The list is filtered to departures with a seat left, and a filter
-            nobody announced reads as a missing departure: a sold-out Saturday
-            simply wasn't here, with nothing on screen to say why or what to do
-            about it. Says both, and names the board as the place to do it. */}
-          {trips.length === 0 ? (
-            // "Put a departure on the board first" now goes to the board.
-            <EmptyState
-              title={t("bookings.new.tripEmpty")}
-              action={
-                <Link
-                  href={`/shop/${shopSlug}/schedule/board`}
-                  className={buttonClass({ className: "mt-4" })}
-                >
-                  {t("bookings.new.tripEmptyAction")}
-                </Link>
-              }
-              className="mt-2"
-            />
-          ) : (
-            <>
-              {/* The shared picker row, also worn by the counter walk-in. Seats
-                left, not "booked/capacity": the question at this moment is
-                whether this diver fits. */}
-              <TripPickerList
-                options={trips.map((trip) => ({
-                  id: trip.id,
-                  href: bookingPath(selectedRequest?.id, trip.id),
-                  // Kept as JSX, not a template literal: the browser shapes text
-                  // per DOM text node, so collapsing these three expressions and
-                  // their separators into one string re-kerns across what were
-                  // node boundaries and moves glyphs by a fraction of a pixel.
-                  // Invisible to a reader, but a real visual-regression diff.
-                  label: (
-                    <>
-                      {trip.title} · {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
-                      {formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone)}
-                    </>
-                  ),
-                  meta: tripMeta(trip),
-                }))}
-              />
-              <Pager
-                page={tripPage.page}
-                pageCount={tripPage.pageCount}
-                href={pageHref}
-                total={t("bookings.new.pagination.total", { count: tripPage.total })}
-                t={t}
-                className="mt-4"
-              />
-            </>
-          )}
-        </SectionCard>
-      </div>
+      {/* The list is filtered to departures with a seat left, and a filter
+          nobody announced reads as a missing departure: a sold-out Saturday
+          simply wasn't here, with nothing on screen to say why or what to do
+          about it. The picker says both, and names the board as the place to
+          do something about it. */}
+      {trips.length === 0 ? (
+        // "Put a departure on the board first" now goes to the board.
+        <EmptyState
+          title={t("bookings.new.tripEmpty")}
+          action={
+            <Link
+              href={`/shop/${shopSlug}/schedule/board`}
+              className={buttonClass({ className: "mt-4" })}
+            >
+              {t("bookings.new.tripEmptyAction")}
+            </Link>
+          }
+          className="mt-8"
+        />
+      ) : (
+        <>
+          <DeparturePicker
+            className="mt-8"
+            heading={t("bookings.new.tripHeading")}
+            headingId="which-departure"
+            days={pickerDays}
+          />
+          <Pager
+            page={tripPage.page}
+            pageCount={tripPage.pageCount}
+            href={pageHref}
+            total={t("bookings.new.pagination.total", { count: tripPage.total })}
+            t={t}
+            className="mt-4"
+          />
+          {/* Under the list rather than over it: it explains an absence, and
+              an absence is only noticed once the reader has looked for it. */}
+          <p className="mt-4 text-sm text-muted">{t("bookings.new.fullExcluded")}</p>
+        </>
+      )}
     </main>
   );
 }

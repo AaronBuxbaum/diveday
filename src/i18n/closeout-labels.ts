@@ -1,34 +1,24 @@
 import type {
   CloseoutAdminTaskStatus,
   CloseoutDepartureStatus,
-  CloseoutShape,
   LeftoverDecision,
 } from "@/lib/closeout";
 import type { RollCallGapReason } from "@/lib/today";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 /**
- * The close-out surface's words, keyed by the codes `src/lib/closeout.ts`
- * produces — the same split `src/i18n/today-labels.ts` keeps for the queue:
- * the lib decides *what* is true, this file says where the words live, and
- * the page does the `t()` call.
+ * The day's closing words, keyed by the codes `src/lib/closeout.ts` produces —
+ * the same split `src/i18n/today-labels.ts` keeps for the queue: the lib
+ * decides *what* is true, this file says where the words live, and the surface
+ * does the `t()` call.
+ *
+ * The day's headline and its sentence used to be here too, one per
+ * `CloseoutShape`. They went with the page they headlined (H-62): the evening
+ * is a state of the shop home, whose h1 is the standing time-aware greeting at
+ * every hour and whose summary sentence is the spine's own.
  */
 
-/** The day's one-line headline, per shape. */
-export const CLOSEOUT_HEADLINE_KEYS: Record<CloseoutShape, StaffMessageKey> = {
-  all_clear: "closeout.headline.allClear",
-  outstanding: "closeout.headline.outstanding",
-  no_departures: "closeout.headline.noDepartures",
-};
-
-/** The sentence under the headline, per shape. */
-export const CLOSEOUT_SUBTITLE_KEYS: Record<CloseoutShape, StaffMessageKey> = {
-  all_clear: "closeout.subtitle.allClear",
-  outstanding: "closeout.subtitle.outstanding",
-  no_departures: "closeout.subtitle.noDepartures",
-};
-
-/** The chip on each departure card. Tone stays in `src/lib/closeout.ts`. */
+/** The state word beside a settled station's mark. Tone stays in `src/lib/closeout.ts`. */
 export const CLOSEOUT_STATUS_KEYS: Record<CloseoutDepartureStatus, StaffMessageKey> = {
   all_home: "closeout.departures.status.allHome",
   unreconciled: "closeout.departures.status.unreconciled",

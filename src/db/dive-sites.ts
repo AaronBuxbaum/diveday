@@ -13,7 +13,12 @@ import {
   sql,
 } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { type DiveSiteDifficulty, parseDiveSiteDifficulty } from "@/lib/dive-site-difficulty";
+import {
+  type DiveSiteDifficulty,
+  parseDiveSiteDifficulty,
+  SITE_LIBRARY_GROUPS,
+  type SiteLibraryGroupLabel,
+} from "@/lib/dive-site-difficulty";
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import { DEFAULT_ROUTE_ZOOM, type RoutePoint } from "@/lib/dive-site-route";
 import {
@@ -222,13 +227,66 @@ export async function listDiveSitesPage(
         .select()
         .from(diveSites)
         .where(where)
+        // **Group-major, then name** — the library renders as one grouped
+        // ledger (ADR 20260827-the-shops-shelves), and grouping composes with
+        // the Pager rather than replacing it: sorting by the group first is
+        // what stops a group's rows interleaving across a page boundary, so a
+        // heading re-rendered on page 2 is the continuation of the same group
+        // rather than a second appearance of it.
+        //
+        // `difficulty_level` is a Postgres enum, which sorts by *declaration*
+        // order — the same `DIVE_SITE_DIFFICULTIES` order the grouping in
+        // `groupSiteLibrary` reads, so the two cannot drift — and an `asc`
+        // sort puts NULL last, which is exactly where the unrated group
+        // belongs. Easiest first, unrated at the tail, without a CASE.
+        //
         // `dive_sites_shop_name_unique` already makes the name a total order
         // within a shop, so no row can land on two pages or on none; `id` is the
         // belt-and-braces tiebreak that keeps that true if the index is ever
         // relaxed (e.g. to let an archived site free its name).
-        .orderBy(asc(diveSites.name), asc(diveSites.id))
+        .orderBy(asc(diveSites.difficultyLevel), asc(diveSites.name), asc(diveSites.id))
         .limit(limit)
         .offset(offset),
+  });
+}
+
+export type SiteLibraryGroup = {
+  label: SiteLibraryGroupLabel;
+  sites: (typeof diveSites.$inferSelect)[];
+};
+
+/**
+ * One page of the library, filed under the collection's own shared fact:
+ * how demanding the site is (ADR 20260827-the-shops-shelves, the library
+ * pattern — "grouped rows by the collection's own shared fact").
+ *
+ * Grouping by `difficulty_level` and never by `siteFit`: the fit sniff yields a
+ * *tone* (demanding / welcoming / unknown) read off free text a shop wrote for
+ * another purpose, so it cannot honestly place a site in a level the shop did
+ * not choose. A site with no chosen level lands in `unrated`, last — an honest
+ * "nobody has said", not a guess.
+ *
+ * A pure re-file of rows the query already ordered, so it needs no database and
+ * `SiteLibraryLedger.test.tsx` can pin the order of the groups directly. Empty
+ * groups never render: a shop with no advanced sites has no Advanced heading.
+ */
+export function groupSiteLibrary(
+  rows: readonly (typeof diveSites.$inferSelect)[],
+): SiteLibraryGroup[] {
+  const buckets = new Map<SiteLibraryGroupLabel, (typeof diveSites.$inferSelect)[]>();
+  for (const row of rows) {
+    const label: SiteLibraryGroupLabel = row.difficultyLevel ?? "unrated";
+    const bucket = buckets.get(label);
+    if (bucket) bucket.push(row);
+    else buckets.set(label, [row]);
+  }
+  // Canonical order rather than encounter order: the query already sorts
+  // group-major, and re-deriving the order here means a caller that hands rows
+  // over in any other order still gets easiest-first rather than whatever the
+  // rows happened to arrive in.
+  return SITE_LIBRARY_GROUPS.flatMap((label) => {
+    const sites = buckets.get(label);
+    return sites && sites.length > 0 ? [{ label, sites }] : [];
   });
 }
 
@@ -707,6 +765,33 @@ export async function listGlobalDiveSiteTemplates(
     pageSize: paged.pageSize,
     total: paged.total,
   };
+}
+
+/**
+ * How many published templates the catalog holds — the number the library's
+ * tail door carries ("Browse the DiveDay catalog / 34 published sites", ADR
+ * 20260827-the-shops-shelves).
+ *
+ * It shares `listGlobalDiveSiteTemplates`' current-version join exactly,
+ * rather than reading `globalDiveSites` alone: a template whose
+ * `currentVersion` has no matching version row is invisible to the catalog, and
+ * a door promising 35 sites onto a catalog that can render 34 is the same
+ * broken promise a pager makes when its count outruns its rows (ADR
+ * 20260803-one-pagination-model). Never a fetched page's `total` either — that
+ * would make the door's number depend on which page was last asked for.
+ */
+export async function countGlobalDiveSiteTemplates(db: AppDb): Promise<number> {
+  const [counted] = await db
+    .select({ total: count() })
+    .from(globalDiveSites)
+    .innerJoin(
+      globalDiveSiteVersions,
+      and(
+        eq(globalDiveSiteVersions.globalDiveSiteId, globalDiveSites.id),
+        eq(globalDiveSiteVersions.version, globalDiveSites.currentVersion),
+      ),
+    );
+  return counted?.total ?? 0;
 }
 
 /**

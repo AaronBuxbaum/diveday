@@ -673,3 +673,107 @@ describe("deleteShopPromoCode", () => {
     expect(await getShopPromoByCode(db, promo.shopId, "REEF20")).not.toBeNull();
   });
 });
+
+/**
+ * Slice 9g of ADR 20260827-the-shops-shelves: the staff codes list is one
+ * ledger grouped live / scheduled / ended, on one Pager.
+ *
+ * Grouping composes with the Pager rather than trading against it, and the
+ * only thing holding that up is this sort. If the rows came back newest-first
+ * regardless of shelf, page 2 would open a second "Live" heading below an
+ * "Ended" one and the ledger would read as two lists — the failure is silent
+ * on a shop with fewer than one page of codes, which is every shop in
+ * development.
+ */
+describe("listShopPromoCodes group ordering (in-memory PGlite)", () => {
+  it("sorts live, then scheduled, then ended — newest first inside each shelf", async () => {
+    const { db, shop } = await promoContext();
+    await db.insert(shopPromoCodes).values([
+      {
+        shopId: shop.id,
+        code: "ENDED",
+        discountPercent: 10,
+        scope: "all" as const,
+        status: "active" as const,
+        expiresAt: new Date("2026-07-01T00:00:00.000Z"),
+        createdAt: new Date("2026-06-01T00:00:00.000Z"),
+      },
+      {
+        shopId: shop.id,
+        code: "SCHEDULED",
+        discountPercent: 10,
+        scope: "all" as const,
+        status: "active" as const,
+        startsAt: new Date("2026-09-01T00:00:00.000Z"),
+        createdAt: new Date("2026-07-02T00:00:00.000Z"),
+      },
+      {
+        shopId: shop.id,
+        code: "LIVEOLD",
+        discountPercent: 10,
+        scope: "all" as const,
+        status: "active" as const,
+        createdAt: new Date("2026-05-01T00:00:00.000Z"),
+      },
+      {
+        shopId: shop.id,
+        // Switched off, inside a live window: the shelf is the window, the
+        // switch is this row's own badge. A grouping that read `status` would
+        // move it, and nothing on screen would say where it went.
+        code: "LIVEOFF",
+        discountPercent: 10,
+        scope: "all" as const,
+        status: "disabled" as const,
+        createdAt: new Date("2026-07-20T00:00:00.000Z"),
+      },
+    ]);
+
+    // **Filtered to this test's own four, never cleared.** Emptying the shop's
+    // codes first is what this reached for and it is refused at the database:
+    // a seeded code is referenced by a `booking_checkouts` row, so the delete
+    // violates `booking_checkouts_promo_code_id_shop_promo_codes_id_fkey`. The
+    // file's own `promoNamed` helper already says the rule — the seeded demo
+    // shop ships codes, so assert on the ones under test. A filter preserves
+    // the order the query returned, so the shelf grouping is proved exactly as
+    // well, and proved against a shop that has other codes in it, which is the
+    // only kind of shop this ever runs against in production.
+    const { promos } = await listShopPromoCodes(db, shop.id, { now: NOW });
+    const mine = new Set(["LIVEOFF", "LIVEOLD", "SCHEDULED", "ENDED"]);
+    expect(promos.map((promo) => promo.code).filter((code) => mine.has(code))).toEqual([
+      "LIVEOFF",
+      "LIVEOLD",
+      "SCHEDULED",
+      "ENDED",
+    ]);
+  });
+
+  it("files a code spent to its cap as ended, however open its window is", async () => {
+    const { db, shop } = await promoContext();
+    const capped = await createShopPromoCode(
+      db,
+      promoInput(shop.id, { code: "capped", maxRedemptions: 1 }),
+      fakePromotions(),
+    );
+    if (!capped.ok) throw new Error("expected the capped promo");
+    await db.insert(shopPromoCodes).values({
+      shopId: shop.id,
+      code: "OPEN",
+      discountPercent: 10,
+      scope: "all" as const,
+      status: "active" as const,
+      createdAt: new Date("2026-07-01T00:00:00.000Z"),
+    });
+    const reef = await pricedReefTrip(db, shop.id);
+    await redeemPromoOnce(db, shop.id, reef.id, capped.promo, "capped@example.com", fakeCheckout());
+
+    const { promos } = await listShopPromoCodes(db, shop.id, { now: NOW });
+    // CAPPED was created after OPEN, so newest-first alone would put it first.
+    // The spent cap moves it onto the Ended shelf, below the older code that
+    // still works — the arm of the rank that reads the redemption count.
+    // Filtered rather than cleared, for the reason given in the test above.
+    const mine = new Set(["OPEN", "CAPPED"]);
+    const ordered = promos.filter((promo) => mine.has(promo.code));
+    expect(ordered.map((promo) => promo.code)).toEqual(["OPEN", "CAPPED"]);
+    expect(ordered.at(-1)?.timesRedeemed).toBe(1);
+  });
+});

@@ -386,7 +386,13 @@ test.describe("with Accept-Language: es", () => {
     // from scratch after the redirect would show up as English right here.
     await expect(page).toHaveURL(/\/ready\//);
     await expect(page.getByRole("heading", { name: /¡Estás a bordo, Nora/ })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Tu lista antes de la salida" })).toBeVisible();
+    // The step spine replaced the checklist and its heading with it (slice 7c):
+    // a step's title is a `<span>` inside a `<summary>`, which must be phrasing
+    // content. `data-thread-step` is the spine's own e2e hook, and this keeps
+    // what the assertion was for — a string rendered by the *destination*
+    // route, in Spanish, so a locale renegotiated after the redirect shows up
+    // here as English.
+    await expect(page.locator('[data-thread-step="sign"]')).toContainText("Firma");
     await expect(page.getByRole("button", { name: "Firmar tu exención" })).toBeVisible();
   });
 });

@@ -14,8 +14,8 @@ import { buttonClass } from "@/components/ui/button";
  *
  * So the shared grammar is Settings': a row of link-buttons under a hairline
  * rule. It reads as "places on this page", promises no active state, and can
- * never be mistaken for the tab bars (`TripSubNav`, `WaiversSubNav`), which
- * keep the sunken-bar look and keep meaning "you are here".
+ * never be mistaken for a tab bar (`TripSubNav`), which keeps the sunken-bar
+ * look and keeps meaning "you are here".
  *
  * **Anchors, not routes.** Every entry is a `#id` on the same document, which
  * the browser handles itself: no re-render, no refetch, works before

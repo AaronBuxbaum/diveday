@@ -1,47 +1,37 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
-import { ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard, sectionCardClass } from "@/components/ui/card";
+import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
+import { type FilterChip, FilterChips } from "@/components/ui/FilterChips";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
-import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
+import { LedgerRow } from "@/components/ui/ledger";
 import {
-  countCheckedOutGear,
   countGearItemsByKind,
   type DeletedGearItemRow,
-  type GearRegisterRow,
-  type GearReturnRow,
+  gearRegisterGroups,
   listDeletedGearItems,
-  listGearDueBack,
-  listGearItems,
-  listGearServiceDue,
-  listOverdueGearReservations,
+  listGearServiceDueRows,
 } from "@/db/gear";
-import { gearItemKindLabel, gearServiceStateText, gearStatusLabel } from "@/i18n/gear-labels";
+import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate } from "@/lib/format";
-import {
-  GEAR_KIND_ORDER,
-  GEAR_SERVICE_DUE_SOON_DAYS,
-  type GearItemKind,
-  reservationPhase,
-} from "@/lib/gear";
+import { GEAR_KIND_ORDER, type GearItemKind } from "@/lib/gear";
 import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { AddUnitDetails } from "./_components/AddUnitDetails";
 import { AddUnitLink } from "./_components/AddUnitLink";
+import { GearRegisterLedger, GearServiceDueList } from "./_components/GearRegisterLedger";
 import {
   checkOutGearReservationAction,
   createGearItemAction,
@@ -95,6 +85,23 @@ function parseKind(value: string | undefined): GearItemKind | undefined {
   return GEAR_KIND_ORDER.find((kind) => kind === value);
 }
 
+/**
+ * **The gear register, as one story** — ADR 20260827-the-shops-shelves, the
+ * instrument pattern. The page is a filter band over three groups that *are*
+ * the states (`GearRegisterLedger`), the add-a-unit form, and nothing else.
+ *
+ * The band's last two chips open the register's two other views, each its own
+ * complete list with no groups over it: **Service due**, the fleet-wide answer
+ * to what the bench owes, and **Deleted**. Service due is the one reading the
+ * three groups do not absorb — the retired stat tiles duplicated Out and Due
+ * back, but nothing duplicated the service clock, and a register that could
+ * only answer it for the fifty units on the current wall page would be
+ * promising something in its own description that it no longer does.
+ *
+ * The register stays opt-in by presence (ADR 20260815-minimal-gear-register):
+ * a shop with zero units gets the empty state and its one door — no groups, no
+ * kind chips, no earned line, and no header action.
+ */
 export default async function GearRegisterPage({
   params,
   searchParams,
@@ -122,43 +129,113 @@ export default async function GearRegisterPage({
   // The one view that leaves the live fleet behind. Its own paging, so a long
   // register and a long list of deleted units never share a page number.
   const deletedView = search.view === "deleted";
-  const [unitPage, deletedPage, countsByKind, overdue, dueBack, serviceDue, outNow] =
-    await Promise.all([
-      listGearItems(db, shop.id, {
-        todayLocal,
-        kind,
-        page: deletedView ? 1 : wantedPage,
-      }),
-      listDeletedGearItems(db, shop.id, { page: deletedView ? wantedPage : 1 }),
-      countGearItemsByKind(db, shop.id),
-      listOverdueGearReservations(db, shop.id, todayLocal),
-      listGearDueBack(db, shop.id, todayLocal),
-      listGearServiceDue(db, shop.id, todayLocal, GEAR_SERVICE_DUE_SOON_DAYS),
-      countCheckedOutGear(db, shop.id),
-    ]);
+  // The register's other view that leaves the groups behind: what the bench
+  // owes, fleet-wide and unpaged. Read on every request rather than only when
+  // asked for, because its chip states the count (`listGearServiceDueRows`).
+  const serviceView = search.view === "service";
+  const [groups, deletedPage, countsByKind, serviceDue] = await Promise.all([
+    gearRegisterGroups(db, shop.id, {
+      todayLocal,
+      kind,
+      page: deletedView || serviceView ? 1 : wantedPage,
+    }),
+    listDeletedGearItems(db, shop.id, { page: deletedView ? wantedPage : 1 }),
+    countGearItemsByKind(db, shop.id),
+    listGearServiceDueRows(db, shop.id, { todayLocal }),
+  ]);
   const fleetTotal = [...countsByKind.values()].reduce((sum, value) => sum + value, 0);
-  const returns = [...overdue, ...dueBack];
   // A view with nothing in it is not a view: an empty Deleted list falls back
   // to the fleet rather than rendering a heading over nothing. A shop that has
   // deleted its whole fleet lands here whether it asked to or not — otherwise
   // the empty state would be the only thing left and the units unreachable.
   const showDeleted = deletedPage.total > 0 && (deletedView || fleetTotal === 0);
+  // Same rule one line up: a view with nothing in it is not a view. A shop
+  // whose whole fleet is in date lands back on the register rather than on a
+  // heading over nothing — and its chip is not there to click in the first
+  // place, so this only catches a hand-typed or stale URL.
+  const showService = !showDeleted && serviceView && serviceDue.length > 0;
+  // The register's one coral moment (ADR 20260827-clearwater-surface-language,
+  // decision 11): units on the register, nothing out, nothing overdue. Derived
+  // from the groups themselves, so it can never disagree with them, and it
+  // only plays its entrance for the reader who just closed the last one.
+  //
+  // **Never under a kind filter.** The groups narrow with the chips, so "all
+  // home" on the Tanks view would be claiming something about the whole
+  // register while a regulator is overdue one chip away.
+  const allHome =
+    !showDeleted &&
+    !showService &&
+    kind === undefined &&
+    fleetTotal > 0 &&
+    groups.out.length === 0 &&
+    groups.overdue.length === 0;
 
   const banner = noticeFromParam(notice, NOTICES);
   const noticeField = noticeFromParam(notice, NOTICE_FIELD);
   const addStatus = notice && ADD_FORM_NOTICES.has(notice) ? NOTICES[notice] : undefined;
-  const pageBanner = noticeField || addStatus ? undefined : banner;
+  // "Marked returned — the unit is home." and the earned line say the same
+  // thing; when the register has earned the line, the line is the better half.
+  const pageBanner =
+    noticeField || addStatus || (allHome && notice === "returned") ? undefined : banner;
   const fieldError = (field: "label" | "purchasedOn") =>
     noticeField === field && banner ? t(banner.key) : undefined;
 
-  const gearHref = (target: { kind?: GearItemKind; page?: number; deleted?: boolean }) => {
+  const gearHref = (target: {
+    kind?: GearItemKind;
+    page?: number;
+    deleted?: boolean;
+    service?: boolean;
+  }) => {
     const query = new URLSearchParams();
     if (target.deleted) query.set("view", "deleted");
+    if (target.service) query.set("view", "service");
     if (target.kind) query.set("kind", target.kind);
     if ((target.page ?? 1) > 1) query.set("page", String(target.page));
     const encoded = query.toString();
     return encoded ? `/shop/${shopSlug}/gear?${encoded}` : `/shop/${shopSlug}/gear`;
   };
+
+  const chips: FilterChip[] = [];
+  if (fleetTotal > 0) {
+    chips.push({
+      key: "all",
+      href: gearHref({}),
+      active: !showDeleted && !showService && kind === undefined,
+      label: t("gear.fleet.filterAll", { count: fleetTotal }),
+    });
+    for (const option of GEAR_KIND_ORDER) {
+      const count = countsByKind.get(option) ?? 0;
+      if (count === 0) continue;
+      chips.push({
+        key: option,
+        href: gearHref({ kind: option }),
+        active: !showDeleted && !showService && kind === option,
+        label: t("gear.fleet.filterKind", { label: gearItemKindLabel(t, option), count }),
+      });
+    }
+  }
+  // The one reading no group owns: what the bench owes across the whole fleet,
+  // not just the wall page in front of you. It appears only when something is
+  // actually due — three tiles reading 0 taught a day-one shop nothing, and
+  // neither does a chip promising a list with nothing in it.
+  if (serviceDue.length > 0) {
+    chips.push({
+      key: "service-due",
+      href: gearHref({ service: true }),
+      active: showService,
+      label: t("gear.fleet.serviceDue.filter", { count: serviceDue.length }),
+    });
+  }
+  // The way back to a deleted unit, and the only one: it is off the fleet, off
+  // every picker, and its own URL is a 404.
+  if (deletedPage.total > 0) {
+    chips.push({
+      key: "deleted",
+      href: gearHref({ deleted: true }),
+      active: showDeleted,
+      label: t("gear.deleted.filter", { count: deletedPage.total }),
+    });
+  }
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -187,55 +264,11 @@ export default async function GearRegisterPage({
           pendingLabel={t("shared.undoToast.pendingLabel")}
           undoLabel={t("shared.undoToast.undo")}
         />
-      ) : notice === "returned" && returns.length === 0 && outNow === 0 ? (
-        // The earned moment (principles.md #3): the last return of the day
-        // closes the loop — one coral line, nothing animated past its 200ms
-        // entrance, and only when the queue is genuinely empty.
-        <EarnedMomentLine className="mt-6">{t("gear.notice.allHome")}</EarnedMomentLine>
       ) : pageBanner ? (
         <StaffNoticeBanner tone={pageBanner.tone}>{t(pageBanner.key)}</StaffNoticeBanner>
       ) : null}
 
-      {/* Three tiles reading 0 / 0 / 0 teach a day-one shop nothing — the
-          overview appears once there is a fleet to count, and counts the
-          whole fleet, never the filtered page. */}
-      {fleetTotal === 0 ? null : (
-        <section
-          aria-label={t("gear.overviewAriaLabel")}
-          className="mb-8 grid gap-3 sm:grid-cols-3"
-        >
-          <ShopStat
-            label={t("gear.stats.outNow")}
-            value={outNow}
-            detail={t("gear.stats.outNowDetail")}
-            // A lagoon-toned zero would spend the action color on "nothing
-            // is happening"; the figure earns its tone with a unit out.
-            tone={outNow > 0 ? "primary" : undefined}
-          />
-          <ShopStat
-            label={t("gear.stats.dueBack")}
-            value={returns.length}
-            detail={
-              overdue.length > 0
-                ? t("gear.stats.dueBackOverdueDetail", { count: overdue.length })
-                : t("gear.stats.dueBackDetail")
-            }
-            tone={overdue.length > 0 ? "warning" : undefined}
-          />
-          <ShopStat
-            label={t("gear.stats.serviceDue")}
-            value={serviceDue.length}
-            detail={t("gear.stats.serviceDueDetail", { days: GEAR_SERVICE_DUE_SOON_DAYS })}
-            tone={serviceDue.some((row) => row.state.state === "overdue") ? "warning" : undefined}
-          />
-        </section>
-      )}
-
       <div className="space-y-10">
-        {returns.length > 0 ? (
-          <ReturnsPanel returns={returns} t={t} locale={locale} todayLocal={todayLocal} />
-        ) : null}
-
         {fleetTotal === 0 && !showDeleted ? (
           <EmptyState
             title={t("gear.empty.heading")}
@@ -249,118 +282,66 @@ export default async function GearRegisterPage({
             className="mt-4"
           />
         ) : (
-          <section aria-label={showDeleted ? t("gear.deleted.title") : t("gear.fleet.ariaLabel")}>
-            <nav aria-label={t("gear.fleet.filterAriaLabel")} className="flex flex-wrap gap-2">
-              {fleetTotal === 0 ? null : (
-                <>
-                  <Link
-                    href={gearHref({})}
-                    aria-current={!showDeleted && kind === undefined ? "true" : undefined}
-                    className={buttonClass({
-                      variant: !showDeleted && kind === undefined ? "secondary" : "ghost",
-                      size: "sm",
-                    })}
-                  >
-                    {t("gear.fleet.filterAll", { count: fleetTotal })}
-                  </Link>
-                  {GEAR_KIND_ORDER.filter((option) => (countsByKind.get(option) ?? 0) > 0).map(
-                    (option) => (
-                      <Link
-                        key={option}
-                        href={gearHref({ kind: option })}
-                        aria-current={!showDeleted && kind === option ? "true" : undefined}
-                        className={buttonClass({
-                          variant: !showDeleted && kind === option ? "secondary" : "ghost",
-                          size: "sm",
-                        })}
-                      >
-                        {t("gear.fleet.filterKind", {
-                          label: gearItemKindLabel(t, option),
-                          count: countsByKind.get(option) ?? 0,
-                        })}
-                      </Link>
-                    ),
-                  )}
-                </>
-              )}
-              {/* The way back to a deleted unit, and the only one: it is off
-                  the fleet, off every picker, and its own URL is a 404. */}
-              {deletedPage.total > 0 ? (
-                <Link
-                  href={gearHref({ deleted: true })}
-                  aria-current={showDeleted ? "true" : undefined}
-                  className={buttonClass({
-                    variant: showDeleted ? "secondary" : "ghost",
-                    size: "sm",
-                  })}
-                >
-                  {t("gear.deleted.filter", { count: deletedPage.total })}
-                </Link>
-              ) : null}
-            </nav>
+          <section
+            aria-label={
+              showDeleted
+                ? t("gear.deleted.title")
+                : showService
+                  ? t("gear.fleet.serviceDue.title")
+                  : t("gear.fleet.ariaLabel")
+            }
+          >
+            {chips.length > 0 ? (
+              <FilterChips label={t("gear.fleet.filterAriaLabel")} chips={chips} />
+            ) : null}
 
             {showDeleted ? (
-              <DeletedList
-                rows={deletedPage.rows}
+              <>
+                <DeletedList
+                  rows={deletedPage.rows}
+                  shopSlug={shopSlug}
+                  t={t}
+                  locale={locale}
+                  timeZone={shop.timezone}
+                />
+                <Pager
+                  page={deletedPage.page}
+                  pageCount={deletedPage.pageCount}
+                  href={(target) => gearHref({ deleted: true, page: target })}
+                  total={t("gear.fleet.pagination.total", { count: deletedPage.total })}
+                  t={t}
+                  className="mt-4"
+                />
+              </>
+            ) : showService ? (
+              <GearServiceDueList
+                rows={serviceDue}
                 shopSlug={shopSlug}
                 t={t}
                 locale={locale}
                 timeZone={shop.timezone}
+                todayLocal={todayLocal}
+                returnAction={returnGearReservationAction}
+                checkOutAction={checkOutGearReservationAction}
+                releaseAction={releaseGearReservationFromRegisterAction}
               />
             ) : (
-              <div className="mt-4">
-                <Table minWidth="45rem">
-                  {/* Th children go straight into THead — it renders the row
-                      itself, and a nested <tr> falls out of the column grid.
-                      Size folds below `sm`: the phone-critical answer is the
-                      tag and where it is.
-
-                      **There is no Kind column.** It said "BCD" beside
-                      "BCD #1" and "Regulator" beside "Reg #4" on every row,
-                      while the chip row directly above states each kind with
-                      its count — the same fact three times, and one of them
-                      spending a fifth of the table's width (issue #776). */}
-                  <THead>
-                    <Th scope="col">{t("gear.fleet.columns.unit")}</Th>
-                    <Th scope="col" hideBelow="sm">
-                      {t("gear.fleet.columns.size")}
-                    </Th>
-                    <Th scope="col">{t("gear.fleet.columns.service")}</Th>
-                    <Th scope="col">{t("gear.fleet.columns.where")}</Th>
-                  </THead>
-                  <TBody>
-                    {unitPage.rows.map((row) => (
-                      <FleetRow
-                        key={row.item.id}
-                        row={row}
-                        shopSlug={shopSlug}
-                        t={t}
-                        locale={locale}
-                        todayLocal={todayLocal}
-                      />
-                    ))}
-                  </TBody>
-                </Table>
+              <div className="mt-6">
+                <GearRegisterLedger
+                  groups={groups}
+                  shopSlug={shopSlug}
+                  t={t}
+                  locale={locale}
+                  timeZone={shop.timezone}
+                  todayLocal={todayLocal}
+                  allHome={allHome}
+                  celebrate={notice === "returned"}
+                  pageHref={(target) => gearHref({ kind, page: target })}
+                  returnAction={returnGearReservationAction}
+                  checkOutAction={checkOutGearReservationAction}
+                  releaseAction={releaseGearReservationFromRegisterAction}
+                />
               </div>
-            )}
-            {showDeleted ? (
-              <Pager
-                page={deletedPage.page}
-                pageCount={deletedPage.pageCount}
-                href={(target) => gearHref({ deleted: true, page: target })}
-                total={t("gear.fleet.pagination.total", { count: deletedPage.total })}
-                t={t}
-                className="mt-4"
-              />
-            ) : (
-              <Pager
-                page={unitPage.page}
-                pageCount={unitPage.pageCount}
-                href={(target) => gearHref({ kind, page: target })}
-                total={t("gear.fleet.pagination.total", { count: unitPage.total })}
-                t={t}
-                className="mt-4"
-              />
             )}
           </section>
         )}
@@ -457,126 +438,15 @@ export default async function GearRegisterPage({
 }
 
 /**
- * The units that should be coming through the door: every open reservation
- * whose window ends today or already ended. One tap closes it — the return is
- * the act the whole panel exists for, so it rides each row (principle 10).
- */
-function ReturnsPanel({
-  returns,
-  t,
-  locale,
-  todayLocal,
-}: {
-  returns: GearReturnRow[];
-  t: StaffTranslator;
-  locale: string;
-  todayLocal: string;
-}) {
-  return (
-    <SectionCard
-      padding="none"
-      title={t("gear.returns.title")}
-      description={t("gear.returns.description")}
-    >
-      <ul className="divide-y divide-border">
-        {returns.map((row) => {
-          // Rows here are open by construction (the readers filter on it).
-          const phase = reservationPhase({ ...row, returnedAt: null }, todayLocal);
-          return (
-            <li
-              key={row.reservationId}
-              className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-5"
-            >
-              {/* Full first line on phone (basis-full), sharing a row only
-                  from `sm` up — three flex children on one 390px line is how
-                  the name ran into the amber date. */}
-              <div className="w-full min-w-0 sm:w-auto sm:flex-1">
-                <p className="font-medium">
-                  <span className="font-mono text-sm">{row.label}</span>
-                  <span className="text-muted"> · {gearItemKindLabel(t, row.kind)}</span>
-                  {row.size ? <span className="text-muted"> · {row.size}</span> : null}
-                </p>
-                <p className="mt-0.5 text-sm text-muted">
-                  {row.tripTitle
-                    ? t("gear.returns.holderWithTrip", {
-                        name: row.personName,
-                        tripTitle: row.tripTitle,
-                      })
-                    : t("gear.returns.holder", { name: row.personName })}
-                </p>
-              </div>
-              <p
-                className={
-                  phase === "overdue"
-                    ? "text-sm font-medium text-warning-strong"
-                    : "text-sm text-muted"
-                }
-              >
-                {phase === "overdue"
-                  ? t("gear.returns.wasDue", {
-                      dueOn: formatCalendarDate(row.reservedUntil, locale),
-                    })
-                  : phase === "never_picked_up"
-                    ? t("gear.returns.neverPickedUp", {
-                        dueOn: formatCalendarDate(row.reservedUntil, locale),
-                      })
-                    : t("gear.returns.dueToday")}
-              </p>
-              {/* The honest close depends on the stamps: a unit that left the
-                  counter comes home with a return; one that never left is
-                  released (or checked out late) — a fabricated return on a
-                  unit still hanging on the wall is the record this branch
-                  exists to prevent. */}
-              <div className="flex gap-2">
-                {row.checkedOutAt === null ? (
-                  <>
-                    <form action={checkOutGearReservationAction}>
-                      <input type="hidden" name="reservationId" value={row.reservationId} />
-                      <SubmitButton
-                        pendingLabel={t("gear.returns.checkingOut")}
-                        className={buttonClass({ variant: "ghost", size: "sm" })}
-                      >
-                        {t("gear.returns.checkOut")}
-                      </SubmitButton>
-                    </form>
-                    <form action={releaseGearReservationFromRegisterAction}>
-                      <input type="hidden" name="reservationId" value={row.reservationId} />
-                      <SubmitButton
-                        pendingLabel={t("gear.unit.where.releasing")}
-                        className={buttonClass({ variant: "secondary", size: "sm" })}
-                      >
-                        {t("gear.unit.where.release")}
-                      </SubmitButton>
-                    </form>
-                  </>
-                ) : (
-                  <form action={returnGearReservationAction}>
-                    <input type="hidden" name="reservationId" value={row.reservationId} />
-                    <SubmitButton
-                      pendingLabel={t("gear.returns.returning")}
-                      className={buttonClass({ variant: "secondary", size: "sm" })}
-                    >
-                      {t("gear.returns.markReturned")}
-                    </SubmitButton>
-                  </form>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </SectionCard>
-  );
-}
-
-/**
  * The units that have been deleted, newest first, each with the one act this
- * list exists for. Deliberately plainer than the fleet table: nothing here is
- * in service, so there is no clock and nowhere it can be.
+ * list exists for. The same ledger rows as the register above, with no group
+ * heading over them: the active Deleted chip is what says which view this is,
+ * and repeating the word underneath it would be the shared fact said twice
+ * (ADR 20260827-the-shops-shelves).
  *
- * The tag links to the unit's own record, which reads as a read-only history
- * while the unit is deleted (issue #614) — so "when was this last serviced"
- * no longer costs a restore-and-delete round trip.
+ * The row is a door to the unit's own record, which reads as a read-only
+ * history while the unit is deleted (issue #614) — so "when was this last
+ * serviced" no longer costs a restore-and-delete round trip.
  */
 function DeletedList({
   rows,
@@ -592,28 +462,13 @@ function DeletedList({
   timeZone: string;
 }) {
   return (
-    <SectionCard className="mt-4" padding="none" title={t("gear.deleted.title")}>
-      <ul className="divide-y divide-border">
-        {rows.map((row) => (
-          <li
-            key={row.id}
-            className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-5"
-          >
-            <div className="w-full min-w-0 sm:w-auto sm:flex-1">
-              <p className="font-medium">
-                <Link
-                  href={`/shop/${shopSlug}/gear/${row.id}`}
-                  className="font-mono text-sm text-primary hover:underline"
-                >
-                  {row.label}
-                </Link>
-                <span className="text-muted"> · {gearItemKindLabel(t, row.kind)}</span>
-                {row.size ? <span className="text-muted"> · {row.size}</span> : null}
-              </p>
-              <p className="mt-0.5 text-sm text-muted">
-                {t("gear.deleted.on", { date: formatShortDate(row.deletedAt, locale, timeZone) })}
-              </p>
-            </div>
+    <ul className="mt-6">
+      {rows.map((row) => (
+        <LedgerRow
+          key={row.id}
+          href={`/shop/${shopSlug}/gear/${row.id}`}
+          linkLabel={row.label}
+          trailing={
             <form action={restoreGearItemAction}>
               <input type="hidden" name="gearItemId" value={row.id} />
               <SubmitButton
@@ -624,120 +479,19 @@ function DeletedList({
                 {t("gear.deleted.restore")}
               </SubmitButton>
             </form>
-          </li>
-        ))}
-      </ul>
-    </SectionCard>
-  );
-}
-
-/** One unit of the fleet. Quiet by default: chrome only for exceptional state. */
-function FleetRow({
-  row,
-  shopSlug,
-  t,
-  locale,
-  todayLocal,
-}: {
-  row: GearRegisterRow;
-  shopSlug: string;
-  t: StaffTranslator;
-  locale: string;
-  todayLocal: string;
-}) {
-  const { item, serviceState, reservation } = row;
-  const serviceText =
-    serviceState.state === "due_soon" || serviceState.state === "overdue"
-      ? gearServiceStateText(t, serviceState, formatCalendarDate(serviceState.nextDueOn, locale))
-      : null;
-  const phase = reservation ? reservationPhase(reservation, todayLocal) : null;
-
-  return (
-    <Tr id={`unit-${item.id}`}>
-      <Td>
-        <RowLink
-          href={`/shop/${shopSlug}/gear/${item.id}`}
-          className="font-mono text-sm font-medium text-primary hover:underline"
+          }
         >
-          {item.label}
-        </RowLink>
-        {item.brandModel || item.serialNumber ? (
-          <p className="mt-0.5 text-xs text-muted">
-            {[item.brandModel, item.serialNumber].filter(Boolean).join(" · ")}
-          </p>
-        ) : null}
-      </Td>
-      {/* No em dash for a unit with no size. A placeholder is the absence of
-          information formatted as information (principles.md §9), and eight of
-          the seeded thirty-four have none. `align="middle"`: the Unit cell can
-          run two lines (tag plus brand/model), and a single-line sibling
-          top-aligned against that reads as floating high in the row. */}
-      <Td muted hideBelow="sm" align="middle">
-        {item.size}
-      </Td>
-      <Td align="middle">
-        {/* **One grammar, and a healthy unit shows nothing.** This column used
-            to answer one question two ways: an amber pill for a status, plain
-            text for a service date. A pill around "Visual inspection due Sep
-            12, 2026" is a box around a sentence, and the page already has a
-            pill vocabulary in its summary tiles and its filter chips — so the
-            column states its fact in words, toned. The words carry the state,
-            so this is not colour alone (issue #776). */}
-        {item.status !== "in_service" ? (
-          <span
-            className={
-              item.status === "needs_service"
-                ? "text-sm font-medium text-warning-strong"
-                : "text-sm text-muted"
-            }
-          >
-            {gearStatusLabel(t, item.status)}
-          </span>
-        ) : serviceText ? (
-          <span
-            className={
-              serviceState.state === "overdue"
-                ? "text-sm font-medium text-warning-strong"
-                : "text-sm text-muted"
-            }
-          >
-            {serviceText}
-          </span>
-        ) : null}
-      </Td>
-      <Td align="middle">
-        {/* Blank for a unit on the wall. "In the shop" was the answer on
-            twenty-nine of thirty-four rows, which made the three that were
-            actually out the faintest thing in the column. */}
-        {reservation === null || phase === null ? null : phase === "overdue" ? (
-          <span className="text-sm font-medium text-warning-strong">
-            {t("gear.fleet.overdueWith", {
-              name: reservation.personName,
-              dueOn: formatCalendarDate(reservation.reservedUntil, locale),
-            })}
-          </span>
-        ) : phase === "never_picked_up" ? (
-          // Quieter than a genuine overdue on purpose: the unit is on the
-          // wall — this is a stale claim to release, not a chase.
-          <span className="text-sm text-muted">
-            {t("gear.fleet.neverPickedUp", { name: reservation.personName })}
-          </span>
-        ) : phase === "out" || phase === "due_back_today" ? (
-          <span className="text-sm">
-            {t("gear.fleet.outWith", {
-              name: reservation.personName,
-              dueOn: formatCalendarDate(reservation.reservedUntil, locale),
-            })}
-          </span>
-        ) : (
-          <span className="text-sm text-muted">
-            {t("gear.fleet.reservedFor", {
-              name: reservation.personName,
-              from: formatCalendarDate(reservation.reservedFrom, locale),
-            })}
-          </span>
-        )}
-      </Td>
-    </Tr>
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1 py-2">
+            <span className="font-mono text-sm font-medium">{row.label}</span>
+            <span className="text-sm text-muted">
+              {[gearItemKindLabel(t, row.kind), row.size].filter(Boolean).join(" · ")}
+            </span>
+            <span className="text-sm text-muted">
+              {t("gear.deleted.on", { date: formatShortDate(row.deletedAt, locale, timeZone) })}
+            </span>
+          </div>
+        </LedgerRow>
+      ))}
+    </ul>
   );
 }

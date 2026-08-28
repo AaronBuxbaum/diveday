@@ -28,7 +28,18 @@ const DIFFICULTY_KEYS: Record<DiveSiteDifficulty, DiverMessageKey> = {
  * Null is the ordinary case for a site nobody has finished writing, and every
  * caller falls back to "crew-led" rather than inventing a reading — the same
  * thing they did when the free-text field was empty.
+ *
+ * Overloaded so a caller holding a *code* gets `string` back rather than
+ * `string | null`: the library's group headings (ADR
+ * 20260827-the-shops-shelves) render one word per difficulty and have already
+ * ruled the null out by grouping, and a `?? ""` there would be a fallback for
+ * a branch the types can see is unreachable.
  */
+export function diveSiteDifficultyLabel(difficulty: DiveSiteDifficulty, t: DiverTranslator): string;
+export function diveSiteDifficultyLabel(
+  difficulty: DiveSiteDifficulty | null | undefined,
+  t: DiverTranslator,
+): string | null;
 export function diveSiteDifficultyLabel(
   difficulty: DiveSiteDifficulty | null | undefined,
   t: DiverTranslator,

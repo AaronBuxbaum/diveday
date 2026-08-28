@@ -341,6 +341,22 @@ export function findQuestionnaireVersion(id: string, version: number): MedicalQu
   return BY_KEY.get(`${id}:${version}`) ?? null;
 }
 
+/**
+ * The prefix every question's form field carries, and the field name itself.
+ *
+ * One spelling, because four readers depend on it and none of them can see the
+ * others: `MedicalQuestionnaireFields` renders the radios, the waiver page
+ * reads the submitted form back through it, `WaiverPacing`'s delegated listener
+ * matches on the prefix, and the same page seeds that listener from a saved
+ * draft. A rename in one of those alone is silent — the count simply stops
+ * moving.
+ */
+export const MEDICAL_FIELD_PREFIX = "q_";
+
+export function medicalQuestionField(questionId: string): string {
+  return `${MEDICAL_FIELD_PREFIX}${questionId}`;
+}
+
 export function applicableMedicalQuestions(
   questionnaire: MedicalQuestionnaire,
   responses: Readonly<Record<string, boolean | undefined>>,

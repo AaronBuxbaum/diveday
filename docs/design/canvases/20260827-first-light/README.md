@@ -1,6 +1,6 @@
 # First light — canvas
 
-- **Status:** Live (its ADR is Proposed — this canvas may still be edited)
+- **Status:** Shipped (its ADR is Accepted — this canvas is the dated argument, superseded rather than freshened)
 - **Date:** 2026-08-27
 - **ADR:** [20260827-first-light](../../../architecture/decisions/20260827-first-light.md)
 - **Published:** https://claude.ai/code/artifact/1c3b7811-c61e-414a-89b1-6e8576d6742d
@@ -47,10 +47,10 @@ Every name, number and time is demo-seed fiction. Nothing here is real customer 
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
-| 10a — the door speaks Clearwater | open | — | — |
+| 10a — the door speaks Clearwater | shipped | `src/components/account/EntryShell.tsx` | `src/components/account/EntryShell.test.tsx`, `e2e/account-lifecycle.spec.ts` |
 | 10b — onboard is the shop's first form | shipped | `src/app/onboard/page.tsx` | `src/components/SuggestShopLink.test.tsx`, `src/app/onboard/copy.test.ts`, `src/app/onboard/actions.instrumentation.test.ts` |
-| 10c — claim joins the thread | open | — | — |
-| 10d — the first morning | open | — | — |
+| 10c — claim joins the thread | shipped | `src/app/claim/[token]/page.tsx` | `src/db/seat-claims.test.ts`, `src/app/claim/[token]/copy.test.ts`, `src/components/account/EntryShell.test.tsx`, `e2e/seat-claim.spec.ts` |
+| 10d — the first morning | shipped | `src/app/shop/[shopSlug]/_components/today/FirstRunChecklist.tsx` | `src/app/shop/[shopSlug]/_components/today/FirstRunChecklist.test.tsx`, `src/app/shop/[shopSlug]/_components/today/DaySpine.test.tsx`, `src/db/first-booking.test.ts`, `src/lib/today.test.ts` |
 
 ## Implementing a slice
 

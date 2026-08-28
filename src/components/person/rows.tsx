@@ -71,6 +71,7 @@ export function CertificationCardRow({
   state,
   imported,
   actions,
+  actionsId,
   as: Tag = "li",
 }: {
   t: StaffTranslator;
@@ -83,6 +84,20 @@ export function CertificationCardRow({
   imported?: { source?: string | null };
   /** Verify / Remove, per the caller's permissions. */
   actions?: ReactNode;
+  /**
+   * Marks this row's action group as the target of a fragment link — the
+   * status ledger's "Verify it" lands here and puts the cursor beside the
+   * control.
+   *
+   * **An id, never a wrapper.** It was a `<span id>` the caller conditionally
+   * wrapped `actions` in, and moving the anchor changed the element *type* of
+   * the subtree: React unmounted the control underneath it and every
+   * `useActionState` result inside died. Marking a card verified is exactly
+   * what moves the anchor, so the confirmation of that act — and the Undo it
+   * carries — were destroyed by their own success. The group renders
+   * unconditionally now and only the attributes move.
+   */
+  actionsId?: string;
   as?: "li" | "div";
 }) {
   const badge = CERTIFICATION_ROW_STATE_BADGE[state];
@@ -110,7 +125,17 @@ export function CertificationCardRow({
           </p>
         ) : null}
       </div>
-      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+      {actions || actionsId ? (
+        // `tabIndex` so a fragment link both scrolls here *and* puts the cursor
+        // beside the control.
+        <div
+          id={actionsId}
+          tabIndex={actionsId ? -1 : undefined}
+          className="flex flex-wrap items-center gap-2"
+        >
+          {actions}
+        </div>
+      ) : null}
     </Tag>
   );
 }

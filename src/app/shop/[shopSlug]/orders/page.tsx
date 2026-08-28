@@ -8,13 +8,11 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
-import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
-import { QueryForm } from "@/components/ui/QueryForm";
+import { LedgerGroup } from "@/components/ui/ledger";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { canPersonManagePaymentSettings } from "@/db/authz";
 import { listImportedPaymentHistory } from "@/db/imported-payment-history";
-import { listShopOrders, ORDER_DEFAULT_RANGE_DAYS } from "@/db/orders";
+import { ORDER_DEFAULT_RANGE_DAYS, pagedOrdersByDay } from "@/db/orders";
 import { listStuckPaymentOperations } from "@/db/payment-operations";
 import { getShopPersonName } from "@/db/people";
 import { listOwedShopCancellationRefunds } from "@/db/refunds";
@@ -24,7 +22,12 @@ import { getShopTripTitle } from "@/db/trips";
 import { ORDER_STATUS_KEYS, ORDER_STATUS_TONES } from "@/i18n/order-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { formatCalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
+import {
+  calendarDateInTimezone,
+  calendarDateToUtcMidnight,
+  formatCalendarDate,
+  isValidCalendarDate,
+} from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
@@ -32,6 +35,8 @@ import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { isManagedStorageUrl } from "@/lib/storage/blob-host";
 import { uuidParam } from "@/lib/uuid";
 import { wallTimeToUtc } from "@/lib/zoned";
+import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
+import { OrdersToolbar } from "./_components/OrdersToolbar";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -49,11 +54,9 @@ export const metadata: Metadata = { title: "Orders — DiveDay" };
  * order *detail* page's longer phrasing, which is what it used to import.
  *
  * On a page with room for a sentence, "Open — awaiting payment" is a helpful
- * gloss. In a `table-layout: fixed` cell one fifth of the table wide it is
- * three words wrapping inside a `rounded-full` pill — a badge two lines tall
- * with its text off-centre against the curve, and the widest thing in a column
- * whose other rows are a single word. The word is "Open"; what it means is what
- * the detail page is for.
+ * gloss. On a ledger row it is three words wrapping inside a `rounded-full`
+ * pill, beside rows whose whole status is one word. The word is "Open"; what
+ * it means is what the order record is for.
  *
  * `ORDER_STATUS_KEYS` keeps the property the local copy existed for: it is
  * keyed by the enum, not by `string`, and the filter below maps over
@@ -120,11 +123,16 @@ function dayBoundary(
 }
 
 /**
- * Every order the shop has ever sent, filterable by status, diver, and
- * date — the index Orders never had (task 158, UX persona lens 17): before
- * this, an order was reachable only through the diver it belonged to.
- * Reports' revenue rows, the roster's payment cells, the command palette, and
- * Settings' Money group all link in here.
+ * **The shop's money as a day ledger** — ADR
+ * 20260827-clearwater-surface-language, decision 7.
+ *
+ * Every order the shop has ever sent, grouped into the days it took them: the
+ * day header owns the date, the count and the subtotal, and a row is a diver,
+ * what they bought, and an amount. The five-control filter card that used to
+ * stand above it is a toolbar; the imported payment history that used to stand
+ * beside it as a second table and a second pager is one disclosure row at the
+ * foot. Reports' revenue rows, the roster's payment cells, the command palette,
+ * and Settings' Money group all link in here.
  */
 export default async function OrdersIndexPage({
   params,
@@ -134,7 +142,8 @@ export default async function OrdersIndexPage({
   searchParams: Promise<{
     status?: string;
     personId?: string;
-    personQuery?: string;
+    /** The toolbar's one search box — diver name, departure title, order note. */
+    q?: string;
     /** One departure's orders — the trip pulse's awaiting-payment fact links here. */
     tripId?: string;
     from?: string;
@@ -146,7 +155,7 @@ export default async function OrdersIndexPage({
   }>;
 }) {
   const { shopSlug } = await params;
-  const { status, personId, personQuery, tripId, from, to, range, page, importedPage, notice } =
+  const { status, personId, q, tripId, from, to, range, page, importedPage, notice } =
     await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
@@ -193,7 +202,7 @@ export default async function OrdersIndexPage({
   )
     ? (status as (typeof orderStatus.enumValues)[number])
     : undefined;
-  const trimmedQuery = personQuery?.trim() || undefined;
+  const trimmedQuery = q?.trim() || undefined;
   // Validated the way `?status=` is validated against its enum, and for the
   // reason `dayBoundary` above gives: a malformed value is simply not a filter.
   // `trips.id` and `orders.person_id` are `uuid` columns, so a stray
@@ -214,12 +223,17 @@ export default async function OrdersIndexPage({
   // and an explicit `?from=`/`?to=` replaces the window rather than nesting
   // inside it — a staffer who asked for last March means last March.
   const hasDateBounds = Boolean(fromBoundary || toBoundary);
-  // `range` is authoritative when present. Date inputs remain in the form so
-  // a staffer can switch back to Custom without retyping them, but an old
-  // custom `from`/`to` pair must never keep constraining an explicit All or
-  // Recent selection.
+  // `range` is authoritative when present, and the toolbar now offers Custom
+  // unconditionally: picking it submits `range=custom` with no bounds yet,
+  // which filters nothing and is what puts the two date inputs on screen.
   const selectedRange =
-    range === "all" ? "all" : range === "recent" ? "recent" : hasDateBounds ? "custom" : "recent";
+    range === "all"
+      ? "all"
+      : range === "recent"
+        ? "recent"
+        : range === "custom" || hasDateBounds
+          ? "custom"
+          : "recent";
   const showAll = selectedRange === "all";
   const customRange = selectedRange === "custom";
   const windowed = selectedRange === "recent";
@@ -227,29 +241,32 @@ export default async function OrdersIndexPage({
     ? new Date(nowDate().getTime() - ORDER_DEFAULT_RANGE_DAYS * 24 * 60 * 60 * 1000)
     : undefined;
 
-  const orderPage = await listShopOrders(
+  const ledger = await pagedOrdersByDay(
     db,
     shop.id,
+    shop.timezone,
     {
       status: statusFilter,
       personId: personFilter,
-      // A `personId` link (roster, diver record) is exact and takes priority
-      // over a typed name — the two never combine, so the filter box always
-      // reflects what it can actually change.
-      personQuery: personFilter ? undefined : trimmedQuery,
+      // The search **combines** with a pinned diver rather than yielding to
+      // it, which the old diver-name box could not do: one search over the
+      // name and the departure means that inside one diver's orders it still
+      // has something to narrow, so the box is never a control that visibly
+      // does nothing.
+      q: trimmedQuery,
       // Arrives from a link, exactly like `personId` — the trip pulse's "N
-      // orders are awaiting payment ›". `listShopOrders` matches it through the
-      // order's booking and counts with the same joins, so the pager cannot
-      // promise pages this filter renders nothing on.
+      // orders are awaiting payment ›". `pagedOrdersByDay` matches it through
+      // the order's booking and counts with the same joins, so the pager
+      // cannot promise pages this filter renders nothing on.
       tripId: tripFilter,
       from: customRange ? fromBoundary : defaultFrom,
       to: customRange ? toBoundary : undefined,
     },
     // A non-numeric or missing `?page=` reads as page 1 rather than NaN;
-    // `listShopOrders` clamps it into range either way.
+    // `offsetPage` clamps it into range either way.
     { page: Number.parseInt(page ?? "", 10) },
   );
-  const rows = orderPage.rows;
+  const orderPage = ledger.page;
   // Imported source history has no local trip/order status to filter against.
   // It does follow the diver filter and an explicitly chosen calendar range,
   // but it is deliberately not trapped in the live Orders page's default
@@ -263,6 +280,9 @@ export default async function OrdersIndexPage({
         shop.id,
         {
           personId: personFilter,
+          // The one search box reaches the diver's name here too. Imported
+          // records carry no departure, so the trip half of the search simply
+          // has nothing to match — the same honest narrowing `?tripId=` gets.
           personQuery: personFilter ? undefined : trimmedQuery,
           from: customRange && from && isValidCalendarDate(from) ? from : undefined,
           to: customRange && to && isValidCalendarDate(to) ? to : undefined,
@@ -276,7 +296,7 @@ export default async function OrdersIndexPage({
     const query = new URLSearchParams();
     if (status) query.set("status", status);
     if (personFilter) query.set("personId", personFilter);
-    if (personQuery) query.set("personQuery", personQuery);
+    if (trimmedQuery) query.set("q", trimmedQuery);
     if (tripFilter) query.set("tripId", tripFilter);
     if (from) query.set("from", from);
     if (to) query.set("to", to);
@@ -286,7 +306,9 @@ export default async function OrdersIndexPage({
           ? "all"
           : range === "recent"
             ? "recent"
-            : null
+            : range === "custom"
+              ? "custom"
+              : null
         : overrides.range;
     if (nextRange) query.set("range", nextRange);
     if (overrides.page !== undefined && overrides.page > 1) {
@@ -299,9 +321,10 @@ export default async function OrdersIndexPage({
     return search ? `/shop/${shopSlug}/orders?${search}` : `/shop/${shopSlug}/orders`;
   };
 
-  // Looked up rather than read off `rows[0]` — a filter that matches nothing
-  // still has to say whose orders it was looking for, and the row-derived name
-  // vanished on exactly the empty screen that needed the explanation most.
+  // Looked up rather than read off the first row — a filter that matches
+  // nothing still has to say whose orders it was looking for, and the
+  // row-derived name vanished on exactly the empty screen that needed the
+  // explanation most.
   const filteredPersonName = personFilter
     ? await getShopPersonName(db, shop.id, personFilter)
     : null;
@@ -317,8 +340,62 @@ export default async function OrdersIndexPage({
       from ||
       to ||
       showAll ||
+      customRange ||
       range === "recent",
   );
+  const clearHref = `/shop/${shopSlug}/orders`;
+
+  const today = calendarDateInTimezone(nowDate(), shop.timezone);
+  const days: OrderLedgerDay[] = ledger.groups.map((group) => {
+    // A calendar day has no instant in it, so it is formatted from its own
+    // UTC midnight in UTC — running a date-only value through the shop's zone
+    // is what shifts a header onto the day before the rows it names.
+    const date = formatShortDate(calendarDateToUtcMidnight(group.day), locale, "UTC");
+    const named = group.day === today ? t("orders.index.ledger.today", { date }) : date;
+    return {
+      key: group.day,
+      // A day cut in half by the page boundary restates its header rather than
+      // starting mid-list under nothing, and says so — the subtotal beside it
+      // is the whole day's, and a reader must not read it as new money.
+      label: group.continued ? t("orders.index.ledger.continued", { day: named }) : named,
+      meta: t("orders.index.ledger.dayMeta", {
+        count: group.count,
+        subtotal: formatMoneyCents(group.subtotalCents, shop.currency, locale),
+      }),
+      rows: group.orders.map((row) => {
+        const amount = formatMoneyCents(row.order.totalCents, row.order.currency, locale);
+        return {
+          id: row.order.id,
+          href: `/shop/${shopSlug}/orders/${row.order.id}`,
+          // The diver and the amount, and deliberately not the date: the day
+          // heading above already carries it, in the accessibility tree as
+          // well as on screen (`OrdersLedger.test.tsx`).
+          linkLabel: t("orders.index.ledger.rowLabel", { name: row.person.fullName, amount }),
+          diver: row.person.fullName,
+          detail: row.trip?.title ?? row.order.description ?? null,
+          // Paid is the expected state and renders as nothing at all; only the
+          // exceptional statuses earn a badge (principle 9). That is this
+          // page's call, made here — `ORDER_STATUS_TONES` still knows paid is
+          // `success`, because the two surfaces that do show it need that.
+          status:
+            row.order.status === "paid"
+              ? null
+              : {
+                  word: ORDER_STATUS_KEYS[row.order.status]
+                    ? t(ORDER_STATUS_KEYS[row.order.status])
+                    : row.order.status,
+                  tone: ORDER_STATUS_TONES[row.order.status] ?? "neutral",
+                },
+          amount,
+        };
+      }),
+    };
+  });
+
+  // A control with nothing to govern: on a shop that has never taken an order
+  // and is not filtering, the toolbar is three empty boxes above an empty
+  // state that already says the one thing there is to do.
+  const showToolbar = hasFilters || orderPage.total > 0 || hasImportedHistory;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -343,7 +420,9 @@ export default async function OrdersIndexPage({
                 this same door — two identical primaries for one action is
                 triage work the layout should do (principle 8), so the header
                 stands down. */}
-            {rows.length === 0 && !hasImportedHistory && !hasFilters ? null : paymentsConnected ? (
+            {orderPage.total === 0 &&
+            !hasImportedHistory &&
+            !hasFilters ? null : paymentsConnected ? (
               <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
                 {t("orders.index.newOrder")}
               </Link>
@@ -356,12 +435,12 @@ export default async function OrdersIndexPage({
 
       {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
 
-      {/* Above the filters because it is not something you filter for, and
+      {/* Above the toolbar because it is not something you filter for, and
           danger-toned rather than folded away: unconfirmed money is a financial
           obligation, not a notification to dismiss. An empty queue renders
-          nothing at all — the calm state of this page is no panel. `mb-6`, not
-          `mt-6`: the header above already carries `mb-8`, and the filter grid
-          below carries no top margin of its own. */}
+          nothing at all — the calm state of this page is no panel. A
+          tone-carrying operational panel is one of the three jobs the bordered
+          card keeps (ADR 20260827-clearwater-surface-language, decision 2). */}
       {stuckPaymentOperations.length > 0 ? (
         <section aria-label={t("orders.index.paymentOps.sectionLabel")} className="mb-6">
           <ShopNotice tone="danger" role="status">
@@ -370,7 +449,7 @@ export default async function OrdersIndexPage({
             </p>
             <p className="mt-1 text-sm">{t("orders.index.paymentOps.detail")}</p>
             <ul className="mt-3 space-y-2 text-sm">
-              {stuckPaymentOperations.map(({ intent, tripId, tripTitle, personName }) => (
+              {stuckPaymentOperations.map(({ intent, tripId: opTripId, tripTitle, personName }) => (
                 <li key={intent.id} className="flex flex-wrap items-baseline gap-x-2">
                   <span className="font-medium">{t(OPERATION_KIND_KEYS[intent.kind])}</span>
                   {tripTitle ? <span>· {tripTitle}</span> : null}
@@ -384,9 +463,9 @@ export default async function OrdersIndexPage({
                       ? ` · ${t("orders.index.paymentOps.stripeId", { id: intent.stripeObjectId })}`
                       : ""}
                   </span>
-                  {tripId ? (
+                  {opTripId ? (
                     <Link
-                      href={`/shop/${shopSlug}/trips/${tripId}/guests`}
+                      href={`/shop/${shopSlug}/trips/${opTripId}/guests`}
                       className="font-medium text-primary underline underline-offset-2"
                     >
                       {t("orders.index.paymentOps.openTrip")}
@@ -439,85 +518,36 @@ export default async function OrdersIndexPage({
         </section>
       ) : null}
 
-      {/* `QueryForm`, not the native GET submit this used to be: applying a
-          filter tore the document down and landed the staffer back at the top
-          of the page, above the row they were reading. Same URL, same server
-          render (see `src/components/ui/QueryForm.tsx`). */}
-      {/* A `form`, so it takes the card's chrome as a class rather than
-          wrapping in one — same shell as the `<Table>` below it, which is the
-          point: a filter panel and the list it filters are one object. */}
-      <QueryForm className={sectionCardClass()}>
-        <FieldGrid columns={4}>
-          <Field label={t("orders.index.filters.statusLabel")}>
-            <select name="status" defaultValue={statusFilter ?? ""} className={controlClass}>
-              <option value="">{t("orders.index.filters.statusAll")}</option>
-              {orderStatus.enumValues.map((value) => (
-                <option key={value} value={value}>
-                  {ORDER_STATUS_KEYS[value] ? t(ORDER_STATUS_KEYS[value]) : value}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label={t("orders.index.filters.diverLabel")}>
-            {/* Pinned by a `?personId=` link (roster, diver record). The name is
-              shown but not editable, because `personId` wins over a typed one
-              — and the id rides along as a hidden field so applying a status or
-              a date does not silently throw the staffer back to every diver,
-              which is what this form's missing `personId` used to do. */}
-            <input
-              type="text"
-              name={personFilter ? undefined : "personQuery"}
-              defaultValue={personFilter ? (filteredPersonName ?? "") : (personQuery ?? "")}
-              placeholder={t("orders.index.filters.diverPlaceholder")}
-              maxLength={120}
-              readOnly={Boolean(personFilter)}
-              disabled={Boolean(personFilter)}
-              className={controlClass}
-            />
-          </Field>
-          {personFilter ? <input type="hidden" name="personId" value={personFilter} /> : null}
-          {/* Same rider as `personId`: this filter arrives from the trip
-              pulse's link, and applying a status or a date here must not
-              silently throw the staffer back to every departure. */}
-          {tripFilter ? <input type="hidden" name="tripId" value={tripFilter} /> : null}
-          <Field label={t("orders.index.filters.rangeLabel")}>
-            <select name="range" defaultValue={selectedRange} className={controlClass}>
-              <option value="recent">
-                {t("orders.index.filters.rangeRecent", { days: ORDER_DEFAULT_RANGE_DAYS })}
-              </option>
-              <option value="all">{t("orders.index.filters.rangeAll")}</option>
-              {hasDateBounds ? (
-                <option value="custom">{t("orders.index.filters.rangeCustom")}</option>
-              ) : null}
-            </select>
-          </Field>
-          <Field label={t("orders.index.filters.fromLabel")}>
-            <input type="date" name="from" defaultValue={from ?? ""} className={controlClass} />
-          </Field>
-          <Field label={t("orders.index.filters.toLabel")}>
-            <input type="date" name="to" defaultValue={to ?? ""} className={controlClass} />
-          </Field>
-          <FieldActions>
-            {/* Secondary weight: a filter form is never the page's one obvious
-              action — that stays with the header's New order (principle 8). */}
-            <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>
-              {t("orders.index.filters.apply")}
-            </button>
-            {hasFilters ? (
-              <Link
-                href={`/shop/${shopSlug}/orders`}
-                scroll={false}
-                className={buttonClass({
-                  variant: "secondary",
-                  size: "sm",
-                })}
-              >
-                {t("orders.index.filters.clear")}
-              </Link>
-            ) : null}
-          </FieldActions>
-        </FieldGrid>
-      </QueryForm>
+      {showToolbar ? (
+        <OrdersToolbar
+          q={trimmedQuery ?? ""}
+          status={statusFilter ?? ""}
+          range={selectedRange}
+          from={from ?? ""}
+          to={to ?? ""}
+          personId={personFilter}
+          tripId={tripFilter}
+          clearHref={hasFilters ? clearHref : undefined}
+          copy={{
+            searchLabel: t("orders.index.filters.searchLabel"),
+            searchPlaceholder: t("orders.index.filters.searchPlaceholder"),
+            statusLabel: t("orders.index.filters.statusLabel"),
+            statusAll: t("orders.index.filters.statusAll"),
+            statuses: orderStatus.enumValues.map((value) => ({
+              value,
+              label: ORDER_STATUS_KEYS[value] ? t(ORDER_STATUS_KEYS[value]) : value,
+            })),
+            rangeLabel: t("orders.index.filters.rangeLabel"),
+            rangeRecent: t("orders.index.filters.rangeRecent", { days: ORDER_DEFAULT_RANGE_DAYS }),
+            rangeAll: t("orders.index.filters.rangeAll"),
+            rangeCustom: t("orders.index.filters.rangeCustom"),
+            fromLabel: t("orders.index.filters.fromLabel"),
+            toLabel: t("orders.index.filters.toLabel"),
+            clear: t("orders.index.filters.clear"),
+            count: t("orders.index.pagination.total", { count: orderPage.total }),
+          }}
+        />
+      ) : null}
 
       {personFilter && filteredPersonName ? (
         <p className="mt-4 text-sm text-muted">
@@ -525,7 +555,7 @@ export default async function OrdersIndexPage({
         </p>
       ) : null}
 
-      {/* The departure is not a field in the grid above — it is a filter that
+      {/* The departure is not a control in the toolbar — it is a filter that
           arrives from a link — so this line is the only thing on screen that
           says the list is narrowed to one boat, and the only way back to the
           boat itself. Dropping the filter is "Clear filters", as it is for
@@ -542,7 +572,7 @@ export default async function OrdersIndexPage({
         </p>
       ) : null}
 
-      {rows.length === 0 && (hasFilters || !hasImportedHistory) ? (
+      {days.length === 0 && (hasFilters || !hasImportedHistory) ? (
         // The same fork the header makes (Loop 3): with no orders on file the
         // one thing that moves a shop forward is either sending the first one
         // or connecting the account that can. Filtered-to-nothing is a
@@ -558,7 +588,7 @@ export default async function OrdersIndexPage({
           action={
             hasFilters ? (
               <Link
-                href={`/shop/${shopSlug}/orders`}
+                href={clearHref}
                 scroll={false}
                 className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
               >
@@ -581,201 +611,142 @@ export default async function OrdersIndexPage({
           }
           className="mt-8"
         />
-      ) : rows.length > 0 ? (
-        <Table shellClassName="mt-6">
-          <THead>
-            <Th>{t("orders.index.table.diver")}</Th>
-            <Th hideBelow="sm">{t("orders.index.table.trip")}</Th>
-            {/* Below sm the status folds under the diver's name (only when
-                exceptional), so Date and Amount stay on screen at 390px.
-                `width` above that: under fixed layout an unnamed column takes
-                an equal share, so a column holding one short pill was claiming
-                as much room as the diver's name.
-
-                **`12rem`, not `8rem`, and the pill is allowed to wrap.** The
-                English words this column holds are one short one — but Spanish
-                spells `partly_refunded` "Reembolsado en parte", 20 characters
-                plus a tone glyph, which does not fit 8rem and, against `Td`'s
-                `overflow-hidden` and a `whitespace-nowrap` pill, was *clipped*
-                rather than wrapped. A status a shop cannot read is a worse
-                outcome than the two-line pill this change was tidying up, so
-                the floor is set by the longest localized label and wrapping
-                stays available underneath it as the thing that never truncates
-                (CodeRabbit on PR #1024). */}
-            <Th hideBelow="sm" width="12rem">
-              {t("orders.index.table.status")}
-            </Th>
-            <Th>{t("orders.index.table.date")}</Th>
-            <Th numeric>{t("orders.index.table.amount")}</Th>
-          </THead>
-          <TBody>
-            {rows.map((row) => {
-              // Paid is the expected state and renders as quiet muted text;
-              // only the exceptional statuses earn a badge (principle 9). That
-              // is this page's call, made here — `ORDER_STATUS_TONES` still
-              // knows paid is `success`, because the two surfaces that do show
-              // it need that, and a hole in the map would have made it grey
-              // there instead of absent here.
-              const statusBadge =
-                row.order.status === "paid" ? null : (
-                  <Badge tone={ORDER_STATUS_TONES[row.order.status] ?? "neutral"}>
-                    {ORDER_STATUS_KEYS[row.order.status]
-                      ? t(ORDER_STATUS_KEYS[row.order.status])
-                      : row.order.status}
-                  </Badge>
-                );
-              return (
-                <Tr key={row.order.id}>
-                  <Td align="middle">
-                    <RowLink
-                      href={`/shop/${shopSlug}/orders/${row.order.id}`}
-                      className="text-base font-medium text-foreground hover:text-primary hover:underline sm:text-sm"
-                    >
-                      {row.person.fullName}
-                    </RowLink>
-                    <div className="text-base text-muted sm:hidden">
-                      {row.trip?.title ?? row.order.description ?? ""}
-                    </div>
-                    {statusBadge ? <div className="mt-1 sm:hidden">{statusBadge}</div> : null}
-                  </Td>
-                  <Td muted hideBelow="sm" align="middle" className="text-base sm:text-sm">
-                    {row.trip?.title ?? row.order.description ?? "—"}
-                  </Td>
-                  {/* Settled rows leave the cell empty — "Paid" on 45 of 50
-                      rows is the expected state formatted as information, so
-                      a marker appears only where a staffer is needed. */}
-                  <Td hideBelow="sm" align="middle">
-                    {statusBadge}
-                  </Td>
-                  <Td muted align="middle" className="whitespace-nowrap tabular-nums">
-                    {formatShortDate(row.order.createdAt, locale, shop.timezone)}
-                  </Td>
-                  <Td numeric align="middle" className="text-base sm:text-sm">
-                    {formatMoneyCents(row.order.totalCents, row.order.currency, locale)}
-                  </Td>
-                </Tr>
-              );
-            })}
-          </TBody>
-        </Table>
+      ) : days.length > 0 ? (
+        <OrdersLedger days={days} className="mt-8" />
       ) : null}
 
+      {/* No `total` here: the toolbar already states how many orders the filter
+          found, and a shared fact said twice on one screen is the repetition
+          this recomposition is about. */}
       <Pager
         page={orderPage.page}
         pageCount={orderPage.pageCount}
         href={(target) => hrefWith({ page: target })}
-        total={t("orders.index.pagination.total", { count: orderPage.total })}
         t={t}
-        className="mt-4"
+        className="mt-8"
       />
 
+      {/* One disclosure row at the foot, where a second full table and a second
+          pager used to stand permanently open (decision 7). It is history from
+          another system: worth keeping findable, never worth a third of the
+          money screen. Open already when a reader has paged into it, so paging
+          does not fold it back up. */}
       {hasImportedHistory && importedHistoryPage ? (
         <section aria-label={t("orders.index.importedHistory.sectionLabel")} className="mt-10">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold">{t("orders.index.importedHistory.heading")}</h2>
-              <p className="mt-1 max-w-3xl text-sm text-muted">
-                {t("orders.index.importedHistory.detail")}
-              </p>
-            </div>
-            <Badge tone="warning">{t("orders.index.importedHistory.unverified")}</Badge>
-          </div>
-          <Table shellClassName="mt-4">
-            <THead>
-              <Th>{t("orders.index.table.diver")}</Th>
-              <Th hideBelow="sm">{t("orders.index.importedHistory.table.source")}</Th>
-              <Th hideBelow="sm">{t("orders.index.importedHistory.table.status")}</Th>
-              <Th>{t("orders.index.table.date")}</Th>
-              <Th numeric>{t("orders.index.table.amount")}</Th>
-            </THead>
-            <TBody>
-              {importedHistoryPage.rows.map(({ history, person }) => {
-                const receiptDocumentUrl = safeImportedDocumentUrl(history.receiptDocumentUrl);
-                return (
-                  <Tr key={history.id}>
-                    <Td align="middle">
-                      <RowLink
-                        href={`/shop/${shopSlug}/divers/${person.id}`}
-                        className="text-base font-medium text-foreground hover:text-primary hover:underline sm:text-sm"
-                      >
-                        {person.fullName}
-                      </RowLink>
-                      <div className="mt-1 text-base text-muted sm:hidden">
-                        {history.title ?? history.sourceReference ?? "—"}
-                      </div>
-                    </Td>
-                    {/* Three things, where there were five.
-                        `Unverified import` was on every row of this table and
-                        again under every diver's name on a phone — a badge
-                        stating the one fact the section's own heading badge
-                        already states about all of it, repeated once per row
-                        down a warning-toned column. And the receipt was two
-                        items, a reference and a link to the same document; they
-                        are now one link wearing the reference as its name, so a
-                        row carrying every field is a title, a source, and a
-                        receipt rather than a paragraph in a cell. */}
-                    <Td muted hideBelow="sm" align="middle">
-                      <div className="text-base sm:text-sm">
-                        {history.title ?? history.sourceReference ?? "—"}
-                      </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-                        {history.sourceLabel ? <span>{history.sourceLabel}</span> : null}
-                        {receiptDocumentUrl ? (
-                          <a
-                            href={receiptDocumentUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="font-medium text-primary underline underline-offset-2"
-                          >
-                            {history.receiptReference
-                              ? t("orders.index.importedHistory.receiptReference", {
-                                  reference: history.receiptReference,
-                                })
-                              : t("orders.index.importedHistory.openReceipt")}
-                          </a>
-                        ) : history.receiptReference ? (
-                          <span>
-                            {t("orders.index.importedHistory.receiptReference", {
-                              reference: history.receiptReference,
-                            })}
-                          </span>
-                        ) : null}
-                      </div>
-                    </Td>
-                    <Td hideBelow="sm" align="middle">
-                      <div>{t(IMPORTED_PAYMENT_DIRECTION_KEYS[history.direction])}</div>
-                      {history.statusLabel ? (
-                        <div className="mt-1 text-xs text-muted">{history.statusLabel}</div>
-                      ) : null}
-                      {history.stripeReference ? (
-                        <div className="mt-1 text-xs text-muted">
-                          {t("orders.index.importedHistory.stripeReference", {
-                            reference: history.stripeReference,
-                          })}
+          <LedgerGroup
+            as="h2"
+            label={t("orders.index.importedHistory.heading")}
+            folded={!importedPage}
+            meta={
+              <span className="inline-flex items-center gap-2">
+                {t("orders.index.importedHistory.pagination.total", {
+                  count: importedHistoryPage.total,
+                })}
+                <Badge tone="neutral" size="sm">
+                  {t("orders.index.importedHistory.unverified")}
+                </Badge>
+              </span>
+            }
+          >
+            {/* The explanation opens with the rows it is about, rather than
+                standing on the page above them. */}
+            <p className="mt-2 max-w-3xl text-sm text-muted">
+              {t("orders.index.importedHistory.detail")}
+            </p>
+            <Table shellClassName="mt-4">
+              <THead>
+                <Th>{t("orders.index.table.diver")}</Th>
+                <Th hideBelow="sm">{t("orders.index.importedHistory.table.source")}</Th>
+                <Th hideBelow="sm">{t("orders.index.importedHistory.table.status")}</Th>
+                <Th>{t("orders.index.table.date")}</Th>
+                <Th numeric>{t("orders.index.table.amount")}</Th>
+              </THead>
+              <TBody>
+                {importedHistoryPage.rows.map(({ history, person }) => {
+                  const receiptDocumentUrl = safeImportedDocumentUrl(history.receiptDocumentUrl);
+                  return (
+                    <Tr key={history.id}>
+                      <Td align="middle">
+                        <RowLink
+                          href={`/shop/${shopSlug}/divers/${person.id}`}
+                          className="text-base font-medium text-foreground hover:text-primary hover:underline sm:text-sm"
+                        >
+                          {person.fullName}
+                        </RowLink>
+                        <div className="mt-1 text-base text-muted sm:hidden">
+                          {history.title ?? history.sourceReference ?? "—"}
                         </div>
-                      ) : null}
-                    </Td>
-                    <Td muted align="middle" className="whitespace-nowrap tabular-nums">
-                      {formatCalendarDate(history.occurredOn, locale)}
-                    </Td>
-                    <Td numeric align="middle" className="text-base sm:text-sm">
-                      {history.amountLabel ?? t("orders.index.importedHistory.amountNotProvided")}
-                    </Td>
-                  </Tr>
-                );
-              })}
-            </TBody>
-          </Table>
-          <Pager
-            page={importedHistoryPage.page}
-            pageCount={importedHistoryPage.pageCount}
-            href={(target) => hrefWith({ importedPage: target })}
-            total={t("orders.index.importedHistory.pagination.total", {
-              count: importedHistoryPage.total,
-            })}
-            t={t}
-            className="mt-4"
-          />
+                      </Td>
+                      {/* Three things, where there were five.
+                          `Unverified import` was on every row of this table and
+                          again under every diver's name on a phone — a badge
+                          stating the one fact the disclosure's own badge
+                          already states about all of it, repeated once per row
+                          down a warning-toned column. And the receipt was two
+                          items, a reference and a link to the same document;
+                          they are now one link wearing the reference as its
+                          name, so a row carrying every field is a title, a
+                          source, and a receipt rather than a paragraph. */}
+                      <Td muted hideBelow="sm" align="middle">
+                        <div className="text-base sm:text-sm">
+                          {history.title ?? history.sourceReference ?? "—"}
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                          {history.sourceLabel ? <span>{history.sourceLabel}</span> : null}
+                          {receiptDocumentUrl ? (
+                            <a
+                              href={receiptDocumentUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-medium text-primary underline underline-offset-2"
+                            >
+                              {history.receiptReference
+                                ? t("orders.index.importedHistory.receiptReference", {
+                                    reference: history.receiptReference,
+                                  })
+                                : t("orders.index.importedHistory.openReceipt")}
+                            </a>
+                          ) : history.receiptReference ? (
+                            <span>
+                              {t("orders.index.importedHistory.receiptReference", {
+                                reference: history.receiptReference,
+                              })}
+                            </span>
+                          ) : null}
+                        </div>
+                      </Td>
+                      <Td hideBelow="sm" align="middle">
+                        <div>{t(IMPORTED_PAYMENT_DIRECTION_KEYS[history.direction])}</div>
+                        {history.statusLabel ? (
+                          <div className="mt-1 text-xs text-muted">{history.statusLabel}</div>
+                        ) : null}
+                        {history.stripeReference ? (
+                          <div className="mt-1 text-xs text-muted">
+                            {t("orders.index.importedHistory.stripeReference", {
+                              reference: history.stripeReference,
+                            })}
+                          </div>
+                        ) : null}
+                      </Td>
+                      <Td muted align="middle" className="whitespace-nowrap tabular-nums">
+                        {formatCalendarDate(history.occurredOn, locale)}
+                      </Td>
+                      <Td numeric align="middle" className="text-base sm:text-sm">
+                        {history.amountLabel ?? t("orders.index.importedHistory.amountNotProvided")}
+                      </Td>
+                    </Tr>
+                  );
+                })}
+              </TBody>
+            </Table>
+            <Pager
+              page={importedHistoryPage.page}
+              pageCount={importedHistoryPage.pageCount}
+              href={(target) => hrefWith({ importedPage: target })}
+              t={t}
+              className="mt-4"
+            />
+          </LedgerGroup>
         </section>
       ) : null}
     </main>

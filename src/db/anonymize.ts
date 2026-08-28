@@ -138,7 +138,7 @@ export type AnonymizeDiverResult =
     }
   | { ok: false; reason: AnonymizeDiverRefusal };
 
-/** Every column `summarizeDivers` already refuses to ship to the browser, plus the rest. */
+/** Every column `listDiverSummaries` already refuses to ship to the browser, plus the rest. */
 const ERASED_PERSON_COLUMNS = {
   fullName: ANONYMIZED_PERSON_NAME,
   // Must be null, not a sentinel: `people_shop_email_unique` is a partial

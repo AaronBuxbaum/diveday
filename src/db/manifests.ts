@@ -383,6 +383,31 @@ export async function listDepartureRollCallByTrip(
 }
 
 /**
+ * **One seat's own departure result**, for the diver's own page rather than a
+ * staff roster: `boarded`, `not_boarded`, or null where the crew recorded
+ * nothing at all.
+ *
+ * It exists because the thread's after-state must never assert that somebody
+ * dived on the strength of a clock (`isAfterTheDive`, src/lib/thread-steps.ts).
+ * A departure roll call is the only direct evidence DiveDay holds about who
+ * actually got on the boat, and this is the narrowest possible read of it —
+ * one booking, and only the answer, never the recorder, the note or the `seq`.
+ *
+ * Composed from the trip reader above rather than a second query, so the two
+ * cannot drift about what "the latest result" means — including its
+ * `cleared`-drops-out rule and its cancelled-booking guard.
+ */
+export async function departureRollCallForBooking(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  bookingId: string,
+): Promise<"boarded" | "not_boarded" | null> {
+  const byTrip = await listDepartureRollCallByTrip(db, shopId, [tripId]);
+  return byTrip.get(tripId)?.get(bookingId) ?? null;
+}
+
+/**
  * **The crew half of the same question**, for a caller that has to answer
  * "is this checkpoint closed" without opening the manifest.
  *

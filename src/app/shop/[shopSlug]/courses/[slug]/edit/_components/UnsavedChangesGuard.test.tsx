@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { EditorSection } from "@/components/editor/EditorSection";
 import { UnsavedChangesGuard, UnsavedChangesNote } from "./UnsavedChangesGuard";
 
 afterEach(() => {
@@ -21,7 +22,15 @@ function Editor({ subhead = "" }: { subhead?: string }) {
         <input id="subhead" name="subhead" defaultValue={subhead} />
         <label htmlFor="live">Live</label>
         <input id="live" name="live" type="checkbox" />
-        <UnsavedChangesNote unsavedLabel="Unsaved changes" restoredLabel="Put back" />
+        {/* No sections: this fixture is the guard on its own, so the note falls
+            back to the sentence it has always said. The sectioned reading is
+            the describe block at the foot of this file. */}
+        <UnsavedChangesNote
+          unsavedLabel="Unsaved changes"
+          restoredLabel="Put back"
+          sections={[]}
+          countSentences={[]}
+        />
       </form>
     </UnsavedChangesGuard>
   );
@@ -164,5 +173,68 @@ describe("UnsavedChangesGuard", () => {
     window.sessionStorage.setItem(KEY, "{ not json");
     render(<Editor subhead="Untouched" />);
     expect((screen.getByLabelText("Subhead") as HTMLInputElement).value).toBe("Untouched");
+  });
+});
+
+const SECTIONS = [
+  { id: "pitch", unsavedSentence: "Unsaved changes in The pitch" },
+  { id: "pricing", unsavedSentence: "Unsaved changes in Pricing" },
+];
+const COUNTS = ["Unsaved changes in 1 section", "Unsaved changes in 2 sections"];
+
+function SectionedEditor() {
+  return (
+    <UnsavedChangesGuard storageKey={KEY}>
+      <form>
+        <EditorSection id="pitch" label="The pitch">
+          <label htmlFor="subhead">Subhead</label>
+          <input id="subhead" name="subhead" defaultValue="" />
+        </EditorSection>
+        <EditorSection id="pricing" label="Pricing">
+          <label htmlFor="price">Price</label>
+          <input id="price" name="price" defaultValue="" />
+        </EditorSection>
+        <UnsavedChangesNote
+          unsavedLabel="Unsaved changes"
+          restoredLabel="Put back"
+          sections={SECTIONS}
+          countSentences={COUNTS}
+        />
+      </form>
+    </UnsavedChangesGuard>
+  );
+}
+
+/**
+ * ADR 20260827-the-shops-shelves, decision 2: on a form this tall the one Save
+ * has to name the section it would be saving. "Unsaved changes" was true and
+ * useless — the section it meant was four screens away.
+ */
+describe("UnsavedChangesNote on a sectioned editor", () => {
+  it("names the one section that holds the edit, then counts them", () => {
+    render(<SectionedEditor />);
+    expect(screen.queryByText(/^Unsaved changes/)).toBeNull();
+
+    fireEvent.input(screen.getByLabelText("Price"), { target: { value: "595" } });
+    expect(screen.getByText("Unsaved changes in Pricing")).toBeInTheDocument();
+
+    fireEvent.input(screen.getByLabelText("Subhead"), { target: { value: "Three days" } });
+    expect(screen.getByText("Unsaved changes in 2 sections")).toBeInTheDocument();
+  });
+
+  /**
+   * `restore()` writes into the boxes and dispatches `input` on each, so a
+   * restored draft looks exactly like typing to the section tracker. The
+   * restored sentence still wins: "these are your own words, put back" is the
+   * fact the writer has no other way to learn.
+   */
+  it("still says a draft was put back, rather than naming the sections it filled", () => {
+    window.sessionStorage.setItem(
+      KEY,
+      JSON.stringify([{ name: "subhead", index: 0, value: "Rewritten", checked: false }]),
+    );
+    render(<SectionedEditor />);
+    expect(screen.getByText("Put back")).toBeInTheDocument();
+    expect(screen.queryByText("Unsaved changes in The pitch")).toBeNull();
   });
 });

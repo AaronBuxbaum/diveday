@@ -391,6 +391,16 @@ export type DiverNotice = FormNotice & {
    */
   code?: string;
   field?: string;
+  /**
+   * Which card's box the refusal belongs on, when the code names a box at all.
+   *
+   * A diver can hold more than one self-declared card, and `field` alone says
+   * only *which kind* of box — so `card-number-implausible` opened every
+   * sighting disclosure on the record and printed the same red sentence under
+   * each, including the ones nobody had typed in. The action carries the id it
+   * refused (`?card=`), and the group compares.
+   */
+  cardId?: string;
   silent?: true;
 };
 
@@ -405,6 +415,7 @@ export function resolveDiverNotice({
   notice,
   form,
   gate,
+  card,
   personId,
   locale,
 }: {
@@ -426,6 +437,8 @@ export function resolveDiverNotice({
    * because a repeated `?gate=` really delivers one.
    */
   gate?: string | string[];
+  /** The card the refusal is about, for a code that names a box (`?card=`). */
+  card?: string;
   /**
    * This record's own person id, from the path. The gate signature is bound to
    * it — this landing URL carries no departure at all, so the diver is the one
@@ -452,6 +465,9 @@ export function resolveDiverNotice({
     code: notice,
     link: notice === undefined ? undefined : NOTICE_LINKS[notice],
     field: banner.field,
+    // Only ever paired with a `field`: an id on a notice that names no box has
+    // nothing to compare against and would read as one that does.
+    cardId: banner.field ? card : undefined,
     silent: banner.silent,
   };
 }

@@ -77,16 +77,19 @@ test("the demo keeps its synthetic medical-review training hold on a future trip
   await expect(diver.getByText("Medical review", { exact: true })).toBeVisible();
   await expect(diver.getByText("Follow up before boarding")).toBeVisible();
   await diver.getByRole("link", { name: "View signed record" }).click();
-  const record = page.locator('li[id^="waiver-record-"]').filter({ hasText: "Morgan Vale" });
+  const record = page.locator('details[id^="waiver-record-"]').filter({ hasText: "Morgan Vale" });
   // Exactly one, and that is the assertion, not an incidental `toBeVisible`.
-  // The signature log pins the `?record=` row above the paginated list, and
-  // the list used to render it a second time whenever it also fell on the
-  // visible page — two `<li>`s sharing one DOM id. Which page it lands on is
-  // decided by a random-UUID tiebreak among rows that share a signing
-  // timestamp, so this test lost that coin toss rather than catching a change.
+  // The signature log renders the `?record=` row first inside its own day
+  // group, and the page's own rows used to render it a second time whenever it
+  // also fell on the visible page — two elements sharing one DOM id. Which
+  // page it lands on is decided by a random-UUID tiebreak among rows that
+  // share a signing timestamp, so this test lost that coin toss rather than
+  // catching a change.
   await expect(record).toHaveCount(1);
   await expect(record).toBeVisible();
-  await expect(record.getByText("View flagged answers")).toHaveCount(0);
+  // The demo's hold is synthetic: the record itself carries no flagged answer,
+  // so the row wears no medical badge.
+  await expect(record.getByText("Medical follow-up flagged")).toHaveCount(0);
 });
 
 test("one waiver button sends a resumable link and a medical yes surfaces follow-up", async ({
@@ -217,6 +220,13 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   await expect(page.getByRole("link", { name: /left before you sail/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Your scheduled dive sites" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Molasses Reef" })).toBeVisible();
+  // The rail closes at two, not three. This record is signed and its medical
+  // side is open — a settled check beside "Medical" here is the product ticking
+  // its own blocking state, three lines under the sentence saying a doctor must
+  // confirm in writing (glossary, **Waiver / release**), and the diver who
+  // reads the last thing on the page is the one who never chases the sign-off
+  // and turns up at the dock unboardable.
+  await expect(page.getByTestId("waiver-step-rail")).toContainText("2 of 3 done");
 
   // Back on the roster, the single button now reports the completed-but-flagged
   // state, and the medical answer is spelled out for staff follow-up.
@@ -226,24 +236,24 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
 
   // The roster's follow-up notice links straight to the signed-record
   // evidence (task 155) — closing the loop between signature chasing here and
-  // the Signatures tab, rather than leaving them as unconnected surfaces. It
+  // the signature log, rather than leaving them as unconnected surfaces. It
   // carries the record's id as `?record=` (resolved through
-  // `getSignedWaiverRecordForShop`, pinned above the paginated list) rather
-  // than a bare URL anchor into the list, so it still resolves on a shop with
-  // enough signed history that the record falls off the list's first page.
+  // `getSignedWaiverRecordForShop`) rather than a bare URL anchor into the
+  // list, so it still resolves on a shop with enough signed history that the
+  // record falls off the log's first page.
   await diverSection.getByRole("link", { name: "View signed record" }).click();
-  await page.waitForURL(/\/waivers\/signatures\?record=/);
-  await expect(
-    page.getByRole("heading", { level: 2, name: "Signed record", exact: true }),
-  ).toBeVisible();
-  const recordRow = page.locator(`li[id^="waiver-record-"]`).filter({ visible: true }).first();
-  await expect(recordRow.getByText("Priya Sharma")).toBeVisible();
+  await page.waitForURL(/\/waivers\?record=/);
+  const recordRow = page
+    .locator('details[id^="waiver-record-"]')
+    .filter({ hasText: "Priya Sharma" });
   await expect(recordRow.getByText("Medical follow-up flagged")).toBeVisible();
-  // The list itself never shows the flagged prompt text — it sits behind the
-  // per-record disclosure, mirroring the roster's own gating.
-  await expect(page.getByText("I struggle to perform moderate exercise")).not.toBeVisible();
-  await recordRow.getByText("View flagged answers").click();
+  // The row the URL named opens itself — reading it is why the reviewer
+  // followed the link — and it is the *only* one that does. Every other row's
+  // answers stay behind its own disclosure, which is the gate that matters:
+  // the log at rest never renders a medical answer (ADR
+  // 20260827-people-not-lists, decision 4).
   await expect(recordRow.getByText("I struggle to perform moderate exercise")).toBeVisible();
+  await expect(page.locator('details[id^="waiver-record-"][open]')).toHaveCount(1);
 });
 
 test("the medical questionnaire refuses to complete with an unanswered question, even past client validation", async ({
@@ -306,7 +316,11 @@ test("a waiver signed under someone else's name is refused, and the link stays s
 
   await page.getByLabel("Type your full name").fill("Someone Else Entirely");
   await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
-  for (const radio of await page.getByRole("radio", { name: "No" }).all()) {
+  // The medical questions are the form's substance: a run that ticked none of
+  // them and submitted anyway would be testing the wrong refusal.
+  const medicalNo = page.getByRole("radio", { name: "No" });
+  await expect(medicalNo).not.toHaveCount(0);
+  for (const radio of await medicalNo.all()) {
     await radio.check();
   }
   await page.getByRole("button", { name: "Sign waiver" }).click();
@@ -367,7 +381,11 @@ test("an incomplete sign submit is blocked client-side and focuses the missing f
   // signature name blank — the browser's own `required`/`minLength`
   // validation should block the submit before it ever reaches the server.
   await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
-  for (const radio of await page.getByRole("radio", { name: "No" }).all()) {
+  // The medical questions are the form's substance: a run that ticked none of
+  // them and submitted anyway would be testing the wrong refusal.
+  const medicalNo = page.getByRole("radio", { name: "No" });
+  await expect(medicalNo).not.toHaveCount(0);
+  for (const radio of await medicalNo.all()) {
     await radio.check();
   }
   await page.getByRole("button", { name: "Sign waiver" }).click();
@@ -433,6 +451,121 @@ test("saving a draft preserves partial conditional questionnaire answers", async
 });
 
 /**
+ * **The waiver paces itself** — ADR 20260827-the-divers-thread, decision 5.
+ *
+ * The counting rule, walked end to end on the real page: fresh draft 0 of 3,
+ * any medical answer 1 of 3, all answered 2 of 3, and 3 of 3 only once
+ * `completeWaiver` has taken the signature. The rule itself is pinned without a
+ * browser in `src/app/waivers/[token]/WaiverStepRail.test.tsx`; what only this
+ * can prove is that the live count is wired to the diver's own radios.
+ */
+test("the step rail paces the waiver and reaches 3 of 3 only once it is signed", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, TRIP);
+  await openTripTab(page, "Guests");
+  const waiverHref = await sendWaiverForFirstDiver(page);
+
+  await page.goto(waiverHref ?? "/");
+  const rail = page.getByTestId("waiver-step-rail");
+  // Release · Medical · Sign, each named in words beside a mark that differs by
+  // shape as well as ink — the rail is readable with no colour perception.
+  for (const step of ["Release", "Medical", "Sign"]) {
+    await expect(rail.getByText(step, { exact: true })).toBeVisible();
+  }
+  await expect(rail).toContainText("0 of 3 done");
+  // Not a navigator on first pass: nothing here lets a diver tap past the
+  // release to the signature.
+  await expect(rail.getByRole("link")).toHaveCount(0);
+
+  const noRadios = page.getByRole("radio", { name: "No" });
+  const questionCount = await noRadios.count();
+  // Release settles on the first medical answer, and only then: the release has
+  // no "I have read this" control of its own — presenting the full text is what
+  // typed consent means here — so moving into the questions is the evidence.
+  await noRadios.first().check();
+  await expect(rail).toContainText("1 of 3 done");
+
+  for (let i = 1; i < questionCount; i++) {
+    await noRadios.nth(i).check();
+  }
+  await expect(rail).toContainText("2 of 3 done");
+
+  // And it stops there. A typed name and a ticked box are not a signature, so
+  // the page a diver is still filling in can never read 3 of 3.
+  await page.getByLabel("Type your full name").fill("Priya Sharma");
+  await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
+  await expect(rail).toContainText("2 of 3 done");
+
+  // One primary. Saving is still a real submit on the same form — the
+  // affordance demoted to a text link, the mechanism did not — so a diver with
+  // no JavaScript keeps the answers they came back to finish.
+  await expect(page.getByRole("button", { name: "Save and finish later" })).toBeVisible();
+  await page.getByRole("button", { name: "Sign waiver" }).click();
+  await expect(page).toHaveURL(/\/ready\//);
+
+  await page.goto(waiverHref ?? "/");
+  await expect(page.getByTestId("waiver-step-rail")).toContainText("3 of 3 done");
+});
+
+/**
+ * **An honest yes re-opens the medical step** — the case the rail spec above
+ * misses by construction, because answering "No" to everything opens no Box at
+ * all, and the 2026-08-28 review found it.
+ *
+ * "I am over 45 years of age" is the most ordinary yes on a dive boat and it
+ * puts Box B's four required questions on the page. The page-one list is
+ * complete at that moment and the *form* is not, so a rail that settled Medical
+ * on the ratio alone would tick the section done directly above the outcome
+ * line saying "answer those and you're done" — and over a submit the server is
+ * about to refuse, which is the one path that can lose a diver's answers.
+ */
+test("a Box a diver's own yes opens keeps the rail's Medical step open", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, TRIP);
+  await openTripTab(page, "Guests");
+  const waiverHref = await sendWaiverForFirstDiver(page);
+
+  await page.goto(waiverHref ?? "/");
+  const rail = page.getByTestId("waiver-step-rail");
+  const noRadios = page.getByRole("radio", { name: "No" });
+  const pageOneCount = await noRadios.count();
+  for (let i = 0; i < pageOneCount; i++) {
+    await noRadios.nth(i).check();
+  }
+  await expect(rail).toContainText("2 of 3 done");
+
+  // One answer changed, and four required questions arrive with it.
+  const over45 = page.getByRole("group", { name: /I am over 45 years of age/ });
+  await over45.getByRole("radio", { name: "Yes" }).check();
+  await expect(rail).toContainText("1 of 3 done");
+  await expect(
+    page.getByText("Your answers opened a few follow-up questions above", { exact: false }),
+  ).toBeVisible();
+  // The *counter* keeps the page-one denominator through all of it: one that
+  // grows when you answer honestly punishes honesty, and it was the settle
+  // mark, not the ratio, that owed the diver an answer here.
+  const counter = page.getByText(`${pageOneCount} of ${pageOneCount} answered`);
+  await expect(counter).toBeVisible();
+
+  // The Box is the section its heading opens. `filter({ has })` also matches
+  // the questionnaire section wrapping it, and the Box is the inner of the two.
+  const boxB = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: /BOX B/ }) })
+    .last();
+  const boxNoRadios = boxB.getByRole("radio", { name: "No" });
+  const boxCount = await boxNoRadios.count();
+  expect(boxCount).toBeGreaterThan(0);
+  for (let i = 0; i < boxCount; i++) {
+    await boxNoRadios.nth(i).check();
+  }
+  await expect(rail).toContainText("2 of 3 done");
+  await expect(counter).toBeVisible();
+});
+
+/**
  * The third door onto "signed on paper", and the one that is about the person
  * rather than a departure: a diver phones ahead, or hands the release over at
  * the desk days before their boat, and the record is where the staffer already
@@ -447,7 +580,7 @@ test("a paper release is recorded from the diver's own record, not just from a d
   // The demo roster is well past one page and sorted alphabetically — search
   // for her rather than assume she is on the unfiltered first page.
   await page.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
-  await page.getByRole("row").filter({ hasText: "Priya Sharma" }).getByText("PS").click();
+  await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Priya Sharma", level: 1 })).toBeVisible();
   // The Waiver group leads with where the release stands; the four routes to a
   // signature are its one row's actions, disclosed together as peers rather
@@ -551,54 +684,50 @@ test("a diver without a booking can receive an independent waiver from their rec
 test("staff edit the single shop waiver and each edit is kept as a version", async ({ page }) => {
   await page.goto("/shop/blue-mantis/waivers");
 
-  const release = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Release text" }) })
-    .filter({ visible: true });
-
-  // The current version is shown, and the release text is directly editable.
-  // The demo shop ships with two superseded wordings already on file
-  // (src/db/seed-waiver-versions.ts), the way a trading shop's paperwork looks,
-  // so its live release is version 3 rather than a bare version 1.
-  await expect(release.getByText("Version 3")).toBeVisible();
+  // The current version is shown under the title, and the release text is
+  // directly editable. The demo shop ships with two superseded wordings
+  // already on file (src/db/seed-waiver-versions.ts), the way a trading shop's
+  // paperwork looks, so its live release is version 3 rather than a bare
+  // version 1.
+  await expect(page.getByText(/Version 3 ·/)).toBeVisible();
 
   // Editing pre-fills the current text and saves a new version rather than
   // mutating the one divers may already have signed. Title is immutable.
-  // By role, not by label: the section is a `SectionCard` titled "Release text",
-  // which derives its own `aria-labelledby` from that title, so the accessible
-  // name is carried by both the region and the textarea inside it. `getByLabel`
-  // matches both and trips strict mode. The box is what this test means.
   const releaseTextarea = page.getByRole("textbox", { name: "Release text" });
   await expect(releaseTextarea).toHaveValue(/scuba diving/);
   await releaseTextarea.fill(
     "Revised release: I accept the inherent risks of boat charters and open-water diving for this trip.",
   );
-  // Two taps, because the demo shop holds signed releases against version 3 and
-  // publishing a version puts every one of them back in the queue. The count in
-  // front of the staffer is the point: it used to be a one-tap "Saved" (issue
-  // #720).
-  await page.getByRole("button", { name: "Publish — signatures need renewing" }).click();
-  // **The consequence, in sentence one.** "Replaces the release" is a statement
-  // about a document and says nothing about a signature ceasing to count; the
-  // second sentence then partitions the group, so a manager could read "11 need
-  // chasing, the other 801 are fine". "every one of them" forecloses that, and
-  // it is the only text read before an act with no undo (`dive-domain-expert`,
-  // on issue #790).
-  await expect(page.getByText(/voids the signatures of \d+ divers/)).toBeVisible();
-  await expect(page.getByText(/every one of them signs again/)).toBeVisible();
+  // **Materiality is a choice, and the cost is on the option itself.** The demo
+  // shop holds signed releases against version 3, and publishing a version
+  // puts every one of them back in the queue — so what that costs is stated on
+  // the thing being selected rather than in a message that arrives once the
+  // choice has already been made (issue #720, ADR 20260827-people-not-lists).
+  const materialOption = page.locator("label").filter({ hasText: "A material change" });
+  await expect(materialOption).toContainText(/Asks all \d+ standing signatures to sign again/);
   // **The operational half.** The lifetime number says what publishing costs;
   // this one says which boat it lands on, and it is the one that changes what
   // the shop does next (issue #790). Never larger than the whole set.
-  const confirm = page.getByText(/voids the signatures of/);
-  const [, signed] = /signatures of (\d+) divers/.exec(await confirm.innerText()) ?? [];
-  const [, soon] = /(\d+) of them board/.exec(await confirm.innerText()) ?? [];
+  const choiceText = await materialOption.innerText();
+  const [, signed] = /Asks all (\d+) standing signatures/.exec(choiceText) ?? [];
+  const [, soon] = /(\d+) divers board within/.exec(choiceText) ?? [];
   expect(Number(soon)).toBeGreaterThan(0);
   // Strictly fewer, not merely no more: the first filter keyed on the booking
   // join rather than the trip join, so the two numbers came out equal and the
-  // confirm restated the alarming number as an operational one.
+  // page restated the alarming number as an operational one.
   expect(Number(soon)).toBeLessThan(Number(signed));
 
-  await page.getByRole("button", { name: "Publish as material" }).click();
+  // Nothing has been chosen yet, so there is nothing to publish: the form is
+  // invalid and the browser refuses the submit rather than the app guessing a
+  // materiality on the shop's behalf.
+  await expect(page.getByRole("radio", { name: /A material change/ })).not.toBeChecked();
+  await expect(page.getByRole("radio", { name: /A correction/ })).not.toBeChecked();
+
+  await page.getByRole("radio", { name: /A material change/ }).check();
+  // Two taps on the material path, and only there: the second one repeats what
+  // it is about to cost.
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
+  await page.getByRole("button", { name: /Publish — \d+ sign again/ }).click();
   await expect(page.getByRole("status")).toContainText("sign again before boarding");
   // The shop now owes those divers a link, and the batch send is one tap away
   // rather than a hunt.
@@ -607,8 +736,10 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
     /\/shop\/[a-z0-9-]+$/,
   );
 
-  // The current card advances to the next version.
-  await expect(release.getByText("Version 4")).toBeVisible();
+  // The page advances to the next version — and with nothing signed against
+  // it yet there is no longer a choice to make, so Publish stands alone.
+  await expect(page.getByText(/Version 4 ·/)).toBeVisible();
+  await expect(page.getByRole("radio", { name: /A material change/ })).toHaveCount(0);
 });
 
 /**
@@ -639,20 +770,18 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
 test("saving the release unchanged publishes nothing and says so", async ({ page }) => {
   await page.goto("/shop/blue-mantis/waivers");
 
-  const release = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Release text" }) })
-    .filter({ visible: true });
-  await expect(release.getByText("Version 3")).toBeVisible();
+  await expect(page.getByText(/Version 3 ·/)).toBeVisible();
 
   // Not one character touched — the tap a staffer makes on the way out. The
-  // confirm still arms, because until the body is submitted nothing knows this
-  // is a no-op; what changed is what happens when it lands.
-  await page.getByRole("button", { name: "Publish — signatures need renewing" }).click();
-  await page.getByRole("button", { name: "Publish as material" }).click();
+  // choice and its confirm still work exactly as they would for a real edit,
+  // because until the body is submitted nothing knows this is a no-op; what
+  // changed is what happens when it lands.
+  await page.getByRole("radio", { name: /A material change/ }).check();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
+  await page.getByRole("button", { name: /Publish — \d+ sign again/ }).click();
 
   await expect(page.getByRole("status")).toContainText("No change");
-  await expect(release.getByText("Version 3")).toBeVisible();
+  await expect(page.getByText(/Version 3 ·/)).toBeVisible();
 });
 
 /**
@@ -667,21 +796,28 @@ test("saving the release unchanged publishes nothing and says so", async ({ page
 test("the signature audit pages both ways, and keeps a pinned record while it does", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/waivers/signatures");
+  // The old two-tab surface is one page now (ADR 20260827-people-not-lists);
+  // this starts at the retired URL deliberately, because a bookmark four pages
+  // into a shop's signed evidence is exactly the thing the 308 exists for.
+  await page.goto("/shop/blue-mantis/waivers/signatures?page=2");
+  await expect(page).toHaveURL(/\/waivers\?page=2/);
+  await page.goto("/shop/blue-mantis/waivers");
   const pager = page.getByRole("navigation", { name: "Pages" });
   // Not "skip when there's nothing to page": the demo shop's signed history is
   // well past one page, so a missing pager is the regression, not a pass.
   await expect(pager).toBeVisible();
   await expect(pager).toContainText(/Page 1 of \d+/);
 
-  const rows = page.locator('li[id^="waiver-record-"]');
-  const firstName = await rows.first().getByRole("link").first().textContent();
+  const rows = page.locator('details[id^="waiver-record-"]');
+  // Identity by the row's own id rather than by the name in it: the name is
+  // quiet text on the summary now, and two divers can share one.
+  const firstId = await rows.first().getAttribute("id");
 
   await pager.getByRole("link", { name: "Next" }).click();
   await expect(page).toHaveURL(/page=2/);
   await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
-  const secondName = await rows.first().getByRole("link").first().textContent();
-  expect(secondName).not.toBe(firstName);
+  const secondId = await rows.first().getAttribute("id");
+  expect(secondId).not.toBe(firstId);
 
   // Forward once more, then back one — page 2 again, not page 1 and not the top.
   await page.getByRole("navigation", { name: "Pages" }).getByRole("link", { name: "Next" }).click();
@@ -691,19 +827,18 @@ test("the signature audit pages both ways, and keeps a pinned record while it do
     .getByRole("link", { name: "Previous" })
     .click();
   await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
-  expect(await rows.first().getByRole("link").first().textContent()).toBe(secondName);
+  expect(await rows.first().getAttribute("id")).toBe(secondId);
 
-  // A `?record=` pin is a separate section above the list, so turning a page
+  // A `?record=` pin resolves whichever page it lives on, so turning a page
   // must not drop it — the roster's "View signed record" link is exactly how a
   // reviewer arrives here, and losing the pin mid-audit strands them.
-  const pinned = page.locator('li[id^="waiver-record-"]').first();
-  const pinnedId = (await pinned.getAttribute("id"))?.replace("waiver-record-", "");
-  await page.goto(`/shop/blue-mantis/waivers/signatures?record=${pinnedId}`);
-  const pinnedHeading = page.getByRole("heading", { level: 2, name: "Signed record", exact: true });
-  await expect(pinnedHeading).toBeVisible();
+  const pinnedId = (await rows.first().getAttribute("id"))?.replace("waiver-record-", "");
+  await page.goto(`/shop/blue-mantis/waivers?record=${pinnedId}`);
+  const pinnedRow = page.locator(`details[id="waiver-record-${pinnedId}"]`);
+  await expect(pinnedRow).toBeVisible();
   await page.getByRole("navigation", { name: "Pages" }).getByRole("link", { name: "Next" }).click();
   await expect(page).toHaveURL(/record=/);
-  await expect(pinnedHeading).toBeVisible();
+  await expect(pinnedRow).toBeVisible();
 });
 
 /**

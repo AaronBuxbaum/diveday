@@ -42,28 +42,13 @@
     "returned": "Devuelto",
     "neverPickedUp": "Nunca recogido"
   },
-  "overviewAriaLabel": "Resumen de la flota",
-  "stats": {
-    "outNow": "Fuera con buceadores",
-    "outNowDetail": "Entregado y aún sin volver",
-    "dueBack": "Por devolver",
-    "dueBackDetail": "Ventanas que terminan hoy",
-    "dueBackOverdueDetail": "{count, plural, one {# ya atrasado} other {# ya atrasados}}",
-    "serviceDue": "Mantenimiento",
-    "serviceDueDetail": "Plazos que vencen en {days, plural, one {# día} other {# días}}"
-  },
   "returns": {
-    "title": "Por devolver",
-    "description": "Todo lo que debería entrar hoy por la puerta — cierra cada una cuando vuelva.",
     "holder": "Con {name}",
     "holderWithTrip": "Con {name} · {tripTitle}",
-    "wasDue": "Debía volver el {dueOn}",
-    "dueToday": "Vuelve hoy",
     "checkOut": "Entregar",
     "checkingOut": "Entregando…",
     "markReturned": "Marcar devuelto",
-    "returning": "Marcando devuelto…",
-    "neverPickedUp": "Nunca recogido · vencía el {dueOn}"
+    "returning": "Marcando devuelto…"
   },
   "empty": {
     "heading": "Aún no hay equipo en el registro"
@@ -73,19 +58,30 @@
     "filterAriaLabel": "Filtrar por tipo",
     "filterAll": "Todo ({count})",
     "filterKind": "{label} ({count})",
-    "columns": {
-      "unit": "Unidad",
-      "size": "Talla",
-      "service": "Mantenimiento",
-      "where": "Dónde está"
-    },
     "outWith": "Con {name} · vuelve el {dueOn}",
     "overdueWith": "Con {name} · debía volver el {dueOn}",
     "reservedFor": "Reservado para {name} · desde el {from}",
     "pagination": {
       "total": "{count, plural, one {# unidad} other {# unidades}}"
     },
-    "neverPickedUp": "Reservado para {name} · nunca recogido"
+    "neverPickedUp": "Nunca recogido · {name} · vencía el {dueOn}",
+    "groups": {
+      "out": "Fuera — {count}",
+      "overdue": "Atrasado — {count}",
+      "onWall": "En la pared — {count}"
+    },
+    "outWithToday": "Con {name} · vuelve hoy",
+    "outWithTime": "Con {name} · vuelve hoy a las {time}",
+    "notCollected": "Sin recoger · reservado para {name}",
+    "serviceDue": {
+      "filter": "Mantenimiento ({count})",
+      "title": "Mantenimiento"
+    },
+    "acts": {
+      "markReturnedUnit": "Marcar devuelto — {label}",
+      "checkOutUnit": "Entregar — {label}",
+      "releaseUnit": "Liberar — {label}"
+    }
   },
   "deleted": {
     "filter": "Eliminadas ({count})",

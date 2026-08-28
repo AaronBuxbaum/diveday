@@ -302,7 +302,13 @@ test("a self-declared card cannot be certified without verified evidence", async
   // Sighted: it now reads as an ordinary certified card carrying the number the
   // staffer read off it — at the level *they* read, not the one the diver typed.
   const certified = page.locator("li").filter({ hasText: "RES-8080" }).filter({ visible: true });
-  await expect(certified).toContainText("certified");
+  // **The attribution, not a lowercase badge word.** Slice 8a's shared
+  // `CertificationCardRow` replaced "certified" with the sentence that names
+  // who sighted the card and when — which on a card-verification surface is the
+  // fact worth pinning, since the whole point of this flow is that a person
+  // looked at the plastic. Matched as a pattern so the seeded reviewer's name
+  // and the date stay the seed's business.
+  await expect(certified).toContainText(/Certified by .+ on /);
   await expect(certified).toContainText("Open Water");
   await expect(certified).not.toContainText("Rescue");
   await expect(certified).not.toContainText("Self-declared — no certification number yet");
@@ -323,76 +329,53 @@ test("a self-declared card cannot be certified without verified evidence", async
  * This is the one ⓘ a diver meets on a public page: the "why are you asking me
  * this?" beside the certification question.
  *
- * **Geometry, and pinned to one branch.** The gap is a handful of pixels either
- * way — exactly the size of difference a monochrome capture and a reviewer's
- * eye both wave through — so it is measured rather than photographed. The panel
- * legitimately flips *above* its trigger when it would not fit below, so the
- * "below" branch is fixed as the one under test rather than the assertion
- * accepting both and proving less.
+ * **It measures whichever branch ran, and controls no scroll position at all.**
+ * `place()` flips the panel *above* its trigger when it would not fit below,
+ * and this test used to pin the below branch — on the argument that an
+ * assertion accepting both would prove less. It does not. The relationship
+ * under test is that the panel hangs off the 12px glyph rather than the padded
+ * box, the padding is symmetric, so the same two comparisons hold in either
+ * direction: the gap is `panel.top - mark.bottom` below and
+ * `mark.top - panel.bottom` above, and `targetGap < markGap` — the actual
+ * regression guard — is true in both. Accepting both branches proves exactly as
+ * much and stops the test depending on how tall the document happens to be.
  *
- * **Pinning it took two goes, and the first one only looked like a pin.**
- * Setting an explicit 1280x900 viewport and centring the trigger was not
- * enough: `scrollIntoView({block: "center"})` clamps at the end of the
- * document, and this trigger sits near the foot of the page, so "centred"
- * quietly became "as low as the page will go". How much room was left beneath
- * it was then whatever the content above happened to add up to — 370px here,
- * and on CI not enough, which is the gap of -105 that went red on `main`
- * (run 33102223519). The measurement that settled it: `window.scrollY` came
- * back *equal to* the maximum scroll, so the centring had never happened at
- * all and the test had been passing on luck.
+ * **That dependency was the whole failure history**, and none of it was ever
+ * about `InfoHint`. Pinning the branch meant guaranteeing room below a trigger
+ * near the foot of a page, and every layer of the guarantee failed in turn:
+ * `scrollIntoView({block: "center"})` clamps at the end of the document, so
+ * "centred" silently became "as low as the page will go" (`spaceBelow` 370px
+ * locally, -105 on CI, run 33102223519); a viewport of trailing
+ * `padding-bottom` fixed the clamp; then `locator.hover()`'s own actionability
+ * scroll undid the centring on CI's pinned Chromium (`scrollY` 3654 → 3226,
+ * trigger bottom 900.28 in a 900px viewport, `spaceBelow` -0.28). That last one
+ * reproduced every run on one browser and passed on the other, so it read as
+ * flake — and cost a working day on the Clearwater 6b branch, where it looked
+ * like the branch's fault because the branch had changed the shell's height.
+ * Two fixes were written and pushed against a disclosure animation race that
+ * was never the cause; the disproof was an unrelated branch touching no chrome
+ * failing identically (issue #1095).
  *
- * Two things hold it now. The body gets a viewport's worth of trailing padding,
- * so the scroll is no longer clamped and the trigger genuinely lands
- * mid-viewport on any runner; and the room below is **asserted** before the gap
- * is, so losing it again fails as itself rather than as a large negative number
- * that reads like a placement bug.
+ * So: no viewport pinning, no `scrollIntoView`, no `spaceBelow` precondition,
+ * no `mouse.move` workaround. If you find yourself adding one back to make an
+ * assertion hold, the assertion is asking about the wrong thing.
  */
 test("the certification hint opens beside the mark, not beside its tap target", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/s/blue-mantis");
-  // **Make the centring real.** `scrollIntoView({block: "center"})` below is
-  // best-effort: it clamps at the end of the document, and this trigger sits
-  // near the foot of the page — so "centred" silently becomes "as low as the
-  // page will go", and how much room is left under it is whatever the content
-  // above happens to add up to. That is not a pin, it is a coincidence, and it
-  // broke on CI with a gap of -105 (the panel correctly flipping *above*,
-  // having no room below) while passing here with 370px to spare.
-  //
-  // A viewport's worth of trailing room means the scroll is no longer clamped,
-  // so the trigger really does land mid-viewport on any runner. It changes
-  // nothing the code under test reads: `place()` measures the trigger's own
-  // viewport rect, not the document's height.
-  await page.addStyleTag({ content: "body { padding-bottom: 100vh; }" });
   const dealList = page.locator("#last-minute-list");
   await dealList.locator("summary").click();
   // By its accessible name, never "the first disclosure in here" — a
   // `<summary>` and an `EditDisclosure` wear the same attributes.
   const trigger = dealList.getByRole("button", { name: "Why we ask about certification" });
   await trigger.waitFor();
-  await trigger.evaluate((el) => el.scrollIntoView({ block: "center" }));
   // Read the id *before* the hover. The panel is placed by measurement and is
   // dismissed by any scroll, so a locator action after the hover could scroll
   // the page to reach its own target and leave this measuring a gap nobody
   // would ever see.
   const panelId = await trigger.getAttribute("aria-controls");
-  // **Hovered at a point, not through the locator.** `locator.hover()` runs
-  // Playwright's actionability scroll first, and on CI's pinned Chromium that
-  // scroll undoes the centring above — measured: `scrollY` 3654 → 3226, which
-  // drops the trigger's bottom to 900.28 in a 900px viewport and leaves
-  // `spaceBelow` at -0.28. The panel then correctly flips *above*, and the
-  // assertion below fails saying there was no room, which is true and not the
-  // thing under test. It reproduces every run on that browser and passes on
-  // the fallback one, which is why it read as flake.
-  //
-  // The trigger is already centred and already visible, so there is nothing
-  // for that scroll to fix — moving the mouse to its own box centre is the
-  // same hover without it. This is the same hazard the note above `panelId`
-  // describes, one line further down than it was written for.
-  const box = await trigger.boundingBox();
-  if (!box) throw new Error("the certification hint trigger has no box to hover");
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await trigger.hover();
 
   const geometry = await page.evaluate((id) => {
     const note = document.getElementById(id);
@@ -402,29 +385,24 @@ test("the certification hint opens beside the mark, not beside its tap target", 
     const mark = glyph.getBoundingClientRect();
     const target = button.getBoundingClientRect();
     const panel = note.getBoundingClientRect();
+    // Which way `place()` went — read off the result rather than predicted from
+    // the geometry that produced it.
+    const below = panel.top >= mark.bottom;
     return {
       open: getComputedStyle(note).visibility,
-      markGap: panel.top - mark.bottom,
+      below,
+      markGap: below ? panel.top - mark.bottom : mark.top - panel.bottom,
       // What the gap would have been measured from the tap target instead —
-      // the regression this test exists for.
-      targetGap: panel.top - target.bottom,
+      // the regression this test exists for. Symmetric padding, so the same
+      // subtraction in whichever direction the panel went.
+      targetGap: below ? panel.top - target.bottom : target.top - panel.bottom,
       dx: panel.left - mark.left,
       markWidth: mark.width,
       targetWidth: target.width,
-      // The precondition, measured rather than assumed — see the assertion.
-      spaceBelow: window.innerHeight - target.bottom,
-      panelHeight: panel.height,
     };
   }, panelId ?? "");
 
   expect(geometry.open).toBe("visible");
-  // **The branch under test is the one that actually ran.** `place()` flips the
-  // panel above its trigger whenever it would not fit below, which is correct
-  // behaviour and a different measurement — so if the room ever disappears
-  // again, this fails saying *that*, instead of the gap assertions below
-  // reporting a large negative number and sending the next reader after a
-  // placement bug that is not there.
-  expect(geometry.spaceBelow).toBeGreaterThan(geometry.panelHeight + 8);
   // The mark really is the small dot and the target really is the 44px box —
   // the whole reason measuring the wrong one moved the panel.
   expect(geometry.markWidth).toBeLessThan(24);

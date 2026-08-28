@@ -109,7 +109,15 @@ export function WaiverGroup({
             the same reason: a disclosure whose panel is wider than its trigger
             belongs on a line of its own. */}
         {needsAction ? (
-          <details className="group px-5 py-3 sm:px-6">
+          <details
+            className="group px-5 py-3 sm:px-6"
+            // A refusal aimed at this group re-opens it. The notice renders
+            // below, outside the disclosure, so the staffer is told *that*
+            // something was refused — but the box they must correct is shut,
+            // and the `defaultOpen` on the attestation below cannot help while
+            // its own parent is closed. A success needs no form back.
+            open={Boolean(status) && status?.tone !== "success"}
+          >
             <summary
               id={SEND_ANCHOR}
               className={buttonClass({

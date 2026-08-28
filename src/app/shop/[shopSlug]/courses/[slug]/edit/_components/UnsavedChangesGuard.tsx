@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useDirtySections } from "@/components/editor/EditorRail";
 
 /** One control's state as the writer left it, addressed by name and position. */
 type Typed = { name: string; index: number; value: string; checked: boolean };
@@ -252,19 +253,47 @@ export function UnsavedChangesGuard({
  * nobody has saved, and that those edits were put back rather than read from
  * the row. Both are consequences the writer would otherwise have to infer.
  * Renders nothing when the form is clean.
+ *
+ * Since ADR 20260827-the-shops-shelves put this editor on a section rail, the
+ * unsaved half also **names the section**. On a form this tall, "Unsaved
+ * changes" told a writer standing over the Save button nothing they could act
+ * on — the section they changed was four screens away, and the rail is right
+ * there to take them back to it. Which sections are dirty comes from
+ * `useDirtySections`, by containment in the DOM (see `EditorRail.tsx`, whose
+ * listeners sit on the document in the capture phase precisely so the two
+ * controlled editors below can stop propagation without going unnoticed); the
+ * sentences are built on the server, because staff copy never crosses to the
+ * client as a bundle.
  */
 export function UnsavedChangesNote({
   unsavedLabel,
   restoredLabel,
+  sections,
+  countSentences,
 }: {
+  /** The fallback: dirty, but nothing that traces to a section. */
   unsavedLabel: string;
   restoredLabel: string;
+  /** Every section of the form, each with the sentence naming it as the dirty one. */
+  sections: readonly { id: string; unsavedSentence: string }[];
+  /** `countSentences[n - 1]` is the sentence for `n` dirty sections. */
+  countSentences: readonly string[];
 }) {
   const { dirty, restored } = useContext(DirtyContext);
+  // Called above the early return, and from a component that is mounted from
+  // the first paint: the listener has to be attached before the keystroke that
+  // flips `dirty`, not one render after it.
+  const dirtySections = useDirtySections(sections);
   if (!dirty) return null;
+  const named =
+    dirtySections.length === 1
+      ? sections.find((section) => section.id === dirtySections[0])?.unsavedSentence
+      : dirtySections.length > 1
+        ? countSentences[dirtySections.length - 1]
+        : undefined;
   return (
     <p className="text-sm font-medium text-muted" aria-live="polite">
-      {restored ? restoredLabel : unsavedLabel}
+      {restored ? restoredLabel : (named ?? unsavedLabel)}
     </p>
   );
 }

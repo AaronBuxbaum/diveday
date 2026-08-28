@@ -9,9 +9,12 @@ import { EmptyState } from "@/components/EmptyState";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
+import type { DayCloseoutRecord } from "@/db/closeout";
+import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS, seasonalBriefingText } from "@/i18n/today-labels";
-import { formatShortDate } from "@/lib/format";
+import type { EveningClose } from "@/lib/closeout";
+import { formatShortDate, formatTime } from "@/lib/format";
 import {
   ACTION_KIND_META,
   type DaySpine as DaySpineData,
@@ -21,6 +24,8 @@ import {
   type TodayAction,
   todaysBoatsAreClear,
 } from "@/lib/today";
+import { ClosingBlock } from "./ClosingBlock";
+import { ClosingStation } from "./ClosingStation";
 import { DayStation } from "./DayStation";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
 import {
@@ -49,10 +54,34 @@ import { WaiverSendControl } from "./WaiverSendControl";
  * - **A place a departure's facts get repeated.** The station header owns the
  *   boat; a row under it leads with the person or the chore (principle 9).
  *
- * The morning all-clear line is the one coral element this surface may render,
- * it renders at most once, and it renders nothing when untrue — the coral
- * budget's "The home, morning" row, restated in spine terms by
- * `todaysBoatsAreClear`.
+ * **The evening is a state, not a mode** (slice 6d, H-62). There is still no
+ * phase control and no second view: the stations settle one at a time as their
+ * head counts close, a settled one renders {@link ClosingStation} in its own
+ * place in clock order, and the {@link ClosingBlock} appears beneath the spine
+ * once every departure of the shop day has settled. `/close-out` is a 308 to
+ * this page; nothing about `day_closeouts` or the close act changed underneath.
+ *
+ * **Day zero is a state of this spine, never a wizard** (ADR
+ * 20260827-first-light, decision 6; slice 10d). A shop that has never had a
+ * departure gets `FirstRunChecklist`'s setup ledger as the spine's
+ * *leading group* — passed in as `firstRun`, because the page owns the five
+ * persisted reads behind it — and the spine below it is simply empty. The one
+ * thing that changes for its sake is the queue's own "nothing is waiting on
+ * you" state, which stands down: that is a claim about a roster this shop does
+ * not have yet (issue #711). It never co-renders with the quiet-day
+ * composition either, and that rule is `spineIsQuiet`'s to keep, not this
+ * file's.
+ *
+ * **One coral element, ever.** This surface has four candidates and they are
+ * resolved here, in one place, in one order: the recorded close (a panel, the
+ * moment kept), then the evening's all-boats-home line, then the shop's first
+ * booking ever, then the morning all-clear. More than one can be true at once —
+ * a day whose boats are all clear *and* all home; a first booking on Saturday
+ * while today's empty boat comes home — and the ADR's coral table allows a
+ * surface exactly one, so the later moment wins and, between two moments of the
+ * same morning, the once-in-a-shop's-life one outranks the daily one. Whichever
+ * loses renders nothing at all: a suppressed moment is not a moment drawn
+ * quietly.
  */
 
 /** Binds shopSlug + tripId server-side; the client control supplies the entry. */
@@ -232,6 +261,51 @@ function Stations({
   );
 }
 
+/**
+ * One place in the day's column of times: a departure still ahead (or in
+ * progress), or one whose evening has begun. Discriminated rather than
+ * inferred from a null, because the two halves come from two readers and the
+ * compiler is the only thing that can promise they never render twice.
+ */
+type SpineEntry =
+  | { kind: "live"; at: number; station: DayStationData }
+  | { kind: "closing"; at: number; close: EveningClose["stations"][number] };
+
+/**
+ * Everything the evening reading needs, read once by the page and handed down
+ * whole. Absent on a morning that has nothing settled — and absent is the
+ * honest default, because a spine with no closing state is exactly the spine
+ * this component rendered before 6d.
+ */
+export type EveningReading = {
+  /** The day's departures with their closing state (`src/lib/closeout.ts`). */
+  close: EveningClose;
+  /** Per trip, who made the last roll-call mark and when. Absent for a trip with none. */
+  headCountCloses: ReadonlyMap<string, { closedAt: Date; closedBy: string }>;
+  /**
+   * Per trip, that departure's recap editor — composed by the page, because
+   * the editor binds seven server actions and this component binds none.
+   */
+  recapEditors: ReadonlyMap<string, React.ReactNode>;
+  /**
+   * `canPersonExportIncidentRecord`; the log door is absent for everyone else.
+   * Read once by the page and worn by **every** departure station, live or
+   * settled — the amendment to ADR 20260804-incident-export-owner-gate is
+   * explicit that the document is offered on a boat that has not come home.
+   */
+  canOpenLog: boolean;
+  /** Today's still-open rows, already stripped of the ones the shop dismissed. */
+  leftovers: readonly TodayAction[];
+  latest: DayCloseoutRecord | null;
+  closeCount: number;
+  /**
+   * No earlier day of this shop holds a sailed departure, so tonight is the
+   * first boat that ever came home. The once-ever wording the coral table
+   * sanctions — condition-derived, self-expiring, never stored.
+   */
+  firstEver: boolean;
+};
+
 export function DaySpine({
   spine,
   shopSlug,
@@ -243,7 +317,10 @@ export function DaySpine({
   withheldCount = 0,
   inviteAction,
   showPaymentsRow = false,
+  firstRun,
+  firstBooking,
   sessions,
+  evening,
   now,
 }: {
   spine: DaySpineData;
@@ -263,8 +340,22 @@ export function DaySpine({
    * (ADR 20260827-first-light, decision 6). Gone forever at connection.
    */
   showPaymentsRow?: boolean;
+  /**
+   * The setup ledger, for a shop that has never had a departure — the spine's
+   * leading group (ADR 20260827-first-light, decision 6). Composed by the page,
+   * which owns the five persisted reads behind it.
+   */
+  firstRun?: React.ReactNode;
+  /**
+   * The shop's first booking ever, while it is still the only one
+   * (`shopFirstBooking`). Present means the moment is live; the coral
+   * resolution above decides whether it renders.
+   */
+  firstBooking?: FirstBooking | null;
   /** The instructor lens's own labeled group, above the first station. */
   sessions?: React.ReactNode;
+  /** The day's closing state. Omitted, the spine renders its morning reading alone. */
+  evening?: EveningReading;
   now: Date;
 }) {
   const t = staffTranslator(locale);
@@ -321,6 +412,36 @@ export function DaySpine({
   const jobs = spineJobCount(spine);
   const tomorrowDate = spine.tomorrow.stations[0]?.startsAt ?? null;
 
+  // **The two halves of one row of stations.** The spine's own stations come
+  // from a forward-looking reader, which drops a departure an hour after it
+  // leaves; the closing state is read backwards over the whole shop day. So a
+  // departure appears in exactly one of them, and merging by `startsAt` is
+  // what makes the day read as one column of times settling from the top
+  // rather than a board quietly emptying.
+  const liveTripIds = new Set(spine.stations.map((station) => station.tripId));
+  const liveEntries: SpineEntry[] = spine.stations.map((station) => ({
+    kind: "live",
+    at: station.startsAt.getTime(),
+    station,
+  }));
+  const closingEntries: SpineEntry[] = (evening?.close.stations ?? [])
+    .filter((close) => !liveTripIds.has(close.tripId))
+    .map((close) => ({ kind: "closing", at: close.startsAt.getTime(), close }));
+  const entries = [...liveEntries, ...closingEntries].sort((a, b) => a.at - b.at);
+
+  // The one coral element, resolved once (see this file's docblock). A
+  // recorded close is a panel inside the closing block, so every line stands
+  // down for it; the evening's own moment outranks the morning's; and between
+  // the morning's two, the shop's first booking ever outranks a day whose
+  // boats happen to be clear, because one of them happens once and the other
+  // happens on a good Tuesday.
+  const closedPanel = evening?.latest != null;
+  const allHomeLine = !closedPanel && evening?.close.allHome === true;
+  const firstBookingMark = !closedPanel && !allHomeLine && firstBooking != null;
+  const boatsClearLine =
+    !closedPanel && !allHomeLine && !firstBookingMark && todaysBoatsAreClear(spine);
+  const closing = evening?.close.closing === true;
+
   return (
     <div className="flex flex-col gap-10">
       {withheldCount > 0 ? (
@@ -329,33 +450,110 @@ export function DaySpine({
         </p>
       ) : null}
 
-      {/* The one coral element this surface may render, and only while it is
-          true (principles.md §3; the ADR's coral table, "The home, morning"). */}
-      {todaysBoatsAreClear(spine) ? (
+      {/* **The spine's leading group, on the one morning it exists.** Day zero
+          is a state of this column of work, not a wizard beside it (ADR
+          20260827-first-light, decision 6) — so the setup ledger renders here,
+          above everything, and the spine underneath it is honestly empty. */}
+      {firstRun}
+
+      {/* The coral table's two home rows, one at a time (see the docblock).
+          Each renders only while its condition holds and vanishes when it
+          passes — nothing here is stored, and nothing replays a celebration
+          the day has moved past. */}
+      {allHomeLine && evening ? (
+        <EarnedMomentLine className="-mt-4 tabular-nums">
+          {t(evening.firstEver ? "shopHome.spine.firstBoatHome" : "shopHome.spine.allHome", {
+            out: evening.close.out,
+            back: evening.close.back,
+          })}
+        </EarnedMomentLine>
+      ) : boatsClearLine ? (
         <EarnedMomentLine className="-mt-4">
           {t("shared.today.todayQueue.boatsClear")}
         </EarnedMomentLine>
       ) : null}
 
+      {/* **The first booking ever, and then never again.** The word, the coral
+          dot, and the seat itself — one row, because the moment *is* that
+          diver. Nothing here is stored and nothing acknowledges it: the second
+          booking, or the boat sailing, ends it (ADR 20260827-first-light,
+          decision 6; the coral budget's once-ever row). */}
+      {firstBookingMark && firstBooking ? (
+        <div>
+          {/* `animate={false}`: this moment is a *state* the owner arrives
+              holding, and it can hold for days — the seat is booked, the boat
+              is Saturday. Replaying the entrance on every visit until then is
+              exactly how a celebration stops meaning anything (the rule
+              `EarnedMomentLine` carries). The two lines above are today's and
+              reset with the day; this one does not. */}
+          <EarnedMomentLine animate={false} className="flex items-center gap-2">
+            <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-accent" />
+            {t("shopHome.spine.firstBooking")}
+          </EarnedMomentLine>
+          <ul className="mt-3">
+            <LedgerRow
+              size="lg"
+              href={`/shop/${shopSlug}/trips/${firstBooking.tripId}`}
+              linkLabel={firstBooking.tripTitle}
+              trailing={<DiveDayIcon name="chevron-right" className="size-4 shrink-0 text-muted" />}
+            >
+              <p className="text-base font-medium">{firstBooking.diverName}</p>
+              <p className="mt-0.5 text-sm text-muted tabular-nums">
+                {firstBooking.tripTitle} ·{" "}
+                {formatShortDate(firstBooking.startsAt, locale, timeZone)} ·{" "}
+                {formatTime(firstBooking.startsAt, locale, timeZone)}
+              </p>
+            </LedgerRow>
+          </ul>
+        </div>
+      ) : null}
+
       {sessions}
 
-      {spine.stations.length > 0 ? (
-        <Stations
-          stations={spine.stations}
-          crewedTripIds={crewed}
-          shopSlug={shopSlug}
-          locale={locale}
-          timeZone={timeZone}
-          currency={currency}
-          controls={controls}
-        />
+      {entries.length > 0 ? (
+        <ol>
+          {entries.map((entry) =>
+            entry.kind === "live" ? (
+              <DayStation
+                key={entry.station.tripId}
+                station={entry.station}
+                shopSlug={shopSlug}
+                locale={locale}
+                timeZone={timeZone}
+                currency={currency}
+                crewed={crewed.has(entry.station.tripId)}
+                // Today's live departures carry the log door too, not only the
+                // settled ones (ADR 20260804-incident-export-owner-gate's
+                // amendment). `evening` is absent only when the page has no day
+                // to close over, which is also when there is no station here.
+                canOpenLog={evening?.canOpenLog ?? false}
+                t={t}
+              >
+                <StationRows rows={entry.station.rows} controls={controls} />
+              </DayStation>
+            ) : evening ? (
+              <ClosingStation
+                key={entry.close.tripId}
+                close={entry.close}
+                headCountClose={evening.headCountCloses.get(entry.close.tripId) ?? null}
+                shopSlug={shopSlug}
+                locale={locale}
+                timeZone={timeZone}
+                canOpenLog={evening.canOpenLog}
+                t={t}
+              >
+                {evening.recapEditors.get(entry.close.tripId) ?? null}
+              </ClosingStation>
+            ) : null,
+          )}
+        </ol>
       ) : null}
 
       {/* The whole week is in order — the queue's own good-news moment, and the
           only thing that stands where the work would be. It never renders for
           a shop still in first-run: that shop has no roster to make a claim
-          about (issue #711), and its setup ledger is the page. */}
-      {jobs === 0 ? (
+          about (issue #711), and its setup ledger leads the page. */}
+      {jobs === 0 && !closing && !firstRun ? (
         <EmptyState
           titleId="queue-heading"
           title={t("shared.today.todayQueue.emptyHeading")}
@@ -401,6 +599,23 @@ export function DaySpine({
             ) : null}
           </ul>
         </LedgerGroup>
+      ) : null}
+
+      {/* **The closing block, and where it sits.** Beneath the day's own work
+          — the stations and the desk — and *above* the horizons, because the
+          spine's Tomorrow disclosure is the tomorrow band the evening ends on
+          (the Evening artboard's last row). Rendering a second one inside the
+          block would be the repetition this language exists to remove. It
+          appears only when every departure of the shop day has settled. */}
+      {closing && evening ? (
+        <ClosingBlock
+          leftovers={evening.leftovers}
+          latest={evening.latest}
+          closeCount={evening.closeCount}
+          locale={locale}
+          timeZone={timeZone}
+          t={t}
+        />
       ) : null}
 
       {/* The two horizons, collapsed. Tomorrow expands in place through the

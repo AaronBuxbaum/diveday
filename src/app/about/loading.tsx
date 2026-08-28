@@ -18,8 +18,8 @@ import { sectionCardClass } from "@/components/ui/card";
  * this file reopens that bug.
  *
  * Shaped like the body above the fold — the hero beside the captain's phone,
- * then the four checkable operating rules — so the streamed page lands where
- * the bars stood.
+ * then the four checkable operating rules and the demo/trial pair that closes
+ * them — so the streamed page lands where the bars stood.
  */
 export default function AboutLoading() {
   return (
@@ -64,6 +64,16 @@ export default function AboutLoading() {
               </div>
             ))}
           </div>
+          {/* The demo/trial pair that closes the rules band — bars at
+              `buttonClass`'s `md` height, stacking the way the pair itself
+              does, so the streamed page lands where they stood on a phone as
+              well as at desktop — and the demo note beneath them, at the one
+              bar `/product`'s hero skeleton gives the same sentence. */}
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+            <div className="h-11 w-full rounded-lg bg-surface-sunken sm:w-44" />
+            <div className="h-11 w-full rounded-lg bg-surface-sunken sm:w-36" />
+          </div>
+          <div className="mt-3 h-4 w-72 max-w-full rounded bg-surface-sunken" />
         </section>
       </main>
       <MarketingFooterFallback />

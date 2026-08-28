@@ -12,8 +12,6 @@ import {
 } from "@/lib/dive-site-landmarks";
 
 export type LandmarkEditorCopy = {
-  legend: string;
-  description: string;
   nameLabel: string;
   namePlaceholder: string;
   kindLabel: string;
@@ -68,20 +66,20 @@ export function LandmarkEditor({
     );
 
   return (
-    <fieldset className="rounded-lg border border-border p-4">
-      <legend className="px-1 text-sm font-medium">{copy.legend}</legend>
-      <p className="mt-1 text-sm text-muted">{copy.description}</p>
-
+    // No box and no legend of its own: the editor is the body of the form's
+    // "Landmarks" section, which carries the name and the sentence under it
+    // (ADR 20260827-the-shops-shelves, the long-form editor pattern).
+    <div>
       {/* The record the form posts. Always present, even when empty: clearing
           the last landmark has to be savable too. */}
       <input type="hidden" name="landmarks" value={JSON.stringify(landmarks)} />
 
       {landmarks.length === 0 ? (
-        // Nested inside the fieldset, so no icon — same shared panel the field
+        // Nested inside a section, so no icon — same shared panel the field
         // guide and the route editor wear for the same state.
-        <EmptyState title={copy.empty} icon={false} className="mt-4" />
+        <EmptyState title={copy.empty} icon={false} />
       ) : (
-        <ul className="mt-4 space-y-3">
+        <ul className="space-y-3">
           {landmarks.map((landmark, index) => (
             <li
               // Landmarks have no identity beyond their position in the list,
@@ -156,6 +154,6 @@ export function LandmarkEditor({
         </button>
         {full ? <p className="text-sm text-muted">{copy.full}</p> : null}
       </div>
-    </fieldset>
+    </div>
   );
 }

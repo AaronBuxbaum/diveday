@@ -152,6 +152,16 @@ function looksLikeCopy(raw) {
   // spans from a generic's closing bracket or a comparison to the next tag, so
   // it routinely catches type annotations and expressions.
   if (/(&&|\|\||=>|===|!==|\?\.|\$\{)/.test(value)) return false;
+  // The tail of a comparison the window opened on. `>=` and `<=` both leave the
+  // `=` as the window's first character, so `photos.length >= maxPhotos ? (`
+  // arrives here as `= maxPhotos ? (` — an expression, and one the ternary rule
+  // below misses because its `:` is past the next `<`.
+  if (value.startsWith("=")) return false;
+  // A type union. `void | Promise` is what `=> void | Promise<void>` leaves
+  // behind, and it reached the report five times from one file of server-action
+  // props. A single pipe is already excluded when doubled; a sentence a diver
+  // reads does not carry a bare one either.
+  if (/\s\|\s/.test(value)) return false;
   if (value.includes(";")) return false;
   // A ternary: `cond ? a : b`.
   if (/\s\?\s/.test(value) && /\s:\s/.test(value)) return false;

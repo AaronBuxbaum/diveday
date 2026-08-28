@@ -192,10 +192,10 @@ const FORM_ANCHORS: Record<string, string> = {
  * The record's URL carrying one form's outcome: the code, the form it belongs
  * to (`resolveDiverNotice`), and the anchor that puts that form on screen.
  */
-function backTo(base: string, notice: string, form?: string) {
+function backTo(base: string, notice: string, form?: string, card?: string) {
   // The anchor rides on the path so `noticeUrl` keeps the query ahead of it;
-  // `form` drops out of the query entirely when there is none.
-  return noticeUrl(`${base}${form ? (FORM_ANCHORS[form] ?? "") : ""}`, notice, { form });
+  // `form` and `card` drop out of the query entirely when there is none.
+  return noticeUrl(`${base}${form ? (FORM_ANCHORS[form] ?? "") : ""}`, notice, { form, card });
 }
 
 /**
@@ -526,7 +526,12 @@ export async function reviewAction(shopSlug: string, personId: string, formData:
   // Before anything is read: a number that is not a number gets its own answer,
   // on its own box. Without this the refusal below is the one that fires, and
   // it tells the staffer to do what they just did (`sightedNumberRefused`).
-  if (sightedNumberRefused(formData)) redirect(backTo(base, "card-number-implausible", "cards"));
+  // Named: a diver can hold two self-declared cards, and a refusal that says
+  // only "a card number was wrong" opens both sighting forms with the same red
+  // sentence under each — including the one nobody typed in.
+  if (sightedNumberRefused(formData)) {
+    redirect(backTo(base, "card-number-implausible", "cards", cardIdFromForm(formData)));
+  }
   const certificationId = cardIdFromForm(formData);
   // Present only on the sighting form; absent on the one-tap button, where a
   // blank parse must not turn into an empty-string "sighting".
@@ -601,7 +606,7 @@ export async function reviewSpecialtyAction(
   // The nitrox twin of the level sighting's own refusal, and it matters at
   // least as much here: this tap authorizes a gas fill.
   if (sightedNumberRefused(formData)) {
-    redirect(backTo(base, "card-number-implausible", "cards"));
+    redirect(backTo(base, "card-number-implausible", "cards", cardIdFromForm(formData)));
   }
   const certificationId = cardIdFromForm(formData);
   // One tap, the same as the level card beside it. The imported-card

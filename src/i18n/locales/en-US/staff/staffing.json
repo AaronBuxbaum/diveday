@@ -1,32 +1,30 @@
 {
   "eyebrow": "Operations",
   "title": "Staffing",
-  "description": "Assign the crew for a boat on Today.",
-  "window": {
-    "from": "From",
-    "through": "Through",
-    "show": "Show window"
+  "week": {
+    "ariaLabel": "Who's working",
+    "previous": "Previous week",
+    "next": "Next week",
+    "thisWeek": "This week",
+    "today": "Today",
+    "person": "Person",
+    "needsCrew": "Needs crew",
+    "assign": "Assign",
+    "assignAria": "Assign crew to {trip}",
+    "crewing": "Crewing",
+    "shiftAria": "Shift for {person} on {day}",
+    "empty": "Nothing scheduled this week."
   },
   "working": {
-    "heading": "Who is working",
-    "managerOnly": "Shift changes require owner or manager",
-    "notScheduled": "Not scheduled in this window.",
     "remove": "Remove",
     "removing": "Removing…",
-    "crewingHeading": "Crewing",
-    "crewingEmpty": "Not on any trip's crew in this window.",
     "rosterEmptyHeading": "No crew on the books yet",
     "rosterEmptyManagerBody": "Invite the instructors and divemasters who run your boats, then give them shifts here.",
     "rosterEmptyBody": "An owner or manager adds crew from Team settings — ask one of them to get you started.",
     "rosterEmptyAction": "Invite your crew"
   },
-  "capability": {
-    "teach": "Can teach",
-    "crew": "Can crew",
-    "captain": "Captain"
-  },
   "addShift": {
-    "heading": "Add a working shift",
+    "heading": "Add a shift",
     "person": "Staff member",
     "choosePerson": "Choose a person",
     "date": "Date",
@@ -39,9 +37,7 @@
     "saving": "Saving…"
   },
   "credentials": {
-    "heading": "Staff credentials",
-    "description": "Keep ratings, insurance, and safety credentials visible to the team. These are warning-only records, never an automatic assignment gate.",
-    "empty": "No staff credentials recorded yet.",
+    "heading": "Credentials",
     "person": "Staff member",
     "choosePerson": "Choose a person",
     "kind": "Credential type",
@@ -51,7 +47,6 @@
     "issuedAt": "Issue date",
     "renewsAt": "Renewal date",
     "renews": "renews {date}",
-    "issuerUnknown": "Issuing body not recorded",
     "pending": "Needs review",
     "verified": "Reviewed",
     "overdue": "Expired",
@@ -61,7 +56,7 @@
     "remove": "Remove",
     "removing": "Removing…",
     "saving": "Saving…",
-    "add": "Add credential",
+    "add": "Add a credential",
     "kinds": {
       "instructor_rating": "Instructor rating",
       "divemaster_rating": "Divemaster rating",
@@ -71,11 +66,6 @@
       "captains_licence": "Captain's licence",
       "other": "Other"
     }
-  },
-  "crewGaps": {
-    "needCrew": "{count, plural, one {# departure in this window still needs crew.} other {# departures in this window still need crew.}}",
-    "allCrewed": "Every departure in this window has its crew.",
-    "noDepartures": "No departures scheduled in this window."
   },
   "notice": {
     "shiftSaved": "Shift saved.",

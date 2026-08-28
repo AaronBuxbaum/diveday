@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useActionState, useLayoutEffect, useRef } from "react";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
-import { FormStatus } from "@/components/ui/form";
+import { FormStatus, StickyFormActions } from "@/components/ui/form";
 import type { DiveSiteFormError, SubmittedFormValues } from "@/lib/dive-sites";
 
 /**
@@ -65,6 +65,7 @@ export function SiteFormShell({
   action,
   errorMessages,
   savedMessage,
+  actions,
   children,
 }: {
   action: SiteFormAction;
@@ -78,6 +79,15 @@ export function SiteFormShell({
    * the length of the briefing away from the button that earned it.
    */
   savedMessage?: string;
+  /**
+   * The one Save, and the sentence naming what is unsaved. They ride the
+   * bottom of the viewport with the refusal, because this form is ten sections
+   * and some four thousand pixels tall and a button at the far end of that is
+   * a button nobody can find (ADR 20260827-the-shops-shelves, the long-form
+   * editor pattern: "one sticky Save with the unsaved-changes note, refusals
+   * landing field-side as they do today").
+   */
+  actions?: ReactNode;
   children: ReactNode;
 }) {
   // The attempt counter is what `FieldErrorFocus` is keyed on. Its effect is
@@ -103,13 +113,15 @@ export function SiteFormShell({
   }, [state]);
 
   return (
-    <form ref={formRef} action={formAction} className="mt-8 flex flex-col gap-5">
+    <form ref={formRef} action={formAction} className="flex flex-col gap-6">
       {children}
       {/* The refusal used to render *above* the form. On a twenty-field
           briefing that put it a full screen above the Save button the staffer
           had just pressed — they saw nothing happen, and scrolling back up was
-          on them. It renders at the end of the form now, immediately after the
-          submit button that is this form's last child.
+          on them. It renders beside that button now: the action row rides the
+          bottom of the viewport with Save and the unsaved-changes sentence in
+          it, because on a ten-section briefing the foot of the document is
+          nowhere (ADR 20260827-the-shops-shelves).
 
           `FormStatus` is the shared shape for that (components/ui/form.tsx),
           and it brings the ❌ glyph a danger banner carried but a bare
@@ -118,16 +130,19 @@ export function SiteFormShell({
           `tabIndex={-1}`. Between them the hand-rolled half of this component
           is gone — and the focus target picks up the brief ring the rest of the
           app's refusals already have. */}
-      {state.errorCode ? (
-        <>
-          <FormStatus tone="danger" id={REFUSAL_ID}>
-            {errorMessages[state.errorCode]}
-          </FormStatus>
-          <FieldErrorFocus key={state.attempt} field={REFUSAL_ID} />
-        </>
-      ) : savedMessage ? (
-        <FormStatus tone="success">{savedMessage}</FormStatus>
-      ) : null}
+      <StickyFormActions>
+        {actions}
+        {state.errorCode ? (
+          <>
+            <FormStatus tone="danger" id={REFUSAL_ID}>
+              {errorMessages[state.errorCode]}
+            </FormStatus>
+            <FieldErrorFocus key={state.attempt} field={REFUSAL_ID} />
+          </>
+        ) : savedMessage ? (
+          <FormStatus tone="success">{savedMessage}</FormStatus>
+        ) : null}
+      </StickyFormActions>
     </form>
   );
 }

@@ -6,7 +6,7 @@ the offending line. Read the matching section below when you want the reasoning 
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
 shape being refused.
 
-Only the 16 guards whose reasoning is not obvious from their own failure message are
+Only the 17 guards whose reasoning is not obvious from their own failure message are
 written up here. The rest say everything they need to say when they go red.
 
 This is the long-form half of one row in [AGENTS.md](../../AGENTS.md)'s command table, and it lives
@@ -83,3 +83,13 @@ The exit-curve one (`scripts/check-exit-curves.mjs`) holds every exit animation 
 ### design-canvas
 
 The design-canvas one (`scripts/check-design-canvases.mjs`) holds the mechanical half of [docs/design/design-artifacts.md](../../docs/design/design-artifacts.md), the conventions written when this repo got its first design drawn *before* the code (2026-08-27). Two silent failures are what it exists for: a canvas naming no ADR is a set of pictures nobody can hold code to — which collapses the split that whole document rests on, that pictures argue and **the ADR decides** — and the seeded canvas payload is a ~2.6 MB single file with the editor inlined, regenerable from the artboards beside it, trivially committed by accident because it is written into the same working directory as its sources. So every `docs/design/canvases/<YYYYMMDD-slug>/` needs a README carrying a status word and a link to an ADR that exists, artboards named `<Name>.dc.html` and each placed by `canvas.json`, and no file over 400 KB. It reads no artboard's contents: a picture is not checkable, which is the reason the ADR and not the canvas is normative
+
+### follow-ups, and the third outcome
+
+The follow-ups one (`scripts/check-follow-ups.mjs`) is the only guard here that makes a **network call** — `gh issue list` for every open `needs-triage` issue — and therefore the only one that can end in something other than pass or fail. It fails open by design: a commit is never blocked on GitHub's availability, which is the same refusal `pnpm check:e2e-hygiene` makes about the e2e suite.
+
+What that cost, until 2026-08-28: `check-repo.mjs` labelled a check by its exit code alone, so a guard that had skipped printed under the same `ok` header as one that had validated, and the run still ended `check:repo: all checks passed`. `gh` is not installed in the remote containers this repo is mostly developed in, so that was **every local run there** — while a malformed `needs-triage` issue filed by another session was failing this same check on CI and reddening every open pull request. Several sessions read a fully green `pnpm check` with no way to learn that the one guard which would have caught it had never run (issue #1097). It is the shape AGENTS.md already names for visual regression: a zero visual count with no baseline resolved is nothing compared, not nothing wrong.
+
+So a check has three outcomes. Exit 0 is `ok`, exit 1 is `FAILED`, and exit **2** is `SKIPPED` — its own header, the reason printed under it, and a summary line reading `all checks passed (1 skipped: follow-ups)` instead of claiming otherwise. The overall exit stays 0; nothing is blocked. Two things about that code are load-bearing: it is unreachable from any validation path in the script, so a genuine failure can never downgrade itself into a skip, and it is deliberately a **one-off for the network-dependent guard** rather than a mechanism any check may reach for — one that lets a check opt out of running is one a future check will use when it is merely slow.
+
+When you see `SKIPPED`, the inbox was not validated. Run it where `gh` exists, or read the CI log.

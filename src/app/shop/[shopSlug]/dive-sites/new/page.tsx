@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { z } from "zod";
+import { EditorRail, UnsavedSections } from "@/components/editor/EditorRail";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import {
   marineLifeCatalogEntries,
 } from "../_components/site-editor-copy";
 import { siteFormErrorMessages } from "../_components/site-form-errors";
+import { siteFormSections, siteFormUnsavedCopy } from "../_components/site-form-sections";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. Not a claim of a static shell: the staff shell layout declares
@@ -144,8 +146,14 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
     revalidateAndRedirect(back, `${back}/${site.id}`);
   }
 
+  const sections = siteFormSections(t);
+
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    // Wider from `lg` up than the 3xl it was: the rail takes a column of its
+    // own beside the form rather than out of it, so the fields keep the
+    // measure they had (ADR 20260827-the-shops-shelves, the long-form editor
+    // pattern).
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl">
       <Link href={back} className="text-sm font-medium text-primary hover:underline">
         {t("diveSites.backToLibrary")}
       </Link>
@@ -156,26 +164,33 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
           description={t("diveSites.new.description")}
         />
       </div>
-      <SiteFormShell
-        action={createAction}
-        errorMessages={siteFormErrorMessages(t, "diveSites.new.errorInvalid")}
-      >
-        <SiteFields
-          t={t}
-          depthUnit={depthUnit}
-          routeCopy={routeEditorCopy(t)}
-          landmarkCopy={landmarkEditorCopy(t)}
-          fieldGuideCopy={fieldGuideEditorCopy(t)}
-          marineLifeCatalog={marineLifeCatalogEntries(diverT)}
-          certificationDescription={t("diveSites.new.certificationDescription")}
-        />
-        <SubmitButton
-          pendingLabel={t("diveSites.form.saving")}
-          className={buttonClass({ size: "lg", className: "mt-2 self-start text-base" })}
-        >
-          {t("diveSites.new.saveSiteBriefing")}
-        </SubmitButton>
-      </SiteFormShell>
+      <div className="mt-8 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">
+        <EditorRail sections={sections} navLabel={t("diveSites.form.sectionsLabel")} />
+        <div className="min-w-0">
+          <SiteFormShell
+            action={createAction}
+            errorMessages={siteFormErrorMessages(t, "diveSites.new.errorInvalid")}
+            actions={
+              <>
+                <SubmitButton pendingLabel={t("diveSites.form.saving")} className={buttonClass()}>
+                  {t("diveSites.new.saveSiteBriefing")}
+                </SubmitButton>
+                <UnsavedSections sections={sections} copy={siteFormUnsavedCopy(t)} />
+              </>
+            }
+          >
+            <SiteFields
+              t={t}
+              depthUnit={depthUnit}
+              routeCopy={routeEditorCopy(t)}
+              landmarkCopy={landmarkEditorCopy(t)}
+              fieldGuideCopy={fieldGuideEditorCopy(t)}
+              marineLifeCatalog={marineLifeCatalogEntries(diverT)}
+              certificationDescription={t("diveSites.new.certificationDescription")}
+            />
+          </SiteFormShell>
+        </div>
+      </div>
     </main>
   );
 }

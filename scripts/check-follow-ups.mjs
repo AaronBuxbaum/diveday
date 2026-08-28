@@ -38,9 +38,27 @@ import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
  * static passes for a reason — a flaky network dependency in the commit gate is exactly the
  * class of failure this repo refuses to tolerate in e2e (`pnpm check:e2e-hygiene`) — so a
  * `gh` call that cannot complete is not a content problem and does not fail the build: it
- * prints a warning and exits 0. A `gh` call that *does* complete and returns malformed
- * content still fails, same as always.
+ * prints a warning and exits `SKIPPED_EXIT`. A `gh` call that *does* complete and returns
+ * malformed content still fails, same as always.
+ *
+ * **Failing open is not the same as passing, and the runner has to be able to tell.** Until
+ * 2026-08-28 this exited 0 on an unreachable `gh`, so `check-repo.mjs` — which labels a check
+ * by its exit code alone — printed it under the same `ok` header as a check that had actually
+ * validated something, and ended the run "all checks passed". `gh` is absent from the remote
+ * containers this repo is mostly developed in, so that was *every* local run; meanwhile a
+ * malformed `needs-triage` issue was failing this same check on CI and reddening every open
+ * pull request, and several sessions read a fully green `pnpm check` with no way to learn that
+ * the one guard which would have caught it had never run (issue #1097). Same shape as a visual
+ * run with no baseline resolved: nothing compared, not nothing wrong.
  */
+
+/**
+ * The exit code that means "this guard did not run", distinct from 0 (validated, clean) and 1
+ * (validated, found problems). Deliberately not reachable from any validation path below: a
+ * real failure that downgraded itself to a skip would be worse than the mislabelling this
+ * replaces.
+ */
+export const SKIPPED_EXIT = 2;
 
 export const LABEL = "needs-triage";
 export const WAITING_LABEL = "waiting-on-external";
@@ -246,7 +264,11 @@ export function listOpenFollowUps(root) {
 async function main() {
   const root = process.cwd();
   const issues = listOpenFollowUps(root);
-  if (issues === null) return; // fail open — see the module doc comment
+  // Fail open, but say so — see the module doc comment. The warning naming the reason has
+  // already been printed by `listIssuesByLabel`.
+  if (issues === null) {
+    process.exit(SKIPPED_EXIT);
+  }
 
   const problems = [];
   for (const issue of issues) {

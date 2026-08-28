@@ -1,4 +1,4 @@
-import { EntryDone } from "@/components/account/EntryShell";
+import { type DoorGlyphId, EntryDone } from "@/components/account/EntryShell";
 import type { Shop } from "@/db/schema";
 import type { DiverTranslator } from "@/i18n/messages";
 import { telHref } from "@/lib/contact-links";
@@ -27,19 +27,31 @@ import { telHref } from "@/lib/contact-links";
  * what the diver came for and nothing the shop hides.
  *
  * `EntryDone` is the app's one warm terminal pattern (design principle 4), and
- * `⏳` is the app-wide "this link has run out" mark — decorative, with the
- * heading carrying the meaning. `children` is where a card that can offer a
- * way forward puts it, above the contact line.
+ * the `expired` mark — a drawn clock, never a typed one (ADR
+ * 20260827-first-light, decision 2) — is what every dead link in the app
+ * wears. It is decorative; the heading carries the meaning. `children` is
+ * where a card that can offer a way forward puts it, above the contact line.
+ *
+ * **The mark is a caller's choice, because the card outgrew its name.** The
+ * shape here — a terminal statement, plus the shop to ask about it — is what a
+ * *live* link owes a diver whose booking or departure ended somewhere other
+ * than the water, and those readers must not be told their link has run out
+ * when it plainly has not. `cancelled` is the app's mark for those (the same
+ * one `/ready`'s cancelled notice wears), and it defaults to `expired` so
+ * every existing caller reads exactly as before.
  */
 export function ExpiredLinkCard({
   title,
   text,
+  glyph = "expired",
   shop,
   t,
   children,
 }: {
   title: string;
   text: string;
+  /** A drawn mark, decorative — the heading carries the meaning. */
+  glyph?: DoorGlyphId;
   shop?: Pick<Shop, "name" | "contactEmail" | "contactPhone">;
   t?: DiverTranslator;
   children?: React.ReactNode;
@@ -68,7 +80,7 @@ export function ExpiredLinkCard({
     ) : null;
   return (
     <EntryDone
-      glyph="⏳"
+      glyph={glyph}
       title={title}
       text={text}
       action={

@@ -1,55 +1,43 @@
 {
-  "eyebrow": "Ajustes",
-  "title": "Plantilla de exención",
-  "description": "Todos los buceadores firman esta misma exención.",
+  "title": "La exención",
   "banner": {
     "savedNew": "Guardado como nueva versión.",
     "savedFirst": "Tu exención está guardada.",
     "invalid": "Eso no se guardó. La exención debe tener al menos unas frases de extensión.",
+    "materialityRequired": "Eso no se publicó. Indica si es una corrección o un cambio sustancial y vuelve a publicar.",
     "unchanged": "Sin cambios: la exención está tal cual estaba, así que no se publicó nada ni se vio afectada ninguna firma.",
     "resigningSendLink": "Enviarlas por salida",
     "resigning": "{count, plural, one {Nueva versión publicada. # buceador vuelve a firmar antes de embarcar.} other {Nueva versión publicada. # buceadores vuelven a firmar antes de embarcar.}}"
   },
-  "confirm": {
-    "message": "{count, plural, one {Publicar esto anula la firma de # buceador: vuelve a firmar antes de su próxima inmersión.} other {Publicar esto anula las firmas de # buceadores: todos vuelven a firmar antes de su próxima inmersión.}}",
-    "boardingSoon": "{count, plural, one {# de ellos embarca en los próximos {days} días.} other {# de ellos embarcan en los próximos {days} días.}}",
-    "materialTrigger": "Publicar: renovar firmas",
-    "materialPublish": "Publicar como material",
-    "nonMaterialTrigger": "Publicar corrección de texto",
-    "nonMaterialMessage": "Esta versión mantiene vigentes las firmas existentes. Elige esta opción solo si el cambio no altera lo que aceptó el buceador.",
-    "nonMaterialPublish": "Publicar como no material",
-    "publish": "Publicar nueva versión",
-    "cancel": "Déjalo"
+  "publish": {
+    "choiceLegend": "Esta edición es",
+    "correction": "Una corrección: solo la redacción",
+    "correctionDetail": "Todas las firmas vigentes siguen valiendo.",
+    "material": "Un cambio sustancial",
+    "materialDetail": "{count, plural, one {Obliga a repetir # firma vigente.} other {Obliga a repetir las # firmas vigentes.}}",
+    "materialBoarding": "{count, plural, one {# buceador embarca en los próximos {days} días.} other {# buceadores embarcan en los próximos {days} días.}}",
+    "action": "Publicar",
+    "confirm": "{count, plural, one {Publicar: # vuelve a firmar} other {Publicar: # vuelven a firmar}}"
   },
   "fieldLabel": "Texto de la exención",
   "placeholder": "Escribe la exención que leerá y firmará el buceador.",
-  "pendingLabel": "Guardando…",
-  "saveNewVersion": "Guardar nueva versión",
-  "saveWaiver": "Guardar exención",
-  "releaseTextHeading": "Texto de la exención",
+  "pendingLabel": "Publicando…",
   "releaseDescription": {
-    "current": "Guardar sustituye la exención para los enlaces nuevos; las ya firmadas conservan el texto que se firmó.",
     "sample": "Este es un texto de muestra para empezar — edítalo para tu centro y haz que tu propio asesor legal lo revise."
   },
-  "versionInfo": "Versión {version} · guardado el {date}",
-  "tabs": {
-    "ariaLabel": "Secciones de la exención",
-    "template": "Plantilla",
-    "signatures": "Firmas"
-  },
+  "versionInfo": "Versión {version} · publicado el {date}",
   "signatures": {
-    "eyebrow": "Ajustes",
-    "title": "Firmas",
-    "signedRecordHeading": "Registro firmado",
     "heading": "Registros firmados",
     "noSignedRecords": "Todavía no hay registros firmados.",
     "noSignatureDate": "Sin fecha de firma",
     "noTrip": "Registro importado",
-    "integrityValid": "Integridad verificada",
+    "releaseVersion": "Versión {version} de la exención",
+    "openRecord": "Abrir la ficha del buceador",
+    "openTrip": "Abrir la salida",
     "integrityInvalid": "Integridad no coincide",
-    "integrityUnsealed": "Registro heredado sin sellar",
+    "integrityUnsealed": "Sin sellar",
     "medicalFlag": "Seguimiento médico marcado",
-    "viewFlaggedAnswers": "Ver respuestas marcadas",
+    "flaggedAnswersHeading": "Respuestas marcadas",
     "pagination": {
       "total": "{count, plural, one {# registro} other {# registros}}"
     }

@@ -1,16 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
-import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
-import { GroupLabel } from "@/components/ui/ledger";
-import { QueryForm } from "@/components/ui/QueryForm";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import type { staffCredentials } from "@/db/schema";
 import { listStaffCredentials } from "@/db/staff-credentials";
@@ -18,17 +15,21 @@ import { getStaffingView } from "@/db/staffing";
 import { listStaff } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import {
-  calendarDateInTimezone,
-  formatCalendarDate,
-  isValidCalendarDate,
-  shiftCalendarDate,
-} from "@/lib/calendar-date";
+import type { Role } from "@/lib/authz";
+import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { formatTimeRangeTz } from "@/lib/format";
+import { formatCalendarDateRange } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
-import { parseWallTime, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { staffWeek } from "@/lib/staffing-week";
+import { resolveWeekStart, shiftWeek, WEEK_PARAM, weekStartOf } from "@/lib/week-board";
+import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
+import {
+  type CredentialRow,
+  type RenewalState,
+  StaffCredentials,
+} from "./_components/StaffCredentials";
+import { type GapWords, StaffingWeek } from "./_components/StaffingWeek";
 import {
   createShiftAction,
   deleteShiftAction,
@@ -68,13 +69,16 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
 };
 
 /**
- * Everything the Add-a-shift form itself can say. It lives a long way down the
- * page, under the working list, so its outcome belongs in its own action row
- * rather than in a banner under the `<h1>`.
- * `shift-deleted` is not one of them: it comes from a per-row Remove button in
- * the working list *above*, so it keeps the banner, which is the nearer of the
- * two. `not-authorized` stays there too — a staffer without the right never
- * sees the form at all.
+ * Everything the Add-a-shift door can answer for itself. Its outcome belongs
+ * in its own action row rather than in a banner under the `<h1>` — and because
+ * the door is now a disclosure, the same set decides whether it opens on
+ * arrival: a refusal that closed the form it came from would leave the reader
+ * a red banner and nothing to correct.
+ *
+ * `shift-deleted` is not one of them: it comes from a Remove inside the week
+ * above, so it keeps the banner, which is the nearer of the two.
+ * `not-authorized` stays there too — a staffer without the right never sees
+ * the door at all.
  */
 const ADD_SHIFT_NOTICES = new Set(["shift-saved", "overlap", "staff-not-found", "invalid"]);
 
@@ -91,12 +95,38 @@ const CREDENTIAL_KIND_KEYS: Record<
   other: "staffing.credentials.kinds.other",
 };
 
+/**
+ * A person's roles, in the words Team already gave them. The roster used to
+ * render the raw enum values (`instructor · captain`) beside three derived
+ * capability pills — English leaking out of the domain layer onto a Spanish
+ * reader's screen, and the same fact stated twice. These are the seven labels
+ * the Team page shows, single-sourced.
+ */
+const ROLE_LABEL_KEYS: Record<Role, StaffMessageKey> = {
+  owner: "settings.team.roleLabels.owner",
+  manager: "settings.team.roleLabels.manager",
+  instructor: "settings.team.roleLabels.instructor",
+  divemaster: "settings.team.roleLabels.divemaster",
+  captain: "settings.team.roleLabels.captain",
+  crew: "settings.team.roleLabels.crew",
+  diver: "settings.team.roleLabels.diver",
+};
+
+/** How far ahead a renewal counts as due soon. H-59: a word, never a gate. */
+const RENEWAL_WINDOW_DAYS = 30;
+
 export default async function StaffingPage({
   params,
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ from?: string; to?: string; notice?: string }>;
+  /**
+   * `?week=` only. The old `?from=`/`?to=` window is gone — the week *is* the
+   * window now — and the two are ignored rather than refused, so an old
+   * bookmark lands on this week instead of nowhere (`FlashParams` then clears
+   * them out of the address bar).
+   */
+  searchParams: Promise<{ week?: string; notice?: string }>;
 }) {
   const { shopSlug } = await params;
   const query = await searchParams;
@@ -105,21 +135,36 @@ export default async function StaffingPage({
   // member reads dates and copy in their own language, not the shop row's.
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  // Through the clock, not `new Date()`: this default window is what the whole
-  // page renders from, so a raw wall-clock read here left the one staff surface
-  // that ignores DIVEDAY_CLOCK — the seeded shifts sit at the frozen instant
-  // while the window opened on the real today, which is both an unstable visual
-  // baseline and an e2e fixture that drifts out from under itself. In
-  // production `nowDate()` is the native call, unchanged.
+  // Through the clock, not `new Date()`, and through the *shop's* zone, not
+  // the host's: this one value decides which week the page opens on, which
+  // column is Today, and which days are already behind. A raw wall-clock read
+  // here left the one staff surface that ignored DIVEDAY_CLOCK — the seeded
+  // shifts sit at the frozen instant while the window opened on the real
+  // today, which is both an unstable visual baseline and an e2e fixture that
+  // drifts out from under itself. In production `nowDate()` is the native
+  // call, unchanged.
   const today = calendarDateInTimezone(nowDate(), shop.timezone);
-  const dueSoonThrough = new Date(`${today}T00:00:00.000Z`);
-  dueSoonThrough.setUTCDate(dueSoonThrough.getUTCDate() + 30);
-  const dueSoonThroughDate = dueSoonThrough.toISOString().slice(0, 10);
-  const fromValue = query.from && isValidCalendarDate(query.from) ? query.from : today;
-  const toValue =
-    query.to && isValidCalendarDate(query.to) ? query.to : shiftCalendarDate(fromValue, 6);
-  const fromWall = parseWallTime(fromValue, "00:00");
-  const toWall = parseWallTime(shiftCalendarDate(toValue, 1), "00:00");
+  // The same `?week=` grammar the schedule board pages by, over the same dates
+  // (`src/lib/week-board.ts`; ADR 20260827-clearwater-surface-language,
+  // decision 5). Total by construction: a malformed or missing value lands on
+  // the week the shop is in rather than refusing the page.
+  const weekStart = resolveWeekStart(query[WEEK_PARAM], today);
+  const weekEnd = shiftCalendarDate(weekStart, 6);
+  // **What the Add-a-shift form opens on: today, when the week on screen
+  // contains it.** Defaulting to `weekStart` unconditionally put a Friday
+  // afternoon's last-minute crew change — the busy-dock case this page exists
+  // for — on Monday, silently: `createStaffShift` validates only that a shift
+  // ends after it starts, so nothing refused the date, and the trip page then
+  // went on reporting that crew member as not on a shift for the coverage
+  // warning the manager believed they had just cleared. Paging to another week
+  // still opens on that week's Monday, which is the only honest answer there.
+  // Calendar dates are ISO `YYYY-MM-DD`, so the ordering is the string's.
+  const defaultShiftDate = today >= weekStart && today <= weekEnd ? today : weekStart;
+  // The week's boundaries are **shop-local midnights**, turned into instants
+  // here. On a UTC server the naive reading starts the week four or five hours
+  // early and drags the previous Sunday evening's shifts into it.
+  const fromWall = parseWallTime(weekStart, "00:00");
+  const toWall = parseWallTime(shiftCalendarDate(weekStart, 7), "00:00");
   if (!fromWall || !toWall) redirect(shopPath(shopSlug, "staffing"));
   const [view, staff, credentials] = await Promise.all([
     getStaffingView(
@@ -127,420 +172,364 @@ export default async function StaffingPage({
       shop.id,
       wallTimeToUtc(fromWall, shop.timezone),
       wallTimeToUtc(toWall, shop.timezone),
+      // The shop's own supervision target, so this week measures a departure
+      // exactly as Today's queue and the trip page do.
+      { diversPerDivemaster: shop.diversPerDivemaster },
     ),
     listStaff(db, shop.id),
     listStaffCredentials(db, shop.id),
   ]);
   const canManage = await canPersonManageStaffAccounts(db, shop.id, session.user.personId);
   const notice = noticeFromParam(query.notice, notices);
-  // The shift form answers for itself; only what is genuinely about the page
-  // (or what the form is not on screen to answer) keeps the banner.
   const onShiftForm =
     canManage && query.notice !== undefined && ADD_SHIFT_NOTICES.has(query.notice);
   const shiftStatus = onShiftForm ? notice : undefined;
   const pageNotice = onShiftForm ? undefined : notice;
-  const defaultStart = utcToWallTime(view.from, shop.timezone);
-  const defaultDate = toDateInputValue(defaultStart);
+
+  const week = staffWeek({
+    people: view.staff.map((member) => ({
+      personId: member.person.id,
+      name: member.person.fullName,
+      roles: member.roles
+        .map((role) => ROLE_LABEL_KEYS[role as Role])
+        .filter((key): key is StaffMessageKey => Boolean(key))
+        .map((key) => t(key)),
+      shifts: member.shifts.map((shift) => ({
+        id: shift.id,
+        startsAt: shift.startsAt,
+        endsAt: shift.endsAt,
+        note: shift.note,
+      })),
+      crewingTrips: member.crewingTrips,
+    })),
+    gaps: view.gapTrips,
+    weekStart,
+    timeZone: shop.timezone,
+    today,
+  });
+
+  // One vocabulary, not two: every word here already belongs to a surface that
+  // can fix the gap — Today's chip labels for the shop's own target, the trip
+  // pulse's for the agency training ratio. The staffing week owns no crew
+  // vocabulary of its own (ADR 20260806-staffing-is-the-shift-roster).
+  const gapWords: GapWords = {
+    no_instructor: t("trips.pulse.needsInstructor"),
+    over_ratio: t("trips.pulse.overRatio"),
+    uncrewed_departure: t("shared.today.actionKind.uncrewedDeparture"),
+    crew_below_target: t("shared.today.actionKind.crewBelowTarget"),
+  };
+
+  const staffingPath = shopPath(shopSlug, "staffing");
+  // **Every act carries the week it was performed in.** The page grew a week
+  // dimension and the actions did not, so building next week's roster — the
+  // ordinary Sunday-evening job — meant being thrown back to this week after
+  // every save, with the shift just added nowhere on screen and the add form's
+  // date reset under it. Bound rather than a hidden field in six forms: the
+  // week is the page's own reading of the URL, not something a submitter gets
+  // to choose, and one binding cannot drift from another.
+  const createShift = createShiftAction.bind(null, weekStart);
+  const deleteShift = deleteShiftAction.bind(null, weekStart);
+  const saveCredential = saveStaffCredentialAction.bind(null, weekStart);
+  const reviewCredential = reviewStaffCredentialAction.bind(null, weekStart);
+  const deleteCredential = deleteStaffCredentialAction.bind(null, weekStart);
+  const dueSoonThrough = shiftCalendarDate(today, RENEWAL_WINDOW_DAYS);
+  const credentialRows: CredentialRow[] = credentials.map(({ credential, person }) => {
+    const renewal: RenewalState = !credential.renewsAt
+      ? "not-recorded"
+      : credential.renewsAt < today
+        ? "overdue"
+        : credential.renewsAt <= dueSoonThrough
+          ? "due-soon"
+          : "current";
+    return {
+      id: credential.id,
+      title: `${person.fullName} · ${credential.name}`,
+      detail: [
+        credential.status === "verified"
+          ? t("staffing.credentials.verified")
+          : t("staffing.credentials.pending"),
+        t(CREDENTIAL_KIND_KEYS[credential.kind]),
+        credential.issuingBody,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      // The word is what carries the state; the ink only seconds it. A
+      // credential whose renewal is comfortably ahead says the date and
+      // nothing more, and one with no renewal recorded says nothing at all.
+      renewalWord:
+        renewal === "overdue"
+          ? t("staffing.credentials.overdue")
+          : renewal === "due-soon"
+            ? t("staffing.credentials.dueSoon")
+            : credential.renewsAt
+              ? t("staffing.credentials.renews", {
+                  date: formatCalendarDate(credential.renewsAt, locale),
+                })
+              : null,
+      renewal,
+      reviewed: credential.status === "verified",
+      reviewLabel:
+        credential.status === "verified"
+          ? t("staffing.credentials.markPending")
+          : t("staffing.credentials.markVerified"),
+    };
+  });
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      {/* `week` is a reading of the page and stays in the URL; the rest is
+          one-shot chrome, including the retired `from`/`to` an old bookmark
+          may still carry. */}
       <FlashParams params={["from", "to", "notice"]} />
-      <ShopPageHeader
-        eyebrow={t("staffing.eyebrow")}
-        title={t("staffing.title")}
-        description={t("staffing.description")}
-      />
+      <ShopPageHeader eyebrow={t("staffing.eyebrow")} title={t("staffing.title")} />
 
       {pageNotice ? (
-        <div className="mt-6">
+        <div className="mb-6">
           <ShopNotice tone={pageNotice.tone} role={noticeRole(pageNotice.tone)}>
             {t(pageNotice.key)}
           </ShopNotice>
         </div>
       ) : null}
 
-      <SectionCard as="div" padding="lg" className="mt-8">
-        {/* `QueryForm`, not a native GET form: moving the window is a filter
-            over this page, and a document reload dropped the manager back at
-            the top of it every time. */}
-        <QueryForm>
-          <FieldGrid columns={3}>
-            <Field label={t("staffing.window.from")}>
-              <input name="from" type="date" defaultValue={fromValue} className={controlClass} />
-            </Field>
-            <Field label={t("staffing.window.through")}>
-              <input name="to" type="date" defaultValue={toValue} className={controlClass} />
-            </Field>
-            <FieldActions>
-              <button type="submit" className={buttonClass({ variant: "secondary" })}>
-                {t("staffing.window.show")}
-              </button>
-            </FieldActions>
-          </FieldGrid>
-        </QueryForm>
-      </SectionCard>
-
-      {/* One line about crewing, not a table of it. Which departures still
-          need people is Today's question — it is the surface that can answer
-          it, by dragging a name onto a boat — so the roster states the count
-          and hands over. Composed from the same reader Today's own detection
-          runs on, never a second pass (ADR 20260806-staffing-is-the-shift-roster). */}
-      {/* Weight follows what there is to do (design principle 3): a gap gets a
-          card and a way out, while "all crewed" and "nothing scheduled" are
-          quiet lines — a bordered box around good news is a border the page
-          has not earned. */}
-      {view.crewGaps.needCrew > 0 ? (
-        // This is an operational warning panel, not a neutral section: the
-        // warning tone tells the manager that a departure still needs crew.
-        <section className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-5 py-4">
-          {/* 16px, not 14: this is the page's one operational message, and the
-              dock test (design principle 2) sets the floor for the text a
-              manager reads on a phone between boats.
-              No button beside it. The "Assign crew on Today" link this
-              replaces went to a permanent nav tab, which the header and the
-              phone dock already put one tap away from every page — chrome
-              restated as a call to action. The sentence names where the work
-              is done; getting there was never the hard part. */}
-          <p className="text-base font-medium text-warning">
-            {t("staffing.crewGaps.needCrew", { count: view.crewGaps.needCrew })}
-          </p>
-        </section>
+      {/* Nobody on the roster used to render as an empty grid — a heading, a
+          date range, and then nothing at all, which reads as a page that
+          failed to load. Who can fix it decides what it says: a manager gets
+          the door to Team, everyone else gets the honest "ask an owner". The
+          week and both doors stay off the page until there is a team, because
+          a shift needs somebody to give it to. */}
+      {view.staff.length === 0 ? (
+        <EmptyState
+          titleAs="h2"
+          title={t("staffing.working.rosterEmptyHeading")}
+          body={
+            canManage
+              ? t("staffing.working.rosterEmptyManagerBody")
+              : t("staffing.working.rosterEmptyBody")
+          }
+          action={
+            canManage ? (
+              <Link
+                href={shopPath(shopSlug, "settings", "team")}
+                className={buttonClass({ className: "mt-4" })}
+              >
+                {t("staffing.working.rosterEmptyAction")}
+              </Link>
+            ) : null
+          }
+        />
       ) : (
-        <p className="mt-4 text-sm text-muted">
-          {view.crewGaps.departures === 0
-            ? t("staffing.crewGaps.noDepartures")
-            : t("staffing.crewGaps.allCrewed")}
-        </p>
-      )}
-
-      <section className="mt-8" aria-labelledby="working-heading">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 id="working-heading" className="text-lg font-semibold">
-              {t("staffing.working.heading")}
-            </h2>
-            <p className="mt-1 text-sm text-muted">
-              {formatCalendarDate(fromValue, locale)} – {formatCalendarDate(toValue, locale)}
-            </p>
-          </div>
-          {canManage ? <Badge tone="neutral">{t("staffing.working.managerOnly")}</Badge> : null}
-        </div>
-        {/* Nobody on the roster used to render as an empty grid — a heading, a
-            date range, and then nothing at all, which reads as a page that
-            failed to load. Who can fix it decides what it says: a manager gets
-            the door to Team, everyone else gets the honest "ask an owner". */}
-        {view.staff.length === 0 ? (
-          <EmptyState
-            titleAs="h3"
-            title={t("staffing.working.rosterEmptyHeading")}
-            body={
-              canManage
-                ? t("staffing.working.rosterEmptyManagerBody")
-                : t("staffing.working.rosterEmptyBody")
-            }
-            action={
-              canManage ? (
-                <Link
-                  href={`/shop/${shopSlug}/settings/team`}
-                  className={buttonClass({ className: "mt-4" })}
-                >
-                  {t("staffing.working.rosterEmptyAction")}
-                </Link>
-              ) : null
-            }
-            className="mt-4"
+        <>
+          <StaffingWeek
+            week={week}
+            gapWords={gapWords}
+            locale={locale}
+            timeZone={shop.timezone}
+            shopSlug={shopSlug}
+            canManage={canManage}
+            deleteShiftAction={deleteShift}
+            links={{
+              rangeLabel: formatCalendarDateRange(weekStart, weekEnd, locale),
+              previousHref: `${staffingPath}?${WEEK_PARAM}=${shiftWeek(weekStart, -1)}`,
+              nextHref: `${staffingPath}?${WEEK_PARAM}=${shiftWeek(weekStart, 1)}`,
+              // Absent while it would only reload the week already on screen.
+              thisWeekHref: weekStart === weekStartOf(today) ? null : staffingPath,
+            }}
+            words={{
+              ariaLabel: t("staffing.week.ariaLabel"),
+              previous: t("staffing.week.previous"),
+              next: t("staffing.week.next"),
+              thisWeek: t("staffing.week.thisWeek"),
+              today: t("staffing.week.today"),
+              person: t("staffing.week.person"),
+              needsCrew: t("staffing.week.needsCrew"),
+              assign: t("staffing.week.assign"),
+              // **`t.raw`, not `t`** — both of these name an argument that only
+              // `StaffingWeek` can supply (the departure's title, the person and
+              // the day), so they cross as templates and `fill()` completes them
+              // on the client. `t()` would try to *format* them here, with the
+              // argument by definition absent (src/i18n/fill.ts).
+              assignAria: t.raw("staffing.week.assignAria"),
+              crewing: t("staffing.week.crewing"),
+              remove: t("staffing.working.remove"),
+              removing: t("staffing.working.removing"),
+              shiftAria: t.raw("staffing.week.shiftAria"),
+              empty: t("staffing.week.empty"),
+            }}
           />
-        ) : (
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            {view.staff.map((member) => (
-              <SectionCard as="article" key={member.person.id}>
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-semibold">{member.person.fullName}</h3>
-                    <p className="mt-1 text-sm text-muted">{member.roles.join(" · ")}</p>
-                  </div>
-                  <div className="flex flex-wrap justify-end gap-1.5">
-                    {member.capabilities.map((capability) => (
-                      <Badge key={capability} tone="primary">
-                        {t(`staffing.capability.${capability}`)}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-                {member.shifts.length === 0 ? (
-                  <p className="mt-4 text-sm text-warning">{t("staffing.working.notScheduled")}</p>
-                ) : (
-                  <ul className="mt-4 space-y-2 text-sm">
-                    {member.shifts.map((shift) => (
-                      <li
-                        key={shift.id}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-sunken px-3 py-2"
-                      >
-                        <span>
-                          <span className="font-medium">
-                            {formatTimeRangeTz(shift.startsAt, shift.endsAt, locale, shop.timezone)}
-                          </span>
-                          {shift.note ? (
-                            <span className="ml-2 text-muted">{shift.note}</span>
-                          ) : null}
-                        </span>
-                        {canManage ? (
-                          <form action={deleteShiftAction}>
-                            <input type="hidden" name="shiftId" value={shift.id} />
-                            <SubmitButton
-                              pendingLabel={t("staffing.working.removing")}
-                              className={buttonClass({ variant: "ghost", size: "sm" })}
-                            >
-                              {t("staffing.working.remove")}
-                            </SubmitButton>
-                          </form>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {/* The other half of the shift ↔ crew cross-link (task 165): a
-                  shift alone doesn't say which boat, if any, this person is
-                  actually on — this is where that becomes visible. */}
-                <div className="mt-3 border-t border-border pt-3">
-                  <GroupLabel>{t("staffing.working.crewingHeading")}</GroupLabel>
-                  {member.crewingTrips.length === 0 ? (
-                    <EmptyState title={t("staffing.working.crewingEmpty")} className="mt-1" />
-                  ) : (
-                    <ul className="mt-1 space-y-1 text-sm">
-                      {member.crewingTrips.map((trip) => (
-                        <li key={trip.tripId}>
-                          <Link
-                            href={`/shop/${shopSlug}/trips/${trip.tripId}#crew`}
-                            className="font-medium text-primary hover:underline"
-                          >
-                            {trip.title}
-                          </Link>{" "}
-                          <span className="text-muted">
-                            {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </SectionCard>
-            ))}
-          </div>
-        )}
-      </section>
 
-      {/* A shift needs somebody to give it to. With nobody on the roster the
-          person select has no options, so the form is a dead control — and its
-          "Add shift" primary would sit a screen below the empty state's own
-          primary ("Invite your crew"), two first-choice buttons for one
-          decision. The empty state is the whole answer until there is a team. */}
-      {canManage && staff.length > 0 ? (
-        <SectionCard className="mt-8" padding="lg" title={t("staffing.addShift.heading")}>
-          <FieldGrid as="form" action={createShiftAction} columns={2}>
-            <Field label={t("staffing.addShift.person")}>
-              <select name="personId" required className={controlClass}>
-                <option value="">{t("staffing.addShift.choosePerson")}</option>
-                {staff.map((member) => (
-                  <option key={member.person.id} value={member.person.id}>
-                    {member.person.fullName}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label={t("staffing.addShift.date")}>
-              <input
-                name="date"
-                type="date"
-                required
-                defaultValue={defaultDate}
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("staffing.addShift.starts")}>
-              <input
-                name="startTime"
-                type="time"
-                required
-                defaultValue="07:00"
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("staffing.addShift.ends")}>
-              <input
-                name="endTime"
-                type="time"
-                required
-                defaultValue="15:00"
-                className={controlClass}
-              />
-            </Field>
-            <Field label={t("staffing.addShift.note")} hint={t("staffing.addShift.noteHint")}>
-              <input
-                name="note"
-                maxLength={120}
-                className={controlClass}
-                placeholder={t("staffing.addShift.notePlaceholder")}
-              />
-            </Field>
-            <FieldActions>
-              <SubmitButton pendingLabel={t("staffing.addShift.saving")} className={buttonClass()}>
-                {t("staffing.addShift.submit")}
-              </SubmitButton>
-              <FormStatus tone={shiftStatus?.tone}>
-                {shiftStatus ? t(shiftStatus.key) : undefined}
-              </FormStatus>
-            </FieldActions>
-          </FieldGrid>
-        </SectionCard>
-      ) : null}
-
-      {canManage ? (
-        <section className="mt-8" aria-labelledby="credentials-heading">
-          <h2 id="credentials-heading" className="text-lg font-semibold">
-            {t("staffing.credentials.heading")}
-          </h2>
-          <p className="mt-1 text-sm text-muted">{t("staffing.credentials.description")}</p>
-          {credentials.length > 0 ? (
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {credentials.map(({ credential, person }) => (
-                <SectionCard as="article" key={credential.id}>
-                  {(() => {
-                    const renewalState = !credential.renewsAt
-                      ? "not-recorded"
-                      : credential.renewsAt < today
-                        ? "overdue"
-                        : credential.renewsAt <= dueSoonThroughDate
-                          ? "due-soon"
-                          : "current";
-                    return (
-                      <>
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h3 className="font-semibold">{credential.name}</h3>
-                            <p className="text-sm text-muted">
-                              {person.fullName} · {t(CREDENTIAL_KIND_KEYS[credential.kind])}
-                            </p>
-                          </div>
-                          <div className="flex flex-wrap justify-end gap-2">
-                            <Badge tone={credential.status === "verified" ? "success" : "warning"}>
-                              {credential.status === "verified"
-                                ? t("staffing.credentials.verified")
-                                : t("staffing.credentials.pending")}
-                            </Badge>
-                            {renewalState === "overdue" ? (
-                              <Badge tone="danger">{t("staffing.credentials.overdue")}</Badge>
-                            ) : renewalState === "due-soon" ? (
-                              <Badge tone="warning">{t("staffing.credentials.dueSoon")}</Badge>
-                            ) : null}
-                          </div>
-                        </div>
-                        <p className="mt-2 text-sm text-muted">
-                          {credential.issuingBody ?? t("staffing.credentials.issuerUnknown")}
-                          {credential.renewsAt
-                            ? ` · ${t("staffing.credentials.renews", { date: credential.renewsAt })}`
-                            : ""}
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <form action={reviewStaffCredentialAction}>
-                            <input type="hidden" name="credentialId" value={credential.id} />
-                            <input
-                              type="hidden"
-                              name="status"
-                              value={credential.status === "verified" ? "pending" : "verified"}
-                            />
-                            <SubmitButton
-                              pendingLabel={t("staffing.credentials.saving")}
-                              className={buttonClass({ variant: "secondary", size: "sm" })}
-                            >
-                              {credential.status === "verified"
-                                ? t("staffing.credentials.markPending")
-                                : t("staffing.credentials.markVerified")}
-                            </SubmitButton>
-                          </form>
-                          <form action={deleteStaffCredentialAction}>
-                            <input type="hidden" name="credentialId" value={credential.id} />
-                            <SubmitButton
-                              pendingLabel={t("staffing.credentials.removing")}
-                              className={buttonClass({ variant: "ghost", size: "sm" })}
-                            >
-                              {t("staffing.credentials.remove")}
-                            </SubmitButton>
-                          </form>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </SectionCard>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-4 text-sm text-muted">{t("staffing.credentials.empty")}</p>
-          )}
-          {staff.length > 0 ? (
-            <SectionCard className="mt-4" padding="lg">
-              <FieldGrid as="form" action={saveStaffCredentialAction} columns={2}>
-                <Field label={t("staffing.credentials.person")}>
+          {canManage ? (
+            <AddDoor id="add-shift" label={t("staffing.addShift.heading")} open={onShiftForm}>
+              <FieldGrid as="form" action={createShift} columns={2}>
+                <Field label={t("staffing.addShift.person")}>
                   <select name="personId" required className={controlClass}>
-                    <option value="">{t("staffing.credentials.choosePerson")}</option>
-                    {staff.map(({ person }) => (
-                      <option key={person.id} value={person.id}>
-                        {person.fullName}
+                    <option value="">{t("staffing.addShift.choosePerson")}</option>
+                    {staff.map((member) => (
+                      <option key={member.person.id} value={member.person.id}>
+                        {member.person.fullName}
                       </option>
                     ))}
                   </select>
                 </Field>
-                <Field label={t("staffing.credentials.kind")}>
-                  <select name="kind" required className={controlClass}>
-                    <option value="instructor_rating">
-                      {t("staffing.credentials.kinds.instructor_rating")}
-                    </option>
-                    <option value="divemaster_rating">
-                      {t("staffing.credentials.kinds.divemaster_rating")}
-                    </option>
-                    <option value="liability_insurance">
-                      {t("staffing.credentials.kinds.liability_insurance")}
-                    </option>
-                    <option value="first_aid_cpr">
-                      {t("staffing.credentials.kinds.first_aid_cpr")}
-                    </option>
-                    <option value="oxygen_provider">
-                      {t("staffing.credentials.kinds.oxygen_provider")}
-                    </option>
-                    <option value="captains_licence">
-                      {t("staffing.credentials.kinds.captains_licence")}
-                    </option>
-                    <option value="other">{t("staffing.credentials.kinds.other")}</option>
-                  </select>
+                <Field label={t("staffing.addShift.date")}>
+                  <input
+                    name="date"
+                    type="date"
+                    required
+                    defaultValue={defaultShiftDate}
+                    className={controlClass}
+                  />
                 </Field>
-                <Field label={t("staffing.credentials.name")}>
-                  <input name="name" required maxLength={160} className={controlClass} />
+                <Field label={t("staffing.addShift.starts")}>
+                  <input
+                    name="startTime"
+                    type="time"
+                    required
+                    defaultValue="07:00"
+                    className={controlClass}
+                  />
                 </Field>
-                <Field label={t("staffing.credentials.issuer")}>
-                  <input name="issuingBody" maxLength={160} className={controlClass} />
+                <Field label={t("staffing.addShift.ends")}>
+                  <input
+                    name="endTime"
+                    type="time"
+                    required
+                    defaultValue="15:00"
+                    className={controlClass}
+                  />
                 </Field>
-                <Field label={t("staffing.credentials.identifier")}>
-                  <input name="identifier" maxLength={120} className={controlClass} />
-                </Field>
-                <Field label={t("staffing.credentials.issuedAt")}>
-                  <input name="issuedAt" type="date" className={controlClass} />
-                </Field>
-                <Field label={t("staffing.credentials.renewsAt")}>
-                  <input name="renewsAt" type="date" className={controlClass} />
+                <Field label={t("staffing.addShift.note")} hint={t("staffing.addShift.noteHint")}>
+                  <input
+                    name="note"
+                    maxLength={120}
+                    className={controlClass}
+                    placeholder={t("staffing.addShift.notePlaceholder")}
+                  />
                 </Field>
                 <FieldActions>
                   <SubmitButton
-                    pendingLabel={t("staffing.credentials.saving")}
+                    pendingLabel={t("staffing.addShift.saving")}
                     className={buttonClass()}
                   >
-                    {t("staffing.credentials.add")}
+                    {t("staffing.addShift.submit")}
                   </SubmitButton>
+                  <FormStatus tone={shiftStatus?.tone}>
+                    {shiftStatus ? t(shiftStatus.key) : undefined}
+                  </FormStatus>
                 </FieldActions>
               </FieldGrid>
-            </SectionCard>
+            </AddDoor>
           ) : null}
-        </section>
-      ) : null}
+
+          {/* Owner/manager work, as it was before this slice — the
+              recomposition moved the furniture, not who may see it. The group
+              always carries its door, so a shop that has recorded nothing gets
+              a way in rather than the bare "nothing recorded yet" line that
+              used to stand in for a group with no members. */}
+          {canManage ? (
+            <StaffCredentials
+              label={t("staffing.credentials.heading")}
+              rows={credentialRows}
+              words={{
+                saving: t("staffing.credentials.saving"),
+                remove: t("staffing.credentials.remove"),
+                removing: t("staffing.credentials.removing"),
+              }}
+              reviewAction={reviewCredential}
+              deleteAction={deleteCredential}
+              door={
+                <AddDoor id="add-credential" as="li" label={t("staffing.credentials.add")}>
+                  <FieldGrid as="form" action={saveCredential} columns={2}>
+                    <Field label={t("staffing.credentials.person")}>
+                      <select name="personId" required className={controlClass}>
+                        <option value="">{t("staffing.credentials.choosePerson")}</option>
+                        {staff.map(({ person }) => (
+                          <option key={person.id} value={person.id}>
+                            {person.fullName}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label={t("staffing.credentials.kind")}>
+                      <select name="kind" required className={controlClass}>
+                        {Object.entries(CREDENTIAL_KIND_KEYS).map(([kind, key]) => (
+                          <option key={kind} value={kind}>
+                            {t(key)}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label={t("staffing.credentials.name")}>
+                      <input name="name" required maxLength={160} className={controlClass} />
+                    </Field>
+                    <Field label={t("staffing.credentials.issuer")}>
+                      <input name="issuingBody" maxLength={160} className={controlClass} />
+                    </Field>
+                    <Field label={t("staffing.credentials.identifier")}>
+                      <input name="identifier" maxLength={120} className={controlClass} />
+                    </Field>
+                    <Field label={t("staffing.credentials.issuedAt")}>
+                      <input name="issuedAt" type="date" className={controlClass} />
+                    </Field>
+                    <Field label={t("staffing.credentials.renewsAt")}>
+                      <input name="renewsAt" type="date" className={controlClass} />
+                    </Field>
+                    <FieldActions>
+                      <SubmitButton
+                        pendingLabel={t("staffing.credentials.saving")}
+                        className={buttonClass()}
+                      >
+                        {t("staffing.credentials.add")}
+                      </SubmitButton>
+                    </FieldActions>
+                  </FieldGrid>
+                </AddDoor>
+              }
+            />
+          ) : null}
+        </>
+      )}
     </main>
+  );
+}
+
+/**
+ * The tail row that *is* a form's door — the shape both of this page's add
+ * forms wear (ADR 20260827-the-shops-shelves, decision 3: "the two add-forms
+ * become one '+ Add a shift' door").
+ *
+ * A native `<details>` on a hairline row, so the form opens in place under the
+ * ledger it belongs to and a JS failure still leaves it one tap away. It sits
+ * at the tail rather than in the page header — where the artboard draws it —
+ * for a mechanical reason: a disclosure renders its body inside itself, and a
+ * summary in the header would open a two-column form into a right-aligned
+ * action slot. The `+` is the affordance; a caret beside it would be the same
+ * promise made twice.
+ */
+function AddDoor({
+  id,
+  label,
+  open,
+  as: Tag = "div",
+  children,
+}: {
+  id: string;
+  label: string;
+  /** Server-decided: a refusal reopens the form it came from. */
+  open?: boolean;
+  /** `li` when the door is the tail row of a ledger's own `<ul>`. */
+  as?: "li" | "div";
+  children: React.ReactNode;
+}) {
+  return (
+    // The hairline belongs to the row, not to the `<details>`, so `last:`
+    // closes a ledger whose final member is this door.
+    <Tag className="list-none border-t border-border last:border-b">
+      <AutoOpenDetails id={id} openOnHash={id} open={open} className="group/add scroll-mt-8">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-primary transition-colors select-none [&::-webkit-details-marker]:hidden hover:underline">
+          <span aria-hidden="true">+</span> {label}
+        </summary>
+        <div className="pt-1 pb-6">{children}</div>
+      </AutoOpenDetails>
+    </Tag>
   );
 }

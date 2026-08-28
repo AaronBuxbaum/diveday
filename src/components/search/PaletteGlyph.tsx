@@ -70,6 +70,17 @@ const GLYPHS = {
       <path d="m9.5 14.5-3.9 3.9" />
     </>
   ),
+  // The signed-off day: a checklist closed after the boat is home. It was the
+  // Close-out destination's own mark until H-62 folded that route into the
+  // home; the act outlived the destination, so the artwork moved to the rail
+  // that draws what the palette adds on top of the nav.
+  closeDay: (
+    <>
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="m8 12 2.5 2.5L16 9" />
+      <path d="M8 7h8" />
+    </>
+  ),
   // The copy that works with no signal: a phone with the connection cut.
   offline: (
     <>

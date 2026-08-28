@@ -209,6 +209,7 @@ export function ShopNav({
               destinationLabels,
               destinationTitles,
               goToBoarding: t("shared.commandPalette.goToBoarding"),
+              goToCloseDay: t("shared.commandPalette.goToCloseDay"),
               goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
               hintMove: t("shared.commandPalette.hintMove"),
               hintOpen: t("shared.commandPalette.hintOpen"),
@@ -222,7 +223,6 @@ export function ShopNav({
         gates={navGates}
         counts={navCounts}
         labels={destinationLabels}
-        closeOutLabel={t("shared.shopNavLinks.closeOutShort")}
         navAriaLabel={t("shared.shopNavLinks.primaryNavAriaLabel")}
         badgeLabels={badgeLabels}
         moreLabel={t("shared.shopNavLinks.more")}

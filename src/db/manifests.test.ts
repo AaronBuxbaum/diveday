@@ -17,6 +17,7 @@ import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { seededShopContext } from "@/test/db";
 import { subscribeManifestEvents } from "./manifest-events";
 import {
+  departureRollCallForBooking,
   getTripManifest,
   getTripManifests,
   listDepartureBoardedBookingIds,
@@ -188,6 +189,50 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
     const flat = await listDepartureBoardedBookingIds(db, shop.id, [reef.id]);
     expect(byTrip.get(reef.id)?.has(booking.booking.id) ?? false).toBe(false);
     expect(flat.has(booking.booking.id)).toBe(false);
+  });
+
+  it("answers one seat's own departure result, for the diver's own page", async () => {
+    // `departureRollCallForBooking` is what keeps the thread's after-state
+    // from asserting that somebody dived on the strength of a clock
+    // (`isAfterTheDive`, src/lib/thread-steps.ts). Null is the ordinary answer
+    // — plenty of shops record nothing — and it is the answer that makes that
+    // page wait for the four-hour recap floor instead of opening at the
+    // one-hour late-arrival buffer.
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    expect(await departureRollCallForBooking(db, shop.id, reef.id, booking.booking.id)).toBeNull();
+
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: booking.booking.id,
+    });
+    if (!issued.ok) throw new Error("expected waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: booking.person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+    });
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "not_boarded",
+    });
+    expect(await departureRollCallForBooking(db, shop.id, reef.id, booking.booking.id)).toBe(
+      "not_boarded",
+    );
+
+    // The newest event wins, exactly as it does for the roster readers above.
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "boarded",
+    });
+    expect(await departureRollCallForBooking(db, shop.id, reef.id, booking.booking.id)).toBe(
+      "boarded",
+    );
   });
 
   it("carries the counter check-in status onto the manifest, independent of roll call (task 149)", async () => {

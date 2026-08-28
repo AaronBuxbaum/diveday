@@ -6,7 +6,7 @@ import { setBookingPayment } from "./payments";
 import { getReadyPageData } from "./ready";
 import { bookings } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { getTripRoster, upcomingTripsWithCounts } from "./trips";
+import { getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
 
 async function seededBooking() {
   const { db, shop } = await seededShopContext();
@@ -53,6 +53,25 @@ describe("getReadyPageData", () => {
     // The loader still resolves so the page can say "cancelled" plainly; the
     // transactional actions read this same flag and refuse to write.
     expect(data?.detail.cancelled).toBe(true);
+    // The *departure* is a different fact, and it is still perfectly on.
+    expect(data?.departureCancelled).toBe(false);
+  });
+
+  it("reports a cancelled departure separately from a cancelled booking", async () => {
+    // A blow-out cancels the trip and deliberately leaves every booking active
+    // — refunds stay a per-booking staff decision (src/db/blowouts.ts) — so
+    // `detail.cancelled` is false for every diver it stranded. Reading only
+    // that flag is what let the diver's own page hand them a packing list
+    // before the boat was due back, and "Welcome back" with a dive record and
+    // a tip ask an hour after it was (review, 2026-08-28).
+    const { db, shop, trip, booking } = await seededBooking();
+    expect((await getReadyPageData(db, booking.id))?.departureCancelled).toBe(false);
+
+    await setTripStatus(db, shop.id, trip.id, "cancelled");
+
+    const data = await getReadyPageData(db, booking.id);
+    expect(data?.departureCancelled).toBe(true);
+    expect(data?.detail.cancelled).toBe(false);
   });
 
   it("returns null for a booking that does not exist", async () => {

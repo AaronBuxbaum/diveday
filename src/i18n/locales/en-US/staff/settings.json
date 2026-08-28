@@ -581,11 +581,11 @@
       },
       "certificationCard": {
         "what": "Certification record",
-        "detail": "Imported verified and flagged imported — staff give it a one-tap confirm; unrecognized levels need manual entry."
+        "detail": "Comes across with the diver's record, marked imported, and clears the level gate — unless your file says the card was never verified, and then it waits for staff. Unrecognized levels need manual entry."
       },
       "specialtyCards": {
         "what": "Specialty certifications (deep, wreck, night, drysuit)",
-        "detail": "Imported as verified specialty certifications, flagged imported; each one still needs a staff confirm before the dive that requires it."
+        "detail": "Come across with the diver's record, marked imported. Each one's gate stays shut until staff give it a one-tap confirm, whatever your file says."
       },
       "nitrox": {
         "what": "Nitrox",

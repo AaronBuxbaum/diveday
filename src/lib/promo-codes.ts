@@ -74,6 +74,55 @@ export function promoWindowState(window: PromoWindow, now: Date): PromoWindowSta
   return "live";
 }
 
+/** A code's usage against its own cap — the second half of "is it over?". */
+export type PromoUsage = {
+  timesRedeemed: number;
+  maxRedemptions: number | null;
+};
+
+/**
+ * Whether a code has been spent to its cap. An uncapped code is never
+ * exhausted, which is why the null check comes first rather than being folded
+ * into the comparison.
+ *
+ * Stripe owns the *enforcement* of the cap — {@link isPromoRedeemable}
+ * deliberately does not consult it, because re-deriving it locally would be a
+ * second, lagging authority on whether a checkout may proceed. What it is
+ * honest for is the shelf a staffer finds the code on: a code with nothing
+ * left to give is over, and filing it under Live would be the list lying about
+ * its own shape.
+ */
+export function isPromoExhausted(usage: PromoUsage): boolean {
+  if (usage.maxRedemptions === null) return false;
+  return usage.timesRedeemed >= usage.maxRedemptions;
+}
+
+/** Which shelf of the staff codes ledger a code sits on. */
+export type PromoLedgerGroup = "live" | "scheduled" | "ended";
+
+/**
+ * The three shelves the codes ledger groups into (ADR
+ * 20260827-the-shops-shelves, decision 1): the codes working now, the ones
+ * that have not started, and the ones that are over.
+ *
+ * Derived from the *window* and the cap, never from `status`, and that split
+ * is the point. A code's window is a fact every row in a run shares, so it
+ * belongs to the group header; `pending`, `failed` and switched-off are
+ * exceptions belonging to one row, so they stay on that row's badge. A code
+ * switched off inside a live window is therefore filed under Live and says
+ * "Switched off" beside its own name — both facts, each said once. Folding
+ * status into the grouping would file it under a shelf that describes neither.
+ *
+ * Precedence is {@link promoWindowState}'s own, so this and the booking path
+ * can never disagree about which end of the window a code is at.
+ */
+export function promoLedgerGroup(promo: PromoWindow & PromoUsage, now: Date): PromoLedgerGroup {
+  const window = promoWindowState(promo, now);
+  if (window === "not_started") return "scheduled";
+  if (window === "expired") return "ended";
+  return isPromoExhausted(promo) ? "ended" : "live";
+}
+
 export type PromoRedeemability = {
   status: string;
   scope: PromoScope;

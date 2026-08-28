@@ -1,37 +1,43 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, seededTripId } from "./helpers";
 
 /**
- * The shift roster (`/shop/[shopSlug]/staffing`): who is working in a window,
- * what each person can teach or crew, and one summary line counting the
- * departures that still need crew — which is crewed on Today, not here
- * (ADR 20260806-staffing-is-the-shift-roster). It shipped with no e2e or
- * visual coverage at all — the 2026-08-03 test-system evaluation found it,
- * which is why `scripts/route-coverage.json` carried an exemption for this
- * route until this spec landed.
+ * The staffing week (`/shop/[shopSlug]/staffing`): people down the side, the
+ * shop's seven days across the top, and the departures that still need crew in
+ * the day cell where the work is (ADR 20260827-the-shops-shelves, decision 3).
  *
- * Two things worth knowing before reading the assertions:
+ * Three things worth knowing before reading the assertions:
  *
- * - The seed gives **every** staff member one 12-hour shift today
- *   (`src/db/seed.ts`, "Demo schedule"), so the default window (today through
- *   six days out) is never empty and "Not scheduled in this window." only
- *   appears once the window moves off today.
- * - The window form is a plain `method="get"` form and the whole page is
- *   server-rendered from `getStaffingView(db, shopId, from, to)`, so a changed
- *   list after submitting it is proof the *server* re-queried — nothing here
- *   filters client-side. The URL itself is not assertable: `FlashParams`
- *   strips `from`/`to`/`notice` with `history.replaceState` shortly after
- *   mount, so the rendered list is the stable signal.
+ * - The seed gives **every** staff member one 12-hour shift *today*
+ *   (`src/db/seed.ts`, "Demo schedule"), and the frozen clock puts today at
+ *   Tuesday 21 July 2026, 09:30 in the shop's own zone — so the default week
+ *   is Mon 20 – Sun 26 July and it is never empty.
+ * - Paging is `?week=<ISO Monday>`, the schedule board's own grammar
+ *   (`src/lib/week-board.ts`). The window form this replaced is gone, and with
+ *   it the `?from=`/`?to=` params — an old link is ignored, not refused.
+ * - The grid and the day list are **both** in the DOM, one hidden by CSS at any
+ *   width. The fleet drives at 1279px, above the grid's `lg` floor, so role
+ *   queries reach the grid and skip the day list; where a text query is
+ *   unavoidable it takes the first (visible) match.
+ * - **The seeded week is not a clean week.** The demo's headline charter is the
+ *   one whose divemaster is driving it and whose captain is on the lines
+ *   (`seed-trips.ts`, the DOM-M3 case), so nobody on it is supervising in the
+ *   water — Today already says so, and this surface now agrees. Assertions here
+ *   name their own departure rather than counting the week's chips.
  */
 
 const STAFFING = "/shop/blue-mantis/staffing";
 
-/** One staff member's card in "Who is working" — scoped so a Remove button, a
- * time range, or the not-scheduled warning is read off *that* person's row. */
-function staffCard(page: Page, name: string) {
-  return page.locator("article").filter({ hasText: name }).filter({ visible: true });
-}
+/**
+ * The Add-a-shift door's form, scoped by the disclosure's own id — the
+ * credentials form below it repeats "Staff member" and carries date fields of
+ * its own, and `getByLabel` is a case-insensitive substring match.
+ */
+const addShiftForm = (page: Page) => page.locator("#add-shift");
+
+/** The week grid, named by its own region. */
+const weekOf = (page: Page) => page.getByRole("region", { name: "Who's working" });
 
 /**
  * The one test here that writes a shift takes a shop of its own (`privateShop`,
@@ -45,87 +51,119 @@ function staffCard(page: Page, name: string) {
  * of the cast (`seedStaffShifts`, src/db/seed.ts), which is what the
  * before-and-after assertions below read.
  */
-test("an owner schedules a shift, narrows the window past it, and takes it back off", async ({
+test("an owner puts a shift in a day, steps a week off it, and takes it back off", async ({
   page,
   privateShop,
 }) => {
-  // The mint and the live sign-in the fixture pays for, then a create, a
-  // window submit, and a delete — three full server round trips plus their
-  // re-renders, all inside this test's own budget.
+  // The mint and the live sign-in the fixture pays for, then a create, two
+  // week steps and a delete — full server round trips, all inside this test's
+  // own budget.
   test.setTimeout(60_000);
+  // Thursday of the week the frozen clock sits in, where nobody is scheduled:
+  // the seeded shift is on today (Tuesday), and `createStaffShift` refuses an
+  // overlap.
   const shiftDay = daysFromNow(2);
-  // Unique so the assertions target this test's own shift rather than the
+  // Unique, so the assertions target this test's own shift rather than the
   // seeded "Demo schedule" one.
   const note = `Boat 2 ${e2eNow().getTime()}`;
 
   await page.goto(`/shop/${privateShop.slug}/staffing`);
   await expect(page.getByRole("heading", { level: 1, name: "Staffing" })).toBeVisible();
+  const week = weekOf(page);
+  // The seeded shift is on today, which is inside the week the page opens on.
+  await expect(week.getByText("Demo schedule").first()).toBeVisible();
 
-  const keiko = staffCard(page, "Keiko Tanaka");
-  // The seeded shift is today, so it is inside the default window.
-  await expect(keiko.getByText("Demo schedule")).toBeVisible();
+  // The two add-forms became one door (decision 3), and it opens in place.
+  await page.locator("#add-shift > summary").click();
+  await addShiftForm(page).getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
+  await addShiftForm(page).getByLabel("Date").fill(shiftDay);
+  await addShiftForm(page).getByLabel("Starts").fill("06:30");
+  await addShiftForm(page).getByLabel("Ends").fill("14:45");
+  await addShiftForm(page).getByLabel("Note").fill(note);
+  await addShiftForm(page).getByRole("button", { name: "Add shift" }).click();
 
-  // Scoped to the form itself: "Date" alone also matches the credentials
-  // form's "Issue date" and "Renewal date" fields further down the page
-  // (Playwright's getByLabel is a case-insensitive substring match), and
-  // "Staff member" is the person field on both this form and that one.
-  const addShiftForm = page.getByRole("region", { name: "Add a working shift" });
-  await addShiftForm.getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
-  await addShiftForm.getByLabel("Date").fill(shiftDay);
-  await addShiftForm.getByLabel("Starts").fill("06:30");
-  await addShiftForm.getByLabel("Ends").fill("14:45");
-  await addShiftForm.getByLabel("Note").fill(note);
-  await addShiftForm.getByRole("button", { name: "Add shift" }).click();
+  // The door answers for itself — the outcome lands in its own action row
+  // rather than in a banner a screen above it.
+  await expect(page.getByText("Shift saved.")).toBeVisible();
+  // Read back through the shop's own timezone, not the wall time it was typed
+  // in: this fails if the shift is written or bucketed in the host's zone.
+  await expect(week.getByText("6:30 AM – 2:45 PM").first()).toBeVisible();
+  await expect(week.getByText(note).first()).toBeVisible();
+
+  // Step a week forward. Nothing on this page filters in the browser — this is
+  // a link to another reading of the week, and a fresh server render.
+  await page.getByRole("link", { name: "Next week" }).click();
+  await expect(page).toHaveURL(/week=/);
+  await expect(week.getByText(note)).toHaveCount(0);
+  await expect(week.getByText("Demo schedule")).toHaveCount(0);
+
+  // Back to the week that has it, and take it off. The chip is the disclosure;
+  // Remove is what it opens onto.
+  await page.getByRole("link", { name: "This week" }).click();
+  const chip = week.locator("details").filter({ hasText: note }).first();
+  await chip.locator("> summary").click();
+  await chip.getByRole("button", { name: "Remove" }).click();
+
+  // The delete comes back to the week it was performed in — this one, since
+  // the step above walked home — and the banner is the observable, because
+  // `FlashParams` has already stripped `?notice=` from the URL by the time an
+  // assertion could read it.
+  await expect(page.getByText("Shift removed.")).toBeVisible();
+  await expect(week.getByText(note)).toHaveCount(0);
+  await expect(week.getByText("Demo schedule").first()).toBeVisible();
+});
+
+/**
+ * A save on any week other than this one used to land the staffer back on
+ * this week: "Shift saved." above a grid the shift is not in, with the add
+ * form's date reset under it — and the natural recovery, adding it again, is
+ * refused as an overlap. The act now carries the week it was performed in.
+ */
+test("a shift added on another week comes back to that week", async ({ page, privateShop }) => {
+  test.setTimeout(60_000);
+  const note = `Next week ${e2eNow().getTime()}`;
+
+  await page.goto(`/shop/${privateShop.slug}/staffing`);
+  await page.getByRole("link", { name: "Next week" }).click();
+  await expect(page).toHaveURL(/week=/);
+  const nextWeekUrl = page.url();
+
+  await page.locator("#add-shift > summary").click();
+  const form = addShiftForm(page);
+  await form.getByLabel("Staff member").selectOption({ label: "Keiko Tanaka" });
+  // The date the form offers is inside the week on screen, so a save needs
+  // no correction — filling only the note proves it.
+  await form.getByLabel("Note").fill(note);
+  await form.getByRole("button", { name: "Add shift" }).click();
 
   await expect(page.getByText("Shift saved.")).toBeVisible();
-  // The stored range read back through the shop's own timezone
-  // (`formatTimeRangeTz`, which labels the end) — not the raw wall time the
-  // form was typed in, so this fails if the shift is written in the wrong zone.
-  const newShift = keiko.getByRole("listitem").filter({ hasText: note });
-  await expect(newShift).toHaveCount(1);
-  await expect(newShift.getByText("6:30 AM – 2:45 PM EDT")).toBeVisible();
-
-  // Narrow the window past both shifts. Nothing on this page filters in the
-  // browser: this is a GET submit and a fresh server render.
-  await page.getByLabel("From").fill(daysFromNow(4));
-  await page.getByLabel("Through").fill(daysFromNow(5));
-  await page.getByRole("button", { name: "Show window" }).click();
-
-  await expect(keiko.getByText("Not scheduled in this window.")).toBeVisible();
-  await expect(keiko.getByText(note)).toHaveCount(0);
-  await expect(keiko.getByText("Demo schedule")).toHaveCount(0);
-
-  // Back to the shift's own day, where it is visible again, and take it off.
-  await page.getByLabel("From").fill(shiftDay);
-  await page.getByLabel("Through").fill(shiftDay);
-  await page.getByRole("button", { name: "Show window" }).click();
-  await expect(keiko.getByText(note)).toBeVisible();
-
-  await keiko
-    .getByRole("listitem")
-    .filter({ hasText: note })
-    .getByRole("button", { name: "Remove" })
-    .click();
-  // The delete redirects to the page's own default window (it carries only
-  // `?notice=`, not the from/to the removal was performed in), so this lands
-  // back on today's week: the seeded shift is there, this test's is gone.
-  // The banner is the only observable here — see the file header on why the
-  // URL is not assertable. Adding `toHaveURL(/notice=shift-deleted/)` in
-  // front of this looks like it would pin down a CI flake and instead fails
-  // every run, because FlashParams has already stripped the param.
-  await expect(page.getByText("Shift removed.")).toBeVisible();
-  await expect(keiko.getByText(note)).toHaveCount(0);
-  await expect(keiko.getByText("Demo schedule")).toBeVisible();
+  // Same week, and the shift is on it. `FlashParams` keeps `?week=` — it is
+  // a reading of the page, not one-shot chrome.
+  await expect(page).toHaveURL(new RegExp(`week=${new URL(nextWeekUrl).searchParams.get("week")}`));
+  await expect(weekOf(page).getByText(note).first()).toBeVisible();
 });
 
 test.describe("staffing", () => {
   signedInAsOwner();
 
-  test("an uncrewed departure is counted in one line, and nothing more", async ({ page }) => {
-    // Create the departure, then read it back off the roster — two navigations
-    // and two server round trips.
-    test.setTimeout(30_000);
-    const tripDay = daysFromNow(3);
+  /**
+   * The whole rule in one departure: a boat nobody has to crew says nothing,
+   * and the same boat with a diver aboard says it in the day it sails, with
+   * the act inside the chip.
+   *
+   * Both halves matter. "Has this departure got a `trip_assignments` row" is
+   * the question this surface used to ask, and it answered backwards at both
+   * ends — a warning on an empty boat nobody needs to crew, and silence on a
+   * full one with only a captain aboard. The measurement is now
+   * `divemasterRatioGap`, the same one Today and the trip page read.
+   */
+  test("an empty departure says nothing; the same boat with a diver aboard says No crew", async ({
+    page,
+  }) => {
+    // A create, a seating, and two reads of the week — full server round
+    // trips, and the board is paged to find the departure's id.
+    test.setTimeout(60_000);
+    const tripDay = daysFromNow(2);
     const title = `Unstaffed charter ${e2eNow().getTime()}`;
 
     await createTrip(page, {
@@ -136,48 +174,63 @@ test.describe("staffing", () => {
     });
 
     await page.goto(STAFFING);
-    await page.getByLabel("From").fill(tripDay);
-    await page.getByLabel("Through").fill(tripDay);
-    await page.getByRole("button", { name: "Show window" }).click();
+    const week = weekOf(page);
+    await expect(page.getByRole("heading", { level: 1, name: "Staffing" })).toBeVisible();
+    // Nobody booked is nobody to supervise, so there is nothing to warn about
+    // yet — the expected state must not arrive as an alert.
+    await expect(week.getByText(title)).toHaveCount(0);
+    await expect(page.getByRole("link", { name: `Assign crew to ${title}` })).toHaveCount(0);
 
-    // One departure in the window, nobody rostered on it: the roster states
-    // the count and nothing else — no per-departure table, no second set of
-    // gap words. The departure's own title is deliberately absent here.
-    await expect(page.getByText("1 departure in this window still needs crew")).toBeVisible();
-    await expect(page.getByText(title)).toHaveCount(0);
+    // One diver aboard, and now the boat needs somebody in the water with them.
+    const tripId = await seededTripId(page, "blue-mantis", title);
+    await page.goto(`/shop/blue-mantis/bookings/new/${tripId}`);
+    await page.getByRole("link", { name: "Add diver", exact: true }).click();
+    await page.waitForURL(/\/divers\/new/);
+    await page.getByLabel("Full name").fill("Waiting On Crew");
+    await page.getByRole("button", { name: "Add to trip" }).click();
+    await expect(page).toHaveURL(new RegExp(`/trips/${tripId}/guests`));
 
-    // And no button beside it. The "Assign crew on Today" link this line used
-    // to carry pointed at a permanent nav tab, which the header and the phone
-    // dock already put one tap away from every page — chrome restated as a
-    // call to action. The sentence names where the work is; getting there was
-    // never the hard part.
-    await expect(page.getByRole("link", { name: /Assign crew/ })).toHaveCount(0);
+    await page.goto(STAFFING);
+    // The gap is named, worded and actionable in the day it sails — not a
+    // count in a sentence at the top of the page with nowhere to go.
+    await expect(week.getByText(title).first()).toBeVisible();
+    await expect(week.getByText("No crew").first()).toBeVisible();
+    const assign = page.getByRole("link", { name: `Assign crew to ${title}` });
+    await expect(assign).toBeVisible();
+
+    // And it goes to that trip's crew section, which is where a boat is
+    // actually crewed.
+    await assign.click();
+    await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
   });
 
-  test("a window with every departure crewed says so, with nowhere to go", async ({ page }) => {
-    // The seeded demo crews its own boats, so today's window is the covered
-    // case — the quiet sentence, and no hand-off link to chase.
-    await page.goto(STAFFING);
-    await expect(page.getByText("Every departure in this window has its crew.")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Assign crew on Today" })).toHaveCount(0);
+  test("an old ?from=/?to= link lands on this week rather than nowhere", async ({ page }) => {
+    // The window form is gone; the two params it wrote are ignored, not
+    // refused, so a bookmark a shop kept still opens the page.
+    await page.goto(`${STAFFING}?from=${daysFromNow(30)}&to=${daysFromNow(37)}`);
+    await expect(page.getByRole("heading", { level: 1, name: "Staffing" })).toBeVisible();
+    await expect(weekOf(page).getByText("Demo schedule").first()).toBeVisible();
+    // Already on this week, so the way home is absent rather than disabled.
+    await expect(page.getByRole("link", { name: "This week" })).toHaveCount(0);
   });
 });
 
 test.describe("staffing, as the daily crew", () => {
   signedInAs("captain");
 
-  test("a captain reads who is working but gets no shift controls", async ({ page }) => {
+  test("a captain reads the week but gets no shift controls", async ({ page }) => {
     // Shift changes are owner/manager work (`canPersonManageStaffAccounts`,
     // and `requireStaffingManager` refuses the actions server-side); the crew
     // still needs to see who is on today. Same shape as the schedule board's
     // "a captain sees the board but none of its controls".
     await page.goto(STAFFING);
     await expect(page.getByRole("heading", { level: 1, name: "Staffing" })).toBeVisible();
-    await expect(staffCard(page, "Keiko Tanaka").getByText("Demo schedule")).toBeVisible();
+    await expect(weekOf(page).getByText("Demo schedule").first()).toBeVisible();
 
-    await expect(page.getByRole("heading", { name: "Add a working shift" })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Add shift" })).toHaveCount(0);
+    // No door, and no act inside a chip — a control that refuses is worse than
+    // a control that is not there.
+    await expect(page.getByText("Add a shift")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Remove" })).toHaveCount(0);
-    await expect(page.getByText("Shift changes require owner or manager")).toHaveCount(0);
+    await expect(page.getByText("Add a credential")).toHaveCount(0);
   });
 });

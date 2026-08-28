@@ -323,19 +323,29 @@ export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
 }
 
 /**
- * A slice of the post-trip page a diver keeps and shares: the trip identity,
- * useful dive facts, a crew note, and the diver's own photos. It gives the
- * product page a concrete picture of the memory the trip creates after the
- * operational work is finished.
+ * **The keepsake a diver keeps** — the dive record, the crew's word, and the
+ * one thing the page asks. It is the thread's after-state
+ * ([20260827-the-divers-thread](../../docs/architecture/decisions/20260827-the-divers-thread.md),
+ * decision 4, slice 7d) drawn small, so a buyer sees the artifact their shop's
+ * name ends up on rather than a description of it.
  *
- * **Two callers now, and both describe this screen in their own aria-label**:
+ * It was a stat row, a crew note and a photo grid before that slice landed —
+ * a picture of a page that no longer exists. The redraw follows the real
+ * surface's order: the record first (the *only* place the day's facts render),
+ * then the crew's word, then the review ask as the one primary. The photo and
+ * tip doors are deliberately absent: they are quiet on the real page, and a
+ * mockup that shows every door shows none of them as quiet.
+ *
+ * **Two callers, and both describe this screen in their own `aria-label`**:
  * `/product`'s after-trip chapter, and the homepage's evening moment row
  * (docs/product/marketing-review-20260827.md, "A third moment: the evening").
- * So a redraw of this component — the keepsake card of roadmap slice 7d, per
- * [20260827-the-divers-thread](../../docs/architecture/decisions/20260827-the-divers-thread.md)
- * — has to carry `marketing.product.recapMockupLabel` and
- * `marketing.home.moments.recap.{mockupLabel,description}` with it, in both
- * locales, or the label stops naming what the reader is looking at.
+ * So a redraw of this component has to carry
+ * `marketing.product.recapMockupLabel` and
+ * `marketing.home.moments.recap.mockupLabel` with it, in both locales, or the
+ * label stops naming what the reader is looking at.
+ *
+ * Every control stays `disabled`: the homepage's moments band offers exactly
+ * one door and it is not this one (`e2e/marketing.spec.ts`).
  */
 export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
@@ -343,61 +353,72 @@ export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
     <div className="bg-background">
       <AppBar label={t("fallback.recap.label")} />
       <div className="p-5">
-        <p className="text-xs font-medium tracking-widest text-primary uppercase">
-          {t("fallback.recap.eyebrow")}
-        </p>
-        <div className="mt-1 flex flex-wrap items-baseline justify-between gap-2">
-          <div>
-            <h3 className="text-xl font-semibold tracking-tight">{t("fallback.recap.greeting")}</h3>
-            <p className="mt-1 text-sm text-muted">{t("fallback.recap.tripLine")}</p>
-          </div>
-          <span className="rounded-full bg-success-tint px-2.5 py-1 text-xs font-semibold text-success-strong">
-            {t("fallback.recap.completed")}
-          </span>
-        </div>
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-          {/* i18n-exempt: sample dive facts used only in the marketing mockup */}
-          {[
-            [t("fallback.recap.depth"), "18 m"],
-            [t("fallback.recap.visibility"), "24 m"],
-            [t("fallback.recap.water"), "27°C"],
-          ].map(([label, value]) => (
-            <div key={label} className="rounded-lg border border-border bg-surface p-2">
-              <p className="text-[10px] font-medium text-muted uppercase">{label}</p>
-              <p className="mt-0.5 text-sm font-semibold tabular-nums">{value}</p>
-            </div>
-          ))}
-        </div>
+        <h3 className="text-xl font-semibold tracking-tight">{t("fallback.recap.greeting")}</h3>
+        <p className="mt-1 text-sm text-muted">{t("fallback.recap.tripLine")}</p>
+
+        {/* The dive record: the one place the day's facts render. */}
         <div className="mt-4 rounded-xl border border-border bg-surface p-3">
-          <p className="text-xs font-semibold tracking-wide text-primary uppercase">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-sm font-semibold">{t("fallback.recap.recordHeading")}</h4>
+            <span className="rounded-md bg-primary-tint px-2 py-0.5 text-[10px] font-semibold text-primary">
+              {t("fallback.recap.visits")}
+            </span>
+          </div>
+          <dl className="mt-2 divide-y divide-border border-t border-border text-xs">
+            {[
+              // i18n-exempt: sample boat and crew used only in the marketing mockup
+              [t("fallback.recap.boatLabel"), "Mantis II · Keiko Tanaka"],
+              // The record stopped printing the *site's* deepest point as
+              // though it were this diver's, so the mockup carries no depth
+              // either — one that still did would sell a screen we do not
+              // render.
+              // i18n-exempt: sample site used only in the marketing mockup
+              [t("fallback.recap.sitesLabel"), "French Reef"],
+              // i18n-exempt: sample conditions used only in the marketing mockup
+              [t("fallback.recap.conditionsLabel"), "27°C · 24 m"],
+            ].map(([label, value]) => (
+              <div key={label} className="flex items-baseline gap-3 py-1.5">
+                <dt className="w-20 shrink-0 text-muted">{label}</dt>
+                <dd className="min-w-0 flex-1 font-medium tabular-nums">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        {/* The crew's word, as a quote rather than a boxed panel. */}
+        <figure className="mt-4">
+          <blockquote className="text-sm leading-6">{t("fallback.recap.crewNote")}</blockquote>
+          <figcaption className="mt-1 text-xs text-muted">
             {t("fallback.recap.crewNoteLabel")}
-          </p>
-          <p className="mt-1 text-sm leading-6 text-muted">{t("fallback.recap.crewNote")}</p>
-        </div>
-        <div className="mt-4">
-          <div className="flex items-center justify-between gap-3">
-            <h4 className="text-sm font-semibold">{t("fallback.recap.photos")}</h4>
-            <span className="text-xs text-muted">{t("fallback.recap.photoCount")}</span>
+          </figcaption>
+        </figure>
+
+        {/* The one ask. */}
+        <div className="mt-4 rounded-xl border border-border bg-surface p-3">
+          <h4 className="text-sm font-semibold">{t("fallback.recap.reviewAsk")}</h4>
+          <div className="mt-2 flex gap-1" aria-hidden="true">
+            {[0, 1, 2, 3, 4].map((star) => (
+              <svg
+                key={star}
+                // The row is already `aria-hidden`, but the rule reads one
+                // element at a time and cannot see the ancestor. Marking the
+                // star itself is the same truth said twice, not a workaround:
+                // it is a drawn mark in a fallback screenshot.
+                aria-hidden="true"
+                viewBox="0 0 18 18"
+                className="size-5 fill-warning"
+                focusable="false"
+              >
+                <path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z" />
+              </svg>
+            ))}
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <div className="aspect-[4/3] rounded-lg bg-gradient-to-br from-primary/35 via-primary/10 to-surface" />
-            <div className="aspect-[4/3] rounded-lg bg-gradient-to-br from-success/30 via-primary/10 to-surface" />
-          </div>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="button"
             disabled
-            className="inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground"
+            className="mt-3 inline-flex min-h-10 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground"
           >
-            {t("fallback.recap.share")}
-          </button>
-          <button
-            type="button"
-            disabled
-            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-border px-3 text-xs font-semibold"
-          >
-            {t("fallback.recap.addPhoto")}
+            {t("fallback.recap.reviewSubmit")}
           </button>
         </div>
       </div>

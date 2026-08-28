@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { MedicalQuestion, MedicalQuestionnaire } from "@/lib/medical";
-import { medicalProgress } from "@/lib/medical";
+import { medicalProgress, medicalQuestionField } from "@/lib/medical";
 
 /**
  * Every word this component renders, resolved server-side. The waiver page has
@@ -45,7 +45,7 @@ function RadioQuestion({
         <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-base hover:bg-surface-sunken">
           <input
             type="radio"
-            name={`q_${question.id}`}
+            name={medicalQuestionField(question.id)}
             // Read by `QuestionnaireProgress`, which counts the page-one
             // questions the diver was asked up front separately from the
             // follow-ups their own answers open (`data-*` rather than parsing
@@ -61,7 +61,7 @@ function RadioQuestion({
         <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-base hover:bg-surface-sunken">
           <input
             type="radio"
-            name={`q_${question.id}`}
+            name={medicalQuestionField(question.id)}
             data-question-scope={question.section === "primary" ? "primary" : "follow-up"}
             value="no"
             checked={answer === false}
@@ -146,9 +146,17 @@ export function MedicalQuestionnaireFields({
   function answer(id: string, value: boolean) {
     setResponses((previous) => {
       const next = { ...previous, [id]: value };
-      // A branch that is closed is not applicable; clear stale child values so
-      // a changed answer can never carry a hidden yes into the result.
-      if (value === false) {
+      // A branch that is *closing* is not applicable; clear stale child values
+      // so a changed answer can never carry a hidden yes into the result.
+      //
+      // `previous[id] === true` is the whole rule: only a branch that was open
+      // has children the diver has seen. Without it, every no on a page-one
+      // question wrote a no into the children of a Box that had never been
+      // opened — answering no to all ten primaries silently filled Box B's four
+      // questions, so `medicalProgress` counted zero follow-ups remaining, the
+      // outcome line read `outcomeClear`, and four answers the diver never read
+      // went into the signed record.
+      if (value === false && previous[id] === true) {
         for (const child of questionnaire.questions.filter(
           (question) => question.parentId === id,
         )) {

@@ -1,6 +1,6 @@
 # 20260827-people-not-lists — The diver record has one idea, and the people surfaces become worklists
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-08-27
 - **Design:** [the canvas](../../design/canvases/20260827-people-not-lists/README.md) — six
   artboards: the diver record at desktop and phone, the roster, reviews as a worklist, the waiver

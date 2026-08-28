@@ -10,7 +10,7 @@ afterEach(() => {
 });
 
 const COPY: FirstRunChecklistCopy = {
-  heading: "Get your shop ready",
+  groupLabel: "First morning",
   subtitle: "Seven steps and divers can start booking.",
   progress: "2 of 7 done",
   contactTitle: "Add your contact details",
@@ -59,15 +59,19 @@ describe("FirstRunChecklist", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: "Get your shop ready" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "First morning" })).toBeInTheDocument();
     expect(screen.queryByText("Done")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Add contact details" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/settings#contact",
     );
+    // The **library**, not its blank form: a shop with no sites is offered two
+    // doors there — write one, or copy a published template — and landing on
+    // the form has already chosen for them (slice 10d,
+    // ADR 20260827-the-shops-shelves).
     expect(screen.getByRole("link", { name: "Add a dive site" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/dive-sites/new",
+      "/shop/blue-mantis/dive-sites",
     );
     expect(screen.getByRole("link", { name: "Schedule a trip" })).toHaveAttribute(
       "href",
@@ -244,5 +248,71 @@ describe("the units step", () => {
 
     expect(screen.getByText("Units confirmed.")).toBeInTheDocument();
     expect(screen.queryByText(/USD and feet/)).toBeNull();
+  });
+});
+
+/**
+ * **The open steps that are not next are doors, not buttons** — ADR
+ * 20260827-first-light, decision 6, and principle 10's "actions ride on their
+ * objects". The rule the shipped checklist broke: six secondary buttons beside
+ * one primary is a row of things to press, and the reader has to read all seven
+ * to find the one that matters.
+ */
+describe("one primary, and the rest are the rows themselves", () => {
+  const renderFresh = (done: Partial<Parameters<typeof FirstRunChecklist>[0]> = {}) =>
+    render(
+      <FirstRunChecklist
+        shopSlug="blue-mantis"
+        scheduleUrl="https://app.diveday.example/s/blue-mantis"
+        contactDone={false}
+        profileDone={false}
+        diveSiteCount={0}
+        unitsDone={false}
+        stripeDone={false}
+        copy={COPY}
+        {...done}
+      />,
+    );
+
+  it("gives the next step the only button-shaped thing on the group", () => {
+    const { container } = renderFresh();
+    // `buttonClass`'s primary variant is the one filled control here; every
+    // other open step's fix is a link with a chevron.
+    const filled = container.querySelectorAll('[data-first-run-primary="true"]');
+    expect(filled).toHaveLength(1);
+    expect(filled[0]).toHaveTextContent("Add contact details");
+  });
+
+  it("makes each other open step a door, its destination named on the row", () => {
+    renderFresh();
+    // The stretched overlay carries the name — so the row *is* the link, and a
+    // reader tabbing through hears where it goes.
+    for (const [name, href] of [
+      ["Set up profile", "/shop/blue-mantis/settings#profile"],
+      ["Check units", "/shop/blue-mantis/settings#units"],
+      ["Add a dive site", "/shop/blue-mantis/dive-sites"],
+      ["Schedule a trip", "/shop/blue-mantis/schedule/board?add=1"],
+    ] as const) {
+      expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
+    }
+  });
+
+  it("keeps Stripe's fix a plain anchor beside the row, never the row itself", () => {
+    // The one step that cannot be a door: its route 302s to Stripe's OAuth
+    // authorize URL, which Next's client navigation would follow via fetch and
+    // Stripe's CORS policy would reject. A full navigation is the whole point,
+    // so this link must not be a `<Link>` and must not be stretched over a row.
+    renderFresh();
+    const stripe = screen.getByRole("link", { name: "Connect Stripe" });
+    expect(stripe).toHaveAttribute("href", "/shop/blue-mantis/settings/connect");
+    expect(stripe.className).not.toContain("absolute");
+  });
+
+  it("leaves a settled step nothing at all to press", () => {
+    renderFresh({ contactDone: true, profileDone: true, stripeDone: true });
+    expect(screen.queryByRole("link", { name: "Add contact details" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Set up profile" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Connect Stripe" })).not.toBeInTheDocument();
+    expect(screen.getByText("Contact details on file.")).toBeInTheDocument();
   });
 });

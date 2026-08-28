@@ -62,17 +62,21 @@ test.describe("as owner", () => {
 
     const standing = page.locator("li").filter({ hasText: "REEF10" }).filter({ visible: true });
     await expect(standing.getByText("10% off")).toBeVisible();
-    await expect(standing.getByText("Trips and courses")).toBeVisible();
-    await expect(standing.getByText("Redeemed 1 time")).toBeVisible();
-    // The success-tone Badge prepends a decorative aria-hidden glyph
-    // (Badge.tsx toneGlyph), so the element's own text is "✅Live", not
-    // "Live" alone — and a bare substring match also picks up the "live
-    // now" window text elsewhere in this same card.
-    await expect(standing.getByText("✅Live")).toBeVisible();
+    await expect(standing.getByText(/Trips and courses/)).toBeVisible();
+    await expect(standing.getByText(/Redeemed 1 time/)).toBeVisible();
 
-    // An expired code is honestly not live, rather than quietly still offered.
-    const expired = page.locator("li").filter({ hasText: "OPENWATER25" }).filter({ visible: true });
-    await expect(expired.getByText("Not live right now")).toBeVisible();
+    // Slice 9g of ADR 20260827-the-shops-shelves: whether a code is working
+    // now is a fact a whole run of them shares, so it is a group heading said
+    // once — not a "Live" pill down every row, which was a badge marking the
+    // expected state. The standing code sits under Live; the expired one sits
+    // under Ended rather than carrying "Not live right now" of its own.
+    const live = page.getByRole("list", { name: "Live" });
+    await expect(live.locator("li").filter({ hasText: "REEF10" })).toHaveCount(1);
+    await expect(page.getByText("Live", { exact: true })).toHaveCount(1);
+
+    const ended = page.getByRole("list", { name: "Ended" });
+    await expect(ended.locator("li").filter({ hasText: "OPENWATER25" })).toHaveCount(1);
+    await expect(page.getByText("Not live right now")).toHaveCount(0);
   });
 
   test("a code Stripe never minted is kept as failed evidence, and cannot be switched on", async ({
@@ -203,13 +207,18 @@ test.describe("as owner", () => {
       await target.click();
       await expect(page.getByText(live ? /Code switched on/ : /Code switched off/)).toBeVisible();
     }
-    await expect(
-      page
-        .locator("li")
-        .filter({ hasText: "REEF10" })
-        .filter({ visible: true })
-        .getByText(live ? "✅Live" : "Switched off"),
-    ).toBeVisible();
+    // A live code wears no badge at all — its shelf already said so, once,
+    // for the whole run (slice 9g). "Switched off" is the exception, so it is
+    // the only one of the two states with a word on the row.
+    const settled = page.locator("li").filter({ hasText: "REEF10" }).filter({ visible: true });
+    if (live) {
+      await expect(
+        page.getByRole("list", { name: "Live" }).locator("li").filter({ hasText: "REEF10" }),
+      ).toHaveCount(1);
+      await expect(settled.getByText("Switched off")).toHaveCount(0);
+    } else {
+      await expect(settled.getByText("Switched off")).toBeVisible();
+    }
   }
 
   /**

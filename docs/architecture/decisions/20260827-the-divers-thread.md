@@ -1,6 +1,6 @@
 # 20260827-the-divers-thread — One link from booking to afterglow: the diver's thread
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-08-27
 - **Design:** [the canvas](../../design/canvases/20260827-the-divers-thread/README.md) — six
   artboards: the thread map, the booking page at phone and desktop, the thread page in its prep and
@@ -93,6 +93,26 @@ after-state (same data, one surface), and recap emails keep their `/recap` URLs,
 thread's after-state. This closes the
 concept-model row's open half ("folding recap into the same link"); the row's *other* open half —
 whether the second booking-time email survives — stays an owner call and is not settled here.
+
+**Amended 2026-08-28, by review of the shipped slice.** Two sentences above were wrong in the
+water, and the code now says otherwise; the decision itself stands.
+
+- *"Once the departure ends (the standing one-hour buffer)"* — that buffer answers **has it
+  sailed**, and this state also asserts **this person dived it**, which no clock knows. The switch
+  now reads the crew's own departure roll call where a shop kept one (`not_boarded` never sees the
+  after-state; `boarded` opens it at the buffer) and otherwise waits the four hours the recap
+  *send* has always waited (`isAfterTheDive`, `src/lib/thread-steps.ts`). Nothing but recorded
+  evidence or that floor may open a page saying somebody dived.
+- *"the diver's dive count"* — DiveDay holds no record of dives **performed**, and this keepsake
+  prints, with a signature rule. `trips.planned_dives` is what a shop typed on the trip row and
+  `dive_sites.max_depth_meters` is the site's deepest point, so neither may appear on a page a
+  divemaster is asked to sign. The record states what the shop wrote down — diver, date, vessel,
+  crew, sites, conditions, dive day — and leaves depth, bottom time and dive count as ruled blanks
+  (glossary, **Dive record**).
+
+A third thing the decision never said and had to: a **cancelled departure** is answered before
+either state. A blow-out leaves its bookings active by design, so the thread reads the trip's own
+status and renders the cancellation with the way back to the schedule — never the afterglow.
 
 ### 5. The waiver paces itself
 

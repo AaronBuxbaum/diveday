@@ -1,6 +1,6 @@
 # The shop's shelves — canvas
 
-- **Status:** Live (its ADR is Proposed — this canvas may still be edited)
+- **Status:** Shipped (its ADR is Accepted — this canvas is the dated argument, superseded rather than freshened)
 - **Date:** 2026-08-27
 - **ADR:** [20260827-the-shops-shelves](../../../architecture/decisions/20260827-the-shops-shelves.md)
 - **Published:** https://claude.ai/code/artifact/a6d6dfa5-0c90-4a5f-a13f-d64937af7b5d
@@ -48,13 +48,29 @@ Every name, number and time is demo-seed fiction. Nothing here is real customer 
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
-| 9a — the dive-site library and the catalog door | open | — | — |
-| 9b — the editor rail on the course editor | open | — | — |
-| 9c — the editor rail on the site form | open | — | — |
-| 9d — the gear register's one story | open | — | — |
-| 9e — staffing as a week | open | — | — |
-| 9f — reports sheds its chrome | open | — | — |
-| 9g — the mapped surfaces (courses roster, promos, team, add-booking) | open | — | — |
+| 9a — the dive-site library and the catalog door | shipped | `src/app/shop/[shopSlug]/dive-sites/_components/SiteLibraryLedger.tsx` | `SiteLibraryLedger.test.tsx`, `src/lib/dive-sites.test.ts`, `src/db/dive-sites.test.ts`, `e2e/dive-sites.spec.ts` |
+| 9b — the editor rail on the course editor | shipped | `src/components/editor/EditorRail.tsx` | `EditorRail.test.tsx`, `page.test.tsx`, `UnsavedChangesGuard.test.tsx`, `e2e/courses.spec.ts` |
+| 9c — the editor rail on the site form | shipped | `src/components/editor/EditorRail.tsx` | `EditorRail.test.tsx`, `site-form-sections.test.ts`, `SiteFormShell.test.tsx`, `e2e/dive-sites.spec.ts` |
+| 9d — the gear register's one story | shipped | `src/app/shop/[shopSlug]/gear/_components/GearRegisterLedger.tsx` | `GearRegisterLedger.test.tsx`, `src/lib/gear.test.ts`, `src/db/gear.test.ts`, `e2e/gear.spec.ts` |
+| 9e — staffing as a week | shipped | `src/app/shop/[shopSlug]/staffing/_components/StaffingWeek.tsx` | `staffing-week.test.ts`, `StaffingWeek.test.tsx`, `StaffCredentials.test.tsx`, `staffing.test.ts`, `e2e/staffing.spec.ts` |
+
+(The assembly half is `src/lib/staffing-week.ts` and the credentials ledger
+`src/app/shop/[shopSlug]/staffing/_components/StaffCredentials.tsx`; both name the ADR in their doc
+comments, as does the component in the row above, so `pnpm check:design-canvases` is satisfied when
+the row flips to `shipped`.)
+| 9f — reports sheds its chrome | shipped | `src/app/shop/[shopSlug]/reports/_components/MonthFigures.tsx` | `MonthFigures.test.tsx`, `DepartureLedger.test.tsx`, `reporting.test.ts`, `e2e/reports.spec.ts` |
+
+(The ledger half is `src/app/shop/[shopSlug]/reports/_components/DepartureLedger.tsx`; both it and
+the component named in the row carry the ADR id in their doc comments, as does the page, so
+`pnpm check:design-canvases` is satisfied when the row flips to `shipped`.)
+| 9g — the mapped surfaces (courses roster, promos, add-booking) | shipped | `src/app/shop/[shopSlug]/courses/_components/CourseRoster.tsx` | `CourseRoster.test.tsx`, `PromoLedger.test.tsx`, `DeparturePicker.test.tsx`, `promo-codes.test.ts`, `courses.test.ts`, `shop-promos.test.ts` |
+
+(The other two components are `src/app/shop/[shopSlug]/promos/_components/PromoLedger.tsx` and
+`src/app/shop/[shopSlug]/bookings/new/_components/DeparturePicker.tsx`; all three carry the ADR id
+in their doc comments, as does `src/components/seat-diver/PersonCandidateList.tsx`, so
+`pnpm check:design-canvases` is satisfied when the row flips to `shipped`. Note the canvas README's
+row still reads "courses roster, promos, team, add-booking" — Team shipped separately as 9h, and
+the roadmap's own 9g bullet already says the three.)
 | 9h — Team's per-row roles | shipped | `src/app/shop/[shopSlug]/settings/team/_components/StaffRolesDisclosure.tsx` | `StaffRolesDisclosure.test.tsx`, `notices.test.ts`, `actions.authz.test.ts`, `e2e/staff-invite.spec.ts` |
 
 9h's server half is `saveStaffRolesAction` in that folder's `actions.ts` and the notice router in

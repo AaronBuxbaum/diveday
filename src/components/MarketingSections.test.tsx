@@ -22,8 +22,15 @@ describe("marketingMockups", () => {
 
   it("renders the recap screen the product page's after-trip chapter also shows", () => {
     render(<div>{marketingMockups.recap.render("en-US")}</div>);
+    // **The keepsake and the one ask** — no longer a photos section. Slice 7d
+    // recomposed the after-state around the dive-log entry, the crew's note and
+    // a single review ask, with photos and tipping demoted to quiet doors, and
+    // the mockup follows the surface rather than the other way round. Asserted
+    // on the two blocks that carry the argument this screen is on the product
+    // page to make: the shop wrote something, and the diver is asked once.
+    expect(screen.getByText("Dive log entry")).toBeInTheDocument();
     expect(screen.getByText("From your crew")).toBeInTheDocument();
-    expect(screen.getByText("Your photos")).toBeInTheDocument();
+    expect(screen.getByText("How was your day?")).toBeInTheDocument();
   });
 
   it("renders the recap screen in Spanish", () => {

@@ -1,32 +1,17 @@
 {
   "notice": {
     "closed": "Día cerrado. El registro está abajo — hasta mañana.",
-    "acknowledgeRequired": "Confirma el barco abierto o el recuento pendiente antes de cerrar el día.",
     "recapSent": "Se enviaron los resúmenes que aún estaban pendientes.",
-    "recapAttention": "Algunos resúmenes requieren atención. Revisa los informes posteriores a la inmersión abajo.",
+    "recapAttention": "Algunos resúmenes requieren atención. Abre la salida a la que pertenecen.",
     "recapNotReady": "Los resúmenes no se pueden enviar hasta cuatro horas después del final de la salida.",
     "recapLocked": "Este resumen ya se envió. Ya no se pueden cambiar la nota ni las fotos.",
-    "crewPhotoAdded": "Foto del equipo añadida a este cierre.",
+    "crewPhotoAdded": "Foto del equipo añadida a esta salida.",
     "crewPhotoRemoved": "Foto del equipo eliminada.",
-    "crewPhotoLimit": "Este cierre ya tiene el máximo de fotos del equipo.",
+    "crewPhotoLimit": "Esta salida ya tiene el máximo de fotos del equipo.",
     "crewPhotoUnsupported": "La carga de fotos todavía no está configurada para este centro.",
     "crewPhotoFailed": "No se pudo añadir esa foto. Revisa el archivo e inténtalo de nuevo."
   },
-  "headline": {
-    "allClear": "Todos de vuelta",
-    "outstanding": "Aún queda algo abierto",
-    "noDepartures": "Un día tranquilo en el muelle"
-  },
-  "subtitle": {
-    "allClear": "Cierra el día y a casa.",
-    "outstanding": "Resuelve lo que puedas y decide sobre el resto.",
-    "noDepartures": "Mira con qué abre mañana, cierra el día y a casa.",
-    "quietDay": "Hoy no salió nadie y mañana abre despejado."
-  },
   "departures": {
-    "heading": "Cómo terminaron los barcos de hoy",
-    "subtitle": "Cada salida del día, juzgada por su recuento — la misma evidencia que persiguen el manifiesto y Hoy.",
-    "empty": "Hoy no hubo salidas.",
     "status": {
       "allHome": "Todos de vuelta",
       "unreconciled": "Recuento sin cerrar",
@@ -36,7 +21,7 @@
     },
     "detail": {
       "allHome": "{booked, plural, =0 {No había buceadores reservados} one {# buceador, recuento cerrado} other {# buceadores, recuento cerrado}}.",
-      "stillOut": "Vuelve a las {time}. Un barco que no está en casa no puede leerse como cerrado.",
+      "stillOut": "Vuelve a las {time}.",
       "notDeparted": "Zarpa a las {time}.",
       "missingDiver": "{count, plural, one {# buceador quedó marcado como no regresado a bordo tras la inmersión {dive}.} other {# buceadores quedaron marcados como no regresados a bordo tras la inmersión {dive}.}} Localízalos — el recuento se cierra en el manifiesto.",
       "missingCrew": "{count, plural, one {# tripulante quedó marcado como no regresado a bordo tras la inmersión {dive}.} other {# tripulantes quedaron marcados como no regresados a bordo tras la inmersión {dive}.}} Localízalos — el recuento se cierra en el manifiesto.",
@@ -47,21 +32,13 @@
     }
   },
   "admin": {
-    "heading": "Cierre administrativo",
-    "subtitle": "Seguimiento de los barcos que ya están de vuelta.",
     "status": {
       "complete": "Completo",
       "pending": "En curso",
       "attention": "Requiere atención"
     },
     "postDiveReports": {
-      "label": "Informes posteriores a la inmersión",
-      "description": "Envía a cada buceador el resumen de una salida completada.",
-      "progress": "{completed} de {total, plural, one {# enviado} other {# enviados}}.",
-      "pending": "{count, plural, one {Queda # informe en cola.} other {Quedan # informes en cola.}}",
-      "failed": "{count, plural, one {# informe requiere atención.} other {# informes requieren atención.}}",
-      "retry": "Reintentar informes fallidos",
-      "retrying": "Reintentando informes fallidos…"
+      "label": "Informes posteriores a la inmersión"
     }
   },
   "recap": {
@@ -91,46 +68,32 @@
   },
   "crewPhotos": {
     "heading": "Fotos del equipo",
-    "description": "Guarda las fotos de los instructores con este cierre. Solo las ve el personal y no se añaden a los resúmenes de los buceadores.",
+    "description": "Las fotos de aquí se comparten con todos los buceadores en el resumen de esta salida.",
     "photoAlt": "Foto del equipo de esta salida",
     "add": "Añadir una foto del equipo",
     "upload": "Subir foto",
     "adding": "Subiendo foto…",
     "remove": "Eliminar",
-    "confirmRemove": "¿Eliminar esta foto del equipo del cierre?",
+    "confirmRemove": "¿Eliminar esta foto del equipo de esta salida?",
     "removeConfirmButton": "Eliminar foto",
     "removeCancel": "Conservar foto",
     "removing": "Eliminando foto…"
   },
   "leftovers": {
-    "heading": "Lo que quedó de hoy",
-    "subtitle": "Trabajo de hoy que sigue abierto. Pasa a mañana salvo que lo descartes aquí.",
-    "empty": "No quedó nada pendiente de hoy.",
-    "carry": "Llevar a mañana",
+    "groupLabel": "Sigue abierto — pasa a mañana",
     "dismiss": "Descartar",
-    "decisionLabel": "Qué hacer con {subject}",
-    "currentCarried": "Esto pasará a mañana.",
-    "currentDismissed": "Descartado para este cierre; volverá a aparecer si sigue abierto.",
     "savedCarried": "{subject} pasará a mañana.",
-    "savedDismissed": "{subject} descartado para este cierre.",
+    "savedDismissed": "{subject} descartado.",
     "saving": "Guardando…",
     "undo": "Deshacer",
     "undoing": "Deshaciendo…"
   },
-  "tomorrow": {
-    "heading": "Mañana, de un vistazo",
-    "empty": "Mañana empieza despejado.",
-    "count": "{count, plural, one {# tarea espera en la cola de mañana.} other {# tareas esperan en la cola de mañana.}}"
-  },
   "close": {
     "heading": "Cerrar el día",
-    "acknowledge": "{count, plural, one {# barco de arriba sigue fuera o tiene un recuento abierto. Lo he visto: cerrar el día no detiene el seguimiento.} other {# barcos de arriba siguen fuera o tienen recuentos abiertos. Los he visto: cerrar el día no detiene el seguimiento.}}",
     "button": "Cerrar el día",
-    "buttonAgain": "Cerrar el día otra vez",
-    "note": "Cerrar es un registro, no un candado."
+    "buttonAgain": "Cerrar el día otra vez"
   },
   "record": {
-    "heading": "Día cerrado",
     "closedBy": "Cerrado por {name} a las {time}.",
     "closeCount": "{count, plural, other {Cerrado # veces hoy — cada cierre es su propio registro.}}",
     "outstandingHeading": "Registrado como pendiente",

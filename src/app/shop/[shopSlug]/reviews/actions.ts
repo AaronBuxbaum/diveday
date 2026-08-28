@@ -36,18 +36,25 @@ import { isUuid } from "@/lib/uuid";
 export type ReviewActionResult =
   | {
       ok: true;
+      /**
+       * Which review this outcome is about. The state lives above the list now
+       * (`ReviewRowProvider`), so the row that reports it has to recognise its
+       * own result rather than assume every result is hers.
+       */
+      reviewId: string;
       effect: "published" | "hidden" | "standout" | "standout-removed";
       /** Set on a hide: the review the land-then-undo toast offers to put back. */
       undoReviewId?: string;
     }
-  | { ok: false; reason: "reason-required" | "note-required" | "note-too-long" | "error" }
+  | {
+      ok: false;
+      reviewId: string;
+      reason: "reason-required" | "note-required" | "note-too-long" | "error";
+    }
   | null;
 
-/** What a "Publish selected" pass did. `null` is "nothing yet". */
-export type BulkPublishResult =
-  | { ok: true; published: number }
-  | { ok: false; reason: "none-selected" | "error" }
-  | null;
+/** What a "Publish all" pass did. `null` is "nothing yet". */
+export type BulkPublishResult = { ok: true; published: number } | { ok: false } | null;
 
 /**
  * One review's controls, behind one action.
@@ -60,6 +67,12 @@ export type BulkPublishResult =
  * something to say. That is the bug the bulk control's status row already
  * exists to prevent, one scale down: one action, one state, one status region
  * that outlives every button in the row.
+ *
+ * The same reasoning went one scale further on 2026-08-28, because the page
+ * renders three independent `<ul>`s and every one of these acts moves a review
+ * between them — which unmounts the whole row, status region included. The
+ * state lives above the lists in `ReviewRowProvider` now, and every result
+ * names its `reviewId` so a row can tell its own outcome from its neighbour's.
  */
 export async function reviewRowAction(
   _prev: ReviewActionResult,
@@ -71,14 +84,14 @@ export async function reviewRowAction(
   // is escaped (src/lib/staff-notices.ts).
   const reviews = shopPath(session.user.shopSlug, "reviews");
   const reviewId = String(formData.get("reviewId") ?? "");
-  if (!isUuid(reviewId)) return { ok: false, reason: "error" };
+  if (!isUuid(reviewId)) return { ok: false, reviewId, reason: "error" };
 
   if (formData.get("intent") === "standout") {
     const standout = formData.get("standout") === "true";
     const outcome = await setReviewStandout(await getDb(), session.user.shopId, reviewId, standout);
-    if (outcome !== true) return { ok: false, reason: "error" };
+    if (outcome !== true) return { ok: false, reviewId, reason: "error" };
     revalidatePath(reviews);
-    return { ok: true, effect: standout ? "standout" : "standout-removed" };
+    return { ok: true, reviewId, effect: standout ? "standout" : "standout-removed" };
   }
 
   /*
@@ -99,15 +112,15 @@ export async function reviewRowAction(
     reason: parseReviewModerationReason(formData.get("reason")),
     reasonNote: String(formData.get("reasonNote") ?? ""),
   });
-  if (outcome === "reason_required") return { ok: false, reason: "reason-required" };
-  if (outcome === "note_required") return { ok: false, reason: "note-required" };
-  if (outcome === "note_too_long") return { ok: false, reason: "note-too-long" };
-  if (outcome !== true) return { ok: false, reason: "error" };
+  if (outcome === "reason_required") return { ok: false, reviewId, reason: "reason-required" };
+  if (outcome === "note_required") return { ok: false, reviewId, reason: "note-required" };
+  if (outcome === "note_too_long") return { ok: false, reviewId, reason: "note-too-long" };
+  if (outcome !== true) return { ok: false, reviewId, reason: "error" };
 
   revalidatePath(reviews);
   return publish
-    ? { ok: true, effect: "published" }
-    : { ok: true, effect: "hidden", undoReviewId: reviewId };
+    ? { ok: true, reviewId, effect: "published" }
+    : { ok: true, reviewId, effect: "hidden", undoReviewId: reviewId };
 }
 
 /** A posted value narrowed to a real reason code, or null — never a coerced one. */
@@ -121,15 +134,20 @@ function parseReviewModerationReason(
 }
 
 /**
- * Release every ticked review in one go — the queue's answer to a weekend that
- * left eight reviews waiting and only a per-row button to clear them with.
+ * Release every review in the waiting group in one go — the queue's answer to a
+ * weekend that left eight reviews waiting and only a per-row button to clear
+ * them with.
  *
  * Publish-only, deliberately: the same shop-scoping as the row action above
  * (`setReviewsPublished` re-checks the session's shop, so ids belonging to
  * another shop change nothing and come back as a refusal), but no bulk *hide*.
  * Taking words down is the destructive direction and keeps its per-review undo.
- * An empty tick list is refused with its own result rather than answering with
- * a list that looks unchanged.
+ *
+ * One refusal, not two. The ids arrive as hidden fields on the group header's
+ * own form, so "nothing was selected" stopped being a thing a person can do
+ * when the tick boxes retired (ADR 20260827-people-not-lists); an empty or
+ * already-published post is a stale page replaying itself, and "that could not
+ * be updated" is the honest answer to both.
  */
 export async function publishReviewsAction(
   _prev: BulkPublishResult,
@@ -141,7 +159,7 @@ export async function publishReviewsAction(
     .getAll("reviewIds")
     .map((value) => String(value))
     .filter(Boolean);
-  if (reviewIds.length === 0) return { ok: false, reason: "none-selected" };
+  if (reviewIds.length === 0) return { ok: false };
 
   const published = await setReviewsPublished(
     await getDb(),
@@ -149,7 +167,7 @@ export async function publishReviewsAction(
     reviewIds,
     session.user.personId,
   );
-  if (published === 0) return { ok: false, reason: "error" };
+  if (published === 0) return { ok: false };
   revalidatePath(reviews);
   return { ok: true, published };
 }

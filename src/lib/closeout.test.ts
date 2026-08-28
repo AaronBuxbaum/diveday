@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assembleDayCloseout,
+  assembleEveningClose,
   buildCloseoutSnapshot,
   type CloseoutTripInput,
   closeoutAdminTaskStatus,
@@ -50,20 +51,16 @@ describe("assembleDayCloseout", () => {
       now,
     });
 
-    expect(state.shape).toBe("all_clear");
     expect(state.shopDay).toBe("2026-08-04");
     expect(state.departures.map((d) => d.status)).toEqual(["all_home", "all_home"]);
     expect(state.leftovers).toEqual([]);
-    expect(state.tomorrow).toEqual({ total: 0, byKind: [] });
-    expect(state.mustAcknowledge).toEqual([]);
   });
 
-  it("keeps a day with zero departures calm — no boats is a shape, not an error", () => {
+  it("keeps a day with zero departures calm — no boats is not an error", () => {
     const state = assembleDayCloseout({ trips: [], gaps: [], actions: [], timeZone: TZ, now });
 
-    expect(state.shape).toBe("no_departures");
     expect(state.departures).toEqual([]);
-    expect(state.mustAcknowledge).toEqual([]);
+    expect(state.leftovers).toEqual([]);
   });
 
   it("keeps a quiet day open when work exists without a departure", () => {
@@ -75,7 +72,6 @@ describe("assembleDayCloseout", () => {
       now,
     });
 
-    expect(state.shape).toBe("outstanding");
     expect(state.leftovers).toHaveLength(1);
   });
 
@@ -98,7 +94,6 @@ describe("assembleDayCloseout", () => {
       now,
     });
 
-    expect(state.shape).toBe("outstanding");
     expect(state.adminTasks).toEqual([
       {
         id: "post_dive_reports",
@@ -123,7 +118,7 @@ describe("assembleDayCloseout", () => {
     );
   });
 
-  it("makes an unreconciled after-dive count the loudest thing on the page and demands acknowledgement", () => {
+  it("makes an unreconciled after-dive count the loudest thing on the page", () => {
     const state = assembleDayCloseout({
       trips: [trip({ tripId: "t1" }), trip({ tripId: "t2", title: "Sunset Dive" })],
       gaps: [{ tripId: "t2", reason: "after_dive_uncounted", diveNumber: 2, uncounted: 3 }],
@@ -132,13 +127,11 @@ describe("assembleDayCloseout", () => {
       now,
     });
 
-    expect(state.shape).toBe("outstanding");
     // Loudest first: the gap outranks the clean boat whatever the sailing order.
     expect(state.departures[0]?.tripId).toBe("t2");
     expect(state.departures[0]?.status).toBe("unreconciled");
     expect(state.departures[0]?.uncounted).toBe(3);
     expect(state.departures[0]?.diveNumber).toBe(2);
-    expect(state.mustAcknowledge.map((d) => d.tripId)).toEqual(["t2"]);
   });
 
   it("headlines a missing diver over a clerical gap on the same boat", () => {
@@ -157,7 +150,7 @@ describe("assembleDayCloseout", () => {
     expect(state.departures[0]?.status).toBe("unreconciled");
   });
 
-  it("tones a dock-count gap as paperwork: outstanding, but no acknowledgement demanded", () => {
+  it("tones a dock-count gap as paperwork rather than as a person in the water", () => {
     const state = assembleDayCloseout({
       trips: [trip({ tripId: "t1" })],
       gaps: [{ tripId: "t1", reason: "no_roll_call", diveNumber: 0, uncounted: 8 }],
@@ -166,9 +159,7 @@ describe("assembleDayCloseout", () => {
       now,
     });
 
-    expect(state.shape).toBe("outstanding");
     expect(state.departures[0]?.status).toBe("count_open");
-    expect(state.mustAcknowledge).toEqual([]);
   });
 
   it("says so while a boat is still out, and when one has not even left", () => {
@@ -197,10 +188,6 @@ describe("assembleDayCloseout", () => {
       ["out", "still_out"],
       ["night", "not_departed"],
     ]);
-    // A boat not home yet must be acknowledged to close over; one that has
-    // not left is stated but does not gate — closing before a night dive
-    // departs is an ordinary early close, not an incident.
-    expect(state.mustAcknowledge.map((d) => d.tripId)).toEqual(["out"]);
   });
 
   it("marks only the boats that are actually back as ended, and carries each one's recap note", () => {
@@ -250,7 +237,7 @@ describe("assembleDayCloseout", () => {
     expect(state.departures.map((d) => d.status)).toEqual(["all_home"]);
   });
 
-  it("splits the queue into today's leftovers and tomorrow's glance by the shop's own day", () => {
+  it("keeps today's own open rows as leftovers, and nothing dated past today", () => {
     const leftoverDated = action({ id: "a-today", dueAt: new Date(now.getTime() + HOUR) });
     const leftoverUndated = action({
       id: "a-undated",
@@ -277,32 +264,23 @@ describe("assembleDayCloseout", () => {
     });
 
     expect(state.leftovers.map((a) => a.id)).toEqual(["a-today", "a-undated"]);
-    expect(state.tomorrow).toEqual({ total: 1, byKind: [{ kind: "waiver", count: 1 }] });
   });
 
-  it("counts tomorrow by kind instead of re-rendering rows Today owns", () => {
-    // Tomorrow's queue as a mix of kinds. The close-out states how much is
-    // waiting and hands the rows themselves to Today, the only surface that
-    // can act on them (ADR 20260803-not-ready-is-a-view, applied at section
-    // level) — so what comes back is counts, never actions.
+  it("leaves tomorrow entirely to the spine — no row dated tomorrow is a leftover", () => {
+    // The evening used to end on a parting glance that tallied tomorrow's
+    // queue by kind. That card went with the page (H-62): the home's own
+    // Tomorrow disclosure is what the evening closes on, built from the queue
+    // rather than from a second tally of it. What survives is the boundary —
+    // a row that belongs to tomorrow is not something today left over.
     const rows = [
       action({ id: "a-0", dueAt: new Date("2026-08-05T11:00:00Z") }),
       action({ id: "a-1", dueAt: new Date("2026-08-05T12:00:00Z") }),
       action({ id: "a-2", kind: "payment", dueAt: new Date("2026-08-05T13:00:00Z") }),
-      action({ id: "a-3", kind: "certification", dueAt: new Date("2026-08-05T14:00:00Z") }),
-      action({ id: "a-4", kind: "payment", dueAt: new Date("2026-08-05T15:00:00Z") }),
     ];
 
     const state = assembleDayCloseout({ trips: [], gaps: [], actions: rows, timeZone: TZ, now });
 
-    expect(state.tomorrow.total).toBe(5);
-    // Queue order — `sortActions`'s own ranking, so the glance names the kinds
-    // in the order the morning will meet them.
-    expect(state.tomorrow.byKind).toEqual([
-      { kind: "waiver", count: 2 },
-      { kind: "payment", count: 2 },
-      { kind: "certification", count: 1 },
-    ]);
+    expect(state.leftovers).toEqual([]);
   });
 });
 
@@ -371,5 +349,158 @@ describe("shopDayOf", () => {
   it("names the day the shop's own wall clock is in, not UTC's", () => {
     // 23:30 local on Aug 4 is 03:30 UTC on Aug 5.
     expect(shopDayOf(new Date("2026-08-05T03:30:00Z"), TZ)).toBe("2026-08-04");
+  });
+});
+
+/**
+ * **The evening reading, and the one thing it must never get wrong** (ADR
+ * 20260827-clearwater-surface-language, decision 4).
+ *
+ * The day closes when the day is over — with the standing one-hour
+ * late-arrival buffer this app carries on every "has it sailed" question,
+ * because trips run late. Everything else here is arithmetic over what
+ * `assembleDayCloseout` already decided; this is the part a wrong answer would
+ * put a shop's day to bed while a boat is still on the water.
+ */
+describe("assembleEveningClose", () => {
+  const day = (overrides: Partial<CloseoutTripInput> & { tripId: string }) =>
+    assembleDayCloseout({
+      trips: [trip(overrides)],
+      gaps: [],
+      actions: [],
+      timeZone: TZ,
+      now,
+    }).departures;
+
+  it("settles a boat whose head count closed clean, and counts everyone back", () => {
+    const evening = assembleEveningClose(day({ tripId: "t1", booked: 10 }), now);
+
+    expect(evening.stations.map((station) => [station.tripId, station.settled])).toEqual([
+      ["t1", true],
+    ]);
+    expect([evening.out, evening.back]).toEqual([10, 10]);
+    expect(evening.closing).toBe(true);
+    expect(evening.allHome).toBe(true);
+  });
+
+  it("holds the closing block back while a boat is still out", () => {
+    // **The pin.** A departure due back in an hour is not a departure the day
+    // may be closed over, and nothing on the page may suggest otherwise.
+    const departures = assembleDayCloseout({
+      trips: [
+        trip({ tripId: "home" }),
+        trip({
+          tripId: "out",
+          startsAt: new Date(now.getTime() - 3 * HOUR),
+          endsAt: new Date(now.getTime() + HOUR),
+        }),
+      ],
+      gaps: [],
+      actions: [],
+      timeZone: TZ,
+      now,
+    }).departures;
+    const evening = assembleEveningClose(departures, now);
+
+    expect(evening.stations.find((station) => station.tripId === "out")?.settled).toBe(false);
+    expect(evening.closing).toBe(false);
+    expect(evening.allHome).toBe(false);
+  });
+
+  it("holds it back through the whole late-arrival buffer, and lets go the moment it passes", () => {
+    // A boat scheduled home ten minutes ago has not settled: trips run late,
+    // and the hour is the allowance every other "is it back" question makes.
+    const justIn = trip({
+      tripId: "late",
+      startsAt: new Date(now.getTime() - 4 * HOUR),
+      endsAt: new Date(now.getTime() - 10 * 60 * 1000),
+    });
+    const before = assembleEveningClose(
+      assembleDayCloseout({ trips: [justIn], gaps: [], actions: [], timeZone: TZ, now }).departures,
+      now,
+    );
+    expect(before.closing).toBe(false);
+
+    const later = new Date(now.getTime() + 51 * 60 * 1000);
+    const after = assembleEveningClose(
+      assembleDayCloseout({
+        trips: [justIn],
+        gaps: [],
+        actions: [],
+        timeZone: TZ,
+        now: later,
+      }).departures,
+      later,
+    );
+    expect(after.closing).toBe(true);
+  });
+
+  it("never closes a day that had no departures at all", () => {
+    const evening = assembleEveningClose([], now);
+
+    expect(evening.stations).toEqual([]);
+    expect(evening.closing).toBe(false);
+    // Nothing sailed, so there is no homecoming to mark — the quiet-day
+    // collapse is the page, not a celebration about an empty dock.
+    expect(evening.allHome).toBe(false);
+  });
+
+  it("subtracts an after-dive gap from the count back, and withholds the moment", () => {
+    const departures = assembleDayCloseout({
+      trips: [trip({ tripId: "t1", booked: 10 })],
+      gaps: [{ tripId: "t1", reason: "missing_diver", diveNumber: 2, uncounted: 1 }],
+      actions: [],
+      timeZone: TZ,
+      now,
+    }).departures;
+    const evening = assembleEveningClose(departures, now);
+
+    expect([evening.out, evening.back]).toEqual([10, 9]);
+    // The day is over, so the block may render — but a boat that came back one
+    // person short is not "all boats are home", and the accent stays unspent.
+    expect(evening.closing).toBe(true);
+    expect(evening.allHome).toBe(false);
+  });
+
+  it("leaves a dock-count gap's numbers alone — paperwork is not a person in the water", () => {
+    const departures = assembleDayCloseout({
+      trips: [trip({ tripId: "t1", booked: 10 })],
+      gaps: [{ tripId: "t1", reason: "no_roll_call", diveNumber: 0, uncounted: 10 }],
+      actions: [],
+      timeZone: TZ,
+      now,
+    }).departures;
+    const evening = assembleEveningClose(departures, now);
+
+    expect([evening.out, evening.back]).toEqual([10, 10]);
+    // …and precisely because the arithmetic comes out even, the moment must
+    // not: nobody counted this boat at the dock, so "10 out, 10 back" is a
+    // claim the shop's records cannot support.
+    expect(evening.stations[0]?.status).toBe("count_open");
+    expect(evening.closing).toBe(true);
+    expect(evening.allHome).toBe(false);
+  });
+
+  it("puts the stations in clock order, not in the loudest-first order the list arrives in", () => {
+    const departures = assembleDayCloseout({
+      trips: [
+        trip({ tripId: "dawn", startsAt: new Date("2026-08-04T11:00:00Z") }),
+        trip({
+          tripId: "afternoon",
+          startsAt: new Date("2026-08-04T15:00:00Z"),
+          endsAt: new Date("2026-08-04T18:00:00Z"),
+        }),
+      ],
+      gaps: [{ tripId: "afternoon", reason: "no_roll_call", diveNumber: 0, uncounted: 2 }],
+      actions: [],
+      timeZone: TZ,
+      now,
+    }).departures;
+    // The closing list ranks the loudest departure first; the spine is a clock.
+    expect(departures[0]?.tripId).toBe("afternoon");
+    expect(assembleEveningClose(departures, now).stations.map((s) => s.tripId)).toEqual([
+      "dawn",
+      "afternoon",
+    ]);
   });
 });

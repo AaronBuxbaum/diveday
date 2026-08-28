@@ -115,11 +115,32 @@ function runCheck(label, scriptFile) {
 
 const results = await Promise.all(checks.map(([label, scriptFile]) => runCheck(label, scriptFile)));
 
+/**
+ * A check has three outcomes, not two.
+ *
+ * `SKIPPED_EXIT` means the guard could not run at all — today only `check:follow-ups`, the one
+ * check here that makes a network call, when `gh` cannot answer. It fails open on purpose: a
+ * commit must never be blocked on GitHub's availability. But an exit code was the only thing
+ * this loop read, so a guard that skipped printed under the same `ok` header as one that
+ * validated, and the run still ended "all checks passed" — false for that check, and false in
+ * exactly the containers where `gh` is absent, which is most of them (issue #1097).
+ *
+ * The exit code stays 0 so nothing is blocked. What changes is that the summary says which
+ * checks did not run, rather than claiming they passed.
+ */
+const SKIPPED_EXIT = 2;
+
 let anyFailed = false;
+const skipped = [];
 for (const result of results) {
   const header = `check:${result.label} (${result.scriptFile})`;
   if (result.code === 0) {
     console.log(`== ${header}: ok ==`);
+    if (result.stdout) console.log(result.stdout);
+    if (result.stderr) console.log(result.stderr);
+  } else if (result.code === SKIPPED_EXIT) {
+    skipped.push(result.label);
+    console.log(`== ${header}: SKIPPED ==`);
     if (result.stdout) console.log(result.stdout);
     if (result.stderr) console.log(result.stderr);
   } else {
@@ -135,4 +156,8 @@ if (anyFailed) {
   process.exit(1);
 }
 
-console.log("\ncheck:repo: all checks passed");
+console.log(
+  skipped.length > 0
+    ? `\ncheck:repo: all checks passed (${skipped.length} skipped: ${skipped.join(", ")})`
+    : "\ncheck:repo: all checks passed",
+);

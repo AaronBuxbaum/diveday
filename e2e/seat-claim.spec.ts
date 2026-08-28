@@ -101,11 +101,28 @@ test.describe("seat claim links", () => {
       claimantPage.getByRole("heading", { name: "A quick step before the dock" }),
     ).toBeVisible();
 
-    // The spent link is dead for everyone, uniformly.
+    // The spent link is dead for everyone — and because the token still
+    // resolves to a capability this app issued, it dies in the *booking* tier
+    // (ADR 20260827-first-light, decision 3): the shop's name and its way in.
     await claimantPage.goto(claimPath ?? "/");
     await expect(
       claimantPage.getByRole("heading", { name: "This link isn’t available" }),
     ).toBeVisible();
+    await expect(claimantPage.getByText(/Whoever sent you this link/)).toBeVisible();
+    await expect(
+      claimantPage.getByRole("link", { name: /Contact Blue Mantis Divers/ }),
+    ).toBeVisible();
+    // Five other causes share this one sentence — a cancelled seat, a departure
+    // called off for weather, a boat already back — so it may not tell this
+    // diver the seat is safe, nor send them for a link nothing can mint.
+    await expect(claimantPage.getByText(/seat is safe|fresh link/i)).toHaveCount(0);
+
+    // A token that was never ours resolves to no record, so it names nobody.
+    await claimantPage.goto("/claim/not-a-real-token");
+    await expect(
+      claimantPage.getByRole("heading", { name: "This link isn’t available" }),
+    ).toBeVisible();
+    await expect(claimantPage.getByText(/Blue Mantis/)).toHaveCount(0);
     await claimantContext.close();
 
     // The organizer reloads their page: claimed, no link to share.

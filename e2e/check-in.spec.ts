@@ -155,6 +155,9 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
   // clears the counter's own 56px one.
   const chips = page.getByRole("navigation", { name: "Choose a departure" });
   const chipLinks = chips.getByRole("link");
+  // Zero chips would pass every assertion in the loop below and prove nothing
+  // about the tap target — the vacuous pass `empty-all` exists for.
+  await expect(chipLinks).not.toHaveCount(0);
   for (const chip of await chipLinks.all()) {
     expect((await chip.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
   }

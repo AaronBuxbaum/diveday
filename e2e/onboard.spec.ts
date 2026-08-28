@@ -37,7 +37,10 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   await page.getByRole("button", { name: "Create shop & start trial" }).click();
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
 
-  await expect(page.getByRole("heading", { name: "Get your shop ready" })).toBeVisible();
+  // The setup ledger is the spine's leading group, under its own group label
+  // (ADR 20260827-first-light, decision 6) — not a card standing where the
+  // day's work would be.
+  await expect(page.getByRole("heading", { name: "First morning" })).toBeVisible();
   await expect(page.getByText("Add your contact details")).toBeVisible();
   await expect(page.getByText("Add your first dive site")).toBeVisible();
   await expect(page.getByText("Schedule your first trip")).toBeVisible();
@@ -82,6 +85,15 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveCount(1);
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveText("Set up profile");
   await expect(page.getByText("Add your first dive site")).toBeVisible();
+
+  // Every open step that is not the next one is the row itself — its
+  // destination named on the stretched link, no button (principle 10). The
+  // site step points at the **library**, whose two-door empty state is where a
+  // shop chooses between writing a site and copying a published one.
+  await expect(page.getByRole("link", { name: "Add a dive site" })).toHaveAttribute(
+    "href",
+    `/shop/${unique}/dive-sites`,
+  );
 
   // The schedule-link step always offers the link, independent of "done" state.
   await expect(page.getByText(`/s/${unique}`)).toBeVisible();

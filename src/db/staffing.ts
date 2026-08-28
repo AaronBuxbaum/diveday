@@ -1,6 +1,13 @@
 import { and, asc, count, eq, gt, inArray, isNull, lt, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
+import {
+  DEFAULT_DIVERS_PER_DIVEMASTER,
+  divemasterRatioGap,
+  inWaterDivemasterCount,
+} from "@/lib/divemaster-ratio";
+import type { StaffGapCode, TripMeeting } from "@/lib/staffing-week";
 import type { AppDb } from "./client";
 import {
   bookings,
@@ -9,23 +16,22 @@ import {
   personRoles,
   staffShifts,
   tripAssignments,
+  tripScheduleDays,
   trips,
 } from "./schema";
 import { courseCrewCountsByTrip } from "./today";
 import { listStaff } from "./trips";
 import { liveTrip } from "./trips-live";
 
-export type StaffCapability = "teach" | "crew" | "captain";
-
-export function capabilitiesForRoles(roles: readonly string[]): StaffCapability[] {
-  const capabilities: StaffCapability[] = [];
-  if (roles.includes("instructor")) capabilities.push("teach");
-  if (roles.some((role) => ["instructor", "divemaster", "captain", "crew"].includes(role))) {
-    capabilities.push("crew");
-  }
-  if (roles.includes("captain")) capabilities.push("captain");
-  return capabilities;
-}
+/*
+ * `capabilitiesForRoles` used to live here, deriving "Can teach" / "Can crew" /
+ * "Captain" from a person's roles so the roster could badge every person with
+ * all three. The week says it once instead — a row states the roles it has,
+ * which is the same fact one step less derived — and the badges are gone with
+ * the derivation, because `Badge` marks the exceptional state rather than
+ * decorating every row (ADR 20260827-clearwater-surface-language, decision 3;
+ * ADR 20260827-the-shops-shelves, decision 3). Nothing else ever read it.
+ */
 
 /**
  * How many of the window's departures still need somebody on the crew — a
@@ -35,13 +41,17 @@ export function capabilitiesForRoles(roles: readonly string[]): StaffCapability[
  * its own gap vocabulary (`over_ratio` / `course_needs_instructor`) beside
  * Today's word for the same fact (`instructor_missing`). Two surfaces, two
  * names, one computation, and only Today's could actually assign anyone —
- * the roster's rows dead-ended on a link. So the roster keeps the question it
- * alone answers (who is working, when) and reduces the rest to this summary,
- * composed from the same reader Today's detection runs on
+ * the roster's rows dead-ended on a link. What survived that is this summary,
+ * composed from the same readers Today's detection runs on
  * (`courseCrewCountsByTrip`, src/db/today.ts + `courseCrewGap`,
- * src/lib/course-ratios.ts). There is no second detector, and no second set of
- * words — the surface that can crew a boat owns them
- * (ADR 20260806-staffing-is-the-shift-roster, ADR 20260803-not-ready-is-a-view).
+ * src/lib/course-ratios.ts + `divemasterRatioGap`,
+ * src/lib/divemaster-ratio.ts). There is still no second detector, and still no
+ * second set of words: {@link StaffingGapTrip} hands back the very departures
+ * this walk counted, in Today's own codes, so the staffing week can put each
+ * gap in the day it belongs to with a door into that trip's crew section —
+ * which is the thing the retired table could not do
+ * (ADR 20260806-staffing-is-the-shift-roster, ADR 20260803-not-ready-is-a-view,
+ * ADR 20260827-the-shops-shelves).
  *
  * Advisory throughout: booking-time ratio enforcement stays in
  * `createBookingRecord` (src/db/bookings.ts). Nothing here refuses anything.
@@ -50,19 +60,62 @@ export type StaffingCrewGaps = {
   /** Scheduled departures overlapping the window — the summary's denominator. */
   departures: number;
   /**
-   * How many of them have nobody rostered at all, or a course crew gap
-   * `courseCrewGap` reports (an instructorless session, or one booked past its
-   * ratio). Zero-crew is a plain fact off the assignment rows, not a rule.
+   * How many of them are short-handed by the one measurement every crew
+   * surface shares. See {@link StaffingGapTrip} for what that means and what
+   * it deliberately leaves alone.
    */
   needCrew: number;
 };
 
-/** A trip a staff member crews, shown on their staffing card (task 165). */
+/**
+ * A trip a staff member crews, shown in their day cells (task 165).
+ *
+ * `meetings` rather than one `startsAt`/`endsAt` pair, because
+ * `trips.starts_at`/`ends_at` bound the **whole run** of a multi-day
+ * departure: a Thursday-to-Saturday course carries one window from Thu 08:00
+ * to Sat 17:00, and a week that filed it by `startsAt` alone showed the
+ * instructor busy on Thursday and free for the two days they are teaching.
+ * The meeting windows are `trip_schedule_days`, the same rows the schedule
+ * board's week reads for exactly this reason (`weekBoard`,
+ * src/db/trips-queries.ts).
+ */
 export type StaffCrewingTrip = {
   tripId: string;
   title: string;
+  /** Every window this departure meets in, ascending. Never empty. */
+  meetings: TripMeeting[];
+};
+
+/**
+ * A departure `needCrew` counted, handed back rather than only tallied.
+ *
+ * The count alone was the right answer while the roster had nowhere to put a
+ * departure: it dead-ended on a link to Today, so naming the boat added
+ * nothing a staffer could act on. The week has a day cell for it — the gap
+ * renders where the work is, carrying its own Assign door into that trip's
+ * crew section (ADR 20260827-the-shops-shelves, decision 3). Same pass, same
+ * detectors, same vocabulary as Today's: `courseCrewGap`'s two codes for a
+ * course session, and `divemasterRatioGap`'s `uncrewed_departure` /
+ * `crew_below_target` for every departure the shop runs.
+ *
+ * **Absence of a gap means somebody is in the water with them, not that
+ * somebody has a row.** This used to ask whether the departure had any
+ * `trip_assignments` row at all, which said the opposite thing twice: a
+ * twelve-diver reef charter with a captain rostered and no divemaster drew
+ * nothing, while an empty boat nobody has crewed yet drew a warning. Both
+ * answers now come from `divemasterRatioGap`, which is where that judgement
+ * lives precisely "so the trip page, the Today queue and whatever reads this
+ * next must not be able to disagree about whether one departure is short" —
+ * so a self-guided departure and a departure with nobody booked are silent
+ * here for the same reason they are silent on Today.
+ */
+export type StaffingGapTrip = {
+  tripId: string;
+  title: string;
   startsAt: Date;
-  endsAt: Date;
+  gap: StaffGapCode;
+  /** Its meeting windows, so the week can place it in a day it actually meets. */
+  meetings: TripMeeting[];
 };
 
 export type StaffingView = {
@@ -71,15 +124,19 @@ export type StaffingView = {
   staff: {
     person: typeof people.$inferSelect;
     roles: string[];
-    capabilities: StaffCapability[];
     shifts: (typeof staffShifts.$inferSelect)[];
     /** Trips in this window this person is on the crew of — a shift with no
      * boat and a boat with no shift are otherwise invisible to each other
      * (Lens 17 task 165). */
     crewingTrips: StaffCrewingTrip[];
   }[];
-  /** The one line this page says about crewing; see {@link StaffingCrewGaps}. */
+  /** The summary; see {@link StaffingCrewGaps}. */
   crewGaps: StaffingCrewGaps;
+  /**
+   * The departures behind `crewGaps.needCrew`, in departure order — the same
+   * walk, not a second one. `gapTrips.length === crewGaps.needCrew`, always.
+   */
+  gapTrips: StaffingGapTrip[];
 };
 
 export async function getStaffingView(
@@ -87,7 +144,19 @@ export async function getStaffingView(
   shopId: string,
   from: Date,
   to: Date,
+  options: {
+    /**
+     * The shop's own target (`shops.divers_per_divemaster`). Defaults for the
+     * same reason `getTodayWork` defaults it: every pre-existing caller, tests
+     * included, keeps working unchanged.
+     */
+    diversPerDivemaster?: number;
+    /** Read through the clock so the frozen e2e instant reaches this too. */
+    now?: Date;
+  } = {},
 ): Promise<StaffingView> {
+  const diversPerDivemaster = options.diversPerDivemaster ?? DEFAULT_DIVERS_PER_DIVEMASTER;
+  const now = options.now ?? nowDate();
   const [staffRows, shiftRows, tripCourseRows, crewRows] = await Promise.all([
     listStaff(db, shopId),
     db
@@ -174,6 +243,15 @@ export async function getStaffingView(
     tripMap.get(row.tripId)?.crew.add(row.personId);
   }
 
+  // When each departure actually meets. `trips.starts_at`/`ends_at` bound the
+  // whole run, so a three-day course is one 57-hour window and nothing else
+  // here can tell which days of it a person is committed to — the same reason
+  // `weekBoard` joins these rows (src/db/trips-queries.ts). A departure with no
+  // rows at all meets once, on its own window, which is every ordinary boat.
+  const meetingsByTrip = await tripMeetings(db, [...tripMap.keys()]);
+  const meetingsFor = (trip: typeof trips.$inferSelect): TripMeeting[] =>
+    meetingsByTrip.get(trip.id) ?? [{ startsAt: trip.startsAt, endsAt: trip.endsAt }];
+
   const crewingByPerson = new Map<string, StaffCrewingTrip[]>();
   for (const entry of tripMap.values()) {
     for (const personId of entry.crew) {
@@ -181,19 +259,19 @@ export async function getStaffingView(
       trips.push({
         tripId: entry.trip.id,
         title: entry.trip.title,
-        startsAt: entry.trip.startsAt,
-        endsAt: entry.trip.endsAt,
+        meetings: meetingsFor(entry.trip),
       });
       crewingByPerson.set(personId, trips);
     }
   }
   for (const trips of crewingByPerson.values()) {
-    trips.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+    trips.sort(
+      (a, b) => (a.meetings[0]?.startsAt.getTime() ?? 0) - (b.meetings[0]?.startsAt.getTime() ?? 0),
+    );
   }
 
   const staff = staffRows.map((entry) => ({
     ...entry,
-    capabilities: capabilitiesForRoles(entry.roles),
     shifts: shiftsByPerson.get(entry.person.id) ?? [],
     crewingTrips: crewingByPerson.get(entry.person.id) ?? [],
   }));
@@ -204,26 +282,97 @@ export async function getStaffingView(
   // (`countInWaterCrew`, src/lib/crew-roles.ts) — a divemaster rostered as
   // this trip's captain is not their own assistant here either.
   const crewCounts = await courseCrewCountsByTrip(db, shopId, [...tripMap.keys()]);
-  let needCrew = 0;
+  // A departure already home is nobody's morning. The week deliberately shows
+  // up to six days behind the shop's own today, and `trip_status` is only
+  // `scheduled`/`cancelled` — a boat that sailed on Monday is still
+  // `scheduled` on Friday — so without this the loudest thing on a Friday
+  // afternoon is a warning asking a manager to crew a boat that came home
+  // three days ago: the expected state formatted as an alert, spending the one
+  // warning channel this surface has. The hour of slack is the same
+  // late-arrival buffer every "has it sailed" question in this repo carries,
+  // and the same reading `weekBoard` takes.
+  const sailedBefore = new Date(now.getTime() - HOUR_MS);
+  // One walk, two answers: the count the summary reads and the departures the
+  // week places in their own day cells. They cannot disagree, because the
+  // count *is* the list's length.
+  const gapTrips: StaffingGapTrip[] = [];
   for (const entry of tripMap.values()) {
-    // Nobody rostered at all — read straight off the assignment rows. It is
-    // the one crew fact that is not a rule, and the boat it describes needs
-    // people whether or not a course ratio applies.
-    if (entry.crew.size === 0) {
-      needCrew += 1;
-      continue;
-    }
+    if (entry.trip.endsAt < sailedBefore) continue;
     const counts = crewCounts.get(entry.trip.id) ?? { instructorCount: 0, assistantCount: 0 };
-    const gap = courseCrewGap({
+    // The agency training ratio first, exactly as Today orders them: a course
+    // session missing its instructor is the more precise fact, and firing the
+    // shop's own target underneath it would name one gap in two vocabularies.
+    const courseGap = courseCrewGap({
       course: entry.course,
       instructorCount: counts.instructorCount,
       assistantCount: counts.assistantCount,
       booked: entry.booked,
     });
-    if (gap.code !== "none") needCrew += 1;
+    const place = (gap: StaffGapCode) =>
+      gapTrips.push({
+        tripId: entry.trip.id,
+        title: entry.trip.title,
+        startsAt: entry.trip.startsAt,
+        gap,
+        meetings: meetingsFor(entry.trip),
+      });
+    if (courseGap.code !== "none") {
+      place(courseGap.code);
+      continue;
+    }
+    // Then the shop's own target, which reaches every departure it runs rather
+    // than only the courses — and which owns the two exemptions this walk used
+    // to miss: a self-guided departure, and one with nobody booked.
+    const ratioGap = divemasterRatioGap({
+      divers: entry.booked,
+      divemasterCount: inWaterDivemasterCount(counts),
+      diversPerDivemaster,
+      selfGuided: entry.trip.selfGuided,
+    });
+    if (ratioGap.code === "none") continue;
+    // Two problems, two words — Today's own, not a second spelling of them:
+    // nobody in the water at all, and short of the shop's target.
+    place(ratioGap.divemasterCount === 0 ? "uncrewed_departure" : "crew_below_target");
   }
+  gapTrips.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 
-  return { from, to, staff, crewGaps: { departures: tripMap.size, needCrew } };
+  return {
+    from,
+    to,
+    staff,
+    crewGaps: { departures: tripMap.size, needCrew: gapTrips.length },
+    gapTrips,
+  };
+}
+
+/**
+ * Every departure's meeting windows, keyed by trip — the rows that say a
+ * three-day course meets on three mornings rather than running continuously
+ * for 57 hours.
+ *
+ * A trip with no `trip_schedule_days` rows is absent from the map rather than
+ * given a synthetic entry: the caller already holds the trip row and its own
+ * window is the honest fallback, and inventing one here would hide a trip
+ * whose rows were never written.
+ */
+async function tripMeetings(db: AppDb, tripIds: string[]): Promise<Map<string, TripMeeting[]>> {
+  const byTrip = new Map<string, TripMeeting[]>();
+  if (tripIds.length === 0) return byTrip;
+  const rows = await db
+    .select({
+      tripId: tripScheduleDays.tripId,
+      startsAt: tripScheduleDays.startsAt,
+      endsAt: tripScheduleDays.endsAt,
+    })
+    .from(tripScheduleDays)
+    .where(inArray(tripScheduleDays.tripId, tripIds))
+    .orderBy(asc(tripScheduleDays.tripId), asc(tripScheduleDays.dayNumber));
+  for (const row of rows) {
+    const windows = byTrip.get(row.tripId) ?? [];
+    windows.push({ startsAt: row.startsAt, endsAt: row.endsAt });
+    byTrip.set(row.tripId, windows);
+  }
+  return byTrip;
 }
 
 /**

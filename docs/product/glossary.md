@@ -10,7 +10,12 @@ new domain concept, define it here in the same PR.
   their money story, and rebooking options filtered to departures they qualify for, and staff work
   the cascade record until nobody is left unresolved (ADR
   [20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md)). A blow-out
-  moves no money on its own — refunds stay a per-booking staff decision.
+  moves no money on its own — refunds stay a per-booking staff decision. **That is why it cancels
+  the *trip* and leaves every booking active**, and every reader downstream has to expect that
+  shape: `bookings.status` says nothing about a blow-out, so a surface asking "was this seat
+  cancelled" gets `false` for all twelve people who drove to the dock and were sent home. The
+  diver's own thread therefore says the departure was cancelled on its own authority, the **dive
+  day** count excludes the date, and there is no **after-state** for a day that never happened.
 - **Conditions hold** — a reversible crew call while weather or sea state is uncertain. Existing
   bookings remain valid, new bookings pause, and booked divers are notified. It is not a
   cancellation and never implies a refund.
@@ -61,8 +66,8 @@ new domain concept, define it here in the same PR.
   spreadsheet. It lands `verified` (DiveDay assumes the shop's own system already checked it) but is
   permanently flagged `imported` (a non-null `importedAt`, with an optional prior-shop
   `importedFromLabel`), so it is never mistaken for a card this shop carded on sight. A level card
-  satisfies readiness and clears depth gates on import; staff get a soft one-tap **Confirm card** nudge (which stamps `reviewedAt`) but boarding never waits
-  on it. **Two gates do wait for that confirm.** The **enriched-air fill**: an imported nitrox card
+  satisfies readiness and clears depth gates on import; staff get a soft one-tap **Confirm card** nudge (which stamps `reviewedAt`) but boarding does not wait
+  on it — the confirm is record-keeping, not a gate, and the only thing that holds a level card is the source file's own downgrade at the foot of this entry. **Two gates do wait for that confirm.** The **enriched-air fill**: an imported nitrox card
   gives plain air until it, because a wrong fill is the highest-consequence failure
   (ADR 20260724-import-verified-cards). And any **specialty** gate: an
   imported specialty card is `verified` but does not clear the dive it authorizes until a staffer
@@ -1108,13 +1113,50 @@ new domain concept, define it here in the same PR.
 - **First-timer track** — the night-before brief in a softer, what-happens-on-the-boat voice for a
   diver with no prior non-cancelled booking on a departed trip with the shop. Same data, extra
   reassurance; the signal is derived at send time, not stored.
-- **Post-trip recap** — a single shareable per-diver-per-trip page (`/recap/[token]`) generated after
-  the trip ends: the sites dived, the day's conditions, and a bring-a-buddy nudge. It rides the same
-  delivery-row dedup as the reminders, sent once per booking as the `trip_recap` kind no earlier than
-  four hours after the departure ends. The dedicated hourly recap scan (`/api/cron/recaps`) keeps that
-  floor punctual without weakening it. The link is a purpose-separated signed booking token, distinct
-  from the readiness link. See
-  [20260723-post-trip-recap](../architecture/decisions/20260723-post-trip-recap.md).
+- **Post-trip recap** — the per-diver-per-trip reading of the day, delivered once per booking as the
+  `trip_recap` kind no earlier than four hours after the departure ends. It rides the same
+  delivery-row dedup as the reminders, and the dedicated hourly recap scan (`/api/cron/recaps`) keeps
+  that floor punctual without weakening it. Since slice 7d it is **not a page of its own**: the link
+  (`/recap/[token]`, a purpose-separated signed booking token, distinct from the readiness link)
+  renders the **after-state**, and so does the diver's own readiness link once their day is over. No
+  redirect between the two, because a recap token may not mint a readiness capability — and no
+  share-this-page control on either, because one of the two URLs rendering that surface can also
+  cancel the booking and move its refund. See
+  [20260723-post-trip-recap](../architecture/decisions/20260723-post-trip-recap.md) and
+  [20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md).
+- **After-state** — the third and last state of the diver's thread, after *prep* and *the dive day*:
+  the welcome-home greeting, the **dive record**, the crew's word, one review ask, and the quiet
+  doors for photos and a tip. **When it opens is a domain question, not a clock reading.** Where the
+  crew kept a departure roll call it follows that: `not_boarded` never sees it at all, and `boarded`
+  opens it once the boat is scheduled home plus the standing one-hour late-arrival buffer. Where a
+  shop recorded no roll call it waits four hours after the scheduled return — the floor the recap
+  *send* already uses, because nothing else in the product knows whether this person dived
+  (`isAfterTheDive`, `src/lib/thread-steps.ts`). A cancelled booking, a **blow-out**, and a no-show
+  are each answered by their own notice before it is ever asked.
+- **Dive record** — the card the after-state is built around, headed "Dive log entry", and the one
+  thing on the page that prints: everything else is `print:hidden`, and on paper the card gains a
+  ruled Notes block and a signature rule. **It states only what the shop wrote down** — the diver,
+  the date, the vessel, the crew, the sites, the conditions, and which **dive day** this makes — and
+  asserts nothing about the dive itself. There is no bottom time, no depth and no dive count
+  anywhere in it, because DiveDay records nothing about dives *performed*: `trips.planned_dives` is
+  what a shop typed on the trip row weeks earlier, and `dive_sites.max_depth_meters` is the *site's*
+  deepest point (see **Site maximum depth**), not this diver's. Logged counts and depths are what
+  divers present for course prerequisites, and a divemaster handed this page to sign must not be
+  signing for numbers nobody observed; those are the diver's to write on the ruled lines. Settled
+  after a review found all three printing as facts (2026-08-28).
+- **Dive day** — the counted unit of a diver's history with one shop: what "Your 3rd dive day with
+  Blue Mantis" counts, and what a **milestone stamp** is awarded for. One calendar day in the shop's
+  own zone, merged across the diver's own DiveDay bookings and the **prior visit** rows a shop imported
+  from wherever it kept them before (`mergeShopHistory`, `src/lib/prior-visits.ts`) — so a two-tank
+  morning and an afternoon single on one date are one day, not two. **A day nobody dived is never
+  one**: a cancelled booking, a no-show, an imported visit standing `did_not_happen`, and a
+  cancelled departure are all excluded, the last of those because a blow-out leaves its bookings
+  active by design and the count read them as days until a review caught it (2026-08-28).
+- **Milestone stamp** — the drawn double-ring roundel beside the dive record, on the dive days
+  `src/lib/visit-milestones.ts` names and no others: the 1st, 10th, 25th, 50th and 100th. Exact
+  equality, not "at least", so a miscounted day does not blur a milestone — it skips it permanently.
+  Primary ink, never coral (the thread spends its accent three times and this is not one of them),
+  and on every other visit the plain ordinal line renders in its place.
 - **Review request** — a "Leave a review" section on the post-trip recap page, shown only when the
   shop has set a single, optional outbound link (`shops.review_url`) in Settings — DiveDay never
   integrates with a review platform's API, never tracks whether a diver actually left a review, and
@@ -1279,10 +1321,32 @@ new domain concept, define it here in the same PR.
   return closes the window and frees the unit immediately. A lapsed window splits on the handover
   stamp: checked out and late is **overdue** (the unit is with a diver), never collected is
   **never picked up** (it hangs on the wall) and is closed by release, never a fabricated return.
+  Both are *phases* of one reservation and keep those narrow meanings everywhere a phase is worded
+  — the unit page's badge, Today's rows, the register row's own line — while the register files
+  them under one heading (**gear register groups**, next entry), which is the one place the word
+  "overdue" is deliberately wider.
   Cancelling a booking releases its un-collected units; a checked-out one stays until it really
   comes home. Assigning informs the prep page; it gates nothing at boarding. The direct-person
   shape is modeled but deliberately has no staff form yet; booking-held rows remain prep-flow
   shape.
+- **Gear register groups** — the three windows the register files every live unit into, and its
+  answer to "where is my fleet right now": **Out** (a window that has begun — with a diver, or
+  waiting on the desk for someone to collect it), **Overdue** (a window that has closed and nobody
+  has shut), and **On the wall** (everything else — unclaimed, returned, or spoken for on a date
+  still ahead). These are *window* states, and the one place they part company with the phase
+  vocabulary above is worth knowing: **the Overdue group takes both lapsed phases.** Its count is
+  every claim that has run out, so "Overdue — 3" means three claims to close, never three units in
+  divers' hands — two of them may be hanging on the shop's own wall under a stale claim. Which is
+  which is the row's job and not the heading's: the never-collected unit says **Never picked up**
+  in a quieter line and offers a *release*, the one with a diver carries the warning word and
+  offers a *return*, and Today still raises the two as separate rows with separate detail. A unit
+  is in exactly one group, by a pure rule (`gearRegisterGroup`, `src/lib/gear.ts`) the register and
+  its row words both read
+  ([20260827-the-shops-shelves](../architecture/decisions/20260827-the-shops-shelves.md), slice 9d).
+  **Service due** sits beside the three on the same chip row without being one of them: the
+  fleet-wide list of units the bench owes work — pulled off the wall, or a clock overdue or running
+  out inside the month — which asks what a unit *needs* rather than where it *is*, and is the one
+  reading no group absorbs.
 - **Service clock** — a unit's care deadlines, derived from its append-only service events
   (`gear_service_events`): manufacturer `service`, a tank's independent `hydro_test` and
   `visual_inspection` clocks, the `o2_clean` renewal, and clockless condition `note`s. The newest

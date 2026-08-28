@@ -1,32 +1,17 @@
 {
   "notice": {
     "closed": "Day closed. The record is below — see you tomorrow.",
-    "acknowledgeRequired": "Acknowledge the open boat or head count before closing the day.",
     "recapSent": "Any still-outstanding recaps were sent.",
-    "recapAttention": "Some recaps need attention. Check the post-dive reports below.",
+    "recapAttention": "Some recaps need attention. Open the departure they belong to.",
     "recapNotReady": "Recaps cannot be sent until four hours after the departure ends.",
     "recapLocked": "This recap has been sent. Its note and photos can no longer be changed.",
-    "crewPhotoAdded": "Crew photo added to this close-out.",
+    "crewPhotoAdded": "Crew photo added to this departure.",
     "crewPhotoRemoved": "Crew photo removed.",
-    "crewPhotoLimit": "This close-out already has the maximum number of crew photos.",
+    "crewPhotoLimit": "This departure already has the maximum number of crew photos.",
     "crewPhotoUnsupported": "Photo uploads are not configured for this shop yet.",
     "crewPhotoFailed": "That photo could not be added. Check the file and try again."
   },
-  "headline": {
-    "allClear": "Everyone is home",
-    "outstanding": "A few things are still open",
-    "noDepartures": "A quiet day at the dock"
-  },
-  "subtitle": {
-    "allClear": "Close the day and go home.",
-    "outstanding": "Settle what you can, decide about the rest.",
-    "noDepartures": "Have a look at what tomorrow opens with, close the day, and go home.",
-    "quietDay": "Nothing sailed, and tomorrow opens clear."
-  },
   "departures": {
-    "heading": "How today's boats ended",
-    "subtitle": "Every departure of the day, judged by its head count — the same evidence the manifest and Today chase.",
-    "empty": "No departures today.",
     "status": {
       "allHome": "All home",
       "unreconciled": "Unreconciled",
@@ -36,7 +21,7 @@
     },
     "detail": {
       "allHome": "{booked, plural, =0 {Nobody was booked} one {# diver, head count closed} other {# divers, head count closed}}.",
-      "stillOut": "Due back at {time}. A boat that is not home cannot read as closed.",
+      "stillOut": "Due back at {time}.",
       "notDeparted": "Departs at {time}.",
       "missingDiver": "{count, plural, one {# diver was marked not back aboard after dive {dive}.} other {# divers were marked not back aboard after dive {dive}.}} Find them — the count closes on the manifest.",
       "missingCrew": "{count, plural, one {# crew member was marked not back aboard after dive {dive}.} other {# crew members were marked not back aboard after dive {dive}.}} Find them — the count closes on the manifest.",
@@ -47,21 +32,13 @@
     }
   },
   "admin": {
-    "heading": "Administrative close-out",
-    "subtitle": "Follow-up work for the boats that are already back.",
     "status": {
       "complete": "Complete",
       "pending": "In progress",
       "attention": "Needs attention"
     },
     "postDiveReports": {
-      "label": "Post-dive reports",
-      "description": "Send each diver the recap from a completed departure.",
-      "progress": "{completed} of {total} sent.",
-      "pending": "{count, plural, one {# report is still queued.} other {# reports are still queued.}}",
-      "failed": "{count, plural, one {# report needs attention.} other {# reports need attention.}}",
-      "retry": "Retry failed reports",
-      "retrying": "Retrying failed reports…"
+      "label": "Post-dive reports"
     }
   },
   "recap": {
@@ -97,40 +74,26 @@
     "upload": "Upload photo",
     "adding": "Uploading photo…",
     "remove": "Remove",
-    "confirmRemove": "Remove this crew photo from the close-out?",
+    "confirmRemove": "Remove this crew photo from this departure?",
     "removeConfirmButton": "Remove photo",
     "removeCancel": "Keep photo",
     "removing": "Removing photo…"
   },
   "leftovers": {
-    "heading": "Today's leftovers",
-    "subtitle": "Open work from today. It carries into tomorrow unless you dismiss it here.",
-    "empty": "Nothing is left over from today.",
-    "carry": "Carry to tomorrow",
+    "groupLabel": "Still open — carries to tomorrow",
     "dismiss": "Dismiss",
-    "decisionLabel": "What to do with {subject}",
-    "currentCarried": "This will carry into tomorrow.",
-    "currentDismissed": "Dismissed for this close-out; it will still resurface if it remains open.",
     "savedCarried": "{subject} will carry into tomorrow.",
-    "savedDismissed": "{subject} dismissed for this close-out.",
+    "savedDismissed": "{subject} dismissed.",
     "saving": "Saving…",
     "undo": "Undo",
     "undoing": "Undoing…"
   },
-  "tomorrow": {
-    "heading": "Tomorrow, at a glance",
-    "empty": "Tomorrow starts clear.",
-    "count": "{count, plural, one {# job is waiting in tomorrow's queue.} other {# jobs are waiting in tomorrow's queue.}}"
-  },
   "close": {
     "heading": "Close the day",
-    "acknowledge": "{count, plural, one {# boat above is still out or has an open head count. I have seen it — closing the day does not stop the chase.} other {# boats above are still out or have open head counts. I have seen them — closing the day does not stop the chase.}}",
     "button": "Close the day",
-    "buttonAgain": "Close the day again",
-    "note": "Closing is a record, not a lock."
+    "buttonAgain": "Close the day again"
   },
   "record": {
-    "heading": "Day closed",
     "closedBy": "Closed by {name} at {time}.",
     "closeCount": "{count, plural, other {Closed # times today — each close is its own record.}}",
     "outstandingHeading": "Recorded as outstanding",
