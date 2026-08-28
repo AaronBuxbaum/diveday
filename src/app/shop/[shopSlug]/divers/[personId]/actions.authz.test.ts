@@ -2,6 +2,7 @@ import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { people, personRoles, userAccounts } from "@/db/schema";
+import { getSupportNeeds } from "@/db/support-needs";
 import { STAFF_ROLES } from "@/lib/authz";
 import { seededShopContext } from "@/test/db";
 import {
@@ -56,7 +57,8 @@ vi.mock("@/db/orders", async (importOriginal) => {
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
 const { refundOrder } = await import("@/db/orders");
-const { deletePersonAction, erasePersonAction, refundPaymentAction } = await import("./actions");
+const { deletePersonAction, erasePersonAction, refundPaymentAction, saveSupportNeedsAction } =
+  await import("./actions");
 
 /**
  * A seeded diver — someone with no *staff* role. `anonymizeDiver` refuses to
@@ -273,5 +275,77 @@ describe("erasing a diver's personal and medical data", () => {
     const after = await personRow(db, diver);
     expect(after.anonymizedAt).not.toBeNull();
     expect(after.fullName).not.toBe(before.fullName);
+  });
+});
+
+/**
+ * Issue #1069. Support needs gate like the rental fit beside them, and for the
+ * same reason: recording arrangements nobody has stated yet is data entry, open
+ * to whoever took the phone call — the Saturday walk-up whose only staff on the
+ * floor are the captain and a deckhand must not end up on a napkin. Overwriting
+ * what the diver themselves stated on `/ready` is the judgement call, and takes
+ * the same permission as overriding their stated gear.
+ */
+describe("recording a diver's dive support arrangements", () => {
+  function arrangements() {
+    const formData = new FormData();
+    formData.set("supportDiversProvidedBy", "shop");
+    formData.set("supportDiversNeeded", "2");
+    formData.set("needsWaterLift", "on");
+    formData.set("equipmentAdaptation", "webbed gloves");
+    formData.set("divesWithName", "Marisol Vega");
+    return formData;
+  }
+
+  it("lets a captain record a first set, taken over the phone", async () => {
+    const { db, shop, diver, captain } = await context();
+    signIn(shop, captain);
+
+    const to = await redirectedTo(() => saveSupportNeedsAction(shop.slug, diver, arrangements()));
+
+    expect(to).toBe(`/shop/${shop.slug}/divers/${diver}?notice=support-saved&form=support#support`);
+    expect(await getSupportNeeds(db, shop.id, diver)).toMatchObject({
+      supportDiversNeeded: 2,
+      needsWaterLift: true,
+      divesWithName: "Marisol Vega",
+    });
+  });
+
+  it("refuses that same captain the second time, and leaves the record as it was", async () => {
+    const { db, shop, diver, captain, owner } = await context();
+    // The diver's own answer is already on file — from `/ready`, or from the
+    // owner taking the first call.
+    signIn(shop, owner);
+    await redirectedTo(() => saveSupportNeedsAction(shop.slug, diver, arrangements()));
+
+    signIn(shop, captain);
+    const emptied = new FormData();
+    emptied.set("supportDiversProvidedBy", "");
+    emptied.set("supportDiversNeeded", "");
+    emptied.set("equipmentAdaptation", "");
+    emptied.set("divesWithName", "");
+    const to = await redirectedTo(() => saveSupportNeedsAction(shop.slug, diver, emptied));
+
+    expect(to).toBe(
+      `/shop/${shop.slug}/divers/${diver}?notice=not-authorized-support&form=support#support`,
+    );
+    // The whole point of the gate: the hoist the diver arranged is still there.
+    expect(await getSupportNeeds(db, shop.id, diver)).toMatchObject({
+      supportDiversNeeded: 2,
+      needsWaterLift: true,
+    });
+  });
+
+  it("lets an owner correct what is already on file", async () => {
+    const { db, shop, diver, owner } = await context();
+    signIn(shop, owner);
+    await redirectedTo(() => saveSupportNeedsAction(shop.slug, diver, arrangements()));
+
+    const corrected = arrangements();
+    corrected.set("supportDiversNeeded", "1");
+    const to = await redirectedTo(() => saveSupportNeedsAction(shop.slug, diver, corrected));
+
+    expect(to).toBe(`/shop/${shop.slug}/divers/${diver}?notice=support-saved&form=support#support`);
+    expect(await getSupportNeeds(db, shop.id, diver)).toMatchObject({ supportDiversNeeded: 1 });
   });
 });

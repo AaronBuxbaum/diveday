@@ -466,8 +466,12 @@ export default async function TripPrepPage({
               <ul className="mt-2 flex flex-col gap-2 text-sm">
                 {checklist.supportNeeds.divers.map((diver) => (
                   <li key={diver.personId}>
+                    {/* Straight to the record's own Dive support section, not
+                        the top of a 6,400px page: a staffer following this link
+                        is going to read or correct the thing they were just
+                        looking at (issue #1069). */}
                     <Link
-                      href={`/shop/${shopSlug}/divers/${diver.personId}`}
+                      href={`/shop/${shopSlug}/divers/${diver.personId}#support`}
                       className="font-medium hover:text-primary hover:underline"
                     >
                       {diver.fullName}
@@ -477,9 +481,11 @@ export default async function TripPrepPage({
                         sentence inside a joined list is where a crew loses
                         track of which fact is which. */}
                     <ul className="mt-0.5 flex flex-col text-muted">
-                      {supportNeedsLines(t, diver.needs).map((line) => (
-                        <li key={line}>{line}</li>
-                      ))}
+                      {supportNeedsLines(t, diver.needs, checklist.supportNeeds.rosterNames).map(
+                        (line) => (
+                          <li key={line}>{line}</li>
+                        ),
+                      )}
                     </ul>
                   </li>
                 ))}

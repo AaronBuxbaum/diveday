@@ -28,6 +28,22 @@ function optional(value: string | undefined) {
   return value?.trim() || null;
 }
 
+/** The size columns the caller actually named, trimmed; the rest stay as they are. */
+function sizeUpdates(input: RentalFitInput) {
+  const sizes = {
+    bcdSize: input.bcdSize,
+    wetsuitSize: input.wetsuitSize,
+    bootSize: input.bootSize,
+    finSize: input.finSize,
+    weightPreference: input.weightPreference,
+  };
+  return Object.fromEntries(
+    Object.entries(sizes)
+      .filter(([, value]) => value !== undefined)
+      .map(([column, value]) => [column, optional(value)]),
+  );
+}
+
 /**
  * A fit is a living preference, not evidence: staff and divers both correct it
  * as sizes change, so it upserts rather than versioning. The person lookup
@@ -49,11 +65,15 @@ export async function saveRentalFit(db: AppDb, input: RentalFitInput) {
     rentsWeights: input.rentsWeights,
     rentsDiveComputer: input.rentsDiveComputer,
     rentsGopro: input.rentsGopro,
-    bcdSize: optional(input.bcdSize),
-    wetsuitSize: optional(input.wetsuitSize),
-    bootSize: optional(input.bootSize),
-    finSize: optional(input.finSize),
-    weightPreference: optional(input.weightPreference),
+    // Each size is written only when the caller actually carried it -- the
+    // same rule as `note` below, and for the same reason. The diver record's
+    // form renders a size box only for an item the shop's catalog currently
+    // offers, so a shop that has turned weights off posts no
+    // `weightPreference` at all. Writing `null` for an absent key would erase
+    // a size the diver already gave the moment the shop put the item back
+    // (issue #1062); refusing the save instead, which is what a required
+    // field did, left that shop unable to save any fit at all.
+    ...sizeUpdates(input),
     // This writer *is* the fit being stated — by the diver's gear form or by
     // staff editing it. `saveRentalFitNote` deliberately never sets it, which
     // is what keeps a note-only row off the packing list (see the column's own

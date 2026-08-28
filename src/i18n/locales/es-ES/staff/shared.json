@@ -84,18 +84,6 @@
     "meetingPoint": "Punto de encuentro: {label}",
     "conditionsHeading": "Condiciones"
   },
-  "rollCallNote": {
-    "optionalNote": "Nota",
-    "message": {
-      "saving": "Guardando…",
-      "waiting": "Guardada en este dispositivo — se envía con el resultado de este buceador.",
-      "saved": "Guardada.",
-      "queued": "Guardada en este dispositivo — se enviará cuando vuelvas a estar en línea.",
-      "error": "No se pudo guardar — tu nota sigue aquí. Inténtalo de nuevo.",
-      "idle": "Se guarda mientras escribes."
-    },
-    "notePlaceholder": "Llegó tarde al barco, pregunta médica, problema de equipo…"
-  },
   "commandPalette": {
     "search": "Buscar",
     "dialogAriaLabel": "Búsqueda rápida",
@@ -598,11 +586,8 @@
       "emergencyContact": "Contacto de emergencia",
       "notOnFile": "Sin datos registrados",
       "rentalFit": "Equipo de alquiler",
+      "diveSupport": "Apoyo en la inmersión",
       "nitroxRequestedSuffix": "· Nitrox solicitado",
-      "addNoteSummary": "Añadir una nota",
-      "optionalNote": "Nota opcional",
-      "notePlaceholder": "Llegó tarde al barco, pregunta médica, problema de equipo…",
-      "noteHint": "La nota viaja con este registro de pase de lista.",
       "saving": "Guardando…",
       "boardedDone": "Embarcado ☑️",
       "markBoarded": "Marcar embarcado",
@@ -723,6 +708,8 @@
     "briefingAloud": "Briefing descrito en voz alta",
     "briefingSignals": "Señales acordadas",
     "equipment": "Equipo: {note}",
-    "divesWith": "Bucea con {name}"
+    "divesWith": "Bucea con {name}",
+    "divesWithOnDeparture": "Bucea con {name} — en esta salida",
+    "divesWithNotOnDeparture": "Bucea con {name} — sin reserva en esta salida"
   }
 }

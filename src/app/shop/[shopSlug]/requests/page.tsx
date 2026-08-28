@@ -97,7 +97,15 @@ function RequestCard({
         {request.email ? (
           <>
             {" · "}
-            <a href={`mailto:${request.email}`} className="text-primary hover:underline">
+            {/* **Underlined always, not on hover.** This link sits *inside* a
+                run of text — the diver's name and phone number either side of
+                it — where colour alone is the only thing marking it as a link,
+                and `--primary` against the surrounding ink is 2.8:1, under
+                WCAG's 3:1 floor for exactly that (axe `link-in-text-block`,
+                found by the scan added in issue #1056). The links in the action
+                row below stand alone in their own line, so the rule does not
+                reach them and they keep the hover underline. */}
+            <a href={`mailto:${request.email}`} className="text-primary underline">
               {request.email}
             </a>
           </>

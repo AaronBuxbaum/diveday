@@ -905,7 +905,6 @@ describe("diver erasure", () => {
       bookingId,
       recordedByPersonId: captainId,
       status: "boarded",
-      note: "Elena boarded last, said she felt fine",
       occurredAt: erasureNow,
     });
     await db.insert(bookingPayments).values({
@@ -1192,7 +1191,6 @@ describe("diver erasure", () => {
       .select()
       .from(rollCallEvents)
       .where(eq(rollCallEvents.bookingId, bookingId));
-    expect(rollCall?.note).toBeNull();
     expect(rollCall?.status).toBe("boarded");
 
     const [payment] = await db

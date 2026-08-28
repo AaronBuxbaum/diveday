@@ -148,6 +148,40 @@ describe("auditLedger", () => {
     expect(messages(result)).toContain('names visual capture "ghost-surface"');
   });
 
+  /**
+   * Issue #1056. The axe share used to be counted off the `e2e` list — the
+   * routes whose specs happened to include `a11y.spec.ts` — which is a list
+   * maintained to say which specs *navigate* a route, not which ones scan it.
+   * It read 22% while the spec was in fact scanning better than forty routes.
+   * The column makes the two facts separable.
+   */
+  it("accepts an a11y column and holds its spec names to the same rule", async () => {
+    const healthy = await audit({
+      ledger: {
+        ...HEALTHY.ledger,
+        "/": { e2e: ["booking.spec.ts"], visual: ["landing"], a11y: ["booking.spec.ts"] },
+      },
+    });
+    expect(healthy.violations).toEqual([]);
+
+    const ghost = await audit({
+      ledger: {
+        ...HEALTHY.ledger,
+        "/": { e2e: ["booking.spec.ts"], visual: ["landing"], a11y: ["nope.spec.ts"] },
+      },
+    });
+    expect(messages(ghost)).toContain('names a11y spec "nope.spec.ts"');
+  });
+
+  it("never makes a missing scan a violation — that half is a human decision", async () => {
+    // Every route in the healthy ledger carries no `a11y` at all, and the
+    // audit passes. Turning coverage into a ratchet is a call about how much
+    // the product pays per route, and it is not an agent's to impose.
+    const result = await audit();
+    expect(result.violations).toEqual([]);
+    expect(result.stats.a11y).toBe(0);
+  });
+
   it("fails an uncovered route that carries no exempt reason", async () => {
     const result = await audit({
       ledger: { ...HEALTHY.ledger, "/shop/[shopSlug]/staffing": { e2e: [], visual: [] } },

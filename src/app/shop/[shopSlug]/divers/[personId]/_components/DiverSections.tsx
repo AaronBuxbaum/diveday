@@ -24,6 +24,11 @@ export const DIVER_SECTIONS = [
   { id: "cards", labelKey: "divers.subNav.cards" },
   { id: "specialty", labelKey: "divers.subNav.specialty" },
   { id: "fit", labelKey: "divers.subNav.fit" },
+  // Beside the fit, because the record is: one row per person per shop,
+  // upserted, a living preference rather than evidence (schema.ts). A staffer
+  // arriving from the prep panel's link lands on the record and finds what they
+  // were just reading (issue #1069).
+  { id: "support", labelKey: "divers.subNav.support" },
   { id: "payments", labelKey: "divers.subNav.payments" },
   { id: "book-activity", labelKey: "divers.subNav.bookActivity" },
   { id: "trips", labelKey: "divers.subNav.trips" },

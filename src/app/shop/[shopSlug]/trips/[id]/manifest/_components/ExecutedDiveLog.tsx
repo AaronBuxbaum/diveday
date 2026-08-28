@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
 import type { ExecutedDive } from "@/db/schema";
 import { type DepthUnit, depthInUnit, maxEnteredDepth } from "@/lib/depth-units";
@@ -24,7 +25,6 @@ function dateTimeValue(value: Date | null, timeZone: string) {
  */
 export type ExecutedDiveLabels = {
   heading: string;
-  description: string;
   actualSite: string;
   unknown: string;
   maxDepth: string;
@@ -68,6 +68,14 @@ export function ExecutedDiveLog({
     diveSite: { id: string; name: string } | null;
     diveLabel: string;
     plannedSiteLabel: string;
+    /**
+     * The whole line the collapsed row shows — "Dive 1 — not recorded yet", or
+     * "Dive 1 — Molasses Reef, 18 m, 8:05–8:47". Composed on the server for the
+     * reason `diveLabel` is: it interpolates a depth in the shop's unit and two
+     * times in the shop's zone, and a Client Component has neither the
+     * translator nor the formatters.
+     */
+    summaryLine: string;
   }>;
   liveDiveSites: ReadonlyArray<{ id: string; name: string }>;
   executed: ReadonlyArray<{
@@ -90,24 +98,54 @@ export function ExecutedDiveLog({
       <h2 id="executed-dive-heading" className="text-lg font-semibold">
         {labels.heading}
       </h2>
-      <p className="mt-1 text-sm text-muted">{labels.description}</p>
+      {/* No standing description. "Record the actual site, times, depth and
+          conditions after each dive" restated the field labels one tap below
+          it, and the summary line now says what state each dive is in — which
+          is the thing a crew at a checkpoint actually needs to know. */}
       <div className="mt-4 space-y-4">
         {planned
           .filter(({ diveNumber }) => diveNumber === activeDiveNumber)
-          .map(({ diveNumber, diveSite, diveLabel, plannedSiteLabel }) => (
-            <ExecutedDiveForm
-              key={diveNumber}
-              diveNumber={diveNumber}
-              plannedSite={diveSite}
-              diveLabel={diveLabel}
-              plannedSiteLabel={plannedSiteLabel}
-              row={byNumber.get(diveNumber)}
-              liveDiveSites={liveDiveSites}
-              action={action}
-              labels={labels}
-              timeZone={timeZone}
-              depthUnit={depthUnit}
-            />
+          .map(({ diveNumber, diveSite, diveLabel, plannedSiteLabel, summaryLine }) => (
+            <div key={diveNumber} className={sectionCardClass({ padding: "none" })}>
+              {/* **Collapsed to its summary** (issue #1055, ADR
+                  20260827-the-departure-is-two-working-surfaces decision 2).
+                  This is the largest form in the trip namespace and it stood
+                  fully open at every after-dive checkpoint — roughly a third
+                  of a 2,700px phone screen, between the roll call and the
+                  buddy panel, on the surface the ADR calls an instrument.
+
+                  It stays on the boat rather than moving ashore: the surface
+                  interval is when a divemaster still has the numbers in their
+                  head and the shop has no signal. What changes is that it no
+                  longer claims the screen while a crew is counting bodies. The
+                  same treatment `PreDepartureCheckList` took in slice 5a. */}
+              <details className="group/dive print:hidden">
+                <summary className="group/summary flex min-h-14 cursor-pointer list-none items-center gap-2 px-4 py-3 select-none [&::-webkit-details-marker]:hidden">
+                  <DisclosureCaret className="group-open/dive:rotate-90" />
+                  <span className="text-base font-semibold group-hover/summary:underline">
+                    {summaryLine}
+                  </span>
+                </summary>
+                <ExecutedDiveForm
+                  diveNumber={diveNumber}
+                  plannedSite={diveSite}
+                  diveLabel={diveLabel}
+                  plannedSiteLabel={plannedSiteLabel}
+                  row={byNumber.get(diveNumber)}
+                  liveDiveSites={liveDiveSites}
+                  action={action}
+                  labels={labels}
+                  timeZone={timeZone}
+                  depthUnit={depthUnit}
+                />
+              </details>
+              {/* A closed `<details>` contributes nothing to print, and the
+                  packet's stylesheet hides every input inside
+                  `.trip-print-bundle` anyway — so what paper carried here was a
+                  blank form. It carries the state instead, restated outside the
+                  disclosure the same way the checklist's lines are. */}
+              <p className="hidden px-4 py-3 text-base print:block">{summaryLine}</p>
+            </div>
           ))}
       </div>
     </section>
@@ -168,7 +206,7 @@ function ExecutedDiveForm({
   const depthError = result?.status === "error" && result.reason === "depth_out_of_range";
 
   return (
-    <form action={formAction} className={sectionCardClass({ padding: "md" })}>
+    <form action={formAction} className="px-4 pb-4">
       <input type="hidden" name="diveNumber" value={diveNumber} />
       <h3 className="font-semibold">{diveLabel}</h3>
       <p className="mt-1 text-sm text-muted">{plannedSiteLabel}</p>

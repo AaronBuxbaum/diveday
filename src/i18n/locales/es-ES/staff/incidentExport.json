@@ -84,7 +84,6 @@
   "timelineBuddyMembers": "Integrantes en ese momento: {names}",
   "actionCleared": "Registro anulado (corrección)",
   "recordedByName": "Registrado por {name}",
-  "noteLine": "Nota: {note}",
   "footerHashLabel": "Código de integridad (SHA-256)",
   "footerHashExplainer": "Calculado a partir de los datos registrados en este documento. Regenerarlo con los mismos registros reproduce el mismo código, así que dos copias pueden compararse entre sí.",
   "certNoNumber": "sin número de certificación registrado",

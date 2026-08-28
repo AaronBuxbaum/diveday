@@ -90,7 +90,7 @@ test("the diver record's sub-nav jumps to a section without leaving the page", a
   await expect(subNav).toBeVisible();
 
   const payments = page.getByRole("heading", { name: "Payments" });
-  // Eighth of twelve sections: far below the fold on arrival.
+  // Well below the fold on arrival, which is the whole reason the bar exists.
   await expect(payments).not.toBeInViewport();
 
   await subNav.getByRole("link", { name: "Payments" }).click();
@@ -106,7 +106,7 @@ test("the diver record's sub-nav jumps to a section without leaving the page", a
 
   // The destructive tail is deliberately not a sub-nav target: deleting a
   // diver and erasing their personal data cost a scroll, on purpose.
-  await expect(subNav.getByRole("link")).toHaveCount(10);
+  await expect(subNav.getByRole("link")).toHaveCount(11);
   await expect(subNav.getByRole("link", { name: /Erase|Delete/ })).toHaveCount(0);
 });
 
@@ -408,8 +408,10 @@ test("erase is absent on a live diver's record and appears once they are deleted
   await page.getByRole("button", { name: "Add diver", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: diverName })).toBeVisible();
 
-  // Live: the destructive tail is Delete alone.
-  await expect(page.getByRole("heading", { name: "Delete", exact: true })).toBeVisible();
+  // Live: the destructive tail is Delete alone. The delete section carries no
+  // heading of its own — "Delete" above a disclosure reading "Delete <name>"
+  // named the same act twice (issue #779) — so the disclosure is the anchor.
+  await expect(page.getByText(`Delete ${diverName}`)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Erase personal data" })).toBeHidden();
 
   await page.getByText(`Delete ${diverName}`).click();

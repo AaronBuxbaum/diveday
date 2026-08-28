@@ -84,7 +84,6 @@
   "timelineBuddyMembers": "Members at that moment: {names}",
   "actionCleared": "Entry cleared (correction)",
   "recordedByName": "Recorded by {name}",
-  "noteLine": "Note: {note}",
   "footerHashLabel": "Integrity code (SHA-256)",
   "footerHashExplainer": "Computed from this document's recorded facts. Re-generating from unchanged records reproduces the same code, so two copies can be checked against each other.",
   "certNoNumber": "no certification number on file",

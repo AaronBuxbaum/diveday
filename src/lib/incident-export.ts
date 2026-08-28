@@ -117,7 +117,6 @@ export type IncidentRollCallResult = {
   label: RollCallLabel;
   occurredAt: string | null;
   recordedByName: string | null;
-  note: string | null;
 };
 
 /**
@@ -235,7 +234,6 @@ export type IncidentTimelineEntry =
       action: "boarded" | "not_boarded" | "cleared";
       source: "live" | "offline";
       recordedByName: string;
-      note: string | null;
     }
   /**
    * One act on a buddy team (ADR 20260804-buddy-teams). Buddy was the only fact
@@ -262,7 +260,6 @@ export type IncidentTimelineEntry =
       teamNumber: number;
       memberNames: string[];
       recordedByName: string;
-      note: null;
     };
 
 export type IncidentExportDocument = {
@@ -326,7 +323,6 @@ export type IncidentTimelineEventInput = {
   status: "boarded" | "not_boarded" | "cleared";
   source: "live" | "offline";
   recordedByName: string;
-  note: string | null;
   occurredAt: Date;
   createdAt: Date;
 };
@@ -491,7 +487,6 @@ function rollCallResults(
       label: rollCallLabel(manifest.checkpoint, rollCall),
       occurredAt: rollCall && !rollCall.implied ? rollCall.occurredAt.toISOString() : null,
       recordedByName: rollCall && !rollCall.implied ? rollCall.recordedByName : null,
-      note: rollCall && !rollCall.implied ? rollCall.note : null,
     };
   });
 }
@@ -595,7 +590,6 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
         action: event.status,
         source: event.source,
         recordedByName: event.recordedByName,
-        note: event.note,
       } satisfies IncidentTimelineEntry,
       occurredAt: event.occurredAt,
       createdAt: event.createdAt,
@@ -612,7 +606,6 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
         teamNumber: teamNumberById.get(event.teamId) ?? 0,
         memberNames: [...event.memberNames],
         recordedByName: event.recordedByName,
-        note: null,
       } satisfies IncidentTimelineEntry,
       occurredAt: event.occurredAt,
       createdAt: event.createdAt,

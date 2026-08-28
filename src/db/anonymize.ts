@@ -93,7 +93,6 @@ import {
   priorVisits,
   recapPhotos,
   rentalFitProfiles,
-  rollCallEvents,
   specialtyCertifications,
   staffCredentials,
   tripReviews,
@@ -742,17 +741,6 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         and(
           inArray(bookingCapabilities.bookingId, bookingIds),
           isNull(bookingCapabilities.revokedAt),
-        ),
-      );
-
-    await tx
-      .update(rollCallEvents)
-      .set({ note: null })
-      .where(
-        and(
-          eq(rollCallEvents.shopId, shopId),
-          inArray(rollCallEvents.bookingId, bookingIds),
-          isNotNull(rollCallEvents.note),
         ),
       );
 

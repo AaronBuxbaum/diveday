@@ -15,6 +15,7 @@ import { getDiverProfile } from "@/db/divers";
 import { canPersonExportShopData } from "@/db/export";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { getSupportNeeds } from "@/db/support-needs";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -38,6 +39,7 @@ import { RestoreDiver } from "./_components/RestoreDiver";
 import { ShopHistory } from "./_components/ShopHistory";
 import { SpecialtyCards } from "./_components/SpecialtyCards";
 import { StatsSummary } from "./_components/StatsSummary";
+import { SupportNeedsPanel } from "./_components/SupportNeedsPanel";
 import { UpcomingTripsSection } from "./_components/UpcomingTripsSection";
 import { WaiverSection } from "./_components/WaiverSection";
 import { restoreCardAction, restoreDiverNoteAction } from "./actions";
@@ -123,6 +125,7 @@ export default async function DiverDetailPage({
     stripeAccount,
     notes,
     activityPage,
+    supportNeeds,
   ] = await Promise.all([
     canPersonRefund(db, shop.id, session.user.personId),
     canPersonDeleteDiver(db, shop.id, session.user.personId),
@@ -140,6 +143,7 @@ export default async function DiverDetailPage({
     // page. A non-numeric `?activity=` reads as page 1 and the query clamps
     // anything past the end, so a stale bookmark lands on the last real page.
     pagedDiverActivity(db, shop.id, personId, { page: Number.parseInt(activity ?? "", 10) }),
+    getSupportNeeds(db, shop.id, personId),
   ]);
   const mergeCandidates =
     canMerge && !removed ? await listDiverMergeCandidates(db, shop.id, personId) : [];
@@ -295,6 +299,20 @@ export default async function DiverDetailPage({
           canOverride={canOverrideFit}
           locale={locale}
           status={noticeForForm(diverNotice, "fit")}
+        />
+      </DiverSection>
+      {/* Beside the fit, because the record is: one row per person per shop,
+          upserted, a living preference rather than evidence. A staffer arriving
+          from the prep panel's link now lands on the record and finds what they
+          were just reading (issue #1069). */}
+      <DiverSection id="support">
+        <SupportNeedsPanel
+          needs={supportNeeds}
+          shopSlug={shopSlug}
+          personId={personId}
+          canOverride={canOverrideFit}
+          locale={locale}
+          status={noticeForForm(diverNotice, "support")}
         />
       </DiverSection>
       {/* Above "Book an activity" deliberately: the errand that brings staff to

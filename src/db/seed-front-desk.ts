@@ -108,7 +108,6 @@ export async function seedFrontDesk(
           status: "boarded",
           checkpoint: "departure",
           source: "live",
-          note: "Demo roll call — checked in at the dock.",
           occurredAt: nowDate(),
         });
       }

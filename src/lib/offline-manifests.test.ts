@@ -251,7 +251,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "departure",
           status: "boarded",
-          note: null,
           occurredAt: "2026-07-20T11:05:00.000Z",
           syncStatus: "pending",
         },
@@ -293,7 +292,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "departure",
           status: "boarded",
-          note: null,
           occurredAt: "2026-07-20T11:00:00.000Z",
           syncStatus: "applied",
         },
@@ -305,7 +303,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "departure",
           status: "not_boarded",
-          note: null,
           occurredAt: "2026-07-20T11:10:00.000Z",
           syncStatus: "rejected",
         },
@@ -342,7 +339,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "after_dive_1",
           status: "not_boarded",
-          note: null,
           occurredAt: "2026-07-20T14:00:00.000Z",
           syncStatus: "applied",
         },
@@ -354,7 +350,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "after_dive_1",
           status: "boarded",
-          note: null,
           occurredAt: "2026-07-20T14:05:00.000Z",
           syncStatus: "rejected",
         },
@@ -493,7 +488,6 @@ describe("offline manifest policy", () => {
               state: "not_boarded",
               occurredAt: "2026-07-20T11:30:00.000Z",
               recordedByName: "Dana Divemaster",
-              note: null,
             }
           : undefined;
     }
@@ -558,7 +552,6 @@ describe("offline manifest policy", () => {
       state: "not_boarded",
       occurredAt: "2026-07-20T14:20:00.000Z",
       recordedByName: "Sal Ortiz",
-      note: null,
     };
     const refused = {
       clientEventId: "event-undo",
@@ -596,7 +589,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "after_dive_1",
           status: "boarded",
-          note: null,
           occurredAt: "2026-07-20T14:00:00.000Z",
           syncStatus: "applied",
         },
@@ -608,7 +600,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "after_dive_1",
           status: "not_boarded",
-          note: null,
           occurredAt: "2026-07-20T14:05:00.000Z",
           syncStatus: "rejected",
         },
@@ -636,7 +627,6 @@ describe("offline manifest policy", () => {
       state: "boarded",
       occurredAt: "2026-07-20T14:03:00.000Z",
       recordedByName: "Sal Ortiz",
-      note: null,
     };
     const latest = latestOfflineRollCall(
       saved,
@@ -649,7 +639,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "after_dive_1",
           status: "not_boarded",
-          note: null,
           occurredAt: "2026-07-20T14:00:00.000Z",
           syncStatus: "applied",
         },
@@ -661,7 +650,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "after_dive_1",
           status: "boarded",
-          note: null,
           occurredAt: "2026-07-20T14:05:00.000Z",
           syncStatus: "rejected",
         },
@@ -697,7 +685,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "departure",
           status: "not_boarded",
-          note: null,
           occurredAt: "2026-07-20T11:00:00.000Z",
           syncStatus: "applied",
         },
@@ -709,7 +696,6 @@ describe("offline manifest policy", () => {
           bookingId: "ready",
           checkpoint: "departure",
           status: "boarded",
-          note: null,
           occurredAt: "2026-07-20T11:10:00.000Z",
           syncStatus: "rejected",
         },
@@ -788,7 +774,6 @@ describe("offline manifest policy", () => {
         state: "not_boarded",
         occurredAt: "2026-07-20T11:02:00.000Z",
         recordedByName: "Dana Divemaster",
-        note: null,
         implied: manifest.checkpoint !== "departure",
       };
     }
@@ -825,7 +810,6 @@ describe("offline manifest policy", () => {
       state: "not_boarded",
       occurredAt: "2026-07-20T14:00:00.000Z",
       recordedByName: "Dana Divemaster",
-      note: null,
     };
     const events = [
       {
@@ -881,7 +865,6 @@ describe("offline manifest policy", () => {
         state: "not_boarded",
         occurredAt: "2026-07-20T11:02:00.000Z",
         recordedByName: "Dana Divemaster",
-        note: "Left after dive 1",
         implied: true,
       },
     });
@@ -909,7 +892,6 @@ describe("offline manifest policy", () => {
           bookingId: "blocked",
           checkpoint: "departure",
           status: "not_boarded",
-          note: null,
           occurredAt: "2026-07-20T11:06:00.000Z",
           syncStatus: "pending",
         },
@@ -959,7 +941,6 @@ describe("offline manifest policy", () => {
             state: "not_boarded",
             occurredAt: new Date("2026-07-20T13:30:00.000Z"),
             recordedByName: "Dana Divemaster",
-            note: null,
             implied: true,
           },
           buddyAlert: null,
@@ -991,11 +972,144 @@ describe("offline manifest policy", () => {
       state: "not_boarded",
       occurredAt: "2026-07-20T13:30:00.000Z",
       recordedByName: "Dana Divemaster",
-      note: null,
       implied: true,
     });
     // Private data the dock does not need is still dropped.
     expect(payload.manifests[0]?.divers[0]?.email).toBeNull();
+  });
+
+  /** One ready diver on a two-dive departure — the shape these serialization cases vary. */
+  function baseManifest(): TripManifest {
+    return {
+      trip: {
+        id: "trip-1",
+        title: "Two-Tank Reef",
+        startsAt: new Date("2026-07-20T12:00:00.000Z"),
+        endsAt: new Date("2026-07-20T16:00:00.000Z"),
+        plannedDives: 2,
+      },
+      checkpoint: "after_dive_1",
+      crew: [],
+      completeness: {
+        complete: false,
+        diversAccountedFor: false,
+        crewAccountedFor: false,
+        reason: "divers_awaiting",
+        crewReason: "crew_none_assigned",
+        crewCounts: { crewAwaiting: 0, crewNotBackAboard: 0, crewAshore: 0, crewAssigned: 0 },
+      },
+      divers: [
+        {
+          bookingId: "booking-1",
+          fullName: "Nobody Asked",
+          email: "nobody@example.com",
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+          readiness: { status: "ready", blockers: [] },
+          rentalFit: { state: "own_kit" },
+          nitroxRequested: false,
+          checkedIn: false,
+          rollCall: undefined,
+          buddyAlert: null,
+        },
+      ],
+      summary: {
+        totalDivers: 1,
+        ready: 1,
+        blocked: 0,
+        boarded: 0,
+        notBoarded: 0,
+        notBackAboard: 0,
+        awaiting: 1,
+        unaccountedFor: 1,
+      },
+    } as TripManifest;
+  }
+
+  it("carries the whole support-needs record offshore, free text and all", () => {
+    // Issue #1067. The allow-list exists because this payload sits up to 14
+    // days on a deckhand's personal phone -- but a water lift and an
+    // agreed-signal briefing are *mooring* facts, and at the mooring this copy
+    // is the only copy. The free text rides too: "webbed gloves" is what
+    // somebody packs, and a person you must be teamed with is the arrangement
+    // a crew acts on.
+    const manifest: TripManifest = {
+      ...baseManifest(),
+      divers: [
+        {
+          bookingId: "booking-adaeze",
+          fullName: "Adaeze Nwosu",
+          email: "adaeze@example.com",
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+          readiness: { status: "ready", blockers: [] },
+          rentalFit: { state: "own_kit" },
+          nitroxRequested: false,
+          checkedIn: false,
+          rollCall: undefined,
+          buddyAlert: null,
+          supportNeeds: {
+            supportDiversNeeded: 2,
+            supportDiversProvidedBy: "shop",
+            needsBoardingAssistance: true,
+            needsWaterLift: true,
+            briefingInSign: false,
+            briefingInWriting: true,
+            briefingAloud: false,
+            briefingBySignals: false,
+            equipmentAdaptation: "webbed gloves, short fin",
+            divesWithName: "Marisol Vega",
+            statedAt: new Date("2026-07-19T09:00:00.000Z"),
+          },
+        },
+      ],
+    } as TripManifest;
+
+    const payload = serializeManifests(
+      [manifest],
+      {
+        slug: "blue-mantis",
+        name: "Blue Mantis",
+        timezone: "America/New_York",
+        emergencyReference: EMPTY_EMERGENCY_REFERENCE,
+      },
+      (blocker) => blocker.code,
+    );
+    const [adaeze] = payload.manifests[0]?.divers ?? [];
+    expect(adaeze?.supportNeeds).toEqual({
+      supportDiversNeeded: 2,
+      supportDiversProvidedBy: "shop",
+      needsBoardingAssistance: true,
+      needsWaterLift: true,
+      briefingInSign: false,
+      briefingInWriting: true,
+      briefingAloud: false,
+      briefingBySignals: false,
+      equipmentAdaptation: "webbed gloves, short fin",
+      divesWithName: "Marisol Vega",
+    });
+    // `statedAt` is the one field deliberately left behind: it is a `Date` in
+    // a payload that is otherwise all JSON scalars, and it answers "was this
+    // diver ever asked" -- a question the diver's own page asks and no crew
+    // surface renders.
+    expect(adaeze?.supportNeeds).not.toHaveProperty("statedAt");
+    // And it survives the trip through storage, which is where a `Date` would
+    // have come back as a string wearing the wrong type.
+    expect(JSON.parse(JSON.stringify(adaeze)).supportNeeds).toEqual(adaeze?.supportNeeds);
+  });
+
+  it("leaves a diver nobody asked with no record rather than an empty one", () => {
+    const payload = serializeManifests(
+      [baseManifest()],
+      {
+        slug: "blue-mantis",
+        name: "Blue Mantis",
+        timezone: "America/New_York",
+        emergencyReference: EMPTY_EMERGENCY_REFERENCE,
+      },
+      (blocker) => blocker.code,
+    );
+    expect(payload.manifests[0]?.divers[0]?.supportNeeds).toBeNull();
   });
 
   it("carries a buddy as a name only — never an id, never a computed divergence", () => {
@@ -1048,7 +1162,6 @@ describe("offline manifest policy", () => {
             state: "boarded",
             occurredAt: new Date("2026-07-20T13:30:00.000Z"),
             recordedByName: "Dana Divemaster",
-            note: null,
           },
           buddyAlert: "separated_after_dive",
         },
@@ -1292,7 +1405,6 @@ describe("offline crew roll call", () => {
       state: "not_boarded",
       occurredAt: "2026-07-20T14:30:00.000Z",
       recordedByName: "Sal Ortiz",
-      note: null,
     };
     const event = {
       clientEventId: "event-crew",

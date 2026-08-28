@@ -1,8 +1,8 @@
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import type { SupportDiverProvider, SupportNeeds } from "@/lib/support-needs";
+import { hasSupportNeeds, type SupportDiverProvider, type SupportNeeds } from "@/lib/support-needs";
 import type { AppDb, DbExecutor } from "./client";
-import { bookings, diveSupportNeeds, people } from "./schema";
+import { activityEvents, bookings, diveSupportNeeds, people } from "./schema";
 
 /**
  * Reads and writes for the accessible-dive support-needs record (ADR
@@ -18,10 +18,24 @@ import { bookings, diveSupportNeeds, people } from "./schema";
  * does beside it.
  */
 
+/**
+ * Who is stating the record, which the trail below records and nothing else
+ * reads.
+ *
+ * A diver states their own on `/ready/[token]`, where the actor *is* the
+ * subject; staff state one taken over the phone. The distinction is the whole
+ * point of the trail: a readiness link gets forwarded -- a group organiser's
+ * address on five seats, a hotel front desk's shared inbox -- so "did this
+ * come from the diver's own link or from the shop" is the question somebody
+ * will eventually need answered (issue #1070).
+ */
+export type SupportNeedsActor = { kind: "diver" } | { kind: "staff"; personId: string };
+
 /** What a caller may state. Absent fields are left alone; `null` clears. */
 export type SupportNeedsInput = {
   shopId: string;
   personId: string;
+  actor: SupportNeedsActor;
   supportDiversNeeded: number | null;
   supportDiversProvidedBy: SupportDiverProvider | null;
   needsBoardingAssistance: boolean;
@@ -106,15 +120,98 @@ export async function saveSupportNeeds(
     statedAt: nowDate(),
     updatedAt: nowDate(),
   };
-  const [row] = await db
-    .insert(diveSupportNeeds)
-    .values({ shopId: input.shopId, personId: input.personId, ...values })
-    .onConflictDoUpdate({
-      target: [diveSupportNeeds.shopId, diveSupportNeeds.personId],
-      set: values,
-    })
-    .returning();
-  return row ?? null;
+  return await db.transaction(async (tx) => {
+    // Read before write: the trail says whether this save *emptied* a record
+    // that held something, which is the one shape a reader cannot reconstruct
+    // afterwards -- the row that is left looks identical to one nobody ever
+    // filled in beyond its `stated_at`.
+    const before = await getSupportNeeds(tx, input.shopId, input.personId);
+    const [row] = await tx
+      .insert(diveSupportNeeds)
+      .values({ shopId: input.shopId, personId: input.personId, ...values })
+      .onConflictDoUpdate({
+        target: [diveSupportNeeds.shopId, diveSupportNeeds.personId],
+        set: values,
+      })
+      .returning();
+    if (!row) return null;
+    await recordSupportNeedsChange(tx, {
+      shopId: input.shopId,
+      personId: input.personId,
+      actor: input.actor,
+      emptied: hasSupportNeeds(before) && !hasSupportNeeds(row),
+    });
+    return row;
+  });
+}
+
+/**
+ * One line on the diver's trail saying the record changed -- never what it
+ * says.
+ *
+ * Whoever holds a `/ready` link can read that a diver arranged a hoist and a
+ * sign-language briefing, and can empty the whole record with one save: every
+ * unticked box is a real `false` by design, so a form reset and submitted
+ * clears it. That is deliberate -- the record is a living preference and a
+ * diver must be able to retract an arrangement as easily as they made one --
+ * but a retraction has to be *visible afterwards*, or a support-diver count
+ * silently lost between `/ready` and the manifest is a diver in the water
+ * without the help they arranged, with no way to find out when it went or
+ * from where (ADR 20260827-support-needs-are-a-record-about-the-dive; issue
+ * #1070).
+ *
+ * The arrangements themselves stay out of the message on purpose. This table
+ * has its own retention window, and copying a health-adjacent detail into a
+ * second one buys nothing the record itself does not already answer.
+ */
+async function recordSupportNeedsChange(
+  tx: DbExecutor,
+  input: { shopId: string; personId: string; actor: SupportNeedsActor; emptied: boolean },
+) {
+  const [diver] = await tx
+    .select({ name: people.fullName })
+    .from(people)
+    .where(and(eq(people.id, input.personId), eq(people.shopId, input.shopId)))
+    .limit(1);
+  if (!diver) return;
+  const verb = input.emptied ? "cleared" : "updated";
+  if (input.actor.kind === "staff") {
+    const [actor] = await tx
+      .select({ name: people.fullName })
+      .from(people)
+      .where(and(eq(people.id, input.actor.personId), eq(people.shopId, input.shopId)))
+      .limit(1);
+    // A staff actor who is not this shop's leaves no line rather than an
+    // unattributed one: `actor_person_id` is `notNull` and a trail that
+    // invents an author is worse than one that is short.
+    if (!actor) return;
+    await tx.insert(activityEvents).values({
+      shopId: input.shopId,
+      tripId: null,
+      bookingId: null,
+      actorPersonId: input.actor.personId,
+      subjectPersonId: input.personId,
+      // i18n-exempt: an activity-trail line, stored as written like every
+      // other row in this table; it is staff-facing history, not UI copy.
+      message: `${actor.name} ${verb} what to set up for ${diver.name}'s dives`,
+      occurredAt: nowDate(),
+    });
+    return;
+  }
+  await tx.insert(activityEvents).values({
+    shopId: input.shopId,
+    tripId: null,
+    bookingId: null,
+    // The diver is both author and subject here -- they wrote it on their own
+    // page. Both handles are set anyway: `actor_person_id` is what attributes
+    // the line, and `subject_person_id` is what ties it to the record it was
+    // written on (`pagedDiverActivity`).
+    actorPersonId: input.personId,
+    subjectPersonId: input.personId,
+    // i18n-exempt: see above.
+    message: `${diver.name} ${verb} what to set up for their dives`,
+    occurredAt: nowDate(),
+  });
 }
 
 /** One diver's record, or null when they have never been asked. */

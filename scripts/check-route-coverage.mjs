@@ -71,9 +71,15 @@ export const VISUAL_SPEC = "e2e/visual.spec.ts";
 export const LEDGER_PATH = "scripts/route-coverage.json";
 
 export const LEDGER_NOTE =
-  "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `exempt` states why a route warrants less than both. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose — see scripts/check-route-coverage.mjs.";
+  "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `a11y` names the specs that run an axe scan on it, `exempt` states why a route warrants less than both. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose — see scripts/check-route-coverage.mjs.";
 
-const ENTRY_KEYS = new Set(["e2e", "visual", "exempt"]);
+// `a11y` is deliberately its own column rather than being read out of `e2e`.
+// "a spec navigates through this route" and "an axe scan runs on it" are
+// different facts, and conflating them is what let the axe share read as 22%
+// while `e2e/a11y.spec.ts` was in fact scanning better than forty routes: the
+// share was counting the routes whose `e2e` list happened to name that spec,
+// which is a list maintained for a different purpose (issue #1056).
+const ENTRY_KEYS = new Set(["e2e", "visual", "a11y", "exempt"]);
 
 // ---------------------------------------------------------------------------
 // Enumerating the tree — pure-ish readers, each rooted at a directory so the
@@ -191,6 +197,11 @@ function normalizeEntry(entry) {
     e2e: [...new Set(list(entry?.e2e))].sort(),
     visual: [...new Set(list(entry?.visual))].sort(),
   };
+  // Only when the route has one: an empty `a11y: []` on every route would read
+  // as a checklist somebody is expected to tick, which is the ratchet this
+  // change deliberately does not create.
+  const a11y = [...new Set(list(entry?.a11y))].sort();
+  if (a11y.length > 0) next.a11y = a11y;
   if (typeof entry?.exempt === "string" && entry.exempt.trim() !== "") next.exempt = entry.exempt;
   return next;
 }
@@ -210,13 +221,20 @@ export function auditLedger({ routes, ledger, specs, captures }) {
       violations: [
         `${LEDGER_PATH} is missing. Create it with \`node scripts/check-route-coverage.mjs --write\`, then fill in the coverage by hand.`,
       ],
-      stats: { total: routes.length, e2e: 0, visual: 0, exempt: 0, uncovered: routes.length },
+      stats: {
+        total: routes.length,
+        e2e: 0,
+        visual: 0,
+        a11y: 0,
+        exempt: 0,
+        uncovered: routes.length,
+      },
     };
   }
 
   const entries = ledgerEntries(ledger);
   const known = new Set(routes);
-  const stats = { total: routes.length, e2e: 0, visual: 0, exempt: 0, uncovered: 0 };
+  const stats = { total: routes.length, e2e: 0, visual: 0, a11y: 0, exempt: 0, uncovered: 0 };
 
   for (const route of routes) {
     const entry = entries[route];
@@ -236,10 +254,10 @@ export function auditLedger({ routes, ledger, specs, captures }) {
 
     for (const key of Object.keys(entry)) {
       if (!ENTRY_KEYS.has(key)) {
-        violations.push(`${route}: unknown key "${key}" — expected e2e, visual, or exempt.`);
+        violations.push(`${route}: unknown key "${key}" — expected e2e, visual, a11y, or exempt.`);
       }
     }
-    for (const key of ["e2e", "visual"]) {
+    for (const key of ["e2e", "visual", "a11y"]) {
       if (entry[key] !== undefined && !Array.isArray(entry[key])) {
         violations.push(`${route}: "${key}" must be an array of names.`);
       }
@@ -250,11 +268,23 @@ export function auditLedger({ routes, ledger, specs, captures }) {
 
     const e2eNames = list(entry.e2e);
     const visualNames = list(entry.visual);
+    const a11yNames = list(entry.a11y);
 
     for (const spec of e2eNames) {
       if (!specs.has(spec)) {
         violations.push(
           `${route}: names e2e spec "${spec}", which does not exist under ${E2E_DIR}/. Fix the name, or restore the coverage this route lost.`,
+        );
+      }
+    }
+    // Same rule as `e2e`: a named spec has to exist. This column never becomes
+    // a *requirement* — a route with no scan is not a violation, because
+    // whether accessibility coverage is a ratchet is a human decision and not
+    // an agent's to impose (issue #1056).
+    for (const spec of a11yNames) {
+      if (!specs.has(spec)) {
+        violations.push(
+          `${route}: names a11y spec "${spec}", which does not exist under ${E2E_DIR}/. Fix the name, or restore the scan this route lost.`,
         );
       }
     }
@@ -268,6 +298,7 @@ export function auditLedger({ routes, ledger, specs, captures }) {
 
     if (e2eNames.length > 0) stats.e2e += 1;
     if (visualNames.length > 0) stats.visual += 1;
+    if (a11yNames.length > 0) stats.a11y += 1;
     const exempt = typeof entry.exempt === "string" && entry.exempt.trim() !== "";
 
     // **Both, or a written reason.** This used to pass on *either* — so a route

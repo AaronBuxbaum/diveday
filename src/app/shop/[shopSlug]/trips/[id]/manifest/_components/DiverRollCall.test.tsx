@@ -72,6 +72,7 @@ function renderList({
   return render(
     <DiverRollCall
       divers={divers}
+      crewNames={[]}
       checkpoint={checkpoint}
       isDeparture={checkpoint === "departure"}
       shopSlug="blue-mantis"
@@ -212,6 +213,133 @@ describe("the screen worries only with reason (decision 4)", () => {
       ],
     });
     expect(screen.getAllByText("Minor · age 13").length).toBeGreaterThan(0);
+  });
+});
+
+describe("a recorded alarm sorts to the top, and paper does not (decision 4)", () => {
+  /** The three seats, in the order the manifest gave them. */
+  const roster = () => [
+    diver({ bookingId: "b-1", fullName: "Ana Ruiz" }),
+    diver({ bookingId: "b-2", fullName: "Diego Marín" }),
+    diver({ bookingId: "b-3", fullName: "Priya Sharma", rollCall: notBackAt() }),
+  ];
+
+  it("pulls the not-back row to the top on screen while it keeps its manifest number", () => {
+    const { container } = renderList({ divers: roster() });
+    const rows = [...container.querySelectorAll<HTMLElement>("li[id^='diver-row-']")];
+    expect(rows.map((row) => row.id)).toEqual(["diver-row-b-1", "diver-row-b-2", "diver-row-b-3"]);
+
+    // The move is `order-first` on a flex column, not a re-sorted array: the
+    // DOM *is* the printed order, so paper never depends on what the screen
+    // did. Priya is third in the document and first under a reader's eye.
+    const alarmed = rows.find((row) => row.id === "diver-row-b-3");
+    expect(alarmed?.className).toContain("order-first");
+    expect(alarmed?.className).toContain("print:order-none");
+    for (const row of rows.filter((candidate) => candidate.id !== "diver-row-b-3")) {
+      expect(row.className).not.toContain("order-first");
+    }
+
+    // Her place on the manifest is a fact about the boat, not about the list,
+    // so it rides with her.
+    expect(within(alarmed as HTMLElement).getByText("03")).toBeTruthy();
+  });
+
+  it("draws the top hairline where each medium actually starts the list", () => {
+    const { container } = renderList({ divers: roster() });
+    const rule = (bookingId: string) =>
+      container.querySelector<HTMLElement>(`li[id='diver-row-${bookingId}'] > div`)?.className ??
+      "";
+
+    // On screen the list starts at the alarmed row, so that one carries no top
+    // rule and Ana -- first in the document -- now does.
+    expect(rule("b-3")).toContain("border-t-0");
+    expect(rule("b-1")).toMatch(/(^|\s)border-t(\s|$)/);
+    // On paper the list starts at the top of the manifest, which is Ana.
+    expect(rule("b-1")).toContain("print:border-t-0");
+    expect(rule("b-3")).toContain("print:border-t");
+  });
+
+  it("moves nothing when the only records are ordinary ones", () => {
+    const { container } = renderList({
+      divers: [
+        diver({ bookingId: "b-1", fullName: "Ana Ruiz", rollCall: boardedAt() }),
+        diver({ bookingId: "b-2", fullName: "Diego Marín" }),
+      ],
+    });
+    for (const row of container.querySelectorAll<HTMLElement>("li[id^='diver-row-']")) {
+      expect(row.className).not.toContain("order-first");
+    }
+    // And the list still starts where the manifest does.
+    expect(
+      container.querySelector<HTMLElement>("li[id='diver-row-b-1'] > div")?.className,
+    ).toContain("border-t-0");
+  });
+});
+
+describe("the person a diver must dive with is checked against this departure", () => {
+  /**
+   * Issue #1068. "Dives with Omar Haddad" at the rail tells a crew a constraint
+   * is in place. If Omar was never booked on this departure it is not — the
+   * same class of error as a stale readiness badge, about the fact the diver is
+   * most relying on. It informs and never gates: the departure sails either
+   * way.
+   */
+  const withBuddy = (name: string) =>
+    diver({
+      bookingId: "b-1",
+      fullName: "Diego Marín",
+      supportNeeds: {
+        supportDiversNeeded: null,
+        supportDiversProvidedBy: null,
+        needsBoardingAssistance: false,
+        needsWaterLift: false,
+        briefingInSign: false,
+        briefingInWriting: false,
+        briefingAloud: false,
+        briefingBySignals: false,
+        equipmentAdaptation: null,
+        divesWithName: name,
+        statedAt: new Date("2026-09-10T09:00:00.000Z"),
+      },
+    });
+
+  it("says so when that person is on the departure, matching loosely", () => {
+    // A first name alone counts: the diver typed what they call him.
+    const { container } = renderList({
+      divers: [withBuddy("Omar"), diver({ bookingId: "b-2", fullName: "Omar Haddad" })],
+    });
+    expect(container.textContent).toContain("Dives with Omar — on this departure");
+  });
+
+  it("counts the crew, who are on the boat but not on the diver list", () => {
+    const { container } = render(
+      <DiverRollCall
+        divers={[withBuddy("Keiko Tanaka")]}
+        crewNames={["Keiko Tanaka"]}
+        checkpoint="after_dive_1"
+        isDeparture={false}
+        shopSlug="blue-mantis"
+        tripId="00000000-0000-4000-8000-0000000000ff"
+        locale="en-US"
+        timezone="America/New_York"
+        notesByBooking={new Map()}
+        rollCallAction={vi.fn(async () => ({ ok: true }) as const)}
+        addPrivateNoteAction={vi.fn(async () => undefined) as never}
+        rollCallButtonCopy={() => ({ errorRefusal: "Try again", blockedMessage: "Still blocked" })}
+        buddyTeamLabel={() => null}
+        t={t}
+      />,
+    );
+    expect(container.textContent).toContain("on this departure");
+    expect(container.textContent).not.toContain("not booked");
+  });
+
+  it("says plainly when they are not booked, and still blocks nothing", () => {
+    const { container } = renderList({ divers: [withBuddy("Omar Haddad")] });
+    expect(container.textContent).toContain("not booked on this departure");
+    // Informs, never gates (the ADR's fourth refusal): no danger tone, and the
+    // row's ordinary controls are untouched.
+    expect(dangerToned(container)).toHaveLength(0);
   });
 });
 

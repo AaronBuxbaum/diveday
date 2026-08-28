@@ -64,10 +64,24 @@ no filter chips. Open work expands inline: one line per blocker with its one fix
 - **Always on screen** — names in manifest order, one 56px tap each, the count, who is still to
   call, the checkpoint.
 - **One tap away** — a person's sheet (emergency contact, medical, notes, today's audit trail), the
-  boat checklist's items, buddy-team editing, and — behind a `⋯` in the top bar — the emergency
-  numbers, the response plan, and device settings.
-- **Ashore, not here** — clearing readiness blockers (the Trip tab), the dive log, anything that
-  edits the departure.
+  boat checklist's items, buddy-team editing, the executed-dive record (see below), and — behind a
+  `⋯` in the top bar — the emergency numbers, the response plan, and device settings.
+- **Ashore, not here** — clearing readiness blockers (the Trip tab), the **departure** log, anything
+  that edits the departure.
+
+*Amended 2026-08-27 (issue #1055).* "The dive log" above meant the **departure** log — the evening
+write-up at `/shop/[shopSlug]/trips/[id]/log`, owner-only and reached from close-out (ADR 20260812).
+It did not mean `ExecutedDiveLog`, which records what actually happened underwater: actual site,
+times, depth, conditions. Those are two different documents and the line read as though it covered
+both, which left the manifest carrying the largest form in the trip namespace — about a third of a
+390px screen — permanently open at every after-dive checkpoint.
+
+The executed-dive record **stays on the boat** and moves to the one-tap tier. The surface interval
+is when a divemaster still has the numbers in their head and the shop has no signal; asking them to
+write it up ashore is asking them to remember it twice. It now shows one line per dive — "Dive 1 —
+not recorded yet", or "Dive 1 — Molasses Reef, 18 m, 8:05 – 8:47" — with the form behind the tap,
+the same treatment the boat checklist took in slice 5a. Paper carries that line rather than the
+blank form it used to print.
 
 Paper is unaffected: the printed manifest keeps every contact, number and advisory in full. Screens
 hide; the sheet that goes ashore never does.

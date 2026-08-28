@@ -25,6 +25,7 @@ export function BuddyTeamsPanel({
   diverOptions,
   crewOptions,
   unteamedDivers,
+  divesWithByBooking,
   buddyErrorText,
   buddyErrorForm,
   formBuddyTeamAction,
@@ -43,6 +44,16 @@ export function BuddyTeamsPanel({
   diverOptions: BuddyMemberOption[];
   crewOptions: BuddyMemberOption[];
   unteamedDivers: ReadonlyArray<{ fullName: string }>;
+  /**
+   * Per booking, the line saying who this diver must be teamed with — already
+   * matched against the roster and worded (issue #1068).
+   *
+   * This panel is the one surface that *acts* on `dives_with`, and until now it
+   * could not see it: a crew member dragging teams together had no idea Diego
+   * must be with Omar. It informs and nothing more — no refusal, no auto-build.
+   * A team that ignores it still forms, and the shop has a conversation.
+   */
+  divesWithByBooking: ReadonlyMap<string, string>;
   buddyErrorText: string | null;
   /**
    * Which form the refusal answers, so it renders beside that form rather
@@ -134,6 +145,14 @@ export function BuddyTeamsPanel({
                 options.filter((option) => !onThisTeam.has(option.token));
               const addableDivers = free(diverOptions);
               const addableCrew = free(crewOptions);
+              // The "dives with" constraints carried by this team's own divers
+              // (issue #1068) — rendered under the chips rather than among
+              // them, since a constraint is not a member.
+              const teamDivesWith = team.members.flatMap((member) => {
+                if (member.kind !== "diver") return [];
+                const line = divesWithByBooking.get(member.bookingId);
+                return line ? [{ bookingId: member.bookingId, line }] : [];
+              });
               return (
                 <li key={team.teamId} className="px-4 py-3">
                   {/* No `justify-between`: it pushed "Dissolve team" to the
@@ -168,6 +187,14 @@ export function BuddyTeamsPanel({
                           return (
                             <li
                               key={token}
+                              // A team row carries two lists of names now — who
+                              // is *on* the team, and who its divers must dive
+                              // with (issue #1068) — so "the row with Omar in
+                              // it" stopped being a question the DOM could
+                              // answer. This marks the membership half, which
+                              // is what `e2e/buddy-pairs.spec.ts` means when it
+                              // asks for a diver's team.
+                              data-buddy-member=""
                               className={`flex items-center gap-1 rounded-full border border-border bg-surface-sunken font-semibold ${
                                 removable ? "py-0.5 ps-4 pe-1" : "px-3 py-1"
                               }`}
@@ -214,6 +241,25 @@ export function BuddyTeamsPanel({
                           );
                         })}
                       </ul>
+                      {/* **Under the chips, not among them.** These are
+                          constraints on the team, not members of it: rendered
+                          as chips they read as extra people, and a name in a
+                          member list is what every locator on this panel means
+                          by "who is on this team" — which is how the first cut
+                          of this made `buddy-pairs.spec.ts` match Diego's team
+                          when it asked for Omar's.
+
+                          Muted, never a warning tone: a departure with the
+                          constraint unmet sails (ADR
+                          20260827-support-needs-are-a-record-about-the-dive,
+                          fourth refusal). The words carry it. */}
+                      {teamDivesWith.length > 0 ? (
+                        <ul className="mt-1.5 flex flex-col gap-0.5 text-sm text-muted">
+                          {teamDivesWith.map(({ bookingId, line }) => (
+                            <li key={bookingId}>{line}</li>
+                          ))}
+                        </ul>
+                      ) : null}
                       <p className="mt-1 text-sm text-muted">
                         {t("manifest.buddyRecordedBy", { name: team.recordedByName })}
                       </p>

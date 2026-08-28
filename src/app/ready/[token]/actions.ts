@@ -204,6 +204,9 @@ export async function saveSupportNeedsFromReady(token: string, formData: FormDat
   const saved = await saveSupportNeeds(ctx.db, {
     shopId: ctx.data.shop.id,
     personId: ctx.data.person.id,
+    // The diver, on their own page — which is what the trail this write leaves
+    // records, since a forwarded readiness link writes as the diver too.
+    actor: { kind: "diver" },
     // "No" means no support divers, whatever number is left in the box.
     supportDiversNeeded: providedBy === "" ? null : parsed.data.supportDiversNeeded,
     supportDiversProvidedBy: providedBy === "" ? null : providedBy,

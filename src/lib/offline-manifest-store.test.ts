@@ -274,7 +274,6 @@ describe("loadOfflineManifest", () => {
       bookingId: payload.manifests[0].divers[0].bookingId,
       checkpoint: "departure",
       status: "not_boarded",
-      note: null,
     });
     expect(envelope.events[0].syncStatus).toBe("pending");
 
@@ -307,7 +306,6 @@ describe("loadOfflineManifest", () => {
       bookingId: payload.manifests[0].divers[0].bookingId,
       checkpoint: "departure",
       status: "not_boarded",
-      note: null,
     });
     await patchStoredExpiresAt(tripId, EXPIRED_PAST_GRACE);
 
@@ -329,7 +327,6 @@ describe("loadOfflineManifest", () => {
       bookingId: payload.manifests[0].divers[0].bookingId,
       checkpoint: "departure",
       status: "not_boarded",
-      note: "left with the shore boat",
     });
     await patchStoredExpiresAt(tripId, EXPIRED_PAST_GRACE);
     await loadOfflineManifest(tripId);
@@ -422,7 +419,6 @@ describe("listOfflineManifests", () => {
       bookingId: payload.manifests[0].divers[0].bookingId,
       checkpoint: "departure",
       status: "not_boarded",
-      note: null,
     });
     await patchStoredExpiresAt(tripId, EXPIRED_WITHIN_GRACE);
 
@@ -443,7 +439,6 @@ describe("listOfflineManifests", () => {
       bookingId: payload.manifests[0].divers[0].bookingId,
       checkpoint: "departure",
       status: "not_boarded",
-      note: null,
     });
     await patchStoredExpiresAt(tripId, EXPIRED_PAST_GRACE);
 
@@ -556,7 +551,6 @@ describe("purgeOfflineManifestsExceptShop", () => {
       bookingId: otherShopPayload.manifests[0].divers[0].bookingId,
       checkpoint: "departure",
       status: "boarded",
-      note: null,
     });
 
     await purgeOfflineManifestsExceptShop(payload.shop.slug);
@@ -580,7 +574,6 @@ describe("purgeOfflineManifestsExceptShop", () => {
       bookingId: otherShopPayload.manifests[0].divers[0].bookingId,
       checkpoint: "departure",
       status: "boarded",
-      note: null,
     });
     await patchStoredExpiresAt(foreignTripId, EXPIRED_PAST_GRACE);
 
@@ -632,7 +625,6 @@ describe("appendOfflineRollCall", () => {
       crewPersonId: payload.manifests[0].crew[0].id,
       checkpoint: "departure",
       status: "boarded",
-      note: null,
     });
 
     expect(envelope.events).toHaveLength(1);
@@ -657,7 +649,7 @@ describe("appendOfflineRollCall", () => {
     await saveOfflineManifest(payload);
 
     await expect(
-      appendOfflineRollCall(tripId, { checkpoint: "departure", status: "boarded", note: null }),
+      appendOfflineRollCall(tripId, { checkpoint: "departure", status: "boarded" }),
     ).rejects.toMatchObject({ code: "not_allowed" });
     await expect(
       appendOfflineRollCall(tripId, {
@@ -665,7 +657,6 @@ describe("appendOfflineRollCall", () => {
         crewPersonId: payload.manifests[0].crew[0].id,
         checkpoint: "departure",
         status: "boarded",
-        note: null,
       }),
     ).rejects.toMatchObject({ code: "not_allowed" });
 
@@ -695,7 +686,6 @@ describe("appendOfflineRollCall", () => {
           crewPersonId: "33333333-3333-3333-3333-333333333333",
           checkpoint: "departure",
           status,
-          note: null,
         }),
       ).rejects.toMatchObject({ code: "not_allowed" });
     }
@@ -725,7 +715,6 @@ describe("appendOfflineRollCall", () => {
       bookingId: payload.manifests[0].divers[0].bookingId,
       checkpoint: "departure",
       status: "not_boarded",
-      note: null,
     });
     const longOverTrip: OfflineManifestPayload = {
       ...payload,
@@ -746,7 +735,6 @@ describe("appendOfflineRollCall", () => {
         bookingId: payload.manifests[0].divers[0].bookingId,
         checkpoint: "departure",
         status: "boarded",
-        note: null,
       }),
     ).rejects.toMatchObject({ code: "expired" });
 
@@ -767,7 +755,6 @@ describe("appendOfflineRollCall", () => {
       bookingId: payload.manifests[0].divers[0].bookingId,
       checkpoint: "departure",
       status: "not_boarded",
-      note: null,
     });
     await patchStoredExpiresAt(tripId, EXPIRED_PAST_GRACE);
 
@@ -776,7 +763,6 @@ describe("appendOfflineRollCall", () => {
         bookingId: payload.manifests[0].divers[0].bookingId,
         checkpoint: "departure",
         status: "not_boarded",
-        note: null,
       }),
     ).rejects.toMatchObject({ code: "unavailable" });
   });
@@ -798,7 +784,6 @@ describe("appendOfflineRollCall", () => {
         bookingId,
         checkpoint: "departure",
         status: "boarded",
-        note: null,
       }),
     ).rejects.toMatchObject({ code: "not_allowed" });
 
@@ -808,7 +793,6 @@ describe("appendOfflineRollCall", () => {
       bookingId,
       checkpoint: "after_dive_1",
       status: "boarded",
-      note: null,
     });
     const event = envelope.events.find((entry) => entry.checkpoint === "after_dive_1");
     expect(event?.status).toBe("boarded");
@@ -819,7 +803,6 @@ describe("appendOfflineRollCall", () => {
       bookingId,
       checkpoint: "departure",
       status: "not_boarded",
-      note: null,
     });
     expect(
       notBoarded.events.find(
@@ -836,7 +819,6 @@ describe("syncOfflineManifest", () => {
       bookingId: payload.manifests[0].divers[0].bookingId,
       checkpoint: "departure",
       status: "not_boarded",
-      note: null,
     });
     const pendingEvent = envelope.events[0];
     expect(pendingEvent.syncStatus).toBe("pending");
@@ -865,7 +847,6 @@ describe("syncOfflineManifest", () => {
       bookingId: payload.manifests[0].divers[0].bookingId,
       checkpoint: "departure",
       status: "boarded",
-      note: null,
     });
     const pendingEvent = envelope.events[0];
 
@@ -894,7 +875,6 @@ describe("syncOfflineManifest", () => {
       bookingId: payload.manifests[0].divers[0].bookingId,
       checkpoint: "departure",
       status: "not_boarded",
-      note: null,
     });
 
     server.use(

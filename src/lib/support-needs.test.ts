@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  divesWithMatch,
   hasSupportNeeds,
   type SupportNeeds,
   supportDiversToArrange,
@@ -72,7 +73,9 @@ describe("support needs", () => {
       { kind: "briefing_aloud" },
       { kind: "briefing_signals" },
       { kind: "equipment", note: "webbed gloves" },
-      { kind: "dives_with", name: "Marisol Vega" },
+      // `match: null` -- no roster was supplied, so nobody checked. A surface
+      // with no departure in hand states the constraint and stops.
+      { kind: "dives_with", name: "Marisol Vega", match: null },
     ]);
   });
 
@@ -127,5 +130,58 @@ describe("support needs", () => {
     for (const gate of ["readiness.ts", "trip-admission.ts", "course-ratios.ts"]) {
       expect(readFileSync(`src/lib/${gate}`, "utf8")).not.toContain("support-needs");
     }
+  });
+});
+
+/**
+ * Issue #1068. The name is free text a diver typed about somebody the shop may
+ * hold no record of, so the match is charitable by design: a confident "not
+ * booked on this departure" about somebody who *is* booked under a different
+ * spelling reads as a checked fact and invites the shop to stop looking. A
+ * false "yes" costs a glance down the roster; a false "no" costs the
+ * arrangement.
+ */
+describe("matching the person a diver must dive with against the roster", () => {
+  const ROSTER = ["Omar Haddad", "Marisol Vega", "Jean-Luc Béart"];
+
+  it("says nothing when the diver named nobody", () => {
+    // Not the same answer as "they are not here" -- a surface that conflated
+    // the two would put a line on every diver on the boat.
+    expect(divesWithMatch(null, ROSTER)).toBeNull();
+    expect(divesWithMatch("", ROSTER)).toBeNull();
+    expect(divesWithMatch("   ", ROSTER)).toBeNull();
+  });
+
+  it("matches the ordinary spelling, however it was typed", () => {
+    expect(divesWithMatch("Omar Haddad", ROSTER)).toBe("on_departure");
+    expect(divesWithMatch("  omar   haddad ", ROSTER)).toBe("on_departure");
+    expect(divesWithMatch("OMAR HADDAD", ROSTER)).toBe("on_departure");
+  });
+
+  it("counts a first name alone, and a surname alone", () => {
+    expect(divesWithMatch("Omar", ROSTER)).toBe("on_departure");
+    expect(divesWithMatch("Haddad", ROSTER)).toBe("on_departure");
+    expect(divesWithMatch("Marisol", ROSTER)).toBe("on_departure");
+  });
+
+  it("reads an initial as the word it begins", () => {
+    expect(divesWithMatch("O. Haddad", ROSTER)).toBe("on_departure");
+  });
+
+  it("ignores accents and punctuation, which nobody types consistently", () => {
+    expect(divesWithMatch("jean luc beart", ROSTER)).toBe("on_departure");
+    expect(divesWithMatch("Béart", ROSTER)).toBe("on_departure");
+  });
+
+  it("still says no to somebody who is genuinely not aboard", () => {
+    expect(divesWithMatch("Priya Sharma", ROSTER)).toBe("not_on_departure");
+    // A stray initial must not match anybody it likes: "H." alone is a
+    // surname's first letter, but "Zed" is nobody on this boat.
+    expect(divesWithMatch("Zed", ROSTER)).toBe("not_on_departure");
+    expect(divesWithMatch("Omar Sharma", ROSTER)).toBe("not_on_departure");
+  });
+
+  it("says no rather than throwing on an empty roster", () => {
+    expect(divesWithMatch("Omar Haddad", [])).toBe("not_on_departure");
   });
 });

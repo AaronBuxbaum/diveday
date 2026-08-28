@@ -141,6 +141,24 @@ const TITLE_CLASS = {
   h3: "text-base font-semibold",
 } as const;
 
+/**
+ * A short, stable discriminator from a card's heading, for the id above.
+ *
+ * Only a string title yields one — a `ReactNode` heading has no text to read
+ * here, and falls back to `title`, which is what every card had before. Bounded
+ * because an id is not a place to put a sentence, and sanitised to the charset
+ * an id may hold.
+ */
+function titleSlug(title: ReactNode): string {
+  if (typeof title !== "string") return "title";
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40);
+  return slug || "title";
+}
+
 export function SectionCard({
   as: Tag = "section",
   title,
@@ -199,7 +217,32 @@ export function SectionCard({
   // here to satisfy a doubt about that — it would drag every staff page's panels
   // into the client bundle to buy nothing.
   const generatedId = useId();
-  const headingId = title != null ? `${generatedId}-title` : undefined;
+  // **Prefixed, so this id can never be a `Field`'s.** Under `cacheComponents`
+  // a client navigation renders in two passes and each restarts React's server
+  // `useId` counter at 1, so two subtrees can be handed the same `_S_n_`
+  // (issue #1022). `scopedFieldId` (./form.tsx) answers that for fields by
+  // folding the control's `name` in — and its own note argues that
+  // `_S_2_-maxDepthMeters` and `_S_2_-title` therefore cannot collide. They
+  // cannot; but this card minted `${useId()}-title` too, and the trip's own
+  // Overview has both a `Field name="title"` (DetailsSection) and several of
+  // these. Same string, two namespaces, duplicate id — caught by the
+  // duplicate-id net in e2e/a11y.spec.ts on the departure-tabs scan.
+  //
+  // A different *suffix* would only move the coincidence: a control may legally
+  // be named anything, so no suffix is provably unreachable. A prefix is.
+  // React's ids are `_S_n_`, so a field's id always starts with `_`, and this
+  // one never does.
+  //
+  // The prefix alone is not enough, because the same two passes can hand
+  // `_S_1_` to two *cards* — a card in the prerendered shell and a card in the
+  // streamed content, which is what the departure's Overview does. So the
+  // title is folded in as well, the same move `scopedFieldId` makes with a
+  // control's `name`: a stable, content-derived discriminator that both passes
+  // compute identically. Its residue is the one that comment names too — two
+  // cards sharing *both* a counter value and a heading would still collide,
+  // which is why the duplicate-id net in e2e/a11y.spec.ts stays the backstop
+  // rather than the belt.
+  const headingId = title != null ? `card-${generatedId}-${titleSlug(title)}` : undefined;
   const resolvedAriaLabel = ariaLabelProp ?? ariaLabel;
   return (
     <Tag

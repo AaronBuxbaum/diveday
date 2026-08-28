@@ -10,7 +10,8 @@
     "bookActivity": "Book activity",
     "trips": "Trips",
     "history": "History",
-    "activity": "Activity"
+    "activity": "Activity",
+    "support": "Dive support"
   },
   "activity": {
     "heading": "Activity",
@@ -264,6 +265,29 @@
     "flagging": "Flagging…",
     "flagForStaffFit": "Flag for staff fit"
   },
+  "support": {
+    "heading": "Dive support",
+    "description": "What this diver's dives need set up. They answer this on their own readiness page; record it here when they tell you on the phone.",
+    "supportDiversLegend": "Support divers in the water",
+    "supportDiversNone": "None",
+    "supportDiversFromShop": "The shop arranges them",
+    "supportDiversOwn": "They bring their own",
+    "countLabel": "How many?",
+    "countHint": "Up to 4 here — more takes a conversation.",
+    "boardingLegend": "Getting aboard and into the water",
+    "boardingAssistance": "A hand or a transfer getting aboard",
+    "waterLift": "A lift getting into and out of the water",
+    "briefingLegend": "How the briefing reaches them",
+    "briefingSign": "In sign language",
+    "briefingWriting": "In writing",
+    "briefingAloud": "Described out loud",
+    "briefingSignals": "Signals agreed beforehand",
+    "equipmentLabel": "Equipment to adapt or bring",
+    "divesWithLabel": "Someone who should be on the same boat and team",
+    "save": "Save dive support",
+    "saving": "Saving…",
+    "changeRestricted": "Changing what a diver stated is limited to owners, managers, instructors, and divemasters."
+  },
   "history": {
     "heading": "Shop history",
     "importedVisitsText": "{count, plural, one {# visit} other {# visits}} came across from your previous system. Those lines are booking records, not dive records.",
@@ -393,7 +417,9 @@
     "mergeAlreadyRemoved": "One of these records is deleted. Restore it before merging.",
     "mergeStaffRecord": "Staff or crew records cannot be merged with a diver record.",
     "mergeBookingConflict": "These records are both booked on the same trip. Resolve that booking first; nothing was moved.",
-    "mergeRecordConflict": "These records have conflicting history that cannot be combined safely. Nothing was moved."
+    "mergeRecordConflict": "These records have conflicting history that cannot be combined safely. Nothing was moved.",
+    "supportSaved": "Dive support saved.",
+    "notAuthorizedSupport": "Changing what a diver stated about their dive support is limited to owners, managers, instructors, and divemasters."
   },
   "export": {
     "downloadButton": {

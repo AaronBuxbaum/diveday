@@ -78,7 +78,6 @@ const eventSchema = z
      * inverts if the comparison ever moves into SQL.
      */
     retractsClientEventId: z.string().uuid().optional(),
-    note: z.string().trim().max(300).nullable(),
     occurredAt: z.iso.datetime(),
   })
   // No `message`: nothing here reaches a person. A failure of this refinement
@@ -205,7 +204,6 @@ export async function POST(request: Request) {
       retractsClientEventId: event.retractsClientEventId,
       offlineSnapshotSavedAt: new Date(event.snapshotSavedAt),
       occurredAt: new Date(event.occurredAt),
-      note: event.note ?? undefined,
     };
     const outcome = event.crewPersonId
       ? await recordCrewRollCall(db, { ...common, personId: event.crewPersonId })

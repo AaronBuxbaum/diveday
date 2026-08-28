@@ -549,11 +549,6 @@ export default async function IncidentExportPage({
                     {t("incidentExport.timelineOfflineTag")}
                   </span>
                 ) : null}
-                {entry.note ? (
-                  <span className="text-muted">
-                    {t("incidentExport.noteLine", { note: entry.note })}
-                  </span>
-                ) : null}
               </li>
             ))}
           </ol>
@@ -619,11 +614,6 @@ function RollCallCell({
             date: dateTime(result.occurredAt),
             name: result.recordedByName,
           })}
-        </span>
-      ) : null}
-      {result.note ? (
-        <span className="mt-0.5 block text-xs text-muted">
-          {t("incidentExport.noteLine", { note: result.note })}
         </span>
       ) : null}
     </Td>

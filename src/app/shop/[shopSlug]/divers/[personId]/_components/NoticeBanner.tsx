@@ -167,6 +167,12 @@ const NOTICE_KEYS: Record<
   "fit-flagged": { form: "fit", tone: "success", key: "divers.notices.fitFlagged" },
   "fit-cleared": { form: "fit", tone: "success", key: "divers.notices.fitCleared" },
   "not-authorized-fit": { form: "fit", tone: "danger", key: "divers.notices.notAuthorizedFit" },
+  "support-saved": { form: "support", tone: "success", key: "divers.notices.supportSaved" },
+  "not-authorized-support": {
+    form: "support",
+    tone: "danger",
+    key: "divers.notices.notAuthorizedSupport",
+  },
   "not-authorized-waiver": {
     form: "waiver",
     tone: "danger",

@@ -180,17 +180,75 @@ the offline manifest, checking the named support diver against the roster and sh
 buddy-team builder, a staff-side write path for arrangements taken over the phone, and an activity
 trail entry so an overwritten arrangement is diagnosable.
 
-## What was **not** built, and is a decision rather than an omission
+## Amended 2026-08-27: staff may write the record too, and it is not marked when they do
 
-**The record does not reach the offline manifest.** `src/lib/offline-manifests.ts` carries an
-explicit allow-list, and this is not on it — so the copy a crew reads with no signal has the rental
-fit and the emergency contact but not "lift in and out of the water" or the named buddy. That cuts
-both ways and both reviews said so. It is health-adjacent data retained up to fourteen days on a
-deckhand's personal phone, which is exactly why the allow-list exists and why `age`/`minor` were
-taken out of it. It is also the offshore copy, and a water lift is an offshore fact. **The default
-here is to hold the line the allow-list already draws** — a new field does not join it silently —
-and the trade is now written down rather than being an unstated consequence of a `Pick`. Reopening
-it is a product-owner call, not a reviewer's.
+The build gave the record exactly one writer — the diver's own `/ready/[token]`
+page — and the ADR's reason for that stands: a record about somebody's own body
+and how their dive has to be set up is theirs to state. But "the diver is the
+author" and "the diver is the only one who can type it" are different claims,
+and the second one was costing the thing this record exists for.
+
+**Adaptive divers frequently book by phone**, precisely because they want to talk
+to a human about arrangements before committing. A shop would take the whole
+conversation — two support divers, a hoist, a briefing in writing — and have
+nowhere to put it; the best it could offer was "go and find the link in your
+email and type it in again". Walk-ups without a smartphone had the same problem.
+And the prep panel already linked each diver's name to their staff record, where
+the thing the staffer had just been reading was invisible, beside an editable
+rental fit.
+
+So there is a second door (issue #1069): a Dive support panel on the diver
+record, beside the fit, writing through the same `saveSupportNeeds`. The
+question stays on `/ready`. This is a second door, not a replacement.
+
+It gates like the fit and for the same reason: recording arrangements nobody has
+stated yet is data entry, open to whoever took the call, and overwriting what
+the diver stated is the judgement call, on the same permission as overriding
+their stated gear.
+
+**A staff entry is not distinguishable from the diver's own, and that is a
+decision rather than an oversight.** No `stated_by` column. A crew reading "needs
+a lift in and out of the water" acts identically whether the diver typed it or
+the shop typed it after speaking to them, and a badge saying "the shop wrote this
+down" invites a crew to discount the arrangement — which is the failure this
+record exists to prevent. The question such a badge would answer is already
+answered better: every write leaves an activity-trail entry naming its author
+(issue #1070), so "did this come from the diver's own link or from the shop" is a
+fact on the record rather than a qualifier on the screen a crew works from. The
+rental fit beside it makes the same choice.
+
+## Amended 2026-08-27: the record does reach the offline manifest
+
+The build shipped without it, as the conservative default rather than a considered answer, and the
+trade was left written down here for a product-owner call. That call has been made (issue #1067):
+**the whole record rides, the two free-text fields included.**
+
+The argument against was real and is unchanged — this payload sits up to fourteen days in encrypted
+IndexedDB on a deckhand's *personal* phone, which is exactly why the allow-list exists and why
+`age`, `minor` and `birthday` were taken back off it, and support needs are health-adjacent facts
+about disabled adults. What settled it is *where the record is read*. Boarding assistance is a
+dock-side fact, where signal usually exists; a water lift and an agreed-signal briefing are
+**mooring** facts, and at the mooring the offline copy is the only copy. This ADR names "a
+support-diver count silently lost between `/ready` and the manifest" as the record's failure mode,
+and a crew that cannot see it offshore is precisely that loss.
+
+The equipment note and the named buddy ride rather than being trimmed as "a description of a
+person", which was the narrower option. They are the most operational things here: "webbed gloves,
+short fin" is what somebody packs, and a person you must be teamed with is the arrangement a crew
+acts on at the rail. Shipping the flags and dropping the words would hand the boat a record it
+could not act on.
+
+One field is deliberately left behind. `statedAt` is not an arrangement — it answers "was this
+diver ever asked", which the diver's own page reads and no crew surface renders — and it is a
+`Date` in a payload that is otherwise JSON scalars, so it would come back a string wearing the
+wrong type. The snapshot therefore carries `SupportArrangements` (`src/lib/support-needs.ts`), the
+record minus that field.
+
+It renders in `src/app/offline-manifest/` beside the rental fit, in the same neutral voice and
+never as a warning, and only when something was stated — a line reading "nothing needed" down the
+whole boat is the absence of information formatted as information. The field is optional and
+additive on the snapshot, like `buddyTeamNames`, so a copy saved before this change still decrypts
+and simply shows no record.
 
 ## Three deliberate differences from the design above
 
