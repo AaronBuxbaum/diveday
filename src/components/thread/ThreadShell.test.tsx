@@ -39,6 +39,19 @@ const THREAD_PAGES = [
 
 const THREAD_LOADING = THREAD_PAGES.map((page) => page.replace("page.tsx", "loading.tsx"));
 
+/**
+ * The bearer pages that mount `ThreadShell` **directly** — three of the four.
+ *
+ * `/recap/[token]` is a bearer page and part of the thread, but since slice 7d
+ * it is a thin route that renders `AfterState`, and that component owns its own
+ * `<main>` on purpose: the after-state's header *is* its moment, and it is
+ * `print:hidden` so the keepsake prints alone. It is the same call the waiver's
+ * completed state already made, and it does not escape the thread's one column
+ * — `AfterState` takes the measure from this file's own exported
+ * `THREAD_MEASURE_CLASS`, so the width cannot drift.
+ */
+const THREAD_SHELL_PAGES = THREAD_PAGES.filter((page) => page !== "app/recap/[token]/page.tsx");
+
 describe("ThreadShell", () => {
   it("renders the shop's name as the eyebrow and exactly one h1", () => {
     render(
@@ -145,13 +158,15 @@ describe("TokenPageHeader is gone", () => {
 });
 
 describe("the thread's adopters", () => {
-  it("are the four bearer pages, and only those", () => {
+  it("are the bearer pages that mount it, and only those", () => {
     const adopters = sourceFiles(SRC_DIR)
       .filter((file) => /page\.tsx$/.test(file))
       .filter((file) => readFileSync(file, "utf8").includes("<ThreadShell"))
       .map((file) => relative(SRC_DIR, file).replaceAll("\\", "/"))
       .sort();
-    expect(adopters).toEqual([...THREAD_PAGES].sort());
+    // The set, not the count: this test's job is to stop the shell leaking onto
+    // a page that is not a bearer page, which holds at three as well as four.
+    expect(adopters).toEqual([...THREAD_SHELL_PAGES].sort());
   });
 
   it("no longer spell the thread's column themselves", () => {
