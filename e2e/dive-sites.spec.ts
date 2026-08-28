@@ -28,7 +28,12 @@ test.describe("staff", () => {
       .getByLabel("Underwater briefing")
       .fill("Look along the sandy edge for turtles resting below the coral heads.");
     await page.getByRole("button", { name: "Save dive site" }).click();
-    await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
+    // The trip's own `h1` is the arrival gate — a property only the
+    // destination has — and the site name is then read as *text*: since slice
+    // 7c the day plan names each dive's site in a `<span>` inside its ledger
+    // row, not in a heading of its own.
+    await expect(page.getByRole("heading", { level: 1, name: tripTitle })).toBeVisible();
+    await expect(page.getByText(siteName)).toBeVisible();
 
     await page.goto("/shop/blue-mantis/schedule/board?add=full");
     await page.getByLabel("What is it").fill(tripTitle);

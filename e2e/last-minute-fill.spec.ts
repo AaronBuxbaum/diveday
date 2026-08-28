@@ -302,7 +302,13 @@ test("a self-declared card cannot be certified without verified evidence", async
   // Sighted: it now reads as an ordinary certified card carrying the number the
   // staffer read off it — at the level *they* read, not the one the diver typed.
   const certified = page.locator("li").filter({ hasText: "RES-8080" }).filter({ visible: true });
-  await expect(certified).toContainText("certified");
+  // **The attribution, not a lowercase badge word.** Slice 8a's shared
+  // `CertificationCardRow` replaced "certified" with the sentence that names
+  // who sighted the card and when — which on a card-verification surface is the
+  // fact worth pinning, since the whole point of this flow is that a person
+  // looked at the plastic. Matched as a pattern so the seeded reviewer's name
+  // and the date stay the seed's business.
+  await expect(certified).toContainText(/Certified by .+ on /);
   await expect(certified).toContainText("Open Water");
   await expect(certified).not.toContainText("Rescue");
   await expect(certified).not.toContainText("Self-declared — no certification number yet");

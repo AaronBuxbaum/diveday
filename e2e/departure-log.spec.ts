@@ -20,6 +20,7 @@ signedInAsOwner();
  */
 test("one tap from a settled station opens the departure log with the recorded facts", async ({
   page,
+  request,
 }) => {
   // Board → trip → manifest, one roll-call write, the home, then the log —
   // several full server round trips over a 9-diver manifest.
@@ -48,6 +49,17 @@ test("one tap from a settled station opens the departure log with the recorded f
 
   // The manifest keeps the printer and nothing else — this door moved.
   await expect(page.getByRole("link", { name: "Generate log" })).toHaveCount(0);
+
+  // **The evening has to be made, not waited for.** The door lives on a
+  // *settled* station, and the seeded demo day is deliberately mid-morning —
+  // a boat home, a boat out, a night dive ahead — because that is the shape
+  // every other spec asserts against. The clock cannot be moved for one test
+  // either: `DIVEDAY_CLOCK` is one process-wide value the server, the seed and
+  // the browser all share. So the departures move instead, which is exactly
+  // what this route is for. Safe because each worker owns its own database and
+  // resets it before every test.
+  const evening = await request.post("/api/test/seed-evening");
+  expect(evening.ok()).toBe(true);
 
   // The evening reading is where it lives now, one link per departure.
   await page.goto("/shop/blue-mantis");

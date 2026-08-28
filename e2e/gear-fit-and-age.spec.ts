@@ -20,12 +20,13 @@ const DIVER_WITH_UNFLAGGED_FIT = "Priya Sharma";
 
 async function goToDiver(page: Page, name: string) {
   await page.goto(`/shop/${SHOP}/divers?q=${encodeURIComponent(name)}`);
-  const href = await page
-    .locator(`a[href^="/shop/${SHOP}/divers/"]`)
-    .filter({ hasText: name })
-    .filter({ visible: true })
-    .first()
-    .getAttribute("href");
+  // **By accessible name, not by text.** Since the roster became one ledger
+  // (slice 8c) a row's door is `LedgerRow`'s stretched `<Link>` — an empty
+  // anchor laid over the whole row, whose name comes from `aria-label` and
+  // whose text content is therefore "". `hasText` cannot see it; `getByRole`
+  // reads the label. `exact` because a role query matches by substring, and one
+  // diver's name can sit inside another's.
+  const href = await page.getByRole("link", { name, exact: true }).first().getAttribute("href");
   if (!href) throw new Error(`no diver link for ${name}`);
   await page.goto(href);
 }
