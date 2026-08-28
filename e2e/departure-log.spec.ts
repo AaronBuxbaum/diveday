@@ -4,7 +4,7 @@ import { offlineCopySaved, openTripFromBoard, openTripTab } from "./helpers";
 signedInAsOwner();
 
 /**
- * The departure log: one tap from a settled station produces the print-ready
+ * The departure log: one tap from a departure's own station produces the print-ready
  * document of recorded facts — roster with boarding state, the roll-call
  * timeline, certification evidence, waiver *status*, and the integrity code in
  * the footer. Safety-critical surface, so the flow is exercised end to end:
@@ -16,11 +16,11 @@ signedInAsOwner();
  * on the surface a crew works at the rail. Since H-62 that evening is a state
  * of the shop home rather than a page of its own (ADR
  * 20260827-clearwater-surface-language, decision 4), so the door moved with
- * it — same one link per departure, on the departure's own station.
+ * it — same one link per departure, on the departure's own station, whether
+ * that departure is still ahead of the day or already settled.
  */
-test("one tap from a settled station opens the departure log with the recorded facts", async ({
+test("one tap from a departure's station opens the log with the recorded facts", async ({
   page,
-  request,
 }) => {
   // Board → trip → manifest, one roll-call write, the home, then the log —
   // several full server round trips over a 9-diver manifest.
@@ -50,18 +50,12 @@ test("one tap from a settled station opens the departure log with the recorded f
   // The manifest keeps the printer and nothing else — this door moved.
   await expect(page.getByRole("link", { name: "Generate log" })).toHaveCount(0);
 
-  // **The evening has to be made, not waited for.** The door lives on a
-  // *settled* station, and the seeded demo day is deliberately mid-morning —
-  // a boat home, a boat out, a night dive ahead — because that is the shape
-  // every other spec asserts against. The clock cannot be moved for one test
-  // either: `DIVEDAY_CLOCK` is one process-wide value the server, the seed and
-  // the browser all share. So the departures move instead, which is exactly
-  // what this route is for. Safe because each worker owns its own database and
-  // resets it before every test.
-  const evening = await request.post("/api/test/seed-evening");
-  expect(evening.ok()).toBe(true);
-
-  // The evening reading is where it lives now, one link per departure.
+  // **Every departure row, not only the ones that are back** — the ADR's
+  // amendment says so in as many words. The seeded demo day is deliberately
+  // mid-morning, so the reef trip is a *live* station rather than a settled
+  // one, and that is the case worth pinning: an owner whose boat is overdue
+  // needs the record of who is on it, and for a while after 6d moved this door
+  // onto the evening that was the one state where it did not exist.
   await page.goto("/shop/blue-mantis");
   const reefRow = page.locator("li", {
     has: page.getByText("Two-Tank Reef — Molasses & French"),

@@ -287,7 +287,12 @@ export type EveningReading = {
    * the editor binds seven server actions and this component binds none.
    */
   recapEditors: ReadonlyMap<string, React.ReactNode>;
-  /** `canPersonExportIncidentRecord`; the log door is absent for everyone else. */
+  /**
+   * `canPersonExportIncidentRecord`; the log door is absent for everyone else.
+   * Read once by the page and worn by **every** departure station, live or
+   * settled — the amendment to ADR 20260804-incident-export-owner-gate is
+   * explicit that the document is offered on a boat that has not come home.
+   */
   canOpenLog: boolean;
   /** Today's still-open rows, already stripped of the ones the shop dismissed. */
   leftovers: readonly TodayAction[];
@@ -517,6 +522,11 @@ export function DaySpine({
                 timeZone={timeZone}
                 currency={currency}
                 crewed={crewed.has(entry.station.tripId)}
+                // Today's live departures carry the log door too, not only the
+                // settled ones (ADR 20260804-incident-export-owner-gate's
+                // amendment). `evening` is absent only when the page has no day
+                // to close over, which is also when there is no station here.
+                canOpenLog={evening?.canOpenLog ?? false}
                 t={t}
               >
                 <StationRows rows={entry.station.rows} controls={controls} />

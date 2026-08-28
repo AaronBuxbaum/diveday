@@ -891,6 +891,32 @@ describe("the evening reading", () => {
     expect(screen.queryByRole("link", { name: "Generate log" })).toBeNull();
   });
 
+  it("offers it on a departure that has not come home, which is when it is wanted", () => {
+    // ADR 20260804-incident-export-owner-gate's 2026-08-12 amendment, verbatim:
+    // *offered on every departure row, not only the ones that are back, because
+    // the moment a shop most needs a departure's recorded facts is while the
+    // departure is still happening.* Moving the door onto the evening's station
+    // in 6d dropped it from the live one, which put an owner whose boat is
+    // overdue in the one place they could not reach the record of who is on it.
+    renderSpine({
+      departures: [departure({ tripId: "t1" })],
+      evening: evening([closed({ tripId: "t2", title: "Dawn Wall" })]),
+    });
+    const live = screen.getByRole("link", { name: "Two-Tank Reef" }).closest("li");
+    if (!live) throw new Error("the live departure did not render a station");
+    expect(within(live).getByRole("link", { name: "Generate log" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/t1/log",
+    );
+
+    cleanup();
+    renderSpine({
+      departures: [departure({ tripId: "t1" })],
+      evening: evening([closed({ tripId: "t2", title: "Dawn Wall" })], { canOpenLog: false }),
+    });
+    expect(screen.queryByRole("link", { name: "Generate log" })).toBeNull();
+  });
+
   it("says how the head count ended, once, on the station that owns it", () => {
     renderSpine({
       departures: [],
