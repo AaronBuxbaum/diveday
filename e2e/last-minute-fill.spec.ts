@@ -358,7 +358,22 @@ test("the certification hint opens beside the mark, not beside its tap target", 
   // the page to reach its own target and leave this measuring a gap nobody
   // would ever see.
   const panelId = await trigger.getAttribute("aria-controls");
-  await trigger.hover();
+  // **Hovered at a point, not through the locator.** `locator.hover()` runs
+  // Playwright's actionability scroll first, and on CI's pinned Chromium that
+  // scroll undoes the centring above — measured: `scrollY` 3654 → 3226, which
+  // drops the trigger's bottom to 900.28 in a 900px viewport and leaves
+  // `spaceBelow` at -0.28. The panel then correctly flips *above*, and the
+  // assertion below fails saying there was no room, which is true and not the
+  // thing under test. It reproduces every run on that browser and passes on
+  // the fallback one, which is why it read as flake.
+  //
+  // The trigger is already centred and already visible, so there is nothing
+  // for that scroll to fix — moving the mouse to its own box centre is the
+  // same hover without it. This is the same hazard the note above `panelId`
+  // describes, one line further down than it was written for.
+  const box = await trigger.boundingBox();
+  if (!box) throw new Error("the certification hint trigger has no box to hover");
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
 
   const geometry = await page.evaluate((id) => {
     const note = document.getElementById(id);
