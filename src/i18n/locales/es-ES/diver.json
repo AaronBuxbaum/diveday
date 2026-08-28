@@ -2303,7 +2303,6 @@
       "item2": "Cada rol del personal, de recepción a capitán, en un solo lugar",
       "item3": "Las funciones nuevas según salen, todo dentro del acceso anticipado",
       "item4": "Un centro de práctica precargado con salidas realistas para entrenar",
-      "item5": "Sin subidas sorpresa mientras ayudas a dar forma a lo que sigue",
       "item6": "Soporte por correo — escribe y te responde una persona real"
     },
     "export": {
@@ -2879,16 +2878,16 @@
       "heroTitle": "Un precio fijo para todo el centro.",
       "heroDescription": "Sin cuota de alta. Sin cálculos por plaza. Sin niveles de funciones. Sin comisión sobre tus reservas.",
       "heroSafetyNote": "El flujo de seguridad nunca es un extra.",
-      "lockNote": "Congelado dos años para los centros fundadores.",
+      "lockNote": "El precio de hoy, congelado dos años para los centros fundadores.",
       "trialNote": "La prueba es un centro tuyo — gratis 3 semanas, sin tarjeta, y nada se apaga cuando termina el plazo.",
       "earlyAccessBadge": "Acceso anticipado",
-      "feesNote": "Las comisiones de procesamiento de pagos quedan entre tú y tu proveedor de pagos. Si alguna integración tiene coste adicional, lo diremos antes de activarla.",
+      "feesNote": "Las comisiones de procesamiento de pagos quedan entre tú y tu proveedor de pagos.",
       "includedLead": "Qué cubre el precio",
       "feeAnchor": {
         "title": "Un precio predecible para todo tu centro.",
         "body": "Si hoy tus reservas pasan por un canal, ya hiciste esta cuenta: cuanto mejor la temporada, mayor la comisión. Así describen su propio precio dos de esos canales, junto al precio fijo de DiveDay para todo el centro.",
         "rezdy": "El precio publicado actualmente por {competitor} combina una suscripción mensual con un 3% de cada reserva en línea.",
-        "fareharbor": "{competitor} no publica ninguna tarifa. Nada al mes. En su lugar, una comisión de cada reserva, añadida al precio que paga tu cliente, mientras lo uses. Su tamaño no está publicado — terceros sitúan esa comisión en torno al 6%.",
+        "fareharbor": "{competitor} no publica ninguna tarifa. Nada al mes. En su lugar, una comisión de cada reserva, añadida al precio que paga tu cliente, mientras lo uses. Terceros sitúan esa comisión en torno al 6%.",
         "ours": "DiveDay no se lleva ninguna parte de una reserva. El cobro pasa por tu propia cuenta de Stripe, y lo que nos pagas es el precio de arriba — el mismo número en un agosto lleno que en un enero tranquilo.",
         "sourcesNote": "Ambas descripciones vienen de las guías de cambio, donde cada una está citada a las propias páginas del proveedor.",
         "guideLink": "Cómo es dejar {competitor} →"
@@ -2897,7 +2896,7 @@
         "eyebrow": "Tus registros",
         "title": "Una exportación completa cuando la necesites.",
         "body": "Cada buceador, reserva, exención firmada e historial de pagos, en CSV documentado — y cada foto que guardó el centro, como archivos reales en lugar de enlaces. Un ZIP que descarga el propietario desde Ajustes, cualquier día, incluido el primero de la prueba.",
-        "securityNote": "De los registros de tu centro, lo único que se queda son las credenciales — contraseñas y claves push de cada dispositivo, que ningún otro sistema podría usar de todos modos.",
+        "securityNote": "Lo único que se queda de los registros de tu centro son las credenciales — contraseñas y claves push de cada dispositivo, que ningún otro sistema podría usar de todos modos.",
         "mockupLabel": "La pantalla Exportar datos de DiveDay, con los archivos del paquete, el número de filas de cada uno y las credenciales de cuenta que siguen protegidas"
       },
       "seeFullList": "Ver todo lo que hace, en detalle →",
@@ -2913,7 +2912,7 @@
         },
         "trialMeaning": {
           "question": "¿Qué significa \"prueba\" ahora mismo?",
-          "answer": "Crear un centro es gratis durante 3 semanas, sin tarjeta. Nada se apaga cuando termina el plazo: lo que hayas montado sigue funcionando — así que si tu temporada empieza dentro de meses, no pierdes nada por armar el tablero ahora. Cuando quieras pasar al plan de pago, escribe a {email}."
+          "answer": "Lo que hayas montado sigue funcionando cuando termina el plazo — así que si tu temporada empieza dentro de meses, no pierdes nada por armar el tablero ahora. Crear un centro es gratis durante 3 semanas, sin tarjeta; cuando quieras pasar al plan de pago, escribe a {email}."
         },
         "seeBefore": {
           "question": "¿Puedo verlo antes de comprometerme?",
@@ -2921,7 +2920,7 @@
         },
         "setupTime": {
           "question": "¿Cuánto se tarda en montarlo?",
-          "answer": "Seis campos: el nombre de tu centro, su dirección web, su zona horaria, y luego tu propio nombre, correo y contraseña. El centro existe en el momento en que lo envías, listo para su primer viaje. Traer una hoja de cálculo de buceadores es un paso aparte, y el importador te muestra exactamente qué va a pasar antes de guardar nada."
+          "answer": "Seis campos: el nombre de tu centro, su dirección web, su zona horaria, y luego tu propio nombre, correo y contraseña. El centro existe en el momento en que lo envías, listo para su primer viaje. Traer una hoja de cálculo de buceadores es un paso aparte."
         },
         "dataIfNotWorking": {
           "question": "¿Cómo accedo a los registros de mi centro?",

@@ -156,8 +156,12 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
       // Counted against the real form: /onboard asks for six fields (shop
       // name, link, timezone, then the owner's name, email and password) and
       // its action inserts the shop row on submit. The spreadsheet is named as
-      // its own step because it is one — the importer previews every row
-      // before anything is saved.
+      // its own step because it is one — but the importer's preview belongs to
+      // the `switching` row below, not here: in the row-major two-column grid
+      // this row and that one are vertically adjacent in the left column, and
+      // both used to close on the same eight-word promise about seeing what
+      // will happen before anything is saved. This is the time question, so it
+      // ends on time.
       question: t("marketing.pricing.faq.setupTime.question"),
       answer: t("marketing.pricing.faq.setupTime.answer"),
     },
@@ -256,11 +260,21 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                   be reachable only by reading the included list (`item5`) and
                   the founding-shop FAQ row — two places, neither of them where
                   a reader is looking at the number and asking "for how long".
-                  `item5` trims to its other half so the claim is not
+                  `item5` was retired rather than trimmed, so the claim is not
                   inventoried twice (docs/product/marketing-review-20260827.md).
                   A restatement of a binding commercial commitment (H-12),
-                  never an extension of it. */}
-              <p className="mt-2 text-sm leading-6 text-muted">{t("marketing.pricing.lockNote")}</p>
+                  never an extension of it.
+
+                  It names its subject — "Today's price, locked for…" — because
+                  this is fine print under a figure, the slot a reader who has
+                  been burned scans for the catch, and a subjectless "Locked
+                  for two years" lets them supply "I am" as the subject on a
+                  page whose next band argues they can leave any day. Naming it
+                  costs a second line on a phone, and `text-pretty` is what
+                  stops that line being the word "shops." alone. */}
+              <p className="mt-2 text-sm leading-6 text-pretty text-muted">
+                {t("marketing.pricing.lockNote")}
+              </p>
               {/* Two blocks, not one paragraph: as one they broke mid-clause
                   ("No cut / of your bookings") directly under the figure. The
                   split protects the break, not a line count — the longer
@@ -293,8 +307,16 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                   balancing two lines of this sentence puts the break inside
                   "no / card", which is the one clause a reader is scanning
                   for. Pretty leaves the fill alone and only guards the
-                  orphan. */}
-              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-pretty text-muted">
+                  orphan.
+
+                  `font-medium`, matching the demo note above it rather than
+                  sitting a weight under it: these are two notes of one kind —
+                  terms at a door — and the trial is the door with the higher
+                  friction, so setting only the demo's terms in medium put the
+                  more weight on the easier ask. On `/` the medium note sits
+                  beside a regular *price line*, which is context rather than
+                  terms; that page keeps its pairing. */}
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 font-medium text-pretty text-muted">
                 {t("marketing.pricing.trialNote")}
               </p>
             </div>
@@ -333,7 +355,15 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 {t("marketing.pricing.seeFullList")}
               </Link>
               {/* The one cost the price does not cover, as the footnote to the
-                  list of what it does — the same thought, finished. */}
+                  list of what it does — the same thought, finished. It carried
+                  a second sentence ("if an integration ever costs extra, we'll
+                  say so before you turn it on") until 2026-08-28: a promise
+                  about an unshipped condition, sitting under "What the price
+                  covers" and telling a reader who has just absorbed four
+                  negations that a fifth charge might arrive later. It answered
+                  a question nobody asked about a charge that does not exist
+                  (AGENTS.md, "every sentence earns its place, or it is
+                  deleted"). */}
               <p className="mt-8 max-w-xl text-sm leading-6 text-muted">
                 {t("marketing.pricing.feesNote")}
               </p>
@@ -480,8 +510,10 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 trial note is deliberately not: a reader who scrolled five
                 thousand pixels of objections to reach this band is being asked
                 to commit here, and the closing pair carried no terms at all.
-                The divergence is recorded in marketing.md beside that rule. */}
-            <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-pretty text-muted">
+                The divergence is recorded in marketing.md beside that rule.
+                Same `font-medium` as the hero's copy of it, for the same
+                reason. */}
+            <p className="mx-auto mt-4 max-w-xl text-sm leading-6 font-medium text-pretty text-muted">
               {t("marketing.pricing.trialNote")}
             </p>
             <p className="mt-10 text-sm leading-6 text-muted">

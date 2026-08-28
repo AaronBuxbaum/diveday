@@ -322,6 +322,12 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   and that band carried no terms at all until this landed. It stays a sentence at both positions,
   never a third door (the budget note below). A third placement would be a new divergence and needs
   its own line here.
+  **Both notes at a door carry the same weight** (`font-medium`), which on `/pricing` means the
+  trial note matches the demo note rather than sitting a step under it. They are one kind of object
+  — terms at a door — and the trial is the door with the higher friction, so setting only the demo's
+  terms in medium put the heavier ink on the easier ask. `/` is not this case and does not change:
+  the regular-weight line under its medium demo note is a *price line*, context beside terms rather
+  than terms of its own.
 - **One primary CTA per screen.** The demo leads everywhere through the shared `FunnelCtas`
   pair (the 2026-08-22 two-doors decision above — this bullet said "the trial on `/pricing`"
   until 2026-08-27, a leftover from before that decision); `/pricing`'s trial door is simply

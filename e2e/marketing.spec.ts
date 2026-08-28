@@ -301,8 +301,12 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // this slice (docs/product/marketing-review-20260827.md, "the terms never
   // stand at the doors"). The lock is a restatement of a binding commercial
   // commitment (H-12) directly under the number it qualifies; it used to be
-  // reachable only through the included list and a FAQ row.
-  await expect(page.getByText("Locked for two years for founding shops.")).toBeVisible();
+  // reachable only through the included list and a FAQ row. It names its
+  // subject — the price, not the reader — because this is the fine-print slot
+  // a burned buyer scans for the catch.
+  await expect(
+    page.getByText("Today's price, locked for two years for founding shops."),
+  ).toBeVisible();
   // The trial's own terms, at both decision points — free, three weeks, no
   // card, and the soft expiry that src/lib/trial.ts actually implements. The
   // demo note beside it answers only for the demo, so before this the trial
@@ -335,7 +339,10 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     page.getByText(/monthly subscription plus 3% of every online booking/),
   ).toBeVisible();
   await expect(page.getByText(/publishes no rate at all/)).toBeVisible();
-  await expect(page.getByText(/third parties report that fee at around 6%/)).toBeVisible();
+  // Case-insensitive: the attribution now opens the row's last breath unit,
+  // because the second "the size of it is unpublished" announcement went — the
+  // row's first four words already say it.
+  await expect(page.getByText(/third parties report that fee at around 6%/i)).toBeVisible();
   await expect(
     page.getByRole("link", { name: /What moving off Rezdy looks like/ }),
   ).toHaveAttribute("href", "/switching/rezdy");

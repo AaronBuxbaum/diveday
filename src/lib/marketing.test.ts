@@ -190,13 +190,92 @@ describe("the trial's terms stand at the pricing doors", () => {
      * The lock moved under the figure, so the included list stops inventorying
      * it — the silence is the point. `item5` carried "locked for two years"
      * while `lockNote` and `faq.whyFounding` said it too; three renderings of
-     * one binding commercial commitment is three places to drift.
+     * one binding commercial commitment is three places to drift. The stub
+     * `item5` was left behind ("no surprise increases…") went entirely on
+     * 2026-08-28, so this now sweeps the whole rendered list rather than the
+     * one key that used to carry the claim.
      */
     it(`states the two-year lock under the figure and not in the included list in ${locale}`, () => {
       const messages = marketingMessages(locale);
       const lock = locale === "en-US" ? /two years/i : /dos años/i;
       expect(messages["marketing.pricing.lockNote"]).toMatch(lock);
-      expect(messages["marketing.price.item5"]).not.toMatch(lock);
+      for (const key of earlyAccessPrice.includedKeys) {
+        expect(messages[key], key).not.toMatch(lock);
+      }
+    });
+
+    /**
+     * And the stub itself is gone rather than reworded — an absence check,
+     * because the failure it guards is a future editor filling `item5` back in
+     * with the founding-cohort rationale `faq.whyFounding` already carries.
+     */
+    it(`carries no retired sixth included item in ${locale}`, () => {
+      expect(marketingMessages(locale)["marketing.price.item5"]).toBeUndefined();
+    });
+
+    /**
+     * The lock's subject. Fine print under a figure is where a burned buyer
+     * looks for the catch, and a subjectless "Locked for two years" lets them
+     * read themselves as the thing locked — on the page whose next band argues
+     * they can leave any day. The sentence must name what is locked.
+     */
+    it(`names the price as the thing that is locked in ${locale}`, () => {
+      const note = marketingMessages(locale)["marketing.pricing.lockNote"];
+      expect(note).toMatch(locale === "en-US" ? /price/i : /precio/i);
+    });
+  }
+});
+
+/**
+ * The importer's preview is said once. `faq.setupTime` and `faq.switching` are
+ * index 4 and index 6 of a row-major two-column grid — vertically adjacent in
+ * the left column, about 200px apart — and both used to close on the same
+ * promise that the importer shows you what will happen before anything is
+ * saved. The time question gives ground, because its strongest content is the
+ * six fields and the shop existing on submit; the switching question keeps the
+ * preview, which is the objection it exists to answer. Both rows still stand
+ * alone, which the `FAQPage` structured data requires.
+ */
+describe("the pricing FAQ promises the import preview once", () => {
+  const preview = {
+    "en-US": /before anything is saved/i,
+    "es-ES": /antes de guardar nada/i,
+  } as const;
+
+  for (const locale of DIVER_LOCALES) {
+    it(`keeps the preview clause in the switching row in ${locale}`, () => {
+      const answer = marketingMessages(locale)["marketing.pricing.faq.switching.answer"];
+      expect(answer).toMatch(preview[locale]);
+    });
+
+    it(`leaves it out of the setup-time row stacked above it in ${locale}`, () => {
+      const answer = marketingMessages(locale)["marketing.pricing.faq.setupTime.answer"];
+      expect(answer).toBeDefined();
+      expect(answer).not.toMatch(preview[locale]);
+    });
+  }
+});
+
+/**
+ * `feesNote` names the one cost the flat price does not cover — processing fees,
+ * which stay with the shop's own provider — and stops there. Its second
+ * sentence ("if an integration ever costs extra, we'll say so before you turn
+ * it on") went on 2026-08-28: a promise about a charge that does not exist,
+ * printed under "What the price covers" directly beneath four negations, which
+ * manufactures the doubt it then answers. The silence is the assertion.
+ */
+describe("the fee footnote raises no charge that does not exist", () => {
+  const futureCharge = {
+    "en-US": /costs? extra|charge you extra|additional (?:cost|charge|fee)/i,
+    "es-ES": /coste adicional|cargo adicional|cobro adicional/i,
+  } as const;
+
+  for (const locale of DIVER_LOCALES) {
+    it(`names processing fees and nothing further in ${locale}`, () => {
+      const note = marketingMessages(locale)["marketing.pricing.feesNote"];
+      expect(note).toBeDefined();
+      expect(note).toMatch(locale === "en-US" ? /processing fees/i : /procesamiento de pagos/i);
+      expect(note).not.toMatch(futureCharge[locale]);
     });
   }
 });
@@ -230,7 +309,11 @@ describe("the manifest's offline answer lives on /product alone", () => {
  * bounded hard: FareHarbor publishes no rate, so the figure must stay reported
  * and attributed rather than presented as their price. The 2026-08-28 rewrite
  * broke the row's semicolon run into breath units; these pin the two things
- * that rewrite was not allowed to lose.
+ * that rewrite was not allowed to lose. The attribution matches
+ * case-insensitively because the row now *opens* its last unit on it — the
+ * second "the size of it is unpublished" announcement went, since the row's
+ * first four words already say so — and where a clause falls in a sentence is
+ * not what this is pinning.
  */
 describe("the fee anchor reports an unpublished rate as unpublished", () => {
   for (const locale of DIVER_LOCALES) {
@@ -243,8 +326,8 @@ describe("the fee anchor reports an unpublished rate as unpublished", () => {
       const row = marketingMessages(locale)["marketing.pricing.feeAnchor.fareharbor"];
       expect(row).toMatch(
         locale === "en-US"
-          ? /third parties report that fee at around 6%/
-          : /terceros sitúan esa comisión en torno al 6%/,
+          ? /third parties report that fee at around 6%/i
+          : /terceros sitúan esa comisión en torno al 6%/i,
       );
     });
   }

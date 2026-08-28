@@ -95,12 +95,20 @@ export const earlyAccessPrice = {
   price: "$99", // i18n-exempt: currency figure, the H-12 single source — never restate elsewhere
   nameKey: "marketing.price.name",
   cadenceKey: "marketing.price.cadence",
+  // Five things the price covers, every one of them a thing rather than a
+  // reassurance. `item5` ("no surprise increases while you help shape what
+  // ships next") was retired on 2026-08-28: under a heading reading "What the
+  // price covers" it was the one negation among positives, and once the
+  // two-year lock moved under the figure (`marketing.pricing.lockNote`) what
+  // it still carried was a founding-cohort rationale rather than something the
+  // price buys — `faq.whyFounding` says that whole. The numbering is
+  // deliberately not resequenced: `item6` keeps naming the string it has
+  // always named.
   includedKeys: [
     "marketing.price.item1",
     "marketing.price.item2",
     "marketing.price.item3",
     "marketing.price.item4",
-    "marketing.price.item5",
     "marketing.price.item6",
   ],
 } as const satisfies {
