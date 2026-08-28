@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import { InsetGroup } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
 import { listDiveSites } from "@/db/dive-sites";
 import { diveSites, mediaDeletionAttempts, processorErasureObligations } from "@/db/schema";
@@ -20,6 +21,7 @@ import {
 } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
+import { SETTINGS_RAIL_ROWS, type SectionId, settingsSectionFragment } from "./settings-groups";
 
 // Same mocking shape as ./embed/page.test.tsx: the page is invoked directly,
 // outside Next's request scope, so the three things that only exist inside one
@@ -75,6 +77,7 @@ async function sessionFor(role: Role): Promise<{ db: AppDb; session: DiveDaySess
 async function renderSettings(
   role: Role,
   seed?: (db: AppDb, session: DiveDaySession) => Promise<void>,
+  searchParams: { notice?: string; saved?: string } = {},
 ) {
   const { db, session } = await sessionFor(role);
   if (seed) await seed(db, session);
@@ -82,7 +85,7 @@ async function renderSettings(
   vi.mocked(auth).mockResolvedValue(session);
   return SettingsPage({
     params: Promise.resolve({ shopSlug: SHOP_SLUG }),
-    searchParams: Promise.resolve({}),
+    searchParams: Promise.resolve(searchParams),
   });
 }
 
@@ -144,16 +147,16 @@ describe("settings findability", () => {
 describe("deep links into settings", () => {
   it("opens the row every settings fragment in the app points at", async () => {
     const rendered = await renderSettings("owner");
-    const rows = findElements<{ openOnHash?: string; anchorId?: string }>(
-      rendered,
-      settingsRowsModule.SettingsRow,
-    );
+    const rows = findElements<{ sectionId?: SectionId }>(rendered, settingsRowsModule.SettingsRow);
+    // One prop answers both halves now: a row's `sectionId` is what produces
+    // its `#anchor` *and* what opens it on that hash, so a row cannot be
+    // linkable and unopenable at the same time (`SettingsRows.tsx`).
     const openable = new Set(
-      rows.flatMap((row) => (row.props.openOnHash ? [row.props.openOnHash] : [])),
+      rows.flatMap((row) =>
+        row.props.sectionId ? [settingsSectionFragment(row.props.sectionId)] : [],
+      ),
     );
-    const anchored = new Set(
-      rows.flatMap((row) => (row.props.anchorId ? [row.props.anchorId] : [])),
-    );
+    const anchored = openable;
     // A link may also point at a whole *group* — a plain `<h2 id>` outside any
     // disclosure, so it needs nothing to reveal it. `#data-integrations` is
     // one, and reading it as a broken row link would be this test crying wolf.
@@ -389,3 +392,79 @@ async function readdirDeep(dir: string): Promise<string[]> {
   }
   return out;
 }
+
+/**
+ * **The pane half of the rail-and-pane split** (ADR
+ * 20260827-clearwater-surface-language, decision 6). The rail is only honest
+ * if it is drawn from the same list the pane renders, so these read the hub's
+ * own output and hold `SETTINGS_RAIL_ROWS` against it: a section the pane
+ * renders and the map does not name is a destination a shop cannot find, and a
+ * door the map names and the pane never renders is a row that leads nowhere.
+ */
+describe("the rail and the pane say the same thing", () => {
+  it("renders every section the rail points at, in the rail's order", async () => {
+    const rows = findElements<{ sectionId?: string }>(
+      await renderSettings("owner"),
+      settingsRowsModule.SettingsRow,
+    );
+    const rendered = rows.flatMap((row) => (row.props.sectionId ? [row.props.sectionId] : []));
+    const mapped = SETTINGS_RAIL_ROWS.flatMap((row) =>
+      row.target.kind === "section" ? [row.target.id] : [],
+    );
+    // Order too, not just membership: the scroll-spy walks the rail's rows
+    // against the pane's positions, so a rail that disagreed with the page
+    // would light the wrong row all the way down.
+    expect(rendered).toEqual(mapped.filter((id) => rendered.includes(id)));
+    expect(new Set(rendered)).toEqual(new Set(mapped.filter((id) => rendered.includes(id))));
+    // The seeded shop runs boats and takes payments, so it renders the lot.
+    expect(rendered).toEqual(mapped);
+  });
+
+  it("names every door the hub renders", async () => {
+    const doors = findElements<{ href: string }>(
+      await renderSettings("owner"),
+      settingsRowsModule.SettingsDoorRow,
+    ).map((row) => row.props.href.replace(`/shop/${SHOP_SLUG}`, ""));
+    const mapped = new Set(
+      SETTINGS_RAIL_ROWS.flatMap((row) => (row.target.kind === "route" ? [row.target.path] : [])),
+    );
+    for (const href of doors) {
+      expect(mapped, `${href} is a door with no row on the map`).toContain(href);
+    }
+    expect(doors.length).toBeGreaterThan(0);
+  });
+
+  it("carries no standing caption on a door row", async () => {
+    // The heaviest deletion in this slice: fourteen captions whose only reader
+    // was a closed row. A door row is its label and the page it opens.
+    const doors = findElements<Record<string, unknown>>(
+      await renderSettings("owner"),
+      settingsRowsModule.SettingsDoorRow,
+    );
+    for (const door of doors) expect(door.props.description).toBeUndefined();
+  });
+
+  it("groups the pane into inset groups rather than a stack of cards", async () => {
+    // Decision 2's second anatomy, consumed from 6a rather than re-spelled.
+    expect(findElements(await renderSettings("owner"), InsetGroup)).toHaveLength(
+      SETTINGS_GROUPS.length,
+    );
+  });
+
+  it("reopens the row `?saved=` names, and no other", async () => {
+    const rows = findElements<{ sectionId?: string; activeSection?: string | null }>(
+      await renderSettings("owner", undefined, { saved: "units" }),
+      settingsRowsModule.SettingsRow,
+    );
+    const opened = rows.filter((row) => row.props.sectionId === row.props.activeSection);
+    expect(opened.map((row) => row.props.sectionId)).toEqual(["units"]);
+  });
+
+  it("opens nothing when nothing was saved", async () => {
+    const rows = findElements<{ sectionId?: string; activeSection?: string | null }>(
+      await renderSettings("owner"),
+      settingsRowsModule.SettingsRow,
+    );
+    for (const row of rows) expect(row.props.activeSection).toBeNull();
+  });
+});

@@ -91,7 +91,7 @@ bodies, with their pins and owner-call dependencies, are in
 | 6d — the home's evening reading and the fold (H-62) | open | — | — |
 | 6e — the week board | open | — | — |
 | 6f — the orders day ledger | open | — | — |
-| 6g — settings rail and pane | open | — | — |
+| 6g — settings rail and pane | shipped | `src/app/shop/[shopSlug]/settings/_components/SettingsRail.tsx` | `src/app/shop/[shopSlug]/settings/_components/SettingsRail.test.tsx` |
 | 6h — the counter instrument | open | — | — |
 | 6i — the storefront | open | — | — |
 

@@ -7,6 +7,23 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Settings is a rail and a pane (delivered 2026-08-28)
+
+Slice 6g of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
+decision 6. From `lg` up, `/shop/[shopSlug]/settings/**` opens as a two-column frame: the whole map
+of the shop's switches on the left, the destination on the right. The rail is one registry —
+`SETTINGS_RAIL_ROWS` in `settings-groups.ts`, which now also owns `SECTION_IDS` — covering every
+hub section and every door the hub renders, including the three outside the `/settings` namespace
+(dive sites, waiver template, promo codes), and it wraps the sub-routes too, so team, security,
+WhatsApp, calendar, imports and the export all read as panes without moving a path. The selection
+model is stated once and cannot blur: a sub-route row selects by pathname, a hub-section row is a
+`#fragment` link selected by a client scroll-spy. The rail carries at most one badge per row, only
+for a warning, and only from a summary reader the hub row already uses. Below `lg` nothing changes
+but the words. **Fourteen standing captions are deleted** in both locales — a door row is its label
+and the page it opens; explanation lives inside the row that opens, or on the destination. The
+hub's three groups now compose from 6a's `InsetGroup`, and the second spelling of that shell
+(`SettingsRowList`) is gone.
+
 ## Clearwater's language mechanics (delivered 2026-08-28)
 
 Slice 6a of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),

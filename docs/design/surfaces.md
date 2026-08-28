@@ -114,7 +114,7 @@ stream stays on phone.
 
 ### Settings — `/shop/[shopSlug]/settings`
 
-**Redesign proposed (desktop only)** — same ADR and canvas. The phone keeps grouped lists.
+**Shipped 2026-08-28** (slice 6g) — same ADR and canvas. The phone keeps grouped lists.
 
 - **One idea:** every switch in the shop, findable in one look.
 - **The question it arrives with:** "where do I change X?" — answered by the rail, which shows the

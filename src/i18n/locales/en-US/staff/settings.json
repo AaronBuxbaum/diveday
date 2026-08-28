@@ -299,16 +299,13 @@
       "summaryDisconnected": "Disconnected"
     },
     "embed": {
-      "heading": "Website embed",
-      "description": "Copy-paste snippets that put your live booking calendar on your own website."
+      "heading": "Website embed"
     },
     "calendar": {
-      "heading": "Calendar subscriptions",
-      "description": "Put your departures on the calendar app you already use — read-only, so DiveDay never touches it."
+      "heading": "Calendar subscriptions"
     },
     "integrations": {
-      "heading": "Shopify, QuickBooks & Zapier",
-      "description": "Connect the tools you already use for catalog publishing, accounting, and automation."
+      "heading": "Shopify, QuickBooks & Zapier"
     },
     "trial": {
       "heading": "Your trial",
@@ -328,40 +325,32 @@
       "money": "Money",
       "dataIntegrations": "Data & integrations"
     },
-    "subNav": {
+    "rail": {
       "ariaLabel": "Settings sections"
     },
     "whatsapp": {
-      "heading": "WhatsApp",
-      "description": "Send trip reminders and recaps from your shop's own WhatsApp number instead of a platform SMS number."
+      "heading": "WhatsApp"
     },
     "backup": {
-      "heading": "Backups",
-      "description": "A weekly copy of everything your shop holds, delivered to storage you own."
+      "heading": "Backups"
     },
     "team": {
-      "heading": "Team",
-      "description": "Who works here, what each person is allowed to reach, and where your invitations stand."
+      "heading": "Team"
     },
     "diveSites": {
-      "heading": "Dive sites",
-      "description": "The site library the board picks from — depths, conditions, and what divers see there."
+      "heading": "Dive sites"
     },
     "waivers": {
-      "heading": "Waiver template",
-      "description": "The release every diver signs, and the log of who has signed it."
+      "heading": "Waiver template"
     },
     "safetyChecklist": {
-      "heading": "Pre-departure checklist",
-      "description": "What your crew confirms before a boat leaves the dock."
+      "heading": "Pre-departure checklist"
     },
     "security": {
-      "heading": "Account security",
-      "description": "Protect your sign-in with two-factor authentication and manage active sessions."
+      "heading": "Account security"
     },
     "promos": {
-      "heading": "Promo codes",
-      "description": "Shop-wide discount codes a diver types at checkout, each with its own dates and limits."
+      "heading": "Promo codes"
     },
     "dataJobs": {
       "mediaKind": {
@@ -396,15 +385,6 @@
     },
     "summary": {
       "notSet": "Not set"
-    },
-    "dataImport": {
-      "description": "Bring contacts in from a CSV — matched to existing divers, never duplicated."
-    },
-    "gearImport": {
-      "description": "Bring your fleet and its dated service records in from a CSV."
-    },
-    "dataExport": {
-      "description": "Take everything your shop holds back out as a ZIP of CSVs."
     },
     "emergency": {
       "heading": "Emergency reference",

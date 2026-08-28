@@ -169,8 +169,6 @@ test pins the rule (never a pixel snapshot).
   tablets and phones keep the stream. *Pins:* a test that widths below `xl` render the stream.
 - **6f. The orders day ledger.** Day groups own date and subtotal; toolbar filters; imported
   history as one disclosure. *Pins:* a test that no row repeats its group's date.
-- **6g. Settings rail and pane.** Desktop two-pane; phone keeps grouped lists; standing captions
-  retire behind disclosure.
 - **6h. The counter instrument.** Count-led boarding queue, settled rows sink, ≥56px targets at
   tablet. Safety-adjacent: `dive-domain-expert` review.
 - **6i. The storefront.** Identity hero, next-boat object, one-line week rows, courses and reviews
