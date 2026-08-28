@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { JumpNav } from "@/components/JumpNav";
 import type { EditorSectionRef, EditorUnsavedCopy } from "./EditorSection";
 
 /**
@@ -10,12 +9,12 @@ import type { EditorSectionRef, EditorUnsavedCopy } from "./EditorSection";
  * the rail naming the sections and tracking position. On the phone the rail
  * collapses to a top jump-row."
  *
- * Two renderings of one list, and the width decides which: from `lg` up a rail
- * pinned under the chrome bar in the page's first grid column, below it the
- * app's existing jump row (`JumpNav`, the one grammar for "places on this
- * page"). Both are plain `#anchor` links the browser resolves itself, so the
- * rail works before this component's JavaScript arrives and cannot disturb a
- * form mid-edit.
+ * Two shapes of one list, and the width decides which: from `lg` up a column
+ * pinned under the chrome bar in the page's first grid column, below it a
+ * wrap-row across the top — the jump row's shape, in the rail's own landmark
+ * rather than a second one (see the note in the body). They are plain
+ * `#anchor` links the browser resolves itself, so the rail works before this
+ * component's JavaScript arrives and cannot disturb a form mid-edit.
  *
  * **`top-(--chrome-h)`, never a number.** The bar's height is a token
  * (ADR 20260827-clearwater-surface-language, decision 10) and
@@ -36,35 +35,41 @@ export function EditorRail({
 }) {
   const current = useCurrentSection(sections);
   return (
-    <>
-      {/* Below `lg` the rail is the jump row the diver-facing course page and
-          Settings already wear. It marks nothing current: every entry is on the
-          screen you are already looking at (see `JumpNav`). */}
-      <JumpNav ariaLabel={navLabel} items={sections} className="lg:hidden" />
-      <nav
-        aria-label={navLabel}
-        className="hidden lg:sticky lg:top-(--chrome-h) lg:block lg:self-start lg:pt-1"
-      >
-        <ul className="flex flex-col gap-0.5">
-          {sections.map((section) => {
-            const active = section.id === current;
-            return (
-              <li key={section.id} className="flex">
-                <a
-                  href={`#${section.id}`}
-                  aria-current={active ? "true" : undefined}
-                  className={`flex min-h-11 w-full items-center rounded-xl px-3 py-2 text-sm font-medium transition-colors hover:bg-surface-sunken hover:text-foreground ${
-                    active ? "bg-primary-tint text-primary" : "text-muted"
-                  }`}
-                >
-                  {section.label}
-                </a>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-    </>
+    // **One `<nav>` in both readings, never two hidden copies.** This started
+    // as `JumpNav` for the phone beside a rail for the desktop, which is the
+    // app's existing "places on this page" grammar and looked like reuse — but
+    // `JumpNav` brings its own `<nav>` landmark, so the editor announced the
+    // same anchor list twice under one name and a screen reader read it twice.
+    // Hiding one with `lg:hidden` does not help: both are in the accessibility
+    // tree at every width, and it is the *landmark* that duplicates, not the
+    // pixels. So the list changes shape at `lg` and the landmark does not.
+    <nav
+      aria-label={navLabel}
+      className="mb-6 lg:sticky lg:top-(--chrome-h) lg:mb-0 lg:self-start lg:pt-1"
+    >
+      {/* A wrap-row below `lg`, a column from `lg` up — the jump row's own
+          shape, without a second landmark to carry it. */}
+      <ul className="-ml-3 flex flex-wrap items-center gap-x-1 lg:ml-0 lg:flex-col lg:items-stretch lg:gap-x-0 lg:gap-y-0.5">
+        {sections.map((section) => {
+          // Current is a *desktop* state: the phone row sits above the section
+          // you are already looking at, so marking one there says nothing.
+          const active = section.id === current;
+          return (
+            <li key={section.id} className="flex">
+              <a
+                href={`#${section.id}`}
+                aria-current={active ? "true" : undefined}
+                className={`flex min-h-11 items-center rounded-xl px-3 py-2 text-sm font-medium transition-colors hover:bg-surface-sunken hover:text-foreground lg:w-full ${
+                  active ? "text-muted lg:bg-primary-tint lg:text-primary" : "text-muted"
+                }`}
+              >
+                {section.label}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
 }
 

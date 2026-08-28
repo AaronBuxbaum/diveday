@@ -632,9 +632,7 @@ export async function pagedOrdersByDay(
 ): Promise<{ groups: OrdersDayGroup[]; page: OffsetPage<ShopOrderListRow> }> {
   // `::text` on the bound zone, not decoration: `AT TIME ZONE` has both a
   // `text` and an `interval` overload, and an untyped parameter leaves Postgres
-  // to pick between them. The one place this expression is written is here, and
-  // it is re-emitted verbatim into the `group by` and the `order by` so all
-  // three agree by construction.
+  // to pick between them.
   const localDay = sql<string>`to_char(${orders.createdAt} at time zone ${timeZone}::text, 'YYYY-MM-DD')`;
   const [paged, dayTotals] = await queryAll(db, [
     () => listShopOrders(db, shopId, filter, page),
@@ -654,8 +652,18 @@ export async function pagedOrdersByDay(
         .leftJoin(bookings, eq(bookings.id, orders.bookingId))
         .leftJoin(trips, eq(trips.id, bookings.tripId))
         .where(shopOrderWhere(shopId, filter))
-        .groupBy(localDay)
-        .orderBy(desc(localDay)),
+        // **By ordinal, not by re-emitting the expression.** Writing
+        // `localDay` a second and third time *looks* like it makes the three
+        // clauses agree by construction, and it is how this was first written
+        // — but drizzle binds a fresh placeholder on every embed, so the select
+        // reads `$1` where the group-by reads `$3`. Postgres matches a
+        // grouped expression to a selected one structurally, and `$1` is not
+        // `$3`, so it refused the whole query: *column "orders.created_at"
+        // must appear in the GROUP BY clause* (42803), pointing at a GROUP BY
+        // that plainly contains it. `1` is the one form that cannot drift from
+        // the column it names.
+        .groupBy(sql`1`)
+        .orderBy(sql`1 desc`),
   ]);
 
   const offset = (paged.page - 1) * paged.pageSize;

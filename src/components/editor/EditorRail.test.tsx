@@ -90,16 +90,22 @@ describe("the editor rail", () => {
     expect(rail.className).toContain("lg:top-(--chrome-h)");
   });
 
-  /** Below `lg` the same list is the app's one jump-row grammar, not a second rail. */
-  it("renders the same anchors as a jump row for the phone", () => {
+  /**
+   * **One landmark, whatever the width.** This rail was first written as the
+   * app's `JumpNav` for the phone beside a sticky column for the desktop, which
+   * read as reuse of the one "places on this page" grammar — but `JumpNav`
+   * brings a `<nav>` of its own, so the editor offered two landmarks under one
+   * name and a screen reader read the same anchor list twice. `lg:hidden` does
+   * not help: both are in the accessibility tree at every width. The list
+   * changes shape at `lg`; the landmark does not.
+   */
+  it("is one navigation landmark, holding every anchor exactly once", () => {
     render(<Editor />);
 
-    const jump = screen
-      .getAllByRole("navigation", { name: "On this page" })
-      .find((candidate) => !candidate.className.includes("lg:sticky"));
-    expect(jump).toBeDefined();
+    const navs = screen.getAllByRole("navigation", { name: "On this page" });
+    expect(navs).toHaveLength(1);
     expect(
-      Array.from(jump?.querySelectorAll("a") ?? []).map((link) => link.getAttribute("href")),
+      Array.from(navs[0].querySelectorAll("a")).map((link) => link.getAttribute("href")),
     ).toEqual(SECTIONS.map((section) => `#${section.id}`));
   });
 });

@@ -2,7 +2,7 @@
   "note": "Words of agent context every session loads before reading any code. A ratchet: a count may never rise, and a fall is banked with `node scripts/check-context-budget.mjs --write`. See the module comment in scripts/check-context-budget.mjs.",
   "budgets": {
     "CLAUDE.md": 49,
-    "AGENTS.md": 11150,
+    "AGENTS.md": 11143,
     ".claude/skills/*/SKILL.md (description lines)": 723,
     ".claude/agents/*.md (description lines)": 130
   },

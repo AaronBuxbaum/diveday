@@ -81,6 +81,10 @@ export function EditorSection({
   const shell = `scroll-mt-[calc(var(--chrome-h)+1.5rem)] ${
     lead ? "" : "border-t border-border pt-6"
   }`.trim();
+  // The attribute the unsaved-note hook traces a typed control back to, and
+  // the one thing that makes a section findable without knowing its id. Written
+  // out rather than spread from a constant so JSX keeps its typing.
+  const marker = { "data-editor-section": id };
   const body = <div className="mt-4 flex flex-col gap-5">{children}</div>;
   if (as === "fieldset") {
     return (
@@ -88,7 +92,7 @@ export function EditorSection({
       // spelled with `groupLabelClass()` rather than `GroupLabel` — the one
       // documented use of the exported class: the same spelling, on the element
       // this element has to be.
-      <fieldset id={id} className={shell}>
+      <fieldset id={id} {...marker} className={shell}>
         <legend className={groupLabelClass()}>{label}</legend>
         {description == null ? null : <SectionDescription>{description}</SectionDescription>}
         {body}
@@ -96,7 +100,7 @@ export function EditorSection({
     );
   }
   return (
-    <section id={id} aria-labelledby={`${id}-label`} className={shell}>
+    <section id={id} {...marker} aria-labelledby={`${id}-label`} className={shell}>
       <GroupLabel as="h2" id={`${id}-label`}>
         {label}
       </GroupLabel>
