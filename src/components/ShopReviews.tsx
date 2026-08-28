@@ -1,19 +1,30 @@
 import Link from "next/link";
 import { StarRating } from "@/components/StarRating";
-import { SectionCard } from "@/components/ui/card";
+import { LedgerRow } from "@/components/ui/ledger";
 import type { PublicReview } from "@/db/reviews";
 import type { DiverTranslator } from "@/i18n/messages";
 import { formatShortDate } from "@/lib/format";
 import { publicReviewsPath } from "@/lib/public-routes";
 import type { ReviewAggregate } from "@/lib/reviews";
 
+/** How many quotes the storefront's shelf carries before it hands over to the archive. */
+const SHELF_QUOTES = 2;
+
 /**
- * The shop's published reviews on its public schedule. Rendered only when
+ * **The reviews shelf on the shopfront** (ADR
+ * 20260827-clearwater-surface-language, decision 8). Rendered only when
  * something is actually published — an empty "no reviews yet" panel on a new
- * shop's page reads as a warning, not as neutral.
+ * shop's page reads as a warning rather than as neutral.
  *
- * Every string here comes from the caller's localized dictionary. Diver-written
- * comments are rendered as plain React text children, never as markup.
+ * **The aggregate is said once, and it is said in the hero**, not here. This
+ * band used to open with the stars, the average and the count, two hundred
+ * pixels below a masthead that said nothing about the shop at all; the
+ * recomposition puts the rating line where the shop's identity is and leaves
+ * the shelf the one thing a figure cannot do — quote two divers, and open the
+ * door to the rest.
+ *
+ * Diver-written comments render as plain React text children, never as markup,
+ * and every string here comes from the caller's localized dictionary.
  */
 export function ShopReviews({
   aggregate,
@@ -21,6 +32,7 @@ export function ShopReviews({
   shopSlug,
   locale,
   timezone,
+  className = "",
   t,
 }: {
   aggregate: ReviewAggregate;
@@ -28,40 +40,46 @@ export function ShopReviews({
   shopSlug: string;
   locale: string;
   timezone: string;
+  /** The page's rhythm, carried inside — a shelf that renders nothing leaves no gap. */
+  className?: string;
   t: DiverTranslator;
 }) {
   if (aggregate.average === null || aggregate.count === 0) return null;
-  // ICU picks the singular/plural form, so "1 review" vs "2 reviews" (and the
-  // Spanish equivalents) is the translator's decision, not a ternary here.
-  const roundedAverage = Math.round(aggregate.average);
 
   return (
-    <section aria-labelledby="shop-reviews" className="mt-10">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 id="shop-reviews" className="text-lg font-semibold">
+    <section aria-labelledby="shop-reviews" className={className || undefined}>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 id="shop-reviews" className="text-lg font-semibold tracking-tight">
           {t("reviews.sectionTitle")}
         </h2>
-        <p className="flex items-center gap-2 text-sm text-muted">
-          <StarRating
-            rating={roundedAverage}
-            label={t("reviews.ratingOption", { rating: roundedAverage })}
-          />
-          <span className="tabular-nums">
-            {t("reviews.average", { average: aggregate.average.toFixed(1) })} ·{" "}
-            <Link href={publicReviewsPath(shopSlug)} className="hover:underline">
-              {t("reviews.count", { count: aggregate.count })}
-            </Link>
-          </span>
-        </p>
+        <Link
+          href={publicReviewsPath(shopSlug)}
+          className="text-sm font-medium text-primary hover:underline focus-visible:underline"
+        >
+          {t("reviews.allTitle")}
+        </Link>
       </div>
-      <p className="mt-1 text-sm text-muted">{t("reviews.verifiedNote")}</p>
-      <ReviewCards reviews={reviews} locale={locale} timezone={timezone} t={t} />
+      <ReviewLedger
+        reviews={reviews.slice(0, SHELF_QUOTES)}
+        locale={locale}
+        timezone={timezone}
+        t={t}
+      />
     </section>
   );
 }
 
-/** Shared public cards; the archive intentionally omits the trip title. */
-export function ReviewCards({
+/**
+ * Published reviews as the open ledger (ADR
+ * 20260827-clearwater-surface-language, decision 2): hairline rows on the page
+ * background rather than a two-up grid of bordered cards. Shared by the
+ * shopfront's shelf and by the archive, which deliberately omits the trip
+ * title.
+ *
+ * The star fill is `--accent` here — data ink under decision 11's budget, one
+ * appearance however many rows are lit, and public pages only.
+ */
+export function ReviewLedger({
   reviews,
   locale,
   timezone,
@@ -76,21 +94,22 @@ export function ReviewCards({
 }) {
   if (reviews.length === 0) return null;
   return (
-    <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+    <ul className="mt-4 flex flex-col">
       {reviews.map((review) => (
-        <SectionCard as="li" key={review.id}>
+        <LedgerRow key={review.id} className="py-4">
           <StarRating
             rating={review.rating}
             label={t("reviews.ratingOption", { rating: review.rating })}
+            tone="accent"
             className="text-sm"
           />
-          {review.comment ? <p className="mt-2 text-base text-pretty">{review.comment}</p> : null}
-          <p className="mt-3 text-sm text-muted">
+          {review.comment ? <p className="mt-1.5 text-base text-pretty">{review.comment}</p> : null}
+          <p className="mt-1.5 text-sm text-muted">
             {review.reviewer || t("reviews.anonymousReviewer")}
             {showTrip ? ` · ${review.tripTitle}` : null} ·{" "}
             {formatShortDate(review.divedAt, locale, timezone)}
           </p>
-        </SectionCard>
+        </LedgerRow>
       ))}
     </ul>
   );

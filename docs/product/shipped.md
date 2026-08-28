@@ -7,6 +7,31 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The storefront leads with the shop (delivered 2026-08-28)
+
+Slice 6i of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
+decision 8. `/s/[shopSlug]` opens on **the shop**, not on the word "Schedule": the name at display
+scale as the page's `h1`, the shop's own tagline, the review aggregate — drawn stars in the accent,
+the figure, the count, and the claim that makes the number mean anything — and one conservation
+line joining every commitment the shop ticked, with the "stated by the shop, not verified by
+DiveDay" guard intact behind it. The band renders **only what the shop authored**: no tagline it
+has not written, no rating nobody has left, no DiveDay filler in place of either. Day zero is a
+name and nothing else, and it is a shape rather than a failure state.
+
+Beside it, the **next boat as a bookable object** — the page's one card and its one primary, "Book
+this boat" into the trip page's `#book`. `pinnedNextDeparture` became `nextBookableDeparture`: the
+pin used to stand down whenever the week's own first row already had room, and the storefront makes
+the next boat the page's subject instead, so the card always renders and the week below keeps that
+departure's row. The week is the same day-grouped ledger at **one meta line per row** — course
+session, where it goes, what it asks of you — with the seat state and the price as its trailing
+facts; the shop's description, the labelled dive-site and certification lines and the two-tank
+aside all left, and their keys left both locales with them. Full rows dim under a neutral badge,
+scarcity keeps its warning words, and a departure with no price shows no price. Courses and reviews
+follow as shelves (a drawn swell stands in for a course with no photo, in the primary tint, never
+the accent), the review archive restyles to the same ledger and says its aggregate once, and the
+two public course routes took the display-scale `h1` and nothing else. `?embed=1` renders neither
+the band nor the shelves — the widget stays the list-first window onto the schedule.
+
 ## The counter becomes a boarding instrument (delivered 2026-08-28)
 
 Slice 6h of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),

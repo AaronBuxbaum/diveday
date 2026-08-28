@@ -437,6 +437,37 @@ test("a tampered readiness token reveals nothing, and ?booking= no longer opens 
 });
 
 /**
+ * **J6 — a diver finds the shop** (ADR
+ * 20260827-clearwater-surface-language, decision 8; the canvas SPEC's journey
+ * table). On a phone the shopfront stacks: the shop's own name and line, then
+ * the next boat as a bookable object with the page's one primary, then the
+ * week at one line per departure. One tap gets a diver into the booking form
+ * they would otherwise have had to find by reading fifteen stacked cards.
+ */
+test.describe("the shopfront on a phone", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("leads with the shop, then the next boat, then the booking form", async ({ page }) => {
+    await page.goto("/s/blue-mantis");
+
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Blue Mantis Divers");
+    await expect(
+      page.getByText("Small-boat reef and wreck diving out of Key Largo."),
+    ).toBeVisible();
+
+    const card = page.getByRole("region", { name: "Next boat out" });
+    await expect(card).toBeVisible();
+    // The page's one primary — every week row below it is a link.
+    const primaries = page.getByRole("link", { name: "Book this boat" });
+    await expect(primaries).toHaveCount(1);
+    await primaries.click();
+
+    await expect(page).toHaveURL(/\/s\/blue-mantis\/trips\/[0-9a-f-]{36}#book$/);
+    await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  });
+});
+
+/**
  * **A stale link is the most likely first impression a diver ever has of a
  * shop**, because links outlive the departures they point at — a flyer, a
  * saved message, an Instagram post from last season.

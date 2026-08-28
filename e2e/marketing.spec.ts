@@ -63,7 +63,9 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   expect(href).toBe(`/s/${DEMO_SHOP_SLUG}?from=home-diver-moment`);
 
   await scheduleLink.click();
-  await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();
+  // The storefront's h1 is the shop, not the word "Schedule" (ADR
+  // 20260827-clearwater-surface-language, decision 8).
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Blue Mantis Divers");
   // Departures on it, not merely a page titled "Schedule". The link promises a
   // booking page, and the heading renders identically over the "No trips on the
   // books yet" empty state — which is exactly what the canonical demo shows once

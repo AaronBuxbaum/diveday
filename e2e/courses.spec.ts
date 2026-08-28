@@ -1,4 +1,4 @@
-import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
+import { expect, makeActivitySafe, READ_ONLY, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
   createTrip,
@@ -635,6 +635,42 @@ test("a diver's inquiry is recorded server-side and the shop's details stay reac
  * the shop teaches anything at all. The header carries the map on every public
  * page, so the walk works from wherever a diver came in.
  */
+/**
+ * The storefront's courses shelf and the display-scale h1 both land with slice
+ * 6i of ADR 20260827-clearwater-surface-language, decision 8: courses follow
+ * the week as a shelf, and the public h1 resolves the `text-2xl`/`text-4xl`
+ * disagreement upward.
+ */
+test.describe("courses on the shopfront", () => {
+  test("the shelf shows three rungs and a door to the rest", { tag: READ_ONLY }, async ({
+    page,
+  }) => {
+    await page.goto("/s/blue-mantis");
+    const shelf = page.getByRole("region", { name: "Courses" });
+    await expect(shelf).toBeVisible();
+    // Three, and no more: a shelf that grew to the whole catalog would be a
+    // second page glued under the first.
+    const cards = shelf.getByRole("listitem");
+    await expect(cards).toHaveCount(3);
+    await expect(shelf.getByRole("link", { name: "All courses" })).toHaveAttribute(
+      "href",
+      "/s/blue-mantis/courses",
+    );
+    await cards.first().getByRole("link").click();
+    await expect(page).toHaveURL(/\/s\/blue-mantis\/courses\/[a-z0-9-]+$/);
+  });
+
+  test("both public course routes render their h1 at the display scale", {
+    tag: READ_ONLY,
+  }, async ({ page }) => {
+    await page.goto("/s/blue-mantis/courses");
+    await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toHaveClass(/text-4xl/);
+
+    await page.goto("/s/blue-mantis/courses/open-water-diver");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveClass(/text-4xl/);
+  });
+});
+
 test.describe("the public header nav", () => {
   test("walks a diver from the schedule to the catalog and back", async ({ page }) => {
     await page.goto("/s/blue-mantis");

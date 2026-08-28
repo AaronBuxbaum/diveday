@@ -12,11 +12,15 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
   page,
 }) => {
   await page.goto("/s/blue-mantis");
-  await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
-  // Scoped to the departure's own card heading: the reviews section below the
-  // list quotes trip titles too, so a bare text match finds two things.
+  // The shopfront leads with the shop (ADR
+  // 20260827-clearwater-surface-language, decision 8); "Schedule" is the week's
+  // own section heading beneath it.
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Blue Mantis Divers");
+  await expect(page.getByRole("heading", { level: 2, name: "Schedule" })).toBeVisible();
+  // Scoped to the departure's own row heading: the reviews shelf below the list
+  // quotes trip titles too, so a bare text match finds two things.
   await expect(
-    page.getByRole("heading", { level: 2, name: "Two-Tank Reef — Molasses & French" }),
+    page.getByRole("heading", { level: 3, name: "Two-Tank Reef — Molasses & French" }),
   ).toBeVisible();
   // Assert the count rather than visibility: a capacity badge can double-render
   // for a sub-frame during hydration, and Playwright throws strict-mode
@@ -30,7 +34,11 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
   await expect(tripList.getByText("Full")).toHaveCount(1); // sold-out wreck trip
   await expect(page.getByRole("link", { name: "Full trip form" })).toHaveCount(0);
   await expect(page.getByLabel("Schedule overview")).toHaveCount(0);
-  await expect(page.getByText(/reserve your spot/i)).toBeVisible();
+  // The hero says only what the shop wrote. DiveDay's own "find your next day
+  // on the water, … reserve your spot" filler left the page with the
+  // recomposition; it survives as the metadata description and nowhere else.
+  await expect(page.getByText(/reserve your spot/i)).toHaveCount(0);
+  await expect(page.getByText("Small-boat reef and wreck diving out of Key Largo.")).toBeVisible();
 
   // The month rail names the month in view and steps the list a month at a
   // time — what the old full month grid did for a diver, in one quiet row.
@@ -53,17 +61,13 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
   const twoSiteCard = tripList
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" });
-  await expect(twoSiteCard.getByText(/^Dive sites · Molasses Reef and French Reef$/)).toHaveCount(
-    1,
-  );
+  await expect(twoSiteCard.getByText(/^Molasses Reef and French Reef$/)).toHaveCount(1);
   // And a departure whose second tank has no site yet says so, in the same
   // line, rather than silently reporting one site for a two-tank plan.
   const openTankCard = tripList
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Benwood & Elbow" });
-  await expect(
-    openTankCard.getByText(/^Dive site · Benwood Wreck · \+ 1 more dive site$/),
-  ).toHaveCount(1);
+  await expect(openTankCard.getByText(/^Benwood Wreck · \+ 1 more dive site$/)).toHaveCount(1);
 
   // A multi-dive trip's public page presents every dive briefing.
   await page

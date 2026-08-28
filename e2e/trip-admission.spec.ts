@@ -417,15 +417,16 @@ test.describe("what the public schedule card says a departure requires", () => {
     // is what demands Advanced Open Water and a Deep card, and the trip adds
     // nitrox. All three have to be on the card, or the composition is not what
     // reached it.
+    // The labels went with the stacked detail lines when the storefront
+    // recomposed (ADR 20260827-clearwater-surface-language, decision 8): each
+    // marker is already worded to stand on its own, and the row's one meta line
+    // sets them between separators.
     await expect(
-      row("Wreck Trip — Spiegel Grove").getByText(
-        /Certifications · Advanced Open Water or higher · Deep · Nitrox/,
-      ),
+      row("Wreck Trip — Spiegel Grove").getByText(/Advanced Open Water or higher · Deep · Nitrox/),
     ).toBeVisible();
 
-    // A plain level gate, singular label.
     await expect(
-      row("Two-Tank Reef — Molasses & French").getByText(/Certification · Open Water or higher/),
+      row("Two-Tank Reef — Molasses & French").getByText(/Open Water or higher/),
     ).toBeVisible();
 
     // And the requirement is no longer *also* typed into the description — the
@@ -446,7 +447,8 @@ test.describe("what the public schedule card says a departure requires", () => {
     const list = page.locator("form + ul");
     const rows = list.getByRole("listitem");
     await expect(rows).not.toHaveCount(0);
-    await expect(list.getByText(/^Certifications? ·/)).toHaveCount(0);
+    await expect(list.getByText(/or higher/)).toHaveCount(0);
+    await expect(list.getByText(/^Nitrox$/)).toHaveCount(0);
   });
 
   test("the embed carries the gate too", { tag: READ_ONLY }, async ({ page }) => {
@@ -463,7 +465,7 @@ test.describe("what the public schedule card says a departure requires", () => {
       page
         .getByRole("listitem")
         .filter({ hasText: "Deep Wreck Charter — the Duane on EANx" })
-        .getByText(/Certifications · Advanced Open Water or higher · Deep · Nitrox/),
+        .getByText(/Advanced Open Water or higher · Deep · Nitrox/),
     ).toBeVisible();
   });
 });

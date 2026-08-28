@@ -169,8 +169,6 @@ test pins the rule (never a pixel snapshot).
   tablets and phones keep the stream. *Pins:* a test that widths below `xl` render the stream.
 - **6f. The orders day ledger.** Day groups own date and subtotal; toolbar filters; imported
   history as one disclosure. *Pins:* a test that no row repeats its group's date.
-- **6i. The storefront.** Identity hero, next-boat object, one-line week rows, courses and reviews
-  shelves. Conversion surface: `conversion-reviewer` pass.
 
 **Both of this section's owner calls are decided** — H-62 (the fold) and H-63 (desktop-only week)
 in [../human-decisions.md](../human-decisions.md), 2026-08-27 — so no slice here waits on a human.
@@ -181,7 +179,7 @@ of this context. Start any slice from the canvas README's "Implementing a slice"
 **Build order across items 6–10** — the dependency graph a scheduler of sessions needs, stated
 once (each SPEC's preamble points here). Everything not listed is independent:
 
-- **6a and 6h have shipped** ([shipped.md](../shipped.md)), so the ledger primitives
+- **6a, 6g, 6h and 6i have shipped** ([shipped.md](../shipped.md)), so the ledger primitives
   (`GroupLabel`/`LedgerGroup`/`LedgerRow`/`RowKind`/`InsetGroup`), flat-at-rest and `SettledCheck`
   are already in the tree for 6c, 6f, 7a, 7b, 8a, 8c, 8f, 9a, 9d–9g, 10a and 10d to build on.
 - **6b → 6c** (the chrome height token); **6c → 6d and 10d** (they extend the spine 6c builds;
