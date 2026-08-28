@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid, PriceField } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
+import { GroupLabel } from "@/components/ui/ledger";
 import {
   canPersonErasePersonalData,
   canPersonManagePaymentSettings,
@@ -367,12 +368,9 @@ export function SettingsGroup({
 }) {
   return (
     <div>
-      <h2
-        id={group.id}
-        className="mb-3 scroll-mt-24 text-xs font-semibold tracking-[0.14em] text-muted uppercase"
-      >
+      <GroupLabel as="h2" id={group.id} className="mb-3 scroll-mt-24">
         {label}
-      </h2>
+      </GroupLabel>
       {children}
     </div>
   );

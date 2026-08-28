@@ -85,7 +85,7 @@ bodies, with their pins and owner-call dependencies, are in
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
-| 6a — the language mechanics | open | — | — |
+| 6a — the language mechanics | shipped | `src/components/ui/ledger.tsx` | `src/components/ui/ledger.test.tsx` |
 | 6b — one chrome spec | open | — | — |
 | 6c — the home as the day's spine | open | — | — |
 | 6d — the home's evening reading and the fold (H-62) | open | — | — |

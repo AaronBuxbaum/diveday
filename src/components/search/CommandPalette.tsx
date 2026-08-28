@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, useTransition
 import { createPortal } from "react-dom";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { DiveDayIcon, StaffDestinationIcon } from "@/components/StaffDestinationIcon";
+import { GroupLabel } from "@/components/ui/ledger";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useFocusTrap } from "@/components/useFocusTrap";
 import type { SearchResults } from "@/db/search";
@@ -593,9 +594,7 @@ export function CommandPalette({
                         }
                       >
                         {group.heading ? (
-                          <p className="px-5 pt-2 pb-1 text-xs font-bold tracking-wide text-muted uppercase">
-                            {group.heading}
-                          </p>
+                          <GroupLabel className="px-5 pt-2 pb-1">{group.heading}</GroupLabel>
                         ) : null}
                         {group.items.map((item) => {
                           const isActive = item.key === activeKey;

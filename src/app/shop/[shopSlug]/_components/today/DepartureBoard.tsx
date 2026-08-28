@@ -180,7 +180,7 @@ function DepartureCard({
               plus a seat count the boarding summary below already breaks into
               aboard/ready/blocked/open. The range carries the end time up
               here and the line under it is gone (principle 9). */}
-          <p className="flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight tabular-nums">
+          <p className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight tabular-nums">
             {formatTimeRange(departure.startsAt, departure.endsAt, locale, timeZone)}
             {crewed ? <Badge tone="primary">{copy.crewingBadge}</Badge> : null}
           </p>
@@ -393,14 +393,18 @@ function DepartureCard({
         </summary>
         <div className="mt-2 flex flex-col gap-2 pb-1 pl-5">
           {localCrew.length > 0 ? (
-            <ul className="flex flex-wrap gap-1.5">
+            <ul className="flex flex-wrap items-center gap-x-3 gap-y-1">
               {localCrew.map((c) => (
                 <li
                   key={c.id}
                   onAnimationEnd={() => {
                     if (c.id === justAddedId) setJustAddedId(null);
                   }}
-                  className={`inline-flex items-center gap-1 rounded-full border border-border-strong bg-surface py-0.5 pl-2.5 text-xs font-medium ${
+                  // Quiet text with its own remove target, not a bordered
+                  // capsule: a crew name is a fact the row already owns, and
+                  // `Badge` is the app's only pill (ADR
+                  // 20260827-clearwater-surface-language, decision 3).
+                  className={`inline-flex items-center gap-1 text-sm ${
                     c.id === justAddedId ? "animate-scale-in" : ""
                   }`}
                 >

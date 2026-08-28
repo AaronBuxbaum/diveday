@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { GroupLabel } from "@/components/ui/ledger";
 import { useExitAnimation } from "@/components/useExitAnimation";
 
 export type LanguagePickerCopy = {
@@ -105,9 +106,7 @@ export function LanguagePicker({
         <div
           className={`absolute top-full right-0 z-10 mt-1 min-w-40 rounded-xl border border-border bg-surface p-2 shadow-lg ${closing ? "animate-scale-out" : "animate-scale-in"}`}
         >
-          <p className="px-2 text-xs font-semibold tracking-wide text-muted uppercase">
-            {copy.heading}
-          </p>
+          <GroupLabel className="px-2">{copy.heading}</GroupLabel>
           <div className="mt-1">
             <LanguageChoices
               current={current}

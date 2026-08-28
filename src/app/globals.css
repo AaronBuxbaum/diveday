@@ -637,6 +637,32 @@ textarea {
   animation: rise-in 200ms var(--ease-out-soft) both;
 }
 
+/*
+ * The settled mark landing — `SettledCheck` (ADR
+ * 20260827-clearwater-surface-language). One of the four keyframes the
+ * Clearwater program sanctions, beside `figure-settle`, `rise-in` and
+ * `fade-out`; a fifth needs the same argument a new coral moment does.
+ *
+ * The spring overshoots by design: the mark is a thing coming to rest, not a
+ * thing appearing. It fires only on a client-side false -> true transition
+ * (the component's first-render ref guard), never on the initial paint, and
+ * the reduced-motion kill-switch below zeroes it so the mark simply swaps.
+ * The name carries no `out`/`dismiss` word, so `check-exit-curves.mjs`
+ * correctly reads it as an entrance and leaves it on the arrival spring.
+ */
+@keyframes settle-in {
+  from {
+    transform: scale(0.5);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.settle-in {
+  animation: settle-in 200ms var(--ease-spring) both;
+}
+
 /* Marketing sections reveal once, only after the browser has confirmed they
    start below the first viewport. The client component leaves above-fold
    content visible in the server HTML, so this is progressive enhancement. */

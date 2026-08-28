@@ -152,10 +152,6 @@ Sequenced so the language lands before the recompositions that speak it. **Each 
 standing obligation**: the component that must not drift names the ADR in its doc comment, and a
 test pins the rule (never a pixel snapshot).
 
-- **6a. The language mechanics.** Flat-at-rest panels (shadow retires from resting cards), the
-  open-ledger and inset-group primitives, `Badge` as the only pill, the closed type ramp, tabular
-  figures. *Pins:* a test that `sectionCardClass` emits no shadow at rest, and that the group-label
-  spelling is single-sourced.
 - **6b. One chrome spec.** The 56px translucent header bar shared by both shells, its height a
   token no child hard-codes. *Pins:* a test that no `top-[68px]`-style literal survives outside the
   chrome component.
@@ -189,10 +185,9 @@ of this context. Start any slice from the canvas README's "Implementing a slice"
 **Build order across items 6–10** — the dependency graph a scheduler of sessions needs, stated
 once (each SPEC's preamble points here). Everything not listed is independent:
 
-- **6a first, almost always.** The ledger primitives (`GroupLabel`/`LedgerRow`/`InsetGroup`),
-  flat-at-rest, and `SettledCheck` are consumed by 6c, 6f, 6h, 7a, 7b, 8a, 8c, 8f, 9a, 9d–9g,
-  10a and 10d. A session handed a downstream slice first lands 6a's primitives beneath it, in
-  the same stack.
+- **6a has shipped** ([shipped.md](../shipped.md)), so the ledger primitives
+  (`GroupLabel`/`LedgerGroup`/`LedgerRow`/`RowKind`/`InsetGroup`), flat-at-rest and `SettledCheck`
+  are already in the tree for 6c, 6f, 6h, 7a, 7b, 8a, 8c, 8f, 9a, 9d–9g, 10a and 10d to build on.
 - **6b → 6c** (the chrome height token); **6c → 6d and 10d** (they extend the spine 6c builds;
   8b's S1 journey also starts from 6c's station row); **6e → 9e** (the `?week=` grammar — 9e
   introduces it itself if 6e has not landed, per its cross-reference).

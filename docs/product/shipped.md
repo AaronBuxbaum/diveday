@@ -7,6 +7,21 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Clearwater's language mechanics (delivered 2026-08-28)
+
+Slice 6a of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
+the vocabulary the rest of that ADR's slices speak. **Elevation is earned**: `sectionCardClass()`
+and the `<Table>` shell drop `shadow-sm` from their resting output and the `elevated` prop is gone,
+so a shadow now means one thing only — this floats above the page. The two grouped anatomies get
+components (`src/components/ui/ledger.tsx`: `GroupLabel`, `LedgerGroup`, `LedgerRow`, `RowKind`,
+`InsetGroup`), which is also where the group label's one small-caps spelling and the app's **one
+disclosure spelling** — a native `<details>` under the shared `DisclosureCaret` — now live.
+`Badge` is the only pill left: `KindChip` is deleted, and the queue's count capsule, the
+by-departure view's seat capsule and the departure board's crew chips are quiet text.
+`SettledCheck` (`src/components/ui/SettledCheck.tsx`) is the drawn mark a thing wears once it has
+settled, with the `settle-in` keyframe firing only on a client-side false→true transition and never
+on first paint. The visual baseline moved app-wide, which is the slice's whole point.
+
 ## The boat manifest becomes an instrument (delivered 2026-08-27)
 
 Slice 5a of [20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md),

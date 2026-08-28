@@ -9,11 +9,11 @@ import { EmptyState } from "@/components/EmptyState";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { RowKind } from "@/components/ui/ledger";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { seasonalBriefingText, URGENCY_KEYS } from "@/i18n/today-labels";
+import { ACTION_KIND_KEYS, seasonalBriefingText, URGENCY_KEYS } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
-import { getSeasonalBriefing, groupActions, type TodayAction } from "@/lib/today";
-import { KindChip } from "./KindChip";
+import { ACTION_KIND_META, getSeasonalBriefing, groupActions, type TodayAction } from "@/lib/today";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
 import { RelativeDepartureTime } from "./RelativeDepartureTime";
 import {
@@ -67,7 +67,10 @@ function ActionRow({
   const lead = grouped ? (
     <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <KindChip kind={action.kind} t={t} />
+        <RowKind
+          word={t(ACTION_KIND_KEYS[action.kind])}
+          tone={ACTION_KIND_META[action.kind].tone}
+        />
         {action.aboutDeparture ? null : <p className="font-semibold">{action.subject}</p>}
         {showRelativeDepartureTime && dueAt ? (
           <p className="text-sm text-muted">
@@ -80,7 +83,10 @@ function ActionRow({
   ) : (
     <div className="min-w-0">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <KindChip kind={action.kind} t={t} />
+        <RowKind
+          word={t(ACTION_KIND_KEYS[action.kind])}
+          tone={ACTION_KIND_META[action.kind].tone}
+        />
         <p className="font-semibold">{action.subject}</p>
         {action.context ? <p className="text-sm text-muted">{action.context}</p> : null}
         {showRelativeDepartureTime && dueAt ? (

@@ -125,7 +125,10 @@ function TripGroup({
           <p className="text-sm text-muted">{formatDateTimeTz(trip.startsAt, locale, timeZone)}</p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
-          <span className="rounded-full bg-surface px-3 py-1 text-sm font-semibold tabular-nums">
+          {/* Quiet text, not a capsule: the group header already owns this
+              boat's facts, and a pill is reserved for the exceptional state
+              (ADR 20260827-clearwater-surface-language, decision 3). */}
+          <span className="text-sm font-medium text-muted tabular-nums">
             {t("blockers.tripBlockedCount", { blocked: trip.divers.length, booked: trip.booked })}
           </span>
           {batchIds.length > 1 ? (

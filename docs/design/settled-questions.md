@@ -39,7 +39,6 @@ sweep that produced it, not a follow-up.
 | Looks wrong | Why it is right | Where the reasoning lives |
 | --- | --- | --- |
 | Roll call shows "Mark boarded" **and** "Mark not boarded" — the button pair principle 8 forbids | Tri-state, not a toggle: `not_boarded` is a *recorded* no-show and distinct from unrecorded. The exception control drops its border to demote itself | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/RollCallControls.tsx` |
-| The Today queue pills two kinds and leaves the rest in bare caps | Deliberate — a pill renders only for danger and warning, with the contrast arithmetic for both in the file. It *is* principle 9 applied, not an omission of it | `src/app/shop/[shopSlug]/_components/today/KindChip.tsx` |
 | Settings rows use `›` and `⌄` interchangeably | The chevron's **direction** is what distinguishes navigate from expand; the file documents three shapes over one anatomy | `src/app/shop/[shopSlug]/settings/_components/SettingsRows.tsx` |
 | The departure progress bar carries state in colour | The bar is decorative and `aria-hidden`; the exact counts are plain text directly beneath it (principle 6 is about what a *reader* must rely on) | `src/components/BoardingBar.tsx` |
 | The orders table's Status column is blank on most rows | "Paid" on 45 of 50 rows is the expected state formatted as information. Blank is principle 9 done right | `src/app/shop/[shopSlug]/orders/page.tsx` |

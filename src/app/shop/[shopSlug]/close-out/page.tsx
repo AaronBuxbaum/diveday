@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { KindChip } from "@/app/shop/[shopSlug]/_components/today/KindChip";
 import { EARNED_MOMENT_SURFACE } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
@@ -11,6 +10,7 @@ import { UndoToast } from "@/components/UndoToast";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { GroupLabel, RowKind } from "@/components/ui/ledger";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getDb } from "@/db/client";
 import {
@@ -42,7 +42,7 @@ import {
 } from "@/i18n/closeout-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
-import { openRollCallActionText } from "@/i18n/today-labels";
+import { ACTION_KIND_KEYS, openRollCallActionText } from "@/i18n/today-labels";
 import { canViewShopReports } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import {
@@ -59,6 +59,7 @@ import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
+import { ACTION_KIND_META } from "@/lib/today";
 import { RecapNoteEditor } from "./_components/RecapNoteEditor";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -608,9 +609,7 @@ export default async function CloseOutPage({
             <p className="mt-3 text-sm text-muted">{t("closeout.record.nothingOutstanding")}</p>
           ) : (
             <div className="mt-3">
-              <h3 className="text-xs font-bold tracking-wide text-muted uppercase">
-                {t("closeout.record.outstandingHeading")}
-              </h3>
+              <GroupLabel as="h3">{t("closeout.record.outstandingHeading")}</GroupLabel>
               <ul className="mt-2 space-y-1 text-sm">
                 {latest.outstanding.departures.map((departure) => (
                   <li key={`dep-${departure.tripId}`}>
@@ -861,7 +860,10 @@ export default async function CloseOutPage({
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <KindChip kind={action.kind} t={t} />
+                          <RowKind
+                            word={t(ACTION_KIND_KEYS[action.kind])}
+                            tone={ACTION_KIND_META[action.kind].tone}
+                          />
                           <Link href={action.href} className="font-semibold hover:underline">
                             {action.subject}
                           </Link>
@@ -960,7 +962,7 @@ export default async function CloseOutPage({
           here, which taught staff those jobs wait until morning. A surface that
           re-renders another's evidence is a view, not a route (ADR
           20260803-not-ready-is-a-view), and the same reasoning applies to a
-          section: state how much is waiting, name it in the queue's own chips,
+          section: state how much is waiting, name it in the queue's own kind words,
           and hand the work to the surface that owns it. */}
       {quietDay ? null : (
         <section aria-labelledby="closeout-tomorrow-heading" className="mb-6">
@@ -974,16 +976,20 @@ export default async function CloseOutPage({
               <p className="font-semibold">
                 {t("closeout.tomorrow.count", { count: state.tomorrow.total })}
               </p>
-              {/* The tally rides *inside* each chip. Set beside one it was bound
-                to its label by a 2px gap difference, and a row of them wrapping
-                at 390px read as loose digits. The gap between chips must
-                stay visibly wider than the gap around the interpunct inside
+              {/* The tally rides *inside* each label. Set beside one it was
+                bound to its words by a 2px gap difference, and a row of them
+                wrapping at 390px read as loose digits. The gap between labels
+                must stay visibly wider than the gap around the interpunct inside
                 one, or proximity regroups "PREP · 2  FILL SEATS" into
                 "2 FILL SEATS" on a narrow screen. */}
               <ul className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
                 {state.tomorrow.byKind.map((entry) => (
                   <li key={entry.kind}>
-                    <KindChip kind={entry.kind} count={entry.count} t={t} />
+                    <RowKind
+                      word={t(ACTION_KIND_KEYS[entry.kind])}
+                      tone={ACTION_KIND_META[entry.kind].tone}
+                      count={entry.count}
+                    />
                   </li>
                 ))}
               </ul>

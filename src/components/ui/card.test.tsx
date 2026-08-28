@@ -14,15 +14,43 @@ afterEach(cleanup);
  */
 describe("sectionCardClass", () => {
   it("is one radius, and the ShopStat/Table spelling", () => {
-    expect(sectionCardClass()).toBe(
-      "rounded-2xl border border-border bg-surface shadow-sm p-4 sm:p-5",
-    );
+    expect(sectionCardClass()).toBe("rounded-2xl border border-border bg-surface p-4 sm:p-5");
   });
 
-  it("drops the shadow for a card contained by another, and the padding for a shell", () => {
-    expect(sectionCardClass({ elevated: false })).not.toContain("shadow-sm");
+  it("drops the padding for a shell", () => {
     expect(sectionCardClass({ padding: "none" })).not.toMatch(/\bp-\d/);
     expect(sectionCardClass({ padding: "lg" })).toContain("p-5 sm:p-6");
+  });
+
+  /**
+   * **Elevation is earned** — ADR 20260827-clearwater-surface-language,
+   * decision 1. A panel at rest is a fill and a hairline; a shadow says the
+   * thing floats above the page, which is true of a menu, a sheet, a dialog
+   * and a toast and of nothing else. Asserted as "no shadow utility at all"
+   * rather than as "not `shadow-sm`", because the failure this guards against
+   * is somebody reaching for a *quieter* shadow rather than reaching for the
+   * same one again.
+   */
+  it("emits no shadow token, at any padding or with any className", () => {
+    for (const padding of ["none", "md", "lg"] as const) {
+      expect(sectionCardClass({ padding }), padding).not.toMatch(/\bshadow(-|$)/);
+    }
+    expect(sectionCardClass({ className: "scroll-mt-24" })).not.toMatch(/\bshadow(-|$)/);
+  });
+
+  /**
+   * The prop is gone, not merely defaulted off. It existed so a card nested in
+   * another card could stop stacking surface on surface; with no shadow at
+   * rest there is nothing to stack, and leaving it accepted would let a call
+   * site keep asking for an elevation it will never get.
+   */
+  it("takes no `elevated` option — the escape hatch is inert, not just off", () => {
+    // `pnpm typecheck` refuses the prop at a call site; this is the runtime
+    // half, for the JS a `.mjs` script or a stale build could still hand it.
+    const forced = (sectionCardClass as (options: Record<string, unknown>) => string)({
+      elevated: true,
+    });
+    expect(forced).toBe(sectionCardClass());
   });
 });
 
@@ -34,7 +62,8 @@ describe("SectionCard", () => {
       </SectionCard>,
     );
     const card = container.querySelector("section");
-    expect(card).toHaveClass("rounded-2xl", "border", "border-border", "bg-surface", "shadow-sm");
+    expect(card).toHaveClass("rounded-2xl", "border", "border-border", "bg-surface");
+    expect(card?.className).not.toMatch(/\bshadow(-|$)/);
     // The drift this component exists to end: no call site can reintroduce a
     // second radius through the escape hatch.
     expect(card?.className).not.toMatch(/rounded-(lg|xl|3xl)\b/);
