@@ -1,0 +1,167 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;650;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7; --border-strong: #8a8577;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+      --success: #15803d; --warning: #b45309; --warning-tint: #f8eee6; --danger: #b91c1c;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.4; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--primary); }
+    .tab { font-size: 14px; font-weight: 500; color: var(--muted); padding: 6px 12px; border-radius: 10px; white-space: nowrap; }
+    .rrow { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--ink); }
+    .prow { display: flex; align-items: center; gap: 14px; min-height: 52px; padding: 0 18px; }
+    .plabel { font-size: 14.5px; font-weight: 550; }
+    .pval { margin-left: auto; font-size: 14px; color: var(--muted); text-align: right; }
+    .shell { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 1220px; background: var(--bg); box-sizing: border-box; overflow: hidden;">
+
+  <!-- Chrome -->
+  <div style="height: 56px; display: flex; align-items: center; gap: 20px; padding: 0 32px; background: rgba(250,249,246,.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); box-sizing: border-box;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 28px; height: 28px; border-radius: 8px; background: var(--primary); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">BM</div>
+      <span style="font-size: 15px; font-weight: 650; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"></path></svg>
+    </div>
+    <div style="display: flex; align-items: center; gap: 2px; margin-left: 16px;">
+      <span class="tab">Today</span>
+      <span class="tab">Check-in</span>
+      <span class="tab">Divers</span>
+      <span class="tab">Board</span>
+      <span class="tab" style="background: var(--primary-tint); color: var(--primary); font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">More
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"></path></svg>
+      </span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 10px; padding: 7px 12px; background: var(--surface);">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="4.6"></circle><path d="M10.6 10.6L13.6 13.6"></path></svg>
+      <span style="font-size: 13px; color: var(--muted);">Search</span>
+      <span style="font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px;">&#8984;K</span>
+    </div>
+  </div>
+
+  <div style="width: 1088px; margin: 0 auto; padding: 44px 0 40px; box-sizing: border-box;">
+
+    <p class="eyebrow" style="margin: 0;">Settings</p>
+    <h1 style="margin: 8px 0 0; font-size: 34px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.1;">Shop settings</h1>
+
+    <div style="margin-top: 32px; display: grid; grid-template-columns: 264px 1fr; column-gap: 48px;">
+
+      <!-- The rail: the whole map in one look -->
+      <div>
+        <p class="glabel" style="margin: 0 0 8px 12px;">Your shop</p>
+        <div class="rrow" style="background: var(--primary-tint); color: var(--primary); font-weight: 600;">Shop profile &amp; branding</div>
+        <div class="rrow">Team</div>
+        <div class="rrow">Dive sites</div>
+        <div class="rrow">Waiver template</div>
+        <div class="rrow">Pre-departure checklist</div>
+        <div class="rrow">Dock-day rhythm</div>
+        <div class="rrow">Units &amp; timezone</div>
+        <div class="rrow">Emergency reference</div>
+        <div class="rrow">Boats</div>
+        <div class="rrow">Account security</div>
+
+        <p class="glabel" style="margin: 22px 0 8px 12px;">Money</p>
+        <div class="rrow">Online payments</div>
+        <div class="rrow">Promo codes</div>
+        <div class="rrow">Rentals &amp; prices</div>
+        <div class="rrow">Dive packages</div>
+        <div class="rrow">Taxes &amp; fees</div>
+
+        <p class="glabel" style="margin: 22px 0 8px 12px;">Data &amp; integrations</p>
+        <div class="rrow">Website embed</div>
+        <div class="rrow">Calendar subscriptions</div>
+        <div class="rrow">Shopify, QuickBooks &amp; Zapier</div>
+        <div class="rrow">WhatsApp</div>
+        <div class="rrow">Backups</div>
+        <div class="rrow">Imports</div>
+        <div class="rrow">Data export</div>
+      </div>
+
+      <!-- The pane: the selected destination as inset groups. A row's value is its description. -->
+      <div>
+        <h2 style="margin: 4px 0 0; font-size: 20px; font-weight: 650; letter-spacing: -0.015em;">Shop profile &amp; branding</h2>
+
+        <p class="glabel" style="margin: 26px 0 8px 4px;">Identity</p>
+        <div class="shell">
+          <div class="prow">
+            <span class="plabel">Name</span>
+            <span class="pval">Blue Mantis Divers</span>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#8a8577" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+          </div>
+          <!-- Edit in place: the row is the form -->
+          <div style="border-top: 1px solid var(--border); padding: 12px 18px 14px; background: var(--sunken);">
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <span class="plabel" style="flex-shrink: 0;">Tagline</span>
+              <div style="flex: 1; display: flex; align-items: center; border: 1.5px solid var(--primary); border-radius: 10px; background: var(--surface); padding: 9px 12px;">
+                <span style="font-size: 14px;">Small-boat reef and wreck diving out of Key Largo.<span style="display: inline-block; width: 1.5px; height: 16px; background: var(--primary); vertical-align: -3px; margin-left: 1px;"></span></span>
+              </div>
+              <span style="font-size: 13.5px; font-weight: 600; color: var(--primary);">Save</span>
+              <span style="font-size: 13.5px; font-weight: 500; color: var(--muted);">Cancel</span>
+            </div>
+          </div>
+          <div class="prow" style="border-top: 1px solid var(--border);">
+            <span class="plabel">Logo</span>
+            <span style="margin-left: auto; width: 30px; height: 30px; border-radius: 8px; background: var(--primary); color: #ffffff; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">BM</span>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#8a8577" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+          </div>
+        </div>
+
+        <p class="glabel" style="margin: 26px 0 8px 4px;">Contact</p>
+        <div class="shell">
+          <div class="prow">
+            <span class="plabel">Email</span>
+            <span class="pval">hello@demo.invalid</span>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#8a8577" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+          </div>
+          <div class="prow" style="border-top: 1px solid var(--border);">
+            <span class="plabel">Phone</span>
+            <span class="pval tnum">+1 305 555 0142</span>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#8a8577" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+          </div>
+          <div class="prow" style="border-top: 1px solid var(--border);">
+            <span class="plabel">Address</span>
+            <span class="pval">100 Ocean Drive, Key Largo, FL</span>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#8a8577" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+          </div>
+        </div>
+
+        <p class="glabel" style="margin: 26px 0 8px 4px;">Public listing</p>
+        <div class="shell">
+          <div class="prow">
+            <span class="plabel">Search listing</span>
+            <span class="pval">Listed</span>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#8a8577" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+          </div>
+          <div class="prow" style="border-top: 1px solid var(--border);">
+            <span class="plabel">Review link</span>
+            <span class="pval">Not set</span>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#8a8577" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+          </div>
+          <div class="prow" style="border-top: 1px solid var(--border);">
+            <span class="plabel">Conservation commitments</span>
+            <span class="pval tnum">2 chosen</span>
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#8a8577" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

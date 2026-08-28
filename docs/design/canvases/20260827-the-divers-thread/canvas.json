@@ -1,0 +1,78 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "The thread — one link",
+      "x": 0,
+      "y": 0,
+      "w": 1360,
+      "h": 860
+    },
+    {
+      "file": "TripPhone.dc.html",
+      "title": "Book — phone, unrolled",
+      "x": 0,
+      "y": 1020,
+      "w": 390,
+      "h": 1615
+    },
+    {
+      "file": "TripDesktop.dc.html",
+      "title": "Book — desktop",
+      "x": 470,
+      "y": 1020,
+      "w": 1440,
+      "h": 1600
+    },
+    {
+      "file": "ReadyPhone.dc.html",
+      "title": "Get ready — the step spine",
+      "x": 1990,
+      "y": 1020,
+      "w": 390,
+      "h": 960
+    },
+    {
+      "file": "WaiverPhone.dc.html",
+      "title": "Sign — the paced waiver",
+      "x": 2460,
+      "y": 1020,
+      "w": 390,
+      "h": 980
+    },
+    {
+      "file": "AfterPhone.dc.html",
+      "title": "Afterglow — the same link",
+      "x": 2930,
+      "y": 1020,
+      "w": 390,
+      "h": 1180
+    }
+  ],
+  "annotations": [
+    {
+      "id": "thread-thesis",
+      "x": 1420,
+      "y": 0,
+      "w": 430,
+      "text": "The diver's thread: one link from booking to afterglow, at one measure, in the Clearwater grammar. The booking page sells then closes (the form is terminal, the money is one block, packing moves to prep); /ready becomes a step spine where only the current step is open; the waiver paces itself under a step rail; and after the dive the SAME link renders the keepsake, one review ask, and quiet doors — /recap stops being a page of its own (the concept-model row's open half, proposed here)."
+    },
+    {
+      "id": "thread-fiction",
+      "x": 1420,
+      "y": 330,
+      "w": 430,
+      "text": "Fiction: Thursday evening, Yara Halabi books the last 2 spots on Saturday's Two-Tank — French Reef ($95, 11:00 AM) for herself and Noor Rahman; $235 paid at booking ($190 fare + $45 rental set for Noor). Yara is Advanced (verified); Noor's Open Water is with the shop. Saturday: 27°C, 24 m vis, a turtle on tank two, five stars. All demo-seed fiction; the Blue Mantis facts match the Clearwater canvas."
+    },
+    {
+      "id": "thread-states",
+      "x": 2460,
+      "y": 2400,
+      "w": 430,
+      "text": "States deliberately not drawn (the shipped grammar already covers them): the expired-link rescue, the wait-list and full states, cancelled-trip notices, and the embed confirmation. The spec's acceptance tests pin that each keeps its current behavior under the new shell."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

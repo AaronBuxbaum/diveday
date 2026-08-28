@@ -1,0 +1,63 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "The library pattern — dive sites",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 960
+    },
+    {
+      "file": "Editor.dc.html",
+      "title": "The editor pattern — a course",
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 1200
+    },
+    {
+      "file": "Gear.dc.html",
+      "title": "The register — one story",
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "Staffing.dc.html",
+      "title": "Staffing — a week",
+      "x": 0,
+      "y": 1340,
+      "w": 1440,
+      "h": 840
+    },
+    {
+      "file": "Reports.dc.html",
+      "title": "Reports — figures, then a ledger",
+      "x": 1520,
+      "y": 1340,
+      "w": 1440,
+      "h": 810
+    }
+  ],
+  "annotations": [
+    {
+      "id": "shelves-thesis",
+      "x": 4560,
+      "y": 0,
+      "w": 430,
+      "text": "Three patterns cover every shelf. The library: one ledger at every width, grouped by the collection's own shared fact, the catalog a quiet door at the tail — the table-vs-card-grid split dies. The editor: a sticky section rail beside unboxed sections — eight bordered fieldsets become hairlines you can navigate. The instrument: state said once — gear's three renderings of reservation state become the groups themselves; staffing's crew gap finally carries its act; reports keeps its shape and sheds its tiles."
+    },
+    {
+      "id": "shelves-mapping",
+      "x": 4560,
+      "y": 400,
+      "w": 430,
+      "text": "Surfaces with no board of their own map to these patterns in the ADR's table: courses roster and promos take the library; team takes inset groups plus a people ledger (the page-level bulk role Save retires); the add-booking picker is a day-grouped library; the order record just goes flat. With this canvas, every surface has a named composition or a recorded deferral across items 5–10 somewhere in the stack."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

@@ -8,8 +8,9 @@ exists today.
 This document is the living rulebook for those pages: the positioning they argue, the claims they
 may make, the voice they use, and the maintenance loop that keeps them true. The dated case for the
 current direction is [archive/marketing-review-20260723.md](archive/marketing-review-20260723.md)
-(fully delivered, kept for rationale); the step-by-step editing procedure is the `marketing-page`
-skill.
+(fully delivered, kept for rationale); the **open** conversion pass — argued, sliced in roadmap
+section 12, not yet delivered — is [marketing-review-20260827.md](marketing-review-20260827.md);
+the step-by-step editing procedure is the `marketing-page` skill.
 
 **These pages are product surface.** DiveDay is developed exclusively by AI sessions, so marketing
 has no separate team, tooling, or CMS: copy is code, reviewed like code, tested like code
@@ -297,11 +298,12 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   not the homepage close — because that is where the decision is made; a reader who scrolls past it
   has already read it. Deleting it from a page entirely is a different change and not an allowed
   one: `e2e/marketing.spec.ts` asserts it on `/`.
-- **One primary CTA per screen.** Each marketing page carries its own primary (demo on `/` and
-  `/product`, the trial on `/pricing` — in its price hero, and again in the closing band beneath
-  the FAQ, tagged `pricing-close` so the second position is measured separately); the nav's
-  "Start a trial" stays secondary weight so
-  it never competes, and it hides entirely on `/onboard`, where it would link to the page it's on.
+- **One primary CTA per screen.** The demo leads everywhere through the shared `FunnelCtas`
+  pair (the 2026-08-22 two-doors decision above — this bullet said "the trial on `/pricing`"
+  until 2026-08-27, a leftover from before that decision); `/pricing`'s trial door is simply
+  measured at two positions (the price hero, and the closing band tagged `pricing-close`). The
+  nav's single door stays secondary weight so it never competes, and the CTA hides entirely on
+  `/onboard`, where it would link to the page it's on.
   **The homepage hero is the scarcest screen on the site and is capped at one primary plus one
   secondary** — it once offered around nine choices (a five-chip role picker, a diver-preview link,
   demo, trial), which is a menu, not an ask. Cutting a hero control never means deleting the

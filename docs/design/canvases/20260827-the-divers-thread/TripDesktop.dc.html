@@ -1,0 +1,149 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;650;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7; --border-strong: #8a8577;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+      --warning: #b45309;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .glabel { font-size: 11px; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--primary); }
+    .field { border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); min-height: 44px; display: flex; align-items: center; padding: 0 12px; font-size: 15px; }
+    .flabel { font-size: 13px; font-weight: 600; margin: 0 0 5px; }
+    .mrow { display: flex; align-items: baseline; gap: 10px; font-size: 13.5px; min-height: 26px; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 1600px; background: var(--bg); overflow: hidden; box-sizing: border-box;">
+
+  <!-- Public chrome -->
+  <div style="height: 56px; display: flex; align-items: center; gap: 20px; padding: 0 40px; background: rgba(250,249,246,.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); box-sizing: border-box;">
+    <span style="font-size: 16px; font-weight: 650; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 4px;">
+      <span style="font-size: 14.5px; font-weight: 600; color: var(--primary); background: var(--primary-tint); padding: 7px 14px; border-radius: 10px;">Schedule</span>
+      <span style="font-size: 14.5px; font-weight: 500; color: var(--muted); padding: 7px 14px;">Courses</span>
+      <span style="font-size: 13.5px; font-weight: 500; color: var(--muted); padding: 7px 10px;">English</span>
+    </div>
+  </div>
+
+  <!-- One measure: the thread column, centered, desktop included -->
+  <div style="width: 576px; margin: 0 auto; padding: 56px 0 40px; box-sizing: border-box;">
+
+    <p style="margin: 0 0 18px; font-size: 13.5px; font-weight: 600; color: var(--primary);">&#8249; All departures</p>
+
+    <p class="eyebrow" style="margin: 0;">Blue Mantis Divers</p>
+    <h1 style="margin: 10px 0 0; font-size: 33px; font-weight: 700; letter-spacing: -0.023em; line-height: 1.1;">Two-Tank — French Reef</h1>
+    <p class="tnum" style="margin: 10px 0 0; font-size: 16.5px; font-weight: 600;">Sat, Aug 29 &middot; 11:00 AM – 2:30 PM</p>
+    <div style="margin-top: 12px; display: flex; align-items: baseline; gap: 12px;">
+      <span class="tnum" style="font-size: 30px; font-weight: 700; letter-spacing: -0.015em;">$95</span>
+      <span style="font-size: 14px; color: var(--muted);">per diver</span>
+      <span style="margin-left: auto; font-size: 13.5px; font-weight: 650; color: var(--warning);">Only 2 spots left</span>
+    </div>
+    <p style="margin: 10px 0 0; font-size: 13px; font-weight: 600; color: var(--muted);">Add to calendar &middot; Share with a buddy</p>
+
+    <p style="margin: 22px 0 0; font-size: 15.5px; line-height: 1.55;">Swim-throughs and ledges, with the light coming in low on the second tank.</p>
+
+    <p class="glabel" style="margin: 26px 0 0;">The day</p>
+    <div style="margin-top: 6px;">
+      <div style="display: flex; align-items: center; gap: 12px; min-height: 46px; border-top: 1px solid var(--border);">
+        <span class="tnum" style="width: 56px; font-size: 13px; font-weight: 700;">Dive 1</span>
+        <span style="flex: 1; font-size: 14.5px;">French Reef swim-throughs</span>
+        <span class="tnum" style="font-size: 13px; color: var(--muted);">to 12 m</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; min-height: 46px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+        <span class="tnum" style="width: 56px; font-size: 13px; font-weight: 700;">Dive 2</span>
+        <span style="flex: 1; font-size: 14.5px;">White Sand Bottom Cave</span>
+        <span class="tnum" style="font-size: 13px; color: var(--muted);">to 14 m</span>
+      </div>
+    </div>
+
+    <p class="glabel" style="margin: 24px 0 0;">Look for</p>
+    <p style="margin: 6px 0 0; font-size: 14.5px; color: var(--muted);">Stoplight parrotfish &middot; green turtle &middot; spotted eagle ray</p>
+
+    <div style="margin-top: 24px; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--muted);">
+      <span class="tnum">Wind 8 kt E &middot; seas 2 ft</span>
+      <span>&middot;</span>
+      <span>Mantis II &middot; Keiko Tanaka, Sal Moretti</span>
+      <span>&middot;</span>
+      <span>English aboard</span>
+    </div>
+
+    <p style="margin: 22px 0 0; font-size: 14px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 16px;">This charter is for divers with <span style="color: var(--ink); font-weight: 600;">Open Water or higher</span>.</p>
+
+    <!-- The form, terminal -->
+    <div style="margin-top: 30px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 26px 24px; box-sizing: border-box;">
+      <p style="margin: 0; font-size: 19px; font-weight: 650; letter-spacing: -0.013em;">Grab your spots</p>
+
+      <p class="glabel" style="margin: 20px 0 0;">Divers</p>
+      <div style="margin-top: 8px; display: flex; gap: 8px;">
+        <span style="display: inline-flex; align-items: center; justify-content: center; min-width: 46px; min-height: 42px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); font-size: 15px; font-weight: 600; color: var(--muted);">1</span>
+        <span style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 54px; min-height: 42px; border-radius: 10px; background: var(--primary-tint); color: var(--primary); font-size: 15px; font-weight: 650;"><svg width="12" height="12" viewBox="0 0 18 18" fill="none" stroke="#0e7490" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5l3.5 3.5L14.5 5"></path></svg>2</span>
+      </div>
+
+      <div style="margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+        <div>
+          <p class="flabel">Your name</p>
+          <div class="field">Yara Halabi</div>
+        </div>
+        <div>
+          <p class="flabel">Email</p>
+          <div class="field">yara@example.com</div>
+        </div>
+      </div>
+      <div style="margin-top: 12px; width: calc(50% - 7px);">
+        <p class="flabel">Phone</p>
+        <div class="field" style="color: var(--muted);">For day-of updates</div>
+      </div>
+
+      <div style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: end;">
+          <div>
+            <p class="flabel">Diver 2</p>
+            <div class="field">Noor Rahman</div>
+          </div>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--muted); min-height: 44px;">
+            <span style="width: 18px; height: 18px; border-radius: 5px; background: var(--primary); display: inline-flex; align-items: center; justify-content: center;">
+              <svg width="11" height="11" viewBox="0 0 18 18" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5l3.5 3.5L14.5 5"></path></svg>
+            </span>
+            Use my email for their updates
+          </label>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; display: flex; align-items: center; gap: 12px;">
+        <div style="flex: 1;">
+          <p style="margin: 0; font-size: 15px; font-weight: 600;">Rental gear for Noor</p>
+          <p style="margin: 2px 0 0; font-size: 13px; color: var(--muted);">Full set &middot; sized on your readiness page</p>
+        </div>
+        <span class="tnum" style="font-size: 15px; font-weight: 600;">$45</span>
+      </div>
+
+      <div style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px;">
+        <div class="mrow"><span style="color: var(--muted);">$95 &times; 2 divers</span><span class="tnum" style="margin-left: auto; font-weight: 600;">$190</span></div>
+        <div class="mrow"><span style="color: var(--muted);">Rental gear</span><span class="tnum" style="margin-left: auto; font-weight: 600;">$45</span></div>
+        <div class="mrow"><span style="color: var(--muted);">Tax</span><span style="margin-left: auto; font-size: 13px; color: var(--muted);">added at checkout</span></div>
+        <div class="mrow" style="margin-top: 8px;"><span style="font-size: 16px; font-weight: 650;">Due now</span><span class="tnum" style="margin-left: auto; font-size: 21px; font-weight: 700;">$235</span></div>
+      </div>
+
+      <div style="margin-top: 16px; display: flex; align-items: center; justify-content: center; min-height: 50px; border-radius: 12px; background: var(--primary); color: #ffffff; font-size: 16px; font-weight: 600;">Book &middot; pay securely</div>
+      <p style="margin: 11px 0 0; font-size: 13px; color: var(--muted); text-align: center;">Free cancellation until Fri, 11:00 AM &middot; no account needed</p>
+    </div>
+
+    <p style="margin: 20px 0 0; font-size: 13px; color: var(--muted); text-align: center;">Questions? hello@demo.invalid &middot; <span class="tnum">+1 305 555 0142</span></p>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

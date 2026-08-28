@@ -1,0 +1,156 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;650;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7; --border-strong: #8a8577;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+      --success: #15803d;
+      --warning: #b45309; --warning-tint: #f8eee6;
+      --danger: #b91c1c;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .glabel { font-size: 11px; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .eyebrow { font-size: 10px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--primary); }
+    .row { display: flex; align-items: center; gap: 10px; min-height: 48px; border-top: 1px solid var(--border); }
+    .shell { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .prow { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: var(--bg); position: relative; overflow: hidden; box-sizing: border-box;">
+
+  <div style="height: 52px; display: flex; align-items: center; gap: 9px; padding: 0 16px; background: rgba(250,249,246,.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); box-sizing: border-box;">
+    <div style="width: 26px; height: 26px; border-radius: 7px; background: var(--primary); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;">BM</div>
+    <span style="font-size: 15px; font-weight: 650; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+    <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" style="margin-left: auto;"><circle cx="7" cy="7" r="4.6"></circle><path d="M10.6 10.6L13.6 13.6"></path></svg>
+  </div>
+
+  <div style="padding: 16px 20px 0;">
+    <p class="eyebrow" style="margin: 0; display: flex; align-items: center; gap: 4px;">
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+      Divers
+    </p>
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-top: 6px;">
+      <div>
+        <h1 style="margin: 0; font-size: 24px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.12;">Grace Mensah</h1>
+        <p style="margin: 5px 0 0; font-size: 12.5px; color: var(--muted);">grace.m@example.com &middot; <span class="tnum">+1 305 555 0177</span></p>
+      </div>
+      <span style="display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 10px; background: var(--primary); color: #ffffff; font-size: 13px; font-weight: 600; white-space: nowrap; margin-top: 2px;">Book</span>
+    </div>
+
+    <!-- Status ledger -->
+    <div style="margin-top: 14px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 10px 0;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="#b91c1c" stroke-width="1.8" stroke-linecap="round" style="flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M6.2 6.2l5.6 5.6M11.8 6.2l-5.6 5.6"></path></svg>
+        <span style="font-size: 13px; font-weight: 650; color: var(--danger);">Certification</span>
+        <span style="margin-left: auto; font-size: 13px; font-weight: 600; color: var(--primary);">Verify it</span>
+      </div>
+      <p style="margin: 3px 0 0 24px; font-size: 13px;">PADI Open Water waiting for verification — she&#8217;s on tomorrow&#8217;s 7:00.</p>
+    </div>
+
+    <!-- The story -->
+    <p class="glabel" style="margin: 18px 0 0;">The story</p>
+    <div style="margin-top: 4px;">
+      <div class="row">
+        <span class="tnum" style="width: 86px; font-size: 12.5px; font-weight: 700;">Thu, Aug 27</span>
+        <span style="flex: 1; min-width: 0;">
+          <span style="font-size: 14px; font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Two-Tank Reef — Molasses &amp; French</span>
+          <span style="display: block; font-size: 12px; color: var(--muted);">7:00 AM &middot; paid <span class="tnum">$95</span> &middot; waiver signed</span>
+        </span>
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="row">
+        <span class="tnum" style="width: 86px; font-size: 12.5px; font-weight: 700; color: var(--muted);">Jul 12</span>
+        <span style="flex: 1; min-width: 0;">
+          <span style="font-size: 14px; font-weight: 600; color: var(--muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Two-Tank Reef — Benwood &amp; Elbow</span>
+          <span style="display: block; font-size: 12px; color: var(--muted);">sailed &middot; <span class="tnum">$95</span></span>
+        </span>
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="row" style="border-bottom: 1px solid var(--border);">
+        <span class="tnum" style="width: 86px; font-size: 12.5px; font-weight: 700; color: var(--muted);">Mar 3</span>
+        <span style="flex: 1; min-width: 0;">
+          <span style="font-size: 14px; font-weight: 600; color: var(--muted); display: block;">Reef morning — two tanks</span>
+          <span style="display: block; font-size: 12px; color: var(--muted);">brought across from your old system</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- The file, as doors on the phone -->
+    <p class="glabel" style="margin: 18px 0 0;">The file</p>
+    <div class="shell" style="margin-top: 6px;">
+      <div class="prow">
+        <span style="flex: 1; font-size: 14px; font-weight: 550;">Certifications</span>
+        <span style="display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 9px; font-size: 11.5px; font-weight: 650; background: var(--warning-tint); color: var(--warning);">
+          <svg width="10" height="10" viewBox="0 0 18 18" fill="none" stroke="#b45309" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.4L16.6 15.2H1.4L9 2.4z"></path><path d="M9 7.2v3.4"></path></svg>
+          1 waiting
+        </span>
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#8a8577" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="prow" style="border-top: 1px solid var(--border);">
+        <span style="flex: 1; font-size: 14px; font-weight: 550;">Waiver</span>
+        <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--success);">
+          <svg width="11" height="11" viewBox="0 0 18 18" fill="none" stroke="#15803d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5l3.5 3.5L14.5 5"></path></svg>
+          Current
+        </span>
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#8a8577" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="prow" style="border-top: 1px solid var(--border);">
+        <span style="flex: 1; font-size: 14px; font-weight: 550;">Gear and sizes</span>
+        <span class="tnum" style="font-size: 12px; color: var(--muted);">BCD M &middot; ML long &middot; 38</span>
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#8a8577" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="prow" style="border-top: 1px solid var(--border);">
+        <span style="flex: 1; font-size: 14px; font-weight: 550;">Notes</span>
+        <span class="tnum" style="font-size: 12px; color: var(--muted);">1</span>
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#8a8577" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+    </div>
+
+    <div style="margin-top: 18px; border-top: 1px solid var(--border); padding-top: 12px; display: flex; align-items: center; gap: 16px; font-size: 12.5px; font-weight: 600; color: var(--muted);">
+      <span>Download</span>
+      <span>Merge</span>
+      <span style="margin-left: auto; color: var(--danger);">Delete</span>
+    </div>
+  </div>
+
+  <!-- The dock -->
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 76px; background: rgba(250,249,246,.92); backdrop-filter: blur(20px); border-top: 1px solid var(--border); display: flex; align-items: stretch; padding: 6px 4px 10px; box-sizing: border-box;">
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.4"></circle><path d="M10 5.8V10l2.8 1.8"></path></svg>
+      <span style="font-size: 10.5px; color: var(--muted);">Today</span>
+    </div>
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.5l3.2 3.2 7-7.6"></path><path d="M9.5 13.7l1.2 1.2 6-6.5" opacity=".5"></path></svg>
+      <span style="font-size: 10.5px; color: var(--muted);">Check-in</span>
+    </div>
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+      <span style="display: flex; align-items: center; justify-content: center; width: 44px; height: 26px; border-radius: 999px; background: var(--primary-tint);">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.4" cy="7" r="2.7"></circle><path d="M2.6 16c.8-2.8 2.5-4.1 4.8-4.1s4 1.3 4.8 4.1"></path><circle cx="13.8" cy="7.8" r="2.2" opacity=".55"></circle><path d="M12.4 11.9c2 .1 3.4 1.3 4.1 3.6" opacity=".55"></path></svg>
+      </span>
+      <span style="font-size: 10.5px; font-weight: 600; color: var(--primary);">Divers</span>
+    </div>
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="13" rx="2.4"></rect><path d="M6.6 2.6v2.8M13.4 2.6v2.8M3 8.4h14"></path></svg>
+      <span style="font-size: 10.5px; color: var(--muted);">Board</span>
+    </div>
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="4.5" cy="10" r="1.4" fill="#5b6f77"></circle><circle cx="10" cy="10" r="1.4" fill="#5b6f77"></circle><circle cx="15.5" cy="10" r="1.4" fill="#5b6f77"></circle></svg>
+      <span style="font-size: 10.5px; color: var(--muted);">More</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

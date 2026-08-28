@@ -1,0 +1,63 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Sign in — the door grammar",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "OnboardPhone.dc.html",
+      "title": "Onboard — the shop's first form",
+      "x": 1520,
+      "y": 0,
+      "w": 390,
+      "h": 880
+    },
+    {
+      "file": "Doors.dc.html",
+      "title": "Terminal states — two tiers",
+      "x": 0,
+      "y": 1040,
+      "w": 1400,
+      "h": 385
+    },
+    {
+      "file": "FirstMorning.dc.html",
+      "title": "The first morning",
+      "x": 0,
+      "y": 1560,
+      "w": 1440,
+      "h": 540
+    },
+    {
+      "file": "FirstBooking.dc.html",
+      "title": "The coral morning",
+      "x": 0,
+      "y": 2240,
+      "w": 1180,
+      "h": 205
+    }
+  ],
+  "annotations": [
+    {
+      "id": "firstlight-doors",
+      "x": 1990,
+      "y": 0,
+      "w": 430,
+      "text": "Every door into DiveDay is one shell (EntryShell), spoken in Clearwater: one column, one act, quiet footer links. The terminal glyph is drawn, never an emoji. Dead links split into two tiers, now law: an account token (verify, reset, invite) never names a shop; a booking token (waiver, ready, recap, claim) always offers the shop's hand. Claim leaves its hand-rolled grammar and joins the diver's thread — its success already lands on /ready."
+    },
+    {
+      "id": "firstlight-morning",
+      "x": 1990,
+      "y": 330,
+      "w": 430,
+      "text": "The first morning is a state of the home, never a wizard — H-62's grammar applied to day zero. Three presence-derived ledger rows (first dive site, first departure, payments) each leave forever when their fact becomes true; zero new columns, nothing to dismiss. The first booking ever carries the coral mark — the staff side's single entry in the coral budget — and with the second, the home is just the home. Fiction: June Okafor opens Torchlight Divers, Islamorada, on Tue Sep 1."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

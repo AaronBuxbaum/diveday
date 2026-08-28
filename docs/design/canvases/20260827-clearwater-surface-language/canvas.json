@@ -1,0 +1,171 @@
+{
+  "pages": [
+    {
+      "id": "page-language",
+      "name": "The language"
+    },
+    {
+      "id": "page-staff",
+      "name": "The staff app"
+    },
+    {
+      "id": "page-shopfront",
+      "name": "The shopfront"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "System.dc.html",
+      "title": "Clearwater \u2014 the language",
+      "page": "page-language",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 1990
+    },
+    {
+      "file": "Main.dc.html",
+      "title": "The home \u2014 morning",
+      "page": "page-staff",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1420
+    },
+    {
+      "file": "Evening.dc.html",
+      "title": "The home \u2014 evening",
+      "page": "page-staff",
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 990
+    },
+    {
+      "file": "TodayPhone.dc.html",
+      "title": "The home \u2014 phone",
+      "page": "page-staff",
+      "x": 3040,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Counter.dc.html",
+      "title": "The counter \u2014 tablet",
+      "page": "page-staff",
+      "x": 3510,
+      "y": 0,
+      "w": 820,
+      "h": 1180
+    },
+    {
+      "file": "Board.dc.html",
+      "title": "The board \u2014 a week",
+      "page": "page-staff",
+      "x": 0,
+      "y": 1640,
+      "w": 1440,
+      "h": 1080
+    },
+    {
+      "file": "Orders.dc.html",
+      "title": "Orders \u2014 a day ledger",
+      "page": "page-staff",
+      "x": 1520,
+      "y": 1640,
+      "w": 1440,
+      "h": 1300
+    },
+    {
+      "file": "Settings.dc.html",
+      "title": "Settings \u2014 rail and pane",
+      "page": "page-staff",
+      "x": 3040,
+      "y": 1640,
+      "w": 1440,
+      "h": 1220
+    },
+    {
+      "file": "Storefront.dc.html",
+      "title": "The shopfront \u2014 desktop",
+      "page": "page-shopfront",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 2240
+    },
+    {
+      "file": "StorefrontPhone.dc.html",
+      "title": "The shopfront \u2014 phone",
+      "page": "page-shopfront",
+      "x": 1520,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "QuietDay.dc.html",
+      "title": "The home \u2014 a quiet day",
+      "page": "page-staff",
+      "x": 4410,
+      "y": 0,
+      "w": 1440,
+      "h": 540
+    }
+  ],
+  "annotations": [
+    {
+      "id": "language-thesis",
+      "page": "page-language",
+      "x": 1260,
+      "y": 0,
+      "w": 420,
+      "text": "Clearwater in one breath: type leads, chrome recedes, elevation is earned. The app's two best surfaces (the board, the public schedule) already invented the open ledger independently \u2014 this canvas makes their grammar the default and retires the stack of bordered boxes. No new tokens anywhere: same palette, same type family, different composition."
+    },
+    {
+      "id": "staff-thesis",
+      "page": "page-staff",
+      "x": 0,
+      "y": -190,
+      "w": 440,
+      "text": "The home stops being twelve boxes that name one departure eight times. The day is a spine: each boat is a station carrying its own work, ranked by severity, with its one fix beside it; desk work pools below; tomorrow collapses to a count. In the evening the same spine settles station by station \u2014 a state, never a mode \u2014 and the closing block appears: leftovers with their own Dismiss (H-57), then the one closing act. Close-out's route folds away entirely (H-62, decided 2026-08-27): the dock drops to four destinations plus More. On a day with no boats the page collapses to a heading, one sentence, and one act (the QuietDay board)."
+    },
+    {
+      "id": "staff-week",
+      "page": "page-staff",
+      "x": 0,
+      "y": 1450,
+      "w": 440,
+      "text": "Below: the week board (seven columns answer \"what does my week look like?\" in one screen \u2014 the phone keeps today's stream), orders as a day ledger (the group header owns the date and the subtotal; principle 9 applied to a table), and settings as rail + pane (the whole map in one look; a row's value is its description)."
+    },
+    {
+      "id": "counter-note",
+      "page": "page-staff",
+      "x": 3510,
+      "y": -190,
+      "w": 420,
+      "text": "The counter inherits the manifest's instrument grammar, ashore: the count leads at figure scale, a blocked row carries its one fix inline, checked-in rows sink into a settled group. One boat in focus; the day's other departures are one tap away. 56px targets at counter scale \u2014 an iPad on a stand, morning rush."
+    },
+    {
+      "id": "shopfront-thesis",
+      "page": "page-shopfront",
+      "x": 0,
+      "y": -190,
+      "w": 440,
+      "text": "A diver chooses a shop before a time slot, so the shopfront leads with the shop: name, its own words, the review aggregate, and the next boat as the one bookable object, on the page's one card. The week keeps the ledger grammar at one metadata line per row \u2014 the trip page answers the rest. Courses and reviews read as shelves. One primary per view: Book."
+    },
+    {
+      "id": "shopfront-honesty",
+      "page": "page-shopfront",
+      "x": 1520,
+      "y": 920,
+      "w": 400,
+      "text": "Everything on these boards is demo-seed fiction (Blue Mantis Divers, \u26054.3 \u00b7 83 reviews, the seed's own review quotes). Course photos are drawn placeholders, not photographs. Prices render scanned \u2014 \"$95\", never \"$95.00\" \u2014 per principle 6."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-staff"
+  }
+}

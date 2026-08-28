@@ -138,6 +138,279 @@ a pixel snapshot).
 into Trip is an acceptable reading of one-home-per-action, and whether boat mode should hide the
 phone dock. Both want a `dive-domain-expert` review; 5a–5d and 5f do not depend on either.
 
+### 6. Clearwater — the surface language (design complete)
+
+The app-wide surface redesign — type-led hierarchy, grouped ledgers over card stacks, earned
+elevation, and five recomposed surfaces — argued in the Proposed ADR
+[20260827-clearwater-surface-language](../../architecture/decisions/20260827-clearwater-surface-language.md).
+Pictures live in
+[its canvas](../../design/canvases/20260827-clearwater-surface-language/README.md); the holistic
+passes are in [design/surfaces.md](../../design/surfaces.md). The trip/manifest surfaces are out of
+scope (item 5 owns them). Unranked against items 1–5; where it sits is an owner call.
+
+Sequenced so the language lands before the recompositions that speak it. **Each slice ends with the
+standing obligation**: the component that must not drift names the ADR in its doc comment, and a
+test pins the rule (never a pixel snapshot).
+
+- **6a. The language mechanics.** Flat-at-rest panels (shadow retires from resting cards), the
+  open-ledger and inset-group primitives, `Badge` as the only pill, the closed type ramp, tabular
+  figures. *Pins:* a test that `sectionCardClass` emits no shadow at rest, and that the group-label
+  spelling is single-sourced.
+- **6b. One chrome spec.** The 56px translucent header bar shared by both shells, its height a
+  token no child hard-codes. *Pins:* a test that no `top-[68px]`-style literal survives outside the
+  chrome component.
+- **6c. The home as the day's spine** (morning reading). Stations in clock order carrying their own
+  work rows; the desk group; collapsed horizons; the view switch dissolves. *Pins:* a test that a
+  departure's facts render once — no queue row repeats a station's title at equal weight.
+- **6d. The home's evening reading, and the fold (H-62).** The spine settles station by station —
+  a state, never a mode — and the closing block (leftovers with per-row Dismiss per H-57, then the
+  one closing act) appears once the day's departures have ended, with the standing one-hour buffer.
+  The same slice removes the destination: `/close-out` 308s to the home, its notices re-home, the
+  `closeOut` registry entry goes, and the dock drops to four destinations plus More. *Pins:* a test
+  that no acknowledgement gate stands on the closing act, and one that the closing block never
+  renders while a departure is still out.
+- **6e. The week board (H-63).** Seven columns from `xl` (1280px) up, spans for multi-day courses;
+  tablets and phones keep the stream. *Pins:* a test that widths below `xl` render the stream.
+- **6f. The orders day ledger.** Day groups own date and subtotal; toolbar filters; imported
+  history as one disclosure. *Pins:* a test that no row repeats its group's date.
+- **6g. Settings rail and pane.** Desktop two-pane; phone keeps grouped lists; standing captions
+  retire behind disclosure.
+- **6h. The counter instrument.** Count-led boarding queue, settled rows sink, ≥56px targets at
+  tablet. Safety-adjacent: `dive-domain-expert` review.
+- **6i. The storefront.** Identity hero, next-boat object, one-line week rows, courses and reviews
+  shelves. Conversion surface: `conversion-reviewer` pass.
+
+**Both of this section's owner calls are decided** — H-62 (the fold) and H-63 (desktop-only week)
+in [../human-decisions.md](../human-decisions.md), 2026-08-27 — so no slice here waits on a human.
+The canvas carries [an implementation spec](../../design/canvases/20260827-clearwater-surface-language/SPEC.md)
+— journeys, acceptance tests, and interface contracts per slice — written for a session with none
+of this context. Start any slice from the canvas README's "Implementing a slice" prompt.
+
+**Build order across items 6–10** — the dependency graph a scheduler of sessions needs, stated
+once (each SPEC's preamble points here). Everything not listed is independent:
+
+- **6a first, almost always.** The ledger primitives (`GroupLabel`/`LedgerRow`/`InsetGroup`),
+  flat-at-rest, and `SettledCheck` are consumed by 6c, 6f, 6h, 7a, 7b, 8a, 8c, 8f, 9a, 9d–9g,
+  10a and 10d. A session handed a downstream slice first lands 6a's primitives beneath it, in
+  the same stack.
+- **6b → 6c** (the chrome height token); **6c → 6d and 10d** (they extend the spine 6c builds;
+  8b's S1 journey also starts from 6c's station row); **6e → 9e** (the `?week=` grammar — 9e
+  introduces it itself if 6e has not landed, per its cross-reference).
+- **7a → 7b–7e, 10a and 10c** (the thread shell and the EntryShell type-ramp land in 7a; claim's
+  recomposition and the door restyle build on them). **7b and 7c ship together, or 7c first** —
+  packing must have a destination on the thread before the trip page deletes it.
+- **8a → 8b and 8c**, and 9g's add-booking step consumes 8a's person rows.
+
+### 7. The diver's thread (design complete)
+
+One link from booking to afterglow, in the Clearwater grammar — argued in the Proposed ADR
+[20260827-the-divers-thread](../../architecture/decisions/20260827-the-divers-thread.md), drawn in
+[its canvas](../../design/canvases/20260827-the-divers-thread/README.md), specified in
+[its SPEC](../../design/canvases/20260827-the-divers-thread/SPEC.md). Extends items 5 and 6;
+unranked against them. The regression floor is the existing booking/readiness/waiver/recap e2e
+suite — every slice keeps it green.
+
+- **7a. The thread shell and measure.** One shell (shop eyebrow, title, state slot) and one
+  `max-w-xl` measure for every page a booked diver walks; `EntryDone`/`ExpiredLinkCard` restyle
+  flat inside it. Chrome only, no behavior. *Pins:* shell renders shop-name eyebrow + one h1.
+- **7b. The trip page sells, then closes.** Hero (price once) → pitch → one-line requirement →
+  the terminal form with the money as one block; packing moves to the thread; briefings collapse
+  into the pitch. *Pins:* one due-now figure; the form is the last section; packing absent.
+  `conversion-reviewer` pass.
+- **7c. The thread page's step spine.** Five steps, one open at rest, one status statement; the
+  progress figure counts only finishable steps; the cancellation window lands in the Pay step
+  (closing ADR 20260820's dead `cancellationOnly`). *Pins:* one status statement; the figure can
+  always fill.
+- **7d. The after-state and the recap fold.** After endsAt + the standing buffer, the same link
+  renders the keepsake, one review ask, and quiet doors; `/recap/[token]` renders the same surface
+  (links and emails keep working); the duplicate facts delete (H-49). Closes the concept-model
+  row's "folding recap into the same link" half; the second booking-time email stays an owner
+  call. The keepsake's unprompted-share artifact (save-as-image, no bearer URL) is
+  deliberately not in this slice — issue #1081 carries it. *Pins:* the day's facts render once; prep-vs-after switches on the buffer rule.
+- **7e. The waiver paces itself.** Step rail, one notice grammar, one primary; the release stays
+  fully presented; signature/medical semantics untouched (H-01/H-03). *Pins:* one primary;
+  banners through one component.
+
+### 8. People, not lists (design complete)
+
+The staff people surfaces — the diver record (whose one idea issue #780 recorded as unanswered),
+the roster, reviews, waivers, requests — argued in the Proposed ADR
+[20260827-people-not-lists](../../architecture/decisions/20260827-people-not-lists.md), drawn in
+[its canvas](../../design/canvases/20260827-people-not-lists/README.md), specified in
+[its SPEC](../../design/canvases/20260827-people-not-lists/SPEC.md). Speaks Clearwater (item 6);
+unranked. `security-reviewer` before 8b and 8e merge.
+
+- **8a. The shared person-row vocabulary.** `CertificationCardRow`, `WaiverStateRow`,
+  `BookingStoryRow` — one spelling for the rows every people surface repeats. *Pins:* verified
+  renders no badge; every state carries a word.
+- **8b. The diver record recomposition.** Status ledger leads and renders nothing when clear; the
+  story is one ledger; the file is inset groups; Book is the one primary; the jump nav, the
+  514-line notice router and the twin certification components delete (H-49). Closes issue #780.
+  *Pins:* empty-status renders nothing; exactly one primary.
+- **8c. The roster ledger.** One rendering at all widths, letter groups, exceptional badges only.
+  *Pins:* a clear diver's row carries no badge.
+- **8d. Reviews as a worklist.** "Waiting on you" leads; the stat tiles collapse to one aggregate
+  line; the floor's arithmetic untouched. *Pins:* one aggregate rendering.
+- **8e. The waiver surface.** Materiality as a recorded choice then one Publish (H-54 semantics
+  unchanged); the signature log as a day-grouped ledger with integrity badges only when not valid.
+  *Pins:* no submit without a choice while signatures stand.
+- **8f. Requests in the language.** Day groups own count and advice; soft matches are ink, not
+  tint.
+
+### 9. The shop's shelves (design complete)
+
+The catalog and setup surfaces — dive sites, the long-form editors, gear, staffing, reports, and
+the mapped rest — argued in the Proposed ADR
+[20260827-the-shops-shelves](../../architecture/decisions/20260827-the-shops-shelves.md), drawn in
+[its canvas](../../design/canvases/20260827-the-shops-shelves/README.md), specified in
+[its SPEC](../../design/canvases/20260827-the-shops-shelves/SPEC.md). Completes the Clearwater
+stack's app-wide pass (items 6–9 + the departure's own item 5). Unranked.
+
+- **9a. The dive-site library and the catalog door.** One ledger; the catalog a door at the tail;
+  the provenance glyph retires. *Pins:* requirement words only above Open Water.
+- **9b/9c. The editor rail** on the course editor, then the site form. Sticky rail, unboxed
+  sections, one Save; `ConflictGuardedForm`, depth markers, template-update flows untouched.
+  *Pins:* every section reachable from the rail; refusal anchors land.
+- **9d. The gear register's one story.** Out / Overdue / On the wall as the groups; tiles and
+  the Returns panel fold in (H-49); 23P01 truth untouched. *Pins:* a unit renders in exactly one
+  group.
+- **9e. Staffing as a week.** People × days; the gap carries its act in its day; credentials stay
+  inform-only (H-59). *Pins:* no control gated by a lapse.
+- **9f. Reports sheds its chrome.** Unboxed figures; the ledger keeps the remainder-attention
+  waiver meter via the shared `ProgressBar`. *Pins:* the remainder carries the tone, never the
+  fill.
+- **9g. The mapped surfaces.** Courses roster, promos, add-booking onto the patterns — mechanical
+  restyles, no behavior change.
+- **9h. Team's per-row roles.** Per-row disclosures that save on close, Escape aborts, refusal
+  reopens field-side, Undo one re-save; replaces the page-level bulk Save. *Pins:* per-row save
+  round-trip; refusal never a page banner.
+
+### 10. First light (design complete)
+
+The doors — sign-in, onboard, the reset/verify/invite family, claim, unsubscribe — and the shop's
+first morning, argued in the Proposed ADR
+[20260827-first-light](../../architecture/decisions/20260827-first-light.md), drawn in
+[its canvas](../../design/canvases/20260827-first-light/README.md), specified in
+[its SPEC](../../design/canvases/20260827-first-light/SPEC.md). Closes the route-coverage hole the
+2026-08-27 sweep found: the pages a person meets *before* items 6–9's surfaces. Unranked.
+
+- **10a. The door speaks Clearwater.** `EntryShell`/`EntryDone` converge on the language;
+  `EntryDone`'s emoji glyph becomes the closed drawn set (`DoorGlyphId`); the dead-link law's two
+  tiers become normative. *Pins:* no emoji literal in `account/` components; a door renders one
+  primary.
+- **10b. Onboard is the shop's first form.** Group labels replace the h2 rules; the four-sentence
+  reassurance collapses to one; the slug hint reads as the storefront URL, live. Enumeration
+  safety, error routing and analytics untouched. *Pins:* the hint yields to the field error.
+- **10c. Claim joins the thread.** `/claim/[token]` adopts `ThreadShell` (its success already
+  lands on `/ready`); a readable dead claim becomes booking-tier and names the shop. *Pins:* a
+  readable dead token names the shop; an unreadable one does not.
+- **10d. The first morning.** `FirstRunChecklist` recomposes onto the ledger primitives as the
+  spine's leading group — its facts, condition, `FIRST_RUN_STEP_COUNT` and test hooks unchanged,
+  its nested step boxes gone; the first booking ever carries the coral mark (a coral-budget
+  entry, Clearwater ADR decision 11). Depends on 6a and 6c. *Pins:* the group never co-renders
+  with the quiet-day composition; two bookings ever means no mark.
+
+### 11. Product ideas from the sweep (each needs an owner's nod)
+
+Thirteen ideas from the 2026-08-27 design sweep, each composing into a surface items 6–10 already
+design — none adds a nav destination. Every one carries a schema/lib/surface sketch here so a
+green-light starts warm; none is scheduled, and several are safety-adjacent enough to need the
+standing reviews. Ordered roughly by leverage-per-effort.
+
+- **Morning conditions call.** A recorded Go / Watching word on a departure — append-only
+  `trip_condition_calls` (call enum, optional shop-worded note), latest row wins, deliberately no
+  `blown_out` value (that act stays the blowout cascade). Renders beside the station's time (6c)
+  and the week cell (6e); "watching" adds a Today urgency row. Informs, never gates; staff-only
+  until an owner call puts anything on the storefront. *Medium.*
+- **Milestone cues for the crew.** The visit ordinal (already computable) plus two nullable
+  self-reported columns (`people.logged_dives_count`, `logged_dives_as_of`) feed
+  `milestoneForBooking()` → quiet text on the counter row (6h) and record masthead (8b), one desk
+  row when milestones are aboard. Never a badge, never in readiness logic; the projection always
+  attributed ("by their own log"). *Small.*
+- **No-show frees the seat.** When a boarding-window booking is `no_show`, the boat full, and
+  live wait-list entries exist, the counter's blocked group offers one row — "Seat free — 3
+  waiting · Invite" — riding the existing freed-seat invite path. Never auto-refunds, never
+  auto-cancels; the seat is still claimed through `bookSpot`'s transaction. *Small; one money
+  policy line for the owner.*
+- **Usage-based service sentence on gear.** `usageSinceService(unitId)` counts reservation-days
+  since the last service event; above a per-kind threshold the row's existing service sentence
+  gains the usage clause ("~48 dive-days since service"). Copy says dive-days, never dives;
+  informs only (ADR 20260815). *Small.*
+- **Dive insurance completes the emergency picture.** `people.dive_insurance` exists with no
+  writer and no emergency reader: one optional field in the thread's contact step (never a sixth
+  step), rendered beside the emergency contact on the person sheet, the printed manifest, and
+  the record's file group. security-reviewer; inform-only. *Small.*
+- **Recent conditions replayed on the site library.** `latestSiteConditions(siteId)` reads the
+  newest executed-dive log ≤14 days (defensive over `observed_conditions` jsonb) → a quiet
+  second line on the 9a row and under the add panel's chosen site. Staff-only by design.
+  *Small.*
+- **Share-the-boat door, counted.** A `booking_referrals` table plus a non-secret
+  `bookings.share_ref` id: the thread offers "Bring a buddy · 4 spots left" linking to the public
+  trip page with `?via=`; `bookSpot` records the referral when the id resolves, ignores it
+  otherwise. One quiet reports line ("6 seats came from shared links"). Explicitly no credits —
+  that stays the parked referral-program call; the capability token never enters the URL.
+  *Medium.*
+- **Refresher counsel for rusty divers.** One nullable `shops.refresher_course_id` (a settings
+  course picker): when the booking's recency band is stale and the course is live, the thread's
+  prep state renders one quiet line linking to it — absent within 48h of departure. Counsel,
+  never a gate; dive-domain-expert on the wording. *Small.*
+- **Load-out checklist templates.** `checklist_template_items` (shop-worded label + trigger enum
+  always/night/nitrox/deep_site) copy into the pre-departure checklist at trip creation and
+  series materialization — copy-on-create, like site templates. Managed as one Settings inset
+  group. Safety-critical review path. *Medium.*
+- **Tips by crew.** `tipsByCrewForMonth()` joins paid tips → bookings → trips → assignments,
+  split equally per departure; one collapsed disclosure under the 9f tips figure, with an
+  "unassigned" remainder line so no money silently drops. Display arithmetic only — not payroll.
+  *Small.*
+- **Site rotation memory.** `recentSiteRuns(shopId, siteId, 14d)` under the add panel's chosen
+  site: "Ran 3× in the last 14 days." One read after selection; cancelled blowouts never count
+  as "ran". *Small.*
+- **Seasonal price windows on a series.** `trip_series_price_windows` (date range + price,
+  overlap-refused): materialization prices each new occurrence through
+  `priceForOccurrence()`; existing instances keep their price; per-trip edit stays the override.
+  One inset group in the add panel's repeat disclosure. *Medium.*
+- **One outbound review door.** `shops.external_review_url` (validated https, a settings row):
+  after the after-state's review submits, one quiet "Also share it on Google" link — shown to
+  every submitter regardless of stars (selective solicitation is the review-gating the
+  suppression floor already refuses), never pre-filling the text. *Small.*
+
+### 12. The marketing pages earn the trial (review complete)
+
+The conversion pass argued in
+[marketing-review-20260827.md](../marketing-review-20260827.md) — three diagnoses (the
+persuasion gradient is inverted, the terms never stand at the doors, help arrives after the
+homework) and every replacement sentence written out, claims-policy-clean. Each slice is one
+`marketing-page`-skill PR: claims checklist, `e2e/marketing.spec.ts` assertion updates
+(deliberate), screenshots looked at light+dark, `conversion-reviewer` re-pass. Copy lands in
+both locales in the same change. Unranked, but 12a and 12c aim directly at "owners aren't
+starting trials."
+
+- **12a. The homepage says the morning.** Hero triad + de-jargoned description; the flat-price
+  line reaches the hero (text, not a control — the pinned control budget holds); the moments
+  band's redundancy cuts; the four-card summaries rewritten in the owner's-day voice. *Pins:*
+  the hero still counts its controls; the price renders only via interpolation.
+- **12b. The day gets its evening.** The third moment row ("That evening", `RecapPageFallback`)
+  and the mid-season sentence in the records band via a shared key. The delight thesis's first
+  appearance on `/`. When thread slice 7d ships, `RecapPageFallback` re-draws as the keepsake
+  card (dive record, crew line, review ask); whichever of 12b/7d lands second carries the
+  reconciliation in its PR.
+- **12c. The trial's terms stand at its doors.** `/pricing`: the trial-terms note at both CTA
+  pairs, the two-year lock under the cadence line (item5 trims), the fee-anchor rewrite, the
+  two new FAQ rows (crew, setup time), the November fold-in, the offline row cut; `/onboard`'s
+  day-22 clause rides first-light 10b. *Pins:* the trial note names free/3 weeks/no card/soft
+  expiry; no billing terms beyond `faq.trialMeaning`'s.
+- **12d. The product page's dare gets a door.** The money band renders the figure; a demo door
+  under the capability index (new `product-index` tag registered first); the hero description
+  rewrite. *Pins:* one primary per screen holds across the page's screens.
+- **12e. Help arrives before the homework.** `switching.common.moveIntro` carries the
+  concierge; the DiveShop360 and EVE ledes lead with their documented wedges; the fifth shared
+  cutover step (the crew walks their screens in the demo); the spreadsheet guide's parallel-run
+  note and `wedgeIntro1` tone fix; the nitrox scope-table rewording (verify against
+  `src/lib/import.ts`, `dive-domain-expert` before merge). The leave-it guides' pricing link
+  waits on the owner call recorded in the review.
+- **12f. `/about` spends the impulse it creates.** The `FunnelCtas` pair under the four-rules
+  grid; the support mailto demotes to secondary; `leaveTitle` matches its section.
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)
@@ -150,7 +423,7 @@ not decisions.
 
 | Proposal | What it merges or cuts | Recommendation | Cost |
 | --- | --- | --- | --- |
-| **The home becomes the shop's day** | Today absorbs counter Check-in (provably the by-departure view filtered oppositely — both read `operational-window.ts`) and Close-out (already "Today's evening mirror" by its own docstring); the home leads with the phase the clock is in, with a visible way to any phase | Do it, in two slices: Close-out-as-evening-view first (M), the Check-in fold second (L) | Route 308s, `?view=` contract, large e2e/visual churn |
+| **The home becomes the shop's day** | Today absorbs counter Check-in (provably the by-departure view filtered oppositely — both read `operational-window.ts`) and Close-out (already "Today's evening mirror" by its own docstring); the home leads with the phase the clock is in, with a visible way to any phase | **First half decided 2026-08-27 (H-62)** — Close-out folds into the home's evening, designed as Clearwater slice 6d. The Check-in fold remains the open second half, still gated on the arrived-vs-aboard data question below | Route 308s, `?view=` contract, large e2e/visual churn |
 | **Check-in = boarding's first rung** | `bookings.status = checked_in` and the manifest's "boarded" are two staff-recorded arrival facts that can disagree; make arrival a two-rung state (arrived → aboard) on the departure's first checkpoint | Do it *with* the Check-in fold above, not before — it is the data half of the same merge | Schema migration, counter surface, Today rows, reports |
 | **One "your trip" link per diver** | Promote `/ready/[token]` to the single capability page (waiver step, prep, recap as states over time); retire the trip page's `?booking=` confirmation branch and the second booking-time email | **Part shipped 2026-08-20** — the owner called the shape and the confirmation branch is gone: booking and Stripe both land on `/ready`, the three duplicate server actions are deleted, and the `confirm` capability is now read-only and embed-only (ADR [20260820-one-page-after-booking](../../architecture/decisions/20260820-one-page-after-booking.md)). **Still open:** folding recap into the same link as a post-trip state, and the second booking-time email | Recap-token reconciliation, email templates |
 | **One "Bill" per booking** | Order / invoice / checkout / payment stay as Stripe mechanisms but surface as one money story per booking — quoted, deposit, paid, owed, refunded | Do after the diver-link work; touches every money surface | Orders index re-homing, back-office panels, reports |

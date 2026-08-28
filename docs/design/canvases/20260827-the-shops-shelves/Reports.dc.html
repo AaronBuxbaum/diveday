@@ -1,0 +1,152 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;650;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7; --border-strong: #8a8577;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+      --warning: #b45309;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--primary); }
+    .tab { font-size: 14px; font-weight: 500; color: var(--muted); padding: 6px 12px; border-radius: 10px; white-space: nowrap; }
+    .fig { padding: 0 28px; border-left: 1px solid var(--border); }
+    .trow { display: flex; align-items: center; gap: 16px; min-height: 52px; border-top: 1px solid var(--border); }
+    .meter { width: 96px; height: 5px; border-radius: 999px; background: var(--sunken); overflow: hidden; display: inline-flex; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 810px; background: var(--bg); box-sizing: border-box; overflow: hidden;">
+
+  <div style="height: 56px; display: flex; align-items: center; gap: 20px; padding: 0 32px; background: rgba(250,249,246,.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); box-sizing: border-box;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 28px; height: 28px; border-radius: 8px; background: var(--primary); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">BM</div>
+      <span style="font-size: 15px; font-weight: 650; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"></path></svg>
+    </div>
+    <div style="display: flex; align-items: center; gap: 2px; margin-left: 16px;">
+      <span class="tab">Today</span>
+      <span class="tab">Check-in</span>
+      <span class="tab">Divers</span>
+      <span class="tab">Board</span>
+      <span class="tab" style="background: var(--primary-tint); color: var(--primary); font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">More
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"></path></svg>
+      </span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 10px; padding: 7px 12px; background: var(--surface);">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="4.6"></circle><path d="M10.6 10.6L13.6 13.6"></path></svg>
+      <span style="font-size: 13px; color: var(--muted);">Search</span>
+      <span style="font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px;">&#8984;K</span>
+    </div>
+  </div>
+
+  <div style="width: 1024px; margin: 0 auto; padding: 44px 0 40px; box-sizing: border-box;">
+
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;">
+      <div>
+        <p class="eyebrow" style="margin: 0;">Reports</p>
+        <h1 style="margin: 8px 0 0; font-size: 34px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.1;">How&#8217;s your month</h1>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding-bottom: 4px;">
+        <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface);">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#0c2a35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5L5.5 8 10 12.5"></path></svg>
+        </span>
+        <span class="tnum" style="font-size: 15px; font-weight: 650;">August, so far</span>
+        <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); opacity: .45;">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#0c2a35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+        </span>
+      </div>
+    </div>
+
+    <!-- The figures, unboxed: hairlines, not tiles -->
+    <div style="margin-top: 34px; display: flex; align-items: stretch; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 22px 0;">
+      <div class="fig" style="border-left: 0; padding-left: 0;">
+        <p class="glabel" style="margin: 0; font-size: 11px;">Revenue</p>
+        <p class="tnum" style="margin: 6px 0 0; font-size: 28px; font-weight: 700; letter-spacing: -0.015em;">$12,480.50</p>
+        <p class="tnum" style="margin: 4px 0 0; font-size: 12.5px; color: var(--muted);">up 18% on July</p>
+      </div>
+      <div class="fig">
+        <p class="glabel" style="margin: 0; font-size: 11px;">Tips</p>
+        <p class="tnum" style="margin: 6px 0 0; font-size: 28px; font-weight: 700; letter-spacing: -0.015em;">$640.00</p>
+        <p class="tnum" style="margin: 4px 0 0; font-size: 12.5px; color: var(--muted);">31 tips</p>
+      </div>
+      <div class="fig">
+        <p class="glabel" style="margin: 0; font-size: 11px;">Seats</p>
+        <p class="tnum" style="margin: 6px 0 0; font-size: 28px; font-weight: 700; letter-spacing: -0.015em;">214</p>
+        <p class="tnum" style="margin: 4px 0 0; font-size: 12.5px; color: var(--muted);">across 24 departures</p>
+      </div>
+      <div class="fig">
+        <p class="glabel" style="margin: 0; font-size: 11px;">Fill</p>
+        <p class="tnum" style="margin: 6px 0 0; font-size: 28px; font-weight: 700; letter-spacing: -0.015em;">78%</p>
+        <p class="tnum" style="margin: 4px 0 0; font-size: 12.5px; color: var(--muted);">6 boats at capacity</p>
+      </div>
+      <div class="fig">
+        <p class="glabel" style="margin: 0; font-size: 11px;">Waivers</p>
+        <p class="tnum" style="margin: 6px 0 0; font-size: 28px; font-weight: 700; letter-spacing: -0.015em;">96%</p>
+        <p style="margin: 4px 0 0; font-size: 12.5px; color: var(--warning); font-weight: 600;"><span class="tnum">9</span> still unsigned</p>
+      </div>
+    </div>
+    <p class="tnum" style="margin: 10px 0 0; font-size: 12.5px; color: var(--muted); text-align: right;">Tax collected $918.20 &middot; Download the month as CSV</p>
+
+    <!-- The month's departures -->
+    <p class="glabel" style="margin: 34px 0 0;">Departures</p>
+    <div style="margin-top: 6px;">
+      <div class="trow">
+        <span style="width: 330px; min-width: 0; font-size: 14.5px; font-weight: 600;">Two-Tank Reef — Molasses &amp; French <span class="tnum" style="font-weight: 500; color: var(--muted);">&middot; Wed, Aug 26</span></span>
+        <span class="tnum" style="width: 70px; font-size: 13.5px; color: var(--muted);">12 of 12</span>
+        <span class="meter"><span style="width: 100%; background: var(--muted); opacity: .32;"></span></span>
+        <span class="tnum" style="margin-left: auto; font-size: 13.5px; color: var(--muted);">waivers 12 of 12</span>
+        <span class="meter"><span style="width: 100%; background: var(--muted); opacity: .32;"></span></span>
+        <span class="tnum" style="width: 90px; text-align: right; font-size: 14.5px; font-weight: 600;">$1,285.00</span>
+      </div>
+      <div class="trow">
+        <span style="width: 330px; min-width: 0; font-size: 14.5px; font-weight: 600;">Discover Scuba — Pool &amp; Reef <span class="tnum" style="font-weight: 500; color: var(--muted);">&middot; Tue, Aug 25</span></span>
+        <span class="tnum" style="width: 70px; font-size: 13.5px; color: var(--muted);">2 of 4</span>
+        <span class="meter"><span style="width: 50%; background: var(--muted); opacity: .32;"></span></span>
+        <span class="tnum" style="margin-left: auto; font-size: 13.5px; color: var(--muted);">waivers 2 of 2</span>
+        <span class="meter"><span style="width: 100%; background: var(--muted); opacity: .32;"></span></span>
+        <span class="tnum" style="width: 90px; text-align: right; font-size: 14.5px; font-weight: 600;">$390.00</span>
+      </div>
+      <div class="trow">
+        <span style="width: 330px; min-width: 0; font-size: 14.5px; font-weight: 600;">Two-Tank Reef — Benwood &amp; Elbow <span class="tnum" style="font-weight: 500; color: var(--muted);">&middot; Mon, Aug 24</span></span>
+        <span class="tnum" style="width: 70px; font-size: 13.5px; color: var(--muted);">9 of 12</span>
+        <span class="meter"><span style="width: 75%; background: var(--muted); opacity: .32;"></span></span>
+        <span style="margin-left: auto; display: inline-flex; align-items: center; gap: 5px; font-size: 13.5px; font-weight: 600; color: var(--warning);"><svg width="11" height="11" viewBox="0 0 18 18" fill="none" stroke="#b45309" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.4L16.6 15.2H1.4L9 2.4z"></path><path d="M9 7.2v3.4"></path></svg><span class="tnum">waivers 7 of 9</span></span>
+        <span class="meter"><span style="width: 78%; background: var(--muted); opacity: .32;"></span><span style="width: 22%; background: var(--warning); opacity: .85;"></span></span>
+        <span class="tnum" style="width: 90px; text-align: right; font-size: 14.5px; font-weight: 600;">$855.00</span>
+      </div>
+      <div class="trow" style="border-bottom: 1px solid var(--border);">
+        <span style="width: 330px; min-width: 0; font-size: 14.5px; font-weight: 600;">Wreck Trip — Duane <span class="tnum" style="font-weight: 500; color: var(--muted);">&middot; Sun, Aug 23</span></span>
+        <span class="tnum" style="width: 70px; font-size: 13.5px; color: var(--muted);">8 of 8</span>
+        <span class="meter"><span style="width: 100%; background: var(--muted); opacity: .32;"></span></span>
+        <span class="tnum" style="margin-left: auto; font-size: 13.5px; color: var(--muted);">waivers 8 of 8</span>
+        <span class="meter"><span style="width: 100%; background: var(--muted); opacity: .32;"></span></span>
+        <span class="tnum" style="width: 90px; text-align: right; font-size: 14.5px; font-weight: 600;">$1,352.35</span>
+      </div>
+    </div>
+
+    <div style="margin-top: 28px; display: flex; align-items: center; justify-content: center; gap: 14px;">
+      <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); opacity: .45;">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#0c2a35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5L5.5 8 10 12.5"></path></svg>
+      </span>
+      <span class="tnum" style="font-size: 13px; color: var(--muted);">Page 1 of 6</span>
+      <span style="display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface);">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#0c2a35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </span>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

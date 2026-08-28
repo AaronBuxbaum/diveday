@@ -1,0 +1,71 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "The diver record \u2014 one idea",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1240
+    },
+    {
+      "file": "DiverPhone.dc.html",
+      "title": "The record \u2014 phone",
+      "x": 1520,
+      "y": 0,
+      "w": 390,
+      "h": 844
+    },
+    {
+      "file": "Divers.dc.html",
+      "title": "The roster \u2014 one ledger",
+      "x": 1990,
+      "y": 0,
+      "w": 1440,
+      "h": 1120
+    },
+    {
+      "file": "Reviews.dc.html",
+      "title": "Reviews \u2014 a worklist",
+      "x": 0,
+      "y": 1400,
+      "w": 1440,
+      "h": 940
+    },
+    {
+      "file": "Waivers.dc.html",
+      "title": "Waiver \u2014 one choice, one act",
+      "x": 1520,
+      "y": 1400,
+      "w": 1440,
+      "h": 1200
+    },
+    {
+      "file": "Requests.dc.html",
+      "title": "Requests \u2014 days asked for",
+      "x": 3040,
+      "y": 1400,
+      "w": 1440,
+      "h": 800
+    }
+  ],
+  "annotations": [
+    {
+      "id": "people-thesis",
+      "x": 3510,
+      "y": 0,
+      "w": 430,
+      "text": "The diver record finally has one idea: this diver, ready or not \u2014 and the one fix if not. A status ledger leads and renders NOTHING when they're clear; the story is one chronological ledger (bookings with their money facts, imported visits marked); the file is inset groups (all three certification kinds as one group); Book is the page's one primary. The jump nav, the 514-line notice router, and the twin certification components all retire."
+    },
+    {
+      "id": "people-worklists",
+      "x": 3510,
+      "y": 330,
+      "w": 430,
+      "text": "Every people list is a worklist whose actionable rows lead: the roster groups by initial letter with badges only for exceptions; Reviews opens with \"Waiting on you\" and collapses four stat tiles into one aggregate line; the waiver publish becomes a materiality choice then one act (H-54's two explicit choices, without two competing destructive buttons); Requests keeps its day-grouped shape in the new grammar. Fiction continues the Clearwater/thread week \u2014 Grace Mensah's record on Wednesday evening, Yara's Saturday review waiting on Monday."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

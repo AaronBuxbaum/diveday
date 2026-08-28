@@ -231,6 +231,11 @@ try {
       const context = await browser.newContext({
         colorScheme,
         viewport: { width, height: height ?? (width < 800 ? 844 : 900) },
+        // The marketing pages hide below-the-fold sections until their first
+        // intersection (MarketingReveal), and a stitched full-page capture never
+        // scrolls, so without this the shots carry section-sized voids. The
+        // component's own reduced-motion branch renders everything visible.
+        reducedMotion: "reduce",
       });
       const page = await context.newPage();
 

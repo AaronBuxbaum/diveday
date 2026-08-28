@@ -65,8 +65,8 @@ every disagreement a decidable answer without anyone having to judge how stale a
 | ADR vs. code | Real drift, or an unshipped slice | Say which, in the PR |
 
 Shipped code outranks the canvas; the ADR outranks both. And the read order — ADR, roadmap slice,
-slice table, **current code**, artboards last — exists so a session reaches the pictures already
-knowing which of them still apply.
+slice table, **current code**, the spec's slice section where one exists, artboards last — exists
+so a session reaches the pictures already knowing which of them still apply.
 
 ## The slice table is the sync mechanism
 
@@ -118,6 +118,7 @@ docs/design/canvases/<YYYYMMDD-slug>/
   Main.dc.html   # artboards, one file per frame
   <Name>.dc.html
   canvas.json    # layout: positions, pages, launch view
+  SPEC.md        # optional — the implementation spec: journeys, tests, interfaces
 ```
 
 The `<YYYYMMDD-slug>` id is the ADR's own, so a canvas and the decision it argues are findable from
@@ -127,6 +128,35 @@ branches must not race for an id).
 **The seeded output file is never committed.** Publishing produces a ~2.6 MB single-page bundle with
 the whole editor inlined; it is a build artifact, regenerable from these sources in one command, and
 it would dominate every diff of this directory forever. The sources are ~200 KB of readable HTML.
+
+## The spec is the implementation half, and it expires the same way
+
+A canvas may carry a `SPEC.md` beside its artboards (the Clearwater canvas is the first). It exists
+for one reader: **the session that implements a slice, which may be a smaller model than the one
+that designed it.** The ADR records *what was decided*; the artboards show *how it composes*; the
+spec carries the third thing an implementer otherwise has to re-derive — the user journeys the
+slice must keep working, the acceptance tests it must ship, and the interface contracts (component
+signatures, reader signatures, route and redirect tables, message-key inventories) precise enough
+that two independent implementations would collide on the same shapes.
+
+Its authority is bounded on both sides:
+
+- **Below the ADR, always.** A spec detail that contradicts the ADR is a bug in the spec. The spec
+  elaborates decisions; it never makes them — anything in it that would need an owner call belongs
+  in the ADR or `human-decisions.md` first.
+- **Above the artboards.** Where a signature in the spec and a pixel in a drawing disagree, the
+  spec wins — an artboard cannot name a type.
+- **Expiring per slice, exactly like the canvas.** Once a slice ships, its section of the spec is a
+  record, not an instruction: the shipped code and its tests are the contract from then on, and the
+  slice table is still what says which is which. Never freshen a shipped slice's spec section to
+  match drifted code — that is the same rot rule the artboards live under.
+- **Its interface names are proposals until code exists.** An implementer who finds a better name
+  or an existing primitive that already fits uses it and says so in the PR — the spec pins shapes
+  and behavior, not baptisms. What is *not* negotiable is behavior a listed acceptance test pins.
+
+`pnpm check:design-canvases` treats `SPEC.md` as any other file (the size ceiling applies); its
+content is reviewed like the ADR's, not checked by script — which is one more reason every
+behavioral claim in it should name the test that will pin it.
 
 ## A canvas is dated, and superseded rather than freshened
 

@@ -1,0 +1,162 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;650;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7; --border-strong: #8a8577;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+      --accent: #ff6f61;
+      --success: #15803d;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--primary); }
+    .beat { font-size: 17px; font-weight: 650; letter-spacing: -0.012em; margin: 12px 0 0; }
+    .note { font-size: 13px; color: var(--muted); margin: 5px 0 0; line-height: 1.5; }
+    .mini { margin-top: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+    .bar { height: 7px; border-radius: 999px; background: var(--sunken); }
+    .num { width: 26px; height: 26px; border-radius: 999px; background: var(--primary); color: #ffffff; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+  </style>
+</helmet>
+
+<div style="width: 1360px; height: 860px; background: var(--bg); box-sizing: border-box; overflow: hidden;">
+<div style="padding: 52px 56px 40px; box-sizing: border-box;">
+
+  <p class="eyebrow" style="margin: 0;">The diver&#8217;s thread</p>
+  <h1 style="margin: 10px 0 0; font-size: 34px; font-weight: 700; letter-spacing: -0.022em; line-height: 1.08;">One link, the whole way</h1>
+  <p style="margin: 12px 0 0; font-size: 15.5px; color: var(--muted); max-width: 760px;">A diver&#8217;s trip is one thread: find a boat, book it, get ready, dive, glow. Booking already lands on the readiness link (ADR 20260820); this design keeps that link as the home of everything after — including the afterglow.</p>
+
+  <!-- The five beats -->
+  <div style="margin-top: 40px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 28px;">
+
+    <div>
+      <span class="num">1</span>
+      <p class="beat">Find</p>
+      <p class="note">The shopfront (Clearwater 6i). Identity, the next boat, the week at a line per row.</p>
+      <div class="mini">
+        <div class="bar" style="width: 70%; background: var(--ink); opacity: .8; height: 9px;"></div>
+        <div class="bar" style="width: 45%; margin-top: 7px;"></div>
+        <div style="margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px;">
+          <div class="bar" style="width: 90%;"></div>
+          <div class="bar" style="width: 84%; margin-top: 6px;"></div>
+          <div class="bar" style="width: 88%; margin-top: 6px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <span class="num">2</span>
+      <p class="beat">Book</p>
+      <p class="note">The pitch, then one terminal form. Party, gear and the money resolve in one sheet; the total is said once.</p>
+      <div class="mini">
+        <div class="bar" style="width: 60%; background: var(--ink); opacity: .8; height: 9px;"></div>
+        <div class="bar" style="width: 80%; margin-top: 7px;"></div>
+        <div style="margin-top: 10px; border: 1px solid var(--border); border-radius: 8px; padding: 8px;">
+          <div class="bar" style="width: 85%;"></div>
+          <div class="bar" style="width: 70%; margin-top: 6px;"></div>
+          <div style="margin-top: 8px; height: 16px; border-radius: 6px; background: var(--primary);"></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <span class="num">3</span>
+      <p class="beat">Get ready</p>
+      <p class="note">The thread page: a step spine. Settled steps are check lines; the current step opens inline; status is one figure.</p>
+      <div class="mini">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="width: 10px; height: 10px; border-radius: 999px; background: var(--success); display: inline-block;"></span>
+          <div class="bar" style="width: 60%;"></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; margin-top: 7px;">
+          <span style="width: 10px; height: 10px; border-radius: 999px; background: var(--success); display: inline-block;"></span>
+          <div class="bar" style="width: 48%;"></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; margin-top: 7px;">
+          <span style="width: 10px; height: 10px; border-radius: 999px; border: 2px solid var(--primary); box-sizing: border-box; display: inline-block;"></span>
+          <div class="bar" style="width: 72%; background: var(--primary-tint);"></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; margin-top: 7px;">
+          <span style="width: 10px; height: 10px; border-radius: 999px; border: 2px solid var(--border); box-sizing: border-box; display: inline-block;"></span>
+          <div class="bar" style="width: 40%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <span class="num">4</span>
+      <p class="beat">Dive day</p>
+      <p class="note">The same page carries the dock call, the packing list and the shop&#8217;s door. Ashore, the counter checks the party in (Clearwater 6h).</p>
+      <div class="mini">
+        <div class="bar" style="width: 55%; background: var(--ink); opacity: .8; height: 9px;"></div>
+        <div style="margin-top: 8px; display: flex; gap: 6px; align-items: center;">
+          <div class="bar" style="width: 30%;"></div>
+          <span class="tnum" style="font-size: 11px; color: var(--muted);">10:30</span>
+        </div>
+        <div class="bar" style="width: 82%; margin-top: 7px;"></div>
+        <div class="bar" style="width: 76%; margin-top: 6px;"></div>
+      </div>
+    </div>
+
+    <div>
+      <span class="num">5</span>
+      <p class="beat">Afterglow</p>
+      <p class="note">The same link, after the boat is home: the keepsake record, one review ask, and quiet doors for photos, tips and Google.</p>
+      <div class="mini">
+        <div style="border: 1px dashed var(--border-strong); border-radius: 8px; padding: 8px;">
+          <div class="bar" style="width: 65%;"></div>
+          <div class="bar" style="width: 80%; margin-top: 6px;"></div>
+        </div>
+        <div style="margin-top: 8px; display: flex; gap: 3px;">
+          <svg width="12" height="12" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+          <svg width="12" height="12" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+          <svg width="12" height="12" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+          <svg width="12" height="12" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+          <svg width="12" height="12" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8z"></path></svg>
+        </div>
+        <div style="margin-top: 8px; height: 16px; border-radius: 6px; background: var(--primary);"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- The invariants -->
+  <div style="margin-top: 48px; border-top: 1px solid var(--border); padding-top: 26px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; max-width: 1160px;">
+    <div>
+      <p style="margin: 0; font-size: 15px; font-weight: 650;">One measure.</p>
+      <p class="note">Every page a booked diver walks reads at the same column width, phone and desktop alike. The measure never changes mid-thread.</p>
+    </div>
+    <div>
+      <p style="margin: 0; font-size: 15px; font-weight: 650;">Status is said once.</p>
+      <p class="note">The spine&#8217;s figure and the next step&#8217;s name carry the whole state. No banner, receipt and progress bar repeating each other.</p>
+    </div>
+    <div>
+      <p style="margin: 0; font-size: 15px; font-weight: 650;">Coral is earned three times.</p>
+      <p class="note">Booked. Paperwork done. Home from the dive. Nothing else celebrates.</p>
+    </div>
+    <div>
+      <p style="margin: 0; font-size: 15px; font-weight: 650;">Money resolves in one block.</p>
+      <p class="note">Fare &times; party, gear, tax, due now — one ledger above the pay button. A picker may price its own line; the total resolves once.</p>
+    </div>
+    <div>
+      <p style="margin: 0; font-size: 15px; font-weight: 650;">The pitch sells; the thread prepares.</p>
+      <p class="note">What you&#8217;ll see stays on the trip page. What to bring moves to the thread. The form is the pitch page&#8217;s last word.</p>
+    </div>
+    <div>
+      <p style="margin: 0; font-size: 15px; font-weight: 650;">After the dive, the same URL.</p>
+      <p class="note">The recap is the thread&#8217;s third act, not a second page. Old recap links render the same surface.</p>
+    </div>
+  </div>
+
+</div>
+</div>
+</x-dc>
+</body>
+</html>

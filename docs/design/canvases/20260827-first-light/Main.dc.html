@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;650;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7; --border-strong: #8a8577;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    .flabel { font-size: 13px; font-weight: 600; margin: 0 0 5px; }
+    .field { border: 1px solid var(--border-strong); border-radius: 10px; background: var(--surface); min-height: 44px; display: flex; align-items: center; padding: 0 12px; font-size: 14.5px; box-sizing: border-box; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 900px; background: var(--bg); box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column;">
+
+  <!-- Marketing nav (unchanged by this canvas — drawn for context) -->
+  <div style="height: 60px; display: flex; align-items: center; padding: 0 40px; box-sizing: border-box;">
+    <span style="font-size: 17px; font-weight: 700; letter-spacing: -0.02em;">DiveDay</span>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 26px;">
+      <span style="font-size: 13.5px; font-weight: 500; color: var(--muted);">Product</span>
+      <span style="font-size: 13.5px; font-weight: 500; color: var(--muted);">Pricing</span>
+      <span style="font-size: 13.5px; font-weight: 600; color: var(--primary);">Sign in</span>
+    </div>
+  </div>
+
+  <!-- The door: one column, one act -->
+  <div style="flex: 1; display: flex; align-items: center; justify-content: center; padding-bottom: 72px;">
+    <div style="width: 400px;">
+      <h1 style="margin: 0; font-size: 29px; font-weight: 700; letter-spacing: -0.022em; text-align: center;">Sign in</h1>
+
+      <div style="margin-top: 26px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 30px; box-sizing: border-box;">
+        <p class="flabel">Email</p>
+        <div class="field" style="color: var(--muted);">dana@demo.invalid</div>
+
+        <p class="flabel" style="margin-top: 16px;">Password</p>
+        <div class="field" style="letter-spacing: .28em; font-weight: 700; color: var(--muted);">&middot;&middot;&middot;&middot;&middot;&middot;&middot;&middot;&middot;&middot;<span style="display: inline-block; width: 1.5px; height: 16px; background: var(--primary); vertical-align: -3px; letter-spacing: 0;"></span></div>
+
+        <div style="margin-top: 10px; display: flex; justify-content: flex-end;">
+          <span style="font-size: 12.5px; font-weight: 600; color: var(--primary);">Forgot password?</span>
+        </div>
+
+        <div style="margin-top: 18px; display: flex; align-items: center; justify-content: center; min-height: 46px; border-radius: 11px; background: var(--primary); color: #ffffff; font-size: 15px; font-weight: 600;">Sign in</div>
+      </div>
+
+      <p style="margin: 20px 0 0; text-align: center; font-size: 13px; color: var(--muted);">New here? <span style="font-weight: 600; color: var(--primary);">Start a shop</span> — free while you set up.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

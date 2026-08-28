@@ -1,0 +1,242 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;650;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7; --border-strong: #8a8577;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+      --accent: #ff6f61;
+      --success: #15803d; --success-tint: #e8f2ec;
+      --warning: #b45309; --warning-tint: #f8eee6;
+      --danger: #b91c1c; --danger-tint: #f8e8e8;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--primary); }
+    a { color: var(--primary); } a:hover { color: #155e75; }
+    .act { font-size: 13.5px; font-weight: 600; color: var(--primary); white-space: nowrap; }
+    .kind { font-size: 13px; font-weight: 650; letter-spacing: .01em; min-width: 92px; }
+    .row { display: flex; align-items: center; gap: 12px; min-height: 48px; border-top: 1px solid var(--border); }
+    .tab { font-size: 14px; font-weight: 500; color: var(--muted); padding: 6px 12px; border-radius: 10px; white-space: nowrap; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 1420px; background: var(--bg); box-sizing: border-box; overflow: hidden;">
+
+  <!-- Chrome: one 56px translucent bar, hairline below, page h1 stays in the page -->
+  <div style="height: 56px; display: flex; align-items: center; gap: 20px; padding: 0 32px; background: rgba(250,249,246,.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); box-sizing: border-box;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 28px; height: 28px; border-radius: 8px; background: var(--primary); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;">BM</div>
+      <span style="font-size: 15px; font-weight: 650; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"></path></svg>
+    </div>
+    <div style="display: flex; align-items: center; gap: 2px; margin-left: 16px;">
+      <span class="tab" style="background: var(--primary-tint); color: var(--primary); font-weight: 600;">Today</span>
+      <span class="tab">Check-in</span>
+      <span class="tab">Divers</span>
+      <span class="tab">Board</span>
+      <span class="tab" style="display: inline-flex; align-items: center; gap: 5px;">More
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"></path></svg>
+      </span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 10px; padding: 7px 12px; background: var(--surface);">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="4.6"></circle><path d="M10.6 10.6L13.6 13.6"></path></svg>
+      <span style="font-size: 13px; color: var(--muted);">Search</span>
+      <span style="font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px;">&#8984;K</span>
+    </div>
+  </div>
+
+  <div style="width: 1024px; margin: 0 auto; padding: 44px 0 40px; box-sizing: border-box;">
+
+    <!-- The page header: type leads. No buttons up here; the day's actions ride the stations. -->
+    <p class="eyebrow" style="margin: 0;">Today &middot; Thu, Aug 27</p>
+    <h1 style="margin: 10px 0 0; font-size: 34px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.15;">Good morning, Dana.</h1>
+    <p style="margin: 10px 0 0; font-size: 16px; color: var(--muted); max-width: 640px;">Three boats today. Two things need you before the 7:00 leaves the dock.</p>
+
+    <!-- The spine -->
+    <div style="margin-top: 44px;">
+
+      <!-- Station 1 · 7:00 AM -->
+      <div style="display: grid; grid-template-columns: 96px 40px 1fr;">
+        <div style="text-align: right; padding-top: 6px;">
+          <p class="tnum" style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em; line-height: 1;">7:00<span style="font-size: 13px; font-weight: 600; color: var(--muted);">&nbsp;AM</span></p>
+          <p class="tnum" style="margin: 5px 0 0; font-size: 12.5px; color: var(--muted);">until 10:30</p>
+        </div>
+        <div style="position: relative;">
+          <div style="position: absolute; left: 50%; top: 14px; bottom: 0; width: 1px; background: var(--border);"></div>
+          <div style="position: absolute; left: 50%; top: 8px; width: 12px; height: 12px; border-radius: 999px; background: var(--surface); border: 2.5px solid var(--primary); transform: translateX(-50%); box-sizing: border-box;"></div>
+        </div>
+        <div style="padding-bottom: 46px;">
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 24px;">
+            <div style="min-width: 0;">
+              <p style="margin: 0; font-size: 19px; font-weight: 650; letter-spacing: -0.012em; display: flex; align-items: center; gap: 8px;">Two-Tank Reef — Molasses &amp; French
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+              </p>
+              <p style="margin: 5px 0 0; font-size: 13.5px; color: var(--muted);">Molasses Reef &middot; Mantis II &middot; Keiko Tanaka, Sal Moretti &middot; <span class="tnum">$95</span></p>
+            </div>
+            <div style="text-align: right; flex-shrink: 0;">
+              <p class="tnum" style="margin: 0; font-size: 20px; font-weight: 700; line-height: 1;">10<span style="font-size: 14px; font-weight: 600; color: var(--muted);"> of 12</span></p>
+              <p style="margin: 4px 0 0; font-size: 12.5px; color: var(--muted);">2 spots open</p>
+            </div>
+          </div>
+          <div style="margin-top: 12px; height: 4px; border-radius: 999px; background: var(--sunken); overflow: hidden;">
+            <div style="width: 83%; height: 100%; border-radius: 999px; background: var(--muted); opacity: .32;"></div>
+          </div>
+
+          <div style="margin-top: 18px;">
+            <div class="row">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#b91c1c" stroke-width="1.8" stroke-linecap="round" style="flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M6.2 6.2l5.6 5.6M11.8 6.2l-5.6 5.6"></path></svg>
+              <span class="kind" style="color: var(--danger);">Certification</span>
+              <span style="flex: 1; font-size: 14px;">Grace Mensah&#8217;s is waiting for verification.</span>
+              <span class="act">Verify it</span>
+            </div>
+            <div class="row">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#b45309" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M9 2.4L16.6 15.2H1.4L9 2.4z"></path><path d="M9 7.2v3.4"></path><circle cx="9" cy="12.9" r="0.4" fill="#b45309"></circle></svg>
+              <span class="kind" style="color: var(--warning);">Waiver</span>
+              <span style="flex: 1; font-size: 14px;">Priya Sharma hasn&#8217;t been sent hers.</span>
+              <span class="act">Send waiver</span>
+            </div>
+            <div class="row">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><rect x="3.2" y="3.2" width="11.6" height="11.6" rx="2.4"></rect><path d="M6.4 9h5.2M9 6.4v5.2"></path></svg>
+              <span class="kind" style="color: var(--muted);">Prep</span>
+              <span style="flex: 1; font-size: 14px; color: var(--muted);">3 divers still need rental sizes.</span>
+              <span class="act">Open prep list</span>
+            </div>
+            <div class="row" style="border-bottom: 1px solid var(--border);">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><circle cx="9" cy="6.2" r="2.8"></circle><path d="M3.6 15c.9-3 2.8-4.4 5.4-4.4s4.5 1.4 5.4 4.4"></path></svg>
+              <span class="kind" style="color: var(--muted);">Contact</span>
+              <span style="flex: 1; font-size: 14px; color: var(--muted);">No emergency contact for Nadia Petrov — ask when she arrives.</span>
+              <span class="act">Open guests</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Station 2 · 1:00 PM -->
+      <div style="display: grid; grid-template-columns: 96px 40px 1fr;">
+        <div style="text-align: right; padding-top: 6px;">
+          <p class="tnum" style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em; line-height: 1;">1:00<span style="font-size: 13px; font-weight: 600; color: var(--muted);">&nbsp;PM</span></p>
+          <p class="tnum" style="margin: 5px 0 0; font-size: 12.5px; color: var(--muted);">until 5:00</p>
+        </div>
+        <div style="position: relative;">
+          <div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--border);"></div>
+          <div style="position: absolute; left: 50%; top: 8px; width: 12px; height: 12px; border-radius: 999px; background: var(--surface); border: 2.5px solid var(--primary); transform: translateX(-50%); box-sizing: border-box;"></div>
+        </div>
+        <div style="padding-bottom: 46px;">
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 24px;">
+            <div style="min-width: 0;">
+              <p style="margin: 0; font-size: 19px; font-weight: 650; letter-spacing: -0.012em; display: flex; align-items: center; gap: 8px;">Wreck Trip — Spiegel Grove
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+              </p>
+              <p style="margin: 5px 0 0; font-size: 13.5px; color: var(--muted);">Spiegel Grove &middot; Mantis II &middot; <span class="tnum">$145</span></p>
+            </div>
+            <div style="text-align: right; flex-shrink: 0;">
+              <p class="tnum" style="margin: 0; font-size: 20px; font-weight: 700; line-height: 1;">10<span style="font-size: 14px; font-weight: 600; color: var(--muted);"> of 10</span></p>
+              <p style="margin: 4px 0 0; font-size: 12.5px; color: var(--muted);">Full</p>
+            </div>
+          </div>
+          <div style="margin-top: 12px; height: 4px; border-radius: 999px; background: var(--sunken); overflow: hidden;">
+            <div style="width: 100%; height: 100%; border-radius: 999px; background: var(--muted); opacity: .32;"></div>
+          </div>
+
+          <div style="margin-top: 18px;">
+            <div class="row">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#b91c1c" stroke-width="1.8" stroke-linecap="round" style="flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M6.2 6.2l5.6 5.6M11.8 6.2l-5.6 5.6"></path></svg>
+              <span class="kind" style="color: var(--danger);">Crew</span>
+              <span style="flex: 1; font-size: 14px;">No divemaster or instructor is assigned.</span>
+              <span class="act">Assign crew</span>
+            </div>
+            <div class="row" style="border-bottom: 1px solid var(--border);">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#b91c1c" stroke-width="1.8" stroke-linecap="round" style="flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M6.2 6.2l5.6 5.6M11.8 6.2l-5.6 5.6"></path></svg>
+              <span class="kind" style="color: var(--danger);">Certification</span>
+              <span style="flex: 1; font-size: 14px;">Tom&aacute;s Ferreira has none on file for a deep wreck.</span>
+              <span class="act">Open his record</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Station 3 · 7:30 PM -->
+      <div style="display: grid; grid-template-columns: 96px 40px 1fr;">
+        <div style="text-align: right; padding-top: 6px;">
+          <p class="tnum" style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em; line-height: 1;">7:30<span style="font-size: 13px; font-weight: 600; color: var(--muted);">&nbsp;PM</span></p>
+          <p class="tnum" style="margin: 5px 0 0; font-size: 12.5px; color: var(--muted);">until 11:00</p>
+        </div>
+        <div style="position: relative;">
+          <div style="position: absolute; left: 50%; top: 0; height: 20px; width: 1px; background: var(--border);"></div>
+          <div style="position: absolute; left: 50%; top: 8px; width: 12px; height: 12px; border-radius: 999px; background: var(--surface); border: 2.5px solid var(--primary); transform: translateX(-50%); box-sizing: border-box;"></div>
+        </div>
+        <div style="padding-bottom: 8px;">
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 24px;">
+            <div style="min-width: 0;">
+              <p style="margin: 0; font-size: 19px; font-weight: 650; letter-spacing: -0.012em; display: flex; align-items: center; gap: 8px;">Night Dive — City of Washington
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+              </p>
+              <p style="margin: 5px 0 0; font-size: 13.5px; color: var(--muted);">City of Washington &middot; Skiff &middot; Keiko Tanaka, Sal Moretti &middot; <span class="tnum">$120</span></p>
+            </div>
+            <div style="text-align: right; flex-shrink: 0;">
+              <p class="tnum" style="margin: 0; font-size: 20px; font-weight: 700; line-height: 1;">3<span style="font-size: 14px; font-weight: 600; color: var(--muted);"> of 8</span></p>
+              <p style="margin: 4px 0 0; font-size: 12.5px; color: var(--muted);">5 spots open</p>
+            </div>
+          </div>
+          <div style="margin-top: 12px; height: 4px; border-radius: 999px; background: var(--sunken); overflow: hidden;">
+            <div style="width: 37.5%; height: 100%; border-radius: 999px; background: var(--muted); opacity: .32;"></div>
+          </div>
+
+          <div style="margin-top: 18px;">
+            <div class="row" style="border-bottom: 1px solid var(--border);">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M2.6 9.6V3.4a.8.8 0 0 1 .8-.8h6.2l5.8 5.8a1.1 1.1 0 0 1 0 1.6l-4.8 4.8a1.1 1.1 0 0 1-1.6 0L2.6 9.6z"></path><circle cx="6.3" cy="6.3" r="1.1"></circle></svg>
+              <span class="kind" style="color: var(--muted);">Seats</span>
+              <span style="flex: 1; font-size: 14px; color: var(--muted);">5 open with no last-minute deal sent.</span>
+              <span class="act">Send a deal</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Work that belongs to no boat -->
+    <div style="margin-top: 44px; padding-left: 136px;">
+      <p class="glabel" style="margin: 0 0 6px;">At the desk</p>
+      <div class="row">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><rect x="2.6" y="3.6" width="12.8" height="11.6" rx="2.2"></rect><path d="M5.8 2.2v2.8M12.2 2.2v2.8M2.6 7.4h12.8"></path></svg>
+        <span class="kind" style="color: var(--muted);">Requests</span>
+        <span style="flex: 1; font-size: 14px; color: var(--muted);">Two divers asked for days that aren&#8217;t on the board.</span>
+        <span class="act">Open requests</span>
+      </div>
+      <div class="row" style="border-bottom: 1px solid var(--border);">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#5b6f77" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M9 2.6l1.9 3.9 4.3.6-3.1 3 .7 4.3L9 12.4l-3.8 2 .7-4.3-3.1-3 4.3-.6L9 2.6z"></path></svg>
+        <span class="kind" style="color: var(--muted);">Reviews</span>
+        <span style="flex: 1; font-size: 14px; color: var(--muted);">One review is waiting on you.</span>
+        <span class="act">Read it</span>
+      </div>
+    </div>
+
+    <!-- Later, collapsed to a count -->
+    <div style="margin-top: 44px; padding-left: 136px;">
+      <div class="row" style="min-height: 54px; border-top: 0;">
+        <span style="font-size: 15px; font-weight: 600;">Tomorrow &middot; Fri, Aug 28</span>
+        <span class="tnum" style="margin-left: auto; font-size: 13.5px; color: var(--muted);">3 departures &middot; 5 jobs</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="row" style="min-height: 54px; border-bottom: 1px solid var(--border);">
+        <span style="font-size: 15px; font-weight: 600;">This week</span>
+        <span class="tnum" style="margin-left: auto; font-size: 13.5px; color: var(--muted);">11 jobs</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

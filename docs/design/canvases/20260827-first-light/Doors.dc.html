@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;650;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7; --border-strong: #8a8577;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    .speclabel { font-size: 11px; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .door { width: 300px; display: flex; flex-direction: column; align-items: center; text-align: center; padding-top: 26px; }
+    .mark { width: 56px; height: 56px; border-radius: 50%; background: var(--sunken); display: flex; align-items: center; justify-content: center; }
+    .door h2 { margin: 18px 0 0; font-size: 21px; font-weight: 700; letter-spacing: -0.018em; }
+    .door p { margin: 9px 0 0; font-size: 14px; color: var(--muted); max-width: 260px; }
+    .quiet { margin-top: 16px; font-size: 13px; font-weight: 600; color: var(--primary); }
+  </style>
+</helmet>
+
+<div style="width: 1400px; height: 385px; background: var(--bg); box-sizing: border-box; overflow: hidden; padding: 40px 44px 0;">
+
+  <div style="display: flex; gap: 36px;">
+
+    <!-- 1. The ask: one act, no panel -->
+    <div>
+      <p class="speclabel" style="margin: 0;">The ask</p>
+      <div class="door" style="border-top: 1px solid var(--border); margin-top: 10px;">
+        <span style="font-size: 15px; font-weight: 700; letter-spacing: -0.02em;">DiveDay</span>
+        <h2 style="margin-top: 26px;">Confirm your email</h2>
+        <div style="margin-top: 22px; display: flex; align-items: center; justify-content: center; min-height: 46px; width: 220px; border-radius: 11px; background: var(--primary); color: #ffffff; font-size: 15px; font-weight: 600;">Confirm</div>
+      </div>
+    </div>
+
+    <!-- 2. Sent -->
+    <div>
+      <p class="speclabel" style="margin: 0;">Sent</p>
+      <div class="door" style="border-top: 1px solid var(--border); margin-top: 10px;">
+        <span style="font-size: 15px; font-weight: 700; letter-spacing: -0.02em;">DiveDay</span>
+        <div class="mark" style="margin-top: 26px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 7.5l9 6 9-6"></path></svg>
+        </div>
+        <h2>Check your email</h2>
+        <p>If that address has an account, a reset link is on its way.</p>
+        <span class="quiet">Back to sign in</span>
+      </div>
+    </div>
+
+    <!-- 3. Dead link, account tier: never a shop name -->
+    <div>
+      <p class="speclabel" style="margin: 0;">Dead link &mdash; account</p>
+      <div class="door" style="border-top: 1px solid var(--border); margin-top: 10px;">
+        <span style="font-size: 15px; font-weight: 700; letter-spacing: -0.02em;">DiveDay</span>
+        <div class="mark" style="margin-top: 26px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3.2 2"></path></svg>
+        </div>
+        <h2>This link has expired</h2>
+        <p>Request a new one from the sign-in page.</p>
+        <span class="quiet">Back to sign in</span>
+      </div>
+    </div>
+
+    <!-- 4. Dead link, booking tier: the shop's hand -->
+    <div>
+      <p class="speclabel" style="margin: 0;">Dead link &mdash; booking</p>
+      <div class="door" style="border-top: 1px solid var(--border); margin-top: 10px;">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--primary);">Blue Mantis Divers</span>
+        <div class="mark" style="margin-top: 26px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3.2 2"></path></svg>
+        </div>
+        <h2>This link has expired</h2>
+        <p>Ask the shop for a fresh one &mdash; your booking is safe.</p>
+        <p style="margin-top: 16px; font-size: 13px;"><span style="font-weight: 600; color: var(--ink);">Blue Mantis Divers</span><br><span style="font-variant-numeric: tabular-nums;">+1 305 555 0142</span> &middot; hello@demo.invalid</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
