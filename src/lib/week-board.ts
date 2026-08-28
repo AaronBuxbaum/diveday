@@ -62,3 +62,45 @@ export function shiftWeek(weekStart: CalendarDate, weeks: number): CalendarDate 
 export function resolveWeekStart(param: string | undefined, today: CalendarDate): CalendarDate {
   return weekStartOf(param && isValidCalendarDate(param) ? param : today);
 }
+
+/**
+ * The floor under "say a shared fact once". Below three departures a banner
+ * claiming the whole week is unpriced says less than the two marks it
+ * replaces, and on one departure it is the same sentence moved further from
+ * the thing it is about.
+ */
+export const WEEK_SHARED_FACT_FLOOR = 3;
+
+/** The little this gate needs to know about a departure. */
+type PricedDeparture = { status: "upcoming" | "sailed"; priceCents: number | null };
+
+/**
+ * Whether *every* departure this week still has to sail is unpriced — the
+ * grid's gate for collapsing seven warning marks into one line above it
+ * (principle 9: a fact shared by every row belongs to the group, not to each
+ * row).
+ *
+ * **It takes the whole board, days and spans, and not a list the caller
+ * assembled.** A multi-day course comes back from `weekBoard()` as a span and
+ * is deliberately never also dropped into the day cells it covers, so a gate
+ * fed `days` alone reads a week whose only upcoming departures are two
+ * unpriced courses as having nothing to say: no banner, and no mark on the
+ * bars either, since they were never in the tally that decides whether a mark
+ * is needed. The shop is told nothing at all, which is the one outcome this
+ * exists to prevent — so the shape of the argument is the fix.
+ *
+ * A departure already home is excluded on both sides: it cannot be booked, so
+ * its missing price is nobody's morning.
+ */
+export function weekIsWhollyUnpriced(board: {
+  days: Record<CalendarDate, PricedDeparture[]>;
+  spans: readonly PricedDeparture[];
+}): boolean {
+  const upcoming = [...Object.values(board.days).flat(), ...board.spans].filter(
+    (departure) => departure.status === "upcoming",
+  );
+  return (
+    upcoming.length >= WEEK_SHARED_FACT_FLOOR &&
+    upcoming.every((departure) => departure.priceCents === null)
+  );
+}

@@ -19,7 +19,7 @@ import {
   MIN_DECISION_HOURS,
   MINIMUM_SEATS_DECISION_HOURS_DEFAULT,
 } from "@/lib/minimum-seats";
-import type { BuilderWeek, WeekEntry } from "./WeekBoard";
+import type { BuilderWeek, WeekDeparture } from "./WeekBoard";
 import { WeekBoard } from "./WeekBoard";
 
 /** One departure as the board hands it to the builder, already shop-local. */
@@ -1038,14 +1038,18 @@ function AddPanel({
   );
 }
 
-/** A week-grid entry as the shared move/copy/remove panels want it. */
-function panelTripOf(entry: WeekEntry): PanelTrip {
+/**
+ * A week-grid departure as the shared move/copy/remove panels want it —
+ * a day cell or a spanning course bar alike, which is why the grid states them
+ * as one type.
+ */
+function panelTripOf(departure: WeekDeparture): PanelTrip {
   return {
-    id: entry.tripId,
-    title: entry.title,
-    dateIso: entry.dateIso,
-    startTime: entry.startTime,
-    dayCount: entry.dayCount,
+    id: departure.tripId,
+    title: departure.title,
+    dateIso: departure.dateIso,
+    startTime: departure.startTime,
+    dayCount: departure.dayCount,
   };
 }
 
@@ -1386,17 +1390,23 @@ export function ScheduleBuilder({
   // Everything the grid opens is prefixed `w:` so a control there hands focus
   // back to itself rather than to its identically-keyed twin in the stream,
   // which is `display:none` at this width and cannot take focus at all.
-  const weekEntries = week ? week.days.flatMap((day) => day.entries) : [];
+  // **Spans as well as cells.** A multi-day course is drawn once, as a bar
+  // across the days it owns, *instead of* the entries for those days — so if
+  // the bar were left out of this lookup the desktop board would be the one
+  // place in the app where a course cannot be moved, copied or removed at all.
+  const weekDepartures: WeekDeparture[] = week
+    ? [...week.days.flatMap((day) => day.entries), ...week.spans]
+    : [];
   const weekAdd = open?.startsWith("w:add:") ? open.slice("w:add:".length) : null;
   const weekAction = ((): {
     kind: "menu" | "move" | "copy" | "remove";
-    entry: WeekEntry;
+    entry: WeekDeparture;
   } | null => {
     for (const kind of ["menu", "move", "copy", "remove"] as const) {
       const prefix = `w:${kind}:`;
       if (!open?.startsWith(prefix)) continue;
       const tripId = open.slice(prefix.length);
-      const entry = weekEntries.find((candidate) => candidate.tripId === tripId);
+      const entry = weekDepartures.find((candidate) => candidate.tripId === tripId);
       if (entry) return { kind, entry };
     }
     return null;

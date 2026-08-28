@@ -20,7 +20,7 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
  * Three things this file deliberately owns, because owning them one place is
  * the whole point:
  *
- * - **The group label's spelling.** `GROUP_LABEL_CLASS` below is the only place
+ * - **The group label's spelling.** `groupLabelClass()` below is the only place
  *   in `src/` that *renders* `tracking-[0.14em]`; `ledger.test.tsx` names the
  *   value once to pin it, and its sweep fails the build on a copy in any other
  *   file — source or test, `.ts`, `.tsx` or `.css`. What that sweep catches is
@@ -28,8 +28,12 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
  *   *different* spelling of the same idea (`tracking-wide`, `tracking-widest`),
  *   and the SPEC's wider convergence of every `text-xs … uppercase` label onto
  *   `GroupLabel` is deliberately not finished here — see the canvas README's
- *   6a row. The eyebrow's `0.18em` (`ShopPageHeader.EYEBROW_CLASS`) is a
- *   different thing at a different volume and stays where it is.
+ *   6a row. It is a *function* of the tone rather than a bare constant because
+ *   the ink is part of the spelling: appending `text-primary` at a call site
+ *   would race `text-muted` in a stylesheet Tailwind orders by token name, the
+ *   same trap `buttonClass` carries a warning about. The eyebrow's `0.18em`
+ *   (`ShopPageHeader.EYEBROW_CLASS`) is a different thing at a different
+ *   volume and stays where it is.
  * - **The one disclosure spelling.** A ledger group that collapses is a native
  *   `<details>` whose `<summary>` carries the group label plus the shared
  *   `DisclosureCaret` — `LedgerGroup`'s `folded` prop, and nothing else. 6c's
@@ -41,10 +45,30 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
  */
 
 /**
+ * The inks a group label may be set in. `primary` is for the one group in a
+ * run that is *current* — the week board's today column — and nothing else;
+ * a group label is quiet by default and stays that way.
+ */
+const GROUP_LABEL_INK = { muted: "text-muted", primary: "text-primary" } as const;
+
+/** Which ink a group label is set in. `muted` unless the group is the current one. */
+export type GroupLabelTone = keyof typeof GROUP_LABEL_INK;
+
+/**
  * The small-caps line that owns a group's shared facts. Settings' spelling,
  * now the only spelling.
+ *
+ * A function rather than a bare string because the ink is part of the
+ * spelling: a caller that appended its own `text-primary` would be racing
+ * `text-muted` in the emitted stylesheet, which Tailwind orders by token name
+ * rather than by where the class was written (AGENTS.md's `buttonClass`
+ * warning, the same failure at 31 call sites). Exported for the one caller
+ * that needs the class without the element — the week board's day columns,
+ * whose header is a `<span>` inside its own `<h3>` beside the "Today" word.
  */
-const GROUP_LABEL_CLASS = "text-xs font-semibold tracking-[0.14em] text-muted uppercase";
+export function groupLabelClass(tone: GroupLabelTone = "muted") {
+  return `text-xs font-semibold tracking-[0.14em] ${GROUP_LABEL_INK[tone]} uppercase`;
+}
 
 /**
  * The quiet, tabular facts a group carries beside its label. One constant
@@ -62,6 +86,7 @@ export function GroupLabel({
   meta,
   as: Label = "p",
   id,
+  tone = "muted",
   className = "",
 }: {
   /** The label text. */
@@ -72,6 +97,8 @@ export function GroupLabel({
   as?: GroupLabelElement;
   /** For the `aria-labelledby` of the list this labels, and for a fragment target. */
   id?: string;
+  /** `primary` for the one group in a run that is current; quiet otherwise. */
+  tone?: GroupLabelTone;
   className?: string;
 }) {
   // `className` lands on the label element in both shapes, never on the
@@ -79,7 +106,7 @@ export function GroupLabel({
   // fragment actually targets, and its `px-2` has to indent the words rather
   // than a flex box that may not exist.
   const label = (
-    <Label id={id} className={`${GROUP_LABEL_CLASS} ${className}`.trim()}>
+    <Label id={id} className={`${groupLabelClass(tone)} ${className}`.trim()}>
       {children}
     </Label>
   );

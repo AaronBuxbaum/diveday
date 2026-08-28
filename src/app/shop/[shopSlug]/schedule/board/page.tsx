@@ -49,7 +49,13 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { uuidParam } from "@/lib/uuid";
-import { resolveWeekStart, shiftWeek, weekDates, weekStartOf } from "@/lib/week-board";
+import {
+  resolveWeekStart,
+  shiftWeek,
+  weekDates,
+  weekIsWhollyUnpriced,
+  weekStartOf,
+} from "@/lib/week-board";
 import { toDateInputValue, toTimeInputValue, utcToWallTime } from "@/lib/zoned";
 import {
   type BuilderCopy,
@@ -208,9 +214,16 @@ export default async function ScheduleBoardPage({
     // `pagedUpcomingTripsWithCounts` cannot reach them — it only returns trips
     // whose `startsAt` is still ahead of `now` — so this is its own backwards
     // query, and one batched query for every such boat rather than a per-trip
-    // roll-call lookup. Only on the first page: they belong at the front of
-    // the board, not repeated on top of every later cursor page.
-    after ? [] : openAfterDiveRollCalls(db, shop.id, now),
+    // roll-call lookup.
+    //
+    // Read at every cursor page, not only the first, because the **week** also
+    // needs it and the week has no cursor: it is addressed by `?week=`, so a
+    // board sitting on `?after=` still draws a grid, and gating the read on
+    // the stream's pager is what made the loudest thing the board can say
+    // disappear at desktop. The stream's own placement is unchanged — those
+    // rows lead page one and are not repeated on top of every later page
+    // (`streamRollCalls` below).
+    openAfterDiveRollCalls(db, shop.id, now),
     listBoats(db, shop.id),
     // A second, bounded reading of the same departures — one week, not a
     // cursor page — for the `xl` grid (ADR 20260827-clearwater-surface-language,
@@ -231,7 +244,13 @@ export default async function ScheduleBoardPage({
   const hasUpcoming = range.first !== null;
   // Depends on the trip ids above, so it runs as a second wave rather than
   // inside the batch that produces `upcoming`.
-  const boardTripIds = [...openRollCalls.map((open) => open.tripId), ...upcoming.map((t) => t.id)];
+  // The stream's backwards-looking rows lead page one and appear nowhere else;
+  // the week reads `openRollCalls` directly, whatever page the stream is on.
+  const streamRollCalls = after ? [] : openRollCalls;
+  const boardTripIds = [
+    ...streamRollCalls.map((open) => open.tripId),
+    ...upcoming.map((t) => t.id),
+  ];
   const [dayCounts, crewByTrip] = await Promise.all([
     tripScheduleDayCounts(db, boardTripIds),
     tripCrewByTrip(db, shop.id, boardTripIds),
@@ -574,7 +593,7 @@ export default async function ScheduleBoardPage({
   // of them already ended before `now` — so pushing them ahead of `upcoming`
   // keeps the whole board in one chronological run and lets a boat that
   // sailed this morning share its own day header with the afternoon's.
-  for (const open of openRollCalls) {
+  for (const open of streamRollCalls) {
     pushBuilderTrip(
       {
         id: open.tripId,
@@ -657,11 +676,12 @@ export default async function ScheduleBoardPage({
     cents === null ? null : formatMoneyCents(cents, currency, locale);
   // The same "say a shared fact once" gate the stream's price banner uses: a
   // whole week with no price anywhere is one condition, not seven warnings.
-  const weekUpcoming = weekDayIsos
-    .flatMap((iso) => weekRows.days[iso] ?? [])
-    .filter((entry) => entry.status === "upcoming");
-  const weekAllUnpriced =
-    weekUpcoming.length >= 3 && weekUpcoming.every((entry) => entry.priceCents === null);
+  // **Spans are weighed with the cells.** A multi-day course is drawn once as
+  // a bar instead of once per day, so a week whose only upcoming departures
+  // are unpriced courses would otherwise fall through both halves of this —
+  // no banner, and no mark on the bars either — and the shop would be told
+  // nothing at all.
+  const weekAllUnpriced = weekIsWhollyUnpriced(weekRows);
   const weekViewDays = weekDayIsos.map((iso) => {
     // A calendar date has no instant in it, so it is formatted through a
     // UTC-midnight reference rather than converted from the shop's zone —
@@ -728,6 +748,15 @@ export default async function ScheduleBoardPage({
         ]
           .filter(Boolean)
           .join(" · "),
+        // The course's own first day and departure time, not the column the
+        // bar happens to start in: a run that began before this week still
+        // moves from where it really starts.
+        dateIso: span.firstDay,
+        startTime: toTimeInputValue(utcToWallTime(span.startsAt, tz)),
+        dayCount: span.dayCount,
+        status: span.status,
+        unpriced: span.priceCents === null && !weekAllUnpriced,
+        ref: `${span.title}, ${formatCalendarDateRange(span.firstDay, span.lastDay, locale)}`,
         startColumn: first + 1,
         columnSpan: last - first + 1,
       },

@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { createDiveSite } from "./dive-sites";
@@ -656,6 +657,26 @@ describe("the week board", () => {
     const everyEntry = Object.values(week.days).flat();
     expect(everyEntry.filter((entry) => entry.tripId === span.tripId)).toHaveLength(0);
     expect(everyEntry.filter((entry) => entry.title === OPEN_WATER)).toHaveLength(0);
+  });
+
+  it("gives a span everything the move, copy and remove panels ask a departure", async () => {
+    // A bar replaces the entries for the days it owns, so it is also the only
+    // door those days have to `moveTrip`/`duplicateTrip`/`deleteTrip`. Without
+    // the run's own start and length the panels cannot open on it at all, and
+    // the desktop board becomes the one place in the app where a multi-day
+    // course cannot be moved.
+    const { db, shop } = await seededShopContext();
+
+    const span = (await weekBoard(db, shop.id, COURSE_WEEK, TZ)).spans.find(
+      (row) => row.title === OPEN_WATER,
+    );
+    if (!span) throw new Error("the seeded three-day course is missing from the week");
+    expect(span.dayCount).toBe(3);
+    // The instant the run begins — its first meeting, not the week's Monday.
+    expect(calendarDateInTimezone(span.startsAt, TZ)).toBe(span.firstDay);
+    // Still ahead, on the frozen clock: a course meeting next week is not
+    // something to be offered no actions.
+    expect(span.status).toBe("upcoming");
   });
 
   it("carries a bucket for every day of the week, empty ones included", async () => {

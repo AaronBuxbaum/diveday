@@ -11,7 +11,7 @@ import {
   type BuilderPriceInput,
   ScheduleBuilder,
 } from "./ScheduleBuilder";
-import type { BuilderWeek, WeekEntry } from "./WeekBoard";
+import type { BuilderWeek, WeekEntry, WeekSpan } from "./WeekBoard";
 
 // The board route has no dynamic id, so `usePathname()` is what
 // ScheduleBuilder keys its disarm-on-revisit effect on (see the component's
@@ -1487,6 +1487,22 @@ describe("ScheduleBuilder week board", () => {
     };
   }
 
+  function weekSpan(overrides: Partial<WeekSpan> & { tripId: string }): WeekSpan {
+    return {
+      title: "Open Water Diver — three-day course",
+      meta: "4 of 5 · $595 · Marcus Webb",
+      dateIso: "2026-08-28",
+      startTime: "08:00",
+      dayCount: 3,
+      status: "upcoming" as const,
+      unpriced: false,
+      ref: "Open Water Diver — three-day course, Aug 28 – 30, 2026",
+      startColumn: 5,
+      columnSpan: 3,
+      ...overrides,
+    };
+  }
+
   function week(overrides: Partial<BuilderWeek> = {}): BuilderWeek {
     return {
       ariaLabel: "The week",
@@ -1568,19 +1584,7 @@ describe("ScheduleBuilder week board", () => {
   });
 
   it("draws a multi-day course once, as a bar, and never in the days it covers", () => {
-    board(
-      week({
-        spans: [
-          {
-            tripId: "course-1",
-            title: "Open Water Diver — three-day course",
-            meta: "4 of 5 · $595 · Marcus Webb",
-            startColumn: 5,
-            columnSpan: 3,
-          },
-        ],
-      }),
-    );
+    board(week({ spans: [weekSpan({ tripId: "course-1" })] }));
 
     const bars = within(grid()).getAllByRole("link", {
       name: "Open Water Diver — three-day course",
@@ -1708,6 +1712,82 @@ describe("ScheduleBuilder week board", () => {
     // grid rather than inside a 160px column.
     expect(screen.getByLabelText("New date")).toHaveValue("2026-08-27");
     expect(screen.getByLabelText("New departure time")).toHaveValue("07:00");
+  });
+
+  it("opens move, copy and remove from a multi-day course bar too", async () => {
+    // **The bar replaces the entries for the days it covers.** So if it did
+    // not carry the same "⋯" a day cell does, the desktop board would be the
+    // one place in the app where a multi-day course cannot be moved, copied or
+    // removed at all — a capability the stream underneath still has. The panels
+    // are the shared ones, opened with the course's own first day, its
+    // departure time and how many days move together.
+    const user = userEvent.setup();
+    board(
+      week({
+        spans: [
+          weekSpan({
+            tripId: "course-1",
+            dateIso: "2026-08-28",
+            startTime: "08:00",
+            dayCount: 3,
+          }),
+        ],
+      }),
+    );
+
+    await user.click(
+      within(grid()).getByRole("button", { name: /^Move, copy, or remove Open Water Diver/ }),
+    );
+    await user.click(screen.getByRole("button", { name: /^Move Open Water Diver/ }));
+    expect(screen.getByLabelText("New date")).toHaveValue("2026-08-28");
+    expect(screen.getByLabelText("New departure time")).toHaveValue("08:00");
+    // Three days move together, and the form says so — the same note the
+    // stream's own move panel carries for a course.
+    expect(screen.getByText("All 3 days move together, keeping their gaps.")).toBeTruthy();
+
+    // Copy and remove reach the course from the same menu.
+    await user.click(
+      within(grid()).getByRole("button", { name: /^Move, copy, or remove Open Water Diver/ }),
+    );
+    await user.click(screen.getByRole("button", { name: /^Copy Open Water Diver/ }));
+    expect(screen.getByLabelText("Copy to")).toHaveValue("2026-09-04");
+
+    await user.click(
+      within(grid()).getByRole("button", { name: /^Move, copy, or remove Open Water Diver/ }),
+    );
+    await user.click(screen.getByRole("button", { name: /^Remove Open Water Diver/ }));
+    expect(
+      screen.getByText("Take “Open Water Diver — three-day course” off the board for good?"),
+    ).toBeTruthy();
+  });
+
+  it("offers a course already finished no move, copy or remove", () => {
+    // Same refusal as a boat already home: src/db/trips-schedule.ts declines
+    // all three, so the bar is offered none of them.
+    board(week({ spans: [weekSpan({ tripId: "course-1", status: "sailed" })] }));
+
+    expect(
+      within(grid()).queryByRole("button", { name: /^Move, copy, or remove Open Water Diver/ }),
+    ).toBeNull();
+  });
+
+  it("carries the price warning on an unpriced course bar", () => {
+    // The bar is a departure like any other: unpriced, still to run, and
+    // divers can already see it. Without this the one shape that *replaces*
+    // its day entries is also the one shape that says nothing about a missing
+    // price.
+    board(
+      week({
+        spans: [weekSpan({ tripId: "course-1", unpriced: true, meta: "4 of 5 · Marcus Webb" })],
+      }),
+    );
+
+    const flag = within(grid()).getByRole("link", {
+      name: "Set a price for Open Water Diver — three-day course, Aug 28 – 30, 2026",
+    });
+    expect(flag).toHaveAttribute("href", "/shop/blue-mantis/trips/course-1#details");
+    expect(flag.textContent).toContain("No price set");
+    expect(flag.querySelector("svg")).not.toBeNull();
   });
 
   it("pages by week, and never mixes a cursor into that URL", () => {

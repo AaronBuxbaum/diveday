@@ -3,37 +3,50 @@
 import Link from "next/link";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { fill } from "@/i18n/fill";
 
 /**
- * One departure in a day column. Everything a cell renders is already
- * formatted for the reader's locale and the shop's zone — a column 160px wide
- * has no room to be wrong about a time, and a Client Component may format
- * neither.
+ * What every departure the grid draws — a day cell or a spanning course bar —
+ * has to say about itself, because both of them open the *same* move, copy and
+ * remove panels and carry the same price flag. Kept as one type rather than
+ * two overlapping ones: the bar losing an action the cell has is exactly the
+ * regression that shipped in this slice's first commit.
+ *
+ * Everything here is already formatted for the reader's locale and the shop's
+ * zone — a column 160px wide has no room to be wrong about a time, and a
+ * Client Component may format neither.
  */
-export type WeekEntry = {
+export type WeekDeparture = {
   tripId: string;
-  /** `YYYY-MM-DD` in the shop's timezone — the column this entry sits in. */
+  /**
+   * `YYYY-MM-DD` in the shop's timezone. For a cell, the column it sits in;
+   * for a span, the departure's own **first** day, which may be earlier than
+   * the week on screen — the move panel is about the course, not the columns.
+   */
   dateIso: string;
-  /** `HH:mm`, for the move/copy panels this entry can open. */
+  /** `HH:mm`, for the move/copy panels this departure can open. */
   startTime: string;
   title: string;
-  /** Preformatted departure time, e.g. "7:00 AM". */
-  time: string;
-  /** "10 of 12 · $95", or "Sailed · 9 of 12" for a boat already home. */
-  meta: string;
+  /** How many days it runs; 1 for a day cell, 2+ for a span. */
   dayCount: number;
   status: "upcoming" | "sailed";
-  /** No price has ever been set — the one warning a cell carries. */
+  /** No price has ever been set — the one warning a departure carries. */
   unpriced: boolean;
   /** "{title}, {day} {time}" — what names this departure to a screen reader. */
   ref: string;
 };
 
+/** One departure in a day column. */
+export type WeekEntry = WeekDeparture & {
+  /** Preformatted departure time, e.g. "7:00 AM". */
+  time: string;
+  /** "10 of 12 · $95", or "Sailed · 9 of 12" for a boat already home. */
+  meta: string;
+};
+
 /** A multi-day course session as one bar across the columns it owns. */
-export type WeekSpan = {
-  tripId: string;
-  title: string;
+export type WeekSpan = WeekDeparture & {
   /** "4 of 5 · $595 · Marcus Webb". */
   meta: string;
   /** 1-based column the bar starts in, and how many columns it covers. */
@@ -73,6 +86,74 @@ export type BuilderWeek = {
   days: WeekDay[];
   spans: WeekSpan[];
 };
+
+/**
+ * Move / copy / remove, on whichever shape draws the departure. **A course bar
+ * wears the same one as a day cell**: the bar deliberately replaces the entries
+ * for the days it owns, so without this the desktop board is the one place in
+ * the app where a multi-day course cannot be moved at all — a capability the
+ * stream underneath still has. It opens the board's own panels; a boat already
+ * home is refused all three by `src/db/trips-schedule.ts`, so it is offered
+ * none.
+ */
+function RowActions({
+  departure,
+  openKey,
+  onToggle,
+  registerToggle,
+  label,
+  className,
+}: {
+  departure: WeekDeparture;
+  openKey: string | null;
+  onToggle: (key: string) => void;
+  registerToggle: (key: string) => (el: HTMLButtonElement | null) => void;
+  label: string;
+  className: string;
+}) {
+  const key = `w:menu:${departure.tripId}`;
+  return (
+    <button
+      type="button"
+      ref={registerToggle(key)}
+      onClick={() => onToggle(key)}
+      aria-expanded={openKey === key}
+      aria-label={fill(label, { ref: departure.ref })}
+      className={buttonClass({ variant: "ghost", size: "sm", className })}
+    >
+      <DiveDayIcon name="more" className="size-4" />
+    </button>
+  );
+}
+
+/**
+ * The one toned mark a departure can carry, and only while it can still be
+ * booked. Glyph and word together: hue is never the whole signal. It is
+ * absent when the week's warning has collapsed into the banner above the grid
+ * — the caller decides that, once, over the whole week.
+ */
+function PriceFlag({
+  departure,
+  shopSlug,
+  copy,
+  className,
+}: {
+  departure: WeekDeparture;
+  shopSlug: string;
+  copy: { noPriceSet: string; noPriceSetAria: string };
+  className: string;
+}) {
+  return (
+    <Link
+      href={`/shop/${shopSlug}/trips/${departure.tripId}#details`}
+      aria-label={fill(copy.noPriceSetAria, { ref: departure.ref })}
+      className={`flex items-center gap-1.5 text-xs font-semibold text-warning-strong hover:underline ${className}`}
+    >
+      <DiveDayIcon name="warning" className="size-3.5" />
+      {copy.noPriceSet}
+    </Link>
+  );
+}
 
 /**
  * The staff board as a **week** — seven columns, one per day, at `xl` (1280px)
@@ -174,11 +255,12 @@ export function WeekBoard({
               <h3 className="flex items-center gap-2">
                 <span className="sr-only">{day.label}</span>
                 <span aria-hidden="true" className="flex items-center gap-2">
-                  <span
-                    className={`text-xs font-semibold tracking-[0.14em] uppercase ${
-                      day.isToday ? "text-primary" : "text-muted"
-                    }`}
-                  >
+                  {/* A day column is a ledger group, and its header wears the
+                      one group-label spelling — `groupLabelClass`
+                      (src/components/ui/ledger.tsx), which owns the tracking
+                      value and the ink together so neither is re-spelled here
+                      (ADR 20260827-clearwater-surface-language, decision 3). */}
+                  <span className={groupLabelClass(day.isToday ? "primary" : "muted")}>
                     {day.weekday}
                   </span>
                   {/* Today is a filled disc *and* the word — colour is never
@@ -204,7 +286,9 @@ export function WeekBoard({
           ))}
         </div>
 
-        {/* A multi-day course owns its days rather than repeating in them. */}
+        {/* A multi-day course owns its days rather than repeating in them —
+            and carries everything a day cell carries, because replacing the
+            entries is not the same as removing their controls. */}
         {week.spans.map((span) => (
           <div key={span.tripId} className="grid grid-cols-7">
             <div
@@ -217,9 +301,22 @@ export function WeekBoard({
               >
                 {span.title}
               </Link>
+              {span.unpriced && span.status === "upcoming" ? (
+                <PriceFlag departure={span} shopSlug={shopSlug} copy={copy} className="shrink-0" />
+              ) : null}
               <span className="ms-auto shrink-0 text-xs font-medium text-primary tabular-nums">
                 {span.meta}
               </span>
+              {canConfigure && span.status === "upcoming" ? (
+                <RowActions
+                  departure={span}
+                  openKey={openKey}
+                  onToggle={onToggle}
+                  registerToggle={registerToggle}
+                  label={copy.rowActionsAria}
+                  className="-my-1 -me-2 shrink-0"
+                />
+              ) : null}
             </div>
           </div>
         ))}
@@ -251,24 +348,16 @@ export function WeekBoard({
                           {entry.time}
                         </p>
                         {/* Move / copy / remove carry over from the stream —
-                            the board is the only place they exist. A boat
-                            already home is refused all three by
-                            src/db/trips-schedule.ts, so it is offered none. */}
+                            the board is the only place they exist. */}
                         {canConfigure && entry.status === "upcoming" ? (
-                          <button
-                            type="button"
-                            ref={registerToggle(`w:menu:${entry.tripId}`)}
-                            onClick={() => onToggle(`w:menu:${entry.tripId}`)}
-                            aria-expanded={openKey === `w:menu:${entry.tripId}`}
-                            aria-label={fill(copy.rowActionsAria, { ref: entry.ref })}
-                            className={buttonClass({
-                              variant: "ghost",
-                              size: "sm",
-                              className: "-mt-1 -me-2 min-w-11",
-                            })}
-                          >
-                            <DiveDayIcon name="more" className="size-4" />
-                          </button>
+                          <RowActions
+                            departure={entry}
+                            openKey={openKey}
+                            onToggle={onToggle}
+                            registerToggle={registerToggle}
+                            label={copy.rowActionsAria}
+                            className="-mt-1 -me-2 min-w-11"
+                          />
                         ) : null}
                       </div>
                       <Link
@@ -280,18 +369,13 @@ export function WeekBoard({
                         {entry.title}
                       </Link>
                       <p className="mt-1 text-xs text-muted tabular-nums">{entry.meta}</p>
-                      {/* The one toned mark a cell can carry, and only while
-                          the departure can still be booked. Glyph and word
-                          together: hue is never the whole signal. */}
                       {entry.unpriced && entry.status === "upcoming" ? (
-                        <Link
-                          href={`/shop/${shopSlug}/trips/${entry.tripId}#details`}
-                          aria-label={fill(copy.noPriceSetAria, { ref: entry.ref })}
-                          className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-warning-strong hover:underline"
-                        >
-                          <DiveDayIcon name="warning" className="size-3.5" />
-                          {copy.noPriceSet}
-                        </Link>
+                        <PriceFlag
+                          departure={entry}
+                          shopSlug={shopSlug}
+                          copy={copy}
+                          className="mt-1"
+                        />
                       ) : null}
                     </div>
                   </li>

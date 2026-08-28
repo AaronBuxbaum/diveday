@@ -708,6 +708,21 @@ export type WeekBoardEntry = {
    */
   status: "upcoming" | "sailed";
   courseId: string | null;
+  /**
+   * The site this departure is diving, and the hull it is on. **What a cell
+   * says that its neighbours do not.** Every title in a column shares its
+   * prefix ("Dawn Two-Tank — …", "Morning Two-Tank — …") and a 150px column
+   * clips exactly the half that differs, so the site leads the cell's meta
+   * line instead of being the thing the ellipsis eats. `boatId` is not read
+   * by any cell: it is what lets the caller ask the day the stream's own
+   * question — more departures than boats, or one hull in two places at once
+   * (`src/lib/boats.ts`) — which is the board's whole question and had no
+   * answer at desktop.
+   */
+  diveSiteName: string | null;
+  boatId: string | null;
+  /** A shore or pool session has no hull to be in two places at once. */
+  diveMode: "boat" | "shore" | "pool";
 };
 
 /**
@@ -722,6 +737,20 @@ export type WeekBoardSpan = {
   title: string;
   firstDay: CalendarDate;
   lastDay: CalendarDate;
+  /**
+   * The instant the run begins, and how many days it meets on. A span opens
+   * the same move/copy/remove panels a day entry does — a course drawn as one
+   * bar still has to be movable — and those forms are a date, a time and "all
+   * {count} days move together".
+   */
+  startsAt: Date;
+  dayCount: number;
+  /**
+   * `sailed` once the whole run is behind, with the same one-hour
+   * late-arrival buffer a day entry carries: a course still meeting on Friday
+   * is not a thing to be told nothing about on Wednesday.
+   */
+  status: "upcoming" | "sailed";
   booked: number;
   capacity: number;
   priceCents: number | null;
@@ -772,6 +801,7 @@ export async function weekBoard(
   const overlapping = await db
     .select({
       trip: trips,
+      diveSiteName: diveSites.name,
       // `countDistinct`, not `count`: the meeting-window join multiplies a
       // multi-day course's rows by its days, and a plain count would report a
       // three-day class as three times as booked as it is.
@@ -779,6 +809,7 @@ export async function weekBoard(
     })
     .from(trips)
     .innerJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
+    .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
     .leftJoin(bookings, liveBookingJoin)
     .where(
       and(
@@ -789,7 +820,7 @@ export async function weekBoard(
         gt(tripScheduleDays.endsAt, from),
       ),
     )
-    .groupBy(trips.id)
+    .groupBy(trips.id, diveSites.id)
     .orderBy(asc(trips.startsAt), asc(trips.id));
 
   if (overlapping.length === 0) return { days, spans: [] };
@@ -816,7 +847,7 @@ export async function weekBoard(
 
   const spans: WeekBoardSpan[] = [];
   const sailedBefore = new Date(now.getTime() - 60 * 60 * 1000);
-  for (const { trip, booked } of overlapping) {
+  for (const { trip, diveSiteName, booked } of overlapping) {
     // A trip with no meeting rows at all is its own single window — the same
     // reading `tripScheduleDayCounts` callers already take.
     const windows = windowsByTrip.get(trip.id) ?? [trip.startsAt];
@@ -826,6 +857,9 @@ export async function weekBoard(
         title: trip.title,
         firstDay: calendarDateInTimezone(windows[0] ?? trip.startsAt, timeZone),
         lastDay: calendarDateInTimezone(windows.at(-1) ?? trip.endsAt, timeZone),
+        startsAt: windows[0] ?? trip.startsAt,
+        dayCount: windows.length,
+        status: trip.endsAt < sailedBefore ? "sailed" : "upcoming",
         booked,
         capacity: trip.capacity,
         priceCents: trip.priceCents,
@@ -844,6 +878,9 @@ export async function weekBoard(
       priceCents: trip.priceCents,
       status: trip.endsAt < sailedBefore ? "sailed" : "upcoming",
       courseId: trip.courseId,
+      diveSiteName,
+      boatId: trip.boatId,
+      diveMode: trip.diveMode,
     });
   }
   for (const iso of dayIsos) {

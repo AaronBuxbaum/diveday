@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { resolveWeekStart, shiftWeek, WEEK_PARAM, weekDates, weekStartOf } from "./week-board";
+import {
+  resolveWeekStart,
+  shiftWeek,
+  WEEK_PARAM,
+  weekDates,
+  weekIsWhollyUnpriced,
+  weekStartOf,
+} from "./week-board";
 
 describe("the ?week= grammar", () => {
   it("names the parameter once, so a second surface cannot spell it differently", () => {
@@ -47,5 +54,68 @@ describe("the ?week= grammar", () => {
     for (const bad of [undefined, "", "next", "2026-02-31", "2026-13-01", "../../etc"]) {
       expect(resolveWeekStart(bad, "2026-07-23")).toBe("2026-07-20");
     }
+  });
+});
+
+describe("the week's shared price fact", () => {
+  const unpriced = (status: "upcoming" | "sailed" = "upcoming") => ({ status, priceCents: null });
+  const priced = (status: "upcoming" | "sailed" = "upcoming") => ({ status, priceCents: 9500 });
+  /** An empty seven-day record, the shape `weekBoard()` always returns. */
+  const noDays = () => Object.fromEntries(weekDates("2026-08-24").map((iso) => [iso, []]));
+
+  it("counts the spans, not only the day cells", () => {
+    // The regression this pins. A multi-day course comes back as a *span* and
+    // is never also dropped into the days it covers, so a week whose only
+    // upcoming departures are three unpriced courses has no day cells at all.
+    // Weighed on `days` alone it reads as nothing to say — no banner, and no
+    // mark on the bars either, because they were absent from the very tally
+    // that decides whether a mark is needed.
+    expect(
+      weekIsWhollyUnpriced({ days: noDays(), spans: [unpriced(), unpriced(), unpriced()] }),
+    ).toBe(true);
+    // Cells and bars are one week: two of one and one of the other is three
+    // departures sharing one fact.
+    expect(
+      weekIsWhollyUnpriced({
+        days: { ...noDays(), "2026-08-24": [unpriced(), unpriced()] },
+        spans: [unpriced()],
+      }),
+    ).toBe(true);
+    // And a priced course is enough to make it not a shared fact — the marks
+    // then stay on the departures that lack a price.
+    expect(
+      weekIsWhollyUnpriced({
+        days: { ...noDays(), "2026-08-24": [unpriced(), unpriced()] },
+        spans: [priced()],
+      }),
+    ).toBe(false);
+  });
+
+  it("weighs only what is still to sail, on both sides of the question", () => {
+    // A boat already home cannot be booked, so its missing price is nobody's
+    // morning — it neither triggers the banner nor keeps it away.
+    expect(
+      weekIsWhollyUnpriced({
+        days: { ...noDays(), "2026-08-24": [unpriced(), unpriced(), unpriced()] },
+        spans: [priced("sailed")],
+      }),
+    ).toBe(true);
+    expect(
+      weekIsWhollyUnpriced({
+        days: { ...noDays(), "2026-08-24": [unpriced(), unpriced()] },
+        spans: [unpriced("sailed")],
+      }),
+    ).toBe(false);
+  });
+
+  it("stays quiet under three, where a banner says less than the marks it replaces", () => {
+    expect(weekIsWhollyUnpriced({ days: noDays(), spans: [] })).toBe(false);
+    expect(weekIsWhollyUnpriced({ days: noDays(), spans: [unpriced()] })).toBe(false);
+    expect(
+      weekIsWhollyUnpriced({
+        days: { ...noDays(), "2026-08-24": [unpriced()] },
+        spans: [unpriced()],
+      }),
+    ).toBe(false);
   });
 });
