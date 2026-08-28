@@ -7,6 +7,47 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The trial's terms stand at the pricing doors (delivered 2026-08-28)
+
+Slice 12c of [marketing-review-20260827.md](marketing-review-20260827.md), against that review's
+second finding — the terms never stand at the doors. `/pricing` asked for a trial at two decision
+points and named no terms at either: the demo note beside the hero pair answers for the demo alone
+and must not promise "no sign-up" on the trial's behalf, so the higher-friction door stood bare.
+`marketing.pricing.trialNote` now sits under both pairs — free, three weeks, no card, and the soft
+expiry `src/lib/trial.ts` genuinely implements (expiry blocks no route and no mutation). It is a
+sentence at both positions, never a third door; the deliberate divergence from "the demo's cost is
+stated once per page" is recorded in [marketing.md](marketing.md) beside that rule.
+
+**The two-year lock moved under the figure it qualifies** (`marketing.pricing.lockNote`), where a
+reader looking at the number is asking "for how long", and `marketing.price.item5` trimmed to its
+other half so a binding commercial commitment (H-12) is not inventoried twice in one screen. The
+fee anchor stopped lecturing — the body now opens on the arithmetic the reader has already done —
+and the FareHarbor row broke its semicolon run into breath units with the rate still unpublished,
+reported-only and attributed.
+
+The FAQ traded one row for two: "Does the manifest work offline?" left (a product question wearing
+pricing clothes; `/product` answers it at depth beside the screen it is about), and "Do I pay more
+as my crew grows?" and "How long does setup take?" arrived — the first counted against
+`src/lib/authz.ts`'s six staff roles and the fact that divers never authenticate at all, the second
+against the six fields `/onboard` actually asks for and its action that inserts the shop on submit.
+The November case folded into `faq.trialMeaning`. All of it feeds the page's `FAQPage` structured
+data automatically.
+
+**The credentials claim ships scoped, and that is the slice's one deliberate divergence from the
+review's wording.** "The only things held back are credentials" is true of the shop's *records* and
+false of the export bundle, which also withholds retry queues, provider linkage, DiveDay's own
+reconciliation ledgers and the close-out and buddy-team trails — all named on the real Settings
+screen, which did not move. So the sentence carries its scope and the mockup lists without claiming
+completeness; the rule is now a claims-policy bullet in [marketing.md](marketing.md).
+
+Pinned rather than remembered: `src/lib/marketing.test.ts` asserts the four things the trial note
+must name and that it invents no billing term `faq.trialMeaning` has not already made (H-12 leaves
+cadence, taxes and the contract flow open), the lock's move out of `item5`, the credentials scope,
+FareHarbor's rate staying reported-only, and the two silences — no `faq.offline` key survives in
+either locale, and `/product`'s dock note still carries the claim it held. `e2e/marketing.spec.ts`
+reads both trial notes on the page, proves neither is a link, and asserts the offline row is gone
+from `/pricing` and its claim present on `/product`.
+
 ## The day on the homepage gets its evening (delivered 2026-08-28)
 
 Slice 12b of [marketing-review-20260827.md](marketing-review-20260827.md), against that review's

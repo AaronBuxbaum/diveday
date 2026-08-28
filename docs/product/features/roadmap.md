@@ -385,11 +385,6 @@ homework) and every replacement sentence written out, claims-policy-clean. Each 
 both locales in the same change. Unranked, but 12a and 12c aim directly at "owners aren't
 starting trials."
 
-- **12c. The trial's terms stand at its doors.** `/pricing`: the trial-terms note at both CTA
-  pairs, the two-year lock under the cadence line (item5 trims), the fee-anchor rewrite, the
-  two new FAQ rows (crew, setup time), the November fold-in, the offline row cut; `/onboard`'s
-  day-22 clause rides first-light 10b. *Pins:* the trial note names free/3 weeks/no card/soft
-  expiry; no billing terms beyond `faq.trialMeaning`'s.
 - **12d. The product page's dare gets a door.** The money band renders the figure; a demo door
   under the capability index (new `product-index` tag registered first); the hero description
   rewrite. *Pins:* one primary per screen holds across the page's screens.

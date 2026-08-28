@@ -2143,7 +2143,7 @@
       "bookingsNote": "Every booking with its trip, diver, and payment state.",
       "rowCount": "{count, plural, one {# row} other {# rows}}",
       "notIncludedLabel": "Not included, on purpose:",
-      "notIncludedText": "login accounts and password hashes, and per-device push credentials — credentials never leave."
+      "notIncludedText": "passwords and device push keys — credentials no other system could use anyway."
     },
     "nightBefore": {
       "label": "Ready brief",
@@ -2303,7 +2303,7 @@
       "item2": "Every staff role, from front desk to captain, in one place",
       "item3": "New features as they ship, all through early access",
       "item4": "A practice shop preloaded with realistic trips to train on",
-      "item5": "Today's price, locked for two years — no surprise increases while you help shape what ships next",
+      "item5": "No surprise increases while you help shape what ships next",
       "item6": "Email support — write in, hear back from a real person"
     },
     "export": {
@@ -2879,14 +2879,16 @@
       "heroTitle": "One flat price for the whole shop.",
       "heroDescription": "No setup fee. No per-seat math. No feature tiers. No cut of your bookings.",
       "heroSafetyNote": "The safety workflow is never an add-on.",
+      "lockNote": "Locked for two years for founding shops.",
+      "trialNote": "The trial is a shop of your own — free for 3 weeks, no card, and nothing switches off when the window ends.",
       "earlyAccessBadge": "Early access",
       "feesNote": "Payment-processing fees stay between you and your payment provider. If an integration ever costs extra, we'll say so before you turn it on.",
       "includedLead": "What the price covers",
       "feeAnchor": {
         "title": "A flat price, or a cut of every seat you sell.",
-        "body": "Booking platforms use different pricing models. Here is how two popular channels describe their current prices, alongside DiveDay's flat shop price.",
+        "body": "If your bookings run through a channel today, you've already done this math: the busier the season, the bigger the cut. Here is how two of those channels describe their own pricing, next to DiveDay's flat shop price.",
         "rezdy": "{competitor}'s pricing is a monthly subscription plus 3% of every online booking.",
-        "fareharbor": "{competitor} publishes no rate at all. It charges nothing monthly and takes a fee on every booking, added to your guest's checkout price, for as long as you use it; third parties report that fee at around 6%.",
+        "fareharbor": "{competitor} publishes no rate at all. Nothing monthly. Instead, a fee on every booking, added to your guest's checkout price, for as long as you use it. The size of it is unpublished — third parties report that fee at around 6%.",
         "ours": "DiveDay takes no cut of a booking. Checkout runs through your own Stripe account, and what you pay us is the price above — the same number in a busy August as in a quiet January.",
         "sourcesNote": "Both descriptions come from the switching guides, where each one is cited to the incumbent's own pages.",
         "guideLink": "What moving off {competitor} looks like →"
@@ -2895,7 +2897,7 @@
         "eyebrow": "Your records",
         "title": "What happens to my records if I leave?",
         "body": "Every diver, booking, signed waiver and payment history, as documented CSVs — plus every photo the shop stored, as real files rather than links. One ZIP, downloaded by the shop's owner from Settings, on any day including the first day of a trial.",
-        "securityNote": "Login accounts and device push credentials stay protected because they are tied to this app and a particular phone.",
+        "securityNote": "Of your shop's records, the only things held back are credentials — passwords and device push keys, which no other system could use anyway.",
         "mockupLabel": "The Data export screen in DiveDay, listing the bundle's files with a row count for each and the account credentials that stay protected"
       },
       "seeFullList": "See everything it does, in detail →",
@@ -2905,17 +2907,21 @@
           "question": "How does billing work?",
           "answer": "Month to month, per location. Your records are exportable from day one, with no setup fee and no annual contract."
         },
+        "crewSize": {
+          "question": "Do I pay more as my crew grows?",
+          "answer": "No. The price is per location, whoever is on the schedule — front desk, instructors, divemasters, captains and crew all get their own login at no extra cost. Divers never need an account at all: they book on your shop's pages and open their own trip from a link."
+        },
         "trialMeaning": {
           "question": "What does \"trial\" mean right now?",
-          "answer": "Starting a shop is free for 3 weeks, no card required — and nothing switches off when the window ends; what you set up keeps working. When you're ready to move to paid, email {email}."
+          "answer": "Starting a shop is free for 3 weeks, no card required. Nothing switches off when the window ends: what you set up keeps working — so if your season is months out, nothing is lost by building the board now. When you're ready to move to paid, email {email}."
         },
         "seeBefore": {
           "question": "Can I see it before I commit?",
           "answer": "Yes. The live demo is a shop already full of sample trips — walk the day as the owner, an instructor, a divemaster, the captain, or a diver. A trial shop of your own starts empty, ready for your first trip."
         },
-        "offline": {
-          "question": "Does the manifest work offline?",
-          "answer": "Yes. The crew saves the manifest to their phone before leaving the dock. Departure and after-dive roll calls work from that copy, the screen always shows how fresh it is, and when service returns DiveDay checks every change against the live manifest before it counts."
+        "setupTime": {
+          "question": "How long does setup take?",
+          "answer": "Six fields: your shop's name, its web address, its timezone, then your own name, email and password. The shop exists the moment you submit it, ready for its first trip. Bringing a spreadsheet of divers across is its own step, and the importer shows you exactly what will happen before anything is saved."
         },
         "dataIfNotWorking": {
           "question": "How do I access my shop's records?",

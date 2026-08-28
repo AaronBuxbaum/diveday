@@ -209,6 +209,17 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   there — with the limits of that protection named alongside it. Nowhere else. The capability
   index on `/product` sells the outcome ("a head count with no signal, matching the counter's once
   you're back"), never the snapshot.
+- **What the export withholds is stated scoped, never as an absolute** (2026-08-28). The honest
+  short answer to "what stays behind" is *credentials* — passwords and per-device push keys, which
+  no other system could use anyway — and that is what `/pricing`'s `dataExit.securityNote` and the
+  export mockup say. But it is only true of the shop's **records**: the bundle also leaves out
+  notification retry queues, provider linkage, DiveDay's own reconciliation ledgers, and the
+  close-out and buddy-team trails, which is why the real Settings screen names all of them
+  (`settings.export.notIncluded.text`, and `EXCLUDED_TABLES` in `src/db/export.test.ts`). So the
+  marketing sentence carries its scope and the mockup lists without claiming to be the whole list —
+  "the only thing held back is credentials", said flat, would be a fabricated-proof failure wearing
+  a security badge. `src/lib/marketing.test.ts` pins the scope; the Settings screen's own wording is
+  the source of truth and does not bend to the marketing page.
 - **Safety-adjacent copy** (readiness, manifests, medical, cert gating, nitrox) gets
   `dive-domain-expert` review before merge, same as safety-critical code.
 - Multi-location operation and unconfigured provider integrations are out of scope and must not be
@@ -301,6 +312,16 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   not the homepage close — because that is where the decision is made; a reader who scrolls past it
   has already read it. Deleting it from a page entirely is a different change and not an allowed
   one: `e2e/marketing.spec.ts` asserts it on `/`.
+  **This rule governs `demoNote` only, and `/pricing`'s trial note diverges from it deliberately
+  (2026-08-28).** `marketing.pricing.trialNote` — free, three weeks, no card, and the soft expiry
+  `src/lib/trial.ts` implements — stands at *both* of that page's CTA pairs, the price hero and the
+  `pricing-close` band. The demo note's argument does not carry across: it answers a question the
+  reader has already answered by the time they scroll, whereas the trial's terms are the objection
+  itself, and the closing band is a second point of decision rather than a repetition of the first —
+  a reader who has just read five thousand pixels of objections is being asked to commit *there*,
+  and that band carried no terms at all until this landed. It stays a sentence at both positions,
+  never a third door (the budget note below). A third placement would be a new divergence and needs
+  its own line here.
 - **One primary CTA per screen.** The demo leads everywhere through the shared `FunnelCtas`
   pair (the 2026-08-22 two-doors decision above — this bullet said "the trial on `/pricing`"
   until 2026-08-27, a leftover from before that decision); `/pricing`'s trial door is simply

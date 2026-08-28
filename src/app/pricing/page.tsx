@@ -131,6 +131,16 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
       answer: t("marketing.pricing.faq.billing.answer"),
     },
     {
+      // The per-seat fear, answered where the flat price raises it: the
+      // number above is per *location*, and the roles it covers are the six
+      // in src/lib/authz.ts's STAFF_ROLES. Divers never authenticate at all —
+      // they book on the public shop pages and reach their own trip through a
+      // capability link, so a growing customer list is not a growing bill
+      // either.
+      question: t("marketing.pricing.faq.crewSize.question"),
+      answer: t("marketing.pricing.faq.crewSize.answer"),
+    },
+    {
       question: t("marketing.pricing.faq.trialMeaning.question"),
       // The upgrade address, not the support one: marketing.md routes "how do
       // I move a trial shop to paid" through its own inbox, and the soft
@@ -143,9 +153,18 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
       answer: t("marketing.pricing.faq.seeBefore.answer"),
     },
     {
-      question: t("marketing.pricing.faq.offline.question"),
-      answer: t("marketing.pricing.faq.offline.answer"),
+      // Counted against the real form: /onboard asks for six fields (shop
+      // name, link, timezone, then the owner's name, email and password) and
+      // its action inserts the shop row on submit. The spreadsheet is named as
+      // its own step because it is one — the importer previews every row
+      // before anything is saved.
+      question: t("marketing.pricing.faq.setupTime.question"),
+      answer: t("marketing.pricing.faq.setupTime.answer"),
     },
+    // "Does the manifest work offline?" left this list on 2026-08-28: a
+    // product question wearing pricing clothes, and /product answers it at
+    // depth beside the screen it is about (`marketing.product.dockNote`).
+    // Nothing on this page decides on it (docs/product/marketing-review-20260827.md).
     {
       question: t("marketing.pricing.faq.dataIfNotWorking.question"),
       answer: t("marketing.pricing.faq.dataIfNotWorking.answer", {
@@ -233,6 +252,15 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 {earlyAccessPrice.price}
               </p>
               <p className="mt-4 text-base text-muted">{t(earlyAccessPrice.cadenceKey)}</p>
+              {/* The two-year lock, under the figure it is about. It used to
+                  be reachable only by reading the included list (`item5`) and
+                  the founding-shop FAQ row — two places, neither of them where
+                  a reader is looking at the number and asking "for how long".
+                  `item5` trims to its other half so the claim is not
+                  inventoried twice (docs/product/marketing-review-20260827.md).
+                  A restatement of a binding commercial commitment (H-12),
+                  never an extension of it. */}
+              <p className="mt-2 text-sm leading-6 text-muted">{t("marketing.pricing.lockNote")}</p>
               {/* Two blocks, not one paragraph: as one they broke mid-clause
                   ("No cut / of your bookings") directly under the figure. The
                   split protects the break, not a line count — the longer
@@ -250,6 +278,24 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                   thousand pixels down. */}
               <p className="mx-auto mt-6 max-w-lg text-sm leading-6 font-medium text-balance text-muted">
                 {t("marketing.common.demoNote")}
+              </p>
+              {/* And what the *other* door costs. The demo note has always
+                  answered for the demo alone — it must not promise "no
+                  sign-up" on the trial's behalf — so the trial button stood
+                  here with no terms at all, at the one point on the site where
+                  the decision is made. Soft expiry is a fact, not a
+                  softener: src/lib/trial.ts blocks no route and no mutation
+                  when the window elapses. A `<p>`, deliberately: the hero's
+                  door budget is two, and the DOM order of those two is pinned
+                  in e2e/marketing.spec.ts.
+
+                  `text-pretty`, not the `text-balance` its neighbour uses:
+                  balancing two lines of this sentence puts the break inside
+                  "no / card", which is the one clause a reader is scanning
+                  for. Pretty leaves the fill alone and only guards the
+                  orphan. */}
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-pretty text-muted">
+                {t("marketing.pricing.trialNote")}
               </p>
             </div>
 
@@ -429,6 +475,15 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 page is warmest, the only door left asked for an account
                 (issue #785). */}
             <FunnelCtas locale={locale} source="pricing-close" className="mt-8 justify-center" />
+            {/* The same terms at the second door. `demoNote` is stated once
+                per page, at the first door (docs/product/marketing.md) — the
+                trial note is deliberately not: a reader who scrolled five
+                thousand pixels of objections to reach this band is being asked
+                to commit here, and the closing pair carried no terms at all.
+                The divergence is recorded in marketing.md beside that rule. */}
+            <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-pretty text-muted">
+              {t("marketing.pricing.trialNote")}
+            </p>
             <p className="mt-10 text-sm leading-6 text-muted">
               {t("marketing.pricing.stillQuestion")}
             </p>

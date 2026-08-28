@@ -109,3 +109,179 @@ describe("the mid-season answer is one shared key", () => {
     });
   }
 });
+
+/**
+ * The pricing page's terms, pinned as rules rather than sentences
+ * (docs/product/marketing-review-20260827.md, "the terms never stand at the
+ * doors" — roadmap slice 12c). Every assertion here is a claims-policy
+ * obligation: the trial note has to say the four things a burned buyer is
+ * actually asking, and it has to say nothing beyond them, because billing
+ * cadence, taxes and the contract flow are still undecided (H-12).
+ */
+describe("the trial's terms stand at the pricing doors", () => {
+  /** What the note must name, in each locale's own words. */
+  const trialTerms = {
+    "en-US": [/free/i, /3 weeks/, /no card/i, /nothing switches off/i],
+    "es-ES": [/gratis/i, /3 semanas/, /sin tarjeta/i, /nada se apaga/i],
+  } as const;
+
+  /**
+   * Billing vocabulary the page may not grow on its own. The rule is not "never
+   * say these words" — `faq.trialMeaning` is allowed to, and does — it is that
+   * the note at the door may not introduce a billing term the FAQ row has not
+   * already committed to. Publishing billing terms through a new channel needs
+   * the decision H-12 leaves open.
+   */
+  const billingVocabulary = {
+    "en-US": [
+      "renew",
+      "invoice",
+      "bill",
+      "charge",
+      "card",
+      "subscription",
+      "contract",
+      "refund",
+      "prorat",
+      "tax",
+      "cancel",
+      "per seat",
+    ],
+    "es-ES": [
+      "renov",
+      "factura",
+      "cobr",
+      "tarjeta",
+      "suscripción",
+      "contrato",
+      "reembolso",
+      "prorrate",
+      "impuesto",
+      "cancel",
+      "por plaza",
+    ],
+  } as const;
+
+  for (const locale of DIVER_LOCALES) {
+    it(`names free, three weeks, no card and the soft expiry in ${locale}`, () => {
+      const note = marketingMessages(locale)["marketing.pricing.trialNote"];
+      expect(note).toBeDefined();
+      for (const pattern of trialTerms[locale]) expect(note).toMatch(pattern);
+    });
+
+    it(`invents no billing term the trial FAQ row has not already made in ${locale}`, () => {
+      const messages = marketingMessages(locale);
+      const note = messages["marketing.pricing.trialNote"].toLowerCase();
+      const answer = messages["marketing.pricing.faq.trialMeaning.answer"].toLowerCase();
+      const invented = billingVocabulary[locale].filter(
+        (term) => note.includes(term) && !answer.includes(term),
+      );
+      expect(invented).toEqual([]);
+    });
+
+    it(`states the soft expiry the code actually implements in ${locale}`, () => {
+      // src/lib/trial.ts: expiry blocks no route and no mutation, so "nothing
+      // switches off" is a description of behaviour, not a reassurance.
+      const answer = marketingMessages(locale)["marketing.pricing.faq.trialMeaning.answer"];
+      expect(answer).toMatch(locale === "en-US" ? /keeps working/i : /sigue funcionando/i);
+    });
+
+    /**
+     * The lock moved under the figure, so the included list stops inventorying
+     * it — the silence is the point. `item5` carried "locked for two years"
+     * while `lockNote` and `faq.whyFounding` said it too; three renderings of
+     * one binding commercial commitment is three places to drift.
+     */
+    it(`states the two-year lock under the figure and not in the included list in ${locale}`, () => {
+      const messages = marketingMessages(locale);
+      const lock = locale === "en-US" ? /two years/i : /dos años/i;
+      expect(messages["marketing.pricing.lockNote"]).toMatch(lock);
+      expect(messages["marketing.price.item5"]).not.toMatch(lock);
+    });
+  }
+});
+
+/**
+ * The offline row left `/pricing` on 2026-08-28 — a product question wearing
+ * pricing clothes. A cut copy is only honest if the claim still has a home, so
+ * this pins both halves: the pricing key is gone, and `/product`'s dock note
+ * still carries the sentence the row was made of.
+ */
+describe("the manifest's offline answer lives on /product alone", () => {
+  for (const locale of DIVER_LOCALES) {
+    it(`carries no offline FAQ row on the pricing page in ${locale}`, () => {
+      const messages = marketingMessages(locale);
+      const orphans = Object.keys(messages).filter((key) =>
+        key.startsWith("marketing.pricing.faq.offline"),
+      );
+      expect(orphans).toEqual([]);
+    });
+
+    it(`still answers it beside the screen it is about in ${locale}`, () => {
+      const note = marketingMessages(locale)["marketing.product.dockNote"];
+      expect(note).toBeDefined();
+      expect(note).toMatch(locale === "en-US" ? /saves the manifest/i : /guarda el listado/i);
+    });
+  }
+});
+
+/**
+ * The fee anchor is the one place marketing.md lets a rival be named, and it is
+ * bounded hard: FareHarbor publishes no rate, so the figure must stay reported
+ * and attributed rather than presented as their price. The 2026-08-28 rewrite
+ * broke the row's semicolon run into breath units; these pin the two things
+ * that rewrite was not allowed to lose.
+ */
+describe("the fee anchor reports an unpublished rate as unpublished", () => {
+  for (const locale of DIVER_LOCALES) {
+    it(`says FareHarbor publishes nothing in ${locale}`, () => {
+      const row = marketingMessages(locale)["marketing.pricing.feeAnchor.fareharbor"];
+      expect(row).toMatch(locale === "en-US" ? /publishes no rate at all/ : /no publica ninguna/);
+    });
+
+    it(`attributes the figure to third parties in ${locale}`, () => {
+      const row = marketingMessages(locale)["marketing.pricing.feeAnchor.fareharbor"];
+      expect(row).toMatch(
+        locale === "en-US"
+          ? /third parties report that fee at around 6%/
+          : /terceros sitúan esa comisión en torno al 6%/,
+      );
+    });
+  }
+});
+
+/**
+ * The credentials claim, and the reason it is scoped. The 2026-08-27 review
+ * proposed "the only things held back are credentials" for the pricing page —
+ * true of what a shop would *carry somewhere else*, and not true of the export
+ * bundle, which also withholds retry queues, provider linkage, DiveDay's own
+ * reconciliation ledgers and the close-out and buddy-team trails (the
+ * `EXCLUDED_TABLES` list pinned by src/db/export.test.ts, and the real Settings
+ * screen's own "Not included, on purpose:" line, which names all of it).
+ *
+ * So the sentence ships scoped to the shop's *records*, and the mockup — which
+ * mirrors that Settings screen element for element — lists without claiming to
+ * be the whole list. An unscoped absolute here would be the fabricated-proof
+ * failure wearing a security badge, so the scope is the rule these pin.
+ */
+describe("the export's credentials claim never overstates what is held back", () => {
+  const scoped = { "en-US": /records/i, "es-ES": /registros/i } as const;
+  const credentials = { "en-US": /credentials/i, "es-ES": /credenciales/i } as const;
+  /** Exclusivity words: "the only thing not included is…" is the claim we may not make. */
+  const absolute = { "en-US": /\bonly\b/i, "es-ES": /\búnic|\bsolo\b/i } as const;
+
+  for (const locale of DIVER_LOCALES) {
+    it(`scopes the pricing page's sentence to the shop's records in ${locale}`, () => {
+      const note = marketingMessages(locale)["marketing.pricing.dataExit.securityNote"];
+      expect(note).toBeDefined();
+      expect(note).toMatch(credentials[locale]);
+      expect(note).toMatch(scoped[locale]);
+    });
+
+    it(`keeps the export mockup a list rather than a claim of completeness in ${locale}`, () => {
+      const mockup = DIVER_MESSAGES[locale].fallback.export.notIncludedText;
+      expect(mockup).toMatch(credentials[locale]);
+      expect(mockup).not.toMatch(absolute[locale]);
+    });
+  }
+});
