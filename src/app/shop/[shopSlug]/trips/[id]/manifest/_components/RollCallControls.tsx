@@ -112,14 +112,24 @@ export { ROLL_CALL_ROW_TONE };
  * two magic numbers would mean a future change to the panel's height silently
  * fixing one list and not the other.
  *
- * Sized to the panel at its tallest for the checkpoint kind: after a dive it can
- * carry up to three pinned danger lines. A jump that buries the name under the
- * panel is what invites a tap on the *next* visible row's mark, for the wrong
- * person (dive-domain review 20260810) — which is why this is bounded by the
- * panel rather than by taste.
+ * Two terms, and only one of them is a number. The panel pins at the chrome
+ * bar's own height, so the margin has to clear the bar *and* the panel: the
+ * bar's share is `var(--chrome-h)`, read from the same declaration the bar sets
+ * its height from (ADR 20260827-clearwater-surface-language, decision 10), and
+ * the rem is the panel's own height at its tallest for the checkpoint kind —
+ * after a dive it can carry up to three pinned danger lines. Content-driven, so
+ * it can only be allowed for; the chrome half no longer has to be.
+ *
+ * A jump that buries the name under the panel is what invites a tap on the
+ * *next* visible row's mark, for the wrong person (dive-domain review
+ * 20260810) — which is why this is bounded by the panel rather than by taste.
+ * It was `scroll-mt-64`/`scroll-mt-80`, both of which folded in 80px of a
+ * 69px bar that no longer exists.
  */
 export function rollCallScrollMargin(isDeparture: boolean): string {
-  return isDeparture ? "scroll-mt-64" : "scroll-mt-80";
+  return isDeparture
+    ? "scroll-mt-[calc(var(--chrome-h)+11rem)]"
+    : "scroll-mt-[calc(var(--chrome-h)+15rem)]";
 }
 
 /**

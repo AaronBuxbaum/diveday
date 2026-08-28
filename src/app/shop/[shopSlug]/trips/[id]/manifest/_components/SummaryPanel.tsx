@@ -240,12 +240,19 @@ export function SummaryPanel({
   ];
   return (
     <>
+      {/* Pinned under the chrome bar by reading its height, never by
+          measuring it: `top-(--chrome-h)` is the same declaration the bar sets
+          its own height from (ADR 20260827-clearwater-surface-language,
+          decision 10). This was `top-20` — 80px, measured once against a
+          69px content-driven staff bar — which the moment the bar became 56px
+          left 24px of scrolling roster showing between the two, on the surface
+          a crew counts heads on. */}
       <section
         aria-labelledby="roll-call-progress-heading"
         className={
           rollCallComplete
-            ? "rise-in sticky top-20 z-10 mt-4 rounded-2xl border border-accent/50 bg-accent/10 p-4 shadow-lg backdrop-blur print:hidden"
-            : "sticky top-20 z-10 mt-4 rounded-2xl border border-primary/30 bg-surface/95 p-4 shadow-lg backdrop-blur print:hidden"
+            ? "rise-in sticky top-(--chrome-h) z-10 mt-4 rounded-2xl border border-accent/50 bg-accent/10 p-4 shadow-lg backdrop-blur print:hidden"
+            : "sticky top-(--chrome-h) z-10 mt-4 rounded-2xl border border-primary/30 bg-surface/95 p-4 shadow-lg backdrop-blur print:hidden"
         }
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

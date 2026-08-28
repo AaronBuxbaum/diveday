@@ -293,7 +293,9 @@ test.describe("schedule builder", () => {
         await page.setViewportSize({ width, height: 800 });
         const measured = await measure();
 
-        // One height, both shells: 56px of bar plus its own hairline.
+        // One height, both shells. Preflight makes the bar `border-box`, so
+        // the 3.5rem `--chrome-h` names is its whole outside edge with the
+        // hairline inside it — 56px measured, not 56 plus a border.
         expect(
           measured.barHeight,
           `the chrome bar on ${surface} is ${measured.barHeight}px tall at ${width}px, not the 56px --chrome-h names`,

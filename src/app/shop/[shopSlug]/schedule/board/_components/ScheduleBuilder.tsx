@@ -452,7 +452,11 @@ function AddPanel({
       className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
     >
       {requestPlan ? (
-        <fieldset className="sticky top-4 z-10 rounded-lg border border-primary/30 bg-primary/5 p-4 shadow-sm">
+        /* Pinned under the chrome bar, not at a hand-picked 16px: `top-4` put
+           this brief *behind* the bar the moment the page scrolled, which is
+           the same defect the day headers had. It reads `--chrome-h` like they
+           do (ADR 20260827-clearwater-surface-language, decision 10). */
+        <fieldset className="sticky top-(--chrome-h) z-10 rounded-lg border border-primary/30 bg-primary/5 p-4 shadow-sm">
           <legend className="px-1 text-sm font-semibold text-primary">
             {copy.requestPlanHeading ?? ""}
           </legend>
@@ -1372,10 +1376,12 @@ export function ScheduleBuilder({
                 thumb always name their day — but pinned *below* the chrome
                 bar, whose height it reads rather than measures: `--chrome-h`
                 (ADR 20260827-clearwater-surface-language, decision 10) is the
-                same declaration the bar sets its own height from, so the
-                header lands 1px under the bar's bottom border — no slit of
-                scrolling content between the two — and stays there if the bar
-                ever changes height. This was `top-[68px]`, a number somebody
+                same declaration the bar sets its own height from. Preflight
+                makes every box `border-box`, so `--chrome-h` is the bar's
+                whole outside edge, hairline included: the header lands flush
+                against that edge — no slit of scrolling content between the
+                two, and no gap either — and stays there if the bar ever
+                changes height. This was `top-[68px]`, a number somebody
                 measured off a content-driven bar, with an e2e test standing
                 guard over it. z-20 keeps it above the rows' own z-10 action
                 clusters; the row "⋯" menus disclose inline rather than
