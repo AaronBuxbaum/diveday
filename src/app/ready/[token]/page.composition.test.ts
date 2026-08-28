@@ -156,16 +156,40 @@ describe("after the dive", () => {
     expect(SOURCE).toContain("theBoatIsHome({ endsAt: detail.trip.endsAt })");
   });
 
-  it("answers a cancelled departure before it composes anything else", () => {
+  it("answers a cancelled departure on the branch a cancelled departure reaches", () => {
     // A blow-out cancels the *trip* and deliberately leaves every booking
     // active (src/db/blowouts.ts), so `detail.cancelled` is false for every
     // diver a cancellation stranded — and this page read only that. Before the
     // boat was due back it handed them a packing list; an hour after it, the
     // afterglow.
+    //
+    // **This assertion used to be a source *position*, and that is precisely
+    // how the fix for it shipped broken.** It proved the branch was written
+    // above the afterglow; it could not prove the branch was reachable, and it
+    // was not: `verifyBookingCapability` fails closed on a cancelled trip
+    // (`src/db/booking-capabilities.ts`), so a page that read
+    // `data.departureCancelled` only *after* that call had already returned
+    // told every stranded diver their link had expired. The e2e spec was the
+    // one thing in the repository that could catch it.
+    //
+    // So the rule is where the answer sits relative to the gate, not relative
+    // to the afterglow: it is inside the `!capability` block, which is the only
+    // place a cancelled departure's token ever arrives.
+    const gate = positionOf("const capability = await verifyBookingCapability");
+    const deadEnd = positionOf("if (!capability) {");
     const departure = positionOf("data.departureCancelled");
-    expect(departure).toBeGreaterThan(-1);
-    expect(departure).toBeLessThan(positionOf("<AfterState"));
-    expect(departure).toBeLessThan(positionOf("<ThreadStatus"));
+    const liveShop = positionOf("const shopContact = {");
+    for (const marker of [gate, deadEnd, departure, liveShop]) {
+      expect(marker).toBeGreaterThan(-1);
+    }
+    expect(deadEnd).toBeGreaterThan(gate);
+    expect(departure).toBeGreaterThan(deadEnd);
+    expect(departure).toBeLessThan(liveShop);
+    // And it resolves the token the relaxed way, since the strict one is the
+    // thing that refused it.
+    expect(SOURCE).toContain(
+      'const stranded = await resolveRevokedBookingCapability(db, { token, purpose: "readiness" });',
+    );
   });
 
   it("names the shop on both of its live-token dead ends", () => {
@@ -173,7 +197,10 @@ describe("after the dive", () => {
     // verified, the shop is already in scope, and the reader's question is
     // *who do I ask*. Issue #801 gave the expired branch the shop's name and
     // contact details for exactly that reason; these two named nobody.
-    expect(countOf("shop={shopContact}")).toBe(2);
+    // One now, not two: the cancelled-departure card moved into the
+    // `!capability` block, where the shop is not yet in scope and it builds its
+    // own contact object from the booking it resolved.
+    expect(countOf("shop={shopContact}")).toBe(1);
     expect(SOURCE).toContain('t("recap.noShowHeading")');
     // And never the pair of sentences it replaced — "This readiness link isn't
     // available" over "This booking didn't sail" — both false for this reader.

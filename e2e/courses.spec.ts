@@ -202,8 +202,17 @@ test.describe("staff", () => {
       .map((heading) => heading.trim())
       .filter((heading, index, all) => heading !== all[index - 1]);
     expect(runs).toEqual(["PADI", "SDI", "SSI"]);
-    expect(rows.filter((row) => row.includes("SSI Open Water Diver"))).toHaveLength(1);
-    expect(rows.filter((row) => row.includes("Divemaster"))).toHaveLength(1);
+    // Matched on the row's own opening title. These were written against one
+    // agency's tab, where a substring was unambiguous; on one ungrouped walk
+    // "Divemaster" also catches SDI's own "SDI Divemaster" — two real courses at
+    // different prices, not a duplicated row — and a prerequisite line ("Rescue
+    // Diver or higher") can carry another course's title through the middle of a
+    // row. The third line is new: it pins SDI's ladder into the same check
+    // rather than letting it fall out of the assertion.
+    const rowsTitled = (title: string) => rows.filter((row) => row.trimStart().startsWith(title));
+    expect(rowsTitled("SSI Open Water Diver")).toHaveLength(1);
+    expect(rowsTitled("Divemaster")).toHaveLength(1);
+    expect(rowsTitled("SDI Divemaster")).toHaveLength(1);
 
     // No filter survives: `?agency=` was a real URL and is now an ignored one,
     // which must show the same catalog rather than an empty roster.
@@ -847,8 +856,14 @@ test.describe("the course editor over a wander through the app", () => {
     // find which of eight sections it meant.
     await expect(page.getByText("Unsaved changes in The pitch", { exact: true })).toBeVisible();
 
-    for (const tab of ["Divers", "Board", "Close-out", "Check-in"]) {
-      await page.getByRole("link", { name: tab, exact: true }).first().click();
+    // **Four routes, and four is the point** — React's Activity holds three, so
+    // a three-hop walk never reaches the eviction this test exists to cover.
+    // Close-out left the nav on 2026-08-28 (H-62: the evening is a state of the
+    // home, not a place to go), so the home itself is the fourth hop. Today's
+    // accessible name carries its blocked-diver badge, so it is matched by
+    // prefix where the others are exact.
+    for (const tab of [/^Divers$/, /^Board$/, /^Today/, /^Check-in$/]) {
+      await page.getByRole("link", { name: tab }).first().click();
       await page.waitForURL((candidate) => !candidate.pathname.endsWith("/edit"));
       await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
     }
@@ -857,7 +872,12 @@ test.describe("the course editor over a wander through the app", () => {
     await page.locator("header summary").filter({ hasText: "More" }).click();
     await page.getByRole("link", { name: "Courses" }).first().click();
     await page.waitForURL(/\/courses$/);
-    await page.getByRole("link", { name: "Discover Scuba Diving" }).first().click();
+    // By the door's own accessible name. The row is one `LedgerRow` whose
+    // stretched link is labelled "Edit {title}", and the Schedule act beside it
+    // is "Schedule a session of {title}" — so a bare substring match on the
+    // course title finds both and takes whichever comes first in the DOM, which
+    // since slice 9g is the one that leaves for the board.
+    await page.getByRole("link", { name: "Edit Discover Scuba Diving", exact: true }).click();
     await page.waitForURL(/\/edit/);
 
     await expect(page.locator('[name="summary"]')).toHaveValue("Half a thought, never saved");

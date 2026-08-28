@@ -662,11 +662,12 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
   test("the catalog editors have no automated a11y violations", async ({ page }) => {
     // 6 scans at ~3.5s each.
     test.setTimeout(90_000);
-    // The staff roster first — its agency tab strip is the one control on the
-    // page a keyboard or screen-reader user has to get through to reach the
-    // course they want (ADR 20260805-remove-certification-paths).
+    // The staff roster first — one ledger, an `<h2>` per agency over the run it
+    // describes, with every ladder on one pager (ADR 20260827-the-shops-shelves,
+    // slice 9g). The agency tab strip it replaced is gone, so a group heading is
+    // what proves the rows are in the DOM before axe reads them.
     await page.goto("/shop/blue-mantis/courses", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("navigation", { name: "Filter courses by agency" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "PADI" })).toBeVisible();
     await expectNoA11yViolations(page);
 
     // The course editor: the longest form in the product (content blocks,

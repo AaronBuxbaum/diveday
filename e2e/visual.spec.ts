@@ -2614,7 +2614,22 @@ for (const scheme of ["light", "dark"] as const) {
         // The whole row is the door and its accessible name is the departure's
         // title — the seats-left fact rides beside it rather than inside the
         // link, so it is the row that is clicked here.
-        await page.getByRole("listitem").first().getByRole("link").first().click();
+        //
+        // **Scoped to the picker.** This page opens with "Relevant requests"
+        // above the departures, and those rows are `<li>`s too — so an
+        // unscoped `listitem` query took the first *date request*, whose link
+        // is `?request=<id>` on this same page and can never satisfy the
+        // `waitForURL` below. The capture then burned its whole budget and
+        // took the shard down with it, which is worse than a wrong picture:
+        // reg-suit skips its compare when a shard fails and reports green over
+        // nothing compared.
+        await page
+          .getByRole("region", { name: "Which departure?" })
+          .getByRole("listitem")
+          .first()
+          .getByRole("link")
+          .first()
+          .click();
         await page.waitForURL(/\/bookings\/new\/[^/?]+$/);
         await page.getByRole("link", { name: "Add diver", exact: true }).click();
         await page.waitForURL(/\/divers\/new/);

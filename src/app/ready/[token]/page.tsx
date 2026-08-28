@@ -1215,6 +1215,57 @@ export default async function DiverReadinessPage({
         }
       }
     }
+    /**
+     * **The departure was called off, which is why this token stopped
+     * verifying at all.**
+     *
+     * `verifyBookingCapability` fails closed on `trips.status = 'cancelled'`
+     * (`src/db/booking-capabilities.ts`) — rightly, since an outstanding
+     * capability must not keep paying, rental-fit or cancel authority for a
+     * trip that no longer runs. But this page reaches for the same call as its
+     * *identity* lookup, so a blow-out took the diver's link out from under
+     * them: the branch written below for exactly this case sat behind a guard
+     * (`trip_status` has two values, so `departureCancelled` **is** the
+     * condition that already returned null) that could never be reached, and
+     * every diver a cancellation stranded was told the one thing that is
+     * false — that their link had run out — with no door back and a "send me
+     * a fresh one" button that fails the same check.
+     *
+     * Resolved the relaxed way the diver's-own-cancel path above resolves, and
+     * used only to *say* what happened: the hash must still match an unexpired
+     * capability genuinely issued for this purpose, and what it renders is a
+     * terminal card with no form on it, so it authorizes nothing. A genuinely
+     * aged-out link resolves nothing here and keeps the honest expired notice
+     * below.
+     */
+    const stranded = await resolveRevokedBookingCapability(db, { token, purpose: "readiness" });
+    if (stranded) {
+      const data = await getReadyPageData(db, stranded.bookingId);
+      // A cancelled *booking* keeps its own path above; this is the diver whose
+      // seat is still live under a departure that is not (`callTripBlowout`
+      // cancels the trip and leaves every booking active, because whether each
+      // seat is refunded stays a per-booking staff decision).
+      if (data && data.departureCancelled && !data.detail.cancelled) {
+        const strandedT = diverTranslator(await requestLocale(data.shop.defaultLocale));
+        return (
+          <ExpiredLinkCard
+            glyph="cancelled"
+            title={strandedT("booking.cancelledHeading")}
+            text={strandedT("ready.tripCancelledBody")}
+            shop={{
+              name: data.detail.shop.name,
+              contactEmail: data.shop.contactEmail,
+              contactPhone: data.shop.contactPhone,
+            }}
+            t={strandedT}
+          >
+            <Link href={publicSchedulePath(data.shop.slug)} className={buttonClass()}>
+              {strandedT("recap.seeWhatsNext")}
+            </Link>
+          </ExpiredLinkCard>
+        );
+      }
+    }
     // **Name the shop where the token still tells us which one it is.**
     //
     // `/ready` is the link in the 24-hour trip reminder, so every ordinary way
@@ -1311,42 +1362,6 @@ export default async function DiverReadinessPage({
     contactEmail: shop.contactEmail,
     contactPhone: shop.contactPhone,
   };
-
-  if (data.departureCancelled) {
-    /**
-     * **The departure was called off**, and this diver's seat is still live —
-     * which is the *normal* shape of a blow-out rather than an inconsistency
-     * to tolerate. `callTripBlowout` cancels the trip and deliberately leaves
-     * every booking active, because whether each seat is refunded stays a
-     * per-booking staff decision (src/db/blowouts.ts). So `detail.cancelled`
-     * above is false for every diver a cancellation stranded, and until a
-     * review caught it (2026-08-28) nothing else asked: the page carried on
-     * with a packing list before the boat was due back, and an hour after it
-     * was due back with the afterglow — "Welcome back", a dive record naming
-     * the boat and the crew, a request to rate the day and an invitation to
-     * tip them. That is the single worst message a shop can send on the
-     * afternoon it blew out, and it went automatically to everyone who drove
-     * to the dock.
-     *
-     * The money is deliberately not spoken to. The cascade's own message
-     * carries each diver's refund story, read from their payment row as it
-     * was composed; a page guessing at it hours later is how two DiveDay
-     * surfaces come to disagree about where somebody's money is.
-     */
-    return (
-      <ExpiredLinkCard
-        glyph="cancelled"
-        title={t("booking.cancelledHeading")}
-        text={t("ready.tripCancelledBody")}
-        shop={shopContact}
-        t={t}
-      >
-        <Link href={publicSchedulePath(shop.slug)} className={buttonClass()}>
-          {t("recap.seeWhatsNext")}
-        </Link>
-      </ExpiredLinkCard>
-    );
-  }
 
   /**
    * **After the dive, the same link** (ADR 20260827-the-divers-thread,

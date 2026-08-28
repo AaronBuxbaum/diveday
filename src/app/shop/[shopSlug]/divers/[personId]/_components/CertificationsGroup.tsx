@@ -380,7 +380,7 @@ export function CertificationsGroup({
              takes the record to *silence*, never to "certified". The phrase
              comes from `shared.certificationSummary.notCertified` and is never
              respelled here. */
-          <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <li className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div className="min-w-0">
               <p className="font-medium text-warning-strong">
                 {t("shared.certificationSummary.notCertified")}
@@ -408,26 +408,33 @@ export function CertificationsGroup({
                 {t("divers.certifications.clearNoCertification")}
               </SubmitButton>
             </form>
-          </div>
+          </li>
         ) : null}
         {rows.length === 0 && !noCertificationDeclared ? (
-          <p className="px-5 py-4 text-sm text-muted sm:px-6">{t("divers.certifications.empty")}</p>
+          <li className="px-5 py-4 text-sm text-muted sm:px-6">
+            {t("divers.certifications.empty")}
+          </li>
         ) : null}
         {/* **A correction that leaves no mark is not a correction.** The panel
             above unmounts the moment it succeeds, so without this line the next
             staffer cannot see that this diver ever gave that answer, or that a
             colleague overrode it. */}
         {!noCertificationDeclared && diver.person.noCertificationClearedAt ? (
-          <p className="px-5 py-4 text-sm text-muted sm:px-6">
+          <li className="px-5 py-4 text-sm text-muted sm:px-6">
             {t("divers.certifications.noCertificationClearedNote", {
               date: formatShortDate(diver.person.noCertificationClearedAt, locale, shop.timezone),
               name:
                 diver.noCertificationClearedByName ??
                 t("divers.certifications.noCertificationClearedByUnknown"),
             })}
-          </p>
+          </li>
         ) : null}
-        <div className="px-5 py-3 sm:px-6">
+        {/* `<li>`, not `<div>`: the shell above is a `<ul>`, and a list that
+            directly contains anything but a list item is a serious axe
+            violation (`only-listitems`) — the count a screen reader is given
+            before it starts reading is exactly what stops being true. Every
+            non-row block in this group is one for the same reason. */}
+        <li className="px-5 py-3 sm:px-6">
           <details className="group">
             <summary
               className={buttonClass({
@@ -495,7 +502,7 @@ export function CertificationsGroup({
             </FieldGrid>
           </details>
           <DiverFormStatus status={groupStatus} className="mt-3" />
-        </div>
+        </li>
       </InsetGroup>
     </section>
   );
