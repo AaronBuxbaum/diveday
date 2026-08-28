@@ -127,6 +127,7 @@
   "tapToUndoNotBackAboard": "Tap “Not back aboard” again to undo.",
   "diverFactsSummary": "Contact & gear",
   "notBackAboardListLabel": "Who is not back aboard",
+  "rollCallNoteLabel": "What happened (optional)",
   "stillToCallListLabel": "People still to call",
   "buddySummaryTeams": "{count, plural, =0 {No teams yet} one {# team} other {# teams}}",
   "buddySummaryUnteamed": " · {count, plural, one {# diver not on a team} other {# divers not on a team}}",

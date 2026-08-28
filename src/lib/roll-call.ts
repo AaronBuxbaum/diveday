@@ -70,6 +70,13 @@ export type RollCallRecord = {
    * checkpoint defaults to not boarded until staff say otherwise.
    */
   implied?: boolean;
+  /**
+   * What the crew observed about a person who is unaccounted for — after-dive
+   * checkpoints only (`rollCallNoteAllowed`, ADR
+   * 20260828-a-missing-diver-gets-a-sentence). Absent on every carried-forward
+   * result, which nobody wrote.
+   */
+  note?: string | null;
 };
 
 /**
@@ -90,6 +97,39 @@ export type RollCallRecord = {
  * `isAccountedForAfterDive` there); the two are asserted against each other on
  * one trip in src/db/today.test.ts so they can never drift apart again.
  */
+/**
+ * How long a roll-call note may be. One bound, shared by the form, the two
+ * server actions and the offline queue, so a sentence a crew member could type
+ * into the box can never be the thing a sync refuses.
+ */
+export const ROLL_CALL_NOTE_MAX = 300;
+
+/**
+ * Whether a roll-call event at this checkpoint may carry a note
+ * (ADR 20260828-a-missing-diver-gets-a-sentence).
+ *
+ * **After a dive, and nowhere else.** At the dock `not_boarded` means "never
+ * left", a clerical fact that has never needed a sentence; after a dive it
+ * means "did not come back", which is the one state in the product where a
+ * shop has to be able to say *what happened* and not merely *that it did*. The
+ * two most common real outcomes — "surfaced 200 m north, recovered by Reef
+ * Runner" and "left early, signed out with Marisol" — are both benign, and
+ * without this the printed manifest carried neither.
+ *
+ * It is a checkpoint rule rather than a status rule because the same status
+ * means different things either side of the tap: `boarded` after a dive is both
+ * the ordinary "came back" and the retraction of a stated alarm, and no
+ * (checkpoint, status) pair can tell them apart without re-reading the row. The
+ * surfaces are what narrow it further — the field renders on the exception
+ * control, on its retraction, and on "Mark back aboard", never on an ordinary
+ * boarded tap. This predicate is the floor beneath that: both writers apply it,
+ * so a note posted at departure is dropped rather than written to the
+ * append-only trail.
+ */
+export function rollCallNoteAllowed(checkpoint: RollCallCheckpoint): boolean {
+  return checkpoint !== "departure";
+}
+
 export function isNotBackAboard(
   checkpoint: RollCallCheckpoint,
   rollCall: Pick<RollCallRecord, "state" | "implied"> | undefined,

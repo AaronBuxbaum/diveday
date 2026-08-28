@@ -392,6 +392,25 @@ export type OfflineRollCallEvent = {
    * "took the pre-change path", which the server still accepts.
    */
   retractsClientEventId?: string;
+  /**
+   * What the crew observed about a person who is unaccounted for (ADR
+   * 20260828-a-missing-diver-gets-a-sentence). The whole reason it is queued
+   * here rather than posted as a server action: a diver who did not surface is
+   * precisely the case where the boat is offshore, so the sentence has to
+   * survive the same dry bag the mark does.
+   *
+   * **Additive, and no `OFFLINE_MANIFEST_RECORD_VERSION` bump** — the same
+   * reasoning as `retractsClientEventId` above. The snapshot payload is
+   * untouched, older events parse with this undefined, and the server treats
+   * undefined as "nothing to say". It is kept only at an after-dive checkpoint
+   * (`rollCallNoteAllowed`), which the server re-applies rather than trusting
+   * the device.
+   *
+   * Nullable as well as optional: the fixtures a device wrote before the
+   * field existed and the ones written since are both legitimate, and neither
+   * spelling of "nothing to say" is worth a migration on a queue.
+   */
+  note?: string | null;
   occurredAt: string;
   syncStatus: "pending" | "applied" | "rejected";
   rejectionReason?: string;

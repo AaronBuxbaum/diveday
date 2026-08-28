@@ -212,6 +212,11 @@ export function CrewRollCall({
                             <span className="text-sm text-muted">{member.roles.join(", ")}</span>
                             {capsule}
                           </span>
+                          {rc?.note ? (
+                            // The same line a diver's row carries, on the same
+                            // terms — see DiverRollCall.
+                            <span className="mt-0.5 block text-sm">{rc.note}</span>
+                          ) : null}
                           {supportLine ? (
                             <span className="mt-0.5 block text-sm text-muted">{supportLine}</span>
                           ) : null}

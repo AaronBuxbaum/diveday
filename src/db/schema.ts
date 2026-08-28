@@ -5939,6 +5939,20 @@ export const rollCallEvents = pgTable(
     clientEventId: uuid("client_event_id"),
     /** Which encrypted snapshot supplied the offline readiness evidence. */
     offlineSnapshotSavedAt: timestamp("offline_snapshot_saved_at", { withTimezone: true }),
+    /**
+     * What a crew member observed about a person who is unaccounted for
+     * (ADR 20260828-a-missing-diver-gets-a-sentence). **After-dive checkpoints
+     * only** — `rollCallNoteAllowed` in src/lib/roll-call.ts is the rule, and
+     * both writers apply it, so a note arriving on a departure event is
+     * dropped rather than written. At the dock `not_boarded` means "never
+     * left", which is clerical and has never needed a sentence.
+     *
+     * Written with the event and never edited afterwards: it rides the same
+     * submit as the tap that states the alarm, so the recorded fact and the
+     * observation behind it are one append-only row. `updateLatestRollCallNote`
+     * is deliberately gone.
+     */
+    note: text("note"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /**
@@ -6054,6 +6068,20 @@ export const rollCallCrewEvents = pgTable(
     source: rollCallSource("source").notNull().default("live"),
     /** Device-generated idempotency key. Live events leave this null. */
     clientEventId: uuid("client_event_id"),
+    /**
+     * What a crew member observed about a person who is unaccounted for
+     * (ADR 20260828-a-missing-diver-gets-a-sentence). **After-dive checkpoints
+     * only** — `rollCallNoteAllowed` in src/lib/roll-call.ts is the rule, and
+     * both writers apply it, so a note arriving on a departure event is
+     * dropped rather than written. At the dock `not_boarded` means "never
+     * left", which is clerical and has never needed a sentence.
+     *
+     * Written with the event and never edited afterwards: it rides the same
+     * submit as the tap that states the alarm, so the recorded fact and the
+     * observation behind it are one append-only row. `updateLatestRollCallNote`
+     * is deliberately gone.
+     */
+    note: text("note"),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /**

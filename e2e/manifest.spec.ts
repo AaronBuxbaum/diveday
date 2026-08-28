@@ -745,6 +745,14 @@ test("a checkpoint with every diver counted stays open until the crew are called
   const firstDiverRow = page.locator("#roll-call-list > ul > li").first();
   await openManifestPerson(firstDiverRow);
   const markNotBack = firstDiverRow.getByRole("button", { name: "Mark not back aboard" });
+  // The sentence rides the same submit as the mark (ADR
+  // 20260828-a-missing-diver-gets-a-sentence). What is being pinned is the
+  // pairing: there is no separate save, so nothing can record the alarm and
+  // lose the observation behind it.
+  await firstDiverRow
+    .getByRole("textbox", { name: "What happened (optional)" })
+    .first()
+    .fill("Surfaced 200 m north, picked up by Reef Runner at 14:31.");
   await markNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await markNotBack.click();
   // `exact` matters: without it the substring match resolves against the
@@ -756,6 +764,20 @@ test("a checkpoint with every diver counted stays open until the crew are called
   await expect(page.getByRole("button", { name: "Not boarded ☑️" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Roll call complete 🎉" })).toHaveCount(0);
   await expect(page.getByText(/1 diver is not back aboard/)).toBeVisible();
+  // Read back on the row, so a second crew member arriving at the alarm does
+  // not type the same sentence again.
+  await expect(
+    firstDiverRow.getByText("Surfaced 200 m north, picked up by Reef Runner at 14:31."),
+  ).toBeVisible();
+  // And the panel names who it is about, not just how many. `order-first` is
+  // paint order: it reaches neither a keyboard nor the crew list, so this link
+  // is what actually gets a reader to the row (dive-domain review 20260828).
+  const missingList = progressPanel.getByRole("list", { name: "Who is not back aboard" });
+  await expect(missingList.getByRole("link")).toHaveCount(1);
+  await expect(missingList.getByRole("link").first()).toHaveAttribute(
+    "href",
+    `#${await firstDiverRow.getAttribute("id")}`,
+  );
 
   // DD1. A stated crew emergency must never be hidden behind a clerical diver
   // gap. `rollCallCompleteness` ranks `divers_awaiting` above

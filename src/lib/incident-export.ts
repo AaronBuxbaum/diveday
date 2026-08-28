@@ -234,6 +234,14 @@ export type IncidentTimelineEntry =
       action: "boarded" | "not_boarded" | "cleared";
       source: "live" | "offline";
       recordedByName: string;
+      /**
+       * What the crew observed about a person who was unaccounted for (ADR
+       * 20260828-a-missing-diver-gets-a-sentence). After-dive checkpoints only,
+       * so absent on most entries — and the reason this document can now say
+       * "surfaced 200 m north, recovered by Reef Runner at 14:31" rather than
+       * leaving an investigator an unexplained mark.
+       */
+      note?: string;
     }
   /**
    * One act on a buddy team (ADR 20260804-buddy-teams). Buddy was the only fact
@@ -323,6 +331,8 @@ export type IncidentTimelineEventInput = {
   status: "boarded" | "not_boarded" | "cleared";
   source: "live" | "offline";
   recordedByName: string;
+  /** See `IncidentTimelineEntry.note`. */
+  note?: string | null;
   occurredAt: Date;
   createdAt: Date;
 };
@@ -590,6 +600,10 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
         action: event.status,
         source: event.source,
         recordedByName: event.recordedByName,
+        // Omitted rather than carried as null, so the content hash of a
+        // departure where nobody wrote anything is what it was before the
+        // field existed.
+        ...(event.note ? { note: event.note } : {}),
       } satisfies IncidentTimelineEntry,
       occurredAt: event.occurredAt,
       createdAt: event.createdAt,

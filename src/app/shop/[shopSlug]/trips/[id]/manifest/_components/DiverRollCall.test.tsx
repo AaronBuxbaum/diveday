@@ -326,6 +326,59 @@ describe("a recorded alarm sorts to the top, and paper does not (decision 4)", (
   });
 });
 
+/**
+ * ADR 20260828-a-missing-diver-gets-a-sentence. The note was deleted and came
+ * back narrowed, and the narrowing is the whole decision — so what is pinned is
+ * where the box appears rather than what it looks like.
+ */
+describe("the row offers one place to say what happened, and only where it applies", () => {
+  const noteBoxes = (container: HTMLElement) =>
+    // Not `[name='note']`: the private staff note on the same row posts under
+    // that name too, to a different action.
+    [...container.querySelectorAll<HTMLTextAreaElement>("textarea[data-roll-call-note]")];
+
+  it("offers no box at the dock, where not boarded means never left", () => {
+    const { container } = renderList({
+      checkpoint: "departure",
+      divers: [diver({ bookingId: "b-1" })],
+    });
+    expect(noteBoxes(container)).toHaveLength(0);
+  });
+
+  it("offers exactly one after a dive, on the control about to raise the alarm", () => {
+    const { container } = renderList({ divers: [diver({ bookingId: "b-1" })] });
+    expect(noteBoxes(container)).toHaveLength(1);
+    // Inside the form that posts the mark, so there is no second save to lose
+    // and nothing to mirror to the device.
+    expect(noteBoxes(container)[0]?.closest("form")).not.toBeNull();
+  });
+
+  it("keeps it to one once the alarm stands, on the sighting rather than the undo", () => {
+    // Both controls render on an alarmed row: "Mark back aboard" and the
+    // settled exception control. Two boxes asking one question side by side is
+    // what the rule avoids — the sighting takes it, the `cleared` undo has
+    // nothing to observe.
+    const { container } = renderList({
+      divers: [diver({ bookingId: "b-1", rollCall: notBackAt() })],
+    });
+    expect(noteBoxes(container)).toHaveLength(1);
+  });
+
+  it("shows what was already written, so nobody types it twice", () => {
+    const { container } = renderList({
+      divers: [
+        diver({
+          bookingId: "b-1",
+          rollCall: { ...notBackAt(), note: "Surfaced 200 m north, picked up by Reef Runner." },
+        }),
+      ],
+    });
+    expect(
+      within(container).getByText("Surfaced 200 m north, picked up by Reef Runner."),
+    ).toBeTruthy();
+  });
+});
+
 describe("the person a diver must dive with is checked against this departure", () => {
   /**
    * Issue #1068. "Dives with Omar Haddad" at the rail tells a crew a constraint

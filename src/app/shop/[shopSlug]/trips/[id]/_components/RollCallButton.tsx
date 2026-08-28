@@ -2,6 +2,7 @@
 
 import { type ReactNode, useActionState, useEffect, useRef } from "react";
 import { vibrate } from "@/components/haptics";
+import { controlClass } from "@/components/ui/form";
 
 /**
  * The result a roll-call server action returns instead of redirecting, so the
@@ -64,6 +65,7 @@ export function RollCallButton({
   className,
   formClassName,
   copy,
+  noteField,
   observabilityAction,
 }: {
   action: RollCallAction;
@@ -122,6 +124,19 @@ export function RollCallButton({
    */
   formClassName?: string;
   copy: RollCallButtonCopy;
+  /**
+   * An optional sentence carried on the *same submit* as the tap
+   * (ADR 20260828-a-missing-diver-gets-a-sentence): what the crew observed
+   * about a person who is unaccounted for. Only the three controls that state
+   * or unsay a missing person pass this, and the server keeps it only at an
+   * after-dive checkpoint.
+   *
+   * Inside this form rather than beside it, which is the whole design: there is
+   * no draft to mirror to the device, no second save to lose on a dropped
+   * connection, and no way to edit what a crew recorded afterwards. The
+   * apparatus that tried to do it the other way was deleted for good reason.
+   */
+  noteField?: { name: string; label: string; maxLength: number };
   /** Stable action label used by the app-wide mutation-duration reporter. */
   observabilityAction?: string;
 }) {
@@ -161,6 +176,25 @@ export function RollCallButton({
       <form action={formAction} className={formClassName}>
         <input type="hidden" name={subject.field} value={subject.id} />
         <input type="hidden" name="status" value={status} />
+        {noteField ? (
+          <p className="mb-2">
+            <label htmlFor={`${noteField.name}-${subject.id}-${status}`} className="sr-only">
+              {noteField.label}
+            </label>
+            <textarea
+              id={`${noteField.name}-${subject.id}-${status}`}
+              name={noteField.name}
+              // The one attribute that tells this box apart from the private
+              // staff note a row also carries, which posts under the same
+              // field name to a different action.
+              data-roll-call-note=""
+              rows={2}
+              maxLength={noteField.maxLength}
+              placeholder={noteField.label}
+              className={`${controlClass} text-base`}
+            />
+          </p>
+        ) : null}
         <button
           type="submit"
           disabled={isPending}

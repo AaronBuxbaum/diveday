@@ -542,6 +542,15 @@ export function DiverRollCall({
                           </span>
                           {capsule}
                         </span>
+                        {rc?.note ? (
+                          // What the crew wrote when they recorded this. On the
+                          // row rather than behind the disclosure: a second
+                          // crew member arriving at an alarmed row needs to
+                          // read it before they type the same sentence again,
+                          // and it prints, which is the point of it existing
+                          // (ADR 20260828-a-missing-diver-gets-a-sentence).
+                          <span className="mt-0.5 block text-sm">{rc.note}</span>
+                        ) : null}
                         {supportLine ? (
                           <span className="mt-0.5 block text-sm text-muted">{supportLine}</span>
                         ) : null}

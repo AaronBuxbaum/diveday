@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { controlClass } from "@/components/ui/form";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import { matchLocale } from "@/i18n/negotiate";
@@ -32,6 +33,7 @@ import { cachedFormatter, cachedListFormat } from "@/lib/intl-cache";
 import {
   isNotBackAboard,
   isRollCallCheckpoint,
+  ROLL_CALL_NOTE_MAX,
   type RollCallCheckpoint,
   rollCallCheckpoints,
   rollCallCompleteness,
@@ -224,6 +226,46 @@ type OfflineStatement = Pick<OfflineRollCallEvent, "status" | "retractsClientEve
  * somebody who can see the person. Never a bare `cleared`, which the server
  * would apply blind.
  */
+/**
+ * The box a crew member writes "surfaced 200 m north, picked up by Reef Runner"
+ * into, on the copy they are actually holding when a diver does not come back
+ * (ADR 20260828-a-missing-diver-gets-a-sentence).
+ *
+ * **After a dive only**, matching the live manifest and the server rule: at the
+ * dock `not_boarded` means "never left", which has never needed a sentence. It
+ * sits beneath the row's controls rather than inside the cluster so it claims a
+ * full line at every width, and it is `print:hidden` like every other control
+ * on this surface — what prints is the departure log, not this viewer.
+ */
+function OfflineRollCallNote({
+  subjectId,
+  label,
+  value,
+  onChange,
+}: {
+  subjectId: string;
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <p className="w-full print:hidden">
+      <label htmlFor={`offline-roll-call-note-${subjectId}`} className="sr-only">
+        {label}
+      </label>
+      <textarea
+        id={`offline-roll-call-note-${subjectId}`}
+        rows={2}
+        maxLength={ROLL_CALL_NOTE_MAX}
+        placeholder={label}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={`${controlClass} text-base`}
+      />
+    </p>
+  );
+}
+
 function reTap(
   state: OfflineRollCallResult | undefined,
   active: boolean,
@@ -353,6 +395,20 @@ export function OfflineManifestView() {
    * back off, which must never be the harder direction.
    */
   const [confirmAboardFor, setConfirmAboardFor] = useState<string | null>(null);
+  /**
+   * What the crew is typing about a person who is unaccounted for, keyed by the
+   * booking or person id the row is about (ADR
+   * 20260828-a-missing-diver-gets-a-sentence). It rides the next result queued
+   * for that subject and is cleared with it.
+   *
+   * Ordinary component state, deliberately: the deleted apparatus mirrored a
+   * draft into IndexedDB and cleared it on sync, which is a second store to
+   * keep honest for a box that lives one tap away from the submit that empties
+   * it. Losing an unsent sentence to a reload is the same loss as losing an
+   * unsent one on the live manifest, and the live manifest does not mirror
+   * either.
+   */
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const tripId = useMemo(() => searchParams.get("trip") ?? "", [searchParams]);
   // Freshness (current/aging/stale) is computed inline at render time from
   // `saved.snapshot.savedAt`/`envelope.snapshot.savedAt`, so nothing re-renders
@@ -1054,12 +1110,23 @@ export function OfflineManifestView() {
       setMessage(t("shared.offlineManifest.single.record.expiredCannotRecord"));
       return;
     }
-    setBusyBooking("bookingId" in subject ? subject.bookingId : subject.crewPersonId);
+    const subjectId = "bookingId" in subject ? subject.bookingId : subject.crewPersonId;
+    setBusyBooking(subjectId);
     try {
       const next = await appendOfflineRollCall(tripId, {
         ...subject,
         ...statement,
         checkpoint,
+        // The sentence rides the same queued event as the mark, so there is no
+        // second write to lose offshore. The server keeps it only at an
+        // after-dive checkpoint (`rollCallNoteAllowed`), which is also the only
+        // place the box below renders.
+        note: noteDrafts[subjectId]?.trim() || undefined,
+      });
+      setNoteDrafts((drafts) => {
+        if (!(subjectId in drafts)) return drafts;
+        const { [subjectId]: _sent, ...rest } = drafts;
+        return rest;
       });
       dispatchSaved({ type: "loaded", envelope: next });
       setMessage(t("shared.offlineManifest.single.record.saved"));
@@ -1539,6 +1606,18 @@ export function OfflineManifestView() {
                           </div>
                         )}
                       </div>
+                      {isDeparture || expired || !crewPersonId ? null : (
+                        <div className="mt-2">
+                          <OfflineRollCallNote
+                            subjectId={crewPersonId}
+                            label={t("manifest.rollCallNoteLabel")}
+                            value={noteDrafts[crewPersonId] ?? ""}
+                            onChange={(next) =>
+                              setNoteDrafts((drafts) => ({ ...drafts, [crewPersonId]: next }))
+                            }
+                          />
+                        </div>
+                      )}
                       {/* One line under a not-back-aboard row, and only there:
                         the mark that is loudest is also the one a crew member
                         must be certain they can take straight back off, or
@@ -1917,6 +1996,16 @@ export function OfflineManifestView() {
                                   ? t("shared.offlineManifest.single.markNotBoarded")
                                   : t("shared.offlineManifest.single.markNotBackAboard")}
                           </button>
+                          {isDeparture ? null : (
+                            <OfflineRollCallNote
+                              subjectId={diver.bookingId}
+                              label={t("manifest.rollCallNoteLabel")}
+                              value={noteDrafts[diver.bookingId] ?? ""}
+                              onChange={(next) =>
+                                setNoteDrafts((drafts) => ({ ...drafts, [diver.bookingId]: next }))
+                              }
+                            />
+                          )}
                           {/* Same one line the crew rows carry, on the same
                             terms: the loudest mark on the page states how it
                             comes back off, and while a confirmation is armed

@@ -56,10 +56,13 @@ tamper-evident document. An unexplained missing-diver mark reads far worse than 
    second save to lose, and no way to rewrite what a crew recorded. That was the whole apparatus
    #1058 was right to remove; what it also removed was the sentence.
 
-3. **Three doors, all of them the alarm.** The note field renders on the exception control when it
-   is about to state "not back aboard", on that same control's retraction, and on "Mark back
-   aboard". Never on an ordinary boarded tap — the common case, where everybody came back, stays a
-   single tap with nothing to type.
+3. **One box per row, on whichever control is about to say something new.** While nothing is
+   recorded, the exception control carries it — that control is about to state "not back aboard".
+   Once the alarm stands, "Mark back aboard" renders beside it and takes the box over: that is the
+   positive sighting worth describing, while the exception control's remaining job is `cleared`,
+   which means "nobody said it" — a mis-tap, with nothing to observe. Never on an ordinary boarded
+   tap: the common case, where everybody came back, stays a single tap with nothing to type. Two
+   boxes asking one question, side by side on an alarmed row, is what the rule avoids.
 
 4. **It rides the offline queue and prints.** A diver who did not surface is the case where the
    boat is offshore, so the note is part of the queued offline event, not a server action layered
@@ -79,9 +82,18 @@ tamper-evident document. An unexplained missing-diver mark reads far worse than 
   retention and erasure commitments are explicitly not relaxed by pre-pilot status, and this is the
   same kind of obligation.
 
+5. **It is erasable, and it leaves the shop.** The note is free text about a person, on a row that
+   legitimately survives an erasure — the boarding fact is a safety record, the sentence about the
+   diver is not — so `anonymize.ts` nulls it for the erased person's own bookings and, since a crew
+   member is a person too, for the crew events about them. It rides the shop's CSV export like every
+   other column, and stays out of the per-diver bundle for the reason that bundle already gives:
+   free text on this table can name a *different* diver.
+
 ## Consequences
 
-- Two columns return by migration, having been dropped days earlier. That churn is the honest cost
+- Two columns return by migration, having been dropped days earlier. The erasure sweep and the
+  export column come back with them, which is the half of a restore that is easy to forget: H-02's
+  erasure promise is explicitly one of the things pre-pilot status does not relax. That churn is the honest cost
   of the round trip and is preferable to a shop discovering the gap on the day it matters.
 - `rollCallNoteAllowed` is now the single place the rule lives. A surface that wants to offer the
   field elsewhere has to change the predicate, which is a decision, not a prop.

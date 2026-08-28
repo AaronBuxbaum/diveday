@@ -34,7 +34,9 @@ export {
   isNotBackAboard,
   isRollCallCheckpoint,
   RETRACTION_SUPERSEDED,
+  ROLL_CALL_NOTE_MAX,
   rollCallCheckpoints,
+  rollCallNoteAllowed,
 } from "./roll-call";
 
 /**
