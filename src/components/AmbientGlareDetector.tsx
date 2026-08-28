@@ -163,7 +163,7 @@ const CONTRAST_MODES = ["auto", "standard", "full"] as const;
  * above the track because the handle position alone did not say which stop it
  * was on, and dragging a 1px rail is the wrong target for a wet hand on a
  * moving boat. Each option is now a real 44px button whose pressed state *is*
- * the answer, in the same segmented grammar as `QueueViewSwitch`.
+ * the answer.
  */
 export function AmbientContrastControl({
   copy,

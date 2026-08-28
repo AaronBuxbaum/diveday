@@ -15,7 +15,6 @@
   "src/app/s/[shopSlug]/trips/[id]/_components/TripActions.tsx": 1,
   "src/app/s/[shopSlug]/trips/[id]/page.tsx": 1,
   "src/app/shop/[shopSlug]/_components/SeatDiverPanel.tsx": 4,
-  "src/app/shop/[shopSlug]/_components/today/DepartureBoard.tsx": 1,
   "src/app/shop/[shopSlug]/_components/today/PaymentActionControl.tsx": 1,
   "src/app/shop/[shopSlug]/_components/today/ResendConfirmationControl.tsx": 1,
   "src/app/shop/[shopSlug]/_components/today/WaiverSendControl.tsx": 1,

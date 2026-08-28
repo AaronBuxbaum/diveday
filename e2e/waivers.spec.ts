@@ -599,7 +599,7 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
   // rather than a hunt.
   await expect(page.getByRole("link", { name: "Send them by departure" })).toHaveAttribute(
     "href",
-    /\?view=departures$/,
+    /\/shop\/[a-z0-9-]+$/,
   );
 
   // The current card advances to the next version.

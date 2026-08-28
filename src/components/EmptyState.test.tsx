@@ -49,7 +49,7 @@ describe("EmptyState", () => {
 
   /**
    * One card is its section's accessible name, which is the only reason the id
-   * is exposed at all — `TodayQueue`'s `aria-labelledby="queue-heading"`.
+   * is exposed at all — the day spine's `aria-labelledby="queue-heading"`.
    */
   it("lends its heading an id for a section that names itself by it", () => {
     render(<EmptyState titleId="queue-heading" title="Nothing waiting" />);

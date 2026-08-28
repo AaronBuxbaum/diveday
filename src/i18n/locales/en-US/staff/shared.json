@@ -171,7 +171,6 @@
     "closeOut": "Close-out",
     "closeOutShort": "Close",
     "walkIn": "Walk-in",
-    "blockers": "Not ready",
     "divers": "Divers",
     "board": "Board",
     "addBooking": "Add a booking",
@@ -208,51 +207,11 @@
     "undo": "Undo"
   },
   "today": {
-    "departureBoard": {
-      "crewingBadge": "You’re crewing",
-      "courseSession": "Course session · {title}",
-      "boarding": "Board divers",
-      "openGuests": "Open guests",
-      "assignCrewMemberAria": "Assign crew member to {title}",
-      "assignCrewOption": "Assign crew…",
-      "assignCrewLabel": "Assign crew",
-      "assignFailed": "That didn’t save — recheck your connection or try again.",
-      "boardingSummary": "{aboard} · {ready} · {blocked} · {open}",
-      "boardingAboardOne": "{count} aboard",
-      "boardingAboardOther": "{count} aboard",
-      "boardingReadyOne": "{count} clear to board",
-      "boardingReadyOther": "{count} clear to board",
-      "boardingBlockedOne": "{count} blocked",
-      "boardingBlockedOther": "{count} blocked",
-      "boardingOpenOne": "{count} seat open",
-      "boardingOpenOther": "{count} seats open",
-      "blockedWarningNamed": "{name} cannot board yet — the fix is in the list below.",
-      "unassignAria": "Unassign {name}",
-      "noCrewAssigned": "No crew assigned yet.",
-      "crewLine": "Crew · {names}",
-      "editCrew": "Edit",
-      "blockedWarningOne": "{count} diver cannot board yet — they are in the list below.",
-      "blockedWarningOther": "{count} divers cannot board yet — they are in the list below.",
-      "blockedAboardNamed": "{name} is aboard — {reason}",
-      "blockedAboardOne": "{count} diver is aboard — {reason}",
-      "blockedAboardOther": "{count} divers are aboard — {reason}",
-      "aboardReasonMedical": "a medical hold. A doctor has to sign off, so nobody aboard can clear it.",
-      "aboardReasonCertification": "a certification this dive asks for that we have not seen.",
-      "aboardReasonUnknown": "nothing on file that clears them. An unsigned waiver is no medical declaration.",
-      "aboardReasonPayment": "payment still owed. It is in the list below.",
-      "noneBooked": "No one’s booked yet — share the trip page and they’ll show up here.",
-      "everyoneAboard": "Everyone’s aboard.",
-      "crewRollCallOpen": "Every diver is aboard — the crew roll call is still open.",
-      "clearToBoard": "Everyone booked on this trip is clear to board.",
-      "sailingToday": "Sailing today"
-    },
     "todayQueue": {
       "emptyHeading": "Nothing is waiting on you",
       "emptyBody": "Every diver booked in the next week has their waiver, certifications, and payment in order.",
       "emptyAction": "View the schedule",
-      "needsYouHeading": "Needs you",
       "boatsClear": "Today's boats are all clear 🤙",
-      "itemsCount": "{count, plural, one {# item} other {# items}}",
       "withheldDeskWork": "{count, plural, one {# job for the front desk} other {# jobs for the front desk}}"
     },
     "resendConfirmation": {
@@ -285,12 +244,6 @@
       "readyCount": "{count} ready",
       "blockedCount": "{count} blocked",
       "openRoster": "Open roster"
-    },
-    "urgency": {
-      "imminent": "Next 3 hours",
-      "now": "Within 24 hours",
-      "soon": "Next 3 days",
-      "later": "This week"
     },
     "actionKind": {
       "rollCallMissingDiver": "Missing diver",
@@ -431,12 +384,6 @@
       "openGearUnit": "Open unit record",
       "openStaffing": "Open staffing",
       "openUnits": "Open units"
-    },
-    "summary": {
-      "blocked": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. {blockedToday, plural, =1 {1 diver still can’t board.} other {# divers still can’t board.}}",
-      "clear": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}} — and nothing is waiting on you.",
-      "urgent": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. {urgent, plural, =1 {1 job to clear before they sail.} other {# jobs to clear before they sail.}}",
-      "ahead": "{departures, plural, =0 {No boats out today} =1 {1 departure today} other {# departures today}}. Nothing is urgent; {jobs, plural, =1 {1 job to work ahead.} other {# jobs to work ahead.}}"
     },
     "greeting": {
       "morning": "Good morning, {name}",

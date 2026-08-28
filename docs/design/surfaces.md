@@ -33,26 +33,27 @@ So an entry here is the index; the constraint lives beside the code it constrain
 
 ### The shop home — `/shop/[shopSlug]`
 
-- **One idea:** the work. What needs this shop today, ranked, with the day's boats above it
-  (ADR 20260720-today-work-queue).
-- **The question it arrives with:** "what needs me before the first boat?" — answered on screen, in
-  the queue's first band, without a click.
+- **One idea:** the work. What needs this shop today, in the order the day happens
+  (ADR 20260720-today-work-queue; recomposed by
+  [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
+  decision 4).
+- **The question it arrives with:** "what needs me before the first boat?" — answered on screen, by
+  the summary sentence and the first station's rows, without a click.
 - **Controls that dissolved:** the queue's rows *are* their own controls — each row's own link goes
-  to the thing it is about. The view switch is the one standing control.
+  to the thing it is about — and the urgency/by-departure view switch is gone with the views it
+  chose between. There is no standing control on this page at all.
 - **Remove first:** nothing currently; the orientation card is already conditional on first-run and
   the good-news lines already render nothing when untrue (see
   [settled-questions.md](settled-questions.md)).
-- **Composition:** not the default card stack — a departure board above a ranked queue, because the
-  day's boats and the day's work are two different readings and the first is the shorter list.
+- **Composition:** **the day's spine.** Today's departures are stations in clock order, each owning
+  its time, title, site, hull, crew, price and head count, with its own blockers and chores as
+  ledger rows beneath it; work bound to no boat pools under "At the desk"; tomorrow is a collapsed
+  disclosure and the rest of the week one link to the board. A departure's facts are said once, at
+  its station, instead of once per card.
 
-Enforced beside the code: `RoleOrientationCard.tsx` defers to it by name, and
-`RoleOrientationCard.test.tsx` fails if the orientation box out-ranks the queue.
-
-**Recomposition proposed** — ADR
-[20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
-(Proposed) redraws the same one idea as a chronological spine: stations carry their own work rows,
-so a departure's facts are said once instead of once per card, and the two views become one
-composition. The shipped code governs until that slice ships.
+Enforced beside the code: `DaySpine.tsx` and `DayStation.tsx` defer to the ADR by name,
+`DaySpine.test.tsx` pins the composition (including its silences), and
+`RoleOrientationCard.test.tsx` fails if the orientation box out-ranks the work.
 
 ### The trip page — `/shop/[shopSlug]/trips/[id]`
 

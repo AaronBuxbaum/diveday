@@ -552,6 +552,24 @@ export async function countOpenTripOrders(
 }
 
 /**
+ * Has this shop ever taken an order at all?
+ *
+ * A presence question, so a presence query: one row, `limit 1`, no count and no
+ * window. The day spine's desk group asks it to decide whether to carry the
+ * quiet "payments aren't connected" row — a shop that has taken money some
+ * other way does not need telling (ADR 20260827-first-light, decision 6) — and
+ * that row is on the shop home, which is the most-visited page in the app.
+ */
+export async function shopHasEverTakenAnOrder(db: DbExecutor, shopId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: orders.id })
+    .from(orders)
+    .where(eq(orders.shopId, shopId))
+    .limit(1);
+  return rows.length > 0;
+}
+
+/**
  * How far back the index looks when nobody has said otherwise.
  *
  * The index used to load every invoice the shop had ever raised — the demo's

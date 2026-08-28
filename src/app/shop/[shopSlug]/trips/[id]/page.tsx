@@ -566,7 +566,7 @@ export default async function ManageTripPage({
 
         {/* Who's aboard is manifest accuracy (glossary) — open to all staff.
           Per-person assign/unassign (updateTripCrewAction), the same mutation
-          Today's DepartureBoard uses — not a whole-set replace — so two staff
+          the schedule board uses — not a whole-set replace — so two staff
           editing crew at once can no longer clobber each other (Lens 17 task
           139). */}
         <CrewSection
@@ -589,10 +589,10 @@ export default async function ManageTripPage({
             languageGapNote: cancelled ? null : languageGapNote,
             noStaff: t("trips.crew.noCrew"),
             notAssignedYet: t("trips.crew.notAssignedYet"),
-            assignLabel: t("shared.today.departureBoard.assignCrewLabel"),
-            assignOption: t("shared.today.departureBoard.assignCrewOption"),
-            unassignAria: t.raw("shared.today.departureBoard.unassignAria"),
-            assignFailed: t("shared.today.departureBoard.assignFailed"),
+            assignLabel: t("trips.crew.assignLabel"),
+            assignOption: t("trips.crew.assignOption"),
+            unassignAria: t.raw("trips.crew.unassignAria"),
+            assignFailed: t("trips.crew.assignFailed"),
             roleAria: t.raw("trips.crew.roleAria"),
             roleUnspecified: t("trips.crew.roleUnspecified"),
             roleOptions: {

@@ -198,15 +198,6 @@ const ICON_PATHS: Partial<Record<StaffDestinationId, ReactNode>> = {
       <path d="M9 12h6" />
     </>
   ),
-  // Not ready: a departure with something still open on it — a triangle of
-  // attention over the day it belongs to.
-  blockers: (
-    <>
-      <path d="M10.3 4.3 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0Z" />
-      <path d="M12 10v4" />
-      <path d="M12 17.5h.01" />
-    </>
-  ),
   // Add a booking: a seat taken on a boat — the plus that fills one.
   addBooking: (
     <>

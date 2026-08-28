@@ -1955,8 +1955,8 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * The seeded demo shop's Today queue never runs dry, so the shared
-       * `EmptyState` card TodayQueue now renders when nothing needs attention
+       * The seeded demo shop's day spine never runs dry, so the shared
+       * `EmptyState` card the spine renders when nothing needs attention
        * (docs/design/principles.md, terminal-vs-section empty states) has no
        * other baseline. A freshly onboarded shop is the real "empty queue"
        * scenario — same flow as e2e/onboard.spec.ts's first-run checklist test.
@@ -2016,20 +2016,12 @@ for (const scheme of ["light", "dark"] as const) {
         );
         await capture(page, "today-empty", scheme);
 
-        // **The same nothing, seen the other way.** `BlockerGroups` renders its
-        // own `EmptyState` whenever `trips.length === 0`, and a shop this new
-        // has no departures at all — which is the only way to reach that branch
-        // without emptying a seeded shop's queue. It had no capture of any
-        // width: the `blockers` baseline is shot against blue-mantis, whose
-        // queue always has blocked divers, so PR #595 could delete
-        // `emptyDescription` and reword `truncated` with 30 surfaces changed
-        // and not one of them this one (issue #616).
-        //
-        // Free to take here: the shop, the session and the page are already
-        // built, so this is one navigation rather than another onboarding.
-        await page.goto(`/shop/${unique}?view=departures`);
-        await page.getByRole("heading", { name: "Every boat is boarding-ready" }).waitFor();
-        await capture(page, "today-empty-departures", scheme);
+        // **`today-empty-departures` retired here**, with the by-departure view
+        // it photographed: that capture existed to catch `BlockerGroups`'s own
+        // `EmptyState`, and both are gone (ADR
+        // 20260827-clearwater-surface-language, decision 4). The one empty
+        // state left on this page is the spine's, which `today-empty` above
+        // already frames.
 
         // **The page this shop is told to paste on its website.** Step 4 of the
         // checklist above hands over this URL, and nothing had ever
@@ -2218,7 +2210,7 @@ for (const scheme of ["light", "dark"] as const) {
     test.describe("staff", () => {
       signedInAsOwner();
 
-      test(`the Today queue renders true to the design (${scheme})`, async ({ page }) => {
+      test(`the day spine renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis");
         await page
           .getByRole("heading", { name: /Good (morning|afternoon|evening|night), Dana/ })
@@ -2227,13 +2219,13 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **The departure card once a blocked diver is on the boat.**
+       * **A station once a blocked diver is on the boat.**
        *
-       * The card's aboard line says what the blocker *is* — a medical hold, a
+       * The station's aboard line says what the blocker *is* — a medical hold, a
        * certification this dive asks for, an unsigned waiver, money owed — and
        * one line per kind, because a count is a census and a reason is not
        * (issue #791). Nothing had ever photographed it: the seeded shop starts
-       * with nobody boarded, so every capture of this card saw the *ashore*
+       * with nobody boarded, so every capture of this surface saw the *ashore*
        * sentence, and the one a crew reads at the rail with the gate already
        * behind somebody was never looked at.
        *
@@ -2242,11 +2234,11 @@ for (const scheme of ["light", "dark"] as const) {
        * schedule before the next test, which is what makes it safe to board her
        * here.
        */
-      test(`the departure card names a blocker aboard (${scheme})`, async ({ page, request }) => {
+      test(`a station names a blocker aboard (${scheme})`, async ({ page, request }) => {
         // **Through the trouble-states route, because it cannot be clicked.**
         // The departure checkpoint offers a blocked diver no boarding button —
         // that is the app's gate — and the after-dive head count writes a
-        // different checkpoint than this card reads. In production the state
+        // different checkpoint than the station reads. In production the state
         // arises the other way round: a diver boards while clear and *then*
         // becomes blocked, because readiness is evaluated live.
         await request.post("/api/test/seed-trouble-states?blockedAboard=1");
@@ -2262,11 +2254,12 @@ for (const scheme of ["light", "dark"] as const) {
        *
        * Every diver-shaped signal on this page says the day is going
        * perfectly, and a named crew member has no result — so somebody may be
-       * on the dock, or in the water. The card used to celebrate here (issue
-       * #789); the line it shows instead is warning-toned, and a warning
-       * nothing has photographed is one nobody has looked at.
+       * on the dock, or in the water. The departure card the station replaced
+       * used to celebrate here (issue #789); the line it shows instead is
+       * warning-toned, and a warning nothing has photographed is one nobody has
+       * looked at.
        */
-      test(`the departure card holds back the confetti for an uncounted crew (${scheme})`, async ({
+      test(`a station holds back the confetti for an uncounted crew (${scheme})`, async ({
         page,
         request,
       }) => {
@@ -2308,36 +2301,13 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "nav-more-sheet", scheme);
       });
 
-      // The blocker queue — until recently the one staff surface with no
-      // baseline at all, because a flat unpaginated list of every blocked
-      // diver across every upcoming departure rendered a ~10,700px page
-      // nothing could capture sanely (the same shape the orders index was
-      // found in). Two bounds now: the shared operational horizon decides
-      // which departures it holds, the pager how many render at once.
-      //
-      // It is Today's by-departure *view* rather than a route of its own
-      // since Not ready folded into the shop home, so this navigates through
-      // the redirect the old URL still serves and keeps the `blockers`
-      // capture name.
-      //
-      // **Two of this view's three states are photographed; `truncated` is
-      // deliberately the one that is not** (issue #616). Its empty state is
-      // covered by `today-empty-departures`, which rides the fresh shop the
-      // first-run capture already onboards and costs a navigation. `truncated`
-      // is only true above `OPERATIONAL_MAX_TRIPS` (60,
-      // `src/lib/operational-window.ts`) departures *all* inside the
-      // operational horizon, so covering it means seeding sixty-one boats for
-      // one line of text — a slow fixture, paid on every visual run of both
-      // schemes, to guard a sentence with no layout of its own. If that line
-      // grows a control or a count, seed it then; until it does, the cost is
-      // the wrong way round and this comment is the record of that call.
-      test(`the by-departure "Not ready" view renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        await page.goto("/shop/blue-mantis/blockers");
-        await page.getByRole("heading", { name: "Not ready", level: 2 }).waitFor();
-        await capture(page, "blockers", scheme);
-      });
+      // **The `blockers` capture retired with its surface.** It photographed
+      // Today's by-departure view, reached through the `/blockers` redirect;
+      // the shop home is one chronological spine now and that view no longer
+      // exists to shoot (ADR 20260827-clearwater-surface-language, decision 4).
+      // Every blocked diver it used to frame is a row on their boat's station
+      // in the `today` capture above, and `day-spine.spec.ts` holds the
+      // redirect to a single hop.
 
       // Counter mode itself — the third surface reading the shared
       // operational window (task 141). Only its walk-in sub-page had a

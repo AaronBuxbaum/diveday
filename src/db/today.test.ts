@@ -4,7 +4,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { groupActions } from "@/lib/today";
+import { sortStationRows } from "@/lib/today";
 import { dbNowPlus, seededShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking, createBookingParty } from "./bookings";
@@ -1530,7 +1530,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       // and it must never be worded as an unfinished count.
       expect(rollCallRows(work, trip.id)).toHaveLength(1);
       // It outranks everything else on the queue, whatever else is due today.
-      const [first] = groupActions(work.actions)[0]?.actions ?? [];
+      const [first] = sortStationRows(work.actions);
       expect(first?.id).toBe(row?.id);
     });
 
@@ -1806,7 +1806,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       // worded as a diver problem.
       expect(rollCallRow(work, trip.id, "missing_diver")).toBeUndefined();
       // And it leads the queue, exactly as the diver row does.
-      const [first] = groupActions(work.actions)[0]?.actions ?? [];
+      const [first] = sortStationRows(work.actions);
       expect(first?.id).toBe(row?.id);
     });
 
@@ -2269,7 +2269,7 @@ describe("unclosed roll call (DOM-H3)", () => {
         "roll_call_departure_open",
         "roll_call_unfinished",
       ]);
-      const [first] = groupActions(work.actions)[0]?.actions ?? [];
+      const [first] = sortStationRows(work.actions);
       expect(first?.kind).toBe("roll_call_unfinished");
     });
 
@@ -2378,7 +2378,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       await boardAtDeparture(db, { shopId: shop.id, tripId: trip.id, staffId, bookingIds });
 
       const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-      const [first] = groupActions(work.actions)[0]?.actions ?? [];
+      const [first] = sortStationRows(work.actions);
 
       expect(first?.id).toBe(`roll-call:${trip.id}:after_dive_uncounted:after_dive_1`);
       expect(first?.href.startsWith(`/shop/${shop.slug}/`)).toBe(true);

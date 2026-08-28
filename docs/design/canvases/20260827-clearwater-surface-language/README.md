@@ -87,7 +87,7 @@ bodies, with their pins and owner-call dependencies, are in
 | --- | --- | --- | --- |
 | 6a — the language mechanics | shipped | `src/components/ui/ledger.tsx` | `src/components/ui/ledger.test.tsx` |
 | 6b — one chrome spec | shipped | `src/components/chrome/ChromeBar.tsx` | `src/components/chrome/chrome.test.ts`, `src/components/PublicShopNav.test.tsx`, `scripts/check-critical-text.mjs`, `e2e/schedule-builder.spec.ts` |
-| 6c — the home as the day's spine | open | — | — |
+| 6c — the home as the day's spine | shipped | `src/app/shop/[shopSlug]/_components/today/DaySpine.tsx` | `src/app/shop/[shopSlug]/_components/today/DaySpine.test.tsx` |
 | 6d — the home's evening reading and the fold (H-62) | open | — | — |
 | 6e — the week board | open | — | — |
 | 6f — the orders day ledger | open | — | — |

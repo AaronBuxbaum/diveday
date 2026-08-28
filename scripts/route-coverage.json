@@ -167,8 +167,8 @@
   },
   "/shop/[shopSlug]": {
     "e2e": [
-      "blockers.spec.ts",
       "boat-loop.spec.ts",
+      "day-spine.spec.ts",
       "first-ten-minutes.spec.ts",
       "last-minute-fill.spec.ts",
       "onboard.spec.ts",
@@ -180,12 +180,10 @@
       "tenant-isolation.spec.ts"
     ],
     "visual": [
-      "blockers",
       "nav-more-menu",
       "nav-more-sheet",
       "today",
       "today-empty",
-      "today-empty-departures",
       "today-first-bookable",
       "today-orientation-line"
     ],

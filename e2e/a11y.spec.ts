@@ -402,15 +402,12 @@ test.describe("automated accessibility scans of the static staff routes", () => 
     // 7 scans at ~3.5s each, plus the sign-in state and first cold render.
     test.setTimeout(90_000);
     await scanStaticRoutes(page, [
-      // Today, in both of its views. `/blockers` is a permanent redirect to
-      // `?view=departures` now (ADR 20260803-not-ready-is-a-view), so this
-      // scans the by-departure queue through the URL staff bookmarks — same
-      // greeting `<h1>`, a completely different body.
+      // Today, which is now one composition rather than two views of one
+      // (ADR 20260827-clearwater-surface-language, decision 4) — so the second
+      // scan this list used to carry, of `/blockers`'s by-departure body, is
+      // gone with the body. `/blockers` still redirects here, and
+      // `day-spine.spec.ts` holds it to a single hop.
       { path: "/shop/blue-mantis", heading: /Good (morning|afternoon|evening|night), Dana/ },
-      {
-        path: "/shop/blue-mantis/blockers",
-        heading: /Good (morning|afternoon|evening|night), Dana/,
-      },
       { path: "/shop/blue-mantis/check-in", heading: "Counter check-in" },
       { path: "/shop/blue-mantis/check-in/walk-in", heading: "Walk-in" },
       { path: "/shop/blue-mantis/schedule/board", heading: "Board" },

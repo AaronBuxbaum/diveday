@@ -22,6 +22,46 @@ by-departure view's seat capsule and the departure board's crew chips are quiet 
 settled, with the `settle-in` keyframe firing only on a client-side false→true transition and never
 on first paint. The visual baseline moved app-wide, which is the slice's whole point.
 
+## The shop home is the day's spine (delivered 2026-08-28)
+
+Slice 6c of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
+(decision 4). `/shop/[shopSlug]` had two views over one set of evidence — ranked by urgency, or
+grouped by the departure each job held up — chosen by `?view=` and switched by a control on the
+queue, and between them they rendered one departure's title eight times down twelve near-identical
+cards. Both views are gone. Today's departures are **stations on a chronological spine**: each owns
+its time, title, site, hull, crew, price and head count, and carries its own blockers and chores as
+ledger rows ranked danger → warning → quiet with the one fix beside each. Work bound to no boat
+pools under **At the desk**; tomorrow is a collapsed disclosure whose body reuses the station
+renderer, and the rest of the week is one link to the board. A day with no boats and nothing waiting
+collapses to a heading, one sentence and the one act.
+
+Nothing about *what counts as work* moved: `assembleDaySpine` (`src/lib/today.ts`) is a pure
+re-filing of the queue `getTodayWork` already ranked — a `tripId` picks the station, its absence
+picks the desk — and tomorrow comes from a second bounded read of the next shop-day sharing the same
+readiness pass, never a widened window. `DepartureSummary` gained the station's three meta facts
+(dive site, boat, price) in that one departures pass. The role lens survives: rows arrive
+pre-filtered, the withheld line keeps its place under the summary sentence, `YourSessions` is its
+own labeled group — and `leadWithCrewed` is gone, because clock order now wins for every reader.
+Both good-news moments still render on their exact conditions and nothing at all otherwise, and the
+morning all-clear line is the surface's one coral element.
+
+On the phone a work row stacks, because that is the only width where it has to: the kind and the
+fix share the first line and the sentence takes the width beneath them (`LedgerRow`'s new opt-in
+`stacked`, the `TodayPhone` artboard's reading). Unstacked, at 390px, the desk's sentences had about
+80px to wrap in and ran six lines deep. Nothing else opts in — a row that carries a name and a state
+rather than a sentence reads better on one line at every width.
+
+`?view=` (and its `?page=`) 308 to the bare home from the edge, `/shop/[shopSlug]/blockers` 308s
+there in a single hop, the "Not ready" staff destination is gone rather than pointing at Today's own
+URL, and the first-run setup checklist re-expressed as a ledger group with exactly one open step
+carrying the page's one primary. `TodayQueue`, `BlockerGroups`, `DepartureBoard`, `UrgencyBand`,
+`QueueViewSwitch`, `getBlockerQueue` and the by-departure grouping helpers are deleted, and so are
+the things that only they had used: the in-memory `pageOf` and its `BLOCKERS_TRIPS_PER_PAGE`, the
+`blockers` waiver-send and analytics surface, and five orphaned message keys in both locales.
+`DaySpine.test.tsx` carries every assertion they held. Two other emoji left the page with the
+recomposition, per the coral budget's one-word-mark rule: the 🎉 on "your shop is bookable" and the
+🤿 on the demo-reset notice. The 🤙 on the morning all-clear line stays, and a test says so.
+
 ## One chrome spec — both shells wear the same bar (delivered 2026-08-28)
 
 Slice 6b of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)

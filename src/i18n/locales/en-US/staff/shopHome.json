@@ -11,16 +11,15 @@
     "series": "“{title}” is on the board — {count, plural, one {# trip} other {# trips}} scheduled. 🤙"
   },
   "firstBookable": {
-    "heading": "“{title}” is on the board — your shop is bookable. 🎉",
-    "headingSeries": "“{title}” is on the board — {count, plural, one {# trip} other {# trips}} scheduled, and your shop is bookable. 🎉",
+    "heading": "“{title}” is on the board — your shop is bookable.",
+    "headingSeries": "“{title}” is on the board — {count, plural, one {# trip} other {# trips}} scheduled, and your shop is bookable.",
     "body": "This link is your public schedule — the page divers book from. Put it on your website, your socials, and wherever divers find you.",
     "linkLabel": "Your booking link",
     "viewAsDiver": "See it the way your divers will"
   },
-  "demoReset": "Demo data reset — fresh boat, clean slate. 🤿",
+  "demoReset": "Demo data reset — fresh boat, clean slate.",
   "emailResent": "Confirmation email re-sent.",
   "emailFailed": "That email still couldn’t be sent — check the address and email configuration.",
-  "crewingBoat": "You’re crewing the {time} {title}.",
   "offlineLabel": "Offline — this board may be out of date",
   "nextDeparture": "Next up is <link>{title}</link> on {date} at {time}.",
   "noDeparturesEmpty": "Nothing is on the books yet. Schedule a trip and it will show up here the morning it sails.",
@@ -62,8 +61,8 @@
       },
       "divemaster": {
         "title": "Getting divers ready to board",
-        "desc": "Not ready lists everyone who can't board yet, with the one tap that fixes each one.",
-        "tryThis": "Open Not ready to see who still needs prep."
+        "desc": "Today lists every diver who can’t board yet, with the one tap that fixes each one.",
+        "tryThis": "Open Today to see who still needs prep."
       },
       "captain": {
         "title": "Running the boat",
@@ -113,9 +112,31 @@
     "unitsFeet": "feet",
     "unitsMeters": "metres"
   },
-  "queueView": {
-    "label": "How to read the queue",
-    "byUrgency": "By urgency",
-    "byDeparture": "By departure"
+  "spine": {
+    "summaryBoats": "{count, plural, one {# boat today.} other {# boats today.}}",
+    "summaryNext": "{count, plural, =0 {Nothing needs you before the {time} leaves the dock.} one {# thing needs you before the {time} leaves the dock.} other {# things need you before the {time} leaves the dock.}}",
+    "summaryAfter": "{count, plural, =0 {Nothing is waiting on you.} one {# thing still needs you.} other {# things still need you.}}",
+    "quietHeading": "A quiet day at the dock.",
+    "quietSentence": "No boats today, and nothing is waiting on you.",
+    "deskLabel": "At the desk",
+    "deskPaymentsRow": "Payments aren’t connected — divers can book, and pay at the counter.",
+    "deskPaymentsAction": "Open payment settings",
+    "tomorrow": "Tomorrow · {date}",
+    "week": "This week",
+    "openBoard": "Open the board",
+    "departures": "{count, plural, one {# departure} other {# departures}}",
+    "jobs": "{count, plural, one {# job} other {# jobs}}",
+    "spotsOpen": "{count, plural, one {# spot open} other {# spots open}}",
+    "full": "Full",
+    "ofCapacity": "of {capacity}",
+    "until": "until {time}",
+    "crewing": "You’re crewing",
+    "aboardNamed": "{name} is aboard — {reason}",
+    "aboardCount": "{count, plural, one {# diver is aboard — {reason}} other {# divers are aboard — {reason}}}",
+    "aboardReasonMedical": "a medical hold. A doctor has to sign off, so nobody aboard can clear it.",
+    "aboardReasonCertification": "a certification this dive asks for that we have not seen.",
+    "aboardReasonUnknown": "nothing on file that clears them. An unsigned waiver is no medical declaration.",
+    "aboardReasonPayment": "payment still owed. It is in the list below.",
+    "crewRollCallOpen": "Every diver is aboard — the crew roll call is still open."
   }
 }

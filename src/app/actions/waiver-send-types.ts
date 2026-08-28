@@ -9,7 +9,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
  */
 
 /** Where the send happened, so the right route is revalidated after it lands. */
-export type WaiverSendSurface = "today" | "blockers" | "check_in" | "roster" | "diver";
+export type WaiverSendSurface = "today" | "check_in" | "roster" | "diver";
 
 /**
  * Which way the shop asked DiveDay to hand the link over. Structurally the same

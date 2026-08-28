@@ -192,7 +192,11 @@
     "roleInstructor": "Instructor",
     "roleDivemaster": "Divemaster",
     "roleCaptain": "Captain",
-    "roleCrew": "Deck crew"
+    "roleCrew": "Deck crew",
+    "assignLabel": "Assign crew",
+    "assignOption": "Assign crew…",
+    "unassignAria": "Unassign {name}",
+    "assignFailed": "That didn’t save — recheck your connection or try again."
   },
   "recapNote": {
     "heading": "Post-trip recap note",

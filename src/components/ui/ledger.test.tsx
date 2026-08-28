@@ -264,6 +264,51 @@ describe("LedgerRow", () => {
     );
   });
 
+  it("gives the sentence its own line below sm, and one line from sm up", () => {
+    // The phone reading the `TodayPhone` artboard draws: the kind and the fix
+    // share the first line, the sentence takes the width beneath them. It is a
+    // *layout* fact, so the classes are the assertion — jsdom has no viewport
+    // to resolve a breakpoint against, and a screenshot would pin pixels
+    // instead of the rule.
+    const { container } = render(
+      <LedgerRow
+        as="div"
+        stacked
+        kind={{ word: "Waiver", tone: "warning" }}
+        trailing={<span>Send waiver</span>}
+      >
+        <p>Priya Sharma hasn’t been sent hers.</p>
+      </LedgerRow>,
+    );
+    const row = container.firstElementChild as HTMLElement;
+    expect(row).toHaveClass("max-sm:flex-wrap");
+    const sentence = screen.getByText("Priya Sharma hasn’t been sent hers.")
+      .parentElement as HTMLElement;
+    // Full width on its own line below sm — and every one of these is a
+    // `max-sm:` class, so from sm up the row is the row it always was.
+    expect(sentence).toHaveClass("max-sm:basis-full", "max-sm:order-3", "flex-1");
+    expect(screen.getByText("Send waiver").parentElement).toHaveClass(
+      "max-sm:order-2",
+      "max-sm:ms-auto",
+    );
+  });
+
+  it("stays one line when a row is not stacked — the default is unchanged", () => {
+    const { container } = render(
+      <LedgerRow as="div" kind={{ word: "Waiver", tone: "warning" }}>
+        <p>Priya Sharma</p>
+      </LedgerRow>,
+    );
+    const row = container.firstElementChild as HTMLElement;
+    expect(row).not.toHaveClass("flex-wrap");
+    // `border-border` contains the substring "order-", so ask the classes,
+    // never the string.
+    const ordered = [...row.querySelectorAll("*")].filter((node) =>
+      [...node.classList].some((name) => /^(?:max-sm:)?order-/.test(name)),
+    );
+    expect(ordered).toHaveLength(0);
+  });
+
   it("renders no link at all when the row is not a door", () => {
     // The silence matters: a row that carries its own fix must not also be
     // wrapped in an overlay that swallows the tap.

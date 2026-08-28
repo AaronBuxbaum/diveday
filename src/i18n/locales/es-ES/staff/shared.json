@@ -171,7 +171,6 @@
     "closeOut": "Cierre del día",
     "closeOutShort": "Cierre",
     "walkIn": "Walk-in",
-    "blockers": "No listos",
     "divers": "Buceadores",
     "board": "Tablero",
     "addBooking": "Añadir una reserva",
@@ -208,51 +207,11 @@
     "undo": "Deshacer"
   },
   "today": {
-    "departureBoard": {
-      "crewingBadge": "Formas parte de la tripulación",
-      "courseSession": "Sesión de curso · {title}",
-      "boarding": "Embarcar buceadores",
-      "openGuests": "Ver invitados",
-      "assignCrewMemberAria": "Asignar tripulante a {title}",
-      "assignCrewOption": "Asignar tripulante…",
-      "assignCrewLabel": "Asignar tripulante",
-      "assignFailed": "No se ha guardado — verifica tu conexión o inténtalo de nuevo.",
-      "boardingSummary": "{aboard} · {ready} · {blocked} · {open}",
-      "boardingAboardOne": "{count} a bordo",
-      "boardingAboardOther": "{count} a bordo",
-      "boardingReadyOne": "{count} listo para embarcar",
-      "boardingReadyOther": "{count} listos para embarcar",
-      "boardingBlockedOne": "{count} bloqueado",
-      "boardingBlockedOther": "{count} bloqueados",
-      "boardingOpenOne": "{count} plaza libre",
-      "boardingOpenOther": "{count} plazas libres",
-      "blockedWarningNamed": "{name} todavía no puede embarcar — la solución está en la lista de abajo.",
-      "unassignAria": "Quitar a {name}",
-      "noCrewAssigned": "Todavía no hay tripulación asignada.",
-      "crewLine": "Tripulación · {names}",
-      "editCrew": "Editar",
-      "blockedWarningOne": "{count} buceador todavía no puede embarcar — está en la lista de abajo.",
-      "blockedWarningOther": "{count} buceadores todavía no pueden embarcar — están en la lista de abajo.",
-      "blockedAboardNamed": "{name} está a bordo — {reason}",
-      "blockedAboardOne": "{count} buceador está a bordo — {reason}",
-      "blockedAboardOther": "{count} buceadores están a bordo — {reason}",
-      "aboardReasonMedical": "hay una respuesta médica que un médico tiene que autorizar; nadie a bordo puede darla por buena.",
-      "aboardReasonCertification": "falta una certificación que esta inmersión pide y que no hemos visto.",
-      "aboardReasonUnknown": "no hay nada en la ficha que lo autorice. Sin exención firmada no hay declaración médica.",
-      "aboardReasonPayment": "queda un pago pendiente. Está en la lista de abajo.",
-      "noneBooked": "Todavía nadie ha reservado — comparte la página de la salida y aparecerán aquí.",
-      "everyoneAboard": "Todos a bordo.",
-      "crewRollCallOpen": "Todos los buceadores están a bordo: falta pasar lista a la tripulación.",
-      "clearToBoard": "Todos los de esta salida están listos para embarcar.",
-      "sailingToday": "Sale hoy"
-    },
     "todayQueue": {
       "emptyHeading": "No hay nada pendiente para ti",
       "emptyBody": "Todos los buceadores reservados en la próxima semana tienen en orden su exención, sus certificaciones y su pago.",
       "emptyAction": "Ver el calendario",
-      "needsYouHeading": "Necesita tu atención",
       "boatsClear": "Las salidas de hoy están todas despejadas 🤙",
-      "itemsCount": "{count, plural, one {# tarea} other {# tareas}}",
       "withheldDeskWork": "{count, plural, one {# tarea para recepción} other {# tareas para recepción}}"
     },
     "resendConfirmation": {
@@ -285,12 +244,6 @@
       "readyCount": "{count, plural, one {# listo} other {# listos}}",
       "blockedCount": "{count, plural, one {# bloqueado} other {# bloqueados}}",
       "openRoster": "Ver lista"
-    },
-    "urgency": {
-      "imminent": "Próximas 3 horas",
-      "now": "En las próximas 24 horas",
-      "soon": "Próximos 3 días",
-      "later": "Esta semana"
     },
     "actionKind": {
       "rollCallMissingDiver": "Buceador sin localizar",
@@ -431,12 +384,6 @@
       "openGearUnit": "Abrir ficha de la unidad",
       "openStaffing": "Abrir personal",
       "openUnits": "Abrir unidades"
-    },
-    "summary": {
-      "blocked": "{departures, plural, =0 {Hoy no sale ningún barco} =1 {1 salida hoy} other {# salidas hoy}}. {blockedToday, plural, =1 {1 buceador todavía no puede embarcar.} other {# buceadores todavía no pueden embarcar.}}",
-      "clear": "{departures, plural, =0 {Hoy no sale ningún barco} =1 {1 salida hoy} other {# salidas hoy}} — y no tienes nada pendiente.",
-      "urgent": "{departures, plural, =0 {Hoy no sale ningún barco} =1 {1 salida hoy} other {# salidas hoy}}. {urgent, plural, =1 {1 tarea por resolver antes de zarpar.} other {# tareas por resolver antes de zarpar.}}",
-      "ahead": "{departures, plural, =0 {Hoy no sale ningún barco} =1 {1 salida hoy} other {# salidas hoy}}. Nada es urgente; {jobs, plural, =1 {1 tarea para adelantar.} other {# tareas para adelantar.}}"
     },
     "greeting": {
       "morning": "Buenos días, {name}",

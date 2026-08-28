@@ -18,12 +18,21 @@ test.describe("as captain", () => {
     // The cached session (signedInAs) carries cookies but never navigates —
     // land on Today ourselves, same as the live sign-in flow used to.
     await page.goto("/shop/blue-mantis");
-    // The seed assigns the captain to today's charter, so their boat is badged
-    // and the greeting names it.
+    // The seed assigns the captain to today's charter, so their station wears
+    // the one badge a station may wear. It is **not** moved up the spine for
+    // them: clock order wins for every reader (ADR
+    // 20260827-clearwater-surface-language, decision 4).
     await expect(page.getByText("You’re crewing", { exact: false }).first()).toBeVisible();
-    await expect(page.getByRole("link", { name: "Board divers" }).first()).toBeVisible();
+    // The stations themselves read in clock order, ascending, whoever is
+    // looking — the badge marks the boat, it never moves it up the spine.
+    const stamps = await page
+      .locator("ol > li time")
+      .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("datetime") ?? ""));
+    expect(stamps.length).toBeGreaterThan(0);
+    expect(stamps).toEqual([...stamps].sort());
 
-    // A captain's action queue withholds clerical and commercial rows
+    // A captain's station rows withhold clerical and commercial work, and the
+    // withheld line keeps its place under the summary sentence.
     await expect(page.getByText(/jobs? for the front desk/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Send waiver" })).toHaveCount(0);
   });
@@ -49,12 +58,10 @@ test.describe("as instructor", () => {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis");
+    // Its own labeled group, between the summary sentence and the first
+    // station — not a stack of sunken cards.
     await expect(page.getByRole("heading", { name: "Your sessions" })).toBeVisible();
-    const firstSession = page
-      .locator("section", { has: page.getByRole("heading", { name: "Your sessions" }) })
-      .getByRole("link", { name: "Open roster" })
-      .first();
-    await expect(firstSession).toBeVisible();
+    await expect(page.getByRole("link", { name: "Open roster" }).first()).toBeVisible();
   });
 });
 
@@ -71,5 +78,8 @@ test.describe("as owner", () => {
     await expect(page.getByRole("heading", { name: "Your sessions" })).toHaveCount(0);
     await expect(page.getByText("You’re crewing")).toHaveCount(0);
     await expect(page.getByText(/jobs? for the front desk/)).toHaveCount(0);
+    // And no view control, on any lens: the two views the switch chose between
+    // are gone, and the clock decides the order.
+    await expect(page.getByRole("navigation", { name: "How to read the queue" })).toHaveCount(0);
   });
 });

@@ -245,6 +245,18 @@ type LedgerRowDoor = { href: string; linkLabel: string } | { href?: never; linkL
  *
  * The hairline is `border-t` plus a `last:border-b`, so a group closes itself
  * without any row having to know it is last.
+ *
+ * **`stacked` is the phone reading of a row that carries a whole sentence**
+ * (ADR 20260827-clearwater-surface-language; the `TodayPhone` artboard draws
+ * it). One line holds the kind and the fix, and the sentence takes the full
+ * width beneath them — because at 390px a kind word, a sentence and a named
+ * fix on one line leave the sentence about 80px to wrap in, which is where the
+ * day spine's desk rows first ran six lines deep. Every class it adds is a
+ * `max-sm:` one, so from `sm` up an opted-in row is byte-for-byte the row it
+ * always was. It is opt-in rather than the default because a row whose content
+ * is a name and a state (the counter's queue, the gear register) reads better
+ * on one line at every width, and changing those would be restyling surfaces
+ * this decision has not reached yet.
  */
 export function LedgerRow({
   leading,
@@ -254,6 +266,7 @@ export function LedgerRow({
   href,
   linkLabel,
   size = "md",
+  stacked = false,
   as: Tag = "li",
   className = "",
 }: {
@@ -267,6 +280,8 @@ export function LedgerRow({
   trailing?: ReactNode;
   /** `lg` (min-h-14) for the counter's queue and the horizon rows. */
   size?: "md" | "lg";
+  /** Below `sm`, drop the sentence to its own full-width line. See above. */
+  stacked?: boolean;
   as?: "li" | "div";
   className?: string;
 } & LedgerRowDoor) {
@@ -274,14 +289,37 @@ export function LedgerRow({
     <Tag
       className={`relative flex items-center gap-3 border-t border-border last:border-b ${
         size === "lg" ? "min-h-14" : "min-h-12"
-      } ${href ? "transition-colors hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""} ${className}`
+      } ${stacked ? "max-sm:flex-wrap max-sm:py-2" : ""} ${href ? "transition-colors hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""} ${className}`
         .replace(/\s+/g, " ")
         .trim()}
     >
       {leading != null ? <span className="shrink-0">{leading}</span> : null}
-      {kind ? <RowKind word={kind.word} tone={kind.tone} className="min-w-23" /> : null}
-      <div className="min-w-0 flex-1">{children}</div>
-      {trailing != null ? <div className="relative z-10 shrink-0">{trailing}</div> : null}
+      {kind ? (
+        <RowKind
+          word={kind.word}
+          tone={kind.tone}
+          className={stacked ? "min-w-23 max-sm:order-1" : "min-w-23"}
+        />
+      ) : null}
+      {/* Every `stacked` class is a `max-sm:` one, deliberately: from `sm` up
+          the row must render byte-for-byte as it always has, so opting a
+          surface in can only ever change the phone. */}
+      <div
+        className={stacked ? "min-w-0 flex-1 max-sm:order-3 max-sm:basis-full" : "min-w-0 flex-1"}
+      >
+        {children}
+      </div>
+      {trailing != null ? (
+        <div
+          className={
+            stacked
+              ? "relative z-10 shrink-0 max-sm:order-2 max-sm:ms-auto"
+              : "relative z-10 shrink-0"
+          }
+        >
+          {trailing}
+        </div>
+      ) : null}
       {href ? (
         // The stretched link, the same construction the public schedule's
         // agenda rows use: an invisible overlay makes the whole row the tap

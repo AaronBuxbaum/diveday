@@ -45,7 +45,7 @@ sweep that produced it, not a follow-up.
 | The departure log repeats "Awaiting roll call" 33 times | It is an evidentiary document, where an absence is stated rather than left blank | `src/app/shop/[shopSlug]/trips/[id]/log/page.tsx` |
 | Tone glyphs are emoji (✅ ⚠️ ❌) | Text dingbats were tried and reverted — they read as a font falling back | `src/components/ui/tone.ts` |
 | The trip overview renders three primary buttons | Three sections, 600–1,100 px apart. Principle 8 counts what is on screen *together* | `docs/design/principles.md` §8 |
-| The shop home has no good news in it | It has two, outside the row kinds and rendering nothing when untrue: "Today's boats are all clear 🤙" and the queue's empty state. A demo shop with a full queue shows neither | `src/app/shop/[shopSlug]/_components/today/TodayQueue.tsx`, principles.md §3 |
+| The shop home has no good news in it | It has two, outside the row kinds and rendering nothing when untrue: "Today's boats are all clear 🤙" — now "no danger or warning row on any of today's stations or at the desk" — and the whole-week empty state. A demo shop with a full queue shows neither | `src/app/shop/[shopSlug]/_components/today/DaySpine.tsx`, principles.md §3 |
 | Staff surfaces are denser than the diver's | Measured, controls per 1,000 px at rest: Settings **9.1**, public schedule **10.7**, Today **11.6**, Orders **17.0**. Settings is the *calmest* surface in the app. A first measurement that counted inside closed `<details>` was wrong by 6× | issue #826 |
 | The course editor's roster link 404s | Reproducible three times at the HTTP level — and only against a dev database where a demo shop had been minted. Pristine database: fine | issue #826 |
 

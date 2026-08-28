@@ -33,10 +33,6 @@ import {
 
 const SURFACE_PATH: Record<WaiverSendSurface, (shopSlug: string, tripId?: string) => string> = {
   today: (shopSlug) => `/shop/${shopSlug}`,
-  // The by-departure view lives *on* the shop home now, so revalidating it is
-  // revalidating that path — the `?view=` query selects a view of the same
-  // route, and `revalidatePath` is keyed on the route, not the query.
-  blockers: (shopSlug) => `/shop/${shopSlug}`,
   check_in: (shopSlug) => `/shop/${shopSlug}/check-in`,
   roster: (shopSlug, tripId) => `/shop/${shopSlug}/trips/${tripId}/guests`,
   diver: (shopSlug, _tripId) => `/shop/${shopSlug}/divers`,
@@ -113,9 +109,6 @@ export async function sendWaiversAction(
   switch (surface) {
     case "today":
       path = SURFACE_PATH.today(shopSlug);
-      break;
-    case "blockers":
-      path = SURFACE_PATH.blockers(shopSlug);
       break;
     case "check_in":
       path = SURFACE_PATH.check_in(shopSlug);

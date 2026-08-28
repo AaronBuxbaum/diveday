@@ -152,9 +152,6 @@ Sequenced so the language lands before the recompositions that speak it. **Each 
 standing obligation**: the component that must not drift names the ADR in its doc comment, and a
 test pins the rule (never a pixel snapshot).
 
-- **6c. The home as the day's spine** (morning reading). Stations in clock order carrying their own
-  work rows; the desk group; collapsed horizons; the view switch dissolves. *Pins:* a test that a
-  departure's facts render once — no queue row repeats a station's title at equal weight.
 - **6d. The home's evening reading, and the fold (H-62).** The spine settles station by station —
   a state, never a mode — and the closing block (leftovers with per-row Dismiss per H-57, then the
   one closing act) appears once the day's departures have ended, with the standing one-hour buffer.
@@ -184,11 +181,12 @@ once (each SPEC's preamble points here). Everything not listed is independent:
 
 - **6a has shipped** ([shipped.md](../shipped.md)), so the ledger primitives
   (`GroupLabel`/`LedgerGroup`/`LedgerRow`/`RowKind`/`InsetGroup`), flat-at-rest and `SettledCheck`
-  are already in the tree for 6c, 6f, 6h, 7a, 7b, 8a, 8c, 8f, 9a, 9d–9g, 10a and 10d to build on.
-- **6b has landed** — `--chrome-h` and `ChromeBar` are in the tree, so 6c inherits the token
-  rather than introducing it. **6c → 6d and 10d** (they extend the spine 6c builds;
-  8b's S1 journey also starts from 6c's station row); **6e → 9e** (the `?week=` grammar — 9e
-  introduces it itself if 6e has not landed, per its cross-reference).
+  are already in the tree for 6f, 6h, 7a, 7b, 8a, 8c, 8f, 9a, 9d–9g, 10a and 10d to build on.
+- **6b has landed** — `--chrome-h` and `ChromeBar` are in the tree. **6c has shipped**
+  ([shipped.md](../shipped.md)), so `assembleDaySpine`, `DaySpine.tsx` and `DayStation.tsx` are
+  what **6d** settles station by station, what **10d** extends for day zero, and where 8b's S1
+  journey starts. **6e → 9e** (the `?week=` grammar — 9e introduces it itself if 6e has not
+  landed, per its cross-reference).
 - **7a → 7b–7e, 10a and 10c** (the thread shell and the EntryShell type-ramp land in 7a; claim's
   recomposition and the door restyle build on them). **7b and 7c ship together, or 7c first** —
   packing must have a destination on the thread before the trip page deletes it.

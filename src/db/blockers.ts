@@ -1,19 +1,14 @@
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { pointingLabelText } from "@/i18n/today-labels";
-import { annotateAlsoOn, type BlockerQueueTrip, blockerFixFor } from "@/lib/blockers";
 import { nowDate } from "@/lib/clock";
 import { OPERATIONAL_MAX_TRIPS, operationalWindow } from "@/lib/operational-window";
-import { urgencyFor } from "@/lib/today";
 import type { AppDb } from "./client";
 import { listTripsReadiness } from "./readiness";
 import { pagedUpcomingTripsWithCounts } from "./trips";
 
 /**
- * Not ready is a lens on the same queue Today ranks, not a fourth product with
- * its own idea of "upcoming". Both read the shared operational horizon
- * (`src/lib/operational-window.ts`); this file used to cap itself at the
- * nearest 40 departures instead, which is why the nav badge, the Today counts,
- * and this page could each report a different number of blocked divers.
+ * Readiness across the shared operational horizon, read once. The nav badge
+ * and the day spine both hang off this, so they cannot report a different
+ * number of blocked divers; this file used to cap itself at the nearest 40
+ * departures instead, which is exactly how they came to.
  *
  * `OPERATIONAL_MAX_TRIPS` is a work bound, not the window: departures are
  * filtered to the horizon *before* readiness is computed, and the cap only
@@ -24,11 +19,10 @@ import { pagedUpcomingTripsWithCounts } from "./trips";
 
 /**
  * Every in-horizon departure plus its readiness rows, in one place. Exported
- * so a page rendering more than one readiness surface in a single request
- * (the shop home's urgency queue plus its by-departure view) can run the
- * pipeline once and hand the same evidence to each consumer — the pass costs
- * about ten queries, so recomputing it per surface doubles the page's whole
- * database bill.
+ * so a page reading the queue more than once in a single request — the shop
+ * home reads today's shop-day and tomorrow's — runs the pipeline once and
+ * hands the same evidence to each call: the pass costs about ten queries, so
+ * recomputing it per read doubles the page's whole database bill.
  */
 export async function inHorizonReadiness(db: AppDb, shopId: string, now: Date) {
   const { to: horizon } = operationalWindow(now);
@@ -63,101 +57,9 @@ export async function inHorizonReadiness(db: AppDb, shopId: string, now: Date) {
 /** The evidence bundle `inHorizonReadiness` produces, for callers passing it through. */
 export type HorizonReadinessEvidence = Awaited<ReturnType<typeof inHorizonReadiness>>;
 
-export type BlockerQueue = {
-  trips: BlockerQueueTrip[];
-  /**
-   * True only when the shop has more departures inside the shared horizon than
-   * the work bound inspects — never for departures beyond the horizon, which
-   * the window note already discloses on every readiness surface.
-   */
-  truncated: boolean;
-};
-
-/**
- * Every diver who can't board yet, grouped by the departure that holds them up,
- * across the shared operational horizon. Trips with no blocked diver are
- * omitted — the queue is a list of problems, not a schedule.
- */
-export async function getBlockerQueue(
-  db: AppDb,
-  shopId: string,
-  shopSlug: string,
-  now: Date = nowDate(),
-  /**
-   * Resolves every fix's button label (`blockerFixFor`, `src/lib/blockers.ts`).
-   * Defaults to English so every pre-existing caller (tests included) keeps
-   * working unchanged; the page passes its own request-locale translator.
-   */
-  t: StaffTranslator = staffTranslator("en-US"),
-  /**
-   * Precomputed horizon evidence from `inHorizonReadiness`, when the caller
-   * already ran the pass for another surface in the same request. Omitted,
-   * the queue runs its own.
-   */
-  evidence?: HorizonReadinessEvidence,
-): Promise<BlockerQueue> {
-  const {
-    trips: inspected,
-    readinessByTrip,
-    truncated,
-  } = evidence ?? (await inHorizonReadiness(db, shopId, now));
-
-  const trips: BlockerQueueTrip[] = [];
-  for (const trip of inspected) {
-    const rows = readinessByTrip.get(trip.id) ?? [];
-    const divers = rows
-      .filter((row) => row.readiness.status === "blocked")
-      .map((row) => ({
-        bookingId: row.booking.id,
-        personId: row.person.id,
-        fullName: row.person.fullName,
-        blockers: [...row.readiness.blockers],
-        // Every blocked row has at least one blocker, so a fix always resolves.
-        fix: blockerFixFor(
-          row.readiness.blockers,
-          {
-            shopSlug,
-            tripId: trip.id,
-            personId: row.person.id,
-            bookingId: row.booking.id,
-            fullName: row.person.fullName,
-          },
-          t,
-        ) ?? {
-          // Every blocked row has at least one blocker (`primaryBlocker` never
-          // returns null here), so this fallback is unreachable in practice —
-          // kept only because `blockerFixFor` types as nullable. Same "points
-          // at the roster" wording as any other row with nowhere more specific
-          // to send a diver.
-          label: pointingLabelText(t, "trip", row.person.fullName),
-          href: `/shop/${shopSlug}/trips/${trip.id}/guests`,
-          sendsWaiver: false,
-          bookingId: row.booking.id,
-        },
-        // Filled once the whole queue is built (a repeat diver spans trips).
-        alsoOn: [],
-      }))
-      .sort((a, b) => a.fullName.localeCompare(b.fullName));
-    if (divers.length === 0) continue;
-    trips.push({
-      tripId: trip.id,
-      title: trip.title,
-      startsAt: trip.startsAt,
-      courseTitle: trip.course?.title ?? null,
-      booked: trip.booked,
-      ready: rows.filter((row) => row.readiness.status === "ready").length,
-      divers,
-      urgency: urgencyFor(trip.startsAt, now),
-    });
-  }
-
-  annotateAlsoOn(trips);
-  return { trips, truncated };
-}
-
 /**
  * Distinct divers who can't board yet, across the same shared horizon
- * `getBlockerQueue` inspects — for the nav badge (task 83, UX persona 11
+ * this file reads — for the nav badge (task 83, UX persona 11
  * "Kai"/12 "Maren"), which only needs the headline count, not each row's fix
  * label/href. It walks the *same* helper as the full queue, so the badge and
  * the page it links to can never report different numbers; there is no cheaper
