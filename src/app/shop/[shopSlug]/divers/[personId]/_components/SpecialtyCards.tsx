@@ -3,8 +3,14 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { HELD_CARD_STATUS_KEYS, heldCardStatusTone } from "@/i18n/card-labels";
 import { SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
+import {
+  heldCardDisplayStatus,
+  isImportedCard,
+  needsImportConfirm,
+} from "@/lib/certification-cards";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import {
   addSpecialtyAction,
@@ -17,15 +23,7 @@ import { CardStatusMark } from "./CardStatusMark";
 import { MarkCertifiedControl } from "./MarkCertifiedControl";
 import { markCertifiedCopy } from "./mark-certified-copy";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
-import {
-  AGENCY_KEYS,
-  type DiverProfile,
-  HELD_CARD_STATUS_KEYS,
-  heldCardDisplayStatus,
-  heldCardStatusTone,
-  isImportedCard,
-  needsImportConfirm,
-} from "./shared";
+import { AGENCY_KEYS, type DiverProfile } from "./shared";
 
 export function SpecialtyCards({
   diver,
