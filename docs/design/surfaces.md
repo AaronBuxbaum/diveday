@@ -99,15 +99,17 @@ either.
 
 ### The schedule board — `/shop/[shopSlug]/schedule/board`
 
-**Redesign proposed (desktop only)** — ADR
-[20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
-(Proposed), drawn in [its canvas](canvases/20260827-clearwater-surface-language/README.md). The
-stream stays on phone.
+**Shipped 2026-08-28 (desktop only)** — slice 6e of ADR
+[20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
+drawn in [its canvas](canvases/20260827-clearwater-surface-language/README.md). The stream stays
+below `xl` (1280px), on tablets and phones.
 
 - **One idea:** the shape of the week — where the boats are, and where they aren't.
 - **The question it arrives with:** "what does my week look like?" — answered in one screen of
   seven columns rather than seven screens of scroll.
-- **Controls that dissolved:** none new; the row's `⋯` menu and per-day "+ Add" carry over.
+- **Controls that dissolved:** none new; the row's `⋯` menu and per-day "+ Add" carried over — the
+  menu's panels open full width beneath the grid, because a move form is two date/time fields and
+  a 160px column is not a form.
 - **Remove first:** the standing crew line above the board, once a station says its own crew.
 - **Composition:** a week grid at desktop because the content is a calendar; the phone keeps the
   stream because a seven-column grid has no honest 390px form.

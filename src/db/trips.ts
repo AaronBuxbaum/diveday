@@ -68,6 +68,9 @@ export {
   // Unbounded whole-schedule read kept ONLY as a test fixture — never call it
   // from product code (see its docstring in trips-queries.ts).
   upcomingTripsWithCounts,
+  type WeekBoardEntry,
+  type WeekBoardSpan,
+  weekBoard,
 } from "./trips-queries";
 export {
   bookedDiverLanguages,

@@ -17,16 +17,20 @@ import {
   tripCrewByTrip,
   tripScheduleDayCounts,
   upcomingScheduleRange,
+  weekBoard,
 } from "@/db/trips";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { maxConcurrentTrips, overlappingBoatIds } from "@/lib/boats";
+import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
+  formatCalendarDateRange,
   formatDayParts,
   formatMoneyCents,
   formatShortDate,
+  formatTime,
   formatTimeRange,
   weekdayNames,
 } from "@/lib/format";
@@ -45,6 +49,7 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { uuidParam } from "@/lib/uuid";
+import { resolveWeekStart, shiftWeek, weekDates, weekStartOf } from "@/lib/week-board";
 import { toDateInputValue, toTimeInputValue, utcToWallTime } from "@/lib/zoned";
 import {
   type BuilderCopy,
@@ -56,6 +61,7 @@ import {
   type BuilderRequestPlan,
   ScheduleBuilder,
 } from "./_components/ScheduleBuilder";
+import type { BuilderWeek, WeekEntry, WeekSpan } from "./_components/WeekBoard";
 import {
   addDepartureAction,
   duplicateDepartureAction,
@@ -141,11 +147,19 @@ export default async function ScheduleBoardPage({
     requests?: string;
     /** Opens the add panel pointed at a dive site (the library's own control). */
     site?: string;
+    /**
+     * Which week the desktop grid draws, as any date inside it — normalised
+     * to that week's Monday (`src/lib/week-board.ts`). Deliberately separate
+     * from the stream's `after`/`back` cursor: the grid is a second *reading*
+     * of the same departures, not a second stream, and the two never mix.
+     * Slice 9e's staffing week reads the same parameter.
+     */
+    week?: string;
   }>;
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { after, back, builder, created, gear, series, add, date, course, requests, site } =
+  const { after, back, builder, created, gear, series, add, date, course, requests, site, week } =
     await searchParams;
   const requestIds = [
     ...new Set(
@@ -164,6 +178,11 @@ export default async function ScheduleBoardPage({
   const { locale, t } = await requestTranslator(shop.defaultLocale);
   const st = staffTranslator(locale);
   const now = nowDate();
+  const todayIso = toDateInputValue(utcToWallTime(now, tz));
+  // Which week the desktop grid draws. Total by construction: a malformed or
+  // missing `?week=` lands on the one the shop is in rather than refusing the
+  // page (`src/lib/week-board.ts`).
+  const weekStartIso = resolveWeekStart(week, todayIso);
 
   // The board works off one keyset page of departures, same as the public
   // list — a shop with hundreds of upcoming departures still loads one page,
@@ -179,6 +198,7 @@ export default async function ScheduleBoardPage({
     canViewReports,
     openRollCalls,
     shopBoats,
+    weekRows,
   ] = await Promise.all([
     upcomingScheduleRange(db, shop.id, now),
     pagedUpcomingTripsWithCounts(db, shop.id, { cursor: after, now }),
@@ -192,6 +212,12 @@ export default async function ScheduleBoardPage({
     // the board, not repeated on top of every later cursor page.
     after ? [] : openAfterDiveRollCalls(db, shop.id, now),
     listBoats(db, shop.id),
+    // A second, bounded reading of the same departures — one week, not a
+    // cursor page — for the `xl` grid (ADR 20260827-clearwater-surface-language,
+    // decision 5). It reaches backwards, which the stream never does: a week
+    // that has already half-happened is most of what "what does my week look
+    // like" means.
+    weekBoard(db, shop.id, weekStartIso, tz, now),
   ]);
   // **Names come from every hull the shop has ever had, not just the live
   // ones.** A departure that sailed on a boat the shop has since deleted must
@@ -489,7 +515,6 @@ export default async function ScheduleBoardPage({
     placeholder: formatMoneyCents(0, currency, locale),
   };
 
-  const todayIso = toDateInputValue(utcToWallTime(now, tz));
   const builderDays: BuilderDay[] = [];
   /** Appends one departure to the board, opening a new day header when the day turns. */
   function pushBuilderTrip(
@@ -621,6 +646,114 @@ export default async function ScheduleBoardPage({
       null,
     );
   }
+
+  // ---- The week, for `xl` and up (ADR 20260827-clearwater-surface-language,
+  // decision 5). Every string below is resolved here, for the request locale
+  // and the shop's own zone: a 160px column has no room to be wrong about a
+  // time, and the grid is a Client Component that may format neither.
+  const boardPath = `/shop/${shopSlug}/schedule/board`;
+  const weekDayIsos = weekDates(weekStartIso);
+  const weekMoney = (cents: number | null) =>
+    cents === null ? null : formatMoneyCents(cents, currency, locale);
+  // The same "say a shared fact once" gate the stream's price banner uses: a
+  // whole week with no price anywhere is one condition, not seven warnings.
+  const weekUpcoming = weekDayIsos
+    .flatMap((iso) => weekRows.days[iso] ?? [])
+    .filter((entry) => entry.status === "upcoming");
+  const weekAllUnpriced =
+    weekUpcoming.length >= 3 && weekUpcoming.every((entry) => entry.priceCents === null);
+  const weekViewDays = weekDayIsos.map((iso) => {
+    // A calendar date has no instant in it, so it is formatted through a
+    // UTC-midnight reference rather than converted from the shop's zone —
+    // which would only risk shifting a column onto the wrong day.
+    const dayInstant = calendarDateToUtcMidnight(iso);
+    const parts = formatDayParts(dayInstant, locale, "UTC");
+    const label = formatShortDate(dayInstant, locale, "UTC");
+    const entries: WeekEntry[] = (weekRows.days[iso] ?? []).map((entry) => {
+      const timeRange = formatTimeRange(entry.startsAt, entry.endsAt, locale, tz);
+      const price = weekMoney(entry.priceCents);
+      const seats = st("schedule.week.seats", {
+        booked: entry.booked,
+        capacity: entry.capacity,
+      });
+      return {
+        tripId: entry.tripId,
+        dateIso: iso,
+        startTime: toTimeInputValue(utcToWallTime(entry.startsAt, tz)),
+        title: entry.title,
+        time: formatTime(entry.startsAt, locale, tz),
+        meta:
+          entry.status === "sailed"
+            ? [st("schedule.week.sailed"), seats].join(" · ")
+            : [entry.booked >= entry.capacity ? st("schedule.week.full") : null, seats, price]
+                .filter(Boolean)
+                .join(" · "),
+        // Single-day by construction: `weekBoard` returns a multi-day course
+        // as a span, never as a day entry, so an entry's move panel never has
+        // a block of days to warn about.
+        dayCount: 1,
+        status: entry.status,
+        unpriced: entry.priceCents === null && !weekAllUnpriced,
+        // The same shape the stream's controls use, so "Move X, Mon Jul 20
+        // 7:00 AM – 11:00 AM" names one departure whichever composition a
+        // staffer is reading.
+        ref: `${entry.title}, ${label} ${timeRange}`,
+      };
+    });
+    return {
+      dateIso: iso,
+      weekday: parts.weekday,
+      dayNumber: parts.day,
+      label,
+      isToday: iso === todayIso,
+      isPast: iso < todayIso,
+      entries,
+    };
+  });
+  const lastWeekDayIso = weekDayIsos.at(-1) ?? weekStartIso;
+  const weekViewSpans: WeekSpan[] = weekRows.spans.flatMap((span) => {
+    // A course that started before this week, or runs past it, is clamped to
+    // the columns there are — it is the same object read from either week.
+    const first = span.firstDay < weekStartIso ? 0 : weekDayIsos.indexOf(span.firstDay);
+    const last = span.lastDay > lastWeekDayIso ? 6 : weekDayIsos.indexOf(span.lastDay);
+    if (first < 0 || last < 0 || last < first) return [];
+    return [
+      {
+        tripId: span.tripId,
+        title: span.title,
+        meta: [
+          st("schedule.week.seats", { booked: span.booked, capacity: span.capacity }),
+          weekMoney(span.priceCents),
+          span.instructorName,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        startColumn: first + 1,
+        columnSpan: last - first + 1,
+      },
+    ];
+  });
+  // Null while the board has nothing upcoming at all: the terminal empty
+  // state is the whole page at every width, and seven empty columns beneath
+  // it would be the same nothing said twice.
+  const builderWeek: BuilderWeek | null = hasUpcoming
+    ? {
+        ariaLabel: st("schedule.week.ariaLabel"),
+        rangeLabel: formatCalendarDateRange(weekStartIso, lastWeekDayIso, locale),
+        previousHref: `${boardPath}?week=${shiftWeek(weekStartIso, -1)}`,
+        nextHref: `${boardPath}?week=${shiftWeek(weekStartIso, 1)}`,
+        thisWeekHref: weekStartIso === weekStartOf(todayIso) ? null : boardPath,
+        allUnpriced: weekAllUnpriced,
+        words: {
+          previous: st("schedule.week.previous"),
+          next: st("schedule.week.next"),
+          thisWeek: st("schedule.week.thisWeek"),
+          today: st("schedule.week.today"),
+        },
+        days: weekViewDays,
+        spans: weekViewSpans,
+      }
+    : null;
 
   // "More departures than boats" is only a warning to a shop that runs boats.
   // A shore operation's hull rows are dormant, not a fleet to be outrun.
@@ -803,6 +936,7 @@ export default async function ScheduleBoardPage({
         initialSite={initialSite}
         requestPlan={requestPlan}
         openAdd={addPanelState}
+        week={builderWeek}
         actions={{
           add: addDepartureAction.bind(null, shopSlug),
           move: moveDepartureAction.bind(null, shopSlug),
@@ -811,8 +945,12 @@ export default async function ScheduleBoardPage({
         }}
       />
 
+      {/* The stream's own pager, and only the stream's: the grid pages by
+          week, and mixing a cursor into that URL would make two readings
+          argue about where the board is. `xl:hidden` for the same reason the
+          stream is. */}
       {nextCursor || after ? (
-        <div className="mt-5 flex flex-wrap items-center gap-3">
+        <div className="mt-5 flex flex-wrap items-center gap-3 xl:hidden">
           {(() => {
             const backStack = decodeCursorStack(back);
             const previous = popCursor(backStack);

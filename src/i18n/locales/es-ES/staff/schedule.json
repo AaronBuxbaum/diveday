@@ -138,5 +138,15 @@
     "requestPlanPersonOne": "{name} ({divers} buceador)",
     "requestPlanPersonOther": "{name} ({divers} buceadores)"
   },
+  "week": {
+    "ariaLabel": "La semana",
+    "previous": "Semana anterior",
+    "next": "Semana siguiente",
+    "thisWeek": "Esta semana",
+    "today": "Hoy",
+    "seats": "{booked} de {capacity}",
+    "full": "Completo",
+    "sailed": "Zarpó"
+  },
   "addBooking": "Añadir una reserva"
 }

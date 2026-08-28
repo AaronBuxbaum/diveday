@@ -7,6 +7,20 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The schedule board is a week (delivered 2026-08-28)
+
+Slice 6e of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
+(decision 5, width floor H-63). From `xl` (1280px) up, `/shop/[shopSlug]/schedule/board` composes
+as **seven columns, one per day** — departures as compact time-led entries, a multi-day course as
+one bar spanning the days it owns rather than repeated into each of them, today marked with a disc
+*and* the word, past columns set down and offered no "+ Add". Paging is by week (`?week=<any date
+in it>`, normalised to that week's Monday in `src/lib/week-board.ts` — the grammar slice 9e's
+staffing week reads too). Below `xl`, tablets and phones keep the vertical day stream exactly as
+it was, cursor pager and all: the two are readings of the same departures, not two streams, and
+their parameters never mix. The reader is `weekBoard()` (`src/db/trips-queries.ts`), one bounded
+week through `liveTrip()`; the move/copy/remove panels and the day's add panel are the board's
+existing ones, opened full width beneath the grid.
+
 ## The diver's thread reads at one measure (delivered 2026-08-28)
 
 Slice 7a of [20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md)

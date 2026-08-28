@@ -138,5 +138,15 @@
     "requestPlanPersonOne": "{name} ({divers} diver)",
     "requestPlanPersonOther": "{name} ({divers} divers)"
   },
+  "week": {
+    "ariaLabel": "The week",
+    "previous": "Previous week",
+    "next": "Next week",
+    "thisWeek": "This week",
+    "today": "Today",
+    "seats": "{booked} of {capacity}",
+    "full": "Full",
+    "sailed": "Sailed"
+  },
   "addBooking": "Add a booking"
 }

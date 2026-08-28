@@ -162,8 +162,6 @@ test pins the rule (never a pixel snapshot).
   `closeOut` registry entry goes, and the dock drops to four destinations plus More. *Pins:* a test
   that no acknowledgement gate stands on the closing act, and one that the closing block never
   renders while a departure is still out.
-- **6e. The week board (H-63).** Seven columns from `xl` (1280px) up, spans for multi-day courses;
-  tablets and phones keep the stream. *Pins:* a test that widths below `xl` render the stream.
 - **6f. The orders day ledger.** Day groups own date and subtotal; toolbar filters; imported
   history as one disclosure. *Pins:* a test that no row repeats its group's date.
 - **6g. Settings rail and pane.** Desktop two-pane; phone keeps grouped lists; standing captions
@@ -172,6 +170,8 @@ test pins the rule (never a pixel snapshot).
   tablet. Safety-adjacent: `dive-domain-expert` review.
 - **6i. The storefront.** Identity hero, next-boat object, one-line week rows, courses and reviews
   shelves. Conversion surface: `conversion-reviewer` pass.
+
+**6e shipped 2026-08-28** ([shipped.md](../shipped.md)); the rest of the section is open.
 
 **Both of this section's owner calls are decided** — H-62 (the fold) and H-63 (desktop-only week)
 in [../human-decisions.md](../human-decisions.md), 2026-08-27 — so no slice here waits on a human.

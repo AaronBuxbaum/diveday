@@ -279,9 +279,15 @@ test.describe("schedule builder", () => {
 
     // The staff board and the shopfront — the two shells, and the two surfaces
     // decision 10 names by hand.
-    for (const [surface, url, ready] of [
-      ["the schedule board", BOARD, "Board"],
-      ["the public schedule", `/s/${SHOP}`, "Schedule"],
+    // Each shell carries its own top width, and the difference is the week
+    // board's doing: a sticky day header belongs to the *stream*, and the
+    // stream's ceiling is the board's `xl` floor (H-63). At 1280 the board is
+    // seven columns with no day header to pin, so 1279 is the widest the board
+    // can be asked this question. The shopfront keeps its stream at every
+    // width and is still asked at 1280.
+    for (const [surface, url, ready, widths] of [
+      ["the schedule board", BOARD, "Board", [390, 768, 1279]],
+      ["the public schedule", `/s/${SHOP}`, "Schedule", [390, 768, 1280]],
     ] as const) {
       await page.goto(url);
       // The destination's own h1 — what makes the measurement below wait on
@@ -289,7 +295,7 @@ test.describe("schedule builder", () => {
       await expect(page.getByRole("heading", { name: ready, level: 1 })).toBeVisible();
       // Phone, tablet, desktop — the widths at which the bar has historically
       // changed shape, so a future re-wrap is caught wherever it happens.
-      for (const width of [390, 768, 1280]) {
+      for (const width of widths) {
         await page.setViewportSize({ width, height: 800 });
         const measured = await measure();
 

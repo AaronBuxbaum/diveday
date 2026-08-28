@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { createDiveSite } from "./dive-sites";
 import { bookings, shops, trips } from "./schema";
@@ -15,6 +16,7 @@ import {
   upcomingScheduleStats,
   upcomingTripsWithCounts,
   updateTrip,
+  weekBoard,
 } from "./trips";
 
 describe("demo seed + schedule queries (in-memory PGlite)", () => {
@@ -617,5 +619,118 @@ describe("trips.dive_site_id — the denormalized pointer the forecast and calen
       sites: [{ id: second.id, name: "Test Edit Tank Two" }],
       undecidedDives: 1,
     });
+  });
+});
+
+/**
+ * The week board's own reader (ADR 20260827-clearwater-surface-language,
+ * decision 5). The frozen unit clock is 2026-07-21T13:30Z — a Tuesday in the
+ * demo shop's America/New_York — so "this week" is Mon 2026-07-20 to Sun
+ * 2026-07-26, and the seeded three-day Open Water class (day +9 to day +11)
+ * sits in the week after it.
+ */
+describe("the week board", () => {
+  const THIS_WEEK = "2026-07-20";
+  const COURSE_WEEK = "2026-07-27";
+  const TZ = "America/New_York";
+  const OPEN_WATER = "Open Water Diver — three-day course";
+
+  it("draws a multi-day course once, as a span, and never as an entry in the days it covers", async () => {
+    const { db, shop } = await seededShopContext();
+
+    const week = await weekBoard(db, shop.id, COURSE_WEEK, TZ);
+
+    const span = week.spans.find((row) => row.title === OPEN_WATER);
+    expect(span).toBeDefined();
+    if (!span) throw new Error("the seeded three-day course is missing from the week");
+    expect(span.firstDay).toBe("2026-07-30");
+    expect(span.lastDay).toBe("2026-08-01");
+    // The join that produces a span multiplies its booking rows by its
+    // meeting days; a count that forgot to be distinct would report a class
+    // of four students as twelve.
+    expect(span.booked).toBeLessThanOrEqual(span.capacity);
+
+    // The silence this design depends on: the days a span covers render the
+    // bar and nothing else. A course drawn once as a bar and again as three
+    // entries is the same fact said four times.
+    const everyEntry = Object.values(week.days).flat();
+    expect(everyEntry.filter((entry) => entry.tripId === span.tripId)).toHaveLength(0);
+    expect(everyEntry.filter((entry) => entry.title === OPEN_WATER)).toHaveLength(0);
+  });
+
+  it("carries a bucket for every day of the week, empty ones included", async () => {
+    const { db, shop } = await seededShopContext();
+
+    // Far enough out that the demo shop has nothing on the board at all —
+    // the seven columns still exist, because an empty cell is the information
+    // the grid is for.
+    const week = await weekBoard(db, shop.id, "2027-06-07", TZ);
+
+    expect(Object.keys(week.days)).toEqual([
+      "2027-06-07",
+      "2027-06-08",
+      "2027-06-09",
+      "2027-06-10",
+      "2027-06-11",
+      "2027-06-12",
+      "2027-06-13",
+    ]);
+    expect(Object.values(week.days).flat()).toHaveLength(0);
+    expect(week.spans).toHaveLength(0);
+  });
+
+  it("never draws a departure that has been taken off the board", async () => {
+    const { db, shop } = await seededShopContext();
+
+    const before = Object.values((await weekBoard(db, shop.id, THIS_WEEK, TZ)).days).flat();
+    const victim = before[0];
+    if (!victim) throw new Error("no departure in the seeded week to delete");
+
+    // Deleting a departure stamps `deleted_at` (ADR 20260820-every-delete-is-soft);
+    // the row survives, so every reader that means *the board* has to say so.
+    await db.update(trips).set({ deletedAt: nowDate() }).where(eq(trips.id, victim.tripId));
+
+    const after = await weekBoard(db, shop.id, THIS_WEEK, TZ);
+    expect(
+      Object.values(after.days)
+        .flat()
+        .map((entry) => entry.tripId),
+    ).not.toContain(victim.tripId);
+    expect(after.spans.map((span) => span.tripId)).not.toContain(victim.tripId);
+  });
+
+  it("calls a departure sailed only once the late-arrival buffer has passed", async () => {
+    const { db, shop } = await seededShopContext();
+    const now = new Date("2026-07-21T13:30:00.000Z");
+
+    const seeded = Object.values((await weekBoard(db, shop.id, THIS_WEEK, TZ, now)).days).flat()[0];
+    if (!seeded) throw new Error("no departure in the seeded week to re-time");
+
+    // Back at the dock half an hour ago: inside the standing one-hour buffer
+    // every "has it sailed" check in this app carries, so still the day's work.
+    await db
+      .update(trips)
+      .set({
+        startsAt: new Date(now.getTime() - 3 * 60 * 60 * 1000),
+        endsAt: new Date(now.getTime() - 30 * 60 * 1000),
+      })
+      .where(eq(trips.id, seeded.tripId));
+    const inside = Object.values((await weekBoard(db, shop.id, THIS_WEEK, TZ, now)).days)
+      .flat()
+      .find((entry) => entry.tripId === seeded.tripId);
+    expect(inside?.status).toBe("upcoming");
+
+    // Two hours ago, and the column it sits in is history.
+    await db
+      .update(trips)
+      .set({
+        startsAt: new Date(now.getTime() - 5 * 60 * 60 * 1000),
+        endsAt: new Date(now.getTime() - 2 * 60 * 60 * 1000),
+      })
+      .where(eq(trips.id, seeded.tripId));
+    const outside = Object.values((await weekBoard(db, shop.id, THIS_WEEK, TZ, now)).days)
+      .flat()
+      .find((entry) => entry.tripId === seeded.tripId);
+    expect(outside?.status).toBe("sailed");
   });
 });

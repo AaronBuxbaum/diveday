@@ -13,6 +13,7 @@
  * modules that were still paying the constructor on every call — see the
  * reasoning there.
  */
+import { type CalendarDate, calendarDateToUtcMidnight } from "./calendar-date";
 import { nowDate } from "./clock";
 import { cachedFormatter } from "./intl-cache";
 import { minorToMajor } from "./money";
@@ -314,6 +315,30 @@ export function weekdayNames(locale = "en-US", width: "short" | "narrow" = "shor
     timeZone: "UTC",
   });
   return Array.from({ length: 7 }, (_, day) => format.format(new Date(Date.UTC(2024, 0, 7 + day))));
+}
+
+/**
+ * A span of calendar days as one phrase — "Aug 24 – 30, 2026", or whatever
+ * the reader's locale collapses it to. The staff week board's title.
+ *
+ * Date-only on both ends, so `timeZone: "UTC"` is the honest answer rather
+ * than a shortcut: a `CalendarDate` has no instant in it, and running it
+ * through a shop's zone would only risk shifting the label off the week it
+ * names. `formatRange` is what removes the repeated month and year, which is
+ * the whole reason this is not two `formatCalendarDate` calls with a dash
+ * between them (and the reason the dash is never a hard-coded string).
+ */
+export function formatCalendarDateRange(
+  from: CalendarDate,
+  to: CalendarDate,
+  locale = "en-US",
+): string {
+  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).formatRange(calendarDateToUtcMidnight(from), calendarDateToUtcMidnight(to));
 }
 
 /**
