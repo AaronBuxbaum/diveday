@@ -2,13 +2,20 @@ import sharp from "sharp";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { openRosterDetails, openSettingsRow, signOut } from "./helpers";
+import { openRecapDoor, openRosterDetails, openSettingsRow, signOut } from "./helpers";
 
 // The recap page (`/recap/[token]`) is a public, signed-token diver surface, the
 // same shape as the readiness page: it must fail closed on a bad or forged
 // token and reveal nothing. The happy-path rendering is covered by the
 // getRecapPageData integration tests (src/db/recap.test.ts); here we prove the
 // route is wired and the fail-closed notice shows.
+//
+// Since slice 7d (ADR 20260827-the-divers-thread, decision 4) this URL renders
+// the *thread's after-state* rather than a page of its own — the same surface
+// `/ready` shows once the boat is home. So the greeting is the thread's
+// welcome-home line, the day's facts render once inside the dive record, and
+// photos and the tip sit behind quiet doors that have to be opened before
+// their forms are reachable.
 test("a tampered recap token reveals nothing", async ({ page }) => {
   await page.goto("/recap/not-a-real-token");
   await expect(page.getByRole("heading", { name: /recap link isn.t available/ })).toBeVisible();
@@ -18,11 +25,9 @@ test("an oversize recap photo is rejected client-side before it ever reaches the
   page,
 }) => {
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
-  await expect(page.getByRole("heading", { name: /Nice diving/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
 
-  // Assert stylized recap map is rendered (delight feature)
-  await expect(page.getByLabel("Stylized recap navigation map of your dive sites")).toBeVisible();
-
+  await openRecapDoor(page, "photos");
   const photoInput = page.locator('input[name="photo"]').filter({ visible: true });
   await photoInput.setInputFiles({
     name: "recap.jpg",
@@ -53,7 +58,7 @@ test.describe("as owner", () => {
     // A review link is configured, but nothing was just submitted — no second
     // ask stacked underneath the on-page form.
     await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
-    await expect(page.getByRole("heading", { name: /Nice diving/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
     await expect(page.getByRole("link", { name: "Leave a public review" })).toHaveCount(0);
 
     // A 3-star rating isn't "strong" — still no merged ask.
@@ -79,12 +84,19 @@ test.describe("as owner", () => {
   });
 });
 
-test("the recap link itself has a share affordance, and its unfurl card reveals nothing for a bad token (task 59)", async ({
+test("the recap link hands out no share affordance, and its unfurl card reveals nothing for a bad token (task 59)", async ({
   page,
   request,
 }) => {
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
-  await expect(page.getByRole("button", { name: /Share this recap|Link copied/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
+  // **No share-this-page button, deliberately** (slice 7d). This surface also
+  // answers on `/ready`, whose URL is a bearer capability that can cancel the
+  // booking and move its refund — so a control that hands the current page to
+  // a group chat cannot exist on one of two URLs rendering one surface. The
+  // keepsake's own shareable artifact, with no bearer URL in it, is issue
+  // #1081.
+  await expect(page.getByRole("button", { name: /Share this recap|Link copied/ })).toHaveCount(0);
 
   // This request used to *prime* the optimizer, deliberately: `next/image`'s
   // optimizer disables libvips' SVG loader process-wide the first time it runs,
@@ -136,7 +148,7 @@ test("a booking cancelled after the recap page loaded gets an honest notice, not
   // The diver's page loads while the booking is still active — the review
   // and photo forms render normally.
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
-  await expect(page.getByRole("heading", { name: /Nice diving/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Welcome back/ })).toBeVisible();
 
   // Staff cancel the booking from a second, separately-authenticated
   // context — the diver's already-open tab (and its bound server actions)
@@ -154,11 +166,11 @@ test("a booking cancelled after the recap page loaded gets an honest notice, not
   // trip — unambiguous by construction.
   await staffPage.goto("/shop/blue-mantis/divers");
   await staffPage.getByRole("searchbox", { name: "Search divers" }).fill("Priya Sharma");
-  await staffPage
-    .getByRole("row", { name: /Priya Sharma/ })
-    .getByText("Priya Sharma")
-    .click();
-  await staffPage.getByRole("region", { name: "Upcoming trips" }).getByRole("link").first().click();
+  await staffPage.getByRole("link", { name: "Priya Sharma", exact: true }).click();
+  // "The story" is the diver record's one chronological ledger now (slice 8a):
+  // the seats ahead lead it, so the first link in it is still the departure
+  // this test needs.
+  await staffPage.getByRole("region", { name: "The story" }).getByRole("link").first().click();
   await staffPage.waitForURL(/\/trips\//);
   const tripId = staffPage.url().match(/\/trips\/([^/?]+)/)?.[1];
   if (!tripId) throw new Error("could not resolve the reef trip id from the URL");
@@ -190,6 +202,7 @@ test("a whole pick of photos submits in one request, not one page reload per pho
   page,
 }) => {
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await openRecapDoor(page, "photos");
   const photoInput = page.locator('input[name="photo"]').filter({ visible: true });
   await expect(photoInput).toHaveAttribute("multiple", "");
 
@@ -213,10 +226,26 @@ test("a whole pick of photos submits in one request, not one page reload per pho
   await expect(page.getByText("Photo uploads aren’t set up for this shop yet")).toBeVisible();
 });
 
-test("the recap renders a keepsake dive logbook entry with print affordance", async ({ page }) => {
+test("the day's facts render once, inside the one record a diver keeps", async ({ page }) => {
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
-  await expect(page.getByRole("heading", { name: "Dive log entry" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Print log entry/i })).toBeVisible();
-  await expect(page.getByText(/dive day with/i)).toBeVisible();
-  await expect(page.getByText(/Verified log entry from/i)).toBeVisible();
+  const record = page.getByTestId("dive-record");
+  await expect(record.getByRole("heading", { name: "Dive log entry" })).toBeVisible();
+  await expect(record.getByRole("button", { name: /Print log entry/i })).toBeVisible();
+  // "Recorded by {shop}", never "Verified log entry from {shop}": this card
+  // prints, under a divemaster signature rule, and DiveDay verifies nothing
+  // about the dive itself. For the same reason it states no dive count and no
+  // depth — both were numbers nobody observed (review, 2026-08-28).
+  await expect(page.getByText(/Recorded by/i)).toBeVisible();
+  await expect(page.getByText(/dives? logged/i)).toHaveCount(0);
+  await expect(record.getByText(/Max depth/i)).toHaveCount(0);
+
+  // The one rule this surface exists to keep (ADR 20260827-the-divers-thread,
+  // decision 4): the page it replaced said the day's conditions and its sites
+  // twice — a quiet stat row in its first act, then a keepsake card under it —
+  // so a diver read the same two numbers in two typefaces one screen apart.
+  await expect(page.getByTestId("dive-record-conditions")).toHaveCount(1);
+  await expect(page.getByTestId("dive-record-sites")).toHaveCount(1);
+  // Nothing outside the record repeats them.
+  await expect(record.getByTestId("dive-record-conditions")).toHaveCount(1);
+  await expect(record.getByTestId("dive-record-sites")).toHaveCount(1);
 });

@@ -3,9 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { Suspense } from "react";
-import { DaySpine } from "@/app/shop/[shopSlug]/_components/today/DaySpine";
+import { DaySpine, type EveningReading } from "@/app/shop/[shopSlug]/_components/today/DaySpine";
 import { FirstBookableCard } from "@/app/shop/[shopSlug]/_components/today/FirstBookableCard";
 import { FirstRunChecklist } from "@/app/shop/[shopSlug]/_components/today/FirstRunChecklist";
+import { RecapNoteEditor } from "@/app/shop/[shopSlug]/_components/today/RecapNoteEditor";
 import {
   RoleOrientationCard,
   RoleOrientationLine,
@@ -14,10 +15,13 @@ import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessio
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
-import { buttonClass } from "@/components/ui/button";
+import { UndoToast } from "@/components/UndoToast";
+import { canPersonExportIncidentRecord } from "@/db/authz";
 import { inHorizonReadiness } from "@/db/blockers";
 import { getDb } from "@/db/client";
+import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "@/db/closeout";
 import { listDiveSites } from "@/db/dive-sites";
+import { shopFirstBooking } from "@/db/first-booking";
 import { shopHasEverTakenAnOrder } from "@/db/orders";
 import { getShopById } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -34,28 +38,37 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { daySpineSummaryText, GREETING_KEYS } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
 import { canViewShopReports } from "@/lib/authz";
-import { HOUR_MS, nowDate } from "@/lib/clock";
-import { formatShortDate, formatTime } from "@/lib/format";
+import { nowDate } from "@/lib/clock";
+import { assembleEveningClose, DEPARTURE_BUFFER_MS } from "@/lib/closeout";
+import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { FIRST_RUN_STEP_COUNT } from "@/lib/onboarding";
 import { publicSchedulePath } from "@/lib/public-routes";
+import { recapAutoSendAt } from "@/lib/recap-schedule";
 import { requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { type NoticeTone, noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import {
   ACTION_KIND_META,
-  anyBoatIsIn,
   assembleDaySpine,
   type DayStation,
   getTimeOfDayGreeting,
-  lastBoatIsIn,
   roleLensFor,
   spineIsQuiet,
   spineJobCount,
   type TodayAction,
 } from "@/lib/today";
-import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import {
+  deleteCrewRecapPhotoAction,
+  deleteRecapPhotoAction,
+  saveRecapNoteAction,
+  sendRecapAction,
+  setLeftoverDecisionAction,
+  toggleRecapAutoSendPauseAction,
+  uploadCrewRecapPhotoAction,
+} from "./actions";
 import { inviteWaitlistAction } from "./trips/[id]/actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -93,16 +106,32 @@ const AUTH_NOTICES: Record<string, StaffMessageKey> = {
   "integrations-not-authorized": "shopHome.notice.integrationsNotAuthorized",
 };
 
+/**
+ * The evening's own `?notice=` codes, re-homed here when `/close-out` folded
+ * into this page (H-62). Every code is unchanged — a bookmark carrying one
+ * still lands on the right words, because the 308 keeps the query and this
+ * page answers it. `invalid` is the recap send's own failure and is the one
+ * that must announce itself, hence the tone table rather than a bare key map.
+ */
+const EVENING_NOTICES: Record<string, { key: StaffMessageKey; tone: NoticeTone }> = {
+  "recap-sent": { key: "closeout.notice.recapSent", tone: "success" },
+  "recap-send-attention": { key: "closeout.notice.recapAttention", tone: "warning" },
+  "recap-not-ready": { key: "closeout.notice.recapNotReady", tone: "neutral" },
+  "recap-locked": { key: "closeout.notice.recapLocked", tone: "neutral" },
+  "recap-photo-removed": { key: "trips.notices.recapPhotoRemoved", tone: "success" },
+  "crew-photo-added": { key: "closeout.notice.crewPhotoAdded", tone: "success" },
+  "crew-photo-removed": { key: "closeout.notice.crewPhotoRemoved", tone: "success" },
+  "crew-photo-limit": { key: "closeout.notice.crewPhotoLimit", tone: "danger" },
+  "crew-photo-unconfigured": { key: "closeout.notice.crewPhotoUnsupported", tone: "danger" },
+  "crew-photo-failed": { key: "closeout.notice.crewPhotoFailed", tone: "danger" },
+  // Where the owner-only departure log lands everyone else. The door is absent
+  // from their stations, so this is for a bookmark or a role that changed.
+  "log-not-authorized": { key: "incidentExport.ownerOnlyNotice", tone: "neutral" },
+};
+
 export const metadata: Metadata = {
   title: "Today — DiveDay",
 };
-
-/**
- * How long after its scheduled departure a boat still counts as "not away
- * yet" — the standing late-arrival buffer every "has it sailed" question in
- * this app carries, because trips run late.
- */
-const DEPARTURE_BUFFER_MS = HOUR_MS;
 
 /**
  * **The shop home is the day's spine** (ADR
@@ -133,20 +162,36 @@ export default async function ShopPage({
     reset?: string;
     email?: string;
     notice?: string;
+    closed?: string;
+    noted?: string;
+    decision?: string;
+    decisionState?: string;
   }>;
 }) {
   // The session and the two route-param promises don't depend on one
   // another — resolve them together instead of serially.
-  const [session, { shopSlug }, { created, series, reset, email, notice }] = await Promise.all([
-    requireStaffSession(),
-    params,
-    searchParams,
-  ]);
+  const [
+    session,
+    { shopSlug },
+    { created, series, reset, email, notice, closed, noted, decision, decisionState },
+  ] = await Promise.all([requireStaffSession(), params, searchParams]);
   const seriesCount = series ? Number.parseInt(series, 10) : 0;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams params={["created", "series", "reset", "email", "notice"]} />
+      <FlashParams
+        params={[
+          "created",
+          "series",
+          "reset",
+          "email",
+          "notice",
+          "closed",
+          "noted",
+          "decision",
+          "decisionState",
+        ]}
+      />
       {/* The queue join is the one real wait on this page; a content-shaped
           fallback keeps a cold nav from reading as a blank hang (principle 1). */}
       <Suspense fallback={<TodaySkeleton />}>
@@ -158,6 +203,10 @@ export default async function ShopPage({
           reset={reset}
           email={email}
           notice={notice}
+          closed={closed}
+          noted={noted}
+          decision={decision}
+          decisionState={decisionState}
         />
       </Suspense>
     </main>
@@ -200,6 +249,10 @@ async function TodayBody({
   reset,
   email,
   notice,
+  closed,
+  noted,
+  decision,
+  decisionState,
 }: {
   session: Awaited<ReturnType<typeof requireStaffSession>>;
   shopSlug: string;
@@ -208,6 +261,13 @@ async function TodayBody({
   reset?: string;
   email?: string;
   notice?: string;
+  /** The day was just closed — the one arrival banner the evening carries. */
+  closed?: string;
+  /** A departure whose recap note was just saved; re-opens that station's editor. */
+  noted?: string;
+  /** A leftover just decided, and which way — the Undo toast's whole input. */
+  decision?: string;
+  decisionState?: string;
 }) {
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
@@ -272,6 +332,52 @@ async function TodayBody({
   );
   const { actions, withheldCount, nextDeparture, crewedTripIds, crewedSessions } = work;
   const spine = assembleDaySpine(work, tomorrowWork);
+  // **The day's closing state** (H-62; ADR 20260827-clearwater-surface-language,
+  // decision 4). `/close-out` is a 308 to this page now, and its reader came
+  // here with it — unchanged, including the trail it appends to.
+  //
+  // It is handed the queue this render already built rather than reading its
+  // own: without that, one page would run `getTodayWork` twice and hold two
+  // answers about one boat. That also means the leftovers are filtered by the
+  // reader's own lens and role, which is exactly what the list has always
+  // claimed to be — "what the Today queue would still show *you*".
+  const closeout = await getDayCloseout(
+    db,
+    shop.id,
+    shopSlug,
+    shop.timezone,
+    now,
+    t,
+    locale,
+    canViewShopReports(session.user.roles),
+    actions,
+  );
+  const eveningClose = assembleEveningClose(closeout.state.departures, now);
+  // Two bounded reads, and only when there is a day to close over: who made
+  // the last roll-call mark on each settled boat, and whether this staffer may
+  // generate a departure's log at all. The log gate is checked against the
+  // database rather than the session's roles so a demotion takes effect at
+  // once, and resolved once here rather than per station.
+  const [headCountCloses, canOpenLog]: [
+    Map<string, { closedAt: Date; closedBy: string }>,
+    boolean,
+  ] =
+    eveningClose.stations.length > 0
+      ? await Promise.all([
+          listHeadCountCloses(
+            db,
+            shop.id,
+            eveningClose.stations
+              .filter((station) => station.status === "all_home")
+              .map((station) => station.tripId),
+          ),
+          canPersonExportIncidentRecord(db, shop.id, session.user.personId),
+        ])
+      : [new Map(), false];
+  // The once-ever wording, asked for only in the moment it could apply.
+  const firstBoatEver =
+    eveningClose.allHome &&
+    !(await shopHasSailedBefore(db, shop.id, shopDayBounds(now, shop.timezone).from));
   // Real shops only — the demo shop already teaches its own tour via the
   // role switcher banner, and a dismissal there would be meaningless (every
   // demo visit signs in as a fresh, credential-shared session).
@@ -321,6 +427,14 @@ async function TodayBody({
     : [null, true];
   const showPaymentsRow =
     paymentsRowCandidate && !canAcceptPayments(paymentsAccount) && !hasEverTakenAnOrder;
+  // **The shop's first booking, while it is still the only one** — the staff
+  // side's once-in-a-shop's-life coral moment (ADR 20260827-first-light,
+  // decision 6). One bounded read (`limit 2`), skipped where it could never
+  // fire: a shop still in first run has no departures and so no bookings, and a
+  // demo shop's board arrives seeded, so no booking on it is ever a first —
+  // the same reasoning `firstBookableMoment` below makes about departures.
+  const firstBooking =
+    shop.isDemo || showFirstRunChecklist ? null : await shopFirstBooking(db, shop.id, now);
   const showOrientation =
     orientationRole !== null &&
     !showFirstRunChecklist &&
@@ -368,11 +482,98 @@ async function TodayBody({
           : null,
       });
   // The whole page is empty at once, and collapses to a heading, one sentence
-  // and the one act available — never a spine of empty groups. The rule and
-  // the reason a desk row cancels the collapse live with the spine
-  // (`spineIsQuiet`); first-run is a different page and answers to its own
-  // condition.
-  const quietDay = !showFirstRunChecklist && spineIsQuiet(spine, showPaymentsRow);
+  // and the one act available — never a spine of empty groups. Every clause of
+  // that rule lives with the spine (`spineIsQuiet`), first-run included: the
+  // setup ledger and the quiet-day collapse are exclusive compositions, and
+  // saying so there rather than in an `&&` here is what keeps a later caller
+  // from composing them by forgetting.
+  const quietDay = spineIsQuiet(
+    spine,
+    showPaymentsRow,
+    eveningClose.stations.length,
+    showFirstRunChecklist,
+  );
+
+  // Each returned departure's recap, written where the crew is standing when
+  // they still remember the day. It rides its own station rather than a
+  // page-level section, because the note is about one boat and the hourly scan
+  // mails it four hours after that boat came in.
+  const recapDurationText = (durationMs: number) => {
+    const minutes = Math.max(1, Math.round(Math.abs(durationMs) / 60_000));
+    return minutes < 60
+      ? t("closeout.recap.aboutMinutes", { count: minutes })
+      : t("closeout.recap.aboutHours", { count: Math.max(1, Math.round(minutes / 60)) });
+  };
+  const recapEditors = new Map<string, React.ReactNode>();
+  for (const departure of closeout.state.departures) {
+    // Only a returned boat: a trip still out has no day to write about yet,
+    // and one that never left has no recap coming.
+    if (!departure.ended) continue;
+    const autoSendAt = recapAutoSendAt(departure.endsAt, departure.recapAutoSendAt);
+    const recapStatusSummary = departure.recapSentAt
+      ? t("closeout.recap.summarySent", {
+          duration: recapDurationText(now.getTime() - departure.recapSentAt.getTime()),
+        })
+      : departure.recapFailed
+        ? t("closeout.recap.summaryFailed")
+        : departure.recapAutoSendPaused
+          ? t("closeout.recap.summaryPaused")
+          : autoSendAt && autoSendAt.getTime() <= now.getTime()
+            ? t("closeout.recap.summaryDue")
+            : autoSendAt
+              ? t("closeout.recap.summaryWaiting", {
+                  duration: recapDurationText(autoSendAt.getTime() - now.getTime()),
+                })
+              : t("closeout.recap.summaryNoScheduled");
+    recapEditors.set(
+      departure.tripId,
+      <RecapNoteEditor
+        action={saveRecapNoteAction.bind(null, departure.tripId)}
+        shoutout={departure.recapShoutout}
+        saved={noted === departure.tripId}
+        t={t}
+        photos={departure.photos}
+        deletePhotoAction={deleteRecapPhotoAction.bind(null, departure.tripId)}
+        crewPhotos={departure.crewPhotos}
+        crewPhotoInputId={`crew-recap-photo-${departure.tripId}`}
+        uploadCrewPhotoAction={uploadCrewRecapPhotoAction.bind(null, departure.tripId)}
+        deleteCrewPhotoAction={deleteCrewRecapPhotoAction.bind(null, departure.tripId)}
+        tripId={departure.tripId}
+        recapSendAction={sendRecapAction.bind(null, departure.tripId)}
+        toggleRecapAutoSendPauseAction={toggleRecapAutoSendPauseAction}
+        recapAutoSendAt={autoSendAt}
+        recapAutoSendAtLabel={
+          autoSendAt ? formatDateTimeTz(autoSendAt, locale, shop.timezone) : undefined
+        }
+        recapAutoSendPaused={departure.recapAutoSendPaused}
+        recapFailed={departure.recapFailed}
+        recapNowMs={now.getTime()}
+        recapSentAt={departure.recapSentAt}
+        recapStatusSummary={recapStatusSummary}
+      />,
+    );
+  }
+  // Dismissing is immediate and per row (H-57), so a dismissed leftover leaves
+  // the group rather than sitting under a caption explaining that it was
+  // dismissed. Undo is the way back, and it is a toast, not a second state.
+  const openLeftovers = closeout.state.leftovers.filter(
+    (action) => closeout.state.leftoverDecisions[action.id] !== "dismiss",
+  );
+  const evening: EveningReading = {
+    close: eveningClose,
+    headCountCloses,
+    recapEditors,
+    canOpenLog,
+    leftovers: openLeftovers,
+    latest: closeout.latest,
+    closeCount: closeout.closeCount,
+    firstEver: firstBoatEver,
+  };
+  const decidedLeftover =
+    decisionState === "carry" || decisionState === "dismiss"
+      ? closeout.state.leftovers.find((action) => action.id === decision)
+      : undefined;
+  const eveningNotice = noticeFromParam(notice, EVENING_NOTICES);
   // The page's one idea is the work (ADR 20260720-today-work-queue), so
   // instructional content sizes itself against whether any exists: a station,
   // a queue row, or — under the instructor lens — a session block means
@@ -478,10 +679,37 @@ async function TodayBody({
         />
       ) : null}
 
+      {/* The land-then-undo toast for a leftover just decided (H-57): the
+          choice is already saved, and this is the few seconds to take it
+          back — never a confirm in front of a reversible act. */}
+      {decidedLeftover && decisionState ? (
+        <UndoToast
+          message={t(
+            decisionState === "dismiss"
+              ? "closeout.leftovers.savedDismissed"
+              : "closeout.leftovers.savedCarried",
+            { subject: decidedLeftover.subject },
+          )}
+          action={setLeftoverDecisionAction.bind(
+            null,
+            decidedLeftover.id,
+            decisionState === "dismiss" ? "carry" : "dismiss",
+          )}
+          fields={{}}
+          pendingLabel={t("closeout.leftovers.undoing")}
+          undoLabel={t("closeout.leftovers.undo")}
+        />
+      ) : null}
+
       {/* One notice surface. A visit rarely carries more than one of these;
           when it does, they read as one stack of arrivals rather than four
           competing banners. */}
-      {(created && !firstBookableMoment) || reset || email || authNoticeKey ? (
+      {(created && !firstBookableMoment) ||
+      reset ||
+      email ||
+      authNoticeKey ||
+      closed ||
+      eveningNotice ? (
         <div className="mb-6 flex flex-col gap-2">
           {created && !firstBookableMoment ? (
             <ShopNotice>
@@ -504,6 +732,16 @@ async function TodayBody({
           {authNoticeKey ? (
             <ShopNotice tone="warning" role="status">
               {t(authNoticeKey)}
+            </ShopNotice>
+          ) : null}
+          {closed ? (
+            <ShopNotice tone="success" role="status">
+              {t("closeout.notice.closed")}
+            </ShopNotice>
+          ) : null}
+          {eveningNotice ? (
+            <ShopNotice tone={eveningNotice.tone} role={noticeRole(eveningNotice.tone)}>
+              {t(eveningNotice.key)}
             </ShopNotice>
           ) : null}
         </div>
@@ -549,64 +787,7 @@ async function TodayBody({
           })()
         : null}
 
-      {showFirstRunChecklist ? (
-        <FirstRunChecklist
-          shopSlug={shopSlug}
-          // No configured APP_HOST (local dev, some test environments) means no
-          // origin to build an absolute URL from — `publicScheduleUrl` falls
-          // back to the path alone rather than crash the page on a bad base URL.
-          scheduleUrl={publicScheduleUrl}
-          contactDone={Boolean(shop.contactEmail || shop.contactPhone)}
-          profileDone={Boolean(shop.tagline || shop.description || shop.logoUrl)}
-          diveSiteCount={firstRunDiveSites?.length ?? 0}
-          unitsDone={Boolean(shop.unitsConfirmedAt)}
-          stripeDone={canAcceptPayments(firstRunStripeAccount)}
-          copy={{
-            heading: t("shopHome.firstRun.heading"),
-            subtitle: t("shopHome.firstRun.subtitle", { count: FIRST_RUN_STEP_COUNT }),
-            progress: t("shopHome.firstRun.progress", {
-              done: firstRunDoneCount,
-              total: FIRST_RUN_STEP_COUNT,
-            }),
-            contactTitle: t("shopHome.firstRun.contactTitle"),
-            contactBody: t("shopHome.firstRun.contactBody"),
-            contactAction: t("shopHome.firstRun.contactAction"),
-            contactDone: t("shopHome.firstRun.contactDone"),
-            profileTitle: t("shopHome.firstRun.profileTitle"),
-            profileBody: t("shopHome.firstRun.profileBody"),
-            profileAction: t("shopHome.firstRun.profileAction"),
-            profileDone: t("shopHome.firstRun.profileDone"),
-            unitsTitle: t("shopHome.firstRun.unitsTitle"),
-            unitsBody: t("shopHome.firstRun.unitsBody", {
-              currency: shop.currency.toUpperCase(),
-              depth: t(
-                shop.depthUnit === "feet"
-                  ? "shopHome.firstRun.unitsFeet"
-                  : "shopHome.firstRun.unitsMeters",
-              ),
-            }),
-            unitsAction: t("shopHome.firstRun.unitsAction"),
-            unitsDone: t("shopHome.firstRun.unitsDone"),
-            siteTitle: t("shopHome.firstRun.siteTitle"),
-            siteBody: t("shopHome.firstRun.siteBody"),
-            siteAction: t("shopHome.firstRun.siteAction"),
-            siteDone: t("shopHome.firstRun.siteDone", { count: firstRunDiveSites?.length ?? 0 }),
-            tripTitle: t("shopHome.firstRun.tripTitle"),
-            tripBody: t("shopHome.firstRun.tripBody"),
-            tripAction: t("shopHome.firstRun.tripAction"),
-            scheduleTitle: t("shopHome.firstRun.scheduleTitle"),
-            scheduleBody: t("shopHome.firstRun.scheduleBody"),
-            scheduleCopy: t("shopHome.firstRun.scheduleCopy"),
-            scheduleCopied: t("shopHome.firstRun.scheduleCopied"),
-            scheduleCopyFailed: t("shopHome.firstRun.scheduleCopyFailed"),
-            stripeTitle: t("shopHome.firstRun.stripeTitle"),
-            stripeBody: t("shopHome.firstRun.stripeBody"),
-            stripeAction: t("shopHome.firstRun.stripeAction"),
-            stripeDone: t("shopHome.firstRun.stripeDone"),
-            doneBadge: t("shopHome.firstRun.doneBadge"),
-          }}
-        />
-      ) : quietDay ? null : (
+      {quietDay ? null : (
         <DaySpine
           spine={spine}
           shopSlug={shopSlug}
@@ -618,6 +799,8 @@ async function TodayBody({
           withheldCount={withheldCount}
           inviteAction={inviteWaitlistAction.bind(null, shopSlug)}
           showPaymentsRow={showPaymentsRow}
+          firstBooking={firstBooking}
+          evening={evening}
           now={now}
           sessions={
             lens === "sessions" ? (
@@ -629,43 +812,74 @@ async function TodayBody({
               />
             ) : null
           }
+          // **The spine's leading group, on the one morning it exists** (ADR
+          // 20260827-first-light, decision 6). Composed here rather than inside
+          // the spine because the five persisted facts behind it are this
+          // page's reads; the spine only decides where the group sits.
+          firstRun={
+            showFirstRunChecklist ? (
+              <FirstRunChecklist
+                shopSlug={shopSlug}
+                // No configured APP_HOST (local dev, some test environments) means no
+                // origin to build an absolute URL from — `publicScheduleUrl` falls
+                // back to the path alone rather than crash the page on a bad base URL.
+                scheduleUrl={publicScheduleUrl}
+                contactDone={Boolean(shop.contactEmail || shop.contactPhone)}
+                profileDone={Boolean(shop.tagline || shop.description || shop.logoUrl)}
+                diveSiteCount={firstRunDiveSites?.length ?? 0}
+                unitsDone={Boolean(shop.unitsConfirmedAt)}
+                stripeDone={canAcceptPayments(firstRunStripeAccount)}
+                copy={{
+                  groupLabel: t("shopHome.firstRun.groupLabel"),
+                  subtitle: t("shopHome.firstRun.subtitle", { count: FIRST_RUN_STEP_COUNT }),
+                  progress: t("shopHome.firstRun.progress", {
+                    done: firstRunDoneCount,
+                    total: FIRST_RUN_STEP_COUNT,
+                  }),
+                  contactTitle: t("shopHome.firstRun.contactTitle"),
+                  contactBody: t("shopHome.firstRun.contactBody"),
+                  contactAction: t("shopHome.firstRun.contactAction"),
+                  contactDone: t("shopHome.firstRun.contactDone"),
+                  profileTitle: t("shopHome.firstRun.profileTitle"),
+                  profileBody: t("shopHome.firstRun.profileBody"),
+                  profileAction: t("shopHome.firstRun.profileAction"),
+                  profileDone: t("shopHome.firstRun.profileDone"),
+                  unitsTitle: t("shopHome.firstRun.unitsTitle"),
+                  unitsBody: t("shopHome.firstRun.unitsBody", {
+                    currency: shop.currency.toUpperCase(),
+                    depth: t(
+                      shop.depthUnit === "feet"
+                        ? "shopHome.firstRun.unitsFeet"
+                        : "shopHome.firstRun.unitsMeters",
+                    ),
+                  }),
+                  unitsAction: t("shopHome.firstRun.unitsAction"),
+                  unitsDone: t("shopHome.firstRun.unitsDone"),
+                  siteTitle: t("shopHome.firstRun.siteTitle"),
+                  siteBody: t("shopHome.firstRun.siteBody"),
+                  siteAction: t("shopHome.firstRun.siteAction"),
+                  siteDone: t("shopHome.firstRun.siteDone", {
+                    count: firstRunDiveSites?.length ?? 0,
+                  }),
+                  tripTitle: t("shopHome.firstRun.tripTitle"),
+                  tripBody: t("shopHome.firstRun.tripBody"),
+                  tripAction: t("shopHome.firstRun.tripAction"),
+                  scheduleTitle: t("shopHome.firstRun.scheduleTitle"),
+                  scheduleBody: t("shopHome.firstRun.scheduleBody"),
+                  scheduleCopy: t("shopHome.firstRun.scheduleCopy"),
+                  scheduleCopied: t("shopHome.firstRun.scheduleCopied"),
+                  scheduleCopyFailed: t("shopHome.firstRun.scheduleCopyFailed"),
+                  stripeTitle: t("shopHome.firstRun.stripeTitle"),
+                  stripeBody: t("shopHome.firstRun.stripeBody"),
+                  stripeAction: t("shopHome.firstRun.stripeAction"),
+                  stripeDone: t("shopHome.firstRun.stripeDone"),
+                  doneBadge: t("shopHome.firstRun.doneBadge"),
+                }}
+              />
+            ) : null
+          }
         />
       )}
-
-      {/* The evening handoff, after the spine — writing the day up is what
-          comes *after* the work, and on the evenings it matters the stations
-          above it have thinned to nothing.
-
-          It keys on **any** boat being back (`anyBoatIsIn`), not all of them:
-          an evening with a night dive still on the board, or a boat running
-          late, is when someone starts writing the day up
-          (FU-20260811-close-out-has-one-conditional-door). `lastBoatIsIn` then
-          picks the words, because "the last boat is in" is a sentence that must
-          not be said over a boat still at sea. Closing is a ritual, never a
-          gate (ADR 20260804-day-closeout) — nothing here nags. */}
-      {anyBoatIsIn(work.departures, now) ? (
-        <section
-          aria-labelledby="close-out-handoff-heading"
-          className="mt-10 rounded-2xl border border-border bg-surface p-5 sm:p-6"
-        >
-          <h2 id="close-out-handoff-heading" className="text-lg font-semibold">
-            {lastBoatIsIn(work.departures, now)
-              ? t("shopHome.closeOut.heading")
-              : t("shopHome.closeOut.headingBoatStillOut")}
-          </h2>
-          <p className="mt-1 text-muted">
-            {lastBoatIsIn(work.departures, now)
-              ? t("shopHome.closeOut.body")
-              : t("shopHome.closeOut.bodyBoatStillOut")}
-          </p>
-          <Link
-            href={`/shop/${shopSlug}/close-out`}
-            className={buttonClass({ variant: "secondary", className: "mt-4" })}
-          >
-            {t("shopHome.closeOut.action")}
-          </Link>
-        </section>
-      ) : null}
     </>
   );
 }

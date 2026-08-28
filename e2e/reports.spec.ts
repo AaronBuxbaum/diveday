@@ -19,12 +19,20 @@ test.describe("owner", () => {
 
     await expect(page.getByRole("heading", { level: 1, name: "How's your month" })).toBeVisible();
 
-    // The four headline metrics the buyer asks about.
+    // The five headline figures the buyer asks about — unboxed since slice 9f
+    // of ADR 20260827-the-shops-shelves, which is why these are exact matches:
+    // "Seats" is a figure's own label, and the rows below it say "9 of 12
+    // seats" without being one.
     const metrics = page.getByRole("region", { name: "This month's numbers" });
-    await expect(metrics.getByText("Net revenue")).toBeVisible();
-    await expect(metrics.getByText("Bookings")).toBeVisible();
-    await expect(metrics.getByText("Seat fill")).toBeVisible();
-    await expect(metrics.getByText("Waivers signed")).toBeVisible();
+    await expect(metrics.getByText("Net revenue", { exact: true })).toBeVisible();
+    await expect(metrics.getByText("Tips", { exact: true })).toBeVisible();
+    await expect(metrics.getByText("Seats", { exact: true })).toBeVisible();
+    await expect(metrics.getByText("Fill", { exact: true })).toBeVisible();
+    await expect(metrics.getByText("Waivers", { exact: true })).toBeVisible();
+
+    // The tax figure is a footnote to net revenue now, not a sixth tile beside
+    // it — it shares one quiet line with the CSV door.
+    await expect(page.getByText(/Tax collected/)).toBeVisible();
 
     // The seeded back-fill means the current month always has trips to show.
     await expect(page.getByRole("region", { name: "Trips this month" })).toBeVisible();
@@ -95,14 +103,21 @@ test.describe("owner", () => {
     await expect(metrics.getByText(/vs .+ in \w+ \d{4}/)).toHaveCount(0);
   });
 
-  test("the trip table names how much crew each departure carried", { tag: READ_ONLY }, async ({
+  test("every departure row names its own seats, crew and waivers", { tag: READ_ONLY }, async ({
     page,
   }) => {
-    // Never a cost — DiveDay does not know wages — just the headcount beside
-    // the fill a bare percentage alone cannot show (issue #700).
+    // Crew is never a cost — DiveDay does not know wages — just the headcount
+    // beside the fill a bare percentage alone cannot show (issue #700).
+    //
+    // The column headers that used to name these three facts went with the
+    // table (slice 9f): a ledger row has nothing above it to borrow a noun
+    // from, so each fact carries its own — which is also what let the phone
+    // stop hiding two of them behind a breakpoint.
     await page.goto("/shop/blue-mantis/reports");
-    const table = page.getByRole("region", { name: "Trips this month" });
-    await expect(table.getByRole("columnheader", { name: "Crew" })).toBeVisible();
+    const ledger = page.getByRole("region", { name: "Trips this month" });
+    await expect(ledger.getByText(/\d+ of \d+ seats?$/).first()).toBeVisible();
+    await expect(ledger.getByText(/^\d+ crew$/).first()).toBeVisible();
+    await expect(ledger.getByText(/\d+ of \d+ waivers?$/).first()).toBeVisible();
   });
 
   test("downloads this month's report as a CSV, distinct from the full-shop export", {
@@ -124,7 +139,7 @@ test.describe("owner", () => {
     expect(body).toContain("Crew assigned");
   });
 
-  test("the month and its numbers lead the page, above the per-trip table", {
+  test("the month and its numbers lead the page, above the departures ledger", {
     tag: READ_ONLY,
   }, async ({ page }) => {
     // The page reads top-down as the question it answers: which month, then how
@@ -136,11 +151,11 @@ test.describe("owner", () => {
     await page.goto("/shop/blue-mantis/reports");
     const chooser = page.getByRole("navigation", { name: "Choose month" });
     const numbers = page.getByRole("region", { name: "This month's numbers" });
-    const table = page.getByRole("region", { name: "Trips this month" });
-    await expect(table).toBeVisible();
+    const ledger = page.getByRole("region", { name: "Trips this month" });
+    await expect(ledger).toBeVisible();
 
     const [chooserY, numbersY, tableY] = await Promise.all(
-      [chooser, numbers, table].map(async (locator) => (await locator.boundingBox())?.y ?? -1),
+      [chooser, numbers, ledger].map(async (locator) => (await locator.boundingBox())?.y ?? -1),
     );
     expect(chooserY).toBeGreaterThan(0);
     expect(numbersY).toBeGreaterThan(chooserY);

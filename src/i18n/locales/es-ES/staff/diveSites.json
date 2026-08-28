@@ -4,8 +4,8 @@
     "title": "Biblioteca de sitios de buceo",
     "description": "Guarda un lugar una vez y añádelo a cualquier inmersión de cualquier salida.",
     "createSite": "Crear un sitio",
-    "browseTemplates": "Explorar plantillas",
-    "gridAriaLabel": "Sitios de buceo guardados",
+    "browseTemplates": "Explora el catálogo de DiveDay",
+    "catalogSiteCount": "{count, plural, one {# sitio publicado} other {# sitios publicados}}",
     "siteDeletedNotice": "Sitio eliminado.",
     "emptyHeading": "Empieza con un sitio que tu tripulación ya conoce",
     "emptyBody": "Añade una ubicación, una imagen de mapa o ruta, y la vida marina que verán los buceadores.",
@@ -17,14 +17,9 @@
     "searchClear": "Borrar la búsqueda",
     "noMatchHeading": "Ningún sitio coincide con esa búsqueda",
     "templateUpdateReady": "Actualización de plantilla v{version} disponible.",
-    "diveDayTemplateVersion": "Plantilla de DiveDay v{version}",
     "nitroxBadge": "Nitrox",
-    "oneRequiredSpecialty": "1 especialidad requerida",
-    "manyRequiredSpecialties": "{count} especialidades requeridas",
-    "table": {
-      "site": "Sitio",
-      "location": "Ubicación",
-      "requirements": "Requisitos"
+    "groups": {
+      "unrated": "Sin clasificar"
     },
     "pagination": {
       "total": "{count, plural, one {# sitio} other {# sitios}}"
@@ -36,7 +31,6 @@
     "templateVersion": "Plantilla v{version}",
     "importing": "Importando…",
     "importToLibrary": "Importar a mi biblioteca",
-    "preview": "Léelo primero",
     "backToCatalog": "← Todas las plantillas",
     "previewNote": "Todo lo de abajo se copia a tu biblioteca al importar, y todo es tuyo para reescribirlo después.",
     "preview_location": "Dónde está",
@@ -58,6 +52,14 @@
     }
   },
   "form": {
+    "sections": {
+      "about": "El sitio",
+      "underwater": "Lo que hay abajo",
+      "dive": "La inmersión"
+    },
+    "sectionsLabel": "En esta página",
+    "unsavedInSection": "Cambios sin guardar en {section}",
+    "unsavedInSections": "{count, plural, one {Cambios sin guardar en # sección} other {Cambios sin guardar en # secciones}}",
     "nameLabel": "Nombre",
     "namePlaceholder": "Molasses Reef",
     "forecastLegend": "Ubicación GPS",
@@ -131,7 +133,7 @@
     "fitNoteLabel": "Dilo con tus palabras",
     "fitNotePlaceholder": "Poco profundo, resguardado y una buena primera inmersión en mar abierto después de la piscina.",
     "landmarks": {
-      "legend": "Referencias que cuentan la historia",
+      "legend": "Referencias",
       "description": "Una referencia sin nota igual vale la pena: los buceadores buscan el nombre.",
       "nameLabel": "Referencia",
       "namePlaceholder": "Faro de Molasses Reef",
@@ -153,7 +155,7 @@
       "full": "{max, plural, one {Ese es el máximo de referencias por sitio (#).} other {Ese es el máximo de referencias por sitio (#).}}"
     },
     "fieldGuide": {
-      "legend": "Guía de campo: algunas caras que aprender",
+      "legend": "Guía de campo",
       "description": "Cada ficha viene escrita, en el idioma en que la persona esté leyendo.",
       "searchLabel": "Buscar una especie",
       "searchPlaceholder": "Loro semáforo, o Sparisoma viride",

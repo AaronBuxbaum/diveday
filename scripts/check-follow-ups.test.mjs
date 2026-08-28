@@ -1,6 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { afterAll, describe, expect, it } from "vitest";
 
-import { findIssueProblems } from "./check-follow-ups.mjs";
+import { findIssueProblems, SKIPPED_EXIT } from "./check-follow-ups.mjs";
 
 const valid = {
   number: 123,
@@ -232,5 +236,66 @@ describe("what counts as a touched path", () => {
   it("still demands at least one real path", () => {
     const entry = touches("**Touches:** `importer.honesty.receiptsService`, `someOtherKey`");
     expect(problemsFor(entry).join()).toMatch(/Touches/);
+  });
+});
+
+/**
+ * The three outcomes, at the process boundary rather than through
+ * `findIssueProblems` — because the thing under test *is* the exit code, and the
+ * bug this covers (issue #1097) was that a skipped guard and a passing one were
+ * indistinguishable to `check-repo.mjs`, which reads nothing else.
+ *
+ * Each case supplies its own `gh` on a private PATH: absent, malformed, or
+ * answering with a real issue. `PATH=/usr/bin:/bin` is not enough on its own —
+ * a machine that happens to have `gh` in `/usr/bin` would silently run the
+ * network case and hang.
+ */
+describe("exit codes", () => {
+  const stubDir = mkdtempSync(path.join(tmpdir(), "follow-ups-gh-"));
+
+  const runWithGh = (script) => {
+    if (script === null) {
+      rmSync(path.join(stubDir, "gh"), { force: true });
+    } else {
+      writeFileSync(path.join(stubDir, "gh"), `#!/bin/sh\n${script}\n`, { mode: 0o755 });
+    }
+    return spawnSync(process.execPath, [path.join(import.meta.dirname, "check-follow-ups.mjs")], {
+      // Only the stub dir: an inherited PATH would let a real `gh` answer.
+      env: { ...process.env, PATH: stubDir },
+      encoding: "utf8",
+    });
+  };
+
+  afterAll(() => rmSync(stubDir, { recursive: true, force: true }));
+
+  it("exits SKIPPED_EXIT, not 0, when gh cannot answer", () => {
+    const result = runWithGh(null);
+    expect(result.status).toBe(SKIPPED_EXIT);
+    // The reason travels with the code — a bare exit 2 would be its own puzzle.
+    expect(`${result.stdout}${result.stderr}`).toMatch(/skipping/i);
+  });
+
+  it("exits SKIPPED_EXIT when gh answers with something unparseable", () => {
+    const result = runWithGh("echo 'not json'");
+    expect(result.status).toBe(SKIPPED_EXIT);
+  });
+
+  it("still fails with 1 when gh answers and the inbox is malformed", () => {
+    // A `needs-triage` issue missing every required section — the exact shape
+    // that was reddening CI while local runs read green.
+    const malformed = JSON.stringify([
+      { number: 9001, title: "Something I noticed", body: "no header, no sections", labels: [] },
+    ]);
+    // `echo`, never `cat`: PATH holds only the stub dir, so the stub can call
+    // shell builtins and nothing else. A `cat` heredoc here exited non-zero and
+    // read as an unreachable `gh`, which is the very outcome under test.
+    const result = runWithGh(`echo '${malformed}'`);
+    expect(result.status).toBe(1);
+    expect(result.status).not.toBe(SKIPPED_EXIT);
+  });
+
+  it("exits 0 when gh answers and the inbox is clean", () => {
+    const result = runWithGh(`echo '${JSON.stringify([])}'`);
+    expect(result.status).toBe(0);
   });
 });

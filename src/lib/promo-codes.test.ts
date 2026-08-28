@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   discountedAmountCents,
+  isPromoExhausted,
   isPromoRedeemable,
   isValidPromoDiscountPercent,
   normalizePromoCode,
   PROMO_CODE_MAX_LENGTH,
   type PromoScope,
+  promoLedgerGroup,
   promoScopeCovers,
   promoWindowState,
 } from "./promo-codes";
@@ -125,5 +127,62 @@ describe("discountedAmountCents", () => {
   it("handles the ends of the range without going negative", () => {
     expect(discountedAmountCents(13000, 100)).toBe(0);
     expect(discountedAmountCents(0, 50)).toBe(0);
+  });
+});
+
+/**
+ * Slice 9g of ADR 20260827-the-shops-shelves: the staff codes list is one
+ * ledger grouped live / scheduled / ended.
+ *
+ * The rule worth pinning is which facts decide the shelf. The window and the
+ * cap do; `status` does not — a shared fact belongs to the group header, an
+ * exceptional one to the row's badge, and a grouping that swallowed `disabled`
+ * or `failed` would put a code on a shelf that describes neither its window
+ * nor its trouble. It is exactly the kind of rule a later "tidy-up" undoes
+ * because the result looks neater.
+ */
+describe("promoLedgerGroup", () => {
+  const shelf = (overrides: Partial<Parameters<typeof promoLedgerGroup>[0]> = {}) =>
+    promoLedgerGroup(
+      { startsAt: null, expiresAt: null, timesRedeemed: 0, maxRedemptions: null, ...overrides },
+      NOON,
+    );
+
+  it("files an open, uncapped window as live", () => {
+    expect(shelf()).toBe("live");
+    expect(shelf({ expiresAt: new Date("2026-08-01T00:00:00Z") })).toBe("live");
+  });
+
+  it("files a window that has not opened as scheduled", () => {
+    expect(shelf({ startsAt: new Date("2026-08-01T00:00:00Z") })).toBe("scheduled");
+  });
+
+  it("files an expired window as ended, on the instant it expires", () => {
+    expect(shelf({ expiresAt: NOON })).toBe("ended");
+  });
+
+  it("files a code spent to its cap as ended, even with the window wide open", () => {
+    expect(shelf({ timesRedeemed: 20, maxRedemptions: 20 })).toBe("ended");
+    expect(shelf({ timesRedeemed: 19, maxRedemptions: 20 })).toBe("live");
+  });
+
+  it("never lets status choose the shelf — that is the row's badge, not the group", () => {
+    // A switched-off code with a live window is on the Live shelf saying
+    // "Switched off": the window is the shared fact, the switch is this one
+    // row's exception. The type does not even accept a status, which is the
+    // enforcement; this asserts the reading the type protects.
+    const off = { startsAt: null, expiresAt: null, timesRedeemed: 3, maxRedemptions: null };
+    expect(promoLedgerGroup(off, NOON)).toBe("live");
+  });
+});
+
+describe("isPromoExhausted", () => {
+  it("is never true for an uncapped code, however many times it has been used", () => {
+    expect(isPromoExhausted({ timesRedeemed: 900, maxRedemptions: null })).toBe(false);
+  });
+
+  it("counts the cap as reached, not merely passed", () => {
+    expect(isPromoExhausted({ timesRedeemed: 5, maxRedemptions: 5 })).toBe(true);
+    expect(isPromoExhausted({ timesRedeemed: 4, maxRedemptions: 5 })).toBe(false);
   });
 });

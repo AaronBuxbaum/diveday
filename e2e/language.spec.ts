@@ -74,14 +74,14 @@ test.describe("staff", () => {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await signInAsOwner(page);
-    await page.goto("/shop/blue-mantis/close-out");
+    await page.goto("/shop/blue-mantis/reviews");
 
     // Door one: behind the shop's name, filed with the other controls that are
     // about this person on this device rather than about the dive day.
     await page.locator("[data-identity-menu]").click();
     await page.getByRole("button", { name: "Español" }).click();
     await expect(
-      page.getByRole("heading", { name: "Cómo terminaron los barcos de hoy" }),
+      page.getByRole("heading", { level: 1, name: "Lo que dicen los buceadores" }),
     ).toBeVisible();
 
     // Door two: the command palette, which is where a staffer who is already
@@ -92,6 +92,6 @@ test.describe("staff", () => {
     await expect(dialog.getByRole("option", { name: "Español" })).toHaveCount(0);
     await dialog.getByRole("option", { name: "English" }).click();
 
-    await expect(page.getByRole("heading", { name: "How today's boats ended" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "What divers said" })).toBeVisible();
   });
 });

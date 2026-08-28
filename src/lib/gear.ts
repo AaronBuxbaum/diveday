@@ -312,6 +312,35 @@ function outranks(a: GearServiceState, b: GearServiceState): boolean {
   return a.nextDueOn < b.nextDueOn;
 }
 
+/**
+ * **The unit is due for service** — pulled to the bench, or a clock that has
+ * run out or is about to. One predicate rather than two, because the register
+ * says this fact in two places and they must agree by construction: the row's
+ * service sentence speaks exactly when this is true (`serviceFact` in
+ * `GearRegisterLedger.tsx`), and the register's Service-due view lists exactly
+ * the units for which it is (`listGearServiceDueRows`, `src/db/gear.ts`). A
+ * chip counting one set over a list built from another is how a heading starts
+ * lying, which is the whole failure slice 9d's groups exist to end.
+ *
+ * The 30-day window is not applied here: {@link gearServiceState} has already
+ * spent {@link GEAR_SERVICE_DUE_SOON_DAYS} deciding that `due_soon` means
+ * "inside the next service run". Today's queue narrows further to six days on
+ * its own (`src/db/today.ts`) because it is a *today* list; the register is
+ * where the month-ahead heads-up lives, and a tank's hydro or visual
+ * inspection is a compliance clock a fill station enforces, so losing that
+ * distance costs a boat its air.
+ *
+ * Informs, never gates (ADR 20260815-minimal-gear-register) — this decides
+ * what a row *says*, never whether a unit may dive.
+ */
+export function gearServiceIsDue(
+  item: { status: GearItemStatus },
+  serviceState: GearServiceState,
+): boolean {
+  if (item.status !== "in_service") return true;
+  return serviceState.state === "due_soon" || serviceState.state === "overdue";
+}
+
 /** The inclusive shop-local date range a reservation covers. */
 export type ReservationWindow = { from: CalendarDate; until: CalendarDate };
 
@@ -363,6 +392,58 @@ export function reservationPhase(
   }
   if (reservation.reservedUntil === todayLocal) return "due_back_today";
   return reservation.checkedOutAt ? "out" : "reserved";
+}
+
+/**
+ * The three groups the register tells its one story in — ADR
+ * 20260827-the-shops-shelves, slice 9d: **Out**, **Overdue**, **On the wall**.
+ * The states *are* the groups, which is what let the three stat tiles and the
+ * separate returns panel go: each of them was a second rendering of a fact a
+ * group heading now owns.
+ */
+export type GearRegisterGroupName = "out" | "overdue" | "onWall";
+
+/**
+ * Which group a unit is filed under, from the reservation its row talks about
+ * ({@link pickDisplayReservation}). Every {@link GearReservationPhase} maps to
+ * exactly one group, so a unit can never appear twice or vanish between them —
+ * the pin the roadmap names for this slice, held by `gear.test.ts`.
+ *
+ * Two of the mappings are deliberate widenings of the phase vocabulary:
+ *
+ * - **A lapsed window is overdue whether or not the unit ever left.** The
+ *   `overdue`/`never_picked_up` split stays load-bearing (a phone call vs. a
+ *   release — dive-domain review, 2026-08-20), but it survives as the row's
+ *   word and act rather than as a fourth group nobody would scan.
+ * - **Reserved-but-never-collected sits in Out**, not on the wall, once its
+ *   window has begun. The acts belong where the desk works the reservation,
+ *   and the row's own "not collected" word corrects the count a boat-rigger
+ *   would otherwise read off the heading.
+ */
+export function gearRegisterGroup(
+  reservation: {
+    reservedFrom: CalendarDate;
+    reservedUntil: CalendarDate;
+    checkedOutAt: Date | null;
+    returnedAt: Date | null;
+  } | null,
+  todayLocal: CalendarDate,
+): GearRegisterGroupName {
+  if (!reservation) return "onWall";
+  switch (reservationPhase(reservation, todayLocal)) {
+    case "overdue":
+    case "never_picked_up":
+      return "overdue";
+    case "out":
+    case "due_back_today":
+      return "out";
+    case "reserved":
+      // `reserved` covers both "spoken for next Saturday" and "the window is
+      // open and nobody has collected it" — only the start date separates them.
+      return reservation.reservedFrom <= todayLocal ? "out" : "onWall";
+    case "returned":
+      return "onWall";
+  }
 }
 
 /**

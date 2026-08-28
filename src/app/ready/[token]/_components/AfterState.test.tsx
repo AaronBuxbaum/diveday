@@ -1,0 +1,324 @@
+// @vitest-environment jsdom
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
+import { AFTER_STATE_TEST_IDS, AfterState, type AfterStateProps } from "./AfterState";
+
+/**
+ * The rules ADR 20260827-the-divers-thread's decision 4 states about the
+ * after-state — not the layout it renders them in, which is the artboard's
+ * argument and the visual suite's baseline.
+ *
+ * Three of them were defects on the page this replaced, and every assertion
+ * below is written so one cannot come back:
+ *
+ * - **The day's facts render once.** `/recap` rendered conditions and sites
+ *   twice — a quiet stat row in its first act, then the keepsake card under it
+ *   — so a diver read the same two numbers in two typefaces one screen apart.
+ * - **One primary at rest.** Review, Google, tip, photos and "bring a buddy"
+ *   competed below the fold, three of them at CTA weight.
+ * - **Coral is earned and transient.** The greeting is the thread's third and
+ *   last accent, and it stops the moment the diver has answered the one thing
+ *   the page asks.
+ *
+ * It renders the real component rather than reading its source, which is what
+ * `AfterState` being synchronous and presentational buys: the two routes
+ * resolve the data and bind the actions, so there is nothing here that needs a
+ * database, a request or a live token.
+ */
+
+afterEach(cleanup);
+
+/** Keys, echoed with their params — the words are the bundle's problem, not this test's. */
+const t = ((key: DiverMessageKey, params?: Record<string, unknown>) =>
+  params ? `${key}(${Object.values(params).join(",")})` : key) as unknown as DiverTranslator;
+
+const noop = () => {};
+
+function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps {
+  return {
+    t,
+    locale: "en-US",
+    shop: {
+      name: "Blue Mantis Divers",
+      slug: "blue-mantis",
+      depthUnit: "meters",
+      temperatureUnit: "celsius",
+      reviewUrl: null,
+    },
+    trip: {
+      title: "Two-Tank — French Reef",
+      waterTemperatureC: 27,
+      visibilityMeters: 24,
+      surfaceConditions: "Calm",
+      boatName: "Mantis II",
+      crew: ["Keiko Tanaka", "Sal Moretti"],
+    },
+    when: "Sat, Aug 29",
+    diverName: "Yara Halabi",
+    // The site still *carries* its own maximum depth — that is a real fact
+    // about the reef — and the record deliberately never renders it. See "what
+    // the record may claim" below.
+    sites: [
+      {
+        name: "French Reef",
+        locationName: null,
+        marineLife: null,
+        forecastLatitude: null,
+        forecastLongitude: null,
+        maxDepthMeters: 12,
+        depthRange: "40–60 ft, sandy patches",
+      },
+    ],
+    shoutout: null,
+    photos: [],
+    maxPhotos: 12,
+    visitCount: 3,
+    currency: "usd",
+    canTip: false,
+    tip: null,
+    tipPresets: [10, 20, 40],
+    ownReview: null,
+    params: {},
+    nextDeparture: null,
+    actions: { submitReview: noop, uploadPhoto: noop, startTip: noop },
+    ...overrides,
+  } as AfterStateProps;
+}
+
+/**
+ * Every element carrying the primary fill — the page's loudest control.
+ *
+ * Whole-token matching, not a substring: `bg-primary-tint` is the quiet visit
+ * chip and the tip picker's checked state, neither of which is a primary.
+ */
+function primaries(container: HTMLElement): Element[] {
+  return [...container.querySelectorAll("[class]")].filter((node) =>
+    node.className.toString().split(/\s+/).includes("bg-primary"),
+  );
+}
+
+describe("the day's facts render once", () => {
+  it("carries exactly one conditions element and one sites element", () => {
+    render(<AfterState {...props()} />);
+    expect(screen.getAllByTestId(AFTER_STATE_TEST_IDS.conditions)).toHaveLength(1);
+    expect(screen.getAllByTestId(AFTER_STATE_TEST_IDS.sites)).toHaveLength(1);
+  });
+
+  it("renders no fact line for a fact nobody recorded", () => {
+    // `trip_dives` may be empty, a self-guided departure has no crew, a shore
+    // dive has no boat, and a trip nobody logged conditions for has none. A
+    // keepsake with few facts is short; it never invents a row to fill space.
+    render(
+      <AfterState
+        {...props({
+          sites: [],
+          trip: {
+            title: "Shore dive — Dry Rocks",
+            waterTemperatureC: null,
+            visibilityMeters: null,
+            surfaceConditions: null,
+            boatName: null,
+            crew: [],
+          },
+        })}
+      />,
+    );
+    expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.conditions)).toBeNull();
+    expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.sites)).toBeNull();
+    // The floor still renders: this is a record of a day, however thin.
+    expect(screen.getByTestId(AFTER_STATE_TEST_IDS.record)).toBeInTheDocument();
+    expect(screen.getByText("Yara Halabi")).toBeInTheDocument();
+  });
+});
+
+/**
+ * **What the record may claim** — the rules a review added on 2026-08-28,
+ * after the print pass turned this card into a one-page logbook entry with a
+ * ruled Notes block and a **Divemaster** signature rule.
+ *
+ * That framing is the reason these are not style preferences. Logged dive
+ * counts and depths are what divers present for course prerequisites (Rescue,
+ * Divemaster, Master Scuba Diver at 50 dives), and a divemaster handed this
+ * page to sign is being asked to attest to whatever is printed on it. DiveDay
+ * records nothing about dives *performed*, so the only honest page is one that
+ * prints what the shop wrote down and leaves the rest as ruled blanks.
+ */
+describe("what the record may claim", () => {
+  it("counts no dives — DiveDay has no record of dives performed", () => {
+    // It printed `max(trips.planned_dives, sites.length)` as "{n} dives
+    // logged": a number a shop typed on the trip row weeks earlier, so a diver
+    // who sat out the second tank with an ear squeeze read "2 dives logged".
+    // The key is gone from both bundles; this holds the surface to it.
+    const { container } = render(<AfterState {...props()} />);
+    expect(container.textContent).not.toContain("diveCountSummary");
+  });
+
+  it("claims nothing was verified — only who recorded it", () => {
+    render(<AfterState {...props()} />);
+    expect(screen.queryByText(/verifiedRecord/)).toBeNull();
+    expect(screen.getByText("recap.recordedBy(Blue Mantis Divers)")).toBeInTheDocument();
+  });
+
+  it("names the sites and prints no depth beside them", () => {
+    // `dive_sites.max_depth_meters` is the *site's* deepest point — the
+    // glossary says it "exists solely to be comparable to a certification's
+    // depth ceiling" — and when it was null the label fell back to
+    // `depth_range`, free-text briefing prose, so "Max depth: 40–60 ft, sandy
+    // patches" could print under a max-depth label. Neither is this diver's
+    // dive, and both are in `props()` above precisely so this can say so.
+    render(<AfterState {...props()} />);
+    const sites = screen.getByTestId(AFTER_STATE_TEST_IDS.sites);
+    expect(sites.textContent).toContain("French Reef");
+    expect(sites.textContent).not.toContain("maxDepthLabel");
+    expect(sites.textContent).not.toContain("sandy patches");
+    expect(sites.textContent).not.toContain("12");
+  });
+
+  it("still gives the printer its ruled blanks to write the dive up on", () => {
+    // The numbers are the diver's to write and the signing divemaster's to
+    // countersign. Deleting the claims without leaving the blanks would have
+    // taken the keepsake down with them.
+    render(<AfterState {...props()} />);
+    expect(screen.getByTestId(AFTER_STATE_TEST_IDS.printNotes)).toBeInTheDocument();
+    expect(screen.getByTestId(AFTER_STATE_TEST_IDS.printSignature)).toBeInTheDocument();
+  });
+});
+
+describe("one primary at rest", () => {
+  it("gives the review the only primary weight on the page", () => {
+    const { container } = render(<AfterState {...props({ canTip: true })} />);
+    const loud = primaries(container);
+    expect(loud).toHaveLength(1);
+    expect(loud[0]?.textContent).toBe("reviews.submit");
+  });
+
+  it("demotes the review submit only once the Google door lights up", () => {
+    // The carry-it-to-Google door appears exactly when a strong rating has
+    // just landed — never beside the form — and while it is lit the form's own
+    // submit steps back, so the page still points at one next action.
+    const { container } = render(
+      <AfterState
+        {...props({
+          shop: {
+            name: "Blue Mantis Divers",
+            slug: "blue-mantis",
+            depthUnit: "meters",
+            temperatureUnit: "celsius",
+            reviewUrl: "https://g.page/r/blue-mantis/review",
+          },
+          ownReview: { rating: 5, comment: "Vis was unreal." },
+          params: { review: "published" },
+        })}
+      />,
+    );
+    const loud = primaries(container);
+    expect(loud).toHaveLength(1);
+    expect(loud[0]?.textContent).toBe("recap.externalReviewCta");
+  });
+
+  it("keeps the Google door shut when nothing was just submitted", () => {
+    render(
+      <AfterState
+        {...props({
+          shop: {
+            name: "Blue Mantis Divers",
+            slug: "blue-mantis",
+            depthUnit: "meters",
+            temperatureUnit: "celsius",
+            reviewUrl: "https://g.page/r/blue-mantis/review",
+          },
+          ownReview: { rating: 5, comment: "Vis was unreal." },
+        })}
+      />,
+    );
+    expect(screen.queryByText("recap.externalReviewCta")).toBeNull();
+  });
+});
+
+describe("the coral budget", () => {
+  it("spends the thread's last accent on the greeting, once", () => {
+    const { container } = render(<AfterState {...props()} />);
+    expect(container.querySelectorAll("[class*='accent']")).toHaveLength(1);
+  });
+
+  it("renders the greeting quiet once the diver's review is in", () => {
+    // Every moment is earned and transient (ADR
+    // 20260827-clearwater-surface-language, decision 11). Once the one thing
+    // the page asks has been answered, the same words are a page title.
+    const { container } = render(
+      <AfterState {...props({ ownReview: { rating: 4, comment: null } })} />,
+    );
+    expect(container.querySelectorAll("[class*='accent']")).toHaveLength(0);
+    expect(container.querySelector(".rise-in")).toBeNull();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+      "thread.afterGreeting(Yara)",
+    );
+  });
+});
+
+describe("the milestone stamp", () => {
+  it("stamps a milestone visit instead of the plain ordinal line", () => {
+    render(<AfterState {...props({ visitCount: 10 })} />);
+    expect(screen.getByTestId(AFTER_STATE_TEST_IDS.stamp)).toBeInTheDocument();
+    expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.visitLine)).toBeNull();
+  });
+
+  it("leaves an ordinary visit its plain line and no stamp", () => {
+    render(<AfterState {...props({ visitCount: 12 })} />);
+    expect(screen.queryByTestId(AFTER_STATE_TEST_IDS.stamp)).toBeNull();
+    expect(screen.getByTestId(AFTER_STATE_TEST_IDS.visitLine)).toBeInTheDocument();
+  });
+
+  it("says in words what the roundel draws", () => {
+    // Colour and shape never carry a state alone: the whole label is the
+    // `<svg>`'s accessible name, however its lines are broken up inside.
+    render(<AfterState {...props({ visitCount: 1 })} />);
+    expect(screen.getByRole("img", { name: "recap.milestoneStampFirst" })).toBeInTheDocument();
+  });
+});
+
+describe("the keepsake prints like a logbook page", () => {
+  it("carries a ruled notes block and a signature rule, print-only", () => {
+    render(<AfterState {...props()} />);
+    for (const id of [AFTER_STATE_TEST_IDS.printNotes, AFTER_STATE_TEST_IDS.printSignature]) {
+      const block = screen.getByTestId(id);
+      // `hidden` on screen, `print:block` on paper — the two halves of "this
+      // exists for the printer and nowhere else".
+      expect(block.className).toContain("hidden");
+      expect(block.className).toContain("print:block");
+    }
+  });
+
+  it("hides everything except the dive record when printing", () => {
+    const { container } = render(
+      <AfterState {...props({ shoutout: "Come back for the wreck." })} />,
+    );
+    const record = screen.getByTestId(AFTER_STATE_TEST_IDS.record);
+    for (const child of [...(container.querySelector("main")?.children ?? [])]) {
+      if (child === record) {
+        expect(child.className).not.toContain("print:hidden");
+      } else {
+        expect(child.className).toContain("print:hidden");
+      }
+    }
+  });
+});
+
+describe("the doors stay quiet", () => {
+  it("renders no tip door for a shop that cannot take one and has none to report", () => {
+    render(<AfterState {...props({ canTip: false, tip: null })} />);
+    expect(screen.queryByText("recap.tipCrew")).toBeNull();
+  });
+
+  it("still reports a paid tip after the shop disconnects Stripe", () => {
+    // `canTip` alone would hide the diver's own paid confirmation along with
+    // the form that started it.
+    render(
+      <AfterState
+        {...props({ canTip: false, tip: { status: "paid", amountCents: 2000, checkoutUrl: null } })}
+      />,
+    );
+    expect(screen.getByText("recap.tipCrew")).toBeInTheDocument();
+  });
+});

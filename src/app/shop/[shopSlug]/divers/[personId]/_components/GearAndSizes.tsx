@@ -124,7 +124,14 @@ export function GearAndSizes({
           </FactRow>
         ) : null}
         {mayEdit ? (
-          <details className="group px-5 py-3 sm:px-6">
+          <details
+            className="group px-5 py-3 sm:px-6"
+            // Open when this group has an outcome to show. The save redirects
+            // and the record re-renders with its disclosures shut, so the
+            // "Saved." this form is about sits inside a closed box and the
+            // staffer is told nothing at all.
+            open={Boolean(status)}
+          >
             <summary
               className={buttonClass({
                 variant: "secondary",

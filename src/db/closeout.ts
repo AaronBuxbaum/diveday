@@ -12,6 +12,7 @@ import {
   parseCloseoutSnapshot,
   shopDayOf,
 } from "@/lib/closeout";
+import type { TodayAction } from "@/lib/today";
 import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import {
@@ -21,6 +22,7 @@ import {
   notificationDeliveries,
   people,
   recapPhotos,
+  rollCallEvents,
   tripRecapPhotos,
   trips,
 } from "./schema";
@@ -28,13 +30,17 @@ import { getTodayWork, listRollCallGaps } from "./today";
 import { liveTrip } from "./trips-live";
 
 /**
- * The db half of the end-of-day close-out (ADR 20260804-day-closeout).
+ * The db half of the day's closing state (ADR 20260804-day-closeout, folded
+ * into the shop home by 20260827-clearwater-surface-language's decision 4).
  * `getDayCloseout` gathers the day's facts through the readers that already
  * own them — `listRollCallGaps` and `getTodayWork` (src/db/today.ts) — and
  * hands them to the pure assembly (src/lib/closeout.ts); `closeDay` appends
- * the recorded act. Nothing here detects anything of its own: a close-out
- * that counted a head count differently from the queue that chases it would
- * let the two disagree about whether a person is accounted for.
+ * the recorded act. Nothing here detects anything of its own: an evening that
+ * counted a head count differently from the queue that chases it would let the
+ * two disagree about whether a person is accounted for.
+ *
+ * Its one caller is the shop home. `/close-out` is a 308 (H-62), so this file
+ * lost a page and kept every fact.
  */
 
 /** One recorded close of a day, ready to render. */
@@ -53,14 +59,6 @@ export type DayCloseout = {
   /** How many times this day has been closed (re-closing appends, never edits). */
   closeCount: number;
 };
-
-/** The only close-out refusal: an open person-safety state needs an explicit acknowledgement. */
-export class CloseoutAcknowledgementRequired extends Error {
-  constructor() {
-    super("close-out acknowledgement required");
-    this.name = "CloseoutAcknowledgementRequired";
-  }
-}
 
 /**
  * Read the latest choice for each leftover in one shop-local day. The table is
@@ -372,19 +370,43 @@ async function assembleState(
   t: StaffTranslator,
   locale: string,
   includeOpsAlerts: boolean,
+  /**
+   * The Today queue this render has **already** read.
+   *
+   * The shop home is now the only surface that reads a day's closing state
+   * (H-62 folded the close-out route away), and it has run `getTodayWork` for
+   * the spine before it gets here. Without this the same page would run the
+   * queue twice — about ten queries, the whole readiness pipeline, and two
+   * chances for one render to hold two answers about one boat. Omitted, the
+   * state reads its own (which is what `closeDay` does on purpose: the
+   * recorded act recomputes from the source of truth, never from what a page
+   * believed).
+   */
+  actions?: readonly TodayAction[],
 ): Promise<DayCloseoutState> {
   const shopDay = shopDayOf(now, timeZone);
-  const [tripsToday, gaps, work, leftoverDecisions] = await Promise.all([
+  const [tripsToday, gaps, queued, leftoverDecisions] = await Promise.all([
     todaysTrips(db, shopId, timeZone, now),
     listRollCallGaps(db, shopId, now),
-    getTodayWork(db, shopId, shopSlug, timeZone, now, undefined, t, locale, includeOpsAlerts),
+    actions ??
+      getTodayWork(
+        db,
+        shopId,
+        shopSlug,
+        timeZone,
+        now,
+        undefined,
+        t,
+        locale,
+        includeOpsAlerts,
+      ).then((work) => work.actions),
     listLatestLeftoverDecisions(db, shopId, shopDay),
   ]);
   const adminTask = await postDiveReportTask(db, shopId, tripsToday, now);
   return assembleDayCloseout({
     trips: tripsToday,
     gaps,
-    actions: work.actions,
+    actions: queued,
     adminTasks: adminTask ? [adminTask] : [],
     leftoverDecisions,
     timeZone,
@@ -420,11 +442,12 @@ function toRecord(row: Awaited<ReturnType<typeof closesOfDay>>[number]): DayClos
 }
 
 /**
- * Everything the close-out surface needs, in one pass.
+ * Everything the home's evening reading needs, in one pass.
  *
  * `includeOpsAlerts` mirrors the Today page's owner/manager gate: the
  * leftovers list is "what the Today queue would still show *you*", so it must
- * hold the same rows for the same viewer.
+ * hold the same rows for the same viewer — which is free when the caller hands
+ * its own `actions` in, and load-bearing when it does not.
  */
 export async function getDayCloseout(
   db: AppDb,
@@ -435,6 +458,8 @@ export async function getDayCloseout(
   t: StaffTranslator = staffTranslator("en-US"),
   locale = "en-US",
   includeOpsAlerts = false,
+  /** See `assembleState` — the Today queue this render already read. */
+  actions?: readonly TodayAction[],
 ): Promise<DayCloseout> {
   const state = await assembleState(
     db,
@@ -445,6 +470,7 @@ export async function getDayCloseout(
     t,
     locale,
     includeOpsAlerts,
+    actions,
   );
   const closes = await closesOfDay(db, shopId, state.shopDay);
   const latestRow = closes[0];
@@ -479,7 +505,6 @@ export async function closeDay(
     t?: StaffTranslator;
     locale?: string;
     includeOpsAlerts?: boolean;
-    acknowledged?: boolean;
   },
 ): Promise<DayCloseoutRecord> {
   const now = input.now ?? nowDate();
@@ -502,9 +527,6 @@ export async function closeDay(
     input.locale ?? "en-US",
     input.includeOpsAlerts ?? false,
   );
-  if (state.mustAcknowledge.length > 0 && !input.acknowledged) {
-    throw new CloseoutAcknowledgementRequired();
-  }
   const outstanding = buildCloseoutSnapshot(state, input.decisions);
   const [row] = await db
     .insert(dayCloseouts)
@@ -528,4 +550,91 @@ export async function closeDay(
     actorName: actor.fullName,
     outstanding,
   };
+}
+
+/**
+ * **Who closed each head count, and when** — the two facts a settled station
+ * says about itself beyond its numbers (ADR
+ * 20260827-clearwater-surface-language, decision 4; the Evening artboard's
+ * "back by 10:26 AM · head count closed by Keiko").
+ *
+ * The latest roll-call event on the trip *is* the moment the count closed:
+ * these rows are append-only and a count is closed by its last mark. So this
+ * asks for the newest one per trip and nothing else — it decides no state,
+ * raises no gap and disagrees with nobody. Whether a count is closed at all
+ * stays `listRollCallGaps`'s answer alone (an absent gap), which is why this
+ * can be a plain read.
+ *
+ * The diver half only. A trip whose last mark was a crew one reads a few
+ * minutes early, which is a rounding error in a sentence about an evening; the
+ * alternative is a second table, a merge, and two ways for one line to be
+ * wrong. A trip with no roll call at all is simply absent from the map, and
+ * the station drops the clause rather than guessing at one.
+ *
+ * Ordered by the trio every roll-call read in this repo orders by — `occurredAt`,
+ * then `createdAt`, then `seq` — because the first two tie constantly (a frozen
+ * test clock, an offline batch applied in one transaction) and `seq` is the
+ * only column that records what actually came first (ADR
+ * 20260815-roll-call-order-is-a-property-of-the-data).
+ */
+export async function listHeadCountCloses(
+  db: AppDb,
+  shopId: string,
+  tripIds: readonly string[],
+): Promise<Map<string, { closedAt: Date; closedBy: string }>> {
+  const closes = new Map<string, { closedAt: Date; closedBy: string }>();
+  if (tripIds.length === 0) return closes;
+  const rows = await db
+    .select({
+      tripId: rollCallEvents.tripId,
+      occurredAt: rollCallEvents.occurredAt,
+      closedBy: people.fullName,
+    })
+    .from(rollCallEvents)
+    .innerJoin(people, eq(people.id, rollCallEvents.recordedByPersonId))
+    .where(and(eq(rollCallEvents.shopId, shopId), inArray(rollCallEvents.tripId, [...tripIds])))
+    .orderBy(
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
+    );
+  for (const row of rows) {
+    if (closes.has(row.tripId)) continue;
+    closes.set(row.tripId, { closedAt: row.occurredAt, closedBy: row.closedBy });
+  }
+  return closes;
+}
+
+/**
+ * **Has this shop ever had a boat come home before today?**
+ *
+ * The one input to the evening's once-ever wording: on the day a shop's first
+ * departure ties up, "all boats are home" is a smaller sentence than the
+ * moment deserves, and the coral table sanctions "your first boat is home"
+ * instead (ADR 20260827-clearwater-surface-language, decision 11, the
+ * home-evening row). It expires by itself — the moment any earlier day holds a
+ * sailed departure this answers true forever after, with nothing stored and
+ * nothing to clean up.
+ *
+ * `before` is the start of the shop's own calendar day, so a second boat
+ * landing this afternoon does not cancel this morning's first.
+ */
+export async function shopHasSailedBefore(
+  db: AppDb,
+  shopId: string,
+  before: Date,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        lt(trips.endsAt, before),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
 }

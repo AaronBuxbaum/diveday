@@ -9,7 +9,7 @@ import {
   mergedCourseTemplateSnapshot,
   parseCourseTemplateSnapshot,
 } from "@/lib/course-template-sync";
-import type { CourseContent } from "@/lib/courses";
+import { type CourseContent, canonicalAgency } from "@/lib/courses";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
 import { courseTemplateSnapshot, getCourseTemplate } from "./course-templates";
@@ -81,11 +81,15 @@ const progressionOrder = [
   asc(courses.title),
 ];
 
-/** Course agency is imported shop data; tabs use one stable key per company. */
+/**
+ * Course agency is imported shop data; one stable key per company. The
+ * TypeScript twin the roster groups by is `canonicalAgency`
+ * (`src/lib/courses.ts`) — the two spell the same rule and must not drift.
+ */
 const canonicalAgencyExpression = sql<string>`lower(trim(${courses.agency}))`;
 
 function agencyScope(agency: string) {
-  return sql`lower(trim(${courses.agency})) = ${agency.trim().toLowerCase()}`;
+  return sql`lower(trim(${courses.agency})) = ${canonicalAgency(agency)}`;
 }
 
 /**
@@ -159,31 +163,20 @@ export async function listActiveCoursesForSitemap(
 }
 
 /**
- * The agencies this shop's catalog actually holds, alphabetically.
+ * The agencies the *publicly visible* catalog holds, alphabetically — the
+ * diver page's tab strip.
  *
- * Drives the roster's agency tabs, which is why it is a `SELECT DISTINCT` over
- * the shop's own rows rather than a constant: `courses.agency` is free text a
- * CSV import can carry anything into, so a hard-coded PADI/SSI pair would hide
- * a third agency's courses behind no tab at all. One or zero agencies means
- * there is nothing to filter and the roster renders no tab strip.
- */
-export async function courseAgencies(db: AppDb, shopId: string): Promise<string[]> {
-  const rows = await db
-    .selectDistinct({ agency: canonicalAgencyExpression })
-    .from(courses)
-    .where(eq(courses.shopId, shopId))
-    .orderBy(asc(canonicalAgencyExpression));
-  return rows.map((row) => row.agency);
-}
-
-/**
- * The same question asked of the *publicly visible* catalog, for the diver
- * page's tab strip.
+ * A `SELECT DISTINCT` over the shop's own rows rather than a constant:
+ * `courses.agency` is free text a CSV import can carry anything into, so a
+ * hard-coded PADI/SSI pair would hide a third agency's courses behind no tab
+ * at all. Never a filter applied afterwards to the whole catalog: a shop whose
+ * SSI ladder is entirely hidden must not be offered an SSI tab that lands a
+ * diver on an empty page. Hidden courses are staff's business, and a tab is a
+ * promise that there is something behind it.
  *
- * Deliberately not {@link courseAgencies} with a filter applied afterwards: a
- * shop whose SSI ladder is entirely hidden must not be offered an SSI tab that
- * lands a diver on an empty page. Hidden courses are staff's business, and a
- * tab is a promise that there is something behind it.
+ * The staff roster had a twin of this until slice 9g of ADR
+ * 20260827-the-shops-shelves; it groups by agency now, so it has no filter to
+ * populate.
  */
 export async function activeCourseAgencies(db: AppDb, shopId: string): Promise<string[]> {
   const rows = await db
@@ -207,10 +200,22 @@ export type CoursePage = {
 
 /**
  * The staff roster's paginated view of the full catalog — hidden entries
- * included, in the shared progression sort, just one page at a time, and
- * optionally narrowed to one agency by the roster's tabs. Callers that need
- * the complete set for a dropdown or picker use {@link listActiveCourses},
- * not this.
+ * included, one page at a time. Callers that need the complete set for a
+ * dropdown or picker use {@link listActiveCourses}, not this.
+ *
+ * **Agency-major, then progression order.** The roster reads as one ledger
+ * grouped by agency (ADR 20260827-the-shops-shelves, decision 1), and grouping
+ * composes with the Pager rather than trading against it: sorting group-major
+ * is what keeps a group from interleaving across a page boundary, so a heading
+ * re-rendered on page 2 is the continuation of one run rather than a second
+ * PADI section below an SSI one. It replaced a `?agency=` tab strip that
+ * narrowed the whole query — the reason there is no `agency` option here any
+ * more.
+ *
+ * Progression order only means anything *inside* one agency's ladder (see
+ * {@link progressionOrder}), which is the other half of why the sort is
+ * agency-major: an unsorted mix put an Open Water directly above another Open
+ * Water with nothing saying which was which.
  *
  * `scope` is built once and used by **both** the count and the row query: a
  * count taken over a wider scope than the rows would promise pages that render
@@ -225,11 +230,9 @@ export type CoursePage = {
 export async function pagedCourses(
   db: AppDb,
   shopId: string,
-  options: { page?: number; limit?: number; agency?: string } = {},
+  options: { page?: number; limit?: number } = {},
 ): Promise<CoursePage> {
-  const scope = options.agency
-    ? and(eq(courses.shopId, shopId), agencyScope(options.agency))
-    : eq(courses.shopId, shopId);
+  const scope = eq(courses.shopId, shopId);
 
   const paged = await offsetPage({
     page: options.page,
@@ -243,7 +246,7 @@ export async function pagedCourses(
         .select()
         .from(courses)
         .where(scope)
-        .orderBy(...progressionOrder)
+        .orderBy(asc(canonicalAgencyExpression), ...progressionOrder)
         .limit(limit)
         .offset(offset),
   });

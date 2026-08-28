@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { canDrawRoute, DiveSiteMap } from "@/components/DiveSiteMap";
 import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiveBriefing } from "./types";
@@ -92,6 +93,42 @@ export function TripLookFor({ briefings, locale }: { briefings: DiveBriefing[]; 
           </Fragment>
         ))}
       </p>
+    </section>
+  );
+}
+
+/**
+ * The routes the shop drew, for the sites this day dives.
+ *
+ * ADR 20260809-shop-drawn-dive-routes rests on one sentence — a route reaches
+ * the diver, which is the only reason to draw one — and slice 7c broke it by
+ * accident: the figure lived inside the swipeable briefing deck, so deleting
+ * the deck left the staff route editor drawing for nobody. It comes back here
+ * rather than in the deck, as **one figure per site** instead of one card per
+ * tank. A two-tank day on one mooring drew the same line twice.
+ *
+ * Renders nothing at all when no site on the day has a route, which is the
+ * ordinary case: most shops never draw one, and a heading over an empty frame
+ * would be the page apologising for a feature the shop declined to use.
+ */
+export function TripRoutes({ briefings, locale }: { briefings: DiveBriefing[]; locale: string }) {
+  const t = diverTranslator(locale);
+  const seen = new Set<string>();
+  const sites = [];
+  for (const { diveSite } of briefings) {
+    if (!diveSite || seen.has(diveSite.id) || !canDrawRoute(diveSite)) continue;
+    seen.add(diveSite.id);
+    sites.push(diveSite);
+  }
+  if (sites.length === 0) return null;
+  return (
+    <section className="mt-6">
+      <GroupLabel as="h2">{t("trip.theRoute", { count: sites.length })}</GroupLabel>
+      <div className="mt-2 space-y-3">
+        {sites.map((site) => (
+          <DiveSiteMap key={site.id} site={site} t={t} />
+        ))}
+      </div>
     </section>
   );
 }

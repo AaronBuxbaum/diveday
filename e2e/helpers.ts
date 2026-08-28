@@ -155,6 +155,25 @@ export async function openThreadStep(page: Page, step: string): Promise<Locator>
 }
 
 /**
+ * Open one of the after-state's quiet doors and hand back its `<details>`.
+ *
+ * The thread's third state (ADR 20260827-the-divers-thread, decision 4) keeps
+ * photos, the tip and the Google hand-off behind hairline `<details>` rows, so
+ * a spec that wants the uploader or the tip presets opens its door first —
+ * exactly as a diver does. Same construction and same reasoning as
+ * {@link openThreadStep} above; the doors are not an accordion group, so
+ * opening one leaves the others as they were.
+ */
+export async function openRecapDoor(page: Page, door: string): Promise<Locator> {
+  const details = page.locator(`[data-recap-door="${door}"] details`);
+  await details.waitFor();
+  if (await details.evaluate((element: HTMLDetailsElement) => element.open)) return details;
+  await details.locator("summary").click();
+  await expect(details).toHaveAttribute("open", "");
+  return details;
+}
+
+/**
  * "Now" as the server sees it. The e2e fleet freezes its clock at
  * E2E_FROZEN_CLOCK (playwright.config.ts → src/lib/clock.ts), so any date a
  * test computes for a form input, or any year it asserts against a

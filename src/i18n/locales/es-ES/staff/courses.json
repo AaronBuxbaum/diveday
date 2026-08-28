@@ -3,7 +3,6 @@
     "eyebrow": "Catálogo",
     "title": "Cursos",
     "description": "La copia de tu centro del catálogo PADI y SSI. Abre un curso para editar su página y precio, u oculta los que no ofreces.",
-    "agencyTabsLabel": "Filtrar cursos por agencia",
     "hidden": "Oculto",
     "orHigher": "{level} o superior",
     "openToUncertified": "Abierto a buceadores sin certificar",
@@ -120,6 +119,9 @@
       }
     },
     "unsavedChanges": "Cambios sin guardar",
+    "unsavedInSection": "Cambios sin guardar en {section}",
+    "unsavedInSections": "Cambios sin guardar en {count, plural, one {# sección} other {# secciones}}",
+    "sectionsLabel": "Secciones",
     "draftRestored": "Cambios sin guardar, recuperados de tu última visita"
   },
   "dayByDay": {

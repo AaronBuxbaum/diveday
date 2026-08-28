@@ -1,6 +1,6 @@
 # Clearwater — the surface language, drawn
 
-- **Status:** Live (its ADR is Proposed — this canvas may still be edited)
+- **Status:** Shipped (its ADR is Accepted — this canvas is the dated argument, superseded rather than freshened)
 - **Date:** 2026-08-27
 - **ADR:** [20260827-clearwater-surface-language](../../../architecture/decisions/20260827-clearwater-surface-language.md)
 - **Published:** https://claude.ai/code/artifact/056c99fa-49f8-4939-aacd-b96e6fd771f8
@@ -88,9 +88,9 @@ bodies, with their pins and owner-call dependencies, are in
 | 6a — the language mechanics | shipped | `src/components/ui/ledger.tsx` | `src/components/ui/ledger.test.tsx` |
 | 6b — one chrome spec | shipped | `src/components/chrome/ChromeBar.tsx` | `src/components/chrome/chrome.test.ts`, `src/components/PublicShopNav.test.tsx`, `scripts/check-critical-text.mjs`, `e2e/schedule-builder.spec.ts` |
 | 6c — the home as the day's spine | shipped | `src/app/shop/[shopSlug]/_components/today/DaySpine.tsx` | `src/app/shop/[shopSlug]/_components/today/DaySpine.test.tsx` |
-| 6d — the home's evening reading and the fold (H-62) | open | — | — |
+| 6d — the home's evening reading and the fold (H-62) | shipped | `src/app/shop/[shopSlug]/_components/today/ClosingStation.tsx` | `src/app/shop/[shopSlug]/_components/today/DaySpine.test.tsx` → “the evening reading”; `src/lib/closeout.test.ts` → “assembleEveningClose”; `src/lib/staff-destinations.test.ts` → “has no Close-out destination at all”; `e2e/day-close.spec.ts`. Its other pieces: the closing block (`_components/today/ClosingBlock.tsx`), the pure assembly (`assembleEveningClose` in `src/lib/closeout.ts`), the 308 (`close-out/route.ts`), and the evening's acts (`src/app/shop/[shopSlug]/actions.ts`) |
 | 6e — the week board | shipped | `src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx` | `ScheduleBuilder.test.tsx` → “ScheduleBuilder week board”; `src/db/trips-queries.test.ts` → “the week board”; `src/lib/week-board.test.ts`; `e2e/schedule-builder.spec.ts` → “the board is the day stream below 1280px and the week from 1280 up”. Its reader is `weekBoard()` in `src/db/trips-queries.ts`; the `?week=` grammar is `src/lib/week-board.ts` |
-| 6f — the orders day ledger | open | — | — |
+| 6f — the orders day ledger | shipped | `src/app/shop/[shopSlug]/orders/_components/OrdersLedger.tsx` | `src/app/shop/[shopSlug]/orders/_components/OrdersLedger.test.tsx`; `src/app/shop/[shopSlug]/orders/page.test.tsx` → “the day ledger”; `src/db/orders.test.ts` → “pagedOrdersByDay”; `e2e/orders-demo.spec.ts` → “no row repeats its day group's date”. Its reader is `pagedOrdersByDay()` in `src/db/orders.ts`; the toolbar is `_components/OrdersToolbar.tsx` |
 | 6g — settings rail and pane | shipped | `src/app/shop/[shopSlug]/settings/_components/SettingsRail.tsx` | `src/app/shop/[shopSlug]/settings/_components/SettingsRail.test.tsx` |
 | 6h — the counter instrument | shipped | `src/app/shop/[shopSlug]/check-in/_components/CounterQueueRow.tsx` | `src/app/shop/[shopSlug]/check-in/_components/CounterQueueRow.test.tsx` |
 | 6i — the storefront | shipped | `src/app/s/[shopSlug]/_components/WeekLedger.tsx` | `src/app/s/[shopSlug]/_components/WeekLedger.test.tsx` |

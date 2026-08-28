@@ -99,6 +99,57 @@ describe("includeHidden", () => {
   });
 });
 
+describe("empty .all()", () => {
+  it("catches a loop over .all() with nothing proving the list is not empty", () => {
+    const source = [
+      'const chipLinks = chips.getByRole("link");',
+      "for (const chip of await chipLinks.all()) {",
+      "  expect((await chip.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);",
+      "}",
+    ].join("\n");
+    expect(ruleIds(source)).toEqual(["empty-all"]);
+  });
+
+  it("stays quiet once a count assertion above it proves the list is not empty", () => {
+    const source = [
+      'const chipLinks = chips.getByRole("link");',
+      "await expect(chipLinks).not.toHaveCount(0);",
+      "for (const chip of await chipLinks.all()) {",
+    ].join("\n");
+    expect(ruleIds(source)).toEqual([]);
+  });
+
+  it("looks backwards only — a proof written after the loop has already let it run on nothing", () => {
+    const source = [
+      "for (const chip of await chipLinks.all()) {",
+      "}",
+      "await expect(chipLinks).not.toHaveCount(0);",
+    ].join("\n");
+    expect(ruleIds(source)).toEqual(["empty-all"]);
+  });
+
+  it("does not reach past its window", () => {
+    const source = [
+      "await expect(chipLinks).not.toHaveCount(0);",
+      ...Array.from({ length: 8 }, (_, index) => `const filler${index} = index;`),
+      "for (const chip of await chipLinks.all()) {",
+    ].join("\n");
+    expect(ruleIds(source)).toEqual(["empty-all"]);
+  });
+
+  it("takes the acknowledgement, like every other rule", () => {
+    const source = [
+      `// ${ACKNOWLEDGEMENT} empty-all: the panel renders no rows at all before a shop adds one, and acting on none is the case under test.`,
+      "for (const row of await rows.all()) await row.click();",
+    ].join("\n");
+    expect(ruleIds(source)).toEqual([]);
+  });
+
+  it("never flags an awaited count, which is not a loop over nothing", () => {
+    expect(ruleIds("const total = await rows.count();")).toEqual([]);
+  });
+});
+
 describe("comment lines", () => {
   it("never flags prose about a banned pattern", () => {
     expect(ruleIds("// never reaches the `networkidle` state the scan waits for")).toEqual([]);

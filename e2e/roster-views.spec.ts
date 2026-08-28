@@ -28,6 +28,11 @@ const CONTACT_ON_FILE_DIVER = "Priya Sharma";
 const DIVING_TODAY_DIVER = "Priya Sharma";
 const DIVING_LATER_DIVER = "Hana Kobayashi";
 const PENDING_CARD_DIVER = "Mateo Duarte";
+// Priya's cards are verified, so nothing of hers is waiting on a staffer: she
+// is the roster's "not in this view, but still on the roster" case. That a
+// clear row wears no badge at all is pinned deterministically in
+// `DiverList.test.tsx`, where the row's own facts are the fixture.
+const SETTLED_DIVER = "Priya Sharma";
 
 test("the diver roster offers role-view chips that drive the filter", { tag: READ_ONLY }, async ({
   page,
@@ -37,11 +42,14 @@ test("the diver roster offers role-view chips that drive the filter", { tag: REA
 
   const views = page.getByRole("navigation", { name: "Roster views" });
   const search = page.getByRole("searchbox", { name: "Search divers" });
-  const rowFor = (name: string) => page.getByRole("row").filter({ hasText: name });
+  // The roster is one ledger now: a row is an `<li>` whose stretched link is
+  // named for the diver (ADR 20260827-people-not-lists). There is one of them
+  // per diver at every width — there used to be two, a phone card and a
+  // desktop table row, and every assertion here had to say which it meant.
+  const rowFor = (name: string) => page.getByRole("listitem").filter({ hasText: name });
 
   await views.getByRole("link", { name: "Missing contact" }).click();
   await expect(page).toHaveURL(/filter=missing_contact/);
-  await expect(page.getByRole("heading", { name: /People/ })).toBeVisible();
   // Each diver is looked for by name rather than scanned for in the list: the
   // roster is alphabetical and pages at 10 (DIVER_PAGE_SIZE), so "is this
   // diver in this view" is only a decidable question when the view is narrowed
@@ -82,7 +90,11 @@ test("the roster narrows to today's divers and to whoever needs a staffer", {
   await page.goto("/shop/blue-mantis/divers");
   const views = page.getByRole("navigation", { name: "Roster views" });
   const search = page.getByRole("searchbox", { name: "Search divers" });
-  const rowFor = (name: string) => page.getByRole("row").filter({ hasText: name });
+  // The roster is one ledger now: a row is an `<li>` whose stretched link is
+  // named for the diver (ADR 20260827-people-not-lists). There is one of them
+  // per diver at every width — there used to be two, a phone card and a
+  // desktop table row, and every assertion here had to say which it meant.
+  const rowFor = (name: string) => page.getByRole("listitem").filter({ hasText: name });
 
   await views.getByRole("link", { name: "Diving today" }).click();
   await expect(page).toHaveURL(/filter=diving_today/);
@@ -103,28 +115,23 @@ test("the roster narrows to today's divers and to whoever needs a staffer", {
   await views.getByRole("link", { name: "Needs attention" }).click();
   await expect(page).toHaveURL(/\/divers\?filter=needs_attention$/);
   await search.fill(PENDING_CARD_DIVER);
-  const flagged = rowFor(PENDING_CARD_DIVER);
-  await expect(flagged).toHaveCount(1);
-  // The view and the row's own badge are read off the same evidence, so a
-  // diver in here always has something on screen saying why.
-  await expect(flagged.getByText(/pending review|to confirm/)).toBeVisible();
+  await expect(rowFor(PENDING_CARD_DIVER)).toHaveCount(1);
 
-  // And nobody settled is in it. Asserted over the whole page rather than
-  // against one more hard-coded seed index: an attention badge is the only
-  // marker a row carries — the "None" placeholder is gone (design principle
-  // 9) — so in this view every row must wear one; a bare row is a diver the
-  // WHERE clause should have dropped.
-  await search.fill("");
-  await expect(page).toHaveURL(/\/divers\?filter=needs_attention$/);
-  const tableRows = page.locator("tbody tr");
-  await expect(tableRows.first()).toBeVisible();
-  const flaggedRows = tableRows.filter({ hasText: /pending review|to confirm/ });
-  await expect(flaggedRows).toHaveCount(await tableRows.count());
+  /**
+   * **The chip is what says why, and the rows say nothing** (ADR
+   * 20260827-people-not-lists, decision 2). Every diver in this view has a card
+   * waiting on a staffer, so a badge repeating that on each row would be the
+   * view's own shared fact at row volume — the roster badges exceptions only.
+   *
+   * So the assertion moved from the badge to the membership: a settled diver is
+   * *not* in the view and *is* on the roster, which is what a chip that
+   * decorates the URL and hands back the unfiltered roster would fail.
+   */
+  await search.fill(SETTLED_DIVER);
+  await expect(rowFor(SETTLED_DIVER)).toHaveCount(0);
+  await expect(page.getByText("No divers match this view.")).toBeVisible();
 
-  // ...and the check above is not vacuous: the unfiltered roster is full of
-  // settled divers, whose rows carry no badge at all.
   await views.getByRole("link", { name: "All divers" }).click();
-  await expect(page).toHaveURL(/\/divers$/);
-  await expect(tableRows.first()).toBeVisible();
-  expect(await tableRows.count()).toBeGreaterThan(await flaggedRows.count());
+  await expect(page).toHaveURL(/\/divers\?q=/);
+  await expect(rowFor(SETTLED_DIVER)).toHaveCount(1);
 });

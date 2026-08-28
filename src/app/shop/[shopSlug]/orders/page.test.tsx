@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { Badge } from "@/components/ui/badge";
+import { LedgerGroup } from "@/components/ui/ledger";
 import type { AppDb } from "@/db/client";
 import {
   bookings,
@@ -14,11 +15,15 @@ import { getShopBySlug } from "@/db/shops";
 import { listShopStaff } from "@/db/staff-accounts";
 import type { DiveDaySession } from "@/lib/auth";
 import type { Role } from "@/lib/authz";
+import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { formatShortDate } from "@/lib/format";
 import { seededTestDb } from "@/test/db";
-import { ariaLabelsIn, findElements, hiddenInputNamesIn, hrefsIn } from "@/test/jsx-inspect";
+import { ariaLabelsIn, findElements, hrefsIn } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
+import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
+import { OrdersToolbar } from "./_components/OrdersToolbar";
 
 // Same mocking shape as ../settings/SettingsPage.test.tsx: the page is invoked
 // directly, outside Next's request scope, so the three things that only exist
@@ -79,6 +84,28 @@ async function renderOrders(
   vi.mocked(getDb).mockResolvedValue(db);
   vi.mocked(auth).mockResolvedValue(session);
   return renderWith();
+}
+
+/**
+ * The day groups the page handed the ledger. The rows live in a prop rather
+ * than in `children`, so the tree walkers cannot see them — and reading the
+ * view model is the more exact question anyway: "what did this page decide to
+ * put on a row?".
+ */
+function ledgerDays(element: unknown): OrderLedgerDay[] {
+  return findElements<{ days: OrderLedgerDay[] }>(element, OrdersLedger)[0]?.props.days ?? [];
+}
+
+/** One per order the page decided to list, across every day group. */
+const listedOrders = (element: unknown) =>
+  ledgerDays(element).reduce((total, day) => total + day.rows.length, 0);
+
+/** The toolbar the page built, or `undefined` when it stood down entirely. */
+function toolbarProps(element: unknown) {
+  return findElements<{ personId?: string; tripId?: string; clearHref?: string }>(
+    element,
+    OrdersToolbar,
+  )[0]?.props;
 }
 
 /**
@@ -185,8 +212,13 @@ describe("imported payment history", () => {
     // An imported row never receives an order detail link just because it is
     // rendered under Orders — its uuid must not be confused for an order id.
     expect(hrefsIn(element)).not.toContain(`/shop/${SHOP_SLUG}/orders/${source.historyId}`);
+    // The `Unverified` mark rides the disclosure's own summary line now, where
+    // it says once about the whole folded section what it used to repeat on
+    // every row of a permanently open table.
+    const disclosure = findElements<{ meta?: unknown; folded?: boolean }>(element, LedgerGroup)[0];
+    expect(disclosure?.props.folded).toBe(true);
     expect(
-      findElements<{ children?: unknown }>(element, Badge).some(
+      findElements<{ children?: unknown }>(disclosure?.props.meta, Badge).some(
         (badge) => badge.props.children === "Unverified import",
       ),
     ).toBe(true);
@@ -261,10 +293,6 @@ describe("the trip filter", () => {
     return { tripId: trip.id };
   }
 
-  /** Every `/orders/<id>` row link — one per order the page decided to list. */
-  const listedOrders = (element: unknown) =>
-    hrefsIn(element).filter((href) => /\/orders\/[0-9a-f-]{36}$/.test(href)).length;
-
   it("narrows the list to that departure's orders", async () => {
     const { tripId } = await shopWithAnInvoicedSeat();
 
@@ -277,14 +305,15 @@ describe("the trip filter", () => {
     expect(listedOrders(await renderWith({ tripId, status: "open", range: "all" }))).toBe(1);
   });
 
-  it("keeps the departure in the filter form", async () => {
+  it("keeps the departure in the toolbar", async () => {
     const { tripId } = await shopWithAnInvoicedSeat();
     const element = await renderWith({ tripId, status: "open", range: "all" });
 
-    // The date range is now a filter control rather than a prose toggle. The
-    // departure remains a hidden form field, so applying any filter does not
-    // silently widen the list back out to the whole shop.
-    expect(hiddenInputNamesIn(element)).toContain("tripId");
+    // The departure has no control of its own — it arrives from the trip
+    // pulse's link — so the toolbar carries it as a hidden rider. Without it,
+    // changing the status silently widens the list back out to the whole shop,
+    // which is what this form's missing `personId` used to do.
+    expect(toolbarProps(element)?.tripId).toBe(tripId);
   });
 
   it("treats a malformed departure id as no filter at all", async () => {
@@ -316,10 +345,6 @@ describe("the trip filter", () => {
  * so a truncated link 500'd a staff page (FU-20260814-orders-stray-person-id-500).
  */
 describe("the diver filter", () => {
-  /** Every `/orders/<id>` row link — one per order the page decided to list. */
-  const listedOrders = (element: unknown) =>
-    hrefsIn(element).filter((href) => /\/orders\/[0-9a-f-]{36}$/.test(href)).length;
-
   /**
    * A shop billing two different divers — so "narrowed to one of them" is a
    * claim with something to narrow away from. The lean unit-test template is
@@ -377,7 +402,84 @@ describe("the diver filter", () => {
     expect(listedOrders(element)).toBe(all);
     // And it leaves no trace: no hidden rider, no filter pinned on the page's
     // own links, so the staffer is not carrying the bad id around with them.
-    expect(hiddenInputNamesIn(element)).not.toContain("personId");
+    expect(toolbarProps(element)?.personId).toBeUndefined();
     expect(hrefsIn(element).filter((href) => href.includes("personId="))).toEqual([]);
+  });
+});
+
+/**
+ * The day ledger's own pin — ADR 20260827-clearwater-surface-language,
+ * decision 7. `OrdersLedger.test.tsx` proves the component renders its group's
+ * date once; this proves the page never hands a row one to render, which is
+ * the half a component test cannot see.
+ */
+describe("the day ledger", () => {
+  /**
+   * Two orders on one day and one on another, written directly: the lean
+   * unit-test template is deliberately order-free (`src/db/seed.ts`), and the
+   * instants below straddle New York's midnight so the grouping is the shop's
+   * day rather than the server's.
+   */
+  async function shopWithADayOfOrders() {
+    const { db, session } = await sessionFor("owner");
+    const shopId = session.user.shopId;
+    const [diver] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.shopId, shopId))
+      .limit(1);
+    if (!diver) throw new Error("the seeded shop has no people");
+    await db.insert(orders).values(
+      [
+        { at: "2026-08-27T15:00:00Z", cents: 14_800 },
+        { at: "2026-08-27T13:00:00Z", cents: 12_000 },
+        { at: "2026-08-27T02:00:00Z", cents: 9_000 },
+      ].map(({ at, cents }, index) => ({
+        shopId,
+        personId: diver.id,
+        createdByPersonId: session.user.personId,
+        status: "paid" as const,
+        currency: "usd",
+        totalCents: cents,
+        amountPaidCents: cents,
+        description: `counter sale ${index}`,
+        stripeAccountId: "acct_test",
+        stripeCustomerId: `cus_test_day_${index}`,
+        stripeInvoiceId: `in_test_day_${index}`,
+        createdAt: new Date(at),
+        updatedAt: new Date(at),
+      })),
+    );
+    vi.mocked(getDb).mockResolvedValue(db);
+    vi.mocked(auth).mockResolvedValue(session);
+  }
+
+  it("puts the date in the group header and in no row on that day", async () => {
+    await shopWithADayOfOrders();
+    const days = ledgerDays(await renderWith({ range: "all" }));
+    expect(days.length).toBeGreaterThan(1);
+
+    for (const day of days) {
+      // The date the header is built from, derived from the group's own key
+      // rather than from a row — a calendar day has no instant in it, so it
+      // formats from its UTC midnight in UTC.
+      const date = formatShortDate(calendarDateToUtcMidnight(day.key), "en-US", "UTC");
+      expect(day.label).toContain(date);
+      for (const row of day.rows) {
+        expect([row.diver, row.detail ?? "", row.amount, row.linkLabel].join(" ")).not.toContain(
+          date,
+        );
+      }
+    }
+  });
+
+  it("states the day's own count and money on the day's header", async () => {
+    await shopWithADayOfOrders();
+    const days = ledgerDays(await renderWith({ range: "all" }));
+    const thursday = days.find((day) => day.key === "2026-08-27");
+    // Two of the three orders are Thursday's in New York; the 02:00Z one is
+    // Wednesday evening there, and its money belongs to Wednesday.
+    expect(thursday?.rows).toHaveLength(2);
+    expect(thursday?.meta).toBe("2 orders · $268.00");
   });
 });

@@ -1,14 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { ReadinessBlocker } from "./readiness";
 import {
-  anyBoatIsIn,
   assembleDaySpine,
   collapseDiverActions,
   diverBlockerAction,
   filterActionsForRoles,
   getSeasonalBriefing,
   getTimeOfDayGreeting,
-  lastBoatIsIn,
   primaryBlocker,
   roleLensFor,
   rollCallGapUrgency,
@@ -415,60 +413,6 @@ describe("getTimeOfDayGreeting", () => {
   });
 });
 
-describe("anyBoatIsIn", () => {
-  // The trigger for Today's evening handoff to the close-out. It reads the
-  // departures `getTodayWork` already returned — no second detector, no
-  // wall-clock band.
-  const departure = (hoursFromNowEnd: number) => ({ endsAt: hoursFromNow(hoursFromNowEnd) });
-
-  it("is true once one of today's departures is home, with another still out", () => {
-    // The case the card used to miss entirely: an evening with a night dive
-    // still on the board is exactly when a shop starts writing the day up
-    // (FU-20260811-close-out-has-one-conditional-door).
-    expect(anyBoatIsIn([departure(-4), departure(2)], NOW)).toBe(true);
-  });
-
-  it("is true once every boat is in", () => {
-    expect(anyBoatIsIn([departure(-4), departure(-1)], NOW)).toBe(true);
-  });
-
-  it("is false while every boat is still out — there is nothing to write up yet", () => {
-    expect(anyBoatIsIn([departure(1), departure(4)], NOW)).toBe(false);
-  });
-
-  it("counts a boat due back exactly now as in", () => {
-    expect(anyBoatIsIn([departure(0)], NOW)).toBe(true);
-  });
-
-  it("is false on a day with no departures — nothing sailed, so nothing to hand over", () => {
-    // The close-out is still one palette search away; this is a handoff, not
-    // the door.
-    expect(anyBoatIsIn([], NOW)).toBe(false);
-  });
-});
-
-describe("lastBoatIsIn", () => {
-  // No longer gates the handoff card — it picks the card's words, so that "the
-  // last boat is in" is never said over a boat still at sea.
-  const departure = (hoursFromNowEnd: number) => ({ endsAt: hoursFromNow(hoursFromNowEnd) });
-
-  it("is true once every one of today's departures is back at the dock", () => {
-    expect(lastBoatIsIn([departure(-4), departure(-1)], NOW)).toBe(true);
-  });
-
-  it("is false while any boat is still out — one late return keeps the day open", () => {
-    expect(lastBoatIsIn([departure(-4), departure(2)], NOW)).toBe(false);
-  });
-
-  it("counts a boat due back exactly now as in", () => {
-    expect(lastBoatIsIn([departure(0)], NOW)).toBe(true);
-  });
-
-  it("is false on a day with no departures — nothing sailed, so no last boat", () => {
-    expect(lastBoatIsIn([], NOW)).toBe(false);
-  });
-});
-
 describe("roll-call gap ranking (DOM-H3)", () => {
   it("ranks a diver who did not come back above every other row on the boat", () => {
     // Severity is what breaks the tie once two rows share a `dueAt`. A crew
@@ -732,7 +676,7 @@ describe("spineIsQuiet", () => {
     assembleDaySpine({ departures: [], actions: [] }, { departures: [], actions: [] });
 
   it("collapses a day with no boat and nothing waiting anywhere", () => {
-    expect(spineIsQuiet(empty(), false)).toBe(true);
+    expect(spineIsQuiet(empty(), false, 0)).toBe(true);
   });
 
   it("is not quiet while a boat is on the spine, however clear it is", () => {
@@ -740,7 +684,7 @@ describe("spineIsQuiet", () => {
       { departures: [departure()], actions: [] },
       { departures: [], actions: [] },
     );
-    expect(spineIsQuiet(spine, false)).toBe(false);
+    expect(spineIsQuiet(spine, false, 1)).toBe(false);
   });
 
   it("is not quiet while a job waits at the desk, on tomorrow, or later in the week", () => {
@@ -751,13 +695,13 @@ describe("spineIsQuiet", () => {
       },
       { departures: [], actions: [] },
     );
-    expect(spineIsQuiet(desk, false)).toBe(false);
+    expect(spineIsQuiet(desk, false, 0)).toBe(false);
 
     const week = assembleDaySpine(
       { departures: [], actions: [action({ id: "later", kind: "waiver", departure: boat("t9") })] },
       { departures: [], actions: [] },
     );
-    expect(spineIsQuiet(week, false)).toBe(false);
+    expect(spineIsQuiet(week, false, 0)).toBe(false);
 
     const tomorrow = assembleDaySpine(
       {
@@ -766,13 +710,32 @@ describe("spineIsQuiet", () => {
       },
       { departures: [departure({ tripId: "t2" })], actions: [] },
     );
-    expect(spineIsQuiet(tomorrow, false)).toBe(false);
+    expect(spineIsQuiet(tomorrow, false, 0)).toBe(false);
+  });
+
+  it("is not quiet on an evening whose only boat is already home", () => {
+    // The spine's stations are forward-looking, so a departure that ended an
+    // hour ago is not on them — and a page collapsing to "No boats today" over
+    // a settled station, its leftovers and an unclosed day is the same lie the
+    // desk-row clause below refuses (ADR 20260827-clearwater-surface-language,
+    // decision 4).
+    expect(spineIsQuiet(empty(), false, 1)).toBe(false);
   });
 
   it("is not quiet while a presence-derived desk row stands, which no job count can see", () => {
     // "Nothing is waiting on you" over a payments row the reader can see on the
     // same screen is a lie (ADR 20260827-first-light, decision 6).
-    expect(spineIsQuiet(empty(), true)).toBe(false);
+    expect(spineIsQuiet(empty(), true, 0)).toBe(false);
+  });
+
+  it("is never quiet on a shop's first morning — the two compositions are exclusive", () => {
+    // **The pin** (slice 10d, ADR 20260827-first-light, decision 6). A shop
+    // that has never had a board is not having a quiet day: its spine is empty
+    // by every other measure here, and the setup ledger leads it. Collapsing to
+    // "A quiet day at the dock." over the three steps that are the whole screen
+    // answers a question the owner never asked.
+    expect(spineIsQuiet(empty(), false, 0, true)).toBe(false);
+    expect(spineIsQuiet(empty(), false, 0, false)).toBe(true);
   });
 });
 

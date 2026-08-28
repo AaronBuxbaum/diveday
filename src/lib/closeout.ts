@@ -1,29 +1,38 @@
-import { nowDate } from "./clock";
+import { HOUR_MS, nowDate } from "./clock";
 import type { RollCallGapReason, TodayAction, TodayActionKind } from "./today";
 import { sortActions } from "./today";
 import { shopDayBounds, toDateInputValue, utcToWallTime } from "./zoned";
 
 /**
- * The end-of-day close-out: the evening mirror of the Today queue
- * (`src/lib/today.ts`). Today owns the morning — "can the boats sail, who
- * needs me before they do?" — and nothing used to own 5 p.m. This module
- * answers the closing questions instead: did every boat come home counted,
- * what work from today is still open and what does the shop choose to do
- * about it, and what is waiting tomorrow morning.
+ * **The day's closing state — the evening half of the shop home's spine.**
+ *
+ * Today owns the morning ("can the boats sail, who needs me before they do?");
+ * this module answers the closing questions: did every boat come home counted,
+ * what work from today is still open and what does the shop choose to do about
+ * it, and what is waiting tomorrow morning.
+ *
+ * It had a page of its own until 2026-08-28. It does not any more (H-62; ADR
+ * 20260827-clearwater-surface-language, decision 4): the evening is a *state*
+ * the home's spine settles into station by station, and `/close-out` is a 308
+ * to the home. Everything below survived that fold unchanged, because none of
+ * it was ever about a route — {@link assembleEveningClose} is the join that
+ * turns these facts into stations.
  *
  * It is an *assembly*, never a second detector. Every fact here is composed
  * from the outputs the source-of-truth modules already produce — the roll-call
  * gaps `src/db/today.ts`'s `listRollCallGaps` chases, and the `TodayAction`
  * queue `getTodayWork` builds. Re-deriving either rule here is the failure
- * mode this docblock exists to forbid: a close-out that counts a head count
+ * mode this docblock exists to forbid: an evening that counts a head count
  * differently than the queue that chases it would let the two disagree about
  * whether a person is accounted for.
  *
  * Closing the day is a **ritual, not a gate**. The recorded act (see
  * `buildCloseoutSnapshot`) remembers who closed the day and what was still
  * outstanding, and nothing anywhere may condition on it — not tomorrow's
- * queue, not bookings, nothing. An open head count makes the surface loud and
- * the act deliberate (impossible to close *accidentally*), never impossible.
+ * queue, not bookings, nothing. Nothing stands in front of the act either: the
+ * acknowledgement checkbox that used to is gone, because H-57 already has the
+ * shop deciding each leftover as it meets it, and re-asking at the close is a
+ * confirm on a reversible act.
  *
  * This is the framework-free half: `src/db/closeout.ts` gathers the facts and
  * owns the append-only trail. Words come from `src/i18n/closeout-labels.ts`;
@@ -82,12 +91,16 @@ export const CLOSEOUT_STATUS_TONES: Record<
 
 /**
  * The gap reasons that mean a person may still be in the water (glossary
- * kinds 1–4). A departure carrying one of these — or a boat that simply is
- * not home — must be *acknowledged by name* before the day closes: the
- * checkbox is what makes closing over it deliberate rather than accidental.
- * The dock-count reasons stay out on purpose: requiring a nightly "I know"
- * from every shop that never taps a roll call teaches crews to tick boxes
- * unread, which is how the loud states stop being read too.
+ * kinds 1–4), as opposed to the dock-count reasons, which are paperwork. The
+ * split decides which departures read as `unreconciled` — the loudest state a
+ * station can settle into — and which read as `count_open`.
+ *
+ * It used to decide a second thing: which departures had to be *acknowledged
+ * by name* before the day could close. That gate is gone (ADR
+ * 20260827-clearwater-surface-language's rejected alternative, and H-57 before
+ * it): leftovers are dismissed per row as they are decided, so a checkbox at
+ * the close re-asked a question already answered — a confirm on a reversible
+ * act, which principle 7 refuses.
  */
 const AFTER_DIVE_GAP_REASONS: ReadonlySet<RollCallGapReason> = new Set([
   "missing_diver",
@@ -111,6 +124,17 @@ const GAP_REASON_RANK: Record<RollCallGapReason, number> = {
   departure_uncounted: 4,
   no_roll_call: 5,
 };
+
+/**
+ * **The standing late-arrival buffer**, in one place rather than four literals.
+ *
+ * Trips run late, so every "has it sailed / is it back / is it in the past"
+ * question in this app allows an hour past the scheduled time before it
+ * answers yes (AGENTS.md's hard rule). The evening's whole shape hangs off it:
+ * a station cannot settle, and the closing block cannot appear, until the last
+ * departure is an hour past its scheduled return.
+ */
+export const DEPARTURE_BUFFER_MS = HOUR_MS;
 
 /** One of today's departures, as the db layer hands it in. */
 export type CloseoutTripInput = {
@@ -225,31 +249,9 @@ export function closeoutAdminTaskStatus(input: {
   return input.completed === input.total ? "complete" : "pending";
 }
 
-/** The one-line answer to "how did today end?", as a code. */
-export type CloseoutShape = "no_departures" | "all_clear" | "outstanding";
-
-/**
- * What tomorrow's queue opens with, as counts — never as rows.
- *
- * The close-out used to re-render tomorrow's `TodayAction`s here, and that was
- * the mistake ADR 20260803-not-ready-is-a-view names one level up: the *same*
- * row is actionable on Today (send the waiver, invite the waitlist, copy the
- * payment link) and was a dumb list here, so the evening surface quietly taught
- * staff that those jobs cannot be touched until morning. A count and one link
- * to Today is the honest shape: the parting glance says how much is waiting and
- * hands the work to the surface that owns it.
- */
-export type TomorrowGlance = {
-  /** Every queue row dated tomorrow — the number the parting glance states. */
-  total: number;
-  /** The same rows counted by kind, in queue order (loudest first). */
-  byKind: { kind: TodayActionKind; count: number }[];
-};
-
 export type DayCloseoutState = {
   /** The shop-local date being closed, as "YYYY-MM-DD". */
   shopDay: string;
-  shape: CloseoutShape;
   /** Today's departures, loudest first. */
   departures: CloseoutDeparture[];
   /** Administrative work for the departures that have already returned. */
@@ -261,16 +263,8 @@ export type DayCloseoutState = {
    * counts already stand in the departures list above.
    */
   leftovers: TodayAction[];
-  /** How much tomorrow's queue opens with, by kind. Counts, never rows. */
-  tomorrow: TomorrowGlance;
   /** The latest explicit choice for each leftover, carried from the append-only trail. */
   leftoverDecisions: Readonly<Record<string, LeftoverDecision>>;
-  /**
-   * The departures that must be acknowledged by name before closing — the
-   * after-dive gaps and the boats not home. Empty means the close button
-   * needs no checkbox.
-   */
-  mustAcknowledge: CloseoutDeparture[];
 };
 
 const ROLL_CALL_KINDS: ReadonlySet<TodayActionKind> = new Set([
@@ -296,10 +290,10 @@ function departureStatus(
     };
   }
   const none = { gapReason: null, diveNumber: 0, uncounted: 0 };
-  if (new Date(trip.startsAt.getTime() + 60 * 60 * 1000) > now) {
+  if (trip.startsAt.getTime() + DEPARTURE_BUFFER_MS > now.getTime()) {
     return { status: "not_departed", ...none };
   }
-  if (new Date(trip.endsAt.getTime() + 60 * 60 * 1000) > now) {
+  if (trip.endsAt.getTime() + DEPARTURE_BUFFER_MS > now.getTime()) {
     return { status: "still_out", ...none };
   }
   return { status: "all_home", ...none };
@@ -322,9 +316,6 @@ export function assembleDayCloseout(input: {
 }): DayCloseoutState {
   const now = input.now ?? nowDate();
   const today = shopDayBounds(now, input.timeZone);
-  // `today.to` is tomorrow's local midnight, so bounds taken *at* it are
-  // tomorrow's own day — DST-safe because `shopDayBounds` works on wall time.
-  const tomorrowBounds = shopDayBounds(today.to, input.timeZone);
   const shopDay = shopDayOf(now, input.timeZone);
 
   const worstGapByTrip = new Map<string, CloseoutRollCallGap>();
@@ -359,63 +350,27 @@ export function assembleDayCloseout(input: {
         a.title.localeCompare(b.title),
     );
 
+  // **Today's own open rows, and nothing else.** Tomorrow used to be counted
+  // here too, for a parting-glance card that no longer exists: the spine's own
+  // Tomorrow disclosure is what the evening ends on now (ADR
+  // 20260827-clearwater-surface-language, decision 4), and it is built from
+  // the queue rather than from a second tally of it.
   const carriable = input.actions.filter((action) => !ROLL_CALL_KINDS.has(action.kind));
   const leftovers = sortActions(
     carriable.filter((action) => action.dueAt === null || action.dueAt < today.to),
   );
-  const tomorrowAll = sortActions(
-    carriable.filter(
-      (action) =>
-        action.dueAt !== null &&
-        action.dueAt >= tomorrowBounds.from &&
-        action.dueAt < tomorrowBounds.to,
-    ),
-  );
-
-  const mustAcknowledge = departures.filter(
-    (departure) => departure.status === "unreconciled" || departure.status === "still_out",
-  );
-
-  const adminTasks = [...(input.adminTasks ?? [])];
-  const hasOpenDeparture = departures.some((departure) => departure.status !== "all_home");
-  const hasOpenAdminTask = adminTasks.some((task) => task.status !== "complete");
-  const shape: CloseoutShape =
-    hasOpenDeparture || leftovers.length > 0 || hasOpenAdminTask
-      ? "outstanding"
-      : departures.length === 0
-        ? "no_departures"
-        : "all_clear";
 
   return {
     shopDay,
-    shape,
     departures,
-    adminTasks,
+    adminTasks: [...(input.adminTasks ?? [])],
     leftovers,
-    tomorrow: countByKind(tomorrowAll),
     leftoverDecisions: Object.fromEntries(
       leftovers.flatMap((action) => {
         const decision = input.leftoverDecisions?.[action.id];
         return decision === "carry" || decision === "dismiss" ? [[action.id, decision]] : [];
       }),
     ),
-    mustAcknowledge,
-  };
-}
-
-/**
- * Tally already-sorted queue rows by kind. Insertion order is queue order, so
- * the loudest kind is named first and the glance reads in the same priority the
- * morning queue will.
- */
-function countByKind(actions: readonly TodayAction[]): TomorrowGlance {
-  const counts = new Map<TodayActionKind, number>();
-  for (const action of actions) {
-    counts.set(action.kind, (counts.get(action.kind) ?? 0) + 1);
-  }
-  return {
-    total: actions.length,
-    byKind: [...counts].map(([kind, count]) => ({ kind, count })),
   };
 }
 
@@ -609,4 +564,143 @@ export function parseCloseoutSnapshot(value: unknown): CloseoutSnapshot {
       })
     : [];
   return { departures, leftovers, adminTasks };
+}
+
+/**
+ * **One departure of the shop day, as the evening reads it** — ADR
+ * 20260827-clearwater-surface-language, decision 4.
+ *
+ * A settled station is a *reduced* reading of the same departure the morning
+ * showed in full: the time, the title, how the head count ended, the recap and
+ * the log. The site, the hull, the crew line, the price and the capacity meter
+ * are morning facts — they answer "can this boat sail?", and by the evening
+ * nobody is asking.
+ */
+export type StationClose = {
+  tripId: string;
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  /**
+   * **The whole evening turns on this one boolean.** A station settles when
+   * its head count has closed, or when its scheduled return is an hour behind
+   * it ({@link DEPARTURE_BUFFER_MS}). Until then the boat is out, and the day
+   * cannot close over it.
+   */
+  settled: boolean;
+  status: CloseoutDepartureStatus;
+  /** The headline gap, carried through so the station can say what is open. */
+  gapReason: RollCallGapReason | null;
+  diveNumber: number;
+  uncounted: number;
+  /** The roster the day is judged against — non-cancelled bookings. */
+  booked: number;
+  /**
+   * How many of that roster the head count brought back.
+   *
+   * Only an **after-dive** gap subtracts: those are the reasons that can mean
+   * a person is still in the water (`AFTER_DIVE_GAP_REASONS`). A dock-count
+   * gap means the *departure* count was never closed, which is paperwork about
+   * who got on the boat rather than a claim about who did not get off it — so
+   * it leaves this number alone and says so through `status` instead.
+   */
+  back: number;
+  recapSentAt: Date | null;
+  /** Behind the shop — the same reading `sendDueRecaps` makes about a due recap. */
+  ended: boolean;
+};
+
+/**
+ * The day's closing state, as the spine renders it.
+ *
+ * Every number here is a **sum of what {@link assembleDayCloseout} already
+ * decided**, never a second reading of the water. That is the same rule the
+ * rest of this file keeps, and it is what stops the home's evening sentence
+ * from disagreeing with the station it sits above.
+ */
+export type EveningClose = {
+  /** Every departure of the shop day, clock order — settled or still out. */
+  stations: StationClose[];
+  /**
+   * Whether the closing block may render at all: at least one departure, and
+   * every one of them settled. **The pin.** While one boat is out there is no
+   * leftovers group, no closing act, and nothing on the page suggesting the
+   * day is over.
+   */
+  closing: boolean;
+  /** Divers the day sent out, across every departure. Tabular figures. */
+  out: number;
+  /** Divers the head counts brought back. */
+  back: number;
+  /**
+   * The evening's earned moment: the day is closing and every head count
+   * closed clean. Condition-derived and self-expiring, like every other row of
+   * the ADR's coral table — never stored, never decorative. A day that sent
+   * nobody out has nothing to celebrate, so `out` must be positive.
+   *
+   * **Every station's status has to be `all_home`, not merely `out === back`.**
+   * A dock count that was never closed leaves `back` equal to `booked` by
+   * arithmetic — the gap is about who got *on* the boat, so it subtracts
+   * nothing — and a sentence saying "10 out, 10 back" over a boat nobody
+   * counted is a claim the shop's own records do not support. The moment is
+   * rare on purpose; spending it on an unverified day is worse than not
+   * spending it.
+   */
+  allHome: boolean;
+};
+
+/**
+ * Join the day's departures to the clock, in one pass.
+ *
+ * `departures` is {@link assembleDayCloseout}'s own list — the whole shop day,
+ * backwards-looking, which is what lets a boat that sailed at dawn still have
+ * a station at 11 p.m. The morning spine's stations come from a
+ * forward-looking reader and drop a departure an hour after it leaves; this is
+ * the half that catches it again, so the day reads as one row of stations
+ * settling rather than a board quietly emptying.
+ */
+export function assembleEveningClose(
+  departures: readonly CloseoutDeparture[],
+  now: Date = nowDate(),
+): EveningClose {
+  const stations: StationClose[] = departures
+    .map((departure) => {
+      const settled =
+        departure.status === "all_home" ||
+        departure.endsAt.getTime() + DEPARTURE_BUFFER_MS <= now.getTime();
+      const missing =
+        departure.gapReason !== null && AFTER_DIVE_GAP_REASONS.has(departure.gapReason)
+          ? departure.uncounted
+          : 0;
+      return {
+        tripId: departure.tripId,
+        title: departure.title,
+        startsAt: departure.startsAt,
+        endsAt: departure.endsAt,
+        settled,
+        status: departure.status,
+        gapReason: departure.gapReason,
+        diveNumber: departure.diveNumber,
+        uncounted: departure.uncounted,
+        booked: departure.booked,
+        back: Math.max(0, departure.booked - missing),
+        recapSentAt: departure.recapSentAt,
+        ended: departure.ended,
+      };
+    })
+    .sort(
+      (a, b) =>
+        a.startsAt.getTime() - b.startsAt.getTime() ||
+        a.endsAt.getTime() - b.endsAt.getTime() ||
+        a.tripId.localeCompare(b.tripId),
+    );
+  const out = stations.reduce((total, station) => total + station.booked, 0);
+  const back = stations.reduce((total, station) => total + station.back, 0);
+  const closing = stations.length > 0 && stations.every((station) => station.settled);
+  const allHome =
+    closing &&
+    out > 0 &&
+    out === back &&
+    stations.every((station) => station.status === "all_home");
+  return { stations, closing, out, back, allHome };
 }

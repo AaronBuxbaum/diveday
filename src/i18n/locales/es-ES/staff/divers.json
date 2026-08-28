@@ -81,7 +81,6 @@
     "eyebrow": "Recepción",
     "title": "Buceadores",
     "matchingCount": "{count, plural, one {# coincidencia} other {# coincidencias}}",
-    "onFileCount": "{count, plural, one {# registrado} other {# registrados}}",
     "noticeDuplicate": "Ya hay un buceador con ese correo en este centro.",
     "noticeDeleted": "Buceador eliminado.",
     "noticeRestored": "Buceador restaurado.",
@@ -120,8 +119,6 @@
     "viewRemoved": "Eliminados",
     "viewsAriaLabel": "Vistas del registro",
     "removedNote": "Estos buceadores están fuera de todas las listas y de la preparación.",
-    "peopleHeading": "Personas",
-    "searchHintText": "Busca por nombre, correo o teléfono.",
     "searchDiversLabel": "Buscar buceadores",
     "searchPlaceholder": "Buscar personas",
     "noDiversMatchView": "Ningún buceador coincide con esta vista.",
@@ -130,14 +127,18 @@
     "emptyShowAll": "Ver todos los buceadores",
     "emptyImportBody": "¿Vienes de una hoja de cálculo o de otro sistema?",
     "emptyImportAction": "Importar tu lista",
-    "noContactDetails": "Aún sin datos de contacto",
-    "pendingReviewText": "{count} pendiente de revisión",
-    "toConfirmText": "{count} por confirmar",
-    "tableHeaderPerson": "Persona",
-    "tableHeaderLevel": "Nivel",
-    "tableHeaderAttention": "Requiere atención",
     "possibleDuplicateLabel": "Posible duplicado",
-    "noCertificationLevel": "Sin certificación vigente",
+    "openBalanceLabel": "Saldo pendiente",
+    "blocked": {
+      "medical": "Bloqueado — médico",
+      "unknown": "Bloqueado — papeleo",
+      "certification": "Bloqueado — certificación",
+      "payment": "Bloqueado — pago"
+    },
+    "lastAboard": "último embarque {date}",
+    "bookedOn": "reservado {date} · {time}",
+    "importedOnly": "llegó desde tu sistema anterior",
+    "letterOther": "#",
     "pagination": {
       "total": "{count, plural, one {# buceador} other {# buceadores}}"
     }

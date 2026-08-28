@@ -1,6 +1,6 @@
 # 20260827-clearwater-surface-language — Type leads, chrome recedes: the Clearwater surface language
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-08-27
 - **Design:** [the canvas](../../design/canvases/20260827-clearwater-surface-language/README.md) —
   ten artboards on three pages: **The language** (the system board), **The staff app** (the home in

@@ -1,6 +1,6 @@
 # 20260827-first-light — Every door is one shell, and the first morning is a designed state
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-08-27
 - **Design:** [the canvas](../../design/canvases/20260827-first-light/README.md) — the door
   grammar at desktop and phone, the terminal states, and the shop's first morning. `SPEC.md`

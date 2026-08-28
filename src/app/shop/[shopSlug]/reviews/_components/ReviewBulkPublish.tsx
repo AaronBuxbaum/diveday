@@ -1,148 +1,74 @@
 // i18n-exempt-file: every visible label arrives as an already-translated prop.
 "use client";
 
-import { usePathname } from "next/navigation";
-import { createContext, useActionState, useContext, useEffect, useState } from "react";
+import { createContext, useActionState, useContext } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { FormStatus } from "@/components/ui/form";
 import { fill, pluralForm } from "@/i18n/fill";
 import { type BulkPublishResult, publishReviewsAction } from "../actions";
-import { useRevealPublished } from "./useRevealPublished";
 
 /**
- * "Tick a few reviews, then publish them" for the moderation queue.
+ * **Clear the whole worklist in one act** (ADR 20260827-people-not-lists,
+ * decision 3).
  *
- * Selection lives in shared client state rather than a plain HTML
- * `<input form="…">` cross-association, following the roster's bulk waiver
- * send (`trips/[id]/_components/RosterBulkWaiverSelection.tsx`): form
- * association looks correct and is spec-legal, but ticking one row was
- * observed there to silently untick another. Controlled inputs sidestep the
- * question. Like the roster's provider this one clears itself on a real
- * navigation, since it no longer unmounts for free between pages.
+ * It used to be a tick box on every waiting row plus a "Publish selected"
+ * button, which asked a staffer to make a selection before making a decision —
+ * two acts for the case that is nearly always "all of them", and a column of
+ * empty boxes down a queue the rest of the time. Now the group header carries
+ * the act and the group *is* the selection: "Publish both", "Publish all 5".
+ * The rows still each carry their own Publish, so releasing some-but-not-all
+ * costs exactly the taps it is worth.
+ *
+ * The provider owns the **action state** rather than any selection, and that is
+ * the whole reason it is still a provider: the button lives in the waiting
+ * group's header and the sentence reporting what it did has to outlive it.
+ * Publishing everything empties the group, which takes the header — and the
+ * button — off the page; a `useActionState` living inside the button would
+ * take the confirmation of the pass that just cleared the queue down with it.
+ * Hoisted here, `PublishAllStatus` renders unconditionally above the groups.
  *
  * Staff client components take their words as props — they cannot translate
- * (docs ADR 20260730-staff-copy-localization).
- *
- * The provider also owns the **action state**, not just the selection. The
- * button and the sentence reporting what it did are two different places on
- * the header row, and the sentence has to outlive the button: clearing the
- * last waiting review takes "Publish selected" off the page, and a
- * `useActionState` living inside it would take the confirmation of the pass
- * that just cleared the queue down with it. Hoisting it here is what lets
- * `PublishSelectedStatus` render unconditionally.
+ * (ADR 20260730-staff-copy-localization).
  */
-const SelectionContext = createContext<{
-  selected: Set<string>;
-  toggle: (reviewId: string) => void;
+const PublishAllContext = createContext<{
   result: BulkPublishResult;
   publish: (formData: FormData) => void;
 } | null>(null);
 
-export function ReviewSelectionProvider({
-  children,
-  showingWaitingOnly,
-  scope,
-}: {
-  children: React.ReactNode;
-  /** Whether the list under this is narrowed to reviews still waiting. */
-  showingWaitingOnly: boolean;
-  /**
-   * Which slice of the queue is on screen — the filter and page, from the
-   * server. Changing it empties the selection.
-   *
-   * `usePathname()` alone was not enough and never had been: it excludes the
-   * query string, and this list's filter and page live entirely in the query.
-   * So ticking three reviews on page 1 and paging to page 2 left three
-   * invisible rows selected, under a "Publish selected" button that would
-   * cheerfully publish them (CodeRabbit on PR #1024). A tick box you cannot
-   * see is not a selection anybody made.
-   */
-  scope: string;
-}) {
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+export function PublishAllProvider({ children }: { children: React.ReactNode }) {
   const [result, publish] = useActionState(publishReviewsAction, null);
-  const pathname = usePathname();
-  // A pass that published from the waiting tab drops the filter, so the rows it
-  // released are still on screen underneath the confirmation.
-  useRevealPublished(Boolean(result?.ok), showingWaitingOnly);
-  // Route and query as one value, so the effect below depends on "which list is
-  // on screen" rather than on two things that each half-answer it.
-  const listKey = `${pathname}?${scope}`;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `listKey` is a trigger, not a value the effect body reads — any change clears the selection, which is the point.
-  useEffect(() => setSelected(new Set()), [listKey]);
-  // A pass that landed clears the ticks it acted on. It used to come for free
-  // from the redirect this action no longer makes — the rows lose their boxes
-  // on the re-render either way, but leaving their ids in the set would carry
-  // them into the next selection.
-  useEffect(() => {
-    if (result?.ok) setSelected(new Set());
-  }, [result]);
-  const toggle = (reviewId: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(reviewId)) next.delete(reviewId);
-      else next.add(reviewId);
-      return next;
-    });
-  };
   return (
-    <SelectionContext.Provider value={{ selected, toggle, result, publish }}>
-      {children}
-    </SelectionContext.Provider>
+    <PublishAllContext.Provider value={{ result, publish }}>{children}</PublishAllContext.Provider>
   );
 }
 
-function useSelection() {
-  const context = useContext(SelectionContext);
-  if (!context) throw new Error("Review bulk-publish control used outside its provider");
+function usePublishAll() {
+  const context = useContext(PublishAllContext);
+  if (!context) throw new Error("Review publish-all control used outside its provider");
   return context;
 }
 
 /**
- * Renders its own wrapping `<label>` (rather than trusting a caller's) so the
- * input/label association stays inside this file, where the lint rule
- * requiring it can see it. The 44px box is the tap target, not the ~16px
- * checkbox (docs/design/principles.md #2).
+ * The group header's act. Posts the ids of exactly the rows rendered beneath
+ * it, so what the label promises and what the pass touches are the same set —
+ * there is no invisible selection to get out of step with the screen.
  */
-export function ReviewSelectCheckbox({
-  reviewId,
-  ariaLabel,
-}: {
-  reviewId: string;
-  ariaLabel: string;
-}) {
-  const { selected, toggle } = useSelection();
-  return (
-    <label className="flex min-h-11 min-w-11 shrink-0 items-center justify-center">
-      <input
-        type="checkbox"
-        checked={selected.has(reviewId)}
-        onChange={() => toggle(reviewId)}
-        aria-label={ariaLabel}
-        className="size-4 shrink-0"
-      />
-    </label>
-  );
-}
-
-/**
- * The bulk submit. Posts the ticked ids as repeated `reviewIds` fields; an
- * empty tick list still submits, and the action answers with its own "nothing
- * selected" refusal rather than the button pretending to be broken.
- */
-export function PublishSelectedButton({
+export function PublishAllButton({
+  reviewIds,
   label,
   pendingLabel,
   className,
 }: {
+  /** Every waiting row on screen, in the order they render. */
+  reviewIds: readonly string[];
   label: string;
   pendingLabel: string;
   className: string;
 }) {
-  const { selected, publish } = useSelection();
+  const { publish } = usePublishAll();
   return (
     <form action={publish}>
-      {[...selected].map((reviewId) => (
+      {reviewIds.map((reviewId) => (
         <input key={reviewId} type="hidden" name="reviewIds" value={reviewId} />
       ))}
       <SubmitButton pendingLabel={pendingLabel} className={className}>
@@ -157,26 +83,25 @@ export type BulkPublishCopy = {
   /** `{count}` templates, fetched with `t.raw` — the count is only known client-side. */
   publishedManyOne: string;
   publishedManyOther: string;
-  noneSelected: string;
   error: string;
 };
 
 /**
- * What the last pass did, on the list it changed.
+ * What the last pass did.
  *
- * **Rendered unconditionally**, which is the whole point: a bulk publish has no
- * single control to sit beside — what moved is N rows across the list — so its
- * home is the list's own header row, and the case that most needs a sentence is
- * the one that clears the queue and takes the button away with it.
+ * **Rendered unconditionally**, which is the whole point: a publish-all has no
+ * single control to sit beside — what moved is N rows across the list — and the
+ * case that most needs a sentence is the one that clears the queue and takes
+ * the button away with it.
  */
-export function PublishSelectedStatus({
+export function PublishAllStatus({
   copy,
   className = "",
 }: {
   copy: BulkPublishCopy;
   className?: string;
 }) {
-  const { result } = useSelection();
+  const { result } = usePublishAll();
   if (!result) return <FormStatus className={className} />;
   if (result.ok) {
     return (
@@ -193,7 +118,7 @@ export function PublishSelectedStatus({
   }
   return (
     <FormStatus tone="danger" className={className}>
-      {result.reason === "none-selected" ? copy.noneSelected : copy.error}
+      {copy.error}
     </FormStatus>
   );
 }

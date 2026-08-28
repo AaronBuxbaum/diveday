@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { parseDiveSiteForm } from "./dive-sites";
+import { SITE_LIBRARY_GROUPS } from "./dive-site-difficulty";
+import { parseDiveSiteForm, siteFitCutsAgainstGroup, siteLibraryRequirement } from "./dive-sites";
 
 /** A minimal valid submission; every test below varies one field of it. */
 function formEntries(overrides: Record<string, string> = {}): Record<string, unknown> {
@@ -232,5 +233,54 @@ describe("the briefing a shop writes in its own words", () => {
       creatures: [],
       fields: { fitTone: null, fitNote: "", fieldGuideTipsHeading: "" },
     });
+  });
+});
+
+/**
+ * The library row's two reading rules (ADR 20260827-the-shops-shelves). The
+ * rendered halves are pinned in `SiteLibraryLedger.test.tsx`; these are the
+ * full tables, which a render test can only sample.
+ */
+describe("what a library row says about a site", () => {
+  it("keeps the level word for the levels above Open Water and drops the floor", () => {
+    const base = { requiredSpecialties: [], requiresNitrox: false } as const;
+    expect(siteLibraryRequirement({ ...base, minimumCertificationLevel: null }).level).toBeNull();
+    // The floor every diver on a recreational charter already holds.
+    expect(
+      siteLibraryRequirement({ ...base, minimumCertificationLevel: "open_water" }).level,
+    ).toBeNull();
+    for (const level of ["advanced_open_water", "rescue"] as const) {
+      expect(siteLibraryRequirement({ ...base, minimumCertificationLevel: level })).toMatchObject({
+        level,
+        emphasised: true,
+      });
+    }
+  });
+
+  it("keeps specialty and nitrox at every level, and the warning ink only above the floor", () => {
+    const demands = { requiredSpecialties: ["night"], requiresNitrox: true } as const;
+    expect(
+      siteLibraryRequirement({ ...demands, minimumCertificationLevel: "open_water" }),
+    ).toMatchObject({ specialties: ["night"], nitrox: true, emphasised: false });
+    expect(
+      siteLibraryRequirement({ ...demands, minimumCertificationLevel: "rescue" }),
+    ).toMatchObject({ specialties: ["night"], nitrox: true, emphasised: true });
+  });
+
+  it("says the fit reading only where it disagrees with the group heading", () => {
+    // The whole table. A tone that merely restates its group is silence, and
+    // `unknown` is silence everywhere — including under Unrated, where it would
+    // be the same "nobody has said" twice.
+    expect(siteFitCutsAgainstGroup("beginner", "demanding")).toBe(true);
+    expect(siteFitCutsAgainstGroup("intermediate", "demanding")).toBe(true);
+    expect(siteFitCutsAgainstGroup("advanced", "demanding")).toBe(false);
+    expect(siteFitCutsAgainstGroup("beginner", "welcoming")).toBe(false);
+    expect(siteFitCutsAgainstGroup("intermediate", "welcoming")).toBe(false);
+    expect(siteFitCutsAgainstGroup("advanced", "welcoming")).toBe(true);
+    expect(siteFitCutsAgainstGroup("unrated", "welcoming")).toBe(true);
+    expect(siteFitCutsAgainstGroup("unrated", "demanding")).toBe(true);
+    for (const group of SITE_LIBRARY_GROUPS) {
+      expect(siteFitCutsAgainstGroup(group, "unknown")).toBe(false);
+    }
   });
 });

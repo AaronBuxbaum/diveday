@@ -17,6 +17,7 @@ export function ReviewHideForm({
   noteLabel,
   hideLabel,
   savingLabel,
+  className = "mt-3",
 }: {
   reviewId: string;
   action: ReviewAction;
@@ -26,11 +27,13 @@ export function ReviewHideForm({
   noteLabel: string;
   hideLabel: string;
   savingLabel: string;
+  /** The row's slot decides how wide the picker gets; the form only stacks it. */
+  className?: string;
 }) {
   const [reason, setReason] = useState("");
 
   return (
-    <form action={action} className="mt-3 flex flex-col gap-2">
+    <form action={action} className={`flex flex-col gap-2 ${className}`.trim()}>
       <input type="hidden" name="reviewId" value={reviewId} />
       <input type="hidden" name="publish" value="false" />
       <label className="text-xs font-medium text-muted" htmlFor={`reason-${reviewId}`}>

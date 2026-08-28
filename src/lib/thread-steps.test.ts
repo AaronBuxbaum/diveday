@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { DiverChecklistItem } from "./readiness-summary";
-import { buildThreadSteps, isDiveDay, partyIsAllSet, type ThreadStepsInput } from "./thread-steps";
+import {
+  buildThreadSteps,
+  isAfterTheDive,
+  isDiveDay,
+  partyIsAllSet,
+  type ThreadStepsInput,
+  theBoatIsHome,
+} from "./thread-steps";
 
 /**
  * The rules ADR 20260827-the-divers-thread's decision 3 states, pinned — not
@@ -238,5 +245,100 @@ describe("partyIsAllSet", () => {
 
   it("yields to the dive-day block on the day itself", () => {
     expect(partyIsAllSet({ seats: [settled], ownSignSettled: true, diveDay: true })).toBe(false);
+  });
+});
+
+/**
+ * **Prep or after** — the switch slice 7d hangs the thread's third state on
+ * (ADR 20260827-the-divers-thread, decision 4). Pinned here rather than in
+ * the page, because a page cannot be asked this without a database, a shop and
+ * a live capability token.
+ *
+ * It was the clock alone until a review caught it (2026-08-28), and the whole
+ * point of the block below is that a clock can say *the day is over* and can
+ * never say *this person dived it*.
+ */
+describe("theBoatIsHome", () => {
+  const endsAt = new Date("2026-08-29T18:30:00Z");
+
+  it("is still the trip while the boat is out", () => {
+    expect(theBoatIsHome({ endsAt, now: new Date("2026-08-29T17:00:00Z") })).toBe(false);
+  });
+
+  it("is still the trip at the scheduled end, and through the standing buffer", () => {
+    // Trips run late (AGENTS.md): the hour after the scheduled return is the
+    // hour the boat is actually tying up, and a diver refreshing their own
+    // page then is not yet being asked how it was.
+    expect(theBoatIsHome({ endsAt, now: endsAt })).toBe(false);
+    expect(theBoatIsHome({ endsAt, now: new Date("2026-08-29T19:29:00Z") })).toBe(false);
+    expect(theBoatIsHome({ endsAt, now: new Date("2026-08-29T19:30:00Z") })).toBe(false);
+  });
+
+  it("hands over from the dive-day block at exactly the same moment", () => {
+    // `isDiveDay` and this are the two halves of one clock: while the boat is
+    // out the page says "today's the day", and the instant that stops being
+    // true the day is over. A gap between them would be a screenful that is
+    // neither.
+    const startsAt = new Date("2026-08-29T15:00:00Z");
+    const timeZone = "America/New_York";
+    const stillOut = new Date("2026-08-29T19:30:00Z");
+    const home = new Date("2026-08-29T19:31:00Z");
+    expect(isDiveDay({ startsAt, endsAt, timeZone, now: stillOut })).toBe(true);
+    expect(theBoatIsHome({ endsAt, now: stillOut })).toBe(false);
+    expect(isDiveDay({ startsAt, endsAt, timeZone, now: home })).toBe(false);
+    expect(theBoatIsHome({ endsAt, now: home })).toBe(true);
+  });
+});
+
+describe("isAfterTheDive", () => {
+  const endsAt = new Date("2026-08-29T18:30:00Z");
+  const bufferGone = new Date("2026-08-29T19:31:00Z"); // endsAt + 1h + 1m
+  const recapFloor = new Date("2026-08-29T22:31:00Z"); // endsAt + 4h + 1m
+
+  it("never opens for a diver the crew recorded as not boarded", () => {
+    // The one thing DiveDay actually knows about who got on the boat. A diver
+    // who overslept, or who was held at the desk on a medical hold, opened the
+    // durable link already in their inbox and got "Welcome back", a printable
+    // dive record for the day, and an invitation to tip the crew who dived
+    // without them. No amount of elapsed time makes that true.
+    expect(isAfterTheDive({ endsAt, boarded: "not_boarded", now: bufferGone })).toBe(false);
+    expect(isAfterTheDive({ endsAt, boarded: "not_boarded", now: recapFloor })).toBe(false);
+    expect(
+      isAfterTheDive({ endsAt, boarded: "not_boarded", now: new Date("2026-09-05T09:00:00Z") }),
+    ).toBe(false);
+  });
+
+  it("opens at the late-arrival buffer for a diver the crew recorded aboard", () => {
+    // With the dock's own record in hand the clock is no longer asserting
+    // anything by itself, so the standing buffer is the whole wait.
+    expect(isAfterTheDive({ endsAt, boarded: "boarded", now: endsAt })).toBe(false);
+    expect(
+      isAfterTheDive({ endsAt, boarded: "boarded", now: new Date("2026-08-29T19:30:00Z") }),
+    ).toBe(false);
+    expect(isAfterTheDive({ endsAt, boarded: "boarded", now: bufferGone })).toBe(true);
+  });
+
+  it("waits for the recap floor when the shop recorded no roll call", () => {
+    // Four hours — `RECAP_AUTOMATIC_DELAY_HOURS`, the delay the recap *send*
+    // has always taken before asserting the same thing by email. A shop that
+    // does not run roll call gets that rule, not a looser one invented here.
+    // The old buffer-only switch is the failing case: at `bufferGone` the
+    // page used to be the afterglow.
+    expect(isAfterTheDive({ endsAt, now: bufferGone })).toBe(false);
+    expect(isAfterTheDive({ endsAt, boarded: null, now: bufferGone })).toBe(false);
+    expect(isAfterTheDive({ endsAt, now: new Date("2026-08-29T22:30:00Z") })).toBe(false);
+    expect(isAfterTheDive({ endsAt, now: recapFloor })).toBe(true);
+    expect(isAfterTheDive({ endsAt, now: new Date("2026-08-30T09:00:00Z") })).toBe(true);
+  });
+
+  it("is never the after-state while the boat could still be out", () => {
+    // Whatever the evidence says, the day itself has to be over: a roll call
+    // is recorded at the dock *before* the boat leaves, so `boarded` is true
+    // for every diver on the water right now.
+    for (const boarded of ["boarded", "not_boarded", null] as const) {
+      expect(isAfterTheDive({ endsAt, boarded, now: new Date("2026-08-29T17:00:00Z") })).toBe(
+        false,
+      );
+    }
   });
 });

@@ -21,18 +21,16 @@
     "previousMonthFallback": "{trend}frente a {baseline} en {month} (todavía sin datos del año pasado)"
   },
   "downloadCsv": "Descargar CSV",
+  "taxLine": "Impuestos cobrados {amount}",
   "metrics": {
     "revenueLabel": "Ingresos netos",
-    "revenueDetail": "Pagos y depósitos después del impuesto de Stripe en las salidas de este mes",
     "revenueDetailWithImported": "Pagos y depósitos de salidas actuales después del impuesto de Stripe, más {count, plural, one {# registro importado del origen sin verificar} other {# registros importados del origen sin verificar}}: {payments} en pagos y {refunds} en reembolsos.",
-    "taxLabel": "Impuestos cobrados",
-    "taxDetail": "Impuesto de Stripe incluido en los pagos verificados de este mes",
-    "bookingsLabel": "Reservas",
+    "bookingsLabel": "Plazas",
     "bookingsThisMonth": "{count, plural, one {# salida} other {# salidas}} en el calendario hasta ahora",
     "bookingsOther": "en {count, plural, one {# salida} other {# salidas}}",
     "seatFillLabel": "Ocupación",
     "seatFillDetail": "{booked} de {offered} plazas · {count, plural, one {# barco completo} other {# barcos completos}}",
-    "waiversLabel": "Hojas de exención firmadas",
+    "waiversLabel": "Exenciones",
     "waiversOutstanding": "quedan {count} por recoger",
     "waiversAllIn": "Toda la documentación está en regla",
     "revenueViewOrders": "Ver pedidos",
@@ -49,16 +47,11 @@
     "viewOrders": "Revisar historial importado en Pedidos"
   },
   "tripsThisMonth": "Salidas de este mes",
-  "table": {
-    "trip": "Salida",
-    "seats": "Plazas",
-    "fill": "Ocupación",
-    "crew": "Tripulación",
-    "waivers": "Exenciones"
+  "row": {
+    "seats": "{booked} de {capacity, plural, one {# plaza} other {# plazas}}",
+    "crew": "{count, plural, one {# tripulante} other {# tripulantes}}",
+    "waivers": "{complete} de {total, plural, one {# exención} other {# exenciones}}"
   },
-  "seatsMobile": "{booked}/{capacity, plural, one {# plaza} other {# plazas}}",
-  "fillLabel": "{booked} de {capacity, plural, one {# plaza reservada} other {# plazas reservadas}}",
-  "waiversRowLabel": "{complete} de {total, plural, one {# hoja de exención firmada} other {# hojas de exención firmadas}}",
   "pagination": {
     "total": "{count, plural, one {# salida} other {# salidas}}"
   }

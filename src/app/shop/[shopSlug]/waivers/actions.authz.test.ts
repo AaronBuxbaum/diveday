@@ -173,4 +173,53 @@ describe("publishing a waiver template", () => {
     expect(to).toBe(`/shop/${shop.slug}/waivers?notice=invalid`);
     expect(await currentTemplate(db, shop.id)).toEqual(before);
   });
+
+  /**
+   * **The server half of "no submit without a choice"** (ADR
+   * 20260827-people-not-lists, decision 4; H-54's two explicit choices).
+   *
+   * The surface asks with a radio pair the form is invalid without
+   * (`_components/PublishRelease.tsx`), but a form gate is a render-time gate:
+   * a POST straight at the action never met it (ADR-0006). Publishing the
+   * wrong materiality is not a cosmetic error — it decides whether the whole
+   * shop signs again — so the action refuses a submission that names neither,
+   * rather than defaulting to one of them on the shop's behalf.
+   *
+   * **And it says so in its own words.** This refusal shared the `invalid` code
+   * with the too-short one above until 2026-08-28, and so inherited its
+   * sentence — "the release needs to be at least a few sentences long". The
+   * staffer meeting it has shortened nothing: a material publish leaves zero
+   * standing signatures, so the tab they are looking at drew no radios at all,
+   * and once divers have signed the new release a second publish from that same
+   * tab posts no `material` field. They were told to lengthen a release they
+   * never touched, with nothing on the screen to act on. Two refusals, two
+   * codes.
+   */
+  it("refuses a publish that calls the edit neither thing, while signatures stand", async () => {
+    const { db, shop, owner } = await context();
+    const before = await currentTemplate(db, shop.id);
+    signIn(shop, owner);
+    const formData = new FormData();
+    formData.set("body", NEW_BODY);
+
+    const to = await redirectedTo(() => saveWaiverAction(formData));
+
+    expect(to).toBe(`/shop/${shop.slug}/waivers?notice=waiver-materiality-required`);
+    expect(await currentTemplate(db, shop.id)).toEqual(before);
+  });
+
+  it("tells that refusal apart from a release too short to be one", async () => {
+    const { shop, owner } = await context();
+    signIn(shop, owner);
+    const noChoice = new FormData();
+    noChoice.set("body", NEW_BODY);
+
+    const tooShort = await redirectedTo(() => saveWaiverAction(withBody("Too short.")));
+    const unstated = await redirectedTo(() => saveWaiverAction(noChoice));
+
+    // The inequality is the pin, not either code on its own: a staffer reads
+    // the banner, and one code can only ever render one sentence.
+    expect(unstated).not.toBe(tooShort);
+    expect(unstated).not.toContain("notice=invalid");
+  });
 });

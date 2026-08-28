@@ -152,21 +152,25 @@ test.describe("staff", () => {
     await expect(row2.getByRole("button", { name: "Show Discover Scuba Diving" })).toBeVisible();
   });
 
-  test("the roster reads in progression order and filters by agency tab", async ({ page }) => {
+  test("the roster reads as one ledger, agency by agency, in progression order", async ({
+    page,
+  }) => {
     await page.goto("/shop/blue-mantis/courses");
 
     // The order a counter conversation walks, not the alphabet: a first taste,
     // then the entry card, then what it opens. Alphabetical would have opened
     // on "Advanced Open Water Diver" — the one course a beginner cannot take.
-    // Rows, not title spans: the "Hidden" badge is a `font-semibold` span too,
-    // and a sibling test in this file hides a course — matching on the row that
+    // Rows, not title spans: the "Hidden" badge is its own element too, and a
+    // sibling test in this file hides a course — matching on the row that
     // *starts* with the title keeps the order readable either way.
     // Issue 623 expanded the published catalog beyond one screenful. Walk the
     // real pager so this assertion covers the whole PADI ladder while keeping
     // the roster's deliberate 20-row page size.
     const rows: string[] = [];
+    const headings: string[] = [];
     for (;;) {
       rows.push(...(await page.locator("main ul > li").allInnerTexts()));
+      headings.push(...(await page.locator("main h2").allInnerTexts()));
       const next = page.getByRole("navigation", { name: "Pages" }).getByRole("link", {
         name: "Next",
       });
@@ -185,43 +189,27 @@ test.describe("staff", () => {
     expect(at("Advanced Open Water Diver")).toBeLessThan(at("Rescue Diver"));
     expect(at("Rescue Diver")).toBeLessThan(at("Divemaster"));
 
-    await page.goto("/shop/blue-mantis/courses");
+    // Slice 9g of ADR 20260827-the-shops-shelves: agency is a group heading,
+    // never a tab and never a pill down every row. The whole catalog is on one
+    // Pager, so a shop teaching two ladders reads both — which the tab strip
+    // made impossible — and the query sorts agency-major, so each agency is
+    // named once across the whole walk rather than resuming below the next.
+    // A group that spans a page boundary re-renders its heading on the next
+    // page — that is the grouping composing with the Pager rather than
+    // replacing it. What must never happen is a group *resuming* after
+    // another one, so consecutive repeats collapse and the runs are compared.
+    const runs = headings
+      .map((heading) => heading.trim())
+      .filter((heading, index, all) => heading !== all[index - 1]);
+    expect(runs).toEqual(["PADI", "SDI", "SSI"]);
+    expect(rows.filter((row) => row.includes("SSI Open Water Diver"))).toHaveLength(1);
+    expect(rows.filter((row) => row.includes("Divemaster"))).toHaveLength(1);
 
-    // Agency is a tab, not a pill repeated on every row — and there is no
-    // "All". Progression order is the order a shop *teaches*, which only means
-    // anything inside one agency's ladder; "All" interleaved two of them into
-    // one column where an Open Water sat next to an Open Water. The shop's
-    // first agency is the default, so the bare URL stays canonical.
-    const tabs = page.getByRole("navigation", { name: "Filter courses by agency" });
-    await expect(tabs.getByRole("link", { name: "All" })).toHaveCount(0);
-    await expect(tabs.getByRole("link", { name: "PADI" })).toHaveAttribute("aria-current", "true");
-
-    await tabs.getByRole("link", { name: "SSI" }).click();
-    await expect(page).toHaveURL("/shop/blue-mantis/courses?agency=ssi");
-    const roster = page.locator("main ul > li");
-    await expect(roster.filter({ hasText: "SSI Open Water Diver" })).toHaveCount(1);
-    // Divemaster is PADI-only in the seeded catalog, so the SSI tab drops it.
-    await expect(roster.filter({ hasText: "Divemaster" })).toHaveCount(0);
-    await expect(tabs.getByRole("link", { name: "SSI" })).toHaveAttribute("aria-current", "true");
-
-    // The tab survives a reload (it is a real URL), and the default tab brings
-    // the rest back on the canonical URL.
-    await page.reload();
-    await expect(roster.filter({ hasText: "Divemaster" })).toHaveCount(0);
-    await tabs.getByRole("link", { name: "PADI" }).click();
-    await expect(page).toHaveURL("/shop/blue-mantis/courses");
-    const padiRows: string[] = [];
-    for (;;) {
-      padiRows.push(...(await page.locator("main ul > li").allInnerTexts()));
-      const next = page.getByRole("navigation", { name: "Pages" }).getByRole("link", {
-        name: "Next",
-      });
-      if ((await next.count()) === 0) break;
-      const href = await next.getAttribute("href");
-      if (!href) break;
-      await page.goto(href);
-    }
-    expect(padiRows.filter((row) => row.includes("Divemaster"))).toHaveLength(1);
+    // No filter survives: `?agency=` was a real URL and is now an ignored one,
+    // which must show the same catalog rather than an empty roster.
+    await page.goto("/shop/blue-mantis/courses?agency=ssi");
+    await expect(page.getByRole("navigation", { name: "Filter courses by agency" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { level: 2, name: "PADI" })).toBeVisible();
   });
 
   test("a course row schedules a session of itself, opening the board's add panel", async ({
@@ -540,6 +528,40 @@ test.describe("staff", () => {
     await page.goto("/s/blue-mantis/courses/wreck-diver");
     await expect(page.getByText(/Plan every dive to/)).toContainText(/(18 meters|60 feet)/);
   });
+
+  /**
+   * **The editor rail** — ADR 20260827-the-shops-shelves, decision 2.
+   *
+   * Two things a unit test cannot see: that the rail actually moves the page to
+   * the section it names, and that the sentence beside Save names the section
+   * the writer changed rather than saying "Unsaved changes" about four thousand
+   * pixels of form.
+   */
+  test("the rail jumps to a section, and the save bar names the one holding the edit", async ({
+    page,
+  }) => {
+    test.setTimeout(30_000);
+    await page.goto("/shop/blue-mantis/courses/open-water-diver/edit");
+    const rail = page.getByRole("navigation", { name: "Sections" });
+    await expect(rail.getByRole("link", { name: "Day by day" })).toBeVisible();
+
+    // A clean form says nothing at all — the note is a consequence, not a label.
+    await expect(page.getByText(/^Unsaved changes/)).toHaveCount(0);
+
+    await page.getByLabel("Subhead").fill("Three days from pool to reef");
+    await expect(page.getByText("Unsaved changes in The pitch")).toBeVisible();
+
+    // A second section, and the note counts instead of listing: two names on
+    // one line beside a button is a sentence nobody reads.
+    await page.getByLabel("Duration").fill("Three days");
+    await expect(page.getByText("Unsaved changes in 2 sections")).toBeVisible();
+
+    // And the rail is the way back to it. The anchor is a real fragment, so it
+    // works before hydration and survives a copied URL.
+    await rail.getByRole("link", { name: "The pitch" }).click();
+    await expect(page).toHaveURL(/#pitch$/);
+    await expect(page.getByLabel("Subhead")).toBeInViewport();
+  });
 });
 
 test("a diver with no workable date reaches the shop, and is offered one way to do it", async ({
@@ -819,8 +841,11 @@ test.describe("the course editor over a wander through the app", () => {
     await expect(summary).toBeVisible();
     await summary.fill("Half a thought, never saved");
     // The bar says so, pinned to the bottom edge rather than four thousand
-    // pixels down where Save used to be the only sign this was a form.
-    await expect(page.getByText("Unsaved changes", { exact: true })).toBeVisible();
+    // pixels down where Save used to be the only sign this was a form — and it
+    // names the section, since the rail arrived (ADR
+    // 20260827-the-shops-shelves): "Unsaved changes" alone left the writer to
+    // find which of eight sections it meant.
+    await expect(page.getByText("Unsaved changes in The pitch", { exact: true })).toBeVisible();
 
     for (const tab of ["Divers", "Board", "Close-out", "Check-in"]) {
       await page.getByRole("link", { name: tab, exact: true }).first().click();

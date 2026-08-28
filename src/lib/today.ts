@@ -775,59 +775,6 @@ export function getTimeOfDayGreeting(date: Date, timezone: string): TodayGreetin
 }
 
 /**
- * The slice of `src/db/today.ts`'s `DepartureSummary` the predicate below
- * reads. Structural on purpose, and for the same reason
- * `src/lib/closeout.ts`'s `CloseoutRollCallGap` is: `src/lib` never imports
- * `src/db` (`pnpm check:architecture`), so the db layer's rows are passed in
- * and matched by shape. The shape is still checked — the shop home hands this
- * an actual `DepartureSummary[]`, so dropping or retyping `endsAt` upstream
- * fails to compile at that call site.
- */
-export type DepartureEnd = { endsAt: Date };
-
-/**
- * Is there anything to close out yet — has *any* departure today come home?
- *
- * This is the trigger for Today's evening handoff to the close-out. It used to
- * be {@link lastBoatIsIn}, which asked whether *every* boat was in, and that
- * turned out to be the wrong question for the days a shop most needs the door:
- * an evening with a night dive still on the board, or a boat running late, is
- * exactly when a staffer starts writing the day up — and on those days the card
- * never appeared (FU-20260811-close-out-has-one-conditional-door). A departure
- * that is home is work the close-out can take, whatever else is still out.
- *
- * Deliberately **not** a new detector: it reads the departures `getTodayWork`
- * already returned (today's own, in the shop's calendar day) against the same
- * `now` the page renders with. No clock band, either — a shop whose boat is in
- * at 14:00 has something to write up at 14:00, and one still counting heads at
- * 19:00 does not; a wall-clock hour would be right about neither.
- *
- * A day with no departures at all is `false`: nothing sailed, so there is
- * nothing to hand over. The close-out is still one ⌘K away — this is a handoff,
- * not the only door.
- */
-export function anyBoatIsIn(departures: readonly DepartureEnd[], now: Date): boolean {
-  return departures.some((departure) => departure.endsAt <= now);
-}
-
-/**
- * Has the day's diving finished — every departure today back at the dock?
- *
- * No longer decides *whether* the handoff card renders ({@link anyBoatIsIn}
- * does); it decides which words the card carries. "The last boat is in" is a
- * true and worth-marking sentence, and it must not be said over a shop with a
- * boat still at sea, so the two states get two sets of copy rather than one
- * vague one.
- *
- * Same inputs and the same reasoning about clock bands as `anyBoatIsIn` above.
- * A day with no departures is `false` here too, though the card is already
- * absent by then.
- */
-export function lastBoatIsIn(departures: readonly DepartureEnd[], now: Date): boolean {
-  return departures.length > 0 && departures.every((departure) => departure.endsAt <= now);
-}
-
-/**
  * **The day spine** — ADR 20260827-clearwater-surface-language, decision 4.
  *
  * The shop home stopped being two views over one queue and became one
@@ -844,7 +791,7 @@ export function lastBoatIsIn(departures: readonly DepartureEnd[], now: Date): bo
  * be the failure this shape exists to prevent — two answers about one boat.
  *
  * The shapes are structural rather than imported from `src/db/today.ts` for
- * the reason {@link DepartureEnd} is: `src/lib` never imports `src/db`
+ * the reason the close-out's own inputs are: `src/lib` never imports `src/db`
  * (`pnpm check:architecture`). The shop home hands this an actual
  * `DepartureSummary[]`, so dropping or retyping a field upstream still fails
  * to compile at that call site.
@@ -1022,12 +969,38 @@ export function spineJobCount(spine: DaySpine): number {
  * decision 6) — and "nothing is waiting on you" said over one is a lie the
  * reader can see on the same screen.
  *
- * First-run is a different page and is decided by its own condition
- * (`countShopTrips === 0`), never by this: a shop that has never had a board is
- * not having a quiet day.
+ * `dayDepartures` is the other honesty clause, and it is why the spine's own
+ * station count is not the whole answer. The spine's stations come from a
+ * forward-looking reader — a boat is gone from it an hour after it leaves — so
+ * an evening whose only departure is already home has an empty `stations` and
+ * a page that is anything but quiet: the station settles, the leftovers stand,
+ * and the day is waiting to be closed (ADR
+ * 20260827-clearwater-surface-language, decision 4). Pass
+ * `assembleEveningClose(...).stations.length`, which is the whole shop day.
+ *
+ * `firstRun` is the third, and it is the one clause that is about a *different*
+ * composition rather than about honesty. A shop that has never had a board is
+ * not having a quiet day — it is having its first morning, and the setup ledger
+ * leads its spine (ADR 20260827-first-light, decision 6). The two compositions
+ * are exclusive **by rule**, and the rule lives here rather than in an `&&` at
+ * the call site so that nothing downstream can compose them by forgetting: a
+ * page that collapsed to "a quiet day at the dock" would be answering a
+ * question the owner never asked, over the three steps that are the whole
+ * screen.
  */
-export function spineIsQuiet(spine: DaySpine, deskPresenceRow: boolean): boolean {
-  return spine.stations.length === 0 && spineJobCount(spine) === 0 && !deskPresenceRow;
+export function spineIsQuiet(
+  spine: DaySpine,
+  deskPresenceRow: boolean,
+  dayDepartures: number,
+  firstRun = false,
+): boolean {
+  return (
+    !firstRun &&
+    spine.stations.length === 0 &&
+    dayDepartures === 0 &&
+    spineJobCount(spine) === 0 &&
+    !deskPresenceRow
+  );
 }
 
 /**

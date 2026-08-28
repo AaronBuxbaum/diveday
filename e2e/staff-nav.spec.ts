@@ -14,30 +14,23 @@ import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 test.describe("owner", () => {
   signedInAsOwner();
 
-  test("the header is five tabs plus a More menu holding the two groups", async ({ page }) => {
+  test("the header is four tabs plus a More menu holding the two groups", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
 
     // Scoped to the header: the primary destinations render twice in the DOM
     // (header strip and phone dock), one visible per breakpoint.
     const nav = page.locator("header").getByRole("navigation", { name: "Primary" });
     // "Board", not "Schedule": the public schedule is a different page at a
-    // different URL, and staff call this one the board. Close-out takes the
-    // fifth top-level slot; Orders remains reachable from More.
-    await expect(nav.getByRole("link")).toHaveText([
-      /Today/,
-      "Check-in",
-      "Divers",
-      "Board",
-      "Close-out",
-    ]);
+    // different URL, and staff call this one the board. **Four, not five**:
+    // Close-out left the bar on 2026-08-28 when the evening became a state of
+    // the home rather than a destination (H-62), and the room it freed is
+    // deliberately unspent. Orders remains reachable from More.
+    await expect(nav.getByRole("link")).toHaveText([/Today/, "Check-in", "Divers", "Board"]);
+    await expect(nav.getByRole("link", { name: "Close-out" })).toHaveCount(0);
 
-    // Close-out is a primary tab, so it is reachable without opening More.
-    await nav.getByRole("link", { name: "Close-out" }).click();
-    await expect(page).toHaveURL(/\/close-out$/);
-    await expect(nav.getByRole("link", { name: "Close-out" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    await nav.getByRole("link", { name: "Divers" }).click();
+    await expect(page).toHaveURL(/\/divers$/);
+    await expect(nav.getByRole("link", { name: "Divers" })).toHaveAttribute("aria-current", "page");
 
     await page.goto("/shop/blue-mantis");
     // The More menu holds every other *place*, in two named groups — the
@@ -127,9 +120,9 @@ test.describe("captain", () => {
     await page.goto("/shop/blue-mantis");
 
     const nav = page.locator("header").getByRole("navigation", { name: "Primary" });
-    // Close-out is the ungated primary destination; Orders is still visible,
-    // but it now lives in More with the other daily work.
-    await expect(nav.getByRole("link", { name: "Close-out" })).toBeVisible();
+    // Board is an ungated primary destination; Orders is still visible to a
+    // captain, but it lives in More with the other daily work.
+    await expect(nav.getByRole("link", { name: "Board" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Orders" })).toHaveCount(0);
 
     // The More menu shows a captain only what their role can open: the

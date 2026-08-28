@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Copyable } from "@/components/Copyable";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager } from "@/components/Pager";
@@ -9,11 +8,12 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
-import { Badge } from "@/components/ui/badge";
+import type { BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
+import { GroupLabel } from "@/components/ui/ledger";
 import { canPersonManagePaymentSettings } from "@/db/authz";
 import { listShopPromoCodes } from "@/db/shop-promos";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -23,10 +23,21 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { timeZoneLabel } from "@/i18n/timezone-labels";
 import { nowDate } from "@/lib/clock";
 import { formatDateTimeTz } from "@/lib/format";
-import { isPromoRedeemable, PROMO_DISCOUNT_MAX, PROMO_DISCOUNT_MIN } from "@/lib/promo-codes";
+import {
+  PROMO_DISCOUNT_MAX,
+  PROMO_DISCOUNT_MIN,
+  type PromoLedgerGroup,
+  promoLedgerGroup,
+} from "@/lib/promo-codes";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
+import {
+  PromoCodeLedger,
+  type PromoCodeRow,
+  TripDealLedger,
+  type TripDealRow,
+} from "./_components/PromoLedger";
 import {
   createPromoAction,
   deletePromoAction,
@@ -94,6 +105,36 @@ const SCOPE_KEYS: Record<"all" | "trips" | "courses", StaffMessageKey> = {
   courses: "promos.scope.courses",
 };
 
+/** The shelf words, one per group `promoLedgerGroup` can return. */
+const GROUP_KEYS: Record<PromoLedgerGroup, StaffMessageKey> = {
+  live: "promos.group.live",
+  scheduled: "promos.group.scheduled",
+  ended: "promos.group.ended",
+};
+
+/**
+ * The badge a code wears, or nothing.
+ *
+ * Only the exceptional statuses are here (ADR
+ * 20260827-clearwater-surface-language, decision 3 — a badge marks the
+ * exception, never the expected). Whether a code is live, waiting to start or
+ * over is its *window*, which the shelf it sits on already says once for the
+ * whole run; "Live" and "Not live right now" were pills repeating a fact the
+ * group header now owns, and both keys retired with them.
+ *
+ * All three keep the neutral tone the shipped page gave them. Slice 9g is a
+ * recomposition and not a re-toning: a `failed` code arguably wants danger
+ * ink, but that is a decision about what a broken code *is*, and it belongs
+ * with whoever makes it deliberately rather than arriving as a side effect of
+ * moving the window word to a heading. The row's own acts — Try again, Delete
+ * — sit beside every one of these and say what to do about it.
+ */
+const STATUS_BADGES: Record<string, { tone: BadgeTone; key: StaffMessageKey }> = {
+  failed: { tone: "neutral", key: "promos.status.failed" },
+  pending: { tone: "neutral", key: "promos.status.pending" },
+  disabled: { tone: "neutral", key: "promos.status.disabled" },
+};
+
 export default async function PromosPage({
   params,
   searchParams,
@@ -142,7 +183,10 @@ export default async function PromosPage({
     // A non-numeric or missing `?page=`/`?dealsPage=` reads as page 1; each
     // query clamps it into range, so a bookmarked page past the end of either
     // list lands on that list's last real page.
-    listShopPromoCodes(db, session.user.shopId, { page: Number.parseInt(page ?? "", 10) }),
+    listShopPromoCodes(db, session.user.shopId, {
+      page: Number.parseInt(page ?? "", 10),
+      now,
+    }),
     getShopStripeAccount(db, session.user.shopId),
     listOutstandingLastMinutePromos(db, session.user.shopId, now, {
       page: Number.parseInt(dealsPage ?? "", 10),
@@ -184,6 +228,94 @@ export default async function PromosPage({
   const locale = await requestLocale(shop?.defaultLocale);
   const t = staffTranslator(locale);
   const timezone = shop?.timezone ?? "UTC";
+
+  /**
+   * One code's row, already worded. The shelf comes off `promoLedgerGroup`
+   * against the same `now` the query sorted by, so the heading a code renders
+   * under and the run it was sorted into can never disagree.
+   */
+  const codeRows: PromoCodeRow[] = promos.map((promo) => {
+    const badge = STATUS_BADGES[promo.status];
+    const switchable = promo.status === "active" || promo.status === "disabled";
+    return {
+      id: promo.id,
+      group: promoLedgerGroup(promo, now),
+      code: promo.code,
+      discount: t("promos.discountOff", { percent: promo.discountPercent }),
+      ...(badge ? { badge: { tone: badge.tone, word: t(badge.key) } } : {}),
+      description: promo.description,
+      // One line, three facts: what it buys, the window it buys in, and what
+      // it has spent. The window half stays a statement about the *window* —
+      // it read "live now" once, which an expired code rendered directly under
+      // a "Not live right now" badge as "live now · until Aug 1".
+      facts: [
+        t(SCOPE_KEYS[promo.scope]),
+        promo.startsAt
+          ? t("promos.fromDate", { date: formatDateTimeTz(promo.startsAt, locale, timezone) })
+          : t("promos.noStartDate"),
+        promo.expiresAt
+          ? t("promos.untilDate", { date: formatDateTimeTz(promo.expiresAt, locale, timezone) })
+          : t("promos.noEndDate"),
+        promo.maxRedemptions === null
+          ? t("promos.redeemedNoCap", { count: promo.timesRedeemed })
+          : t("promos.redeemedWithCap", {
+              count: promo.timesRedeemed,
+              max: promo.maxRedemptions,
+            }),
+      ].join(" · "),
+      actions: switchable ? (
+        <form action={setPromoEnabledAction}>
+          <input type="hidden" name="promoId" value={promo.id} />
+          <input type="hidden" name="enable" value={String(promo.status !== "active")} />
+          <SubmitButton
+            pendingLabel={t("promos.saving")}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {promo.status === "active" ? t("promos.switchOff") : t("promos.switchOn")}
+          </SubmitButton>
+        </form>
+      ) : (
+        // `pending` and `failed` are the two states with no Stripe objects
+        // behind them: there is nothing to switch, only to retry or clear.
+        <div className="flex flex-wrap items-center gap-2">
+          {promo.status === "failed" ? (
+            <form action={retryPromoAction}>
+              <input type="hidden" name="promoId" value={promo.id} />
+              <SubmitButton
+                pendingLabel={t("promos.retrying")}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("promos.retry")}
+              </SubmitButton>
+            </form>
+          ) : null}
+          <form action={deletePromoAction}>
+            <input type="hidden" name="promoId" value={promo.id} />
+            <SubmitButton
+              pendingLabel={t("promos.deleting")}
+              className={buttonClass({ variant: "danger", size: "sm" })}
+            >
+              {t("promos.delete")}
+            </SubmitButton>
+          </form>
+        </div>
+      ),
+    };
+  });
+
+  const dealRows: TripDealRow[] = tripDeals.map((deal) => ({
+    id: deal.id,
+    code: deal.code,
+    discount: t("promos.discountOff", { percent: deal.discountPercent }),
+    tripTitle: deal.tripTitle,
+    href: `/shop/${shopSlug}/trips/${deal.tripId}#last-minute-deal`,
+    facts: [
+      t("promos.tripDeals.expiresAt", {
+        date: formatDateTimeTz(deal.expiresAt, locale, timezone),
+      }),
+      t("promos.tripDeals.recipients", { count: deal.recipientCount }),
+    ].join(" · "),
+  }));
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -336,10 +468,8 @@ export default async function PromosPage({
         </FieldGrid>
       </SectionCard>
 
-      <h2 className="mt-8 text-lg font-semibold">{t("promos.yourCodes")}</h2>
       {promos.length === 0 ? (
         <EmptyState
-          titleAs="h3"
           title={t("promos.empty.heading")}
           body={t("promos.empty.detail")}
           action={
@@ -347,125 +477,23 @@ export default async function PromosPage({
               {t("promos.empty.action")}
             </a>
           }
+          className="mt-8"
         />
       ) : (
-        <ul className="mt-3 flex flex-col gap-3">
-          {promos.map((promo) => {
-            // "Live" is the same predicate the booking form applies, so this
-            // badge can never say a code works when checkout would refuse it.
-            const live = isPromoRedeemable(
-              promo,
-              promo.scope === "courses" ? "course" : "trip",
-              now,
-            );
-            const switchable = promo.status === "active" || promo.status === "disabled";
-            return (
-              <SectionCard
-                as="li"
-                key={promo.id}
-                padding="lg"
-                className="list-none flex flex-col gap-3 sm:flex-row sm:items-start"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span className="font-mono text-base font-semibold">{promo.code}</span>
-                    <Copyable
-                      layout="inline"
-                      value={promo.code}
-                      copyLabel={t("promos.copyCode")}
-                      copiedLabel={t("promos.copyCodeCopied")}
-                      failedLabel={t("promos.copyCodeFailed")}
-                    />
-                    <span className="text-sm font-medium text-primary tabular-nums">
-                      {t("promos.discountOff", { percent: promo.discountPercent })}
-                    </span>
-                    <Badge tone={live ? "success" : "neutral"}>
-                      {promo.status === "failed"
-                        ? t("promos.status.failed")
-                        : promo.status === "pending"
-                          ? t("promos.status.pending")
-                          : live
-                            ? t("promos.status.live")
-                            : promo.status === "disabled"
-                              ? t("promos.status.disabled")
-                              : t("promos.status.notLive")}
-                    </Badge>
-                  </div>
-                  {promo.description ? (
-                    <p className="mt-1 text-sm text-muted">{promo.description}</p>
-                  ) : null}
-                  {/* This line describes the code's *window*, so the "no start
-                      date" half has to stay a statement about the window, not
-                      about whether the code is live — it used to read "live
-                      now", which an expired code rendered directly under a
-                      "Not live right now" badge as "live now · until Aug 1". */}
-                  <p className="mt-2 text-sm text-muted">
-                    {t(SCOPE_KEYS[promo.scope])} ·{" "}
-                    {promo.startsAt
-                      ? t("promos.fromDate", {
-                          date: formatDateTimeTz(promo.startsAt, locale, timezone),
-                        })
-                      : t("promos.noStartDate")}{" "}
-                    ·{" "}
-                    {promo.expiresAt
-                      ? t("promos.untilDate", {
-                          date: formatDateTimeTz(promo.expiresAt, locale, timezone),
-                        })
-                      : t("promos.noEndDate")}
-                  </p>
-                  <p className="mt-1 text-sm text-muted tabular-nums">
-                    {promo.maxRedemptions === null
-                      ? t("promos.redeemedNoCap", { count: promo.timesRedeemed })
-                      : t("promos.redeemedWithCap", {
-                          count: promo.timesRedeemed,
-                          max: promo.maxRedemptions,
-                        })}
-                  </p>
-                </div>
-                {switchable ? (
-                  <form action={setPromoEnabledAction} className="shrink-0">
-                    <input type="hidden" name="promoId" value={promo.id} />
-                    <input type="hidden" name="enable" value={String(promo.status !== "active")} />
-                    <SubmitButton
-                      pendingLabel={t("promos.saving")}
-                      className={buttonClass(
-                        promo.status === "active" ? { variant: "secondary" } : {},
-                      )}
-                    >
-                      {promo.status === "active" ? t("promos.switchOff") : t("promos.switchOn")}
-                    </SubmitButton>
-                  </form>
-                ) : null}
-                {promo.status === "failed" || promo.status === "pending" ? (
-                  <div className="flex shrink-0 flex-wrap items-center gap-2">
-                    {promo.status === "failed" ? (
-                      <form action={retryPromoAction}>
-                        <input type="hidden" name="promoId" value={promo.id} />
-                        <SubmitButton
-                          pendingLabel={t("promos.retrying")}
-                          className={buttonClass({
-                            variant: "secondary",
-                          })}
-                        >
-                          {t("promos.retry")}
-                        </SubmitButton>
-                      </form>
-                    ) : null}
-                    <form action={deletePromoAction}>
-                      <input type="hidden" name="promoId" value={promo.id} />
-                      <SubmitButton
-                        pendingLabel={t("promos.deleting")}
-                        className={buttonClass({ variant: "danger" })}
-                      >
-                        {t("promos.delete")}
-                      </SubmitButton>
-                    </form>
-                  </div>
-                ) : null}
-              </SectionCard>
-            );
-          })}
-        </ul>
+        <PromoCodeLedger
+          className="mt-10"
+          rows={codeRows}
+          labels={{
+            live: t(GROUP_KEYS.live),
+            scheduled: t(GROUP_KEYS.scheduled),
+            ended: t(GROUP_KEYS.ended),
+          }}
+          copy={{
+            copyLabel: t("promos.copyCode"),
+            copiedLabel: t("promos.copyCodeCopied"),
+            failedLabel: t("promos.copyCodeFailed"),
+          }}
+        />
       )}
       <Pager
         page={promoPage.page}
@@ -476,12 +504,17 @@ export default async function PromosPage({
         className="mt-4"
       />
 
-      <h2 className="mt-10 text-lg font-semibold">{t("promos.tripDeals.heading")}</h2>
+      {/* One heading over both branches — the list and its empty state stand
+          under the same words, so neither renders a second spelling of them. */}
+      <GroupLabel as="h2" id="trip-deals" className="mt-10">
+        {t("promos.tripDeals.heading")}
+      </GroupLabel>
       <p className="mt-1 text-sm text-muted">{t("promos.tripDeals.description")}</p>
       {tripDeals.length === 0 ? (
         // A trip deal is sent from a departure, never from here, so the door is
-        // the board — the copy above already says so; this is the way there.
+        // the board — the line above already says so; this is the way there.
         <EmptyState
+          titleAs="h3"
           title={t("promos.tripDeals.empty")}
           action={
             <Link
@@ -494,35 +527,7 @@ export default async function PromosPage({
           className="mt-3"
         />
       ) : (
-        <ul className="mt-3 flex flex-col gap-3">
-          {tripDeals.map((deal) => (
-            <SectionCard
-              as="li"
-              key={deal.id}
-              padding="lg"
-              className="list-none flex flex-col gap-1"
-            >
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="text-sm font-medium text-primary tabular-nums">
-                  {t("promos.discountOff", { percent: deal.discountPercent })}
-                </span>
-                <span className="font-mono text-base font-semibold">{deal.code}</span>
-              </div>
-              <Link
-                href={`/shop/${shopSlug}/trips/${deal.tripId}#last-minute-deal`}
-                className="font-medium underline underline-offset-2"
-              >
-                {deal.tripTitle}
-              </Link>
-              <p className="text-sm text-muted">
-                {t("promos.tripDeals.expiresAt", {
-                  date: formatDateTimeTz(deal.expiresAt, locale, timezone),
-                })}{" "}
-                · {t("promos.tripDeals.recipients", { count: deal.recipientCount })}
-              </p>
-            </SectionCard>
-          ))}
-        </ul>
+        <TripDealLedger className="mt-3" labelledBy="trip-deals" rows={dealRows} />
       )}
       <Pager
         page={dealPage.page}

@@ -1,32 +1,30 @@
 {
   "eyebrow": "Operaciones",
   "title": "Personal",
-  "description": "La tripulación de cada salida se asigna en Hoy.",
-  "window": {
-    "from": "Desde",
-    "through": "Hasta",
-    "show": "Mostrar periodo"
+  "week": {
+    "ariaLabel": "Quién trabaja",
+    "previous": "Semana anterior",
+    "next": "Semana siguiente",
+    "thisWeek": "Esta semana",
+    "today": "Hoy",
+    "person": "Persona",
+    "needsCrew": "Falta tripulación",
+    "assign": "Asignar",
+    "assignAria": "Asignar tripulación a {trip}",
+    "crewing": "Tripulación",
+    "shiftAria": "Turno de {person} el {day}",
+    "empty": "No hay nada programado esta semana."
   },
   "working": {
-    "heading": "Quién trabaja",
-    "managerOnly": "Cambiar turnos requiere ser propietario o gerente",
-    "notScheduled": "Sin turnos en este periodo.",
     "remove": "Quitar",
     "removing": "Quitando…",
-    "crewingHeading": "Tripulación",
-    "crewingEmpty": "No forma parte de la tripulación de ninguna salida en este periodo.",
     "rosterEmptyHeading": "Todavía no hay tripulación registrada",
     "rosterEmptyManagerBody": "Invita a los instructores y divemasters que llevan tus barcos y luego asígnales turnos aquí.",
     "rosterEmptyBody": "Un propietario o gerente añade tripulación desde los ajustes de Equipo — pídele a alguno que lo ponga en marcha.",
     "rosterEmptyAction": "Invitar a tu tripulación"
   },
-  "capability": {
-    "teach": "Puede enseñar",
-    "crew": "Puede tripular",
-    "captain": "Patrón"
-  },
   "addShift": {
-    "heading": "Añadir un turno de trabajo",
+    "heading": "Añadir un turno",
     "person": "Miembro del personal",
     "choosePerson": "Elige una persona",
     "date": "Fecha",
@@ -39,9 +37,7 @@
     "saving": "Guardando…"
   },
   "credentials": {
-    "heading": "Credenciales del personal",
-    "description": "Mantén visibles las titulaciones, seguros y credenciales de seguridad. Son avisos informativos, nunca un bloqueo automático de asignaciones.",
-    "empty": "Todavía no hay credenciales registradas.",
+    "heading": "Credenciales",
     "person": "Miembro del personal",
     "choosePerson": "Elige una persona",
     "kind": "Tipo de credencial",
@@ -51,7 +47,6 @@
     "issuedAt": "Fecha de emisión",
     "renewsAt": "Fecha de renovación",
     "renews": "renueva el {date}",
-    "issuerUnknown": "Entidad emisora no registrada",
     "pending": "Pendiente de revisión",
     "verified": "Revisada",
     "overdue": "Vencida",
@@ -61,7 +56,7 @@
     "remove": "Quitar",
     "removing": "Quitando…",
     "saving": "Guardando…",
-    "add": "Añadir credencial",
+    "add": "Añadir una credencial",
     "kinds": {
       "instructor_rating": "Titulación de instructor",
       "divemaster_rating": "Titulación de divemaster",
@@ -71,11 +66,6 @@
       "captains_licence": "Licencia de patrón",
       "other": "Otra"
     }
-  },
-  "crewGaps": {
-    "needCrew": "{count, plural, one {# salida de este periodo sigue sin tripulación suficiente.} other {# salidas de este periodo siguen sin tripulación suficiente.}}",
-    "allCrewed": "Todas las salidas de este periodo tienen su tripulación.",
-    "noDepartures": "No hay salidas programadas en este periodo."
   },
   "notice": {
     "shiftSaved": "Turno guardado.",

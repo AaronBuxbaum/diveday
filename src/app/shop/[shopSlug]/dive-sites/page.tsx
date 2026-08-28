@@ -9,16 +9,18 @@ import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard, sectionCardClass } from "@/components/ui/card";
+import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
+import { LedgerRow } from "@/components/ui/ledger";
 import { QueryForm } from "@/components/ui/QueryForm";
-import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { getDb } from "@/db/client";
 import {
+  countGlobalDiveSiteTemplates,
   currentGlobalDiveSiteVersions,
   diveSiteLibrarySize,
   type GlobalDiveSiteTemplateRow,
   getGlobalDiveSiteTemplate,
+  groupSiteLibrary,
   importGlobalDiveSiteTemplate,
   listDiveSitesPage,
   listGlobalDiveSiteTemplates,
@@ -36,6 +38,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
+import { SiteLibraryLedger } from "./_components/SiteLibraryLedger";
 
 /** `?notice=` codes this page redirects back to itself with. Read through
  * `noticeFromParam`, never a bare `NOTICES[notice]` — the param is
@@ -89,7 +92,7 @@ export default async function DiveSitesPage({
   // A non-numeric or missing `?page=` reads as page 1 rather than NaN.
   const requestedPage = Number.parseInt(page ?? "", 10);
   const query = q?.trim() ?? "";
-  const [sitePage, librarySize] = await Promise.all([
+  const [sitePage, librarySize, catalogSize] = await Promise.all([
     listDiveSitesPage(
       db,
       shop.id,
@@ -100,6 +103,9 @@ export default async function DiveSitesPage({
     // this shop have a library yet? — which is what separates the day-one
     // empty state from a search that simply matched nothing.
     diveSiteLibrarySize(db, shop.id),
+    // The tail door's number, over the whole published catalog — never the
+    // `total` of a page nobody has fetched yet (ADR 20260827-the-shops-shelves).
+    countGlobalDiveSiteTemplates(db),
   ]);
   const sites = sitePage.rows;
   const banner = noticeFromParam(notice, NOTICES);
@@ -123,37 +129,29 @@ export default async function DiveSitesPage({
   const catalogHref = `/shop/${shopSlug}/dive-sites?view=catalog`;
 
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
         title={t("diveSites.list.title")}
         description={t("diveSites.list.description")}
-        // An empty library gets no header actions: the empty card below is
-        // already the whole page, and it carries these same two doors. Two
-        // identical primaries on one screen is what principle 8 forbids — so
-        // the card owns them until there is a library to act on.
-        // The primary sits **last**, so it is the rightmost thing in the
-        // header and the last thing a left-to-right scan lands on. Every
-        // action row in the app puts the demoted door before the one it is
-        // demoted against; this pair was the other way round.
+        // An empty library gets no header action: the empty card below is
+        // already the whole page, and it carries both doors. Two identical
+        // primaries on one screen is what principle 8 forbids — so the card
+        // owns them until there is a library to act on.
+        //
+        // One action, not two: the catalog's "Browse templates" secondary
+        // retired the day the ledger grew its own tail door (ADR
+        // 20260827-the-shops-shelves), which is where a shop looking for a site
+        // it has not written yet is already looking.
         actions={
           librarySize === 0 ? undefined : (
-            <>
-              <Link
-                href={catalogHref}
-                scroll={false}
-                className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
-              >
-                {t("diveSites.list.browseTemplates")}
-              </Link>
-              <Link
-                href={`/shop/${shopSlug}/dive-sites/new`}
-                className={buttonClass({ className: "rounded-xl" })}
-              >
-                <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
-              </Link>
-            </>
+            <Link
+              href={`/shop/${shopSlug}/dive-sites/new`}
+              className={buttonClass({ className: "rounded-xl" })}
+            >
+              <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
+            </Link>
           )
         }
       />
@@ -253,127 +251,17 @@ export default async function DiveSitesPage({
           className="mt-4"
         />
       ) : (
-        // A table, not a grid of cards (issue #608). A library is a list of
-        // like things a staffer scans down one column of — name, then where it
-        // is, then what it demands — and a card grid made that scan a
-        // zig-zag across three columns at two sizes. The site's own briefing
-        // prose is the one thing the card carried that has no column: it is a
-        // paragraph, and a wrapped paragraph cell sets every row a different
-        // height. It lives one tap away, on the row's own page.
-        //
-        // No `SectionCard` around this: `<Table>` brings the same shell at the
-        // same radius, and a card inside a card reads as a rendering bug.
-        <Table shellClassName="mt-4">
-          {/* The table's accessible name, which the `<ul>` carried as an
-              `aria-label`. A caption is the element HTML has for it. */}
-          <caption className="sr-only">{t("diveSites.list.gridAriaLabel")}</caption>
-          <THead>
-            <Th>{t("diveSites.list.table.site")}</Th>
-            {/* Location folds under the site's name on a phone, leaving the
-                name beside the gates — the two a staffer is answering "can
-                this diver go here?" with — rather than three columns to
-                scroll sideways through.
-
-                There is no Template column any more. It spent a quarter of a
-                fixed-layout table on provenance most rows do not have, and on
-                a version number nobody reads: what a staffer can act on is
-                *that an update is waiting*, which is one bit. That bit is now
-                the mark beside the site's name, in every size rather than
-                only above `sm`, and the sentence it stood for survives as the
-                mark's accessible name. */}
-            <Th hideBelow="sm">{t("diveSites.list.table.location")}</Th>
-            <Th>{t("diveSites.list.table.requirements")}</Th>
-          </THead>
-          <TBody>
-            {sites.map((site) => {
-              const location = site.locationName || t("diveSites.list.locationToAdd");
-              const published = currentTemplateVersion.get(site.sourceTemplateId ?? "") ?? 0;
-              const adopted = site.sourceTemplateVersion;
-              const updateReady = adopted !== null && published > adopted;
-              const template = !adopted
-                ? null
-                : updateReady
-                  ? t("diveSites.list.templateUpdateReady", { version: published })
-                  : t("diveSites.list.diveDayTemplateVersion", { version: adopted });
-              // An update waiting is the one thing here a staffer can act on,
-              // so it is the one thing that carries ink; the version a site was
-              // adopted at is provenance, and stays quiet.
-              const templateTone = updateReady ? "text-primary" : "text-muted";
-              return (
-                <Tr key={site.id}>
-                  {/* `clip={false}` is what lets the name's `RowLink` overlay
-                      out of this cell and across the whole row — the row has
-                      exactly one destination and no other control in it, which
-                      is the condition `Td` attaches to that prop. `break-words`
-                      replaces the clipping it gives up: a shop's own site name
-                      is free text and nothing else stops a long one bleeding
-                      into the Location column. */}
-                  <Td align="middle" clip={false} className="break-words">
-                    <span className="flex items-center gap-1.5">
-                      <RowLink
-                        href={`/shop/${shopSlug}/dive-sites/${site.id}`}
-                        className="font-medium text-foreground group-hover:text-primary hover:underline"
-                      >
-                        {site.name}
-                      </RowLink>
-                      {template ? (
-                        /* The Template column, as one mark on the row's subject.
-                           A **sibling** of the link, never inside it: a link's
-                           accessible name is its text content, so nesting this
-                           renamed every imported site's link to "Molasses Reef
-                           DiveDay template v1" — which is both wrong and what
-                           an `exact: true` locator rightly refused.
-
-                           `aria-hidden` on the glyph with the sentence beside
-                           it in `sr-only`, so a screen reader hears the words
-                           rather than a decorative character, and `title` is
-                           the pointer's version of the same. `z-10` is what
-                           makes that tooltip reachable at all — it lifts the
-                           mark above the row-wide link overlay. The cost is a
-                           glyph-sized spot in the row that informs instead of
-                           navigating, which is the better half of the trade. */
-                        <span
-                          title={template}
-                          className={`relative z-10 shrink-0 text-xs ${templateTone}`}
-                        >
-                          <span aria-hidden="true">{updateReady ? "◆" : "◇"}</span>
-                          <span className="sr-only">{template}</span>
-                        </span>
-                      ) : null}
-                    </span>
-                    <div className="text-xs text-muted sm:hidden">{location}</div>
-                  </Td>
-                  <Td muted hideBelow="sm" align="middle">
-                    {location}
-                  </Td>
-                  <Td align="middle">
-                    <div className="flex flex-wrap gap-2">
-                      {site.minimumCertificationLevel ? (
-                        <Badge tone="primary" size="sm">
-                          {t(CERTIFICATION_LEVEL_KEYS[site.minimumCertificationLevel])}
-                        </Badge>
-                      ) : null}
-                      {site.requiresNitrox ? (
-                        <Badge tone="warning" size="sm">
-                          {t("diveSites.list.nitroxBadge")}
-                        </Badge>
-                      ) : null}
-                      {site.requiredSpecialties.length > 0 ? (
-                        <Badge tone="neutral" size="sm">
-                          {site.requiredSpecialties.length === 1
-                            ? t("diveSites.list.oneRequiredSpecialty")
-                            : t("diveSites.list.manyRequiredSpecialties", {
-                                count: site.requiredSpecialties.length,
-                              })}
-                        </Badge>
-                      ) : null}
-                    </div>
-                  </Td>
-                </Tr>
-              );
-            })}
-          </TBody>
-        </Table>
+        <SiteLibraryLedger
+          groups={groupSiteLibrary(sites)}
+          shopSlug={shopSlug}
+          t={t}
+          diverT={diverT}
+          currentTemplateVersion={currentTemplateVersion}
+          // The tail door renders only when there is something behind it. A
+          // catalog DiveDay has not published into yet would otherwise offer a
+          // shop a page of nothing at the foot of its own library.
+          catalog={catalogSize > 0 ? { href: catalogHref, count: catalogSize } : null}
+        />
       )}
 
       <Pager
@@ -418,7 +306,7 @@ async function CatalogView({
 
   if (!locationIsProvided) {
     return (
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
         <Link
           href={back}
           scroll={false}
@@ -486,7 +374,7 @@ async function CatalogView({
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <Link href={back} scroll={false} className="text-sm font-medium text-primary hover:underline">
         {t("diveSites.backToLibrary")}
       </Link>
@@ -497,48 +385,52 @@ async function CatalogView({
           description={t("diveSites.catalog.description")}
         />
       </div>
-      <ul className="mt-8 grid gap-4 sm:grid-cols-2">
+      {/* The same ledger grammar as the library this feeds (ADR
+          20260827-the-shops-shelves): the catalog is not a second surface
+          style. The row **is** the preview door — a template's whole briefing
+          is public DiveDay content and reading it before taking it is the
+          ordinary path — so the separate "Read it first" button retired with
+          the card it sat in, and Import stays as the row's one act. */}
+      <ul className="mt-8">
         {catalog.templates.map(({ template, version }) => (
-          // No `title`: the version line is an eyebrow *above* the name, and
-          // `SectionCard`'s header puts the heading first — so the card is
-          // taken as a shell and the catalog entry keeps its own reading order.
-          <SectionCard as="li" key={template.id}>
-            <p className="text-sm font-medium text-primary">
-              {t("diveSites.catalog.templateVersion", { version: version.version })}
-            </p>
-            <h2 className="mt-1 text-lg font-semibold">{version.briefing.name}</h2>
-            {version.briefing.locationName ? (
-              <p className="mt-0.5 text-sm text-muted">{version.briefing.locationName}</p>
-            ) : null}
-            <p className="mt-2 text-sm text-muted">{version.briefing.description}</p>
-            {/* Two doors, and neither is this page's primary — a grid of
-                twenty-four identical filled buttons is exactly what principle 8
-                forbids, and the act itself belongs on the page that shows what
-                is being taken. The card carrying only "Import to my library"
-                made adopting a template the one way to find out what was in it;
-                reading it first is the door that leads now. */}
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Link
-                href={`${catalogHref}&template=${encodeURIComponent(template.slug)}`}
-                scroll={false}
-                className={buttonClass({ variant: "secondary", size: "sm" })}
-              >
-                {t("diveSites.catalog.preview")}
-              </Link>
+          <LedgerRow
+            key={template.id}
+            href={`${catalogHref}&template=${encodeURIComponent(template.slug)}`}
+            linkLabel={version.briefing.name}
+            // On a phone "Import to my library" beside a name and a paragraph
+            // leaves the paragraph a column two words wide; `stacked` gives the
+            // act the first line and the briefing the full width beneath.
+            stacked
+            trailing={
               <form action={importAction}>
                 <input type="hidden" name="templateId" value={template.id} />
                 <SubmitButton
                   pendingLabel={t("diveSites.catalog.importing")}
-                  className={buttonClass({
-                    variant: "secondary",
-                    size: "sm",
-                  })}
+                  className={buttonClass({ variant: "secondary", size: "sm" })}
                 >
                   {t("diveSites.catalog.importToLibrary")}
                 </SubmitButton>
               </form>
+            }
+          >
+            <div className="min-w-0 py-3">
+              <p className="font-medium">{version.briefing.name}</p>
+              <p className="mt-0.5 text-sm text-muted">
+                {[
+                  version.briefing.locationName,
+                  t("diveSites.catalog.templateVersion", { version: version.version }),
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+              {/* The one paragraph that earns a row of its own: a shop choosing
+                  among thirty-four reefs it has never dived has nothing else to
+                  choose on, which is the opposite of its own library. */}
+              {version.briefing.description ? (
+                <p className="mt-1 text-sm text-muted">{version.briefing.description}</p>
+              ) : null}
             </div>
-          </SectionCard>
+          </LedgerRow>
         ))}
       </ul>
       <Pager

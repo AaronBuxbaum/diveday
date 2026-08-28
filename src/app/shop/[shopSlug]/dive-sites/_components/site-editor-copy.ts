@@ -26,8 +26,6 @@ const NAME_TOKEN = "{name}";
 
 export function landmarkEditorCopy(t: StaffTranslator): LandmarkEditorCopy {
   return {
-    legend: t("diveSites.form.landmarks.legend"),
-    description: t("diveSites.form.landmarks.description"),
     nameLabel: t("diveSites.form.landmarks.nameLabel"),
     namePlaceholder: t("diveSites.form.landmarks.namePlaceholder"),
     kindLabel: t("diveSites.form.landmarks.kindLabel"),
@@ -51,8 +49,6 @@ export function landmarkEditorCopy(t: StaffTranslator): LandmarkEditorCopy {
 
 export function fieldGuideEditorCopy(t: StaffTranslator): FieldGuideEditorCopy {
   return {
-    legend: t("diveSites.form.fieldGuide.legend"),
-    description: t("diveSites.form.fieldGuide.description"),
     searchLabel: t("diveSites.form.fieldGuide.searchLabel"),
     searchPlaceholder: t("diveSites.form.fieldGuide.searchPlaceholder"),
     add: t("diveSites.form.fieldGuide.add"),

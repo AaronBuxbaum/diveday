@@ -34,11 +34,15 @@ if (/const linkClass =\s*\n?\s*"[^"]*\btext-sm\b/.test(publicNav)) {
   failures.push("shopfront nav labels must not drop to 14px on phones");
 }
 
-const orders = read("src/app/shop/[shopSlug]/orders/page.tsx");
+// The orders table became a day ledger with the same recomposition (ADR
+// 20260827-clearwater-surface-language, slice 6f), so the three needles moved
+// with the rows they measure — the guard follows the surface, not the file the
+// surface used to live in.
+const orders = read("src/app/shop/[shopSlug]/orders/_components/OrdersLedger.tsx");
 for (const [needle, label] of [
-  ["text-base font-medium text-foreground", "orders person names"],
-  ["text-base text-muted sm:hidden", "orders phone trip titles"],
-  ['<Td numeric align="middle" className="text-base sm:text-sm">', "orders amounts"],
+  ["truncate text-base font-medium sm:w-56 sm:shrink-0", "orders person names"],
+  ["truncate text-base text-muted sm:text-sm", "orders phone trip titles"],
+  ["min-w-20 text-end text-base font-semibold tabular-nums", "orders amounts"],
 ]) {
   if (!orders.includes(needle)) failures.push(`${label} must be 16px on phones`);
 }

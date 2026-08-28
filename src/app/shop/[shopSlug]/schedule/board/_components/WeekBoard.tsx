@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { groupLabelClass } from "@/components/ui/ledger";
+import { WeekPager } from "@/components/ui/week-pager";
 import { fill } from "@/i18n/fill";
 
 /**
@@ -283,39 +284,16 @@ export function WeekBoard({
   return (
     <section aria-label={week.ariaLabel} className="hidden xl:block">
       {/* Paging is by week, so the control is a pair of steps and a way home
-          — not a cursor. Links, not buttons: each one is a whole reading of
-          the board and belongs in the URL a staffer can keep open. */}
-      <div className="flex items-center gap-2">
-        <Link
-          href={week.previousHref}
-          scroll={false}
-          aria-label={week.words.previous}
-          className={buttonClass({ variant: "secondary", size: "icon" })}
-        >
-          <DiveDayIcon name="chevron-left" />
-        </Link>
-        <Link
-          href={week.nextHref}
-          scroll={false}
-          aria-label={week.words.next}
-          className={buttonClass({ variant: "secondary", size: "icon" })}
-        >
-          <DiveDayIcon name="chevron-right" />
-        </Link>
-        <p className="ms-2 text-base font-semibold tracking-tight tabular-nums">
-          {week.rangeLabel}
-        </p>
-        {/* Absent while it would only reload the week already on screen. */}
-        {week.thisWeekHref ? (
-          <Link
-            href={week.thisWeekHref}
-            scroll={false}
-            className={buttonClass({ variant: "link", size: "sm" })}
-          >
-            {week.words.thisWeek}
-          </Link>
-        ) : null}
-      </div>
+          — not a cursor. The control itself is `WeekPager`
+          (src/components/ui/week-pager.tsx), shared with the staffing week,
+          which reads the same `?week=` parameter over the same dates. */}
+      <WeekPager
+        rangeLabel={week.rangeLabel}
+        previousHref={week.previousHref}
+        nextHref={week.nextHref}
+        thisWeekHref={week.thisWeekHref}
+        words={week.words}
+      />
 
       {/* When *every* departure still to sail this week is unpriced, the
           per-cell warning is the same fact on seven cells. Said once here

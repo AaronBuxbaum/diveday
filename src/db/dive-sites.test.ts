@@ -1,15 +1,18 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { DIVE_SITE_DIFFICULTIES, SITE_LIBRARY_GROUPS } from "@/lib/dive-site-difficulty";
 import { seededShopContext } from "@/test/db";
 import {
   copyDiveSite,
+  countGlobalDiveSiteTemplates,
   createDiveSite,
   createDiveSiteForForm,
   currentGlobalDiveSiteVersions,
   deleteDiveSite,
   diveSiteLibrarySize,
   getDiveSiteTemplateUpdate,
+  groupSiteLibrary,
   importGlobalDiveSiteTemplate,
   listDiveSites,
   listDiveSitesPage,
@@ -382,8 +385,19 @@ describe("dive-site library paging and search", () => {
     const firstIds = new Set(first.rows.map((site) => site.id));
     expect(second.rows.some((site) => firstIds.has(site.id))).toBe(false);
 
-    const names = [...first.rows, ...second.rows].map((site) => site.name);
-    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, "en")));
+    // **Group-major, then name** — the library renders as a grouped ledger
+    // (ADR 20260827-the-shops-shelves), so the order the query returns has to
+    // put every beginner site before every intermediate one before every
+    // advanced one, with the unrated tail last; otherwise a group heading
+    // re-rendered on page 2 would be a *second* appearance of a group rather
+    // than the continuation of it. Names sort within a group, not across the
+    // library.
+    const rank = (site: (typeof first.rows)[number]) =>
+      site.difficultyLevel === null
+        ? DIVE_SITE_DIFFICULTIES.length
+        : DIVE_SITE_DIFFICULTIES.indexOf(site.difficultyLevel);
+    const keys = [...first.rows, ...second.rows].map((site) => [rank(site), site.name] as const);
+    expect(keys).toEqual([...keys].sort((a, b) => a[0] - b[0] || a[1].localeCompare(b[1], "en")));
   });
 
   it("clamps a page number that could never exist rather than handing the driver a bad offset", async () => {
@@ -699,5 +713,61 @@ describe("a dive-site briefing saved from two tabs", () => {
         { expectedVersion: site.rowVersion },
       ),
     ).toBeNull();
+  });
+});
+
+/**
+ * The library's shelves — ADR 20260827-the-shops-shelves, the library pattern.
+ * A pure re-file of rows the query already ordered, so these need no database.
+ */
+describe("the library's difficulty groups", () => {
+  const row = (name: string, difficultyLevel: "beginner" | "intermediate" | "advanced" | null) =>
+    ({ id: name, name, difficultyLevel }) as Parameters<typeof groupSiteLibrary>[0][number];
+
+  it("runs easiest first with the unrated tail last, whatever order the rows arrive in", () => {
+    const groups = groupSiteLibrary([
+      row("Unwritten Ledge", null),
+      row("Spiegel Grove", "advanced"),
+      row("Molasses Reef", "beginner"),
+      row("French Reef", "intermediate"),
+    ]);
+    expect(groups.map((group) => group.label)).toEqual([...SITE_LIBRARY_GROUPS]);
+  });
+
+  it("files a site the shop has not rated under unrated rather than guessing one", () => {
+    // `siteFit`'s keyword sniff would happily call an unrated wall "demanding";
+    // that is a *tone* read off prose written for another purpose, and it may
+    // not place a site in a level the shop never chose.
+    const [group] = groupSiteLibrary([row("Deep Unrated Wall", null)]);
+    expect(group?.label).toBe("unrated");
+    expect(group?.sites).toHaveLength(1);
+  });
+
+  it("renders no heading for a group nothing falls in", () => {
+    const groups = groupSiteLibrary([row("Molasses Reef", "beginner")]);
+    expect(groups.map((group) => group.label)).toEqual(["beginner"]);
+  });
+});
+
+/**
+ * The tail door's number. It shares `listGlobalDiveSiteTemplates`' current-
+ * version join exactly, so the door can never promise a catalog more sites
+ * than the catalog can render.
+ */
+describe("the published catalog's size", () => {
+  it("counts what the catalog itself can show, and never a fetched page's total", async () => {
+    const { db } = await seededShopContext();
+    const listed = await listGlobalDiveSiteTemplates(db, { limit: 2 });
+    expect(listed.templates).toHaveLength(2);
+    expect(await countGlobalDiveSiteTemplates(db)).toBe(listed.total);
+  });
+
+  it("ignores a template whose current version was never published", async () => {
+    const { db } = await seededShopContext();
+    const before = await countGlobalDiveSiteTemplates(db);
+    // `currentVersion` pointing at a version row that does not exist: invisible
+    // to the catalog's own inner join, and so invisible to the door as well.
+    await db.insert(globalDiveSites).values({ slug: "unpublished-reef", currentVersion: 1 });
+    expect(await countGlobalDiveSiteTemplates(db)).toBe(before);
   });
 });

@@ -1033,7 +1033,11 @@ export function RosterSection({
                     )}
                     {currentWaiver ? (
                       <Link
-                        href={`/shop/${shopSlug}/waivers/signatures?record=${currentWaiver.id}`}
+                        // The whole waiver surface is one page now (ADR
+                        // 20260827-people-not-lists): `?record=` pins the row
+                        // first inside its own day group, and the fragment is
+                        // what opens it and scrolls past the release editor.
+                        href={`/shop/${shopSlug}/waivers?record=${currentWaiver.id}#waiver-record-${currentWaiver.id}`}
                         className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline"
                       >
                         {t("trips.roster.viewSignedRecord")}

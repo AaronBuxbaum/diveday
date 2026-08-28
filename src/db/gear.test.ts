@@ -10,6 +10,7 @@ import {
   countGearItemsByKind,
   createGearItem,
   deleteGearItem,
+  gearRegisterGroups,
   getGearItemDetail,
   latestServiceClocks,
   listAvailableGearUnits,
@@ -17,6 +18,7 @@ import {
   listGearDueBack,
   listGearItems,
   listGearServiceDue,
+  listGearServiceDueRows,
   listGearServiceEvents,
   listOverdueGearReservations,
   listTripGearAssignments,
@@ -495,6 +497,112 @@ describe("gear service history", () => {
     // A wider window pulls nothing extra in — the healthy BCD is a year out.
     const wide = await listGearServiceDue(db, shop.id, TODAY, 30);
     expect(wide.map((row) => row.label)).toEqual(["AL80-02", "Reg #3"]);
+  });
+
+  /**
+   * **The register's one fleet-wide reading** (ADR 20260827-the-shops-shelves,
+   * slice 9d as amended). The three groups say where a unit *is*; nothing in
+   * them says what the bench owes, which is why the service-due tile the slice
+   * deleted with the other two had to come back as a view rather than fold
+   * into a group. Two properties are the whole point of it, and both are here:
+   * it reads the fleet rather than the wall page in front of you, and it keeps
+   * the month Today deliberately does not (`listGearServiceDue(…, 6)`).
+   */
+  it("lists everything the bench owes, across the fleet and past Today's six days", async () => {
+    const { db, shop } = await gearShopContext();
+    const benched = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "regulator", label: "Reg #9" }),
+    );
+    const lapsedTank = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "tank", label: "AL80-07" }),
+    );
+    const monthOutTank = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "tank", label: "AL80-08" }),
+    );
+    const healthy = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #9" }),
+    );
+    const deletedUnit = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "tank", label: "AL80-98" }),
+    );
+
+    // Pulled off the wall with no clock behind it: stopped now, so it leads.
+    await setGearItemStatus(db, {
+      shopId: shop.id,
+      gearItemId: benched.id,
+      status: "needs_service",
+      serviceNote: "Free-flow after the morning boat.",
+    });
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: lapsedTank.id,
+      kind: "visual_inspection",
+      servicedOn: "2025-08-01",
+      nextDueOn: "2026-08-01",
+    });
+    // Three weeks out: inside the register's month, outside Today's six days —
+    // and a tank's inspection is what a fill station turns a boat away over.
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: monthOutTank.id,
+      kind: "visual_inspection",
+      servicedOn: "2025-09-10",
+      nextDueOn: "2026-09-10",
+    });
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: healthy.id,
+      kind: "service",
+      servicedOn: "2026-08-01",
+      nextDueOn: "2027-08-01",
+    });
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: deletedUnit.id,
+      kind: "visual_inspection",
+      servicedOn: "2024-01-01",
+      nextDueOn: "2025-01-01",
+    });
+    await deleteGearItem(db, { shopId: shop.id, gearItemId: deletedUnit.id, todayLocal: TODAY });
+
+    const rows = await listGearServiceDueRows(db, shop.id, { todayLocal: TODAY });
+    expect(rows.map((row) => row.item.label)).toEqual(["Reg #9", "AL80-07", "AL80-08"]);
+    expect(rows[1]?.serviceState).toMatchObject({ state: "overdue", kind: "visual_inspection" });
+    expect(rows[2]?.serviceState).toMatchObject({ state: "due_soon", kind: "visual_inspection" });
+
+    // The reading Today cannot give: its six-day horizon leaves the tank a
+    // shop would actually plan next month's service run around behind.
+    const todaysHalf = await listGearServiceDue(db, shop.id, TODAY, 6);
+    expect(todaysHalf.map((row) => row.label)).toEqual(["AL80-07"]);
+  });
+
+  /** A unit can want the bench while it is still with a diver — and the row
+   * that says so is the one carrying the act that starts getting it back. */
+  it("keeps the open reservation on a due unit that is out with somebody", async () => {
+    const { db, shop } = await gearShopContext();
+    const tank = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "tank", label: "AL80-09" }),
+    );
+    const maya = await shopBooking(db, shop.id, "Maya Service");
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: tank.id,
+      kind: "visual_inspection",
+      servicedOn: "2025-08-01",
+      nextDueOn: "2026-08-01",
+    });
+    const reserved = await reserveGearUnit(db, {
+      shopId: shop.id,
+      gearItemId: tank.id,
+      bookingId: maya.bookingId,
+      reservedFrom: "2026-08-19",
+      reservedUntil: "2026-08-22",
+    });
+    expect(reserved.ok).toBe(true);
+
+    const [row] = await listGearServiceDueRows(db, shop.id, { todayLocal: TODAY });
+    expect(row?.item.label).toBe("AL80-09");
+    expect(row?.reservation).toMatchObject({ personName: "Maya Service" });
   });
 });
 
@@ -1003,6 +1111,106 @@ describe("gear register readers", () => {
     const page = await listGearItems(db, shop.id, { todayLocal: TODAY });
     const overdueRow = page.rows.find((row) => row.item.id === overdue.id);
     expect(overdueRow?.reservation?.reservedUntil).toBe("2026-08-15");
+  });
+});
+
+/**
+ * **The pin for slice 9d** (ADR 20260827-the-shops-shelves): the register is
+ * one story in three groups, a unit sits in exactly one of them, and the two
+ * groups that mean somebody has to do something are never paged away.
+ */
+describe("the register's three groups", () => {
+  /** Out, overdue, never-collected, upcoming and free — one shop, five units. */
+  async function registerShop() {
+    const { db, shop } = await gearShopContext();
+    const maya = await shopBooking(db, shop.id, "Maya Reyes");
+    const unit = async (
+      label: string,
+      window?: { from: string; until: string; collected?: boolean },
+    ) => {
+      const item = mustCreate(await createGearItem(db, { shopId: shop.id, kind: "bcd", label }));
+      if (!window) return item;
+      const reserved = await reserveGearUnit(db, {
+        shopId: shop.id,
+        gearItemId: item.id,
+        bookingId: maya.bookingId,
+        reservedFrom: window.from,
+        reservedUntil: window.until,
+      });
+      if (!reserved.ok) throw new Error(`reserve refused: ${reserved.reason}`);
+      if (window.collected) {
+        await checkOutGearReservation(db, {
+          shopId: shop.id,
+          reservationId: reserved.reservation.id,
+        });
+      }
+      return item;
+    };
+    return {
+      db,
+      shop,
+      out: await unit("BCD #1", { from: "2026-08-19", until: "2026-08-25", collected: true }),
+      overdue: await unit("BCD #2", { from: "2026-08-10", until: "2026-08-15", collected: true }),
+      // Never collected and already lapsed: a release, not a phone call — and
+      // still the overdue group, because the group is where the work is.
+      stale: await unit("BCD #3", { from: "2026-08-11", until: "2026-08-16" }),
+      upcoming: await unit("BCD #4", { from: "2026-08-29", until: "2026-08-30" }),
+      free: await unit("BCD #5"),
+    };
+  }
+
+  it("files each unit in exactly one group, the wall holding what nobody has claimed today", async () => {
+    const { db, shop, out, overdue, stale, upcoming, free } = await registerShop();
+    const groups = await gearRegisterGroups(db, shop.id, { todayLocal: TODAY });
+
+    expect(groups.out.map((row) => row.item.id)).toEqual([out.id]);
+    expect(groups.overdue.map((row) => row.item.id)).toEqual([overdue.id, stale.id]);
+    expect(groups.onWall.rows.map((row) => row.item.id)).toEqual([upcoming.id, free.id]);
+
+    const filed = [...groups.out, ...groups.overdue, ...groups.onWall.rows].map(
+      (row) => row.item.id,
+    );
+    expect(new Set(filed).size).toBe(filed.length);
+    expect(filed).toHaveLength(5);
+    // The count keeps the row query's exact scope: the wall's own units, not
+    // the fleet (ADR 20260803-one-pagination-model).
+    expect(groups.onWall.total).toBe(2);
+  });
+
+  it("never pages an overdue unit away, however deep the wall goes", async () => {
+    const { db, shop, out, overdue, stale } = await registerShop();
+    const groups = await gearRegisterGroups(db, shop.id, {
+      todayLocal: TODAY,
+      page: 2,
+      pageSize: 1,
+    });
+    expect(groups.out.map((row) => row.item.id)).toEqual([out.id]);
+    expect(groups.overdue.map((row) => row.item.id)).toEqual([overdue.id, stale.id]);
+    expect(groups.onWall.rows).toHaveLength(1);
+    expect(groups.onWall.page).toBe(2);
+    expect(groups.onWall.pageCount).toBe(2);
+  });
+
+  it("narrows every group by the kind chips, not only the wall", async () => {
+    const { db, shop, out } = await registerShop();
+    const tank = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "tank", label: "AL80-70" }),
+    );
+    const bcds = await gearRegisterGroups(db, shop.id, { todayLocal: TODAY, kind: "bcd" });
+    expect(bcds.out.map((row) => row.item.id)).toEqual([out.id]);
+    expect(bcds.onWall.rows.map((row) => row.item.id)).not.toContain(tank.id);
+
+    const tanks = await gearRegisterGroups(db, shop.id, { todayLocal: TODAY, kind: "tank" });
+    expect(tanks.out).toEqual([]);
+    expect(tanks.overdue).toEqual([]);
+    expect(tanks.onWall.rows.map((row) => row.item.id)).toEqual([tank.id]);
+  });
+
+  it("carries the departure's own clock, for the row that has to name a time", async () => {
+    const { db, shop, out } = await registerShop();
+    const groups = await gearRegisterGroups(db, shop.id, { todayLocal: TODAY });
+    expect(groups.out[0]?.item.id).toBe(out.id);
+    expect(groups.out[0]?.reservation?.tripEndsAt).toBeInstanceOf(Date);
   });
 });
 

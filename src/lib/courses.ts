@@ -4,6 +4,25 @@ import type { DepthUnit } from "./depth-units";
 import { cachedFormatter } from "./intl-cache";
 
 /**
+ * A course's agency, canonicalised: `" PADI "` and `"padi"` are one agency.
+ *
+ * `courses.agency` is free text a CSV import can carry anything into, and this
+ * catalog has held both of those spellings from exactly that. The staff roster
+ * groups by agency (ADR 20260827-the-shops-shelves, decision 1) and the query
+ * sorts by `lower(trim(agency))` to keep those groups from interleaving across
+ * a page — so a grouping keyed on the raw column would draw one agency as
+ * three headings while the query believed it had ordered them into a single
+ * run. This is the SQL expression's twin, kept here rather than in `src/db` so
+ * a surface can canonicalise without loading the schema.
+ *
+ * Not a translation: an agency code is a proper noun, and the surface
+ * upper-cases it rather than looking it up in a bundle.
+ */
+export function canonicalAgency(agency: string): string {
+  return agency.trim().toLowerCase();
+}
+
+/**
  * One block of a course's day-by-day plan: a title over a list of what
  * happens in it, with real clock times when the shop runs that day on a fixed
  * schedule. `startTime`/`endTime` are 24-hour "HH:mm" clock values — nothing

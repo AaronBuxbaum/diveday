@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { MedicalQuestion, MedicalQuestionnaire } from "@/lib/medical";
-import { medicalProgress } from "@/lib/medical";
+import { medicalProgress, medicalQuestionField } from "@/lib/medical";
 
 /**
  * Every word this component renders, resolved server-side. The waiver page has
@@ -45,7 +45,7 @@ function RadioQuestion({
         <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-base hover:bg-surface-sunken">
           <input
             type="radio"
-            name={`q_${question.id}`}
+            name={medicalQuestionField(question.id)}
             // Read by `QuestionnaireProgress`, which counts the page-one
             // questions the diver was asked up front separately from the
             // follow-ups their own answers open (`data-*` rather than parsing
@@ -61,7 +61,7 @@ function RadioQuestion({
         <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-base hover:bg-surface-sunken">
           <input
             type="radio"
-            name={`q_${question.id}`}
+            name={medicalQuestionField(question.id)}
             data-question-scope={question.section === "primary" ? "primary" : "follow-up"}
             value="no"
             checked={answer === false}

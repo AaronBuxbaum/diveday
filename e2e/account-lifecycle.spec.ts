@@ -132,6 +132,27 @@ test("a tampered password-reset token reveals nothing and points back to sign-in
   await expect(page).toHaveURL(/\/sign-in/);
 });
 
+/**
+ * **The dead-link law's account tier, through the real page** (ADR
+ * 20260827-first-light, decision 3): a token that belongs to a person names no
+ * shop, because a forwarded invite link must not disclose who invited whom —
+ * and the mark in the circle is drawn, so nothing in the door is a character
+ * that renders differently on every platform (decision 2).
+ *
+ * `blue-mantis` is the shop every other spec in the fleet works against, so
+ * its name is the one a leak would surface first.
+ */
+test("a dead account-token door draws its mark and names no shop", async ({ page }) => {
+  await page.goto("/verify/not-a-real-token");
+  await expect(
+    page.getByRole("heading", { name: "This confirmation link isn’t available" }),
+  ).toBeVisible();
+  await expect(page.locator("main svg")).toHaveCount(1);
+  const door = await page.locator("main").innerText();
+  expect(door).not.toMatch(/\p{Extended_Pictographic}/u);
+  expect(door).not.toContain("Blue Mantis");
+});
+
 test("sign-in links to forgot-password", async ({ page }) => {
   await page.goto("/sign-in");
   await page.getByRole("link", { name: "Forgot password?" }).click();

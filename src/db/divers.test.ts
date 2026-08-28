@@ -115,13 +115,21 @@ describe("person-first diver records", () => {
     // Search explicitly rather than relying on the default (alphabetically
     // sorted, page-sized) listing — the extended roster is well past one page.
     const { divers: summaries } = await listDiverSummaries(db, shop.id, { query: "Priya Sharma" });
-    const priya = summaries.find((row) => row.person.fullName === "Priya Sharma");
-    expect(priya).toMatchObject({ certificationCount: 1, pendingCertificationCount: 0 });
+    const priya = summaries.find((row) => row.fullName === "Priya Sharma");
     if (!priya) throw new Error("seed diver missing");
+    // The roster row is the person and nothing more: the card counts and the
+    // level it used to carry went with the columns the ledger retired, and the
+    // three columns below are the ones it must never ship to a browser.
+    expect(priya).toMatchObject({
+      dateOfBirth: null,
+      diveInsurance: null,
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+    });
 
     const profile = await saveRentalFit(db, {
       shopId: shop.id,
-      personId: priya.person.id,
+      personId: priya.id,
       rentsBcd: true,
       rentsRegulator: false,
       rentsWetsuit: true,
@@ -136,7 +144,7 @@ describe("person-first diver records", () => {
     });
     expect(profile).toMatchObject({ bcdSize: "M", wetsuitSize: "3 mm / M" });
 
-    const detail = await getDiverProfile(db, shop.id, priya.person.id);
+    const detail = await getDiverProfile(db, shop.id, priya.id);
     expect(detail?.rentalFit).toMatchObject({ bcdSize: "M", finSize: "L", rentsRegulator: false });
     expect(detail?.certifications).toHaveLength(1);
   });
@@ -181,7 +189,7 @@ describe("person-first diver records", () => {
     expect(cleared?.diveInsurance).toBeNull();
 
     const staff = (await listDiverSummaries(db, shop.id)).divers.find(
-      (row) => row.person.fullName === "Dana Reyes",
+      (row) => row.fullName === "Dana Reyes",
     );
     expect(staff).toBeUndefined();
   });
@@ -271,14 +279,14 @@ describe("person-first diver records", () => {
     if (!diver) throw new Error("diver insert failed");
 
     expect(await deleteDiver(db, shop.id, diver.id)).toBe(true);
-    expect(
-      (await listDiverSummaries(db, shop.id)).divers.some((row) => row.person.id === diver.id),
-    ).toBe(false);
+    expect((await listDiverSummaries(db, shop.id)).divers.some((row) => row.id === diver.id)).toBe(
+      false,
+    );
     expect(await getDiverProfile(db, shop.id, diver.id)).toBeNull();
     expect(await restoreDiver(db, shop.id, diver.id)).toBe(true);
-    expect(
-      (await listDiverSummaries(db, shop.id)).divers.some((row) => row.person.id === diver.id),
-    ).toBe(true);
+    expect((await listDiverSummaries(db, shop.id)).divers.some((row) => row.id === diver.id)).toBe(
+      true,
+    );
   });
 
   /**
@@ -315,16 +323,16 @@ describe("person-first diver records", () => {
       const diver = await removedDiver(db, shop.id);
 
       const removed = await listDiverSummaries(db, shop.id, { filter: "removed", limit: 1000 });
-      expect(removed.divers.map((row) => row.person.id)).toContain(diver.id);
+      expect(removed.divers.map((row) => row.id)).toContain(diver.id);
       // The removed view is *only* removed people — an active roster leaking
       // into it would read as "everyone is removed".
-      expect(removed.divers.every((row) => row.person.deletedAt !== null)).toBe(true);
+      expect(removed.divers.every((row) => row.deletedAt !== null)).toBe(true);
 
       // Every other view is untouched: this is a way to see a removal, not an
       // un-removal, and nothing operational may pick these people up.
       for (const filter of ["all", "diving_today", "needs_attention", "missing_contact"] as const) {
         const page = await listDiverSummaries(db, shop.id, { filter, limit: 1000 });
-        expect(page.divers.some((row) => row.person.id === diver.id)).toBe(false);
+        expect(page.divers.some((row) => row.id === diver.id)).toBe(false);
       }
     });
 
@@ -336,7 +344,7 @@ describe("person-first diver records", () => {
         filter: "removed",
         query: "Archived",
       });
-      expect(byName.divers.map((row) => row.person.id)).toEqual([diver.id]);
+      expect(byName.divers.map((row) => row.id)).toEqual([diver.id]);
       expect(byName.total).toBe(1);
       // And the same search over the active roster still finds nobody.
       expect((await listDiverSummaries(db, shop.id, { query: "Archived" })).total).toBe(0);
@@ -355,7 +363,7 @@ describe("person-first diver records", () => {
       // `restoreDiver` refuses an erased record, so listing it under a view
       // whose only affordance is Restore would be a button that can never work.
       const removed = await listDiverSummaries(db, shop.id, { filter: "removed", limit: 1000 });
-      expect(removed.divers.some((row) => row.person.id === diver.id)).toBe(false);
+      expect(removed.divers.some((row) => row.id === diver.id)).toBe(false);
       expect(await restoreDiver(db, shop.id, diver.id)).toBe(false);
     });
 
@@ -438,7 +446,7 @@ describe("roster search and pagination", () => {
     const { db, shop } = await seededShopContext();
 
     const byName = await listDiverSummaries(db, shop.id, { query: "priya" });
-    expect(byName.divers.map((row) => row.person.fullName)).toEqual(["Priya Sharma"]);
+    expect(byName.divers.map((row) => row.fullName)).toEqual(["Priya Sharma"]);
     expect(byName.total).toBe(1);
 
     const byEmail = await listDiverSummaries(db, shop.id, { query: "priya.sharma@example" });
@@ -454,7 +462,7 @@ describe("roster search and pagination", () => {
 
   it("filters the roster to whoever still owes a safety contact", async () => {
     const { db, shop } = await seededShopContext();
-    const target = (await listDiverSummaries(db, shop.id)).divers[0]?.person;
+    const target = (await listDiverSummaries(db, shop.id)).divers[0];
     if (!target) throw new Error("expected seeded divers");
 
     // Start the target with no contact so the baseline "missing contact" count
@@ -474,61 +482,84 @@ describe("roster search and pagination", () => {
 
     // With a full contact now on file, the target leaves the "missing" view.
     const missing = await listDiverSummaries(db, shop.id, { filter: "missing_contact" });
-    expect(missing.divers.some((row) => row.person.id === target.id)).toBe(false);
+    expect(missing.divers.some((row) => row.id === target.id)).toBe(false);
     expect(missing.total).toBe(baselineMissing - 1);
   });
 
   /**
-   * "Needs attention" is the roster-wide version of the per-row "pending
-   * review" / "to confirm" badges, so the two have to be counted off the same
-   * evidence — a card awaiting review, or an imported card awaiting its
-   * one-tap confirm (ADR 20260724-import-verified-cards). The count and the
-   * page share one WHERE clause, so this asserts both.
+   * "Needs attention" narrows the roster to the divers a staffer still owes a
+   * look — a card awaiting review, or an imported card awaiting its one-tap
+   * confirm (ADR 20260724-import-verified-cards). The row itself no longer
+   * carries that count: the ledger's rows are a name, an exceptional badge and
+   * one quiet fact (ADR 20260827-people-not-lists), and the chip is what says
+   * why every row in this view is here. So the expectation is read straight
+   * off the three card tables instead of off the row, which is the stronger
+   * assertion anyway — it no longer proves the filter against a number the
+   * same module computed.
    */
   it("filters the roster to whoever has a card waiting on a staffer", async () => {
     const { db, shop } = await seededShopContext();
     const roster = await listDiverSummaries(db, shop.id, { limit: 1000 });
+    const rosterIds = new Set(roster.divers.map((row) => row.id));
+
+    const waiting = new Set<string>();
+    const collect = (
+      rows: {
+        personId: string;
+        status: string;
+        importedAt: Date | null;
+        reviewedAt: Date | null;
+        deletedAt: Date | null;
+      }[],
+    ) => {
+      for (const row of rows) {
+        if (row.deletedAt) continue;
+        if (row.status === "pending" || (row.importedAt && !row.reviewedAt)) {
+          if (rosterIds.has(row.personId)) waiting.add(row.personId);
+        }
+      }
+    };
+    collect(await db.select().from(certifications).where(eq(certifications.shopId, shop.id)));
+    collect(
+      await db
+        .select()
+        .from(specialtyCertifications)
+        .where(eq(specialtyCertifications.shopId, shop.id)),
+    );
+    collect(
+      await db.select().from(nitroxCertifications).where(eq(nitroxCertifications.shopId, shop.id)),
+    );
 
     const flagged = await listDiverSummaries(db, shop.id, {
       filter: "needs_attention",
       limit: 1000,
     });
-    const flaggedIds = new Set(flagged.divers.map((row) => row.person.id));
+    const flaggedIds = new Set(flagged.divers.map((row) => row.id));
     expect(flagged.total).toBe(flagged.divers.length);
-
-    // Whoever the view returns is exactly whoever the badges would light up
-    // for — no more, no fewer.
-    const expected = roster.divers.filter(
-      (row) =>
-        row.pendingCertificationCount +
-          row.pendingSpecialtyOrNitroxCount +
-          row.importedUnconfirmedCount >
-        0,
-    );
-    expect(expected.length).toBeGreaterThan(0);
-    expect([...flaggedIds].sort()).toEqual(expected.map((row) => row.person.id).sort());
+    expect(waiting.size).toBeGreaterThan(0);
+    expect([...flaggedIds].sort()).toEqual([...waiting].sort());
 
     // Clearing the last waiting card takes that diver back out of the view.
-    const target = expected[0];
-    if (!target) throw new Error("expected a diver with a waiting card");
+    const targetId = [...waiting][0];
+    if (!targetId) throw new Error("expected a diver with a waiting card");
     const reviewed = nowDate();
     for (const table of [certifications, specialtyCertifications, nitroxCertifications]) {
       await db
         .update(table)
         .set({ status: "verified", reviewedAt: reviewed })
-        .where(eq(table.personId, target.person.id));
+        .where(eq(table.personId, targetId));
     }
     const after = await listDiverSummaries(db, shop.id, {
       filter: "needs_attention",
       limit: 1000,
     });
-    expect(after.divers.some((row) => row.person.id === target.person.id)).toBe(false);
+    expect(after.divers.some((row) => row.id === targetId)).toBe(false);
     expect(after.total).toBe(flagged.total - 1);
   });
 
   it("filters the roster to whoever holds a seat on one of today's boats", async () => {
     const { db, shop } = await seededShopContext();
-    const target = (await listDiverSummaries(db, shop.id)).divers[0]?.person;
+    const target = (await listDiverSummaries(db, shop.id)).divers[0];
     if (!target) throw new Error("expected seeded divers");
 
     // A departure at midday in the shop's own timezone, so the assertion is
@@ -552,7 +583,7 @@ describe("roster search and pagination", () => {
       now,
       limit: 1000,
     });
-    expect(before.divers.some((row) => row.person.id === target.id)).toBe(false);
+    expect(before.divers.some((row) => row.id === target.id)).toBe(false);
 
     const booking = await createBooking(db, {
       actor: "staff",
@@ -568,7 +599,7 @@ describe("roster search and pagination", () => {
       now,
       limit: 1000,
     });
-    expect(booked.divers.some((row) => row.person.id === target.id)).toBe(true);
+    expect(booked.divers.some((row) => row.id === target.id)).toBe(true);
     expect(booked.total).toBe(booked.divers.length);
 
     // Tomorrow the same seat is not today's work.
@@ -578,7 +609,7 @@ describe("roster search and pagination", () => {
       now: new Date("2026-08-04T16:00:00Z"),
       limit: 1000,
     });
-    expect(tomorrow.divers.some((row) => row.person.id === target.id)).toBe(false);
+    expect(tomorrow.divers.some((row) => row.id === target.id)).toBe(false);
 
     // Nor is a cancelled departure a dive.
     await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, trip.id));
@@ -588,7 +619,7 @@ describe("roster search and pagination", () => {
       now,
       limit: 1000,
     });
-    expect(cancelled.divers.some((row) => row.person.id === target.id)).toBe(false);
+    expect(cancelled.divers.some((row) => row.id === target.id)).toBe(false);
   });
 
   it("pages by number and never repeats or skips a diver", async () => {
@@ -607,9 +638,9 @@ describe("roster search and pagination", () => {
       const chunk = await listDiverSummaries(db, shop.id, { page, limit: 3 });
       expect(chunk.page).toBe(page);
       expect(chunk.divers.length).toBeLessThanOrEqual(3);
-      seen.push(...chunk.divers.map((row) => row.person.id));
+      seen.push(...chunk.divers.map((row) => row.id));
     }
-    expect(seen).toEqual(all.divers.map((row) => row.person.id));
+    expect(seen).toEqual(all.divers.map((row) => row.id));
     expect(new Set(seen).size).toBe(seen.length);
   });
 
@@ -618,9 +649,7 @@ describe("roster search and pagination", () => {
     const second = await listDiverSummaries(db, shop.id, { page: 2, limit: 3 });
     const backAgain = await listDiverSummaries(db, shop.id, { page: second.page - 1, limit: 3 });
     const first = await listDiverSummaries(db, shop.id, { page: 1, limit: 3 });
-    expect(backAgain.divers.map((row) => row.person.id)).toEqual(
-      first.divers.map((row) => row.person.id),
-    );
+    expect(backAgain.divers.map((row) => row.id)).toEqual(first.divers.map((row) => row.id));
   });
 
   it("treats a nonsensical page as the first page and one past the end as the last", async () => {
@@ -629,9 +658,7 @@ describe("roster search and pagination", () => {
     for (const requested of [0, -3, Number.NaN]) {
       const clamped = await listDiverSummaries(db, shop.id, { page: requested, limit: 3 });
       expect(clamped.page).toBe(1);
-      expect(clamped.divers.map((row) => row.person.id)).toEqual(
-        first.divers.map((row) => row.person.id),
-      );
+      expect(clamped.divers.map((row) => row.id)).toEqual(first.divers.map((row) => row.id));
     }
 
     // A bookmarked page from a longer roster lands on the last real page with
@@ -2222,126 +2249,30 @@ describe("diver erasure", () => {
   });
 });
 
-/**
- * The roster's Cards column became a *level* column (FU-20260813): staff ask
- * "what level is this diver?" at booking time, and the card count answered a
- * question they rarely ask. The level is safety-adjacent display, so the rule
- * for which card speaks is pinned here, failure paths first.
- */
-describe("listDiverSummaries certification level", () => {
-  async function diverWithCards(
-    db: AppDb,
-    shopId: string,
-    fullName: string,
-    cards: {
-      level: "open_water" | "advanced_open_water" | "rescue" | "divemaster" | "instructor";
-      status?: "pending" | "verified";
-    }[],
-  ) {
-    const diver = await createDiver(db, { shopId, fullName });
-    if (!diver) throw new Error("diver insert failed");
-    for (const [index, card] of cards.entries()) {
-      await db.insert(certifications).values({
-        shopId,
-        personId: diver.id,
-        agency: "padi",
-        level: card.level,
-        identifier: `${fullName}-${index}`,
-        status: card.status ?? "verified",
-      });
-    }
-    return diver;
-  }
-
-  /** The one row this query returns for a diver, found by name. */
-  async function summaryFor(db: AppDb, shopId: string, fullName: string) {
-    const { divers } = await listDiverSummaries(db, shopId, { query: fullName });
-    const row = divers.find((diver) => diver.person.fullName === fullName);
-    if (!row) throw new Error(`no summary for ${fullName}`);
-    return row;
-  }
-
-  it("names the highest verified card — and nothing when there is none", async () => {
+describe("findSimilarDivers name similarity and exact matching", () => {
+  it("finds exact and case-insensitive name matches, and similar names using trigram similarity", async () => {
     const { db, shop } = await seededShopContext();
 
-    await diverWithCards(db, shop.id, "Level Nobody", []);
-    expect((await summaryFor(db, shop.id, "Level Nobody")).certificationLevel).toBeNull();
-
-    await diverWithCards(db, shop.id, "Level Ladder", [
-      { level: "open_water" },
-      { level: "rescue" },
-      { level: "advanced_open_water" },
-    ]);
-    expect((await summaryFor(db, shop.id, "Level Ladder")).certificationLevel).toBe("rescue");
-  });
-
-  it("refuses to speak for a pending card, however high it sits on the ladder", async () => {
-    const { db, shop } = await seededShopContext();
-
-    // Only unsighted cards: a claimed Divemaster is not a Divemaster on this
-    // roster, and it says nothing rather than overstating what is on file.
-    await diverWithCards(db, shop.id, "Level Claimed", [
-      { level: "divemaster", status: "pending" },
-    ]);
-    expect((await summaryFor(db, shop.id, "Level Claimed")).certificationLevel).toBeNull();
-
-    // The case the product decision turns on: an unverified higher card never
-    // outranks a verified lower one.
-    await diverWithCards(db, shop.id, "Level Mixed", [
-      { level: "rescue", status: "pending" },
-      { level: "open_water" },
-    ]);
-    expect((await summaryFor(db, shop.id, "Level Mixed")).certificationLevel).toBe("open_water");
-  });
-
-  it("says nothing for a card still awaiting review, and keeps its pending badge", async () => {
-    const { db, shop } = await seededShopContext();
-
-    await diverWithCards(db, shop.id, "Level Pending", [
-      { level: "instructor", status: "pending" },
-    ]);
-    expect(await summaryFor(db, shop.id, "Level Pending")).toMatchObject({
-      certificationLevel: null,
-      pendingCertificationCount: 1,
+    // Create a diver to match
+    const baseDiver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Johnathan Doe",
+      email: "johndoe@example.com",
     });
+    expect(baseDiver).not.toBeNull();
 
-    // A pending card sitting above a verified one does not lift the level
-    // either — the verified card is still what the diver actually holds.
-    await diverWithCards(db, shop.id, "Level Aspiring", [
-      { level: "open_water" },
-      { level: "divemaster", status: "pending" },
-    ]);
-    expect(await summaryFor(db, shop.id, "Level Aspiring")).toMatchObject({
-      certificationLevel: "open_water",
-      pendingCertificationCount: 1,
-    });
-  });
+    // Exact case-insensitive match
+    const exactMatches = await findSimilarDivers(db, shop.id, "johnathan doe");
+    expect(exactMatches).toHaveLength(1);
+    expect(exactMatches[0].fullName).toBe("Johnathan Doe");
 
-  describe("findSimilarDivers name similarity and exact matching", () => {
-    it("finds exact and case-insensitive name matches, and similar names using trigram similarity", async () => {
-      const { db, shop } = await seededShopContext();
+    // Similar match (typo / abbreviation)
+    const similarMatches = await findSimilarDivers(db, shop.id, "Jonathan Do");
+    expect(similarMatches).toHaveLength(1);
+    expect(similarMatches[0].fullName).toBe("Johnathan Doe");
 
-      // Create a diver to match
-      const baseDiver = await createDiver(db, {
-        shopId: shop.id,
-        fullName: "Johnathan Doe",
-        email: "johndoe@example.com",
-      });
-      expect(baseDiver).not.toBeNull();
-
-      // Exact case-insensitive match
-      const exactMatches = await findSimilarDivers(db, shop.id, "johnathan doe");
-      expect(exactMatches).toHaveLength(1);
-      expect(exactMatches[0].fullName).toBe("Johnathan Doe");
-
-      // Similar match (typo / abbreviation)
-      const similarMatches = await findSimilarDivers(db, shop.id, "Jonathan Do");
-      expect(similarMatches).toHaveLength(1);
-      expect(similarMatches[0].fullName).toBe("Johnathan Doe");
-
-      // Unrelated name should not match
-      const noMatches = await findSimilarDivers(db, shop.id, "Jane Smith");
-      expect(noMatches).toHaveLength(0);
-    });
+    // Unrelated name should not match
+    const noMatches = await findSimilarDivers(db, shop.id, "Jane Smith");
+    expect(noMatches).toHaveLength(0);
   });
 });

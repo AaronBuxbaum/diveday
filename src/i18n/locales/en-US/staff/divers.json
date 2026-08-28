@@ -81,7 +81,6 @@
     "eyebrow": "Front desk",
     "title": "Divers",
     "matchingCount": "{count} matching",
-    "onFileCount": "{count} on file",
     "noticeDuplicate": "A diver with that email is already in this shop.",
     "noticeDeleted": "Diver deleted.",
     "noticeRestored": "Diver restored.",
@@ -120,8 +119,6 @@
     "viewRemoved": "Deleted",
     "viewsAriaLabel": "Roster views",
     "removedNote": "These divers are off every list and out of trip prep.",
-    "peopleHeading": "People",
-    "searchHintText": "Search by name, email, or phone.",
     "searchDiversLabel": "Search divers",
     "searchPlaceholder": "Search people",
     "noDiversMatchView": "No divers match this view.",
@@ -130,14 +127,18 @@
     "emptyShowAll": "Show all divers",
     "emptyImportBody": "Coming from a spreadsheet or another system?",
     "emptyImportAction": "Import your roster",
-    "noContactDetails": "No contact details yet",
-    "pendingReviewText": "{count} pending review",
-    "toConfirmText": "{count} to confirm",
-    "tableHeaderPerson": "Person",
-    "tableHeaderLevel": "Level",
-    "tableHeaderAttention": "Needs attention",
     "possibleDuplicateLabel": "Possible duplicate",
-    "noCertificationLevel": "No current certification",
+    "openBalanceLabel": "Open balance",
+    "blocked": {
+      "medical": "Blocked — medical",
+      "unknown": "Blocked — paperwork",
+      "certification": "Blocked — certification",
+      "payment": "Blocked — payment"
+    },
+    "lastAboard": "last aboard {date}",
+    "bookedOn": "booked {date} · {time}",
+    "importedOnly": "brought across from your old system",
+    "letterOther": "#",
     "pagination": {
       "total": "{count, plural, one {# diver} other {# divers}}"
     }

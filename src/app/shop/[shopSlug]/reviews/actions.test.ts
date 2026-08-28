@@ -59,7 +59,7 @@ afterEach(() => {
 });
 
 describe("publishReviewsAction", () => {
-  it("publishes the ticked reviews and reports how many landed", async () => {
+  it("publishes every waiting review the header offered and reports how many landed", async () => {
     vi.mocked(setReviewsPublished).mockResolvedValue(2);
 
     expect(await publishReviewsAction(null, selection(REVIEW_A, REVIEW_B))).toEqual({
@@ -74,11 +74,11 @@ describe("publishReviewsAction", () => {
     expect(revalidatePath).toHaveBeenCalledWith(REVIEWS_PATH);
   });
 
-  it("refuses an empty selection without touching the database", async () => {
-    expect(await publishReviewsAction(null, selection())).toEqual({
-      ok: false,
-      reason: "none-selected",
-    });
+  it("refuses an empty post without touching the database", async () => {
+    // Not something the header act can produce — it carries the ids of the rows
+    // it renders — but a stale page replaying itself can, and it must not read
+    // as a pass that worked.
+    expect(await publishReviewsAction(null, selection())).toEqual({ ok: false });
     expect(setReviewsPublished).not.toHaveBeenCalled();
     // Nothing changed, so nothing is re-read.
     expect(revalidatePath).not.toHaveBeenCalled();
@@ -89,10 +89,7 @@ describe("publishReviewsAction", () => {
     // here: the shop-scoped query changes zero rows.
     vi.mocked(setReviewsPublished).mockResolvedValue(0);
 
-    expect(await publishReviewsAction(null, selection(REVIEW_A))).toEqual({
-      ok: false,
-      reason: "error",
-    });
+    expect(await publishReviewsAction(null, selection(REVIEW_A))).toEqual({ ok: false });
     expect(revalidatePath).not.toHaveBeenCalled();
   });
 });

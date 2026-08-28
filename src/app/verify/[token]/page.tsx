@@ -53,7 +53,7 @@ export default async function VerifyAccountPage({
         <>
           <FlashParams params={["confirmed"]} />
           <EntryDone
-            glyph="🎉"
+            glyph="done"
             title={t("account.verify.confirmedTitle")}
             text={t("account.verify.confirmedText")}
           />
@@ -76,7 +76,7 @@ export default async function VerifyAccountPage({
     // `/reset-password` already offer their own dead links.
     return (
       <EntryDone
-        glyph="⏳"
+        glyph="expired"
         title={t("account.verify.unavailableTitle")}
         text={t("account.verify.unavailableText")}
         action={

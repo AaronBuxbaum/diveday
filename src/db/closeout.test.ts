@@ -4,7 +4,6 @@ import { nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import {
-  CloseoutAcknowledgementRequired,
   closeDay,
   getDayCloseout,
   listLatestLeftoverDecisions,
@@ -71,12 +70,13 @@ describe("day close-out (in-memory PGlite)", () => {
         failed: 0,
       },
     ]);
-    // The report task is part of the close-out's headline shape, not an
-    // invisible side channel below an "Everyone is home" message.
-    expect(state.shape).toBe("outstanding");
+    // The task rides the departure it is about, not an invisible side channel
+    // below an "everyone is home" message — so the departure it belongs to is
+    // the one that has to be on the day.
+    expect(completed?.ended).toBe(true);
   });
 
-  it("carries a crew photo onto its departure's close-out row", async () => {
+  it("carries a crew photo onto its departure's settled station", async () => {
     const { db, shop } = await seededShopContext();
     const { state } = await getDayCloseout(db, shop.id, shop.slug, shop.timezone);
     const completed = state.departures.find(
@@ -101,7 +101,7 @@ describe("day close-out (in-memory PGlite)", () => {
     ).toContainEqual(expect.objectContaining(added.photo));
   });
 
-  it("records exactly the unreconciled head count that was open at the moment of closing", async () => {
+  it("records the unreconciled head count that was open, and never refuses the close over it", async () => {
     const { db, shop } = await seededShopContext();
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("seed staff missing");
@@ -154,8 +154,6 @@ describe("day close-out (in-memory PGlite)", () => {
     const returned = state.departures.find((d) => d.tripId === trip.id);
     expect(returned?.status).toBe("unreconciled");
     expect(returned?.gapReason).toBe("after_dive_uncounted");
-    // The open count must be acknowledged by name to close — loud, never a lock.
-    expect(state.mustAcknowledge.some((d) => d.tripId === trip.id)).toBe(true);
 
     const record = await closeDay(db, {
       shopId: shop.id,
@@ -163,7 +161,6 @@ describe("day close-out (in-memory PGlite)", () => {
       timeZone: shop.timezone,
       actorPersonId: staff.person.id,
       decisions: {},
-      acknowledged: true,
     });
     // The recorded act carries the outstanding count, recomputed server-side.
     const recorded = record.outstanding.departures.find((d) => d.tripId === trip.id);
@@ -174,15 +171,23 @@ describe("day close-out (in-memory PGlite)", () => {
       gapReason: "after_dive_uncounted",
       uncounted: 1,
     });
-    await expect(
-      closeDay(db, {
-        shopId: shop.id,
-        shopSlug: shop.slug,
-        timeZone: shop.timezone,
-        actorPersonId: staff.person.id,
-        decisions: {},
-      }),
-    ).rejects.toBeInstanceOf(CloseoutAcknowledgementRequired);
+
+    // **Nothing stands in front of the act.** This used to throw
+    // `CloseoutAcknowledgementRequired` unless the form carried a ticked
+    // checkbox — a confirm on an append-only act, re-asking a decision H-57
+    // has the shop making per row as it meets it (ADR
+    // 20260827-clearwater-surface-language's rejected alternative). Closing
+    // over an open head count is recorded, loudly and by name, and never
+    // refused; nothing downstream conditions on the row existing, and the
+    // chase carries on exactly as before.
+    const again = await closeDay(db, {
+      shopId: shop.id,
+      shopSlug: shop.slug,
+      timeZone: shop.timezone,
+      actorPersonId: staff.person.id,
+      decisions: {},
+    });
+    expect(again.outstanding.departures.map((d) => d.tripId)).toContain(trip.id);
   });
 
   it("keeps leftover decisions in the record and treats re-closing as another act, not an edit", async () => {

@@ -632,9 +632,17 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
     headings.indexOf("What we're not going to pretend."),
   );
 
-  // A trust page that didn't land on the exit would be missing the point.
+  // A trust page that didn't land on the exit would be missing the point, and
+  // the heading over that band has to *be* the exit answer rather than gesture
+  // at it. It re-asked the founder band's question ("Who you're actually
+  // buying from.") until slice 12f, and then spent one revision on a metaphor
+  // ("What you're standing on.") that every incumbent could have pasted onto
+  // their own site truthfully — the exact failure docs/product/marketing.md's
+  // headline test says binds `/about` hardest. It now states the plan terms
+  // printed directly beneath it, so a reader skimming only the h2s learns the
+  // exit answer is in this band without having to stop and find out.
   await expect(
-    page.getByRole("heading", { name: "Who you're actually buying from." }),
+    page.getByRole("heading", { name: "Month to month, and the export is one button." }),
   ).toBeVisible();
   await expect(page.getByText(/No export fee, no support ticket/)).toBeVisible();
   // …and the door out of that band is tagged, like every other in-page
@@ -651,12 +659,102 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
     expect(rendered, `unfounded social proof matching ${pattern}`).not.toMatch(pattern);
   }
 
-  // Demo-before-trial, same funnel order as every other marketing page.
-  // Scoped to `<main>`: the nav carries its own demo button on every marketing
-  // page (#934), so an unscoped locator here would resolve to two.
+  // The impulse is spent where it is made (slice 12f;
+  // docs/product/marketing-review-20260827.md, "help arrives after the
+  // homework"). The rules band dares the reader to go and check four things,
+  // and until 2026-08-28 the nearest thing to act on was a primary-weight
+  // mailto two bands down, with the demo waiting past the founder story, the
+  // concessions and the export terms. Scoped to `<main>`: the nav carries its
+  // own demo button on every marketing page (#934).
   const aboutMain = page.getByRole("main");
-  await expect(aboutMain.getByRole("button", { name: "Try the live demo" })).toBeVisible();
-  await expect(aboutMain.getByRole("link", { name: "Start a trial" }).last()).toBeVisible();
+  const rulesBand = aboutMain.locator("section").filter({
+    has: page.getByRole("heading", { name: "Four rules, and you can check every one." }),
+  });
+  await expect(rulesBand.getByRole("button", { name: "Try the live demo" })).toBeEnabled();
+  await expect(rulesBand.locator('a[href="/onboard?from=about-rules"]')).toHaveCount(1);
+
+  // …and the note that answers the only question that button raises, at the
+  // page's *first* door (docs/product/marketing.md, "The demo's cost is stated
+  // once per page, at the first door"). `/about` carried it nowhere at all
+  // until 2026-08-28: a page that dares a buyer to go and check four things
+  // and then offers an unlabeled button leaves them guessing whether the click
+  // costs them their email address, which at the moment of maximum impulse
+  // makes scrolling past it the safest move — and by the closing band the
+  // impulse is spent.
+  await expect(rulesBand.locator("p", { hasText: "no sign-up, no card" })).toHaveCount(1);
+  // Once on the page, not under both doors. The answer is worth nothing the
+  // second time — repeated under every demo button it stops reading as
+  // reassurance and starts reading as insistence — so the closing band repeats
+  // the door, not the note.
+  await expect(aboutMain.locator("p", { hasText: "no sign-up, no card" })).toHaveCount(1);
+
+  // Two positions, in DOM order, each tagged for itself — a reader who moved
+  // at the proof is a different moment from one who read the whole page and
+  // reached the close, and folded into one bucket neither could be read on its
+  // own (src/lib/funnel.ts). Asserted as a list rather than a presence: the
+  // page total is the thing this split exists to stop.
+  const aboutTags = await aboutMain
+    .locator('input[name="source"]')
+    .evaluateAll((nodes) => nodes.map((node) => (node as HTMLInputElement).value));
+  expect(aboutTags).toEqual(["about-rules", "about-closing"]);
+
+  // One primary per screen still holds with a second door on the page — the
+  // pin `/product` earned when its fourth door landed
+  // (docs/product/marketing.md, "One primary CTA per screen"). Every enabled
+  // button in `<main>` is a demo submit; the phone mockup's controls are
+  // `disabled` scenery, so the budget is countable without reading a class.
+  await expect(aboutMain.locator("button:not([disabled])")).toHaveCount(2);
+  const bands = aboutMain.locator("section");
+  const bandCount = await bands.count();
+  for (let index = 0; index < bandCount; index += 1) {
+    const band = bands.nth(index);
+    const primaries = await band.locator("button:not([disabled])").count();
+    expect(primaries, `band ${index} offers more than one primary`).toBeLessThanOrEqual(1);
+    // Where there is a primary there is exactly one trial link beside it: the
+    // pair is one component and a page chooses only where it sits
+    // (src/app/_components/FunnelCtas.tsx).
+    if (primaries === 1) {
+      await expect(band.locator('a[href^="/onboard?from="]')).toHaveCount(1);
+    }
+  }
+
+  // …which is what the support mailto gave up to make room. It is a real offer
+  // and stays on the page, demoted to the secondary variant beside the pricing
+  // door it now sits level with: `bg-primary` is the primary variant's own
+  // fill (src/components/ui/button.ts), so its absence here is the demotion,
+  // asserted where a reader would feel it rather than in a class list nobody
+  // reads.
+  const supportDoor = aboutMain.getByRole("link", { name: "Email support@dive.day" });
+  // Anchored on both sides, or `hover:bg-surface-sunken` would satisfy it and
+  // the assertion would pass on a button whose resting fill had changed.
+  await expect(supportDoor).toHaveClass(/(^|\s)bg-surface(\s|$)/);
+  await expect(supportDoor).not.toHaveClass(/bg-primary/);
+
+  // The door beside it states the figure rather than parking it behind itself
+  // — the same unlabeled-door fix `/product`'s money band took on 2026-08-28.
+  // This band raises the cost question three times (the "One price, no seats."
+  // rule sends the reader here to *check it*, the heading promises
+  // straightforward pricing, the paragraph says the whole of it is on one
+  // page) and answered it with "See what it costs", which a skeptic reading a
+  // trust page reads as "they won't say"
+  // (docs/product/marketing-review-20260827.md, diagnosis 2).
+  const aboutPriceDoor = aboutMain.getByRole("link", { name: /^One flat / });
+  await expect(aboutPriceDoor).toHaveAttribute("href", "/pricing");
+  // The figure read out of the one source rather than typed here, which is
+  // also the proof the interpolation ran: the stored message carries `{price}`
+  // (`src/lib/marketing.test.ts` pins it among the keys that must).
+  await expect(aboutPriceDoor).toContainText(earlyAccessPrice.price);
+  // Still no new control on the page — the number arrived inside a door that
+  // already existed (docs/product/marketing.md, "The budget binds controls,
+  // not facts"), so the band's link count is unchanged and it still offers no
+  // primary at all.
+  // `has:` is resolved from the outer match, so it takes a page-rooted
+  // locator rather than `aboutPriceDoor` — the same shape `rulesBand` uses.
+  const runBand = aboutMain
+    .locator("section")
+    .filter({ has: page.getByRole("link", { name: /^One flat / }) });
+  await expect(runBand.locator("button:not([disabled])")).toHaveCount(0);
+  await expect(runBand.locator("a")).toHaveCount(3);
 });
 
 test("migration guides walk a shop from an incumbent export into the importer", async ({

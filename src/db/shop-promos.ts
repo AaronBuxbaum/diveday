@@ -198,9 +198,42 @@ export type ShopPromoPage = {
 };
 
 /**
- * Every code the shop has, newest first, each with its own redemption count —
- * one page at a time (ordered by creation, then id for a stable tiebreak), so
- * a shop with years of codes costs one page, not the whole table.
+ * The shelf each code sits on, said in SQL — the rank `promoLedgerGroup`
+ * returns as a word (`src/lib/promo-codes.ts`), in that function's own
+ * precedence: a window that has not opened first, then one that has closed,
+ * then a cap that has been spent.
+ *
+ * It exists so the *sort* can be group-major. Grouping composes with the Pager
+ * rather than replacing it (ADR 20260803-one-pagination-model), and the only
+ * thing that keeps a group from interleaving across a page boundary is the
+ * order the rows come back in — page 2 must continue the run page 1 was in the
+ * middle of, never open a second Live shelf below an Ended one.
+ *
+ * The exhaustion arm reads the same `count()` the row query selects: a cap is
+ * spent against the redemptions actually recorded, so re-deriving it any other
+ * way here would be a second answer to a question this query already asks.
+ */
+function promoLedgerGroupRank(now: Date) {
+  return sql`case
+    when ${shopPromoCodes.startsAt} is not null and ${shopPromoCodes.startsAt} > ${now}::timestamptz then 1
+    when (${shopPromoCodes.expiresAt} is not null and ${shopPromoCodes.expiresAt} <= ${now}::timestamptz)
+      or (${shopPromoCodes.maxRedemptions} is not null
+          and count(${shopPromoRedemptions.id}) >= ${shopPromoCodes.maxRedemptions}) then 2
+    else 0
+  end`;
+}
+
+/**
+ * Every code the shop has, grouped by shelf and newest first inside each —
+ * one page at a time, so a shop with years of codes costs one page, not the
+ * whole table.
+ *
+ * **Live, then scheduled, then ended**, and creation order within a shelf
+ * (then id, for a stable tiebreak). The staff page renders those runs as group
+ * headings (ADR 20260827-the-shops-shelves, decision 1), and `now` is a
+ * parameter rather than a call to the clock here because the shelf a code sits
+ * on and the words the page prints beside it have to be answers about the same
+ * instant.
  *
  * Offset-paged, like the roster and the orders index. It was a forward-only
  * keyset cursor, which meant a staffer three pages into a long code history
@@ -210,14 +243,18 @@ export type ShopPromoPage = {
  * The count is taken off `shopPromoCodes` alone — deliberately *not* off the
  * redemption join below, whose row multiplication is exactly what the
  * `groupBy` collapses. Counting the joined shape would report a code redeemed
- * forty times as forty codes and invent pages that do not exist.
+ * forty times as forty codes and invent pages that do not exist. It is also
+ * the count for *all three shelves together*, which is what the page's one
+ * Pager is counting: the groups are a rendering of the run, never three
+ * queries.
  */
 export async function listShopPromoCodes(
   db: DbExecutor,
   shopId: string,
-  options: { page?: number; limit?: number } = {},
+  options: { page?: number; limit?: number; now?: Date } = {},
 ): Promise<ShopPromoPage> {
   const scope = eq(shopPromoCodes.shopId, shopId);
+  const now = options.now ?? nowDate();
 
   const paged = await offsetPage({
     page: options.page,
@@ -238,7 +275,7 @@ export async function listShopPromoCodes(
         .leftJoin(shopPromoRedemptions, eq(shopPromoRedemptions.promoCodeId, shopPromoCodes.id))
         .where(scope)
         .groupBy(shopPromoCodes.id)
-        .orderBy(desc(shopPromoCodes.createdAt), desc(shopPromoCodes.id))
+        .orderBy(promoLedgerGroupRank(now), desc(shopPromoCodes.createdAt), desc(shopPromoCodes.id))
         .limit(limit)
         .offset(offset),
   });

@@ -117,6 +117,37 @@ describe("SiteFormShell", () => {
     expect(button.compareDocumentPosition(alert) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  /**
+   * The briefing is ten sections and some four thousand pixels tall, so its one
+   * Save rides the bottom of the viewport with the sentence naming what is
+   * unsaved (ADR 20260827-the-shops-shelves, the long-form editor pattern). The
+   * refusal belongs in that same row: a message at the foot of the document is
+   * a message nobody scrolls to.
+   */
+  it("keeps the one Save, the unsaved note and the refusal in one row", async () => {
+    render(
+      <SiteFormShell
+        action={refusing("nameTaken")}
+        errorMessages={MESSAGES}
+        actions={
+          <>
+            <button type="submit">Save dive site</button>
+            <span>Unsaved changes in The site</span>
+          </>
+        }
+      >
+        <input aria-label="Name" name="name" defaultValue="" />
+      </SiteFormShell>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Save dive site" }));
+
+    const alert = await screen.findByRole("alert");
+    const row = screen.getByRole("button", { name: "Save dive site" }).parentElement;
+    expect(row?.contains(alert)).toBe(true);
+    expect(row?.textContent).toContain("Unsaved changes in The site");
+  });
+
   it("moves the cursor to the refusal", async () => {
     setup(refusing("coordinatesIncomplete"));
 

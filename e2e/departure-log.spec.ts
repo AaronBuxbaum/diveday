@@ -4,19 +4,24 @@ import { offlineCopySaved, openTripFromBoard, openTripTab } from "./helpers";
 signedInAsOwner();
 
 /**
- * The departure log: one tap from close-out produces the print-ready document
- * of recorded facts — roster with boarding state, the roll-call timeline,
- * certification evidence, waiver *status*, and the integrity code in the
- * footer. Safety-critical surface, so the flow is exercised end to end: record
- * a real roll-call fact first, then check it appears on the document with its
- * attribution.
+ * The departure log: one tap from a settled station produces the print-ready
+ * document of recorded facts — roster with boarding state, the roll-call
+ * timeline, certification evidence, waiver *status*, and the integrity code in
+ * the footer. Safety-critical surface, so the flow is exercised end to end:
+ * record a real roll-call fact first, then check it appears on the document
+ * with its attribution.
  *
- * The door is close-out, not the manifest. Writing the day up is an evening
+ * The door is the evening, not the manifest. Writing the day up is an evening
  * act, and an authority-facing document standing beside "Mark boarded" put it
- * on the surface a crew works at the rail.
+ * on the surface a crew works at the rail. Since H-62 that evening is a state
+ * of the shop home rather than a page of its own (ADR
+ * 20260827-clearwater-surface-language, decision 4), so the door moved with
+ * it — same one link per departure, on the departure's own station.
  */
-test("one tap from close-out opens the departure log with the recorded facts", async ({ page }) => {
-  // Board → trip → manifest, one roll-call write, close-out, then the log —
+test("one tap from a settled station opens the departure log with the recorded facts", async ({
+  page,
+}) => {
+  // Board → trip → manifest, one roll-call write, the home, then the log —
   // several full server round trips over a 9-diver manifest.
   test.setTimeout(45_000);
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -44,8 +49,8 @@ test("one tap from close-out opens the departure log with the recorded facts", a
   // The manifest keeps the printer and nothing else — this door moved.
   await expect(page.getByRole("link", { name: "Generate log" })).toHaveCount(0);
 
-  // The evening surface is where it lives now, one link per departure.
-  await page.goto("/shop/blue-mantis/close-out");
+  // The evening reading is where it lives now, one link per departure.
+  await page.goto("/shop/blue-mantis");
   const reefRow = page.locator("li", {
     has: page.getByText("Two-Tank Reef — Molasses & French"),
   });
@@ -149,7 +154,7 @@ test("a trip id that is not this shop's renders the not-found refusal, never a d
 });
 
 /**
- * Owner-only (`canExportIncidentRecord`, src/lib/authz.ts). Close-out and the
+ * Owner-only (`canExportIncidentRecord`, src/lib/authz.ts). The home and the
  * manifest both stay open to the whole crew — they run the roll call and they
  * close the day — but producing the shop's evidentiary account of a departure,
  * stamped with the generator's own name, is the owner's call. The link is
@@ -166,13 +171,16 @@ test.describe("the log is the owner's to produce", () => {
     await offlineCopySaved(page);
     const tripUrl = new URL(page.url());
 
-    // Close-out is theirs to run; this one door is not on any of its rows.
-    await page.goto("/shop/blue-mantis/close-out");
-    await expect(page.getByRole("heading", { name: "How today's boats ended" })).toBeVisible();
+    // The evening is theirs to run; this one door is not on any of its
+    // stations.
+    await page.goto("/shop/blue-mantis");
+    await expect(
+      page.getByRole("heading", { name: /Good (morning|afternoon|evening|night)/ }),
+    ).toBeVisible();
     await expect(page.getByRole("link", { name: "Generate log" })).toHaveCount(0);
 
     // And the route itself refuses, however it was reached — a bookmark, a
-    // deep link, or a role that changed under them. It lands back on close-out
+    // deep link, or a role that changed under them. It lands back on the home
     // saying why, never silently.
     await page.goto(`${tripUrl.pathname.replace(/\/manifest$/, "")}/log`);
     // Matched without the `?notice=`, deliberately. The refusal redirects with
@@ -180,13 +188,13 @@ test.describe("the log is the owner's to produce", () => {
     // hydrates — that is the whole point of a flash param. `page.goto` resolves
     // on `load`, so whether this sees the URL before or after that strip is a
     // race with hydration, and on a CI runner it loses: the log records
-    // "navigated to /shop/blue-mantis/close-out" and then waits 45s for a query
-    // string the app has already, correctly, erased.
+    // "navigated to /shop/blue-mantis" and then waits 45s for a query string
+    // the app has already, correctly, erased.
     //
     // What is durable is the destination and the banner. The line below is the
     // assertion that the notice arrived at all, and it reads what a staffer
     // reads rather than what the address bar held for one frame.
-    await page.waitForURL(/\/close-out(\?|$)/);
+    await page.waitForURL(/\/shop\/blue-mantis(\?|$)/);
     await expect(page.getByText(/[Oo]nly an owner can generate/)).toBeVisible();
     // Not one fact of the document travels with the refusal.
     await expect(page.getByRole("heading", { name: "Roll-call timeline" })).toHaveCount(0);

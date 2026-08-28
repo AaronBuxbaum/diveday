@@ -1,14 +1,11 @@
 {
   "title": "What divers said",
-  "description": "Every review here came from someone who was on the boat. A rating on its own publishes straight away; anything with words waits for you.",
   "viewPublicPage": "View public page",
   "notice": {
     "published": "Review published to your schedule page.",
-    "hidden": "Review hidden — it no longer counts toward your rating.",
     "hiddenToast": "Review hidden.",
     "publishedManyOne": "{count} review published to your schedule page.",
     "publishedManyOther": "{count} reviews published to your schedule page.",
-    "noneSelected": "Tick the reviews you want to publish first.",
     "error": "That review couldn't be updated. Try again.",
     "reasonRequired": "Choose a reason before hiding a review.",
     "noteRequired": "Say what happened, in a few words, when the reason is “Something else”.",
@@ -16,26 +13,12 @@
     "standout": "Review marked as standout.",
     "standoutRemoved": "Review removed from standouts."
   },
-  "overviewLabel": "Rating overview",
-  "publicRating": "Public rating",
-  "noneYet": "Nothing published yet",
-  "fromPublished": "From your published reviews",
-  "published": "Published",
-  "publishedDetail": "Shown on your schedule page",
-  "hidden": "Hidden",
-  "waitingOnYou": "Waiting on you",
-  "waitingDetail": "Reviews with words to read",
-  "hiddenStat": "Hidden",
-  "hiddenStatDetail": "Not shown on your schedule page",
   "ratingWithheld": "Your rating still shows on your own schedule page, but DiveDay has stopped publishing it to search engines: more than one in five of the reviews you have ruled on are now hidden. Republishing {count, plural, one {# hidden review} other {# hidden reviews}} brings it back.",
-  "thisMonthStat": "This month: {rating}★ average from {count, plural, one {# review} other {# reviews}}",
-  "standout": "⭐ Standout review",
+  "standout": "Standout",
   "markStandout": "Mark as standout",
   "removeStandout": "Remove standout",
   "emptyHeading": "No reviews yet",
   "emptyDetail": "Divers are asked for one on their recap page after a trip sails.",
-  "emptyWaitingHeading": "Nothing waiting on you",
-  "emptyWaitingDetail": "New reviews land here as soon as a diver leaves one.",
   "emptyReviewLinkBody": "There is nothing to switch on here — a review arrives when a diver opens their recap. What is yours to set is where a happy one goes next.",
   "emptyReviewLinkAction": "Set your review link",
   "ratingOnly": "Rating only.",
@@ -43,14 +26,7 @@
   "reviewMeta": "<diver>{diverName}</diver> · <trip>{tripTitle}</trip> · {date}",
   "hide": "Hide",
   "publish": "Publish",
-  "publishSelected": "Publish selected",
-  "selectToPublishAriaLabel": "Select {name}'s review to publish",
   "saving": "Saving…",
-  "filterLabel": "Filter reviews",
-  "filter": {
-    "all": "All reviews",
-    "waiting": "Waiting on you"
-  },
   "pagination": {
     "total": "{count, plural, one {# review} other {# reviews}}"
   },
@@ -67,5 +43,14 @@
     "wrongSubject": "About a different trip or shop",
     "spam": "Spam or a test",
     "other": "Something else"
-  }
+  },
+  "aggregate": "{rating} average across {count, plural, one {# published review} other {# published reviews}}",
+  "aggregateMonth": "this month {rating} from {count, plural, one {# review} other {# reviews}}",
+  "group": {
+    "waiting": "Waiting on you — {count}",
+    "published": "Published — {count}",
+    "hidden": "Hidden — {count}"
+  },
+  "publishAll": "{count, plural, =2 {Publish both} other {Publish all #}}",
+  "republish": "Republish"
 }

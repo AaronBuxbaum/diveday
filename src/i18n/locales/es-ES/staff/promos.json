@@ -24,6 +24,11 @@
     "trips": "Solo salidas",
     "courses": "Solo cursos"
   },
+  "group": {
+    "live": "Activos",
+    "scheduled": "Programados",
+    "ended": "Terminados"
+  },
   "newCode": {
     "heading": "Nuevo código",
     "detail": "Deja las fechas o el límite vacíos para que no tenga límite."
@@ -49,7 +54,6 @@
   },
   "creating": "Creando…",
   "createCode": "Crear código",
-  "yourCodes": "Tus códigos",
   "empty": {
     "heading": "Todavía no hay códigos",
     "detail": "Envía una oferta de última hora desde la página de una salida cuando el barco necesite llenarse.",
@@ -58,9 +62,7 @@
   "status": {
     "failed": "Falló en Stripe",
     "pending": "Nunca se terminó",
-    "live": "Activo",
-    "disabled": "Desactivado",
-    "notLive": "No activo ahora mismo"
+    "disabled": "Desactivado"
   },
   "discountOff": "{percent}% de descuento",
   "fromDate": "desde {date}",

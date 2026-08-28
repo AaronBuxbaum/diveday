@@ -9,13 +9,23 @@ import {
   type IssuedCapability,
   issueBookingCapability,
   revokeBookingCapabilities,
+  staleBookingCapabilityForToken,
   verifyBookingCapability,
 } from "./booking-capabilities";
 import { tripAdmissionFor } from "./bookings";
 import { type AppDb, type DbExecutor, isUniqueConstraintViolation } from "./client";
 import { recordTripActivity } from "./operations";
 import { findOrCreatePerson } from "./people";
-import { bookings, certifications, courses, people, shops, trips, waiverRecords } from "./schema";
+import {
+  bookings,
+  certifications,
+  courses,
+  people,
+  type Shop,
+  shops,
+  trips,
+  waiverRecords,
+} from "./schema";
 import { liveTrip } from "./trips-live";
 import { issueWaiverOnJoin } from "./waiver-issue";
 
@@ -86,6 +96,87 @@ export async function getClaimPageData(
     endsAt: row.trip.endsAt,
     seatName: row.person.fullName,
   };
+}
+
+/**
+ * **The one thing a dead claim link is allowed to say about its shop.**
+ *
+ * A claim link is a *booking* capability, so it wears the booking tier of the
+ * dead-link law (ADR 20260827-first-light, decision 3, and decision 4 — claim
+ * joins the thread): the person holding a dead one is a party member who was
+ * forwarded a URL in a group chat, and their whole question is *who do I ask*.
+ * Answering "ask the shop" without naming the shop is a dead end, so where the
+ * token still tells us which shop issued it, the page hands over that shop's
+ * own published name and contact and the claim page's terminal card is
+ * `ExpiredLinkCard`. Where it does not, the bare door renders and names
+ * nothing — there is no shop to attribute an unresolvable token to without
+ * weakening the guarantee the whole model rests on, that a bearer token reveals
+ * only its own record.
+ *
+ * **What is relaxed here is only *when* the token was valid, never *whether* it
+ * was ours.** `staleBookingCapabilityForToken` still requires a genuine hash
+ * match on a capability issued for the `claim` purpose, so guessing is no
+ * cheaper than it was; expiry and revocation are what it lets through, which is
+ * exactly the population this tier exists for — a spent claim (claiming revokes
+ * every capability on the booking), a link replaced by a newer one, a seat
+ * somebody else took, a seat the shop cancelled and a departure it called off
+ * (those two fail closed inside `verifyBookingCapability`), a departure that
+ * has since sailed.
+ *
+ * **That list is the constraint on what the page may say.** Six causes reach
+ * one arm and this reader cannot tell them apart, so the dead card's sentence
+ * has to be true of the worst of them: the seat may be gone, the boat may be
+ * back, the day may be off, and no fresh link is mintable for any of those —
+ * `issuePartySeatClaims` returns `claim: null` the moment `claimableNow` is
+ * false, so the organizer has nothing left to forward. A sentence claiming the
+ * seat, or offering that link, is this page telling a diver whose Saturday was
+ * called off that their seat is safe and sending them to ask for something
+ * nobody can produce. Widening the arm is not the fix; the sentence claiming
+ * less is.
+ *
+ * **The shop's four public columns and nothing else.** No booking, no diver, no
+ * trip is read through a dead token, and the narrow return type is the guard
+ * rather than a comment asking the next caller not to — the same argument
+ * `staleBookingCapabilityForToken`'s `{ shopId }`-only shape makes one file
+ * over. `defaultLocale` is in the set because the page has to choose a language
+ * before it can say anything at all.
+ *
+ * Like `/ready`'s, this attribution is **permanent**: `booking_capabilities` is
+ * never pruned, so a claim URL from last season still names the shop that
+ * issued it. That is recorded in
+ * docs/engineering/capability-telemetry-runbook.md, where an exposed URL is
+ * assessed.
+ */
+export type DeadClaimShop = Pick<Shop, "name" | "contactEmail" | "contactPhone" | "defaultLocale">;
+
+export type ClaimPageState =
+  /** A live token over a seat that can still change hands: render the form. */
+  | { kind: "claimable"; data: ClaimPageData }
+  /** Dead, but ours: the booking tier — name the shop, offer its hand. */
+  | { kind: "dead"; shop: DeadClaimShop }
+  /** Nothing resolved at all: the bare door, naming no one. */
+  | { kind: "unknown" };
+
+export async function getClaimPageState(
+  db: AppDb,
+  token: string,
+  now: Date = nowDate(),
+): Promise<ClaimPageState> {
+  const data = await getClaimPageData(db, token, now);
+  if (data) return { kind: "claimable", data };
+  const stale = await staleBookingCapabilityForToken(db, { token, purpose: "claim" });
+  if (!stale) return { kind: "unknown" };
+  const [shop] = await db
+    .select({
+      name: shops.name,
+      contactEmail: shops.contactEmail,
+      contactPhone: shops.contactPhone,
+      defaultLocale: shops.defaultLocale,
+    })
+    .from(shops)
+    .where(eq(shops.id, stale.shopId))
+    .limit(1);
+  return shop ? { kind: "dead", shop } : { kind: "unknown" };
 }
 
 /**

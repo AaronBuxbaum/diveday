@@ -199,7 +199,15 @@ test("a diver record keeps card refusals visible and clears a wrong no-card stam
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Certification records" }) })
     .filter({ visible: true });
-  await cards.getByText("Verify certification record", { exact: true }).click();
+  // Rowan carries two self-declared cards — a level and a specialty — so the
+  // group holds two identically-named disclosures. `#card-awaiting` is the
+  // anchor the status ledger's "Verify it" lands on: the *first* card waiting
+  // for somebody, in render order, which is the level card this test is about.
+  await cards
+    .locator("li")
+    .filter({ has: page.locator("#card-awaiting") })
+    .getByText("Verify certification record", { exact: true })
+    .click();
 
   const sightingNumber = page.locator('input[name="sightedIdentifier"]').filter({ visible: true });
   await sightingNumber.fill("xx");

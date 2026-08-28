@@ -22,6 +22,27 @@ export const DIVE_SITE_DIFFICULTIES = ["beginner", "intermediate", "advanced"] a
 export type DiveSiteDifficulty = (typeof DIVE_SITE_DIFFICULTIES)[number];
 
 /**
+ * **The dive-site library's groups, easiest first.** The three codes, then
+ * everything the shop has not rated (ADR 20260827-the-shops-shelves: the
+ * library renders as one ledger grouped by the collection's own shared fact).
+ *
+ * `unrated` is a real group and not a gap — a shop that has written nine
+ * briefings and rated four of them has five sites in it, and filing them under
+ * a guess would be the one thing this module exists to refuse. It sorts last
+ * because the three that carry a reading are the ones a staffer scans for.
+ *
+ * The order is load-bearing twice over: it is the order the groups render in,
+ * and — because `difficulty_level` is a Postgres enum, which sorts by
+ * declaration order with NULL last — it is also the order the library's row
+ * query returns. Reordering `DIVE_SITE_DIFFICULTIES` moves both together,
+ * which is why neither one restates it.
+ */
+export const SITE_LIBRARY_GROUPS = [...DIVE_SITE_DIFFICULTIES, "unrated"] as const;
+
+/** Which group a library row falls in. */
+export type SiteLibraryGroupLabel = (typeof SITE_LIBRARY_GROUPS)[number];
+
+/**
  * A stored or posted value narrowed to a code, or null.
  *
  * Reads the legacy free text too, lower-cased and trimmed: `dive_sites.difficulty`

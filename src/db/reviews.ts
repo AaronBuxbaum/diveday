@@ -24,7 +24,7 @@ import {
   reviewerDisplayName,
 } from "@/lib/reviews";
 import { isUuid } from "@/lib/uuid";
-import type { AppDb, DbExecutor } from "./client";
+import { type AppDb, type DbExecutor, queryAll } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import {
   bookings,
@@ -418,31 +418,57 @@ export type StaffReviewPage = {
 };
 
 /**
- * The moderation queue: this shop's reviews, newest first, held ones
- * included — one page at a time (ordered by creation, then id for a stable
- * tiebreak) so a shop with years of trips costs one page, not the whole table.
+ * Which slice of the queue a staff read asks for — the three groups the
+ * moderation page is now made of (ADR 20260827-people-not-lists, decision 3).
+ *
+ * - `waiting` — unpublished with no current hide: the worklist, read whole.
+ * - `moderated` — everything already ruled on, published before hidden.
+ * - `all` — the shop's reviews in one run, newest first.
+ *
+ * `waiting` and `moderated` partition `all`: a row that is published is not
+ * waiting, and a hide recorded *before* the row's own `updated_at` is a stale
+ * one that no longer counts (`hiddenReviewExists`).
+ */
+export type StaffReviewScope = "all" | "waiting" | "moderated";
+
+/**
+ * The moderation queue: this shop's reviews, one page at a time (ordered by
+ * creation, then id for a stable tiebreak) so a shop with years of trips costs
+ * one page, not the whole table.
  *
  * Offset-paged, like the roster and the orders index. It was a forward-only
  * keyset cursor, which meant a staffer three pages into the queue had "Show
  * more" and "Back to top" and nothing in between — no way back one page, and
  * no way to see how much queue was left (ADR 20260803-one-pagination-model).
  *
- * `onlyWaiting` narrows the same query to unpublished rows with no current
- * hidden act — the "Waiting on you" tab. It stays a plain extra `where` clause
- * rather than a different sort order, applied to the count as well as the
- * page, so "page 2 of 4" means the same thing in both tabs.
+ * **`scope` is a `where` clause and, for `moderated`, a sort.** The page
+ * reads the waiting worklist whole and pages only what has been ruled on, so
+ * that list has to arrive with the published run before the hidden one —
+ * otherwise the two groups it renders would interleave across a page boundary
+ * and "Hidden — 3" would show one row on page 1 and two on page 4. `desc` on
+ * a boolean is `true` first in Postgres, which is the published run.
  */
 export async function listShopReviewsForStaff(
   db: DbExecutor,
   shopId: string,
-  options: { page?: number; limit?: number; onlyWaiting?: boolean } = {},
+  options: { page?: number; limit?: number; scope?: StaffReviewScope } = {},
 ): Promise<StaffReviewPage> {
   const hidden = hiddenReviewExists(db);
   const moderationActor = alias(people, "review_moderation_actor");
+  const waiting = and(eq(tripReviews.isPublished, false), not(hidden));
   const scope = and(
     eq(tripReviews.shopId, shopId),
-    options.onlyWaiting ? and(eq(tripReviews.isPublished, false), not(hidden)) : undefined,
+    options.scope === "waiting" ? waiting : undefined,
+    options.scope === "moderated" ? or(eq(tripReviews.isPublished, true), hidden) : undefined,
   );
+  // One spread in the final argument position, not a conditional spread mid-call:
+  // `orderBy` takes a rest parameter, and TypeScript only accepts a spread
+  // followed by further arguments when the spread has a tuple type.
+  const order = [
+    ...(options.scope === "moderated" ? [desc(tripReviews.isPublished)] : []),
+    desc(tripReviews.createdAt),
+    desc(tripReviews.id),
+  ];
 
   const paged = await offsetPage({
     page: options.page,
@@ -472,7 +498,7 @@ export async function listShopReviewsForStaff(
         .innerJoin(people, eq(people.id, tripReviews.personId))
         .innerJoin(trips, eq(trips.id, tripReviews.tripId))
         .where(scope)
-        .orderBy(desc(tripReviews.createdAt), desc(tripReviews.id))
+        .orderBy(...order)
         .limit(limit)
         .offset(offset),
   });
@@ -527,6 +553,43 @@ export async function listShopReviewsForStaff(
     pageSize: paged.pageSize,
     total: paged.total,
   };
+}
+
+/** How many reviews sit in each of the moderation page's three groups. */
+export type StaffReviewGroupCounts = { waiting: number; published: number; hidden: number };
+
+/**
+ * The three group counts, each one counted over **its own group's exact
+ * membership test** — the same predicates `listShopReviewsForStaff` scopes and
+ * derives `isHidden` with.
+ *
+ * That equality is the point rather than an implementation detail. A group
+ * label states a total the rows beneath it are a page of ("Published — 83",
+ * three rows showing), so a count read from a nearby-but-different scope
+ * promises a group that does not exist — the same failure the pager rule names
+ * (AGENTS.md, "Paging a staff list"). Published and hidden are disjoint and
+ * together are exactly what `scope: "moderated"` pages, so the pager's own
+ * total and these two always agree.
+ */
+export async function countStaffReviewGroups(
+  db: DbExecutor,
+  shopId: string,
+): Promise<StaffReviewGroupCounts> {
+  const hidden = hiddenReviewExists(db);
+  const shop = eq(tripReviews.shopId, shopId);
+  const countWhere = async (where: ReturnType<typeof and>) => {
+    const [row] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(tripReviews)
+      .where(where);
+    return row?.count ?? 0;
+  };
+  const [waiting, published, suppressed] = await queryAll(db, [
+    () => countWhere(and(shop, eq(tripReviews.isPublished, false), not(hidden))),
+    () => countWhere(and(shop, eq(tripReviews.isPublished, true))),
+    () => countWhere(and(shop, eq(tripReviews.isPublished, false), hidden)),
+  ]);
+  return { waiting, published, hidden: suppressed };
 }
 
 /** The reason codes a hide may state, for narrowing a posted form value. */

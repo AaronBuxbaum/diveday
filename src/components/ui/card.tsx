@@ -139,7 +139,7 @@ export function sectionCardClass({
 }
 
 /** Closed set on purpose — a caller never hands this component an arbitrary tag. */
-type SectionCardElement = "section" | "div" | "article" | "aside" | "li" | "details";
+type SectionCardElement = "section" | "div" | "article" | "aside" | "ul" | "li" | "details";
 
 /**
  * The heading vocabulary, folded in so no call site types it. Two levels, and

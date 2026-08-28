@@ -105,7 +105,7 @@ type WaiverAuditJoinRow = {
 };
 
 /**
- * Shared row shaping for the Signatures tab: never the bearer token, never
+ * Shared row shaping for the signature log: never the bearer token, never
  * the raw medical questionnaire — a medical hold surfaces only as
  * `flaggedPrompts`, the "answered yes" prompts a reviewer must check, the
  * same summary `flaggedMedicalPrompts` already gives the trip roster
@@ -121,6 +121,13 @@ function toSignedWaiverEntry(row: WaiverAuditJoinRow) {
     tripStartsAt: row.tripStartsAt,
     status: row.record.status,
     signedAt: row.record.signedAt,
+    /**
+     * Which release this signature was given against — the fact that decides
+     * whether it still counts (`isCompletedWaiverCurrent`), and the one thing
+     * a reviewer reading the log back cannot infer from anything else on the
+     * row. Already on `row.record`, so it costs no column and no join.
+     */
+    templateVersion: row.record.templateVersion,
     integrity: verifyWaiverIntegrity(row.record),
     flaggedPrompts:
       row.record.status === "medical_review" && row.record.medicalAnswers
@@ -140,7 +147,7 @@ export type WaiverIntegrityAuditPage = {
 };
 
 /**
- * Signed evidence audit — the Signatures tab's data (`/shop/[shopSlug]/waivers/signatures`)
+ * Signed evidence audit — the signature log's data (`/shop/[shopSlug]/waivers`)
  * and its integrity check. Every row is shop-scoped by `shopId` (never trust a
  * route param for this — see the query's `where`), joins the trip the record
  * was issued against (null only for an imported record, which carries no

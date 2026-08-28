@@ -1,8 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { nowMs } from "@/lib/clock";
+import { DAY_MS, HOUR_MS, nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
+import type { AppDb } from "./client";
 import { bookings, courses, people, staffShifts, tripAssignments } from "./schema";
 import { createStaffShift, crewShiftCoverage, getStaffingView } from "./staffing";
 import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "./trips";
@@ -14,8 +15,26 @@ import { createTrip, listStaff, setTripCrew, upcomingTripsWithCounts } from "./t
  */
 const OPEN_TEST_SESSION_OFFSET_MS = 180 * 24 * 60 * 60 * 1000;
 
+/**
+ * A seat on a departure, written straight to the row.
+ *
+ * `createBooking` is the door a *diver* comes through and enforces this shop's
+ * readiness requirements on the way; every test here needs only the fact that
+ * somebody is aboard, because that is the whole input the supervision target
+ * takes ("a departure with nobody booked is never short",
+ * src/lib/divemaster-ratio.ts).
+ */
+async function seatDiver(db: AppDb, shopId: string, tripId: string, tag: string): Promise<void> {
+  const [diver] = await db
+    .insert(people)
+    .values({ shopId, fullName: `Aboard ${tag}`, email: `staffing-aboard-${tag}@example.com` })
+    .returning();
+  if (!diver) throw new Error("failed to insert diver");
+  await db.insert(bookings).values({ shopId, tripId, personId: diver.id });
+}
+
 describe("staffing view", () => {
-  it("shows roles, working windows, and teaching/crew capabilities", async () => {
+  it("shows roles, working windows, and the departures a person crews", async () => {
     const { db, shop } = await seededShopContext();
     await db.delete(staffShifts).where(eq(staffShifts.shopId, shop.id));
     const staff = await listStaff(db, shop.id);
@@ -41,11 +60,54 @@ describe("staffing view", () => {
       new Date(trip.endsAt.getTime() + 60 * 60 * 1000),
     );
     const working = view.staff.find((entry) => entry.person.id === instructor.person.id);
-    expect(working?.capabilities).toEqual(expect.arrayContaining(["teach", "crew"]));
+    expect(working?.roles).toContain("instructor");
     expect(working?.shifts).toHaveLength(1);
-    // The roster is the page; departures reach it only as the one summary
-    // count (ADR 20260806-staffing-is-the-shift-roster).
+    // The shift and the boat, both against the one person: the week places
+    // them in the same day cell, and a boat somebody crews with no shift
+    // against it is exactly what that cross-link exists to show (task 165).
+    expect(working?.crewingTrips.map((entry) => entry.tripId)).toContain(trip.id);
     expect(view.crewGaps.departures).toBeGreaterThanOrEqual(1);
+  });
+
+  /**
+   * The gap list and the gap count are one walk (ADR
+   * 20260827-the-shops-shelves, decision 3): the staffing week places each
+   * short-handed departure in the day it sails, so the reader has to hand
+   * back the departures it counted rather than only the tally. Two answers
+   * from two passes could disagree; this pins that they cannot.
+   */
+  it("hands back the departures behind the count, in the count's own codes", async () => {
+    const { db, shop } = await seededShopContext();
+    const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
+    const endsAt = new Date(startsAt.getTime() + 4 * 60 * 60 * 1000);
+    const bare = await createTrip(db, {
+      shopId: shop.id,
+      title: "Uncrewed gap charter",
+      startsAt,
+      endsAt,
+      capacity: 10,
+      plannedDives: 2,
+    });
+    if (!bare) throw new Error("failed to create gap fixture");
+
+    // A departure the shop still has to run, with divers on it and nobody in
+    // the water: the state the gap row exists for.
+    await seatDiver(db, shop.id, bare.id, "gap-charter");
+
+    const view = await getStaffingView(
+      db,
+      shop.id,
+      new Date(startsAt.getTime() - 60 * 60 * 1000),
+      new Date(endsAt.getTime() + 60 * 60 * 1000),
+    );
+    expect(view.gapTrips).toHaveLength(view.crewGaps.needCrew);
+    expect(view.gapTrips).toContainEqual({
+      tripId: bare.id,
+      title: "Uncrewed gap charter",
+      startsAt: bare.startsAt,
+      gap: "uncrewed_departure",
+      meetings: [{ startsAt: bare.startsAt, endsAt: bare.endsAt }],
+    });
   });
 
   it("rejects overlapping shifts for one staff member and scopes writes to the shop", async () => {
@@ -253,43 +315,238 @@ describe("staffing view", () => {
     expect(view.crewGaps).toEqual({ departures: 1, needCrew: 0 });
   });
 
-  it("counts a departure with nobody rostered, course or not, and its denominator", async () => {
-    // The zero-crew case is not a ratio rule — a fun-dive charter has no
-    // course to be over the ratio of — so it is read straight off the
-    // assignment rows. Two departures in the window, one of them crewed: the
-    // summary is 1 of 2, which is what the page renders.
+  /**
+   * The one this surface got backwards, and the dangerous direction.
+   *
+   * "Does this departure have a `trip_assignments` row" is not the question a
+   * manager planning the weekend is asking. A twelve-diver reef charter with a
+   * captain rostered and no divemaster has a row and nobody in the water — it
+   * raises `uncrewed_departure` on Today, and it used to draw a clean, empty
+   * day cell here. The same walk now runs `divemasterRatioGap`, the one module
+   * that judgement lives in "so the trip page, the Today queue and whatever
+   * reads this next must not be able to disagree".
+   */
+  it("counts a captain-only charter with divers aboard as uncrewed", async () => {
     const { db, shop } = await seededShopContext();
     const staff = await listStaff(db, shop.id);
+    // Rostered as this trip's captain, so what else they hold in the shop is
+    // beside the point: a captain is driving the boat, not supervising anybody
+    // in the water (`inWaterCrewRole`, src/lib/crew-roles.ts).
     const captain = staff.find((entry) => entry.roles.includes("captain"));
-    if (!captain) throw new Error("seeded captain missing");
+    const divemaster = staff.find(
+      (entry) => entry.roles.includes("divemaster") && entry.person.id !== captain?.person.id,
+    );
+    if (!captain || !divemaster) throw new Error("seeded crew missing");
     const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
-    const endsAt = new Date(startsAt.getTime() + 4 * 60 * 60 * 1000);
-    const bare = await createTrip(db, {
+    const endsAt = new Date(startsAt.getTime() + 4 * HOUR_MS);
+    const charter = await createTrip(db, {
       shopId: shop.id,
-      title: "Uncrewed reef charter",
+      title: "Captain-only reef charter",
+      startsAt,
+      endsAt,
+      capacity: 12,
+      plannedDives: 2,
+    });
+    if (!charter) throw new Error("failed to create charter fixture");
+    expect(
+      await setTripCrew(db, shop.id, charter.id, [
+        { personId: captain.person.id, tripRole: "captain" },
+      ]),
+    ).toBe(true);
+    await seatDiver(db, shop.id, charter.id, "captain-only");
+
+    const readWeek = async () =>
+      getStaffingView(
+        db,
+        shop.id,
+        new Date(startsAt.getTime() - HOUR_MS),
+        new Date(endsAt.getTime() + HOUR_MS),
+      );
+    expect((await readWeek()).gapTrips.map((gap) => gap.gap)).toEqual(["uncrewed_departure"]);
+
+    // A divemaster in the water clears it. Nothing about the row count moved.
+    expect(
+      await setTripCrew(db, shop.id, charter.id, [
+        { personId: captain.person.id, tripRole: "captain" },
+        { personId: divemaster.person.id, tripRole: "divemaster" },
+      ]),
+    ).toBe(true);
+    expect((await readWeek()).gapTrips).toEqual([]);
+  });
+
+  /**
+   * The quieter half of the same measurement: rostered, but under the shop's
+   * own target. Today ranks this with the advisory rows and words it "Under
+   * target"; the week has to say the same thing rather than either shouting or
+   * staying silent.
+   */
+  it("counts a departure rostered under the shop's own target, in Today's quieter code", async () => {
+    const { db, shop } = await seededShopContext();
+    const staff = await listStaff(db, shop.id);
+    const divemaster = staff.find((entry) => entry.roles.includes("divemaster"));
+    if (!divemaster) throw new Error("seeded divemaster missing");
+    const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
+    const endsAt = new Date(startsAt.getTime() + 4 * HOUR_MS);
+    const charter = await createTrip(db, {
+      shopId: shop.id,
+      title: "Under-target reef charter",
+      startsAt,
+      endsAt,
+      capacity: 12,
+      plannedDives: 2,
+    });
+    if (!charter) throw new Error("failed to create charter fixture");
+    expect(
+      await setTripCrew(db, shop.id, charter.id, [
+        { personId: divemaster.person.id, tripRole: "divemaster" },
+      ]),
+    ).toBe(true);
+    for (let i = 0; i < 4; i++) await seatDiver(db, shop.id, charter.id, `under-target-${i}`);
+
+    // A tighter target than the default, deliberately: four divers want one
+    // divemaster at the shop-wide default of six and two at three, so this
+    // fails if the page's `shops.divers_per_divemaster` never reaches the walk.
+    const view = await getStaffingView(
+      db,
+      shop.id,
+      new Date(startsAt.getTime() - HOUR_MS),
+      new Date(endsAt.getTime() + HOUR_MS),
+      { diversPerDivemaster: 3 },
+    );
+    expect(view.gapTrips.map((gap) => gap.gap)).toEqual(["crew_below_target"]);
+
+    // At the shop-wide default the same boat is adequately crewed — the target
+    // is the shop's, not a number this module invented.
+    const atDefault = await getStaffingView(
+      db,
+      shop.id,
+      new Date(startsAt.getTime() - HOUR_MS),
+      new Date(endsAt.getTime() + HOUR_MS),
+    );
+    expect(atDefault.gapTrips).toEqual([]);
+  });
+
+  /**
+   * Three departures nobody has to crew, each of which used to draw a warning
+   * chip with a live "Assign" link: an empty boat, a self-guided one, and one
+   * that came home. Every one of them is the expected state formatted as an
+   * alert — the failure `crewShiftCoverage` two functions below already exists
+   * to prevent — and together they burn the only warning channel this surface
+   * has.
+   */
+  it("says nothing about an empty, a self-guided, or an already-sailed departure", async () => {
+    const { db, shop } = await seededShopContext();
+    const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
+    const endsAt = new Date(startsAt.getTime() + 4 * HOUR_MS);
+    const empty = await createTrip(db, {
+      shopId: shop.id,
+      title: "Nobody booked yet",
       startsAt,
       endsAt,
       capacity: 10,
       plannedDives: 2,
     });
-    const crewed = await createTrip(db, {
+    const selfGuided = await createTrip(db, {
       shopId: shop.id,
-      title: "Crewed reef charter",
+      title: "Self-guided shore entry",
       startsAt,
       endsAt,
       capacity: 10,
       plannedDives: 2,
+      selfGuided: true,
     });
-    if (!bare || !crewed) throw new Error("failed to create charter fixtures");
-    expect(await setTripCrew(db, shop.id, crewed.id, [captain.person.id])).toBe(true);
+    if (!empty || !selfGuided) throw new Error("failed to create charter fixtures");
+    await seatDiver(db, shop.id, selfGuided.id, "self-guided");
 
     const view = await getStaffingView(
       db,
       shop.id,
-      new Date(startsAt.getTime() - 60 * 60 * 1000),
-      new Date(endsAt.getTime() + 60 * 60 * 1000),
+      new Date(startsAt.getTime() - HOUR_MS),
+      new Date(endsAt.getTime() + HOUR_MS),
     );
-    expect(view.crewGaps).toEqual({ departures: 2, needCrew: 1 });
+    // Both are in the denominator — they are departures — and neither is work.
+    expect(view.crewGaps).toEqual({ departures: 2, needCrew: 0 });
+
+    // And the boat that came home. `trip_status` is only `scheduled`/
+    // `cancelled`, so Monday's sailing is still `scheduled` on Friday and the
+    // week deliberately shows up to six days behind: without the buffer, the
+    // loudest thing on the page asks a manager to crew a boat back three days.
+    const sailedStart = new Date(nowMs() - 2 * DAY_MS);
+    const sailedEnd = new Date(sailedStart.getTime() + 4 * HOUR_MS);
+    const sailed = await createTrip(db, {
+      shopId: shop.id,
+      title: "Home since Tuesday",
+      startsAt: sailedStart,
+      endsAt: sailedEnd,
+      capacity: 10,
+      plannedDives: 2,
+    });
+    if (!sailed) throw new Error("failed to create sailed fixture");
+    await seatDiver(db, shop.id, sailed.id, "sailed");
+
+    // By trip id rather than by count: the seeded shop has a past of its own,
+    // and this window reaches back into it.
+    const past = await getStaffingView(
+      db,
+      shop.id,
+      new Date(sailedStart.getTime() - HOUR_MS),
+      new Date(sailedEnd.getTime() + HOUR_MS),
+    );
+    expect(past.gapTrips.map((gap) => gap.tripId)).not.toContain(sailed.id);
+
+    // The same departure, read half an hour after its scheduled return, is
+    // still work — the late-arrival buffer every "has it sailed" question in
+    // this repo carries, because trips run late.
+    const stillOut = await getStaffingView(
+      db,
+      shop.id,
+      new Date(sailedStart.getTime() - HOUR_MS),
+      new Date(sailedEnd.getTime() + HOUR_MS),
+      { now: new Date(sailedEnd.getTime() + 30 * 60 * 1000) },
+    );
+    expect(stillOut.gapTrips.find((gap) => gap.tripId === sailed.id)?.gap).toBe(
+      "uncrewed_departure",
+    );
+  });
+
+  /**
+   * A multi-day course is a run, not a point. `trips.starts_at`/`ends_at`
+   * bound the whole of it, so the week needs the meeting windows to know which
+   * days an instructor is committed to — without them a Thursday-to-Saturday
+   * class shows busy on Thursday and free for the two days it is being taught.
+   */
+  it("hands back a multi-day departure's meeting windows, not just its run", async () => {
+    const { db, shop } = await seededShopContext();
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!instructor) throw new Error("seeded instructor missing");
+    const day1 = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
+    const day2 = new Date(day1.getTime() + DAY_MS);
+    const run = await createTrip(db, {
+      shopId: shop.id,
+      title: "Two-evening specialty",
+      startsAt: day1,
+      endsAt: new Date(day2.getTime() + 4 * HOUR_MS),
+      capacity: 6,
+      plannedDives: 3,
+      scheduleDays: [
+        { dayNumber: 1, startsAt: day1, endsAt: new Date(day1.getTime() + 4 * HOUR_MS) },
+        { dayNumber: 2, startsAt: day2, endsAt: new Date(day2.getTime() + 4 * HOUR_MS) },
+      ],
+    });
+    if (!run) throw new Error("failed to create multi-day fixture");
+    expect(await setTripCrew(db, shop.id, run.id, [instructor.person.id])).toBe(true);
+
+    const view = await getStaffingView(
+      db,
+      shop.id,
+      new Date(day1.getTime() - HOUR_MS),
+      new Date(day2.getTime() + 5 * HOUR_MS),
+    );
+    const crewing = view.staff
+      .find((entry) => entry.person.id === instructor.person.id)
+      ?.crewingTrips.find((trip) => trip.tripId === run.id);
+    expect(crewing?.meetings.map((meeting) => meeting.startsAt)).toEqual([day1, day2]);
   });
 
   /**

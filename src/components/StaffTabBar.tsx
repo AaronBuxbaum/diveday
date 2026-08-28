@@ -53,7 +53,6 @@ export function StaffTabBar({
   gates,
   counts,
   labels,
-  closeOutLabel,
   navAriaLabel,
   badgeLabels,
   moreLabel,
@@ -64,8 +63,6 @@ export function StaffTabBar({
   gates: ShopNavGates;
   counts?: ShopNavCounts;
   labels: StaffDestinationLabels;
-  /** Compact dock word; the header/palette keep the full destination label. */
-  closeOutLabel: string;
   navAriaLabel: string;
   badgeLabels: Record<StaffDestinationBadge, string>;
   /** The sixth slot's word — same key the header's More menu wears. */
@@ -211,7 +208,7 @@ export function StaffTabBar({
                     390px is a locale bug to shorten in the bundle, not a
                     rendering strategy. es-ES's longest ("Buceadores") fits. */}
                   <span className="max-w-full truncate text-base font-medium leading-tight">
-                    {destination.id === "closeOut" ? closeOutLabel : labels[destination.id]}
+                    {labels[destination.id]}
                   </span>
                 </Link>
               </li>
@@ -245,8 +242,9 @@ export function StaffTabBar({
                 aria-controls={moreOpen ? sheetId : undefined}
                 // When the current page lives behind this door, say so in the
                 // tree, not just in color: the five tabs' aria-current="page"
-                // needs this counterpart or a screen reader on /close-out hears
-                // five non-current tabs and nothing current anywhere.
+                // needs this counterpart or a screen reader on a page behind
+                // this door hears four non-current tabs and nothing current
+                // anywhere.
                 aria-current={moreIsCurrent ? "true" : undefined}
                 // The stable hook the e2e specs open the sheet by, like the
                 // identity menu's `data-identity-menu`.

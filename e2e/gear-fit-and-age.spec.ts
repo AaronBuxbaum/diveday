@@ -120,7 +120,9 @@ test.describe("deck crew", () => {
     page,
   }) => {
     await goToDiver(page, DIVER_WITH_FIT);
-    const flaggedHeading = page.getByRole("heading", { name: "Flagged for hands-on fitting" });
+    // A `<p>` now, not a heading: the fallback is one line inside the gear
+    // group rather than a boxed panel with a heading of its own (slice 8b).
+    const flaggedHeading = page.getByText("Flagged for hands-on fitting", { exact: true });
     await expect(flaggedHeading).toBeVisible();
 
     // The form is still on the page for a captain — only its submit button is

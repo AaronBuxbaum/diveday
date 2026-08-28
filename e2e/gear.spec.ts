@@ -73,6 +73,79 @@ test.describe("staff", () => {
     await expect(page.getByText("In the shop — nothing reserved.")).toBeVisible();
   });
 
+  /**
+   * The register's own loop, after slice 9d (ADR 20260827-the-shops-shelves):
+   * the acts that used to live in a Returns panel above the fleet now ride the
+   * rows of the groups they were always about, and closing the last one out
+   * earns the register its one coral line.
+   *
+   * The two states come from `/api/test/seed-trouble-states?gearOut=1`, never
+   * from the demo seed: blue-mantis reserves against a departure five days
+   * out, so nothing on it is ever out or overdue.
+   */
+  test("closes an overdue unit and the last one out, from the register's own rows", async ({
+    page,
+    request,
+  }) => {
+    await request.post("/api/test/seed-trouble-states?gearOut=1");
+    await page.goto("/shop/blue-mantis/gear");
+    await expect(page.getByRole("heading", { level: 2, name: /^Overdue/ })).toBeVisible();
+
+    // The chase: BCD #2 is with a diver and its window lapsed two days ago.
+    await page.getByRole("button", { name: "Mark returned — BCD #2" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "the unit is home" })).toBeVisible();
+    // A group with nothing in it is not a group — never "Overdue — 0".
+    await expect(page.getByRole("heading", { level: 2, name: /^Overdue/ })).toHaveCount(0);
+
+    // The last one out, and the earned moment behind it (Clearwater ADR
+    // 20260827-clearwater-surface-language, decision 11's table).
+    await page.getByRole("button", { name: "Mark returned — Reg #1" }).click();
+    await expect(
+      page.getByRole("status").filter({ hasText: "every unit is back on the wall" }),
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: /^Out/ })).toHaveCount(0);
+  });
+
+  /**
+   * **The register's one fleet-wide reading** (ADR 20260827-the-shops-shelves,
+   * slice 9d as amended after review). The three groups say where a unit is;
+   * none of them says what the bench owes, so the service-due tile the slice
+   * retired came back as the band's own view rather than folding into a group
+   * — otherwise a 120-unit shop could only answer the question for the fifty
+   * units on the wall page in front of it.
+   *
+   * The demo fleet already holds both shapes: Reg #4 was pulled off the wall,
+   * and AL80-03's visual inspection is three weeks out — inside the month the
+   * register plans over and outside the six days Today raises, which is
+   * exactly the heads-up that would otherwise have gone missing.
+   */
+  test("answers what the bench owes across the whole fleet, not just the wall page", async ({
+    page,
+  }) => {
+    await page.goto("/shop/blue-mantis/gear");
+    const chip = page.getByRole("link", { name: "Service due (2)" });
+    await expect(chip).toBeVisible();
+    await chip.click();
+
+    // Stopped now leads; the clock still running follows it.
+    const rows = page.getByRole("listitem");
+    await expect(rows.filter({ hasText: "Reg #4" }).getByText("Needs service")).toBeVisible();
+    await expect(
+      rows.filter({ hasText: "AL80-03" }).getByText(/^Visual inspection due /),
+    ).toBeVisible();
+    // Its own view, not a narrowed register: no group headings over it — the
+    // active chip names it — and the units whose clocks are in date are out.
+    await expect(page.getByRole("heading", { level: 2, name: /^On the wall/ })).toHaveCount(0);
+    await expect(rows.filter({ hasText: "BCD #1" })).toHaveCount(0);
+
+    // A chip is a view of a real URL — it bookmarks and survives a reload.
+    await page.reload();
+    await expect(page.getByRole("link", { name: "Service due (2)" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+  });
+
   test("assigns a free unit on the wreck trip's prep page and releases it again", async ({
     page,
   }) => {
@@ -294,9 +367,11 @@ test.describe("staff", () => {
     await expect(page.getByText("Needs service").first()).toBeVisible();
 
     // Back on the register, the row wears the pulled state — and only the
-    // exceptional rows wear anything at all.
+    // exceptional rows wear anything at all. A ledger row rather than a table
+    // row: the register is one story in three groups now (ADR
+    // 20260827-the-shops-shelves), and a benched unit is still on the wall.
     await page.goto("/shop/blue-mantis/gear?kind=bcd");
-    const pulledRow = page.locator("tr", { hasText: "BCD #6" });
+    const pulledRow = page.getByRole("listitem").filter({ hasText: "BCD #6" });
     await expect(pulledRow.getByText("Needs service")).toBeVisible();
   });
 

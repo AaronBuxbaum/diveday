@@ -25,8 +25,6 @@ export type FieldGuideCatalogEntry = {
 };
 
 export type FieldGuideEditorCopy = {
-  legend: string;
-  description: string;
   searchLabel: string;
   searchPlaceholder: string;
   add: string;
@@ -135,15 +133,15 @@ export function FieldGuideEditor({
   }
 
   return (
-    <fieldset className="rounded-lg border border-border p-4">
-      <legend className="px-1 text-sm font-medium">{copy.legend}</legend>
-      <p className="mt-1 text-sm text-muted">{copy.description}</p>
-
+    // No box and no legend of its own: the picker is the body of the form's
+    // "Field guide" section, which carries the name and the sentence under it
+    // (ADR 20260827-the-shops-shelves, the long-form editor pattern).
+    <div>
       {/* The record the form posts. Always present, even when empty: clearing
           the last species has to be savable too. */}
       <input type="hidden" name="creatures" value={JSON.stringify(chosen)} />
 
-      <div className="mt-4 flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-end gap-3">
         <label className="min-w-56 flex-1 text-sm font-medium">
           {copy.searchLabel}
           <input
@@ -277,6 +275,6 @@ export function FieldGuideEditor({
           })}
         </ul>
       )}
-    </fieldset>
+    </div>
   );
 }

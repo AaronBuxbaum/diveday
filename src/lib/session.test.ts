@@ -221,10 +221,10 @@ describe("requireShopSurface", () => {
     const error = await refusal(() =>
       requireShopSurface(context.shop.slug, {
         allow: canPersonManageShopSettings,
-        refusal: { notice: "log-not-authorized", landing: ["close-out"] },
+        refusal: { notice: "gear-import-not-authorized", landing: ["gear"] },
       }),
     );
-    expect(error.message).toBe(`/shop/${context.shop.slug}/close-out?notice=log-not-authorized`);
+    expect(error.message).toBe(`/shop/${context.shop.slug}/gear?notice=gear-import-not-authorized`);
   });
 
   /**

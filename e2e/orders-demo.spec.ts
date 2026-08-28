@@ -1,10 +1,26 @@
+import type { Page } from "@playwright/test";
 import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
 
 /**
- * READ_ONLY holds here: every one of these reads the orders index, its filters and its
- * pager, or a refusal page. The Stripe-calling controls are asserted *disabled*, and
- * "Apply filters" is a GET form — a navigation, not a write.
+ * READ_ONLY holds here: every one of these reads the orders index, its toolbar and its
+ * pager, or a refusal page. The Stripe-calling controls are asserted *disabled*, and the
+ * toolbar is a GET form — a navigation, not a write.
  */
+
+/**
+ * Every row of the day ledger (ADR 20260827-clearwater-surface-language, slice
+ * 6f). Rows sit in a `<ul>` under each day's own `<h2>`, directly on the page
+ * background — there is no table here any more, and no date column either: the
+ * day header owns the date for every row beneath it.
+ */
+const ledgerRows = (page: Page) =>
+  page.locator('ul[aria-labelledby^="orders-day-"] > li').filter({ visible: true });
+
+/** Each day group's heading, in ledger order — newest day first. */
+const dayHeadings = (page: Page) => page.locator('h2[id^="orders-day-"]');
+
+/** The toolbar's count, which is where the whole filtered total is stated now. */
+const orderCount = (page: Page) => page.getByText(/^\d+ orders?$/);
 
 // The seeded demo carries a billing history whose orders have fabricated Stripe
 // ids (the demo never connects an account). The Stripe-calling controls —
@@ -25,24 +41,13 @@ test.describe("demo billing history", () => {
     // on file, reached the way a staffer reaches one: through the order.
     await page.goto("/shop/blue-mantis/divers");
     await page.getByRole("searchbox", { name: "Search divers" }).fill("Grace Halloran");
-    await page
-      .getByRole("row")
-      .filter({ hasText: "Grace Halloran" })
-      .getByRole("link")
-      .first()
-      .click();
+    await page.getByRole("link", { name: "Grace Halloran", exact: true }).click();
     await page.getByRole("heading", { level: 1, name: "Grace Halloran" }).waitFor();
     await expect(page.getByRole("button", { name: "Refund" })).toHaveCount(0);
 
     await page.goto("/shop/blue-mantis/orders");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
-    await page
-      .locator("tbody tr")
-      .filter({ visible: true })
-      .first()
-      .getByRole("link")
-      .first()
-      .click();
+    await ledgerRows(page).first().getByRole("link").first().click();
     await page.waitForURL(/\/orders\/[0-9a-f-]{36}/);
     const orderRefund = page.getByRole("button", { name: /Refund|Void|Refresh/ }).first();
     await expect(orderRefund).toBeDisabled();
@@ -53,16 +58,19 @@ test.describe("demo billing history", () => {
     tag: READ_ONLY,
   }, async ({ page }) => {
     // Arriving from the index (not from a diver) used to leave browser-back as
-    // the only exit, and the date the index column showed disappeared on the
-    // way in — on the one screen a refund argument turns on.
+    // the only exit, and the date the index showed disappeared on the way in —
+    // on the one screen a refund argument turns on.
     await page.goto("/shop/blue-mantis/orders");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
-    const firstRow = page.locator("tbody tr").filter({ visible: true }).first();
-    const rowDate = ((await firstRow.locator("td").nth(3).textContent()) ?? "").trim();
-    await firstRow.getByRole("link").first().click();
+    // The date is the *group's* now, not the row's, which is the whole point of
+    // the ledger — so this is where it has to be read from. Today's group wears
+    // it after a "Today · " prefix; every other day is the bare date.
+    const heading = ((await dayHeadings(page).first().textContent()) ?? "").trim();
+    const rowDate = (heading.split("·").pop() ?? "").trim();
+    await ledgerRows(page).first().getByRole("link").first().click();
     await page.waitForURL(/\/orders\/[0-9a-f-]{36}/);
 
-    // The same day the row showed, plus who raised it.
+    // The same day the group showed, plus who raised it.
     await expect(page.getByText(`Raised ${rowDate}`)).toBeVisible();
     await expect(page.getByText(/Raised .+ · by .+/)).toBeVisible();
 
@@ -84,16 +92,18 @@ test.describe("demo billing history", () => {
     await page.goto("/shop/blue-mantis/orders");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
 
-    const rows = page.locator("table").first().locator("tbody tr").filter({ visible: true });
+    const rows = ledgerRows(page);
     await expect(rows.first()).toBeVisible();
     const firstPageCount = await rows.count();
     expect(firstPageCount).toBeLessThanOrEqual(50);
-    // The diver link specifically. The whole row — and even its first cell —
-    // carries a mobile-only trip line whose newlines `toHaveText` normalizes
-    // away, so comparing either fails on formatting rather than on content.
-    const firstDiver = (await rows.first().getByRole("link").first().textContent()) ?? "";
+    // The row's own door, by destination rather than by text: a ledger row's
+    // link is the stretched overlay, whose only text is its accessible name,
+    // and an order id is unique where a diver-and-amount label need not be.
+    const firstOrder = rows.first().getByRole("link").first();
+    const firstHref = await firstOrder.getAttribute("href");
 
-    // The pager states the whole set, not just what is on screen.
+    // The toolbar states the whole set, not just what is on screen.
+    await expect(orderCount(page)).toBeVisible();
     const pager = page.getByRole("navigation", { name: "Pages" });
     await expect(pager).toBeVisible();
     await expect(pager).toContainText(/Page 1 of \d+/);
@@ -102,14 +112,14 @@ test.describe("demo billing history", () => {
     await page.waitForURL(/[?&]page=2/);
     await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
     // Different orders, not the same screen re-rendered.
-    await expect(rows.first().getByRole("link").first()).not.toHaveText(firstDiver);
+    await expect(rows.first().getByRole("link").first()).not.toHaveAttribute("href", firstHref!);
 
     // And back, without losing the pager.
     await page
       .getByRole("navigation", { name: "Pages" })
       .getByRole("link", { name: "Previous" })
       .click();
-    await expect(rows.first().getByRole("link").first()).toHaveText(firstDiver);
+    await expect(rows.first().getByRole("link").first()).toHaveAttribute("href", firstHref!);
   });
 
   /**
@@ -122,54 +132,71 @@ test.describe("demo billing history", () => {
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/orders");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+    // Apply-on-change means the select is the submit, so nothing may be
+    // selected until the handler is live — the toolbar says when it is.
+    await page.locator('#orders-search[data-hydrated="true"]').waitFor();
     const range = page.getByLabel("Date range");
     await expect(range).toHaveValue("recent");
 
-    const windowed = await page
-      .locator("table")
-      .first()
-      .locator("tbody tr")
-      .filter({ visible: true })
-      .count();
-    const windowedTotal = await page.getByRole("navigation", { name: "Pages" }).textContent();
+    const windowed = await ledgerRows(page).count();
+    const windowedTotal = await orderCount(page).textContent();
 
     await range.selectOption("all");
-    await page.getByRole("button", { name: "Apply filters" }).click();
     await expect(page).toHaveURL(/range=all/);
     await expect(page.getByLabel("Date range")).toHaveValue("all");
     // A strictly larger set — otherwise the window was never doing anything,
     // and this test would pass on a page that silently ignores `?range=`.
-    const allTotal = await page.getByRole("navigation", { name: "Pages" }).textContent();
+    const allTotal = await orderCount(page).textContent();
     expect(allTotal).not.toBe(windowedTotal);
-    expect(
-      await page.locator("table").first().locator("tbody tr").filter({ visible: true }).count(),
-    ).toBeGreaterThanOrEqual(windowed);
+    expect(await ledgerRows(page).count()).toBeGreaterThanOrEqual(windowed);
 
     // And back to the safe default, so the range control is not one-way.
     await page.getByLabel("Date range").selectOption("recent");
-    await page.getByRole("button", { name: "Apply filters" }).click();
     await expect(page).toHaveURL(/range=recent/);
     await expect(page.getByLabel("Date range")).toHaveValue("recent");
   });
 
-  test("status badges align with the order row", { tag: READ_ONLY }, async ({ page }) => {
+  /**
+   * The rule the whole recomposition turns on (ADR
+   * 20260827-clearwater-surface-language, decision 7): the day header owns the
+   * date, so no row under it may print one. The unit tests pin the view model;
+   * this pins the rendered page, where a stray date column would actually show.
+   */
+  test("no row repeats its day group's date", { tag: READ_ONLY }, async ({ page }) => {
+    await page.goto("/shop/blue-mantis/orders");
+    await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+    await expect(ledgerRows(page).first()).toBeVisible();
+
+    const heading = ((await dayHeadings(page).first().textContent()) ?? "").trim();
+    const date = (heading.split("·").pop() ?? "").trim();
+    expect(date).not.toBe("");
+
+    await expect(dayHeadings(page).first()).toContainText(date);
+    const firstDayRows = page.locator('ul[aria-labelledby^="orders-day-"]').first().locator("> li");
+    // The loop asserts an absence, so an empty day group would pass it without
+    // reading a single row.
+    await expect(firstDayRows.filter({ visible: true })).not.toHaveCount(0);
+    for (const row of await firstDayRows.filter({ visible: true }).all()) {
+      await expect(row).not.toContainText(date);
+    }
+  });
+
+  test("an exceptional status wears the row's one pill", { tag: READ_ONLY }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/orders?status=open&range=all");
     await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
 
-    const row = page
-      .locator("table")
-      .first()
-      .locator("tbody tr")
-      .filter({ visible: true })
-      // The index reads the canonical status word, not the order *detail*
+    const row = ledgerRows(page)
+      // The ledger reads the canonical status word, not the order *detail*
       // page's "Open — awaiting payment": that gloss is a sentence for a page
-      // with room for one, and inside a fifth-of-the-table cell it wrapped
-      // two lines deep inside a rounded pill. `exact` because "Open" is a
-      // substring of half the words on this page.
+      // with room for one, and on a row it is three words wrapping inside a
+      // pill. `exact` because "Open" is a substring of half the words here.
       .filter({ has: page.getByText("Open", { exact: true }) })
       .first();
     await expect(row).toBeVisible();
-    await expect(row.locator("td").nth(2)).toHaveClass(/align-middle/);
+    // `Badge` is the page's only pill (decision 3), so one pill on the row is
+    // the whole assertion — and its word is beside the amount, not in a
+    // column of its own that every settled row leaves blank.
+    await expect(row.locator("span.rounded-full")).toHaveCount(1);
   });
 
   /**
@@ -183,20 +210,15 @@ test.describe("demo billing history", () => {
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/divers");
     await page.getByRole("searchbox", { name: "Search divers" }).fill("Grace Halloran");
-    await page
-      .getByRole("row")
-      .filter({ hasText: "Grace Halloran" })
-      .getByRole("link")
-      .first()
-      .click();
+    await page.getByRole("link", { name: "Grace Halloran", exact: true }).click();
     await page.getByRole("heading", { level: 1, name: "Grace Halloran" }).waitFor();
     const personId = new URL(page.url()).pathname.split("/").pop() ?? "";
 
     await page.goto(`/shop/blue-mantis/orders?personId=${personId}&range=all`);
     await expect(page.getByText("Showing orders for Grace Halloran.")).toBeVisible();
 
+    await page.locator('#orders-search[data-hydrated="true"]').waitFor();
     await page.getByLabel("Status").selectOption("void");
-    await page.getByRole("button", { name: "Apply filters" }).click();
     await expect(page).toHaveURL(new RegExp(`personId=${personId}`));
 
     // Grace has no voided orders, so this is also the empty-result case: the
@@ -223,13 +245,11 @@ test.describe("demo billing history", () => {
     await expect(page).toHaveURL(/page=2/);
     // Every row on page 2, not "every row that happened to match" — iterating
     // the matched badges alone passes trivially when the match set is empty.
-    // A settled order renders an empty status cell (only exceptional states
-    // carry a badge), so "every row is paid" reads as "no row carries one".
-    const rows = page.locator("table").first().locator("tbody tr").filter({ visible: true });
+    // A settled order carries no pill at all (only exceptional states do), so
+    // "every row is paid" reads as "no row wears one".
+    const rows = ledgerRows(page);
     await expect(rows.first()).toBeVisible();
-    for (const row of await rows.all()) {
-      await expect(row.locator("td").nth(2)).toHaveText("");
-    }
+    await expect(rows.locator("span.rounded-full")).toHaveCount(0);
   });
 });
 
@@ -276,12 +296,7 @@ test.describe("no connected payment account", () => {
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/divers");
     await page.getByRole("searchbox", { name: "Search divers" }).fill("Grace Halloran");
-    await page
-      .getByRole("row")
-      .filter({ hasText: "Grace Halloran" })
-      .getByRole("link")
-      .first()
-      .click();
+    await page.getByRole("link", { name: "Grace Halloran", exact: true }).click();
     await page.getByRole("heading", { level: 1, name: "Grace Halloran" }).waitFor();
     const personId = new URL(page.url()).pathname.split("/").pop() ?? "";
     expect(personId).not.toBe("");

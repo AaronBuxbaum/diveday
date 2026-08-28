@@ -10,7 +10,7 @@ import { at } from "./seed-clock";
 
 /**
  * What the shop's signed evidence actually looks like — the Signatures tab's
- * data (`/shop/[shopSlug]/waivers/signatures`).
+ * data (`/shop/[shopSlug]/waivers`).
  *
  * Two things were wrong with the evidence the other scenarios leave behind, and
  * both of them taught the reader something false:

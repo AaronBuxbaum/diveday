@@ -1,4 +1,18 @@
-import { and, asc, count, desc, eq, gte, ilike, inArray, isNotNull, lt } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  lt,
+  or,
+  sql,
+} from "drizzle-orm";
+import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { majorToMinor } from "@/lib/money";
 import {
@@ -8,10 +22,10 @@ import {
   isUsableInvoiceCustomerAddress,
 } from "@/lib/payments/invoicing";
 import { canPersonManageOrders } from "./authz";
-import type { AppDb, DbExecutor } from "./client";
+import { type AppDb, type DbExecutor, queryAll } from "./client";
 import { grantPackageEntitlementsForPaidOrder } from "./dive-packages";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
-import { offsetPage, PAGE_SIZE } from "./paging";
+import { type OffsetPage, offsetPage, PAGE_SIZE } from "./paging";
 import {
   idempotencyKeyFor,
   recordPaymentOperationStripeObject,
@@ -401,8 +415,20 @@ export type ShopOrderFilter = {
   status?: OrderStatus;
   /** Exact match — the roster/diver-record "view orders" links pass this. */
   personId?: string;
-  /** Substring match against the diver's name — the index page's own filter box. */
+  /** Substring match against the diver's name — the imported-history filter, and this list's tests. */
   personQuery?: string;
+  /**
+   * **The ledger toolbar's one search box** (ADR
+   * 20260827-clearwater-surface-language, decision 7): a substring matched
+   * against everything a ledger row actually *shows* — the diver's name, and
+   * the departure title or order description the muted middle column renders.
+   *
+   * Deliberately wider than `personQuery`, which the five-control filter card
+   * offered under a "Diver" caption. One box replacing five controls has to
+   * find what the reader is looking at; a search that silently ignored the
+   * trip title a row displays would be a box that reads as broken.
+   */
+  q?: string;
   /**
    * Orders raised against a booking on one departure — the trip pulse's
    * awaiting-payment fact and the index link it points at.
@@ -433,6 +459,16 @@ function shopOrderWhere(shopId: string, filter: ShopOrderFilter) {
   if (filter.status) conditions.push(eq(orders.status, filter.status));
   if (filter.personId) conditions.push(eq(orders.personId, filter.personId));
   if (filter.personQuery) conditions.push(ilike(people.fullName, `%${filter.personQuery}%`));
+  if (filter.q) {
+    // `or(...)` is only `undefined` for an empty argument list, which this is
+    // not — the non-null assertion is the shape drizzle's own types force here.
+    const matches = or(
+      ilike(people.fullName, `%${filter.q}%`),
+      ilike(trips.title, `%${filter.q}%`),
+      ilike(orders.description, `%${filter.q}%`),
+    );
+    if (matches) conditions.push(matches);
+  }
   if (filter.tripId) conditions.push(eq(bookings.tripId, filter.tripId));
   if (filter.from) conditions.push(gte(orders.createdAt, filter.from));
   if (filter.to) conditions.push(lt(orders.createdAt, filter.to));
@@ -489,6 +525,10 @@ export async function listShopOrders(
         // add one row per order — it never inflates the count.
         .innerJoin(people, eq(people.id, orders.personId))
         .leftJoin(bookings, eq(bookings.id, orders.bookingId))
+        // And the departure, because `?q=` matches its title: a join the row
+        // query makes and the count does not is precisely the pager promising
+        // pages that render nothing.
+        .leftJoin(trips, eq(trips.id, bookings.tripId))
         .where(where);
       return counted?.total ?? 0;
     },
@@ -515,6 +555,153 @@ export async function listShopOrders(
     pageSize: paged.pageSize,
     pageCount: paged.pageCount,
   };
+}
+
+/**
+ * One joined row of the order index — an order, the diver it bills, and the
+ * departure it was raised against, if any.
+ *
+ * Derived from `listShopOrders` rather than written out as
+ * `{ order: Order; person: Person; trip: Trip | null }`, so the two can never
+ * drift: the day ledger below re-slices exactly the rows that query returns,
+ * and a column added to the select is a compile error at every consumer rather
+ * than a field the ledger silently cannot see.
+ */
+export type ShopOrderListRow = Awaited<ReturnType<typeof listShopOrders>>["rows"][number];
+
+/**
+ * One shop-local day of the order ledger: the rows that landed on this page,
+ * and the two facts the day's header owns for all of them.
+ */
+export type OrdersDayGroup = {
+  /** The shop-local calendar day. */
+  day: CalendarDate;
+  /** This day's rows *on this page*, newest first. */
+  orders: ShopOrderListRow[];
+  /** Every order this day holds under the active filter — not just this page's. */
+  count: number;
+  /**
+   * What the day is worth under the active filter, in minor units — the whole
+   * day's, never the page slice's.
+   */
+  subtotalCents: number;
+  /** This day's rows began on the previous page, so its header is a restatement. */
+  continued: boolean;
+};
+
+/**
+ * **The order index, grouped into the days its rows belong to** — ADR
+ * 20260827-clearwater-surface-language, decision 7. The day owns the date and
+ * the day's count and subtotal; a row is a diver, a departure, and an amount,
+ * and never repeats what its group already said.
+ *
+ * Three things are worth knowing about the arithmetic, because they are what
+ * make a group header honest:
+ *
+ * - **The page still slices rows, not days.** `listShopOrders` is unchanged
+ *   underneath, so "Page 3 of 8" counts orders exactly as it always did and
+ *   every existing deep link still lands where it did. Groups are how this
+ *   page's rows are *drawn*, not a second pagination unit.
+ * - **A day's count and subtotal cover the whole day**, computed by one
+ *   aggregate over the same `shopOrderWhere` and the same joins as the rows —
+ *   the pager-scope rule of ADR 20260803-one-pagination-model, applied to a
+ *   subtotal instead of a total. A day split by a page boundary therefore
+ *   states the same subtotal on both pages, and the second one says
+ *   `continued` so a reader is never told the same money twice as if it were
+ *   new.
+ * - **The subtotal is the money, not the sum of the printed amounts.** A void
+ *   order contributes nothing and a refunded one contributes its net, because
+ *   the question a shop asks a day's foot is "what came in". A row still
+ *   prints the order's own total — the exceptional status beside it is what
+ *   says why the column and the subtotal disagree, and the order record is
+ *   where the split is spelled out. Revenue proper is the monthly report's,
+ *   not this ledger's.
+ *
+ * The days are sliced out of the aggregate by cumulative count rather than by
+ * re-deriving each row's local day in JavaScript: the aggregate and the rows
+ * then cannot disagree about where a day starts, however Postgres and the
+ * runtime each spell the shop's zone.
+ */
+export async function pagedOrdersByDay(
+  db: DbExecutor,
+  shopId: string,
+  /** The shop's own zone — the day a row belongs to is the day the shop was in. */
+  timeZone: string,
+  filter: ShopOrderFilter = {},
+  page: { page?: number; pageSize?: number } = {},
+): Promise<{ groups: OrdersDayGroup[]; page: OffsetPage<ShopOrderListRow> }> {
+  // `::text` on the bound zone, not decoration: `AT TIME ZONE` has both a
+  // `text` and an `interval` overload, and an untyped parameter leaves Postgres
+  // to pick between them. The one place this expression is written is here, and
+  // it is re-emitted verbatim into the `group by` and the `order by` so all
+  // three agree by construction.
+  const localDay = sql<string>`to_char(${orders.createdAt} at time zone ${timeZone}::text, 'YYYY-MM-DD')`;
+  const [paged, dayTotals] = await queryAll(db, [
+    () => listShopOrders(db, shopId, filter, page),
+    () =>
+      db
+        .select({
+          day: localDay,
+          count: count(),
+          // `status = 'void'` contributes 0; everything else contributes what is
+          // left after refunds. `coalesce` because an empty group sums to null.
+          subtotalCents: sql<
+            number | string
+          >`coalesce(sum(case when ${orders.status} = 'void' then 0 else ${orders.totalCents} - ${orders.refundedCents} end), 0)`,
+        })
+        .from(orders)
+        .innerJoin(people, eq(people.id, orders.personId))
+        .leftJoin(bookings, eq(bookings.id, orders.bookingId))
+        .leftJoin(trips, eq(trips.id, bookings.tripId))
+        .where(shopOrderWhere(shopId, filter))
+        .groupBy(localDay)
+        .orderBy(desc(localDay)),
+  ]);
+
+  const offset = (paged.page - 1) * paged.pageSize;
+  const end = offset + paged.rows.length;
+  const groups: OrdersDayGroup[] = [];
+  let taken = 0;
+  let cursor = 0;
+  for (const day of dayTotals) {
+    const dayCount = Number(day.count);
+    const start = cursor;
+    const stop = cursor + dayCount;
+    cursor = stop;
+    if (stop <= offset) continue;
+    if (start >= end) break;
+    const slice = Math.min(stop, end) - Math.max(start, offset);
+    groups.push({
+      day: day.day,
+      orders: paged.rows.slice(taken, taken + slice),
+      count: dayCount,
+      subtotalCents: Number(day.subtotalCents),
+      continued: start < offset,
+    });
+    taken += slice;
+  }
+  // Only reachable if a row was written between the two queries above, which
+  // would shift every day's count under the slice arithmetic. The leftover
+  // rows are still this page's rows and still have to render, so they take the
+  // day they were created on and a subtotal covering only themselves — a
+  // momentary undercount beats a page that silently drops orders.
+  if (taken < paged.rows.length) {
+    const rest = paged.rows.slice(taken);
+    const day = calendarDateInTimezone(rest[0]?.order.createdAt ?? nowDate(), timeZone);
+    groups.push({
+      day,
+      orders: rest,
+      count: rest.length,
+      subtotalCents: rest.reduce(
+        (sum, row) =>
+          row.order.status === "void" ? sum : sum + row.order.totalCents - row.order.refundedCents,
+        0,
+      ),
+      continued: false,
+    });
+  }
+
+  return { groups, page: paged };
 }
 
 /**

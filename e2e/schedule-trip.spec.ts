@@ -201,6 +201,10 @@ test("staff moves a departure to a different boat after it is on the board", asy
   // The seeded shop runs two hulls; pick whichever is not on the departure now,
   // so the assertion is about the change rather than about the seed.
   const before = await boat.inputValue();
+  // Two hulls seeded, so the picker has options — asserted rather than assumed,
+  // because an empty list would leave `other` empty and fail eight lines later
+  // as "no other boat" rather than as "the select never rendered".
+  await expect(boat.locator("option")).not.toHaveCount(0);
   const options = await boat.locator("option").all();
   const other = [];
   for (const option of options) {

@@ -1,11 +1,4 @@
 {
-  "closeOut": {
-    "heading": "El último barco ya está en puerto",
-    "body": "Todas las salidas de hoy han vuelto al muelle. Un repaso en el cierre del día — cómo terminó cada barco, qué sigue abierto y con qué abre mañana — y a casa.",
-    "headingBoatStillOut": "El cierre del día ya está abierto",
-    "bodyBoatStillOut": "Todavía no han vuelto todos los barcos — puedes anotar ya las salidas que están en puerto.",
-    "action": "Cerrar el día"
-  },
   "createdNotice": {
     "single": "“{title}” ya está en el calendario. 🤙",
     "series": "“{title}” ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}. 🤙"
@@ -77,7 +70,7 @@
     }
   },
   "firstRun": {
-    "heading": "Prepara tu centro",
+    "groupLabel": "Primera mañana",
     "subtitle": "{count, plural, one {# paso} other {# pasos}} y los buceadores podrán reservar.",
     "progress": "{done} de {total, plural, one {# completado} other {# completados}}",
     "contactTitle": "Añade tus datos de contacto",
@@ -137,6 +130,14 @@
     "aboardReasonCertification": "falta una certificación que esta inmersión pide y que no hemos visto.",
     "aboardReasonUnknown": "no hay nada en la ficha que lo autorice. Sin exención firmada no hay declaración médica.",
     "aboardReasonPayment": "queda un pago pendiente. Está en la lista de abajo.",
-    "crewRollCallOpen": "Todos los buceadores están a bordo: falta pasar lista a la tripulación."
+    "crewRollCallOpen": "Todos los buceadores están a bordo: falta pasar lista a la tripulación.",
+    "allHome": "Todos los barcos están en puerto: {out} salieron, {back} volvieron.",
+    "firstBoatHome": "Tu primer barco está en puerto: {out} salieron, {back} volvieron.",
+    "firstBooking": "Tu primera reserva",
+    "close": {
+      "back": "{back} de {booked} de vuelta",
+      "backBy": "{back} de {booked} de vuelta a las {time}",
+      "closedBy": "lista cerrada por {name}"
+    }
   }
 }

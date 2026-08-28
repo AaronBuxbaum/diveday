@@ -57,7 +57,7 @@ export default async function ResetPasswordPage({
   if (!check) {
     return (
       <EntryDone
-        glyph="⏳"
+        glyph="expired"
         title={t("account.resetPassword.unavailableTitle")}
         text={t("account.resetPassword.unavailableText")}
         action={

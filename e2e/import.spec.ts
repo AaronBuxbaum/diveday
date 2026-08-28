@@ -64,13 +64,17 @@ test.describe("contact import", () => {
     ).toBeVisible();
     await expect(page.getByText(/1 waiver imported as accepted/)).toBeVisible();
 
-    // The person is now on the roster, with the soft "to confirm" nudge. The
-    // roster renders each diver twice (a mobile list, a desktop table); scope
-    // to the desktop row so the assertion doesn't land on the CSS-hidden copy.
-    await page.goto("/shop/blue-mantis/divers?q=imported.ingrid@example.com");
-    const row = page.getByRole("row").filter({ hasText: "Imported Ingrid" });
-    await expect(row).toBeVisible();
-    await expect(row.getByText(/to confirm/)).toBeVisible();
+    // The person is now on the roster — once, as one row, which is the door to
+    // their record (ADR 20260827-people-not-lists). The soft "to confirm" nudge
+    // no longer rides the row: the roster badges only exceptions, and the whole
+    // content of the "Needs attention" view is the same evidence, so asking the
+    // view for her is the stronger assertion — it runs through the WHERE clause
+    // rather than through a count the row rendered.
+    await page.goto(
+      "/shop/blue-mantis/divers?filter=needs_attention&q=imported.ingrid@example.com",
+    );
+    const row = page.getByRole("listitem").filter({ hasText: "Imported Ingrid" });
+    await expect(row).toHaveCount(1);
 
     // On the diver's record, the imported cards show verified + imported and a
     // one-tap Confirm card (a level card and a nitrox card); confirming one
@@ -343,8 +347,12 @@ test.describe("contact import — payment and receipt history", () => {
     await page.goto("/shop/blue-mantis/orders?from=2026-03-01&to=2026-03-31&range=custom");
     const history = page.getByRole("region", { name: "Imported payment history" });
     await expect(history).toBeVisible();
-    await expect(history.getByText("Source Sloane").first()).toBeVisible();
+    // History from another system is one disclosure row at the foot of the day
+    // ledger now, not a second standing table (ADR
+    // 20260827-clearwater-surface-language, slice 6f) — so reading it is a tap.
     await expect(history.getByText("Unverified import").first()).toBeVisible();
+    await history.locator("summary").click();
+    await expect(history.getByText("Source Sloane").first()).toBeVisible();
     await expect(history.getByText("Source payment")).toBeVisible();
     await expect(history.getByText("Source refund")).toBeVisible();
     await expect(history.getByText("Stripe reference: pi_legacy_1001")).toBeVisible();

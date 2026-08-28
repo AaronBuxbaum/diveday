@@ -12,6 +12,7 @@ import {
   lte,
   ne,
   notExists,
+  notInArray,
   or,
   type SQL,
   sql,
@@ -25,6 +26,8 @@ import {
   type GearServiceClock,
   type GearServiceKind,
   type GearServiceState,
+  gearRegisterGroup,
+  gearServiceIsDue,
   gearServiceState,
   pickDisplayReservation,
   type ReservationWindow,
@@ -35,7 +38,7 @@ import {
   violatesExclusionConstraint,
   violatesUniqueIndex,
 } from "./client";
-import { offsetPage } from "./paging";
+import { type OffsetPage, offsetPage } from "./paging";
 import {
   bookings,
   type GearItem,
@@ -302,21 +305,6 @@ export async function restoreGearItem(
     }
     throw error;
   }
-}
-
-/** Units physically out the door right now — checked out and not yet home. */
-export async function countCheckedOutGear(db: AppDb, shopId: string): Promise<number> {
-  const [row] = await db
-    .select({ value: count() })
-    .from(gearReservations)
-    .where(
-      and(
-        eq(gearReservations.shopId, shopId),
-        isNotNull(gearReservations.checkedOutAt),
-        isNull(gearReservations.returnedAt),
-      ),
-    );
-  return row?.value ?? 0;
 }
 
 /** Presence is the register's on-switch: zero rows means no gear UI anywhere. */
@@ -921,6 +909,15 @@ export type GearRowReservation = {
   returnedAt: Date | null;
   personName: string;
   tripTitle: string | null;
+  /**
+   * When the departure this reservation rides on gets back — the clock time an
+   * Out row shows on the day its window closes ("due back today 4:00 PM"), and
+   * null for a reservation with no trip behind it, which falls back to date
+   * words (ADR 20260827-the-shops-shelves, slice 9d). It is the trip's raw
+   * `endsAt`: the standing one-hour late-arrival buffer belongs to *deciding*
+   * whether something is overdue, never to the time printed on the row.
+   */
+  tripEndsAt: Date | null;
 };
 
 export type GearRegisterRow = {
@@ -938,12 +935,26 @@ export type GearRegisterRow = {
 export async function listGearItems(
   db: AppDb,
   shopId: string,
-  options: { todayLocal: CalendarDate; kind?: GearItemKind; page?: number; pageSize?: number },
+  options: {
+    todayLocal: CalendarDate;
+    kind?: GearItemKind;
+    page?: number;
+    pageSize?: number;
+    /**
+     * Units already rendered in full above this page — the register's Out and
+     * Overdue groups (see {@link gearRegisterGroups}). Excluded from both the
+     * rows and the count, so "Page 2 of 3" counts what this list actually
+     * holds (ADR 20260803-one-pagination-model).
+     */
+    excludeItemIds?: readonly string[];
+  },
 ) {
+  const excluded = options.excludeItemIds ?? [];
   const filter = and(
     eq(gearItems.shopId, shopId),
     liveGearItem(),
     options.kind ? eq(gearItems.kind, options.kind) : undefined,
+    excluded.length > 0 ? notInArray(gearItems.id, [...excluded]) : undefined,
   );
   const pageSize = options.pageSize ?? 50;
 
@@ -964,18 +975,193 @@ export async function listGearItems(
         .limit(limit),
   });
 
-  const itemIds = page.rows.map((item) => item.id);
+  return { ...page, rows: await withRegisterFacts(db, shopId, page.rows, options.todayLocal) };
+}
+
+/**
+ * The service clock and the open reservation each unit's row talks about —
+ * two round trips for a whole list rather than two per row.
+ */
+async function withRegisterFacts(
+  db: AppDb,
+  shopId: string,
+  items: readonly GearItem[],
+  todayLocal: CalendarDate,
+): Promise<GearRegisterRow[]> {
+  const itemIds = items.map((item) => item.id);
   const [clocksByItem, openReservations] = await Promise.all([
     latestServiceClocks(db, shopId, itemIds),
     listOpenReservations(db, shopId, itemIds),
   ]);
-
-  const rows: GearRegisterRow[] = page.rows.map((item) => ({
+  return items.map((item) => ({
     item,
-    serviceState: gearServiceState(clocksByItem.get(item.id) ?? [], options.todayLocal),
-    reservation: pickDisplayReservation(openReservations.get(item.id) ?? [], options.todayLocal),
+    serviceState: gearServiceState(clocksByItem.get(item.id) ?? [], todayLocal),
+    reservation: pickDisplayReservation(openReservations.get(item.id) ?? [], todayLocal),
   }));
-  return { ...page, rows };
+}
+
+/**
+ * **The register as three groups** — ADR 20260827-the-shops-shelves, slice 9d.
+ *
+ * Out and Overdue always render complete. They are bounded by the shop's live
+ * reservations rather than by its fleet size, and a register that hides an
+ * overdue unit on page 3 is lying about the one thing it exists to say. Only
+ * the wall pages, through the reader above and the Pager the rest of the app
+ * wears.
+ *
+ * The SQL predicate below and {@link gearRegisterGroup} agree by construction:
+ * a unit has an open window that has already begun exactly when the
+ * reservation its row talks about is out or overdue. `pickDisplayReservation`
+ * prefers a lapsed window and then the one covering today, so a unit holding
+ * both a begun window and a later one can never be filed on the wall — which
+ * is what keeps every unit in exactly one group.
+ */
+export type GearRegisterGroups = {
+  /** With a diver, or waiting on the desk to hand it over. Complete. */
+  out: GearRegisterRow[];
+  /** A lapsed window nobody has closed. Complete. */
+  overdue: GearRegisterRow[];
+  /** Everything else — one page of it, with its own count. */
+  onWall: OffsetPage<GearRegisterRow>;
+};
+
+export async function gearRegisterGroups(
+  db: AppDb,
+  shopId: string,
+  options: { todayLocal: CalendarDate; kind?: GearItemKind; page?: number; pageSize?: number },
+): Promise<GearRegisterGroups> {
+  const claimed = await db
+    .select({ id: gearItems.id })
+    .from(gearReservations)
+    .innerJoin(gearItems, eq(gearItems.id, gearReservations.gearItemId))
+    .where(
+      and(
+        eq(gearReservations.shopId, shopId),
+        isNull(gearReservations.returnedAt),
+        lte(gearReservations.reservedFrom, options.todayLocal),
+        liveGearItem(),
+      ),
+    );
+  // One unit can hold several open windows; the register talks about it once.
+  const claimedIds = [...new Set(claimed.map((row) => row.id))];
+
+  const [claimedRows, onWall] = await Promise.all([
+    claimedIds.length === 0
+      ? Promise.resolve<GearRegisterRow[]>([])
+      : listClaimedGearRows(db, shopId, claimedIds, options),
+    listGearItems(db, shopId, { ...options, excludeItemIds: claimedIds }),
+  ]);
+
+  const out: GearRegisterRow[] = [];
+  const overdue: GearRegisterRow[] = [];
+  for (const row of claimedRows) {
+    (gearRegisterGroup(row.reservation, options.todayLocal) === "overdue" ? overdue : out).push(
+      row,
+    );
+  }
+  return { out, overdue, onWall };
+}
+
+/** The claimed units in full, in the register's own kind-then-label order. */
+async function listClaimedGearRows(
+  db: AppDb,
+  shopId: string,
+  itemIds: readonly string[],
+  options: { todayLocal: CalendarDate; kind?: GearItemKind },
+): Promise<GearRegisterRow[]> {
+  const items = await db
+    .select()
+    .from(gearItems)
+    .where(
+      and(
+        eq(gearItems.shopId, shopId),
+        liveGearItem(),
+        inArray(gearItems.id, [...itemIds]),
+        // The kind chips narrow every group, not just the wall.
+        options.kind ? eq(gearItems.kind, options.kind) : undefined,
+      ),
+    )
+    .orderBy(asc(gearItems.kind), asc(gearItems.label));
+  return withRegisterFacts(db, shopId, items, options.todayLocal);
+}
+
+/**
+ * **The fleet-wide answer to "what wants the bench?"** — every live unit the
+ * register would say a service sentence about, soonest deadline first,
+ * wherever the unit currently is.
+ *
+ * This is the one reading on the register that no group owns. Out, Overdue and
+ * On the wall each fold a fact the retired stat tiles used to duplicate; the
+ * service tile duplicated nothing, and deleting it with the other two would
+ * have left the register able to answer "what is due for service?" only for
+ * the fifty units on the current wall page — while the page's own description
+ * still promised the answer. Today's queue keeps the urgent half (six days,
+ * `src/db/today.ts`); this keeps the month, which is where a tank's visual
+ * inspection and hydro — clocks a fill station enforces — are caught before
+ * they strand a boat.
+ *
+ * Fleet-wide and unpaged on purpose. It is bounded by the work rather than by
+ * the fleet, exactly like {@link gearRegisterGroups}' out and overdue lists,
+ * and a service run hidden on page 3 is the failure this reader exists to
+ * undo. It ignores the kind chips for the same reason the deleted list does:
+ * it is its own view of the register, and the chip that opens it states the
+ * whole count it will show.
+ */
+export async function listGearServiceDueRows(
+  db: AppDb,
+  shopId: string,
+  options: { todayLocal: CalendarDate },
+): Promise<GearRegisterRow[]> {
+  const items = await db
+    .select()
+    .from(gearItems)
+    .where(and(eq(gearItems.shopId, shopId), liveGearItem()))
+    .orderBy(asc(gearItems.kind), asc(gearItems.label));
+  if (items.length === 0) return [];
+
+  // Clocks over the whole fleet, because the question is a fleet question —
+  // but reservations only for the handful that came back due. The register
+  // runs this on every request to state the chip's count, and reading every
+  // open window to decide a number that does not depend on one would be a
+  // query the page pays for and never uses.
+  const clocksByItem = await latestServiceClocks(
+    db,
+    shopId,
+    items.map((item) => item.id),
+  );
+  const due = items
+    .map((item) => ({
+      item,
+      serviceState: gearServiceState(clocksByItem.get(item.id) ?? [], options.todayLocal),
+    }))
+    .filter((row) => gearServiceIsDue(row.item, row.serviceState));
+  if (due.length === 0) return [];
+
+  const openReservations = await listOpenReservations(
+    db,
+    shopId,
+    due.map((row) => row.item.id),
+  );
+  return due
+    .map((row) => ({
+      ...row,
+      reservation: pickDisplayReservation(
+        openReservations.get(row.item.id) ?? [],
+        options.todayLocal,
+      ),
+    }))
+    .sort((a, b) => dueKey(a).localeCompare(dueKey(b)) || a.item.label.localeCompare(b.item.label));
+}
+
+/**
+ * A row's place in the queue, as a sortable key. A unit already off the wall
+ * sorts first whatever its clocks say — it is stopped *now*, which outranks
+ * anything still running — and everything else sorts by the deadline it is
+ * running out of.
+ */
+function dueKey(row: GearRegisterRow): string {
+  if (row.item.status !== "in_service") return "";
+  return row.serviceState.state === "no_clock" ? "9999-12-31" : row.serviceState.nextDueOn;
 }
 
 async function listOpenReservations(
@@ -996,6 +1182,9 @@ async function listOpenReservations(
       returnedAt: gearReservations.returnedAt,
       personName: people.fullName,
       tripTitle: trips.title,
+      // The clock an Out row shows on the last day of its window — taken off
+      // the trip join this reader already makes (ADR 20260827-the-shops-shelves).
+      tripEndsAt: trips.endsAt,
     })
     .from(gearReservations)
     .innerJoin(bookings, eq(bookings.id, gearReservations.bookingId))
@@ -1188,6 +1377,7 @@ async function listItemReservationHistory(
       returnedAt: gearReservations.returnedAt,
       personName: people.fullName,
       tripTitle: trips.title,
+      tripEndsAt: trips.endsAt,
     })
     .from(gearReservations)
     .innerJoin(bookings, eq(bookings.id, gearReservations.bookingId))

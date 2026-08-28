@@ -27,10 +27,11 @@ test.describe.configure({ timeout: 30_000 });
  */
 async function setSiteDepth(page: Page, siteName: string, depth: string, unitLabel: RegExp) {
   await page.goto(`/shop/${SHOP}/dive-sites`);
+  // The library is a ledger now (ADR 20260827-the-shops-shelves): a row's link
+  // is the stretched overlay over the whole row, so it carries the site's name
+  // as its accessible name rather than as text content.
   const href = await page
-    .locator(`a[href^="/shop/${SHOP}/dive-sites/"]:not([href$="/dive-sites/new"])`)
-    .filter({ hasText: siteName })
-    .filter({ visible: true })
+    .getByRole("link", { name: siteName, exact: true })
     .first()
     .getAttribute("href");
   if (!href) throw new Error(`no dive-site link for ${siteName}`);

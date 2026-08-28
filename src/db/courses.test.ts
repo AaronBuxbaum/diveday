@@ -3,14 +3,13 @@ import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
-import { courseSlug } from "@/lib/courses";
+import { canonicalAgency, courseSlug } from "@/lib/courses";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createTestDb } from "./client";
 import { COURSE_TEMPLATES, courseTemplateSnapshot, getCourseTemplate } from "./course-templates";
 import {
-  courseAgencies,
   getCourseBySlug,
   getCourseTemplateUpdate,
   hasActiveCourses,
@@ -1100,47 +1099,48 @@ describe("progression order (in-memory PGlite)", () => {
   });
 });
 
-describe("agency tabs (in-memory PGlite)", () => {
-  it("names only the agencies the shop's own catalog holds", async () => {
+describe("agency groups (in-memory PGlite)", () => {
+  it("orders the roster agency-major, so a group cannot interleave across a page", async () => {
     const { db, shop } = await seededShopContext();
+    // Slice 9g of ADR 20260827-the-shops-shelves: the `?agency=` tabs retired
+    // for agency *groups* in one ledger, and grouping composes with the Pager
+    // only if the query sorts group-major. If it did not, page 2 would open a
+    // second PADI heading below an SSI one and the ledger would read as two
+    // catalogs.
+    const { courses: rows } = await pagedCourses(db, shop.id, { limit: 1000 });
+    const agencies = rows.map((course) => canonicalAgency(course.agency));
+    expect(agencies.length).toBeGreaterThan(0);
+    expect(agencies).toEqual([...agencies].sort());
     // Three since SDI's starter pages landed. The demo shop publishes every
-    // template DiveDay ships, so this list is "which agencies have templates"
+    // template DiveDay ships, so this is "which agencies have templates"
     // rather than a claim about what one real shop teaches — what it pins is
-    // that the tab strip is derived from the catalog and not a hard-coded pair.
-    expect(await courseAgencies(db, shop.id)).toEqual(["padi", "sdi", "ssi"]);
+    // that the groups are read off the catalog, not a hard-coded pair.
+    expect([...new Set(agencies)]).toEqual(["padi", "sdi", "ssi"]);
   });
 
-  it("narrows the roster to one agency, count and rows agreeing", async () => {
+  it("keeps progression order inside each agency's run", async () => {
     const { db, shop } = await seededShopContext();
-    const all = await pagedCourses(db, shop.id, { page: 1, limit: 1000 });
-    const ssi = await pagedCourses(db, shop.id, { page: 1, agency: "ssi" });
-
-    expect(ssi.total).toBeGreaterThan(0);
-    expect(ssi.total).toBeLessThan(all.total);
-    // The count must share the row query's scope, or the pager promises pages
-    // that render nothing (AGENTS.md, one-pagination-model).
-    expect(ssi.total).toBe(all.courses.filter((course) => course.agency === "ssi").length);
-    expect(ssi.courses.every((course) => course.agency === "ssi")).toBe(true);
+    const { courses: rows } = await pagedCourses(db, shop.id, { limit: 1000 });
+    for (const agency of new Set(rows.map((course) => canonicalAgency(course.agency)))) {
+      const ranks = rows
+        .filter((course) => canonicalAgency(course.agency) === agency)
+        .map((course) => rankOf(course.minimumCertificationLevel));
+      expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
+    }
   });
 
-  it("keeps progression order inside a filtered tab", async () => {
-    const { db, shop } = await seededShopContext();
-    const ssi = await pagedCourses(db, shop.id, { page: 1, agency: "ssi" });
-    const ranks = ssi.courses.map((course) => rankOf(course.minimumCertificationLevel));
-    expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
-  });
-
-  it("shows an agency nobody hard-coded — a CSV import can carry any of them", async () => {
+  it("groups an agency nobody hard-coded — a CSV import can carry any of them", async () => {
     const { db, shop } = await seededShopContext();
     await createCourse(db, {
       shopId: shop.id,
       title: "BSAC Ocean Diver",
       agency: "bsac" as "padi",
     });
-    expect(await courseAgencies(db, shop.id)).toContain("bsac");
+    const { courses: rows } = await pagedCourses(db, shop.id, { limit: 1000 });
+    expect(rows.map((course) => canonicalAgency(course.agency))).toContain("bsac");
   });
 
-  it("groups agency values case-insensitively and trims imported whitespace", async () => {
+  it("sorts the imported spellings of one agency into a single run", async () => {
     const { db, shop } = await seededShopContext();
     await db.insert(courses).values([
       {
@@ -1157,13 +1157,14 @@ describe("agency tabs (in-memory PGlite)", () => {
       },
     ]);
 
-    const agencies = await courseAgencies(db, shop.id);
-    expect(agencies).toContain("padi");
-    expect(agencies).toContain("ssi");
-    expect(agencies.filter((agency) => agency === "padi")).toHaveLength(1);
-    expect((await pagedCourses(db, shop.id, { agency: "padi" })).courses).toEqual(
-      expect.arrayContaining([expect.objectContaining({ title: "Imported Uppercase PADI" })]),
-    );
+    const { courses: rows } = await pagedCourses(db, shop.id, { limit: 1000 });
+    const agencies = rows.map((course) => canonicalAgency(course.agency));
+    // Still sorted, and still three runs: the whitespace and the case did not
+    // buy " PADI " a heading of its own.
+    expect(agencies).toEqual([...agencies].sort());
+    expect([...new Set(agencies)]).toEqual(["padi", "sdi", "ssi"]);
+    const padi = rows.filter((course) => canonicalAgency(course.agency) === "padi");
+    expect(padi.map((course) => course.title)).toContain("Imported Uppercase PADI");
   });
 });
 

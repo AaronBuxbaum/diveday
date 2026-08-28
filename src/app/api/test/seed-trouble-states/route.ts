@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, isNull } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
@@ -21,6 +21,7 @@ import {
   personRoles,
   processorErasureObligations,
   specialtyCertifications,
+  tripAssignments,
   tripReviews,
   trips,
   waiverRecords,
@@ -242,9 +243,9 @@ export async function POST(request: Request) {
   await markMixedWaiverDelivery(db, shop.id);
 
   // 8. Gear on its worst day (ADR 20260815-minimal-gear-register): one seeded
-  //    reservation dragged into the past so the register's returns panel wears
+  //    reservation dragged into the past so the register's Overdue group wears
   //    its amber "was due" state and Today gains its gear-overdue row, and one
-  //    tank's visual-inspection clock expired so the service column and the
+  //    tank's visual-inspection clock expired so the service sentence and the
   //    unit page show the overdue grammar. Backdated in place rather than
   //    seeded: the demo fleet stays calm (seed-gear.ts keeps every clock
   //    ahead), same call as seed-front-desk's `succeeded` payment.
@@ -304,7 +305,99 @@ export async function POST(request: Request) {
     await boardEveryDiverAndNoCrew(db, shop.id, now);
   }
 
+  // Opt-in for the same reason again: a unit due back today is a row on Today
+  // as well as on the register, and every capture that only wanted the
+  // register's Overdue group would have paid for it.
+  if (new URL(request.url).searchParams.get("gearOut") === "1") {
+    await putOneUnitOutToday(db, shop.id, now, shop.timezone);
+  }
+
+  // Opt-in, and the widest-reaching of the lot: taking the crew off a
+  // departure moves Today's queue, the trip record, the close-out and every
+  // crew count in the fleet. Only the staffing week's gap capture asks for it.
+  if (new URL(request.url).searchParams.get("crewGap") === "1") {
+    await unstaffTomorrowsDeparture(db, shop.id, now);
+  }
+
   return NextResponse.json({ ok: true });
+}
+
+/**
+ * **One unit actually out with a diver**, which the demo shop never has: it
+ * reserves its fleet against a departure five days out, so every seeded window
+ * is in the future and the register's headline group — Out (ADR
+ * 20260827-the-shops-shelves, slice 9d) — has nothing in it to photograph.
+ *
+ * Dragged onto today rather than seeded, for the reason the whole route
+ * exists: a demo whose regulators are permanently on somebody else's boat is a
+ * worse demo. The window closes today, which is the one day a row names a
+ * clock time instead of a date.
+ */
+async function putOneUnitOutToday(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  now: Date,
+  timezone: string,
+): Promise<void> {
+  const [unit] = await db
+    .select({ id: gearItems.id })
+    .from(gearItems)
+    .where(and(eq(gearItems.shopId, shopId), eq(gearItems.label, "Reg #1")))
+    .limit(1);
+  if (!unit) return;
+  await db
+    .update(gearReservations)
+    .set({
+      reservedFrom: calendarDateInTimezone(new Date(now.getTime() - 24 * HOUR_MS), timezone),
+      reservedUntil: calendarDateInTimezone(now, timezone),
+      checkedOutAt: new Date(now.getTime() - 24 * HOUR_MS),
+    })
+    .where(eq(gearReservations.gearItemId, unit.id));
+}
+
+/**
+ * **A departure this week the shop no longer has crew for** — the loud state
+ * the staffing week exists to put in front of a manager (ADR
+ * 20260827-the-shops-shelves, decision 3), on a boat the seed *had* crewed.
+ * The same call `seed-front-desk.ts` makes about its `succeeded` payment: a
+ * demo permanently short-handed is a worse demo, so this is opt-in.
+ *
+ * Tomorrow's departure rather than today's: today's boat is the one Today, the
+ * close-out and the check-in counter all read, and pulling its crew would move
+ * captures that have nothing to do with this one. Tomorrow's still lands in a
+ * column of the same week the staffing grid draws.
+ *
+ * **With divers on it**, or the capture photographs nothing: an empty boat has
+ * nobody to supervise and raises no gap anywhere (`divemasterRatioGap`,
+ * src/lib/divemaster-ratio.ts) — the same reason the staffing week is silent
+ * about a departure that has not sold a seat yet.
+ */
+async function unstaffTomorrowsDeparture(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  now: Date,
+): Promise<void> {
+  const tomorrow = new Date(now.getTime() + 24 * HOUR_MS);
+  const [departure] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .innerJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        isNull(trips.deletedAt),
+        gte(trips.startsAt, tomorrow),
+      ),
+    )
+    .groupBy(trips.id)
+    .orderBy(trips.startsAt)
+    .limit(1);
+  if (!departure) return;
+  // Straight off the assignment rows: `setTripCrew` refuses to leave a course
+  // session with nobody on the ratio, and the state being photographed is
+  // precisely a boat with nobody on it.
+  await db.delete(tripAssignments).where(eq(tripAssignments.tripId, departure.id));
 }
 
 /**

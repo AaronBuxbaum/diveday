@@ -2,11 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { Pager } from "@/components/Pager";
-import { ShopNotice, ShopPageHeader, ShopStat } from "@/components/ShopPageHeader";
+import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
-import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import {
   canPersonViewShopReports,
   crewCountsByTrip,
@@ -37,12 +36,15 @@ import {
   formatPointsChange,
   formatReportMoney,
   type MonthComparison,
+  monthHasActivity,
   summarizeMonth,
   tripFillRate,
 } from "@/lib/reporting";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { DepartureLedger, type DepartureRow } from "./_components/DepartureLedger";
+import { type MonthFigure, MonthFigures } from "./_components/MonthFigures";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -62,66 +64,6 @@ function earlierMonth(left: MonthRef, right: MonthRef): MonthRef {
 }
 
 /**
- * A slim, labelled share bar — fill or waiver completion as a portion of a
- * whole. A null ratio ("no bookings to measure") renders as a bare em dash, not
- * an empty bar, so "nothing to measure" never reads as a measured zero.
- *
- * **The ink is on the gap, not the achievement** (issue 775). This drew its
- * filled portion in `bg-primary`, which made a healthy row the loudest thing in
- * its column and left the rows needing an owner as the faintest: on the seeded
- * month, fifteen of twenty-one waiver rows read 100% in full teal while the two
- * at 0% — a booked charter with not one signature — drew an empty grey track
- * and slid past the eye. §9 spends ink on the rows that need a staffer, so the
- * fill is now quiet at every ratio and the *remainder* is what can carry a
- * tone. That needs no threshold to argue about: at 0% the whole bar is the
- * warning, at 100% there is nothing left to warn about, and every value between
- * shades itself.
- *
- * `remainder` is opt-in per column because the two gaps do not mean the same
- * thing. Unsigned waivers are work somebody has to chase. Empty seats on a
- * month being reviewed are a fact — a half-full boat is not a task, and toning
- * one would put amber on most rows of a working shop's report and spend exactly
- * the currency this change is trying to save.
- */
-function ShareBar({
-  ratio,
-  label,
-  value,
-  remainder = "quiet",
-}: {
-  ratio: number | null;
-  label: string;
-  /** Shown beside the bar. Omit where a neighbouring cell already states it. */
-  value?: string;
-  remainder?: "quiet" | "attention";
-}) {
-  if (ratio === null) {
-    return (
-      <span className="text-muted" role="img" aria-label={label}>
-        —
-      </span>
-    );
-  }
-  const pct = Math.round(ratio * 100);
-  return (
-    <div className="flex items-center gap-2">
-      <div
-        className={`h-2 w-20 overflow-hidden rounded-full border border-border ${
-          remainder === "attention" && pct < 100 ? "bg-warning" : "bg-surface-sunken"
-        }`}
-        role="img"
-        // Already the exact counts in words ("8 of 9 waivers signed"), which is
-        // why dropping a numeral below costs a screen reader nothing.
-        aria-label={label}
-      >
-        <div className="h-full rounded-full bg-muted" style={{ width: `${pct}%` }} />
-      </div>
-      {value ? <span className="tabular-nums font-medium text-foreground">{value}</span> : null}
-    </div>
-  );
-}
-
-/**
  * Owner reporting — the buyer's "how's my month" over data DiveDay already
  * holds: bookings, net revenue, seat fill, and waiver completion. Trip metrics
  * stay anchored to departures; clearly-labelled source payments/refunds add a
@@ -136,7 +78,15 @@ function ShareBar({
  * moved to the surface that owns its object: payments to the Orders index,
  * both deletion queues to Settings' "Data & integrations" group. Nothing on
  * this page is actionable now except the month you are looking at and the
- * revenue card's jump into Orders.
+ * revenue figure's jump into Orders.
+ *
+ * **The chrome went the same way** (ADR 20260827-the-shops-shelves, decision
+ * 3): six bordered stat tiles over a five-column table are five unboxed
+ * figures over a ledger — `_components/MonthFigures.tsx` and
+ * `_components/DepartureLedger.tsx`, which carry the reasoning for each. Every
+ * number the page had it still has; what it stopped doing is drawing a box
+ * round each one. The month arithmetic, the picker's floor, the baseline
+ * choice and the CSV are untouched.
  */
 export default async function ReportsPage({
   params,
@@ -298,9 +248,9 @@ export default async function ReportsPage({
       ? compareMonthlyReports(baselineKind, report, baselineReport, currency)
       : null;
   const { trips } = tripPage;
-  const hasMonthlyActivity = report.tripCount > 0 || report.importedFinancialRecordCount > 0;
+  const hasMonthlyActivity = monthHasActivity(report);
   // How many crew were assigned per departure on this page — the number
-  // only, never a cost (issue #700). Scoped to the table's own page of
+  // only, never a cost (issue #700). Scoped to the ledger's own page of
   // trips, the same bound every other per-trip figure on this page already
   // keeps to.
   const crewCounts = trips.length
@@ -419,6 +369,111 @@ export default async function ReportsPage({
   // lighting up an arrow that goes nowhere.
   const navDisabledClass = `${navClass} pointer-events-none opacity-40`;
 
+  // The five figures, in reading order. Six tiles became five: the tax tile is
+  // a footnote to net revenue and drops to the quiet line beside the CSV door,
+  // and the departure count was always the Seats figure's own denominator, so
+  // it folds into that figure's subline (ADR 20260827-the-shops-shelves).
+  //
+  // No new arithmetic — every number here is the one the tile above it carried,
+  // and the two percentages still render only over a denominator that exists
+  // (`formatPercent` answers an em dash for a null ratio, which is what
+  // `summarizeMonth` returns when a month offered no seat and took no booking).
+  const waiversAllIn = report.waiverCompletion === 1;
+  const figures: MonthFigure[] = [
+    {
+      key: "revenue",
+      label: t("reports.metrics.revenueLabel"),
+      value: formatReportMoney(report.revenueCents, currency, locale),
+      // Only the imported case says anything: it names money inside this figure
+      // that Stripe has not confirmed. The plain "payments and deposits after
+      // Stripe Tax" line it replaced was the label's own definition read back,
+      // and the tax line under the row now states the same fact as a number.
+      detail:
+        report.importedFinancialRecordCount > 0
+          ? t("reports.metrics.revenueDetailWithImported", {
+              count: report.importedFinancialRecordCount,
+              payments: formatReportMoney(report.importedPaymentCents, currency, locale),
+              refunds: formatReportMoney(report.importedRefundCents, currency, locale),
+            })
+          : undefined,
+      comparison: revenueComparison,
+      link: { href: revenueOrdersHref, label: t("reports.metrics.revenueViewOrders") },
+    },
+    {
+      // Tips sit beside revenue rather than inside it (PAY-M2): they are their
+      // own Stripe charge, 100% to the shop, and never part of the booking
+      // payment gate.
+      key: "tips",
+      label: t("reports.metrics.tipsLabel"),
+      value: formatReportMoney(report.tipsCents, currency, locale),
+      detail: t("reports.metrics.tipsDetail", { count: report.tipCount }),
+      comparison: tipsComparison,
+    },
+    {
+      key: "seats",
+      label: t("reports.metrics.bookingsLabel"),
+      value: String(report.seatsBooked),
+      detail: bookingsDetail,
+      comparison: bookingsComparison,
+    },
+    {
+      key: "fill",
+      label: t("reports.metrics.seatFillLabel"),
+      value: formatPercent(report.fillRate),
+      detail: t("reports.metrics.seatFillDetail", {
+        booked: report.seatsBooked,
+        offered: report.seatsOffered,
+        count: report.atCapacityTrips,
+      }),
+      comparison: fillComparison,
+    },
+    {
+      key: "waivers",
+      label: t("reports.metrics.waiversLabel"),
+      value: formatPercent(report.waiverCompletion),
+      // The month's one coral element, and the only one this surface may ever
+      // carry (ADR 20260827-clearwater-surface-language, decision 11). It is
+      // condition-derived and nothing stores it: `waiverCompletion` is null
+      // whenever the month took no booking at all, so a completion of exactly 1
+      // cannot be reached without counted signatures behind it.
+      earned: waiversAllIn ? t("reports.metrics.waiversAllIn") : undefined,
+      detail: waiversAllIn
+        ? undefined
+        : t("reports.metrics.waiversOutstanding", { count: report.waiverOutstanding }),
+      // Unsigned waivers are work somebody has to chase — the same judgement
+      // the ledger's own remainder-toned meter makes one screen below.
+      detailTone: "attention",
+      comparison: waiverComparison,
+    },
+  ];
+
+  // The ledger's rows. Every fact carries its own noun: a ledger row has no
+  // column header above it to borrow one from, which is also what lets the
+  // phone keep all three facts instead of hiding two behind a breakpoint.
+  const departureRows: DepartureRow[] = trips.map((trip) => ({
+    tripId: trip.tripId,
+    href: `/shop/${shopSlug}/trips/${trip.tripId}/guests`,
+    title: trip.title,
+    date: formatShortDate(trip.startsAt, locale, tz),
+    seats: {
+      fact: t("reports.row.seats", { booked: trip.activeBookings, capacity: trip.capacity }),
+      ratio: tripFillRate(trip),
+    },
+    crew: t("reports.row.crew", { count: crewCounts.get(trip.tripId) ?? 0 }),
+    // A departure nobody booked has no waivers to collect, so it says nothing
+    // about them rather than reporting an em dash against a bar of zero.
+    waivers:
+      trip.activeBookings > 0
+        ? {
+            fact: t("reports.row.waivers", {
+              complete: trip.waiverComplete,
+              total: trip.activeBookings,
+            }),
+            ratio: trip.waiverComplete / trip.activeBookings,
+          }
+        : null,
+  }));
+
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
@@ -440,7 +495,7 @@ export default async function ReportsPage({
         <h2 className="text-lg font-semibold">
           {monthLabel(current, locale)}
           {isThisMonth ? (
-            <span className="ml-2 text-sm font-normal text-muted">{t("reports.soFar")}</span>
+            <span className="ms-2 text-sm font-normal text-muted">{t("reports.soFar")}</span>
           ) : null}
         </h2>
         <nav aria-label={t("reports.chooseMonth")} className="flex flex-wrap items-center gap-2">
@@ -509,88 +564,32 @@ export default async function ReportsPage({
         // A month with no departures is this page's rest state, not news about
         // it: `ShopNotice` is the vocabulary for something that *happened*
         // (a save, a refusal, a permission bounce), and wearing it here made an
-        // ordinary quiet January read as a warning.
+        // ordinary quiet January read as a warning. No figure row either — five
+        // zeroes over an empty ledger is a month described wrongly, not
+        // described quietly (`monthHasActivity`).
         <EmptyState title={isFuture ? t("reports.noTripsFuture") : t("reports.noTripsPast")} />
       ) : (
         <>
-          {/* An owner sending an accountant this month's numbers used to have
-              a screenshot — the full-shop export is the right tool for a
-              bookkeeper, but the wrong one for "just this month" (issue
-              #700). */}
-          <div className="mb-4 flex justify-end">
+          <MonthFigures label={t("reports.numbersLabel")} figures={figures} />
+
+          {/* The month's two quiet doors on one line: what Stripe Tax took out
+              of the revenue figure above, and the CSV an owner sends their
+              accountant (issue #700 — the full-shop export is the right tool
+              for a bookkeeper and the wrong one for "just this month"). Tax
+              used to be the sixth tile; it is a footnote to net revenue, not a
+              headline beside it. */}
+          <p className="mt-3 text-end text-sm text-muted tabular-nums">
+            {t("reports.taxLine", {
+              amount: formatReportMoney(report.taxCents, currency, locale),
+            })}
+            {" · "}
             <a
               href={`/shop/${shopSlug}/reports/download?month=${monthKey(current)}`}
-              className="text-sm font-medium text-primary hover:underline"
+              className="font-medium text-primary hover:underline"
             >
               {t("reports.downloadCsv")}
             </a>
-          </div>
-          <section
-            aria-label={t("reports.numbersLabel")}
-            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            <ShopStat
-              label={t("reports.metrics.revenueLabel")}
-              value={formatReportMoney(report.revenueCents, currency, locale)}
-              detail={
-                report.importedFinancialRecordCount > 0
-                  ? t("reports.metrics.revenueDetailWithImported", {
-                      count: report.importedFinancialRecordCount,
-                      payments: formatReportMoney(report.importedPaymentCents, currency, locale),
-                      refunds: formatReportMoney(report.importedRefundCents, currency, locale),
-                    })
-                  : t("reports.metrics.revenueDetail")
-              }
-              comparison={revenueComparison}
-              linkHref={revenueOrdersHref}
-              linkLabel={t("reports.metrics.revenueViewOrders")}
-            />
-            <ShopStat
-              label={t("reports.metrics.taxLabel")}
-              value={formatReportMoney(report.taxCents, currency, locale)}
-              detail={t("reports.metrics.taxDetail")}
-            />
-            {/*
-              Tips sit beside revenue rather than inside it (PAY-M2): they are
-              their own Stripe charge, 100% to the shop, and never part of the
-              booking payment gate. The imported-source note below separately
-              names financial evidence that is not Stripe-confirmed, so nobody
-              mistakes a useful migration total for a Stripe-dashboard match.
-            */}
-            <ShopStat
-              label={t("reports.metrics.tipsLabel")}
-              value={formatReportMoney(report.tipsCents, currency, locale)}
-              detail={t("reports.metrics.tipsDetail", { count: report.tipCount })}
-              comparison={tipsComparison}
-            />
-            <ShopStat
-              label={t("reports.metrics.bookingsLabel")}
-              value={String(report.seatsBooked)}
-              detail={bookingsDetail}
-              comparison={bookingsComparison}
-            />
-            <ShopStat
-              label={t("reports.metrics.seatFillLabel")}
-              value={formatPercent(report.fillRate)}
-              detail={t("reports.metrics.seatFillDetail", {
-                booked: report.seatsBooked,
-                offered: report.seatsOffered,
-                count: report.atCapacityTrips,
-              })}
-              comparison={fillComparison}
-            />
-            <ShopStat
-              label={t("reports.metrics.waiversLabel")}
-              value={formatPercent(report.waiverCompletion)}
-              celebrate={report.waiverCompletion === 1}
-              detail={
-                report.waiverOutstanding > 0
-                  ? t("reports.metrics.waiversOutstanding", { count: report.waiverOutstanding })
-                  : t("reports.metrics.waiversAllIn")
-              }
-              comparison={waiverComparison}
-            />
-          </section>
+          </p>
 
           {report.importedFinancialRecordCount > 0 ? (
             <section aria-label={t("reports.importedHistory.sectionLabel")} className="mt-6">
@@ -613,104 +612,26 @@ export default async function ReportsPage({
           ) : null}
 
           {report.tripCount > 0 ? (
-            <section aria-label={t("reports.tripsThisMonth")} className="mt-8">
-              <h2 className="mb-3 text-lg font-semibold">{t("reports.tripsThisMonth")}</h2>
-              <Table>
-                <THead>
-                  <Th>{t("reports.table.trip")}</Th>
-                  <Th numeric hideBelow="sm">
-                    {t("reports.table.seats")}
-                  </Th>
-                  <Th>{t("reports.table.fill")}</Th>
-                  <Th numeric hideBelow="sm">
-                    {t("reports.table.crew")}
-                  </Th>
-                  <Th>{t("reports.table.waivers")}</Th>
-                </THead>
-                <TBody>
-                  {trips.map((trip) => {
-                    const waiverRatio =
-                      trip.activeBookings > 0 ? trip.waiverComplete / trip.activeBookings : null;
-                    return (
-                      <tr key={trip.tripId}>
-                        <Td>
-                          <Link
-                            href={`/shop/${shopSlug}/trips/${trip.tripId}/guests`}
-                            className="font-medium text-foreground hover:text-primary hover:underline"
-                          >
-                            {trip.title}
-                          </Link>
-                          <div className="text-xs text-muted">
-                            {formatShortDate(trip.startsAt, locale, tz)}
-                            {/* The raw ratio the Seats column carries on wider screens,
-                                folded in here so a phone never loses "70% of what?". */}
-                            <span className="tabular-nums sm:hidden">
-                              {" · "}
-                              {t("reports.seatsMobile", {
-                                booked: trip.activeBookings,
-                                capacity: trip.capacity,
-                              })}
-                            </span>
-                          </div>
-                        </Td>
-                        <Td numeric muted hideBelow="sm">
-                          {trip.activeBookings}/{trip.capacity}
-                        </Td>
-                        {/* No numeral: "70%" is arithmetic on the `7/12` in the
-                            cell to its left, which the trip cell above repeats
-                            on a phone where that column is hidden. Three
-                            renderings of one number, twenty-one rows to a page
-                            (§9 — cross out what repeats). The bar survives as
-                            the scannable one and the fraction as the exact one. */}
-                        <Td>
-                          <ShareBar
-                            ratio={tripFillRate(trip)}
-                            label={t("reports.fillLabel", {
-                              booked: trip.activeBookings,
-                              capacity: trip.capacity,
-                            })}
-                          />
-                        </Td>
-                        {/* Never a cost — DiveDay does not know wages and must
-                            not guess one. Just the fact a fill percentage alone
-                            hides: a thin departure that still sailed with a
-                            full crew (issue #700). */}
-                        <Td numeric muted hideBelow="sm">
-                          {crewCounts.get(trip.tripId) ?? 0}
-                        </Td>
-                        {/* This one keeps its numeral. Nothing else on the row
-                            states how many waivers are in, so dropping it would
-                            not be removing a duplicate — it would be removing
-                            the fact. */}
-                        <Td>
-                          <ShareBar
-                            ratio={waiverRatio}
-                            value={formatPercent(waiverRatio)}
-                            remainder="attention"
-                            label={t("reports.waiversRowLabel", {
-                              complete: trip.waiverComplete,
-                              total: trip.activeBookings,
-                            })}
-                          />
-                        </Td>
-                      </tr>
-                    );
-                  })}
-                </TBody>
-              </Table>
-              <Pager
-                page={tripPage.page}
-                pageCount={tripPage.pageCount}
-                href={(target) =>
-                  `/shop/${shopSlug}/reports?month=${monthKey(current)}${
-                    target > 1 ? `&page=${target}` : ""
-                  }`
-                }
-                total={t("reports.pagination.total", { count: tripPage.total })}
-                t={t}
-                className="mt-4"
-              />
-            </section>
+            <DepartureLedger
+              className="mt-10"
+              label={t("reports.tripsThisMonth")}
+              labelId="reports-departures"
+              count={t("reports.pagination.total", { count: tripPage.total })}
+              rows={departureRows}
+              pager={
+                <Pager
+                  page={tripPage.page}
+                  pageCount={tripPage.pageCount}
+                  href={(target) =>
+                    `/shop/${shopSlug}/reports?month=${monthKey(current)}${
+                      target > 1 ? `&page=${target}` : ""
+                    }`
+                  }
+                  t={t}
+                  className="mt-4"
+                />
+              }
+            />
           ) : (
             <EmptyState title={t("reports.noTripsWithImportedHistory")} className="mt-8" />
           )}

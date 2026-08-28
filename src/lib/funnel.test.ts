@@ -41,6 +41,14 @@ describe("eventSource", () => {
     // the objection layer answer different moments in the same visit.
     expect(eventSource("pricing-close")).toBe("pricing-close");
     expect(trialHref("pricing-close")).toBe("/onboard?from=pricing-close");
+    // …and on `/about`, whose second position is the band where the page
+    // manufactures its impulse: four rules, each ending in the demo action that
+    // proves it. A reader who moved there is a different moment from one who
+    // read the founder story, the concessions and the export terms first and
+    // arrived at the closing band, so the two cannot share a bucket.
+    expect(eventSource("about-rules")).toBe("about-rules");
+    expect(eventSource("about-closing")).toBe("about-closing");
+    expect(trialHref("about-rules")).toBe("/onboard?from=about-rules");
   });
 
   it("keeps each switching guide door distinct by position", () => {

@@ -73,7 +73,7 @@ export default async function UnsubscribePage({ params }: { params: Promise<{ to
     if (lastMinute.alreadyUnsubscribed) {
       return (
         <EntryDone
-          glyph="🔕"
+          glyph="quiet"
           title={t("lastMinute.unsubscribe.confirmedTitle")}
           text={t("lastMinute.unsubscribe.confirmedText", { shopName: lastMinute.shopName })}
         />
@@ -95,7 +95,7 @@ export default async function UnsubscribePage({ params }: { params: Promise<{ to
     if (courtesy.alreadyOptedOut) {
       return (
         <EntryDone
-          glyph="🔕"
+          glyph="quiet"
           title={t("courtesyEmailUnsubscribe.confirmedTitle")}
           text={t("courtesyEmailUnsubscribe.confirmedText", { shopName: courtesy.shopName })}
         />
@@ -114,7 +114,7 @@ export default async function UnsubscribePage({ params }: { params: Promise<{ to
 
   return (
     <EntryDone
-      glyph="⏳"
+      glyph="expired"
       title={t("lastMinute.unsubscribe.unavailableTitle")}
       text={t("lastMinute.unsubscribe.unavailableText")}
     />

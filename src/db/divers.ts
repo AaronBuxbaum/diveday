@@ -17,7 +17,6 @@ import {
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
-import { diverDepthLimit } from "@/lib/depth-ceiling";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
 import { type AppDb, isUniqueConstraintViolation } from "./client";
@@ -473,119 +472,27 @@ export async function listDiverSummaries(
         .offset(offset),
   });
 
+  // The roster list renders in the browser, so the whole row would ship
+  // there. Drop at the boundary rather than relying on the UI not to show it:
+  // every diver's date of birth (some of them minors'), their dive-insurance
+  // policy identifier, and their emergency contact (a third party's name and
+  // number, never the diver's own) are things the roster does not render and
+  // has no business handing out. The importer now fills those columns
+  // roster-wide in one click, so what used to be incidental is systemic
+  // (`security-reviewer` finding).
   return {
-    divers: await summarizeDivers(
-      db,
-      shopId,
-      page.rows.map(({ person }) => person),
-    ),
+    divers: page.rows.map(({ person }) => ({
+      ...person,
+      dateOfBirth: null,
+      diveInsurance: null,
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+    })),
     total: page.total,
     page: page.page,
     pageCount: page.pageCount,
     pageSize: page.pageSize,
   };
-}
-
-async function summarizeDivers(
-  db: AppDb,
-  shopId: string,
-  peopleRows: (typeof people.$inferSelect)[],
-) {
-  if (peopleRows.length === 0) return [];
-  const ids = peopleRows.map((person) => person.id);
-  const [levelCards, specialtyCards, nitroxCards, profiles] = await Promise.all([
-    db
-      .select()
-      .from(certifications)
-      .where(
-        and(
-          eq(certifications.shopId, shopId),
-          inArray(certifications.personId, ids),
-          isNull(certifications.deletedAt),
-        ),
-      ),
-    db
-      .select()
-      .from(specialtyCertifications)
-      .where(
-        and(
-          eq(specialtyCertifications.shopId, shopId),
-          inArray(specialtyCertifications.personId, ids),
-          isNull(specialtyCertifications.deletedAt),
-        ),
-      ),
-    db
-      .select()
-      .from(nitroxCertifications)
-      .where(
-        and(
-          eq(nitroxCertifications.shopId, shopId),
-          inArray(nitroxCertifications.personId, ids),
-          isNull(nitroxCertifications.deletedAt),
-        ),
-      ),
-    db
-      .select()
-      .from(rentalFitProfiles)
-      .where(and(eq(rentalFitProfiles.shopId, shopId), inArray(rentalFitProfiles.personId, ids))),
-  ]);
-  const profileByPerson = new Map(profiles.map((profile) => [profile.personId, profile]));
-  return peopleRows.map((person) => {
-    const cards = levelCards.filter((card) => card.personId === person.id);
-    const specialty = specialtyCards.filter((card) => card.personId === person.id);
-    const nitrox = nitroxCards.filter((card) => card.personId === person.id);
-    return {
-      // The roster list is a client component, so the whole row would ship to
-      // the browser — including every diver's date of birth, which nothing on
-      // that list renders and some of which belongs to minors. Drop it at the
-      // boundary rather than relying on the UI not to show it. The same argument
-      // covers dive insurance (an insurance policy identifier) and the
-      // emergency contact (a third party's name and number, never the diver's
-      // own): the list renders name, email, and phone, and the importer now
-      // fills those other columns roster-wide in one click, so what used to be
-      // incidental is systemic (`security-reviewer` finding).
-      person: {
-        ...person,
-        dateOfBirth: null,
-        diveInsurance: null,
-        emergencyContactName: null,
-        emergencyContactPhone: null,
-      },
-      /**
-       * The one card that speaks for this diver on the roster: the **highest
-       * level among their verified** certifications, or null when they hold
-       * none. A `pending` card says nothing until a staffer verifies it.
-       *
-       * Read straight off `diverDepthLimit` (`src/lib/depth-ceiling.ts`) rather
-       * than re-derived here, so the roster's idea of "the diver's level" is
-       * the same one the depth advisory already applies. Specialties and date
-       * of birth are deliberately not passed: those change the *ceiling*, never
-       * which level card the diver holds. A **code**, never a word — the label
-       * comes from the shared `CERTIFICATION_LEVEL_KEYS` map in
-       * `src/i18n/readiness-labels.ts`, the same source the diver record uses.
-       */
-      certificationLevel: diverDepthLimit(cards, []).level,
-      certificationCount: cards.length,
-      pendingCertificationCount: cards.filter((card) => card.status === "pending").length,
-      specialtyCount: specialty.length,
-      // Nitrox is not a specialty (see the glossary), but a pending nitrox
-      // card needs staff attention just the same, so it counts here.
-      pendingSpecialtyOrNitroxCount:
-        specialty.filter((card) => card.status === "pending").length +
-        nitrox.filter((card) => card.status === "pending").length,
-      // Imported cards land verified but flagged, awaiting a one-tap staff
-      // confirm (ADR 20260724-import-verified-cards). Level and nitrox cards
-      // already count as valid, so for them this is a soft "give these a look"
-      // nudge, kept separate from the pending-review count above. An imported
-      // *specialty* card is counted here too and is more than a nudge: its gate
-      // stays shut until the confirm (ADR 20260725-import-specialty-cards).
-      importedUnconfirmedCount: [...cards, ...specialty, ...nitrox].filter(
-        (card) => card.importedAt && !card.reviewedAt,
-      ).length,
-      nitroxCertificationCount: nitrox.length,
-      rentalFit: profileByPerson.get(person.id) ?? null,
-    };
-  });
 }
 
 export type BookableDiver = {

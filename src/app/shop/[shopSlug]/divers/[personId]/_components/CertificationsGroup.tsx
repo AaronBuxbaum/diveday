@@ -88,7 +88,7 @@ function CardRow({
 }) {
   return (
     <CertificationCardRow
-      as="div"
+      as="li"
       t={t}
       title={title}
       detail={detail}
@@ -353,6 +353,11 @@ export function CertificationsGroup({
     <section className="mt-10" aria-labelledby="certifications">
       <InsetGroup
         as="h2"
+        // A list of cards is a list: each row is one record a staffer can act
+        // on, so the shell is a `<ul>` and every row a real `<li>`. A screen
+        // reader gets the count before it starts reading, which a run of
+        // `<div>`s cannot give it.
+        bodyAs="ul"
         id="certifications"
         label={t("divers.certifications.heading")}
         className="scroll-mt-24"

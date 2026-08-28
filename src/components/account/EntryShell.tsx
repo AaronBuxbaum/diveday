@@ -30,6 +30,15 @@ import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
  * this shape — they are `EntryDone` below, the whole-page warm pattern from
  * docs/design/principles.md #4.
  *
+ * **This is the one door, and it speaks Clearwater** (ADR
+ * 20260827-first-light, decision 1): the panel is flat, the title takes the
+ * one shell ramp, footer links are text rather than boxes, and a door renders
+ * **one** primary and nothing else button-shaped — sign-in's "Forgot
+ * password?" is a link, not a second button. `EntryShell.test.tsx` holds all
+ * of that, over the door pages themselves rather than over this file, because
+ * a second primary is something a page grows, not something this component
+ * can prevent.
+ *
  * Words arrive as props; this component reads no translator, so it serves
  * every locale context the pages already resolve.
  */
@@ -102,11 +111,75 @@ export const entryPanelClass =
   "mt-8 sm:rounded-2xl sm:border sm:border-border sm:bg-surface sm:p-8";
 
 /**
+ * **The closed set of marks a terminal door may wear** (ADR
+ * 20260827-first-light, decision 2).
+ *
+ * It was a `string` holding an emoji — a mailbox, an hourglass, a party
+ * popper, a crossed-out bell, a calendar — which is the one place in the app
+ * where an emoji was the *structure* of a component rather than a word in a
+ * sentence, and so the one place it rendered at a different size, weight and
+ * hue on every platform the app is opened on. An id instead of a glyph is what
+ * makes the mark a decision this file owns: a caller names the situation,
+ * never the picture, and no caller can pass markup or type one back in.
+ *
+ * The ADR names four — `sent` (a reset is in the inbox), `expired` (a dead
+ * link), `done` (a confirmed act), `quiet` (nothing more will be sent). The
+ * fifth, `cancelled`, is the one its census missed: `/ready/[token]` already
+ * drew a distinction the four cannot carry, because a booking cancelled
+ * underneath a diver has a link that *works*, and sending them off to ask for
+ * a fresh one is the wrong door. Its calendar is the same sentence its emoji
+ * said; the amendment is noted for that record rather than resolved by
+ * flattening the two states into one clock.
+ */
+export const DOOR_GLYPH_IDS = ["sent", "expired", "done", "quiet", "cancelled"] as const;
+
+export type DoorGlyphId = (typeof DOOR_GLYPH_IDS)[number];
+
+/**
+ * The strokes themselves — path data rather than markup, keyed so the compiler
+ * (not a reviewer) is what refuses an id with no drawing. One `<svg>` renders
+ * whichever list the id names, in `currentColor` at a single width, so the mark
+ * inherits the tone and the theme of whatever renders it and none of these
+ * carries a colour of its own.
+ *
+ * One hand drew all of them: the 24px box, the 1.8 stroke and the round caps
+ * are `SettledCheck`'s and `StaffDestinationIcon`'s, so a door's mark and a
+ * settled row's mark are recognisably the same pen and no icon library is
+ * anywhere near this.
+ */
+const DOOR_GLYPH_MARKS: Record<DoorGlyphId, readonly string[]> = {
+  // An envelope, flap open toward the reader.
+  sent: [
+    "M5.5 5.5h13a2.5 2.5 0 0 1 2.5 2.5v8a2.5 2.5 0 0 1-2.5 2.5h-13a2.5 2.5 0 0 1-2.5-2.5v-8a2.5 2.5 0 0 1 2.5-2.5Z",
+    "M3.9 7.2 12 13l8.1-5.8",
+  ],
+  // A clock, hands just past the hour.
+  expired: ["M12 3.75a8.25 8.25 0 1 1 0 16.5 8.25 8.25 0 1 1 0-16.5Z", "M12 7.25V12l3.25 2"],
+  // A check, drawn in one stroke.
+  done: ["m5.25 12.5 4.5 4.5 9-9.5"],
+  // A bell at rest: no motion lines, because nothing is ringing any more.
+  quiet: [
+    "M6.75 17h10.5c-1.1-1.35-1.6-2.9-1.6-4.9V11a3.65 3.65 0 0 0-7.3 0v1.1c0 2-.5 3.55-1.6 4.9Z",
+    "M10.35 19.4a2 2 0 0 0 3.3 0",
+  ],
+  // A calendar sheet: the day is off, not the link.
+  cancelled: [
+    "M6 5.5h12a2.5 2.5 0 0 1 2.5 2.5v10a2.5 2.5 0 0 1-2.5 2.5H6a2.5 2.5 0 0 1-2.5-2.5V8A2.5 2.5 0 0 1 6 5.5Z",
+    "M3.5 10h17M8 3.75v3.5M16 3.75v3.5",
+  ],
+};
+
+/**
  * A terminal outcome as the whole page: email confirmed, link expired, emails
- * stopped. The bespoke warm pattern from docs/design/principles.md — a glyph
- * in a soft circle, a heading, subtext, and at most one quiet way onward —
- * with no card border, because nothing else renders and a box would only ask
- * "compared to what?".
+ * stopped. The bespoke warm pattern from docs/design/principles.md — a drawn
+ * mark in a soft circle, a heading, subtext, and at most one quiet way onward
+ * — with no card border, because nothing else renders and a box would only ask
+ * "compared to what?". Flat at rest, like every panel in the Clearwater
+ * language (ADR 20260827-clearwater-surface-language, decision 1).
+ *
+ * The mark is decorative and the circle says so: the heading carries the
+ * meaning, in the reader's own language, which is exactly what an emoji could
+ * not do.
  */
 export function EntryDone({
   glyph,
@@ -114,8 +187,8 @@ export function EntryDone({
   text,
   action,
 }: {
-  /** A single emoji/dingbat, decorative — the words carry the meaning. */
-  glyph: string;
+  /** Which situation this is — the component owns the drawing. */
+  glyph: DoorGlyphId;
   title: string;
   text: string;
   /** One quiet way onward (usually a link back to sign-in), or nothing. */
@@ -125,9 +198,22 @@ export function EntryDone({
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center px-6 py-12 text-center sm:py-16">
       <div
         aria-hidden="true"
-        className="grid size-14 place-items-center rounded-full bg-surface-sunken text-3xl"
+        className="grid size-14 place-items-center rounded-full bg-surface-sunken"
       >
-        {glyph}
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          className="size-7"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          {DOOR_GLYPH_MARKS[glyph].map((mark) => (
+            <path key={mark} d={mark} />
+          ))}
+        </svg>
       </div>
       <h1 className={`mt-6 ${SHELL_TITLE_CLASS} text-balance`}>{title}</h1>
       <p className="mt-3 max-w-prose text-muted">{text}</p>

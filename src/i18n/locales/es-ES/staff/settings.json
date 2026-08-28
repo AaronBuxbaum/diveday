@@ -581,11 +581,11 @@
       },
       "certificationCard": {
         "what": "Registro de certificación",
-        "detail": "Se importa verificada y marcada como importada — el personal la confirma con un toque; los niveles no reconocidos requieren entrada manual."
+        "detail": "Llega con la ficha del buceador, marcada como importada, y abre la puerta del nivel — salvo que tu archivo diga que la tarjeta nunca se verificó, y entonces espera al personal. Los niveles no reconocidos requieren entrada manual."
       },
       "specialtyCards": {
         "what": "Certificaciones de especialidad (profundidad, naufragios, nocturna, traje seco)",
-        "detail": "Se importan como certificaciones de especialidad verificadas, marcadas como importadas; cada una sigue necesitando la confirmación del personal antes de la inmersión que la exige."
+        "detail": "Llegan con la ficha del buceador, marcadas como importadas. La puerta de cada una sigue cerrada hasta que el personal la confirme con un toque, diga lo que diga tu archivo."
       },
       "nitrox": {
         "what": "Nitrox",

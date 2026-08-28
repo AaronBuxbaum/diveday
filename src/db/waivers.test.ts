@@ -628,7 +628,7 @@ describe("listWaiverIntegrityAudit pagination", () => {
   });
 });
 
-// The Signatures tab's data (task 155, UX persona assessment Lens 17): the
+// The signature log's data (task 155, UX persona assessment Lens 17): the
 // same audit, enriched with the trip a record was issued against and a
 // medical-flag summary, never the raw questionnaire.
 describe("listWaiverIntegrityAudit signature evidence (task 155)", () => {

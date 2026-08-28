@@ -7,6 +7,1045 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Reviews is a worklist (delivered 2026-08-28)
+
+Slice 8d of [20260827-people-not-lists](../architecture/decisions/20260827-people-not-lists.md),
+decision 3. `/shop/[shopSlug]/reviews` is now three ledger groups in the order the work runs —
+**"Waiting on you — N"** with its clear-the-lot act, then **"Published — N"** and **"Hidden — N"**
+quiet beneath it. The group header is the only place this page writes a review's state, so no row
+wears a status pill any more; a publish or a hide *is* a row moving between groups, which is what
+`e2e/reviews.spec.ts` now asserts instead of reading a badge. `Badge` survives for the one genuinely
+exceptional thing, a shop's own standout pick, and its `⭐` emoji went with the pill it sat beside.
+
+The four stat tiles collapsed to **one aggregate line** under the title: "4.3 average across 83
+published reviews · this month 4.6 from 12 reviews". They had said two facts three times — a
+"Waiting on you: 3" tile above a queue whose first group is now titled with the same number, and a
+"Hidden" tile above the group that owns that one. `ReviewsAggregateLine` renders nothing before a
+shop has published anything, because an average of no reviews is not a low score, and its test pins
+the "once" that the tiles cost.
+
+The worklist is **read whole rather than paged** (`scope: "waiting"`, bounded by the same
+`MAX_BULK_PUBLISH` that bounds one pass, so the rows on screen and the rows the act touches are the
+same set by construction); the `Pager` now pages only what has been ruled on, through a new
+`scope: "moderated"` whose published-state-then-date sort is load-bearing — without it "Hidden — 3"
+would show one row on page 1 and two on page 4. Each group label's count comes from
+`countStaffReviewGroups`, one count per group over that group's own membership test, which is the
+pager rule applied to a group header.
+
+Deleted (H-49): the per-row tick boxes and "Publish selected" — the group *is* the selection, and
+its header says "Publish both" at two and "Publish all N" above that, absent entirely at one, where
+the row's own Publish already does it; the `FilterChips` "All / Waiting on you" row, since a
+filtered list cannot show a staffer that publishing moved something; `useRevealPublished`, the
+`router.replace` that existed only to escape that filter; the bulk action's second refusal
+(`none-selected` is not a thing a person can do when there is nothing to tick); and, in both
+locales, the four tile label pairs, the page description, the waiting-filter empty state and the
+selection aria-label. Hidden rows offer **Republish**, because a publish state is not a delete: a
+shop cannot delete words it did not write, only decline to publish them.
+
+The suppression floor's arithmetic is untouched (ADR 20260813-review-moderation-has-a-floor) — a
+hidden review still counts against the share that decides whether DiveDay vouches for the shop's
+average, and the withheld banner is still the one tone panel on the page. Pinned by
+`_components/ReviewsAggregateLine.test.tsx`, `_components/ReviewLedgerRow.test.tsx`, the new
+`moderated scope` and `countStaffReviewGroups` suites in `src/db/reviews.test.ts`, and
+`e2e/reviews.spec.ts`.
+
+## The first morning is a state of the day spine (delivered 2026-08-28)
+
+Slice 10d of [20260827-first-light](../architecture/decisions/20260827-first-light.md), decision 6,
+and the last of that record's day-zero half. `FirstRunChecklist` stops standing *in place of* the
+shop home and becomes the day spine's **leading group**: `DaySpine` takes it as `firstRun` and
+renders it above the stations, so a shop on its first morning reads the same column of work every
+other morning is, with the spine underneath it honestly empty. Nothing about *when* it renders
+moved — the `countShopTrips === 0` condition, the demo exclusion, the five persisted facts,
+`FIRST_RUN_STEP_COUNT`, the `Copyable` schedule link and the `data-first-run-primary` hook are all
+the shipped ones.
+
+What changed is the shape of a step. Six secondary buttons beside one primary is seven things to
+press, which is no next action at all, so **every open step that is not the next one is now the row
+itself** — the destination named on `LedgerRow`'s stretched overlay, a quiet chevron for everyone
+else — and the one open step that *is* next keeps the page's one primary. A settled step is still
+`SettledCheck`'s drawn mark and the fact it settled on, with nothing left to press. Stripe is the
+one step that cannot be a door: its route 302s to Stripe's OAuth authorize URL and Next's client
+navigation would follow that redirect via fetch, so its fix stays a plain `<a>` beside the row,
+wearing the same words and chevron the doors wear. The group's label is **First morning** (the
+`heading` key became `groupLabel` in both locales), and the site step now points at the dive-site
+**library** rather than its blank form — the empty library is where a shop chooses between writing
+a site and copying one of the 34 published Florida templates, and landing on the form had already
+made that choice for them.
+
+Exclusivity with the quiet-day collapse stopped being a convention and became a rule: `spineIsQuiet`
+takes `firstRun` and answers `false` for it, so no caller can compose "A quiet day at the dock." over
+the three steps that are the whole screen by forgetting an `&&`. The queue's own "Nothing is waiting
+on you" still stands down while the group renders — that is a claim about a roster this shop has not
+got yet (issue #711) — and that is now the spine's rule rather than a side effect of the group
+replacing it.
+
+And the shop's **first booking ever carries the coral mark** — the staff side's once-in-a-shop's-life
+entry in the coral budget ([20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
+decision 11, which already carries its row). `shopFirstBooking` (`src/db/first-booking.ts`) is one
+`limit 2` read and three clauses: exactly one booking has ever existed for this shop (the whole row
+set, cancellations included — a shop on its third diver after two cancellations has one *live*
+booking and nothing to celebrate), that booking is still live, and its departure has not gone under
+the standing one-hour buffer. A staff-seated walk-in fires it; a shop that imported ten years of
+history last week still gets it, because prior visits live in `prior_visits` and this reader cannot
+see them. No column, no seen-flag, nothing to acknowledge. The spine's coral resolution grew from
+three candidates to four in the one place it lives — recorded close, then all-boats-home, then the
+first booking, then the morning all-clear — because the once-ever moment outranks the one that comes
+round on a good Tuesday, and whichever loses renders nothing at all. Its line is `animate={false}`:
+the seat is booked and the boat is Saturday, so this is a state the owner arrives holding, and
+replaying the entrance for four days is how a celebration stops meaning anything.
+
+Pinned by `src/db/first-booking.test.ts` (the moment's four exits, the walk-in, and the imported
+history that must not false-fire), `DaySpine.test.tsx` (the group leads, the queue's good-news state
+stands down, the coral resolution both ways), `FirstRunChecklist.test.tsx` (one primary, the rest are
+doors, Stripe's anchor is not one, a settled step offers nothing) and `today.test.ts` (a first-run
+shop is never quiet).
+
+## The day closes where it was worked (delivered 2026-08-28)
+
+Slice 6d of
+[20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
+decision 4, and the delivery of **H-62**. The shop's evening was a second destination that
+re-rendered Today's own evidence in a different order; it is now a **state the home's spine settles
+into**, and `/close-out` is a 308. Nothing about `day_closeouts`, the recorded act or the departure
+log changed underneath — only where they render, which was the whole finding.
+
+**A station settles, one at a time.** `assembleEveningClose` (`src/lib/closeout.ts`) joins the
+day's departures to the clock: a station settles when its head count closed or its scheduled return
+is an hour behind it, and a settled one renders as `ClosingStation` — the time, the title, a drawn
+`SettledCheck` beside the state in words, "10 of 10 back by 10:26 AM · head count closed by Keiko
+Tanaka", the recap, and the owner-only log door. It is a *reduced* reading on purpose: the site,
+the hull, the crew line, the price and the capacity meter answer "can this boat sail?", and by the
+evening nobody is asking. The morning spine reads forward and drops a departure an hour after it
+leaves; the closing state reads the whole shop day backwards. Merged by `startsAt`, the day is one
+column of times settling from the top instead of a board quietly emptying — which is also the bug
+this found: a boat that sailed at dawn used to vanish from the home entirely by 8:01.
+
+**There is no phase control, and there is no mode.** The clock decides per departure, so an
+afternoon can hold a settled dawn boat above a station still counting heads with nothing for a
+reader to find or switch. The closing block appears beneath the spine only when *every* departure
+of the shop day has settled, with the standing one-hour late-arrival buffer: the leftovers as a
+ledger group whose header owns the fact each row used to restate ("Still open — carries to
+tomorrow"), each with its own **Dismiss**, saved immediately with Undo per H-57 — then the one
+closing act, and the spine's own Tomorrow disclosure closing the page. No second tomorrow band, no
+caption under the button, no per-row explanation of what carrying means.
+
+**The acknowledgement gate is gone from the domain, not just the screen.** `closeDay` lost its
+`acknowledged` input and `CloseoutAcknowledgementRequired` is deleted; `DayCloseoutState` lost
+`mustAcknowledge` with them. H-57 already has a shop deciding each leftover as it meets one, so a
+checkbox at the close re-asked an answered question in front of an append-only act — principle 7's
+confirm on something reversible. Closing over an open head count is recorded, loudly and by name,
+and never refused. The tests that pinned the throw were rewritten to pin that.
+
+**The evening's coral is one element and it expires.** `spine.allHome` renders as an
+`EarnedMomentLine` when the day is closing and *every* head count closed clean — worded once-ever
+as `spine.firstBoatHome` on the day no earlier day of the shop's holds a sailed departure. It
+requires every station's status to be `all_home`, not merely that the arithmetic comes out even: a
+dock count that never closed subtracts nothing, and "10 out, 10 back" over a boat nobody counted is
+a claim the shop's own records do not support. The recorded close takes the line's place, and the
+morning all-clear stands down for both — the three candidates are resolved in one place, in one
+order, in `DaySpine`.
+
+**The fold.** `/shop/[shopSlug]/close-out` is a 308 Route Handler carrying its whole query, because
+every `?notice=` that page answered is one the home now answers in its place. The `closeOut`
+destination left `STAFF_DESTINATIONS`, so the phone dock holds **four** destinations plus More and
+the room it freed is deliberately unspent; the command palette keeps answering the phrase with a
+*command* pointing at the home's `#close-day` anchor, since a registry entry landing on Today's own
+URL is the duplicate control principle 8 forbids. `close-out/page.tsx` (1,001 lines) and its
+`loading.tsx` are deleted — there is no legacy — and the recap editor moved to the station it
+belongs to, with the seven acts it binds now in the home's sibling `actions.ts`. The departure
+log's owner-only refusal and its back link re-home. `CloseoutShape` and `TomorrowGlance` went with
+the headline and the parting-glance card they existed for.
+
+Pinned rather than remembered: `DaySpine.test.tsx` holds the closing block back while a boat is
+still out, refuses an acknowledgement control at every leftover count, hides the log door from a
+non-owner, and proves at most one coral element renders; `src/lib/closeout.test.ts` pins the
+late-arrival buffer on both sides of the hour and the once-ever wording's condition;
+`staff-destinations.test.ts` pins four primary tabs and no `/close-out` suffix anywhere in the
+registry; `e2e/day-close.spec.ts` runs J4 end to end and checks the 308, the dock and the palette
+command. `/api/test/seed-evening` is what makes the evening reachable at all — it moves a demo
+day's departures behind the frozen clock, because `DIVEDAY_CLOCK` is one process-wide instant the
+whole worker shares.
+
+## Orders is a day ledger (delivered 2026-08-28)
+
+Slice 6f of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
+decision 7. The index was a twenty-row table that said the same two things down every row: eight of
+Wednesday's orders each printed "Wed, Aug 26" in a column as wide as the diver's name, and the seven
+seats sold off one reef trip printed its title seven times. That is principle 9 enforced *within* a
+list and violated *between* its rows. Orders now group by the day the shop took them — a small-caps
+header owning the date and, on the right, the day's order count and its subtotal — with rows
+directly on the page background: diver, what they bought, an amount. The rule the whole slice turns
+on is that **no row renders its group's date**, and it is pinned three times: in the component's own
+test, in the view model the page hands it, and in the rendered page.
+
+The subtotal is the money rather than the sum of the printed amounts — a void order contributes
+nothing and a refunded one contributes its net — because the question a shop asks a day's foot is
+what came in, and the exceptional status beside the row is what says why the column and the total
+disagree. It is one aggregate over the same `shopOrderWhere` and the same joins as the rows, which
+is ADR 20260803-one-pagination-model's pager-scope rule applied to a subtotal: a header summing rows
+the filter removed is the same lie as a pager promising pages that render nothing. A day cut in half
+by a page boundary restates its header on the next page and says `continued`, with the whole day's
+money either side, so the same figure is never read twice as new. The days are sliced out of that
+aggregate by cumulative count rather than by re-deriving each row's local day in JavaScript — the
+rows and the totals then cannot disagree about where a day starts, however Postgres and the runtime
+each spell the shop's zone.
+
+The five-control filter card is a toolbar: one search box, two quiet selects, and the count
+right-aligned. It applies on change, so there is no Apply button and the select *is* the submit —
+which makes `e2e/scroll-preservation.spec.ts`, the test that a filter never throws the reader back
+to the top of the page, the more honest version of itself. The search reaches what a row shows,
+the diver's name and the departure title (and the order's own note), so the box a shop types a boat
+into finds it; it now **combines** with a pinned diver rather than yielding to it, which the old
+diver-name box could not do and which is what stops it being a control that visibly does nothing.
+The date pair is the one conditional control — it renders on a custom range, which is either what a
+Reports link arrived with or what the reader just chose — and "Custom dates" is offered
+unconditionally so there is still a way into one. On a ledger with nothing in it and no filter
+applied, the toolbar does not render at all.
+
+Imported payment history stopped being a second standing table with a second pager and became one
+disclosure row at the ledger's foot, wearing its record count and the `Unverified` mark, open
+already for a reader who has paged into it. The three-way empty fork survives untouched, the
+stuck-payment and owed-refund panels keep their place above the ledger and still render nothing at
+all when there is nothing wrong, and the pager dropped its total because the toolbar states it.
+`scripts/check-critical-text.mjs` followed the rows it measures into `OrdersLedger.tsx`: a diver's
+name, what they bought and the amount are still 16px on a phone.
+
+## After the dive, it is still the same link (delivered 2026-08-28)
+
+Slice 7d of the diver's thread, ADR
+[20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md), decision 4 —
+the half of the concept-model row that had stayed open since ADR 20260820 ("folding recap into the
+same link as a post-trip state"). Once a diver's day is genuinely over, `/ready/[token]` stops being
+a checklist and renders the afterglow, and
+`/recap/[token]` renders the same surface from its own signed token. No redirect between them and
+no dead emails: a recap token cannot mint a readiness capability — `recap-links.ts` domain-separates
+the two on purpose — so the two tokens render one surface rather than one bouncing to the other, and
+every recap link already in the world keeps working.
+
+**Whose day, not just what time it is.** The switch is deliberately not a clock reading. The crew's
+own departure roll call decides it wherever a shop kept one — `not_boarded` never sees the
+afterglow at all, `boarded` opens it once the boat is scheduled home plus the standing one-hour
+late-arrival buffer — and where a shop recorded none it waits the four hours the recap *send* has
+always waited before asserting the same thing by email. Nothing else in the product knows whether a
+particular person dived: `bookings.status = 'no_show'` is a close-out act that may not happen for
+hours or at all, so an hour of elapsed time is not evidence. A **cancelled departure** is answered
+before either state — a blow-out cancels the trip and leaves every booking active by design, so the
+thread reads `trips.status` itself and renders the cancellation with the way back to the shop's
+schedule — and a no-show is told plainly that the booking is recorded as one, with the shop's name
+and contact details, instead of the old "This readiness link isn't available · This booking didn't
+sail", two sentences that were both false for that reader.
+
+**The day's facts render once, and only the ones a shop wrote down.** `/recap` had been saying them
+twice for months: a quiet stat row of conditions and a dotted site itinerary in its first act, then
+a keepsake card underneath repeating both in a second typeface. There is now one dive record —
+diver, date, boat, crew, sites, conditions — and every line of it renders only when it was recorded,
+so a shore dive with no crew and no logged conditions is a short card rather than a card of "Shop
+crew" and "Shore dive" placeholders. `recap.shoreOrCharter` and `recap.unassignedCrew` went with
+them. It asserts nothing about the dive itself: no bottom time, no depth and no dive count, because
+DiveDay records nothing about dives *performed* — `trips.planned_dives` is what a shop typed on the
+trip row and `dive_sites.max_depth_meters` is the **site's** deepest point, and a page a divemaster
+is asked to sign may not carry numbers nobody observed. Those are the diver's to write on the ruled
+lines. `RecapMap`'s stylized boat track, the `SiteStop` itinerary and the duplicate conditions `<dl>`
+are deleted (H-49), and so is the standalone recap page shell: that route is now 170 lines that
+verify a token, read a booking, and render `AfterState`.
+
+**One ask, and the rest are doors.** The review is the page's single primary in every variant — a
+sparse keepsake never promotes a door to fill the space above it — and the carry-it-to-Google
+hand-off keeps its demote-and-offer behaviour, lighting up only after a strong rating has just
+landed and stepping the form's own submit back to secondary while it is lit. Photos and the tip sit
+behind hairline `<details>` rows in the same grammar the prep spine uses one screen earlier, each
+opening the form it already had; a door with a notice to deliver opens itself. The footer says one
+fact — the shop's next public departure, title and relative day — beside the way back to its
+schedule, and falls back to the bare link when the board is empty.
+
+**The coral is spent once and then stops.** The welcome-home greeting is the thread's third and last
+accent (`thread.afterGreeting`, "Welcome back, {name}." — a sentence still true after a hard day),
+and the moment the diver's review is in the same words render as an ordinary page title. The
+milestone stamp beside the dive record is primary ink, never coral: a 56px drawn double-ring roundel
+whose words come out of the bundle, on the visits `src/lib/visit-milestones.ts` names {1, 10, 25, 50,
+100} and no others. Every other visit keeps the plain ordinal line, and `recap.visitMilestoneFirst`
+is gone because a first visit is now a stamp rather than a sentence. A **dive day** is a calendar
+day in the shop's own zone on which this diver actually dived, merged across their DiveDay bookings
+and the visits a shop imported — a blown-out departure is not one, which matters because the stamp
+is exact equality and a phantom day does not blur a milestone, it skips it permanently. The keepsake
+prints like a logbook page: everything else on the surface is `print:hidden`, and the record grows a
+ruled Notes block and a divemaster signature rule that exist for the printer and nowhere else — the
+blanks that hold the numbers the record itself will not claim.
+
+**No share-this-page control, deliberately.** `/recap` used to offer one. That surface now also
+answers on `/ready`, whose URL is a bearer capability that can cancel the booking and move its
+refund, so a button handing the current page to a group chat cannot exist on one of two URLs
+rendering one surface. `RecapShareButton` is deleted with its five copy keys; the keepsake's own
+shareable artifact — an image with no bearer URL in it — is issue #1081 and stayed out of scope. For
+the same reason the three recap actions were left untouched: `/ready`'s after-state mints a *recap*
+token server-side and binds them to that, and a composition test fails the build if any of them is
+ever bound to the page's own readiness token.
+
+The marketing mockup was reconciled in the same change, since slice 12b had shipped
+`RecapPageFallback` on the homepage's evening moment row while this surface was still a stat row and
+a photo grid. It is redrawn as what a buyer will actually see — the dive record, the crew's word,
+the one review ask — with both callers' `aria-label`s rewritten in both locales to name it.
+
+Pinned rather than remembered: `src/lib/thread-steps.test.ts` holds the clock's own limit and the
+three answers the evidence produces above it; `src/db/recap.test.ts` holds that a cancelled
+departure has no recap and counts as no dive day, and `src/db/ready.test.ts` that a cancelled
+departure is a different fact from a cancelled booking; `AfterState.test.tsx` renders the real
+surface and fails on a second conditions element, a second primary, a coral greeting after a review,
+a stamp outside the named set, a print-only block that renders on screen, or any dive count or depth
+returning to the record; `src/app/ready/[token]/page.composition.test.ts` pins that a cancelled
+departure and the roll-call read both come before the state is composed, that the state is decided
+before any of the prep page is, and that the recap actions never see a readiness token; and
+`e2e/blowout.spec.ts` drives the whole thing — a seat booked, the blow-out called, and the diver's
+own unchanged link opened again.
+
+## The waiver paces itself (delivered 2026-08-28)
+
+Slice 7e of [the diver's thread](../architecture/decisions/20260827-the-divers-thread.md),
+decision 5. `/waivers/[token]` was a wall by construction — the full legal release, then eleven
+medical questions, then a signature, and nothing anywhere saying how much of it was behind you. A
+quiet step rail now sits under the header: **Release · Medical · Sign**, three drawn marks and a
+count, hairlines above and below and no fill of its own. The counting rule is the honest one rather
+than the flattering one. Release settles on the diver's *first medical answer*, because the release
+has no "I have read this" control and presenting the full text is what typed consent means here
+(the ADR rejected collapsing it behind a disclosure outright), so moving into the questions
+underneath it is the only evidence there is. Medical settles when nothing applicable is left blank
+— including the follow-ups a diver's own yes opens. And **Sign settles only on the completed
+state**: a typed name and a ticked box are not a signature until `completeWaiver` has taken them,
+so the page a diver is still filling in tops out at 2 of 3 however finished it looks, and the third
+mark lands on the screen that celebrates it.
+
+**Nothing on this page ticks a step the shop is still holding open.** Two states used to, in the
+same direction — the page claiming more progress than the diver had. Answering "yes" to "I am over
+45 years of age" is the most ordinary answer on a dive boat and it puts Box B's four required
+questions on the page; the page-one list is complete at that moment and the *form* is not, and the
+rail settled Medical anyway, three inches above the outcome line saying "answer those and you're
+done" and over a submit the server was about to refuse. And a signed record on a physician-referral
+hold closed the rail at "3 of 3 done" directly under the sentence telling the diver a doctor must
+confirm in writing before they can go out — the product turning its own blocking state into a
+checkbox, read last by the diver who then never chases the sign-off. Medical now settles on the
+applicable questions rather than the ratio, and the completed state's rail is told when the record
+is still open and draws a ring instead of a check. The *counter* keeps its page-one denominator
+throughout: one that grows when you answer honestly punishes honesty, but that was always an
+argument about the ratio and never a licence for the settle mark to lie.
+
+**One scale of progress, not two.** The form's three sections used to number themselves 1-2-3,
+which was fine while it was the page's only enumeration; the rail's arrival made it the second,
+over a different membership — the rail counts Release · Medical · Sign, the numbering counted the
+medical form, the emergency contact and the signature. A diver met "2 of 3 done" at the top of the
+same viewport as "step 2 of 3" in the body, and the step the two silently disagreed about was the
+emergency contact: a name *and* a reachable phone number the crew calls in an incident, which this
+page is the main place anyone captures. The numbers are gone, the rail is the scale, and the
+contact keeps its own heading between the questions and the signature.
+
+Four banner treatments became one. The refusal band, the saved-draft band, the English-only note
+and the expired link's rescue outcome each had their own tint, radius and ink; all four now render
+through `ShopNotice`, and the three that belong to the signing page stack in one slot above the
+release instead of scattering down it. The English-only note moved out of the release section with
+them — it was attached to the document it warns about, which read well and meant a diver who cannot
+comfortably read English legal text met that warning *after* the page title, the trip line and the
+version rule, in a treatment nothing else on the page shared. It is second in the slot, because a
+refusal answers something the diver just did and a standing fact about the document does not.
+
+**One primary.** Sign and "Save and finish later" used to share a row as two buttons, which on a
+phone stacked them in reverse — the bordered secondary above the filled primary — so the page's one
+act was the second thing a thumb reached. Sign is now the full width of the card it belongs to, and
+saving demotes to a text link on the line with the expiry sentence that explains why you would want
+it (`buttonClass`'s own `link` variant, which reads as inline text and still claims the 44px
+target). The mechanism did not demote with the affordance: it is still a `<button formAction>` on
+the same form, carrying `formNoValidate`, so a diver with no JavaScript still keeps the answers they
+came back to finish.
+
+The count is derived once, and it is right in the first paint. `WaiverPacing` wraps the page from
+the rail down and owns the delegated `change` listener that used to live inside
+`QuestionnaireProgress`, so the rail above the release and the sticky counter over the questions
+read one number off one source rather than two components each deriving it from the same radios. A
+delegated listener sees nothing that happened before it mounted, so both figures are seeded from
+the server: the page already knows which questions the saved draft answered and which Box it left
+open, and it hands them over as props. Without that the HTML shipped "0 of 3 done" above ten radios
+the server had just rendered checked — wrong on dock wifi until the bundle boots, and permanent
+with JavaScript off, which this page deliberately supports. The questionnaire counter also picked
+up a correctness fix on the way: it pluralises against the reader's negotiated locale now, not the
+runtime's, which on a server is whatever the box was booted with.
+
+Nothing about signatures or medicine moved, and the tests say so rather than the commit message:
+the release renders in full with no disclosure, clamp or scroll box; `completeSignatureSchema`,
+`readMedicalAnswers`, the refusal routing and the `?at=` nonce are untouched; and the rail holds no
+copy of its own and no word about outcomes, so `QuestionnaireOutcome`'s single sentence stays the
+only thing on the page that says what an answer means — declining to settle a step is not a
+judgment about it. The rail's own settled Medical line words facts only ("11 of 11 answered") — the
+SPEC's optional "· 1 flagged" was **not** built: it would be a second statement of a referral the
+outcome line already makes in kinder words, on a page under the H-01/H-03 wording freeze.
+
+The rail is deliberately not a navigator on first pass, and never links forward — a diver cannot
+tap "Sign" to skip the release. After a refusal, and only then, the one segment that owns the
+refused field becomes an anchor back to it, which is worth having precisely because the refusal
+redirect lands the reader at the top of a page whose problem is hundreds of pixels down. It carries
+no live region either: the questionnaire counter already announces its running count politely, and
+a second region re-announcing "1 of 3 done" on the same keystroke is two interruptions for one
+fact.
+
+## The roster is one ledger (delivered 2026-08-28)
+
+Slice 8c of [20260827-people-not-lists](../architecture/decisions/20260827-people-not-lists.md),
+decision 2. `/shop/[shopSlug]/divers` rendered every diver **twice** — a stacked card list under
+`sm` and a three-column table above it — so every assertion about the roster had to say which copy
+it meant, and a name a staffer was scanning for competed with an avatar, a contact line, a level
+column and an attention column on the same row. It is now one composition at every width: search
+and the count, the view chips, then hairline rows grouped by the initial letter they were already
+sorted by. A row is **a name and the door it opens**, one quiet fact set right, and a badge only
+where something is exceptional. The measure came to `max-w-5xl`, the shop home's — the roster and
+the record disagreeing about width was the ADR's own first complaint.
+
+The three badges are a **blocker** (danger, worded per `AboardBlockerKind`), an **open balance**
+(warning) and a **possible duplicate** (warning, still gated on the merge permission). Nothing
+else: the "pending review" / "to confirm" counts the rows used to carry were the whole content of
+the Needs-attention view, whose chip already says so — the same fact at two volumes. **A clear
+diver's row carries no pill at all**, and that silence is the slice's pin, asserted in the unit
+suite where the row's own facts are the fixture and again in `roster-views.spec.ts` as membership
+rather than as a badge.
+
+The row's facts came from a new reader, `src/db/roster-facts.ts`, because nothing existing supplied
+them: the latest departure a diver sailed, the soonest one still ahead (split on the standing
+one-hour late-arrival buffer, the same hour the record's story uses), whether their whole history
+came across from another system, whether an invoice against them stands open, and — from the same
+`inHorizonReadiness` pass Today and the nav badge read, never a second detector — what they cannot
+board on. Four `inArray`-bounded reads over the ~25 ids the page just fetched. Which of those a row
+is allowed to say, and which letter a name files under, are `src/lib/roster-rows.ts`: codes, no
+words, and letter groups built as **runs over the query's own order** rather than buckets, so a
+page never re-sorts itself under the pager. Accents fold, so Ángel files under A.
+
+Deleted (H-49): `summarizeDivers` and its four per-page queries, the certification-level column and
+its `diverDepthLimit` read, the pending/imported counts, the avatar, the contact sub-line, the
+"People" heading and the badge hanging off it, and nine message keys in both locales. The count is
+quiet text beside the search box now — a fact about the list, not a status. `listDiverSummaries`
+returns the redacted person row and nothing more, which makes the boundary that drops date of
+birth, dive insurance and the emergency contact the *whole* of what the roster ships to a browser.
+
+## The waiver is one decision, then one act (delivered 2026-08-28)
+
+Slice 8e of [20260827-people-not-lists](../architecture/decisions/20260827-people-not-lists.md),
+decision 4. The release a shop publishes and the signatures standing against it were two tabs that
+could disagree; they are one page now. `/shop/[shopSlug]/waivers/signatures` is a 308 Route Handler
+carrying `?record=` and `?page=` (plus the row's fragment), and the sub-nav, its shell layout and
+the second `page.tsx` are gone (H-49).
+
+**Materiality became the input.** What stood there was two same-weight, near-destructive buttons
+with no default — "Publish — signatures need renewing" beside "Publish wording correction" — each
+arming its own confirm, so the app learned which kind of edit this was from *which button was
+tapped*. H-54 asks for two explicit choices, so the choice is now a radio pair the form is invalid
+without ("A correction — wording only" / "A material change", the material one carrying the live
+`standingWaiverExposure` figures), with a single **Publish** beneath and the `InlineConfirm` double
+tap kept on the material path alone. With nothing signed against the current release the pair
+collapses and Publish stands alone. Nothing about H-54's semantics moved: the same `material` field
+reaches `saveWaiverAction`, exposure is still counted before the save, and the action now refuses a
+submission naming neither rather than defaulting on the shop's behalf — the server half of the pin,
+because a POST straight at the action never met the form. That refusal has its own words
+(`waiver-materiality-required`): it shared the too-short release's notice code briefly, which told an
+owner publishing a typo fix to lengthen a release they had never shortened.
+
+**The signature log became a day-grouped ledger.** The day is the fact a reviewer walks the
+evidence by, so it is stated once at the head of each group instead of on every row; a row carries
+who, which departure and what time, and opens in place onto its evidence block — the release
+version the signature was given against, the doors to the diver and the departure, and any flagged
+medical prompt. Integrity is a `Badge` **only when it is not valid** ("Integrity mismatch", "Not
+sealed"): the log used to write a green "Integrity verified" down every row, which is the page of
+green that teaches a reader to stop looking. A `?record=` deep link renders its row first inside
+its own day group behind a `--border-strong` rule and opens it — never lifted out of the grouping —
+and it is the only row that opens, so the log at rest still renders no medical answer.
+
+Copy fell by eight keys net in both locales: the four confirm triggers, the two-tab labels, the two
+save verbs, the "Integrity verified" word and the card heading that repeated its own field's label
+all retired. Pinned by
+`src/app/shop/[shopSlug]/waivers/_components/PublishRelease.test.tsx`,
+`_components/SignatureLog.test.tsx` and `actions.authz.test.ts`.
+
+## The day owns the count, and a fallback says which day it asked for (delivered 2026-08-28)
+
+Slice 8f of [20260827-people-not-lists](../architecture/decisions/20260827-people-not-lists.md),
+decision 5, and the last of that canvas. Requests was already the closest of the people surfaces to
+right — day groups, advice, one act per group — and merely spoke the old chrome: a tinted
+"Planning suggestion" panel whose first sentence recounted the divers and the requests the heading
+above it had just counted, and a stack of bordered cards where a second choice arrived as a
+`bg-surface-sunken` fill wearing a neutral pill.
+
+The day group now owns everything its rows share. Its label reads "Mar 6, 2027 — 2 groups ·
+5 divers", the planner's answer sits under it as one quiet line saying only what a header cannot —
+which hull fits, or that none does, and how many divemasters the shop's own target implies — and
+"+ Add a departure" is the day's one secondary, in the board's own words (`schedule.builder.addDeparture`)
+so the act has one name wherever a staffer meets it. The rows beneath are hairline ledger rows:
+who asked, what for, how many of them, where they are up to, and **why this row is filed under a
+day it did not name** — "First choice Mar 13, 2027", in ink, which is the slice's pin. The tint and
+the badge that used to carry that are gone, and a request that travelled here on its flexibility
+says so once rather than twice.
+
+A row's name is a door only when the lead is actually tied to a diver on file — the `person_id`
+match is made once, by exact address, and never back-filled, so most requests are strangers with no
+record to open and a row that looked tappable and was not would be worse than one that never
+claimed to be. The contact stays reachable either way: the address is its own `mailto:`, and
+"Create a booking" carries the request id into the seating flow from the row's trailing slot.
+Nothing about a request has a state, so nothing on the page wears one.
+
+Deleted in both locales: `groupPeopleCount`, `recommendationHeading`, `recommendationDetail`,
+`noDateHeading`, and `groupCount` — which nothing had rendered for some time, and which no check in
+the tree could have told us about.
+
+## The dive-site library becomes one shelf (delivered 2026-08-28)
+
+Slice 9a of [20260827-the-shops-shelves](../architecture/decisions/20260827-the-shops-shelves.md),
+the library pattern. `/shop/[shopSlug]/dive-sites` rendered a 6xl three-column table, and the
+DiveDay catalog one query param away rendered a two-column card grid — two furnitures for one noun.
+Both are now **one ledger**: hairline rows on the page background under group headings, the row as
+the door, `SiteLibraryLedger` composed from the shipped `LedgerGroup`/`LedgerRow` primitives.
+
+The shop's own library groups by **how demanding the site is** — Beginner, Intermediate, Advanced,
+then Unrated, easiest first — because that is the collection's own shared fact and the one thing a
+staffer scans for. Grouping composes with the Pager rather than replacing it: `listDiveSitesPage`
+now sorts **group-major, then name**, so a heading re-rendered on page 2 continues its group instead
+of opening a second one, and the count the Pager states keeps the row query's exact scope. The
+`difficulty_level` enum sorts by declaration order with NULL last, which is precisely
+beginner → intermediate → advanced → unrated, so the SQL order and `groupSiteLibrary`'s order are
+the same list and cannot drift. A site nobody has rated is filed under **Unrated** and never guessed
+at: `siteFit`'s keyword sniff yields a *tone* read off prose written for another purpose, and it may
+not place a site in a level the shop declined to choose.
+
+**Requirement words only above Open Water.** The table wore a level badge on most of its rows —
+the certification every diver on a recreational charter already holds, restated once per row. The
+level word now renders only above that floor; specialty and nitrox words render at any level, as
+words rather than the "1 required specialty" count that never named the specialty; and warning ink
+is reserved for the rows whose level is also above the floor, so a nitrox-only reef reads quiet and
+a deep wreck reads loud without either depending on hue. The fit reading is not a column either: it
+appears only where it **cuts against** its group — a shop that marked an easy reef demanding, an
+advanced wall welcoming — and "ask the crew" stays silent everywhere, including under Unrated,
+where it would be the same "nobody has said" twice.
+
+The `◆`/`◇` provenance glyph retires with the column it replaced; the adopted-version line went
+back to the site page, where the whole template-update panel already lives. What a staffer can act
+on stayed: a waiting template update is the row's one badge, which is the exceptional state the pill
+exists for. And **the catalog is a door at the ledger's tail** — "Browse the DiveDay catalog" over
+a count read from `countGlobalDiveSiteTemplates`, which shares the catalog pager's own
+current-version join so the door can never promise more sites than the catalog can render. The
+header's secondary action retired with the door's arrival; the two-door empty state, which owns the
+write-one-or-import-one choice on day zero, is untouched, and the door does not render beneath it.
+`FirstRunChecklist`'s site step now points at the library rather than the create form, so the
+checklist stops making that choice for a shop on its first morning.
+
+The catalog behind the door keeps its preview-then-import flow in the same grammar: the row **is**
+the preview door, so the "Read it first" button retired into it and Import stays as the row's one
+act. Both surfaces came in from `max-w-6xl` to `max-w-5xl` — a 6xl column was the three-column
+table's width, and a hairline row 1,150px wide sets a name and its trailing facts a third of a
+screen apart. Deleted from both locales: `gridAriaLabel`, the three `table.*` headers, the two
+required-specialty counts, `diveDayTemplateVersion` and `catalog.preview`. Pinned by
+`SiteLibraryLedger.test.tsx` (the level word only above Open Water, the specialty words regardless,
+the fit reading only where it cuts, no badge on a site at its published version, and the tail door's
+two halves — renders only when the catalog has entries, never when the library is empty),
+`src/lib/dive-sites.test.ts` (the full requirement and fit tables), and `src/db/dive-sites.test.ts`
+(group-major paging, easiest first with unrated last, and the door's count sharing the catalog's
+join).
+
+## The dive-site briefing gets a rail (delivered 2026-08-28)
+
+Slice 9c of [20260827-the-shops-shelves](../architecture/decisions/20260827-the-shops-shelves.md),
+the long-form editor pattern. The briefing was fourteen blocks running some four thousand pixels,
+four of them bordered fieldsets at two radii, with no way to know where you were in it and one Save
+at the far end that said nothing about what it still owed. It is now **ten named sections on
+hairlines beside a sticky rail** — `EditorRail` and `EditorSection`
+(`src/components/editor/`), built to serve the course editor as well as this one.
+
+The rail is one list rendered two ways: from `lg` up a column pinned at `top-(--chrome-h)` — the
+chrome bar's height read, never measured, which is the mistake the settings rail made and
+`chrome.test.ts` caught — and below `lg` the app's existing jump row, `JumpNav`, the one grammar
+for "places on this page". Both are plain `#anchor` links the browser resolves itself, so the rail
+works before its JavaScript arrives and cannot disturb a form mid-edit; the entry you are reading
+is tinted, tracked by an observer watching a band across the top of the viewport rather than a
+scroll proportion, because these sections are wildly uneven (two coordinate fields above a map
+editor). Anchors land the group label below the bar rather than behind it.
+
+**The boxes are gone and the grouping is not.** A section that is genuinely one group — the GPS
+location, the route, the photos, the fit reading, the landmarks, the field guide, the certification
+demands — is still a `<fieldset>`, and its `<legend>` is now the small-caps group label the ledger
+primitives spell everywhere else; the three custom editors kept every behaviour and lost their
+borders. A stretch of independent fields is a named `<section>` instead, because a `<fieldset>`
+there would prefix every label with a name only some of them share. The only field that moved is
+the pair the page opens with: location and description join the name under **The site**, so the
+first section is the site's identity rather than its name alone. Nothing on the form is DiveDay's
+words about a site (ADR 20260813-dive-site-briefings-are-the-shops-own-words) — the section names
+are chrome on the shop's own editor and never reach a diver.
+
+**One Save, and it says what it owes.** The submit button, the refusal and a new sentence now ride
+`StickyFormActions` at the bottom of the viewport: one dirty section is named ("Unsaved changes in
+The site"), two or more are counted. Dirtiness is read off the DOM rather than a registry — every
+section wraps its own fields, so the map from a control to its section *is* containment, and a
+field that moves needs nothing re-registered. It does not claim a value typed back to what it was
+is clean, because `input` cannot tell, and on a form whose Save is the only way to find out that
+would be the worse error. `SiteFormShell`'s refusal handling, the `expectedVersion` conflict refusal
+and the whole submission-comes-back-with-the-refusal contract are untouched; the refusal simply
+renders in the row beside the button that earned it instead of at the foot of the document.
+
+Both pages widen to `max-w-5xl` from `lg` up so the rail takes a column of its own rather than out
+of the fields' measure, and both `loading.tsx` files are its twin — a rail of bars beside sections
+on hairlines, where they used to draw a form skeleton and a stack of cards. Pinned by
+`EditorRail.test.tsx` (every section the rail names is reachable, the rail pins by reading the
+chrome token, the phone renders the same anchors as a jump row, the sentence names one section and
+counts two, and a section keeps its fieldset while losing its box),
+`site-form-sections.test.ts` (the section list, its anchors and its words in both locales) and
+`SiteFormShell.test.tsx` (Save, the unsaved note and the refusal in one row).
+
+## The gear register says one thing once (delivered 2026-08-28)
+
+Slice 9d of [20260827-the-shops-shelves](../architecture/decisions/20260827-the-shops-shelves.md),
+the instrument pattern. `/shop/[shopSlug]/gear` said one fact three ways: three stat tiles counting
+out / due back / service due, a Returns panel listing the first two again with the acts on them,
+and a "Where it is" column saying it a third time on every row of a bordered table. **The states
+are the groups now** — Out, Overdue, On the wall — hairline rows on the page background under
+headings that own the count, composed from the shipped `LedgerGroup`/`LedgerRow` primitives. The
+tiles and the panel are gone (H-49, no legacy to carry) and their acts ride the rows they were
+always about: mark returned where the unit is with a diver, check out and release where the desk
+still has it.
+
+**A unit is in exactly one group**, and the mapping is a pure rule — `gearRegisterGroup` in
+`src/lib/gear.ts` — so the register and the words on its rows read the same table. Two of the
+mappings are deliberate widenings of the phase vocabulary the register already had. A lapsed window
+is *overdue* whether or not the unit ever left the counter, because the group is where the work is;
+the `overdue`/`never_picked_up` split the 2026-08-20 dive-domain review insisted on survives as the
+row's word and act — a phone call and a return for one, a quieter line and a release for the other,
+because a fabricated return on a unit still hanging on the wall is a false record. And a reservation
+whose window has *begun* and that nobody has collected sits in **Out** rather than on the wall, with
+"Not collected · reserved for …" correcting the count a boat-rigger would otherwise read off the
+heading.
+
+**Out and Overdue always render complete.** They are bounded by the shop's live reservations rather
+than by its fleet, and a register that hides an overdue unit on page 3 is lying about the one thing
+it exists to say; only the wall pages, keeping the Pager it always had, with the heading owning the
+count and the pager left to say the position. `gearRegisterGroups` reads the claimed units in one
+query and hands the rest to the existing paged reader with those ids excluded, so the count keeps
+the row query's exact scope. Out rows whose window closes today name the departure's own clock —
+`GearRowReservation` gained `tripEndsAt`, taken off the trips join the reader already made, rendered
+in the shop's zone, the raw `endsAt` because the standing hour of late-arrival slack belongs to
+deciding whether something is overdue and never to the time printed on a row.
+
+Nothing on the surface wears a pill: an overdue row carries warning ink, the words that say why, and
+the drawn caution mark from the shared icon family — never an emoji, and never a box around a
+sentence (the reading issue #776 settled). Service clocks speak only where they have something to
+say, one sentence per row, and they still inform rather than gate: a unit whose inspection lapsed
+last month renders its acts and its door exactly as its neighbours do. The kind chips became the
+app's one chip control and narrow **every** group rather than only the wall; Deleted stays a chip,
+and its list is the same rows with no heading over it, because the active chip already says which
+view this is. The register is still opt-in by presence — at zero units there are no groups, no
+chips, no earned line and no header action, only the empty state and its one door.
+
+One reading survived the tiles rather than folding into a group, and it is the band's fourth chip:
+**Service due**. Out and Due back each duplicated a group heading; the service tile duplicated
+nothing, and retiring it with the other two left the register able to answer "what wants the bench?"
+only for the fifty units on the wall page in front of you — while the page's own description still
+promised the fleet. The chip opens a complete, unpaged, fleet-wide list of what the bench owes,
+soonest deadline first, with the units already pulled off the wall leading it; the rows are the
+register's own, so a unit still out with a diver carries the act that starts getting it back. Today
+keeps the urgent six days; the register keeps the month, which is the distance a tank's hydro and
+visual inspection are actually planned over — clocks a fill station enforces, so a shop that loses
+the heads-up loses a boat's air. The chip appears only when something is due: a chip promising an
+empty list teaches a day-one shop exactly what three tiles reading 0 taught it. `gearServiceIsDue`
+(`src/lib/gear.ts`) is the one predicate behind both the chip's count and the row's own service
+sentence, so the list and the rows that speak can never become two different sets.
+
+The register's new vocabulary is in the glossary, which is the other half of this slice. Its three
+groups are **window** states, and the one place they part from the phase words is the one worth
+writing down: the Overdue group takes *both* lapsed phases, so "Overdue — 3" means three claims to
+close and never three units in divers' hands — two may be hanging on the shop's own wall under a
+stale claim. The phase words keep their narrow meanings everywhere they are worded, including on
+those rows, and the glossary now says both things in one place instead of leaving two live meanings
+of "overdue" to be discovered on a phone call.
+
+The register's coral moment is now condition-derived rather than notice-derived: units on the
+register, nothing out, nothing overdue, and never under a kind filter, where "all home" would be
+claiming something about the whole shop while a regulator is overdue one chip away. It plays its
+entrance only for the reader who just closed the last one out, and takes the "the unit is home"
+banner's place instead of standing beside it. Pinned by `GearRegisterLedger.test.tsx` (the three
+headings and their counts, no empty group, the overdue word and its drawn mark, the never-collected
+row's own word and act, the due-back clock in the shop's zone, the pager saying the position rather
+than the count, and the one coral line), `src/lib/gear.test.ts` (every phase to exactly one group)
+and `src/db/gear.test.ts` (out and overdue complete on page 2 of the wall, the chips narrowing all
+three groups, the wall's count keeping its own scope). The service-due view is pinned in the same
+three files — the list's words, acts and lack of a heading of its own; `gearServiceIsDue` over every
+state including the benched unit with no clock; and the reader ordering a benched unit ahead of a
+running clock, keeping the reservation on a unit that is out, and holding the month Today's
+six-day horizon drops — plus the glossary entry itself, which `src/lib/gear.test.ts` reads off
+disk and fails without.
+
+## The course editor stops being a wall of boxes (delivered 2026-08-28)
+
+Slice 9b of [20260827-the-shops-shelves](../architecture/decisions/20260827-the-shops-shelves.md),
+the long-form editor pattern. The course editor was eight bordered fieldsets and about four
+thousand pixels, with no way to know where in it you were, no way to get to the section you came
+for, and — after pressing the one Save at the foot — no way to tell which section you had actually
+changed. It now composes as a sticky section rail beside unboxed sections: group labels and
+hairlines where the borders were, `EditorSections` drawing the one rule between each pair rather
+than each section drawing a box around itself, and the depth-marker hint moved out of its panel
+above the form to sit beside the prose it governs. The `<fieldset>`/`<legend>` pairs stay — the
+legend is still the accessible name of a group of controls, which is the half of the old
+composition that was doing work.
+
+The rail is `src/components/editor/EditorRail.tsx`, built shared because 9c takes it to the
+dive-site form next. It pins at `top-(--chrome-h)` and never at a number: the chrome guard fails
+the build on the alternative, and that is the mistake it caught on the settings rail. Position
+comes from a scroll listener over the sections' own elements rather than an `IntersectionObserver`,
+because a form section can be taller than the viewport *and* shorter than one text box, so "which
+one is intersecting" has no single answer while "which one did I last scroll past" always does. One
+`<nav>` in both readings — a column from `lg`, the same list as a jump-row across the top on a
+phone — rather than two hidden copies a screen reader would read twice.
+
+The sticky Save now names the section holding the unsaved work ("Unsaved changes in The pitch",
+"Unsaved changes in 2 sections"), which is what makes the rail actionable: "Unsaved changes" was
+true and useless when the section it meant was four screens away. Which sections are dirty is read
+off the DOM by containment — every section wraps its own controls, so there is no registry for a
+new field to forget to join — and the sentences are built on the server, because staff copy never
+crosses to the client as a bundle. A restored draft still says it was put back; that fact wins over
+the section it filled.
+
+Nothing about the save moved. `ConflictGuardedForm`'s `rowVersion` refusal, `UnsavedChangesGuard`'s
+draft, the depth-marker refusal (`courseDepthPlaceholderIssues`) and the template-update
+keep-vs-replace panel are untouched, and the day-by-day section keeps the id `scheduleDaysJson` it
+has always had, because that is what `?field=` names when the payload is refused and what
+`FieldErrorFocus` resolves. Two tests pin the rule rather than the pixels: every rail anchor lands
+on a section of the real page and every section is in the rail (stated against the rendered page,
+since a section added to the form and forgotten in the rail renders perfectly), and the section
+that was typed in is the one the Save bar names.
+
+## Staffing is a week, and the gap sits in its day (delivered 2026-08-28)
+
+Slice 9e of ADR [20260827-the-shops-shelves](../architecture/decisions/20260827-the-shops-shelves.md).
+Staffing was two identical card grids and two add forms in one 547-line file: a From/Through window
+that answered "who is working" and never "when", three derived capability pills on every person
+beside their raw enum roles, and the page's one operational fact — "3 departures in this window
+still need crew" — as a sentence with nowhere to go. It reads as a week now. People down the side,
+the shop's seven days across the top, shifts as quiet chips, and the departure nobody is rostered
+on **in the day it sails**, carrying the warning word and its own Assign door into that trip's crew
+section. The count that used to stand alone is the length of the list the same walk now hands back
+(`StaffingView.gapTrips`) — one detector, one vocabulary, still `courseCrewGap`'s codes and Today's
+own words for the two ratio ones, which is the contract ADR 20260806-staffing-is-the-shift-roster
+set and this slice keeps.
+
+Paging is `?week=`, the schedule board's own grammar from Clearwater 6e (`src/lib/week-board.ts`) —
+one spelling, two surfaces, and the pair of steps that reads it is now one component
+(`src/components/ui/week-pager.tsx`) rather than the board's markup and a second copy of it. The
+`?from=`/`?to=` window is gone; an old bookmark is ignored rather than refused and lands on this
+week. **Every bucket is a shop-local day**, and that is the assembly's whole reason for existing:
+on a UTC box a 9:00 PM Key Largo shift is stored on tomorrow's date, so a host-zone read would move
+a shop's evening work a column right and no test on a UTC runner could see it. `staffWeek`
+(`src/lib/staffing-week.ts`) is pure, reads no clock of its own, and is pinned on exactly that.
+
+The badges went with the composition. `capabilitiesForRoles` derived "Can teach" / "Can crew" /
+"Captain" from the roles printed beside them — the same fact one step further from its source, worn
+as three pills on every row, which is the pill grammar spent on nothing exceptional; the roles now
+render in the words Team already gave them, which also stops the raw `instructor · captain` enum
+leaking English onto a Spanish reader's screen. Credentials are the quiet ledger beneath: the
+review state and the issuer as one line, the renewal in warning ink only once the clock has
+something to say, and **the word always present** so a monochrome screen loses nothing. Nothing
+there gates anything — H-59 — and the test asserts the absence, because a later change that greys
+a control on a lapsed rating looks helpful and breaks the one promise this surface makes.
+The two add forms became two doors, `+ Add a shift` and `+ Add a credential`, native `<details>`
+at the tail of the ledger each belongs to, reopening themselves on a refusal so the words land
+beside the field that caused them.
+
+**Review pass, same day.** The gap row was asking the wrong question, and it answered backwards at
+both ends. "Does this departure have a `trip_assignments` row" is not "is anybody in the water with
+them": a twelve-diver reef charter with a captain rostered and no divemaster drew a clean, empty
+cell, while an empty boat nobody has crewed yet drew a warning with a live Assign link. So did a
+self-guided departure, and so did a boat that came home on Monday — the week deliberately shows six
+days behind, and `trip_status` never learns that a departure has sailed. The walk now runs
+`divemasterRatioGap` (`src/lib/divemaster-ratio.ts`) beside `courseCrewGap`, in Today's own order
+and with Today's own words: **No crew** where nobody is supervising, **Under target** where the shop
+is merely short of its own ratio, and silence for the self-guided, the unbooked, and anything home
+more than an hour. That is the module that judgement lives in "so the trip page, the Today queue and
+whatever reads this next must not be able to disagree about whether one departure is short" — this
+surface was *whatever reads this next*, and it disagreed in the dangerous direction. The quiet code
+draws quietly, too: the shop's own target binds nothing, so it takes Today's neutral ink rather than
+the warning fill this surface reserves for a boat with nobody in the water. The page's own
+`staffing.week.noCrew` string is deleted in both locales — a fourth spelling of a word two other
+surfaces already own.
+
+A departure is also a **run**, not a point. `trips.starts_at`/`ends_at` bound the whole of a
+three-day course, so filing it by its start showed the instructor busy on Thursday and free for the
+two days they are teaching, printed "8:00 AM – 5:00 PM" for a 57-hour commitment, and dropped a
+class that began the previous Sunday out of the week it is actually running in — fetched, counted
+as needing crew, rendered in no column at all. The week reads the meeting windows now
+(`trip_schedule_days`, the same rows the schedule board's week joins), places a person's crewed
+departure in every day it covers with that day's own hours, and places its gap once, on the first
+day of the run this week can see — one Assign fixes the whole run, and three identical warnings
+would be the same fact said three times.
+
+And every act now carries the week it was performed in. Building next week's roster — the ordinary
+Sunday-evening job — meant being thrown back to this week after each save: "Shift saved." above a
+grid the shift is not in, with the add form's date reset under it, and the natural recovery refused
+as an overlap. The five actions take the displayed week as a bound argument and merge it into their
+`?notice=` redirect. The add form opens on **today** when the week on screen contains it, rather
+than always on that week's Monday: a last-minute crew change recorded on a Friday afternoon landed
+silently on Monday, nothing refused it, and the trip page went on reporting that crew member as not
+on a shift for the coverage warning the manager believed they had just cleared.
+
+Deleted rather than reworded: the window form and its three labels, the "Shift changes require
+owner or manager" badge (a manager reading a page whose controls they can already see), "Not
+scheduled in this window" (the empty cell says it), the per-card "Crewing" heading and its empty
+line, the crew-gap summary in all three of its states, the credentials preamble explaining that the
+records never gate — a clause explaining which rule won — and the bare "no credentials recorded
+yet" line, which was a group with no members. Below `lg` the week collapses to a day list with the
+same acts, the same call H-63 made for the board: seven columns of time ranges have no honest 390px
+form.
+
+## Reports is five figures and a ledger (delivered 2026-08-28)
+
+Slice 9f of ADR [20260827-the-shops-shelves](../architecture/decisions/20260827-the-shops-shelves.md).
+Reports was already the closest of the shelves to right — figures, then a table — and it simply
+wore the old furniture: six bordered stat tiles in a three-column grid, none of which floated above
+anything, for six numbers whose whole job is to be read in one sweep. Clearwater's first decision
+is that elevation is earned, and six flat boxes are still six boxes. The boxes are gone and the
+hairlines stayed: five figures at the ramp's figure size, tabular, in one band bounded top and
+bottom, each over a group label and under at most one quiet line, with the baseline comparison one
+step quieter than that.
+
+Five, not six. **Tax** left the headline row for the quiet line beside the CSV door — it is a
+footnote to net revenue, not a number beside it — and the **departure count** folded into the Seats
+figure's own subline, where it was always the denominator. The revenue tile's definition line went
+with them: "Payments and deposits after Stripe Tax on this month's trips" was the label read back
+in a sentence, and the tax figure now under the row says the same thing as a number. What survives
+on that figure is the imported-history line, because that one is a *state* — money inside the
+figure Stripe has not confirmed — and a state is one of the two kinds of sentence that earns its
+place.
+
+The trips table is a ledger. A five-column `<Table>` needed its headers to name what each cell
+held, which is why the phone had to hide Seats and Crew outright and fold "70% of what?" back into
+the trip cell as a third rendering of one number. A ledger row has nothing above it to borrow a
+noun from, so each fact carries its own — "9 of 12 seats", "2 crew", "7 of 9 waivers" — and the
+phone keeps all three instead of hiding two; the *meters* are what drop below `lg`, which costs the
+reader nothing, because every number they draw is written beside them. The local `ShareBar` and its
+hand-rolled fill are deleted in favour of the shared `ProgressBar` and its scaleX contract. Issue
+775's rule came through the recomposition unchanged and is now pinned rather than commented: **the
+ink is on the gap, not the achievement** — the seats meter is quiet at every ratio, because a
+half-full boat on a month being reviewed is a fact rather than a task, and only the waiver meter's
+*remainder* may carry a tone. A test asserts the fill never takes it, since colouring the fill is
+the plausible regression that looks like an improvement and leaves the row needing a staffer as the
+faintest thing in the column.
+
+The month's one warm word is the same one it had: at 100% the Waivers figure's detail line renders
+through `EarnedMomentLine`, the surface's single sanctioned coral element (decision 11's table).
+It is condition-derived and nothing stores it — `waiverCompletion` is null whenever the month took
+no booking, so a completion of exactly 1 cannot be reached without counted signatures behind it —
+and it never plays the entrance: a month that closed complete is a fact on arrival, not something
+that just happened, and replaying the celebration on every visit to a past month is how a
+celebration stops meaning anything.
+
+No new arithmetic and no new query. The month's totals, the picker's floor, the baseline month's
+choice, the percentage rules over zero denominators, the CSV and its own gate are untouched, and
+the departures ledger keeps the Pager it already wore with the count still sharing the row query's
+exact scope. The count moved to the group header, where a shared fact belongs: the Pager renders
+nothing at all on a single-page month, so a total that lived only there was invisible on most
+months a real shop opens. The one fork the page takes before it draws anything is now a named rule
+in `src/lib/reporting.ts` — `monthHasActivity`, which counts an imported-history-only month as
+activity, because a shop's first month after a migration has real money in it and no departure.
+
+## The last three shelves stop inventing furniture (delivered 2026-08-28)
+
+Slice 9g of ADR [20260827-the-shops-shelves](../architecture/decisions/20260827-the-shops-shelves.md),
+the mapping table's own row: the three surfaces with no board of their own — the course roster,
+the promo codes, and the global Add-booking door — onto the patterns the boards argued, with no
+behaviour to change on the way. Each of them was a stack of bordered boxes doing the work a group
+header does, and each was hiding the same fact: **the thing every row in a run shares belongs
+above the run, not on every row of it.**
+
+The **course roster** loses its agency tabs. `?agency=` was a filter answering a question the list
+could have answered itself, and it charged the reader the rest of their catalog to ask: a shop
+teaching PADI and SSI could never see its catalog, and the SSI tab's page 2 was a different query
+from the PADI tab's. Agency is a group heading now, said once above its own ladder, with the whole
+roster under one Pager. The sort became agency-major — `lower(trim(agency))`, then the untouched
+`progressionOrder` — because that is what stops a group interleaving across a page boundary, and
+`canonicalAgency` moved into `src/lib/courses.ts` as the TypeScript twin of the SQL expression, so
+the key a heading is cut from and the key the query sorted by cannot drift; the catalog holds a
+literal `" PADI "` from a CSV import, and one agency drawn as three headings is what that costs
+otherwise. The rows gained the two facts a roster is read for and did not carry — how long the
+course runs, and what it costs, the price scanned rather than reconciled — and the hand-rolled
+"Hidden" pill became the app's one `Badge`, still the roster's only badge because hidden is its
+only exceptional state. `courseAgencies` and `pagedCourses`' `agency` option are deleted; the
+diver-facing catalog keeps its tabs and `activeCourseAgencies`, because a diver choosing between
+two ladders is not a shop surveying its own.
+
+**Promos** is one page and two ledgers. The codes shelve **live / scheduled / ended** —
+`promoLedgerGroup` in `src/lib/promo-codes.ts`, derived from the window and the redemption cap and
+deliberately never from `status`, with the same `promoWindowState` precedence the booking path
+uses, so the ledger and checkout can never disagree about which end of a window a code is at. That
+split is the whole point: the window is what a run of codes shares, so it is the heading, while
+`pending`, `failed` and switched-off are one row's exceptions and stay on that row's badge. A code
+switched off inside a live window is therefore filed under Live and says "Switched off" beside its
+own name — both facts, each said once. `promos.status.live` and `promos.status.notLive` retired
+with the pills that carried them: a "Live" badge down every live row was a badge marking the
+expected state, and "Not live right now" was a row restating its own heading. The query sorts
+group-major against the same `now` the page words the rows with, and the count still spans all
+three shelves because there is one Pager over one query — no shelf carries a tally of its own,
+which would count *this page's* rows while reading as the shelf's size. The trip deals keep their
+own ledger, their own `?dealsPage=`, and their own reason to be separate: a deal is sent from a
+departure and dies with it.
+
+The **Add-booking door** groups by day. Every row of the picker read "Title · Sat, Aug 29 · 7:00
+AM — 11:00 AM" because a flat list has nothing to hang a date from; the day is a heading now and
+the row keeps the two facts that differ, when it leaves and what it is. A staffer standing at the
+phone is working from a day the caller just said out loud. Days are bucketed in the **shop's**
+timezone through the shared `groupByLocalDay` — on a UTC box a 9:00 PM Key Largo departure is
+stored on tomorrow's date, and a host-zone read would file a shop's evening under the wrong
+heading with no test on a UTC runner able to see it. Step two came with it: the shared
+returning-diver rows are `LedgerRow`s rather than rounded boxes on a sunken fill, so a person
+looks like a person at all three doors that seat one, the way slice 8a's rows already do
+everywhere else.
+
+Nothing in the three flows moved. Seats-left is still the question the picker answers and still
+excludes a full boat at the query; the visibility toggle, the schedule hand-off, the promo
+lifecycle and its Stripe gates, both Pagers' clamping, and every permission check are untouched.
+Three components each name the ADR in their doc comment and each is pinned by the rule rather than
+the pixels: a group is a **consecutive run and never a bucket**, in all three — a component that
+gathered rows into a map would hide a broken sort and silently reorder what the query had ordered,
+and it would look tidier doing it.
+
+## The door's mark is drawn (delivered 2026-08-28)
+
+Slice 10a of [20260827-first-light](../architecture/decisions/20260827-first-light.md), decisions 1
+to 3. `EntryDone` — the terminal outcome every door and every bearer-token page ends on — stops
+putting an **emoji** in its circle. `glyph` was a `string` holding a mailbox, an hourglass, a party
+popper, a crossed-out bell or a calendar, which made it the one place in the app where an emoji was
+the *structure* of a component rather than a word in a sentence, and so the one place the app's own
+mark rendered at a different size, weight and hue on every platform it is opened on. It is now
+`DoorGlyphId`, a closed set of drawn strokes the component owns: **sent** (a reset is in the
+inbox), **expired** (a dead link), **done** (a confirmed act), **quiet** (nothing more will be
+sent) and **cancelled** (the departure is off, not the link). A caller names the situation and
+never the picture; the type is what makes an emoji impossible to type back in. The strokes are the
+24px box, the 1.8 weight and the round caps `SettledCheck` and `StaffDestinationIcon` already draw
+with, in `currentColor`, so one hand drew all of them and the mark follows tone and theme for free.
+Every caller moved in the same change — `ExpiredLinkCard` and the eight pages that render a
+terminal door (forgot-password, verify, invite, reset-password, unsubscribe, claim, recap,
+`/ready`), thirteen glyph values in all, since verify, unsubscribe and `/ready` each name more
+than one.
+
+The ADR names four ids; the fifth is the one its census missed. `/ready/[token]` already drew a
+distinction the four cannot carry — a booking cancelled underneath a diver has a link that
+**works**, and sending them off to ask for a fresh one is the wrong door — so its calendar became a
+drawn calendar rather than being flattened into the dead-link clock. The record needs the
+amendment; the code kept the shipped distinction.
+
+The other two laws were already true in the code and are now held by a test rather than by a
+comment. **A door renders one primary and nothing else button-shaped**: sign-in's "Forgot
+password?" is a `link` variant claiming a full touch target, which is text, and a sweep over the
+seven door pages counts the filled buttons. **The dead-link law has two tiers**: an *account* token
+belongs to a person, so verify, reset-password, invite and unsubscribe render the bare door and
+name no shop — a forwarded invite link must not disclose who invited whom — while a *booking* token
+belongs to a diver holding a phone at a dock, so waivers and `/ready` hand over the shop's name and
+contact through `ExpiredLinkCard`. The disclosure half is checked where it can actually break: the
+`unavailableTitle`/`unavailableText` pair each account door renders carries no shop placeholder, in
+**both** locales, because a translation is where a placeholder gets added back by someone matching
+another string's shape. No copy changed and no route moved. Pinned by
+`src/components/account/EntryShell.test.tsx` and one e2e in
+`e2e/account-lifecycle.spec.ts`; the `sent` door gained the visual capture it never had.
+
+## A dead claim link names the shop it came from (delivered 2026-08-28)
+
+Slice 10c of [20260827-first-light](../architecture/decisions/20260827-first-light.md), decisions 3
+and 4. A claim link is the diver's-thread's first page for a party member — an organizer books four
+seats, forwards one URL per seat into a group chat, and the person who taps it is already on a boat
+nobody has told them about. Slice 7a gave that page `ThreadShell`, so the shop is its eyebrow and
+the trip is its title; this slice finishes the recomposition and settles the one question the shell
+could not answer: **what a dead claim link is allowed to say.**
+
+It used to say nothing at all. Every cause — spent, expired, replaced by a newer link, a seat
+somebody else took, a departure that has since sailed — landed on the bare terminal door, four
+words telling a stranger to ask a shop the page would not name. That is the account tier of the
+dead-link law, and a claim token is not an account token: it belongs to a diver, and the ADR's
+decision 3 puts it in the **booking** tier alongside `/ready` and the waiver. Where the token still
+resolves to a capability row this app issued, the page now renders `ExpiredLinkCard` with the
+shop's own published name and contact, and one sentence pointing at whoever sent the link. Where it
+resolves to nothing at all, the bare door renders and names nobody, because a bearer token reveals
+only its own record and an unresolvable token has no record to reveal.
+
+That sentence claims nothing about the seat, and the reason is the tier's own narrowness. Six causes
+reach the dead arm and the reader deliberately cannot tell them apart, so whatever it says is said
+equally to a spent link, an expired one, a seat somebody else took, a seat the shop cancelled, a
+departure called off for weather, and a boat that is already back. The draft said "your seat is safe
+with your organizer — ask them for a fresh link", which is untrue for four of the six and mints
+nothing for five: `issuePartySeatClaims` is the only place a claim link is ever created and it
+returns `claim: null` the moment a seat can no longer change hands, so the organizer's panel has a
+name and no link to forward. The sharpest case is weather — a shop calls Saturday off, the whole
+group taps the URL from the chat, and the page tells each of them their seat is safe. It now names
+the one person the page cannot, and asserts nothing it has not read.
+
+The distinction is the whole security question, so it is one reader rather than a branch on a page:
+`getClaimPageState` in `src/db/seat-claims.ts` answers `claimable` · `dead` · `unknown`, and the
+`dead` arm carries four shop columns and no booking, no diver and no trip — the narrow return type
+is the guard, the same argument `staleBookingCapabilityForToken`'s `{ shopId }`-only shape makes one
+file over. What the resolver relaxes is only *when* the token was valid, never *whether* it was
+ours: the hash must still match a capability issued for the `claim` purpose, so guessing costs
+exactly what it did before, and a readiness token held up to the claim page still names nobody.
+Note that "readable" is not "verifiable" — a live token over a boat that has already sailed is
+refused by every gate and still earns the shop's hand, which is the case a diver is most likely to
+be holding.
+
+The form and its privacy footnote became the thread's terminal card, the same `SectionCard` the
+waiver signs in, so the last hand-rolled panel on the page is gone. The five `?error=` refusals,
+the requirement sentence with the shop's contact, the rate limit and the landing on
+`/ready/<token>?saved=claimed` are all untouched. Pinned by
+`src/db/seat-claims.test.ts` — a spent link, an expired one, a sailed boat, a cancelled seat and a
+called-off departure each name the shop, and none of the last three has a link left to mint; a
+garbage token and a readiness token each answer `{ kind: "unknown" }` whole, so no shop reaches the
+caller by any route — by `src/app/claim/[token]/copy.test.ts`, which holds both halves of what the
+dead sentence may not do, in both locales — plus the booking tier in
+`src/components/account/EntryShell.test.tsx` and both tiers walked end to end in
+`e2e/seat-claim.spec.ts`. The claim link's permanent shop attribution is
+written into
+[capability-telemetry-runbook.md](../engineering/capability-telemetry-runbook.md) beside `/ready`'s,
+where an exposed URL is assessed.
+
+## /about spends the impulse it creates (delivered 2026-08-28)
+
+Slice 12f of [marketing-review-20260827.md](marketing-review-20260827.md), against that review's
+third finding — help arrives after the homework. The trust page manufactures its impulse in one
+band: four operating rules, each ending in the demo action that proves it ("save a manifest to your
+phone, turn the network off, and run roll call anyway"). What a reader convinced there could act on
+was a primary-weight `mailto:` two bands down, with the demo itself waiting past the founder story,
+the concessions and the export terms — a page that dares you to go and check it, and then asks you
+to write a letter. The `FunnelCtas` pair now closes the rules band. It carries no heading of its
+own, for the reason `/product`'s index door carries none: the four "Check it" lines above it are
+the caption. `size="md"`, so the closing band's pair stays the biggest target on the page — this is
+the door for a reader already convinced, not the page's own ask.
+
+**The demo note stands under it**, which `/about` had carried nowhere at all. `marketing.common.demoNote`
+("no sign-up, no card") answers the only question that button raises, and the once-per-page rule
+puts it at the *first* door — which this now is. Left off, the page dared a buyer who has been
+burned by software to go and check four things and then offered an unlabeled button, at the exact
+moment the safest move is to keep scrolling.
+
+**The support mailto demoted to secondary**, level with the pricing door beside it. It is a real
+offer and stays where it is — a person reads what arrives at `support@dive.day` — but "email a
+stranger and wait" is a slower answer than the one the four rules had just earned, and primary
+weight made it the heaviest thing on the page. That band now holds two peer doors for its two
+claims, write in or read the price, and no primary at all.
+
+**And the pricing door beside it says the number.** That band raises the cost question three times —
+the "One price, no seats." rule sends the reader to the pricing page to *check it*, the heading
+promises straightforward pricing, the paragraph says the whole of it is on one page — and then
+offered "See what it costs", the unlabeled door a skeptic reads as *they won't say*. It reads "One
+flat {price} {cadence} — see the whole list" now, interpolated from `earlyAccessPrice` like the
+three sentences before it, so the loop the rules card opened closes on the page that opened it. No
+new control: the number arrived inside a door that already existed.
+
+**The "From day one" band's heading names what the band holds.** It said "Who you're actually buying
+from." — the founder band's question, answered two sections higher — over the one band carrying
+where a shop's records live, how the plan works, who answers an email, and what the export costs. A
+reader skimming the h2s was told the page repeated itself and given no reason to stop at the terms.
+It now reads "Month to month, and the export is one button." — the plan terms printed directly
+beneath it, and the export the rules band dares the reader to go and run. `src/app/about/copy.test.ts` makes the headline test mechanical for this heading: some
+clause of it has to appear in the band's own published prose, which no metaphor can satisfy, and
+both retired headings are pinned gone by value rather than by key.
+
+`about-rules` was registered in `src/lib/funnel.ts` before the door that uses it, beside
+`about-closing`, which keeps the page's attribution history: a reader who moved at the proof is a
+different moment from one who read the whole page and reached the close, and folded together
+neither could be read on its own. `e2e/marketing.spec.ts` now counts the primary in every band of
+`/about` the way it does on `/product`.
+
 ## Help arrives before the homework on a switching guide (delivered 2026-08-28)
 
 Slice 12e of [marketing-review-20260827.md](marketing-review-20260827.md), against that review's

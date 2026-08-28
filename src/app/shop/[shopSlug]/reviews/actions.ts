@@ -43,11 +43,8 @@ export type ReviewActionResult =
   | { ok: false; reason: "reason-required" | "note-required" | "note-too-long" | "error" }
   | null;
 
-/** What a "Publish selected" pass did. `null` is "nothing yet". */
-export type BulkPublishResult =
-  | { ok: true; published: number }
-  | { ok: false; reason: "none-selected" | "error" }
-  | null;
+/** What a "Publish all" pass did. `null` is "nothing yet". */
+export type BulkPublishResult = { ok: true; published: number } | { ok: false } | null;
 
 /**
  * One review's controls, behind one action.
@@ -121,15 +118,20 @@ function parseReviewModerationReason(
 }
 
 /**
- * Release every ticked review in one go — the queue's answer to a weekend that
- * left eight reviews waiting and only a per-row button to clear them with.
+ * Release every review in the waiting group in one go — the queue's answer to a
+ * weekend that left eight reviews waiting and only a per-row button to clear
+ * them with.
  *
  * Publish-only, deliberately: the same shop-scoping as the row action above
  * (`setReviewsPublished` re-checks the session's shop, so ids belonging to
  * another shop change nothing and come back as a refusal), but no bulk *hide*.
  * Taking words down is the destructive direction and keeps its per-review undo.
- * An empty tick list is refused with its own result rather than answering with
- * a list that looks unchanged.
+ *
+ * One refusal, not two. The ids arrive as hidden fields on the group header's
+ * own form, so "nothing was selected" stopped being a thing a person can do
+ * when the tick boxes retired (ADR 20260827-people-not-lists); an empty or
+ * already-published post is a stale page replaying itself, and "that could not
+ * be updated" is the honest answer to both.
  */
 export async function publishReviewsAction(
   _prev: BulkPublishResult,
@@ -141,7 +143,7 @@ export async function publishReviewsAction(
     .getAll("reviewIds")
     .map((value) => String(value))
     .filter(Boolean);
-  if (reviewIds.length === 0) return { ok: false, reason: "none-selected" };
+  if (reviewIds.length === 0) return { ok: false };
 
   const published = await setReviewsPublished(
     await getDb(),
@@ -149,7 +151,7 @@ export async function publishReviewsAction(
     reviewIds,
     session.user.personId,
   );
-  if (published === 0) return { ok: false, reason: "error" };
+  if (published === 0) return { ok: false };
   revalidatePath(reviews);
   return { ok: true, published };
 }

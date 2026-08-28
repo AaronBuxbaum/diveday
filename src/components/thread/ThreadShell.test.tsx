@@ -262,7 +262,11 @@ describe("the doors keep max-w-md", () => {
 describe("the terminal outcomes are flat", () => {
   it("EntryDone renders no shadow", () => {
     const { container } = render(
-      <EntryDone glyph="⏳" title="This link has expired" text="Ask the shop for a fresh one." />,
+      <EntryDone
+        glyph="expired"
+        title="This link has expired"
+        text="Ask the shop for a fresh one."
+      />,
     );
     expect(container.innerHTML).not.toMatch(/shadow-/);
   });
@@ -275,7 +279,7 @@ describe("the terminal outcomes are flat", () => {
   });
 
   it("neither gains accent ink", () => {
-    const done = render(<EntryDone glyph="⏳" title="Expired" text="Ask the shop." />);
+    const done = render(<EntryDone glyph="expired" title="Expired" text="Ask the shop." />);
     expect(done.container.innerHTML).not.toMatch(/accent/);
     done.unmount();
     const expired = render(<ExpiredLinkCard title="Expired" text="Ask the shop." />);

@@ -44,14 +44,19 @@ describe("the price is interpolated, never spelled out in a bundle", () => {
    * The sentences that carry the figure: the hero and the closing band of `/`,
    * and — since 2026-08-28 — `/product`'s money band, whose link stopped
    * parking the number behind itself and now states it in its own words
-   * (docs/product/marketing-review-20260827.md, "the dare gets a door").
-   * Each addition here is the point: a fourth surface that shows the price
+   * (docs/product/marketing-review-20260827.md, "the dare gets a door"), and
+   * `/about`'s pricing door, the fourth surface this list already anticipated:
+   * a trust page that raises the cost question three times and
+   * answers it with "See what it costs" is the same unlabeled door, on the one
+   * page whose whole argument is that nothing here is hidden.
+   * Each addition here is the point: a fifth surface that shows the price
    * must interpolate it or this list is where it fails.
    */
   const priceSentenceKeys = [
     "marketing.home.heroPriceLine",
     "marketing.home.priceLine",
     "marketing.product.pricingLink",
+    "marketing.about.seeCost",
   ] as const;
 
   for (const locale of DIVER_LOCALES) {

@@ -132,6 +132,17 @@ export type ReadyPageData = {
    * someone aboard.
    */
   canCancelBooking: boolean;
+  /**
+   * **The departure itself was called off** — `trips.status`, not the
+   * booking's.
+   *
+   * The two are genuinely different facts and the page needs both. A blow-out
+   * cancels the trip and deliberately leaves every booking `booked`, because
+   * whether each seat is refunded stays a per-booking staff decision
+   * (src/db/blowouts.ts) — so `detail.cancelled` is false for every diver a
+   * cancellation stranded, and a page reading only that told them to pack.
+   */
+  departureCancelled: boolean;
 };
 
 export async function getReadyPageData(
@@ -255,5 +266,6 @@ export async function getReadyPageData(
     canPay,
     cancelPreview,
     canCancelBooking,
+    departureCancelled: trip.status !== "scheduled",
   };
 }

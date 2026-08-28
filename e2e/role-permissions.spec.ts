@@ -80,12 +80,12 @@ test.describe("H-14 role permissions", () => {
       await expect(page).toHaveURL(`/shop/${SHOP}`);
       await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toHaveCount(0);
 
-      // Its Signatures tab (task 155) — read access to signed medical/waiver
-      // records — takes the exact same gate, never a looser one just because
-      // it's a sub-route.
+      // The signature log — read access to signed medical/waiver records —
+      // shares that page now (ADR 20260827-people-not-lists), and the retired
+      // sub-route 308s into it rather than becoming a second, looser door.
       await page.goto(`/shop/${SHOP}/waivers/signatures`);
       await expect(page).toHaveURL(`/shop/${SHOP}`);
-      await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toHaveCount(0);
+      await expect(page.locator('details[id^="waiver-record-"]')).toHaveCount(0);
 
       // Settings as a whole is owner/manager work now, not just the money
       // cards inside it: every card there changes the shop rather than the
@@ -198,7 +198,7 @@ test.describe("H-14 role permissions", () => {
 
       await page.goto(`/shop/${SHOP}/waivers/signatures`);
       await expect(page).toHaveURL(`/shop/${SHOP}`);
-      await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toHaveCount(0);
+      await expect(page.locator('details[id^="waiver-record-"]')).toHaveCount(0);
 
       // An instructor runs courses, not the shop's configuration.
       await page.goto(`/shop/${SHOP}/settings`);
@@ -215,7 +215,8 @@ test.describe("H-14 role permissions", () => {
       await expect(page.locator('textarea[name="body"]').filter({ visible: true })).toBeVisible();
 
       await page.goto(`/shop/${SHOP}/waivers/signatures`);
-      await expect(page.getByRole("heading", { level: 1, name: "Signatures" })).toBeVisible();
+      await expect(page).toHaveURL(`/shop/${SHOP}/waivers`);
+      await expect(page.locator('details[id^="waiver-record-"]').first()).toBeVisible();
 
       await page.goto(`/shop/${SHOP}/settings`);
       // The catalog form waits behind its summary row on the settings hub.

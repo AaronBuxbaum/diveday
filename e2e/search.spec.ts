@@ -46,6 +46,22 @@ test("the command palette finds a diver by name and ⌘K jumps to a page shortcu
 test("the command palette also finds dive sites, courses, and every gated nav destination", {
   tag: READ_ONLY,
 }, async ({ page }) => {
+  // **Thirteen navigations against a budget sized for one or two** (issue
+  // #1113). This is not a race being papered over: across three failures it
+  // died at a *different* destination each time and passed end to end with
+  // every assertion satisfied when given room, which is the signature of a
+  // test doing thirteen times its neighbours' work rather than one racing
+  // something. `dive-sites.spec.ts` and `role-permissions.spec.ts` size
+  // theirs from the same aggregate-cost reasoning, and
+  // `check-e2e-hygiene.test.mjs` says outright that a per-test budget is
+  // policy rather than a sleep — unlike `waitForTimeout`, this waits for
+  // nothing and hides nothing.
+  //
+  // The loop below is a `test.step` per destination, which is the other half
+  // of what made this hard to read: a failure used to name an arbitrary
+  // destination with no way to tell it from the twelve that passed. Now the
+  // report names the one that broke.
+  test.setTimeout(45_000);
   await page.goto("/shop/blue-mantis");
   await page.getByRole("button", { name: "Search" }).click();
   const box = page.getByRole("combobox", { name: /Search divers/ });
@@ -87,10 +103,12 @@ test("the command palette also finds dive sites, courses, and every gated nav de
     // keeps its own button), so no header tab has ever named it.
     ["Add a booking", /\/bookings\/new$/],
   ] as const) {
-    await shortcuts.fill(query);
-    await page.getByRole("option", { name: query, exact: true }).click();
-    await expect(page).toHaveURL(urlPattern);
-    await page.keyboard.press("ControlOrMeta+k");
+    await test.step(query, async () => {
+      await shortcuts.fill(query);
+      await page.getByRole("option", { name: query, exact: true }).click();
+      await expect(page).toHaveURL(urlPattern);
+      await page.keyboard.press("ControlOrMeta+k");
+    });
   }
 });
 
@@ -198,11 +216,11 @@ test("the divers list filters live as you type, no submit", { tag: READ_ONLY }, 
   // Priya isn't on it unsearched. Confirm the unfiltered roster loaded at all
   // (the first alphabetical name is a stable enough proxy), then exercise the
   // live filter that actually finds her.
-  await expect(page.getByRole("cell", { name: "Adaeze Nwosu" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Adaeze Nwosu", exact: true })).toBeVisible();
 
   await search.fill("zzz-no-such-diver");
   await expect(page.getByText("No divers match this view.")).toBeVisible();
 
   await search.fill("Priya");
-  await expect(page.getByRole("cell", { name: /Priya Sharma/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Priya Sharma", exact: true })).toBeVisible();
 });

@@ -1,13 +1,15 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
-import { sectionCardClass } from "@/components/ui/card";
 
 /**
- * Body-shaped skeleton for the Orders index (design principle 1) — the
- * filtered, paginated invoice list has no loading state to show meanwhile.
+ * Body-shaped skeleton for the Orders day ledger (design principle 1; the
+ * shape it holds is ADR 20260827-clearwater-surface-language decision 7).
  *
- * Both shells come from `sectionCardClass()`, the same place the filter panel
- * and the `<Table>` take theirs, so the skeleton cannot drift squarer or
- * flatter than what replaces it.
+ * It follows the page it replaces: a toolbar of a search box and two selects,
+ * then day groups — a small-caps header line with its count and subtotal on
+ * the right, and hairline rows beneath it directly on the page background. No
+ * card shell anywhere, because the ledger has none; the skeleton this replaces
+ * painted a filter card above a bordered table, which is a picture of a page
+ * that no longer exists.
  */
 export default function OrdersIndexLoading() {
   return (
@@ -15,20 +17,23 @@ export default function OrdersIndexLoading() {
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton descriptionWidth="w-80 max-w-full" />
 
-        <div className={sectionCardClass({ padding: "md", className: "h-40" })}>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {[0, 1, 2, 3].map((field) => (
-              <div key={field}>
-                <div className="h-4 w-24 rounded bg-surface-sunken" />
-                <div className="mt-2 h-11 rounded-lg bg-surface-sunken" />
-              </div>
-            ))}
-          </div>
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div className="h-11 w-full rounded-lg bg-surface-sunken sm:w-80" />
+          <div className="h-11 w-36 rounded-lg bg-surface-sunken" />
+          <div className="h-11 w-40 rounded-lg bg-surface-sunken" />
         </div>
 
-        <div className={sectionCardClass({ padding: "none", className: "mt-6" })}>
-          {[0, 1, 2, 3, 4, 5].map((row) => (
-            <div key={row} className="h-16 border-b border-border last:border-b-0" />
+        <div className="mt-8 flex flex-col gap-9">
+          {[0, 1].map((group) => (
+            <div key={group}>
+              <div className="flex items-baseline justify-between gap-3 pb-2">
+                <div className="h-3 w-32 rounded bg-surface-sunken" />
+                <div className="h-3 w-28 rounded bg-surface-sunken" />
+              </div>
+              {[0, 1, 2].map((row) => (
+                <div key={row} className="h-12 border-t border-border last:border-b" />
+              ))}
+            </div>
           ))}
         </div>
       </div>

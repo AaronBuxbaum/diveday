@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Copyable } from "@/components/Copyable";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import { SettledCheck } from "@/components/ui/SettledCheck";
@@ -15,23 +16,36 @@ import { SettledCheck } from "@/components/ui/SettledCheck";
  * **Day zero is a state of the home, never a wizard** (ADR
  * 20260827-first-light, decision 6, in the grammar ADR
  * 20260827-clearwater-surface-language gives every other surface). The
- * primary-tinted card of nested step boxes became one ledger group under the
- * greeting: a done step is a settled line, an open step is a row with its one
- * fix beside it, and **exactly one open step carries the page's one primary** —
- * the next thing to do. Everything the shipped checklist already owned is
- * unchanged underneath: the five persisted facts, the `countShopTrips === 0`
- * condition, the demo exclusion, the step targets, `Copyable` on the
- * schedule-link row, the Stripe row's plain `<a>` (its route 302s to Stripe's
- * OAuth authorize URL, which Next's client navigation cannot follow), and the
- * `data-first-run-primary` hook the onboarding e2e reads to prove there is
- * exactly one.
+ * primary-tinted card of nested step boxes is one **First morning** ledger
+ * group, and the group is the day spine's *leading* group rather than a panel
+ * standing in its place: `DaySpine` renders it above the stations, so day zero
+ * reads as one more state of the same column of work every other morning is.
+ *
+ * Three shapes, and an open step is exactly one of them:
+ *
+ * - **Settled** — a done step is a line carrying {@link SettledCheck}'s drawn
+ *   mark and the fact it settled on, with nothing left to press.
+ * - **The one primary** — exactly one open step carries the page's one
+ *   primary-weight button: the next thing to do.
+ * - **A door** — every other open step *is* the link, the destination named on
+ *   the stretched overlay and a quiet chevron for everyone else (principle 10,
+ *   "actions ride on their objects"). Seven rows each offering a button is
+ *   seven next actions, which is none.
+ *
+ * Everything the shipped checklist already owned is unchanged underneath: the
+ * five persisted facts, the `countShopTrips === 0` condition, the demo
+ * exclusion, `FIRST_RUN_STEP_COUNT`, `Copyable` on the schedule-link row, the
+ * Stripe row's plain `<a>` (its route 302s to Stripe's OAuth authorize URL,
+ * which Next's client navigation cannot follow, so that one step is a link
+ * beside the row rather than the row itself), and the `data-first-run-primary`
+ * hook the onboarding e2e reads to prove there is exactly one.
  *
  * The group exists only while the shop has no departure at all, and never
  * comes back.
  */
 
 export type FirstRunChecklistCopy = {
-  heading: string;
+  groupLabel: string;
   subtitle: string;
   progress: string;
   contactTitle: string;
@@ -65,27 +79,73 @@ export type FirstRunChecklistCopy = {
   doneBadge: string;
 };
 
+/**
+ * The fix on an open step that is not the next one: the destination's name and
+ * a chevron, in the row's own type — the same trailing a day-spine row that
+ * merely navigates carries.
+ *
+ * `hidden` for a row whose whole surface is the link: the stretched overlay
+ * already carries the destination's name, so repeating it here would read it
+ * twice.
+ */
+function StepDoorLabel({ label, hidden = false }: { label: string; hidden?: boolean }) {
+  return (
+    <span
+      aria-hidden={hidden || undefined}
+      className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary"
+    >
+      {label}
+      <DiveDayIcon name="chevron-right" className="size-4" />
+    </span>
+  );
+}
+
 function ChecklistStep({
   title,
   body,
   done,
   doneLabel,
   doneBadge,
-  action,
+  href,
+  actionLabel,
+  primary,
 }: {
   title: string;
   body: string;
   done: boolean;
   doneLabel: string;
   doneBadge: string;
-  action?: React.ReactNode;
+  href: string;
+  actionLabel: string;
+  /** This is the one open step carrying the page's primary. */
+  primary: boolean;
 }) {
+  // One object, not two props: `LedgerRow`'s door is a union, so a row can
+  // never reach a reader as a link with no accessible name. A step holding the
+  // primary is deliberately *not* a door — the button beside it is the tap,
+  // and a stretched overlay under it would be a second one.
+  const door = done || primary ? {} : { href, linkLabel: actionLabel };
   return (
     <LedgerRow
       // A settled step says so in words as well as in the mark — `SettledCheck`
       // has no way to be used as a bare tick — and it stands where that step's
       // button used to be, so a finished row offers nothing to press.
-      trailing={done ? <SettledCheck settled label={doneBadge} /> : action}
+      trailing={
+        done ? (
+          <SettledCheck settled label={doneBadge} />
+        ) : primary ? (
+          <Link
+            href={href}
+            data-first-run-primary="true"
+            className={buttonClass({ size: "sm", variant: "primary" })}
+          >
+            {actionLabel}
+          </Link>
+        ) : (
+          <StepDoorLabel label={actionLabel} hidden />
+        )
+      }
+      {...door}
     >
       <div className="min-w-0 py-2">
         <p className="font-medium">{title}</p>
@@ -128,18 +188,9 @@ export function FirstRunChecklist({
         : !siteDone
           ? "site"
           : "trip";
-  const stepLink = (id: string, href: string, label: string) => (
-    <Link
-      href={href}
-      data-first-run-primary={nextStep === id ? "true" : undefined}
-      className={buttonClass({ size: "sm", variant: nextStep === id ? "primary" : "secondary" })}
-    >
-      {label}
-    </Link>
-  );
 
   return (
-    <LedgerGroup as="h2" id="first-run-heading" label={copy.heading} meta={copy.progress}>
+    <LedgerGroup as="h2" id="first-run-heading" label={copy.groupLabel} meta={copy.progress}>
       <p className="mt-2 text-sm text-muted">{copy.subtitle}</p>
       <ol className="mt-3">
         <ChecklistStep
@@ -151,7 +202,9 @@ export function FirstRunChecklist({
           // Straight to the open contact row — the settings hub keeps its forms
           // behind summary rows, and a link that promises a form must land on
           // it open.
-          action={stepLink("contact", `/shop/${shopSlug}/settings#contact`, copy.contactAction)}
+          href={`/shop/${shopSlug}/settings#contact`}
+          actionLabel={copy.contactAction}
+          primary={nextStep === "contact"}
         />
         <ChecklistStep
           title={copy.profileTitle}
@@ -159,7 +212,9 @@ export function FirstRunChecklist({
           done={profileDone}
           doneLabel={copy.profileDone}
           doneBadge={copy.doneBadge}
-          action={stepLink("profile", `/shop/${shopSlug}/settings#profile`, copy.profileAction)}
+          href={`/shop/${shopSlug}/settings#profile`}
+          actionLabel={copy.profileAction}
+          primary={nextStep === "profile"}
         />
         {/* **The two settings the shop never chose.** Onboarding derives both
             from the timezone it picked (`src/lib/curated-defaults.ts`), and
@@ -173,7 +228,9 @@ export function FirstRunChecklist({
           done={unitsDone}
           doneLabel={copy.unitsDone}
           doneBadge={copy.doneBadge}
-          action={stepLink("units", `/shop/${shopSlug}/settings#units`, copy.unitsAction)}
+          href={`/shop/${shopSlug}/settings#units`}
+          actionLabel={copy.unitsAction}
+          primary={nextStep === "units"}
         />
         <ChecklistStep
           title={copy.siteTitle}
@@ -181,7 +238,14 @@ export function FirstRunChecklist({
           done={siteDone}
           doneLabel={copy.siteDone}
           doneBadge={copy.doneBadge}
-          action={stepLink("site", `/shop/${shopSlug}/dive-sites/new`, copy.siteAction)}
+          // The **library**, not its blank form (slice 10d). A shop with no
+          // sites is offered two doors there — write one, or take one of the
+          // 34 published Florida templates — and a link that lands straight on
+          // an empty form has quietly made that choice for them
+          // (ADR 20260827-the-shops-shelves).
+          href={`/shop/${shopSlug}/dive-sites`}
+          actionLabel={copy.siteAction}
+          primary={nextStep === "site"}
         />
         <ChecklistStep
           title={copy.tripTitle}
@@ -191,7 +255,9 @@ export function FirstRunChecklist({
           done={false}
           doneLabel={copy.tripTitle}
           doneBadge={copy.doneBadge}
-          action={stepLink("trip", `/shop/${shopSlug}/schedule/board?add=1`, copy.tripAction)}
+          href={`/shop/${shopSlug}/schedule/board?add=1`}
+          actionLabel={copy.tripAction}
+          primary={nextStep === "trip"}
         />
         <LedgerRow
           trailing={
@@ -214,25 +280,31 @@ export function FirstRunChecklist({
             <p className="mt-1 max-w-full truncate font-mono text-xs text-muted">{scheduleUrl}</p>
           </div>
         </LedgerRow>
-        <ChecklistStep
-          title={copy.stripeTitle}
-          body={copy.stripeBody}
-          done={stripeDone}
-          doneLabel={copy.stripeDone}
-          doneBadge={copy.doneBadge}
-          action={
-            // A plain <a>, not <Link>: this route 302s to Stripe's OAuth
-            // authorize URL, and Next's client-side navigation would follow
-            // that redirect via fetch — a cross-origin request Stripe's CORS
-            // policy rejects. A full navigation handles the redirect natively.
-            <a
-              href={`/shop/${shopSlug}/settings/connect`}
-              className={buttonClass({ size: "sm", variant: "secondary" })}
-            >
-              {copy.stripeAction}
-            </a>
+        {/* **The one step that is not the row.** Every other open step is a
+            door — the row itself, stretched over a `<Link>`. This one cannot
+            be: its route 302s to Stripe's OAuth authorize URL, and Next's
+            client-side navigation would follow that redirect via fetch, a
+            cross-origin request Stripe's CORS policy rejects. So the fix sits
+            beside the row as a plain `<a>` doing a full navigation, wearing
+            the same words and chevron the doors wear. */}
+        <LedgerRow
+          trailing={
+            stripeDone ? (
+              <SettledCheck settled label={copy.doneBadge} />
+            ) : (
+              <a href={`/shop/${shopSlug}/settings/connect`} className="hover:underline">
+                <StepDoorLabel label={copy.stripeAction} />
+              </a>
+            )
           }
-        />
+        >
+          <div className="min-w-0 py-2">
+            <p className="font-medium">{copy.stripeTitle}</p>
+            <p className="mt-0.5 text-sm text-muted">
+              {stripeDone ? copy.stripeDone : copy.stripeBody}
+            </p>
+          </div>
+        </LedgerRow>
       </ol>
     </LedgerGroup>
   );

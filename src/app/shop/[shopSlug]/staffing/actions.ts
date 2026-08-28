@@ -15,6 +15,7 @@ import { isValidCalendarDate } from "@/lib/calendar-date";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { WEEK_PARAM, weekStartOf } from "@/lib/week-board";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 
 const shiftSchema = z.object({
@@ -43,26 +44,50 @@ const credentialSchema = z.object({
   renewsAt: z.string().refine((value) => value === "" || isValidCalendarDate(value)),
 });
 
-async function requireStaffingManager() {
+/**
+ * The week the staffer was working in, as the extra `noticeUrl` merges into
+ * every redirect back to the page.
+ *
+ * Without it every act on this page landed on *this* week: adding next
+ * Saturday's shift answered "Shift saved." above a week the shift is not in,
+ * and the natural recovery — adding it again — is refused with "That person
+ * already has an overlapping shift." Delete had the same shape, so a staffer
+ * could not see the removal they had just made.
+ *
+ * The value is bound by the page from its own resolved `?week=`, so it is not
+ * something a submitter chooses; it is still normalised to a Monday and
+ * dropped when it is not a real date, because a bound argument still arrives
+ * over the wire and a value that reached the URL unchecked would page the
+ * board to nowhere. `resolveWeekStart` would forgive it on the way back in —
+ * this refuses to write it in the first place.
+ */
+function weekExtra(week: string): { week?: string } {
+  return isValidCalendarDate(week) ? { [WEEK_PARAM]: weekStartOf(week) } : {};
+}
+
+async function requireStaffingManager(week: Record<string, string | undefined>) {
   const session = await requireStaffSession();
   const allowed = await canPersonManageStaffAccounts(
     await getDb(),
     session.user.shopId,
     session.user.personId,
   );
-  if (!allowed) redirect(noticeUrl(shopPath(session.user.shopSlug, "staffing"), "not-authorized"));
+  if (!allowed) {
+    redirect(noticeUrl(shopPath(session.user.shopSlug, "staffing"), "not-authorized", week));
+  }
   return session;
 }
 
-export async function createShiftAction(formData: FormData) {
-  const session = await requireStaffingManager();
+export async function createShiftAction(week: string, formData: FormData) {
+  const at = weekExtra(week);
+  const session = await requireStaffingManager(at);
   const path = shopPath(session.user.shopSlug, "staffing");
   const parsed = shiftSchema.safeParse(Object.fromEntries(formData));
   const shop = await getShopById(await getDb(), session.user.shopId);
-  if (!parsed.success || !shop) redirect(noticeUrl(path, "invalid"));
+  if (!parsed.success || !shop) redirect(noticeUrl(path, "invalid", at));
   const starts = parseWallTime(parsed.data.date, parsed.data.startTime);
   const ends = parseWallTime(parsed.data.date, parsed.data.endTime);
-  if (!starts || !ends) redirect(noticeUrl(path, "invalid"));
+  if (!starts || !ends) redirect(noticeUrl(path, "invalid", at));
   const result = await createStaffShift(await getDb(), {
     shopId: session.user.shopId,
     personId: parsed.data.personId,
@@ -75,23 +100,25 @@ export async function createShiftAction(formData: FormData) {
   // `noticeUrl` encodes it and normalises it to the one spelling the page's
   // notice map holds, so it is no longer interpolated raw.
   const notice = result.ok ? "shift-saved" : result.reason;
-  revalidateAndRedirect(path, noticeUrl(path, notice));
+  revalidateAndRedirect(path, noticeUrl(path, notice, at));
 }
 
-export async function deleteShiftAction(formData: FormData) {
-  const session = await requireStaffingManager();
+export async function deleteShiftAction(week: string, formData: FormData) {
+  const at = weekExtra(week);
+  const session = await requireStaffingManager(at);
   const path = shopPath(session.user.shopSlug, "staffing");
   const shiftId = String(formData.get("shiftId") ?? "");
-  if (!z.string().uuid().safeParse(shiftId).success) redirect(noticeUrl(path, "invalid"));
+  if (!z.string().uuid().safeParse(shiftId).success) redirect(noticeUrl(path, "invalid", at));
   const deleted = await deleteStaffShift(await getDb(), session.user.shopId, shiftId);
-  revalidateAndRedirect(path, noticeUrl(path, deleted ? "shift-deleted" : "invalid"));
+  revalidateAndRedirect(path, noticeUrl(path, deleted ? "shift-deleted" : "invalid", at));
 }
 
-export async function saveStaffCredentialAction(formData: FormData) {
-  const session = await requireStaffingManager();
+export async function saveStaffCredentialAction(week: string, formData: FormData) {
+  const at = weekExtra(week);
+  const session = await requireStaffingManager(at);
   const path = shopPath(session.user.shopSlug, "staffing");
   const parsed = credentialSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(noticeUrl(path, "credential-invalid"));
+  if (!parsed.success) redirect(noticeUrl(path, "credential-invalid", at));
   const row = await createStaffCredential(await getDb(), {
     shopId: session.user.shopId,
     personId: parsed.data.personId,
@@ -102,15 +129,16 @@ export async function saveStaffCredentialAction(formData: FormData) {
     issuedAt: parsed.data.issuedAt || null,
     renewsAt: parsed.data.renewsAt || null,
   });
-  revalidateAndRedirect(path, noticeUrl(path, row ? "credential-saved" : "credential-invalid"));
+  revalidateAndRedirect(path, noticeUrl(path, row ? "credential-saved" : "credential-invalid", at));
 }
 
-export async function reviewStaffCredentialAction(formData: FormData) {
-  const session = await requireStaffingManager();
+export async function reviewStaffCredentialAction(week: string, formData: FormData) {
+  const at = weekExtra(week);
+  const session = await requireStaffingManager(at);
   const path = shopPath(session.user.shopSlug, "staffing");
   const id = z.string().uuid().safeParse(formData.get("credentialId"));
   const status = z.enum(["pending", "verified"]).safeParse(formData.get("status"));
-  if (!id.success || !status.success) redirect(noticeUrl(path, "credential-invalid"));
+  if (!id.success || !status.success) redirect(noticeUrl(path, "credential-invalid", at));
   const row = await reviewStaffCredential(await getDb(), {
     shopId: session.user.shopId,
     credentialId: id.data,
@@ -121,14 +149,18 @@ export async function reviewStaffCredentialAction(formData: FormData) {
         .slice(0, 300) || null,
     reviewedByPersonId: session.user.personId,
   });
-  revalidateAndRedirect(path, noticeUrl(path, row ? "credential-reviewed" : "credential-invalid"));
+  revalidateAndRedirect(
+    path,
+    noticeUrl(path, row ? "credential-reviewed" : "credential-invalid", at),
+  );
 }
 
-export async function deleteStaffCredentialAction(formData: FormData) {
-  const session = await requireStaffingManager();
+export async function deleteStaffCredentialAction(week: string, formData: FormData) {
+  const at = weekExtra(week);
+  const session = await requireStaffingManager(at);
   const path = shopPath(session.user.shopSlug, "staffing");
   const id = z.string().uuid().safeParse(formData.get("credentialId"));
-  if (!id.success) redirect(noticeUrl(path, "credential-invalid"));
+  if (!id.success) redirect(noticeUrl(path, "credential-invalid", at));
   const deleted = await deleteStaffCredential(
     await getDb(),
     session.user.shopId,
@@ -137,6 +169,6 @@ export async function deleteStaffCredentialAction(formData: FormData) {
   );
   revalidateAndRedirect(
     path,
-    noticeUrl(path, deleted ? "credential-deleted" : "credential-invalid"),
+    noticeUrl(path, deleted ? "credential-deleted" : "credential-invalid", at),
   );
 }

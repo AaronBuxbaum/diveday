@@ -8,32 +8,49 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { controlClass } from "@/components/ui/form";
-import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
-import type { DiverFilter, listDiverSummaries } from "@/db/divers";
-import { fill } from "@/i18n/fill";
-import type { CertificationLevel } from "@/lib/readiness";
+import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
+import type { DiverFilter } from "@/db/divers";
+import { groupByLetter } from "@/lib/roster-rows";
 
-type DiverPage = Awaited<ReturnType<typeof listDiverSummaries>>;
-type DiverSummary = DiverPage["divers"][number];
+/**
+ * One exceptional thing about a diver, as a pill.
+ *
+ * `danger` is a blocker — this diver cannot board the departure they are on —
+ * and `warning` is a standing invoice or a possible duplicate. Every one
+ * carries a word as well as a colour; `Badge` adds the tone's own mark.
+ */
+export type RosterBadge = { tone: "danger" | "warning"; label: string };
+
+/**
+ * **One roster row, fully resolved.** Words, dates and money are formatted by
+ * the Server Component above (`page.tsx`) in the reader's locale and the
+ * shop's timezone — this component is the browser half and formats nothing.
+ */
+export type RosterRow = {
+  personId: string;
+  fullName: string;
+  href: string;
+  /** The letter this name files under, or null when it starts with none. */
+  letter: string | null;
+  /** Exceptional only. A clear diver's row carries none — that is the design. */
+  badges: RosterBadge[];
+  /** The row's one quiet fact: a seat ahead, a visit behind, or provenance. */
+  fact: string | null;
+};
 
 /**
  * Every value is a plain string — never a function. This is a client
  * component with its own client-side-only state (the search text), so the
  * translated copy is fully resolved server-side and handed down as plain
  * data; no translator ever crosses the Server->Client boundary.
- * Count-driven text is a translated `{ one, other }` pair, picked and filled
- * at render time via `pluralForm()`/`fill()` (`@/i18n/fill`).
  */
 export interface DiverListCopy {
   /**
    * The quick-add button, in both of its states — beside a search that has
    * text in it, and beside an empty one, where the same words open the full
-   * add-a-diver form instead. One string, because it is one offer either way;
-   * it never carried the typed name (`addDiverWithName` was the literal "Add
-   * diver" in both bundles by the time issue #782 was written).
+   * add-a-diver form instead. One string, because it is one offer either way.
    */
   addDiverLabel: string;
   viewAllDivers: string;
@@ -42,12 +59,10 @@ export interface DiverListCopy {
   viewMissingContact: string;
   viewRemoved: string;
   viewsAriaLabel: string;
-  /** Replaces the search hint under the heading while the Removed view is on. */
+  /** Replaces the count line while the Removed view is on. */
   removedNote: string;
-  peopleHeading: string;
-  /** Already pluralised for the count the badge carries — never a bare digit. */
-  peopleCountLabel: string;
-  searchHintText: string;
+  /** "312 divers", or "3 matching" while a search is on. Already pluralised. */
+  countLabel: string;
   searchDiversLabel: string;
   searchPlaceholder: string;
   noDiversMatchView: string;
@@ -56,109 +71,57 @@ export interface DiverListCopy {
   emptyShowAll: string;
   emptyImportBody: string;
   emptyImportAction: string;
-  noContactDetails: string;
-  /**
-   * One word per rung of the certification ladder, already translated — handed
-   * down whole from the shop's single level-label source
-   * (`CERTIFICATION_LEVEL_KEYS`, `src/i18n/readiness-labels.ts`), the same map
-   * the diver record and the trip requirements read. Never a second mapping
-   * here: two surfaces that name a diver's level differently is exactly the
-   * drift this shape prevents.
-   */
-  certificationLevels: Record<CertificationLevel, string>;
-  /** No verified, unexpired level card on file — see `levelText` below. */
-  noCertificationLevel: string;
-  pendingReviewText: string;
-  toConfirmText: string;
-  tableHeaderPerson: string;
-  tableHeaderLevel: string;
-  tableHeaderAttention: string;
-  possibleDuplicateLabel: string;
-}
-
-function initials(fullName: string): string {
-  return fullName
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-function pendingCount(diver: DiverSummary): number {
-  return diver.pendingCertificationCount + diver.pendingSpecialtyOrNitroxCount;
-}
-
-/** Imported cards are already valid; this is the soft one-tap-confirm nudge. */
-function confirmCount(diver: DiverSummary): number {
-  return diver.importedUnconfirmedCount;
+  /** The group label over the names that begin with no letter at all. */
+  letterOther: string;
 }
 
 /**
- * What the roster says a diver's level is.
+ * **The roster is one ledger** — ADR 20260827-people-not-lists, decision 2.
  *
- * `certificationLevel` is already the highest *verified, unexpired* card
- * (`summarizeDivers`, src/db/divers.ts, reading `diverDepthLimit`'s rule) — an
- * expired higher card never outranks a valid lower one, and a card still
- * awaiting review says nothing here. When there is no such card the cell says
- * so in words rather than showing a bare dash: "nothing on file" and "we don't
- * know" have to read differently on a safety-adjacent list. Cards that *are*
- * on file but not yet speaking still raise their badge beside this text.
- */
-function levelText(diver: DiverSummary, copy: DiverListCopy): string {
-  return diver.certificationLevel
-    ? copy.certificationLevels[diver.certificationLevel]
-    : copy.noCertificationLevel;
-}
-
-/**
- * The level a diver *has* is roster fact and reads quiet; **having none reads
- * louder**, because that is the row a front-desk staffer is scanning for.
+ * One composition at every width: search, the view chips, and rows grouped by
+ * the initial letter they already sort by. The `sm:hidden` card list and the
+ * three-column desktop table it duplicated are both gone — the roster used to
+ * render every diver twice and call one of them the phone.
  *
- * Both used to render in the same muted grey, which made "No current
- * certification" the same weight as the "Open Water" repeated on seven rows
- * around it (issue #764). The separation is **ink, not weight**: full-strength
- * foreground against muted. Bolding it too made one cell of a scanned column
- * shout, which is a job the attention column already has — and inventing a
- * second alert here would put two tones on the same row for two different
- * questions.
- */
-function levelClass(diver: DiverSummary): string {
-  return diver.certificationLevel ? "whitespace-nowrap text-muted" : "whitespace-nowrap";
-}
-
-/**
- * The divers list filters live as you type — the input drives the URL's `?q=`
- * (debounced) and the server answers with the matching page, so the roster
- * scales to thousands of records without shipping them all to the browser.
- * Pages are `?page=` links, so back/forward and sharing keep working — and,
- * unlike the forward-only cursor this replaced, so does going back one page.
+ * Three rules the rows hold to, each pinned in `DiverList.test.tsx`:
  *
- * **A row carries no actions — it is a link to the record, and nothing else.**
- * The Deleted view used to hang a "Restore" off every row it listed, which put
- * a consequential write on a list a staffer scans rather than reads, one
- * mis-tap from a name they were only looking for. Everything a staffer can do
- * to a diver now lives on that diver's own record, where the person is on
- * screen and the deleted state is stated above the control (`RestoreDiver`).
+ * - **A row is a name, and the name is the door.** No avatar, no contact line,
+ *   no level column. A staffer scanning a hundred names is looking for one of
+ *   them, and everything else on the row was competing with it.
+ * - **A badge marks the exceptional state and nothing else** (ADR
+ *   20260827-clearwater-surface-language, decision 3): a blocker, a standing
+ *   invoice, a possible duplicate. A clear diver's row carries none — the
+ *   silence is the design, which is why the test asserts absence as hard as
+ *   presence. The retired "pending review" / "to confirm" counts were the
+ *   opposite reading: a badge on every row of the one view whose chip already
+ *   says why they are all there.
+ * - **The letter belongs to the group header, never to the rows.** One shared
+ *   fact, stated once, in the app's one group-label spelling (`GroupLabel`).
+ *
+ * The list still drives the URL as you type — the input debounces into `?q=`
+ * and the server answers with the matching page, so the roster scales to
+ * thousands of records without shipping them all to the browser. Pages are
+ * `?page=` links, so back/forward and sharing keep working.
  */
 export function DiverList({
-  page,
+  rows,
+  total,
   shopSlug,
   query,
   filter,
-  possibleDuplicateIds,
   importHref,
   canRestore,
   quickAddAction,
   copy,
   pager,
 }: {
-  page: DiverPage;
+  /** This page of the roster, in the query's own order. */
+  rows: readonly RosterRow[];
+  /** How many divers the current view holds, for the one-match Enter shortcut. */
+  total: number;
   shopSlug: string;
   query: string;
   filter: DiverFilter;
-  /** Active rows with an exact normalized phone or name collision. */
-  possibleDuplicateIds: readonly string[];
   /** Where a bulk import lives, or null when this staffer may not run one. */
   importHref: string | null;
   /**
@@ -185,7 +148,8 @@ export function DiverList({
   // runs: who is on a boat today, whose paperwork needs a staffer, and who
   // still owes a safety contact. Each is a server-side WHERE clause
   // (`DiverFilter`, src/db/divers.ts), so a chip narrows the count and the
-  // page together.
+  // page together — and the chip is also what says why every row in that view
+  // is there, which is why the rows themselves wear no badge for it.
   //
   // "Deleted" is the fourth, and the one that is not about a day: it is the
   // only way to *find* a soft-deleted diver, who otherwise matches no search
@@ -208,6 +172,7 @@ export function DiverList({
   // prop outright — every focus-on-mount in this repo goes the same way.
   const searchRef = useRef<HTMLInputElement>(null);
   const quickAddFormRef = useRef<HTMLFormElement>(null);
+  const ledgerRef = useRef<HTMLDivElement>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Keep the input in sync when navigation (back/forward, a view chip) changes
   // the query underneath us — but never while the user is mid-debounce: the
@@ -223,6 +188,30 @@ export function DiverList({
     searchRef.current?.focus();
   }, []);
   useEffect(() => () => clearTimeout(debounce.current ?? undefined), []);
+  /**
+   * One capture-phase listener for every row link in the ledger, rather than an
+   * `onClick` threaded through `LedgerRow` — the primitive's door is a stretched
+   * `<Link>` with no handler slot, and a click anywhere in the ledger means the
+   * staffer is leaving. That is exactly when a keystroke still sitting in the
+   * debounce must not land 250ms later and replace the record they just opened
+   * with the list they just left (see `cancelPendingSearch`).
+   *
+   * A native listener on a ref rather than React's `onClickCapture`, because
+   * the container is a plain `<div>`: an interaction handler on one is a
+   * static-element-interaction the linter is right to ask about, and the honest
+   * answer is that this is not an interaction at all — it is a timer being
+   * dropped as the page unloads under the reader.
+   */
+  useEffect(() => {
+    const ledger = ledgerRef.current;
+    if (!ledger) return;
+    const drop = () => {
+      if (debounce.current) clearTimeout(debounce.current);
+      debounce.current = null;
+    };
+    ledger.addEventListener("click", drop, true);
+    return () => ledger.removeEventListener("click", drop, true);
+  }, []);
 
   // One place builds every roster URL, so search, a view chip, and the pager all
   // carry both the text query and the active filter (never dropping one).
@@ -267,11 +256,11 @@ export function DiverList({
   /**
    * Enter is the fast path past whatever the debounce hasn't caught up to yet.
    * A pending keystroke (`typed !== query`) gets flushed immediately rather
-   * than acted on blind — the visible `divers` still answer the *previous*
-   * query, so a match count read off them now would be stale. Once the URL
-   * is current, one match opens straight to that diver's record; no match at
-   * all reaches for the same quick-add the button beside the box already
-   * offers, so typing a new name and hitting Enter never requires the mouse.
+   * than acted on blind — the visible rows still answer the *previous* query,
+   * so a match count read off them now would be stale. Once the URL is
+   * current, one match opens straight to that diver's record; no match at all
+   * reaches for the same quick-add the button beside the box already offers,
+   * so typing a new name and hitting Enter never requires the mouse.
    */
   const submitSearch = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== "Enter") return;
@@ -283,15 +272,14 @@ export function DiverList({
       router.replace(hrefFor(typed, filter), { scroll: false });
       return;
     }
-    if (page.total === 1 && page.divers[0]) {
-      router.push(`/shop/${shopSlug}/divers/${page.divers[0].person.id}`);
+    const only = total === 1 ? rows[0] : undefined;
+    if (only) {
+      router.push(only.href);
       return;
     }
     quickAddFormRef.current?.requestSubmit();
   };
 
-  const { divers } = page;
-  const possibleDuplicateSet = new Set(possibleDuplicateIds);
   /** A search box or a view chip is on, so "nothing here" is a filter result. */
   const narrowed = Boolean(query) || filter !== "all";
   /**
@@ -301,17 +289,18 @@ export function DiverList({
    * first diver". Narrowed-to-nothing is a different state and keeps the row:
    * the chips are how you widen back out.
    */
-  const showViews = divers.length > 0 || narrowed;
+  const showViews = rows.length > 0 || narrowed;
+  const groups = groupByLetter(rows);
 
   return (
-    <section className="mt-10" aria-labelledby="diver-list-heading">
+    <section className="mt-8">
       {/* Hidden over a day-one empty roster (see `showViews` above); kept
           whenever a search or chip narrowed the list, so the way back out
           stays on screen. */}
       {showViews ? (
         <FilterChips
           label={copy.viewsAriaLabel}
-          className="mb-4"
+          className="mb-5"
           // Dropped before the URL changes: a keystroke that has not reached
           // the URL yet was scheduled against the view being left, and letting
           // it land would replace the URL with that stale view (see
@@ -329,36 +318,13 @@ export function DiverList({
           }))}
         />
       ) : null}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          {/* The count belongs to this heading — it is how many people are in
-              the list below, under whichever view is on. It used to hang off
-              the page header several sections up, where it read as a stray
-              number with nothing to attach to. */}
-          <h2 id="diver-list-heading" className="flex items-center gap-2 text-lg font-semibold">
-            {copy.peopleHeading}
-            <Badge tone="primary" tabularNums>
-              <span aria-hidden="true">{page.total}</span>
-              <span className="sr-only">{copy.peopleCountLabel}</span>
-            </Badge>
-          </h2>
-          {/* The Removed view's line says what removal actually means here,
-              because the list underneath it looks exactly like the roster and
-              nothing else on screen would tell a reader these people are off
-              every list. It outranks the search hint, which is the same in
-              every view. */}
-          {filter === "removed" ? (
-            <p className="mt-1 text-sm text-muted">{copy.removedNote}</p>
-          ) : (
-            <p className="mt-1 text-sm text-muted">{copy.searchHintText}</p>
-          )}
-        </div>
-        {/* Phone: the button wraps to its own row under a full-width box and
-            stays there. Desktop: it sits beside a 20rem box. Either way it is
-            on screen from first paint — it used to mount on the first
-            keystroke and slide the search box aside to make room, which on a
-            phone moved the box under the thumb typing into it (#781) and read
-            as something popping in beside it (#782). */}
+      {/* Phone: the button wraps to its own row under a full-width box and the
+          count sits beneath both. Desktop: box and button on the left, the
+          count quiet on the right — the artboard's one line. Either way the
+          button is on screen from first paint; it used to mount on the first
+          keystroke and slide the search box aside to make room, which on a
+          phone moved the box under the thumb typing into it (#781). */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex w-full max-w-full flex-wrap items-center gap-2 sm:w-auto">
           <div className="w-full min-w-0 sm:w-80">
             <label className="sr-only" htmlFor="diver-search">
@@ -411,10 +377,19 @@ export function DiverList({
             )
           ) : null}
         </div>
+        {/* The Removed view's line says what removal actually means here,
+            because the list underneath looks exactly like the roster and
+            nothing else on screen would tell a reader these people are off
+            every list. It is the shared fact of that whole view, stated once
+            where the count would be rather than repeated as a badge down every
+            row. */}
+        <p className="text-sm text-muted tabular-nums">
+          {filter === "removed" ? copy.removedNote : copy.countLabel}
+        </p>
       </div>
-      {divers.length === 0 ? (
+      {rows.length === 0 ? (
         <EmptyState
-          className="mt-4"
+          className="mt-6"
           title={narrowed ? copy.noDiversMatchView : copy.noDiversOnFile}
           body={narrowed ? null : copy.addOneHere}
           /* Narrowed to nothing and empty on day one are different problems,
@@ -446,142 +421,55 @@ export function DiverList({
           }
         />
       ) : (
-        <>
-          {/* Phone: stacked cards, so nothing hides behind a sideways scroll. */}
-          <ul className="mt-4 space-y-3 sm:hidden">
-            {divers.map((diver) => (
-              <li key={diver.person.id}>
-                <Link
-                  href={`/shop/${shopSlug}/divers/${diver.person.id}`}
-                  // Same reasoning as the view chips above: a keystroke still
-                  // sitting in the debounce was scheduled against the roster,
-                  // so letting it fire 250ms after this tap replaces the record
-                  // the staffer just opened with the list they just left.
-                  onClick={cancelPendingSearch}
-                  className={sectionCardClass({
-                    className:
-                      "block transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:bg-surface-sunken",
-                  })}
-                >
-                  <span className="flex min-w-0 items-center gap-3">
-                    <span
-                      className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-tint font-semibold text-primary"
-                      aria-hidden="true"
-                    >
-                      {initials(diver.person.fullName)}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate font-semibold">{diver.person.fullName}</span>
-                      <span className="block truncate text-sm text-muted">
-                        {diver.person.email ?? diver.person.phone ?? copy.noContactDetails}
+        <div ref={ledgerRef} className="mt-8 flex flex-col gap-7">
+          {groups.map((group, index) => {
+            const labelId = `roster-letter-${index}`;
+            return (
+              <LedgerGroup
+                // The index is part of the key on purpose: a collation can put
+                // the same letter in two runs, and `groupByLetter` renders both
+                // rather than reordering the page under the pager.
+                key={labelId}
+                as="h2"
+                id={labelId}
+                label={group.letter ?? copy.letterOther}
+              >
+                <ul className="mt-2" aria-labelledby={labelId}>
+                  {group.rows.map((row) => (
+                    // Everything sits in the row's own content rather than in
+                    // `LedgerRow`'s `trailing` slot, and the row carries no
+                    // control at all: `trailing` is `z-10`, deliberately, so
+                    // that a real button sits *above* the stretched link — and
+                    // a quiet date parked there would be a strip of dead pixels
+                    // down the right of every row on a page whose whole
+                    // interaction is "tap the row".
+                    <LedgerRow key={row.personId} href={row.href} linkLabel={row.fullName}>
+                      <span className="flex min-w-0 items-center gap-3">
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="truncate font-semibold">{row.fullName}</span>
+                          {row.badges.map((badge) => (
+                            <Badge
+                              key={badge.label}
+                              tone={badge.tone}
+                              size="sm"
+                              className="shrink-0"
+                            >
+                              {badge.label}
+                            </Badge>
+                          ))}
+                        </span>
+                        <span className="ms-auto flex shrink-0 items-center gap-2 text-sm text-muted tabular-nums">
+                          {row.fact}
+                          <DiveDayIcon name="chevron-right" className="size-4" aria-hidden="true" />
+                        </span>
                       </span>
-                    </span>
-                  </span>
-                  <span className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                    {/* The level is roster fact, not an alert — ink, not a
-                        pill (`levelClass`). Badges below appear only when a row
-                        actually needs a staffer (design principle 9). */}
-                    <span className={levelClass(diver)}>{levelText(diver, copy)}</span>
-                    {possibleDuplicateSet.has(diver.person.id) ? (
-                      <Badge tone="warning">{copy.possibleDuplicateLabel}</Badge>
-                    ) : null}
-                    {pendingCount(diver) > 0 ? (
-                      <Badge tone="warning">
-                        {fill(copy.pendingReviewText, { count: pendingCount(diver) })}
-                      </Badge>
-                    ) : null}
-                    {confirmCount(diver) > 0 ? (
-                      <Badge tone="neutral">
-                        {fill(copy.toConfirmText, { count: confirmCount(diver) })}
-                      </Badge>
-                    ) : null}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-          {/* Desktop: the shared table vocabulary (`@/components/ui/table`) —
-              one shell, one header voice, one row divider, one density, shared
-              with orders, reports, the departure log and the import preview.
-              No `minWidth` floor: this is a three-column table, and the 720px
-              floor it used to carry forced a sideways scroll on exactly the
-              narrow-desktop widths the phone cards no longer cover. The shell's
-              own `overflow-x-auto` stays as the safety net, and `relative` on
-              it keeps the stretched row link's positioning context inside the
-              card. */}
-          <Table shellClassName="relative mt-4 hidden sm:block">
-            <THead>
-              <Th>{copy.tableHeaderPerson}</Th>
-              {/* Both describing columns are pinned narrow, so the person cell
-                  — the only one that tells two rows apart — keeps the rest.
-                  Unpinned, `table-layout: fixed` splits the row in exact
-                  thirds and hands a column that is usually empty as much room
-                  as a name and an email (issue #764). */}
-              <Th width="12rem">{copy.tableHeaderLevel}</Th>
-              <Th width="14rem">{copy.tableHeaderAttention}</Th>
-            </THead>
-            <TBody>
-              {divers.map((diver) => (
-                <Tr key={diver.person.id}>
-                  {/* `text-base` because the person's name is the row's own
-                      voice, not table small print — a directly-applied size
-                      beats the shell's inherited `text-sm`. `align-middle`
-                      centres this cell's avatar against the taller of the two,
-                      as it did before the conversion. */}
-                  <Td className="align-middle text-base">
-                    <RowLink
-                      href={`/shop/${shopSlug}/divers/${diver.person.id}`}
-                      onClick={cancelPendingSearch}
-                      className="min-w-0 gap-3"
-                    >
-                      <span
-                        className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-tint font-semibold text-primary"
-                        aria-hidden="true"
-                      >
-                        {initials(diver.person.fullName)}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold group-hover:text-primary">
-                          {diver.person.fullName}
-                          <DiveDayIcon
-                            name="arrow-right"
-                            className="ml-1 inline-block size-4 align-[-0.15em] opacity-0 transition-opacity group-hover:opacity-100"
-                          />
-                        </p>
-                        <p className="truncate text-sm font-normal text-muted">
-                          {diver.person.email ?? diver.person.phone ?? copy.noContactDetails}
-                        </p>
-                      </div>
-                    </RowLink>
-                  </Td>
-                  {/* The level is a stable fact column. Attention is separate
-                      and always present, so searching never redraws the table
-                      shape when a result happens to have no pending work. */}
-                  <Td className="align-middle">
-                    <span className={levelClass(diver)}>{levelText(diver, copy)}</span>
-                  </Td>
-                  <Td className="align-middle">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {possibleDuplicateSet.has(diver.person.id) ? (
-                        <Badge tone="warning">{copy.possibleDuplicateLabel}</Badge>
-                      ) : null}
-                      {pendingCount(diver) > 0 ? (
-                        <Badge tone="warning">
-                          {fill(copy.pendingReviewText, { count: pendingCount(diver) })}
-                        </Badge>
-                      ) : null}
-                      {confirmCount(diver) > 0 ? (
-                        <Badge tone="neutral">
-                          {fill(copy.toConfirmText, { count: confirmCount(diver) })}
-                        </Badge>
-                      ) : null}
-                    </div>
-                  </Td>
-                </Tr>
-              ))}
-            </TBody>
-          </Table>
-        </>
+                    </LedgerRow>
+                  ))}
+                </ul>
+              </LedgerGroup>
+            );
+          })}
+        </div>
       )}
       {pager}
     </section>

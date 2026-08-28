@@ -12,7 +12,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import { switchingHref } from "@/lib/funnel";
-import { fullShopExport, sharedLinkCard } from "@/lib/marketing";
+import { earlyAccessPrice, fullShopExport, sharedLinkCard } from "@/lib/marketing";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
@@ -195,6 +195,32 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
             </SectionCard>
           ))}
         </div>
+        {/* The page's impulse is manufactured here and, until 2026-08-28, was
+            spent two bands down on a primary-weight mailto: four cards each
+            ending in "Check it: save a manifest to your phone, turn the network
+            off, and run roll call anyway" — and then nothing to do it with
+            until the closing band, past the founder story, the concessions and
+            the export terms (docs/product/marketing-review-20260827.md, "help
+            arrives after the homework"). The pair lands where the dare is made.
+
+            No words of its own, for the reason `/product`'s index door carries
+            none: the four "Check it" lines above are the caption, and a heading
+            here would restate the section it closes. `size="md"` rather than
+            `cta`, so the closing band's pair stays the biggest target on the
+            page — this is the door for a reader already convinced, not the
+            page's own ask. Left-aligned on the section's rail, like the heading
+            block and the grid. */}
+        <FunnelCtas locale={locale} source="about-rules" size="md" className="mt-10" />
+        {/* The demo's cost, stated once on this page — here, because this is
+            now the first demo door a reader meets (docs/product/marketing.md,
+            "The demo's cost is stated once per page, at the first door"). The
+            pair above is wordless on purpose; this is not a caption for it but
+            the answer to the only question its button raises, and a page that
+            has just dared a burned buyer to go and check four things cannot
+            leave "does this cost me my email address?" unanswered at the
+            moment of the dare. The closing band repeats the door, not the
+            note. */}
+        <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
       </section>
 
       <section className="border-y border-border bg-surface">
@@ -227,10 +253,37 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
           </h2>
           <p className="mt-5 text-lg leading-8 text-muted">{t("marketing.about.runP1")}</p>
           <p className="mt-4 text-lg leading-8 text-muted">{t("marketing.about.runP2")}</p>
+          {/* Two peer doors for the section's two claims — write in, or read
+              the price — and no primary among them. The mailto carried primary
+              weight until 2026-08-28, which made "email a stranger" the
+              heaviest thing a convinced reader could do on this page: a real
+              offer, but a slower one than the demo, and it sat two bands below
+              the proof that had convinced them. The impulse is now spent under
+              the rules grid; this row stays available and stops shouting
+              (docs/product/marketing-review-20260827.md, `/about`).
+
+              The pricing door states the figure in its own words rather than
+              parking it behind itself. This band raises the cost question
+              three times — the "One price, no seats." rule sends a reader here
+              to *check it*, the heading promises straightforward pricing, and
+              the paragraph above says the whole of it is on one page — and
+              until 2026-08-28 the row answered none of them: "See what it
+              costs" is the unlabeled door a skeptic reads as "they won't say",
+              the same card wall `/product`'s money band gave up the same day
+              (docs/product/marketing-review-20260827.md, diagnosis 2). It
+              costs the page no control, because the door already existed:
+              the budget binds controls, not facts (docs/product/marketing.md).
+
+              Interpolated, never spelled: `earlyAccessPrice` is H-12's single
+              source, and `src/lib/marketing.test.ts` counts this key among the
+              sentences that must carry `{price}` and `{cadence}`. */}
           <div className="mt-8 flex flex-wrap gap-3">
             <a
               href={`mailto:${SUPPORT_EMAIL}`}
-              className={buttonClass({ className: "cursor-pointer" })}
+              className={buttonClass({
+                variant: "secondary",
+                className: "border-border-strong",
+              })}
             >
               {t("marketing.about.emailCta", { email: SUPPORT_EMAIL })}
             </a>
@@ -241,7 +294,10 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
                 className: "border-border-strong",
               })}
             >
-              {t("marketing.about.seeCost")}
+              {t("marketing.about.seeCost", {
+                price: earlyAccessPrice.price,
+                cadence: t(earlyAccessPrice.cadenceKey),
+              })}
             </Link>
             <Link href="/product" className={buttonClass({ variant: "link" })}>
               {t("marketing.about.seeProduct")}

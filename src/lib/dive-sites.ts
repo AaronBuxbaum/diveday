@@ -1,12 +1,21 @@
 import { z } from "zod";
 import type { MarineLifeSlug } from "@/db/marine-life-catalog";
+import type { DiveSpecialty } from "@/db/schema";
 import { type DepthUnit, depthToMeters, MAX_ENTERED_DEPTH_METERS } from "./depth-units";
-import { type DiveSiteDifficulty, parseDiveSiteDifficulty } from "./dive-site-difficulty";
+import {
+  type DiveSiteDifficulty,
+  parseDiveSiteDifficulty,
+  type SiteLibraryGroupLabel,
+} from "./dive-site-difficulty";
 import { parseFieldGuideSelection } from "./dive-site-field-guide";
 import { type DiveSiteLandmark, parseDiveSiteLandmarks } from "./dive-site-landmarks";
 import { hasRoute, parseRoutePoints, parseRouteZoom, type RoutePoint } from "./dive-site-route";
-import { DOCK_DAY_LIMITS } from "./diver-planning";
-import { REQUIRABLE_CERTIFICATION_LEVELS } from "./readiness";
+import { DOCK_DAY_LIMITS, type SiteFitTone } from "./diver-planning";
+import {
+  type CertificationLevel,
+  certificationRank,
+  REQUIRABLE_CERTIFICATION_LEVELS,
+} from "./readiness";
 
 /**
  * How many photos one site's gallery may hold in total — uploaded ones now,
@@ -219,4 +228,72 @@ export function parseDiveSiteForm(
       note: hasRoute(routePoints) ? (parsed.data.routeNote ?? "") : "",
     },
   };
+}
+
+/**
+ * **What a library row says about who may dive here** — ADR
+ * 20260827-the-shops-shelves, the library pattern's requirement pin.
+ *
+ * Three facts sat in the old table's Requirements column as three badges,
+ * every row wearing at least the level: "Open Water" against six of nine
+ * rows, which is the certification every diver on a recreational charter
+ * already holds. A fact that is true of nearly every row is chrome, not
+ * information, so:
+ *
+ * - **The level word renders only above Open Water.** Advanced and Rescue are
+ *   the readings that change what a staffer does; Open Water is the floor and
+ *   says nothing.
+ * - **Specialty and nitrox words render whenever present**, at any level —
+ *   they are the demands a shop actually has to check a card for, and a Night
+ *   specialty on an Open Water reef is exactly the row that would otherwise
+ *   go silent.
+ * - **Warning ink only when the level is also above Open Water.** Colour is
+ *   the *degree*, and the words carry the fact on their own (principles.md
+ *   #6) — so a nitrox-only reef reads quiet and the deep wreck reads loud,
+ *   and neither depends on the reader seeing a hue.
+ *
+ * Codes, never words: the surface looks each one up in the staff bundle.
+ */
+export function siteLibraryRequirement(site: {
+  minimumCertificationLevel: CertificationLevel | null;
+  requiredSpecialties: readonly DiveSpecialty[];
+  requiresNitrox: boolean;
+}): {
+  /** Null at Open Water and below — the floor is not a requirement worth a word. */
+  level: CertificationLevel | null;
+  specialties: readonly DiveSpecialty[];
+  nitrox: boolean;
+  /** Whether the row's requirement words are set in warning ink. */
+  emphasised: boolean;
+} {
+  const aboveOpenWater =
+    site.minimumCertificationLevel != null &&
+    certificationRank(site.minimumCertificationLevel) > certificationRank("open_water");
+  return {
+    level: aboveOpenWater ? site.minimumCertificationLevel : null,
+    specialties: site.requiredSpecialties,
+    nitrox: site.requiresNitrox,
+    emphasised: aboveOpenWater,
+  };
+}
+
+/**
+ * Whether a site's fit reading tells a staffer something its difficulty group
+ * has not already said (ADR 20260827-the-shops-shelves).
+ *
+ * The fit tone is not a column on the library: under "Beginner", "Welcoming
+ * dive" is the group heading in different words, and a fact repeated down every
+ * row at equal weight is the thing the ledger exists to stop. It earns its
+ * place only where it *cuts against* the group — a shop that marked an easy
+ * reef demanding, or an advanced wall welcoming — which is the one case a
+ * staffer scanning by difficulty would otherwise get wrong.
+ *
+ * `unknown` never renders, including under Unrated: "ask the crew" beneath a
+ * heading that already says nobody has rated this site is the same silence
+ * twice.
+ */
+export function siteFitCutsAgainstGroup(group: SiteLibraryGroupLabel, tone: SiteFitTone): boolean {
+  if (tone === "unknown") return false;
+  if (group === "unrated") return true;
+  return tone === "demanding" ? group !== "advanced" : group === "advanced";
 }

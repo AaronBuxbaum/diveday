@@ -17,8 +17,6 @@ import {
 import { googleTerrainEmbedUrl } from "@/lib/maps";
 
 export type RouteEditorCopy = {
-  legend: string;
-  description: string;
   /** Shown instead of the map when the site has no coordinates yet. */
   needsCoordinates: string;
   labelLabel: string;
@@ -90,7 +88,7 @@ export function RouteEditor({
       ? { lat: latitude, lng: longitude }
       : null,
   );
-  const fieldsetRef = useRef<HTMLFieldSetElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   // The frame follows the coordinate boxes as they are typed, rather than only
   // after a save. Without this a brand-new site is a chicken-and-egg: no
@@ -100,7 +98,7 @@ export function RouteEditor({
   // uncontrolled server-rendered fields — which is what lets a refused submit
   // hand the whole briefing back exactly as it was typed (`SiteFormShell`).
   useEffect(() => {
-    const form = fieldsetRef.current?.closest("form");
+    const form = rootRef.current?.closest("form");
     if (!form) return;
     const latField = form.elements.namedItem("forecastLatitude");
     const lngField = form.elements.namedItem("forecastLongitude");
@@ -141,10 +139,10 @@ export function RouteEditor({
   const status = copy.status[points.length] ?? copy.status[copy.status.length - 1];
 
   return (
-    <fieldset ref={fieldsetRef} className="rounded-lg border border-border p-4">
-      <legend className="px-1 text-sm font-medium">{copy.legend}</legend>
-      <p className="mt-1 text-sm text-muted">{copy.description}</p>
-
+    // No box and no legend of its own: the editor is the body of the form's
+    // "The route you swim" section, which carries the name and the sentence
+    // under it (ADR 20260827-the-shops-shelves, the long-form editor pattern).
+    <div ref={rootRef}>
       {/* The record the form posts. Always present, even with no coordinates:
           clearing a route has to be savable too. */}
       <input type="hidden" name="routePoints" value={JSON.stringify(points)} />
@@ -152,7 +150,7 @@ export function RouteEditor({
 
       {query ? (
         <>
-          <div className="mt-4 overflow-hidden rounded-lg border border-border">
+          <div className="overflow-hidden rounded-lg border border-border">
             {/* Never interactive: a panned map is a route drawn against a frame
                 the briefing cannot reproduce. See the note above. `MapEmbed`
                 also crops Google's own controls out of the window — a staffer
@@ -262,9 +260,9 @@ export function RouteEditor({
           </div>
         </>
       ) : (
-        // Nested inside the fieldset, so no icon — same shared panel the field
+        // Nested inside a section, so no icon — same shared panel the field
         // guide and the landmark editor wear for the same state.
-        <EmptyState title={copy.needsCoordinates} icon={false} className="mt-4" />
+        <EmptyState title={copy.needsCoordinates} icon={false} />
       )}
 
       <FieldGrid columns={2} className="mt-4">
@@ -287,6 +285,6 @@ export function RouteEditor({
           />
         </Field>
       </FieldGrid>
-    </fieldset>
+    </div>
   );
 }
