@@ -1070,6 +1070,15 @@ export default async function ScheduleBoardPage({
                 return `/shop/${shopSlug}/schedule/board?${params.toString()}`;
               })()}
               scroll={false}
+              // A crawl's hook onto the stream's own pager. From `xl` up the
+              // whole stream is `display:none` while the week grid renders, so
+              // a helper walking the board to a departure in a later cursor
+              // page has to read this link out of a subtree nothing paints.
+              // `getByRole(..., { includeHidden: true })` cannot do it: the e2e
+              // fixture wraps every role query in `.filter({ visible: true })`
+              // (`e2e/fixtures.ts`), which discards the option without a word.
+              // An attribute survives that, and costs the page nothing.
+              data-board-pager="next"
               className={buttonClass({ variant: "secondary" })}
             >
               {t("schedule.showLater")}

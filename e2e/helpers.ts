@@ -333,11 +333,16 @@ export async function findTripOnBoard(
     const onScreen = link.filter({ visible: true });
     if ((await onScreen.count()) > 0) return onScreen.first();
     if ((await link.count()) > 0) return link.first();
-    // `includeHidden`, because from `xl` up this pager sits inside the hidden
-    // stream: it is in the DOM with the href that names the next page, but out
-    // of the accessibility tree, so a plain role lookup finds nothing and the
-    // crawl would conclude the board ended on page one.
-    const later = page.getByRole("link", { name: "Show later departures", includeHidden: true });
+    // An attribute, not a role query. From `xl` up this pager sits inside the
+    // hidden day stream: it is in the DOM carrying the href that names the next
+    // cursor page, but out of the accessibility tree, so the crawl would
+    // conclude the board ended on page one. `includeHidden: true` looks like
+    // the answer and is not — `e2e/fixtures.ts` wraps every `getByRole` in
+    // `.filter({ visible: true })`, which discards the option silently, and a
+    // first fix that passed it went red on CI unchanged (visual shard 2/4,
+    // "not found on the schedule board after paging"). `page.locator` is the
+    // one query the fixture leaves alone.
+    const later = page.locator("a[data-board-pager='next']");
     if ((await later.count()) === 0) break;
     const nextHref = await later.getAttribute("href");
     if (!nextHref) break;

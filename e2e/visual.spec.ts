@@ -2467,9 +2467,20 @@ for (const scheme of ["light", "dark"] as const) {
        * The pager is the last thing the list paints, so waiting for it proves
        * the stream finished. It is stable: the seeded board always holds more
        * departures than one keyset page.
+       *
+       * **Attached, and by attribute.** From `xl` up the day stream is
+       * `display:none` behind the week grid, the pager with it — so a wait for
+       * it to be *visible* is a wait for something that is never coming, and
+       * three board captures spent their whole 184s budget on it. Both
+       * compositions arrive in the same streamed payload, so the pager being in
+       * the DOM proves the tail landed whichever one the width paints. The role
+       * query cannot express that: `e2e/fixtures.ts` appends
+       * `.filter({ visible: true })` to every one of them, which is visible in
+       * the CI call log and which silently discards `includeHidden`.
+       * `page.locator` is the query it leaves alone.
        */
       const boardListSettled = (page: Page) =>
-        page.getByRole("link", { name: "Show later departures" }).waitFor();
+        page.locator("a[data-board-pager='next']").waitFor({ state: "attached" });
 
       /**
        * **Prove the add panel is open before photographing it — every other
