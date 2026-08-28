@@ -26,6 +26,11 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   // marketing header's single CTA slot on every page (#934, "The two doors,
   // and which one leads") — it carries the demo everywhere, not just here.
   await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(3);
+  // Still three after the evening moment row landed on 2026-08-28: that row
+  // carries no link and no button, deliberately (the recap is something a
+  // shop's divers receive, not a screen a visitor is sent to poke), so the
+  // band grew a third of the page's height and spent none of the door budget
+  // (docs/product/marketing-review-20260827.md).
   // The old label is gone site-wide, not merely replaced here: one action
   // wearing two names is what the single-label rule exists to stop, and the
   // rename has to stay renamed (docs/product/marketing.md, Voice).
@@ -109,6 +114,67 @@ test("the homepage answers price and offers a way to ask before the footer", asy
   await expect(page.getByRole("link", { name: /Email support@dive\.day/ })).toHaveAttribute(
     "href",
     "mailto:support@dive.day",
+  );
+});
+
+test("the homepage's day reaches the evening, and answers mid-season where it disqualifies", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  // The moments band is the whole day, and until 2026-08-28 it ended at 8 a.m.
+  // — booking, readiness, stop — which left the product's own thesis (the shop
+  // gets remembered) with no home on `/` at all
+  // (docs/product/marketing-review-20260827.md, "A third moment: the
+  // evening"). The band is the second section of the page; the hero is first.
+  const momentsBand = page.getByRole("main").locator("section").nth(1);
+  await expect(
+    momentsBand.getByRole("heading", {
+      name: "The desk clears it in the morning. The captain sees it at the dock.",
+    }),
+  ).toBeVisible();
+  await expect(
+    momentsBand.getByRole("heading", { name: "Divers go home with a page worth sharing" }),
+  ).toBeVisible();
+  // The clause that makes this a revenue argument rather than an
+  // administrative one: the shop's name is on the artifact the diver sends.
+  await expect(
+    momentsBand.getByText("with your shop's name on the thing they send their buddy."),
+  ).toBeVisible();
+  // The screen is the claim in every row of this band, so the recap is shown,
+  // not described — and named for a screen reader by a label the *caller*
+  // resolves from the bundle, never an English literal in the component.
+  await expect(momentsBand.getByRole("img", { name: /recap page/i })).toBeVisible();
+
+  // **The silence this row was built around.** It carries no link and no
+  // button: the recap is something a shop's divers receive after a trip, not a
+  // screen a visitor is sent to go poke, so the band still offers exactly one
+  // door — the diver row's preview — and the page's demo-button count did not
+  // move (asserted at 3 in the hero test above). A row that grew a CTA would
+  // need a funnel tag and would spend the page's door budget on the one band
+  // that is not asking for anything.
+  await expect(momentsBand.getByRole("link")).toHaveCount(1);
+  await expect(momentsBand.getByRole("link")).toHaveText("See a diver's booking page →");
+  await expect(momentsBand.locator("button:not([disabled])")).toHaveCount(0);
+
+  // Mid-season is answered in the column that raises it. A shop reading "bring
+  // your records in clean" in August is doing the arithmetic of switching
+  // mid-season, and the four-phase move rail that answers it lives on a
+  // switching guide this reader may never open.
+  const arrivingColumn = page
+    .locator("div")
+    .filter({ has: page.getByRole("heading", { name: "Coming in" }) })
+    .filter({ has: page.getByRole("link", { name: "Your spreadsheet, column by column →" }) })
+    .last();
+  const midSeason = arrivingColumn.getByText(/^Mid-season isn't a problem:/);
+  await expect(midSeason).toBeVisible();
+  await expect(midSeason).toContainText("an afternoon, not a project plan.");
+  // It is the guides' own shared key rendered here, not a homepage wording of
+  // the same promise — the rule marketing.md states one namespace over for the
+  // export claim. `src/lib/marketing.test.ts` pins the key's home; this pins
+  // that the words actually reach the band.
+  await expect(midSeason).toContainText(
+    "a second import updates your divers instead of duplicating them",
   );
 });
 

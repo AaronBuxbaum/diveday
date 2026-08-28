@@ -2236,6 +2236,12 @@
           "title": "One answer to “are they ready?”",
           "description": "Waiver, certification, site requirements, payment, and rental fit — settled before a problem reaches the dock. When something can't be verified, DiveDay says so plainly instead of waving it through.",
           "mockupLabel": "The trip readiness section showing clear diver-ready and diver-blocked states."
+        },
+        "recap": {
+          "when": "That evening",
+          "title": "Divers go home with a page worth sharing",
+          "description": "Their dives, a note from the crew, room for their own photos — with your shop's name on the thing they send their buddy.",
+          "mockupLabel": "A diver's recap page with the dive's depth, visibility and water temperature, a note from the crew, and their own photos."
         }
       },
       "productTitle": "Instead of a whiteboard, a clipboard, and three apps that don't talk to each other.",
@@ -2396,7 +2402,8 @@
           "step4": {
             "title": "Budget an afternoon, not a week",
             "detail": "Exporting from the old system is minutes of work, and the preview shows exactly what will land before anything saves. Review it, fix any flagged rows, import for real. One sitting, not a project plan."
-          }
+          },
+          "midSeason": "Mid-season isn't a problem: run DiveDay alongside what you have for a trip cycle, and a second import updates your divers instead of duplicating them — an afternoon, not a project plan."
         },
         "coexist": {
           "item1": {

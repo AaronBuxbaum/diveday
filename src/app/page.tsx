@@ -21,7 +21,12 @@ import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import { scheduleAttributionHref, switchingHref } from "@/lib/funnel";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { earlyAccessPrice, earlyAccessPriceAmount, fullShopExport } from "@/lib/marketing";
+import {
+  earlyAccessPrice,
+  earlyAccessPriceAmount,
+  fullShopExport,
+  midSeasonCutover,
+} from "@/lib/marketing";
 import { MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { openGraphSite } from "@/lib/site-metadata";
@@ -235,8 +240,17 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
     MIGRATION_GUIDES.map((guide) => guide.competitor),
   );
   // The day the hero's dock screen completes: a diver books days before, the
-  // front desk clears the boat that morning. Alternating full-width rows —
-  // the screen is the claim, so each row gives the mockup the wider column.
+  // front desk clears the boat that morning, and the diver goes home with
+  // something worth sending their buddy. Alternating full-width rows — the
+  // screen is the claim, so each row gives the mockup the wider column.
+  //
+  // Three rows rather than two since 2026-08-28: the day used to end at 8 a.m.,
+  // which left the product's own thesis — the shop gets remembered — with no
+  // home on `/` at all (docs/product/marketing-review-20260827.md, "A third
+  // moment: the evening"). The evening row is also the one row that argues
+  // revenue rather than administration, and it carries no link: the recap is
+  // something a shop's divers do, not a screen a visitor is asked to go poke,
+  // so the page's demo-door count is exactly what it was.
   // `id` is the message-bundle namespace, never a rendered string: it is this
   // list's React key, and every other field here is localized copy. Keying on
   // the title would make a language switch look like two different components
@@ -266,6 +280,15 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
       link: null,
       mockupLabel: t("marketing.home.moments.frontDesk.mockupLabel"),
       mockup: marketingMockups.frontDeskReadiness,
+    },
+    {
+      id: "recap",
+      when: t("marketing.home.moments.recap.when"),
+      title: t("marketing.home.moments.recap.title"),
+      description: t("marketing.home.moments.recap.description"),
+      link: null,
+      mockupLabel: t("marketing.home.moments.recap.mockupLabel"),
+      mockup: marketingMockups.recap,
     },
   ] as const;
   // What a shop gets back on the way out, listed rather than described — the
@@ -419,6 +442,15 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             <div className="flex flex-col gap-5 lg:pr-14">
               <SectionMarker as="h3">{t("marketing.home.arrivingLabel")}</SectionMarker>
               <p className="leading-7 text-muted">{t("marketing.home.exportDescription1")}</p>
+              {/* The mid-season objection, answered in the column where it is
+                actually raised: a shop reading "bring your records in" in
+                August is doing the arithmetic of a switch mid-season, and the
+                four-phase move rail that answers it lives several thousand
+                pixels away on a switching guide this reader may never open
+                (docs/product/marketing-review-20260827.md). It renders the
+                guides' own shared key rather than a homepage wording of the
+                same promise — see `midSeasonCutover`. */}
+              <p className="leading-7 text-muted">{t(midSeasonCutover.claimKey)}</p>
               <MarketingMockup
                 label={t("marketing.home.importMockupLabel")}
                 className="shadow-xl shadow-foreground/5"

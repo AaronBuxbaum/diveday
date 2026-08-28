@@ -385,11 +385,6 @@ homework) and every replacement sentence written out, claims-policy-clean. Each 
 both locales in the same change. Unranked, but 12a and 12c aim directly at "owners aren't
 starting trials."
 
-- **12b. The day gets its evening.** The third moment row ("That evening", `RecapPageFallback`)
-  and the mid-season sentence in the records band via a shared key. The delight thesis's first
-  appearance on `/`. When thread slice 7d ships, `RecapPageFallback` re-draws as the keepsake
-  card (dive record, crew line, review ask); whichever of 12b/7d lands second carries the
-  reconciliation in its PR.
 - **12c. The trial's terms stand at its doors.** `/pricing`: the trial-terms note at both CTA
   pairs, the two-year lock under the cadence line (item5 trims), the fee-anchor rewrite, the
   two new FAQ rows (crew, setup time), the November fold-in, the offline row cut; `/onboard`'s

@@ -3,6 +3,7 @@ import {
   CaptainRollCallFallback,
   DiverBookingFallback,
   FrontDeskReadinessFallback,
+  RecapPageFallback,
 } from "@/components/MarketingScreenFallbacks";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
@@ -81,6 +82,7 @@ export const marketingMockups = {
   frontDeskReadiness: {
     render: (locale: DiverLocale) => <FrontDeskReadinessFallback locale={locale} />,
   },
+  recap: { render: (locale: DiverLocale) => <RecapPageFallback locale={locale} /> },
 } as const;
 
 /**
