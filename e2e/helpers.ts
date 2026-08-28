@@ -139,7 +139,10 @@ export function threadStatus(page: Page): Locator {
  * contents are not.
  */
 export async function openThreadStep(page: Page, step: string): Promise<Locator> {
-  const details = page.locator(`[data-thread-step="${step}"] details`);
+  // A direct child, not a descendant: slice 7c put per-card disclosures inside a step
+  // body, so the descendant selector matches the step *and* the cards within it and
+  // Playwright refuses the ambiguity.
+  const details = page.locator(`[data-thread-step="${step}"] > details`);
   await details.waitFor();
   if (await details.evaluate((element: HTMLDetailsElement) => element.open)) return details;
   await details.locator("summary").click();

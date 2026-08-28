@@ -2739,7 +2739,11 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Emergency contact name").fill("Kojo Mensah");
         await page.getByLabel("Emergency contact phone").fill("+13055550177");
         await page.getByRole("button", { name: "Save details" }).click();
-        await page.getByRole("region", { name: "Waiver" }).getByText("Send options").waitFor();
+        // Click, not `waitFor`: "Send options" is a closed `<details>` summary since the
+        // record was recomposed, and the paper-waiver control lives inside it. Waiting for
+        // the summary proves only that the disclosure exists — the button below is still
+        // hidden, and the capture then times out on it. `waivers.spec.ts` already clicks it.
+        await page.getByRole("region", { name: "Waiver" }).getByText("Send options").click();
         await page.getByRole("button", { name: "Mark signed on paper" }).click();
         await page
           .getByLabel("I have this diver's signed release on file", { exact: false })
