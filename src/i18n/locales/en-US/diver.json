@@ -2216,18 +2216,18 @@
   "marketing": {
     "home": {
       "eyebrow": "Dive shop software",
-      "heroTitle": "Run the whole dive day, from booking to head count.",
-      "heroDescription": "Bookings, readiness, trip prep, and the boat manifest in one calm place — so the crew chases less paperwork and takes better care of divers.",
+      "heroTitle": "Who's booked, who's cleared, who's on the boat — one answer, all day.",
+      "heroDescription": "Bookings, waivers, cert checks, trip prep, and the roll call in one calm place. When a diver isn't ready, DiveDay says so at the desk — not at the dock.",
+      "heroPriceLine": "One flat price — {price} {cadence}. No cut of your bookings.",
       "phoneFrameLabel": "A captain marking divers boarded on DiveDay's mobile roll-call screen.",
       "dockEyebrow": "At the dock",
       "dockDetail": "Roll-call buttons big enough for wet thumbs — with or without signal.",
-      "momentsTitle": "Everyone works from the same day.",
-      "momentsDescription": "What the front desk clears in the morning is exactly what the captain sees at the dock.",
+      "momentsTitle": "The desk clears it in the morning. The captain sees it at the dock.",
       "moments": {
         "diver": {
           "when": "Days before",
           "title": "A clear way onto the boat",
-          "description": "A live schedule, a calm booking flow, and one obvious next step instead of a back-and-forth with the shop.",
+          "description": "One obvious next step instead of a back-and-forth with the shop — a diver reads the live schedule, picks a day, and finishes the booking without you.",
           "link": "See a diver's booking page →",
           "mockupLabel": "The Blue Mantis public schedule with upcoming dive trips and available places."
         },
@@ -2272,22 +2272,22 @@
       "welcome": {
         "eyebrow": "Welcome divers well",
         "title": "From first click to confirmed place on the boat",
-        "summary": "A live schedule divers book themselves, a booking widget for the site you already have, and confirmations you can see arrived — every public page in the visitor's own language."
+        "summary": "Divers book and pay themselves, from your website or ours, and you can see the confirmation actually arrived — no phone tag, no “did you get my email?”"
       },
       "ready": {
         "eyebrow": "Get ready before the dock",
         "title": "The paperwork, evidence, and exceptions stay together",
-        "summary": "Waivers, medical answers and certification records collected from home, so “is this diver ready?” has one clear answer long before anyone reaches the dock."
+        "summary": "Waivers, medical answers and certification records arrive from home, so you find the missing one while there is still time to fix it — not at the dock with the boat waiting."
       },
       "diveDay": {
         "eyebrow": "Run the dive day",
-        "title": "Crew, prep, and the boat share one source of truth",
-        "summary": "Rental sizes, site briefings, nitrox and a roll call that keeps working with no signal — the counter and the boat reading the same thing."
+        "title": "The counter and the boat read the same thing",
+        "summary": "Rental sizes, site briefings, nitrox and a roll call that keeps working with no signal — so the captain leaves with the head count you cleared."
       },
       "motion": {
         "eyebrow": "Keep the shop in motion",
         "title": "The next handoff is already clear",
-        "summary": "Build the board, staff it, take the money and hand the day off — with a live picture of what's coming and a one-ZIP export whenever you need it."
+        "summary": "Set the board for the season, put crew on it and take the money — so tomorrow's shift opens on what actually happened, not on what someone remembers."
       }
     },
     "price": {

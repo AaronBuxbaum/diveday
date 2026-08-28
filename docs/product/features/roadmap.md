@@ -385,10 +385,6 @@ homework) and every replacement sentence written out, claims-policy-clean. Each 
 both locales in the same change. Unranked, but 12a and 12c aim directly at "owners aren't
 starting trials."
 
-- **12a. The homepage says the morning.** Hero triad + de-jargoned description; the flat-price
-  line reaches the hero (text, not a control — the pinned control budget holds); the moments
-  band's redundancy cuts; the four-card summaries rewritten in the owner's-day voice. *Pins:*
-  the hero still counts its controls; the price renders only via interpolation.
 - **12b. The day gets its evening.** The third moment row ("That evening", `RecapPageFallback`)
   and the mid-season sentence in the records band via a shared key. The delight thesis's first
   appearance on `/`. When thread slice 7d ships, `RecapPageFallback` re-draws as the keepsake

@@ -42,6 +42,18 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   await expect(heroSection.getByRole("link")).toHaveCount(1);
   await expect(heroSection.getByRole("link")).toHaveAttribute("href", "/onboard?from=home-hero");
 
+  // The flat price reaches the first screen as a *sentence*
+  // (docs/product/marketing-review-20260827.md, "The price reaches the first
+  // screen"). The two counts above are the budget it had to arrive inside, so
+  // this assertion sits under them deliberately: it is the reason they are
+  // re-read on every copy change. A "See pricing" link here would answer the
+  // same question and cost the budget a door.
+  const heroPriceLine = heroSection.getByText(/^One flat price —/);
+  await expect(heroPriceLine).toBeVisible();
+  await expect(heroPriceLine).toContainText("No cut of your bookings.");
+  await expect(heroPriceLine.getByRole("link")).toHaveCount(0);
+  await expect(heroPriceLine.locator("button")).toHaveCount(0);
+
   // The dock note intentionally rises 20px into the phone's lower edge. The
   // phone's entrance animation creates a stacking context, so the note must
   // explicitly sit above it or its eyebrow and first line are painted under
@@ -78,10 +90,14 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
 test("the homepage answers price and offers a way to ask before the footer", async ({ page }) => {
   await page.goto("/");
 
-  // The flat price renders in the closing band (from src/lib/marketing.ts —
-  // never a prose literal), so a buyer doesn't have to click through to learn
-  // whether this is a $99 tool or an enterprise quote form.
-  await expect(page.getByText(/One flat price/)).toBeVisible();
+  // The flat price renders twice from src/lib/marketing.ts — never a prose
+  // literal — so a buyer doesn't have to click through to learn whether this is
+  // a hundred-dollar tool or an enterprise quote form. It reached the hero on
+  // 2026-08-28 (docs/product/marketing-review-20260827.md); the closing band
+  // keeps the two-year lock, which is the detail a reader wants at the ask
+  // rather than at the door.
+  await expect(page.getByText(/^One flat price —/)).toHaveCount(2);
+  await expect(page.getByText(/locked for two years for founding shops/)).toBeVisible();
   await expect(page.getByRole("link", { name: "See what's included →" })).toHaveAttribute(
     "href",
     "/pricing",
@@ -100,7 +116,9 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: "Run the whole dive day, from booking to head count." }),
+    page.getByRole("heading", {
+      name: "Who's booked, who's cleared, who's on the boat — one answer, all day.",
+    }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Product" }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Pricing" }).first()).toBeVisible();
@@ -859,8 +877,9 @@ test.describe("with Accept-Language: es", () => {
   /** One phrase per page, unique to its body and absent from the chrome. */
   const bodyCopy = {
     "/": {
-      english: "Run the whole dive day, from booking to head count.",
-      spanish: "Lleva todo el día de buceo, desde la reserva hasta el recuento final.",
+      english: "Who's booked, who's cleared, who's on the boat — one answer, all day.",
+      spanish:
+        "Quién reservó, quién está listo, quién sube al barco — una sola respuesta, todo el día.",
     },
     "/product": {
       english: "From the first booking to the last head count.",

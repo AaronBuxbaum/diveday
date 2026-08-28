@@ -7,6 +7,33 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The homepage says the morning (delivered 2026-08-28)
+
+Slice 12a of [marketing-review-20260827.md](marketing-review-20260827.md), the first of that
+review's six to land, against its first two diagnoses: the persuasion gradient is inverted, and the
+terms never stand at the doors. **The hero asks the questions only a dive shop asks** — "Who's
+booked, who's cleared, who's on the boat — one answer, all day." — and its description drops the
+internal word *readiness* for the differentiator underneath it: when a diver isn't ready, DiveDay
+says so at the desk, not at the dock. **The flat price reaches the first screen** as a muted
+sentence under the demo note, interpolated from `earlyAccessPrice` like every other rendering of
+the figure; it is deliberately not a third door, so the hero's one-primary-one-secondary budget is
+exactly what it was. The closing band keeps the two-year lock.
+
+Two cuts and a rewrite came with it. The moments band said the same sentence twice, as an `h2` and
+as the lede under it, so the lede is **gone** and the sentence promoted: "The desk clears it in the
+morning. The captain sees it at the dock." The diver row now leads with the clause that was buried
+at the end of it. And the four breadth cards stopped listing capabilities and started describing an
+owner's day — divers booking and paying themselves with no phone tag, the missing waiver found
+while there is still time to fix it, the captain leaving with the head count you cleared, tomorrow's
+shift opening on what actually happened. `diveDay`'s card lost "one source of truth", software
+jargon standing where its own closing clause already said it better: the counter and the boat read
+the same thing.
+
+Two rules are pinned rather than remembered: `e2e/marketing.spec.ts` still counts the hero's
+enabled controls (and now asserts the price arrived inside that budget as text carrying no link or
+button), and `src/lib/marketing.test.ts` refuses a currency figure anywhere in a `marketing.*`
+message in either locale, so H-12's single price source cannot be quietly copied into a bundle.
+
 ## The boat manifest becomes an instrument (delivered 2026-08-27)
 
 Slice 5a of [20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md),

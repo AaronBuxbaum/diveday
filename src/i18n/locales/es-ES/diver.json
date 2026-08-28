@@ -2216,18 +2216,18 @@
   "marketing": {
     "home": {
       "eyebrow": "Software para centros de buceo",
-      "heroTitle": "Lleva todo el día de buceo, desde la reserva hasta el recuento final.",
-      "heroDescription": "Reservas, preparación y el listado del barco en un solo lugar tranquilo — para que tu equipo persiga menos papeleo y cuide mejor a los buceadores.",
+      "heroTitle": "Quién reservó, quién está listo, quién sube al barco — una sola respuesta, todo el día.",
+      "heroDescription": "Reservas, exenciones, verificación de titulaciones, preparación de la salida y el pase de lista en un solo lugar tranquilo. Cuando un buceador no está listo, DiveDay lo dice en el mostrador — no en el muelle.",
+      "heroPriceLine": "Un precio único — {price} {cadence}. Sin comisión sobre tus reservas.",
       "phoneFrameLabel": "Un capitán marcando buceadores embarcados en la pantalla móvil de pase de lista de DiveDay.",
       "dockEyebrow": "En el muelle",
       "dockDetail": "Botones de pase de lista lo bastante grandes para dedos mojados — con o sin señal.",
-      "momentsTitle": "Todos trabajan desde el mismo día.",
-      "momentsDescription": "Lo que la recepción deja listo por la mañana es exactamente lo que el capitán ve en el muelle.",
+      "momentsTitle": "La recepción lo deja listo por la mañana. El capitán lo ve en el muelle.",
       "moments": {
         "diver": {
           "when": "Días antes",
           "title": "Una forma clara de subir al barco",
-          "description": "Un horario en vivo, un flujo de reserva tranquilo y un siguiente paso obvio en vez de idas y venidas con el centro.",
+          "description": "Un siguiente paso obvio en vez de idas y venidas con el centro — un buceador lee el horario en vivo, elige un día y termina la reserva sin ti.",
           "link": "Ver la página de reservas de un buceador →",
           "mockupLabel": "El horario público de Blue Mantis con próximas salidas de buceo y plazas disponibles."
         },
@@ -2272,22 +2272,22 @@
       "welcome": {
         "eyebrow": "Recibe bien a los buceadores",
         "title": "Del primer clic a una plaza confirmada en el barco",
-        "summary": "Un horario en vivo que los buceadores reservan por sí mismos, un widget de reservas para la web que ya tienes y confirmaciones cuya llegada puedes ver — cada página pública en el idioma del visitante."
+        "summary": "Los buceadores reservan y pagan por sí mismos, desde tu web o la nuestra, y puedes ver que la confirmación llegó de verdad — sin llamadas cruzadas, sin “¿te llegó mi correo?”"
       },
       "ready": {
         "eyebrow": "Prepárate antes del muelle",
         "title": "El papeleo, la evidencia y las excepciones se quedan juntos",
-        "summary": "Exenciones, respuestas médicas y registros de certificación recogidos desde casa, para que “¿está listo este buceador?” tenga una respuesta clara mucho antes del muelle."
+        "summary": "Exenciones, respuestas médicas y registros de certificación llegan desde casa, así encuentras el que falta cuando todavía hay tiempo de resolverlo — no en el muelle con el barco esperando."
       },
       "diveDay": {
         "eyebrow": "Lleva el día de buceo",
-        "title": "Tripulación, preparación y barco comparten una sola fuente de verdad",
-        "summary": "Tallas de alquiler, briefings de sitios, nitrox y un pase de lista que sigue funcionando sin señal — el mostrador y el barco leyendo lo mismo."
+        "title": "El mostrador y el barco leen lo mismo",
+        "summary": "Tallas de alquiler, briefings de sitios, nitrox y un pase de lista que sigue funcionando sin señal — para que el capitán zarpe con el recuento que tú dejaste listo."
       },
       "motion": {
         "eyebrow": "Mantén el centro en marcha",
         "title": "El siguiente relevo ya está claro",
-        "summary": "Construye el tablero, ponle tripulación, cobra y entrega el relevo — con una imagen en vivo de lo que viene y una exportación en un ZIP cuando la necesites."
+        "summary": "Arma el tablero de la temporada, ponle tripulación y cobra — para que el turno de mañana abra con lo que de verdad pasó, no con lo que alguien recuerda."
       }
     },
     "price": {

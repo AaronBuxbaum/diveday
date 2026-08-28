@@ -182,10 +182,13 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
 - **The price renders only from `src/lib/marketing.ts`.** Never restate the figure in prose, docs,
   JSON-LD literals, or images — every copy is a future stale claim. The product owner has **approved
   the price for now** (H-12, 2026-07-24; early-access and still moving), so it may be shown from
-  `marketing.ts` as today's price. H-12 also closed two commercial terms, now published as
+  `marketing.ts` as today's price. `src/lib/marketing.test.ts` enforces the single source where it
+  is easiest to break — no `marketing.*` message in either locale may carry a currency figure, and
+  the two sentences that show the price must carry `{price}` and `{cadence}`. H-12 also closed two
+  commercial terms, now published as
   founding-shop claims (the price hero's "What the price covers" list + FAQ in
-  `src/app/pricing/page.tsx`, closing band in
-  `src/app/page.tsx`, both sourced from `earlyAccessPrice` in `marketing.ts`): **price locked for
+  `src/app/pricing/page.tsx`, hero and closing band in
+  `src/app/page.tsx`, all sourced from `earlyAccessPrice` in `marketing.ts`): **price locked for
   two years for the founding cohort** and **founder-direct support** for the founding cohort.
   **H-26 (2026-08-02) confirmed DiveDay's posture is deliberately lifestyle-scale, not
   venture-scale** (see [vision.md](vision.md#what-kind-of-business-this-is)) and dropped the
@@ -310,6 +313,14 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   destination: the roles moved into the in-demo switcher, the diver preview into the daily-moments
   row it illustrates, and both are still reachable and still tagged. `e2e/marketing.spec.ts` counts
   the hero's enabled controls so the budget can't quietly grow back.
+  **The budget binds controls, not facts.** The 2026-08-27 conversion review's second diagnosis is
+  that the terms never stand at the doors, and the flat price reached the homepage hero on
+  2026-08-28 as a consequence — as a muted *sentence* under the demo note ("One flat price — {price}
+  {cadence}. No cut of your bookings."), never a "See pricing" link, which would have spent the
+  budget to answer a question the sentence already answers. That is the general move when a page
+  owes a reader a fact at a door: state it, do not open a third one. The closing band keeps the
+  two-year lock and the door to `/pricing`, so the figure now renders on two bands of `/` and both
+  interpolate it.
   The internal positioning pillars ("easy to try", "safe to leave") are argument structure, not
   user-facing labels. **A label a reader sees names a thing, not a strategy** — and after the
   2026-08-13 redesign the homepage names things in two idioms, deliberately: an uppercase eyebrow

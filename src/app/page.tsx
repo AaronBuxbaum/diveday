@@ -141,6 +141,7 @@ function HomeBodySkeleton() {
               <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-44" />
             </div>
             <div className="mt-4 h-4 w-72 max-w-full rounded bg-surface-sunken" />
+            <div className="mt-2 h-4 w-64 max-w-full rounded bg-surface-sunken" />
           </div>
           {/* The captain's phone, and the card that overlaps its lower edge. */}
           <div className="mx-auto w-full max-w-sm lg:max-w-md">
@@ -157,8 +158,7 @@ function HomeBodySkeleton() {
       <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
         <div className="max-w-2xl">
           <div className="h-9 w-full max-w-lg rounded bg-surface-sunken" />
-          <div className="mt-5 h-5 w-full rounded bg-surface-sunken" />
-          <div className="mt-2 h-5 w-3/4 rounded bg-surface-sunken" />
+          <div className="mt-3 h-9 w-3/4 max-w-md rounded bg-surface-sunken" />
         </div>
         <div className="mt-14 grid items-center gap-8 lg:mt-20 lg:grid-cols-11 lg:gap-14">
           <div className="lg:col-span-5">
@@ -298,6 +298,19 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                 door, where the decision is actually made. The closing band
                 repeats the door, not the note. */}
             <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
+            {/* The terms, standing at the door rather than four bands below it
+                (docs/product/marketing-review-20260827.md, diagnosis 2). It is
+                deliberately a sentence and not a third CTA: the hero's decision
+                density is pinned at one primary and one secondary, and a
+                "See pricing" link here would spend that budget to answer a
+                question this line already answers. The closing band keeps the
+                two-year-lock detail and the door to /pricing. */}
+            <p className="mt-2 text-sm text-muted">
+              {t("marketing.home.heroPriceLine", {
+                price: earlyAccessPrice.price,
+                cadence: t(earlyAccessPrice.cadenceKey),
+              })}
+            </p>
           </div>
 
           <MarketingHeroMotion>
@@ -321,12 +334,14 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
       <MarketingReveal>
         <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
           <div className="max-w-2xl">
+            {/* One sentence, not two: the h2 and its lede said the same thing
+                in the same words ("what the front desk clears in the morning is
+                exactly what the captain sees at the dock"), so the lede was
+                deleted and the sentence promoted into the heading
+                (docs/product/marketing-review-20260827.md). */}
             <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
               {t("marketing.home.momentsTitle")}
             </h2>
-            <p className="mt-4 text-lg leading-8 text-pretty text-muted">
-              {t("marketing.home.momentsDescription")}
-            </p>
           </div>
 
           <div className="mt-14 space-y-16 lg:mt-20 lg:space-y-24">
