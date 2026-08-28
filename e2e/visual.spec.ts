@@ -3675,13 +3675,25 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-embed", scheme);
       });
 
-      // The team surface: inviting staff and the current roster, each card's
-      // Enable/Disable/Delete immediate-action buttons and its role
-      // checkboxes batched into the page's single "Save changes".
+      // The team surface at rest: inviting staff, and a roster whose rows read
+      // their roles as words behind a disclosure — the page-level "Save
+      // changes" is gone (ADR 20260827-the-shops-shelves, slice 9h).
       test(`the team settings render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/team");
         await page.getByRole("heading", { level: 1, name: "Team" }).waitFor();
         await capture(page, "settings-team", scheme);
+      });
+
+      // One row's roles open, which is the state that has no still image
+      // anywhere else: the checkbox grid inset in the row it belongs to, with
+      // no Save button beneath it because closing the row is the save.
+      test(`the team roles disclosure renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/team");
+        await page.getByRole("heading", { level: 1, name: "Team" }).waitFor();
+        const roles = page.getByRole("button", { name: /^Edit roles for / }).first();
+        await roles.click();
+        await expect(roles).toHaveAttribute("aria-expanded", "true");
+        await capture(page, "team-role-disclosure", scheme);
       });
 
       // The shop's own pre-departure checklist: seeded lines
