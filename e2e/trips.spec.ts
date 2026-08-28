@@ -441,8 +441,24 @@ test.describe("a departure's tab strip on a phone, in Spanish", () => {
  */
 async function seededTripPath(page: import("@playwright/test").Page): Promise<string> {
   await page.goto("/shop/blue-mantis/schedule/board");
-  const link = page.locator('a[href^="/shop/blue-mantis/trips/"]').first();
-  await link.waitFor();
+  // **Scoped to the day stream, and that scope is the whole point.** The board
+  // draws the same departures twice — the chronological stream below `xl`, the
+  // week grid from `xl` up — and the grid renders *first* in the DOM. So a bare
+  // `.first()` reads "the earliest cell of the week on screen" at one width and
+  // "the next departure" at another, which is a different trip. These tests
+  // name the trip they land on, so the composition has to be named too.
+  const link = page.locator('[data-day-stream] a[href^="/shop/blue-mantis/trips/"]').first();
+  // **Attached, not visible.** From `xl` up the stream is `display:none` behind
+  // the grid, its links still in the DOM. This only reads an href, so presence
+  // is the whole requirement — waiting for a visibility that is never coming is
+  // what timed five tests in this file out at 15s on CI, all of them here
+  // rather than in what they were testing.
+  //
+  // A caller that *clicks* needs the copy on screen instead: that is
+  // `findTripOnBoard` in `e2e/helpers.ts`, which picks the visible one and can
+  // page the board. It takes a title, which is exactly what this helper must
+  // not do — the Spanish run cannot read English copy.
+  await link.waitFor({ state: "attached" });
   return ((await link.getAttribute("href")) ?? "").replace(/\/(guests|manifest|prep|log)$/, "");
 }
 
@@ -469,13 +485,7 @@ test.describe("the printed trip packet", () => {
   signedInAsOwner();
 
   test("carries no control a crew member could try to fill in", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/schedule/board");
-    const link = page.locator('a[href^="/shop/blue-mantis/trips/"]').first();
-    await link.waitFor();
-    const tripPath = ((await link.getAttribute("href")) ?? "").replace(
-      /\/(guests|manifest|prep|log)$/,
-      "",
-    );
+    const tripPath = await seededTripPath(page);
     await page.goto(`${tripPath}/print`);
     // The packet's own heading — the destination's render, not a timing guess.
     await page.getByRole("heading", { name: "Trip packet" }).waitFor();
@@ -527,13 +537,7 @@ test.describe("the printed trip packet", () => {
   test("clips nothing at a page break, and repeats a split table's column names", async ({
     page,
   }) => {
-    await page.goto("/shop/blue-mantis/schedule/board");
-    const link = page.locator('a[href^="/shop/blue-mantis/trips/"]').first();
-    await link.waitFor();
-    const tripPath = ((await link.getAttribute("href")) ?? "").replace(
-      /\/(guests|manifest|prep|log)$/,
-      "",
-    );
+    const tripPath = await seededTripPath(page);
     await page.goto(`${tripPath}/print`);
     await page.getByRole("heading", { name: "Trip packet" }).waitFor();
     await page.emulateMedia({ media: "print" });
@@ -568,13 +572,7 @@ test.describe("the printed trip packet", () => {
    * digits each pushed the packing list that follows them onto its own page.
    */
   test("says the tank counts inline rather than as three tiles", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/schedule/board");
-    const link = page.locator('a[href^="/shop/blue-mantis/trips/"]').first();
-    await link.waitFor();
-    const tripPath = ((await link.getAttribute("href")) ?? "").replace(
-      /\/(guests|manifest|prep|log)$/,
-      "",
-    );
+    const tripPath = await seededTripPath(page);
     await page.goto(`${tripPath}/prep`);
     const tanks = page.getByRole("heading", { name: "Tanks" });
     await tanks.waitFor();

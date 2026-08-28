@@ -35,10 +35,39 @@ export function shopWaiverStatusText(t: StaffTranslator, status: ShopWaiverStatu
  * to stop contradicting the word beside it.
  */
 export function shopWaiverStatusTone(status: ShopWaiverStatus): "success" | "warning" | "danger" {
-  switch (status.state) {
+  return waiverRowStateTone(status.state);
+}
+
+/**
+ * **The state a shared waiver row renders** (ADR 20260827-people-not-lists,
+ * decision 6) — the four states `shopWaiverStatus` can be in, plus the one
+ * that is not a waiver standing at all.
+ *
+ * `failed` is a **delivery** outcome (`diver.waiverRequest === "failed"`),
+ * orthogonal to the release itself: the diver's standing is still "not
+ * signed", and what failed is the message we sent asking them to. So it takes
+ * the same word as `none` — the standing is the standing — and the reason goes
+ * in the row's detail, which is why `WaiverStateRow` will not render that state
+ * without one.
+ */
+export type WaiverRowState = ShopWaiverStatus["state"] | "failed";
+
+/** The one word a waiver row's state goes by, in the staff bundle's language. */
+export function waiverRowStateText(t: StaffTranslator, state: WaiverRowState): string {
+  return t(WAIVER_STATUS_KEYS[state === "failed" ? "none" : state]);
+}
+
+/**
+ * The one tone it wears. `failed` is danger for the reason a held medical is:
+ * it fails closed and somebody has to act — the record's waiver card has tinted
+ * it that way since it shipped.
+ */
+export function waiverRowStateTone(state: WaiverRowState): "success" | "warning" | "danger" {
+  switch (state) {
     case "current":
       return "success";
     case "medical_review":
+    case "failed":
       return "danger";
     default:
       return "warning";

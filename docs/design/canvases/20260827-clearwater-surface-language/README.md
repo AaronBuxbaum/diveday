@@ -89,7 +89,7 @@ bodies, with their pins and owner-call dependencies, are in
 | 6b — one chrome spec | shipped | `src/components/chrome/ChromeBar.tsx` | `src/components/chrome/chrome.test.ts`, `src/components/PublicShopNav.test.tsx`, `scripts/check-critical-text.mjs`, `e2e/schedule-builder.spec.ts` |
 | 6c — the home as the day's spine | open | — | — |
 | 6d — the home's evening reading and the fold (H-62) | open | — | — |
-| 6e — the week board | open | — | — |
+| 6e — the week board | shipped | `src/app/shop/[shopSlug]/schedule/board/_components/WeekBoard.tsx` | `ScheduleBuilder.test.tsx` → “ScheduleBuilder week board”; `src/db/trips-queries.test.ts` → “the week board”; `src/lib/week-board.test.ts`; `e2e/schedule-builder.spec.ts` → “the board is the day stream below 1280px and the week from 1280 up”. Its reader is `weekBoard()` in `src/db/trips-queries.ts`; the `?week=` grammar is `src/lib/week-board.ts` |
 | 6f — the orders day ledger | open | — | — |
 | 6g — settings rail and pane | open | — | — |
 | 6h — the counter instrument | open | — | — |

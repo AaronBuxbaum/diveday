@@ -21,6 +21,7 @@ export type DiveDaySharedIconName =
   | "chevron-left"
   | "chevron-right"
   | "more"
+  | "warning"
   | `waiver-action-${WaiverActionIconName}`
   | `waiver-mark-${WaiverDeliveryMarkName}`;
 
@@ -48,6 +49,18 @@ const SHARED_ICON_PATHS: Record<Exclude<DiveDaySharedIconName, "caret">, ReactNo
   ),
   check: <path d="m5 12.5 4.5 4.5L19 7" />,
   pending: <circle cx="12" cy="12" r="7" strokeDasharray="2.5 2.5" />,
+  // A caution triangle, drawn on the same 24px grid at the same weight and
+  // caps as its siblings. It exists because the shared `Badge` mark is an
+  // emoji, and a status line that is not wearing a pill needs a mark from
+  // this family instead (ADR 20260827-clearwater-surface-language: drawn SVG,
+  // never emoji, on anything new).
+  warning: (
+    <>
+      <path d="M12 3.4 21.6 20H2.4L12 3.4Z" />
+      <path d="M12 10v3.6" />
+      <path d="M12 16.8h.01" />
+    </>
+  ),
   "arrow-right": (
     <>
       <path d="M4 12h15" />

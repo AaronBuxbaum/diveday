@@ -162,8 +162,6 @@ test pins the rule (never a pixel snapshot).
   `closeOut` registry entry goes, and the dock drops to four destinations plus More. *Pins:* a test
   that no acknowledgement gate stands on the closing act, and one that the closing block never
   renders while a departure is still out.
-- **6e. The week board (H-63).** Seven columns from `xl` (1280px) up, spans for multi-day courses;
-  tablets and phones keep the stream. *Pins:* a test that widths below `xl` render the stream.
 - **6f. The orders day ledger.** Day groups own date and subtotal; toolbar filters; imported
   history as one disclosure. *Pins:* a test that no row repeats its group's date.
 - **6g. Settings rail and pane.** Desktop two-pane; phone keeps grouped lists; standing captions
@@ -172,6 +170,8 @@ test pins the rule (never a pixel snapshot).
   tablet. Safety-adjacent: `dive-domain-expert` review.
 - **6i. The storefront.** Identity hero, next-boat object, one-line week rows, courses and reviews
   shelves. Conversion surface: `conversion-reviewer` pass.
+
+**6e shipped 2026-08-28** ([shipped.md](../shipped.md)); the rest of the section is open.
 
 **Both of this section's owner calls are decided** — H-62 (the fold) and H-63 (desktop-only week)
 in [../human-decisions.md](../human-decisions.md), 2026-08-27 — so no slice here waits on a human.
@@ -194,7 +194,9 @@ once (each SPEC's preamble points here). Everything not listed is independent:
   10c to build on (claim's recomposition and the door restyle build on them).
   **7b and 7c ship together, or 7c first** —
   packing must have a destination on the thread before the trip page deletes it.
-- **8a → 8b and 8c**, and 9g's add-booking step consumes 8a's person rows.
+- **8a has shipped** ([shipped.md](../shipped.md)), so `CertificationCardRow`, `WaiverStateRow`
+  and `BookingStoryRow` (`src/components/person/rows.tsx`) are in the tree for 8b, 8c and 9g's
+  add-booking step to adopt.
 
 ### 7. The diver's thread (design complete)
 
@@ -232,9 +234,6 @@ the roster, reviews, waivers, requests — argued in the Proposed ADR
 [its SPEC](../../design/canvases/20260827-people-not-lists/SPEC.md). Speaks Clearwater (item 6);
 unranked. `security-reviewer` before 8b and 8e merge.
 
-- **8a. The shared person-row vocabulary.** `CertificationCardRow`, `WaiverStateRow`,
-  `BookingStoryRow` — one spelling for the rows every people surface repeats. *Pins:* verified
-  renders no badge; every state carries a word.
 - **8b. The diver record recomposition.** Status ledger leads and renders nothing when clear; the
   story is one ledger; the file is inset groups; Book is the one primary; the jump nav, the
   514-line notice router and the twin certification components delete (H-49). Closes issue #780.

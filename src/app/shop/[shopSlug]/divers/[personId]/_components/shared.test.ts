@@ -7,69 +7,10 @@ import {
   bookingMoneyStatusTone,
   cardsNeedingLookCount,
   type DiverProfile,
-  HELD_CARD_STATUS_KEYS,
-  heldCardDisplayStatus,
-  heldCardStatusTone,
-  isImportedCard,
-  needsImportConfirm,
   PAYMENT_STATUS_KEYS,
   PAYMENT_STATUS_TONES,
   unpaidBookingCount,
 } from "./shared";
-
-describe("imported card provenance and confirm nudge", () => {
-  it("flags any card with an importedAt as imported", () => {
-    expect(isImportedCard({ importedAt: new Date() })).toBe(true);
-    expect(isImportedCard({ importedAt: null })).toBe(false);
-    expect(isImportedCard({})).toBe(false);
-  });
-
-  it("needs a confirm only while imported and not yet reviewed", () => {
-    // Imported, no staff review yet → the one-tap confirm nudge shows.
-    expect(needsImportConfirm({ importedAt: new Date(), reviewedAt: null })).toBe(true);
-    // Imported but a staffer already confirmed → no nudge; the imported flag stays.
-    expect(needsImportConfirm({ importedAt: new Date(), reviewedAt: new Date() })).toBe(false);
-    // A hand-entered card (never imported) is not a confirm-nudge case.
-    expect(needsImportConfirm({ importedAt: null, reviewedAt: null })).toBe(false);
-  });
-});
-
-describe("heldCardDisplayStatus", () => {
-  it("distinguishes a card whose gate is still shut from one that clears", () => {
-    // The badge is the only thing on screen saying so. A hand-verified card reads
-    // plain "certified" and does clear; an imported, unconfirmed one holds its
-    // gate — the specialty dive, or the enriched-air fill — so it must not look
-    // identical at a busy desk (H-24).
-    const confirmed = {
-      status: "verified" as const,
-      importedAt: new Date(),
-      reviewedAt: new Date(),
-    };
-    const unconfirmed = { status: "verified" as const, importedAt: new Date(), reviewedAt: null };
-    const byHand = { status: "verified" as const, importedAt: null, reviewedAt: null };
-
-    expect(heldCardDisplayStatus(unconfirmed)).toBe("confirm_to_clear");
-    expect(HELD_CARD_STATUS_KEYS.confirm_to_clear).toBe("divers.shared.cardStatus.confirmToClear");
-    expect(heldCardStatusTone("confirm_to_clear")).toBe("warning");
-
-    // Both of these genuinely clear, so both keep the plain certified badge.
-    expect(heldCardDisplayStatus(confirmed)).toBe("verified");
-    expect(heldCardDisplayStatus(byHand)).toBe("verified");
-    expect(heldCardStatusTone("verified")).toBe("success");
-  });
-
-  it("leaves a pending card pending, imported or not", () => {
-    // There is no third display state to fall into any more: what the badge
-    // shows is the stored status, plus the one imported-but-unconfirmed
-    // overlay above (ADR 20260821-a-card-does-not-expire).
-    expect(heldCardDisplayStatus({ status: "pending", importedAt: null, reviewedAt: null })).toBe(
-      "pending",
-    );
-    expect(
-      heldCardDisplayStatus({ status: "pending", importedAt: new Date(), reviewedAt: null }),
-    ).toBe("pending");
-  });
-});
 
 /**
  * The status vocabulary money wears, and the one place it is proved whole.

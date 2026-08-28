@@ -7,6 +7,35 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The shared person-row vocabulary (delivered 2026-08-28)
+
+Slice 8a of [20260827-people-not-lists](../architecture/decisions/20260827-people-not-lists.md),
+decision 6: the three rows every staff surface about people repeats now have one spelling each, in
+`src/components/person/rows.tsx` — `CertificationCardRow`, `WaiverStateRow` and `BookingStoryRow`.
+A certified card renders **no badge at all** (a badge marks the exceptional state), every other
+state carries a word rather than a colour, an imported card says so on every surface that shows it,
+and an imported visit is never a door. The state vocabulary moved out of the diver record's own
+`_components/shared.ts` to homes the shared rows can reach: predicates and the H-24
+level/specialty asymmetry to `src/lib/certification-cards.ts` (where
+`certificationCardRowState` flattens the two display unions exactly once), words and tones to
+`src/i18n/card-labels.ts`, and the waiver row's five states to `src/i18n/waiver-labels.ts`. No
+surface adopts them yet — 8b, 8c and 9g do. Pinned by `src/components/person/rows.test.tsx` and
+`src/lib/certification-cards.test.ts`.
+
+## The schedule board is a week (delivered 2026-08-28)
+
+Slice 6e of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
+(decision 5, width floor H-63). From `xl` (1280px) up, `/shop/[shopSlug]/schedule/board` composes
+as **seven columns, one per day** — departures as compact time-led entries, a multi-day course as
+one bar spanning the days it owns rather than repeated into each of them, today marked with a disc
+*and* the word, past columns set down and offered no "+ Add". Paging is by week (`?week=<any date
+in it>`, normalised to that week's Monday in `src/lib/week-board.ts` — the grammar slice 9e's
+staffing week reads too). Below `xl`, tablets and phones keep the vertical day stream exactly as
+it was, cursor pager and all: the two are readings of the same departures, not two streams, and
+their parameters never mix. The reader is `weekBoard()` (`src/db/trips-queries.ts`), one bounded
+week through `liveTrip()`; the move/copy/remove panels and the day's add panel are the board's
+existing ones, opened full width beneath the grid.
+
 ## The diver's thread reads at one measure (delivered 2026-08-28)
 
 Slice 7a of [20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md)

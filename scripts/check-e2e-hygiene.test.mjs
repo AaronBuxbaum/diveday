@@ -86,6 +86,19 @@ describe("acknowledgement marker", () => {
   });
 });
 
+describe("includeHidden", () => {
+  it("catches the option the fixture silently discards", () => {
+    expect(ruleIds('page.getByRole("link", { name: "Show later", includeHidden: true })')).toEqual([
+      "include-hidden",
+    ]);
+    expect(ruleIds("  includeHidden : true,")).toEqual(["include-hidden"]);
+  });
+
+  it("never flags the raw locator that is the correct answer", () => {
+    expect(ruleIds(`const later = page.locator("a[data-board-pager='next']");`)).toEqual([]);
+  });
+});
+
 describe("comment lines", () => {
   it("never flags prose about a banned pattern", () => {
     expect(ruleIds("// never reaches the `networkidle` state the scan waits for")).toEqual([]);
