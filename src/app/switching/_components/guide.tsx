@@ -155,6 +155,18 @@ export function DividedList({ items }: { items: { title: string; detail: string 
  * path as a numbered rail of phases. This replaces the three separate
  * "Step 1 / Step 2 / Step 3" mega-sections whose identical dress chopped one
  * afternoon's work into what read as seven screens of process.
+ *
+ * `moveIntro` carries the concierge in its second sentence, and that is the
+ * point of this section's opening line (the 2026-08-27 conversion review's
+ * third diagnosis, "help arrives after the homework"): the free, personal,
+ * authorized offer to do the move *for* a shop sat about 80% down every guide,
+ * below the rail that makes switching look like a project. The reader who is
+ * about to decide whether they can face this now meets the alternative in the
+ * same breath as the work. The full offer — bidirectional, with the inbox to
+ * write to — still stands below in {@link SwitchingConcierge} on every
+ * switching page; this is the compressed form, the same shape
+ * `GUIDE_FACTS.back` uses for the export claim and `midSeasonCutover` uses for
+ * the cutover steps. Compressed here, authored once, never re-worded.
  */
 export function MovePath({ locale, children }: { locale: DiverLocale; children: ReactNode }) {
   const t = diverTranslator(locale);

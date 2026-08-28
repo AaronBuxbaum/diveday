@@ -1916,7 +1916,7 @@
         }
       },
       "moveTitle": "How the move works",
-      "moveIntro": "Every step is one you run yourself, in your own time.",
+      "moveIntro": "Every step is one you run yourself, in your own time. Rather hand it off? Send us the file and a person brings your divers in with you, free.",
       "scopeTableTitle": "What comes across — and what doesn't",
       "scopeTableDescription": "The same table DiveDay shows you before it imports a single row.",
       "comesAcross": "Comes across",
@@ -1963,7 +1963,7 @@
       "eyebrow": "Coming from a spreadsheet",
       "title": "The spreadsheet got you this far.",
       "heroLede": "It won't flag an unverified certification, chase an unsigned waiver, or let a diver book a seat on a Sunday night. DiveDay reads the sheet you already keep and takes the rest off your hands.",
-      "wedgeIntro1": "A spreadsheet is a good memory and a bad teammate. It holds names and numbers, but not the work that keeps a dive day calm — the part you're doing by hand right now.",
+      "wedgeIntro1": "A spreadsheet remembers everything and checks nothing. It holds the names and the numbers; the checking — cards, waivers, who's still not ready — is what you're doing by hand right now.",
       "wedgeIntro2": "That's the trade DiveDay makes worth it. Not a prettier list — the jobs a list can't hold:",
       "wedge": {
         "cardsChecked": {
@@ -2048,6 +2048,7 @@
           "detail": "A separate gear CSV brings in your tagged units and dated service, hydro, inspection, O2-clean, and condition records."
         }
       },
+      "parallelRunNote": "Keep the sheet going as long as you like. A re-import matches divers by email and updates them instead of duplicating, so the day you stop keeping it is yours to pick.",
       "closingTitle": "See it before you switch a thing.",
       "closingDescription": "Walk the live demo as the owner, the captain, or a diver — no sign-up, just the working shop.",
       "otherSystems": "Switching from other software →"
@@ -2386,6 +2387,10 @@
         "cutover": {
           "heading": "Cutover without drama",
           "intro": "Leaving a system you've run for years doesn't have to mean a weekend of downtime.",
+          "crewFirst": {
+            "title": "Let the crew walk their screens first",
+            "detail": "The live demo runs the same roles your dock does. Have the captain run a roll call and the desk see who's not ready before you move a single record."
+          },
           "step1": {
             "title": "Run both systems for one trip cycle",
             "detail": "Import into DiveDay and start taking real trips through it — waivers, roster, manifest — while you keep your old system running alongside it. Nothing forces a hard cutoff on day one."
@@ -2457,7 +2462,7 @@
           },
           "nitrox": {
             "what": "Nitrox",
-            "detail": "Imported as verified nitrox certification, flagged imported — but a diver gets plain air until staff confirm it; boarding never waits."
+            "detail": "Comes across with the diver's record, marked imported. Until staff give it a one-tap confirm, that diver gets plain air — boarding never waits on it."
           },
           "signedWaivers": {
             "what": "Signed waivers & medical clearance",
@@ -2499,7 +2504,7 @@
         "metaDescription": "Leaving EVE? A step-by-step guide to exporting your customers and certifications from EVE and bringing them into DiveDay — what comes across, what doesn't, and why.",
         "heroEyebrow": "Switching to DiveDay",
         "heroTitle": "Moving your shop off EVE",
-        "heroLede": "EVE keeps your divers and their certification records on a Windows PC in the back office. Here's how to get that data out of EVE yourself and bring your people, certification records, and rental sizes into DiveDay — with a plain account of what makes the trip and what stays behind.",
+        "heroLede": "Years of divers and their certification records are sitting in a database on one back-office PC — and shops report the history is the hard part to pull out cleanly. Here's how to get your file out of EVE yourself, and a plain account of what makes the trip and what stays behind.",
         "context": {
           "item1": "EVE (from Integrated Scuba Systems) is the desktop shop-management system PADI retailers ran for years, and DiveShop360 acquired it in 2023. If you're planning a move off it, this guide is about the practical part: getting your people and their certification records out of EVE and into DiveDay.",
           "item2": "The part that makes leaving feel risky is real: EVE stores its data in a database on your own PC, and shops report that years of booking history can be hard to pull out cleanly. DiveDay brings over your roster, certification records, rental sizes, and — through the separate gear-history CSV — your tagged fleet's dated service records, so your people and equipment are ready from the first booking.",
@@ -2545,7 +2550,7 @@
         "metaDescription": "Leaving DiveShop360? A step-by-step guide to exporting your customers and certification data as CSV and bringing them into DiveDay — what comes across, what doesn't, and why.",
         "heroEyebrow": "Switching to DiveDay",
         "heroTitle": "Moving your shop off DiveShop360",
-        "heroLede": "DiveShop360 keeps your customers and their certification records in the cloud, and its own help pages name the datasets you can export as CSV. Here's how to pull your people and certifications and bring them into DiveDay — with a plain account of what makes the trip and what stays behind.",
+        "heroLede": "Your customers and their certification records live in DiveShop360's cloud, and the way out is the four CSVs its own FAQ names — downloaded one at a time, no bulk export, no API. You need two of them. Here's the whole path, with a plain account of what makes the trip and what stays behind.",
         "context": {
           "item1": "DiveShop360 grew out of a retail point-of-sale system, and that's where it's strongest — registers, inventory, vendor catalogs. Its own FAQ names four CSV exports: customers, inventory, sales reports, and certification data. A move to DiveDay needs two of them — customers and certification data.",
           "item2": "We're not here to replace your point of sale. DiveDay runs the water — bookings, readiness, the boat — so “bring your POS, we run the dive day” is a real division of labor, not a slogan. That's why we only ask for the customer and certification files.",

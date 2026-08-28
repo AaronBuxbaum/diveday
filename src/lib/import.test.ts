@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { certificationAgency, certificationLevel } from "@/db/schema";
 import { diverTranslator } from "@/i18n/messages";
+import { staffTranslator } from "@/i18n/staff-messages";
 import { INTERNAL_VOCABULARY } from "@/test/copy";
 import {
   IMPORT_AGENCIES,
@@ -933,17 +934,79 @@ describe("IMPORT_HONESTY_TABLE", () => {
     expect(waiver.detail).toMatch(/imported/i);
   });
 
-  it("marks certifications and nitrox as coming across verified and flagged imported", () => {
+  it("marks certifications as coming across verified and flagged imported", () => {
     const cert = row("certificationCard");
     expect(cert.what).toBe("Certification record");
     expect(cert.scope).toBe("included");
     expect(cert.detail).toMatch(/verified/i);
     expect(cert.detail).toMatch(/imported/i);
+  });
 
+  /**
+   * The nitrox row is the one line on this table a shop reads to decide what to
+   * trust about gas during a migration, so every clause of it is checked here
+   * against the code that decides the outcome rather than against the sentence
+   * that used to be there. Reworded 2026-08-28 (the conversion review's
+   * switching slice) from three states to one, and each assertion names the
+   * mechanism it stands on:
+   *
+   *  - "marked imported" — `importedAt` on the row `prepareContactImport`
+   *    builds, and the only marker `authorizesNitroxFill` reads.
+   *  - "one-tap confirm" — an imported card confirms on one tap and carries no
+   *    separate card-sighting attestation (`reviewNitroxCertification`); only a
+   *    still-unsighted self-declaration asks for the card in hand.
+   *  - "plain air" — `authorizesNitroxFill` is `verified AND (importedAt is
+   *    null OR reviewedAt is not null)`, so an imported, unconfirmed card is
+   *    outside it and `setBookingNitrox` answers `certified: false`.
+   *  - "boarding never waits on it" — `nitroxBlocker` (src/lib/readiness.ts)
+   *    reads `status` and nothing else: it has no `importedAt`/`reviewedAt`
+   *    term at all, which is exactly why the confirm can gate the fill without
+   *    ever holding a diver off the boat.
+   */
+  it("states nitrox as one state: imported, the confirm gates the fill, boarding does not wait", () => {
     const nitrox = row("nitrox");
     expect(nitrox.what).toBe("Nitrox");
     expect(nitrox.scope).toBe("included");
-    expect(nitrox.detail).toMatch(/verified/i);
+    expect(nitrox.detail).toMatch(/marked imported/i);
+    expect(nitrox.detail).toMatch(/one-tap confirm/i);
+    expect(nitrox.detail).toMatch(/plain air/i);
+    expect(nitrox.detail).toMatch(/boarding never waits on it/i);
+  });
+
+  /**
+   * And the clause it must NOT carry. The row said "Imported as verified
+   * nitrox certification" until 2026-08-28, and the importer does not promise
+   * that: a source file whose own `certification_status` column says the card
+   * was never verified downgrades every card on the row to `pending`
+   * (`cardStatus` → `nitroxStatus` in prepareContactImport), and a pending
+   * nitrox card *is* a boarding blocker on a nitrox-required trip
+   * (`nitrox_pending`). The published sentence therefore states what always
+   * happens — it arrives, marked imported — and leaves the status to the file.
+   * The behaviour is pinned below this describe block; this is the copy half.
+   */
+  it("never promises the imported nitrox card lands verified — the source file can say otherwise", () => {
+    expect(row("nitrox").detail).not.toMatch(/verified/i);
+
+    const downgraded = prepareContactImport(
+      [
+        "full_name,certification_status,nitrox_certified,nitrox_certification_number",
+        "A Diver,not verified,yes,NX-9",
+      ].join("\n"),
+    ).rows[0];
+    expect(downgraded.nitrox?.status).toBe("pending");
+  });
+
+  /**
+   * One table, two surfaces. The switching guides render it through
+   * `IMPORT_SCOPE_ROW_KEYS` and the staff importer through its own staff-bundle
+   * map (the one-bundle-per-surface rule), and the nitrox row is the same
+   * sentence in both because it is the same claim about the same importer —
+   * the shape docs/product/marketing.md records for the export's credentials
+   * wording: change both surfaces together or neither.
+   */
+  it("says the same thing on the staff importer as on the switching guides", () => {
+    const staff = staffTranslator("en-US");
+    expect(staff("settings.import.scopeTable.nitrox.detail")).toBe(row("nitrox").detail);
   });
 
   it("says waiver/medical documents accept both images and PDFs", () => {

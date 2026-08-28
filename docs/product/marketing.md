@@ -112,8 +112,16 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   data back *out* just as personally.** It lives on **every** `/switching` page as the shared
   `SwitchingConcierge` block, routed to the `switch@dive.day` inbox. Phrase these as a human
   commitment ("we'll map it with you", "we'll help you carry it out"), never as an automated product
-  capability, and never promise a turnaround time. A new service claim needs product-owner sign-off
-  the same way the price does. **Founder-direct support retired 2026-08-05 (Aaron Buxbaum,
+  capability, and never promise a turnaround time. **It is offered twice on a guide, and the compressed
+  form comes first** (2026-08-28): `switching.common.moveIntro`, the line that opens
+  the move rail, ends "Rather hand it off? Send us the file and a person brings your divers in with
+  you, free." The full block used to be the offer's only appearance and sat about 80% down every
+  guide — *below* the four-phase rail whose whole job is to show a reader how much work switching is
+  ([marketing-review-20260827.md](marketing-review-20260827.md)'s third diagnosis, "help arrives
+  after the homework"). The reader deciding whether they can face this now meets the alternative in
+  the same breath as the work. Compressed at the top, authored once, never re-worded — the same
+  shape `midSeasonCutover` uses for the cutover steps and `GUIDE_FACTS.back` uses for the export
+  claim. A new service claim needs product-owner sign-off the same way the price does. **Founder-direct support retired 2026-08-05 (Aaron Buxbaum,
   [human-decisions.md](human-decisions.md#decision-register), H-12/H-26).** From 2026-07-27 through
   that date a general founder-direct contact line, routed to `aaron@dive.day`, was authorized here —
   the same promise the "You can reach the founder" section on `/about` made in prose. It is
@@ -571,11 +579,11 @@ arithmetic of switching with a season's bookings already on the books, and the f
 that answers it lives several thousand pixels away on a switching guide this reader may never open.
 One sentence now sits under the arriving lede, and it renders
 `marketing.guides.shared.cutover.midSeason` through `midSeasonCutover` in `src/lib/marketing.ts`
-rather than a homepage wording of the same promise: the guides walk the move at four steps, `/`
-compresses it to one, and both live in the same block of the bundle so an editor rewriting either
-is reading the other. This is the export claim's rule applied to a second claim. The guides do not
-additionally render the summary — beside the four steps it compresses, it would be a caption
-restating its own section.
+rather than a homepage wording of the same promise: the guides walk the cutover step by step (five
+of them since 2026-08-28), `/` compresses it to one, and both live in the same block of the bundle
+so an editor rewriting either is reading the other. This is the export claim's rule applied to a
+second claim. The guides do not additionally render the summary — beside the steps it compresses,
+it would be a caption restating its own section.
 
 **The band carries two links, and they are not the same door twice.** The 2026-08-13 redesign merged
 two stacked link CTAs under the section copy — one to `/switching`, one straight to
@@ -683,7 +691,11 @@ decision exists, because a single canonical URL serves one `<head>` to every cra
 A switching guide is a live page only — no roadmap or "coming soon" entries (claims policy).
 
 **A switching guide may carry exactly one forward link to `/pricing`, and it sits under the coexist
-section's leave-path box** (decided 2026-08-14). Two of the guides argue hard on an incumbent's
+section's leave-path box** (decided 2026-08-14; **still the rule as of 2026-08-28** — the
+2026-08-27 review recommends extending the same destination-not-claim link to the leave-it guides'
+`bothWays` block and records it as an open owner call, so `/switching/eve`,
+`/switching/diveshop360` and `/switching/smartwaiver` carry no forward pricing link at all and
+`e2e/marketing.spec.ts` asserts they render none. Adding one is a decision, not an edit). Two of the guides argue hard on an incumbent's
 per-booking fee — FareHarbor's, Rezdy's — and then gave the reader nowhere to learn what DiveDay
 costs except the nav tab several thousand pixels above them. The link is worded as a destination
 (`switching.common.seePricing`), never as a claim: no figure, no "flat price", no comparison and no
@@ -737,7 +749,11 @@ channels get a guide next.
 
 The one non-incumbent guide is `/switching/spreadsheet` ("Coming from a spreadsheet"). A shop on a
 spreadsheet has no vendor to leave, so the page has no incumbent context, no export click-path to
-reverse-engineer, and no `sources`; it lives as its own static route rather than a
+reverse-engineer, no `sources`, and no cutover phase — which is why the parallel-run answer the
+incumbent guides give as a cutover step rides its **import** phase instead (2026-08-28): the reader
+still keeping a sheet is the one likeliest to be asking whether they have to stop, and this guide
+was the only one that never answered. It is its own sentence about the sheet staying, not the
+cutover step's words moved; it lives as its own static route rather than a
 `migration-guides.ts` entry (a static segment wins over the sibling `[competitor]` one). It still
 renders `IMPORT_HONESTY_TABLE` verbatim like every guide — the shared honesty invariant — and it
 carries the shared `SwitchingConcierge` offer like every switching page. Its wedge is not
