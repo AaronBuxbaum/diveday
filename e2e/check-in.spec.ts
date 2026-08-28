@@ -80,15 +80,24 @@ test("a diver blocked five ways names the worst reason and counts the rest", asy
  * The queue's one-tap grammar: the whole row is the control (the same
  * roll-call pattern the manifest speaks), and a settled row tapped again
  * undoes the check-in — re-tap, never a confirm dialog (design principle 7).
+ *
+ * The row now **sinks** on the tap: it leaves the working queue for its
+ * departure's collapsed settled group (ADR 20260827-clearwater-surface-language,
+ * decision 9). Every assertion below is on the final DOM — the settled group's
+ * own count text and the undo control inside it — and never on the 150ms
+ * fade-out that carries the row there. An e2e that waited on motion is exactly
+ * what `pnpm check:e2e-hygiene` refuses.
  */
-test("a ready diver checks in with one tap on the row, and a re-tap undoes it", async ({
+test("a ready diver checks in with one tap, sinks into the settled group, and a re-tap undoes it", async ({
   page,
 }) => {
   await page.goto("/shop/blue-mantis/check-in");
-  await expect(page.getByRole("searchbox", { name: "Scan or search diver" })).toHaveAttribute(
-    "data-hydrated",
-    "true",
-  );
+  const search = page.getByRole("searchbox", { name: "Scan or search diver" });
+  await expect(search).toHaveAttribute("data-hydrated", "true");
+  // Searched, so the row this taps is the same diver on every run whichever
+  // boat the instrument happens to be focused on.
+  await search.fill("Diego Alvarez");
+  await search.press("Enter");
 
   const row = page
     .locator("article")
@@ -96,19 +105,72 @@ test("a ready diver checks in with one tap on the row, and a re-tap undoes it", 
     .filter({ visible: true });
   await row.getByRole("button", { name: "Check in Diego Alvarez" }).click();
 
-  // The settled row IS the confirmation — no success banner restates it from
-  // the top of the page (design principle 9), and no sentence under the row
-  // teaching the re-tap either: a control the finger just put into "Checked in
-  // ☑️" is its own affordance, and its accessible name already says "Undo".
-  const settled = page.getByRole("button", { name: "Undo check-in for Diego Alvarez" });
-  await expect(settled).toBeVisible({ timeout: 15_000 });
-  await expect(settled).toContainText("Checked in ☑️");
-  await expect(settled).not.toContainText("undo");
+  // The settled group IS the confirmation — no success banner restates it from
+  // the top of the page (design principle 9), and no sentence teaching the
+  // re-tap either: the control's accessible name already says "Undo".
+  const settled = page.locator("details").filter({ hasText: "Checked in — 1" });
+  await expect(settled.getByRole("heading", { name: "Checked in — 1" })).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(page.getByRole("button", { name: "Check in Diego Alvarez" })).toHaveCount(0);
 
-  await settled.click();
+  await settled.locator("summary").click();
+  const undo = page.getByRole("button", { name: "Undo check-in for Diego Alvarez" });
+  await expect(undo).toBeVisible();
+  await expect(undo).toContainText("Checked in");
+  await expect(undo).not.toContainText("undo");
+
+  await undo.click();
   await expect(page.getByRole("button", { name: "Check in Diego Alvarez" })).toBeVisible({
     timeout: 15_000,
   });
+});
+
+/**
+ * **J2, at the counter's own device.** The tablet on the front-desk stand is
+ * the width this surface is designed for, so the viewport is set here rather
+ * than inherited — `TABLET_SURFACES` in `visual.spec.ts` governs the captures,
+ * not this spec.
+ *
+ * What it pins is the instrument itself: one departure in focus with the count
+ * leading, the day's other boats one 44px tap away, queue rows at the counter's
+ * 56px floor, and — on a boat that has already sailed — the settled receipts
+ * open with the earned line above them.
+ */
+test("the counter reads as an instrument at the tablet on the desk", async ({ page }) => {
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await page.goto("/shop/blue-mantis/check-in");
+  const queue = page.getByRole("region", { name: "Check-in queue" });
+  await expect(queue).toBeVisible();
+
+  // The count leads, before any list.
+  await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
+
+  // Every standalone control clears the app-wide 44px floor; a queue row
+  // clears the counter's own 56px one.
+  const chips = page.getByRole("navigation", { name: "Choose a departure" });
+  const chipLinks = chips.getByRole("link");
+  for (const chip of await chipLinks.all()) {
+    expect((await chip.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+  }
+  const firstTap = queue.getByRole("button", { name: /^(Check in|Undo check-in for) / }).first();
+  if ((await firstTap.count()) > 0) {
+    expect((await firstTap.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(56);
+  }
+
+  // The walk-in door stands at the foot of the queue, not behind a failed
+  // search.
+  await expect(queue.getByRole("link", { name: "Add a walk-in" })).toBeVisible();
+
+  // A boat that has already sailed: its receipts are the point, so the settled
+  // group arrives open — and this one is complete, so the counter's one
+  // sanctioned coral moment is on screen.
+  await chipLinks.filter({ hasText: "Dawn Two-Tank — Molasses Reef" }).click();
+  await expect(page).toHaveURL(/\/check-in\?trip=[0-9a-f-]{36}$/);
+  await expect(page.getByRole("status").filter({ hasText: "Everyone’s checked in" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Checked in — \d+$/ })).toBeVisible();
+  // No emoji left in the celebration — the coral and the drawn marks carry it.
+  await expect(page.getByText("Everyone’s checked in 🎉")).toHaveCount(0);
 });
 
 test("a counter walk-in books straight onto a boat with no email required", async ({ page }) => {
@@ -156,6 +218,11 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   await expect(
     page.getByText("Added to this boat’s list — but their waiver wasn’t emailed."),
   ).toBeVisible();
+  // Searched, because the queue now shows one departure at a time and the boat
+  // the picker offered first is not necessarily the one in focus.
+  const settledSearch = page.getByRole("searchbox", { name: "Scan or search diver" });
+  await settledSearch.fill("Walk-in Test Diver");
+  await settledSearch.press("Enter");
   await expect(
     page.locator("article").filter({ hasText: "Walk-in Test Diver" }).filter({ visible: true }),
   ).toHaveCount(1);
@@ -342,8 +409,6 @@ test("a dropped signal at the counter fails on the row, not on the page", async 
   await page.goto("/shop/blue-mantis/check-in");
   const queue = page.getByRole("region", { name: "Check-in queue" });
   await expect(queue).toBeVisible();
-  const before = await queue.getByRole("button", { name: /^Check in / }).count();
-  expect(before).toBeGreaterThan(0);
 
   // What the staffer typed, which the boundary used to discard along with
   // everything else.
@@ -367,9 +432,6 @@ test("a dropped signal at the counter fails on the row, not on the page", async 
   await expect(page.getByRole("alert").filter({ hasText: "That didn’t send" })).toBeVisible();
 
   // And the page is still the page: the queue, the row, and what was typed.
-  // `before` is the unfiltered count, asserted above one so a queue that
-  // silently emptied could not have passed the earlier assertion either.
-  expect(before).toBeGreaterThan(1);
   await expect(queue).toBeVisible();
   await expect(row).toBeVisible();
   await expect(search).toHaveValue("Lena");

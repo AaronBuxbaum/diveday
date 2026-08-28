@@ -12,9 +12,21 @@
   "emptyViewSchedule": "Ver el calendario",
   "emptyNoTripsTitle": "No hay salidas en el calendario",
   "emptyScheduleDeparture": "Programar una salida",
-  "clearedTitle": "Todos registrados 🎉",
+  "clearedTitle": "Todos registrados",
   "clearedAction": "Abrir Hoy",
   "boardedBadge": "Embarcado",
+  "departuresNavLabel": "Elige una salida",
+  "instrument": {
+    "hereOf": "<figure>{here}</figure> de {expected} aquí",
+    "toCome": "{count} por llegar",
+    "cantBoard": "{count, plural, one {# no puede embarcar todavía} other {# no pueden embarcar todavía}}"
+  },
+  "row": {
+    "firstVisit": "Primera visita",
+    "missingEmergencyContact": "Sin contacto de emergencia"
+  },
+  "settledGroup": "Registrados — {count}",
+  "settledMore": "y {count} más",
   "checkInButton": "Registrar",
   "checkInAriaLabel": "Registrar a {name}",
   "checkingIn": "Registrando…",
@@ -25,7 +37,7 @@
     "release": "Suelta para sincronizar",
     "refreshing": "Sincronizando…"
   },
-  "checkedInCheck": "Registrado ☑️",
+  "checkedInCheck": "Registrado",
   "undoAriaLabel": "Deshacer el check-in de {name}",
   "undoing": "Deshaciendo…",
   "departureProgress": "{checkedIn} de {total, plural, one {# registrado} other {# registrados}}",

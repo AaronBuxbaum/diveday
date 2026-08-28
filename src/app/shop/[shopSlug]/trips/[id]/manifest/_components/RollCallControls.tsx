@@ -95,10 +95,11 @@ export {
 } from "@/lib/manifests";
 /**
  * The fills themselves live in the shared row-tone vocabulary
- * (`src/components/row-tones.ts`), beside the counter queue's quieter map —
- * one module so the two surfaces a staffer reads minutes apart can never
- * drift into two meanings for one colour. Re-exported here because this file
- * is where every roll-call consumer already looks for them.
+ * (`src/components/row-tones.ts`), beside the offline manifest's crew map —
+ * one module so the two surfaces a crew reads minutes apart, often on two
+ * devices at once, can never drift into two meanings for one colour.
+ * Re-exported here because this file is where every roll-call consumer
+ * already looks for them.
  */
 export { ROLL_CALL_ROW_TONE };
 

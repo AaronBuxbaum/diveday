@@ -1,16 +1,15 @@
 import type { RollCallRecordedTone } from "@/lib/manifests";
 
 /**
- * The person-row state tones — one vocabulary for every surface that renders
+ * The person-row state tones — one vocabulary for the surfaces that render
  * "a person's line wearing its state" as a `border-l-4` left rule plus a
- * tinted fill. Three surfaces speak it: the manifest's roll call
- * (`trips/[id]/manifest/_components/`), the counter check-in queue
- * (`check-in/page.tsx`), and the offline boat-mode manifest
- * (`src/components/OfflineManifestView.tsx`). They are read minutes apart by
- * the same staffer — counter first, dock second, and the offline copy when the
- * signal goes — so a colour must mean the same thing on all three, and this
- * module is what keeps a retune on one from silently leaving the others
- * behind (FU-20260811-row-tone-vocabulary).
+ * tinted fill. Two surfaces speak it, and they are the *boat's*: the
+ * manifest's roll call (`trips/[id]/manifest/_components/`) and the offline
+ * boat-mode manifest (`src/components/OfflineManifestView.tsx`). They are read
+ * minutes apart by the same crew, often on two devices at once, so a colour
+ * must mean the same thing on both, and this module is what keeps a retune on
+ * one from silently leaving the other behind
+ * (FU-20260811-row-tone-vocabulary).
  *
  * The offline surface was the one that got away: it could not import the
  * live page's derivation (that lived under `src/app`, which `src/components`
@@ -19,14 +18,13 @@ import type { RollCallRecordedTone } from "@/lib/manifests";
  * "left ashore" and "did not come back". The derivation now lives in
  * `src/lib/manifests.ts`, where every surface can reach it.
  *
- * The two maps deliberately differ in *strength*, not meaning: the manifest
- * is read across a wet deck in sunlight, so its fills run stronger
- * (`success/20`) and even its untouched rows carry a visible rule; the
- * counter is an indoor surface where "not arrived yet" is the calm default,
- * so its fills are quieter and its awaiting rows carry a transparent rule
- * that exists only to keep text aligned across states. Change a hue in one
- * map and the matching entry above or below it is the reminder to decide for
- * both.
+ * **The counter's map is gone, and its absence is the point.** The check-in
+ * queue used to carry a third, quieter set of the same fills; slice 6h of ADR
+ * 20260827-clearwater-surface-language recomposed that surface as hairline
+ * ledger rows with tone in the ink and a word on every state (decisions 2 and
+ * 3), so there is no fill left there to keep in step. The boat keeps its
+ * fills: they are read across a wet deck in sunlight, which is a different
+ * problem from an indoor desk.
  *
  * Colour never carries a state alone on either surface: every row states its
  * status in words beside the fill (design principle 6).
@@ -67,26 +65,6 @@ export const ROLL_CALL_ROW_TONE = {
   // here while a surface still asks for it, is a compile error rather than a
   // roll-call row that silently renders unstyled.
 } as const satisfies Record<RollCallRecordedTone | "awaiting" | "blocked", string>;
-
-/**
- * The counter queue's fills — the same meanings at indoor strength. A settled
- * arrival is the roll call's green a wash quieter; a blocked diver is the
- * *same* `danger/5` as the manifest's blocked row, because "readiness is the
- * thing to fix" is the identical fact on both surfaces; and an awaiting row
- * is deliberately unmarked — at the counter, "not arrived yet" is the norm,
- * not a state demanding attention the way an uncalled name at the rail does.
- */
-export const CHECK_IN_ROW_TONE = {
-  checkedIn: "border-success bg-success-tint",
-  /** Transparent, not absent: the rule holds the text aligned across states. */
-  awaiting: "border-transparent",
-  blocked: ROLL_CALL_ROW_TONE.blocked,
-  // One rule per row, and this is it. A second, absolutely-positioned bar used
-  // to sit on top of this border at the same 4px width — two edges of slightly
-  // different colours overlapping, the top one fading on hover while the one
-  // underneath did not. The border carries both the edge and the fill, which
-  // is why it is the half that survived.
-} as const;
 
 /**
  * The offline manifest's **crew** rows — the same meanings again, on a card

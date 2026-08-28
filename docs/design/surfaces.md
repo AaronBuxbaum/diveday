@@ -141,7 +141,8 @@ stream stays on phone.
 
 ### The counter — `/shop/[shopSlug]/check-in`
 
-**Redesign proposed** — same ADR and canvas. Safety-adjacent; gets the `dive-domain-expert` pass.
+**Built** — same ADR and canvas, slice 6h, delivered 2026-08-28. Safety-adjacent; gets the
+`dive-domain-expert` pass.
 
 - **One idea:** who has walked in, against who should.
 - **The question it arrives with:** "how many are still to come?" — answered by the count figure

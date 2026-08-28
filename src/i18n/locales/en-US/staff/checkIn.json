@@ -12,9 +12,21 @@
   "emptyViewSchedule": "View the schedule",
   "emptyNoTripsTitle": "No departures on the board",
   "emptyScheduleDeparture": "Schedule a trip",
-  "clearedTitle": "Everyone’s checked in 🎉",
+  "clearedTitle": "Everyone’s checked in",
   "clearedAction": "Open Today",
   "boardedBadge": "Boarded",
+  "departuresNavLabel": "Choose a departure",
+  "instrument": {
+    "hereOf": "<figure>{here}</figure> of {expected} here",
+    "toCome": "{count} to come",
+    "cantBoard": "{count} can’t board yet"
+  },
+  "row": {
+    "firstVisit": "First visit",
+    "missingEmergencyContact": "No emergency contact"
+  },
+  "settledGroup": "Checked in — {count}",
+  "settledMore": "and {count} more",
   "checkInButton": "Check in",
   "checkInAriaLabel": "Check in {name}",
   "checkingIn": "Checking in…",
@@ -25,7 +37,7 @@
     "release": "Release to sync",
     "refreshing": "Syncing…"
   },
-  "checkedInCheck": "Checked in ☑️",
+  "checkedInCheck": "Checked in",
   "undoAriaLabel": "Undo check-in for {name}",
   "undoing": "Undoing…",
   "departureProgress": "{checkedIn} of {total} checked in",

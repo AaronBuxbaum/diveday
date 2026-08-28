@@ -2,13 +2,14 @@ import { and, asc, count, eq, gt, gte, ilike, inArray, lte, ne, or } from "drizz
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { arrivalsWindow } from "@/lib/operational-window";
+import { priorVisitStanding } from "@/lib/prior-visits";
 import type { ReadinessResult } from "@/lib/readiness";
 import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { listDepartureBoardedBookingIds } from "./manifests";
 import { getBookingReadiness, listTripsReadiness } from "./readiness";
-import { activityEvents, bookings, people, trips } from "./schema";
+import { activityEvents, bookings, people, priorVisits, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 export type CheckInQueueRow = {
@@ -31,6 +32,29 @@ export type CheckInQueueRow = {
    * UX persona lens 17).
    */
   boarded: boolean;
+  /**
+   * No **usable** emergency contact on this diver's record — the same test
+   * Today's Contact rows apply (`missingEmergencyContactByTrip` in
+   * `src/db/today.ts`): a name *and* a phone, because a name with no number
+   * reads as "on file" and is unreachable in an incident.
+   *
+   * Never a boarding blocker. It is a nudge the counter can settle in the ten
+   * seconds the diver is standing there, which is the one moment in the day
+   * when asking costs nothing (ADR 20260827-clearwater-surface-language,
+   * decision 9).
+   */
+  missingEmergencyContact: boolean;
+  /**
+   * This seat is the diver's **first** with the shop, counting DiveDay's own
+   * bookings *and* the visits a migration carried across
+   * (ADR 20260725-import-prior-visits) — the merged-history semantics
+   * `src/db/recap.ts` reads for its visit count. Counting native bookings
+   * alone would greet a ten-year regular whose history arrived in a CSV as a
+   * newcomer, which is worse than saying nothing.
+   *
+   * Batched over the whole queue, never one query per row.
+   */
+  firstVisit: boolean;
 };
 
 /**
@@ -67,6 +91,8 @@ export async function listCheckInQueue(
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
       bookingStatus: bookings.status,
+      emergencyContactName: people.emergencyContactName,
+      emergencyContactPhone: people.emergencyContactPhone,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -91,16 +117,88 @@ export async function listCheckInQueue(
     readinessByBooking.set(row.booking.id, row.readiness);
   }
   const boardedBookingIds = await listDepartureBoardedBookingIds(db, shopId, tripIds);
+  const history = await queueVisitHistory(db, shopId, rows, arrivals.to);
 
-  return rows.map((row) => ({
+  return rows.map(({ emergencyContactName, emergencyContactPhone, ...row }) => ({
     ...row,
     bookingStatus: row.bookingStatus as "booked" | "checked_in",
     boarded: boardedBookingIds.has(row.bookingId),
+    missingEmergencyContact: !emergencyContactName || !emergencyContactPhone,
+    firstVisit: history.firstVisitBookingIds.has(row.bookingId),
     readiness: readinessByBooking.get(row.bookingId) ?? {
       status: "blocked",
       blockers: [{ code: "readiness_unavailable" }],
     },
   }));
+}
+
+/**
+ * Which of the queue's seats are their diver's **first** with this shop.
+ *
+ * Two batched reads over the queue's person ids, never one per row: every
+ * booking they hold up to the end of the arrivals window, and every visit a
+ * migration carried across. A seat is a first visit when the diver has exactly
+ * one booking at or before this departure and no imported history at all.
+ *
+ * **Deliberately looser than `src/db/recap.ts` in one direction only.** Recap
+ * places an imported visit against the trip's *shop-local* day
+ * (`visitedOn <= tripLocalDay`) before counting it; this counts any imported
+ * visit the prior system did not mark as never-happened, whatever its date. The
+ * difference can only ever *withhold* the greeting — from a diver whose old
+ * system holds a future-dated line — and withholding it from a regular is the
+ * failure that matters. Claiming a first visit for someone on their thirtieth
+ * is the one outcome this must never produce, so the reader that would need the
+ * shop's timezone to be marginally more generous does not ask for it.
+ */
+async function queueVisitHistory(
+  db: AppDb,
+  shopId: string,
+  rows: readonly { bookingId: string; personId: string; startsAt: Date }[],
+  through: Date,
+): Promise<{ firstVisitBookingIds: Set<string> }> {
+  const firstVisitBookingIds = new Set<string>();
+  const personIds = [...new Set(rows.map((row) => row.personId))];
+  if (personIds.length === 0) return { firstVisitBookingIds };
+
+  const [bookingRows, priorVisitRows] = await Promise.all([
+    db
+      .select({ personId: bookings.personId, startsAt: trips.startsAt })
+      .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .where(
+        and(
+          eq(bookings.shopId, shopId),
+          inArray(bookings.personId, personIds),
+          ne(bookings.status, "cancelled"),
+          ne(bookings.status, "no_show"),
+          liveTrip(),
+          lte(trips.startsAt, through),
+        ),
+      ),
+    db
+      .select({ personId: priorVisits.personId, statusLabel: priorVisits.statusLabel })
+      .from(priorVisits)
+      .where(and(eq(priorVisits.shopId, shopId), inArray(priorVisits.personId, personIds))),
+  ]);
+
+  const migrated = new Set(
+    priorVisitRows
+      .filter((visit) => priorVisitStanding(visit.statusLabel) !== "did_not_happen")
+      .map((visit) => visit.personId),
+  );
+  const startsByPerson = new Map<string, number[]>();
+  for (const booking of bookingRows) {
+    const list = startsByPerson.get(booking.personId);
+    if (list) list.push(booking.startsAt.getTime());
+    else startsByPerson.set(booking.personId, [booking.startsAt.getTime()]);
+  }
+  for (const row of rows) {
+    if (migrated.has(row.personId)) continue;
+    const starts = startsByPerson.get(row.personId) ?? [];
+    const upToHere = starts.filter((start) => start <= row.startsAt.getTime()).length;
+    if (upToHere === 1) firstVisitBookingIds.add(row.bookingId);
+  }
+  return { firstVisitBookingIds };
 }
 
 export type WalkInTripOption = {

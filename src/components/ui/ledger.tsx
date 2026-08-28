@@ -267,7 +267,12 @@ export function LedgerRow({
   trailing?: ReactNode;
   /** `lg` (min-h-14) for the counter's queue and the horizon rows. */
   size?: "md" | "lg";
-  as?: "li" | "div";
+  /**
+   * `article` for a row that is a self-contained record of one person — the
+   * counter's queue rows, which carry their own controls and are addressed
+   * individually by the e2e suite. A list of those is a `<div>`, not a `<ul>`.
+   */
+  as?: "li" | "div" | "article";
   className?: string;
 } & LedgerRowDoor) {
   return (

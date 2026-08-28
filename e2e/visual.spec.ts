@@ -2349,19 +2349,24 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "check-in", scheme);
       });
 
-      // The queue's settled state: a checked-in diver's row wearing the
-      // roll-call grammar — success rule, "Checked in ☑️", the re-tap undo
-      // hint — beside rows still waiting. The default capture above can never
-      // show this reliably (the canonical fixture already carries a settled
-      // row), and it is the half of the one-tap design a mis-styled row would
-      // silently break. Reading the seeded row keeps this visual capture
-      // independent from the mutable check-in action while the functional
-      // check-in spec covers the toggle itself.
-      test(`counter check-in's settled row renders true to the design (${scheme})`, async ({
+      // The counter's settled state, which is now a whole reading of the
+      // surface rather than one row's styling: a departure that has already
+      // sailed arrives with its receipts open under the count, and this one is
+      // complete, so the earned line — the counter's single sanctioned coral
+      // moment (ADR 20260827-clearwater-surface-language, decision 11) — is on
+      // screen too. Reached through its own chip, because the instrument
+      // defaults to the next boat still to sail. Reading the seeded state keeps
+      // this capture independent of the mutable check-in action while the
+      // functional spec covers the toggle itself.
+      test(`counter check-in's settled boat renders true to the design (${scheme})`, async ({
         page,
       }) => {
         await page.goto("/shop/blue-mantis/check-in");
-        await page.getByRole("button", { name: "Undo check-in for Amara Osei" }).waitFor();
+        await page
+          .getByRole("navigation", { name: "Choose a departure" })
+          .getByRole("link", { name: /Dawn Two-Tank — Molasses Reef/ })
+          .click();
+        await page.getByRole("heading", { name: /^Checked in — \d+$/ }).waitFor();
         await capture(page, "check-in-checked", scheme);
       });
 

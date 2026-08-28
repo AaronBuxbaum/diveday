@@ -7,6 +7,28 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The counter becomes a boarding instrument (delivered 2026-08-28)
+
+Slice 6h of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
+decision 9. `/shop/[shopSlug]/check-in` **counts before it lists**: one departure is in focus, its
+head count leads as a figure over a 5px meter, and the day's other boats are a strip of segmented
+chips above it. **The focus lives in the URL** (`?trip=`, server-selected), so it survives a
+bookmark, a back button and — the reason it is a URL — a `?notice=` refusal, which now lands back on
+the boat the staffer was working instead of silently re-pointing the instrument at the morning run.
+The default is the next un-departed boat; once the day's boats have all sailed it is **the most
+recent one, with its receipts open**, because the arrivals window reaches backwards for the late
+walk-in inside the standing one-hour buffer.
+
+A row at rest is a name and one 56px tap. Checked-in rows **sink** into one collapsed disclosure
+("Checked in — N", 6a's spelling), dimmed, wearing the drawn `SettledCheck`, truncating to "and N
+more" beyond three; blocked rows keep their badge, every reason and their one fix, and never a
+check-in control. Two quiet facts joined the queue reader, batched over the whole queue: a diver
+with no reachable emergency contact wears a neutral badge, and a **first visit** is muted text —
+counted over merged native *and* imported history, so a regular whose ten years arrived in a CSV is
+never greeted as a newcomer. The 🎉 left `checkIn.clearedTitle` in both locales, and the counter's
+tinted row fills retired with the card stack (`CHECK_IN_ROW_TONE` is gone; the boat keeps its own).
+The coral is unchanged and unmoved: the cleared line, once, when everyone expected is here.
+
 ## Settings is a rail and a pane (delivered 2026-08-28)
 
 Slice 6g of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),

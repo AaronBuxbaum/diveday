@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -7,7 +7,7 @@ import { seededShopContext } from "@/test/db";
 import { checkInBooking, listCheckInQueue, listWalkInTrips, undoCheckInBooking } from "./check-in";
 import { recordRollCall } from "./manifests";
 import { listTripsReadiness } from "./readiness";
-import { activityEvents, bookings, people, personRoles, userAccounts } from "./schema";
+import { activityEvents, bookings, people, personRoles, priorVisits, userAccounts } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -42,6 +42,81 @@ describe("counter check-in", () => {
     const searched = await listCheckInQueue(db, shop.id, { query: "Priya Sharma" });
     expect(searched).toHaveLength(1);
     expect(searched[0]?.readiness.status).toBe("blocked");
+  });
+
+  /**
+   * Two quiet facts the counter carries beside each name — never gates, and
+   * both read in one batched pass over the queue rather than a query per row
+   * (ADR 20260827-clearwater-surface-language, decision 9).
+   */
+  it("flags a diver with no usable emergency contact on file", async () => {
+    const { db, shop } = await context();
+    const queue = await listCheckInQueue(db, shop.id);
+    const [subject] = queue;
+    if (!subject) throw new Error("seeded queue empty");
+
+    // A contact is only usable if the crew can dial it — a name with no number
+    // reads as "on file" and is unreachable in an incident, so it counts as
+    // missing (the same test Today's Contact rows apply).
+    await db
+      .update(people)
+      .set({ emergencyContactName: "Ada Petrov", emergencyContactPhone: null })
+      .where(eq(people.id, subject.personId));
+    const nameOnly = await listCheckInQueue(db, shop.id, { query: subject.personName });
+    expect(nameOnly[0]?.missingEmergencyContact).toBe(true);
+
+    await db
+      .update(people)
+      .set({ emergencyContactName: "Ada Petrov", emergencyContactPhone: "+1 305 555 0142" })
+      .where(eq(people.id, subject.personId));
+    const reachable = await listCheckInQueue(db, shop.id, { query: subject.personName });
+    expect(reachable[0]?.missingEmergencyContact).toBe(false);
+  });
+
+  it("greets a first visit, and never greets a regular whose history was imported", async () => {
+    const { db, shop } = await context();
+    const queue = await listCheckInQueue(db, shop.id);
+    const [subject] = queue;
+    if (!subject) throw new Error("seeded queue empty");
+
+    // Nothing but this seat that counts: their first visit. Cancelled seats
+    // are not visits — the same exclusion `src/db/recap.ts` applies.
+    await db
+      .update(bookings)
+      .set({ status: "cancelled" })
+      .where(and(eq(bookings.personId, subject.personId), ne(bookings.id, subject.bookingId)));
+    const first = await listCheckInQueue(db, shop.id, { query: subject.personName });
+    expect(first[0]?.firstVisit).toBe(true);
+
+    // **The failure this reader exists to prevent.** A ten-year regular whose
+    // history arrived in a migration has no DiveDay booking behind them, and
+    // counting native bookings alone would welcome them as a newcomer
+    // (ADR 20260725-import-prior-visits; the merged-history semantics of
+    // src/db/recap.ts).
+    await db.insert(priorVisits).values({
+      shopId: shop.id,
+      personId: subject.personId,
+      visitedOn: "2019-06-04",
+      statusLabel: "Completed",
+      dedupeKey: "prior-visit-completed",
+      importedAt: nowDate(),
+    });
+    const migrated = await listCheckInQueue(db, shop.id, { query: subject.personName });
+    expect(migrated[0]?.firstVisit).toBe(false);
+
+    // A line the prior system itself marked as never having happened is not a
+    // visit, and must not silently withhold the greeting either.
+    await db.delete(priorVisits).where(eq(priorVisits.personId, subject.personId));
+    await db.insert(priorVisits).values({
+      shopId: shop.id,
+      personId: subject.personId,
+      visitedOn: "2019-06-04",
+      statusLabel: "Cancelled",
+      dedupeKey: "prior-visit-cancelled",
+      importedAt: nowDate(),
+    });
+    const cancelledOnly = await listCheckInQueue(db, shop.id, { query: subject.personName });
+    expect(cancelledOnly[0]?.firstVisit).toBe(true);
   });
 
   it("offers the same day-of trips for a walk-in as the check-in queue reads", async () => {

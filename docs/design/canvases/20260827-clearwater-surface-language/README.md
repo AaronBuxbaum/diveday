@@ -92,8 +92,19 @@ bodies, with their pins and owner-call dependencies, are in
 | 6e — the week board | open | — | — |
 | 6f — the orders day ledger | open | — | — |
 | 6g — settings rail and pane | shipped | `src/app/shop/[shopSlug]/settings/_components/SettingsRail.tsx` | `src/app/shop/[shopSlug]/settings/_components/SettingsRail.test.tsx` |
-| 6h — the counter instrument | open | — | — |
+| 6h — the counter instrument | shipped | `src/app/shop/[shopSlug]/check-in/_components/CounterQueueRow.tsx` | `src/app/shop/[shopSlug]/check-in/_components/CounterQueueRow.test.tsx` |
 | 6i — the storefront | open | — | — |
+
+6h's other pieces: the instrument itself (`_components/CounterInstrument.tsx`, pinned by
+`CounterInstrument.test.tsx` — the earned line renders only at `here === expected`, and never a
+second accent beside it), the settled group (`_components/CounterQueue.tsx` /
+`CounterQueue.test.tsx`), the segmented departure chips (`_components/DepartureChips.tsx` /
+`DepartureChips.test.tsx`), and the URL-carried focus with its evening default
+(`check-in/focus.ts` / `focus.test.ts`). Two facts joined the queue reader for it —
+`missingEmergencyContact` and a batched `firstVisit` over merged native + imported history — pinned
+in `src/db/check-in.test.ts`. Not built: the settled rows carry no check-in **time**, because the
+reader holds none and this slice's contract added no third field for one; the drawn mark and the
+name are what a settled row says.
 
 6a also landed `src/components/ui/SettledCheck.tsx` (pinned by `SettledCheck.test.tsx`) and the
 flat-at-rest change to `src/components/ui/card.tsx` (pinned by `card.test.tsx`, which now fails the
