@@ -144,8 +144,8 @@
     "next": "Semana siguiente",
     "thisWeek": "Esta semana",
     "today": "Hoy",
+    "nothingThisWeek": "Nada esta semana — la próxima salida es el {date}.",
     "seats": "{booked} de {capacity}",
-    "full": "Completo",
     "sailed": "Zarpó"
   },
   "addBooking": "Añadir una reserva"

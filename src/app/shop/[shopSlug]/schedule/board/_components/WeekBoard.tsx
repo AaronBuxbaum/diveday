@@ -31,8 +31,16 @@ export type WeekDeparture = {
   /** How many days it runs; 1 for a day cell, 2+ for a span. */
   dayCount: number;
   status: "upcoming" | "sailed";
-  /** No price has ever been set — the one warning a departure carries. */
+  /** No price has ever been set — the quieter of the two marks a departure carries. */
   unpriced: boolean;
+  /**
+   * The boat is back and somebody on its list was never counted (DOM-H3) —
+   * **the loudest thing this board can say**, and it outranks the price flag
+   * rather than stacking with it. It renders in both compositions or the
+   * desktop board becomes the quietest place in the app to notice a diver
+   * nobody has accounted for.
+   */
+  rollCallOpen: { diveNumber: number; uncounted: number } | null;
   /** "{title}, {day} {time}" — what names this departure to a screen reader. */
   ref: string;
 };
@@ -63,6 +71,12 @@ export type WeekDay = {
   isToday: boolean;
   /** The shop's own calendar day is already behind this one. */
   isPast: boolean;
+  /**
+   * "More departures than boats", or one hull in two places — the board's own
+   * question, asked of this column. Null on a day that is fine, and on a shop
+   * that runs no boats.
+   */
+  boatWarning: string | null;
   entries: WeekEntry[];
 };
 
@@ -82,6 +96,12 @@ export type BuilderWeek = {
    * cursor page that reaches different departures.
    */
   allUnpriced: boolean;
+  /**
+   * Where the next departure is, when *this* week has none. Null whenever the
+   * week has something in it — and the grid never renders at all on a board
+   * with nothing upcoming anywhere.
+   */
+  nextDeparture: { label: string; href: string } | null;
   words: { previous: string; next: string; thisWeek: string; today: string };
   days: WeekDay[];
   spans: WeekSpan[];
@@ -127,10 +147,70 @@ function RowActions({
 }
 
 /**
- * The one toned mark a departure can carry, and only while it can still be
- * booked. Glyph and word together: hue is never the whole signal. It is
- * absent when the week's warning has collapsed into the banner above the grid
- * — the caller decides that, once, over the whole week.
+ * "None of these has a price yet", once. Both compositions say it and both
+ * said it in their own hand-typed markup until the two drifted apart in
+ * review; one element now, and the caller supplies only the width it belongs
+ * to (`xl:hidden` on the stream's, nothing on the grid's).
+ */
+export function AllUnpricedNotice({
+  children,
+  className = "",
+}: {
+  children: string;
+  className?: string;
+}) {
+  return (
+    <p
+      className={`mt-4 rounded-xl border border-warning/40 bg-surface p-4 text-sm font-medium text-warning ${className}`.trim()}
+    >
+      {children}
+    </p>
+  );
+}
+
+/**
+ * **The loudest thing this board can say** (DOM-H3): the boat is back and
+ * somebody on its list was never counted. It is the same fact, the same tone
+ * and the same destination as the stream's row badge — a departure that
+ * shouted at 1279px and went quiet at 1280 would make the desktop board the
+ * worst place in the app to notice a diver nobody has accounted for.
+ *
+ * Drawn mark and words together, never hue alone, and it **outranks** the
+ * price flag rather than stacking with it: one slot, one grammar (issue 758,
+ * the same call the stream made).
+ */
+function RollCallFlag({
+  departure,
+  shopSlug,
+  copy,
+  className,
+}: {
+  departure: WeekDeparture & { rollCallOpen: { diveNumber: number; uncounted: number } };
+  shopSlug: string;
+  copy: { rollCallOpen: string; rollCallOpenAria: string };
+  className: string;
+}) {
+  return (
+    <Link
+      href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest?checkpoint=after_dive_${departure.rollCallOpen.diveNumber}`}
+      aria-label={fill(copy.rollCallOpenAria, {
+        ref: departure.ref,
+        dive: departure.rollCallOpen.diveNumber,
+      })}
+      className={`flex items-center gap-1.5 text-xs font-semibold text-danger hover:underline ${className}`}
+    >
+      <DiveDayIcon name="warning" className="size-3.5" />
+      {fill(copy.rollCallOpen, { count: departure.rollCallOpen.uncounted })}
+    </Link>
+  );
+}
+
+/**
+ * The quieter toned mark, and only while the departure can still be booked.
+ * Glyph and word together: hue is never the whole signal. It is absent when
+ * the week's warning has collapsed into the banner above the grid — the
+ * caller decides that, once, over the whole week — and when the roll-call
+ * flag above has the slot.
  */
 function PriceFlag({
   departure,
@@ -196,6 +276,8 @@ export function WeekBoard({
     noPriceSet: string;
     noPriceSetAria: string;
     noPriceSetAll: string;
+    rollCallOpen: string;
+    rollCallOpenAria: string;
   };
 }) {
   return (
@@ -239,11 +321,7 @@ export function WeekBoard({
           per-cell warning is the same fact on seven cells. Said once here
           instead; the cells keep their mark only while some are priced and
           some are not, which is when a per-cell mark distinguishes anything. */}
-      {week.allUnpriced ? (
-        <p className="mt-4 rounded-xl border border-warning/40 bg-surface p-4 text-sm font-medium text-warning">
-          {copy.noPriceSetAll}
-        </p>
-      ) : null}
+      {week.allUnpriced ? <AllUnpricedNotice>{copy.noPriceSetAll}</AllUnpricedNotice> : null}
 
       <div className="mt-4 border-t border-border">
         <div className="grid grid-cols-7">
@@ -252,7 +330,7 @@ export function WeekBoard({
               key={day.dateIso}
               className={`px-2 pt-3 pb-2 ${day.dateIso === week.days[0]?.dateIso ? "" : "border-s border-border"}`}
             >
-              <h3 className="flex items-center gap-2">
+              <h3 id={`week-day-${day.dateIso}`} className="flex items-center gap-2">
                 <span className="sr-only">{day.label}</span>
                 <span aria-hidden="true" className="flex items-center gap-2">
                   {/* A day column is a ledger group, and its header wears the
@@ -270,11 +348,15 @@ export function WeekBoard({
                   ) : null}
                 </span>
               </h3>
+              {/* The disc is a *filled* day, not a smaller one: the numeral
+                  keeps the ramp's `text-lg` inside it, and the disc grows to
+                  hold it. It read one step down from every other column —
+                  the emphasized day rendered smaller than its neighbours. */}
               <p
                 aria-hidden="true"
                 className={`mt-1 text-lg font-bold tabular-nums ${
                   day.isToday
-                    ? "flex size-7 items-center justify-center rounded-full bg-primary text-base text-primary-foreground"
+                    ? "flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground"
                     : day.isPast
                       ? "text-muted"
                       : ""
@@ -282,6 +364,16 @@ export function WeekBoard({
               >
                 {day.dayNumber}
               </p>
+              {/* More departures than hulls, or one hull in two places — the
+                  question the board exists to answer, on the day it is about.
+                  Wrapped rather than clipped: a column is 150px and this is
+                  not a fact to lose an ellipsis in. */}
+              {day.boatWarning ? (
+                <p className="mt-2 flex items-start gap-1.5 text-xs font-medium text-warning">
+                  <DiveDayIcon name="warning" className="mt-0.5 size-3.5 shrink-0" />
+                  <span>{day.boatWarning}</span>
+                </p>
+              ) : null}
             </div>
           ))}
         </div>
@@ -295,16 +387,34 @@ export function WeekBoard({
               style={{ gridColumn: `${span.startColumn} / span ${span.columnSpan}` }}
               className="mx-2 mb-1.5 flex items-center gap-3 rounded-xl border border-primary/25 bg-primary-tint px-3 py-2"
             >
+              {/* `flex-1` from a zero basis, so the title is the part that
+                  gives way. Its own words are the ones repeated on the days
+                  either side of it; the meta beside it is a roster count and a
+                  teacher's name, and there is nothing else on the bar saying
+                  either. */}
               <Link
                 href={`/shop/${shopSlug}/trips/${span.tripId}`}
-                className="min-w-0 truncate text-sm font-semibold text-primary hover:underline"
+                className="min-w-0 flex-1 truncate text-sm font-semibold text-primary hover:underline"
               >
                 {span.title}
               </Link>
-              {span.unpriced && span.status === "upcoming" ? (
+              {span.rollCallOpen ? (
+                <RollCallFlag
+                  departure={{ ...span, rollCallOpen: span.rollCallOpen }}
+                  shopSlug={shopSlug}
+                  copy={copy}
+                  className="shrink-0"
+                />
+              ) : span.unpriced && span.status === "upcoming" ? (
                 <PriceFlag departure={span} shopSlug={shopSlug} copy={copy} className="shrink-0" />
               ) : null}
-              <span className="ms-auto shrink-0 text-xs font-medium text-primary tabular-nums">
+              {/* Capped and clipped, never unshrinkable: a course clamped to
+                  one column — one that began before this week, or runs past
+                  it — gives the bar a ~150px track, and a `shrink-0` meta both
+                  collapsed the title to nothing and spilled into the next
+                  column. The cap is what stops it doing that; the clip is what
+                  happens when even the cap is too much. */}
+              <span className="ms-auto max-w-[55%] shrink-0 truncate text-xs font-medium text-primary tabular-nums">
                 {span.meta}
               </span>
               {canConfigure && span.status === "upcoming" ? (
@@ -321,6 +431,17 @@ export function WeekBoard({
           </div>
         ))}
 
+        {/* Seven blank columns and no way forward is a dead end: the stream
+            that would have listed the next departures is display:none at this
+            width. One line, and it is a link to the week that has them. */}
+        {week.nextDeparture ? (
+          <p className="px-2 py-6 text-sm text-muted">
+            <Link href={week.nextDeparture.href} scroll={false} className="hover:underline">
+              {week.nextDeparture.label}
+            </Link>
+          </p>
+        ) : null}
+
         <div className="grid min-h-80 grid-cols-7">
           {week.days.map((day) => (
             <div
@@ -328,20 +449,26 @@ export function WeekBoard({
               className={`pt-1 pb-3 ${day.dateIso === week.days[0]?.dateIso ? "" : "border-s border-border"}`}
             >
               {/* No per-cell "nothing here" copy: an empty column is the
-                  information this grid exists to show. */}
-              <ul className="flex flex-col">
+                  information this grid exists to show. Named by its own day
+                  header, so seven lists are not seven anonymous ones to a
+                  screen reader walking the grid. */}
+              <ul aria-labelledby={`week-day-${day.dateIso}`} className="flex flex-col">
                 {day.entries.map((entry) => (
                   <li key={entry.tripId} className="px-2 pb-2">
-                    <div
-                      className={`rounded-xl border px-3 py-2.5 ${
-                        entry.status === "sailed"
-                          ? "border-border bg-surface-sunken"
-                          : "border-border bg-surface"
-                      }`}
-                    >
+                    {/* Borderless, like the stream's own rows: the column
+                        hairlines and the space between entries already divide
+                        them, and a box drawn round every departure says
+                        permanently what the hover tint says on demand
+                        (design/principles.md #10). A returned boat is set
+                        down in muted ink and the word "Sailed" in its meta —
+                        it needs no fill of its own to say so twice. */}
+                    <div className="rounded-xl px-2 py-2 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface">
                       <div className="flex items-start justify-between gap-1">
+                        {/* Time leads the entry, so it is set on the ramp's
+                            row-title step rather than under it — it was the
+                            smallest ink in a cell it is supposed to lead. */}
                         <p
-                          className={`text-xs font-bold tabular-nums ${
+                          className={`text-base leading-tight font-semibold tabular-nums ${
                             entry.status === "sailed" ? "text-muted" : ""
                           }`}
                         >
@@ -360,16 +487,32 @@ export function WeekBoard({
                           />
                         ) : null}
                       </div>
+                      {/* One line, clipped from the end. Every title in a
+                          column shares its prefix ("Dawn Two-Tank — …",
+                          "Morning Two-Tank — …"), so two clamped lines spent
+                          the cell's height on the half that is the same on
+                          every row; the site below is what actually differs
+                          and it is stated in full. */}
                       <Link
                         href={`/shop/${shopSlug}/trips/${entry.tripId}`}
-                        className={`mt-0.5 line-clamp-2 text-sm leading-snug font-semibold hover:text-primary ${
+                        className={`mt-0.5 block truncate text-sm leading-snug font-semibold hover:text-primary ${
                           entry.status === "sailed" ? "text-muted" : ""
                         }`}
                       >
                         {entry.title}
                       </Link>
-                      <p className="mt-1 text-xs text-muted tabular-nums">{entry.meta}</p>
-                      {entry.unpriced && entry.status === "upcoming" ? (
+                      <p className="mt-1 text-sm text-muted tabular-nums">{entry.meta}</p>
+                      {/* One slot, one grammar: an open head count outranks a
+                          missing price rather than stacking two marks in a
+                          150px column. */}
+                      {entry.rollCallOpen ? (
+                        <RollCallFlag
+                          departure={{ ...entry, rollCallOpen: entry.rollCallOpen }}
+                          shopSlug={shopSlug}
+                          copy={copy}
+                          className="mt-1"
+                        />
+                      ) : entry.unpriced && entry.status === "upcoming" ? (
                         <PriceFlag
                           departure={entry}
                           shopSlug={shopSlug}

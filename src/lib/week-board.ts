@@ -104,3 +104,33 @@ export function weekIsWhollyUnpriced(board: {
     upcoming.every((departure) => departure.priceCents === null)
   );
 }
+
+/**
+ * What a week cell says under its title, in the order it says it.
+ *
+ * **The site leads, because it is the half that differs.** Every title in a
+ * column shares its prefix — "Dawn Two-Tank — Molasses Reef", "Morning
+ * Two-Tank — Grecian Rocks" — and a ~150px column clips exactly the words
+ * that tell one from the next, so the site is stated here where it survives
+ * and the title is clamped to one line above it.
+ *
+ * **A full boat is a count, not a word.** "Full · 12 of 12" spends the
+ * currency the grid's real warnings use on a fact the two numbers beside it
+ * already carry (issue 758 — the same call the stream made when it retired
+ * its own success pill).
+ *
+ * Every segment arrives already localised and already formatted for the shop's
+ * zone; this decides only which ones there are and in what order, which is why
+ * it can be a pure function with a test rather than four lines inside a page.
+ */
+export function weekEntryMeta(entry: {
+  status: "upcoming" | "sailed";
+  /** The word for a boat already home — its own state outranks everything. */
+  sailedLabel: string;
+  siteName: string | null;
+  seats: string;
+  price: string | null;
+}): string {
+  if (entry.status === "sailed") return [entry.sailedLabel, entry.seats].join(" · ");
+  return [entry.siteName, entry.seats, entry.price].filter(Boolean).join(" · ");
+}

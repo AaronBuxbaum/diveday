@@ -679,6 +679,30 @@ describe("the week board", () => {
     expect(span.status).toBe("upcoming");
   });
 
+  it("names the site a cell dives, and the hull it is on", async () => {
+    // **What a cell says that its neighbours do not.** Every title in a column
+    // shares its prefix, and a 150px column clips exactly the half that
+    // differs — so the site leads the meta line, and `boatId` is what lets the
+    // column be asked whether one hull is in two places at once (the board's
+    // whole question, which had no answer at desktop).
+    const { db, shop } = await seededShopContext();
+
+    const entries = Object.values((await weekBoard(db, shop.id, THIS_WEEK, TZ)).days).flat();
+    expect(entries.length).toBeGreaterThan(0);
+    // The seeded board dives real sites, so at least one cell can name one.
+    expect(entries.some((entry) => entry.diveSiteName !== null)).toBe(true);
+    // `boatId` and `diveMode` are read off the trip row rather than joined, so
+    // the type is their guarantee; what the column *does* with them — "more
+    // departures than boats", one hull in two places — is pinned where the
+    // column is drawn (ScheduleBuilder.test.tsx). The seeded demo week assigns
+    // no hulls, so asserting a name here would pin the seed, not the reader.
+    expect(entries.every((entry) => entry.diveMode === "boat")).toBe(true);
+    // The join that carries the site must not multiply a departure: one row
+    // per trip, whatever it is joined to.
+    const ids = entries.map((entry) => entry.tripId);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
   it("carries a bucket for every day of the week, empty ones included", async () => {
     const { db, shop } = await seededShopContext();
 

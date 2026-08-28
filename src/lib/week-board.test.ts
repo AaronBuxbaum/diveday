@@ -4,6 +4,7 @@ import {
   shiftWeek,
   WEEK_PARAM,
   weekDates,
+  weekEntryMeta,
   weekIsWhollyUnpriced,
   weekStartOf,
 } from "./week-board";
@@ -117,5 +118,36 @@ describe("the week's shared price fact", () => {
         spans: [unpriced()],
       }),
     ).toBe(false);
+  });
+});
+
+describe("what a week cell says under its title", () => {
+  const cell = {
+    status: "upcoming" as const,
+    sailedLabel: "Sailed",
+    siteName: "Molasses Reef",
+    seats: "8 of 12",
+    price: "$95",
+  };
+
+  it("leads with the site, which is the half a 150px column would otherwise clip", () => {
+    // Titles in a column share their prefix — "Dawn Two-Tank — …", "Morning
+    // Two-Tank — …" — so the site is what tells one entry from the next, and
+    // it is stated where the ellipsis cannot reach it.
+    expect(weekEntryMeta(cell)).toBe("Molasses Reef · 8 of 12 · $95");
+  });
+
+  it("never says a full boat in words: the count beside it already does", () => {
+    // "Full · 12 of 12" spent the same currency the grid's real warnings use
+    // on a fact the two numbers already carry (issue 758).
+    expect(weekEntryMeta({ ...cell, seats: "12 of 12" })).toBe("Molasses Reef · 12 of 12 · $95");
+  });
+
+  it("drops what a departure does not have rather than leaving a gap in the line", () => {
+    expect(weekEntryMeta({ ...cell, siteName: null, price: null })).toBe("8 of 12");
+  });
+
+  it("says a boat is home before anything else, and offers it no price to book at", () => {
+    expect(weekEntryMeta({ ...cell, status: "sailed" })).toBe("Sailed · 8 of 12");
   });
 });

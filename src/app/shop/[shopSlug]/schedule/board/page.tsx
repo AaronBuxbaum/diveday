@@ -23,12 +23,13 @@ import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { maxConcurrentTrips, overlappingBoatIds } from "@/lib/boats";
-import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
+import { calendarDateInTimezone, calendarDateToUtcMidnight } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
   formatCalendarDateRange,
   formatDayParts,
   formatMoneyCents,
+  formatMoneyScanned,
   formatShortDate,
   formatTime,
   formatTimeRange,
@@ -53,6 +54,7 @@ import {
   resolveWeekStart,
   shiftWeek,
   weekDates,
+  weekEntryMeta,
   weekIsWhollyUnpriced,
   weekStartOf,
 } from "@/lib/week-board";
@@ -666,14 +668,71 @@ export default async function ScheduleBoardPage({
     );
   }
 
+  /**
+   * **"More departures than boats", for one day.** One function because both
+   * compositions ask it: the stream asks it of a cursor page's day, the week
+   * asks it of a column, and the answer is the board's whole question — a
+   * grid that drew seven days and never said a hull was booked twice would be
+   * the quietest place in the app to notice it. Only a shop that runs boats is
+   * asked; a shore operation's hull rows are dormant, not a fleet to outrun.
+   */
+  function boatWarningFor(
+    dayTrips: ReadonlyArray<{
+      startsAt: Date;
+      endsAt: Date;
+      diveMode?: "boat" | "shore" | "pool" | null;
+      boatId?: string | null;
+    }>,
+  ): string | null {
+    if (!shop.hasBoatDiving || shopBoats.length === 0) return null;
+    const boatTrips = dayTrips.filter((t) => (t.diveMode ?? "boat") === "boat");
+    // **The per-hull question first, because it names the boat.** Counting
+    // simultaneous departures against the fleet size cannot see two of them
+    // on the *same* vessel: two hulls owned, peak of two, nothing said, one
+    // boat in two places. It is also the mistake that takes three departures
+    // to show up in a count, which is to say the one a shop is most likely to
+    // make by accident.
+    const names = overlappingBoatIds(boatTrips)
+      .map((boatId) => boatMap.get(boatId))
+      .filter((name): name is string => Boolean(name));
+    // The name is the actionable part — "Reef Runner is on two departures"
+    // tells a shop which card to open; a count does not.
+    if (names.length > 0) {
+      return st("boats.doubleBookedWarning", {
+        boats: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(names),
+      });
+    }
+    // The fleet-size answer stays: it is the only one available for a
+    // departure with no hull assigned, which is most of them.
+    const peakConcurrent = maxConcurrentTrips(boatTrips);
+    if (peakConcurrent > shopBoats.length) {
+      return st("boats.concurrencyWarning", {
+        tripCount: peakConcurrent,
+        boatCount: shopBoats.length,
+      });
+    }
+    return null;
+  }
+
   // ---- The week, for `xl` and up (ADR 20260827-clearwater-surface-language,
   // decision 5). Every string below is resolved here, for the request locale
   // and the shop's own zone: a 160px column has no room to be wrong about a
   // time, and the grid is a Client Component that may format neither.
   const boardPath = `/shop/${shopSlug}/schedule/board`;
   const weekDayIsos = weekDates(weekStartIso);
+  // **Scanned, not ledgered** (issue #769): a price read down a column of
+  // seven is a figure to compare, not a line to reconcile, so "$95" rather
+  // than "$95.00" — in the narrowest column the app has.
   const weekMoney = (cents: number | null) =>
-    cents === null ? null : formatMoneyCents(cents, currency, locale);
+    cents === null ? null : formatMoneyScanned(cents, currency, locale);
+  // Every departure that came home with its head count still open, whatever
+  // page the *stream* is on. The week has no cursor (DOM-H3).
+  const weekRollCalls = new Map(
+    openRollCalls.map((open) => [
+      open.tripId,
+      { diveNumber: open.diveNumber, uncounted: open.uncounted },
+    ]),
+  );
   // The same "say a shared fact once" gate the stream's price banner uses: a
   // whole week with no price anywhere is one condition, not seven warnings.
   // **Spans are weighed with the cells.** A multi-day course is drawn once as
@@ -702,12 +761,23 @@ export default async function ScheduleBoardPage({
         startTime: toTimeInputValue(utcToWallTime(entry.startsAt, tz)),
         title: entry.title,
         time: formatTime(entry.startsAt, locale, tz),
-        meta:
-          entry.status === "sailed"
-            ? [st("schedule.week.sailed"), seats].join(" · ")
-            : [entry.booked >= entry.capacity ? st("schedule.week.full") : null, seats, price]
-                .filter(Boolean)
-                .join(" · "),
+        // **The site leads, because it is what differs.** Every title in a
+        // column shares its prefix — "Dawn Two-Tank — …", "Morning Two-Tank —
+        // …" — and a 150px column clips exactly the half that distinguishes
+        // one from the next, so the site is stated here where it survives and
+        // the title is clamped to a single line above it.
+        //
+        // No "Full": the count beside it already says 12 of 12, and the word
+        // spent the same currency the grid's real warnings use (issue 758,
+        // the same call the stream made).
+        meta: weekEntryMeta({
+          status: entry.status,
+          sailedLabel: st("schedule.week.sailed"),
+          siteName: entry.diveSiteName,
+          seats,
+          price,
+        }),
+        rollCallOpen: weekRollCalls.get(entry.tripId) ?? null,
         // Single-day by construction: `weekBoard` returns a multi-day course
         // as a span, never as a day entry, so an entry's move panel never has
         // a block of days to warn about.
@@ -727,6 +797,10 @@ export default async function ScheduleBoardPage({
       label,
       isToday: iso === todayIso,
       isPast: iso < todayIso,
+      // The board's whole question, asked of a column: more departures than
+      // hulls, or one hull in two places. The stream asks the same one of the
+      // same day through the same helper.
+      boatWarning: boatWarningFor(weekRows.days[iso] ?? []),
       entries,
     };
   });
@@ -756,12 +830,31 @@ export default async function ScheduleBoardPage({
         dayCount: span.dayCount,
         status: span.status,
         unpriced: span.priceCents === null && !weekAllUnpriced,
+        rollCallOpen: weekRollCalls.get(span.tripId) ?? null,
         ref: `${span.title}, ${formatCalendarDateRange(span.firstDay, span.lastDay, locale)}`,
         startColumn: first + 1,
         columnSpan: last - first + 1,
       },
     ];
   });
+  // **A visible week with nothing in it is a dead end without this.** The grid
+  // renders whenever the *board* has something upcoming, which is not the same
+  // as this week having it: a shop whose next departure is ten days out lands
+  // on seven blank columns, and the stream that would have listed them is
+  // `display:none` at this width. So the one week that is empty says where the
+  // next one is and links straight to it — `?week=` takes any date inside a
+  // week and normalises it (src/lib/week-board.ts).
+  const weekIsEmpty =
+    weekViewSpans.length === 0 && weekViewDays.every((day) => day.entries.length === 0);
+  const weekNextDeparture =
+    weekIsEmpty && range.first
+      ? {
+          label: st("schedule.week.nothingThisWeek", {
+            date: formatShortDate(range.first, locale, tz),
+          }),
+          href: `${boardPath}?week=${calendarDateInTimezone(range.first, tz)}`,
+        }
+      : null;
   // Null while the board has nothing upcoming at all: the terminal empty
   // state is the whole page at every width, and seven empty columns beneath
   // it would be the same nothing said twice.
@@ -779,50 +872,19 @@ export default async function ScheduleBoardPage({
           thisWeek: st("schedule.week.thisWeek"),
           today: st("schedule.week.today"),
         },
+        nextDeparture: weekNextDeparture,
         days: weekViewDays,
         spans: weekViewSpans,
       }
     : null;
 
-  // "More departures than boats" is only a warning to a shop that runs boats.
-  // A shore operation's hull rows are dormant, not a fleet to be outrun.
-  if (shop.hasBoatDiving && shopBoats.length > 0) {
-    for (const day of builderDays) {
-      const boatTrips = day.trips.filter(
+  for (const day of builderDays) {
+    day.boatWarning = boatWarningFor(
+      day.trips.filter(
         (t): t is typeof t & { startsAt: Date; endsAt: Date } =>
-          (t.diveMode ?? "boat") === "boat" &&
-          t.startsAt instanceof Date &&
-          t.endsAt instanceof Date,
-      );
-      // **The per-hull question first, because it names the boat.** Counting
-      // simultaneous departures against the fleet size cannot see two of them
-      // on the *same* vessel: two hulls owned, peak of two, nothing said, one
-      // boat in two places. It is also the mistake that takes three departures
-      // to show up in a count, which is to say the one a shop is most likely to
-      // make by accident.
-      const doubled = overlappingBoatIds(boatTrips);
-      if (doubled.length > 0) {
-        const names = doubled
-          .map((boatId) => boatMap.get(boatId))
-          .filter((name): name is string => Boolean(name));
-        // The name is the actionable part — "Reef Runner is on two departures"
-        // tells a shop which card to open; a count does not.
-        if (names.length > 0) {
-          day.boatWarning = st("boats.doubleBookedWarning", {
-            boats: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(names),
-          });
-        }
-      }
-      // The fleet-size answer stays: it is the only one available for a
-      // departure with no hull assigned, which is most of them.
-      const peakConcurrent = maxConcurrentTrips(boatTrips);
-      if (!day.boatWarning && peakConcurrent > shopBoats.length) {
-        day.boatWarning = st("boats.concurrencyWarning", {
-          tripCount: peakConcurrent,
-          boatCount: shopBoats.length,
-        });
-      }
-    }
+          t.startsAt instanceof Date && t.endsAt instanceof Date,
+      ),
+    );
   }
 
   return (

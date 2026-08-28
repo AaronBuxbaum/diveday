@@ -359,6 +359,160 @@ test.describe("schedule builder", () => {
     }
   });
 
+  /**
+   * **The width floor** (H-63, decided 2026-08-27; ADR
+   * 20260827-clearwater-surface-language, decision 5). Seven columns have no
+   * honest form on a portrait tablet, so the board is the vertical day stream
+   * below `xl` and the week from `xl` up — never both, and never neither.
+   * This spec sets its own viewports because the fleet's default is 1279, one
+   * pixel under the floor (playwright.config.ts).
+   *
+   * This is the **only** place the floor is really pinned: jsdom evaluates no
+   * media query, so a unit test can read the class and not the breakpoint.
+   */
+  test("the board is the day stream below 1280px and the week from 1280 up", async ({ page }) => {
+    await page.goto(BOARD);
+    await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
+
+    // Raw CSS locators, not `getByRole`: the fixture patches the role queries
+    // to visible-only matches, which would make "is it hidden" unanswerable.
+    //
+    // **Scoped to the stream's own wrapper**, not to the builder section. The
+    // grid is a *child* of that section and renders first, so a
+    // `section[…] ul li` crawl resolved to a week-grid cell and asserted the
+    // exact opposite of this test at every width.
+    const grid = page.locator('section[aria-label="The week"]');
+    const stream = page.locator("[data-day-stream] li").first();
+
+    // The portrait tablet a shop keeps the board open on all day, and the
+    // phone under it.
+    for (const width of [390, 820, 1279]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(stream, `the day stream is missing at ${width}px`).toBeVisible();
+      await expect(grid, `the week grid renders at ${width}px, below its floor`).toBeHidden();
+    }
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expect(grid).toBeVisible();
+    await expect(stream, "the stream renders alongside the week at 1280px").toBeHidden();
+    // The stream's cursor pager goes with it: the grid pages by week.
+    await expect(page.locator('a[href*="after="]').first()).toBeHidden();
+  });
+
+  /**
+   * **J5 — repricing the week.** Dana, at desktop, sees the departure with no
+   * price on the week and fixes it through the departure's own editor, which
+   * is the panel that already existed.
+   */
+  test("an unpriced departure carries its warning on the week, and opens the existing editor", async ({
+    page,
+  }) => {
+    const title = `Unpriced Trip ${e2eNow().getTime()}`;
+    const addDay = daysFromNow(3);
+
+    await page.goto(BOARD);
+    await page.getByRole("link", { name: "Add a departure", exact: true }).click();
+    await page.getByLabel("What is it").fill(title);
+    await page.getByLabel("Date").fill(addDay);
+    await page.getByLabel("Departs").fill("11:30");
+    await page.getByLabel("Returns").fill("15:00");
+    await page.getByLabel("Seats").fill("12");
+    await page.getByRole("button", { name: "Put it on the board" }).click();
+    await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);
+
+    // `?week=` takes any date inside the week and normalises it to that
+    // week's Monday (src/lib/week-board.ts), so the departure's own day is a
+    // valid address for the week it sails in — no paging, no guessing.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`${BOARD}?week=${addDay}`);
+    const week = page.getByRole("region", { name: "The week" });
+    // `exact`, because the cell also carries a "Set a price for {title}, …"
+    // link and a substring match on the title resolves to both.
+    await expect(week.getByRole("link", { name: title, exact: true })).toBeVisible();
+
+    await week.getByRole("link", { name: new RegExp(`^Set a price for ${title},`) }).click();
+    await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+#details$/);
+    await page.getByText("Edit details", { exact: true }).click();
+    await page.getByLabel(/Price per diver/).fill("110");
+    await page.getByRole("button", { name: "Save changes" }).click();
+
+    // Back on the week, the warning is gone and the figure is on the entry.
+    await page.goto(`${BOARD}?week=${addDay}`);
+    const entry = week.getByRole("listitem").filter({ hasText: title });
+    await expect(entry).toHaveCount(1);
+    await expect(entry.getByText("No price set")).toHaveCount(0);
+  });
+
+  /**
+   * **The mutations survive the floor.** Move and remove are the two that
+   * change what sails, and at desktop the only door to them is a week cell's
+   * "⋯" — the stream's is `display:none` and out of the accessibility tree.
+   * Covered here because the functional fleet drives 1279, so no other spec
+   * in this suite ever exercises the `w:`-keyed panels.
+   */
+  test("staff move and remove a departure from the week, not only from the stream", async ({
+    page,
+  }) => {
+    test.setTimeout(30_000);
+    const title = `Week Trip ${e2eNow().getTime()}`;
+    const addDay = daysFromNow(2);
+    const moveDay = daysFromNow(4);
+
+    await page.goto(BOARD);
+    await page.getByRole("link", { name: "Add a departure", exact: true }).click();
+    await page.getByLabel("What is it").fill(title);
+    await page.getByLabel("Date").fill(addDay);
+    await page.getByLabel("Departs").fill("08:00");
+    await page.getByLabel("Returns").fill("12:00");
+    await page.getByLabel("Seats").fill("10");
+    await page.getByRole("button", { name: "Put it on the board" }).click();
+    await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`${BOARD}?week=${addDay}`);
+    const week = page.getByRole("region", { name: "The week" });
+    await expect(week.getByRole("link", { name: title, exact: true })).toBeVisible();
+
+    // The role queries are visible-only (e2e/fixtures.ts), so these resolve to
+    // the grid's own controls rather than to the stream's hidden twins — which
+    // is exactly the confusion the `w:` key prefix exists to prevent.
+    await chooseRowAction(page, "Move", title);
+    await page.getByLabel("New date").fill(moveDay);
+    await page.getByLabel("New departure time").fill("06:45");
+    await page.getByRole("button", { name: "Move it" }).click();
+    await expect(page.getByRole("status")).toContainText("Moved.");
+
+    await page.goto(`${BOARD}?week=${moveDay}`);
+    await expect(week.getByRole("link", { name: title, exact: true })).toBeVisible();
+
+    await chooseRowAction(page, "Remove", title);
+    await page.getByRole("button", { name: "Yes, remove the trip" }).click();
+    await expect(page.getByRole("status")).toContainText("Taken off the board.");
+    await expect(week.getByRole("link", { name: title, exact: true })).toHaveCount(0);
+  });
+
+  test("the week and the stream page by different parameters, and never mix them", async ({
+    page,
+  }) => {
+    // The grid is a second *reading* of the same departures, not a second
+    // stream: a `?week=` in the URL leaves the cursor-paged stream exactly as
+    // it was, and the pager it hands back names a cursor and no week.
+    await page.goto(`${BOARD}?week=2026-01-05`);
+    await expect(page.getByRole("region", { name: "Schedule builder" })).toBeVisible();
+
+    const later = page.getByRole("link", { name: "Show later departures" });
+    await expect(later).toBeVisible();
+    const href = await later.getAttribute("href");
+    expect(href).toContain("after=");
+    expect(href).not.toContain("week=");
+
+    await later.click();
+    if (href) await page.waitForURL(`**${href}`);
+    await expect(
+      page.getByRole("link", { name: "Back to the next departure" }).first(),
+    ).toBeVisible();
+  });
+
   test("staff add a private charter, and verify its private charter badge in schedule and details", async ({
     page,
   }) => {

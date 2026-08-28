@@ -1482,6 +1482,7 @@ describe("ScheduleBuilder week board", () => {
       dayCount: 1,
       status: "upcoming" as const,
       unpriced: false,
+      rollCallOpen: null,
       ref: "Two-Tank Reef, Thu, Aug 27 7:00 AM – 10:30 AM",
       ...overrides,
     };
@@ -1496,6 +1497,7 @@ describe("ScheduleBuilder week board", () => {
       dayCount: 3,
       status: "upcoming" as const,
       unpriced: false,
+      rollCallOpen: null,
       ref: "Open Water Diver — three-day course, Aug 28 – 30, 2026",
       startColumn: 5,
       columnSpan: 3,
@@ -1511,6 +1513,7 @@ describe("ScheduleBuilder week board", () => {
       nextHref: "/shop/blue-mantis/schedule/board?week=2026-08-31",
       thisWeekHref: null,
       allUnpriced: false,
+      nextDeparture: null,
       words: {
         previous: "Previous week",
         next: "Next week",
@@ -1524,6 +1527,7 @@ describe("ScheduleBuilder week board", () => {
         label: `Day ${24 + index}`,
         isToday: dateIso === "2026-08-27",
         isPast: dateIso < "2026-08-27",
+        boatWarning: null,
         entries: [],
       })),
       spans: [],
@@ -1564,14 +1568,21 @@ describe("ScheduleBuilder week board", () => {
   it("declares the xl floor on both compositions, so only one is ever on screen", () => {
     const { container } = board(week());
 
-    // The grid appears at `xl` and up …
-    expect(grid().className).toContain("hidden");
-    expect(grid().className).toContain("xl:block");
+    // **Exact class tokens, never a substring.** `toContain("xl:block")` is
+    // satisfied by `2xl:block`, so the floor could have moved from 1280 to
+    // 1536 with this test still green. jsdom evaluates no media query, so
+    // *where* the floor sits is pinned in e2e (schedule-builder.spec.ts, "the
+    // board is the day stream below 1280px"); what this pins is that the two
+    // compositions declare complementary halves of one breakpoint and can
+    // never be on screen together.
+    expect(grid().classList.contains("hidden")).toBe(true);
+    expect(grid().classList.contains("xl:block")).toBe(true);
     // … and the stream stops exactly where it starts. Without the second
     // half the two would render at once at desktop, which is the whole
     // failure the floor exists to prevent.
-    const stream = container.querySelector(".xl\\:hidden");
+    const stream = container.querySelector("[data-day-stream]");
     expect(stream).not.toBeNull();
+    expect(stream?.classList.contains("xl:hidden")).toBe(true);
     expect(stream?.textContent).toContain("Two-Tank Reef");
   });
 
@@ -1837,5 +1848,116 @@ describe("ScheduleBuilder week board", () => {
       "href",
       "/shop/blue-mantis/trips/trip-1",
     );
+  });
+
+  /** One helper for "a week whose Thursday holds these departures". */
+  function weekWithThursday(entries: WeekEntry[], rest: Partial<BuilderWeek> = {}) {
+    return week({
+      days: week().days.map((day) => (day.dateIso === "2026-08-27" ? { ...day, entries } : day)),
+      ...rest,
+    });
+  }
+
+  it("carries an open roll call into the week, where the stream cannot be seen", () => {
+    // **The loudest thing the board can say** (DOM-H3): the boat is back and
+    // somebody on its list was never counted. It shouted in the stream and
+    // rendered nowhere at all from 1280px up, which made the desktop board
+    // the quietest place in the app to notice an uncounted diver.
+    board(
+      weekWithThursday([
+        weekEntry({
+          tripId: "trip-home",
+          dateIso: "2026-08-27",
+          title: "Dawn Two-Tank",
+          status: "sailed",
+          rollCallOpen: { diveNumber: 2, uncounted: 3 },
+        }),
+      ]),
+    );
+
+    const flag = within(grid()).getByRole("link", {
+      name: "Finish the dive 2 roll call for Two-Tank Reef, Thu, Aug 27 7:00 AM – 10:30 AM",
+    });
+    expect(flag).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/trip-home/manifest?checkpoint=after_dive_2",
+    );
+    // Never hue alone: the count is in the words, not only in the ink.
+    expect(flag).toHaveTextContent("Roll call · 3 not counted");
+  });
+
+  it("lets the open roll call outrank the price flag rather than stacking two marks", () => {
+    // One slot, one grammar (issue 758) — the same call the stream made. In a
+    // 150px column two stacked marks are two alarms competing.
+    board(
+      weekWithThursday([
+        weekEntry({
+          tripId: "trip-home",
+          dateIso: "2026-08-27",
+          status: "sailed",
+          unpriced: true,
+          rollCallOpen: { diveNumber: 1, uncounted: 2 },
+        }),
+      ]),
+    );
+
+    expect(within(grid()).getByText("Roll call · 2 not counted")).toBeInTheDocument();
+    expect(within(grid()).queryByText("No price set")).toBeNull();
+  });
+
+  it("asks each column the board's own question: more departures than boats", () => {
+    // The collision the ADR calls the board's whole question. It was computed
+    // for the stream's days only, so it vanished with the stream at desktop.
+    board(
+      week({
+        days: week().days.map((day) =>
+          day.dateIso === "2026-08-27"
+            ? { ...day, boatWarning: "Reef Runner is on two departures at once." }
+            : day,
+        ),
+      }),
+    );
+
+    expect(within(grid()).getByText("Reef Runner is on two departures at once.")).toBeVisible();
+    // Only on the day it is about — a warning repeated under all seven
+    // numerals would name nothing.
+    expect(within(grid()).getAllByText(/is on two departures at once\./)).toHaveLength(1);
+  });
+
+  it("names the next departure when the week on screen has none, instead of dead-ending", () => {
+    // The stream that would have listed them is display:none at this width,
+    // so seven blank columns and a "›" is the whole affordance without this.
+    board(
+      week({
+        nextDeparture: {
+          label: "Nothing this week — the next departure is Thu, Sep 10.",
+          href: "/shop/blue-mantis/schedule/board?week=2026-09-10",
+        },
+      }),
+    );
+
+    expect(
+      within(grid()).getByRole("link", {
+        name: "Nothing this week — the next departure is Thu, Sep 10.",
+      }),
+    ).toHaveAttribute("href", "/shop/blue-mantis/schedule/board?week=2026-09-10");
+  });
+
+  it("says nothing about a next departure while the week has departures of its own", () => {
+    // The page decides this once, over the whole week; the grid never
+    // second-guesses it. Pinning the silence is the point: a line reading
+    // "nothing this week" above a full week is worse than no line.
+    board(weekWithThursday([weekEntry({ tripId: "trip-1", dateIso: "2026-08-27" })]));
+
+    expect(within(grid()).queryByText(/next departure/)).toBeNull();
+  });
+
+  it("names each day's list by its own column header, not seven anonymous lists", () => {
+    board(weekWithThursday([weekEntry({ tripId: "trip-1", dateIso: "2026-08-27" })]));
+
+    // A screen reader walking the grid reads "Mon 24 … Sun 30" and then seven
+    // lists; without this, none of them says which day it belongs to.
+    const list = within(grid()).getByRole("list", { name: "Day 27" });
+    expect(within(list).getByRole("link", { name: "Two-Tank Reef" })).toBeInTheDocument();
   });
 });

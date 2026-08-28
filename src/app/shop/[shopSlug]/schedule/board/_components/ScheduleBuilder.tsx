@@ -20,7 +20,7 @@ import {
   MINIMUM_SEATS_DECISION_HOURS_DEFAULT,
 } from "@/lib/minimum-seats";
 import type { BuilderWeek, WeekDeparture } from "./WeekBoard";
-import { WeekBoard } from "./WeekBoard";
+import { AllUnpricedNotice, WeekBoard } from "./WeekBoard";
 
 /** One departure as the board hands it to the builder, already shop-local. */
 export type BuilderTrip = {
@@ -1574,9 +1574,7 @@ export function ScheduleBuilder({
           distinguishes anything. Three is the floor so one lone unpriced
           departure keeps its own pill rather than becoming a banner. */}
       {allUnpriced ? (
-        <p className="mt-4 rounded-xl border border-warning/40 bg-surface p-4 text-sm font-medium text-warning xl:hidden">
-          {copy.noPriceSetAll}
-        </p>
+        <AllUnpricedNotice className="xl:hidden">{copy.noPriceSetAll}</AllUnpricedNotice>
       ) : null}
 
       {/* Not a banner: the usual crew is not a problem to solve, it is the
@@ -1691,8 +1689,14 @@ export function ScheduleBuilder({
           portrait tablet or a phone, so the vertical day stream is what those
           widths get, unchanged — the add panel, the row menu, the cursor
           pager and every mutation included. At `xl` and up the week grid
-          above renders instead. */}
-      <div className="mt-4 flex flex-col gap-8 xl:hidden">
+          above renders instead.
+
+          `data-day-stream` is the hook a test asks "which of the two is on
+          screen" with. It has to be on the wrapper rather than derived from
+          the section: the grid is a *child* of the same section and renders
+          first, so a `section[…] li` locator resolved to a week cell and
+          asserted the exact opposite of the floor at every width. */}
+      <div data-day-stream="" className="mt-4 flex flex-col gap-8 xl:hidden">
         {days.map((day) => (
           <div key={day.dateIso}>
             {/* The day header is the public schedule's calendar block — big

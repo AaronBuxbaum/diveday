@@ -144,8 +144,8 @@
     "next": "Next week",
     "thisWeek": "This week",
     "today": "Today",
+    "nothingThisWeek": "Nothing this week — the next departure is {date}.",
     "seats": "{booked} of {capacity}",
-    "full": "Full",
     "sailed": "Sailed"
   },
   "addBooking": "Add a booking"
