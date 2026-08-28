@@ -343,11 +343,16 @@ export default async function StaffingPage({
               person: t("staffing.week.person"),
               needsCrew: t("staffing.week.needsCrew"),
               assign: t("staffing.week.assign"),
-              assignAria: t("staffing.week.assignAria"),
+              // **`t.raw`, not `t`** — both of these name an argument that only
+              // `StaffingWeek` can supply (the departure's title, the person and
+              // the day), so they cross as templates and `fill()` completes them
+              // on the client. `t()` would try to *format* them here, with the
+              // argument by definition absent (src/i18n/fill.ts).
+              assignAria: t.raw("staffing.week.assignAria"),
               crewing: t("staffing.week.crewing"),
               remove: t("staffing.working.remove"),
               removing: t("staffing.working.removing"),
-              shiftAria: t("staffing.week.shiftAria"),
+              shiftAria: t.raw("staffing.week.shiftAria"),
               empty: t("staffing.week.empty"),
             }}
           />

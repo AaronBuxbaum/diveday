@@ -40,13 +40,25 @@ function flatten(node: Record<string, unknown>, prefix = ""): Record<string, str
   return out;
 }
 
-/** Every `.ts`/`.tsx` under `src/` except the bundles — and except this file,
- * whose own prose quotes the very shapes it is looking for. */
+/**
+ * Every `.ts`/`.tsx` under `src/` except the bundles — and except this file,
+ * whose own prose quotes the very shapes it is looking for.
+ *
+ * **Tests are excluded for that same reason, not for convenience.** A spec that
+ * pins where a sentence sits does it by searching the page's source for the
+ * call that renders it, so `page.composition.test.ts` carries the literal
+ * `t("waiver.linkExpiresAt"` as a *needle*. That is not a call site, and
+ * reading it as one reported a page that passes its `{date}` correctly one line
+ * away. What these two rules are about is how the **app** asks for copy; a test
+ * that really does misuse the translator fails on its own assertion, which is a
+ * better error than this file could give it.
+ */
 const sourceFiles = (dir: string): string[] =>
   readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) return entry.name === "locales" ? [] : sourceFiles(full);
     if (full === fileURLToPath(import.meta.url)) return [];
+    if (/\.test\.tsx?$/.test(entry.name)) return [];
     return /\.tsx?$/.test(entry.name) ? [full] : [];
   });
 
