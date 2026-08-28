@@ -1,4 +1,3 @@
-import { Fragment } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -146,6 +145,14 @@ export function BuddyTeamsPanel({
                 options.filter((option) => !onThisTeam.has(option.token));
               const addableDivers = free(diverOptions);
               const addableCrew = free(crewOptions);
+              // The "dives with" constraints carried by this team's own divers
+              // (issue #1068) — rendered under the chips rather than among
+              // them, since a constraint is not a member.
+              const teamDivesWith = team.members.flatMap((member) => {
+                if (member.kind !== "diver") return [];
+                const line = divesWithByBooking.get(member.bookingId);
+                return line ? [{ bookingId: member.bookingId, line }] : [];
+              });
               return (
                 <li key={team.teamId} className="px-4 py-3">
                   {/* No `justify-between`: it pushed "Dissolve team" to the
@@ -177,23 +184,27 @@ export function BuddyTeamsPanel({
                           // stay a team; at two the act is a dissolve, which
                           // has its own button and its own entry on the trail.
                           const removable = team.members.length > 2;
-                          const divesWith =
-                            member.kind === "diver"
-                              ? (divesWithByBooking.get(member.bookingId) ?? null)
-                              : null;
                           return (
-                            <Fragment key={token}>
-                              <li
-                                className={`flex items-center gap-1 rounded-full border border-border bg-surface-sunken font-semibold ${
-                                  removable ? "py-0.5 ps-4 pe-1" : "px-3 py-1"
-                                }`}
-                              >
-                                <span>{name}</span>
-                                {removable ? (
-                                  <form action={removeBuddyTeamMemberAction} className="flex">
-                                    <input type="hidden" name="teamId" value={team.teamId} />
-                                    <input type="hidden" name="member" value={token} />
-                                    {/* A real target, not a bare "×" glyph: this
+                            <li
+                              key={token}
+                              // A team row carries two lists of names now — who
+                              // is *on* the team, and who its divers must dive
+                              // with (issue #1068) — so "the row with Omar in
+                              // it" stopped being a question the DOM could
+                              // answer. This marks the membership half, which
+                              // is what `e2e/buddy-pairs.spec.ts` means when it
+                              // asks for a diver's team.
+                              data-buddy-member=""
+                              className={`flex items-center gap-1 rounded-full border border-border bg-surface-sunken font-semibold ${
+                                removable ? "py-0.5 ps-4 pe-1" : "px-3 py-1"
+                              }`}
+                            >
+                              <span>{name}</span>
+                              {removable ? (
+                                <form action={removeBuddyTeamMemberAction} className="flex">
+                                  <input type="hidden" name="teamId" value={team.teamId} />
+                                  <input type="hidden" name="member" value={token} />
+                                  {/* A real target, not a bare "×" glyph: this
                                     panel is worked on a moving deck, and the
                                     chip shape is what makes the control read
                                     as a control rather than a typo. `size-11`
@@ -215,30 +226,40 @@ export function BuddyTeamsPanel({
                                     44px circle that a word would burst; the
                                     disabled + `aria-busy` state is what says
                                     the tap landed. */}
-                                    <SubmitButton
-                                      pendingLabel="×"
-                                      ariaLabel={t("manifest.buddyRemoveMember", {
-                                        name: member.fullName,
-                                      })}
-                                      className="flex size-11 cursor-pointer items-center justify-center rounded-full text-lg leading-none text-muted disabled:cursor-wait disabled:opacity-70 hover:bg-danger-tint hover:text-danger"
-                                    >
-                                      <span aria-hidden="true">×</span>
-                                    </SubmitButton>
-                                  </form>
-                                ) : null}
-                              </li>
-                              {/* Beside the chip, in the row where teams are
-                                actually built — muted, never a warning tone:
-                                a departure with the constraint unmet sails
-                                (ADR 20260827-support-needs-are-a-record-about-
-                                the-dive, fourth refusal). The words carry it. */}
-                              {divesWith ? (
-                                <li className="text-sm font-normal text-muted">{divesWith}</li>
+                                  <SubmitButton
+                                    pendingLabel="×"
+                                    ariaLabel={t("manifest.buddyRemoveMember", {
+                                      name: member.fullName,
+                                    })}
+                                    className="flex size-11 cursor-pointer items-center justify-center rounded-full text-lg leading-none text-muted disabled:cursor-wait disabled:opacity-70 hover:bg-danger-tint hover:text-danger"
+                                  >
+                                    <span aria-hidden="true">×</span>
+                                  </SubmitButton>
+                                </form>
                               ) : null}
-                            </Fragment>
+                            </li>
                           );
                         })}
                       </ul>
+                      {/* **Under the chips, not among them.** These are
+                          constraints on the team, not members of it: rendered
+                          as chips they read as extra people, and a name in a
+                          member list is what every locator on this panel means
+                          by "who is on this team" — which is how the first cut
+                          of this made `buddy-pairs.spec.ts` match Diego's team
+                          when it asked for Omar's.
+
+                          Muted, never a warning tone: a departure with the
+                          constraint unmet sails (ADR
+                          20260827-support-needs-are-a-record-about-the-dive,
+                          fourth refusal). The words carry it. */}
+                      {teamDivesWith.length > 0 ? (
+                        <ul className="mt-1.5 flex flex-col gap-0.5 text-sm text-muted">
+                          {teamDivesWith.map(({ bookingId, line }) => (
+                            <li key={bookingId}>{line}</li>
+                          ))}
+                        </ul>
+                      ) : null}
                       <p className="mt-1 text-sm text-muted">
                         {t("manifest.buddyRecordedBy", { name: team.recordedByName })}
                       </p>

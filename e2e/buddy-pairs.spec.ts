@@ -33,7 +33,15 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   const teamPanel = page.locator("section", {
     has: page.getByRole("heading", { name: "Buddy teams" }),
   });
-  const teamRow = (name: string) => teamPanel.locator("li", { hasText: name }).first();
+  // Scoped to the **membership** chips, not to any text in the row. A team row
+  // also carries the "dives with" constraints its divers stated (issue #1068),
+  // so a bare `li hasText` matched Diego's team when asked for Omar's — the
+  // same over-loose shape this spec's own note below warns about.
+  const teamRow = (name: string) =>
+    teamPanel
+      .locator("li")
+      .filter({ has: page.locator("li[data-buddy-member]", { hasText: name }) })
+      .first();
   await expect(teamRow("Lena Fischer")).toContainText("Tom Okafor");
   const trio = teamRow("Diego Alvarez");
   await expect(trio).toContainText("June Park");
