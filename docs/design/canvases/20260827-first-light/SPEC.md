@@ -79,8 +79,11 @@ export function EntryDone(props: {
 - The two h2-over-`border-b` sections become two `GroupLabel` groups (**Your shop** / **You**);
   field order, names, and the timezone `<select>` are unchanged. The four concatenated
   reassurance strings collapse to one sentence under the primary —
-  `account.onboard.noCard` ("No card — free while you set up.") — and the other three keys
-  delete from the call site and **both** locales in the same change.
+  `account.onboard.trialNote` ("Free for 3 weeks, no card — and nothing switches off when the
+  window ends.", the day-22 answer from
+  [marketing-review-20260827.md](../../../product/marketing-review-20260827.md); soft expiry per
+  `src/lib/trial.ts`) — and the four old keys delete from the call site and **both** locales in
+  the same change.
 - The slug field's hint becomes the live URL line: "Your schedule will live at
   **diveday.com/s/&lt;slug&gt;**", rendering the current normalized slug from the same client
   state `SuggestShopLink` already owns (extend that component; no new one). When the slug field

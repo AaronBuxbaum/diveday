@@ -288,3 +288,21 @@ which leaves for the thread), because they are one surface: `EntryShell` is the 
   additions (a door never grows a second primary or a marketing aside).
 - **Composition:** wordmark, h1, one form or one sentence, one primary, quiet footer — and two
   dead-link tiers: account tokens never name a shop, booking tokens always offer the shop's hand.
+
+### The homepage — `/`
+
+**Reviewed 2026-08-27** — the conversion pass in
+[marketing-review-20260827.md](../product/marketing-review-20260827.md) (open; slices in roadmap
+section 12). The 2026-08-13 composition stands; the findings move copy, not bands.
+
+- **One idea:** the whole dive day runs from one calm place — and you can walk it right now for
+  free.
+- **The question it arrives with:** "what's the catch — cost, time, and can I get out?" — the
+  exit is answered by the diptych; the review moves cost into the hero and answers time in the
+  records band.
+- **Controls that dissolved:** the nine-choice hero (2026-08-13, down to one primary + one
+  secondary, test-pinned); the mid-page demo door; the stacked switching links.
+- **Remove first:** the moments band's abstraction sentence — its concrete twin does the work.
+- **Composition:** a day told in order — hero, shared-day statement, moments (which the review
+  extends to the evening), breadth as four numbered assertions, the mirrored records diptych,
+  one merged close.

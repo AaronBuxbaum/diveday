@@ -371,6 +371,41 @@ standing reviews. Ordered roughly by leverage-per-effort.
   every submitter regardless of stars (selective solicitation is the review-gating the
   suppression floor already refuses), never pre-filling the text. *Small.*
 
+### 12. The marketing pages earn the trial (review complete)
+
+The conversion pass argued in
+[marketing-review-20260827.md](../marketing-review-20260827.md) — three diagnoses (the
+persuasion gradient is inverted, the terms never stand at the doors, help arrives after the
+homework) and every replacement sentence written out, claims-policy-clean. Each slice is one
+`marketing-page`-skill PR: claims checklist, `e2e/marketing.spec.ts` assertion updates
+(deliberate), screenshots looked at light+dark, `conversion-reviewer` re-pass. Copy lands in
+both locales in the same change. Unranked, but 12a and 12c aim directly at "owners aren't
+starting trials."
+
+- **12a. The homepage says the morning.** Hero triad + de-jargoned description; the flat-price
+  line reaches the hero (text, not a control — the pinned control budget holds); the moments
+  band's redundancy cuts; the four-card summaries rewritten in the owner's-day voice. *Pins:*
+  the hero still counts its controls; the price renders only via interpolation.
+- **12b. The day gets its evening.** The third moment row ("That evening", `RecapPageFallback`)
+  and the mid-season sentence in the records band via a shared key. The delight thesis's first
+  appearance on `/`.
+- **12c. The trial's terms stand at its doors.** `/pricing`: the trial-terms note at both CTA
+  pairs, the two-year lock under the cadence line (item5 trims), the fee-anchor rewrite, the
+  two new FAQ rows (crew, setup time), the November fold-in, the offline row cut; `/onboard`'s
+  day-22 clause rides first-light 10b. *Pins:* the trial note names free/3 weeks/no card/soft
+  expiry; no billing terms beyond `faq.trialMeaning`'s.
+- **12d. The product page's dare gets a door.** The money band renders the figure; a demo door
+  under the capability index (new `product-index` tag registered first); the hero description
+  rewrite. *Pins:* one primary per screen holds across the page's screens.
+- **12e. Help arrives before the homework.** `switching.common.moveIntro` carries the
+  concierge; the DiveShop360 and EVE ledes lead with their documented wedges; the fifth shared
+  cutover step (the crew walks their screens in the demo); the spreadsheet guide's parallel-run
+  note and `wedgeIntro1` tone fix; the nitrox scope-table rewording (verify against
+  `src/lib/import.ts`, `dive-domain-expert` before merge). The leave-it guides' pricing link
+  waits on the owner call recorded in the review.
+- **12f. `/about` spends the impulse it creates.** The `FunnelCtas` pair under the four-rules
+  grid; the support mailto demotes to secondary; `leaveTitle` matches its section.
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)
