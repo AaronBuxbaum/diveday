@@ -233,6 +233,14 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
     .values({
       name: "Blue Mantis Divers",
       slug: DEMO_SHOP_SLUG,
+      // **The shop's own line, because the storefront leads with the shop.**
+      // The identity band renders only what a shop authored (ADR
+      // 20260827-clearwater-surface-language, decision 8), so a demo with no
+      // tagline photographs the day-zero hero rather than the one a trading
+      // shop has — and `public-schedule-new-shop` is already the baseline for
+      // that state.
+      // i18n-exempt: a shop types its own tagline, like its packing list.
+      tagline: "Small-boat reef and wreck diving out of Key Largo.",
       timezone: DEMO_SHOP_TIMEZONE,
       // **Blue Mantis finished its own onboarding**, like the trading shop it
       // is meant to portray. Without this the queue asks it which currency it

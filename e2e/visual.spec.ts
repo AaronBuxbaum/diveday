@@ -2042,7 +2042,20 @@ for (const scheme of ["light", "dark"] as const) {
         // exists and this is one navigation.
         await page.goto(`/s/${unique}`);
         await page.getByRole("heading", { name: "No trips on the books yet" }).waitFor();
+        // **Day zero is a shape, not a failure state** (ADR
+        // 20260827-clearwater-surface-language, decision 8). The hero is the
+        // shop's name and nothing else — no tagline it has not written, no
+        // rating nobody has left, no DiveDay sentence standing in for either —
+        // and with no boat to book, the page's one primary becomes the
+        // date-request composer's own submit.
+        await expect(page.getByRole("heading", { level: 1 })).toHaveText("Fresh Shop E2E");
+        await expect(page.getByRole("region", { name: "Next boat out" })).toHaveCount(0);
+        await expect(page.getByRole("link", { name: "Book this boat" })).toHaveCount(0);
         await capture(page, "public-schedule-new-shop", scheme);
+        // After the shot, so the composer's disclosure is closed in the
+        // baseline: with no boat to book, the page's one primary is this.
+        await page.locator("#request-a-date summary").click();
+        await expect(page.getByRole("button", { name: "Send inquiry" })).toBeVisible();
 
         // **The board before anything is on it.** The `schedule-builder`
         // baseline is shot against blue-mantis, whose board always has

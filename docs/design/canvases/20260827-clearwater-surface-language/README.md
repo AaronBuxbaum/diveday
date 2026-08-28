@@ -93,7 +93,7 @@ bodies, with their pins and owner-call dependencies, are in
 | 6f — the orders day ledger | open | — | — |
 | 6g — settings rail and pane | shipped | `src/app/shop/[shopSlug]/settings/_components/SettingsRail.tsx` | `src/app/shop/[shopSlug]/settings/_components/SettingsRail.test.tsx` |
 | 6h — the counter instrument | shipped | `src/app/shop/[shopSlug]/check-in/_components/CounterQueueRow.tsx` | `src/app/shop/[shopSlug]/check-in/_components/CounterQueueRow.test.tsx` |
-| 6i — the storefront | open | — | — |
+| 6i — the storefront | shipped | `src/app/s/[shopSlug]/_components/WeekLedger.tsx` | `src/app/s/[shopSlug]/_components/WeekLedger.test.tsx` |
 
 6h's other pieces: the instrument itself (`_components/CounterInstrument.tsx`, pinned by
 `CounterInstrument.test.tsx` — the earned line renders only at `here === expected`, and never a
@@ -105,6 +105,22 @@ second accent beside it), the settled group (`_components/CounterQueue.tsx` /
 in `src/db/check-in.test.ts`. Not built: the settled rows carry no check-in **time**, because the
 reader holds none and this slice's contract added no third field for one; the drawn mark and the
 name are what a settled row says.
+
+6i's other pieces: the identity band (`_components/ShopfrontHero.tsx`, pinned by
+`ShopfrontHero.test.tsx` — it renders only what the shop authored, and day zero is a name and
+nothing else), the next boat as the page's one card and one primary
+(`_components/NextBoatCard.tsx` / `NextBoatCard.test.tsx`), the courses shelf
+(`_components/CoursesShelf.tsx` / `CoursesShelf.test.tsx`) with its drawn-swell stand-in for a
+course with no photo (`src/components/CourseWavePlaceholder.tsx` — the SPEC named no path for it),
+the reviews shelf and the archive's ledger rows (`src/components/ShopReviews.tsx` /
+`ShopReviews.test.tsx`), and the accent star fill (`src/components/StarRating.tsx` /
+`StarRating.test.tsx`, whose default keeps staff on amber). `pinnedNextDeparture` became
+`nextBookableDeparture` in `src/lib/trips.ts`: the pin used to stand down whenever the week's own
+first row already had room, and decision 8 makes the next boat the page's subject instead — so the
+card always renders and the week keeps its row. Two deliberate departures from the SPEC, both
+argued in the pull request: the hero carries **no contact line** (the footer has carried phone,
+email and address once per page since issue #777, and the artboard's own footer agrees), and the
+reviews shelf **does not restate the aggregate** the hero now owns.
 
 6a also landed `src/components/ui/SettledCheck.tsx` (pinned by `SettledCheck.test.tsx`) and the
 flat-at-rest change to `src/components/ui/card.tsx` (pinned by `card.test.tsx`, which now fails the

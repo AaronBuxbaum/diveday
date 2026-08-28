@@ -4,13 +4,14 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { ReviewCards } from "@/components/ShopReviews";
+import { ReviewLedger } from "@/components/ShopReviews";
 import { StarRating } from "@/components/StarRating";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getShopReviewAggregate, listPublishedShopReviewsPage } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
 import { requestTranslator } from "@/i18n/request";
+import { cachedFormatter } from "@/lib/intl-cache";
 import { publicReviewsPath, publicSchedulePath } from "@/lib/public-routes";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 
@@ -70,11 +71,15 @@ export default async function PublicReviewsPage({
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+      {/* No standing description under the title. `reviews.allDescription`
+          said "read what divers who were on the boat said about their day" —
+          which is the page's own name plus the verification claim the aggregate
+          line below already carries, and it is still the metadata description
+          where a search result genuinely needs the sentence. */}
       <ShopPageHeader
         eyebrow={t("reviews.sectionTitle")}
         eyebrowHref={publicSchedulePath(shop.slug)}
         title={t("reviews.allTitle")}
-        description={t("reviews.allDescription")}
         actions={
           <Link
             href={publicSchedulePath(shop.slug)}
@@ -86,24 +91,37 @@ export default async function PublicReviewsPage({
       />
 
       <section aria-label={t("reviews.sectionTitle")}>
-        <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
-          {average !== null ? (
+        {/* **The aggregate, exactly once** (ADR
+            20260827-clearwater-surface-language, decision 8): the stars, the
+            figure, the count and the claim that makes the number mean anything,
+            on one line — where it used to be a star row, a second line
+            repeating the average and count, and a third line for the claim. The
+            fill is `--accent` because this is a public page and a filled rating
+            star is data ink (decision 11). */}
+        {average !== null ? (
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
             <StarRating
               rating={Math.round(average)}
               label={t("reviews.ratingOption", { rating: Math.round(average) })}
+              tone="accent"
+              className="text-base"
             />
-          ) : null}
-          <span className="tabular-nums">
-            {average !== null ? `${t("reviews.average", { average: average.toFixed(1) })} · ` : ""}
-            {t("reviews.count", { count: aggregate.count })}
-          </span>
-        </div>
-        <p className="mt-1 text-sm text-muted">{t("reviews.verifiedNote")}</p>
+            <span className="text-base font-semibold text-foreground tabular-nums">
+              {cachedFormatter("num", Intl.NumberFormat, locale, {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1,
+              }).format(average)}
+            </span>
+            <span className="tabular-nums">
+              {t("reviews.count", { count: aggregate.count })} · {t("reviews.verifiedNote")}
+            </span>
+          </p>
+        ) : null}
 
         {reviewPage.total === 0 ? (
-          <EmptyState title={t("reviews.allEmptyHeading")} />
+          <EmptyState title={t("reviews.allEmptyHeading")} className="mt-4" />
         ) : (
-          <ReviewCards
+          <ReviewLedger
             reviews={reviewPage.reviews}
             locale={locale}
             timezone={timezone}

@@ -1,6 +1,5 @@
 {
   "conservation": {
-    "commitmentsHeading": "Conservation commitments",
     "shopClaimsDisclaimer": "Stated by the shop, not verified by DiveDay.",
     "commitments": {
       "green_fins_member": "Green Fins member",
@@ -110,14 +109,7 @@
     "showEarlier": "Show earlier departures",
     "backToNext": "← Back to the next departure",
     "courseSession": "Course session",
-    "diveSite": "Dive site",
-    "diveSites": "Dive sites",
-    "certification": "Certification",
-    "certifications": "Certifications",
     "moreDivesToConfirm": "{count, plural, one {+ # more dive site} other {+ # more dive sites}}",
-    "twoTank": "Two-tank trip",
-    "twoTankHint": "A boat trip with two separate dives, back to back, with a rest break (a surface interval) in between — not two tanks worn at once.",
-    "diveCount": "{count, plural, other {# dives}}",
     "tripCardLabel": "{when} · {trip} · {capacity}",
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
@@ -125,8 +117,10 @@
     "monthNav": "Browse by month",
     "spotsLeftUrgent": "{count, plural, one {Only # spot left} other {Only # spots left}}",
     "nextDeparture": {
-      "eyebrow": "Next boat out",
-      "title": "{when} — {trip}"
+      "eyebrow": "Next boat out"
+    },
+    "shopfront": {
+      "bookThisBoat": "Book this boat"
     },
     "poweredByDiveDay": "Powered by DiveDay",
     "moreWaysHeading": "Other ways we can help"
@@ -134,7 +128,6 @@
   "trip": {
     "courseSession": "Course session",
     "privateCharter": "Private charter",
-    "privateCharterBadge": "Private",
     "depositLine": "{deposit} deposit at booking · {balance} balance at the dock",
     "freeCancellationUntil": "Free cancellation until {when}",
     "cancellationAskShop": "Cancellation questions? Ask the shop:",
@@ -475,11 +468,14 @@
       "noCoursesHeading": "No courses listed yet",
       "noCoursesBody": "Check back soon, or get in touch and we’ll help you find a starting point.",
       "requires": "Requires {level} or higher"
+    },
+    "shelf": {
+      "allCourses": "All courses"
     }
   },
   "reviews": {
     "sectionTitle": "What divers say",
-    "verifiedNote": "Every review here comes from a diver who was on the boat.",
+    "verifiedNote": "every one from a diver who was on the boat",
     "askHeading": "How was your day?",
     "askBody": "Words are welcome but never required.",
     "ratingLegend": "Your rating",

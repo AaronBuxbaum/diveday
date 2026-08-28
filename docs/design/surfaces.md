@@ -156,8 +156,9 @@ stream stays on phone.
 
 ### The public schedule — `/s/[shopSlug]`
 
-**Redesign proposed** — same ADR and canvas. Conversion surface; gets the `conversion-reviewer`
-pass.
+**Shipped 2026-08-28** (slice 6i) — same ADR and canvas. Conversion surface; gets the
+`conversion-reviewer` pass. `/s/[shopSlug]/reviews` restyled with it, and the two public course
+routes took the display-scale h1 only.
 
 - **One idea:** this shop is worth your dive day — and the next boat is right there.
 - **The question it arrives with:** "is this shop good, and can I get on a boat?" — answered by the

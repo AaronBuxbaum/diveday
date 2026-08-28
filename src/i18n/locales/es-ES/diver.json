@@ -1,6 +1,5 @@
 {
   "conservation": {
-    "commitmentsHeading": "Compromisos de conservación",
     "shopClaimsDisclaimer": "Declarado por el centro, no verificado por DiveDay.",
     "commitments": {
       "green_fins_member": "Miembro de Green Fins",
@@ -110,14 +109,7 @@
     "showEarlier": "Ver salidas anteriores",
     "backToNext": "← Volver a la próxima salida",
     "courseSession": "Sesión de curso",
-    "diveSite": "Sitio de buceo",
-    "diveSites": "Sitios de buceo",
-    "certification": "Certificación",
-    "certifications": "Certificaciones",
     "moreDivesToConfirm": "{count, plural, one {+ # sitio de buceo más} other {+ # sitios de buceo más}}",
-    "twoTank": "Salida de dos inmersiones",
-    "twoTankHint": "Una salida en barco con dos inmersiones independientes, una tras otra, con un descanso (un intervalo de superficie) entre medias — no dos botellas puestas a la vez.",
-    "diveCount": "{count, plural, other {# inmersiones}}",
     "tripCardLabel": "{when} · {trip} · {capacity}",
     "previousMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
@@ -125,8 +117,10 @@
     "monthNav": "Explorar por mes",
     "spotsLeftUrgent": "{count, plural, one {Solo queda # plaza} other {Solo quedan # plazas}}",
     "nextDeparture": {
-      "eyebrow": "Próxima salida",
-      "title": "{when} — {trip}"
+      "eyebrow": "Próxima salida"
+    },
+    "shopfront": {
+      "bookThisBoat": "Reservar esta salida"
     },
     "poweredByDiveDay": "Con la tecnología de DiveDay",
     "moreWaysHeading": "Otras formas de ayudarte"
@@ -134,7 +128,6 @@
   "trip": {
     "courseSession": "Sesión de curso",
     "privateCharter": "Chárter privado",
-    "privateCharterBadge": "Privado",
     "depositLine": "{deposit} de señal al reservar · {balance} restante en el muelle",
     "freeCancellationUntil": "Cancelación gratuita hasta el {when}",
     "cancellationAskShop": "¿Dudas sobre la cancelación? Pregunta al centro:",
@@ -475,11 +468,14 @@
       "noCoursesHeading": "Todavía no hay cursos publicados",
       "noCoursesBody": "Vuelve pronto, o escríbenos y te ayudamos a encontrar un punto de partida.",
       "requires": "Requiere {level} o superior"
+    },
+    "shelf": {
+      "allCourses": "Todos los cursos"
     }
   },
   "reviews": {
     "sectionTitle": "Lo que dicen los buceadores",
-    "verifiedNote": "Cada opinión es de alguien que estuvo en el barco.",
+    "verifiedNote": "cada una de un buceador que estuvo en el barco",
     "askHeading": "¿Qué tal tu día?",
     "askBody": "Las palabras son bienvenidas, pero nunca obligatorias.",
     "ratingLegend": "Tu puntuación",

@@ -31,7 +31,10 @@ for (const [needle, label] of [
   if (!orders.includes(needle)) failures.push(`${label} must be 16px on phones`);
 }
 
-const schedule = read("src/app/s/[shopSlug]/page.tsx");
+// The public schedule's day rule moved into the week ledger when the
+// storefront recomposed (ADR 20260827-clearwater-surface-language, slice 6i);
+// the 16px floor on the date chips travelled with it.
+const schedule = read("src/app/s/[shopSlug]/_components/WeekLedger.tsx");
 for (const needle of [
   "text-base font-bold tracking-[0.18em] uppercase",
   "text-base font-medium tracking-[0.18em] text-muted uppercase",

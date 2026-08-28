@@ -46,7 +46,10 @@ test("a diver switches a shop's public pages into Spanish, and it survives navig
   await header.getByRole("button", { name: "Español" }).click();
 
   // The words change; the address does not.
-  await expect(page.getByRole("heading", { level: 1, name: "Calendario" })).toBeVisible();
+  // The schedule section is an `h2` now: slice 6i gave the `h1` to the
+  // shop's own name, which is a proper noun and reads the same in every
+  // language. `schedule.title` is still the translated proof.
+  await expect(page.getByRole("heading", { level: 2, name: "Calendario" })).toBeVisible();
   await expect(page).toHaveURL("/s/blue-mantis");
   await expect(header.getByRole("button", { name: "Cambiar de idioma" })).toContainText("Español");
 
