@@ -72,6 +72,25 @@ describe("the storefront address under the shop-link field", () => {
     expect(screen.queryByText(/dive\.day/)).toBeNull();
   });
 
+  it("says nothing on a fresh form, where there is no address yet", () => {
+    // The other silence, and the one that is easy to miss: before the owner has
+    // typed anything there is no slug, and `dive.day/s/` is not an address —
+    // it is the shape of one with the answer missing. Rendering the bare host
+    // instead would be the same defect in fewer characters.
+    mount();
+    expect(hint()).toBeEmptyDOMElement();
+    expect(screen.queryByText(/Your schedule will live at/)).toBeNull();
+    expect(screen.queryByText(/dive\.day/)).toBeNull();
+  });
+
+  it("starts speaking as soon as the name gives it one", () => {
+    // And the silence lifts the moment there is something true to say, so the
+    // guard above can never be satisfied by a hint that simply never renders.
+    mount();
+    fireEvent.input(nameBox(), { target: { value: "Coral Cove Divers" } });
+    expect(hint()).toHaveTextContent("dive.day/s/coral-cove-divers");
+  });
+
   it("keeps filling the box while it is refused — the hint stands down, the wiring does not", () => {
     // Mounting is what wires the two inputs together, so rendering nothing may
     // not mean doing nothing: a form bounced back with an empty slug must still

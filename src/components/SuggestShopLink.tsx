@@ -84,7 +84,12 @@ export function SuggestShopLink({
     };
   }, [nameId, slugId]);
 
-  if (fieldError) return null;
+  // Two silences, for the same reason: the hint only speaks when it has
+  // something true to say. It yields to a field error (the refusal is the
+  // message), and it yields to an empty slug — on a fresh form there is no
+  // address yet, and `${urlHost}/s/` is not one. Rendering the bare host
+  // instead would be the same defect wearing a shorter string.
+  if (fieldError || !slug) return null;
 
   return (
     <>
