@@ -7,6 +7,31 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The day on the homepage gets its evening (delivered 2026-08-28)
+
+Slice 12b of [marketing-review-20260827.md](marketing-review-20260827.md), against that review's
+fourth finding: the product's argument is delight-first — the shop gets remembered — and the
+homepage's day ended at 8 a.m. The moments band is **three rows now**, and the third is the
+evening: "Divers go home with a page worth sharing", beside the recap screen `/product`'s
+after-trip chapter already shows. It is the one row that argues revenue rather than
+administration, and it carries **no link and no button** — the recap is something a shop's divers
+receive, not a screen a visitor is sent to poke — so the page's demo-door count did not move.
+
+**Mid-season is answered in the column that raises it.** A shop reading "bring your records in
+clean" in August is doing the arithmetic of switching mid-season, and the four-phase move rail
+that answers it lives on a switching guide this reader may never open. One sentence now sits under
+the arriving column's lede, rendered from `marketing.guides.shared.cutover.midSeason` through
+`midSeasonCutover` in `src/lib/marketing.ts` — the guides' own namespace, so the compressed promise
+and the four steps it compresses are edited in the same block and cannot drift into two wordings.
+The guides keep the four steps and do not additionally render the summary.
+
+Pinned rather than remembered: `e2e/marketing.spec.ts` asserts the evening row's heading, its
+clause about the shop's name, its recap mockup, and — the silence the row was built around — that
+the band still offers exactly one door; `src/lib/marketing.test.ts` pins the shared key's home and
+refuses a `marketing.home.*` restatement of it; `src/components/MarketingSections.test.tsx` pins
+the mockup registry and that an illustration never names itself, so the accessible name always
+comes from the caller's translated label.
+
 ## The homepage says the morning (delivered 2026-08-28)
 
 Slice 12a of [marketing-review-20260827.md](marketing-review-20260827.md), the first of that

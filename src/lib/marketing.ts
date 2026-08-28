@@ -130,6 +130,30 @@ export const fullShopExport = {
   termsKey: "marketing.export.terms",
 } as const satisfies { claimKey: DiverMessageKey; termsKey: DiverMessageKey };
 
+/**
+ * The mid-season answer, rendered on the homepage's records band
+ * (docs/product/marketing-review-20260827.md, "Mid-season answered where it
+ * disqualifies"). One claim, told at two lengths: the switching guides walk it
+ * as the four phases of `guides.shared.cutover.*`, and `/` compresses the same
+ * promise to a sentence for a reader who will never open a guide.
+ *
+ * So the key deliberately lives in the **guides'** namespace rather than the
+ * homepage's, and this constant is what makes that legible at the call site:
+ * every clause in the sentence is a compression of
+ * `guides.shared.cutover.step1`, `step3` and `step4`, so an editor rewriting
+ * the four-phase move rail is reading the homepage's sentence in the same
+ * block of the bundle and cannot leave it behind. Two wordings of one promise
+ * is the failure this prevents — the rule marketing.md states one namespace
+ * over for the export claim ("Never let a surface restate the export claim in
+ * its own words"), which is why this reads like `fullShopExport` above.
+ *
+ * The guides do **not** additionally render this sentence: beside the four
+ * steps it summarizes, it would be a caption restating its own section.
+ */
+export const midSeasonCutover = {
+  claimKey: "marketing.guides.shared.cutover.midSeason",
+} as const satisfies { claimKey: DiverMessageKey };
+
 export interface CapabilityAreaKeys {
   title: DiverMessageKey;
   items: readonly DiverMessageKey[];

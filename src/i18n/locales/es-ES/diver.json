@@ -2236,6 +2236,12 @@
           "title": "Una sola respuesta a “¿están listos?”",
           "description": "Exención, titulación, requisitos del sitio, pago y tallas de alquiler — resueltos antes de que un problema llegue al muelle. Cuando algo no se puede verificar, DiveDay lo dice claramente en vez de dejarlo pasar.",
           "mockupLabel": "La sección de preparación de la salida mostrando claramente los estados de buceador listo y bloqueado."
+        },
+        "recap": {
+          "when": "Esa noche",
+          "title": "Los buceadores se van a casa con una página que vale la pena compartir",
+          "description": "Sus inmersiones, una nota de la tripulación, espacio para sus propias fotos — con el nombre de tu centro en lo que le mandan a su compañero.",
+          "mockupLabel": "La página de resumen de un buceador con la profundidad, la visibilidad y la temperatura del agua de la inmersión, una nota de la tripulación y sus propias fotos."
         }
       },
       "productTitle": "En vez de una pizarra, un portapapeles y tres aplicaciones que no se hablan entre sí.",
@@ -2396,7 +2402,8 @@
           "step4": {
             "title": "Cuenta con una tarde, no con una semana",
             "detail": "Exportar desde el sistema anterior lleva minutos, y la vista previa muestra exactamente qué va a entrar antes de guardar nada. Revísala, corrige las filas marcadas e importa de verdad. Una sentada, no un plan de proyecto."
-          }
+          },
+          "midSeason": "Mitad de temporada no es un problema: lleva DiveDay en paralelo con lo que ya usas durante un ciclo de salidas, y una segunda importación actualiza a tus buceadores en vez de duplicarlos — una tarde, no un plan de proyecto."
         },
         "coexist": {
           "item1": {

@@ -514,6 +514,18 @@ stacked under "Going out". The inventory also lost its card border and became a 
 a second rounded box beside the import mockup read as the mockup's twin, when the two halves are a
 picture and a list.
 
+**The arriving column answers mid-season, in the guides' own words** (2026-08-28). A shop reading
+"bring your records in clean" in August is not asking whether an import works — it is doing the
+arithmetic of switching with a season's bookings already on the books, and the four-phase move rail
+that answers it lives several thousand pixels away on a switching guide this reader may never open.
+One sentence now sits under the arriving lede, and it renders
+`marketing.guides.shared.cutover.midSeason` through `midSeasonCutover` in `src/lib/marketing.ts`
+rather than a homepage wording of the same promise: the guides walk the move at four steps, `/`
+compresses it to one, and both live in the same block of the bundle so an editor rewriting either
+is reading the other. This is the export claim's rule applied to a second claim. The guides do not
+additionally render the summary — beside the four steps it compresses, it would be a caption
+restating its own section.
+
 **The band carries two links, and they are not the same door twice.** The 2026-08-13 redesign merged
 two stacked link CTAs under the section copy — one to `/switching`, one straight to
 `/switching/spreadsheet` — into a single hub link, on the reasoning that the hub already forks and
@@ -600,6 +612,7 @@ structure* live; none of them may contain an English sentence:
 | Feature claims shared across pages | `src/lib/marketing.ts` (`productFeatureGroups`, key registry) | `marketing.features.*` in the bundles |
 | Price, plan name, included list | `src/lib/marketing.ts` (`earlyAccessPrice`) — the `$99` figure is the only literal, and the only place it exists | `marketing.price.*` in the bundles |
 | Export claim shared by home + pricing | `src/lib/marketing.ts` (`fullShopExport`) | `marketing.export.*` in the bundles |
+| Mid-season cutover claim shared by home + the guides | `src/lib/marketing.ts` (`midSeasonCutover`) | `marketing.guides.shared.cutover.*` in the bundles |
 | Shared link-preview card fields every page's `openGraph` needs | `src/lib/marketing.ts` (`sharedLinkCard`) | none — URLs and dimensions, no words |
 | Capability index on `/product` | `src/lib/marketing.ts` (`productCapabilityIndex`) | `marketing.capabilities.*` in the bundles |
 | Page-specific narrative copy | The page file (`src/app/{page,product/page,pricing/page}.tsx`) | `marketing.home/product/pricing.*` in the bundles |
