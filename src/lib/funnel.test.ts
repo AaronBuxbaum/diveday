@@ -30,6 +30,13 @@ describe("eventSource", () => {
     expect(eventSource("product-mid")).toBe("product-mid");
     expect(eventSource("product")).toBe("product");
     expect(trialHref("product-mid")).toBe("/onboard?from=product-mid");
+    // `/product` now offers the same action from three positions. The index
+    // door is the page's own dare — "every one of these lines is something you
+    // can go and do in the live demo right now" — and a reader convinced by the
+    // inventory is a different moment from one convinced by the dock story
+    // above it, so it gets its own bucket rather than inflating either.
+    expect(eventSource("product-index")).toBe("product-index");
+    expect(trialHref("product-index")).toBe("/onboard?from=product-index");
     // Same split on the pricing page: its hero door and the door that closes
     // the objection layer answer different moments in the same visit.
     expect(eventSource("pricing-close")).toBe("pricing-close");

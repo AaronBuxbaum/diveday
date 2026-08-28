@@ -48,7 +48,10 @@ test("an owner records a captain's languages, and the public schedule says so", 
   // page exposes the aggregate languages, never a crew roster or a promise
   // that a named guide will be aboard.
   await page.getByRole("link", { name: "Two-Tank Reef — Molasses & French" }).click();
-  const aboardLanguages = page.getByText(/Languages aboard/);
+  // "Deutsch, English and 日本語 aboard", inside the conditions line above the
+  // form — the label moved into the phrase when the four conditions tiles
+  // collapsed into one line (ADR 20260827-the-divers-thread, decision 2).
+  const aboardLanguages = page.getByText(/aboard$/);
   await expect(aboardLanguages).toBeVisible();
   await expect(aboardLanguages).toContainText("Deutsch");
   await expect(aboardLanguages).toContainText("日本語");
@@ -58,5 +61,5 @@ test("a shop with no recorded languages shows no line at all", async ({ page, pr
   await page.goto(`/s/${privateShop.slug}`);
   await expect(page.getByText(/We speak/)).toHaveCount(0);
   await page.getByRole("link", { name: "Two-Tank Reef — Molasses & French" }).click();
-  await expect(page.getByText(/Languages aboard/)).toHaveCount(0);
+  await expect(page.getByText(/aboard$/)).toHaveCount(0);
 });

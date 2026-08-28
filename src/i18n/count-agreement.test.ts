@@ -3,6 +3,7 @@ import { fill, pluralForm } from "./fill";
 import { diverTranslator } from "./messages";
 import { DIVER_LOCALES } from "./settings";
 import { staffTranslator } from "./staff-messages";
+import { daySpineSummaryText } from "./today-labels";
 
 /**
  * **A count of one, read in every language we ship.**
@@ -22,56 +23,47 @@ import { staffTranslator } from "./staff-messages";
  * correct — which is exactly how "1 bloqueados" survived on the shop home.
  */
 
-/** The departure card's boarding line, composed the way `DepartureBoard` does. */
-function boardingSummary(locale: string, counts: Record<string, number>): string {
-  const t = staffTranslator(locale);
-  const fragment = (count: number, name: string) =>
-    fill(
-      pluralForm(
-        count,
-        {
-          one: t.raw(`shared.today.departureBoard.boarding${name}One` as never),
-          other: t.raw(`shared.today.departureBoard.boarding${name}Other` as never),
-        },
-        locale,
-      ),
-      { count },
-    );
-  return fill(t.raw("shared.today.departureBoard.boardingSummary"), {
-    aboard: fragment(counts.aboard ?? 0, "Aboard"),
-    ready: fragment(counts.ready ?? 0, "Ready"),
-    blocked: fragment(counts.blocked ?? 0, "Blocked"),
-    open: fragment(counts.open ?? 0, "Open"),
-  });
-}
-
-describe("the departure card's boarding line", () => {
-  it("reads as Spanish at one, in all four counts", () => {
-    // The line issue #778 was reported against. Every one of the four was
-    // wrong: Spanish inflects the adjective as well as the noun, so a boat with
-    // one diver in each state produced three ungrammatical fragments at once.
-    expect(boardingSummary("es-ES", { aboard: 1, ready: 1, blocked: 1, open: 1 })).toBe(
-      "1 a bordo · 1 listo para embarcar · 1 bloqueado · 1 plaza libre",
-    );
-  });
-
-  it("reads as English at one", () => {
-    expect(boardingSummary("en-US", { aboard: 1, ready: 1, blocked: 1, open: 1 })).toBe(
-      "1 aboard · 1 clear to board · 1 blocked · 1 seat open",
-    );
-  });
-
-  it.each(DIVER_LOCALES)("leaves no placeholder unresolved in %s at any count", (locale) => {
+/**
+ * **The station's head count, read at one, in every language we ship.**
+ *
+ * This block used to compose the departure card's four-fragment boarding line
+ * ("1 aboard · 1 clear to board · 1 blocked · 1 seat open"), which was the
+ * sentence issue #778 was reported against: Spanish inflects the adjective as
+ * well as the noun, so a boat with one diver in each state produced three
+ * ungrammatical fragments at once. That card retired with the shop home's
+ * recomposition into the day spine (ADR 20260827-clearwater-surface-language,
+ * decision 4) and the four hand-joined fragments went with it — a station says
+ * its head count as a figure and one plural sentence.
+ *
+ * The reason for testing it did not retire, so the same question is asked of
+ * what replaced it: the spine's spot count, and the summary sentence above the
+ * first station, both rendered at one.
+ */
+describe("the day spine's counts", () => {
+  it.each(DIVER_LOCALES)("inflects the open-spots line in %s at one", (locale) => {
+    const t = staffTranslator(locale);
     for (const count of [0, 1, 2, 11]) {
-      const line = boardingSummary(locale, {
-        aboard: count,
-        ready: count,
-        blocked: count,
-        open: count,
-      });
+      const line = t("shopHome.spine.spotsOpen", { count });
       expect(line, `${locale} at ${count}`).not.toContain("{");
       expect(line, `${locale} at ${count}`).not.toContain("plural,");
     }
+    // The singular and the plural are genuinely different sentences; asserting
+    // only "no braces left" would pass against a pair identical by mistake.
+    expect(t("shopHome.spine.spotsOpen", { count: 1 })).not.toBe(
+      t("shopHome.spine.spotsOpen", { count: 2 }).replace("2", "1"),
+    );
+  });
+
+  it.each(DIVER_LOCALES)("inflects the summary sentence in %s at one", (locale) => {
+    const t = staffTranslator(locale);
+    const line = daySpineSummaryText(t, { boats: 1, jobs: 1, nextDepartureTime: "7:00 AM" });
+    expect(line, locale).not.toBeNull();
+    expect(line ?? "", locale).not.toContain("{");
+    expect(line ?? "", locale).not.toContain("plural,");
+    // The after-the-fact half is a different sentence, not a shorter one.
+    const away = daySpineSummaryText(t, { boats: 1, jobs: 1, nextDepartureTime: null });
+    expect(away ?? "", locale).not.toContain("{");
+    expect(away, locale).not.toBe(line);
   });
 });
 

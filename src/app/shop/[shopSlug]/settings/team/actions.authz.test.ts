@@ -16,7 +16,7 @@ import {
 /**
  * Team management is the gate over the gates: whoever can edit roles here can
  * hand themselves every other H-14 surface — refunds, erasure, pricing — on the
- * next request. So a captain reaching `saveAllStaffRolesAction` with a hand-made
+ * next request. So a captain reaching `saveStaffRolesAction` with a hand-made
  * form post is the privilege-escalation path in this codebase, and
  * `teamManagementBlock()` is the only thing closing it.
  *
@@ -42,8 +42,8 @@ const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
 const {
   removeStaffAction,
-  saveAllStaffRolesAction,
   saveStaffEmergencyContactAction,
+  saveStaffRolesAction,
   setStaffStatusAction,
 } = await import("./actions");
 
@@ -65,22 +65,16 @@ async function accountStatusOf(db: AppDb, personId: string): Promise<string> {
 }
 
 /**
- * The whole-page "Save changes" form: every staff member's current roles ticked,
- * with `overrides` replacing one person's. Sending only the edited person would
- * trip the action's own "someone has no roles" guard and never reach the write.
+ * One row's roles disclosure, as it posts when it closes: the person it is
+ * about, and one `role_<role>` per box left ticked (ADR
+ * 20260827-the-shops-shelves, slice 9h — the page-level "Save changes" that
+ * batched every row into one submit is gone).
  */
-async function rolesForm(
-  db: AppDb,
-  shopId: string,
-  overrides: Record<string, Role[]> = {},
-): Promise<FormData> {
-  const staff = await listShopStaff(db, shopId);
+function rolesForm(personId: string, roles: Role[], extra: Record<string, string> = {}): FormData {
   const formData = new FormData();
-  for (const member of staff) {
-    for (const role of overrides[member.personId] ?? member.roles) {
-      formData.set(`role_${member.personId}_${role}`, "on");
-    }
-  }
+  formData.set("personId", personId);
+  for (const role of roles) formData.set(`role_${role}`, "on");
+  for (const [key, value] of Object.entries(extra)) formData.set(key, value);
   return formData;
 }
 
@@ -109,9 +103,9 @@ describe("editing the team's roles", () => {
   it("refuses a captain who posts himself an owner role — this is the escalation path", async () => {
     const { db, shop, captain } = await context();
     signIn(shop, captain);
-    const formData = await rolesForm(db, shop.id, { [captain]: ["owner", "manager"] });
+    const formData = rolesForm(captain, ["owner", "manager"]);
 
-    const to = await redirectedTo(() => saveAllStaffRolesAction(formData));
+    const to = await redirectedTo(() => saveStaffRolesAction(formData));
 
     expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=not-authorized`);
     expect(await rolesOf(db, captain)).toEqual(["captain"]);
@@ -120,23 +114,150 @@ describe("editing the team's roles", () => {
   it("refuses a captain who posts the owner *out* of her own roles", async () => {
     const { db, shop, captain, owner } = await context();
     signIn(shop, captain);
-    const formData = await rolesForm(db, shop.id, { [owner]: ["crew"] });
+    const formData = rolesForm(owner, ["crew"]);
 
-    const to = await redirectedTo(() => saveAllStaffRolesAction(formData));
+    const to = await redirectedTo(() => saveStaffRolesAction(formData));
 
     expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=not-authorized`);
     expect(await rolesOf(db, owner)).toEqual(["manager", "owner"]);
   });
 
-  it("lets an owner change a role", async () => {
+  // The 9h round-trip: one row's close is one row's save, and the answer names
+  // the row it is about so nothing lands in a page banner.
+  it("saves one row and answers on that row, carrying its Undo", async () => {
     const { db, shop, captain, owner } = await context();
     signIn(shop, owner);
-    const formData = await rolesForm(db, shop.id, { [captain]: ["captain", "divemaster"] });
 
-    const to = await redirectedTo(() => saveAllStaffRolesAction(formData));
+    const to = await redirectedTo(() =>
+      saveStaffRolesAction(rolesForm(captain, ["captain", "divemaster"])),
+    );
 
-    expect(to).toBe(`/shop/${shop.slug}/settings/team?notice=changes-saved`);
+    expect(to).toBe(
+      `/shop/${shop.slug}/settings/team?notice=changes-saved&rolesFor=${captain}&priorRoles=captain#staff-${captain}`,
+    );
     expect(await rolesOf(db, captain)).toEqual(["captain", "divemaster"]);
+  });
+
+  it("leaves every other row alone — a row's save is only ever its own", async () => {
+    const { db, shop, captain, owner } = await context();
+    signIn(shop, owner);
+    const ownerRolesBefore = await rolesOf(db, owner);
+
+    await redirectedTo(() => saveStaffRolesAction(rolesForm(captain, ["crew"])));
+
+    expect(await rolesOf(db, owner)).toEqual(ownerRolesBefore);
+  });
+
+  it("undoes in exactly one re-save, and offers no undo back", async () => {
+    const { db, shop, captain, owner } = await context();
+    signIn(shop, owner);
+    await redirectedTo(() => saveStaffRolesAction(rolesForm(captain, ["crew"])));
+    expect(await rolesOf(db, captain)).toEqual(["crew"]);
+
+    // What the row's Undo posts: the pre-save roles the redirect handed back,
+    // plus the flag that stops the chain.
+    const to = await redirectedTo(() =>
+      saveStaffRolesAction(rolesForm(captain, ["captain"], { undo: "1" })),
+    );
+
+    expect(await rolesOf(db, captain)).toEqual(["captain"]);
+    expect(to).toBe(
+      `/shop/${shop.slug}/settings/team?notice=changes-saved&rolesFor=${captain}#staff-${captain}`,
+    );
+    expect(to).not.toContain("priorRoles");
+  });
+
+  it("offers no Undo for a save that changed nothing", async () => {
+    const { db, shop, captain, owner } = await context();
+    signIn(shop, owner);
+
+    const to = await redirectedTo(() => saveStaffRolesAction(rolesForm(captain, ["captain"])));
+
+    expect(to).not.toContain("priorRoles");
+    expect(await rolesOf(db, captain)).toEqual(["captain"]);
+  });
+
+  // The two refusals a row's disclosure can produce. Both name the row, and
+  // both carry the fragment that puts the reader back on it — the page banner
+  // never sees either (./notices.test.ts holds the routing half).
+  it("refuses an empty row on the row itself, writing nothing", async () => {
+    const { db, shop, captain, owner } = await context();
+    signIn(shop, owner);
+
+    const to = await redirectedTo(() => saveStaffRolesAction(rolesForm(captain, [])));
+
+    expect(to).toBe(
+      `/shop/${shop.slug}/settings/team?notice=roles-invalid&rolesFor=${captain}#staff-${captain}`,
+    );
+    expect(await rolesOf(db, captain)).toEqual(["captain"]);
+  });
+
+  // The lost update. `setStaffRoles` is a delete-then-insert of the whole staff
+  // subset, so without a baseline the second of two people with this page open
+  // silently reverts the first — on the one surface where what gets reverted is
+  // who may reach every other gated surface in the shop. Refused, not merged:
+  // the same answer `ConflictGuardedForm` gives the course editor (issue #820).
+  it("refuses a close whose baseline is no longer the row's roles, writing nothing", async () => {
+    const { db, shop, captain, owner } = await context();
+    signIn(shop, owner);
+    // Somebody else got there first: the captain is a divemaster now.
+    await redirectedTo(() => saveStaffRolesAction(rolesForm(captain, ["captain", "divemaster"])));
+
+    // This row was rendered before that, and still believes "captain".
+    const to = await redirectedTo(() =>
+      saveStaffRolesAction(rolesForm(captain, ["captain", "crew"], { baseline: "captain" })),
+    );
+
+    expect(to).toBe(
+      `/shop/${shop.slug}/settings/team?notice=roles-conflict&rolesFor=${captain}#staff-${captain}`,
+    );
+    expect(await rolesOf(db, captain)).toEqual(["captain", "divemaster"]);
+  });
+
+  it("writes when the baseline still is the row's roles, whatever order it arrives in", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+
+    const to = await redirectedTo(() =>
+      saveStaffRolesAction(
+        rolesForm(owner, ["owner", "manager", "captain"], { baseline: "owner,manager" }),
+      ),
+    );
+
+    expect(to).toContain("notice=changes-saved");
+    expect(await rolesOf(db, owner)).toEqual(["captain", "manager", "owner"]);
+  });
+
+  it("refuses an Undo left on screen while somebody else edited the same person", async () => {
+    const { db, shop, captain, owner } = await context();
+    signIn(shop, owner);
+    // The save whose answer offered the Undo: the row held "captain" before it.
+    await redirectedTo(() => saveStaffRolesAction(rolesForm(captain, ["crew"])));
+    // Then somebody else moved, and that Undo button is still on screen.
+    await redirectedTo(() =>
+      saveStaffRolesAction(rolesForm(captain, ["instructor"], { baseline: "crew" })),
+    );
+
+    const to = await redirectedTo(() =>
+      saveStaffRolesAction(rolesForm(captain, ["captain"], { undo: "1", baseline: "crew" })),
+    );
+
+    expect(to).toBe(
+      `/shop/${shop.slug}/settings/team?notice=roles-conflict&rolesFor=${captain}#staff-${captain}`,
+    );
+    expect(await rolesOf(db, captain)).toEqual(["instructor"]);
+  });
+
+  it("refuses the last owner on the owner's own row, writing nothing", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+
+    const to = await redirectedTo(() => saveStaffRolesAction(rolesForm(owner, ["manager"])));
+
+    expect(to).toBe(
+      `/shop/${shop.slug}/settings/team?notice=last-owner&rolesFor=${owner}#staff-${owner}`,
+    );
+    expect(await rolesOf(db, owner)).toEqual(["manager", "owner"]);
   });
 });
 

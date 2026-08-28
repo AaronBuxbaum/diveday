@@ -58,6 +58,98 @@ export async function acceptAgeAttestation(page: Page) {
 }
 
 /**
+ * Choose the party size on a public booking form, whichever control the boat's
+ * remaining seats put there.
+ *
+ * The count is a **segmented row of radios up to six seats and a `<select>`
+ * above that** (ADR 20260827-the-divers-thread, decision 2 —
+ * `MAX_PUBLIC_PARTY_SIZE` is 20, and a twenty-segment track fits no phone), so
+ * which shape a spec meets depends on how full the departure is, which is not
+ * a fact any of these specs is about. Both shapes answer to one accessible
+ * name, so the wait is shared; only the act differs.
+ */
+export async function choosePartySize(page: Page, count: number) {
+  const control = page.getByLabel("Number of divers");
+  await expect(control).toHaveAttribute("data-hydrated", "true");
+  if ((await control.evaluate((node: Element) => node.tagName)) === "SELECT") {
+    await control.selectOption(String(count));
+    return;
+  }
+  const label = count === 1 ? "1 diver" : `${count} divers`;
+  // Click the **label**, which is what a diver's thumb lands on, then assert
+  // the input took the value. `check()` on the radio itself cannot work here
+  // and cannot fail fast either: the input is `sr-only`, a 1px box lying under
+  // the very `<label>` that wraps it, so Playwright's hit-target check finds
+  // the label in front of its click point and retries that — "intercepts
+  // pointer events" — until the whole test times out. Three specs and both
+  // party-organizer captures died that way on 2026-08-28, each one a
+  // three-minute hang rather than an assertion.
+  await control.getByText(label, { exact: true }).click();
+  await expect(page.getByRole("radio", { name: label, exact: true })).toBeChecked();
+}
+
+/**
+ * Book one seat on the departure whose public page is already open, and land
+ * on the diver's own thread (`/ready/<token>`).
+ *
+ * The trip page stopped carrying the packing list and the dive briefings on
+ * 2026-08-28 (ADR 20260827-the-divers-thread, decision 2 — the page sells, then
+ * closes; what to bring and what you'll see down there are *preparation*, and
+ * preparation belongs to a diver who has a seat). A spec about that reading
+ * therefore has to hold one.
+ */
+export async function bookASeatAndOpenThread(page: Page, name: string) {
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Name", { exact: true }).fill(name);
+  await page
+    .getByLabel("Email", { exact: true })
+    .fill(`${name.toLowerCase().replace(/[^a-z]+/g, "-")}-${e2eNow().getTime()}@example.com`);
+  await acceptAgeAttestation(page);
+  await page.getByRole("button", { name: /^Book/ }).click();
+  await expect(page).toHaveURL(/\/ready\//);
+}
+
+/**
+ * The thread page's **one status statement** — "2 of 4 done · Next: Gear and
+ * sizes" (ADR 20260827-the-divers-thread, decision 3, slice 7c).
+ *
+ * The stable anchor for "the prep state has rendered". Specs used to wait on
+ * the heading "Your pre-trip checklist", which went with the card that carried
+ * it; every remaining heading on the page is either the trip's own title or a
+ * step name only some bookings have.
+ *
+ * A `data-testid` through `page.locator` rather than `getByTestId`, because
+ * counting it is half of what it pins: exactly one element on the page may say
+ * the booking's status.
+ */
+export function threadStatus(page: Page): Locator {
+  return page.locator('[data-testid="thread-status"]');
+}
+
+/**
+ * Open one step of the thread's spine and hand back its `<details>`.
+ *
+ * **At most one step is open at rest**, so a spec that wants the rental form,
+ * the recency select or a card-entry disclosure has to open its step first —
+ * exactly as a diver does. The steps share one native `<details name>`
+ * accordion, so opening one closes whichever was open.
+ *
+ * Scoped through `data-thread-step` and `page.locator`: `e2e/fixtures.ts`
+ * filters every `getBy*` to visible nodes, which a closed disclosure's
+ * contents are not.
+ */
+export async function openThreadStep(page: Page, step: string): Promise<Locator> {
+  const details = page.locator(`[data-thread-step="${step}"] details`);
+  await details.waitFor();
+  if (await details.evaluate((element: HTMLDetailsElement) => element.open)) return details;
+  await details.locator("summary").click();
+  // Wait on the disclosure's own state, never on the form inside it: a step
+  // whose body is slow to lay out is still open the instant the tap lands.
+  await expect(details).toHaveAttribute("open", "");
+  return details;
+}
+
+/**
  * "Now" as the server sees it. The e2e fleet freezes its clock at
  * E2E_FROZEN_CLOCK (playwright.config.ts → src/lib/clock.ts), so any date a
  * test computes for a form input, or any year it asserts against a
@@ -296,6 +388,19 @@ export async function waiverLinkFromToast(page: Page): Promise<string> {
  * departures" until a trip card matching `title` appears, then returns its
  * link locator — call `.click()`, or `.getAttribute("href")` to read the
  * path without racing the click's own navigation.
+ *
+ * **The board is two compositions, and this crawl walks the stream.** From
+ * `xl` (1280px) up the board draws one week as seven columns and the
+ * cursor-paged stream is `display:none` behind it (H-63, ADR
+ * 20260827-clearwater-surface-language); below that the stream is the board.
+ * The stream is in the DOM at every width and is the only one of the two that
+ * can walk a whole horizon in one grammar — the week pages seven days at a
+ * time — so the crawl reads it either way, and steps by URL rather than by
+ * clicking a pager that at desktop is out of the accessibility tree entirely.
+ * The returned link is the one the reader can actually *see* where either
+ * composition shows the departure, so a `.click()` never lands on the hidden
+ * twin; where neither paints it (a desktop board whose visible week is not the
+ * one the trip sits in) it is still the right href.
  */
 export async function findTripOnBoard(
   page: Page,
@@ -303,34 +408,43 @@ export async function findTripOnBoard(
   title: string | RegExp,
 ): Promise<Locator> {
   await page.goto(`/shop/${shopSlug}/schedule/board`);
-  // The same barrier the `?after=` pages get below, but for the first page:
-  // `goto` resolves into the segment's loading.tsx skeleton while the real
-  // list streams in, and `count()` doesn't auto-wait — so a slow stream-in
-  // read as "no cards and no pager" and the loop concluded the board ended
-  // (seen as a one-in-many-runs CI failure hunting a seeded trip). The
-  // builder section exists only in the streamed body, whatever the board
-  // holds, so its appearance proves the cards and pager are in the DOM. (The
-  // old wait target, the "Schedule overview" stat row, left the page with the
-  // KPI tiles.)
+  // The same barrier every page below gets: `goto` resolves into the segment's
+  // loading.tsx skeleton while the real list streams in, and `count()` doesn't
+  // auto-wait — so a slow stream-in read as "no cards and no pager" and the
+  // loop concluded the board ended (seen as a one-in-many-runs CI failure
+  // hunting a seeded trip). The builder section exists only in the streamed
+  // body, whatever the board holds, so its appearance proves the cards and
+  // pager are in the DOM. (The old wait target, the "Schedule overview" stat
+  // row, left the page with the KPI tiles.)
   await page.getByRole("region", { name: "Schedule builder" }).waitFor();
   for (let hops = 0; hops < 15; hops++) {
     const link = page.locator(`a[href^="/shop/${shopSlug}/trips/"]`).filter({ hasText: title });
+    // The visible copy first: both compositions render the same departure with
+    // the same href, and at any width one of the two is `display:none`. A
+    // caller that clicks what it gets back has to be handed the one on screen.
+    const onScreen = link.filter({ visible: true });
+    if ((await onScreen.count()) > 0) return onScreen.first();
     if ((await link.count()) > 0) return link.first();
-    const later = page.getByRole("link", { name: "Show later departures" });
+    // An attribute, not a role query. From `xl` up this pager sits inside the
+    // hidden day stream: it is in the DOM carrying the href that names the next
+    // cursor page, but out of the accessibility tree, so the crawl would
+    // conclude the board ended on page one. `includeHidden: true` looks like
+    // the answer and is not — `e2e/fixtures.ts` wraps every `getByRole` in
+    // `.filter({ visible: true })`, which discards the option silently, and a
+    // first fix that passed it went red on CI unchanged (visual shard 2/4,
+    // "not found on the schedule board after paging"). `page.locator` is the
+    // one query the fixture leaves alone.
+    const later = page.locator("a[data-board-pager='next']");
     if ((await later.count()) === 0) break;
-    // Each hop is a client-side <Link> navigation into the segment's
-    // loading.tsx skeleton: the URL moves first, the destination's real
-    // content streams in after. `count()` doesn't auto-wait, so without a
-    // barrier the next iteration can read the linkless skeleton, see neither
-    // cards nor pager, and conclude the board ended. Every page reached via
-    // "Show later departures" carries `?after=`, which always renders the
-    // "Back to the next departure" escape link alongside the trip cards (and
-    // the skeleton contains no links at all) — so its appearance proves the
-    // streamed content is in the DOM.
     const nextHref = await later.getAttribute("href");
-    await later.click();
-    if (nextHref) await page.waitForURL(`**${nextHref}`);
-    await page.getByRole("link", { name: "Back to the next departure" }).first().waitFor();
+    if (!nextHref) break;
+    // A navigation rather than a click, for the same reason: the link cannot
+    // be clicked at a width that does not paint it. The barrier after it is
+    // the one above — the builder section exists only in the streamed body, so
+    // its appearance proves this page's cards and pager are in the DOM rather
+    // than the linkless skeleton.
+    await page.goto(nextHref);
+    await page.getByRole("region", { name: "Schedule builder" }).waitFor();
   }
   throw new Error(`trip "${title}" not found on the schedule board after paging`);
 }

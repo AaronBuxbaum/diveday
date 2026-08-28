@@ -4,7 +4,7 @@ import { EntryDone } from "@/components/account/EntryShell";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
-import { TokenPageHeader } from "@/components/TokenPageHeader";
+import { ThreadShell } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field } from "@/components/ui/form";
 import { getDb } from "@/db/client";
@@ -113,16 +113,16 @@ export default async function SeatClaimPage({
   const timeRange = formatTimeRangeTz(data.startsAt, data.endsAt, locale, data.timezone);
 
   return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
-      <FlashParams params={["error"]} />
-      <TokenPageHeader
-        eyebrow={[t("seatClaim.eyebrow"), data.shopName]}
-        title={t("seatClaim.heading", { trip: data.tripTitle })}
-      >
+    <ThreadShell
+      shopName={data.shopName}
+      title={t("seatClaim.heading", { trip: data.tripTitle })}
+      meta={
         <p className="mt-1 text-base text-muted">
           {t("seatClaim.when", { date: when, time: timeRange })}
         </p>
-      </TokenPageHeader>
+      }
+    >
+      <FlashParams params={["error"]} />
 
       {notice ? (
         <div className="mt-6">
@@ -187,6 +187,6 @@ export default async function SeatClaimPage({
         </form>
         <p className="mt-4 text-sm text-muted">{t("seatClaim.privacyNote")}</p>
       </section>
-    </main>
+    </ThreadShell>
   );
 }

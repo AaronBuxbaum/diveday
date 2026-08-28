@@ -272,7 +272,10 @@ test.describe("as owner", () => {
 
     // The form is genuinely in its payable shape — the promo box only exists
     // here, so assert the state it belongs to rather than the box alone.
-    await expect(page.getByText(/per diver — paid securely when you book\./)).toBeVisible();
+    // The money resolves in one block above the button now, so the payable
+    // shape is "Due now" rather than a price quoted under the card's heading
+    // (ADR 20260827-the-divers-thread, decision 2).
+    await expect(page.getByText("Due now")).toBeVisible();
     await expect(page.getByRole("button", { name: /^Book and pay/ })).toBeVisible();
     await expect(page.getByText("You'll finish paying on a secure Stripe page.")).toBeVisible();
 

@@ -6,6 +6,7 @@ import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
+import { GroupLabel } from "@/components/ui/ledger";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { RecapSendControl } from "./RecapSendControl";
@@ -135,9 +136,7 @@ export function RecapNoteEditor({
       tripId &&
       recapNowMs !== undefined ? (
         <div className="mt-4 border-t border-border pt-4">
-          <h4 className="text-xs font-bold tracking-wide text-muted uppercase">
-            {t("closeout.recap.heading")}
-          </h4>
+          <GroupLabel as="h4">{t("closeout.recap.heading")}</GroupLabel>
           <RecapSendControl
             sendAction={recapSendAction}
             togglePauseAction={toggleRecapAutoSendPauseAction}
@@ -193,10 +192,10 @@ export function RecapNoteEditor({
 
       {photos.length > 0 ? (
         <div className="mt-4 border-t border-border pt-4">
-          <h4 className="text-xs font-bold tracking-wide text-muted uppercase">
+          <GroupLabel as="h4">
             {t("trips.recapPhotos.heading")}{" "}
-            <span className="font-normal text-muted tabular-nums">{photos.length}</span>
-          </h4>
+            <span className="font-normal tabular-nums">{photos.length}</span>
+          </GroupLabel>
           <p className="mt-1 text-sm text-muted">{t("trips.recapPhotos.description")}</p>
           <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {photos.map((photo) => (
@@ -254,10 +253,10 @@ export function RecapNoteEditor({
 
       {uploadCrewPhotoAction && deleteCrewPhotoAction ? (
         <div className="mt-4 border-t border-border pt-4">
-          <h4 className="text-xs font-bold tracking-wide text-muted uppercase">
+          <GroupLabel as="h4">
             {t("closeout.crewPhotos.heading")}{" "}
-            <span className="font-normal text-muted tabular-nums">{crewPhotos.length}</span>
-          </h4>
+            <span className="font-normal tabular-nums">{crewPhotos.length}</span>
+          </GroupLabel>
           <p className="mt-1 text-sm text-muted">{t("closeout.crewPhotos.description")}</p>
 
           {crewPhotos.length > 0 ? (

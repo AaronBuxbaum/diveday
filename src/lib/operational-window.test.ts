@@ -4,12 +4,9 @@ import {
   ARRIVALS_LOOKBACK_HOURS,
   arrivalsWindow,
   arrivalsWindowIsInsideHorizon,
-  BLOCKERS_TRIPS_PER_PAGE,
   OPERATIONAL_HORIZON_DAYS,
   OPERATIONAL_HORIZON_MS,
-  OPERATIONAL_MAX_TRIPS,
   operationalWindow,
-  pageOf,
   SHOP_DAY_SCAN_HOURS,
   shopDayWindow,
   withinWindow,
@@ -106,39 +103,5 @@ describe("the shop-day scan", () => {
     const horizon = operationalWindow(NOW);
     expect(shopDay.from.getTime()).toBeLessThan(horizon.from.getTime());
     expect(shopDay.to.getTime()).toBeLessThan(horizon.to.getTime());
-  });
-});
-
-describe("work bounds", () => {
-  it("keeps the inspection cap comfortably above a paged screenful", () => {
-    expect(OPERATIONAL_MAX_TRIPS).toBeGreaterThan(BLOCKERS_TRIPS_PER_PAGE);
-  });
-});
-
-describe("pageOf", () => {
-  const items = Array.from({ length: 23 }, (_, index) => index);
-
-  it("slices the requested page", () => {
-    expect(pageOf(items, 1, 10)).toMatchObject({ page: 1, pageCount: 3 });
-    expect(pageOf(items, 2, 10).items).toEqual([10, 11, 12, 13, 14, 15, 16, 17, 18, 19]);
-    expect(pageOf(items, 3, 10).items).toEqual([20, 21, 22]);
-  });
-
-  it("clamps a hand-typed page rather than showing an empty queue", () => {
-    expect(pageOf(items, 0, 10).page).toBe(1);
-    expect(pageOf(items, -3, 10).page).toBe(1);
-    expect(pageOf(items, Number.NaN, 10).page).toBe(1);
-    expect(pageOf(items, 99, 10)).toMatchObject({ page: 3, pageCount: 3 });
-  });
-
-  it("reports one page for an empty queue instead of zero", () => {
-    expect(pageOf([], 1, 10)).toEqual({ page: 1, pageCount: 1, items: [] });
-  });
-
-  it("never drops an item across the pages it reports", () => {
-    const seen: number[] = [];
-    const { pageCount } = pageOf(items, 1, 10);
-    for (let page = 1; page <= pageCount; page += 1) seen.push(...pageOf(items, page, 10).items);
-    expect(seen).toEqual(items);
   });
 });

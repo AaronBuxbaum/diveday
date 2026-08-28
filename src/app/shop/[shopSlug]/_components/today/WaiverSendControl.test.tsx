@@ -10,7 +10,7 @@ import {
 import { staffTranslator } from "@/i18n/staff-messages";
 
 // The control composes the `"use server"` action module — same treatment as
-// TodayQueue.test.tsx and BlockerGroups.test.tsx.
+// DaySpine.test.tsx.
 vi.mock("@/app/actions/waivers", () => ({ sendWaiversAction: vi.fn() }));
 
 // The outcome is `useActionState`'s to hold, and this suite is about what the

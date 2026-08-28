@@ -13,23 +13,21 @@ const ROLES: readonly OrientationRole[] = [
 
 describe("orientationTourHref", () => {
   /**
-   * The divemaster's "Try:" prompt pointed at `/shop/<slug>/blockers`, which
-   * has been a 308 to Today's by-departure view since ADR
-   * 20260803-not-ready-is-a-view. A staff link should land in one hop, and the
-   * registry has known the one-hop URL — query string and all — the whole time.
+   * The divemaster's "Try:" prompt pointed at `/shop/<slug>/blockers`, a 308 to
+   * a surface that then moved twice: first to Today's by-departure view, then —
+   * with that view — into the day spine itself (ADR
+   * 20260827-clearwater-surface-language, decision 4). A staff link lands in
+   * one hop, and it carries no query, because there is no view to select.
    */
-  it("sends a divemaster straight to the by-departure view, not through the 308", () => {
-    expect(orientationTourHref("blue-mantis", "divemaster", undefined)).toBe(
-      "/shop/blue-mantis?view=departures",
-    );
+  it("sends a divemaster to the bare home, in one hop and with no view query", () => {
+    const href = orientationTourHref("blue-mantis", "divemaster", undefined);
+    expect(href).toBe("/shop/blue-mantis");
+    expect(href).not.toContain("?");
   });
 
   it("points every role at a destination the registry declares", () => {
     const known = new Set(
-      STAFF_DESTINATIONS.map(
-        (destination) =>
-          `/shop/blue-mantis${destination.suffix}${destination.query ?? ""}` as string,
-      ),
+      STAFF_DESTINATIONS.map((destination) => `/shop/blue-mantis${destination.suffix}` as string),
     );
     for (const role of ROLES) {
       expect(known).toContain(orientationTourHref("blue-mantis", role, undefined));

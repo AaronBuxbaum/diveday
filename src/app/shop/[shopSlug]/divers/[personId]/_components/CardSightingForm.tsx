@@ -90,13 +90,7 @@ export function CardSightingForm({
         as="form"
         action={action}
         columns={1}
-        // `elevated={false}`: this disclosure opens inside a row of the cards
-        // list, which now wears the card shell itself — surface never stacks
-        // on surface.
-        className={sectionCardClass({
-          elevated: false,
-          className: "mt-2 gap-y-3 sm:w-72",
-        })}
+        className={sectionCardClass({ className: "mt-2 gap-y-3 sm:w-72" })}
       >
         <input type="hidden" name="certificationId" value={certificationId} />
         {cardType ? <input type="hidden" name="cardType" value={cardType} /> : null}

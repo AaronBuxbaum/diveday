@@ -217,9 +217,13 @@ export type FormNotice = { form: string; tone: NoticeTone; text: string };
  * a mistyped `form` name would otherwise fail silently as "no notice", which is
  * exactly the bug this whole mechanism exists to remove.
  */
-export function noticeForForm(
-  notice: FormNotice | undefined,
+export function noticeForForm<T extends FormNotice>(
+  notice: T | undefined,
   form: string,
-): FormNotice | undefined {
+): T | undefined {
+  // Generic rather than `FormNotice` in and out: a surface may widen the shape
+  // with fields of its own — the diver record carries the `?notice=` code
+  // itself, so it can tell its one earned moment from an ordinary success —
+  // and routing must not narrow those away on the way through.
   return notice?.form === form ? notice : undefined;
 }

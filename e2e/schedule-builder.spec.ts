@@ -183,70 +183,334 @@ test.describe("schedule builder", () => {
     ).toBeVisible();
   });
 
-  test("a pinned day header sits flush under the shop nav", async ({ page }) => {
-    // The board's day headers are sticky so a staffer scrolled into the middle
-    // of a two-week window still knows which day the rows under their thumb
-    // belong to. They pin directly under the staff shell's own sticky header,
-    // at a `top-[68px]` that is a *measured* constant: the nav's height is
-    // content-driven, so it cannot be derived in CSS, and nothing until this
-    // test checked that the number still matched the nav.
+  test("a pinned day header sits flush under the chrome bar, on both shells", async ({ page }) => {
+    // Sticky day headers so a reader scrolled into the middle of a long list
+    // still knows which day the rows under their thumb belong to. They pin
+    // directly under the one chrome bar both shells wear (ADR
+    // 20260827-clearwater-surface-language, decision 10), which they now read
+    // rather than measure: `top-(--chrome-h)` is the same declaration the bar
+    // sets its own height from. Before that token the board carried a
+    // hand-measured `top-[68px]` and only this test stood between it and the
+    // bar's next change, while the public schedule pinned at `top-0` and spent
+    // every scroll hidden underneath its own header — which is the failure
+    // this covers on the second shell.
     //
-    // Flush, not merely "clear of it", because the constant drifts in both
-    // directions and both are real. Too small and the day hides behind the nav.
-    // Too large and it floats in a band of dead space — which is not
-    // hypothetical: the nav was 169px on a phone until the dock moved its links
-    // out and left one 69px row, and a one-sided "clearance >= 0" check passed
-    // happily on a day header hanging 100px below the nav.
+    // Flush, not merely "clear of it", because the offset drifts in both
+    // directions and both are real. Too small and the day hides behind the
+    // bar. Too large and it floats in a band of dead space — which is not
+    // hypothetical: the staff bar was 169px on a phone until the dock moved
+    // its links out, and a one-sided "clearance >= 0" check passed happily on
+    // a day header hanging 100px below it.
     //
-    // The band below is deliberately asymmetric. 68px against a 69px nav is a
-    // 1px overlap on purpose (see ScheduleBuilder: it tucks under the nav's
-    // bottom border so no slit of scrolling content shows between the two), so
-    // -2 is the floor rather than 0.
-    await page.goto(BOARD);
-    await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
+    // The band below allows a pixel or two either way. `--chrome-h` is the
+    // bar's whole border-box, hairline included, so the header should land
+    // exactly flush — but a fractional device pixel or a sub-pixel layout
+    // rounding is not a regression, and a header tucking a pixel *under* the
+    // bar's bottom border is the safe side of the error to be on.
+    const measure = async () =>
+      await page.evaluate(async () => {
+        const frame = async () =>
+          await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+        // Everything pinned at an offset of its own: the bar itself sits at 0,
+        // a day header clears it.
+        const dayHeaders = () =>
+          [...document.querySelectorAll<HTMLElement>("*")].filter((el) => {
+            const style = getComputedStyle(el);
+            return style.position === "sticky" && Number.parseFloat(style.top) > 0;
+          });
 
-    // Phone, tablet, desktop — the widths at which the nav has historically
-    // changed shape, so a future re-wrap is caught wherever it happens.
-    for (const width of [390, 768, 1280]) {
-      await page.setViewportSize({ width, height: 800 });
-      const measured = await page.evaluate(async () => {
-        window.scrollTo(0, document.body.scrollHeight / 2);
-        // A frame boundary, not a timing guess: sticky offsets are resolved
-        // during layout, so the next animation frame is the first moment the
-        // pinned positions are readable at all.
-        await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
-        const nav = document.querySelector("header.sticky");
-        const navBottom = nav ? nav.getBoundingClientRect().bottom : 0;
-        const headers = [...document.querySelectorAll("h3")]
-          .map((heading) => heading.parentElement)
-          .filter(
-            (el): el is HTMLElement => el !== null && getComputedStyle(el).position === "sticky",
-          );
+        // Scroll to a position *inside* a day rather than halfway down the
+        // page. A day header only holds its offset while its own day is on
+        // screen, so "halfway down" lands between two days as often as not.
+        //
+        // Which day matters, and picking the second one is a guess that fails:
+        // a day whose section is shorter than the scroll delta has already
+        // pushed its own header off the top before the next day's arrives, so
+        // nothing is pinned and the measurement reads a dead zone rather than a
+        // regression. That is what went red on the board at 768px, where the
+        // stream renders a short day. So measure every section first and scroll
+        // into the *tallest* one — the day with the most room to hold its
+        // header pinned. That makes the scroll position a fact about the page
+        // instead of a guess about it, at any width and on either shell.
+        window.scrollTo(0, 0);
+        await frame();
+        const headers = dayHeaders();
         const offset = headers[0] ? Number.parseFloat(getComputedStyle(headers[0]).top) : -1;
+        const tops = headers.map((el) => el.getBoundingClientRect().top + window.scrollY);
+        const documentEnd = document.documentElement.scrollHeight;
+        // Each day's section runs from its own header to the next one, and the
+        // last runs to the end of the document.
+        const sections = tops.map((top, i) => ({
+          top,
+          height: (tops[i + 1] ?? documentEnd) - top,
+        }));
         // "Pinned" is a header holding its sticky offset rather than flowing.
-        const pinned = headers
-          .map((el) => el.getBoundingClientRect())
-          .filter((rect) => Math.abs(rect.top - offset) < 1.5);
+        const pinnedNow = () =>
+          dayHeaders()
+            .map((el) => el.getBoundingClientRect())
+            .filter((rect) => Math.abs(rect.top - offset) < 1.5);
+
+        // Tallest section first, then the next — a section can still be too
+        // short to hold its header once the viewport is tall, and the last one
+        // can sit past the end of the scroll range. Exhausting every candidate
+        // without pinning anything is a real failure, not a dead zone, so this
+        // loop can only rescue a bad guess; it can never hide a regression.
+        for (const section of [...sections].sort((a, b) => b.height - a.height)) {
+          if (section.height <= 0) continue;
+          // Far enough past the header to have lifted it off its natural
+          // position, but still well inside its own section.
+          window.scrollTo(0, section.top + Math.min(150, section.height / 2));
+          await frame();
+          if (pinnedNow().length > 0) break;
+        }
+
+        const bar = document.querySelector("header.sticky");
+        const barBottom = bar ? bar.getBoundingClientRect().bottom : 0;
+        const pinned = pinnedNow();
         return {
+          dayCount: tops.length,
+          barHeight: bar ? bar.getBoundingClientRect().height : 0,
           pinnedCount: pinned.length,
-          // How far the worst-placed pinned header clears the nav. Negative
+          // How far the worst-placed pinned header clears the bar. Negative
           // means it is hiding underneath it.
-          clearance: Math.min(...pinned.map((rect) => rect.top - navBottom)),
+          clearance: Math.min(...pinned.map((rect) => rect.top - barBottom)),
         };
       });
 
-      expect(measured.pinnedCount, `no day header pinned at ${width}px`).toBeGreaterThan(0);
-      // A couple of pixels of slack either way, and no more: the gap this is
-      // policing is measured in tens of pixels when it goes wrong.
-      expect(
-        measured.clearance,
-        `a pinned day header is behind the shop nav at ${width}px (overlapping by ${-measured.clearance}px) — the sticky offset in ScheduleBuilder is smaller than the nav`,
-      ).toBeGreaterThanOrEqual(-2);
-      expect(
-        measured.clearance,
-        `a pinned day header floats below the shop nav at ${width}px (${measured.clearance}px of dead space) — the sticky offset in ScheduleBuilder is larger than the nav`,
-      ).toBeLessThanOrEqual(4);
+    // The staff board and the shopfront — the two shells, and the two surfaces
+    // decision 10 names by hand.
+    // Each shell carries its own top width, and the difference is the week
+    // board's doing: a sticky day header belongs to the *stream*, and the
+    // stream's ceiling is the board's `xl` floor (H-63). At 1280 the board is
+    // seven columns with no day header to pin, so 1279 is the widest the board
+    // can be asked this question. The shopfront keeps its stream at every
+    // width and is still asked at 1280.
+    for (const [surface, url, ready, widths] of [
+      ["the schedule board", BOARD, "Board", [390, 768, 1279]],
+      ["the public schedule", `/s/${SHOP}`, "Schedule", [390, 768, 1280]],
+    ] as const) {
+      await page.goto(url);
+      // The destination's own h1 — what makes the measurement below wait on
+      // the page rather than on the clock.
+      await expect(page.getByRole("heading", { name: ready, level: 1 })).toBeVisible();
+      // Phone, tablet, desktop — the widths at which the bar has historically
+      // changed shape, so a future re-wrap is caught wherever it happens.
+      for (const width of widths) {
+        await page.setViewportSize({ width, height: 800 });
+        const measured = await measure();
+
+        // One height, both shells. Preflight makes the bar `border-box`, so
+        // the 3.5rem `--chrome-h` names is its whole outside edge with the
+        // hairline inside it — 56px measured, not 56 plus a border.
+        expect(
+          measured.barHeight,
+          `the chrome bar on ${surface} is ${measured.barHeight}px tall at ${width}px, not the 56px --chrome-h names`,
+        ).toBeCloseTo(56, 0);
+        expect(
+          measured.dayCount,
+          `${surface} rendered no day headers at ${width}px`,
+        ).toBeGreaterThan(1);
+        expect(
+          measured.pinnedCount,
+          `no day header pinned on ${surface} at ${width}px`,
+        ).toBeGreaterThan(0);
+        // A couple of pixels of slack either way, and no more: the gap this is
+        // policing is measured in tens of pixels when it goes wrong.
+        expect(
+          measured.clearance,
+          `a pinned day header is behind the chrome bar on ${surface} at ${width}px (overlapping by ${-measured.clearance}px)`,
+        ).toBeGreaterThanOrEqual(-2);
+        expect(
+          measured.clearance,
+          `a pinned day header floats below the chrome bar on ${surface} at ${width}px (${measured.clearance}px of dead space)`,
+        ).toBeLessThanOrEqual(4);
+      }
     }
+  });
+
+  test("the shopfront bar holds the shop's own name whole on a phone", async ({ page }) => {
+    // The shopfront's `<h1>` reads "Schedule": this bar is the only place the
+    // page says *whose* shop it is above the fold, which is the whole reason
+    // the header exists (`PublicShopChrome`'s doc comment). One fixed-height
+    // row means the name, two destinations and the language control share
+    // 358 points at 390px, and the name is the slot that gives — so when it
+    // gave, it gave silently: "Blue Mantis Div…", green, on the standard
+    // photographed phone.
+    //
+    // 390 and 430 are the two phones the shop name has to survive whole.
+    // Below them it may ellipse, and this deliberately does not assert that it
+    // does not — that is what `truncate` is for, and a shop can always pick a
+    // longer name than any width can hold.
+    await page.goto(`/s/${SHOP}`);
+    await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();
+
+    for (const width of [390, 430]) {
+      await page.setViewportSize({ width, height: 800 });
+      const name = page.locator("header a span.truncate").first();
+      const clipped = await name.evaluate((el) => ({
+        text: el.textContent ?? "",
+        needs: el.scrollWidth,
+        has: Math.round(el.getBoundingClientRect().width),
+      }));
+      expect(
+        clipped.needs,
+        `the shop's name is cut in the bar at ${width}px ("${clipped.text}" needs ${clipped.needs}px, has ${clipped.has}px)`,
+      ).toBeLessThanOrEqual(clipped.has + 1);
+    }
+  });
+
+  /**
+   * **The width floor** (H-63, decided 2026-08-27; ADR
+   * 20260827-clearwater-surface-language, decision 5). Seven columns have no
+   * honest form on a portrait tablet, so the board is the vertical day stream
+   * below `xl` and the week from `xl` up — never both, and never neither.
+   * This spec sets its own viewports because the fleet's default is 1279, one
+   * pixel under the floor (playwright.config.ts).
+   *
+   * This is the **only** place the floor is really pinned: jsdom evaluates no
+   * media query, so a unit test can read the class and not the breakpoint.
+   */
+  test("the board is the day stream below 1280px and the week from 1280 up", async ({ page }) => {
+    await page.goto(BOARD);
+    await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
+
+    // Raw CSS locators, not `getByRole`: the fixture patches the role queries
+    // to visible-only matches, which would make "is it hidden" unanswerable.
+    //
+    // **Scoped to the stream's own wrapper**, not to the builder section. The
+    // grid is a *child* of that section and renders first, so a
+    // `section[…] ul li` crawl resolved to a week-grid cell and asserted the
+    // exact opposite of this test at every width.
+    const grid = page.locator('section[aria-label="The week"]');
+    const stream = page.locator("[data-day-stream] li").first();
+
+    // The portrait tablet a shop keeps the board open on all day, and the
+    // phone under it.
+    for (const width of [390, 820, 1279]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(stream, `the day stream is missing at ${width}px`).toBeVisible();
+      await expect(grid, `the week grid renders at ${width}px, below its floor`).toBeHidden();
+    }
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expect(grid).toBeVisible();
+    await expect(stream, "the stream renders alongside the week at 1280px").toBeHidden();
+    // The stream's cursor pager goes with it: the grid pages by week.
+    await expect(page.locator('a[href*="after="]').first()).toBeHidden();
+  });
+
+  /**
+   * **J5 — repricing the week.** Dana, at desktop, sees the departure with no
+   * price on the week and fixes it through the departure's own editor, which
+   * is the panel that already existed.
+   */
+  test("an unpriced departure carries its warning on the week, and opens the existing editor", async ({
+    page,
+  }) => {
+    const title = `Unpriced Trip ${e2eNow().getTime()}`;
+    const addDay = daysFromNow(3);
+
+    await page.goto(BOARD);
+    await page.getByRole("link", { name: "Add a departure", exact: true }).click();
+    await page.getByLabel("What is it").fill(title);
+    await page.getByLabel("Date").fill(addDay);
+    await page.getByLabel("Departs").fill("11:30");
+    await page.getByLabel("Returns").fill("15:00");
+    await page.getByLabel("Seats").fill("12");
+    await page.getByRole("button", { name: "Put it on the board" }).click();
+    await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);
+
+    // `?week=` takes any date inside the week and normalises it to that
+    // week's Monday (src/lib/week-board.ts), so the departure's own day is a
+    // valid address for the week it sails in — no paging, no guessing.
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`${BOARD}?week=${addDay}`);
+    const week = page.getByRole("region", { name: "The week" });
+    // `exact`, because the cell also carries a "Set a price for {title}, …"
+    // link and a substring match on the title resolves to both.
+    await expect(week.getByRole("link", { name: title, exact: true })).toBeVisible();
+
+    await week.getByRole("link", { name: new RegExp(`^Set a price for ${title},`) }).click();
+    await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+#details$/);
+    await page.getByText("Edit details", { exact: true }).click();
+    await page.getByLabel(/Price per diver/).fill("110");
+    await page.getByRole("button", { name: "Save changes" }).click();
+
+    // Back on the week, the warning is gone and the figure is on the entry.
+    await page.goto(`${BOARD}?week=${addDay}`);
+    const entry = week.getByRole("listitem").filter({ hasText: title });
+    await expect(entry).toHaveCount(1);
+    await expect(entry.getByText("No price set")).toHaveCount(0);
+  });
+
+  /**
+   * **The mutations survive the floor.** Move and remove are the two that
+   * change what sails, and at desktop the only door to them is a week cell's
+   * "⋯" — the stream's is `display:none` and out of the accessibility tree.
+   * Covered here because the functional fleet drives 1279, so no other spec
+   * in this suite ever exercises the `w:`-keyed panels.
+   */
+  test("staff move and remove a departure from the week, not only from the stream", async ({
+    page,
+  }) => {
+    test.setTimeout(30_000);
+    const title = `Week Trip ${e2eNow().getTime()}`;
+    const addDay = daysFromNow(2);
+    const moveDay = daysFromNow(4);
+
+    await page.goto(BOARD);
+    await page.getByRole("link", { name: "Add a departure", exact: true }).click();
+    await page.getByLabel("What is it").fill(title);
+    await page.getByLabel("Date").fill(addDay);
+    await page.getByLabel("Departs").fill("08:00");
+    await page.getByLabel("Returns").fill("12:00");
+    await page.getByLabel("Seats").fill("10");
+    await page.getByRole("button", { name: "Put it on the board" }).click();
+    await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`${BOARD}?week=${addDay}`);
+    const week = page.getByRole("region", { name: "The week" });
+    await expect(week.getByRole("link", { name: title, exact: true })).toBeVisible();
+
+    // The role queries are visible-only (e2e/fixtures.ts), so these resolve to
+    // the grid's own controls rather than to the stream's hidden twins — which
+    // is exactly the confusion the `w:` key prefix exists to prevent.
+    await chooseRowAction(page, "Move", title);
+    await page.getByLabel("New date").fill(moveDay);
+    await page.getByLabel("New departure time").fill("06:45");
+    await page.getByRole("button", { name: "Move it" }).click();
+    await expect(page.getByRole("status")).toContainText("Moved.");
+
+    await page.goto(`${BOARD}?week=${moveDay}`);
+    await expect(week.getByRole("link", { name: title, exact: true })).toBeVisible();
+
+    await chooseRowAction(page, "Remove", title);
+    await page.getByRole("button", { name: "Yes, remove the trip" }).click();
+    await expect(page.getByRole("status")).toContainText("Taken off the board.");
+    await expect(week.getByRole("link", { name: title, exact: true })).toHaveCount(0);
+  });
+
+  test("the week and the stream page by different parameters, and never mix them", async ({
+    page,
+  }) => {
+    // The grid is a second *reading* of the same departures, not a second
+    // stream: a `?week=` in the URL leaves the cursor-paged stream exactly as
+    // it was, and the pager it hands back names a cursor and no week.
+    await page.goto(`${BOARD}?week=2026-01-05`);
+    await expect(page.getByRole("region", { name: "Schedule builder" })).toBeVisible();
+
+    const later = page.getByRole("link", { name: "Show later departures" });
+    await expect(later).toBeVisible();
+    const href = await later.getAttribute("href");
+    expect(href).toContain("after=");
+    expect(href).not.toContain("week=");
+
+    await later.click();
+    if (href) await page.waitForURL(`**${href}`);
+    await expect(
+      page.getByRole("link", { name: "Back to the next departure" }).first(),
+    ).toBeVisible();
   });
 
   test("staff add a private charter, and verify its private charter badge in schedule and details", async ({

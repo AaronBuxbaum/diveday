@@ -32,10 +32,16 @@ export function EntryShellSkeleton({
       <div className="animate-pulse">
         {wordmark ? <div className="mx-auto h-6 w-28 rounded bg-surface-sunken" /> : null}
         {eyebrow ? <div className="mx-auto mb-2 h-4 w-24 rounded bg-surface-sunken" /> : null}
+        {/* The bars are the shell's own line boxes, read off `EntryShell`: the
+            `<h1>` is `SHELL_TITLE_CLASS` at both widths now, whose `text-3xl`
+            line box is 36px (`h-9`), and the description is an unsized `<p>` at
+            24px (`h-6`) under the header's own `mt-2`. They were `h-8` and
+            `mt-3 h-4` — a title bar sized for the `text-2xl` this shell no
+            longer renders, over a description bar a third too short. */}
         <div
-          className={`mx-auto h-8 w-56 max-w-full rounded bg-surface-sunken ${wordmark ? "mt-8" : ""}`}
+          className={`mx-auto h-9 w-56 max-w-full rounded bg-surface-sunken ${wordmark ? "mt-8" : ""}`}
         />
-        <div className="mx-auto mt-3 h-4 w-72 max-w-full rounded bg-surface-sunken" />
+        <div className="mx-auto mt-2 h-6 w-72 max-w-full rounded bg-surface-sunken" />
         {panel ? (
           <div className={entryPanelClass}>
             {fields.map((slot, index) => (

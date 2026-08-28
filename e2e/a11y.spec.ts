@@ -5,6 +5,7 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
+  choosePartySize,
   createTrip,
   daysFromNow,
   e2eNow,
@@ -12,6 +13,7 @@ import {
   openTripFromBoard,
   openTripTab,
   signOut,
+  threadStatus,
   waiverLinkFromResult,
 } from "./helpers";
 
@@ -402,15 +404,12 @@ test.describe("automated accessibility scans of the static staff routes", () => 
     // 7 scans at ~3.5s each, plus the sign-in state and first cold render.
     test.setTimeout(90_000);
     await scanStaticRoutes(page, [
-      // Today, in both of its views. `/blockers` is a permanent redirect to
-      // `?view=departures` now (ADR 20260803-not-ready-is-a-view), so this
-      // scans the by-departure queue through the URL staff bookmarks — same
-      // greeting `<h1>`, a completely different body.
+      // Today, which is now one composition rather than two views of one
+      // (ADR 20260827-clearwater-surface-language, decision 4) — so the second
+      // scan this list used to carry, of `/blockers`'s by-departure body, is
+      // gone with the body. `/blockers` still redirects here, and
+      // `day-spine.spec.ts` holds it to a single hop.
       { path: "/shop/blue-mantis", heading: /Good (morning|afternoon|evening|night), Dana/ },
-      {
-        path: "/shop/blue-mantis/blockers",
-        heading: /Good (morning|afternoon|evening|night), Dana/,
-      },
       { path: "/shop/blue-mantis/check-in", heading: "Counter check-in" },
       { path: "/shop/blue-mantis/check-in/walk-in", heading: "Walk-in" },
       { path: "/shop/blue-mantis/schedule/board", heading: "Board" },
@@ -791,9 +790,7 @@ test.describe("automated accessibility scans of the diver bearer-token surfaces"
       .filter({ hasText: title })
       .getByRole("link")
       .click();
-    const partySize = page.getByLabel("Number of divers");
-    await expect(partySize).toHaveAttribute("data-hydrated", "true");
-    await partySize.selectOption("2");
+    await choosePartySize(page, 2);
     await page.getByLabel("Name", { exact: true }).fill("Iris Marlow");
     await page.getByLabel("Email", { exact: true }).fill(`iris-${e2eNow().getTime()}@example.com`);
     await page.getByLabel("Diver 2 name").fill("Tem Okafor");
@@ -819,7 +816,7 @@ test.describe("automated accessibility scans of the diver bearer-token surfaces"
     // hand-off and a checklist whose rows change state as they are satisfied.
     // The densest diver-facing form surface in the product after booking, and
     // the one a diver is most likely to be filling in on a phone at a dock.
-    await expect(page.getByRole("heading", { name: "Your pre-trip checklist" })).toBeVisible();
+    await expect(threadStatus(page)).toBeVisible();
     await expectNoA11yViolations(page);
 
     // The claim page: a stranger's first-ever DiveDay screen, arriving from a

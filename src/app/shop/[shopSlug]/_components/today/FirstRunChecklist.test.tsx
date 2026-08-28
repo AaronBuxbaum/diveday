@@ -144,6 +144,64 @@ describe("the step count", () => {
   });
 });
 
+/**
+ * **Exactly one open step carries the page's one primary** — the day-zero half
+ * of ADR 20260827-clearwater-surface-language's slice 6c, where the setup
+ * ledger *is* the shop home. Seven rows each offering a primary-weight button
+ * is seven next actions, which is none.
+ */
+describe("the one next thing", () => {
+  const render7 = (done: Partial<Parameters<typeof FirstRunChecklist>[0]> = {}) =>
+    render(
+      <FirstRunChecklist
+        shopSlug="blue-mantis"
+        scheduleUrl="https://app.diveday.example/s/blue-mantis"
+        contactDone={false}
+        profileDone={false}
+        diveSiteCount={0}
+        unitsDone={false}
+        stripeDone={false}
+        copy={COPY}
+        {...done}
+      />,
+    );
+
+  it("marks one step, and only one, as the primary", () => {
+    const { container } = render7();
+    const primaries = container.querySelectorAll('[data-first-run-primary="true"]');
+    expect(primaries).toHaveLength(1);
+    expect(primaries[0]).toHaveTextContent("Add contact details");
+  });
+
+  it("moves the primary to the next unfinished step rather than adding a second", () => {
+    const { container } = render7({ contactDone: true, profileDone: true });
+    const primaries = container.querySelectorAll('[data-first-run-primary="true"]');
+    expect(primaries).toHaveLength(1);
+    expect(primaries[0]).toHaveTextContent("Check units");
+  });
+
+  it("keeps exactly one once every persisted step is done — the trip is the last", () => {
+    // The group only renders while the shop has no departure, so the trip step
+    // is always the open one at the end and always has somewhere to send you.
+    const { container } = render7({
+      contactDone: true,
+      profileDone: true,
+      unitsDone: true,
+      diveSiteCount: 2,
+      stripeDone: true,
+    });
+    const primaries = container.querySelectorAll('[data-first-run-primary="true"]');
+    expect(primaries).toHaveLength(1);
+    expect(primaries[0]).toHaveTextContent("Schedule a trip");
+  });
+
+  it("settles a finished step into a mark with no control left to press", () => {
+    render7({ contactDone: true });
+    expect(screen.getByText("Contact details on file.")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Add contact details" })).not.toBeInTheDocument();
+  });
+});
+
 describe("the units step", () => {
   it("names what the shop was started on, so the guess is checkable", () => {
     render(

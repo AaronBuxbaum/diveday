@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
+import { GroupLabel } from "@/components/ui/ledger";
 import { QueryForm } from "@/components/ui/QueryForm";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import type { staffCredentials } from "@/db/schema";
@@ -302,9 +303,7 @@ export default async function StaffingPage({
                   shift alone doesn't say which boat, if any, this person is
                   actually on — this is where that becomes visible. */}
                 <div className="mt-3 border-t border-border pt-3">
-                  <p className="text-xs font-bold tracking-wide text-muted uppercase">
-                    {t("staffing.working.crewingHeading")}
-                  </p>
+                  <GroupLabel>{t("staffing.working.crewingHeading")}</GroupLabel>
                   {member.crewingTrips.length === 0 ? (
                     <EmptyState title={t("staffing.working.crewingEmpty")} className="mt-1" />
                   ) : (

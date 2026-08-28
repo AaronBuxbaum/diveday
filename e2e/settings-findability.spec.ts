@@ -57,14 +57,25 @@ test.describe("as owner", () => {
     ).toBeVisible();
   });
 
-  test("a settings sub-page carries a way back and no repeated directory", async ({ page }) => {
-    // The six sub-pages used to open under a grouped pill card listing every
-    // settings destination — the hub's own directory, repeated above each
-    // page's <h1> as permanent chrome, and on a phone the whole first
-    // viewport. What a sub-page actually needs is the way back, which its
-    // eyebrow now is.
+  test("a settings sub-page keeps the map beside it, and its own way back", async ({ page }) => {
+    // The six sub-pages used to open under a grouped pill *card* listing every
+    // settings destination — the hub's directory repeated above each page's
+    // <h1>, on a phone the whole first viewport. What replaced it is not that
+    // card returning: the rail is a desktop column beside the pane, and the
+    // phone still gets nothing above the content (ADR
+    // 20260827-clearwater-surface-language, decision 6).
     await page.goto(`/shop/${SHOP}/settings/team`);
-    await expect(page.getByRole("navigation", { name: "Settings sections" })).toHaveCount(0);
+    const rail = page.getByRole("navigation", { name: "Settings sections" });
+    await expect(rail).toBeVisible();
+    // Sub-route rows select by pathname — the half of the selection model the
+    // scroll-spy must never touch.
+    await expect(rail.getByRole("link", { name: "Team" })).toHaveAttribute("aria-current", "true");
+    await expect(rail.getByRole("link", { name: "Data export" })).not.toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    // The directory is beside the page, not inside it: `main` still holds only
+    // the destination's own content.
     await expect(page.getByRole("main").getByRole("link", { name: "Data export" })).toHaveCount(0);
 
     // Scoped to `main`: the nav's "Set up" group carries its own Settings
@@ -72,6 +83,20 @@ test.describe("as owner", () => {
     await page.getByRole("main").getByRole("link", { name: "Settings", exact: true }).click();
     await expect(page).toHaveURL(`/shop/${SHOP}/settings`);
     await expect(page.getByRole("heading", { level: 1, name: "Shop settings" })).toBeVisible();
+  });
+
+  test("the rail is a desktop column and the phone keeps its list", async ({ page }) => {
+    // The other half of the same decision. A 390px viewport is the dock test's
+    // device, and a directory stacked above the content there is the card that
+    // was deleted.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/shop/${SHOP}/settings`);
+    await expect(page.getByRole("heading", { level: 1, name: "Shop settings" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Settings sections" })).toBeHidden();
+    // The grouped list is still the whole surface, doors and all.
+    await expect(
+      page.getByRole("main").getByRole("link", { name: "Team", exact: true }),
+    ).toBeVisible();
   });
 });
 
@@ -115,6 +140,29 @@ test.describe("settings that change the shop", () => {
     await expect(
       page.getByRole("status").filter({ hasText: "listed in search engines" }),
     ).toBeVisible();
+  });
+
+  test("the rail opens a setting and the row edits in place", async ({ page, privateShop }) => {
+    // J7. The rail is the map; tapping a destination on it opens that row
+    // *where it already is* — settings never became twenty routes.
+    test.setTimeout(60_000);
+    await page.goto(`/shop/${privateShop.slug}/settings`);
+    const rail = page.getByRole("navigation", { name: "Settings sections" });
+    await rail.getByRole("link", { name: "Shop profile & branding" }).click();
+
+    const tagline = page.getByLabel("Tagline");
+    await expect(tagline).toBeVisible();
+    await tagline.fill("Small-boat reef and wreck diving out of Key Largo.");
+    await page.getByRole("button", { name: "Save profile" }).click();
+
+    // Saved, and the row comes back open with its notice inside it — the
+    // `?saved=<section>` round trip, unchanged by the decomposition.
+    await expect(
+      page.getByRole("status").filter({ hasText: "Shop profile and branding saved." }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Tagline")).toHaveValue(
+      "Small-boat reef and wreck diving out of Key Largo.",
+    );
   });
 
   test("a shop can change the zone its whole schedule is read in", async ({

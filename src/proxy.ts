@@ -17,6 +17,27 @@ import {
 
 const STAFF_PREFIX = "/shop";
 
+/** `/shop/<slug>` exactly — the shop home, and nothing below it. */
+const SHOP_HOME_PATH = /^\/shop\/[^/]+\/?$/;
+
+/**
+ * Query params the shop home used to answer to and no longer does.
+ *
+ * `?view=` selected the by-departure rendering of the one work queue, and
+ * `?page=` paged it. The home is a single chronological spine now — today's
+ * departures as stations in clock order (ADR
+ * 20260827-clearwater-surface-language, decision 4) — so neither selects
+ * anything, and a bookmark carrying one must land on the page rather than on a
+ * URL that quietly means nothing.
+ *
+ * The strip happens **here**, at the edge, so it is a real 308 a bookmark
+ * manager, a crawler and a `curl` all follow. Under `cacheComponents` a page
+ * is partially prerendered, so a redirect thrown from a page body answers 200
+ * with the hop resolving inside the streamed payload, which only a browser
+ * follows (ADR 20260806-one-trip-create-form).
+ */
+const RETIRED_HOME_PARAMS = ["view", "page"] as const;
+
 type CachedSessionSnapshot = {
   personId: string;
   shopId: string;
@@ -97,6 +118,31 @@ async function authGateResponse(req: NextRequest): Promise<Response | undefined>
       return NextResponse.redirect(signIn);
     }
     if (roles && !isStaff(roles)) return NextResponse.redirect(new URL("/", req.nextUrl));
+    // After the auth gate, never before it: a signed-out visitor with a stale
+    // `?view=` bookmark belongs at sign-in, not at a tidied URL.
+    if (
+      SHOP_HOME_PATH.test(pathname) &&
+      RETIRED_HOME_PARAMS.some((param) => req.nextUrl.searchParams.has(param))
+    ) {
+      const url = new URL(req.nextUrl);
+      for (const param of RETIRED_HOME_PARAMS) url.searchParams.delete(param);
+      // **Absolute, and built from `req.nextUrl` — both halves matter.**
+      //
+      // The `/blockers` Route Handler answers with a *relative* `Location`
+      // because a Route Handler's response goes to the client as written. A
+      // proxy response does not: Next's middleware adapter parses the header
+      // through `NextURL` before it ever reaches the wire, and a relative
+      // value there has no base to resolve against — it throws `Invalid URL`
+      // and the request answers **500**, which is exactly what it did until
+      // `day-spine.spec.ts` asked for the status.
+      //
+      // Deriving the URL from `req.nextUrl` is what keeps the host honest:
+      // it is the request's own origin, so the hop cannot pin a visitor to
+      // whichever host the proxy happened to resolve — the trap that once
+      // sent an owner cookied to `127.0.0.1` to `localhost` and out to
+      // /sign-in. Every other redirect in this file is built the same way.
+      return NextResponse.redirect(url, 308);
+    }
   }
   return undefined;
 }

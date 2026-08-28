@@ -19,6 +19,8 @@ import {
   MIN_DECISION_HOURS,
   MINIMUM_SEATS_DECISION_HOURS_DEFAULT,
 } from "@/lib/minimum-seats";
+import type { BuilderWeek, WeekDeparture } from "./WeekBoard";
+import { AllUnpricedNotice, WeekBoard } from "./WeekBoard";
 
 /** One departure as the board hands it to the builder, already shop-local. */
 export type BuilderTrip = {
@@ -452,7 +454,11 @@ function AddPanel({
       className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
     >
       {requestPlan ? (
-        <fieldset className="sticky top-4 z-10 rounded-lg border border-primary/30 bg-primary/5 p-4 shadow-sm">
+        /* Pinned under the chrome bar, not at a hand-picked 16px: `top-4` put
+           this brief *behind* the bar the moment the page scrolled, which is
+           the same defect the day headers had. It reads `--chrome-h` like they
+           do (ADR 20260827-clearwater-surface-language, decision 10). */
+        <fieldset className="sticky top-(--chrome-h) z-10 rounded-lg border border-primary/30 bg-primary/5 p-4 shadow-sm">
           <legend className="px-1 text-sm font-semibold text-primary">
             {copy.requestPlanHeading ?? ""}
           </legend>
@@ -1033,6 +1039,195 @@ function AddPanel({
 }
 
 /**
+ * A week-grid departure as the shared move/copy/remove panels want it —
+ * a day cell or a spanning course bar alike, which is why the grid states them
+ * as one type.
+ */
+function panelTripOf(departure: WeekDeparture): PanelTrip {
+  return {
+    id: departure.tripId,
+    title: departure.title,
+    dateIso: departure.dateIso,
+    startTime: departure.startTime,
+    dayCount: departure.dayCount,
+  };
+}
+
+/** The little a move/copy/remove panel needs to know about its departure. */
+type PanelTrip = {
+  id: string;
+  title: string;
+  dateIso: string;
+  startTime: string;
+  dayCount: number;
+};
+
+/**
+ * Take a departure off the board. Two deliberate steps: the row menu's
+ * "Remove" only discloses this, and this holds the only real submit.
+ *
+ * Module scope, and shared by both compositions — the vertical day stream and
+ * the `xl` week grid render the same three panels, so a change to a refusal or
+ * a field lands in one place rather than in two that drift.
+ */
+function RemovePanel({
+  trip,
+  copy,
+  action,
+  onCancel,
+}: {
+  trip: PanelTrip;
+  copy: BuilderCopy;
+  // i18n-exempt: type annotation, not copy — the scanner misreads the union as a string.
+  action: (formData: FormData) => void | Promise<void>;
+  onCancel: () => void;
+}) {
+  return (
+    <form
+      action={action}
+      className="mt-3 rounded-xl border border-danger/30 bg-danger/5 p-4 animate-scale-in"
+    >
+      <input type="hidden" name="tripId" value={trip.id} />
+      <p className="text-sm" role="alert">
+        {fill(copy.removeConfirm, { title: trip.title })}
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <SubmitButton
+          pendingLabel={copy.removePending}
+          className={buttonClass({ variant: "danger", size: "sm" })}
+        >
+          {copy.removeConfirmButton}
+        </SubmitButton>
+        <button
+          type="button"
+          onClick={onCancel}
+          className={buttonClass({ variant: "ghost", size: "sm" })}
+        >
+          {copy.removeCancel}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/** Slide a departure to another day or time; a multi-day course moves as a block. */
+function MovePanel({
+  trip,
+  copy,
+  action,
+  onCancel,
+}: {
+  trip: PanelTrip;
+  copy: BuilderCopy;
+  // i18n-exempt: type annotation, not copy — the scanner misreads the union as a string.
+  action: (formData: FormData) => void | Promise<void>;
+  onCancel: () => void;
+}) {
+  return (
+    <FieldGrid
+      as="form"
+      action={action}
+      columns={2}
+      className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
+    >
+      <input type="hidden" name="tripId" value={trip.id} />
+      <Field
+        label={copy.newDate}
+        description={
+          trip.dayCount > 1 ? fill(copy.multiDayNote, { count: trip.dayCount }) : undefined
+        }
+      >
+        <input
+          name="date"
+          type="date"
+          required
+          defaultValue={trip.dateIso}
+          className={controlClass}
+          ref={focusOnMount}
+        />
+      </Field>
+      <Field label={copy.newDepartureTime}>
+        <input
+          name="startTime"
+          type="time"
+          required
+          defaultValue={trip.startTime}
+          className={controlClass}
+        />
+      </Field>
+      <div className="flex items-center gap-3 sm:col-span-2">
+        <SubmitButton pendingLabel={copy.moving} className={buttonClass()}>
+          {copy.moveIt}
+        </SubmitButton>
+        <button
+          type="button"
+          onClick={onCancel}
+          className={buttonClass({ variant: "ghost", size: "sm" })}
+        >
+          {copy.cancel}
+        </button>
+      </div>
+    </FieldGrid>
+  );
+}
+
+/** Mint the same departure on another day — same seats, same price, no roster. */
+function CopyPanel({
+  trip,
+  copy,
+  action,
+  onCancel,
+}: {
+  trip: PanelTrip;
+  copy: BuilderCopy;
+  // i18n-exempt: type annotation, not copy — the scanner misreads the union as a string.
+  action: (formData: FormData) => void | Promise<void>;
+  onCancel: () => void;
+}) {
+  return (
+    <FieldGrid
+      as="form"
+      action={action}
+      columns={2}
+      className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
+    >
+      <input type="hidden" name="tripId" value={trip.id} />
+      <Field label={copy.copyTo} description={copy.copyDescription}>
+        <input
+          name="date"
+          type="date"
+          required
+          defaultValue={shiftCalendarDate(trip.dateIso, 7)}
+          className={controlClass}
+          ref={focusOnMount}
+        />
+      </Field>
+      <Field label={copy.departureTime}>
+        <input
+          name="startTime"
+          type="time"
+          required
+          defaultValue={trip.startTime}
+          className={controlClass}
+        />
+      </Field>
+      <div className="flex items-center gap-3 sm:col-span-2">
+        <SubmitButton pendingLabel={copy.copying} className={buttonClass()}>
+          {copy.copyIt}
+        </SubmitButton>
+        <button
+          type="button"
+          onClick={onCancel}
+          className={buttonClass({ variant: "ghost", size: "sm" })}
+        >
+          {copy.cancel}
+        </button>
+      </div>
+    </FieldGrid>
+  );
+}
+
+/**
  * The staff schedule board, as a builder rather than a list.
  *
  * Departures sit under the shop-local day they sail on, and each row's actions —
@@ -1106,6 +1301,7 @@ export function ScheduleBuilder({
   initialSite,
   requestPlan,
   openAdd,
+  week,
 }: {
   shopSlug: string;
   days: BuilderDay[];
@@ -1130,6 +1326,12 @@ export function ScheduleBuilder({
    * open a whole page of form has to open something.
    */
   openAdd: "closed" | "quick" | "expanded";
+  /**
+   * The same departures read as a seven-column week, for `xl` and up (ADR
+   * 20260827-clearwater-surface-language, decision 5). Null on a board with
+   * nothing upcoming at all, where the empty state stands at every width.
+   */
+  week?: BuilderWeek | null;
 }) {
   // One of `add:<dateIso>`, `move:<tripId>`, `copy:<tripId>`, or null.
   const [open, setOpen] = useState<string | null>(openAdd === "closed" ? null : "add:top");
@@ -1183,6 +1385,33 @@ export function ScheduleBuilder({
   // wrong half the time. An unstaffed departure can never become the default —
   // it is not a crew, it is the gap this whole line exists to show.
   const usualCrew = mostCommonCrew(windowTrips);
+
+  // The week grid's own disclosures, read back out of the one `open` key.
+  // Everything the grid opens is prefixed `w:` so a control there hands focus
+  // back to itself rather than to its identically-keyed twin in the stream,
+  // which is `display:none` at this width and cannot take focus at all.
+  // **Spans as well as cells.** A multi-day course is drawn once, as a bar
+  // across the days it owns, *instead of* the entries for those days — so if
+  // the bar were left out of this lookup the desktop board would be the one
+  // place in the app where a course cannot be moved, copied or removed at all.
+  const weekDepartures: WeekDeparture[] = week
+    ? [...week.days.flatMap((day) => day.entries), ...week.spans]
+    : [];
+  const weekAdd = open?.startsWith("w:add:") ? open.slice("w:add:".length) : null;
+  const weekAction = ((): {
+    kind: "menu" | "move" | "copy" | "remove";
+    entry: WeekDeparture;
+  } | null => {
+    for (const kind of ["menu", "move", "copy", "remove"] as const) {
+      const prefix = `w:${kind}:`;
+      if (!open?.startsWith(prefix)) continue;
+      const tripId = open.slice(prefix.length);
+      const entry = weekDepartures.find((candidate) => candidate.tripId === tripId);
+      if (entry) return { kind, entry };
+    }
+    return null;
+  })();
+
   const closeMenu = useCallback((menuKey: string) => {
     setClosingMenu(menuKey);
     if (menuCloseTimer.current) clearTimeout(menuCloseTimer.current);
@@ -1345,21 +1574,129 @@ export function ScheduleBuilder({
           distinguishes anything. Three is the floor so one lone unpriced
           departure keeps its own pill rather than becoming a banner. */}
       {allUnpriced ? (
-        <p className="mt-4 rounded-xl border border-warning/40 bg-surface p-4 text-sm font-medium text-warning">
-          {copy.noPriceSetAll}
-        </p>
+        <AllUnpricedNotice className="xl:hidden">{copy.noPriceSetAll}</AllUnpricedNotice>
       ) : null}
 
       {/* Not a banner: the usual crew is not a problem to solve, it is the
           answer the rows below no longer have to repeat. Muted and inline, in
           the caption voice those rows used to carry. */}
+      {/* `xl:hidden` with the stream it describes: "unless a departure says
+          otherwise" is a promise about rows, and the week's cells carry no
+          crew line for it to be the exception to. */}
       {usualCrew ? (
-        <p className="mt-4 text-sm text-muted">
+        <p className="mt-4 text-sm text-muted xl:hidden">
           {fill(copy.crewMostlyAll, { names: usualCrew.join(", ") })}
         </p>
       ) : null}
 
-      <div className="mt-4 flex flex-col gap-8">
+      {/* The week, at `xl` and up. Its own disclosures are keyed `w:` so a
+          control in the grid hands focus back to itself rather than to its
+          twin in the stream, which is display:none at this width and cannot
+          take it. The panels render full width beneath the grid: a move form
+          is two date/time fields, and a 160px column is not a form. */}
+      {week ? (
+        <div className="mt-4">
+          <WeekBoard
+            week={week}
+            canConfigure={canConfigure}
+            shopSlug={shopSlug}
+            openKey={open}
+            onToggle={toggle}
+            registerToggle={registerToggle}
+            copy={copy}
+          />
+          <div className="hidden xl:block">
+            {canConfigure && weekAdd ? (
+              <AddPanel
+                dateIso={weekAdd}
+                options={options}
+                price={price}
+                copy={copy}
+                more={more}
+                initialCourse={null}
+                requestPlan={null}
+                startExpanded={false}
+                onAdd={actions.add}
+                onCancel={() => closePanel(`w:add:${weekAdd}`)}
+              />
+            ) : null}
+            {canConfigure && weekAction ? (
+              <>
+                {weekAction.kind === "menu" ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface-sunken/50 p-3">
+                    <p className="text-sm font-medium">{weekAction.entry.ref}</p>
+                    <div className="ms-auto flex items-center gap-1">
+                      <button
+                        type="button"
+                        ref={focusOnMount}
+                        onClick={() => toggle(`w:move:${weekAction.entry.tripId}`)}
+                        aria-label={fill(copy.moveAria, { ref: weekAction.entry.ref })}
+                        className={buttonClass({ variant: "ghost", size: "sm" })}
+                      >
+                        {copy.move}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggle(`w:copy:${weekAction.entry.tripId}`)}
+                        aria-label={fill(copy.copyAria, { ref: weekAction.entry.ref })}
+                        className={buttonClass({ variant: "ghost", size: "sm" })}
+                      >
+                        {copy.copy}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggle(`w:remove:${weekAction.entry.tripId}`)}
+                        aria-label={fill(copy.removeAria, { ref: weekAction.entry.ref })}
+                        className={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                      >
+                        {copy.remove}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                {weekAction.kind === "move" ? (
+                  <MovePanel
+                    trip={panelTripOf(weekAction.entry)}
+                    copy={copy}
+                    action={actions.move}
+                    onCancel={() => closePanel(`w:menu:${weekAction.entry.tripId}`)}
+                  />
+                ) : null}
+                {weekAction.kind === "copy" ? (
+                  <CopyPanel
+                    trip={panelTripOf(weekAction.entry)}
+                    copy={copy}
+                    action={actions.duplicate}
+                    onCancel={() => closePanel(`w:menu:${weekAction.entry.tripId}`)}
+                  />
+                ) : null}
+                {weekAction.kind === "remove" ? (
+                  <RemovePanel
+                    trip={panelTripOf(weekAction.entry)}
+                    copy={copy}
+                    action={actions.remove}
+                    onCancel={() => closePanel(`w:menu:${weekAction.entry.tripId}`)}
+                  />
+                ) : null}
+              </>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {/* **The stream, and the floor it lives under.** Below `xl` this is the
+          board (H-63, 2026-08-27): seven columns have no honest form on a
+          portrait tablet or a phone, so the vertical day stream is what those
+          widths get, unchanged — the add panel, the row menu, the cursor
+          pager and every mutation included. At `xl` and up the week grid
+          above renders instead.
+
+          `data-day-stream` is the hook a test asks "which of the two is on
+          screen" with. It has to be on the wrapper rather than derived from
+          the section: the grid is a *child* of the same section and renders
+          first, so a `section[…] li` locator resolved to a week cell and
+          asserted the exact opposite of the floor at every width. */}
+      <div data-day-stream="" className="mt-4 flex flex-col gap-8 xl:hidden">
         {days.map((day) => (
           <div key={day.dateIso}>
             {/* The day header is the public schedule's calendar block — big
@@ -1369,14 +1706,22 @@ export function ScheduleBuilder({
                 one piece for screen readers.
 
                 Sticky like the storefront's, so mid-scroll the rows under a
-                thumb always name their day — but pinned *below* the staff
-                header (sticky top-0, 69px tall; 68 tucks 1px under its border
-                so no slit of scrolling content shows between them). z-20 keeps
-                it above the rows' own z-10 action clusters; the row "⋯" menus
-                disclose inline rather than floating, so nothing needs to paint
-                over a pinned header. The day's "+ Add" rides inside the sticky
-                row, so the affordance travels with the day. */}
-            <div className="sticky top-[68px] z-20 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-background pt-2 pb-2">
+                thumb always name their day — but pinned *below* the chrome
+                bar, whose height it reads rather than measures: `--chrome-h`
+                (ADR 20260827-clearwater-surface-language, decision 10) is the
+                same declaration the bar sets its own height from. Preflight
+                makes every box `border-box`, so `--chrome-h` is the bar's
+                whole outside edge, hairline included: the header lands flush
+                against that edge — no slit of scrolling content between the
+                two, and no gap either — and stays there if the bar ever
+                changes height. This was `top-[68px]`, a number somebody
+                measured off a content-driven bar, with an e2e test standing
+                guard over it. z-20 keeps it above the rows' own z-10 action
+                clusters; the row "⋯" menus disclose inline rather than
+                floating, so nothing needs to paint over a pinned header. The
+                day's "+ Add" rides inside the sticky row, so the affordance
+                travels with the day. */}
+            <div className="sticky top-(--chrome-h) z-20 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-background pt-2 pb-2">
               <h3 className="flex items-center gap-3">
                 <span className="sr-only">{day.label}</span>
                 <span aria-hidden="true" className="flex items-center gap-3">
@@ -1735,121 +2080,30 @@ export function ScheduleBuilder({
                     </div>
 
                     {canConfigure && open === `remove:${trip.id}` ? (
-                      <form
+                      <RemovePanel
+                        trip={trip}
+                        copy={copy}
                         action={actions.remove}
-                        className="mt-3 rounded-xl border border-danger/30 bg-danger/5 p-4 animate-scale-in"
-                      >
-                        <input type="hidden" name="tripId" value={trip.id} />
-                        <p className="text-sm" role="alert">
-                          {fill(copy.removeConfirm, { title: trip.title })}
-                        </p>
-                        <div className="mt-3 flex flex-wrap items-center gap-3">
-                          <SubmitButton
-                            pendingLabel={copy.removePending}
-                            className={buttonClass({ variant: "danger", size: "sm" })}
-                          >
-                            {copy.removeConfirmButton}
-                          </SubmitButton>
-                          <button
-                            type="button"
-                            onClick={() => closePanel(`menu:${trip.id}`)}
-                            className={buttonClass({ variant: "ghost", size: "sm" })}
-                          >
-                            {copy.removeCancel}
-                          </button>
-                        </div>
-                      </form>
+                        onCancel={() => closePanel(`menu:${trip.id}`)}
+                      />
                     ) : null}
 
                     {canConfigure && open === `move:${trip.id}` ? (
-                      <FieldGrid
-                        as="form"
+                      <MovePanel
+                        trip={trip}
+                        copy={copy}
                         action={actions.move}
-                        columns={2}
-                        className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
-                      >
-                        <input type="hidden" name="tripId" value={trip.id} />
-                        <Field
-                          label={copy.newDate}
-                          description={
-                            trip.dayCount > 1
-                              ? fill(copy.multiDayNote, { count: trip.dayCount })
-                              : undefined
-                          }
-                        >
-                          <input
-                            name="date"
-                            type="date"
-                            required
-                            defaultValue={trip.dateIso}
-                            className={controlClass}
-                            ref={focusOnMount}
-                          />
-                        </Field>
-                        <Field label={copy.newDepartureTime}>
-                          <input
-                            name="startTime"
-                            type="time"
-                            required
-                            defaultValue={trip.startTime}
-                            className={controlClass}
-                          />
-                        </Field>
-                        <div className="flex items-center gap-3 sm:col-span-2">
-                          <SubmitButton pendingLabel={copy.moving} className={buttonClass()}>
-                            {copy.moveIt}
-                          </SubmitButton>
-                          <button
-                            type="button"
-                            onClick={() => closePanel(`menu:${trip.id}`)}
-                            className={buttonClass({ variant: "ghost", size: "sm" })}
-                          >
-                            {copy.cancel}
-                          </button>
-                        </div>
-                      </FieldGrid>
+                        onCancel={() => closePanel(`menu:${trip.id}`)}
+                      />
                     ) : null}
 
                     {canConfigure && open === `copy:${trip.id}` ? (
-                      <FieldGrid
-                        as="form"
+                      <CopyPanel
+                        trip={trip}
+                        copy={copy}
                         action={actions.duplicate}
-                        columns={2}
-                        className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
-                      >
-                        <input type="hidden" name="tripId" value={trip.id} />
-                        <Field label={copy.copyTo} description={copy.copyDescription}>
-                          <input
-                            name="date"
-                            type="date"
-                            required
-                            defaultValue={shiftCalendarDate(trip.dateIso, 7)}
-                            className={controlClass}
-                            ref={focusOnMount}
-                          />
-                        </Field>
-                        <Field label={copy.departureTime}>
-                          <input
-                            name="startTime"
-                            type="time"
-                            required
-                            defaultValue={trip.startTime}
-                            className={controlClass}
-                          />
-                        </Field>
-                        <div className="flex items-center gap-3 sm:col-span-2">
-                          <SubmitButton pendingLabel={copy.copying} className={buttonClass()}>
-                            {copy.copyIt}
-                          </SubmitButton>
-                          <button
-                            type="button"
-                            onClick={() => closePanel(`menu:${trip.id}`)}
-                            className={buttonClass({ variant: "ghost", size: "sm" })}
-                          >
-                            {copy.cancel}
-                          </button>
-                        </div>
-                      </FieldGrid>
+                        onCancel={() => closePanel(`menu:${trip.id}`)}
+                      />
                     ) : null}
                   </li>
                 );

@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { e2eNow } from "./helpers";
+import { e2eNow, openThreadStep } from "./helpers";
 
 // The demo shop prices its rental gear (src/db/seed.ts): a $45 full set and
 // per-piece prices. A diver setting their rental fit should see those prices and
@@ -25,12 +25,10 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // Per-piece prices show next to the gear, and the default fit — every core
   // item including the dive computer, which is default-on and part of the set —
   // is estimated at the set price ($45.00).
-  // The rental form is the "Gear and setup" checklist row's action, so its own
-  // row is the scope — there is no longer a section of its own to select.
-  const fit = page
-    .locator("li")
-    .filter({ has: page.getByRole("heading", { name: "Gear and setup" }) })
-    .filter({ visible: true });
+  // The rental form is the "Gear and sizes" step's body on the thread's spine,
+  // and at most one step is open at rest (ADR 20260827-the-divers-thread,
+  // decision 3) — so this opens it exactly as a diver does, then scopes to it.
+  const fit = await openThreadStep(page, "gear");
   await expect(fit.getByText(/Estimated rental: \$45\.00 per person/)).toBeVisible();
   // The set discount is *shown*, not just silently applied: the piece-by-piece
   // price is struck through and the saving is named. It used to be invisible —

@@ -286,12 +286,18 @@ export function PackingSection({
       ? null
       : exposureSuitFor(trip.waterTemperatureC);
   return (
-    // No outer card, same reasoning as `ForecastSection`: this is pre-trip
-    // reading, not a decision, and the three columns plus the rhythm below are
-    // their own shape. The heading steps up to the briefings section's scale
-    // so the page's supporting reading reads as one system.
-    <section className="mt-12">
-      <h2 className="text-2xl font-semibold tracking-tight">{t("trip.packTitle")}</h2>
+    // No outer card: this is pre-trip reading, not a decision, and the three
+    // columns plus the rhythm below are their own shape.
+    //
+    // **The heading came back down to the section scale in slice 7c.** It was
+    // raised to `text-2xl` to match `DiveBriefingsSection`, which the thread no
+    // longer renders — so it was matching nothing, and it left the one page
+    // this component now lives on (`/ready`) with a second heading almost as
+    // loud as its own `h1` sitting under a spine of `text-base` steps. This is
+    // Clearwater's closed ramp's section heading (ADR
+    // 20260827-clearwater-surface-language, decision 3).
+    <section className="mt-10">
+      <h2 className="text-lg font-semibold">{t("trip.packTitle")}</h2>
       {exposureSuit ? (
         <p className="mt-2 text-sm text-muted">{t(EXPOSURE_SUIT_KEYS[exposureSuit])}</p>
       ) : null}

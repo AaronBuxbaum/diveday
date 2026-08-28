@@ -17,10 +17,10 @@ import type { WaiverState } from "./waivers";
  * The roster used to ask `status !== "ready"`, which reads as the same thing
  * and is not: an **absent** readiness row (a booking the batched readiness pass
  * returned nothing for) has no status at all, so `!== "ready"` counted it as
- * blocked. `getBlockerQueue` — the queue the nav badge, Today, and the
- * by-departure view all derive from — requires `status === "blocked"`, so the
- * same booking was blocked on the roster and absent everywhere else. This is
- * the queue's rule, stated once.
+ * blocked. The readiness pass the nav badge and the shop home's spine both
+ * derive from requires `status === "blocked"`, so the same booking was blocked
+ * on the roster and absent everywhere else. This is the queue's rule, stated
+ * once.
  *
  * Failing *open* here is deliberate and safe: nothing gates boarding on this
  * predicate. It only decides whether a card appears under a filter chip. The

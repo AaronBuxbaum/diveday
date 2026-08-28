@@ -8,9 +8,10 @@ import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
 
 // The seeded demo carries a billing history whose orders have fabricated Stripe
 // ids (the demo never connects an account). The Stripe-calling controls —
-// Refund on the diver profile, Refresh/Void/Refund on the order page — are
-// disabled on a demo shop with a hover reason, and the actions refuse before any
-// Stripe call (ADR 20260723-owner-reporting; src/db/seed.ts).
+// Refresh/Void/Refund on the order page, which is where money out lives since
+// ADR 20260827-people-not-lists took it off the diver record — are disabled on
+// a demo shop with a hover reason, and the actions refuse before any Stripe
+// call (ADR 20260723-owner-reporting; src/db/seed.ts).
 
 test.describe("demo billing history", () => {
   signedInAsOwner();
@@ -18,9 +19,10 @@ test.describe("demo billing history", () => {
   test("a paid demo order's refund control is disabled with a reason", { tag: READ_ONLY }, async ({
     page,
   }) => {
-    // A seeded historical diver with a paid order on file. The extended
-    // roster is well past one default page, sorted alphabetically — search
-    // for her rather than assume she's on the unfiltered first page.
+    // **The diver record no longer holds a refund at all** — money out is the
+    // Orders ledger's act, where the form can send back a partial amount (ADR
+    // 20260827-people-not-lists). A seeded historical diver with a paid order
+    // on file, reached the way a staffer reaches one: through the order.
     await page.goto("/shop/blue-mantis/divers");
     await page.getByRole("searchbox", { name: "Search divers" }).fill("Grace Halloran");
     await page
@@ -30,15 +32,18 @@ test.describe("demo billing history", () => {
       .first()
       .click();
     await page.getByRole("heading", { level: 1, name: "Grace Halloran" }).waitFor();
+    await expect(page.getByRole("button", { name: "Refund" })).toHaveCount(0);
 
-    const refund = page.getByRole("button", { name: "Refund" }).first();
-    await expect(refund).toBeVisible();
-    await expect(refund).toBeDisabled();
-    await expect(refund).toHaveAttribute("title", /demo order/i);
-
-    // The order page reached from the same row disables its Stripe actions too.
-    await page.getByRole("link", { name: "Open payment" }).first().click();
-    await page.waitForURL(/\/orders\//);
+    await page.goto("/shop/blue-mantis/orders");
+    await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+    await page
+      .locator("tbody tr")
+      .filter({ visible: true })
+      .first()
+      .getByRole("link")
+      .first()
+      .click();
+    await page.waitForURL(/\/orders\/[0-9a-f-]{36}/);
     const orderRefund = page.getByRole("button", { name: /Refund|Void|Refresh/ }).first();
     await expect(orderRefund).toBeDisabled();
     await expect(page.getByText(/backed by a live Stripe invoice/i)).toBeVisible();
@@ -281,12 +286,9 @@ test.describe("no connected payment account", () => {
     const personId = new URL(page.url()).pathname.split("/").pop() ?? "";
     expect(personId).not.toBe("");
 
-    // The diver record's own order buttons are replaced, not dead.
-    await expect(page.getByRole("link", { name: "New payment" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Connect payments" }).first()).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/settings#money",
-    );
+    // The record's invoice door is simply absent on a shop that cannot take
+    // money — the Connect-payments CTA left the person page with the ADR.
+    await expect(page.getByRole("link", { name: "+ New invoice" })).toHaveCount(0);
 
     await page.goto(`/shop/blue-mantis/orders/new?personId=${personId}`);
     await page.getByRole("heading", { level: 1, name: "Grace Halloran" }).waitFor();

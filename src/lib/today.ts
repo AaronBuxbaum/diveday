@@ -10,7 +10,8 @@ import {
 } from "@/i18n/today-labels";
 import { HOUR_MS } from "@/lib/clock";
 import type { Role } from "./authz";
-import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
+import type { CrewIncompleteReason } from "./manifests";
+import type { AboardBlockerKind, ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 import { utcToWallTime } from "./zoned";
 
 /**
@@ -42,15 +43,6 @@ import { utcToWallTime } from "./zoned";
 
 /** How soon the work has to be done, derived from the departure it belongs to. */
 export type TodayUrgency = "imminent" | "now" | "soon" | "later";
-
-/**
- * Band order, soonest first — the one place it's written down. Every grouping
- * function across both work-queue views (`groupActions` below,
- * `groupBlockerTrips` in `src/lib/blockers.ts`) buckets over this same array,
- * so the two views can never render the bands in a different order or drop
- * one without the other noticing.
- */
-export const URGENCY_ORDER: readonly TodayUrgency[] = ["imminent", "now", "soon", "later"];
 
 const URGENCY_RANK: Record<TodayUrgency, number> = { imminent: 0, now: 1, soon: 2, later: 3 };
 
@@ -722,130 +714,6 @@ export function sortActions(actions: readonly TodayAction[]): TodayAction[] {
   });
 }
 
-/**
- * The urgency view answers "what matters most across the shop?" rather than
- * "which boat is next?". Time still chooses the band, then the event's actual
- * criticality breaks ties across trips, and the departure time only breaks a
- * tie between equally critical work. The by-departure view keeps the original
- * chronological sort through `sortActions`.
- */
-export function sortUrgencyActions(actions: readonly TodayAction[]): TodayAction[] {
-  return [...actions].sort((a, b) => {
-    const urgency = URGENCY_RANK[a.urgency] - URGENCY_RANK[b.urgency];
-    if (urgency !== 0) return urgency;
-    const severity = KIND_SEVERITY[a.kind] - KIND_SEVERITY[b.kind];
-    if (severity !== 0) return severity;
-    const due =
-      (a.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER) -
-      (b.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER);
-    if (due !== 0) return due;
-    return a.subject.localeCompare(b.subject);
-  });
-}
-
-/**
- * `urgency` is the code the caller looks up in `src/i18n/today-labels.ts`'s
- * `URGENCY_KEYS` for the section heading; this module never renders the word.
- */
-export type TodayActionGroup = {
-  urgency: TodayUrgency;
-  actions: TodayAction[];
-};
-
-/** Only groups with work are returned; an empty heading is noise. */
-export function groupActions(actions: readonly TodayAction[]): TodayActionGroup[] {
-  const sorted = sortUrgencyActions(actions);
-  return URGENCY_ORDER.map((urgency) => ({
-    urgency,
-    actions: sorted.filter((action) => action.urgency === urgency),
-  })).filter((group) => group.actions.length > 0);
-}
-
-/**
- * One urgency band's rows, re-read boat by boat: rows that hang off the same
- * departure share one `label` header so the trip's name and time are said
- * once, not once per row (design/principles.md #9). A row with no departure
- * stands alone (`label: null`). Order is preserved: sub-groups appear where
- * their first row sorted, and rows keep their order inside one — so severity
- * still ranks the work within a boat, and boats still read chronologically.
- */
-export type DepartureActionGroup = {
-  /** Stable per sub-group; the row id when the row stands alone. */
-  key: string;
-  /** The header line — "title · time" — or null for a standalone row. */
-  label: string | null;
-  actions: TodayAction[];
-};
-
-export function groupByDeparture(actions: readonly TodayAction[]): DepartureActionGroup[] {
-  const groups: DepartureActionGroup[] = [];
-  const byTrip = new Map<string, DepartureActionGroup>();
-  for (const action of actions) {
-    if (!action.departure) {
-      groups.push({ key: `solo:${action.id}`, label: null, actions: [action] });
-      continue;
-    }
-    // Keyed by trip *and* label: a boat can owe both a morning departure row
-    // and an evening roll-call row, and those are different moments with
-    // different headers, never one group.
-    const key = `${action.departure.tripId}:${action.departure.label}`;
-    const existing = byTrip.get(key);
-    if (existing) {
-      existing.actions.push(action);
-      continue;
-    }
-    const group = { key, label: action.departure.label, actions: [action] };
-    byTrip.set(key, group);
-    groups.push(group);
-  }
-  return groups;
-}
-
-/**
- * The one-line answer to "how's my day?", as a code: which of the day's four
- * shapes it is, plus the numbers that fill it in. Deliberately not a stat
- * grid: the caller renders it as a sentence above the queue instead of four
- * tiles beside it (`src/i18n/today-labels.ts`'s `summarizeDayText`).
- *
- * It leads with people, not rows. Nine divers collapsed into one row is still
- * nine divers who cannot board, and the headline must not shrink that to "1".
- */
-export type DaySummary =
-  | { code: "blocked"; departures: number; blockedToday: number }
-  | { code: "clear"; departures: number }
-  | { code: "urgent"; departures: number; urgent: number }
-  | { code: "ahead"; departures: number; jobs: number }
-  /**
-   * A shop that has never had a departure — not a quiet Tuesday. It renders no
-   * sentence at all, which is why it carries no counts: "No boats out today"
-   * is right for a shop with a board and wrong for a shop without one, and
-   * anything else here would restate the setup checklist directly beneath it
-   * (issue #711).
-   */
-  | { code: "first_run" };
-
-export function summarizeDay(
-  actions: readonly TodayAction[],
-  departures: number,
-  blockedToday = 0,
-  /**
-   * Whether the shop is still in first-run — the same signal that decides
-   * whether the setup checklist renders, never a second one derived here.
-   */
-  firstRun = false,
-): DaySummary {
-  if (blockedToday > 0) return { code: "blocked", departures, blockedToday };
-  // Checked after `blocked` on purpose: a first-run shop has no divers to
-  // block, so if one somehow does, that is the more urgent truth.
-  if (firstRun && actions.length === 0 && departures === 0) return { code: "first_run" };
-  if (actions.length === 0) return { code: "clear", departures };
-  const urgent = actions.filter(
-    (action) => action.urgency === "imminent" || action.urgency === "now",
-  ).length;
-  if (urgent > 0) return { code: "urgent", departures, urgent };
-  return { code: "ahead", departures, jobs: actions.length };
-}
-
 export type RoleLens = "boat" | "sessions" | null;
 
 /**
@@ -860,17 +728,6 @@ export function roleLensFor(roles: readonly Role[]): RoleLens {
   if (roles.includes("instructor")) return "sessions";
   if (roles.includes("divemaster") || roles.includes("captain")) return "boat";
   return null;
-}
-
-/** Crewed departures first, original sailing order within each half. */
-export function leadWithCrewed<T extends { tripId: string }>(
-  departures: readonly T[],
-  crewedTripIds: ReadonlySet<string>,
-): T[] {
-  return [
-    ...departures.filter((departure) => crewedTripIds.has(departure.tripId)),
-    ...departures.filter((departure) => !crewedTripIds.has(departure.tripId)),
-  ];
 }
 
 /** Which seasonal-briefing sentence today's date falls into. */
@@ -968,4 +825,231 @@ export function anyBoatIsIn(departures: readonly DepartureEnd[], now: Date): boo
  */
 export function lastBoatIsIn(departures: readonly DepartureEnd[], now: Date): boolean {
   return departures.length > 0 && departures.every((departure) => departure.endsAt <= now);
+}
+
+/**
+ * **The day spine** — ADR 20260827-clearwater-surface-language, decision 4.
+ *
+ * The shop home stopped being two views over one queue and became one
+ * chronological spine: today's departures as stations in clock order, each
+ * carrying the work that hangs off it, and everything bound to no boat pooled
+ * under one desk group.
+ *
+ * Everything below is a **re-filing, never a re-detection**. `getTodayWork`
+ * (`src/db/today.ts`) is still the one reader and `KIND_SEVERITY` is still the
+ * one severity ranking; this decides only *where* each
+ * row already produced renders. A `TodayAction` that names a `departure.tripId`
+ * files under that trip's station; one that names none files under the desk.
+ * A new query, a new blocker rule or a second urgency computation here would
+ * be the failure this shape exists to prevent — two answers about one boat.
+ *
+ * The shapes are structural rather than imported from `src/db/today.ts` for
+ * the reason {@link DepartureEnd} is: `src/lib` never imports `src/db`
+ * (`pnpm check:architecture`). The shop home hands this an actual
+ * `DepartureSummary[]`, so dropping or retyping a field upstream still fails
+ * to compile at that call site.
+ */
+export type SpineDeparture = {
+  tripId: string;
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  siteName: string | null;
+  boatName: string | null;
+  priceCents: number | null;
+  capacity: number;
+  booked: number;
+  boarded: number;
+  blocked: number;
+  crew: readonly { fullName: string }[];
+  /**
+   * The two safety facts the departure card carried and the station keeps.
+   * They are not queue rows: neither has a fix a staffer taps here, and both
+   * describe a checkpoint rather than a job (issues #789 and #791).
+   */
+  blockedAboardGroups: readonly { kind: AboardBlockerKind; names: readonly string[] }[];
+  crewAccountedFor: boolean;
+  crewReason: CrewIncompleteReason | null;
+};
+
+/**
+ * One station of the spine: a departure, and the work that hangs off it. The
+ * departure's own fields are spread rather than nested — a station *is* the
+ * departure, seen at the time it sails.
+ */
+export type DayStation = SpineDeparture & {
+  /** The crew line, already flattened to names in roster order. */
+  crewNames: string[];
+  /** This departure's queue rows, severity-ordered. */
+  rows: TodayAction[];
+};
+
+export type DaySpine = {
+  /** Today's departures, clock order. Never re-ordered by the role lens. */
+  stations: DayStation[];
+  /** Rows bound to no departure — the "At the desk" group. */
+  desk: TodayAction[];
+  /** The collapsed Tomorrow disclosure's body and count. */
+  tomorrow: { stations: DayStation[]; jobs: number };
+  /** The rest of the horizon, as one count behind a link to the board. */
+  week: { jobs: number };
+};
+
+/** Tone first: danger, then warning, then everything quiet. */
+const TONE_RANK: Record<"danger" | "warning" | "neutral", number> = {
+  danger: 0,
+  warning: 1,
+  neutral: 2,
+};
+
+function toneRank(action: TodayAction): number {
+  return TONE_RANK[ACTION_KIND_META[action.kind].tone];
+}
+
+/**
+ * Severity order inside one station: danger → warning → quiet, then by
+ * time-to-departure, then by how long the fix takes to land
+ * ({@link KIND_SEVERITY}), then by name so the order is total rather than
+ * merely usually-stable.
+ */
+export function sortStationRows(actions: readonly TodayAction[]): TodayAction[] {
+  return [...actions].sort((a, b) => {
+    const tone = toneRank(a) - toneRank(b);
+    if (tone !== 0) return tone;
+    const due =
+      (a.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER) -
+      (b.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER);
+    if (due !== 0) return due;
+    const severity = KIND_SEVERITY[a.kind] - KIND_SEVERITY[b.kind];
+    if (severity !== 0) return severity;
+    return a.subject.localeCompare(b.subject);
+  });
+}
+
+/** What `assembleDaySpine` needs of one `getTodayWork` result. */
+export type SpineWork = {
+  departures: readonly SpineDeparture[];
+  actions: readonly TodayAction[];
+};
+
+function stationFor(departure: SpineDeparture, rows: readonly TodayAction[]): DayStation {
+  return {
+    ...departure,
+    crewNames: departure.crew.map((member) => member.fullName),
+    rows: sortStationRows(rows),
+  };
+}
+
+/**
+ * Files today's ranked queue onto today's departures.
+ *
+ * `today` is the shop-day's own `getTodayWork`; `tomorrow` is the second,
+ * equally bounded call for the next shop-day, whose *departures* become the
+ * Tomorrow disclosure's body. Rows are drawn from `today.actions` for both —
+ * the horizon is one queue and a job is counted exactly once, wherever its boat
+ * happens to sail.
+ *
+ * Stations arrive in clock order, and nothing re-orders them: the crew-first
+ * ordering the departure board used is deliberately gone,
+ * because a spine that puts 1:00 PM above 7:00 AM for one reader is no longer
+ * a clock.
+ */
+export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpine {
+  const byClock = (a: SpineDeparture, b: SpineDeparture) =>
+    a.startsAt.getTime() - b.startsAt.getTime() || a.tripId.localeCompare(b.tripId);
+  const todayDepartures = [...today.departures].sort(byClock);
+  const tomorrowDepartures = [...tomorrow.departures].sort(byClock);
+
+  const rowsByTrip = new Map<string, TodayAction[]>();
+  const desk: TodayAction[] = [];
+  for (const action of today.actions) {
+    if (!action.departure) {
+      desk.push(action);
+      continue;
+    }
+    const bucket = rowsByTrip.get(action.departure.tripId);
+    if (bucket) bucket.push(action);
+    else rowsByTrip.set(action.departure.tripId, [action]);
+  }
+
+  const stations = todayDepartures.map((departure) =>
+    stationFor(departure, rowsByTrip.get(departure.tripId) ?? []),
+  );
+  const tomorrowStations = tomorrowDepartures.map((departure) =>
+    stationFor(departure, rowsByTrip.get(departure.tripId) ?? []),
+  );
+
+  const placed = new Set([
+    ...todayDepartures.map((departure) => departure.tripId),
+    ...tomorrowDepartures.map((departure) => departure.tripId),
+  ]);
+  const weekJobs = today.actions.filter(
+    (action) => action.departure && !placed.has(action.departure.tripId),
+  ).length;
+
+  return {
+    stations,
+    desk: sortStationRows(desk),
+    tomorrow: {
+      stations: tomorrowStations,
+      jobs: tomorrowStations.reduce((total, station) => total + station.rows.length, 0),
+    },
+    week: { jobs: weekJobs },
+  };
+}
+
+/** Every row the spine holds, wherever it filed. */
+export function spineJobCount(spine: DaySpine): number {
+  return (
+    spine.stations.reduce((total, station) => total + station.rows.length, 0) +
+    spine.desk.length +
+    spine.tomorrow.jobs +
+    spine.week.jobs
+  );
+}
+
+/**
+ * **The whole page is empty at once** (principles.md's whole-page-empty rule):
+ * no boat on the spine, nothing waiting anywhere on it, and no presence-derived
+ * desk row standing in for work the queue cannot see. The home then collapses
+ * to a heading, one sentence and the one act available, rather than rendering a
+ * spine of empty groups.
+ *
+ * `deskPresenceRow` is the honesty clause, and it is the whole reason this is a
+ * function rather than a `spineJobCount(spine) === 0` at the call site: the
+ * desk group can carry a row that is *not* a queue job — the payments row a
+ * shop sees while it cannot take money online (ADR 20260827-first-light,
+ * decision 6) — and "nothing is waiting on you" said over one is a lie the
+ * reader can see on the same screen.
+ *
+ * First-run is a different page and is decided by its own condition
+ * (`countShopTrips === 0`), never by this: a shop that has never had a board is
+ * not having a quiet day.
+ */
+export function spineIsQuiet(spine: DaySpine, deskPresenceRow: boolean): boolean {
+  return spine.stations.length === 0 && spineJobCount(spine) === 0 && !deskPresenceRow;
+}
+
+/**
+ * Has the day earned its morning all-clear line (principles.md §3, and the
+ * coral budget's "The home, morning" row in ADR
+ * 20260827-clearwater-surface-language)?
+ *
+ * Restated in spine terms: no danger or warning row on any of today's stations
+ * or in the desk group. Tomorrow's and the week's jobs may remain — the line is
+ * about *today's boats*, and a job three days out was never what it counted.
+ *
+ * Two conditions ride with it, both carried over from the line's first
+ * implementation rather than invented here. A day with **no departures** never
+ * earns it: "today's boats are all clear" over an empty dock is a compliment
+ * about nothing. And a queue with **no work left anywhere** does not either —
+ * that is the other good-news moment, the queue's own "Nothing is waiting on
+ * you", and the two have never both rendered at once.
+ */
+export function todaysBoatsAreClear(spine: DaySpine): boolean {
+  if (spine.stations.length === 0) return false;
+  if (spineJobCount(spine) === 0) return false;
+  const pressing = (action: TodayAction) => toneRank(action) < TONE_RANK.neutral;
+  if (spine.desk.some(pressing)) return false;
+  return !spine.stations.some((station) => station.rows.some(pressing));
 }

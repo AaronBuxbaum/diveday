@@ -3,39 +3,55 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { arrivalsWindow, operationalWindow, withinWindow } from "@/lib/operational-window";
 import { seededShopContext } from "@/test/db";
-import { countBlockedDivers, getBlockerQueue } from "./blockers";
+import { countBlockedDivers, inHorizonReadiness } from "./blockers";
 import { listCheckInQueue, listWalkInTrips } from "./check-in";
 import { getTodayWork } from "./today";
 
 /**
- * The cross-surface contract of the shared window model (task 141): Today, Not
- * ready, and Check-in read one horizon, so a diver cleared on one is cleared on
- * the others and their counts agree. These are the assertions that would have
- * caught the three-horizon drift — each surface's own file only ever checked
- * itself.
+ * The cross-surface contract of the shared window model (task 141): the day
+ * spine, the nav badge and Check-in read one horizon, so a diver cleared on one
+ * is cleared on the others and their counts agree. These are the assertions
+ * that would have caught the three-horizon drift — each surface's own file only
+ * ever checked itself.
  */
 const NOW = nowDate();
 
+/** Who each in-horizon departure is still holding up, from the shared pass. */
+async function blockedByTrip(
+  db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+  shopId: string,
+): Promise<Map<string, Set<string>>> {
+  const evidence = await inHorizonReadiness(db, shopId, NOW);
+  const byTrip = new Map<string, Set<string>>();
+  for (const trip of evidence.trips) {
+    const people = new Set<string>();
+    for (const row of evidence.readinessByTrip.get(trip.id) ?? []) {
+      if (row.readiness.status === "blocked") people.add(row.person.id);
+    }
+    if (people.size > 0) byTrip.set(trip.id, people);
+  }
+  return byTrip;
+}
+
 describe("one operational window across the readiness surfaces", () => {
-  it("Today and Not ready agree on which of today's departures still hold divers up", async () => {
+  it("a station's blocked count is the shared readiness pass's own answer", async () => {
     const { db, shop } = await seededShopContext();
-    const [work, queue] = await Promise.all([
+    const [work, blocked] = await Promise.all([
       getTodayWork(db, shop.id, shop.slug, shop.timezone, NOW),
-      getBlockerQueue(db, shop.id, shop.slug, NOW),
+      blockedByTrip(db, shop.id),
     ]);
 
-    const blockedInQueue = new Map(queue.trips.map((trip) => [trip.tripId, trip.divers.length]));
     const blockedToday = work.departures.filter((departure) => departure.blocked > 0);
     expect(blockedToday.length).toBeGreaterThan(0);
     for (const departure of blockedToday) {
-      // Same departure, same number of blocked divers — two lenses, one query
-      // horizon and one readiness pass.
-      expect(blockedInQueue.get(departure.tripId)).toBe(departure.blocked);
+      // Same departure, same number of blocked divers — one query horizon and
+      // one readiness pass behind both the station's figure and the badge.
+      expect(blocked.get(departure.tripId)?.size).toBe(departure.blocked);
     }
-    // And the reverse: a departure Today reports as clear is not sitting on the
-    // Not ready queue with blocked divers on it.
+    // And the reverse: a departure the spine reports as clear is not one the
+    // shared pass is still holding blocked divers for.
     for (const departure of work.departures) {
-      if (departure.blocked === 0) expect(blockedInQueue.has(departure.tripId)).toBe(false);
+      if (departure.blocked === 0) expect(blocked.has(departure.tripId)).toBe(false);
     }
   });
 
@@ -67,14 +83,16 @@ describe("one operational window across the readiness surfaces", () => {
     }
   });
 
-  it("shows no blocked diver at the counter that Not ready has already dropped", async () => {
+  it("shows no blocked diver at the counter the shared pass has already cleared", async () => {
     const { db, shop } = await seededShopContext();
-    const [counter, queue] = await Promise.all([
+    const [counter, blocked] = await Promise.all([
       listCheckInQueue(db, shop.id, { now: NOW }),
-      getBlockerQueue(db, shop.id, shop.slug, NOW),
+      blockedByTrip(db, shop.id),
     ]);
     const onNotReady = new Set(
-      queue.trips.flatMap((trip) => trip.divers.map((diver) => `${trip.tripId}:${diver.personId}`)),
+      [...blocked].flatMap(([tripId, people]) =>
+        [...people].map((personId) => `${tripId}:${personId}`),
+      ),
     );
     const upcomingBlocked = counter.filter(
       (row) => row.startsAt >= NOW && row.readiness.status === "blocked",

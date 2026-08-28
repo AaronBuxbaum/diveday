@@ -654,7 +654,8 @@ export type ImportIssueCode =
   | "level_no_card_number"
   | "cert_imported_verified"
   | "cert_imported_pending"
-  | "nitrox_imported"
+  | "nitrox_imported_verified"
+  | "nitrox_imported_pending"
   | "nitrox_no_card_number"
   | "waiver_date_invalid"
   | "waiver_imported"
@@ -1690,11 +1691,23 @@ export function prepareContactImport(text: string): PreparedImport {
         nitrox = { agency, identifier: nitroxNumber, sourceLabel, status: nitroxStatus };
         issues.push({
           level: "info",
-          code: "nitrox_imported",
+          // Split the same way the level and specialty cards are, and for the
+          // same reason: `nitroxStatus` follows the source file's own
+          // verification column, so a row it calls unverified lands `pending` —
+          // which `nitroxBlocker` answers `nitrox_pending` to. One code for
+          // both told a staffer the card arrived verified when it had not.
+          code:
+            nitroxStatus === "verified" ? "nitrox_imported_verified" : "nitrox_imported_pending",
         });
       } else if (flagged) {
         issues.push({
-          level: "info",
+          // `warning`, like `level_no_card_number` beside it and for the same
+          // reason: the source claimed a card and none came across. A diver
+          // whose old system called them nitrox-certified arrives with no
+          // nitrox card at all, and a nitrox-required departure holds them —
+          // which a staffer only learns in time if this row is not filed under
+          // the notes they skim.
+          level: "warning",
           code: "nitrox_no_card_number",
         });
       }

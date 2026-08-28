@@ -1,9 +1,15 @@
 // @vitest-environment jsdom
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { SectionCard, sectionCardClass } from "./card";
 
 afterEach(cleanup);
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const SRC_DIR = join(HERE, "..", "..");
 
 /**
  * The card's contract is mostly visual, but the parts a screenshot cannot
@@ -14,15 +20,95 @@ afterEach(cleanup);
  */
 describe("sectionCardClass", () => {
   it("is one radius, and the ShopStat/Table spelling", () => {
-    expect(sectionCardClass()).toBe(
-      "rounded-2xl border border-border bg-surface shadow-sm p-4 sm:p-5",
-    );
+    expect(sectionCardClass()).toBe("rounded-2xl border border-border bg-surface p-4 sm:p-5");
   });
 
-  it("drops the shadow for a card contained by another, and the padding for a shell", () => {
-    expect(sectionCardClass({ elevated: false })).not.toContain("shadow-sm");
+  it("drops the padding for a shell", () => {
     expect(sectionCardClass({ padding: "none" })).not.toMatch(/\bp-\d/);
     expect(sectionCardClass({ padding: "lg" })).toContain("p-5 sm:p-6");
+  });
+
+  /**
+   * **Elevation is earned** — ADR 20260827-clearwater-surface-language,
+   * decision 1. A panel at rest is a fill and a hairline; a shadow says the
+   * thing floats above the page, which is true of a menu, a sheet, a dialog
+   * and a toast and of nothing else. Asserted as "no shadow utility at all"
+   * rather than as "not `shadow-sm`", because the failure this guards against
+   * is somebody reaching for a *quieter* shadow rather than reaching for the
+   * same one again.
+   */
+  it("emits no shadow token, at any padding or with any className", () => {
+    for (const padding of ["none", "md", "lg"] as const) {
+      expect(sectionCardClass({ padding }), padding).not.toMatch(/\bshadow(-|$)/);
+    }
+    expect(sectionCardClass({ className: "scroll-mt-24" })).not.toMatch(/\bshadow(-|$)/);
+  });
+
+  /**
+   * The prop is gone, not merely defaulted off. It existed so a card nested in
+   * another card could stop stacking surface on surface; with no shadow at
+   * rest there is nothing to stack, and leaving it accepted would let a call
+   * site keep asking for an elevation it will never get.
+   */
+  it("takes no `elevated` option — the escape hatch is inert, not just off", () => {
+    // `pnpm typecheck` refuses the prop at a call site; this is the runtime
+    // half, for the JS a `.mjs` script or a stale build could still hand it.
+    const forced = (sectionCardClass as (options: Record<string, unknown>) => string)({
+      elevated: true,
+    });
+    expect(forced).toBe(sectionCardClass());
+  });
+});
+
+/**
+ * The primitive going flat is only half of decision 1. The other half is the
+ * tree: a page whose `SectionCard`s are flat and whose hand-rolled panels are
+ * not re-creates the ADR's opening complaint — identically-shaped panels at two
+ * elevations on one page — in the opposite direction. This is the tree half,
+ * asserted mechanically rather than remembered.
+ *
+ * Scoped to the card's own radius on purpose. `shadow-sm` is legitimate on
+ * things that are not resting panels — a button, a switch thumb, a segmented
+ * control's selected tile, the sticky chrome bar — and no grep can tell those
+ * from a panel. What it *can* tell is that a rectangle wearing `rounded-2xl`
+ * is wearing the card's shape, and decision 1 says that shape is flat.
+ *
+ * The two `rounded-3xl` one-offs the SPEC leaves to slice 6i (the public
+ * next-departure hero, `CourseSessions`) are deliberately out of this net —
+ * they carry a radius the language does not have yet, and 6i re-shapes them.
+ */
+describe("nothing wearing the card's shape wears a resting shadow", () => {
+  /**
+   * `src/components/MarketingSections.tsx` — the marketing, legal and error
+   * surfaces sit outside every recomposition in ADR
+   * 20260827-clearwater-surface-language and are carried by decision 1's
+   * *shared-primitive* mechanics only (its scope note says so in as many
+   * words). This panel is hand-rolled on a `bg-surface` band, so no primitive
+   * reaches it, and re-styling the marketing pages is not this slice's to do.
+   */
+  const ALLOWED = new Set(["components/MarketingSections.tsx"]);
+
+  function files(dir: string): string[] {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) return files(full);
+      return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [full] : [];
+    });
+  }
+
+  it("finds no rounded-2xl class string carrying shadow-sm", () => {
+    const offenders = files(SRC_DIR)
+      .filter((file) => {
+        // Quoted and templated strings only, so a doc comment discussing the
+        // retired token is not an offender. A class list lives in one such
+        // string; a block comment never puts both tokens inside one of them.
+        const strings = readFileSync(file, "utf8").match(/"[^"]*"|`[^`]*`/g) ?? [];
+        return strings.some((text) => /\brounded-2xl\b/.test(text) && /\bshadow-sm\b/.test(text));
+      })
+      .map((file) => relative(SRC_DIR, file).split(/[\\/]/).join("/"))
+      .filter((file) => !ALLOWED.has(file));
+    // Listed, not counted — a failure should name the file to open.
+    expect(offenders).toEqual([]);
   });
 });
 
@@ -34,7 +120,8 @@ describe("SectionCard", () => {
       </SectionCard>,
     );
     const card = container.querySelector("section");
-    expect(card).toHaveClass("rounded-2xl", "border", "border-border", "bg-surface", "shadow-sm");
+    expect(card).toHaveClass("rounded-2xl", "border", "border-border", "bg-surface");
+    expect(card?.className).not.toMatch(/\bshadow(-|$)/);
     // The drift this component exists to end: no call site can reintroduce a
     // second radius through the escape hatch.
     expect(card?.className).not.toMatch(/rounded-(lg|xl|3xl)\b/);

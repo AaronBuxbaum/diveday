@@ -2,22 +2,12 @@ import { DSD_RATIO } from "@/lib/course-ratios";
 import { firstNameOf } from "@/lib/person-name";
 import type { ReadinessBlockerCode } from "@/lib/readiness";
 import type {
-  DaySummary,
   RollCallGapReason,
   TodayActionKind,
   TodayGreetingBand,
   TodaySeason,
-  TodayUrgency,
 } from "@/lib/today";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
-
-/** Every `TodayUrgency` the queue groups by, to its section-heading key. */
-export const URGENCY_KEYS: Record<TodayUrgency, StaffMessageKey> = {
-  imminent: "shared.today.urgency.imminent",
-  now: "shared.today.urgency.now",
-  soon: "shared.today.urgency.soon",
-  later: "shared.today.urgency.later",
-};
 
 /** Every `TodayActionKind` chip, to its label key. Tone stays in `src/lib/today.ts` (not copy). */
 export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
@@ -538,6 +528,22 @@ export function openTripActionText(t: StaffTranslator): string {
   return t("shared.today.actionLabel.openTrip");
 }
 
+/**
+ * A day station renders every row about one departure under one heading, so
+ * two rows both saying "Open trip" are two links a screen reader announces
+ * identically and that go to different places — the crew anchor and the
+ * last-minute deal panel co-occur on exactly the departure that is short of
+ * crew *and* short of divers. Each row's door names where it goes instead.
+ */
+export function openCrewActionText(t: StaffTranslator): string {
+  return t("shared.today.actionLabel.openCrew");
+}
+
+/** See {@link openCrewActionText}. */
+export function openLastMinuteDealActionText(t: StaffTranslator): string {
+  return t("shared.today.actionLabel.openLastMinuteDeal");
+}
+
 export function openGuestsActionText(t: StaffTranslator): string {
   return t("shared.today.actionLabel.openGuests");
 }
@@ -613,32 +619,35 @@ export function openStaffingActionText(t: StaffTranslator): string {
 
 /** The one-line "how's my day?" headline, resolved from `summarizeDay`'s code. */
 /**
- * Null for a shop still in first-run: it has nothing true to say that the setup
- * checklist beneath it does not already say, and the page renders no sentence
- * rather than an empty one (issue #711).
+ * The day spine's one summary sentence: how many boats today, how many things
+ * are still open, and the next departure that has not left yet — "3 boats
+ * today. 2 things need you before the 7:00 AM leaves the dock." (ADR
+ * 20260827-clearwater-surface-language, decision 4).
+ *
+ * Two clauses, two keys, because the second one has a different sentence once
+ * every boat is away: "before the 7:00 leaves the dock" is a deadline, and a
+ * deadline that has passed is not a smaller version of itself. `time` is
+ * already formatted in the shop's own zone by the caller — this file never
+ * touches a clock.
+ *
+ * It renders nothing for a shop still in first-run: it has nothing true to say
+ * that the setup ledger beneath it does not already say (issue #711), and
+ * nothing at all on a day with no departures, where the page collapses to its
+ * own quiet state instead (principles.md's whole-page-empty rule).
  */
-export function summarizeDayText(t: StaffTranslator, summary: DaySummary): string | null {
-  switch (summary.code) {
-    case "first_run":
-      return null;
-    case "blocked":
-      return t("shared.today.summary.blocked", {
-        departures: summary.departures,
-        blockedToday: summary.blockedToday,
-      });
-    case "clear":
-      return t("shared.today.summary.clear", { departures: summary.departures });
-    case "urgent":
-      return t("shared.today.summary.urgent", {
-        departures: summary.departures,
-        urgent: summary.urgent,
-      });
-    case "ahead":
-      return t("shared.today.summary.ahead", {
-        departures: summary.departures,
-        jobs: summary.jobs,
-      });
-  }
+export function daySpineSummaryText(
+  t: StaffTranslator,
+  summary: { boats: number; jobs: number; nextDepartureTime: string | null },
+): string | null {
+  if (summary.boats === 0) return null;
+  const boats = t("shopHome.spine.summaryBoats", { count: summary.boats });
+  const jobs = summary.nextDepartureTime
+    ? t("shopHome.spine.summaryNext", {
+        count: summary.jobs,
+        time: summary.nextDepartureTime,
+      })
+    : t("shopHome.spine.summaryAfter", { count: summary.jobs });
+  return `${boats} ${jobs}`;
 }
 
 /** Every `TodayGreetingBand`, to its greeting key (`{name}` is the only placeholder). */

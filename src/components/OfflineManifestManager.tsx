@@ -7,6 +7,7 @@ import { OfflineFreshnessPill } from "@/components/OfflineFreshnessPill";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { GroupLabel } from "@/components/ui/ledger";
 import { fill, pluralForm } from "@/i18n/fill";
 import { requestBackgroundFlush } from "@/lib/background-flush";
 import { formatDateTimeTz } from "@/lib/format";
@@ -452,7 +453,12 @@ export function OfflineManifestManager({
   return (
     <>
       {rejectedNotice ? (
-        <div className="pointer-events-none fixed inset-x-0 top-20 z-40 flex justify-center px-4 print:hidden">
+        /* Pinned just under the chrome bar, whose height it reads rather than
+           measures (`--chrome-h`, ADR 20260827-clearwater-surface-language,
+           decision 10). This was `top-20`, a number taken off the old 69px
+           staff bar; the breathing room that number smuggled in is `pt-3` now,
+           where it is a spacing decision rather than a stale measurement. */
+        <div className="pointer-events-none fixed inset-x-0 top-(--chrome-h) z-40 flex justify-center px-4 pt-3 print:hidden">
           <div
             role="alert"
             className="pointer-events-auto max-w-2xl rounded-xl border border-danger/30 bg-danger-tint px-4 py-3 text-base font-semibold text-danger shadow-lg backdrop-blur"
@@ -492,12 +498,9 @@ export function OfflineManifestManager({
             <DisclosureCaret className="group-open/phone:rotate-90" />
             {/* A deliberate eyebrow rather than a section heading, which is a
                 scale `SectionCard`'s own `title` does not render. */}
-            <h2
-              id="offline-heading"
-              className="text-xs font-semibold tracking-widest text-muted uppercase group-hover/summary:underline"
-            >
+            <GroupLabel as="h2" id="offline-heading" className="group-hover/summary:underline">
               {copy.groupHeading}
-            </h2>
+            </GroupLabel>
             <span className="flex flex-wrap items-center gap-2">
               <ConnectivityStatus
                 offlineLabel={saved ? copy.connectivityOfflineWithCopy : copy.connectivityOffline}

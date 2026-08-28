@@ -299,16 +299,13 @@
       "summaryDisconnected": "Disconnected"
     },
     "embed": {
-      "heading": "Website embed",
-      "description": "Copy-paste snippets that put your live booking calendar on your own website."
+      "heading": "Website embed"
     },
     "calendar": {
-      "heading": "Calendar subscriptions",
-      "description": "Put your departures on the calendar app you already use — read-only, so DiveDay never touches it."
+      "heading": "Calendar subscriptions"
     },
     "integrations": {
-      "heading": "Shopify, QuickBooks & Zapier",
-      "description": "Connect the tools you already use for catalog publishing, accounting, and automation."
+      "heading": "Shopify, QuickBooks & Zapier"
     },
     "trial": {
       "heading": "Your trial",
@@ -328,40 +325,32 @@
       "money": "Money",
       "dataIntegrations": "Data & integrations"
     },
-    "subNav": {
+    "rail": {
       "ariaLabel": "Settings sections"
     },
     "whatsapp": {
-      "heading": "WhatsApp",
-      "description": "Send trip reminders and recaps from your shop's own WhatsApp number instead of a platform SMS number."
+      "heading": "WhatsApp"
     },
     "backup": {
-      "heading": "Backups",
-      "description": "A weekly copy of everything your shop holds, delivered to storage you own."
+      "heading": "Backups"
     },
     "team": {
-      "heading": "Team",
-      "description": "Who works here, what each person is allowed to reach, and where your invitations stand."
+      "heading": "Team"
     },
     "diveSites": {
-      "heading": "Dive sites",
-      "description": "The site library the board picks from — depths, conditions, and what divers see there."
+      "heading": "Dive sites"
     },
     "waivers": {
-      "heading": "Waiver template",
-      "description": "The release every diver signs, and the log of who has signed it."
+      "heading": "Waiver template"
     },
     "safetyChecklist": {
-      "heading": "Pre-departure checklist",
-      "description": "What your crew confirms before a boat leaves the dock."
+      "heading": "Pre-departure checklist"
     },
     "security": {
-      "heading": "Account security",
-      "description": "Protect your sign-in with two-factor authentication and manage active sessions."
+      "heading": "Account security"
     },
     "promos": {
-      "heading": "Promo codes",
-      "description": "Shop-wide discount codes a diver types at checkout, each with its own dates and limits."
+      "heading": "Promo codes"
     },
     "dataJobs": {
       "mediaKind": {
@@ -396,15 +385,6 @@
     },
     "summary": {
       "notSet": "Not set"
-    },
-    "dataImport": {
-      "description": "Bring contacts in from a CSV — matched to existing divers, never duplicated."
-    },
-    "gearImport": {
-      "description": "Bring your fleet and its dated service records in from a CSV."
-    },
-    "dataExport": {
-      "description": "Take everything your shop holds back out as a ZIP of CSVs."
     },
     "emergency": {
       "heading": "Emergency reference",
@@ -453,6 +433,7 @@
       "restoreFailed": "Couldn't restore that person's access — check their account first.",
       "inviteInvalid": "Enter a name, a valid email, and check at least one role.",
       "rolesInvalid": "Check at least one role before saving.",
+      "rolesConflict": "Somebody else changed these roles while you had the row open, so nothing was saved. Reload to see where they stand now.",
       "inviteAlreadyOnTeam": "That person already has an account here.",
       "inviteEmailTaken": "That email isn’t available here. Invite this teammate at a different address.",
       "inviteEmailReserved": "That email address is reserved and can't receive mail. Invite this teammate at an address they can read.",
@@ -469,6 +450,10 @@
       "disabled": "Disabled"
     },
     "rolesLegend": "Roles",
+    "roles": {
+      "editAriaLabel": "Edit roles for {name}",
+      "undoAriaLabel": "Undo the role change for {name}"
+    },
     "roleLabels": {
       "owner": "Owner",
       "manager": "Manager",
@@ -492,11 +477,9 @@
     },
     "current": {
       "heading": "Current team",
-      "description": "Enable, disable, and delete take effect immediately. Role changes below wait for Save changes.",
+      "description": "Role changes save when you close a row. Enable, disable, and delete take effect immediately.",
       "empty": "No staff invited yet.",
-      "emptyAction": "Invite a teammate",
-      "save": "Save changes",
-      "saving": "Saving…"
+      "emptyAction": "Invite a teammate"
     },
     "staffRow": {
       "resendInvite": "Resend invite",
@@ -606,7 +589,7 @@
       },
       "nitrox": {
         "what": "Nitrox",
-        "detail": "Imported as verified nitrox certification, flagged imported — but a diver gets plain air until staff confirm it; boarding never waits."
+        "detail": "Comes across with the diver's record, marked imported. Until staff give it a one-tap confirm, that diver gets plain air. Boarding waits on it only where your file says the card was never verified."
       },
       "signedWaivers": {
         "what": "Signed waivers & medical clearance",
@@ -786,7 +769,8 @@
       "levelNoCardNumber": "Certification level \"{level}\" has no usable certification number — certification not imported. Evidence without a number can't be verified.",
       "certImportedVerified": "Certification imported as verified from your records — flagged imported, with a one-tap confirm for staff.",
       "certImportedPending": "Certification imported for staff review — see the note above.",
-      "nitroxImported": "Nitrox certification imported as verified from your records — flagged imported. Fills give plain air until a staffer taps confirm.",
+      "nitroxImportedVerified": "Nitrox certification imported as verified from your records — flagged imported. Fills give plain air until a staffer taps confirm.",
+      "nitroxImportedPending": "Nitrox certification imported for staff review — see the note above. A nitrox-required departure holds this diver until it is confirmed.",
       "nitroxNoCardNumber": "Nitrox marked on the source with no certification number — add and verify the nitrox certification in DiveDay.",
       "waiverDateInvalid": "Waiver accepted date \"{value}\" isn't a real calendar date (expected YYYY-MM-DD) — imported dated to today instead.",
       "waiverImported": "Waiver imported as accepted — trusted from the prior shop, medical clearance included, and marked “imported”.",

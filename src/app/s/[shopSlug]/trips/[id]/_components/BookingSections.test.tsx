@@ -30,6 +30,13 @@ const tripRef = { shopSlug: "reef-shop", tripId: "trip-1", embed: false };
 
 afterEach(cleanup);
 
+/** Every figure the card renders at or above the total's own size. */
+function loudFigures() {
+  return [...document.querySelectorAll(".text-lg, .text-xl, .text-2xl, .text-3xl")]
+    .map((node) => node.textContent ?? "")
+    .filter((text) => /\d/.test(text));
+}
+
 describe("BookSpotSection price currency (task 35)", () => {
   it("quotes the per-diver price in the shop's currency, not dollars", () => {
     renderDiver(
@@ -41,12 +48,13 @@ describe("BookSpotSection price currency (task 35)", () => {
         perDiverPriceCents={130_000}
         currency="mxn"
         locale="en-US"
+        timeZone="America/New_York"
         rentalItems={[]}
         rentalPricing={EMPTY_RENTAL_PRICING}
       />,
     );
 
-    expect(screen.getByText(/MX\$1,300\.00 per diver/)).toBeInTheDocument();
+    expect(screen.getByText(/MX\$1,300\.00 × 1 diver/)).toBeInTheDocument();
   });
 
   it("does not divide a zero-decimal currency by a hundred", () => {
@@ -61,12 +69,13 @@ describe("BookSpotSection price currency (task 35)", () => {
         perDiverPriceCents={13_000}
         currency="jpy"
         locale="en-US"
+        timeZone="America/New_York"
         rentalItems={[]}
         rentalPricing={EMPTY_RENTAL_PRICING}
       />,
     );
 
-    expect(screen.getByText(/¥13,000 per diver/)).toBeInTheDocument();
+    expect(screen.getByText(/¥13,000 × 1 diver/)).toBeInTheDocument();
   });
 
   it("still reads as dollars for a usd shop", () => {
@@ -79,12 +88,220 @@ describe("BookSpotSection price currency (task 35)", () => {
         perDiverPriceCents={13_000}
         currency="usd"
         locale="en-US"
+        timeZone="America/New_York"
         rentalItems={[]}
         rentalPricing={EMPTY_RENTAL_PRICING}
       />,
     );
 
-    expect(screen.getByText(/\$130\.00 per diver/)).toBeInTheDocument();
+    expect(screen.getByText(/\$130\.00 × 1 diver/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * ADR 20260827-the-divers-thread, decision 2. The card said the money five
+ * ways — a description under the heading, a party total, a running checkout
+ * total, a fee line and a tax line — and the hero shouted a sixth figure a page
+ * above. It says it once now, in `MoneyBlock`, directly above the button.
+ */
+describe("BookSpotSection — the money says itself once", () => {
+  it("renders exactly one figure at total scale when the diver pays now", () => {
+    renderDiver(
+      <BookSpotSection
+        trip={trip()}
+        tripRef={tripRef}
+        remaining={6}
+        payAtBooking
+        perDiverPriceCents={9_500}
+        currency="usd"
+        locale="en-US"
+        timeZone="America/New_York"
+        rentalItems={[]}
+        rentalPricing={EMPTY_RENTAL_PRICING}
+      />,
+    );
+
+    expect(loudFigures()).toEqual(["$95"]);
+    expect(screen.getByText("Due now")).toBeInTheDocument();
+  });
+
+  it("renders exactly one figure at total scale when the shop is paid at the counter", () => {
+    renderDiver(
+      <BookSpotSection
+        trip={trip()}
+        tripRef={tripRef}
+        remaining={6}
+        payAtBooking={false}
+        perDiverPriceCents={9_500}
+        currency="usd"
+        locale="en-US"
+        timeZone="America/New_York"
+        rentalItems={[]}
+        rentalPricing={EMPTY_RENTAL_PRICING}
+      />,
+    );
+
+    expect(loudFigures()).toEqual(["$95"]);
+    expect(screen.getByText("Due at the shop")).toBeInTheDocument();
+  });
+
+  it("says no money at all on an unpriced departure", () => {
+    renderDiver(
+      <BookSpotSection
+        trip={trip()}
+        tripRef={tripRef}
+        remaining={6}
+        payAtBooking={false}
+        perDiverPriceCents={null}
+        currency="usd"
+        locale="en-US"
+        timeZone="America/New_York"
+        rentalItems={[]}
+        rentalPricing={EMPTY_RENTAL_PRICING}
+      />,
+    );
+
+    expect(loudFigures()).toEqual([]);
+    expect(screen.queryByText(/\$/)).not.toBeInTheDocument();
+  });
+
+  it("still calls itself Grab a spot, because the party still defaults to one", () => {
+    // The SPEC allows a plural heading *if and only if* the count defaults
+    // above 1. It does not, so no second heading key exists — the plural was
+    // never a design preference, only a consequence.
+    renderDiver(
+      <BookSpotSection
+        trip={trip()}
+        tripRef={tripRef}
+        remaining={6}
+        payAtBooking
+        perDiverPriceCents={9_500}
+        currency="usd"
+        locale="en-US"
+        timeZone="America/New_York"
+        rentalItems={[]}
+        rentalPricing={EMPTY_RENTAL_PRICING}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Grab a spot" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "1 diver" })).toBeChecked();
+  });
+
+  it("no longer quotes the per-diver price under its own heading", () => {
+    // The hero says the price once, at figure scale. A card description
+    // repeating it was the second of five places this form said the money.
+    renderDiver(
+      <BookSpotSection
+        trip={trip()}
+        tripRef={tripRef}
+        remaining={6}
+        payAtBooking
+        perDiverPriceCents={9_500}
+        currency="usd"
+        locale="en-US"
+        timeZone="America/New_York"
+        rentalItems={[]}
+        rentalPricing={EMPTY_RENTAL_PRICING}
+      />,
+    );
+
+    expect(screen.queryByText(/paid securely when you book/i)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * The fine print under the button, and nothing else under it. `TripTerms`
+ * arrives as a node from the page; "no account needed" was a standalone
+ * paragraph of reassurance and now lives behind the one disclosure.
+ */
+describe("BookSpotSection — under the button", () => {
+  function renderWithTerms(payAtBooking: boolean) {
+    renderDiver(
+      <BookSpotSection
+        trip={trip()}
+        tripRef={tripRef}
+        remaining={6}
+        payAtBooking={payAtBooking}
+        perDiverPriceCents={9_500}
+        currency="usd"
+        locale="en-US"
+        timeZone="America/New_York"
+        rentalItems={[]}
+        rentalPricing={EMPTY_RENTAL_PRICING}
+        terms={<p>Free cancellation until Fri, 11:00 AM EDT</p>}
+      />,
+    );
+  }
+
+  it("puts the full terms behind one disclosure, with no account needed inside it", () => {
+    renderWithTerms(true);
+    const summary = screen.getByText("Full terms");
+    const details = summary.closest("details");
+    expect(details).not.toBeNull();
+    expect(details).toContainElement(screen.getByText(/No account needed/i));
+  });
+
+  it("promises a secure page only when there is a checkout to reach", () => {
+    renderWithTerms(true);
+    expect(screen.getByText(/secure Stripe page/i)).toBeInTheDocument();
+
+    cleanup();
+    renderWithTerms(false);
+    expect(screen.queryByText(/secure Stripe page/i)).not.toBeInTheDocument();
+  });
+
+  it("states the shop's cancellation window and nothing else it was handed", () => {
+    renderWithTerms(false);
+    expect(screen.getByText(/Free cancellation until/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * The requirement note is the *page's*, above the form. It was a sunken
+ * bordered panel inside this raised card — a box inside a box, and the first
+ * thing a diver met on reaching the form.
+ */
+describe("BookSpotSection — no box inside the box", () => {
+  it("renders no requirement panel of its own", () => {
+    renderDiver(
+      <BookSpotSection
+        trip={trip()}
+        tripRef={tripRef}
+        remaining={6}
+        payAtBooking
+        perDiverPriceCents={9_500}
+        currency="usd"
+        locale="en-US"
+        timeZone="America/New_York"
+        rentalItems={[]}
+        rentalPricing={EMPTY_RENTAL_PRICING}
+      />,
+    );
+
+    expect(screen.queryByText(/Who this trip is for/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/This charter is for divers with/i)).not.toBeInTheDocument();
+  });
+
+  it("wraps no party or gear step in a bordered fieldset", () => {
+    const { container } = renderDiver(
+      <BookSpotSection
+        trip={trip()}
+        tripRef={tripRef}
+        remaining={4}
+        payAtBooking
+        perDiverPriceCents={9_500}
+        currency="usd"
+        locale="en-US"
+        timeZone="America/New_York"
+        rentalItems={["bcd", "regulator", "wetsuit", "mask_fins", "weights"]}
+        rentalPricing={pricedRentals}
+      />,
+    );
+
+    for (const fieldset of container.querySelectorAll("fieldset")) {
+      expect(fieldset.className).not.toMatch(/\bborder\b/);
+    }
   });
 });
 
@@ -106,24 +323,24 @@ describe("BookSpotSection rental gear at checkout", () => {
         perDiverPriceCents={12_000}
         currency="usd"
         locale="en-US"
+        timeZone="America/New_York"
         rentalItems={["bcd", "regulator", "wetsuit", "mask_fins", "weights"]}
         rentalPricing={pricedRentals}
       />,
     );
 
-    expect(screen.getByText("Rental gear")).toBeInTheDocument();
+    expect(screen.getByText("Rental gear", { selector: "legend" })).toBeInTheDocument();
     // Nothing is added until the diver asks for gear, so the running total
     // stays out of the way rather than announcing a charge nobody chose.
-    expect(
-      screen.queryByText(/Total due at checkout, gear and third-party charges included/),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Rental gear", { selector: "dt" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText("Need rental gear?"));
     fireEvent.click(screen.getByLabelText(/^BCD/));
-    // $120 seat + $15 BCD.
-    expect(
-      screen.getByText(/Total due at checkout, gear and third-party charges included: \$135\.00/),
-    ).toBeInTheDocument();
+    // $120 seat + $15 BCD, resolved in one block and stated once at total
+    // scale — the running "total due at checkout" line is gone with the other
+    // four places this form used to say the money.
+    expect(screen.getByText("Rental gear", { selector: "dt" })).toBeInTheDocument();
+    expect(loudFigures()).toEqual(["$135"]);
   });
 
   it("shows no gear step when the shop hasn't priced any rental gear online", () => {
@@ -136,13 +353,13 @@ describe("BookSpotSection rental gear at checkout", () => {
         perDiverPriceCents={12_000}
         currency="usd"
         locale="en-US"
+        timeZone="America/New_York"
         rentalItems={["bcd", "regulator", "wetsuit", "mask_fins", "weights"]}
         rentalPricing={EMPTY_RENTAL_PRICING}
       />,
     );
 
-    expect(screen.queryByText("Rental gear")).not.toBeInTheDocument();
-    expect(screen.queryByText(/Total due at checkout/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Rental gear", { selector: "legend" })).not.toBeInTheDocument();
   });
 
   it("shows no gear step when checkout itself is off, even with rental pricing configured", () => {
@@ -155,12 +372,13 @@ describe("BookSpotSection rental gear at checkout", () => {
         perDiverPriceCents={null}
         currency="usd"
         locale="en-US"
+        timeZone="America/New_York"
         rentalItems={["bcd", "regulator", "wetsuit", "mask_fins", "weights"]}
         rentalPricing={pricedRentals}
       />,
     );
 
-    expect(screen.queryByText("Rental gear")).not.toBeInTheDocument();
+    expect(screen.queryByText("Rental gear", { selector: "legend" })).not.toBeInTheDocument();
   });
 });
 
@@ -182,6 +400,7 @@ describe("BookSpotSection tax disclosure", () => {
         perDiverPriceCents={19_500}
         currency="usd"
         locale="en-US"
+        timeZone="America/New_York"
         rentalItems={[]}
         rentalPricing={EMPTY_RENTAL_PRICING}
         passThroughFee={{ name: "Marine park fee", amountCents: 2_500 }}
@@ -189,7 +408,8 @@ describe("BookSpotSection tax disclosure", () => {
       />,
     );
 
-    expect(screen.getByText(/Tax is calculated at checkout/)).toBeInTheDocument();
+    expect(screen.getByText("Tax")).toBeInTheDocument();
+    expect(screen.getByText("added at checkout")).toBeInTheDocument();
   });
 
   it("says nothing about tax when the shop handles it outside DiveDay", () => {
@@ -202,12 +422,13 @@ describe("BookSpotSection tax disclosure", () => {
         perDiverPriceCents={19_500}
         currency="usd"
         locale="en-US"
+        timeZone="America/New_York"
         rentalItems={[]}
         rentalPricing={EMPTY_RENTAL_PRICING}
         passThroughFee={{ name: "Marine park fee", amountCents: 2_500 }}
       />,
     );
 
-    expect(screen.queryByText(/Tax is calculated at checkout/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Tax")).not.toBeInTheDocument();
   });
 });

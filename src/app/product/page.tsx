@@ -20,7 +20,12 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import { switchingHref } from "@/lib/funnel";
-import { fullShopExport, productCapabilityIndex, sharedLinkCard } from "@/lib/marketing";
+import {
+  earlyAccessPrice,
+  fullShopExport,
+  productCapabilityIndex,
+  sharedLinkCard,
+} from "@/lib/marketing";
 import { ProductChapterNav } from "./_components/ProductChapterNav";
 
 // `instant = true`: navigating here paints immediately. The request-scoped
@@ -426,14 +431,31 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
           </dl>
           {/* "What is this going to cost me" is one of the three questions a
               burned owner arrives with, and this band — the only one on the
-              page about money — answered the other party's half of it and left
-              ours to the nav. A link, not the figure: the price has exactly one
-              source (`earlyAccessPrice`, H-12) and one page that argues it. */}
+              page about money — raised it, answered the other party's half, and
+              parked our own half behind a click ("What DiveDay itself costs →")
+              until 2026-08-28. An unlabeled door on the one band about money is
+              what a burned buyer reads as a card wall
+              (docs/product/marketing-review-20260827.md, diagnosis 2), so the
+              figure now stands in the link's own words.
+
+              It costs the page no control: this door already existed, and the
+              number arrives inside it rather than beside it. That is the same
+              move the homepage hero made — state the fact, do not open a
+              second door to it (docs/product/marketing.md, "The budget binds
+              controls, not facts").
+
+              Interpolated, never spelled: `earlyAccessPrice` is the single
+              source H-12 requires, and `src/lib/marketing.test.ts` now counts
+              this key among the sentences that must carry `{price}` and
+              `{cadence}`. */}
           <Link
             href="/pricing"
             className={buttonClass({ variant: "link", flush: true, className: "mt-8 text-left" })}
           >
-            {t("marketing.product.pricingLink")}
+            {t("marketing.product.pricingLink", {
+              price: earlyAccessPrice.price,
+              cadence: t(earlyAccessPrice.cadenceKey),
+            })}
           </Link>
         </div>
       </section>
@@ -482,6 +504,30 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
                 </ul>
               </section>
             ))}
+            {/* The dare gets a door. This band's lede makes the page's most
+                explicit promise — every one of these lines is something you
+                can go and do in the live demo right now — and then left it
+                unspent: the reader who took the dare had two more bands to
+                scroll before anything let them act
+                (docs/product/marketing-review-20260827.md, "the dare gets a
+                door"). Tagged `product-index`, registered beside
+                `product-mid`, so the inventory's own conversion can be read
+                apart from the dock story's and from the page total.
+
+                It carries no words of its own, deliberately. The lede above is
+                the caption — a heading here would be the sentence restating
+                its own section that copy-restraint deletes, and the two
+                candidates on this page are already taken ("Rather see it than
+                read about it?" heads the mid-page card two bands up; the
+                closing band names the roles). So the door reads as the list's footer,
+                the way the homepage records band's closing link does: a rule
+                that terminates the hairlines above it, then the pair, at the
+                same left margin as the group rail. No card either — this band
+                is a spec sheet, and a rounded box at the bottom of it would be
+                the one object in the section that isn't a hairline. */}
+            <div className="border-t border-border pt-8">
+              <FunnelCtas locale={locale} source="product-index" size="md" />
+            </div>
           </div>
         </div>
       </section>

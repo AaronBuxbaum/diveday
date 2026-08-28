@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { GroupLabel } from "@/components/ui/ledger";
 import { useMenuDismissal } from "@/components/useMenuDismissal";
 import {
   currentStaffNavDestinationId,
@@ -150,12 +151,9 @@ export function MoreGroup({
 }) {
   return (
     <div className={className}>
-      <p
-        id={id}
-        className="px-2 pt-1 pb-1 text-xs font-semibold tracking-wide text-muted uppercase"
-      >
+      <GroupLabel id={id} className="px-2 pt-1 pb-1">
         {heading}
-      </p>
+      </GroupLabel>
       {/* A named list rather than a bare stack: the heading is the list's
           accessible name, so a screen reader announces "Run the shop, list, 7
           items" instead of leaving the grouping purely visual. */}

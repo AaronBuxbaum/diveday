@@ -2,9 +2,33 @@
 
 import Link from "next/link";
 import { Copyable } from "@/components/Copyable";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
-import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
+import { SettledCheck } from "@/components/ui/SettledCheck";
+
+/**
+ * A new, real shop's Today is otherwise an empty work queue. This replaces
+ * that blank landing with five persisted setup checks plus two guided actions
+ * (schedule a trip and share its public link). Each completion state comes
+ * from a real query, never a dismiss-and-forget flag.
+ *
+ * **Day zero is a state of the home, never a wizard** (ADR
+ * 20260827-first-light, decision 6, in the grammar ADR
+ * 20260827-clearwater-surface-language gives every other surface). The
+ * primary-tinted card of nested step boxes became one ledger group under the
+ * greeting: a done step is a settled line, an open step is a row with its one
+ * fix beside it, and **exactly one open step carries the page's one primary** —
+ * the next thing to do. Everything the shipped checklist already owned is
+ * unchanged underneath: the five persisted facts, the `countShopTrips === 0`
+ * condition, the demo exclusion, the step targets, `Copyable` on the
+ * schedule-link row, the Stripe row's plain `<a>` (its route 302s to Stripe's
+ * OAuth authorize URL, which Next's client navigation cannot follow), and the
+ * `data-first-run-primary` hook the onboarding e2e reads to prove there is
+ * exactly one.
+ *
+ * The group exists only while the shop has no departure at all, and never
+ * comes back.
+ */
 
 export type FirstRunChecklistCopy = {
   heading: string;
@@ -48,83 +72,29 @@ function ChecklistStep({
   doneLabel,
   doneBadge,
   action,
-  isNext,
 }: {
   title: string;
   body: string;
   done: boolean;
   doneLabel: string;
   doneBadge: string;
-  action: React.ReactNode;
-  isNext: boolean;
+  action?: React.ReactNode;
 }) {
   return (
-    // These are compact steps inside the primary-toned onboarding panel, not
-    // page sections. They stay inset and retain their tighter radius so the
-    // checklist reads as one guided object rather than nested full cards.
-    <li
-      data-first-run-next={isNext ? "true" : undefined}
-      className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between"
+    <LedgerRow
+      // A settled step says so in words as well as in the mark — `SettledCheck`
+      // has no way to be used as a bare tick — and it stands where that step's
+      // button used to be, so a finished row offers nothing to press.
+      trailing={done ? <SettledCheck settled label={doneBadge} /> : action}
     >
-      <div className="flex items-start gap-3">
-        <span
-          aria-hidden="true"
-          className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-            done
-              ? // `-tint`, not `/15`: this tick renders on the shop home, in the
-                // app palette, where `-strong` on a 15% fill measures 4.33:1
-                // over `--background` (issue #874). The opaque token is 4.86:1
-                // wherever it is mounted, which is the whole argument for it.
-                "bg-success-tint text-success-strong"
-              : "border-2 border-dashed border-border-strong"
-          }`}
-        >
-          {done ? <DiveDayIcon name="check" className="size-3.5" strokeWidth={2.2} /> : null}
-        </span>
-        <div>
-          <p className="font-medium">{title}</p>
-          <p className="mt-0.5 text-sm text-muted">{done ? doneLabel : body}</p>
-        </div>
+      <div className="min-w-0 py-2">
+        <p className="font-medium">{title}</p>
+        <p className="mt-0.5 text-sm text-muted">{done ? doneLabel : body}</p>
       </div>
-      {done ? (
-        <Badge tone="success" size="sm" className="shrink-0 self-start sm:self-center">
-          {doneBadge}
-        </Badge>
-      ) : (
-        <div className="shrink-0 self-start sm:self-center">{action}</div>
-      )}
-    </li>
+    </LedgerRow>
   );
 }
 
-function CopyScheduleLinkButton({
-  url,
-  copy,
-  copied,
-  failed,
-}: {
-  url: string;
-  copy: string;
-  copied: string;
-  failed: string;
-}) {
-  return (
-    <Copyable
-      layout="inline"
-      value={url}
-      copyLabel={copy}
-      copiedLabel={copied}
-      failedLabel={failed}
-    />
-  );
-}
-
-/**
- * A new, real shop's Today is otherwise an empty work queue. This replaces
- * that blank landing with five persisted setup checks plus two guided actions
- * (schedule a trip and share its public link). Each completion state comes
- * from a real query, never a dismiss-and-forget flag.
- */
 export function FirstRunChecklist({
   shopSlug,
   scheduleUrl,
@@ -146,9 +116,9 @@ export function FirstRunChecklist({
   copy: FirstRunChecklistCopy;
 }) {
   const siteDone = diveSiteCount > 0;
-  // The trip row is intentionally the step that keeps this panel visible: the
-  // checklist only mounts before the first departure exists. It remains an
-  // actionable step rather than pretending a scheduled trip is complete.
+  // The trip row is intentionally the step that keeps this group visible: it
+  // only mounts before the first departure exists. It stays an actionable step
+  // rather than pretending a scheduled trip is complete.
   const nextStep = !contactDone
     ? "contact"
     : !profileDone
@@ -158,46 +128,30 @@ export function FirstRunChecklist({
         : !siteDone
           ? "site"
           : "trip";
-  const contactNext = nextStep === "contact";
-  const profileNext = nextStep === "profile";
-  const unitsNext = nextStep === "units";
-  const siteNext = nextStep === "site";
-  const tripNext = nextStep === "trip";
+  const stepLink = (id: string, href: string, label: string) => (
+    <Link
+      href={href}
+      data-first-run-primary={nextStep === id ? "true" : undefined}
+      className={buttonClass({ size: "sm", variant: nextStep === id ? "primary" : "secondary" })}
+    >
+      {label}
+    </Link>
+  );
 
   return (
-    <section
-      aria-labelledby="first-run-heading"
-      className="mb-10 rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:p-6"
-    >
-      <h2 id="first-run-heading" className="text-lg font-semibold">
-        {copy.heading}
-      </h2>
-      <p className="mt-1 text-sm text-muted">{copy.subtitle}</p>
-      <p className="mt-2 text-sm font-medium text-primary">{copy.progress}</p>
-
-      <ol className="mt-4 flex flex-col gap-2.5">
+    <LedgerGroup as="h2" id="first-run-heading" label={copy.heading} meta={copy.progress}>
+      <p className="mt-2 text-sm text-muted">{copy.subtitle}</p>
+      <ol className="mt-3">
         <ChecklistStep
           title={copy.contactTitle}
           body={copy.contactBody}
           done={contactDone}
           doneLabel={copy.contactDone}
           doneBadge={copy.doneBadge}
-          isNext={nextStep === "contact"}
-          action={
-            // Straight to the open contact row — the settings hub keeps its
-            // forms behind summary rows, and a link that promises a form must
-            // land on it open.
-            <Link
-              href={`/shop/${shopSlug}/settings#contact`}
-              data-first-run-primary={contactNext ? "true" : undefined}
-              className={buttonClass({
-                size: "sm",
-                variant: contactNext ? "primary" : "secondary",
-              })}
-            >
-              {copy.contactAction}
-            </Link>
-          }
+          // Straight to the open contact row — the settings hub keeps its forms
+          // behind summary rows, and a link that promises a form must land on
+          // it open.
+          action={stepLink("contact", `/shop/${shopSlug}/settings#contact`, copy.contactAction)}
         />
         <ChecklistStep
           title={copy.profileTitle}
@@ -205,19 +159,7 @@ export function FirstRunChecklist({
           done={profileDone}
           doneLabel={copy.profileDone}
           doneBadge={copy.doneBadge}
-          isNext={nextStep === "profile"}
-          action={
-            <Link
-              href={`/shop/${shopSlug}/settings#profile`}
-              data-first-run-primary={profileNext ? "true" : undefined}
-              className={buttonClass({
-                size: "sm",
-                variant: profileNext ? "primary" : "secondary",
-              })}
-            >
-              {copy.profileAction}
-            </Link>
-          }
+          action={stepLink("profile", `/shop/${shopSlug}/settings#profile`, copy.profileAction)}
         />
         {/* **The two settings the shop never chose.** Onboarding derives both
             from the timezone it picked (`src/lib/curated-defaults.ts`), and
@@ -231,19 +173,7 @@ export function FirstRunChecklist({
           done={unitsDone}
           doneLabel={copy.unitsDone}
           doneBadge={copy.doneBadge}
-          isNext={nextStep === "units"}
-          action={
-            <Link
-              href={`/shop/${shopSlug}/settings#units`}
-              data-first-run-primary={unitsNext ? "true" : undefined}
-              className={buttonClass({
-                size: "sm",
-                variant: unitsNext ? "primary" : "secondary",
-              })}
-            >
-              {copy.unitsAction}
-            </Link>
-          }
+          action={stepLink("units", `/shop/${shopSlug}/settings#units`, copy.unitsAction)}
         />
         <ChecklistStep
           title={copy.siteTitle}
@@ -251,77 +181,50 @@ export function FirstRunChecklist({
           done={siteDone}
           doneLabel={copy.siteDone}
           doneBadge={copy.doneBadge}
-          isNext={nextStep === "site"}
-          action={
-            <Link
-              href={`/shop/${shopSlug}/dive-sites/new`}
-              data-first-run-primary={siteNext ? "true" : undefined}
-              className={buttonClass({ size: "sm", variant: siteNext ? "primary" : "secondary" })}
-            >
-              {copy.siteAction}
-            </Link>
-          }
+          action={stepLink("site", `/shop/${shopSlug}/dive-sites/new`, copy.siteAction)}
         />
         <ChecklistStep
           title={copy.tripTitle}
           body={copy.tripBody}
-          // The whole checklist only renders while the shop has no upcoming
-          // trip, so this step is never done at render time — no separate
-          // query needed to know that.
+          // The whole group only renders while the shop has no upcoming trip,
+          // so this step is never done at render time.
           done={false}
           doneLabel={copy.tripTitle}
           doneBadge={copy.doneBadge}
-          isNext={nextStep === "trip"}
-          action={
-            <Link
-              href={`/shop/${shopSlug}/schedule/board?add=1`}
-              data-first-run-primary={tripNext ? "true" : undefined}
-              className={buttonClass({ size: "sm", variant: tripNext ? "primary" : "secondary" })}
-            >
-              {copy.tripAction}
-            </Link>
-          }
+          action={stepLink("trip", `/shop/${shopSlug}/schedule/board?add=1`, copy.tripAction)}
         />
-        <li className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
-          {/* `min-w-0` on both levels, or the `truncate` below never fires: a
-              flex item defaults to `min-width:auto`, so these boxes grow to
-              their widest child — the URL — and push the whole page wider than
-              the viewport instead of clipping it. Only visible once the URL is
-              absolute (a configured APP_HOST); with no origin it degrades to a
-              short path and fits by accident. */}
-          <div className="flex min-w-0 items-start gap-3">
-            <span
-              aria-hidden="true"
-              className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-border-strong text-xs font-bold"
+        <LedgerRow
+          trailing={
+            <Copyable
+              layout="inline"
+              value={scheduleUrl}
+              copyLabel={copy.scheduleCopy}
+              copiedLabel={copy.scheduleCopied}
+              failedLabel={copy.scheduleCopyFailed}
             />
-            <div className="min-w-0">
-              <p className="font-medium">{copy.scheduleTitle}</p>
-              <p className="mt-0.5 text-sm text-muted">{copy.scheduleBody}</p>
-              <p className="mt-2 max-w-full truncate font-mono text-xs text-muted">{scheduleUrl}</p>
-            </div>
+          }
+        >
+          {/* `min-w-0`, or the `truncate` below never fires: a flex item
+              defaults to `min-width:auto`, so the row grows to its widest child
+              — the URL — and pushes the page wider than the viewport instead of
+              clipping it. */}
+          <div className="min-w-0 py-2">
+            <p className="font-medium">{copy.scheduleTitle}</p>
+            <p className="mt-0.5 text-sm text-muted">{copy.scheduleBody}</p>
+            <p className="mt-1 max-w-full truncate font-mono text-xs text-muted">{scheduleUrl}</p>
           </div>
-          <div className="shrink-0 self-start sm:self-center">
-            <CopyScheduleLinkButton
-              url={scheduleUrl}
-              copy={copy.scheduleCopy}
-              copied={copy.scheduleCopied}
-              failed={copy.scheduleCopyFailed}
-            />
-          </div>
-        </li>
+        </LedgerRow>
         <ChecklistStep
           title={copy.stripeTitle}
           body={copy.stripeBody}
           done={stripeDone}
           doneLabel={copy.stripeDone}
           doneBadge={copy.doneBadge}
-          isNext={false}
           action={
             // A plain <a>, not <Link>: this route 302s to Stripe's OAuth
             // authorize URL, and Next's client-side navigation would follow
-            // that redirect via fetch — a cross-origin request Stripe's
-            // CORS policy rejects. A full navigation handles the redirect
-            // natively.
+            // that redirect via fetch — a cross-origin request Stripe's CORS
+            // policy rejects. A full navigation handles the redirect natively.
             <a
               href={`/shop/${shopSlug}/settings/connect`}
               className={buttonClass({ size: "sm", variant: "secondary" })}
@@ -331,6 +234,6 @@ export function FirstRunChecklist({
           }
         />
       </ol>
-    </section>
+    </LedgerGroup>
   );
 }

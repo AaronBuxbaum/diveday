@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import {
-  annotateAlsoOn,
-  type BlockerQueueTrip,
-  blockerFixFor,
-  distinctBlockedDivers,
-} from "./blockers";
+import { blockerFixFor } from "./blockers";
 import type { ReadinessBlocker, ReadinessBlockerCode, ReadinessBlockerParams } from "./readiness";
 import { BLOCKER_ACTIONS, diverBlockerAction } from "./today";
 
@@ -49,74 +44,12 @@ describe("blockerFixFor", () => {
   });
 });
 
-describe("distinctBlockedDivers", () => {
-  it("counts a diver booked on two boats once for the headline", () => {
-    const trips = [
-      {
-        tripId: "a",
-        title: "",
-        startsAt: nowDate(),
-        courseTitle: null,
-        booked: 2,
-        ready: 0,
-        divers: [{ personId: "p1" }, { personId: "p2" }] as never,
-        urgency: "now" as const,
-      },
-      {
-        tripId: "b",
-        title: "",
-        startsAt: nowDate(),
-        courseTitle: null,
-        booked: 1,
-        ready: 0,
-        divers: [{ personId: "p1" }] as never,
-        urgency: "now" as const,
-      },
-    ];
-    expect(distinctBlockedDivers(trips)).toBe(2);
-  });
-});
-
-describe("annotateAlsoOn", () => {
-  const trip = (tripId: string, title: string, personIds: string[]): BlockerQueueTrip => ({
-    tripId,
-    title,
-    startsAt: nowDate(),
-    courseTitle: null,
-    booked: personIds.length,
-    ready: 0,
-    divers: personIds.map((personId) => ({ personId, alsoOn: [] }) as never),
-    urgency: "now",
-  });
-
-  it("ties a repeat diver's rows together with the other trip titles", () => {
-    const trips = [
-      trip("a", "Wreck Trip", ["p1", "p2"]),
-      trip("b", "Reef Dive", ["p1"]),
-      trip("c", "Night Dive", ["p1"]),
-    ];
-    annotateAlsoOn(trips);
-    // p1 is on all three: each row lists the other two.
-    expect(trips[0].divers[0].alsoOn).toEqual(["Reef Dive", "Night Dive"]);
-    expect(trips[1].divers[0].alsoOn).toEqual(["Wreck Trip", "Night Dive"]);
-    // p2 is only on one boat — no cross-reference.
-    expect(trips[0].divers[1].alsoOn).toEqual([]);
-  });
-
-  it("dedupes by trip identity, not title, so same-named departures stay distinct", () => {
-    const trips = [trip("a", "Two-Tank Reef", ["p1"]), trip("b", "Two-Tank Reef", ["p1"])];
-    annotateAlsoOn(trips);
-    expect(trips[0].divers[0].alsoOn).toEqual(["Two-Tank Reef"]);
-    expect(trips[1].divers[0].alsoOn).toEqual(["Two-Tank Reef"]);
-  });
-});
-
 /**
- * The invariant that silently broke: the by-departure blocker view and the
- * Today queue sit one tap apart and must send a staffer to the same place for
- * the same diver. They used to compute that independently from six identical
- * lines each. Walking `BLOCKER_ACTIONS` rather than a hand-written list means a
- * blocker code added tomorrow is covered the day it exists.
+ * The invariant that silently broke: the counter's blocked rows and the day
+ * spine's diver rows sit one tap apart and must send a staffer to the same
+ * place for the same diver. They used to compute that independently from six
+ * identical lines each. Walking `BLOCKER_ACTIONS` rather than a hand-written
+ * list means a blocker code added tomorrow is covered the day it exists.
  */
 describe("blockerFixFor and diverBlockerAction agree on every blocker code", () => {
   const codes = Object.keys(BLOCKER_ACTIONS) as ReadinessBlockerCode[];

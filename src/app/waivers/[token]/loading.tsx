@@ -1,3 +1,4 @@
+import { THREAD_MEASURE_CLASS } from "@/components/thread/ThreadShell";
 import { sectionCardClass } from "@/components/ui/card";
 
 /**
@@ -10,7 +11,7 @@ import { sectionCardClass } from "@/components/ui/card";
  */
 export default function WaiverLoading() {
   return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
+    <main className={THREAD_MEASURE_CLASS}>
       <div className="animate-pulse">
         <div className="h-4 w-32 rounded bg-surface-sunken" />
         <div className="mt-2 h-9 w-72 max-w-full rounded bg-surface-sunken" />

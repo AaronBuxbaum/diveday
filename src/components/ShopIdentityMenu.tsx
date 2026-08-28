@@ -5,6 +5,7 @@ import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoic
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
+import { GroupLabel } from "@/components/ui/ledger";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useMenuDismissal } from "@/components/useMenuDismissal";
 
@@ -129,9 +130,7 @@ export function ShopIdentityMenu({
           className={`absolute top-full left-0 z-10 mt-2 min-w-44 rounded-xl border border-border bg-surface p-2 shadow-lg ${closing ? "animate-scale-out" : "animate-scale-in"}`}
         >
           <div className="pt-1">
-            <p className="px-2 text-xs font-semibold tracking-wide text-muted uppercase">
-              {copy.language}
-            </p>
+            <GroupLabel className="px-2">{copy.language}</GroupLabel>
             <div className="mt-1">
               <LanguageChoices
                 current={locale}

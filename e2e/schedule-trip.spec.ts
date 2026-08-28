@@ -1,5 +1,11 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signInAsOwner, tripPathByTitle } from "./helpers";
+import {
+  bookASeatAndOpenThread,
+  daysFromNow,
+  e2eNow,
+  signInAsOwner,
+  tripPathByTitle,
+} from "./helpers";
 
 signedInAsOwner();
 
@@ -45,8 +51,8 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   await expect(page.getByRole("status")).toContainText(title);
 
   // View as a diver: a staff session puts a preview banner on
-  // /s/<slug>/trips/[id]; the public dive-plan briefing ("Your N-dive plan")
-  // is what a signed-out visitor gets.
+  // /s/<slug>/trips/[id]; the public dive plan ("The day") is what a signed-out
+  // visitor gets.
   await page.context().clearCookies();
   await page.goto("/s/blue-mantis");
   // Scoped to the trip list itself, the page's one stable anchor for
@@ -61,9 +67,16 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   await expect(card.getByText("8 spots left").filter({ visible: true })).toBeVisible();
 
   await card.click();
-  await expect(page.getByRole("heading", { name: "Your 3-dive plan" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Morning reef" })).toBeVisible();
-  await expect(page.getByText("Second site details will be confirmed at the dock.")).toBeVisible();
+  // What the staffer typed, read back in the diver's own words: the three tanks
+  // in plan order under "The day", with dive one wearing the name it was given.
+  // The heading counted the dives ("Your 3-dive plan") and each tank carried its
+  // own prose until 2026-08-28; the count is now the last row's own number and
+  // the prose is the thread's, since a dive's briefing is preparation and
+  // preparation is for a diver who has a seat (ADR 20260827-the-divers-thread,
+  // decision 2).
+  await expect(page.getByRole("heading", { name: "The day" })).toBeVisible();
+  await expect(page.getByText("Dive 3", { exact: true })).toBeVisible();
+  await expect(page.getByText("Morning reef", { exact: true })).toBeVisible();
 
   // Cancel the trip — this leg exercises the staff cancel control itself;
   // test isolation is already handled by the per-test demo reset in
@@ -220,8 +233,14 @@ test("staff moves a departure to a different boat after it is on the board", asy
  * (issue #704 slice 2) — a marina three miles out, a shore dive's beach car
  * park. Staff sets it on the trip's own details form; the diver reads it on
  * the exact line ("Arrive and check in") that used to say only a time.
+ *
+ * That line is the dock-day rhythm, and the rhythm moved to the diver's thread
+ * with `PackingSection` (ADR 20260827-the-divers-thread, decision 2 — what to
+ * bring and when to be there is preparation, and preparation is for a diver who
+ * has a seat). So this takes a seat before it reads the meeting point, exactly
+ * as the three journeys in `dock-day-rhythm.spec.ts` do for the same line.
  */
-test("a departure's own meeting point reaches the diver on the booking page", async ({ page }) => {
+test("a departure's own meeting point reaches the diver on their thread", async ({ page }) => {
   test.setTimeout(BOARD_FLOW_TIMEOUT_MS);
   const tripPath = await tripPathByTitle(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
   await page.goto(tripPath);
@@ -237,6 +256,7 @@ test("a departure's own meeting point reaches the diver on the booking page", as
 
   const tripId = tripPath.split("/").pop();
   await page.goto(`/s/blue-mantis/trips/${tripId}`);
+  await bookASeatAndOpenThread(page, "Jetty Reader");
   await expect(page.getByText("North Jetty Marina")).toBeVisible();
   await expect(page.getByText("12 Dock Rd")).toBeVisible();
 });

@@ -1,22 +1,5 @@
-import type { Locator } from "@playwright/test";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import { daysFromNow, e2eNow, signInAsOwner } from "./helpers";
-
-/**
- * The photo an `<img>` ultimately renders, seen through `next/image`.
- *
- * An optimized image's `src` is `/_next/image?url=<the real source>&w=…&q=…`,
- * with the source percent-encoded — so a bundled path that reads
- * `/dive-sites/Sponge%2006%20…jpg` on a plain `<img>` arrives here as
- * `%2Fdive-sites%2FSponge%252006%2520…jpg`. One decode of the `url` parameter
- * gets back to the stored URL, which is what the assertions care about.
- * Falls through unchanged for an image that isn't being optimized.
- */
-async function bundledSource(image: Locator): Promise<string> {
-  const src = (await image.getAttribute("src")) ?? "";
-  const optimized = src.match(/^\/_next\/image\?url=([^&]+)/);
-  return optimized?.[1] ? decodeURIComponent(optimized[1]) : src;
-}
 
 test.describe("staff", () => {
   signedInAsOwner();
@@ -576,107 +559,57 @@ test("the dive-site catalog is staff-only", async ({ page }) => {
   await expect(page).toHaveURL(/\/sign-in/);
 });
 
-test("the seeded reef briefing shows a terrain map, a gentle route, landmarks, and a field guide", async ({
-  page,
-}) => {
-  // The per-test fixture reset already restored the seeded briefing; read it
-  // straight off the public schedule as a diver. Scoped to the trip-list
-  // item so the locator can never drift onto another surface that happens to
-  // carry the trip's title (reviews quote trip names too).
+/**
+ * **What a diver reads about the day's sites, after slice 7c took the deck
+ * away.**
+ *
+ * Until 2026-08-28 this was two long tests over `DiveBriefingsSection` — a
+ * terrain map, a route line, landmark folds, a field-guide door and a
+ * comparison table, all rendered on the thread. ADR
+ * 20260827-the-divers-thread moved the pitch to the trip page and left the
+ * thread as prep only (decision 2 and 3), and its SPEC's 7c line deletes the
+ * deck; with no renderer left, the deck's components went with it (H-49).
+ *
+ * What survives, and what these two tests now pin, is the claim that outlives
+ * any one layout: **the shop picks the faces, DiveDay writes the words, and
+ * the reader's own language decides which words** (ADR
+ * 20260813-marine-life-is-diveday-copy). The row stores a slug, so the same
+ * saved guide reads in English for one visitor and in Spanish for the next —
+ * which under the old copy-at-pick-time model was impossible.
+ */
+test("the day's field guide reads in the shop's own picks, in English", async ({ page }) => {
   await page.goto("/s/blue-mantis");
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
     .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
     .click();
-
-  await expect(page.getByTitle("Terrain map of Molasses Reef")).toBeVisible();
-  await expect(page.getByText("Reef garden loop")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Open map ↗" })).toBeVisible();
-  // Landmarks and diver moments fold behind one tap per dive so the page stays
-  // a briefing; open both tanks' folds to read them. The field guide has a
-  // *separate* door of its own for a diver who has not booked — named for what
-  // is in it and counting it (issue #760) — and it is closed too, so its own
-  // summary is opened alongside them (product owner, 2026-08-27).
-  for (const summary of await page.getByText("What to look for down there").all()) {
-    await summary.click();
-  }
-  for (const summary of await page.getByText("A few faces to learn").all()) {
-    await summary.click();
-  }
-  // Both tanks of the seeded two-tank trip carry a site briefing, so this
-  // heading appears once per dive.
-  await expect(
-    page.getByRole("heading", { name: "Landmarks that tell the story" }).first(),
-  ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Molasses Reef Light" })).toBeVisible();
-  await expect(page.getByText("8 likely sightings")).toBeVisible();
-  await expect(page.getByRole("img", { name: "Stoplight parrotfish" }).first()).toBeVisible();
-  // Both the landmark's paragraph and the fit line under "Welcoming dive" are
-  // the *shop's* words now, off its own row — they used to come from a
-  // hard-coded table keyed by site name and from a canned sentence per tone,
-  // neither of which any field on the site could change.
-  await expect(
-    page.getByText("The steel tower is the easiest above-water reference on the reef"),
-  ).toBeVisible();
-  await expect(page.getByText("a good first ocean dive after a pool course").first()).toBeVisible();
-  // What these two assert is the CR-020 property: a public page serves the
-  // bundled first-party copy, never a live third-party Commons URL. Read it
-  // through `bundledSource` rather than off `src` directly — these photos go
-  // through `next/image` now, so the real source is the `url` parameter of an
-  // `/_next/image?...` request, and matching the raw attribute would only be
-  // asserting which optimizer is in front of it.
-  await expect
-    .poll(() => bundledSource(page.getByRole("img", { name: "Elkhorn coral" })))
-    .toMatch(/\/marine-life\//);
-  await expect
-    .poll(() => bundledSource(page.getByRole("img", { name: /southern stingray/i })))
-    .toMatch(/\/marine-life\/southern-stingray\.jpg/);
+  // The pitch page, before any seat is taken: "is this my day?" is answered
+  // here, and preparation waits for a diver who has one.
+  await expect(page.getByRole("heading", { name: "Look for" })).toBeVisible();
+  await expect(page.getByText("Stoplight parrotfish")).toBeVisible();
+  await expect(page.getByText("Elkhorn coral")).toBeVisible();
 });
 
 test("the same saved field guide reads in Spanish for a Spanish-speaking diver", async ({
   page,
 }) => {
-  // The point of ADR 20260813-marine-life-is-diveday-copy. Nothing about the
-  // site changes between this test and the one above it -- same shop, same
-  // seeded rows, same eight species. What changes is who is reading, and the
-  // cards follow them. Under the copy-at-pick-time model this was impossible:
-  // a row held one language, whichever the staffer's browser was in.
+  // Nothing about the site changes between this test and the one above it --
+  // same shop, same seeded rows, same species. What changes is who is reading.
+  // The choice is a cookie rather than a URL (`LOCALE_COOKIE`, ADR
+  // 20260812-reader-chosen-language), so it is set directly here.
   await page.goto("/s/blue-mantis");
-  await page.getByRole("banner").getByRole("button", { name: "Change language" }).click();
-  await page.getByRole("banner").getByRole("button", { name: "Español" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Calendario" })).toBeVisible();
-
+  await page.context().addCookies([{ name: "diveday_locale", value: "es-ES", url: page.url() }]);
+  await page.reload();
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
     .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
     .click();
-  // Wait for the briefing itself before enumerating the folds. `.all()` is a
-  // snapshot of what exists at that instant, so calling it straight off the
-  // navigation finds nothing, opens nothing, and leaves the assertions below
-  // looking for cards inside a closed `<details>`.
-  await expect(page.getByRole("heading", { level: 3, name: "Molasses Reef" })).toBeVisible();
-  for (const summary of await page.getByText("Qué buscar ahí abajo").all()) {
-    await summary.click();
-  }
-  // The field guide's own door, in the reader's own language — the same
-  // `site.fieldGuideHeading` the summary above renders in English.
-  for (const summary of await page.getByText("Algunas caras que aprender").all()) {
-    await summary.click();
-  }
-
-  // The species names, the category words and the descriptions are all
-  // Spanish, off the same `dive_site_creatures` rows the English render reads.
-  await expect(page.getByText("Loro semáforo").first()).toBeVisible();
-  await expect(page.getByText("Coral cuerno de alce").first()).toBeVisible();
-  await expect(page.getByText("Pez de arrecife").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Busca" })).toBeVisible();
+  await expect(page.getByText("Loro semáforo")).toBeVisible();
+  await expect(page.getByText("Coral cuerno de alce")).toBeVisible();
   await expect(page.getByText("Stoplight parrotfish")).toHaveCount(0);
-  // The photo is the same file -- an image is not a string, and bundling it
-  // once is the whole reason it is not in a message bundle.
-  await expect
-    .poll(() => bundledSource(page.getByRole("img", { name: "Loro semáforo" }).first()))
-    .toMatch(/\/marine-life\/stoplight-parrotfish\.jpg/);
 });
 
 test("a shop writes its own landmarks and picks its own field guide", async ({ page }) => {

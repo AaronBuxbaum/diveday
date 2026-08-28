@@ -252,6 +252,9 @@ test("booking a diver from their record issues their waiver, like every other do
   await page.getByRole("link", { name: "Priya Sharma" }).first().click();
   await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
 
+  // "Book a departure" is the record's one primary, and it discloses the
+  // picker in place (ADR 20260827-people-not-lists).
+  await page.getByText("Book a departure", { exact: true }).click();
   // The picker's option values are trip ids, so this targets *our* departure
   // without depending on how an option label is formatted for the locale.
   await page.getByLabel("Course or dive").selectOption(tripId);

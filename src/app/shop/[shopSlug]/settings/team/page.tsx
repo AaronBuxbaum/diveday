@@ -17,19 +17,22 @@ import { languageNameIn } from "@/i18n/language-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { requireShopSurface } from "@/lib/session";
 import { COMMON_SPOKEN_LANGUAGES } from "@/lib/spoken-languages";
-import { noticeFromParam } from "@/lib/staff-notices";
+import { type FormNotice, noticeForForm, noticeFromParam } from "@/lib/staff-notices";
+import { StaffRolesDisclosure } from "./_components/StaffRolesDisclosure";
 import {
   inviteStaffAction,
   removeStaffAction,
   resendInviteAction,
   restoreStaffAction,
-  saveAllStaffRolesAction,
   saveStaffEmergencyContactAction,
   saveStaffLanguagesAction,
+  saveStaffRolesAction,
   setStaffStatusAction,
 } from "./actions";
+import { TEAM_FORMS, teamNoticeForm, teamNoticeOnRoster } from "./notices";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -40,23 +43,7 @@ import {
 // segment's `loading.tsx` is what paints. See ADR 20260804-instant-navigation.
 export const instant = true;
 
-const ROLES_FORM_ID = "team-roles-form";
-
 export const metadata: Metadata = { title: "Team — DiveDay" };
-
-/** Refusals about the address typed into the invite form's Email box. */
-const INVITE_EMAIL_NOTICES = new Set([
-  "invite-already-on-team",
-  "invite-email-taken",
-  "invite-email-reserved",
-]);
-
-/** The rest of what the invite form itself can say, refusals and confirmation alike. */
-const INVITE_FORM_NOTICES = new Set(["invited", "invite-invalid"]);
-/** Outcomes of one staff card's emergency-contact form, shown on that card. */
-const CONTACT_FORM_NOTICES = new Set(["contact-saved", "half-filled"]);
-/** Outcomes of one staff card's spoken-languages form, shown on that card (issue #708). */
-const LANGUAGES_FORM_NOTICES = new Set(["languages-saved"]);
 
 /** One resolved `?notice=`: the tone it carries and the words for it. */
 type NoticeMessage = { tone: "success" | "danger" | "warning"; text: string };
@@ -78,6 +65,7 @@ function noticeMessages(t: StaffTranslator): Record<string, NoticeMessage> {
     "restore-failed": { tone: "danger", text: t("settings.team.notice.restoreFailed") },
     "invite-invalid": { tone: "danger", text: t("settings.team.notice.inviteInvalid") },
     "roles-invalid": { tone: "danger", text: t("settings.team.notice.rolesInvalid") },
+    "roles-conflict": { tone: "danger", text: t("settings.team.notice.rolesConflict") },
     "invite-already-on-team": {
       tone: "danger",
       text: t("settings.team.notice.inviteAlreadyOnTeam"),
@@ -124,18 +112,19 @@ function roleLabels(t: StaffTranslator): Record<Role, string> {
   };
 }
 
+/**
+ * The invite form's role picker. A roster row's is `StaffRolesDisclosure` —
+ * the per-row disclosure that saves on close (ADR 20260827-the-shops-shelves,
+ * slice 9h). This one stays a plain fieldset because it is one part of a form
+ * with its own Send invite: there is nothing to close, and nothing to save yet.
+ */
 function RoleCheckboxes({
   name,
   defaultRoles,
-  formId,
   t,
 }: {
   name: string;
   defaultRoles: readonly string[];
-  /** Associates each checkbox with a form elsewhere in the page (HTML `form`
-   * attribute) instead of nesting — lets a per-member Disable/Delete form
-   * sit right below without ever nesting one <form> inside another. */
-  formId?: string;
   t: StaffTranslator;
 }) {
   const labels = roleLabels(t);
@@ -151,7 +140,6 @@ function RoleCheckboxes({
             name={`${name}_${role}`}
             type="checkbox"
             defaultChecked={defaultRoles.includes(role)}
-            form={formId}
             className="size-4 accent-primary"
           />
           {labels[role]}
@@ -166,12 +154,6 @@ function RoleCheckboxes({
  * DiveDay can render, each labelled in the *reader's* own language
  * (`languageNameIn`) so the staffer filling this in recognises the option,
  * unlike the diver-facing badge below which uses each language's endonym.
- *
- * Nested directly in its own per-member `<form>` (unlike `RoleCheckboxes`,
- * whose inputs cross-reference one shared form at the page's foot via the
- * `form` attribute) — a bulk save makes sense for roles, which every row
- * shares the same submit for, but not for a fact nobody else on the roster
- * holds.
  */
 function LanguageCheckboxes({
   defaultLanguages,
@@ -205,26 +187,31 @@ function LanguageCheckboxes({
 
 function StaffRow({
   member,
-  contactStatus,
-  languagesStatus,
+  notice,
+  priorRoles,
   locale,
   t,
 }: {
   member: StaffMember;
-  /** This card's own emergency-contact outcome, or nothing. */
-  contactStatus: NoticeMessage | undefined;
-  /** This card's own spoken-languages outcome, or nothing. */
-  languagesStatus: NoticeMessage | undefined;
+  /** The page's one resolved notice, already told which form it belongs to. */
+  notice: FormNotice | undefined;
+  /** The roles this row held before the save it just made — its Undo, or nothing. */
+  priorRoles: Role[];
   locale: string;
   t: StaffTranslator;
 }) {
   const status = statusBadge(t)[member.accountStatus];
   const isDisabled = member.accountStatus === "disabled";
+  const labels = roleLabels(t);
+  const held = STAFF_ROLES.filter((role) => member.roles.includes(role));
+  const rolesNotice = noticeForForm(notice, TEAM_FORMS.roles(member.personId));
+  const contactStatus = noticeForForm(notice, TEAM_FORMS.contact(member.personId));
+  const languagesStatus = noticeForForm(notice, TEAM_FORMS.languages(member.personId));
   return (
     // A person's row on the roster is the same card as everything else on the
     // page — one radius, one elevation — so the list reads as a list of cards
     // rather than a second, flatter kind of box.
-    <SectionCard as="li" id={`staff-${member.personId}`}>
+    <SectionCard as="li" id={`staff-${member.personId}`} className="scroll-mt-24">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="font-medium">{member.fullName}</p>
@@ -233,12 +220,57 @@ function StaffRow({
         <Badge tone={status.tone}>{status.label}</Badge>
       </div>
 
+      {/* Roles read as words at rest and open in place to be edited; closing
+          the row is the save (ADR 20260827-the-shops-shelves, slice 9h). */}
       <div className="mt-4">
-        <RoleCheckboxes
-          name={`role_${member.personId}`}
-          defaultRoles={member.roles}
-          formId={ROLES_FORM_ID}
-          t={t}
+        <StaffRolesDisclosure
+          personId={member.personId}
+          summary={
+            held.length > 0
+              ? cachedListFormat(locale).format(held.map((role) => labels[role]))
+              : t("settings.team.rolesLegend")
+          }
+          legend={t("settings.team.rolesLegend")}
+          editLabel={t("settings.team.roles.editAriaLabel", { name: member.fullName })}
+          options={STAFF_ROLES.map((role) => ({
+            value: role,
+            label: labels[role],
+            checked: member.roles.includes(role),
+          }))}
+          action={saveStaffRolesAction}
+          refusal={rolesNotice?.tone === "danger" ? rolesNotice.text : undefined}
+          // Composed here — it is an answer about the save that just landed,
+          // not a control on the panel — but rendered *inside* the row, so
+          // reaching for it never closes-and-saves the row on the way and
+          // turns one Undo into two writes.
+          footer={
+            rolesNotice?.tone === "success" ? (
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <FormStatus tone="success">{rolesNotice.text}</FormStatus>
+                {/* Undo is one re-save of exactly what this row held a moment
+                    ago — `undo=1` so the answer to it offers no undo back, and
+                    `baseline` so an Undo left on screen while somebody else
+                    edited the same person refuses instead of reverting them. */}
+                {priorRoles.length > 0 ? (
+                  <form action={saveStaffRolesAction}>
+                    <input type="hidden" name="personId" value={member.personId} />
+                    <input type="hidden" name="undo" value="1" />
+                    <input type="hidden" name="baseline" value={[...held].sort().join(",")} />
+                    {priorRoles.map((role) => (
+                      <input key={role} type="hidden" name={`role_${role}`} value="on" />
+                    ))}
+                    <SubmitButton
+                      pendingLabel={t("shared.undoToast.pendingLabel")}
+                      ariaLabel={t("settings.team.roles.undoAriaLabel", { name: member.fullName })}
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                    >
+                      {t("shared.undoToast.undo")}
+                    </SubmitButton>
+                  </form>
+                ) : null}
+              </div>
+            ) : undefined
+          }
         />
       </div>
 
@@ -246,8 +278,7 @@ function StaffRow({
           book (a shop's "we speak …" line and each trip's crew section) and
           nowhere gated — a shop that never fills this in loses nothing
           (issue #708). Its own immediate form, like the emergency contact
-          below: unlike roles, there is no bulk save that makes sense for a
-          per-person fact nobody else on the roster shares. */}
+          below. */}
       <div className="mt-4">
         <p className="mb-2 text-sm font-medium text-muted">{t("settings.team.languagesLabel")}</p>
         <form action={saveStaffLanguagesAction} className="flex flex-col gap-3">
@@ -396,6 +427,13 @@ function StaffRow({
   );
 }
 
+/** A `?priorRoles=` value, kept to roles this app actually has. */
+function parseRoles(value: string | undefined): Role[] {
+  return (value ?? "")
+    .split(",")
+    .filter((role): role is Role => (STAFF_ROLES as readonly string[]).includes(role));
+}
+
 export default async function TeamSettingsPage({
   params,
   searchParams,
@@ -409,11 +447,22 @@ export default async function TeamSettingsPage({
     undoName?: string;
     contactFor?: string;
     languagesFor?: string;
+    rolesFor?: string;
+    priorRoles?: string;
   }>;
 }) {
   const { shopSlug } = await params;
-  const { notice, undoPersonId, undoUserAccountId, undoRoles, undoName, contactFor, languagesFor } =
-    await searchParams;
+  const {
+    notice,
+    undoPersonId,
+    undoUserAccountId,
+    undoRoles,
+    undoName,
+    contactFor,
+    languagesFor,
+    rolesFor,
+    priorRoles,
+  } = await searchParams;
   // Settings, not Today: Team is a Settings sub-page, and the nearest parent
   // surface is where a refusal explains itself best (the same landing the
   // promos and WhatsApp gates already use). A code the destination handles,
@@ -426,25 +475,30 @@ export default async function TeamSettingsPage({
   const staff = await listShopStaff(db, shop.id);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const banner = noticeFromParam(notice, noticeMessages(t));
-  // An invitation's outcome belongs on the invitation form — and the three
-  // refusals that are really about one address belong on that address box.
-  // Everything else here is about the roster below (a role change, a member
-  // disabled) and keeps the page banner.
-  const inviteEmailError =
-    notice && INVITE_EMAIL_NOTICES.has(notice) ? (banner?.text ?? undefined) : undefined;
-  const inviteStatus =
-    !inviteEmailError && notice && INVITE_FORM_NOTICES.has(notice) ? banner : undefined;
-  // An emergency contact's outcome belongs on the card whose contact it is —
-  // `contactFor` names that card, so a "name without a number" refusal is beside
-  // the two boxes that caused it and not above a roster of eleven people.
-  const contactStatus =
-    notice && CONTACT_FORM_NOTICES.has(notice) && contactFor ? banner : undefined;
-  // Same routing, for the languages form (issue #708).
-  const languagesStatus =
-    notice && LANGUAGES_FORM_NOTICES.has(notice) && languagesFor ? banner : undefined;
-  const pageBanner =
-    inviteEmailError || inviteStatus || contactStatus || languagesStatus ? undefined : banner;
+  // One resolution, then `noticeForForm` hands each form its own: the invite
+  // box, the invite form, and — per person — roles, languages, and the
+  // emergency contact. What is left for the page banner is what is genuinely
+  // about the page (`./notices.ts`).
+  const resolved = noticeFromParam(notice, noticeMessages(t));
+  // `teamNoticeOnRoster` is the second half, and it is not decoration: three of
+  // these codes are emitted precisely *because* the person is no longer live
+  // staff of this shop, which is the same condition `listShopStaff` filters on
+  // — so the row the answer names is the one row that is not here to render it.
+  // Without the demotion that refusal renders nowhere at all.
+  const pageNotice: FormNotice | undefined =
+    notice && resolved
+      ? {
+          form: teamNoticeOnRoster(
+            teamNoticeForm(notice, { rolesFor, contactFor, languagesFor }),
+            staff.map((member) => member.personId),
+          ),
+          ...resolved,
+        }
+      : undefined;
+  const inviteEmailError = noticeForForm(pageNotice, TEAM_FORMS.inviteEmail)?.text;
+  const inviteStatus = noticeForForm(pageNotice, TEAM_FORMS.invite);
+  const pageBanner = noticeForForm(pageNotice, TEAM_FORMS.page);
+  const undoRolesFor = parseRoles(priorRoles);
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -457,6 +511,8 @@ export default async function TeamSettingsPage({
           "undoName",
           "contactFor",
           "languagesFor",
+          "rolesFor",
+          "priorRoles",
         ]}
       />
       <ShopPageHeader
@@ -549,36 +605,18 @@ export default async function TeamSettingsPage({
               className="mt-4"
             />
           ) : (
-            <>
-              <ul className="mt-4 flex flex-col gap-3">
-                {staff.map((member) => (
-                  <StaffRow
-                    key={member.personId}
-                    member={member}
-                    contactStatus={contactFor === member.personId ? contactStatus : undefined}
-                    languagesStatus={languagesFor === member.personId ? languagesStatus : undefined}
-                    locale={locale}
-                    t={t}
-                  />
-                ))}
-              </ul>
-              {/* Every card's role checkboxes are associated to this form via the
-                HTML `form` attribute (see RoleCheckboxes), not DOM nesting — so
-                this can sit at the bottom of the page while each row keeps its
-                own separate, immediate Enable/Disable/Delete forms. */}
-              <form
-                id={ROLES_FORM_ID}
-                action={saveAllStaffRolesAction}
-                className="mt-4 flex justify-end"
-              >
-                <SubmitButton
-                  pendingLabel={t("settings.team.current.saving")}
-                  className={buttonClass({ variant: "primary" })}
-                >
-                  {t("settings.team.current.save")}
-                </SubmitButton>
-              </form>
-            </>
+            <ul className="mt-4 flex flex-col gap-3">
+              {staff.map((member) => (
+                <StaffRow
+                  key={member.personId}
+                  member={member}
+                  notice={pageNotice}
+                  priorRoles={rolesFor === member.personId ? undoRolesFor : []}
+                  locale={locale}
+                  t={t}
+                />
+              ))}
+            </ul>
           )}
         </section>
       </div>

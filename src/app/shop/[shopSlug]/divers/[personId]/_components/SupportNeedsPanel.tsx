@@ -2,7 +2,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
-import { staffTranslator } from "@/i18n/staff-messages";
+import { GroupLabel } from "@/components/ui/ledger";
+import type { StaffTranslator } from "@/i18n/staff-messages";
 import { supportNeedsLines } from "@/i18n/support-needs-labels";
 import type { SupportNeeds } from "@/lib/support-needs";
 import { saveSupportNeedsAction } from "../actions";
@@ -36,7 +37,7 @@ export function SupportNeedsPanel({
   shopSlug,
   personId,
   canOverride,
-  locale,
+  t,
   status,
 }: {
   needs: SupportNeeds | null;
@@ -44,11 +45,10 @@ export function SupportNeedsPanel({
   personId: string;
   /** Rewriting what a diver already stated is the judgement call — see the action. */
   canOverride: boolean;
-  locale: string;
-  /** This section's own outcome, beside the form that earned it. */
+  t: StaffTranslator;
+  /** This group's own outcome, beside the form that earned it. */
   status?: DiverNotice;
 }) {
-  const t = staffTranslator(locale);
   // Recording arrangements nobody has stated yet is data entry, open to whoever
   // took the call. Overwriting the diver's own answer is gated.
   const mayEdit = canOverride || !needs;
@@ -58,15 +58,15 @@ export function SupportNeedsPanel({
   const stated = supportNeedsLines(t, needs);
 
   return (
-    <section className="mt-10" aria-labelledby="support-heading">
-      <h2 id="support-heading" className="text-lg font-semibold">
+    <section className="mt-8" aria-labelledby="support">
+      <GroupLabel as="h2" id="support" className="scroll-mt-24">
         {t("divers.support.heading")}
-      </h2>
-      <p className="mt-1 text-sm text-muted">{t("divers.support.description")}</p>
+      </GroupLabel>
+      <p className="mt-2 text-sm text-muted">{t("divers.support.description")}</p>
 
       {mayEdit ? null : (
         <>
-          <div className="mt-4 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm text-muted">
+          <div className="mt-3 rounded-2xl border border-border bg-surface-sunken px-4 py-3 text-sm text-muted">
             {stated.length > 0 ? (
               <ul className="font-medium text-foreground">
                 {stated.map((line) => (
@@ -80,7 +80,7 @@ export function SupportNeedsPanel({
           </div>
           {/* A refusal aimed at this section belongs in it, and there is no
               editable form here to hang it on. */}
-          <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} className="mt-3" />
+          <DiverFormStatus status={status} className="mt-3" />
         </>
       )}
 
@@ -89,7 +89,7 @@ export function SupportNeedsPanel({
           as="form"
           action={saveSupportNeedsAction.bind(null, shopSlug, personId)}
           columns={1}
-          className={sectionCardClass({ padding: "lg", className: "mt-4" })}
+          className={sectionCardClass({ padding: "lg", className: "mt-3" })}
         >
           {/* **How many, and who brings them** — two questions, because the
               shop's action is opposite in each: "we arrange them" is more crew
@@ -206,7 +206,7 @@ export function SupportNeedsPanel({
             >
               {t("divers.support.save")}
             </SubmitButton>
-            <DiverFormStatus status={status} shopSlug={shopSlug} locale={locale} />
+            <DiverFormStatus status={status} />
           </FieldActions>
         </FieldGrid>
       ) : null}

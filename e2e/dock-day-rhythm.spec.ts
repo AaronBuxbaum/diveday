@@ -1,10 +1,21 @@
 import { expect, test } from "./fixtures";
-import { daysFromNow, openSettingsRow, seededTripId, signInAsOwner } from "./helpers";
+import {
+  bookASeatAndOpenThread,
+  daysFromNow,
+  openSettingsRow,
+  seededTripId,
+  signInAsOwner,
+} from "./helpers";
 
 /**
  * The dock-day rhythm, end to end: six numbers a shop types in Settings, and
- * the day a diver reads on the booking page because of them
+ * the day a diver reads on their own thread because of them
  * (ADR 20260812-configurable-dock-day-rhythm).
+ *
+ * The diver reads it *after booking*, on `/ready`: the trip page sells and the
+ * thread prepares (ADR 20260827-the-divers-thread, decision 2), so each of
+ * these journeys takes a seat before it can read the rhythm the shop just
+ * typed.
  *
  * What this guards is the join. The rhythm's arithmetic has unit tests
  * (src/lib/diver-planning.test.ts) and its authorization has its own
@@ -68,6 +79,7 @@ test("a shop's own minutes are the day the diver reads", async ({ page, privateS
   // page — which has no rhythm on it at all.
   await page.goto(`/s/${SHOP}`);
   await page.locator(`a[href^="/s/${SHOP}/trips/"]`).first().click();
+  await bookASeatAndOpenThread(page, "Rhythm Reader");
   await expect(page.getByRole("heading", { name: "Pack with confidence" })).toBeVisible();
 
   const rhythm = page.getByRole("list").filter({ hasText: "Arrive and check in" }).last();
@@ -129,6 +141,7 @@ test("a departure's own legs are the day the diver reads", async ({ page, privat
   // `seededTripId` walks the staff board's own pages to find the departure.
   const tripId = await seededTripId(page, SHOP, TITLE);
   await page.goto(`/s/${SHOP}/trips/${tripId}`);
+  await bookASeatAndOpenThread(page, "Leg Reader");
   await expect(page.getByRole("heading", { name: "Pack with confidence" })).toBeVisible();
 
   const rhythm = page.getByRole("list").filter({ hasText: "Arrive and check in" }).last();
@@ -174,6 +187,7 @@ test("the demo shop's long-range run reads its own legs", async ({ page }) => {
   );
 
   await page.goto(`/s/blue-mantis/trips/${tripId}`);
+  await bookASeatAndOpenThread(page, "Tortugas Reader");
   await expect(page.getByRole("heading", { name: "Pack with confidence" })).toBeVisible();
   const rhythm = page.getByRole("list").filter({ hasText: "Arrive and check in" }).last();
 

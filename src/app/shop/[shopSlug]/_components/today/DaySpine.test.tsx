@@ -1,0 +1,650 @@
+// @vitest-environment jsdom
+
+import { cleanup, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { assembleDaySpine, type SpineDeparture, type TodayAction } from "@/lib/today";
+
+// The spine composes WaiverSendControl/ResendConfirmationControl/
+// PaymentActionControl, each of which statically imports its own `"use server"`
+// action file. Those import `requireStaffSession` -> better-auth, which fails
+// to resolve under vitest's module graph — mocking them here is what makes the
+// spine renderable in this environment at all.
+vi.mock("@/app/actions/invoices", () => ({ resendInvoiceAction: vi.fn() }));
+vi.mock("@/app/actions/notifications", () => ({ resendConfirmationAction: vi.fn() }));
+vi.mock("@/app/actions/waivers", () => ({ sendWaiversAction: vi.fn() }));
+
+import { DaySpine, type SpineInviteAction } from "./DaySpine";
+
+afterEach(() => {
+  cleanup();
+});
+
+const NOW = new Date("2026-08-27T11:00:00Z");
+const hoursFromNow = (hours: number) => new Date(NOW.getTime() + hours * 60 * 60 * 1000);
+const inviteAction: SpineInviteAction = vi.fn().mockResolvedValue("sent");
+
+function action(overrides: Partial<TodayAction> = {}): TodayAction {
+  return {
+    id: "a",
+    kind: "waiver",
+    urgency: "now",
+    subject: "Diver",
+    context: null,
+    detail: "…",
+    actionLabel: "Open roster",
+    href: "/shop/blue-mantis/trips/t1",
+    dueAt: null,
+    ...overrides,
+  };
+}
+
+function departure(overrides: Partial<SpineDeparture> = {}): SpineDeparture {
+  return {
+    tripId: "t1",
+    title: "Two-Tank Reef",
+    startsAt: hoursFromNow(2),
+    endsAt: hoursFromNow(5),
+    siteName: "Molasses Reef",
+    boatName: "Mantis II",
+    priceCents: 9500,
+    capacity: 12,
+    booked: 10,
+    boarded: 0,
+    blocked: 0,
+    crew: [{ fullName: "Keiko Tanaka" }],
+    blockedAboardGroups: [],
+    crewAccountedFor: true,
+    crewReason: null,
+    ...overrides,
+  };
+}
+
+const boat = (tripId: string, label = "Two-Tank Reef · 7:00 AM") => ({ tripId, label });
+
+function renderSpine({
+  departures = [departure()],
+  actions = [],
+  tomorrow = [],
+  ...props
+}: {
+  departures?: SpineDeparture[];
+  actions?: TodayAction[];
+  tomorrow?: SpineDeparture[];
+  withheldCount?: number;
+  showPaymentsRow?: boolean;
+  crewedTripIds?: string[];
+  sessions?: React.ReactNode;
+} = {}) {
+  return render(
+    <DaySpine
+      spine={assembleDaySpine({ departures, actions }, { departures: tomorrow, actions: [] })}
+      shopSlug="blue-mantis"
+      shopName="Blue Mantis"
+      locale="en-US"
+      timeZone="America/New_York"
+      currency="usd"
+      inviteAction={inviteAction}
+      now={NOW}
+      {...props}
+    />,
+  );
+}
+
+/**
+ * **A departure's facts are said once.** This is principle 9 at page scale and
+ * the reason the day spine exists: the board it replaced repeated one boat's
+ * title on every queue row that hung off it.
+ */
+describe("a station owns its departure's facts", () => {
+  it("renders the departure's title exactly once, and no row repeats it", () => {
+    renderSpine({
+      actions: [
+        action({ id: "r1", subject: "Priya Sharma", departure: boat("t1") }),
+        action({ id: "r2", subject: "Grace Mensah", departure: boat("t1") }),
+        action({
+          id: "r3",
+          subject: "Two-Tank Reef",
+          aboutDeparture: true,
+          kind: "dive_prep",
+          detail: "3 divers still need rental sizes.",
+          departure: boat("t1"),
+        }),
+      ],
+    });
+    // Once, in the station header — never again beneath it, not even by the
+    // row that is *about* the departure, which leads with its detail instead.
+    expect(screen.getAllByText("Two-Tank Reef")).toHaveLength(1);
+    expect(screen.getByRole("link", { name: /Two-Tank Reef/ })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/t1",
+    );
+    expect(screen.getByText("3 divers still need rental sizes.")).toBeInTheDocument();
+  });
+
+  it("says the site, hull, crew and price on the station's own line", () => {
+    renderSpine();
+    expect(
+      screen.getByText("Molasses Reef · Mantis II · Keiko Tanaka · $95.00"),
+    ).toBeInTheDocument();
+  });
+
+  it("leads the head count as a figure with the open spots beneath it", () => {
+    renderSpine();
+    expect(screen.getByText("10")).toBeInTheDocument();
+    expect(screen.getByText("of 12")).toBeInTheDocument();
+    expect(screen.getByText("2 spots open")).toBeInTheDocument();
+  });
+
+  it("says Full rather than nought spots open on a boat with no seats left", () => {
+    renderSpine({ departures: [departure({ booked: 12 })] });
+    expect(screen.getByText("Full")).toBeInTheDocument();
+    expect(screen.queryByText(/spots? open/)).toBeNull();
+  });
+
+  it("draws the capacity meter as opacity on the fill, never as a new token", () => {
+    const { container } = renderSpine();
+    // The ADR ships no new tokens, so the quiet fill is `bg-muted` turned down
+    // rather than a colour the palette does not have.
+    const fill = container.querySelector(".bg-muted");
+    expect(fill).not.toBeNull();
+    expect(fill?.className).toContain("opacity-30");
+  });
+
+  it("badges the reader's own boat without moving it up the clock", () => {
+    renderSpine({
+      departures: [
+        departure({ tripId: "morning", title: "Morning Reef", startsAt: hoursFromNow(1) }),
+        departure({ tripId: "wreck", title: "Wreck Trip", startsAt: hoursFromNow(6) }),
+      ],
+      crewedTripIds: ["wreck"],
+    });
+    const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent ?? "");
+    expect(headings[0]).toContain("Morning Reef");
+    expect(headings[1]).toContain("Wreck Trip");
+    expect(headings[1]).toContain("You’re crewing");
+  });
+});
+
+/**
+ * The two safety sentences the departure card carried and the station keeps —
+ * neither is a job anyone taps here, and both describe a checkpoint (issues
+ * #789, #791). Every case below is as much about the sentence *not* rendering.
+ */
+describe("a station's safety notes", () => {
+  it("names a lone blocked diver who is already aboard, and why", () => {
+    renderSpine({
+      departures: [
+        departure({
+          booked: 4,
+          boarded: 4,
+          blocked: 1,
+          blockedAboardGroups: [{ kind: "medical", names: ["Grace Mensah"] }],
+        }),
+      ],
+    });
+    expect(screen.getByText(/Grace Mensah is aboard —/)).toBeInTheDocument();
+  });
+
+  it("renders one line per kind, never one reason spread over a whole count", () => {
+    renderSpine({
+      departures: [
+        departure({
+          booked: 5,
+          boarded: 5,
+          blocked: 5,
+          blockedAboardGroups: [
+            { kind: "medical", names: ["Grace Mensah"] },
+            { kind: "certification", names: ["Tomás Ferreira", "Ines Costa", "June Park", "Omar"] },
+          ],
+        }),
+      ],
+    });
+    expect(screen.getByText(/Grace Mensah is aboard —/)).toBeInTheDocument();
+    expect(screen.getByText(/4 divers are aboard —/)).toBeInTheDocument();
+  });
+
+  it("says the crew roll call is open on a full boat nobody has counted the crew on", () => {
+    renderSpine({
+      departures: [
+        departure({
+          booked: 6,
+          boarded: 6,
+          blocked: 0,
+          crewAccountedFor: false,
+          crewReason: "crew_awaiting",
+        }),
+      ],
+    });
+    expect(screen.getByText(/crew roll call is still open/)).toBeInTheDocument();
+  });
+
+  it("says nothing about the crew roll call when the boat has no crew rostered at all", () => {
+    // That is a coverage gap the spine already raises as its own row; saying it
+    // twice on one screen buys nothing.
+    renderSpine({
+      departures: [
+        departure({
+          booked: 6,
+          boarded: 6,
+          blocked: 0,
+          crewAccountedFor: false,
+          crewReason: "crew_none_assigned",
+        }),
+      ],
+    });
+    expect(screen.queryByText(/crew roll call is still open/)).toBeNull();
+  });
+
+  it("celebrates nothing on a boat that is fully aboard — the coral belongs to the day, not the boat", () => {
+    // "Everyone's aboard" was a coral moment per departure; the ADR's coral
+    // table gives the home exactly one morning moment, and this is not it.
+    renderSpine({
+      departures: [departure({ booked: 6, boarded: 6, blocked: 0 })],
+    });
+    expect(screen.queryByText(/Everyone’s aboard/)).toBeNull();
+    expect(screen.queryByText(/clear to board/)).toBeNull();
+  });
+});
+
+/** A `TodayAction` with no `tripId` belongs to nobody's boat. */
+describe("the desk group", () => {
+  it("files a row with no departure under 'At the desk'", () => {
+    renderSpine({
+      actions: [
+        action({ id: "on-boat", subject: "Priya Sharma", departure: boat("t1") }),
+        action({
+          id: "chore",
+          kind: "reviews_pending",
+          subject: "1 review",
+          detail: "One review is waiting on you.",
+        }),
+      ],
+    });
+    const desk = screen.getByText("At the desk").closest("div");
+    expect(desk).not.toBeNull();
+    expect(
+      within(desk as HTMLElement).getByText("One review is waiting on you."),
+    ).toBeInTheDocument();
+    expect(within(desk as HTMLElement).queryByText("Priya Sharma")).toBeNull();
+  });
+
+  it("renders no desk group at all when nothing is bound to the desk", () => {
+    renderSpine({ actions: [action({ id: "on-boat", departure: boat("t1") })] });
+    expect(screen.queryByText("At the desk")).toBeNull();
+  });
+
+  it("carries the quiet payments row, pointing at settings, when the shop is asked to connect", () => {
+    renderSpine({
+      actions: [action({ id: "on-boat", departure: boat("t1") })],
+      showPaymentsRow: true,
+    });
+    expect(
+      screen.getByText("Payments aren’t connected — divers can book, and pay at the counter."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open payment settings" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/settings#stripe",
+    );
+  });
+
+  it("renders no payments row once the shop can take payment", () => {
+    renderSpine({ actions: [action({ id: "on-boat", departure: boat("t1") })] });
+    expect(screen.queryByText(/Payments aren’t connected/)).toBeNull();
+  });
+});
+
+/**
+ * The two good-news moments (principles.md §3). These assertions moved here
+ * from `TodayQueue.test.tsx` when the queue became the spine; the conditions
+ * are restated in spine terms and nothing was dropped.
+ */
+describe("the good-news moments", () => {
+  it("celebrates once today's stations carry nothing pressing but later work remains", () => {
+    renderSpine({
+      actions: [
+        action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
+        action({ id: "later", kind: "waiver", departure: boat("t9") }),
+      ],
+    });
+    expect(screen.getByText("Today's boats are all clear 🤙")).toBeInTheDocument();
+  });
+
+  it("keeps the 🤙 — the product's one word-mark gesture, inside the sentence", () => {
+    renderSpine({
+      actions: [
+        action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
+        action({ id: "later", kind: "waiver", departure: boat("t9") }),
+      ],
+    });
+    expect(screen.getByRole("status").textContent).toContain("🤙");
+  });
+
+  it("stays quiet while a station still carries a blocking row", () => {
+    renderSpine({
+      actions: [
+        action({ id: "blocked", kind: "waiver", departure: boat("t1") }),
+        action({ id: "later", kind: "dive_prep", departure: boat("t9") }),
+      ],
+    });
+    expect(screen.queryByText("Today's boats are all clear 🤙")).toBeNull();
+  });
+
+  it("stays quiet while the desk still carries one", () => {
+    renderSpine({
+      actions: [
+        action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
+        action({ id: "stuck", kind: "stuck_payment_operation" }),
+        action({ id: "later", kind: "waiver", departure: boat("t9") }),
+      ],
+    });
+    expect(screen.queryByText("Today's boats are all clear 🤙")).toBeNull();
+  });
+
+  it("never doubles up with the whole-week 🤙 state", () => {
+    renderSpine({ actions: [] });
+    expect(screen.queryByText("Today's boats are all clear 🤙")).toBeNull();
+    expect(screen.getByText("Nothing is waiting on you")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View the schedule" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/schedule/board",
+    );
+  });
+
+  it("renders neither once there is real work anywhere", () => {
+    renderSpine({ actions: [action({ id: "blocked", departure: boat("t1") })] });
+    expect(screen.queryByText("Nothing is waiting on you")).toBeNull();
+    expect(screen.queryByText("Today's boats are all clear 🤙")).toBeNull();
+  });
+
+  it("puts the earned line above the first station, where the summary sentence ends", () => {
+    const { container } = renderSpine({
+      actions: [
+        action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
+        action({ id: "later", kind: "waiver", departure: boat("t9") }),
+      ],
+    });
+    const line = screen.getByRole("status");
+    const firstStation = container.querySelector("ol li");
+    expect(firstStation).not.toBeNull();
+    expect(
+      line.compareDocumentPosition(firstStation as Node) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+});
+
+describe("the role lens", () => {
+  it("keeps the withheld-work line under the summary sentence, above the first station", () => {
+    const { container } = renderSpine({
+      actions: [action({ id: "on-boat", departure: boat("t1") })],
+      withheldCount: 3,
+    });
+    const line = screen.getByText("3 jobs for the front desk");
+    const firstStation = container.querySelector("ol li");
+    expect(
+      line.compareDocumentPosition(firstStation as Node) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("renders no withheld line for a reader nothing was withheld from", () => {
+    renderSpine({ actions: [action({ id: "on-boat", departure: boat("t1") })] });
+    expect(screen.queryByText(/jobs? for the front desk/)).toBeNull();
+  });
+
+  it("renders the instructor's own group between the summary and the first station", () => {
+    const { container } = renderSpine({
+      actions: [action({ id: "on-boat", departure: boat("t1") })],
+      sessions: <p data-testid="your-sessions">Your sessions</p>,
+    });
+    const sessions = screen.getByTestId("your-sessions");
+    const firstStation = container.querySelector("ol li");
+    expect(
+      sessions.compareDocumentPosition(firstStation as Node) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+});
+
+describe("the two horizon rows", () => {
+  it("collapses tomorrow behind the one disclosure spelling, with its counts on the label", () => {
+    const { container } = renderSpine({
+      actions: [
+        action({ id: "today", departure: boat("t1") }),
+        action({ id: "tomorrow", departure: boat("t2") }),
+      ],
+      tomorrow: [departure({ tripId: "t2", title: "Night Dive", startsAt: hoursFromNow(26) })],
+    });
+    const fold = container.querySelector("details");
+    expect(fold).not.toBeNull();
+    expect(fold?.open).toBe(false);
+    expect(screen.getByText(/1 departure · 1 job/)).toBeInTheDocument();
+    // Folding hides; it never drops. Tomorrow's station is in the DOM, drawn by
+    // the same renderer as today's, one native toggle away.
+    expect(within(fold as HTMLElement).getByRole("link", { name: /Night Dive/ })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/t2",
+    );
+  });
+
+  it("renders no Tomorrow row on a day with nothing sailing tomorrow", () => {
+    renderSpine({ actions: [action({ id: "today", departure: boat("t1") })] });
+    expect(screen.queryByText(/^Tomorrow/)).toBeNull();
+  });
+
+  it("makes 'This week' a plain link to the board with nothing to expand", () => {
+    renderSpine({
+      actions: [
+        action({ id: "today", departure: boat("t1") }),
+        action({ id: "friday", departure: boat("t9") }),
+      ],
+    });
+    const week = screen.getByText("This week").closest("li");
+    expect(week).not.toBeNull();
+    expect(week?.querySelector("details")).toBeNull();
+    expect(within(week as HTMLElement).getByRole("link")).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/schedule/board",
+    );
+  });
+
+  it("renders no 'This week' row when the rest of the week is clear", () => {
+    renderSpine({ actions: [action({ id: "today", departure: boat("t1") })] });
+    expect(screen.queryByText("This week")).toBeNull();
+  });
+
+  it("points neither horizon row at a queue view — there is no longer one", () => {
+    const { container } = renderSpine({
+      actions: [
+        action({ id: "today", departure: boat("t1") }),
+        action({ id: "tomorrow", departure: boat("t2") }),
+        action({ id: "friday", departure: boat("t9") }),
+      ],
+      tomorrow: [departure({ tripId: "t2", startsAt: hoursFromNow(26) })],
+    });
+    for (const link of container.querySelectorAll("a")) {
+      expect(link.getAttribute("href")).not.toContain("view=");
+    }
+  });
+});
+
+/**
+ * Roll-call rows, carried over from `TodayQueue.test.tsx`: the loudest thing
+ * this app can say, and the two kinds that must never share a word or a tone.
+ */
+describe("roll-call rows (DOM-H3)", () => {
+  it("words the row as a roll call in the danger tone and points at the open checkpoint", () => {
+    const { container } = renderSpine({
+      actions: [
+        action({
+          id: "roll-call:t1:after_dive_2",
+          kind: "roll_call_unfinished",
+          urgency: "imminent",
+          subject: "Two-Tank Reef",
+          aboutDeparture: true,
+          detail: "This boat is back and the dive 2 roll call was never finished…",
+          actionLabel: "Open roll call",
+          href: "/shop/blue-mantis/trips/t1/manifest?checkpoint=after_dive_2",
+          departure: boat("t1"),
+        }),
+      ],
+    });
+
+    expect(screen.getByText("Roll call").className).toContain("text-danger");
+    // Never an in-place control: closing a head count happens on the manifest,
+    // one tap away, not from a button on the spine.
+    expect(screen.getByRole("link", { name: "Open roll call" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/t1/manifest?checkpoint=after_dive_2",
+    );
+    expect(container.querySelector("form")).toBeNull();
+  });
+
+  it("gives a diver who did not come back its own word, and the dock count a quieter one", () => {
+    renderSpine({
+      actions: [
+        action({ id: "m", kind: "roll_call_missing_diver", departure: boat("t1") }),
+        action({ id: "d", kind: "roll_call_departure_open", departure: boat("t1") }),
+        action({ id: "n", kind: "roll_call_not_started", departure: boat("t1") }),
+      ],
+    });
+    expect(screen.getByText("Missing diver").className).toContain("text-danger");
+    expect(screen.getByText("Dock count").className).toContain("text-warning");
+    expect(screen.getByText("No roll call").className).toContain("text-warning");
+  });
+});
+
+describe("payment rows", () => {
+  it("renders the inline payment control only once a booking is known to be invoiced", () => {
+    renderSpine({
+      actions: [
+        action({
+          id: "paid-row",
+          kind: "payment",
+          actionLabel: "Take payment",
+          departure: boat("t1"),
+          payment: {
+            bookingId: "booking-1",
+            orderId: "order-1",
+            hostedInvoiceUrl: "https://invoice.stripe.com/i/acct_1/in_1",
+          },
+        }),
+      ],
+    });
+    expect(screen.getByRole("button", { name: "Copy payment link" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resend invoice" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Take payment" })).toBeNull();
+  });
+
+  it("falls back to plain roster navigation when the booking was never invoiced — never a dead button", () => {
+    renderSpine({
+      actions: [
+        action({
+          id: "counter-row",
+          kind: "payment",
+          actionLabel: "Take payment",
+          href: "/shop/blue-mantis/trips/t1/guests#booking-2",
+          departure: boat("t1"),
+          payment: { bookingId: "booking-2" },
+        }),
+      ],
+    });
+    expect(screen.getByRole("link", { name: "Take payment" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/t1/guests#booking-2",
+    );
+    expect(screen.queryByRole("button", { name: "Copy payment link" })).toBeNull();
+  });
+});
+
+/**
+ * **A tap's outcome survives its own fix landing.**
+ *
+ * Every performing control on this page holds `useActionState` — the waiver
+ * send's private fallback link, the invoice resend's result, the wait-list
+ * invite's. The server action revalidates the home, which re-renders these
+ * rows with fresh evidence, and the row a staffer just tapped comes back
+ * carrying a *different blocker code* (a waiver goes missing → pending). Keyed
+ * on `TodayAction.id`, which spells that code, React would treat it as a new
+ * row and throw the outcome away with the old one — silently, and exactly on
+ * the shop with no email configured, where the outcome *is* the link.
+ */
+describe("a row that performs keeps its place", () => {
+  it("keeps the same control mounted when the fix lands and the blocker code moves on", () => {
+    const missing = action({
+      id: "blocker:booking-1:waiver_missing",
+      kind: "waiver",
+      subject: "Priya Sharma",
+      detail: "Priya Sharma hasn’t been sent hers.",
+      actionLabel: "Send waiver",
+      departure: boat("t1"),
+      waiver: { bookingIds: ["booking-1"] },
+    });
+    const { rerender } = renderSpine({ actions: [missing] });
+    const before = screen.getByRole("button", { name: "Send waiver" });
+
+    // The same booking, one state later: what the server hands back after the
+    // send lands.
+    rerender(
+      <DaySpine
+        spine={assembleDaySpine(
+          {
+            departures: [departure()],
+            actions: [
+              action({
+                ...missing,
+                id: "blocker:booking-1:waiver_pending",
+                detail: "Waiver is waiting for the diver’s signature.",
+                actionLabel: "Nudge waiver",
+              }),
+            ],
+          },
+          { departures: [], actions: [] },
+        )}
+        shopSlug="blue-mantis"
+        shopName="Blue Mantis"
+        locale="en-US"
+        timeZone="America/New_York"
+        currency="usd"
+        inviteAction={inviteAction}
+        now={NOW}
+      />,
+    );
+
+    // The *same DOM node*, relabelled — not a new one. A remount would have
+    // replaced it, and taken the tap's outcome with it.
+    expect(screen.getByRole("button", { name: "Nudge waiver" })).toBe(before);
+  });
+
+  it("still tells two rows apart when neither performs anything", () => {
+    renderSpine({
+      actions: [
+        action({ id: "blocker:booking-1:certification", kind: "certification", subject: "Grace" }),
+        action({
+          id: "blocker:booking-1:emergency_contact",
+          kind: "emergency_contact",
+          subject: "Nadia",
+        }),
+      ],
+    });
+    expect(screen.getByText("Grace")).toBeInTheDocument();
+    expect(screen.getByText("Nadia")).toBeInTheDocument();
+  });
+});
+
+/**
+ * The copy rules the ADR rides on this slice. A status sentence that says
+ * "she" or "his" about a diver is wrong twice over — the app does not know,
+ * and the name is shorter than the pronoun (SPEC 6c).
+ */
+describe("the words on the spine", () => {
+  it("uses no third-person pronoun in a status sentence or an action label", () => {
+    const { container } = renderSpine({
+      actions: [
+        action({ id: "on-boat", subject: "Priya Sharma", departure: boat("t1") }),
+        action({ id: "chore", kind: "reviews_pending" }),
+      ],
+      showPaymentsRow: true,
+      withheldCount: 2,
+    });
+    const text = container.textContent ?? "";
+    expect(text).not.toMatch(/\b(she|he|her|hers|his|him|they|them|their|theirs)\b/i);
+  });
+});

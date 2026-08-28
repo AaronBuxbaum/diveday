@@ -188,6 +188,38 @@ describe("onboardAction instrumentation", () => {
     logged.mockRestore();
   });
 
+  /**
+   * **The sign-up form's enumeration posture, pinned where it was only ever
+   * implied.** `/onboard` is the one door that *does* tell you an address is
+   * registered — it has to, because the alternative is a person typing the
+   * same email four times and never learning that the account they want is the
+   * one they already have. That is a deliberate exception to the rule the
+   * account doors keep (forgot-password answers identically either way), and
+   * an exception nothing asserts is an exception one recomposition away from
+   * quietly becoming something else.
+   *
+   * So: the refusal is `email_taken`, it lands on the form rather than
+   * creating anything, and — the half that is not about enumeration at all —
+   * it counts no trial and alerts nobody, because no shop exists to count.
+   */
+  it("says an address is already registered, and creates nothing when it is", async () => {
+    await useDb();
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await signUp()).toBe("/shop/reef-runners");
+    hoisted.afterTasks.length = 0;
+    vi.mocked(trackEvent).mockClear();
+    vi.mocked(sendNotification).mockClear();
+
+    // Same owner email, a shop link nothing has taken — so the slug check
+    // passes and the address is the only thing left to refuse on.
+    const landing = await signUp(onboardForm({ shopSlug: "reef-runners-two" }));
+    expect(landing).toContain("error=email_taken");
+    expect(landing).not.toContain("/shop/");
+    expect(trackEvent).not.toHaveBeenCalled();
+    expect(sendNotification).not.toHaveBeenCalled();
+    logged.mockRestore();
+  });
+
   it("still signs the new owner in when the alert throws", async () => {
     // The contract that matters: a failed alert costs the founder an email,
     // never a shop owner their shop.

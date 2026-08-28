@@ -81,17 +81,25 @@ export function capacityLabel(trip: TripCapacity): CapacityLabel {
 }
 
 /**
- * The departure the schedule pins above its agenda — the soonest one with
- * room, but only when that is *news*. When the first listed departure already
- * has room, the agenda's own first row answers "when can I go?" and a pinned
- * card would restate it card-for-card two hundred pixels apart
- * (design/principles.md #9). The pin earns its place exactly when the soonest
- * boats are full and the answer is buried mid-list.
+ * **The next boat out** — the soonest departure on the page a diver can still
+ * get on, or `null` when every one of them is full, and when there is nothing
+ * on the board at all.
+ *
+ * This was `pinnedNextDeparture`, which answered the same question but refused
+ * to answer it whenever the agenda's own first row already had room: the pin
+ * existed to surface a bookable departure *buried* behind full ones, and
+ * restating the first row two hundred pixels above itself is the duplication
+ * principle 9 forbids.
+ *
+ * ADR 20260827-clearwater-surface-language, decision 8, reverses that. The
+ * storefront leads with the next boat **as a bookable object** — the page's one
+ * card and its one primary action — so the card is the page's subject rather
+ * than a notice about the list, and the week below keeps that same departure's
+ * row, because a week with a hole where its first boat should be is not an
+ * honest week. The card is a pin, not a removal.
  */
-export function pinnedNextDeparture<T extends TripCapacity & { id: string }>(
+export function nextBookableDeparture<T extends TripCapacity & { id: string }>(
   upcoming: readonly T[],
 ): T | null {
-  const next = upcoming.find((trip) => !isFull(trip)) ?? null;
-  if (!next || next.id === upcoming[0]?.id) return null;
-  return next;
+  return upcoming.find((trip) => !isFull(trip)) ?? null;
 }

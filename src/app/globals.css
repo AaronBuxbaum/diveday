@@ -211,6 +211,21 @@
    */
   --default-transition-duration: 200ms;
   --default-transition-timing-function: var(--ease-out-soft);
+
+  /*
+   * The height of the one chrome bar both shells wear (ADR
+   * 20260827-clearwater-surface-language, decision 10). 3.5rem is 56px.
+   *
+   * It lives here rather than in a component because it is read in two
+   * directions: `ChromeBar` sets its own height from it, and every surface
+   * that pins something *under* the bar — the schedule board's day headers,
+   * the public schedule's — offsets by it with `top-(--chrome-h)`. The staff
+   * bar's height used to be content-driven, so the only way to pin beneath it
+   * was to measure it and write the number down (`sticky top-[68px]`, three
+   * directories away, with an e2e test standing guard over the constant).
+   * A token cannot drift from itself.
+   */
+  --chrome-h: 3.5rem;
 }
 
 @theme inline {
@@ -635,6 +650,38 @@ textarea {
 
 .rise-in {
   animation: rise-in 200ms var(--ease-out-soft) both;
+}
+
+/*
+ * The settled mark landing — `SettledCheck` (ADR
+ * 20260827-clearwater-surface-language).
+ *
+ * The Clearwater program sanctions four names for *new* motion — `settle-in`,
+ * `figure-settle` (not yet written; it arrives with the slice that needs it),
+ * `rise-in` and `fade-out` — and a fifth needs the same argument a new coral
+ * moment does. That is a rule about what may be added, not a census of this
+ * file: the other keyframes here predate the program and are untouched by it.
+ * Nothing enforces the rule mechanically — `check-exit-curves.mjs` checks exit
+ * *curves*, never a count — so it lives in review, not in a script.
+ *
+ * The spring overshoots by design: the mark is a thing coming to rest, not a
+ * thing appearing. It fires only on a client-side false -> true transition
+ * (the component's first-render ref guard), never on the initial paint, and
+ * the reduced-motion kill-switch below zeroes it so the mark simply swaps.
+ * The name carries no `out`/`dismiss` word, so `check-exit-curves.mjs`
+ * correctly reads it as an entrance and leaves it on the arrival spring.
+ */
+@keyframes settle-in {
+  from {
+    transform: scale(0.5);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.settle-in {
+  animation: settle-in 200ms var(--ease-spring) both;
 }
 
 /* Marketing sections reveal once, only after the browser has confirmed they

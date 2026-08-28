@@ -2,22 +2,23 @@ import { describe, expect, it } from "vitest";
 import type { ReadinessBlocker } from "./readiness";
 import {
   anyBoatIsIn,
+  assembleDaySpine,
   collapseDiverActions,
   diverBlockerAction,
   filterActionsForRoles,
   getSeasonalBriefing,
   getTimeOfDayGreeting,
-  groupActions,
-  groupByDeparture,
   lastBoatIsIn,
-  leadWithCrewed,
   primaryBlocker,
   roleLensFor,
   rollCallGapUrgency,
+  type SpineDeparture,
   sortActions,
-  sortUrgencyActions,
-  summarizeDay,
+  sortStationRows,
+  spineIsQuiet,
+  spineJobCount,
   type TodayAction,
+  todaysBoatsAreClear,
   urgencyFor,
 } from "./today";
 
@@ -348,171 +349,6 @@ describe("sortActions", () => {
   });
 });
 
-describe("groupActions", () => {
-  it("drops empty groups so no heading sits over nothing", () => {
-    const groups = groupActions([action({ urgency: "now" }), action({ id: "z", urgency: "now" })]);
-    expect(groups).toHaveLength(1);
-    expect(groups[0]?.urgency).toBe("now");
-    expect(groups[0]?.actions).toHaveLength(2);
-  });
-
-  it("keeps groups in urgency order, imminent ahead of the rest of today", () => {
-    const groups = groupActions([
-      action({ id: "l", urgency: "later", dueAt: hoursFromNow(100) }),
-      action({ id: "n", urgency: "now" }),
-      action({ id: "i", urgency: "imminent", dueAt: hoursFromNow(1) }),
-      action({ id: "s", urgency: "soon", dueAt: hoursFromNow(40) }),
-    ]);
-    expect(groups.map((group) => group.urgency)).toEqual(["imminent", "now", "soon", "later"]);
-  });
-
-  it("ranks critical work across trips inside one urgency band", () => {
-    const groups = groupActions([
-      action({ id: "prep", kind: "dive_prep", urgency: "now", dueAt: hoursFromNow(1) }),
-      action({ id: "medical", kind: "medical_review", urgency: "now", dueAt: hoursFromNow(5) }),
-    ]);
-    expect(groups[0]?.actions.map((entry) => entry.id)).toEqual(["medical", "prep"]);
-  });
-
-  it("ranks critical urgency work before routine work across trips", () => {
-    const sorted = sortUrgencyActions([
-      action({ id: "routine", kind: "payment", urgency: "now", dueAt: hoursFromNow(1) }),
-      action({
-        id: "critical",
-        kind: "roll_call_missing_diver",
-        urgency: "now",
-        dueAt: hoursFromNow(5),
-      }),
-    ]);
-    expect(sorted.map((entry) => entry.id)).toEqual(["critical", "routine"]);
-  });
-
-  it("returns nothing at all for an empty queue", () => {
-    expect(groupActions([])).toEqual([]);
-  });
-});
-
-describe("groupByDeparture", () => {
-  const boat = (tripId: string, label: string) => ({ tripId, label });
-
-  it("collects rows that hang off the same boat under one label, said once", () => {
-    const groups = groupByDeparture([
-      action({ id: "a1", departure: boat("t1", "Two-Tank Reef · 9:30 AM") }),
-      action({ id: "a2", departure: boat("t1", "Two-Tank Reef · 9:30 AM") }),
-      action({ id: "a3", departure: boat("t2", "Night Dive · 7:30 PM") }),
-    ]);
-    expect(groups.map((group) => group.label)).toEqual([
-      "Two-Tank Reef · 9:30 AM",
-      "Night Dive · 7:30 PM",
-    ]);
-    expect(groups[0]?.actions.map((row) => row.id)).toEqual(["a1", "a2"]);
-  });
-
-  it("keeps a boat's rows together even when another boat's row sorted between them", () => {
-    // Two boats at the same time interleave by severity in sortActions; the
-    // group still forms where the boat first appeared.
-    const groups = groupByDeparture([
-      action({ id: "a1", departure: boat("t1", "Reef · 9:30 AM") }),
-      action({ id: "b1", departure: boat("t2", "Wreck · 9:30 AM") }),
-      action({ id: "a2", departure: boat("t1", "Reef · 9:30 AM") }),
-    ]);
-    expect(groups.map((group) => group.key)).toHaveLength(2);
-    expect(groups[0]?.actions.map((row) => row.id)).toEqual(["a1", "a2"]);
-  });
-
-  it("leaves a row with no boat standing alone, label-less", () => {
-    const groups = groupByDeparture([
-      action({ id: "chore" }),
-      action({ id: "a1", departure: boat("t1", "Reef · 9:30 AM") }),
-    ]);
-    expect(groups[0]?.label).toBeNull();
-    expect(groups[0]?.actions.map((row) => row.id)).toEqual(["chore"]);
-  });
-
-  it("splits the same trip's different moments — a departure and a returned-boat count — into their own groups", () => {
-    const groups = groupByDeparture([
-      action({ id: "morning", departure: boat("t1", "Reef · 9:30 AM") }),
-      action({ id: "return", departure: boat("t1", "Reef · Jul 20, 1:00 PM EDT") }),
-    ]);
-    expect(groups).toHaveLength(2);
-  });
-});
-
-describe("summarizeDay", () => {
-  it("celebrates a genuinely clear day", () => {
-    expect(summarizeDay([], 2)).toEqual({ code: "clear", departures: 2 });
-  });
-
-  /**
-   * **"You're done" and "there's nothing here yet" must not share a message.**
-   *
-   * `clear` renders "No boats out today — and nothing is waiting on you", and
-   * the queue's empty state under it claims every booked diver has their
-   * waiver, certifications and payment in order. On a shop's first screen that
-   * is a claim about a roster that does not exist, sitting directly beneath a
-   * checklist whose third step is "Schedule your first trip" (issue #711).
-   */
-  it("separates a shop that has never sailed from a shop with a quiet day", () => {
-    expect(summarizeDay([], 0, 0, true)).toEqual({ code: "first_run" });
-    // The same shape without the first-run signal is still the earned moment.
-    expect(summarizeDay([], 0, 0, false)).toEqual({ code: "clear", departures: 0 });
-  });
-
-  it("still leads with a blocked diver, even in a shop that looks brand new", () => {
-    // First-run is checked after `blocked` deliberately: a shop with no board
-    // has nobody to block, so if one is blocked that is the more urgent truth
-    // and the quiet first-run treatment must not swallow it.
-    expect(summarizeDay([], 0, 1, true)).toEqual({
-      code: "blocked",
-      departures: 0,
-      blockedToday: 1,
-    });
-  });
-
-  it("leads with the people who cannot board, not the number of rows", () => {
-    // Nine divers collapsed into one row is still nine divers.
-    const summary = summarizeDay([action({ urgency: "now" })], 1, 9);
-    expect(summary).toEqual({ code: "blocked", departures: 1, blockedToday: 9 });
-  });
-
-  it("counts a single blocked diver in the singular", () => {
-    expect(summarizeDay([action({ urgency: "now" })], 1, 1)).toEqual({
-      code: "blocked",
-      departures: 1,
-      blockedToday: 1,
-    });
-  });
-
-  it("falls back to jobs when today's boats are clear but work remains", () => {
-    const summary = summarizeDay(
-      [action({ urgency: "now" }), action({ id: "b", urgency: "later" })],
-      1,
-    );
-    expect(summary).toEqual({ code: "urgent", departures: 1, urgent: 1 });
-  });
-
-  it("counts imminent work as urgent alongside the rest of today", () => {
-    const summary = summarizeDay(
-      [action({ id: "a", urgency: "imminent" }), action({ id: "b", urgency: "later" })],
-      1,
-    );
-    expect(summary).toEqual({ code: "urgent", departures: 1, urgent: 1 });
-  });
-
-  it("stays calm when nothing is urgent", () => {
-    const summary = summarizeDay([action({ urgency: "soon" })], 0);
-    expect(summary).toEqual({ code: "ahead", departures: 0, jobs: 1 });
-  });
-
-  it("pluralises departures and jobs", () => {
-    const summary = summarizeDay(
-      [action({ id: "a", urgency: "soon" }), action({ id: "b", urgency: "later" })],
-      3,
-    );
-    expect(summary).toEqual({ code: "ahead", departures: 3, jobs: 2 });
-  });
-});
-
 describe("roleLensFor", () => {
   it("gives owners and managers no lens, whatever else they hold", () => {
     expect(roleLensFor(["owner"])).toBeNull();
@@ -527,18 +363,6 @@ describe("roleLensFor", () => {
     expect(roleLensFor(["captain", "instructor"])).toBe("sessions");
     expect(roleLensFor(["diver"])).toBeNull();
     expect(roleLensFor([])).toBeNull();
-  });
-});
-
-describe("leadWithCrewed", () => {
-  it("moves crewed departures first without reordering within each half", () => {
-    const departures = [{ tripId: "a" }, { tripId: "b" }, { tripId: "c" }];
-    expect(leadWithCrewed(departures, new Set(["c"])).map((d) => d.tripId)).toEqual([
-      "c",
-      "a",
-      "b",
-    ]);
-    expect(leadWithCrewed(departures, new Set()).map((d) => d.tripId)).toEqual(["a", "b", "c"]);
   });
 });
 
@@ -744,5 +568,288 @@ describe("filterActionsForRoles", () => {
     const result = filterActionsForRoles(sampleActions, ["captain", "instructor"]);
     expect(result.visibleActions.map((a) => a.id)).toEqual(["1", "2", "3", "4", "5", "8"]);
     expect(result.withheldCount).toBe(2);
+  });
+});
+
+/**
+ * **The day spine files work; it never re-detects it** (ADR
+ * 20260827-clearwater-surface-language, decision 4). Everything below asks the
+ * same question: given a queue `getTodayWork` already produced and ranked, does
+ * every row land where the design says, and does nothing appear twice?
+ */
+function departure(overrides: Partial<SpineDeparture> = {}): SpineDeparture {
+  return {
+    tripId: "t1",
+    title: "Two-Tank Reef",
+    startsAt: hoursFromNow(2),
+    endsAt: hoursFromNow(5),
+    siteName: "Molasses Reef",
+    boatName: "Mantis II",
+    priceCents: 9500,
+    capacity: 12,
+    booked: 10,
+    boarded: 0,
+    blocked: 0,
+    crew: [{ fullName: "Keiko Tanaka" }],
+    blockedAboardGroups: [],
+    crewAccountedFor: true,
+    crewReason: null,
+    ...overrides,
+  };
+}
+
+const boat = (tripId: string, label = "Reef") => ({ tripId, label });
+
+describe("assembleDaySpine", () => {
+  it("files a row under the station of the trip it names, and a row with no trip at the desk", () => {
+    const spine = assembleDaySpine(
+      {
+        departures: [departure()],
+        actions: [
+          action({ id: "on-boat", departure: boat("t1") }),
+          action({ id: "at-desk", kind: "reviews_pending", departure: undefined }),
+        ],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(spine.stations.map((station) => station.rows.map((row) => row.id))).toEqual([
+      ["on-boat"],
+    ]);
+    expect(spine.desk.map((row) => row.id)).toEqual(["at-desk"]);
+  });
+
+  it("orders stations by the clock, whoever is reading", () => {
+    // The departure board led with the boat the signed-in staffer crewed. The
+    // spine does not: a clock that puts 1:00 PM above 7:00 AM for one reader is
+    // no longer a clock (a deliberate change, decision 4).
+    const spine = assembleDaySpine(
+      {
+        departures: [
+          departure({ tripId: "afternoon", startsAt: hoursFromNow(6), endsAt: hoursFromNow(9) }),
+          departure({ tripId: "morning", startsAt: hoursFromNow(1), endsAt: hoursFromNow(4) }),
+        ],
+        actions: [],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(spine.stations.map((station) => station.tripId)).toEqual(["morning", "afternoon"]);
+  });
+
+  it("ranks a station's rows danger, then warning, then quiet", () => {
+    const spine = assembleDaySpine(
+      {
+        departures: [departure()],
+        actions: [
+          action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
+          action({ id: "danger", kind: "medical_review", departure: boat("t1") }),
+          action({ id: "warning", kind: "waiver", departure: boat("t1") }),
+        ],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(spine.stations[0]?.rows.map((row) => row.id)).toEqual(["danger", "warning", "quiet"]);
+  });
+
+  it("flattens the crew to names and carries the station's own site, boat and price", () => {
+    const spine = assembleDaySpine(
+      {
+        departures: [
+          departure({ crew: [{ fullName: "Keiko Tanaka" }, { fullName: "Sal Moretti" }] }),
+        ],
+        actions: [],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(spine.stations[0]?.crewNames).toEqual(["Keiko Tanaka", "Sal Moretti"]);
+    expect(spine.stations[0]?.siteName).toBe("Molasses Reef");
+    expect(spine.stations[0]?.boatName).toBe("Mantis II");
+    expect(spine.stations[0]?.priceCents).toBe(9500);
+  });
+
+  it("hangs tomorrow's rows off tomorrow's own departures, and counts the rest as the week", () => {
+    const spine = assembleDaySpine(
+      {
+        departures: [departure()],
+        actions: [
+          action({ id: "today", departure: boat("t1") }),
+          action({ id: "tomorrow", departure: boat("t2") }),
+          action({ id: "friday", departure: boat("t9") }),
+        ],
+      },
+      { departures: [departure({ tripId: "t2", startsAt: hoursFromNow(26) })], actions: [] },
+    );
+    expect(spine.tomorrow.stations.map((station) => station.tripId)).toEqual(["t2"]);
+    expect(spine.tomorrow.stations[0]?.rows.map((row) => row.id)).toEqual(["tomorrow"]);
+    expect(spine.tomorrow.jobs).toBe(1);
+    expect(spine.week.jobs).toBe(1);
+  });
+
+  it("counts every row exactly once, wherever its boat sails", () => {
+    const spine = assembleDaySpine(
+      {
+        departures: [departure()],
+        actions: [
+          action({ id: "today", departure: boat("t1") }),
+          action({ id: "tomorrow", departure: boat("t2") }),
+          action({ id: "friday", departure: boat("t9") }),
+          action({ id: "desk", departure: undefined }),
+        ],
+      },
+      { departures: [departure({ tripId: "t2" })], actions: [] },
+    );
+    expect(spineJobCount(spine)).toBe(4);
+  });
+
+  it("renders no station for a day with no departures", () => {
+    const spine = assembleDaySpine(
+      { departures: [], actions: [action({ id: "desk", departure: undefined })] },
+      { departures: [], actions: [] },
+    );
+    expect(spine.stations).toEqual([]);
+    expect(spine.tomorrow.stations).toEqual([]);
+    expect(spine.desk).toHaveLength(1);
+  });
+});
+
+describe("sortStationRows", () => {
+  it("does not mutate its input", () => {
+    const input = [
+      action({ id: "quiet", kind: "dive_prep" }),
+      action({ id: "danger", kind: "medical_review" }),
+    ];
+    sortStationRows(input);
+    expect(input.map((row) => row.id)).toEqual(["quiet", "danger"]);
+  });
+});
+
+/**
+ * **The quiet day** — the composition's other silence, and the one that decides
+ * whether the spine renders at all (SPEC 6c's pinned pair, "A quiet day at the
+ * dock." over "No boats today, and nothing is waiting on you.").
+ */
+describe("spineIsQuiet", () => {
+  const empty = () =>
+    assembleDaySpine({ departures: [], actions: [] }, { departures: [], actions: [] });
+
+  it("collapses a day with no boat and nothing waiting anywhere", () => {
+    expect(spineIsQuiet(empty(), false)).toBe(true);
+  });
+
+  it("is not quiet while a boat is on the spine, however clear it is", () => {
+    const spine = assembleDaySpine(
+      { departures: [departure()], actions: [] },
+      { departures: [], actions: [] },
+    );
+    expect(spineIsQuiet(spine, false)).toBe(false);
+  });
+
+  it("is not quiet while a job waits at the desk, on tomorrow, or later in the week", () => {
+    const desk = assembleDaySpine(
+      {
+        departures: [],
+        actions: [action({ id: "stuck", kind: "stuck_payment_operation", departure: undefined })],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(spineIsQuiet(desk, false)).toBe(false);
+
+    const week = assembleDaySpine(
+      { departures: [], actions: [action({ id: "later", kind: "waiver", departure: boat("t9") })] },
+      { departures: [], actions: [] },
+    );
+    expect(spineIsQuiet(week, false)).toBe(false);
+
+    const tomorrow = assembleDaySpine(
+      {
+        departures: [],
+        actions: [action({ id: "tmw", kind: "waiver", departure: boat("t2") })],
+      },
+      { departures: [departure({ tripId: "t2" })], actions: [] },
+    );
+    expect(spineIsQuiet(tomorrow, false)).toBe(false);
+  });
+
+  it("is not quiet while a presence-derived desk row stands, which no job count can see", () => {
+    // "Nothing is waiting on you" over a payments row the reader can see on the
+    // same screen is a lie (ADR 20260827-first-light, decision 6).
+    expect(spineIsQuiet(empty(), true)).toBe(false);
+  });
+});
+
+/**
+ * The morning good-news moment (principles.md §3, and the coral budget's "The
+ * home, morning" row). Every case here is a **silence** as much as a sentence:
+ * this line renders nothing at all when it is not true, which is the whole
+ * discipline the ADR's coral table is enforcing.
+ */
+describe("todaysBoatsAreClear", () => {
+  const spineWith = (rows: TodayAction[], desk: TodayAction[] = []) =>
+    assembleDaySpine(
+      {
+        departures: [departure()],
+        actions: [...rows, ...desk],
+      },
+      { departures: [], actions: [] },
+    );
+
+  it("fires once today's boats carry nothing pressing but work remains elsewhere", () => {
+    const spine = assembleDaySpine(
+      {
+        departures: [departure()],
+        actions: [
+          action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
+          action({ id: "later", kind: "waiver", departure: boat("t9") }),
+        ],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(todaysBoatsAreClear(spine)).toBe(true);
+  });
+
+  it("stays silent while a station still carries a warning or a danger row", () => {
+    expect(
+      todaysBoatsAreClear(spineWith([action({ id: "w", kind: "waiver", departure: boat("t1") })])),
+    ).toBe(false);
+    expect(
+      todaysBoatsAreClear(
+        spineWith([action({ id: "d", kind: "medical_review", departure: boat("t1") })]),
+      ),
+    ).toBe(false);
+  });
+
+  it("stays silent while the desk group carries one", () => {
+    // The desk is today's work too — a stuck payment operation is not "the
+    // boats are clear" just because it has no boat.
+    const spine = assembleDaySpine(
+      {
+        departures: [departure()],
+        actions: [
+          action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
+          action({ id: "stuck", kind: "stuck_payment_operation", departure: undefined }),
+          action({ id: "later", kind: "waiver", departure: boat("t9") }),
+        ],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(todaysBoatsAreClear(spine)).toBe(false);
+  });
+
+  it("renders nothing on a day with no boats at all", () => {
+    const spine = assembleDaySpine(
+      { departures: [], actions: [action({ id: "later", kind: "waiver", departure: boat("t9") })] },
+      { departures: [], actions: [] },
+    );
+    expect(todaysBoatsAreClear(spine)).toBe(false);
+  });
+
+  it("yields to the other good-news moment when nothing is waiting anywhere", () => {
+    // "Nothing is waiting on you" is the whole-week moment; the two have never
+    // both rendered at once, and this is what keeps that true.
+    const spine = assembleDaySpine(
+      { departures: [departure()], actions: [] },
+      { departures: [], actions: [] },
+    );
+    expect(spineJobCount(spine)).toBe(0);
+    expect(todaysBoatsAreClear(spine)).toBe(false);
   });
 });

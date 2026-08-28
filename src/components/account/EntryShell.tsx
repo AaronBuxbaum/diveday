@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { Wordmark } from "@/components/Logo";
+import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
+import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
  * The one door into DiveDay.
@@ -59,16 +61,14 @@ export function EntryShell({
     <main className={entryMainClass(width)}>
       <header className="text-center">
         {wordmark ? <Wordmark className="mb-8 justify-center" /> : null}
-        {eyebrow ? (
-          <p className="mb-2 text-xs font-semibold tracking-widest text-primary uppercase">
-            {eyebrow}
-          </p>
-        ) : null}
-        <h1
-          className={`font-semibold tracking-tight text-balance ${width === "lg" ? "text-3xl" : "text-2xl"}`}
-        >
-          {title}
-        </h1>
+        {eyebrow ? <p className={`${EYEBROW_CLASS} mb-2`}>{eyebrow}</p> : null}
+        {/* One size at both widths. The title used to step down to `text-2xl`
+            on the `sm` doors, which made the question a diver was being asked
+            smaller on sign-in than on onboarding and smaller again than on the
+            thread page they had just come from — three sizes for one sentence
+            (ADR 20260827-the-divers-thread, decision 1). `width` still decides
+            the column; it no longer decides the type. */}
+        <h1 className={`${SHELL_TITLE_CLASS} text-balance`}>{title}</h1>
         {description ? <p className="mx-auto mt-2 max-w-prose text-muted">{description}</p> : null}
       </header>
       {panel ? (
@@ -129,7 +129,7 @@ export function EntryDone({
       >
         {glyph}
       </div>
-      <h1 className="mt-6 text-2xl font-semibold tracking-tight text-balance">{title}</h1>
+      <h1 className={`mt-6 ${SHELL_TITLE_CLASS} text-balance`}>{title}</h1>
       <p className="mt-3 max-w-prose text-muted">{text}</p>
       {action ? <div className="mt-6 text-sm">{action}</div> : null}
     </main>

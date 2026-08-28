@@ -144,6 +144,48 @@ describe("issuePartySeatClaims", () => {
     }
   });
 
+  it("reports whether each seat's own current waiver is signed", async () => {
+    // The one fact beyond `claimed` the party panel's aggregate line rests on
+    // (ADR 20260827-the-divers-thread, slice 7c). A *superseded* record must
+    // never count: a claim supersedes the placeholder's paperwork, and a seat
+    // reported as signed on a withdrawn waiver is exactly the diver who turns
+    // up at the dock with nothing on file.
+    const { db, shop, open } = await seededContext();
+    const { lead, memberOne, memberTwo } = await bookParty(db, shop.id, open.id);
+
+    const unsigned = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(unsigned.every((seat) => seat.waiverSigned)).toBe(false);
+
+    for (const bookingId of [memberOne.bookingId, memberTwo.bookingId]) {
+      const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId });
+      if (!issued.ok) throw new Error("waiver setup failed");
+      await db
+        .update(waiverRecords)
+        .set({ status: "completed", signedName: "Party Member", signatureMethod: "typed" })
+        .where(eq(waiverRecords.bookingId, bookingId));
+    }
+    const signed = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(signed.every((seat) => seat.waiverSigned)).toBe(true);
+
+    await db
+      .update(waiverRecords)
+      .set({ supersededAt: new Date(nowMs()) })
+      .where(eq(waiverRecords.bookingId, memberOne.bookingId));
+    const afterSuperseding = await issuePartySeatClaims(db, {
+      shopId: shop.id,
+      leadBookingId: lead.bookingId,
+    });
+    expect(
+      afterSuperseding.find((seat) => seat.bookingId === memberOne.bookingId)?.waiverSigned,
+    ).toBe(false);
+  });
+
   it("stops minting once the trip has departed but keeps reporting claim status", async () => {
     const { db, shop, open } = await seededContext();
     const { lead, memberOne } = await bookParty(db, shop.id, open.id);

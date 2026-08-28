@@ -158,16 +158,13 @@ export default async function WaiverTemplatesPage({
             half away from the control that was pressed. */}
         <FormStatus tone={bannerTone}>
           {banner}
-          {/* The shop now owes those divers a link, and the batch send that
-              issues one per departure already exists on the by-departure view.
-              A door, rather than leaving them to hunt for it (issue #790). */}
+          {/* The shop now owes those divers a link, and every one of them is
+              a waiver row on their boat's station on the home. A door, rather
+              than leaving them to hunt for it (issue #790). */}
           {notice === "waiver-resigning" && Number.isFinite(resigning) && resigning > 0 ? (
             <>
               {" "}
-              <Link
-                href={`/shop/${shopSlug}?view=departures`}
-                className="font-medium text-primary hover:underline"
-              >
+              <Link href={`/shop/${shopSlug}`} className="font-medium text-primary hover:underline">
                 {t("waiversStaff.banner.resigningSendLink")}
               </Link>
             </>

@@ -11,16 +11,15 @@
     "series": "“{title}” ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}. 🤙"
   },
   "firstBookable": {
-    "heading": "“{title}” ya está en el calendario — tu centro ya acepta reservas. 🎉",
-    "headingSeries": "“{title}” ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}, y tu centro ya acepta reservas. 🎉",
+    "heading": "“{title}” ya está en el calendario — tu centro ya acepta reservas.",
+    "headingSeries": "“{title}” ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}, y tu centro ya acepta reservas.",
     "body": "Este enlace es tu calendario público — la página desde la que reservan los buceadores. Ponlo en tu web, tus redes sociales y donde te encuentren los buceadores.",
     "linkLabel": "Tu enlace de reservas",
     "viewAsDiver": "Míralo como lo verán tus buceadores"
   },
-  "demoReset": "Datos de demostración reiniciados — barco nuevo, pizarra limpia. 🤿",
+  "demoReset": "Datos de demostración reiniciados — barco nuevo, pizarra limpia.",
   "emailResent": "Correo de confirmación reenviado.",
   "emailFailed": "Ese correo no se pudo enviar — revisa la dirección y la configuración de correo.",
-  "crewingBoat": "Estás en la tripulación del {title} de las {time}.",
   "offlineLabel": "Sin conexión: este tablón puede estar desactualizado",
   "nextDeparture": "La próxima es <link>{title}</link> el {date} a las {time}.",
   "noDeparturesEmpty": "Todavía no hay nada programado. Programa una salida y aparecerá aquí la mañana que zarpe.",
@@ -62,8 +61,8 @@
       },
       "divemaster": {
         "title": "Preparando a los buceadores para embarcar",
-        "desc": "No listos enumera a todos los que aún no pueden embarcar, con el único toque que resuelve cada caso.",
-        "tryThis": "Abre No listos para ver quién todavía necesita preparación."
+        "desc": "Hoy enumera a todos los buceadores que aún no pueden embarcar, con el único toque que resuelve cada caso.",
+        "tryThis": "Abre Hoy para ver quién todavía necesita preparación."
       },
       "captain": {
         "title": "Dirigiendo el barco",
@@ -113,9 +112,31 @@
     "unitsFeet": "pies",
     "unitsMeters": "metros"
   },
-  "queueView": {
-    "label": "Cómo leer la lista",
-    "byUrgency": "Por urgencia",
-    "byDeparture": "Por salida"
+  "spine": {
+    "summaryBoats": "{count, plural, one {# salida hoy.} other {# salidas hoy.}}",
+    "summaryNext": "{count, plural, =0 {Nada te espera antes de que la de las {time} zarpe.} one {# cosa te espera antes de que la de las {time} zarpe.} other {# cosas te esperan antes de que la de las {time} zarpe.}}",
+    "summaryAfter": "{count, plural, =0 {No hay nada pendiente para ti.} one {Todavía te espera # cosa.} other {Todavía te esperan # cosas.}}",
+    "quietHeading": "Un día tranquilo en el muelle.",
+    "quietSentence": "Hoy no sale ninguna salida y no hay nada pendiente para ti.",
+    "deskLabel": "En recepción",
+    "deskPaymentsRow": "Los pagos no están conectados — los buceadores pueden reservar y pagar en recepción.",
+    "deskPaymentsAction": "Abrir ajustes de pago",
+    "tomorrow": "Mañana · {date}",
+    "week": "Esta semana",
+    "openBoard": "Abrir el calendario",
+    "departures": "{count, plural, one {# salida} other {# salidas}}",
+    "jobs": "{count, plural, one {# tarea} other {# tareas}}",
+    "spotsOpen": "{count, plural, one {# plaza libre} other {# plazas libres}}",
+    "full": "Completa",
+    "ofCapacity": "de {capacity}",
+    "until": "hasta las {time}",
+    "crewing": "Formas parte de la tripulación",
+    "aboardNamed": "{name} está a bordo — {reason}",
+    "aboardCount": "{count, plural, one {# buceador está a bordo — {reason}} other {# buceadores están a bordo — {reason}}}",
+    "aboardReasonMedical": "hay una respuesta médica que un médico tiene que autorizar; nadie a bordo puede darla por buena.",
+    "aboardReasonCertification": "falta una certificación que esta inmersión pide y que no hemos visto.",
+    "aboardReasonUnknown": "no hay nada en la ficha que lo autorice. Sin exención firmada no hay declaración médica.",
+    "aboardReasonPayment": "queda un pago pendiente. Está en la lista de abajo.",
+    "crewRollCallOpen": "Todos los buceadores están a bordo: falta pasar lista a la tripulación."
   }
 }

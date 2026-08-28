@@ -155,10 +155,10 @@ export function RouteEditor({
           <div className="mt-4 overflow-hidden rounded-lg border border-border">
             {/* Never interactive: a panned map is a route drawn against a frame
                 the briefing cannot reproduce. See the note above. `MapEmbed`
-                also crops Google's own controls out of the window, and it has
-                to be the *same* frame the diver-facing briefing draws on
-                (`src/components/DiveSiteMap.tsx`) — a staffer clicking a
-                waypoint here is fixing a percentage of this box. */}
+                also crops Google's own controls out of the window — a staffer
+                clicking a waypoint here is fixing a percentage of this box, so
+                the frame has to stay exactly the one the percentages were
+                measured against. */}
             <MapEmbed
               title={copy.mapAriaLabel}
               src={googleTerrainEmbedUrl(query, zoom)}

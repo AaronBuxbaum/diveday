@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChromeBar } from "@/components/chrome/ChromeBar";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { LanguagePicker, type LanguagePickerCopy } from "@/components/LanguagePicker";
 import { PublicShopNav, type PublicShopNavItem } from "@/components/PublicShopNav";
@@ -22,16 +23,23 @@ import { shopAddressLines, shopMapQuery } from "@/lib/shop-address";
  * never renders in `?embed=1` mode, which already carries its own framing on
  * the page that embeds it.
  *
- * The header shows the shop's name, where a diver can go, and — beside the
- * name — which language they are reading in. Phone and email live in the
- * footer, once: repeating them up here made the top of every page a contact
- * card and left no room for the navigation that was actually missing.
+ * The header shows the shop's name, where a diver can go, and which language
+ * they are reading in. Phone and email live in the footer, once: repeating
+ * them up here made the top of every page a contact card and left no room for
+ * the navigation that was actually missing.
  *
- * The language control sits with the shop's own identity rather than in the
- * nav, because it is not a destination. It is the one control on a public page
- * whose *label* the reader may not be able to read, which is why each option
- * is its own language's name for itself and why it is on the first band of the
- * page rather than filed in the footer.
+ * **The shop's name owns the leading edge; everything else shares the trailing
+ * one.** The language control used to sit beside the name, on the grounds that
+ * it is identity rather than a destination. On a one-row bar that reasoning
+ * cost the wrong thing: the name is the only place a shopfront page states
+ * whose shop this is above the fold — the `<h1>` below it reads "Schedule" —
+ * so anything sharing its edge is competing with the answer the diver came
+ * for. Language moves in with the nav instead, where the two read as one
+ * question ("which page, in which words") at the edge the name is not at, and
+ * where each control can tighten on a phone without the name paying for it.
+ * Each language is still named in itself, and it is still on the first band of
+ * the page rather than filed in the footer, because it is the one control here
+ * whose *label* the reader may not be able to read.
  */
 export function PublicShopHeader({
   shop,
@@ -56,15 +64,33 @@ export function PublicShopHeader({
   languagePickerCopy: LanguagePickerCopy;
 }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 sm:px-6">
+    /* The same bar the staff shell wears — one height, one z-index, one
+       translucency (ADR 20260827-clearwater-surface-language, decision 10).
+       This header used to be its own shorter bar at `z-40`, which is why the
+       schedule's sticky day headers, pinned at `top-0`, spent every scroll
+       hidden underneath it. */
+    <ChromeBar
+      leading={
+        /* A truncating span inside, which the name did not need while the row
+           could wrap onto a second line: the bar is one fixed-height row now,
+           so a long shop name has to ellipse rather than push the nav off the
+           viewport. The span rather than the link itself because
+           `text-overflow` has nothing to act on inside a flex container. */
         <Link
           href={publicSchedulePath(shop.slug)}
-          className="inline-flex min-h-11 items-center text-lg font-semibold tracking-tight"
+          className="flex min-h-11 min-w-0 items-center text-base font-semibold tracking-tight sm:text-lg"
         >
-          {shop.name}
+          <span className="truncate">{shop.name}</span>
         </Link>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      }
+      trailing={
+        /* The nav rides in the trailing cluster rather than the bar's centre
+           slot: on a diver's page the two tabs and the language control are one
+           group — which page, in which words — and both belong at the edge the
+           shop's name is not at. The centre slot would have put them between
+           the name and the picker, which on a phone is the arrangement that
+           squeezes the name from both sides. */
+        <>
           <PublicShopNav ariaLabel={navAriaLabel} items={navItems} />
           <LanguagePicker
             current={locale}
@@ -73,9 +99,9 @@ export function PublicShopHeader({
             setLocale={setLocale}
             copy={languagePickerCopy}
           />
-        </div>
-      </div>
-    </header>
+        </>
+      }
+    />
   );
 }
 

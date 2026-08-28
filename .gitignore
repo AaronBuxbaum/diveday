@@ -71,3 +71,6 @@ next-env.d.ts
 
 # Built by scripts/build-service-worker.mjs from src/worker/manifest-sw.ts.
 public/manifest-sw.js
+
+# Agent scratch output — never part of a change.
+.agent-out/

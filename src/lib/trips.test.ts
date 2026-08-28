@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { capacityLabel, isFull, pinnedNextDeparture, spotsRemaining } from "./trips";
+import { capacityLabel, isFull, nextBookableDeparture, spotsRemaining } from "./trips";
 
 describe("spotsRemaining", () => {
   it("subtracts booked from capacity", () => {
@@ -33,20 +33,24 @@ describe("capacityLabel", () => {
   });
 });
 
-describe("pinnedNextDeparture", () => {
+describe("nextBookableDeparture", () => {
   const trip = (id: string, booked: number, capacity = 8) => ({ id, booked, capacity });
 
-  it("stays quiet when the first listed departure already has room — the list's own first row is the answer", () => {
-    expect(pinnedNextDeparture([trip("a", 3), trip("b", 8, 8)])).toBeNull();
+  it("is the first listed departure when that one already has room", () => {
+    // The storefront leads with the next boat as a bookable object, so the
+    // card renders even when the week's own first row says the same thing —
+    // the row stays too (ADR 20260827-clearwater-surface-language, decision 8).
+    const first = trip("a", 3);
+    expect(nextBookableDeparture([first, trip("b", 8, 8)])).toBe(first);
   });
 
-  it("pins the soonest departure with room when the boats before it are full", () => {
+  it("skips the full boats to the soonest one with room", () => {
     const buried = trip("c", 2);
-    expect(pinnedNextDeparture([trip("a", 8, 8), trip("b", 8, 8), buried])).toBe(buried);
+    expect(nextBookableDeparture([trip("a", 8, 8), trip("b", 8, 8), buried])).toBe(buried);
   });
 
-  it("stays quiet when everything is full, and on an empty list", () => {
-    expect(pinnedNextDeparture([trip("a", 8, 8), trip("b", 8, 8)])).toBeNull();
-    expect(pinnedNextDeparture([])).toBeNull();
+  it("is null when everything is full, and on an empty list", () => {
+    expect(nextBookableDeparture([trip("a", 8, 8), trip("b", 8, 8)])).toBeNull();
+    expect(nextBookableDeparture([])).toBeNull();
   });
 });

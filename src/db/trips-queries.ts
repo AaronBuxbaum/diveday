@@ -2,6 +2,7 @@ import {
   and,
   asc,
   count,
+  countDistinct,
   eq,
   gt,
   gte,
@@ -15,12 +16,15 @@ import {
   sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
   summarizeTripDiveSites,
   type TripDiveSiteRef,
   type TripDiveSiteSummary,
 } from "@/lib/trip-dives";
+import { shiftWeek, weekDates } from "@/lib/week-board";
+import { wallTimeToUtc } from "@/lib/zoned";
 import type { AppDb, DbExecutor } from "./client";
 import { decodeCursor, encodeCursor } from "./cursor";
 import { offsetPage } from "./paging";
@@ -685,4 +689,236 @@ export async function listUpcomingSessionsForCourse(
     .groupBy(trips.id)
     .orderBy(asc(trips.startsAt));
   return rows.map(({ trip, booked }) => ({ ...trip, booked }));
+}
+
+/** One single-day departure as the week board draws it. */
+export type WeekBoardEntry = {
+  tripId: string;
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  booked: number;
+  capacity: number;
+  priceCents: number | null;
+  /**
+   * `sailed` once the boat is back — the departure has *ended*, with the
+   * standing one-hour late-arrival buffer every "has it sailed" check in this
+   * app carries (AGENTS.md). A past column's entries are read, not worked, so
+   * this is the one fact that separates the two.
+   */
+  status: "upcoming" | "sailed";
+  courseId: string | null;
+  /**
+   * The site this departure is diving, and the hull it is on. **What a cell
+   * says that its neighbours do not.** Every title in a column shares its
+   * prefix ("Dawn Two-Tank — …", "Morning Two-Tank — …") and a 150px column
+   * clips exactly the half that differs, so the site leads the cell's meta
+   * line instead of being the thing the ellipsis eats. `boatId` is not read
+   * by any cell: it is what lets the caller ask the day the stream's own
+   * question — more departures than boats, or one hull in two places at once
+   * (`src/lib/boats.ts`) — which is the board's whole question and had no
+   * answer at desktop.
+   */
+  diveSiteName: string | null;
+  boatId: string | null;
+  /** A shore or pool session has no hull to be in two places at once. */
+  diveMode: "boat" | "shore" | "pool";
+};
+
+/**
+ * A multi-day course session as the week board draws it: one bar across the
+ * days it owns, never one entry per day. `firstDay`/`lastDay` are the shop's
+ * own calendar dates and may sit outside the week being drawn — a course that
+ * starts on Sunday and runs into Tuesday is the same object read from either
+ * week, and the caller clamps it to the columns it has.
+ */
+export type WeekBoardSpan = {
+  tripId: string;
+  title: string;
+  firstDay: CalendarDate;
+  lastDay: CalendarDate;
+  /**
+   * The instant the run begins, and how many days it meets on. A span opens
+   * the same move/copy/remove panels a day entry does — a course drawn as one
+   * bar still has to be movable — and those forms are a date, a time and "all
+   * {count} days move together".
+   */
+  startsAt: Date;
+  dayCount: number;
+  /**
+   * `sailed` once the whole run is behind, with the same one-hour
+   * late-arrival buffer a day entry carries: a course still meeting on Friday
+   * is not a thing to be told nothing about on Wednesday.
+   */
+  status: "upcoming" | "sailed";
+  booked: number;
+  capacity: number;
+  priceCents: number | null;
+  instructorName: string | null;
+};
+
+/**
+ * One week of the staff board, as seven day buckets and the spans that cross
+ * them — the desktop reading of the same rows the cursor stream pages
+ * (ADR 20260827-clearwater-surface-language, decision 5).
+ *
+ * **A multi-day departure appears exactly once, as a span.** It is never also
+ * dropped into the day cells it covers: a three-day course rendered four times
+ * (a bar and three entries) is the same fact said four times, which principle
+ * 9 spends this whole redesign removing.
+ *
+ * Bounded by construction — one week, one shop — so unlike the stream this
+ * needs no cursor. It is a *different reading*, not a second stream: nothing
+ * here touches `pagedUpcomingTripsWithCounts`'s keyset contract, and the two
+ * page by different parameters that deliberately never mix.
+ *
+ * Reads through `liveTrip()`, so a departure taken off the board is gone from
+ * the week as well as from the stream.
+ */
+export async function weekBoard(
+  db: DbExecutor,
+  shopId: string,
+  weekStartIso: CalendarDate,
+  timeZone: string,
+  now: Date = nowDate(),
+): Promise<{ days: Record<CalendarDate, WeekBoardEntry[]>; spans: WeekBoardSpan[] }> {
+  const dayIsos = weekDates(weekStartIso);
+  const from = wallTimeToUtc({ ...midnightOf(weekStartIso), hour: 0, minute: 0 }, timeZone);
+  const to = wallTimeToUtc(
+    { ...midnightOf(shiftWeek(weekStartIso, 1)), hour: 0, minute: 0 },
+    timeZone,
+  );
+  // Every column exists whether or not anything sails in it: an empty cell is
+  // the information the grid is for, and a caller that had to invent the gaps
+  // would be re-deriving the calendar this query already knows.
+  const days: Record<CalendarDate, WeekBoardEntry[]> = Object.fromEntries(
+    dayIsos.map((iso) => [iso, [] as WeekBoardEntry[]]),
+  );
+
+  // Overlap, not containment: a course that met on Sunday and meets again on
+  // Monday belongs to both weeks. The join is on the meeting windows rather
+  // than on `trips.startsAt` for exactly that reason.
+  const overlapping = await db
+    .select({
+      trip: trips,
+      diveSiteName: diveSites.name,
+      // `countDistinct`, not `count`: the meeting-window join multiplies a
+      // multi-day course's rows by its days, and a plain count would report a
+      // three-day class as three times as booked as it is.
+      booked: countDistinct(bookings.id),
+    })
+    .from(trips)
+    .innerJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
+    .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
+    .leftJoin(bookings, liveBookingJoin)
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        lt(tripScheduleDays.startsAt, to),
+        gt(tripScheduleDays.endsAt, from),
+      ),
+    )
+    .groupBy(trips.id, diveSites.id)
+    .orderBy(asc(trips.startsAt), asc(trips.id));
+
+  if (overlapping.length === 0) return { days, spans: [] };
+
+  const tripIds = overlapping.map((row) => row.trip.id);
+  // Every meeting window of every trip that touched the week, not just the
+  // windows inside it: a span has to state the run it really is, and a trip
+  // is multi-day or not regardless of how much of it this week can see.
+  const dayRows = await db
+    .select({
+      tripId: tripScheduleDays.tripId,
+      dayNumber: tripScheduleDays.dayNumber,
+      startsAt: tripScheduleDays.startsAt,
+    })
+    .from(tripScheduleDays)
+    .where(inArray(tripScheduleDays.tripId, tripIds))
+    .orderBy(asc(tripScheduleDays.tripId), asc(tripScheduleDays.dayNumber));
+  const windowsByTrip = new Map<string, Date[]>();
+  for (const row of dayRows) {
+    const list = windowsByTrip.get(row.tripId) ?? [];
+    list.push(row.startsAt);
+    windowsByTrip.set(row.tripId, list);
+  }
+
+  const spans: WeekBoardSpan[] = [];
+  const sailedBefore = new Date(now.getTime() - 60 * 60 * 1000);
+  for (const { trip, diveSiteName, booked } of overlapping) {
+    // A trip with no meeting rows at all is its own single window — the same
+    // reading `tripScheduleDayCounts` callers already take.
+    const windows = windowsByTrip.get(trip.id) ?? [trip.startsAt];
+    if (windows.length > 1) {
+      spans.push({
+        tripId: trip.id,
+        title: trip.title,
+        firstDay: calendarDateInTimezone(windows[0] ?? trip.startsAt, timeZone),
+        lastDay: calendarDateInTimezone(windows.at(-1) ?? trip.endsAt, timeZone),
+        startsAt: windows[0] ?? trip.startsAt,
+        dayCount: windows.length,
+        status: trip.endsAt < sailedBefore ? "sailed" : "upcoming",
+        booked,
+        capacity: trip.capacity,
+        priceCents: trip.priceCents,
+        instructorName: null,
+      });
+      continue;
+    }
+    const dayIso = calendarDateInTimezone(trip.startsAt, timeZone);
+    days[dayIso]?.push({
+      tripId: trip.id,
+      title: trip.title,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      booked,
+      capacity: trip.capacity,
+      priceCents: trip.priceCents,
+      status: trip.endsAt < sailedBefore ? "sailed" : "upcoming",
+      courseId: trip.courseId,
+      diveSiteName,
+      boatId: trip.boatId,
+      diveMode: trip.diveMode,
+    });
+  }
+  for (const iso of dayIsos) {
+    days[iso]?.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+  }
+
+  if (spans.length > 0) {
+    // Who is teaching it — the one fact a course bar carries that a departure
+    // entry does not, and the reason a shop looks at the bar at all. One
+    // batched read for the spans only; the day entries never ask.
+    const teachers = await db
+      .select({
+        tripId: tripAssignments.tripId,
+        name: people.fullName,
+        role: personRoles.role,
+      })
+      .from(tripAssignments)
+      .innerJoin(people, eq(people.id, tripAssignments.personId))
+      .leftJoin(personRoles, eq(personRoles.personId, people.id))
+      .where(
+        inArray(
+          tripAssignments.tripId,
+          spans.map((span) => span.tripId),
+        ),
+      )
+      .orderBy(asc(people.fullName));
+    for (const span of spans) {
+      const crew = teachers.filter((row) => row.tripId === span.tripId);
+      span.instructorName =
+        crew.find((row) => row.role === "instructor")?.name ?? crew[0]?.name ?? null;
+    }
+  }
+
+  return { days, spans };
+}
+
+/** A calendar date as the wall-clock parts `wallTimeToUtc` reads — midnight, shop-local. */
+function midnightOf(date: CalendarDate): { year: number; month: number; day: number } {
+  const [year, month, day] = date.split("-").map(Number);
+  return { year: year ?? 1970, month: month ?? 1, day: day ?? 1 };
 }

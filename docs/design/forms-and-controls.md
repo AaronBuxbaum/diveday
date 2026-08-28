@@ -13,8 +13,11 @@ routes one tap apart rendered the same panel at two different corner radii, and 
 cards sat at two elevations on one page.
 
 One spelling now, and it is the one `ShopStat` and the `<Table>` shell already shared —
-`rounded-2xl border border-border bg-surface shadow-sm` — so **a card, a stat tile and a table
-shell read as the same object**.
+`rounded-2xl border border-border bg-surface` — so **a card, a stat tile and a table shell read as
+the same object**. That spelling lost its shadow on 2026-08-28 (ADR
+20260827-clearwater-surface-language, decision 1: **elevation is earned**) — a panel at rest is a
+fill and a hairline, and a shadow says the thing *floats above the page*, which is true of a menu,
+a sheet, a dialog and a toast and of nothing else.
 
 ```tsx
 import { SectionCard } from "@/components/ui/card";
@@ -37,9 +40,11 @@ import { SectionCard } from "@/components/ui/card";
   (`p-5 sm:p-6`) for a card someone works *inside* — a form, a wizard step, a set of snippets — or
   `none` for a card that is a **shell**: a divided row list, a `<details>`, anything whose own parts
   pad themselves.
-- **`elevated`** follows containment, the rule `Table`'s `flush` and `ShopStat`'s `inset` already
-  keep: a card on the page is raised; a card that has to sit inside another one drops its shadow so
-  surface never stacks on surface.
+- **There is no `elevated` prop either.** It existed so a card nested inside another card could
+  stop stacking surface on surface; with no shadow at rest there is nothing left to stack, and an
+  option that can only ever be a no-op is a call site asking for an elevation it will never get.
+  `Table`'s `flush` and `ShopStat`'s `inset` still follow containment — they drop the *border and
+  fill*, which is a different question.
 - **The heading is folded in.** Pass `title`; never spell `<h2 className="text-lg font-semibold">`
   at a call site. `titleAs="h3"` steps a card down one level when it sits under a group that
   already owns the `h2` (the export page's Backups half) — the element *and* its size, so a group
@@ -129,7 +134,7 @@ Two things are deliberately *not* on that rhythm:
 ### A route's `loading.tsx` takes the shell from the same place
 
 A skeleton narrower, squarer or flatter than what replaces it is a layout jump on every navigation
-into the route. `sectionCardClass({ padding, elevated, className })` is the card's chrome as a
+into the route. `sectionCardClass({ padding, className })` is the card's chrome as a
 class string, for exactly that — the skeleton and the page can no longer drift apart.
 
 ```tsx
@@ -469,8 +474,17 @@ Bold is under AA. Read off it:
   4.38–4.39, just under. `danger` needs no `-strong` and has none.
 - **On `bg-surface-sunken`, success/warning text is `-strong`** even with no tint (4.36 → 4.84).
   This is why `StatTile`'s figure uses `-strong`: the tile's `inset` variant is a sunken box.
-- **On plain `bg-surface`, the raw hue is fine** (5.02) — which is what `KindChip` relies on, and
-  why it names `bg-surface` on the chip itself rather than inheriting whatever it landed in.
+- **On plain `bg-surface`, the raw hue is fine** (5.02) — and that is exactly why a component that
+  does not know what it is mounted on may not rely on it. `KindChip` named `bg-surface` on *itself*
+  so it could; its replacement, `LedgerRow`'s kind word (`src/components/ui/ledger.tsx`), carries no
+  fill at all, so it takes `text-warning-strong` (5.56 / 4.83 / 4.86 — clears on surface, sunken and
+  tint alike) and keeps `text-danger`, which needs no `-strong` at any of them. The case is not
+  hypothetical: a `LedgerRow` that is a door hovers to `bg-surface-sunken/60`, where the raw hue is
+  4.37. **The general rule this is an instance of:** a component mounted in whatever container its
+  caller chose picks the ink that clears everywhere, rather than the one that clears where its
+  author happened to be looking — `FormStatus` and `ShopStat` already settle it the same way. A
+  `className` override is not the escape hatch, because Tailwind emits colour utilities
+  alphabetically by token name and the override would win or lose by that accident.
 - **`opacity-*` dims the ratio too.** A row greyed out with `opacity-60` takes its own status chip
   down with it — 2.81:1 on the import preview, on a table whose whole job is being read. Quiet ink
   is `text-muted`, which is a token with a measured ratio; opacity is not.

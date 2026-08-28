@@ -9,7 +9,7 @@ import { EarnedMoment } from "@/components/EarnedMoment";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
-import { TokenPageHeader } from "@/components/TokenPageHeader";
+import { THREAD_MEASURE_CLASS, ThreadShell } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
@@ -297,7 +297,7 @@ export default async function WaiverPage({
     // just came from: the outcome screen used to sit on a taller `py-16` on a
     // phone than the flow that led to it.
     return (
-      <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
+      <main className={THREAD_MEASURE_CLASS}>
         <EarnedMoment
           as="h1"
           eyebrow={shopName}
@@ -570,25 +570,30 @@ export default async function WaiverPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
+    <ThreadShell
+      shopName={shopName}
+      title={t("waiver.beforeDockTitle")}
+      meta={
+        <>
+          <p className="mt-2 text-base text-muted">{t("waiver.beforeDockDescription")}</p>
+          {tripHeader ? (
+            <p className="mt-3 text-base font-medium text-foreground">
+              {t("waiver.tripHeader", {
+                trip: tripHeader.title,
+                when: formatShortDate(tripHeader.startsAt, locale, shop.timezone),
+                time: formatTimeRangeTz(
+                  tripHeader.startsAt,
+                  tripHeader.endsAt,
+                  locale,
+                  shop.timezone,
+                ),
+              })}
+            </p>
+          ) : null}
+        </>
+      }
+    >
       <FlashParams params={["saved", "error", "field", "at"]} />
-      <TokenPageHeader eyebrow={shopName} title={t("waiver.beforeDockTitle")}>
-        <p className="mt-2 text-base text-muted">{t("waiver.beforeDockDescription")}</p>
-        {tripHeader ? (
-          <p className="mt-3 text-base font-medium text-foreground">
-            {t("waiver.tripHeader", {
-              trip: tripHeader.title,
-              when: formatShortDate(tripHeader.startsAt, locale, shop.timezone),
-              time: formatTimeRangeTz(
-                tripHeader.startsAt,
-                tripHeader.endsAt,
-                locale,
-                shop.timezone,
-              ),
-            })}
-          </p>
-        ) : null}
-      </TokenPageHeader>
 
       {/* One flash surface, never a stack. A refused submit and a saved draft
           arrive on different redirects, so at most one has something to say —
@@ -874,7 +879,7 @@ export default async function WaiverPage({
             })
           : t("common.needHelpPlain", { shop: shopName })}
       </p>
-    </main>
+    </ThreadShell>
   );
 }
 

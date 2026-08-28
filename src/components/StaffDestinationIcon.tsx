@@ -21,6 +21,7 @@ export type DiveDaySharedIconName =
   | "chevron-left"
   | "chevron-right"
   | "more"
+  | "warning"
   | `waiver-action-${WaiverActionIconName}`
   | `waiver-mark-${WaiverDeliveryMarkName}`;
 
@@ -48,6 +49,18 @@ const SHARED_ICON_PATHS: Record<Exclude<DiveDaySharedIconName, "caret">, ReactNo
   ),
   check: <path d="m5 12.5 4.5 4.5L19 7" />,
   pending: <circle cx="12" cy="12" r="7" strokeDasharray="2.5 2.5" />,
+  // A caution triangle, drawn on the same 24px grid at the same weight and
+  // caps as its siblings. It exists because the shared `Badge` mark is an
+  // emoji, and a status line that is not wearing a pill needs a mark from
+  // this family instead (ADR 20260827-clearwater-surface-language: drawn SVG,
+  // never emoji, on anything new).
+  warning: (
+    <>
+      <path d="M12 3.4 21.6 20H2.4L12 3.4Z" />
+      <path d="M12 10v3.6" />
+      <path d="M12 16.8h.01" />
+    </>
+  ),
   "arrow-right": (
     <>
       <path d="M4 12h15" />
@@ -196,15 +209,6 @@ const ICON_PATHS: Partial<Record<StaffDestinationId, ReactNode>> = {
       <path d="M5 3h14v18l-2.33-1.5L14.33 21 12 19.5 9.67 21l-2.34-1.5L5 21V3Z" />
       <path d="M9 8h6" />
       <path d="M9 12h6" />
-    </>
-  ),
-  // Not ready: a departure with something still open on it — a triangle of
-  // attention over the day it belongs to.
-  blockers: (
-    <>
-      <path d="M10.3 4.3 2.6 18a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0Z" />
-      <path d="M12 10v4" />
-      <path d="M12 17.5h.01" />
     </>
   ),
   // Add a booking: a seat taken on a boat — the plus that fills one.

@@ -53,9 +53,9 @@ export type CrewSectionCopy = {
 
 /**
  * Day-of crew editing for one trip. Assign/unassign is per-person
- * (`updateCrewAction`, the same `changeTripCrew` mutation Today's
- * `DepartureBoard` uses) rather than replacing the whole assigned set, so two
- * staff editing this trip and Today at once can no longer silently clobber
+ * (`updateCrewAction`, the same `changeTripCrew` mutation the schedule board
+ * uses) rather than replacing the whole assigned set, so two
+ * staff editing this trip and the board at once can no longer silently clobber
  * each other's change (docs/product/archive/ux-personas-20260730-findings.md, Lens
  * 17 task 139).
  */

@@ -12,11 +12,15 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
   page,
 }) => {
   await page.goto("/s/blue-mantis");
-  await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
-  // Scoped to the departure's own card heading: the reviews section below the
-  // list quotes trip titles too, so a bare text match finds two things.
+  // The shopfront leads with the shop (ADR
+  // 20260827-clearwater-surface-language, decision 8); "Schedule" is the week's
+  // own section heading beneath it.
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Blue Mantis Divers");
+  await expect(page.getByRole("heading", { level: 2, name: "Schedule" })).toBeVisible();
+  // Scoped to the departure's own row heading: the reviews shelf below the list
+  // quotes trip titles too, so a bare text match finds two things.
   await expect(
-    page.getByRole("heading", { level: 2, name: "Two-Tank Reef — Molasses & French" }),
+    page.getByRole("heading", { level: 3, name: "Two-Tank Reef — Molasses & French" }),
   ).toBeVisible();
   // Assert the count rather than visibility: a capacity badge can double-render
   // for a sub-frame during hydration, and Playwright throws strict-mode
@@ -30,7 +34,11 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
   await expect(tripList.getByText("Full")).toHaveCount(1); // sold-out wreck trip
   await expect(page.getByRole("link", { name: "Full trip form" })).toHaveCount(0);
   await expect(page.getByLabel("Schedule overview")).toHaveCount(0);
-  await expect(page.getByText(/reserve your spot/i)).toBeVisible();
+  // The hero says only what the shop wrote. DiveDay's own "find your next day
+  // on the water, … reserve your spot" filler left the page with the
+  // recomposition; it survives as the metadata description and nowhere else.
+  await expect(page.getByText(/reserve your spot/i)).toHaveCount(0);
+  await expect(page.getByText("Small-boat reef and wreck diving out of Key Largo.")).toBeVisible();
 
   // The month rail names the month in view and steps the list a month at a
   // time — what the old full month grid did for a diver, in one quiet row.
@@ -53,17 +61,13 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
   const twoSiteCard = tripList
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" });
-  await expect(twoSiteCard.getByText(/^Dive sites · Molasses Reef and French Reef$/)).toHaveCount(
-    1,
-  );
+  await expect(twoSiteCard.getByText(/^Molasses Reef and French Reef$/)).toHaveCount(1);
   // And a departure whose second tank has no site yet says so, in the same
   // line, rather than silently reporting one site for a two-tank plan.
   const openTankCard = tripList
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Benwood & Elbow" });
-  await expect(
-    openTankCard.getByText(/^Dive site · Benwood Wreck · \+ 1 more dive site$/),
-  ).toHaveCount(1);
+  await expect(openTankCard.getByText(/^Benwood Wreck · \+ 1 more dive site$/)).toHaveCount(1);
 
   // A multi-dive trip's public page presents every dive briefing.
   await page
@@ -71,10 +75,13 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
     .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
     .click();
-  await expect(page.getByRole("heading", { name: "Your two-tank plan" })).toBeVisible();
-  await expect(page.getByRole("paragraph").filter({ hasText: /^Dive 1$/ })).toBeVisible();
-  await expect(page.getByRole("paragraph").filter({ hasText: /^Dive 2$/ })).toBeVisible();
-  await expect(page.getByText("French Reef is the second tank")).toBeVisible();
+  // The pitch, above the form: the run of dives in plan order (ADR
+  // 20260827-the-divers-thread, decision 2). The swipeable briefing deck this
+  // replaced is `/ready`'s now — reading for the night before, not the pitch.
+  await expect(page.getByRole("heading", { name: "The day" })).toBeVisible();
+  await expect(page.getByText("Dive 1", { exact: true })).toBeVisible();
+  await expect(page.getByText("Dive 2", { exact: true })).toBeVisible();
+  await expect(page.getByText("French Reef", { exact: true })).toBeVisible();
 });
 
 /**
@@ -93,9 +100,9 @@ test("a tank with no site yet says so on the booking page, so one site and two d
     .filter({ hasText: "Two-Tank Reef — Benwood & Elbow" })
     .getByRole("link", { name: "Two-Tank Reef — Benwood & Elbow" })
     .click();
-  await expect(page.getByRole("heading", { name: "Your two-tank plan" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "The day" })).toBeVisible();
   // Tank one has a site; tank two is the crew's call at the dock.
-  await expect(page.getByRole("heading", { level: 3, name: "Benwood Wreck" })).toBeVisible();
+  await expect(page.getByText("Benwood Wreck", { exact: true })).toBeVisible();
   await expect(page.getByText("Site to be confirmed")).toHaveCount(1);
 });
 
@@ -441,8 +448,24 @@ test.describe("a departure's tab strip on a phone, in Spanish", () => {
  */
 async function seededTripPath(page: import("@playwright/test").Page): Promise<string> {
   await page.goto("/shop/blue-mantis/schedule/board");
-  const link = page.locator('a[href^="/shop/blue-mantis/trips/"]').first();
-  await link.waitFor();
+  // **Scoped to the day stream, and that scope is the whole point.** The board
+  // draws the same departures twice — the chronological stream below `xl`, the
+  // week grid from `xl` up — and the grid renders *first* in the DOM. So a bare
+  // `.first()` reads "the earliest cell of the week on screen" at one width and
+  // "the next departure" at another, which is a different trip. These tests
+  // name the trip they land on, so the composition has to be named too.
+  const link = page.locator('[data-day-stream] a[href^="/shop/blue-mantis/trips/"]').first();
+  // **Attached, not visible.** From `xl` up the stream is `display:none` behind
+  // the grid, its links still in the DOM. This only reads an href, so presence
+  // is the whole requirement — waiting for a visibility that is never coming is
+  // what timed five tests in this file out at 15s on CI, all of them here
+  // rather than in what they were testing.
+  //
+  // A caller that *clicks* needs the copy on screen instead: that is
+  // `findTripOnBoard` in `e2e/helpers.ts`, which picks the visible one and can
+  // page the board. It takes a title, which is exactly what this helper must
+  // not do — the Spanish run cannot read English copy.
+  await link.waitFor({ state: "attached" });
   return ((await link.getAttribute("href")) ?? "").replace(/\/(guests|manifest|prep|log)$/, "");
 }
 
@@ -469,13 +492,7 @@ test.describe("the printed trip packet", () => {
   signedInAsOwner();
 
   test("carries no control a crew member could try to fill in", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/schedule/board");
-    const link = page.locator('a[href^="/shop/blue-mantis/trips/"]').first();
-    await link.waitFor();
-    const tripPath = ((await link.getAttribute("href")) ?? "").replace(
-      /\/(guests|manifest|prep|log)$/,
-      "",
-    );
+    const tripPath = await seededTripPath(page);
     await page.goto(`${tripPath}/print`);
     // The packet's own heading — the destination's render, not a timing guess.
     await page.getByRole("heading", { name: "Trip packet" }).waitFor();
@@ -527,13 +544,7 @@ test.describe("the printed trip packet", () => {
   test("clips nothing at a page break, and repeats a split table's column names", async ({
     page,
   }) => {
-    await page.goto("/shop/blue-mantis/schedule/board");
-    const link = page.locator('a[href^="/shop/blue-mantis/trips/"]').first();
-    await link.waitFor();
-    const tripPath = ((await link.getAttribute("href")) ?? "").replace(
-      /\/(guests|manifest|prep|log)$/,
-      "",
-    );
+    const tripPath = await seededTripPath(page);
     await page.goto(`${tripPath}/print`);
     await page.getByRole("heading", { name: "Trip packet" }).waitFor();
     await page.emulateMedia({ media: "print" });
@@ -568,13 +579,7 @@ test.describe("the printed trip packet", () => {
    * digits each pushed the packing list that follows them onto its own page.
    */
   test("says the tank counts inline rather than as three tiles", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/schedule/board");
-    const link = page.locator('a[href^="/shop/blue-mantis/trips/"]').first();
-    await link.waitFor();
-    const tripPath = ((await link.getAttribute("href")) ?? "").replace(
-      /\/(guests|manifest|prep|log)$/,
-      "",
-    );
+    const tripPath = await seededTripPath(page);
     await page.goto(`${tripPath}/prep`);
     const tanks = page.getByRole("heading", { name: "Tanks" });
     await tanks.waitFor();

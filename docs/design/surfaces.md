@@ -33,26 +33,27 @@ So an entry here is the index; the constraint lives beside the code it constrain
 
 ### The shop home — `/shop/[shopSlug]`
 
-- **One idea:** the work. What needs this shop today, ranked, with the day's boats above it
-  (ADR 20260720-today-work-queue).
-- **The question it arrives with:** "what needs me before the first boat?" — answered on screen, in
-  the queue's first band, without a click.
+- **One idea:** the work. What needs this shop today, in the order the day happens
+  (ADR 20260720-today-work-queue; recomposed by
+  [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
+  decision 4).
+- **The question it arrives with:** "what needs me before the first boat?" — answered on screen, by
+  the summary sentence and the first station's rows, without a click.
 - **Controls that dissolved:** the queue's rows *are* their own controls — each row's own link goes
-  to the thing it is about. The view switch is the one standing control.
+  to the thing it is about — and the urgency/by-departure view switch is gone with the views it
+  chose between. There is no standing control on this page at all.
 - **Remove first:** nothing currently; the orientation card is already conditional on first-run and
   the good-news lines already render nothing when untrue (see
   [settled-questions.md](settled-questions.md)).
-- **Composition:** not the default card stack — a departure board above a ranked queue, because the
-  day's boats and the day's work are two different readings and the first is the shorter list.
+- **Composition:** **the day's spine.** Today's departures are stations in clock order, each owning
+  its time, title, site, hull, crew, price and head count, with its own blockers and chores as
+  ledger rows beneath it; work bound to no boat pools under "At the desk"; tomorrow is a collapsed
+  disclosure and the rest of the week one link to the board. A departure's facts are said once, at
+  its station, instead of once per card.
 
-Enforced beside the code: `RoleOrientationCard.tsx` defers to it by name, and
-`RoleOrientationCard.test.tsx` fails if the orientation box out-ranks the queue.
-
-**Recomposition proposed** — ADR
-[20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
-(Proposed) redraws the same one idea as a chronological spine: stations carry their own work rows,
-so a departure's facts are said once instead of once per card, and the two views become one
-composition. The shipped code governs until that slice ships.
+Enforced beside the code: `DaySpine.tsx` and `DayStation.tsx` defer to the ADR by name,
+`DaySpine.test.tsx` pins the composition (including its silences), and
+`RoleOrientationCard.test.tsx` fails if the orientation box out-ranks the work.
 
 ### The trip page — `/shop/[shopSlug]/trips/[id]`
 
@@ -99,22 +100,24 @@ either.
 
 ### The schedule board — `/shop/[shopSlug]/schedule/board`
 
-**Redesign proposed (desktop only)** — ADR
-[20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
-(Proposed), drawn in [its canvas](canvases/20260827-clearwater-surface-language/README.md). The
-stream stays on phone.
+**Shipped 2026-08-28 (desktop only)** — slice 6e of ADR
+[20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
+drawn in [its canvas](canvases/20260827-clearwater-surface-language/README.md). The stream stays
+below `xl` (1280px), on tablets and phones.
 
 - **One idea:** the shape of the week — where the boats are, and where they aren't.
 - **The question it arrives with:** "what does my week look like?" — answered in one screen of
   seven columns rather than seven screens of scroll.
-- **Controls that dissolved:** none new; the row's `⋯` menu and per-day "+ Add" carry over.
+- **Controls that dissolved:** none new; the row's `⋯` menu and per-day "+ Add" carried over — the
+  menu's panels open full width beneath the grid, because a move form is two date/time fields and
+  a 160px column is not a form.
 - **Remove first:** the standing crew line above the board, once a station says its own crew.
 - **Composition:** a week grid at desktop because the content is a calendar; the phone keeps the
   stream because a seven-column grid has no honest 390px form.
 
 ### Settings — `/shop/[shopSlug]/settings`
 
-**Redesign proposed (desktop only)** — same ADR and canvas. The phone keeps grouped lists.
+**Shipped 2026-08-28** (slice 6g) — same ADR and canvas. The phone keeps grouped lists.
 
 - **One idea:** every switch in the shop, findable in one look.
 - **The question it arrives with:** "where do I change X?" — answered by the rail, which shows the
@@ -141,7 +144,8 @@ stream stays on phone.
 
 ### The counter — `/shop/[shopSlug]/check-in`
 
-**Redesign proposed** — same ADR and canvas. Safety-adjacent; gets the `dive-domain-expert` pass.
+**Built** — same ADR and canvas, slice 6h, delivered 2026-08-28. Safety-adjacent; gets the
+`dive-domain-expert` pass.
 
 - **One idea:** who has walked in, against who should.
 - **The question it arrives with:** "how many are still to come?" — answered by the count figure
@@ -155,8 +159,9 @@ stream stays on phone.
 
 ### The public schedule — `/s/[shopSlug]`
 
-**Redesign proposed** — same ADR and canvas. Conversion surface; gets the `conversion-reviewer`
-pass.
+**Shipped 2026-08-28** (slice 6i) — same ADR and canvas. Conversion surface; gets the
+`conversion-reviewer` pass. `/s/[shopSlug]/reviews` restyled with it, and the two public course
+routes took the display-scale h1 only.
 
 - **One idea:** this shop is worth your dive day — and the next boat is right there.
 - **The question it arrives with:** "is this shop good, and can I get on a boat?" — answered by the
@@ -169,7 +174,7 @@ pass.
 
 ### The public trip page — `/s/[shopSlug]/trips/[id]`
 
-**Redesign proposed** — ADR
+**Built** (slice 7b, 2026-08-28) — ADR
 [20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md) (Proposed),
 drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion surface.
 
@@ -179,13 +184,16 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
 - **Controls that dissolved:** the boxed requirement note (one sentence), the boxed gear fieldsets
   (hairline steps of one sheet), the five-piece money story (one block), the sticky pill's
   duplicate seat count (verb only).
-- **Remove first:** the packing section — it is preparation, not pitch, and moves to the thread.
+- **Removed:** the packing section, which is preparation rather than pitch and moved to the thread
+  in 7b; and the swipeable briefing deck, deleted outright in 7c — "Look for" names the species and
+  that is the whole of what a deciding diver needs.
 - **Composition:** sell then close — the form is the page's terminal word, so the primary is where
   a decided diver already is.
 
 ### The thread — `/ready/[token]` (and every state after booking)
 
-**Redesign proposed** — same ADR and canvas. Extends ADR 20260820-one-page-after-booking.
+**Prep state built** (slice 7c, 2026-08-28); the after-state (7d) is still proposed — same ADR and
+canvas. Extends ADR 20260820-one-page-after-booking.
 
 - **One idea:** the one link that answers "am I ready, and what's next?" for this trip — before,
   during, and after.
@@ -253,18 +261,21 @@ drawn in [its canvas](canvases/20260827-the-shops-shelves/README.md).
 
 ### The diver record — `/shop/[shopSlug]/divers/[personId]`
 
-**Answered 2026-08-27, redesign proposed** — ADR
-[20260827-people-not-lists](../architecture/decisions/20260827-people-not-lists.md) (Proposed),
-drawn in [its canvas](canvases/20260827-people-not-lists/README.md). This entry replaces the
-"unanswered, and known to be" record that stood here since issue #780; the shipped code governs
-until slice 8b ships.
+**Answered 2026-08-27, shipped** — ADR
+[20260827-people-not-lists](../architecture/decisions/20260827-people-not-lists.md), drawn in
+[its canvas](canvases/20260827-people-not-lists/README.md), built as slice 8b. This entry replaces
+the "unanswered, and known to be" record that stood here since issue #780. Two rules are pinned in
+code: the status section renders nothing when `buildDiverStatus` is empty
+(`_lib/status.test.ts`, `_components/DiverStatusLedger.test.tsx`), and exactly one
+primary-weight control lives on the page (`_lib/record-primaries.test.ts`).
 
 - **One idea:** this diver, ready or not — and the one fix if not.
 - **The question it arrives with:** "can they dive with us, and is anything in the way?" — answered
   by the status ledger under the masthead, which renders *nothing* when they are clear.
-- **Controls that dissolved:** the jump nav (the page got short), the ten per-section notice slots
-  (one router convention), the stat tiles (each figure lives in its group), three of the four
-  primary-weight buttons (Book is the one primary).
+- **Controls that dissolved:** the jump nav (the page got short), the stat tiles (each figure lives
+  in its group), the twin certification sections (one group, one add flow), the three lists of the
+  same bookings (one story), the refund button (money out is the Orders ledger's act) and the
+  Connect-payments CTA, leaving Book as the one primary.
 - **Remove first:** the merge panel's standing card — it earns its place only while candidates
   exist, and the redesign keeps it conditional.
 - **Composition:** status, story, file — a person is a readiness question, a history, and a set of

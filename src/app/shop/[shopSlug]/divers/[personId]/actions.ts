@@ -10,7 +10,6 @@ import {
   canPersonErasePersonalData,
   canPersonMergeDiver,
   canPersonOverrideGearRequest,
-  canPersonRefund,
   loadActiveStaffRoles,
 } from "@/db/authz";
 import { type AppDb, getDb } from "@/db/client";
@@ -30,7 +29,6 @@ import {
   unreviewNitroxCertification,
 } from "@/db/nitrox";
 import { addDiverNote, deleteDiverNote } from "@/db/operations";
-import { refundOrder } from "@/db/orders";
 import {
   type CardSighting,
   type CertificationReviewRefusal,
@@ -49,20 +47,18 @@ import {
 import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
 import { certificationAgency, certificationLevel, people } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
-import { getShopById } from "@/db/shops";
 import { getSupportNeeds, saveSupportNeeds } from "@/db/support-needs";
 import { recordInPersonWaiver } from "@/db/waivers";
 import { isPlausibleDateOfBirth } from "@/lib/age";
-import { trackEvent } from "@/lib/analytics";
 import { canOverrideGearRequest, isStaff } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { isPlausibleCardNumber } from "@/lib/card-number";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
-import { hasRequiredStepUp, stepUpChallengeUrl } from "@/lib/security-step-up";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { diverRecordIsClear } from "./_lib/status-load";
 
 // The pg enum itself, not a copy of it: a card the column accepts is a card the
 // form must accept, and a hand-kept list is what let CMAS/RAID/GUE be refused
@@ -73,7 +69,14 @@ const agencySchema = z.enum(certificationAgency.enumValues);
 // submit fail *silently* (`levelSightingFromForm` returns undefined), which
 // reads to the staffer as "you did not fill the form in".
 const levelSchema = z.enum(certificationLevel.enumValues);
-const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit", "nitrox"]);
+/**
+ * The specialties that live in `specialty_certifications`. Nitrox is
+ * deliberately **not** one of them: it is its own table and its own gas gate,
+ * so a hand-posted `card=specialty:nitrox` must not reach
+ * `createSpecialtyCertification`. The picker spells that card `card=nitrox`,
+ * and this closed enum is what makes anything else a refusal.
+ */
+const specialtyOnlySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
 const personSchema = z.object({
   // Shared diver person-field bounds (src/lib/person-fields.ts); blank-able
   // email is this form's own call — clearing a wrong address to "" is valid.
@@ -109,16 +112,6 @@ const personSchema = z.object({
 // beside it — delete the claim, capture the same "xx", tap Mark certified, and
 // the `self_declared_at` provenance is gone with it.
 const cardNumberSchema = z.string().trim().max(120).refine(isPlausibleCardNumber);
-const certificationSchema = z.object({
-  agency: agencySchema,
-  level: levelSchema,
-  identifier: cardNumberSchema,
-});
-const specialtyCertificationSchema = z.object({
-  agency: agencySchema,
-  specialty: specialtySchema,
-  identifier: cardNumberSchema,
-});
 /**
  * The card a staffer says they are holding, when the row they are verifying is
  * still only a diver's word (`certifications.selfDeclaredAt`).
@@ -181,17 +174,17 @@ const profileSchema = z.object({
  * (`_components/DiverSections.tsx`) and the destructive tail's own headings.
  */
 const FORM_ANCHORS: Record<string, string> = {
-  cards: "#cards",
-  "specialty-cards": "#cards",
-  fit: "#fit",
+  cards: "#certifications",
+  waiver: "#waiver",
+  fit: "#gear",
   support: "#support",
-  payments: "#payments",
+  story: "#the-story",
   notes: "#notes",
-  "book-activity": "#trips",
-  remove: "#remove-heading",
+  book: "#book-departure",
+  remove: "#remove",
   restore: "#removed-heading",
   erase: "#erase-heading",
-  merge: "#merge-heading",
+  merge: "#merge",
   // `details` sits under the header, which is where a redirect lands anyway.
 };
 
@@ -427,55 +420,85 @@ export async function savePersonAction(shopSlug: string, personId: string, formD
   revalidateAndRedirect(base, backTo(base, notice, "details"));
 }
 
-export async function addCertificationAction(
-  shopSlug: string,
-  personId: string,
-  formData: FormData,
-) {
-  const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
-  personId = context.personId;
-  const { base, db, staff } = context;
-  const parsed = certificationSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(backTo(base, "invalid", "cards"));
-  // No card photo, anywhere in the model: a shop verifies a card by looking its
-  // number up with the issuing agency, which is what "Mark certified" attests
-  // to. The upload only ever added a second, unverified artefact to hold
-  // (ADR 20260804-card-evidence-is-the-number), and the column that held it is
-  // gone too (ADR 20260811-retire-the-digital-card).
-  const saved = await createCertification(db, {
-    shopId: staff.user.shopId,
-    personId,
-    agency: parsed.data.agency,
-    level: parsed.data.level,
-    identifier: parsed.data.identifier,
-  });
-  const notice = saved ? "captured" : "invalid";
-  revalidateAndRedirect(base, backTo(base, notice, "cards"));
+/**
+ * **The one card a staffer is holding, whichever table it belongs in.**
+ *
+ * Two forms — one for a level, one for a specialty or a nitrox card — became
+ * one when the record's two certification sections merged into a single group
+ * (ADR 20260827-people-not-lists, decision 1). The form asks *what card is
+ * this*, with the ladder and the specialties as two option groups, and the
+ * value carries its own kind: `level:<rung>`, `specialty:<kind>`, or `nitrox`.
+ *
+ * Splitting it here rather than in the component is what keeps the closed
+ * enums as the gate: the rung and the specialty are still parsed against
+ * `certificationLevel`/`specialtySchema`, so a hand-posted `card=level:god`
+ * is a refusal, not a row.
+ */
+/**
+ * **The success notice, unless that was the last thing.**
+ *
+ * The three acts that can close a record's final open item — verifying a level
+ * card, verifying a specialty or nitrox card, recording a paper signature —
+ * ask the record afterwards whether anything is still waiting, and answer with
+ * `diver-clear` when nothing is (ADR 20260827-people-not-lists's "Delight —
+ * the last thing clears"; the accent rule is 20260827-clearwater-surface-language
+ * decision 11).
+ *
+ * It re-reads the record rather than reasoning from what was just written,
+ * because "nothing is waiting" is a claim about the whole record. It is asked
+ * only on the success path, so a refusal costs nothing; and the moment is
+ * carried by a `?notice=` that `FlashParams` strips from the URL on arrival,
+ * so it is transient by construction and a reload cannot re-celebrate it.
+ *
+ * `markCertifiedAction` is deliberately not one of them: it answers in place
+ * with a toast and never redirects, and giving it a redirect back would undo
+ * the reason it stopped redirecting.
+ */
+async function successUrl(
+  context: { base: string; db: AppDb; personId: string; staff: { user: { shopId: string } } },
+  notice: string,
+  form: string,
+  succeeded: boolean,
+): Promise<string> {
+  if (!succeeded) return backTo(context.base, notice, form);
+  const clear = await diverRecordIsClear(context.db, context.staff.user.shopId, context.personId);
+  // No `?form=`: the moment belongs to the masthead, which is where the
+  // `diver-clear` entry in `NOTICE_KEYS` files it.
+  return clear ? backTo(context.base, "diver-clear") : backTo(context.base, notice, form);
 }
 
-export async function addSpecialtyAction(shopSlug: string, personId: string, formData: FormData) {
+export async function addCardAction(shopSlug: string, personId: string, formData: FormData) {
   const context = await requireDiverActionContext(shopSlug, personId, "not-authorized-cards");
   personId = context.personId;
   const { base, db, staff } = context;
-  const parsed = specialtyCertificationSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) redirect(backTo(base, "invalid", "specialty-cards"));
-  const saved =
-    parsed.data.specialty === "nitrox"
-      ? await createNitroxCertification(db, {
-          shopId: staff.user.shopId,
-          personId,
-          agency: parsed.data.agency,
-          identifier: parsed.data.identifier,
-        })
-      : await createSpecialtyCertification(db, {
-          shopId: staff.user.shopId,
-          personId,
-          agency: parsed.data.agency,
-          specialty: parsed.data.specialty,
-          identifier: parsed.data.identifier,
-        });
-  const notice = saved ? "captured" : "invalid";
-  revalidateAndRedirect(base, backTo(base, notice, "specialty-cards"));
+  const card = String(formData.get("card") ?? "");
+  const identifier = cardNumberSchema.safeParse(formData.get("identifier"));
+  const agency = agencySchema.safeParse(formData.get("agency"));
+  if (!identifier.success || !agency.success) redirect(backTo(base, "invalid", "cards"));
+  const common = {
+    shopId: staff.user.shopId,
+    personId,
+    agency: agency.data,
+    identifier: identifier.data,
+  };
+  // No card photo, anywhere in the model: a shop verifies a card by looking its
+  // number up with the issuing agency, which is what "Mark certified" attests
+  // to (ADR 20260804-card-evidence-is-the-number).
+  let saved: unknown;
+  if (card === "nitrox") {
+    saved = await createNitroxCertification(db, common);
+  } else if (card.startsWith("level:")) {
+    const level = levelSchema.safeParse(card.slice("level:".length));
+    if (!level.success) redirect(backTo(base, "invalid", "cards"));
+    saved = await createCertification(db, { ...common, level: level.data });
+  } else if (card.startsWith("specialty:")) {
+    const specialty = specialtyOnlySchema.safeParse(card.slice("specialty:".length));
+    if (!specialty.success) redirect(backTo(base, "invalid", "cards"));
+    saved = await createSpecialtyCertification(db, { ...common, specialty: specialty.data });
+  } else {
+    redirect(backTo(base, "invalid", "cards"));
+  }
+  revalidateAndRedirect(base, backTo(base, saved ? "captured" : "invalid", "cards"));
 }
 
 /**
@@ -517,7 +540,10 @@ export async function reviewAction(shopSlug: string, personId: string, formData:
         reviewedByPersonId: staff.user.personId,
       })
     : ({ ok: false, reason: "not_found" } as const);
-  revalidateAndRedirect(base, backTo(base, reviewNotice(outcome), "cards"));
+  revalidateAndRedirect(
+    base,
+    await successUrl(context, reviewNotice(outcome), "cards", outcome.ok),
+  );
 }
 
 /**
@@ -575,7 +601,7 @@ export async function reviewSpecialtyAction(
   // The nitrox twin of the level sighting's own refusal, and it matters at
   // least as much here: this tap authorizes a gas fill.
   if (sightedNumberRefused(formData)) {
-    redirect(backTo(base, "card-number-implausible", "specialty-cards"));
+    redirect(backTo(base, "card-number-implausible", "cards"));
   }
   const certificationId = cardIdFromForm(formData);
   // One tap, the same as the level card beside it. The imported-card
@@ -604,7 +630,10 @@ export async function reviewSpecialtyAction(
           reviewedByPersonId: staff.user.personId,
         })
     : ({ ok: false, reason: "not_found" } as const);
-  revalidateAndRedirect(base, backTo(base, reviewNotice(outcome), "specialty-cards"));
+  revalidateAndRedirect(
+    base,
+    await successUrl(context, reviewNotice(outcome), "cards", outcome.ok),
+  );
 }
 
 /**
@@ -740,7 +769,7 @@ export async function deleteSpecialtyAction(
           cardType,
           by: removedBy ?? undefined,
         })
-      : backTo(base, "invalid", "specialty-cards"),
+      : backTo(base, "invalid", "cards"),
   );
 }
 
@@ -767,12 +796,11 @@ export async function restoreCardAction(shopSlug: string, personId: string, form
       : cardType.data === "specialty"
         ? await restoreSpecialtyCertification(db, input)
         : await restoreNitroxCertification(db, input);
-  // Home is the section that card lives in, so an undo that could not land
-  // says so beside the list it failed to return to.
-  const form = cardType.data === "level" ? "cards" : "specialty-cards";
+  // Every card now lives in one group, so an undo that could not land says so
+  // beside the list it failed to return to — whichever table it came from.
   revalidateAndRedirect(
     base,
-    backTo(base, restored ? "card-restored" : "card-restore-conflict", form),
+    backTo(base, restored ? "card-restored" : "card-restore-conflict", "cards"),
   );
 }
 
@@ -1110,67 +1138,17 @@ export async function markWaiverInPersonAction(
   });
   revalidateAndRedirect(
     base,
-    backTo(
-      base,
+    await successUrl(
+      context,
       outcome.ok
         ? "waiver-paper-recorded"
         : outcome.reason === "medical_attestation_required"
           ? "waiver-medical-attestation"
           : "waiver-error",
       "waiver",
+      outcome.ok,
     ),
   );
-}
-
-export async function refundPaymentAction(shopSlug: string, personId: string, formData: FormData) {
-  const context = await requireDiverActionContext(
-    shopSlug,
-    personId,
-    "not-authorized-refund",
-    "payments",
-  );
-  personId = context.personId;
-  const { base, db, staff } = context;
-  const orderId = uuidParam(String(formData.get("orderId") ?? ""));
-  // Money leaving the account is owner/manager work (H-14, ADR
-  // 20260724-role-authorization), re-checked against live roles.
-  if (!(await canPersonRefund(db, staff.user.shopId, staff.user.personId))) {
-    revalidateAndRedirect(base, backTo(base, "not-authorized-refund", "payments"));
-    return;
-  }
-  if (!(await hasRequiredStepUp(db, staff, "money"))) {
-    redirect(stepUpChallengeUrl(staff.user.shopSlug, "money", base));
-  }
-  // A demo shop's orders carry fabricated Stripe ids; refunding one would hit
-  // live Stripe and fail. The button is rendered disabled to match (PaymentsSection).
-  const shop = await getShopById(db, staff.user.shopId);
-  if (shop?.isDemo) {
-    revalidateAndRedirect(base, backTo(base, "demo-disabled", "payments"));
-    return;
-  }
-  // `refundOrder` returns a code, never a sentence; the words are picked here
-  // (docs ADR 20260731-domain-layer-copy-leaks). `in_progress` — a second tap
-  // arriving while the first refund is still at Stripe — is its own notice, not
-  // a failure: telling staff it failed invites the third tap (PAY-L3).
-  const outcome = orderId
-    ? await refundOrder(db, staff.user.shopId, orderId)
-    : ({ status: "not_found" } as const);
-  if (orderId) {
-    await trackEvent({
-      name: "refund_issued",
-      auto: false,
-      status: outcome.status === "refunded" ? "refunded" : "failed",
-    });
-  }
-  const notice =
-    outcome.status === "refunded"
-      ? "refunded"
-      : outcome.status === "in_progress"
-        ? "refund-in-progress"
-        : outcome.status === "needs_reconciliation"
-          ? "refund-needs-reconciliation"
-          : "refund-failed";
-  revalidateAndRedirect(base, backTo(base, notice, "payments"));
 }
 
 /**

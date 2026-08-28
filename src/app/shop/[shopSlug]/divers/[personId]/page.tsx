@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { FlashParams } from "@/components/FlashParams";
-import { JumpNav } from "@/components/JumpNav";
 import { UndoToast } from "@/components/UndoToast";
 import {
   canPersonDeleteDiver,
   canPersonErasePersonalData,
   canPersonMergeDiver,
   canPersonOverrideGearRequest,
-  canPersonRefund,
 } from "@/db/authz";
 import { listDiverMergeCandidates } from "@/db/diver-merge";
 import { getDiverProfile } from "@/db/divers";
@@ -19,29 +18,28 @@ import { getSupportNeeds } from "@/db/support-needs";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
 import { requireShopSurface } from "@/lib/session";
 import { noticeForForm } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { ActivitySection } from "./_components/ActivitySection";
 import { BookActivity } from "./_components/BookActivity";
-import { CertificationCards } from "./_components/CertificationCards";
+import { CertificationsGroup } from "./_components/CertificationsGroup";
 import { DiverHeader } from "./_components/DiverHeader";
 import { DiverNotesSection } from "./_components/DiverNotesSection";
-import { DIVER_SECTIONS, DiverSection } from "./_components/DiverSections";
+import { DiverStatusLedger } from "./_components/DiverStatusLedger";
+import { DiverStory } from "./_components/DiverStory";
 import { DownloadDiverExportButton } from "./_components/DownloadDiverExportButton";
 import { ErasePersonalData } from "./_components/ErasePersonalData";
+import { GearAndSizes } from "./_components/GearAndSizes";
 import { MergeDiver } from "./_components/MergeDiver";
 import { NoticeBanner, resolveDiverNotice } from "./_components/NoticeBanner";
-import { PaymentsSection } from "./_components/PaymentsSection";
 import { RemoveDiver } from "./_components/RemoveDiver";
-import { RentalFit } from "./_components/RentalFit";
 import { RestoreDiver } from "./_components/RestoreDiver";
-import { ShopHistory } from "./_components/ShopHistory";
-import { SpecialtyCards } from "./_components/SpecialtyCards";
-import { StatsSummary } from "./_components/StatsSummary";
 import { SupportNeedsPanel } from "./_components/SupportNeedsPanel";
-import { UpcomingTripsSection } from "./_components/UpcomingTripsSection";
-import { WaiverSection } from "./_components/WaiverSection";
+import { WaiverGroup } from "./_components/WaiverGroup";
+import { bookingIsAhead } from "./_lib/status";
+import { diverStatusRows } from "./_lib/status-load";
 import { restoreCardAction, restoreDiverNoteAction } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -62,6 +60,34 @@ export const metadata: Metadata = { title: "Diver — DiveDay" };
  */
 const BOOK_ACTIVITY_TRIP_SCAN_LIMIT = 50;
 
+/**
+ * **The diver record, which answers one question**: can this diver dive with
+ * us, and what's the story so far? (ADR 20260827-people-not-lists, decision 1,
+ * closing issue #780; the language is 20260827-clearwater-surface-language.)
+ *
+ * The composition, top to bottom, and each part is load-bearing:
+ *
+ * 1. **The masthead** — who this is, how to reach them, and the page's *one*
+ *    primary control (Book a departure). `_lib/record-primaries.test.ts` fails
+ *    the build if a second joins it.
+ * 2. **The status ledger** — the open items, worst first, each with its one
+ *    fix. It renders **nothing at all** when the diver is clear, which is the
+ *    other pinned rule.
+ * 3. **The story** — one chronological ledger of bookings, imported visits and
+ *    person-level orders, each row carrying its own money fact.
+ * 4. **The file** — inset groups in the settings grammar: certifications,
+ *    waiver, gear and sizes, dive support, notes, and the folded activity
+ *    trail.
+ * 5. **The quiet foot** — the things you do *to* a record: download it, merge a
+ *    duplicate, delete it, and (on a deleted record, for an owner only) erase
+ *    it.
+ *
+ * What this replaced: ten stacked sections under a jump nav, four stat tiles
+ * restating facts the sections below them already carried, two near-identical
+ * certification components, and three divided lists of the same bookings. It
+ * led with money, and its heaviest control was Book-an-activity, seven sections
+ * down.
+ */
 export default async function DiverDetailPage({
   params,
   searchParams,
@@ -79,7 +105,7 @@ export default async function DiverDetailPage({
     edit?: string;
     /** The deleted diver note's text, carried by the land-then-undo redirect. */
     noteBody?: string;
-    /** Which page of the Activity section is being read. Not `?page=`: this record has one paged list, and it is not the page. */
+    /** Which page of the Activity group is being read. Not `?page=`: this record has one paged list, and it is not the page. */
     activity?: string;
   }>;
 }) {
@@ -108,7 +134,8 @@ export default async function DiverDetailPage({
     redirect(`/shop/${shopSlug}/divers/${diver.person.mergedIntoPersonId}`);
   }
   const removed = Boolean(diver.person.deletedAt);
-  // Refunds and diver deletion are owner/manager only (H-14, ADR
+  const now = nowDate();
+  // Diver deletion and merging are owner/manager only (H-14, ADR
   // 20260724-role-authorization); hide those controls from other staff. The
   // server actions re-check regardless — hiding is a courtesy, not the gate.
   // Rewriting a diver's stated rental fit is instructor/divemaster/manager work
@@ -116,7 +143,6 @@ export default async function DiverDetailPage({
   // Erasing a diver's personal and medical data is stricter still — owner only,
   // one way, and never offered to anyone else (ADR 20260802-diver-data-erasure).
   const [
-    canRefund,
     canDelete,
     canMerge,
     canOverrideFit,
@@ -126,8 +152,8 @@ export default async function DiverDetailPage({
     notes,
     activityPage,
     supportNeeds,
+    status,
   ] = await Promise.all([
-    canPersonRefund(db, shop.id, session.user.personId),
     canPersonDeleteDiver(db, shop.id, session.user.personId),
     canPersonMergeDiver(db, shop.id, session.user.personId),
     canPersonOverrideGearRequest(db, shop.id, session.user.personId),
@@ -144,11 +170,16 @@ export default async function DiverDetailPage({
     // anything past the end, so a stale bookmark lands on the last real page.
     pagedDiverActivity(db, shop.id, personId, { page: Number.parseInt(activity ?? "", 10) }),
     getSupportNeeds(db, shop.id, personId),
+    // The readiness of the departure this diver is next on, read through the
+    // entry the Today queue and the manifest already use — never a second
+    // detector (`_lib/status-load.ts`).
+    diverStatusRows(db, shop.id, diver, now),
   ]);
   const mergeCandidates =
     canMerge && !removed ? await listDiverMergeCandidates(db, shop.id, personId) : [];
-  // `orders/new` refuses outright without a payable account, so the Payments
-  // section offers "Connect payments" rather than invoice buttons that bounce.
+  // `orders/new` refuses outright without a payable account, so the story's
+  // foot simply omits "+ New invoice" rather than offering a link that bounces.
+  // Connecting payments is a Settings errand and left this page with the ADR.
   const paymentsConnected = canAcceptPayments(stripeAccount);
   const { trips: scannedTrips } = await pagedUpcomingTripsWithCounts(db, shop.id, {
     limit: BOOK_ACTIVITY_TRIP_SCAN_LIMIT,
@@ -161,25 +192,36 @@ export default async function DiverDetailPage({
   );
 
   /**
-   * The page's `?notice=` resolved once, to words *and* to the section those
-   * words belong beside. This record is nine independent forms on one very
-   * long scroll, and every one of their outcomes used to land in a single
-   * banner under the `<h1>` — so saving a rental fit two screens down confirmed
-   * it somewhere the staffer was not looking. Each section is handed its own
-   * below; `pageNotice` is what is left over (ADR 20260730-staff-copy-localization,
-   * and the trip page's `resolveTripNotice`, which this mirrors).
+   * The page's `?notice=` resolved once, to words *and* to the group those
+   * words belong beside. Each group is handed its own below with
+   * `noticeForForm`; `pageNotice` is what is left over — a refusal that
+   * bounced the staffer here from somewhere else, or one whose group this
+   * staffer's role means the page never rendered.
    */
   const diverNotice = resolveDiverNotice({ notice, form, gate, personId, locale });
   const detailsStatus = noticeForForm(diverNotice, "details");
   const pageNotice = noticeForForm(diverNotice, "page");
   // A card deletion with its undo capability has one outcome: the toast. The
-  // `card-deleted` notice remains a cards-section fallback for an old or
-  // malformed link that has no undo payload, but showing both on the normal
-  // path repeats the same confirmation in two places.
+  // `card-deleted` notice remains a cards fallback for an old or malformed link
+  // that has no undo payload, but showing both on the normal path repeats the
+  // same confirmation in two places.
   const cardRemovalUndo = notice === "card-deleted" && undo && cardType;
   const cardsStatus = cardRemovalUndo ? undefined : noticeForForm(diverNotice, "cards");
   const diverNoteRemovalUndo = notice === "note-deleted" && noteBody;
   const notesStatus = diverNoteRemovalUndo ? undefined : noticeForForm(diverNotice, "notes");
+  // **The record's one earned moment**, and the only accent ink this page may
+  // carry (20260827-clearwater-surface-language, decision 11). Derived by the
+  // action that redirected here — from a post-mutation `buildDiverStatus` that
+  // came back empty — and stripped out of the URL by `FlashParams`, so a
+  // reload never re-celebrates it.
+  const cleared = detailsStatus?.code === "diver-clear" ? detailsStatus : undefined;
+  // Times out with this shop: a seat that has sailed plus the visits the
+  // importer brought across. Shares `bookingIsAhead`'s late-arrival buffer, so
+  // the boat somebody is still boarding is not counted as a visit yet.
+  const visits =
+    diver.bookings.filter(
+      (entry) => entry.booking.status !== "cancelled" && !bookingIsAhead(entry, now),
+    ).length + diver.priorVisits.length;
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -188,28 +230,39 @@ export default async function DiverDetailPage({
         diver={diver}
         shopSlug={shopSlug}
         personId={personId}
-        locale={locale}
-        status={detailsStatus}
-        // Beside "Edit details" rather than on its own line under the header:
-        // both are doors onto the record itself, and the export is one of the
-        // roles' answers to a subject-access request, not a page banner.
-        downloadRecord={
-          canExport ? (
-            <DownloadDiverExportButton
-              href={`/shop/${shopSlug}/divers/${personId}/export`}
-              idleLabel={t("divers.export.downloadButton.idle")}
-              acknowledgedLabel={t("divers.export.downloadButton.acknowledged")}
-            />
+        t={t}
+        visits={visits}
+        status={cleared ? undefined : detailsStatus}
+        moment={
+          cleared ? (
+            <EarnedMomentLine className="-mt-4 mb-4">
+              {t("divers.notices.cleared", { name: diver.person.fullName })}
+            </EarnedMomentLine>
           ) : null
+        }
+        // No new bookings for a removed diver: seating one would walk them
+        // straight back onto a manifest and a prep list without anybody
+        // deciding to restore them. Their existing story still shows — removal
+        // takes a person off the lists, it does not rewrite what happened.
+        book={
+          removed ? null : (
+            <BookActivity
+              locale={locale}
+              t={t}
+              diver={diver}
+              shop={shop}
+              upcoming={upcoming}
+              shopSlug={shopSlug}
+              personId={personId}
+              status={noticeForForm(diverNotice, "book")}
+            />
+          )
         }
         // Only ever set by the roster's "Add a diver" form, which lands here
         // with a name and little else. `FlashParams` strips it from the URL
         // straight away, so a reload or a shared link is the ordinary
-        // collapsed page.
-        //
-        // Keep the editor open for a refused save so the staffer can correct
-        // the fields in place. A successful save closes it; the saved notice
-        // remains visible above the editor.
+        // collapsed page. Keep the editor open for a refused save so the
+        // staffer can correct the fields in place.
         editOpen={edit === "1" || detailsStatus?.tone === "danger"}
       />
       {removed ? (
@@ -217,16 +270,14 @@ export default async function DiverDetailPage({
           shopSlug={shopSlug}
           personId={personId}
           canRestore={canDelete}
-          locale={locale}
+          t={t}
           status={noticeForForm(diverNotice, "restore")}
         />
       ) : null}
       {cardRemovalUndo ? (
         <UndoToast
-          message={staffTranslator(locale)("divers.notices.cardRemovedToast", {
-            name:
-              by ??
-              staffTranslator(locale)("divers.certifications.noCertificationClearedByUnknown"),
+          message={t("divers.notices.cardRemovedToast", {
+            name: by ?? t("divers.certifications.noCertificationClearedByUnknown"),
           })}
           action={restoreCardAction.bind(null, shopSlug, personId)}
           fields={{ certificationId: undo, cardType }}
@@ -242,180 +293,136 @@ export default async function DiverDetailPage({
           undoLabel={t("shared.undoToast.undo")}
         />
       ) : (
-        <NoticeBanner notice={pageNotice} shopSlug={shopSlug} locale={locale} />
+        <NoticeBanner notice={pageNotice} />
       )}
-      {canMerge && !removed ? (
-        <MergeDiver
-          candidates={mergeCandidates}
-          shopSlug={shopSlug}
-          personId={personId}
-          locale={locale}
-          status={noticeForForm(diverNotice, "merge")}
-        />
-      ) : null}
-      {/* Above the stat cards, not below them: on a 390px phone those three
-          cards stack, and a row sitting under them lands ~1,150px down — a spine
-          you have to scroll to find is not a spine. */}
-      <JumpNav
-        ariaLabel={t("divers.subNav.ariaLabel")}
-        items={DIVER_SECTIONS.map((section) => ({ id: section.id, label: t(section.labelKey) }))}
-        className="mt-8"
+      <DiverStatusLedger
+        rows={status}
+        t={t}
+        locale={locale}
+        timezone={shop.timezone}
+        shopSlug={shopSlug}
       />
-      <StatsSummary diver={diver} shop={shop} locale={locale} />
-      <DiverSection id="waiver">
-        <WaiverSection
-          diver={diver}
-          shopSlug={shopSlug}
-          personId={personId}
-          locale={locale}
-          timezone={shop.timezone}
-          status={noticeForForm(diverNotice, "waiver")}
-        />
-      </DiverSection>
-      <DiverSection id="cards">
-        <CertificationCards
-          diver={diver}
-          shopSlug={shopSlug}
-          personId={personId}
-          shop={shop}
-          status={cardsStatus}
-        />
-      </DiverSection>
-      <DiverSection id="specialty">
-        <SpecialtyCards
-          diver={diver}
-          shopSlug={shopSlug}
-          personId={personId}
-          locale={locale}
-          status={noticeForForm(diverNotice, "specialty-cards")}
-        />
-      </DiverSection>
-      <DiverSection id="fit">
-        <RentalFit
-          diver={diver}
-          shopSlug={shopSlug}
-          personId={personId}
-          rentalItems={shop.rentalItems}
-          canOverride={canOverrideFit}
-          locale={locale}
-          status={noticeForForm(diverNotice, "fit")}
-        />
-      </DiverSection>
-      {/* Beside the fit, because the record is: one row per person per shop,
+      <DiverStory
+        diver={diver}
+        shop={shop}
+        shopSlug={shopSlug}
+        personId={personId}
+        locale={locale}
+        t={t}
+        paymentsConnected={paymentsConnected}
+        status={noticeForForm(diverNotice, "story")}
+        now={now}
+      />
+      <CertificationsGroup
+        diver={diver}
+        shop={shop}
+        shopSlug={shopSlug}
+        personId={personId}
+        locale={locale}
+        t={t}
+        status={cardsStatus}
+      />
+      <WaiverGroup
+        diver={diver}
+        shopSlug={shopSlug}
+        personId={personId}
+        locale={locale}
+        t={t}
+        timezone={shop.timezone}
+        status={noticeForForm(diverNotice, "waiver")}
+      />
+      <GearAndSizes
+        diver={diver}
+        shopSlug={shopSlug}
+        personId={personId}
+        rentalItems={shop.rentalItems}
+        canOverride={canOverrideFit}
+        locale={locale}
+        t={t}
+        status={noticeForForm(diverNotice, "fit")}
+      />
+      {/* Beside the gear, because the record is: one row per person per shop,
           upserted, a living preference rather than evidence. A staffer arriving
-          from the prep panel's link now lands on the record and finds what they
+          from the prep panel's link lands on the record and finds what they
           were just reading (issue #1069). */}
-      <DiverSection id="support">
-        <SupportNeedsPanel
-          needs={supportNeeds}
-          shopSlug={shopSlug}
-          personId={personId}
-          canOverride={canOverrideFit}
-          locale={locale}
-          status={noticeForForm(diverNotice, "support")}
-        />
-      </DiverSection>
-      {/* Above "Book an activity" deliberately: the errand that brings staff to
-          this page in a hurry is a diver standing at the counter with a bill,
-          not one browsing next week's boats. Both used to sit below the fold;
-          only one of them has somebody waiting. */}
-      <DiverSection id="payments">
-        <PaymentsSection
-          locale={locale}
-          diver={diver}
-          shop={shop}
-          shopSlug={shopSlug}
-          personId={personId}
-          canRefund={canRefund}
-          paymentsConnected={paymentsConnected}
-          status={noticeForForm(diverNotice, "payments")}
-        />
-      </DiverSection>
-      <DiverSection id="book-activity">
-        {/* No new bookings for a removed diver: seating one would walk them
-            straight back onto a manifest and a prep list without anybody
-            deciding to restore them. Their existing trips still show — removal
-            takes a person off the lists, it does not rewrite what happened. */}
-        {removed ? null : (
-          <BookActivity
-            locale={locale}
-            diver={diver}
-            shop={shop}
-            upcoming={upcoming}
+      <SupportNeedsPanel
+        needs={supportNeeds}
+        shopSlug={shopSlug}
+        personId={personId}
+        canOverride={canOverrideFit}
+        t={t}
+        status={noticeForForm(diverNotice, "support")}
+      />
+      <DiverNotesSection
+        notes={notes}
+        shopSlug={shopSlug}
+        personId={personId}
+        locale={locale}
+        timezone={shop.timezone}
+        t={t}
+        status={notesStatus}
+      />
+      <ActivitySection
+        page={activityPage}
+        shopSlug={shopSlug}
+        personId={personId}
+        locale={locale}
+        timezone={shop.timezone}
+        t={t}
+      />
+      {/* **The quiet foot** — the things you do *to* a record rather than with
+          it. Nothing here is primary-weight, and reaching the two destructive
+          ones costs a scroll on purpose (ADR 20260802-diver-data-erasure). */}
+      <div className="mt-12 space-y-6 border-t border-border pt-8">
+        {canMerge && !removed && mergeCandidates.length > 0 ? (
+          <MergeDiver
+            candidates={mergeCandidates}
             shopSlug={shopSlug}
             personId={personId}
-            status={noticeForForm(diverNotice, "book-activity")}
+            t={t}
+            status={noticeForForm(diverNotice, "merge")}
           />
-        )}
-      </DiverSection>
-      <DiverSection id="trips">
-        <UpcomingTripsSection
-          diver={diver}
-          shop={shop}
-          shopSlug={shopSlug}
-          personId={personId}
-          locale={locale}
-          paymentsConnected={paymentsConnected}
-        />
-      </DiverSection>
-      <DiverSection id="notes">
-        <DiverNotesSection
-          notes={notes}
-          shopSlug={shopSlug}
-          personId={personId}
-          locale={locale}
-          timezone={shop.timezone}
-          status={notesStatus}
-        />
-      </DiverSection>
-      <DiverSection id="history">
-        <ShopHistory
-          locale={locale}
-          diver={diver}
-          shop={shop}
-          shopSlug={shopSlug}
-          personId={personId}
-          paymentsConnected={paymentsConnected}
-        />
-      </DiverSection>
-      <DiverSection id="activity">
-        <ActivitySection
-          page={activityPage}
-          shopSlug={shopSlug}
-          personId={personId}
-          locale={locale}
-          timezone={shop.timezone}
-        />
-      </DiverSection>
-      {/* Nothing to remove twice: a removed diver gets the Restore card at the
-          top of the record instead. */}
-      {canDelete && !removed ? (
-        <RemoveDiver
-          diver={diver}
-          shopSlug={shopSlug}
-          personId={personId}
-          locale={locale}
-          status={noticeForForm(diverNotice, "remove")}
-        />
-      ) : null}
-      {/* **Erasure is offered on a deleted record and nowhere else.** It is the
-          one control in the product with no undo, and it used to sit at the
-          foot of every diver's record — including the diver a staffer opened to
-          take a payment from. Deleting first is the step that makes the erase a
-          decision rather than a scroll: it is reversible, it is the state an
-          erasure request describes anyway, and it puts the record's own "This
-          diver is deleted" card on screen above the control. `erasePersonAction`
-          enforces the same rule, because this page's tab may be older than the
-          record's state (ADR 20260802-diver-data-erasure). */}
-      {canErase && removed ? (
-        <ErasePersonalData
-          diver={diver}
-          shopSlug={shopSlug}
-          personId={personId}
-          locale={locale}
-          status={noticeForForm(diverNotice, "erase")}
-        />
-      ) : null}
+        ) : null}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+          {canExport ? (
+            <DownloadDiverExportButton
+              href={`/shop/${shopSlug}/divers/${personId}/export`}
+              idleLabel={t("divers.export.downloadButton.idle")}
+              acknowledgedLabel={t("divers.export.downloadButton.acknowledged")}
+            />
+          ) : null}
+          {/* Nothing to delete twice: a removed diver gets the Restore panel at
+              the top of the record instead. */}
+          {canDelete && !removed ? (
+            <RemoveDiver
+              diver={diver}
+              shopSlug={shopSlug}
+              personId={personId}
+              t={t}
+              status={noticeForForm(diverNotice, "remove")}
+            />
+          ) : null}
+        </div>
+        {/* **Erasure is offered on a deleted record and nowhere else.** It is
+            the one control in the product with no undo, and it used to sit at
+            the foot of every diver's record — including the diver a staffer
+            opened to take a payment from. Deleting first is the step that makes
+            the erase a decision rather than a scroll: it is reversible, it is
+            the state an erasure request describes anyway, and it puts the
+            record's own "This diver is deleted" panel on screen above the
+            control. `erasePersonAction` enforces the same rule, because this
+            page's tab may be older than the record's state (ADR
+            20260802-diver-data-erasure). */}
+        {canErase && removed ? (
+          <ErasePersonalData
+            diver={diver}
+            shopSlug={shopSlug}
+            personId={personId}
+            locale={locale}
+            status={noticeForForm(diverNotice, "erase")}
+          />
+        ) : null}
+      </div>
     </main>
   );
 }

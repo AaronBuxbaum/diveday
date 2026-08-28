@@ -42,7 +42,7 @@ export type StaffDestinationCounts = Record<StaffDestinationBadge, number>;
  * than in the nav component so the two cannot disagree, and so a new badge
  * source has to answer the question.
  *
- * `blockers` is danger because every other surface that names a blocked diver
+ * The blocked count is danger because every other surface that names a blocked diver
  * is (glossary: "blocked is always danger" — `readinessStatusTone`). A count of
  * people who cannot board, toned like Reviews' moderation queue, was the one
  * place the shop's readiness vocabulary changed colour on the way to the nav.
@@ -72,8 +72,7 @@ export const STAFF_DESTINATION_BADGE_TONES: Record<StaffDestinationBadge, "prima
  * `null` means the destination is real and reachable, but not in the header —
  * it earns its place in the palette instead of one more row (design
  * principle 8, fewer controls). What stays `null` now is only what is not a
- * *place*: an action (`addBooking`), a way into a page (`walkIn`), a view of
- * one (`blockers`).
+ * *place*: an action (`addBooking`) and a way into a page (`walkIn`).
  *
  * **The dock holds five destination tabs; the sixth slot is More, and that is
  * the ceiling.** The phone dock renders every `primary` destination at ~65px
@@ -89,7 +88,6 @@ export type StaffDestinationId =
   | "checkIn"
   | "closeOut"
   | "walkIn"
-  | "blockers"
   | "divers"
   | "board"
   | "addBooking"
@@ -146,7 +144,6 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   checkIn: "shared.shopNavLinks.checkIn",
   closeOut: "shared.shopNavLinks.closeOut",
   walkIn: "shared.shopNavLinks.walkIn",
-  blockers: "shared.shopNavLinks.blockers",
   divers: "shared.shopNavLinks.divers",
   board: "shared.shopNavLinks.board",
   addBooking: "shared.shopNavLinks.addBooking",
@@ -188,12 +185,6 @@ export type StaffDestination = {
   readonly id: StaffDestinationId;
   /** Path below `/shop/<shopSlug>`; `""` is the shop home (Today). */
   readonly suffix: string;
-  /**
-   * A query string (leading `?`) that selects a *view* of `suffix` rather than
-   * a page of its own — the one case where two registry entries share a path.
-   * Only `blockers` uses it; see its entry below for why it is still an entry.
-   */
-  readonly query?: string;
   /** Header placement, or `null` for palette-only. */
   readonly navGroup: StaffNavGroup | null;
   /** Whether the command palette offers it under "Go to". */
@@ -229,21 +220,14 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
     badge: "blockers",
   },
   { id: "checkIn", suffix: "/check-in", navGroup: "primary", inPalette: true },
-  // Not a page any more: Not ready is Today's by-departure *view*, selected by
-  // a query param and served by the shop home. It keeps a registry entry
-  // because it is still somewhere staff go by name — ⌘K "Not ready" lands on
-  // that view — and the registry is the only place a destination may be
-  // declared. `navGroup: null` is what takes it out of the header: a
-  // tab beside Today that only re-renders Today's own queue is the duplicate
-  // control principle 8 forbids, and the switch on the page is the honest
-  // control for it.
-  {
-    id: "blockers",
-    suffix: "",
-    query: "?view=departures",
-    navGroup: null,
-    inPalette: true,
-  },
+  // **There is no "Not ready" destination.** It was a page, then Today's
+  // by-departure view behind `?view=departures`, and it is now neither: the
+  // shop home is one chronological spine and a blocked diver is a row on the
+  // station of the boat waiting for them (ADR
+  // 20260827-clearwater-surface-language, decision 4). An entry pointing at the
+  // bare home would be a second palette row landing on Today's own URL — the
+  // duplicate control principle 8 forbids, and one this registry's
+  // unique-URL invariant refuses outright. Today keeps the blocked badge.
   { id: "divers", suffix: "/divers", navGroup: "primary", inPalette: true },
   // Staff work a departure on /trips/[id], which is the board's detail view —
   // keep the board tab lit so they don't lose their place.
@@ -371,13 +355,15 @@ export function staffShopRoot(shopSlug: string): string {
 }
 
 /**
- * Everything below `/shop/<shopSlug>` for one destination — its path plus, for
- * a destination that is a *view* of another page, the query that selects it.
- * Consumers that build a URL from parts use this rather than `suffix`, so a
- * view can never be navigated to without its query.
+ * Everything below `/shop/<shopSlug>` for one destination.
+ *
+ * It used to append a view query for the one destination that was a *view* of
+ * another page rather than a page of its own; no destination is any more, so
+ * this is the suffix and nothing else. Consumers still build URLs through it,
+ * which is what keeps a path from being hand-written at a call site.
  */
 export function staffDestinationSuffix(destination: StaffDestination): string {
-  return `${destination.suffix}${destination.query ?? ""}`;
+  return destination.suffix;
 }
 
 /** A destination's full path for one shop. */
@@ -388,8 +374,8 @@ export function staffDestinationHref(root: string, destination: StaffDestination
 /**
  * One destination by id, for the callers that link to a *particular* place
  * rather than rendering a list of them (Today's orientation card). Without
- * this they hand-write the path, which is how a link ends up pointing at
- * `/blockers` — a 308 to the view that replaced it — long after the registry
+ * this they hand-write the path, which is how the divemaster's orientation
+ * prompt ended up pointing at `/blockers` — a 308 — long after the registry
  * learned the one-hop URL.
  *
  * Total by construction: every `StaffDestinationId` has an entry, and the

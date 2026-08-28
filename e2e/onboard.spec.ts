@@ -1,4 +1,8 @@
 import { expect, test } from "./fixtures";
+import { E2E_APP_HOST } from "./servers";
+
+/** The origin the fleet advertises, as the shop-link hint prints it: no scheme. */
+const STOREFRONT_HOST = new URL(E2E_APP_HOST).host;
 
 // A freshly onboarded shop is the real "empty shop" scenario the first-run
 // checklist exists for — the seeded demo shop never reaches this state, so
@@ -10,6 +14,17 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   await page.goto("/onboard");
   await page.locator('input[name="shopName"]').filter({ visible: true }).fill("First Run E2E");
   await page.locator('input[name="shopSlug"]').filter({ visible: true }).fill(unique);
+  // The one decision sign-up asks an owner to make is what their web address
+  // will be, so the line under the box *is* that address, written as they type
+  // (ADR 20260827-first-light, decision 1). Asserted before the submit,
+  // because after it there is nothing left to have shown them. The address is
+  // matched exactly, on its own element, so the assertion cannot be satisfied
+  // by a paragraph that merely mentions the slug.
+  const storefront = page.getByText(`${STOREFRONT_HOST}/s/${unique}`, { exact: true });
+  await expect(storefront).toBeVisible();
+  await expect(storefront.locator("xpath=..")).toHaveText(
+    `Your schedule will live at ${STOREFRONT_HOST}/s/${unique}`,
+  );
   await page.locator('input[name="ownerName"]').filter({ visible: true }).fill("Nour Haddad");
   await page
     .locator('input[name="ownerEmail"]')

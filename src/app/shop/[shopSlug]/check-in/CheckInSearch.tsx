@@ -7,9 +7,22 @@ import { QueryForm } from "@/components/ui/QueryForm";
 
 export function CheckInSearch({
   query,
+  trip,
   copy,
 }: {
   query: string;
+  /**
+   * The departure in focus, carried through every submit.
+   *
+   * `QueryForm` rebuilds the query string from this form's own fields, so a
+   * param no field owns is dropped unless it is named here — and the focused
+   * boat is exactly that: a `?trip=` the chips wrote, which the search box
+   * knows nothing about. Without it, typing a name and clearing the box left
+   * the counter pointed at whatever `selectFocusedDeparture` picks by default,
+   * showing a different boat's head count to a staffer who never asked to
+   * change boats (`./focus.ts`).
+   */
+  trip: string | undefined;
   copy: { label: string; placeholder: string; submit: string };
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -55,8 +68,15 @@ export function CheckInSearch({
   return (
     <QueryForm
       ref={formRef}
+      keep={{ trip }}
       onSubmitCapture={clearSearchTimer}
-      className="flex flex-col gap-3 sm:flex-row sm:items-end"
+      // **The page's own rhythm above it**, which this block used to contribute
+      // nothing to: every other section on the counter opens on `mt-6`/`mt-8`,
+      // so with no margin of its own the search sat 14px under the instrument —
+      // close enough that the earned "Everyone's checked in" line read as a
+      // caption on the search box rather than as the instrument's closing
+      // statement.
+      className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-end"
     >
       {/* No hint line under the label. "A barcode scanner can type a booking
           ID here" said in prose what the label's own first word ("Scan") and

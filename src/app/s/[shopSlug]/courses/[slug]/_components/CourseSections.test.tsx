@@ -43,6 +43,23 @@ const t = diverTranslator("en-US");
 
 afterEach(cleanup);
 
+describe("the public h1 joins the display scale", () => {
+  /**
+   * ADR 20260827-clearwater-surface-language, decision 8, resolves the
+   * `text-2xl`/`text-4xl` disagreement between `/s/[shopSlug]` and its course
+   * pages **upward**. Nothing else on this page changed in that slice, which is
+   * why this is the only assertion it gets.
+   */
+  it("renders the course title as the page title, not as a section heading", () => {
+    render(<CourseHero course={course()} totalCents={null} currency="usd" locale="en-US" t={t} />);
+
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading).toHaveTextContent("Open Water Diver");
+    expect(heading.className).toContain("text-4xl");
+    expect(heading.className).not.toContain("text-2xl");
+  });
+});
+
 describe("CourseHero price currency (task 35)", () => {
   it("renders the shop's own currency rather than dollars", () => {
     render(

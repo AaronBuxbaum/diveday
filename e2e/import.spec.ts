@@ -260,7 +260,7 @@ test.describe("contact import — prior visits", () => {
     // words, marked imported, and never a link to a trip that doesn't exist here.
     await page.goto("/shop/blue-mantis/divers?q=regular.rosa@example.com");
     await page.getByRole("link", { name: /Regular Rosa/ }).click();
-    const history = page.locator("section").filter({ has: page.getByText("Shop history") });
+    const history = page.getByRole("region", { name: "The story" });
     await expect(
       history.getByText(/3 visits came across from your previous system/).filter({ visible: true }),
     ).toBeVisible();
@@ -294,8 +294,7 @@ test.describe("contact import — prior visits", () => {
     await page.getByRole("link", { name: /Regular Rosa/ }).click();
     await expect(
       page
-        .locator("section")
-        .filter({ has: page.getByText("Shop history") })
+        .getByRole("region", { name: "The story" })
         .getByText(/3 visits came across/)
         .filter({ visible: true }),
     ).toBeVisible();

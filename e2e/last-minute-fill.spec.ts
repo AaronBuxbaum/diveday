@@ -37,13 +37,20 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   const nudge = page
     .locator("li")
     .filter({ hasText: "3 seats open with no last-minute deal sent yet." })
+    // The row itself, not the day station that contains it. Since the home
+    // became the day's spine every row about a departure nests inside that
+    // departure's own `<li>`, and `hasText` matches an ancestor as readily as
+    // the element that holds the words.
+    .filter({ hasNot: page.locator("li") })
     .filter({ visible: true });
   await expect(nudge).toBeVisible();
 
-  // "Open trip" (not the departure card's generic "Open guests") links to
-  // this trip's own #last-minute-deal anchor, which is what auto-opens the
-  // "Promote this trip" disclosure the deal panel lives behind (task 156).
-  await nudge.getByRole("link", { name: "Open trip" }).click();
+  // The row's door names where it goes — a station short of crew *and* short
+  // of divers renders both rows under one heading, and two links announced
+  // "Open trip" would be indistinguishable. It carries this trip's own
+  // #last-minute-deal anchor, which is what auto-opens the "Promote this trip"
+  // disclosure the deal panel lives behind (task 156).
+  await nudge.getByRole("link", { name: "Open last-minute deal" }).click();
   await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+\/guests#last-minute-deal$/);
   await expect(page.getByRole("heading", { name: "Last-minute deal" })).toBeVisible();
   const sendButton = page.getByRole("button", { name: /Send to \d+ diver/ });
@@ -88,12 +95,19 @@ test("a failed send attempt does not silence the Today nudge — nothing actuall
   const nudge = page
     .locator("li")
     .filter({ hasText: "3 seats open with no last-minute deal sent yet." })
+    // The row itself, not the day station that contains it. Since the home
+    // became the day's spine every row about a departure nests inside that
+    // departure's own `<li>`, and `hasText` matches an ancestor as readily as
+    // the element that holds the words.
+    .filter({ hasNot: page.locator("li") })
     .filter({ visible: true });
   await expect(nudge).toBeVisible();
-  // "Open trip" (not the departure card's generic "Open guests") links to
-  // this trip's own #last-minute-deal anchor, which is what auto-opens the
-  // "Promote this trip" disclosure the deal panel lives behind (task 156).
-  await nudge.getByRole("link", { name: "Open trip" }).click();
+  // The row's door names where it goes — a station short of crew *and* short
+  // of divers renders both rows under one heading, and two links announced
+  // "Open trip" would be indistinguishable. It carries this trip's own
+  // #last-minute-deal anchor, which is what auto-opens the "Promote this trip"
+  // disclosure the deal panel lives behind (task 156).
+  await nudge.getByRole("link", { name: "Open last-minute deal" }).click();
   // Stripe is seeded connected but has no real key, so this send fails at the
   // Stripe step — durable proof an *attempt* happened, but no code actually
   // went out, so the nudge (which dedupes on a genuinely `sent` row) must
@@ -178,8 +192,13 @@ test("a joiner's declared level reaches the staffer before they send a deal", as
   const nudge = page
     .locator("li")
     .filter({ hasText: "3 seats open with no last-minute deal sent yet." })
+    // The row itself, not the day station that contains it. Since the home
+    // became the day's spine every row about a departure nests inside that
+    // departure's own `<li>`, and `hasText` matches an ancestor as readily as
+    // the element that holds the words.
+    .filter({ hasNot: page.locator("li") })
     .filter({ visible: true });
-  await nudge.getByRole("link", { name: "Open trip" }).click();
+  await nudge.getByRole("link", { name: "Open last-minute deal" }).click();
   await expect(page.getByRole("heading", { name: "Last-minute deal" })).toBeVisible();
 
   // The row a staffer reads before deciding carries the level claim as

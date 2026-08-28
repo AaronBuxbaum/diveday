@@ -95,7 +95,10 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   const scheduleResponse = await page.goto("/shop/blue-mantis/schedule");
   expect(scheduleResponse?.status()).toBe(200);
   await expect(page).toHaveURL(/\/s\/blue-mantis$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
+  // The storefront's h1 is the shop's own name now (ADR
+  // 20260827-clearwater-surface-language, decision 8) — which makes it a
+  // sharper tenant assertion than "Schedule" ever was.
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Blue Mantis Divers");
   // …and they get the *visitor's* chrome on it: the shop's own public header,
   // never Blue Mantis's staff nav or its pending-work counts.
   await expect(page.getByRole("link", { name: OTHER_SHOP_NAME }).first()).toBeVisible();

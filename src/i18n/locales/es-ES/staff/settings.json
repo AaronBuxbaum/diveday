@@ -299,16 +299,13 @@
       "summaryDisconnected": "Desconectada"
     },
     "embed": {
-      "heading": "Widget para tu web",
-      "description": "Fragmentos para copiar y pegar que ponen tu calendario de reservas en directo en tu propia web."
+      "heading": "Widget para tu web"
     },
     "calendar": {
-      "heading": "Suscripciones al calendario",
-      "description": "Pon tus salidas en la app de calendario que ya usas — de solo lectura, así que DiveDay nunca la modifica."
+      "heading": "Suscripciones al calendario"
     },
     "integrations": {
-      "heading": "Shopify, QuickBooks y Zapier",
-      "description": "Conecta las herramientas que ya usas para publicar el catálogo, llevar la contabilidad y automatizar tareas."
+      "heading": "Shopify, QuickBooks y Zapier"
     },
     "trial": {
       "heading": "Tu prueba",
@@ -328,40 +325,32 @@
       "money": "Dinero",
       "dataIntegrations": "Datos e integraciones"
     },
-    "subNav": {
+    "rail": {
       "ariaLabel": "Secciones de configuración"
     },
     "whatsapp": {
-      "heading": "WhatsApp",
-      "description": "Envía recordatorios y resúmenes desde el número de WhatsApp de tu centro en lugar de un número SMS de la plataforma."
+      "heading": "WhatsApp"
     },
     "backup": {
-      "heading": "Respaldos",
-      "description": "Una copia semanal de todo lo que guarda tu centro, entregada en un almacenamiento que es tuyo."
+      "heading": "Respaldos"
     },
     "team": {
-      "heading": "Equipo",
-      "description": "Quién trabaja aquí, a qué puede llegar cada persona y cómo van tus invitaciones."
+      "heading": "Equipo"
     },
     "diveSites": {
-      "heading": "Puntos de buceo",
-      "description": "La biblioteca de puntos que usa el tablón — profundidades, condiciones y qué ven los buceadores allí."
+      "heading": "Puntos de buceo"
     },
     "waivers": {
-      "heading": "Plantilla de exención",
-      "description": "La exención que firma cada buceador, y el registro de quién la ha firmado."
+      "heading": "Plantilla de exención"
     },
     "safetyChecklist": {
-      "heading": "Lista de comprobación previa a la salida",
-      "description": "Lo que tu tripulación confirma antes de que el barco zarpe."
+      "heading": "Lista de comprobación previa a la salida"
     },
     "security": {
-      "heading": "Seguridad de la cuenta",
-      "description": "Protege tu acceso con autenticación de dos factores y gestiona las sesiones activas."
+      "heading": "Seguridad de la cuenta"
     },
     "promos": {
-      "heading": "Códigos promocionales",
-      "description": "Códigos de descuento para todo el centro que el buceador escribe al pagar, cada uno con sus fechas y límites."
+      "heading": "Códigos promocionales"
     },
     "dataJobs": {
       "mediaKind": {
@@ -396,15 +385,6 @@
     },
     "summary": {
       "notSet": "Sin configurar"
-    },
-    "dataImport": {
-      "description": "Trae contactos desde un CSV — se emparejan con buceadores existentes, nunca se duplican."
-    },
-    "gearImport": {
-      "description": "Trae tu flota y sus registros de mantenimiento desde un CSV."
-    },
-    "dataExport": {
-      "description": "Llévate todo lo que guarda tu centro en un ZIP de CSV."
     },
     "emergency": {
       "heading": "Referencia de emergencia",
@@ -453,6 +433,7 @@
       "restoreFailed": "No se pudo restaurar el acceso de esa persona — revisa su cuenta primero.",
       "inviteInvalid": "Introduce un nombre, un correo válido y marca al menos un rol.",
       "rolesInvalid": "Marca al menos un rol antes de guardar.",
+      "rolesConflict": "Alguien más cambió estos roles mientras tenías la fila abierta, así que no se guardó nada. Recarga para ver cómo están ahora.",
       "inviteAlreadyOnTeam": "Esa persona ya tiene una cuenta aquí.",
       "inviteEmailTaken": "Ese correo no está disponible aquí. Invita a esta persona en otra dirección.",
       "inviteEmailReserved": "Esa dirección de correo está reservada y no puede recibir mensajes. Invita a esta persona en una dirección que pueda leer.",
@@ -469,6 +450,10 @@
       "disabled": "Deshabilitado"
     },
     "rolesLegend": "Roles",
+    "roles": {
+      "editAriaLabel": "Editar los roles de {name}",
+      "undoAriaLabel": "Deshacer el cambio de roles de {name}"
+    },
     "roleLabels": {
       "owner": "Propietario",
       "manager": "Gerente",
@@ -492,11 +477,9 @@
     },
     "current": {
       "heading": "Equipo actual",
-      "description": "Habilitar, deshabilitar y eliminar surten efecto de inmediato. Los cambios de rol de abajo esperan a Guardar cambios.",
+      "description": "Los cambios de rol se guardan al cerrar una fila. Habilitar, deshabilitar y eliminar surten efecto de inmediato.",
       "empty": "Todavía no se ha invitado a nadie.",
-      "emptyAction": "Invitar a un compañero",
-      "save": "Guardar cambios",
-      "saving": "Guardando…"
+      "emptyAction": "Invitar a un compañero"
     },
     "staffRow": {
       "resendInvite": "Reenviar invitación",
@@ -606,7 +589,7 @@
       },
       "nitrox": {
         "what": "Nitrox",
-        "detail": "Se importa como una certificación de nitrox verificada, marcada como importada — pero el buceador recibe aire normal hasta que el personal la confirme; el embarque nunca espera."
+        "detail": "Llega con la ficha del buceador, marcada como importada. Hasta que el personal la confirme con un toque, ese buceador recibe aire normal. El embarque solo espera si tu archivo dice que la tarjeta nunca se verificó."
       },
       "signedWaivers": {
         "what": "Exenciones firmadas y aptitud médica",
@@ -786,7 +769,8 @@
       "levelNoCardNumber": "El nivel de certificación «{level}» no tiene un número de certificación utilizable — certificación no importada. Una evidencia sin número no se puede verificar.",
       "certImportedVerified": "Certificación importada como verificada desde tus registros — marcada como importada, con una confirmación de un toque para el personal.",
       "certImportedPending": "Certificación importada para revisión del personal — ver la nota anterior.",
-      "nitroxImported": "Certificación de nitrox importada como verificada desde tus registros — marcada como importada. Los rellenos dan aire normal hasta que el personal confirme.",
+      "nitroxImportedVerified": "Certificación de nitrox importada como verificada desde tus registros — marcada como importada. Los rellenos dan aire normal hasta que el personal confirme.",
+      "nitroxImportedPending": "Certificación de nitrox importada para revisión del personal — ver la nota anterior. Una salida que exige nitrox retiene a este buceador hasta que se confirme.",
       "nitroxNoCardNumber": "Nitrox marcado en el origen sin número de certificación — añade y verifica la certificación de nitrox en DiveDay.",
       "waiverDateInvalid": "La fecha de aceptación del waiver “{value}” no es una fecha de calendario real (se espera AAAA-MM-DD) — se importó fechada hoy en su lugar.",
       "waiverImported": "Exención importada como aceptada: se acepta la del centro anterior, incluida la aptitud médica, y se marca como “importada”.",

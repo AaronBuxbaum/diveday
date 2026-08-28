@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { DiveBriefingsSection } from "@/app/s/[shopSlug]/trips/[id]/_components/DiveBriefingsSection";
+import {
+  ThreadSpine,
+  type ThreadSpineStep,
+  ThreadStatus,
+} from "@/app/ready/[token]/_components/ThreadSpine";
 import { PackingSection } from "@/app/s/[shopSlug]/trips/[id]/_components/PackingSection";
 import { RentalFitForm } from "@/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm";
 import { TripActions } from "@/app/s/[shopSlug]/trips/[id]/_components/TripActions";
+import { TripTerms } from "@/app/s/[shopSlug]/trips/[id]/_components/TripTerms";
 import { EntryDone } from "@/components/account/EntryShell";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
@@ -12,15 +17,15 @@ import { PartyClaimPanel } from "@/components/PartyClaimPanel";
 import { RememberBooker } from "@/components/RememberBooker";
 import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { ShopNotice } from "@/components/ShopPageHeader";
-import { DiveDayIcon, type DiveDaySharedIconName } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
-import { TokenPageHeader } from "@/components/TokenPageHeader";
+import { ThreadShell } from "@/components/thread/ThreadShell";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard, sectionCardClass } from "@/components/ui/card";
+import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
+import { SettledCheck } from "@/components/ui/SettledCheck";
 import {
   resolveRevokedBookingCapability,
   staleBookingCapabilityForToken,
@@ -28,8 +33,6 @@ import {
 } from "@/db/booking-capabilities";
 import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/checkouts";
 import { getDb } from "@/db/client";
-import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
-import { bookingConfirmationAndWaiverEmailsSent } from "@/db/notifications";
 import { getBookingPayment } from "@/db/payments";
 import { getReadyPageData, type ReadyPageData } from "@/db/ready";
 import {
@@ -42,7 +45,6 @@ import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopById, getShopBySlug } from "@/db/shops";
 import { getTripWithBooked, listTripDives } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
-import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import {
   DIVER_CERTIFICATION_AGENCY_KEYS,
@@ -50,8 +52,9 @@ import {
   DIVER_DIVE_RECENCY_KEYS,
   DIVER_SPECIALTY_KEYS,
 } from "@/i18n/readiness-labels";
-import { checklistCategoryText, checklistDetailText } from "@/i18n/readiness-summary-labels";
+import { checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
+import { THREAD_STEP_STATE_KEYS, THREAD_STEP_TITLE_KEYS } from "@/i18n/thread-labels";
 import { claimLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
@@ -68,16 +71,11 @@ import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
 import { combineCertRequirements, type ReadinessBlockerCode } from "@/lib/readiness";
-import {
-  buildDiverChecklist,
-  type ChecklistState,
-  type DiverChecklistItem,
-  nextDiverStep,
-} from "@/lib/readiness-summary";
+import { buildDiverChecklist, type DiverChecklistItem } from "@/lib/readiness-summary";
 import { nitroxCardWanted } from "@/lib/rentals";
 import { shopAddressLines, shopMapQuery } from "@/lib/shop-address";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
-import { supportNeedsAnswered } from "@/lib/support-needs";
+import { buildThreadSteps, isDiveDay, partyIsAllSet, type ThreadStep } from "@/lib/thread-steps";
 import {
   cancelMyBookingAction,
   emailFreshReadinessLinkAction,
@@ -100,55 +98,6 @@ export async function generateMetadata(): Promise<Metadata> {
     robots: { index: false, follow: false },
   };
 }
-
-/**
- * A row's state as this page *shows* it — the engine's three, plus one this
- * page adds.
- *
- * "optional" is the note row (issue 627). It is a genuine category a diver
- * answers, but most divers have nothing to say, so a row that read "Your turn"
- * forever would be the one nag on a page whose whole job is telling someone
- * what is actually left. It stays out of the progress figure for the same
- * reason: a bar that can never fill is a bar that lies.
- */
-type RowState = ChecklistState | "optional";
-
-const STATE_STYLE: Record<
-  RowState,
-  {
-    icon: Exclude<DiveDaySharedIconName, `waiver-${string}` | "caret">;
-    word: DiverMessageKey;
-    box: string;
-    text: string;
-  }
-> = {
-  // `-strong` on the success pair: the raw light-palette hue reads 4.39:1 on
-  // its own 10% fill, under AA (docs/design/forms-and-controls.md).
-  done: {
-    icon: "check",
-    word: "ready.stateDone",
-    box: "bg-success-tint text-success-strong",
-    text: "text-success-strong",
-  },
-  action: {
-    icon: "arrow-right",
-    word: "ready.stateAction",
-    box: "bg-primary-tint text-primary",
-    text: "text-primary",
-  },
-  waiting: {
-    icon: "pending",
-    word: "ready.stateWaiting",
-    box: "bg-surface-sunken text-muted",
-    text: "text-muted",
-  },
-  optional: {
-    icon: "pending",
-    word: "ready.stateOptional",
-    box: "bg-surface-sunken text-muted",
-    text: "text-muted",
-  },
-};
 
 /**
  * One tick-box in the support-needs question, worded on its right.
@@ -209,50 +158,6 @@ function RadioRow({
       />
       <span>{label}</span>
     </label>
-  );
-}
-
-function ChecklistRow({
-  label,
-  state,
-  detail,
-  action,
-  t,
-}: {
-  label: string;
-  state: RowState;
-  /**
-   * Already resolved by the caller — see `checklistDetailText`. Nullable
-   * because the last-dived row has nothing to say before it is answered: the
-   * label *is* the question, and a sentence restating it would be exactly the
-   * caption the copy-restraint filter deletes.
-   */
-  detail: string | null;
-  action?: React.ReactNode;
-  t: DiverTranslator;
-}) {
-  const style = STATE_STYLE[state];
-  return (
-    <li className="flex items-start gap-4 px-4 py-4 sm:px-5">
-      <span
-        aria-hidden="true"
-        className={`grid size-10 shrink-0 place-items-center rounded-xl text-lg font-bold ${style.box}`}
-      >
-        <DiveDayIcon
-          name={style.icon}
-          className={style.icon === "arrow-right" ? "size-5" : "size-4"}
-          strokeWidth={style.icon === "arrow-right" ? 1.8 : 2}
-        />
-      </span>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <h3 className="text-base font-semibold">{label}</h3>
-          <span className={`text-sm font-semibold ${style.text}`}>{t(style.word)}</span>
-        </div>
-        {detail ? <p className="mt-0.5 text-base text-muted">{detail}</p> : null}
-        {action ? <div className="mt-3">{action}</div> : null}
-      </div>
-    </li>
   );
 }
 
@@ -330,44 +235,6 @@ type PaymentReceipt = {
   /** The per-diver balance still due after a deposit, or 0 when paid in full. */
   balanceDueCents: number;
 } | null;
-
-/**
- * The receipt itself. Not a `SectionCard`: this panel carries a *tone* (a
- * settled payment), which the shared card deliberately does not model. Its
- * radius follows the canonical one so it sits at the same corner as the
- * checklist above it.
- */
-function PaymentReceiptPanel({
-  receipt,
-  locale,
-  t,
-}: {
-  receipt: NonNullable<PaymentReceipt>;
-  locale: string;
-  t: DiverTranslator;
-}) {
-  const depositWithBalance = receipt.isDeposit && receipt.balanceDueCents > 0;
-  // The currency comes off the settled payment row, not today's shop setting:
-  // a receipt is evidence of what was charged, and a shop that switches
-  // currency next season must not restate last season's amount (docs ADR
-  // 20260731-shop-currency). The balance is the remainder of that same charge,
-  // so it is quoted in the same currency. `formatMoneyCents` divides by *that*
-  // currency's minor unit — a ¥9,000 deposit is not ¥90.
-  const money = (cents: number) => formatMoneyCents(cents, receipt.currency, locale);
-  return (
-    <div className="mt-8 rounded-2xl border border-success/40 bg-success-tint p-4 text-left sm:p-5">
-      <h2 className="font-semibold text-success">
-        {depositWithBalance ? t("booking.paymentDepositReceived") : t("booking.paymentReceived")}
-        {receipt.amountCents !== null ? ` — ${money(receipt.amountCents)}` : ""} ✅
-      </h2>
-      <p className="mt-1 text-sm text-muted">
-        {depositWithBalance
-          ? t("booking.paymentDepositBalance", { balance: money(receipt.balanceDueCents) })
-          : t("booking.paymentSquare")}
-      </p>
-    </div>
-  );
-}
 
 /**
  * A terminal outcome for this link — a dead token, or a booking that was
@@ -746,77 +613,6 @@ function NitroxEntry({
 }
 
 /**
- * Which single-button action a checklist item answers with, if any. The one
- * source of truth for `itemAction`'s button branches *and* for choosing the
- * page's primary — one function so the two can never drift apart. The
- * certification rows are deliberately not here: their action is the
- * multi-field `CertificationEntry` form, whose submit stays secondary by
- * design — a form's save is not the page's one obvious action.
- */
-function actionButtonKind(item: DiverChecklistItem, canPay: boolean): "waiver" | "pay" | null {
-  if (item.code === "waiver_pending" || item.code === "waiver_expired") return "waiver";
-  if ((item.code === "payment_due" || item.code === "payment_refunded") && canPay) return "pay";
-  return null;
-}
-
-/**
- * The action a checklist item enables on this page, if any.
- *
- * `isPrimary` marks the first row whose action is a button — and only that
- * button wears primary weight. Two actionable rows at once (a waiver and a
- * payment, most commonly) used to render two primaries, leaving the diver to
- * do the triage the page had already done in its own headline (design
- * principle 8: one obvious action). Chosen among the button-bearing rows
- * rather than blindly from `nextDiverStep`: when the next step is a
- * certification form, demoting the one payment button with nothing promoted
- * in its place would leave the page with no primary at all.
- */
-function itemAction(
-  item: DiverChecklistItem,
-  token: string,
-  canPay: boolean,
-  isPrimary: boolean,
-  /** Whether the certification row should also offer an un-demanded nitrox card. */
-  offerNitrox: boolean,
-  t: DiverTranslator,
-): React.ReactNode {
-  const actionButton = buttonClass(
-    isPrimary ? { size: "sm" } : { variant: "secondary", size: "sm" },
-  );
-  const buttonKind = actionButtonKind(item, canPay);
-  // An expired link needs the same action as a pending one — `signWaiverFromReady`
-  // always issues a fresh link and opens it, superseding whatever came before,
-  // so the only difference is what the button promises. Naming the difference
-  // matters: "Sign your waiver" on a link the diver already knows is dead reads
-  // as the page not having noticed.
-  if (buttonKind === "waiver") {
-    return (
-      <form action={signWaiverFromReady.bind(null, token)}>
-        <SubmitButton pendingLabel={t("ready.opening")} className={actionButton}>
-          {t(item.code === "waiver_expired" ? "ready.freshWaiverLink" : "ready.signWaiver")}
-        </SubmitButton>
-      </form>
-    );
-  }
-  if (buttonKind === "pay") {
-    return (
-      <form action={payFromReady.bind(null, token)}>
-        <SubmitButton pendingLabel={t("ready.openingPayment")} className={actionButton}>
-          {t("ready.payForTrip")}
-        </SubmitButton>
-      </form>
-    );
-  }
-  // Explicitly the certification row's, rather than "whatever is left over".
-  // Every category used to fall through to here and render nothing, because an
-  // empty `actionable` produced no forms — but the optional nitrox offer does
-  // not come from `actionable`, so a waiting waiver row would have grown an
-  // "Add your nitrox card" disclosure underneath it.
-  if (item.category !== "certification") return null;
-  return <CertificationEntries token={token} item={item} offerNitrox={offerNitrox} t={t} />;
-}
-
-/**
  * Notice keys, not sentences: the query string carries a key, and the page
  * looks it up in the diver's own language. Storing the prose here would have
  * pinned every one of these to English no matter what the reader asked for
@@ -1082,6 +878,251 @@ function ExpiredLink({
   );
 }
 
+/**
+ * **Day-of details** — the last step of the thread's spine, and the one that
+ * absorbed four separate rows.
+ *
+ * Before this it was four: "When did you last dive?", the diver's own note to
+ * the crew, the hotel-pickup question and the support-needs record, each a row
+ * of its own on a checklist, three of them permanently marked "Optional"
+ * because most divers have nothing to say to them. Three rows that could never
+ * settle are three reasons the figure over the list could never fill, which is
+ * the defect ADR 20260827-the-divers-thread, decision 3 set out to end.
+ *
+ * So the step **counts, and settles on the recency question** — the one thing
+ * genuinely asked of everybody. The other three ride inside it, save on their
+ * own actions exactly as before, and gate nothing: answering none of them
+ * still finishes the step, and answering one cannot blank another.
+ */
+function DayOfDetails({
+  token,
+  data,
+  error,
+  t,
+}: {
+  token: string;
+  data: ReadyPageData;
+  /** The `?error=` code, for the one field that refuses on itself. */
+  error?: string;
+  t: DiverTranslator;
+}) {
+  const saveButton = buttonClass({ variant: "secondary", size: "sm" });
+  return (
+    <div className="divide-y divide-border">
+      {/* **The question nobody was asking.** A rung is what the shop gates on;
+          currency is what actually catches people, and an honest "Advanced
+          Open Water" from 1998 with no dive since 2013 clears every check in
+          this product (ADR 20260821-currency-is-what-catches-people). It gates
+          nothing — it is here because a diver whose card the shop verified
+          years ago is exactly the person worth asking. */}
+      <form
+        action={saveDiveRecencyFromReady.bind(null, token)}
+        className="flex flex-col gap-3 pb-5 sm:flex-row sm:items-end"
+      >
+        <Field label={t("ready.lastDivedHeading")} htmlFor="last-dived" className="flex-1">
+          <select
+            id="last-dived"
+            name="lastDivedBand"
+            required
+            defaultValue={data.lastDivedBand ?? ""}
+            className={controlClass}
+          >
+            <option value="">{t("ready.lastDivedChoose")}</option>
+            {DIVE_RECENCY_BANDS.map((band) => (
+              <option key={band} value={band}>
+                {t(DIVER_DIVE_RECENCY_KEYS[band])}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <SubmitButton pendingLabel={t("ready.savingLastDived")} className={saveButton}>
+          {t("ready.saveLastDived")}
+        </SubmitButton>
+      </form>
+      {/* **The diver's own words.** Its own save (`saveNoteFromReady` writes
+          the note column and nothing else), so answering it cannot blank sizes
+          set last week, and saving sizes cannot blank it (issue 627). */}
+      <form action={saveNoteFromReady.bind(null, token)} className="flex flex-col gap-3 py-5">
+        <Field label={t("rental.anythingElse")} htmlFor="crew-note">
+          <textarea
+            id="crew-note"
+            name="note"
+            rows={2}
+            maxLength={300}
+            defaultValue={data.rentalFit?.note ?? ""}
+            className={controlClass}
+          />
+        </Field>
+        <div>
+          <SubmitButton pendingLabel={t("common.saving")} className={saveButton}>
+            {t("ready.saveNote")}
+          </SubmitButton>
+        </div>
+      </form>
+      {/* The question asks about the *service*, not the address. "Where are you
+          staying?" on a list of things a diver owes their shop reads as a
+          records question — nobody volunteers their hotel room to a form that
+          has not said why it wants it. The field under it keeps the address
+          label. */}
+      <div className="py-5">
+        <h3 className="text-base font-semibold">{t("ready.hotelPickupLabel")}</h3>
+        <form
+          action={saveHotelPickupLocationFromReady.bind(null, token)}
+          className="mt-3 flex flex-col gap-3"
+        >
+          <Field label={t("ready.hotelPickupFieldLabel")} htmlFor="hotel-pickup">
+            <input
+              id="hotel-pickup"
+              type="text"
+              name="hotelPickupLocation"
+              maxLength={300}
+              placeholder={t("ready.hotelPickupPlaceholder")}
+              defaultValue={data.hotelPickupLocation ?? ""}
+              className={controlClass}
+            />
+          </Field>
+          <div>
+            <SubmitButton pendingLabel={t("common.saving")} className={saveButton}>
+              {t("ready.saveHotelPickup")}
+            </SubmitButton>
+          </div>
+        </form>
+      </div>
+      {/* **What this dive needs set up for you** — the accessible-dive record
+          (ADR 20260827-support-needs-are-a-record-about-the-dive). Asked here
+          and nowhere else: `/ready` is after the sale and is the diver's own
+          page, where the public booking form is a disclosure to a stranger
+          before a purchase, on a page the shop's competitors can also load.
+
+          Every question is about the *dive* — how many hands in the water,
+          getting aboard, how the briefing reaches you — and none is about the
+          diver. There is no condition to declare and nothing here is medical.
+          Nothing it records gates anything, this step included. */}
+      <div className="pt-5">
+        <h3 className="text-base font-semibold">{t("ready.supportLabel")}</h3>
+        <form
+          action={saveSupportNeedsFromReady.bind(null, token)}
+          className="mt-3 flex flex-col gap-4"
+        >
+          {/* **How many, and who brings them.** Two questions, because the
+              shop's action is opposite in each: "please arrange them" is two
+              more crew to roster, "they're coming with me" is two more seats to
+              book and a buddy team to build. One number could not say which,
+              and the crew was reading the same sentence for both. */}
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-sm font-semibold">{t("ready.supportDiversLabel")}</legend>
+            <RadioRow
+              name="supportDiversProvidedBy"
+              value=""
+              label={t("ready.supportDiversNone")}
+              defaultChecked={!data.supportNeeds?.supportDiversProvidedBy}
+            />
+            <RadioRow
+              name="supportDiversProvidedBy"
+              value="shop"
+              label={t("ready.supportDiversFromShop")}
+              defaultChecked={data.supportNeeds?.supportDiversProvidedBy === "shop"}
+            />
+            <RadioRow
+              name="supportDiversProvidedBy"
+              value="diver"
+              label={t("ready.supportDiversOwn")}
+              defaultChecked={data.supportNeeds?.supportDiversProvidedBy === "diver"}
+            />
+            {/* Seats, not crew. Somebody in the water who is on no manifest is
+                a person the coastguard's copy does not know about. */}
+            <p className="text-sm text-muted">{t("ready.supportDiversSeatNote")}</p>
+          </fieldset>
+          <Field
+            label={t("ready.supportDiversCountLabel")}
+            htmlFor="support-divers"
+            // The ceiling is a typo guard, not a limit, and it has to say so: a
+            // browser's own validation bubble arrives in the wrong language and
+            // reads as a refusal on the one form that must never feel like one.
+            hint={t("ready.supportDiversCountHint")}
+            error={error === "support-count" ? t("ready.supportDiversCountHint") : undefined}
+          >
+            <input
+              id="support-divers"
+              name="supportDiversNeeded"
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={4}
+              defaultValue={data.supportNeeds?.supportDiversNeeded ?? ""}
+              className={`${controlClass} max-w-24`}
+            />
+          </Field>
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-sm font-semibold">{t("ready.supportBoardingLegend")}</legend>
+            <CheckboxRow
+              name="needsBoardingAssistance"
+              label={t("ready.supportBoardingAssistance")}
+              defaultChecked={data.supportNeeds?.needsBoardingAssistance ?? false}
+            />
+            <CheckboxRow
+              name="needsWaterLift"
+              label={t("ready.supportWaterLift")}
+              defaultChecked={data.supportNeeds?.needsWaterLift ?? false}
+            />
+          </fieldset>
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-sm font-semibold">{t("ready.supportBriefingLegend")}</legend>
+            <CheckboxRow
+              name="briefingInSign"
+              label={t("ready.supportBriefingSign")}
+              defaultChecked={data.supportNeeds?.briefingInSign ?? false}
+            />
+            <CheckboxRow
+              name="briefingInWriting"
+              label={t("ready.supportBriefingWriting")}
+              defaultChecked={data.supportNeeds?.briefingInWriting ?? false}
+            />
+            {/* A briefing is delivered off a map or a slate, so the options
+                above are all *visual* — which is the wrong set for a blind or
+                low-vision diver, and "in writing" is exactly the wrong answer
+                for one. */}
+            <CheckboxRow
+              name="briefingAloud"
+              label={t("ready.supportBriefingAloud")}
+              defaultChecked={data.supportNeeds?.briefingAloud ?? false}
+            />
+            <CheckboxRow
+              name="briefingBySignals"
+              label={t("ready.supportBriefingSignals")}
+              defaultChecked={data.supportNeeds?.briefingBySignals ?? false}
+            />
+          </fieldset>
+          <Field label={t("ready.supportEquipmentLabel")} htmlFor="support-equipment">
+            <textarea
+              id="support-equipment"
+              name="equipmentAdaptation"
+              rows={2}
+              maxLength={300}
+              defaultValue={data.supportNeeds?.equipmentAdaptation ?? ""}
+              className={controlClass}
+            />
+          </Field>
+          <Field label={t("ready.supportDivesWithLabel")} htmlFor="support-dives-with">
+            <input
+              id="support-dives-with"
+              name="divesWithName"
+              maxLength={120}
+              defaultValue={data.supportNeeds?.divesWithName ?? ""}
+              className={controlClass}
+            />
+          </Field>
+          <div>
+            <SubmitButton pendingLabel={t("common.saving")} className={saveButton}>
+              {t("ready.saveSupport")}
+            </SubmitButton>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default async function DiverReadinessPage({
   params,
   searchParams,
@@ -1274,29 +1315,28 @@ export default async function DiverReadinessPage({
   // which takes the same figure to work out a balance after a deposit.
   const fullPriceCents = fullTrip ? perDiverBookingPriceCents(fullTrip, fullTrip.course) : null;
 
-  // What this booking has been charged, and — only in the minutes after a
-  // submit — whether both of its emails actually left the building. Both moved
-  // here from the trip page's confirmation branch (ADR
-  // 20260820-one-page-after-booking); the receipt is read on every visit,
-  // because "what did I pay?" is a question the night before too, while the
-  // emails line is only ever true right after booking.
-  const [paymentReceipt, emailsOnTheWay] = await Promise.all([
-    resolvePaymentReceipt(
-      db,
-      shop.id,
-      bookingId,
-      // The two ways a diver arrives here straight off Stripe's hosted page:
-      // paying at booking (`bookSpot`'s success_url) and paying later
-      // (`payFromReady`'s). Both are the moment the webhook may still be in
-      // flight; every other arrival is not.
-      justBooked || pay === "paid",
-      fullPriceCents,
-      toShopCurrency(shop.currency),
-    ),
-    justBooked
-      ? bookingConfirmationAndWaiverEmailsSent(db, shop.id, bookingId)
-      : Promise.resolve(false),
-  ]);
+  // What this booking has been charged. Read on every visit, because "what did
+  // I pay?" is a question the night before too — and it is what the Pay step's
+  // settled line says, now that the receipt panel that used to say it above
+  // the checklist is gone (ADR 20260827-the-divers-thread, decision 3).
+  //
+  // The emails line went with that panel. It claimed, in the minutes after a
+  // submit, that two messages were on their way — a third statement of the
+  // booking's status in one screenful, on a page whose status is now said once
+  // by the spine. `EmbedBookedNotice` still carries it where it is the *only*
+  // thing the reader gets, which is the embed's confirmation and not this page.
+  const paymentReceipt = await resolvePaymentReceipt(
+    db,
+    shop.id,
+    bookingId,
+    // The two ways a diver arrives here straight off Stripe's hosted page:
+    // paying at booking (`bookSpot`'s success_url) and paying later
+    // (`payFromReady`'s). Both are the moment the webhook may still be in
+    // flight; every other arrival is not.
+    justBooked || pay === "paid",
+    fullPriceCents,
+    toShopCurrency(shop.currency),
+  );
   // Absolute where a canonical origin is configured — this one exists to be
   // pasted into a group chat — with the relative fallback the claim links above
   // use, so a missing APP_HOST shares a working same-origin link rather than a
@@ -1305,20 +1345,6 @@ export default async function DiverReadinessPage({
   const tripPath = publicTripPath(shop.slug, data.trip.id);
   const shareTripUrl = shareOrigin ? new URL(tripPath, `${shareOrigin}/`).toString() : tripPath;
 
-  const briefingExtras = await listDiveSiteBriefingExtras(
-    db,
-    shop.id,
-    tripDives.map(({ diveSite }) => diveSite?.id).filter((id): id is string => Boolean(id)),
-  );
-  const diveBriefings = tripDives.map(({ dive, diveSite }) => ({
-    dive,
-    diveSite,
-    creatures: fieldGuideCards(
-      diveSite ? (briefingExtras.creatures.get(diveSite.id) ?? []) : [],
-      t,
-    ),
-    moments: diveSite ? (briefingExtras.moments.get(diveSite.id) ?? []) : [],
-  }));
   // Dive 1 first, in the dive plan's own order: where a site names its own
   // time in the water, that is what the day's rhythm counts rather than the
   // shop-wide default (src/lib/diver-planning.ts).
@@ -1329,25 +1355,20 @@ export default async function DiverReadinessPage({
   const legTravelTimes = tripDives.map(({ dive }) => dive.travelMinutes);
 
   const items = buildDiverChecklist(detail.requirement, detail.readiness);
-  const nextStep = nextDiverStep(items);
-  // The page's one primary button, chosen among the rows that render one.
-  const primaryActionItem =
-    items.find((item) => actionButtonKind(item, data.canPay) !== null) ?? null;
-  const ready = detail.readiness.status === "ready";
   /**
-   * **A balance nobody named.** "There's a balance to settle" is the one row on
-   * this checklist whose whole subject is a number, and it carried none — the
-   * amount lived on the receipt panel above, which exists only once something
-   * has *already* settled. So the diver being asked to pay was the one reader
-   * who could not see the figure.
+   * **A balance nobody named.** "There's a balance to settle" is the one step
+   * on this spine whose whole subject is a number, and it carried none — the
+   * amount lived on a receipt panel that exists only once something has
+   * *already* settled, so the diver being asked to pay was the one reader who
+   * could not see the figure.
    *
-   * The trip's own list price, in the shop's currency. This row is raised only
-   * on an unpaid or refunded booking — `PAYMENT_CLEARED` clears a part-paid
+   * The trip's own list price, in the shop's currency. This is raised only on
+   * an unpaid or refunded booking — `PAYMENT_CLEARED` clears a part-paid
    * deposit, so a fare is either owed whole or not owed here at all — and an
    * unpriced departure quotes nothing rather than a guess. A *settled* payment
-   * keeps its generic line: the receipt above states what was actually
-   * charged, which is evidence and outranks a list price that may have moved
-   * since (ADR 20260731-shop-currency reasons the same way about currency).
+   * quotes the receipt instead: what was actually charged is evidence, and it
+   * outranks a list price that may have moved since (ADR
+   * 20260731-shop-currency reasons the same way about currency).
    */
   const amountDueText =
     fullPriceCents !== null && fullPriceCents > 0
@@ -1358,7 +1379,7 @@ export default async function DiverReadinessPage({
    * set on the trip and what the sites it visits impose
    * (`combineCertRequirements`, the same fold the readiness engine gates on).
    *
-   * Named on the certification row (issue 627) because "we still need your
+   * Named on the certification step (issue 627) because "we still need your
    * certification card" never said *which* card, and a diver holding Open Water
    * had no way to tell from this page whether the Advanced they don't have was
    * the thing standing between them and the boat. Null when the departure gates
@@ -1367,91 +1388,226 @@ export default async function DiverReadinessPage({
   const requiredLevel = detail.requirement
     ? combineCertRequirements(detail.requirement, detail.siteRequirement).minimumCertificationLevel
     : null;
-  /** One checklist row's sentence, with the two rows that say more than the generic one. */
-  const rowDetail = (item: DiverChecklistItem): string => {
-    // The certification row says which rung, on every state including "done" —
-    // a diver reading a settled row still wants to know what it settled
-    // against (issue 627).
-    if (item.category === "certification" && requiredLevel) {
-      return `${checklistDetailText(t, item)} ${t("ready.certMinimumLevel", {
-        level: t(DIVER_CERTIFICATION_LEVEL_KEYS[requiredLevel]),
-      })}`;
-    }
-    if (item.category === "payment" && item.state === "action" && amountDueText) {
-      return t("ready.checklistDetail.paymentDueAmount", { amount: amountDueText });
-    }
-    return checklistDetailText(t, item);
-  };
   // A rental fit is on file — the diver has answered the gear question at least
   // once, whatever they answered. "Bringing my own" is a complete answer, so
-  // this asks whether the row was filled in, never whether anything was rented.
-  //
-  // `fitStatedAt`, not the row's existence: since issue 627 the note row below
-  // creates the same `rental_fit_profiles` row without stating a fit, and
-  // reading mere existence here would mark gear done for a diver who has only
-  // left a note (schema.ts, `fit_stated_at`).
+  // this asks whether the question was answered, never whether anything was
+  // rented. `fitStatedAt`, not the row's existence: the note below writes the
+  // same `rental_fit_profiles` row without stating a fit (schema.ts).
   const hasRentalFit = data.rentalFit?.fitStatedAt != null;
+  // The diver has answered the currency question at least once. Every band is
+  // a complete answer, "I haven't dived yet" included.
+  const hasLastDived = data.lastDivedBand != null;
   // Whether to ask for a nitrox card nothing has asked for yet — the rule
   // itself lives in `src/lib/rentals.ts` beside `nitroxAvailableOn`, because
-  // the card disclosure below and the rental form's request lock are two
-  // surfaces that must answer it identically.
+  // the card disclosure and the rental form's request lock are two surfaces
+  // that must answer it identically.
   const offerNitroxCard = nitroxCardWanted(shop.rentalItems, data.trip.course, {
     verified: data.nitroxCardVerified,
     onFile: data.nitroxCardOnFile,
   });
   /**
-   * ...and whether this page can actually make that offer.
-   *
-   * The disclosure lives inside the certification row, so it can only be
-   * rendered on a page that has one. A departure gating on nothing at all has
-   * no such row — and rather than grow a second place for a card to go, the
-   * request box stays unlocked there, exactly as it was before this rework.
-   *
-   * This single boolean is what `RentalFitForm` locks on. It holds no copy of
-   * the rule above: the form is told whether the control it would point at
-   * exists, so the lock and the offer cannot disagree.
+   * ...and whether this page can actually make that offer. The disclosure
+   * lives inside the certification step, so it can only be rendered on a
+   * booking that has one. `RentalFitForm` locks on this single boolean rather
+   * than on a second copy of the rule, so the lock and the offer cannot
+   * disagree.
    */
   const nitroxCardEntryOffered =
     offerNitroxCard && items.some((item) => item.category === "certification");
-  // The diver has answered the currency question at least once. Every band is
-  // a complete answer, "I haven't dived yet" included, so this asks whether the
-  // row was filled in and never what was said.
-  const hasLastDived = data.lastDivedBand != null;
+
   /**
-   * The gear and last-dived rows are rendered as their own `ChecklistRow`s
-   * below, outside `items` — counted alongside the requirement-derived items so
-   * the progress bar and its label match what the diver actually sees.
-   *
-   * The note row is deliberately **not** counted (issue 627). It is optional
-   * and most divers have nothing to say, so counting it would leave the bar
-   * permanently short of full for having answered everything that was asked.
-   * The emergency contact is no longer here at all — the waiver collects it,
-   * through the same `saveBookingEmergencyContact`, and asking twice for one
-   * fact is how a diver ends up correcting the copy the crew is not reading.
+   * **The spine** (ADR 20260827-the-divers-thread, decision 3). Every step it
+   * emits is finishable, so the figure over it can always fill — which is the
+   * whole reason the optional questions (the note, hotel pickup, support
+   * needs) live *inside* Day-of details rather than beside it as rows of their
+   * own that moved no number when answered.
    */
-  const checklistTotal = items.length + 2;
-  const checklistDone =
-    items.filter((item) => item.state === "done").length +
-    (hasRentalFit ? 1 : 0) +
-    (hasLastDived ? 1 : 0);
-  const noticeKey = saved
-    ? `saved-${saved}`
-    : error
-      ? `error-${error}`
-      : pay
-        ? `pay-${pay}`
-        : undefined;
-  // `Object.hasOwn`, not `READY_NOTICES[noticeKey]` — the param is
-  // attacker-supplied and a bare lookup walks the prototype
-  // (src/lib/staff-notices.ts).
-  const notice = noticeFromParam(noticeKey, READY_NOTICES);
+  const spine = buildThreadSteps({
+    checklist: items,
+    // Money is owed, or money has settled. The receipt matters on its own:
+    // a departure whose requirement does not gate on payment can still have
+    // taken a card at booking, and that payment has to render somewhere.
+    hasPayableOrder: items.some((item) => item.category === "payment") || paymentReceipt !== null,
+    rentalFitComplete: hasRentalFit,
+    dayOfComplete: hasLastDived,
+  });
+
+  const notice = noticeFromParam(
+    saved ? `saved-${saved}` : error ? `error-${error}` : pay ? `pay-${pay}` : undefined,
+    READY_NOTICES,
+  );
+
+  /**
+   * The departure is today. From 00:00 in the shop's own zone, not twenty-four
+   * hours out: the night before, this page is a plan; on the day it is a
+   * morning, and the dock call is the only number on it that matters.
+   */
+  const diveDay = isDiveDay({
+    startsAt: detail.trip.startsAt,
+    endsAt: detail.trip.endsAt,
+    timeZone: detail.shop.timezone,
+  });
+
+  /** "Everyone's set — see you at the dock." The rule is `partyIsAllSet`'s. */
+  const ownSignStep = spine.steps.find((step) => step.id === "sign");
+  const partyAllSet = partyIsAllSet({
+    seats: partySeatClaims,
+    ownSignSettled: !ownSignStep || ownSignStep.state === "done",
+    diveDay,
+  });
+
+  /** A money figure in the currency it was actually charged in, never today's shop setting. */
+  const money = (cents: number, currency: string) => formatMoneyCents(cents, currency, locale);
+  /**
+   * What the Pay step says once it has settled: the figure, which is the one
+   * thing the step's own word ("Paid") cannot carry. The receipt's currency,
+   * not the shop's — a shop that switches currency next season must not
+   * restate last season's charge (ADR 20260731-shop-currency).
+   */
+  const paidLine =
+    paymentReceipt && paymentReceipt.amountCents !== null
+      ? money(paymentReceipt.amountCents, paymentReceipt.currency)
+      : t("ready.checklistDetail.paymentDone");
+  const depositBalanceLine =
+    paymentReceipt?.isDeposit && paymentReceipt.balanceDueCents > 0
+      ? t("booking.paymentDepositBalance", {
+          balance: money(paymentReceipt.balanceDueCents, paymentReceipt.currency),
+        })
+      : null;
+
+  /** One step's fact, and one step's form. The two things the spine cannot derive. */
+  const stepLine = (step: ThreadStep): string | null => {
+    if (step.id === "gear") return hasRentalFit ? t("ready.gearOnFile") : null;
+    if (step.id === "dayof") {
+      return hasLastDived && data.lastDivedBand
+        ? t(DIVER_DIVE_RECENCY_KEYS[data.lastDivedBand])
+        : null;
+    }
+    if (step.id === "pay" && step.state === "done") return paidLine;
+    if (!step.item) return null;
+    // The certification step names which rung, on every state including
+    // "done" — a diver reading a settled step still wants to know what it
+    // settled against (issue 627).
+    if (step.item.category === "certification" && requiredLevel) {
+      return `${checklistDetailText(t, step.item)} ${t("ready.certMinimumLevel", {
+        level: t(DIVER_CERTIFICATION_LEVEL_KEYS[requiredLevel]),
+      })}`;
+    }
+    if (step.id === "pay" && step.state === "your_turn" && amountDueText) {
+      return t("ready.checklistDetail.paymentDueAmount", { amount: amountDueText });
+    }
+    return checklistDetailText(t, step.item);
+  };
+
+  /**
+   * The step's form, or nothing.
+   *
+   * A settled step returns nothing and renders as a line — with two deliberate
+   * exceptions, gear and Day-of, whose answers a diver genuinely revisits (a
+   * fin size the night before, a recency band they mistyped). Those stay
+   * openable, and "collapses to a check line" is what their closed summary
+   * already is.
+   */
+  const stepBody = (step: ThreadStep): React.ReactNode => {
+    const primary = step.id === spine.current;
+    const actionButton = buttonClass(
+      primary ? { size: "sm" } : { variant: "secondary", size: "sm" },
+    );
+    switch (step.id) {
+      case "sign":
+        // An expired link needs the same action as a pending one —
+        // `signWaiverFromReady` always issues a fresh link and opens it,
+        // superseding whatever came before, so the only difference is what the
+        // button promises. Naming it matters: "Sign your waiver" on a link the
+        // diver already knows is dead reads as the page not having noticed.
+        if (step.item?.code !== "waiver_pending" && step.item?.code !== "waiver_expired") {
+          return null;
+        }
+        return (
+          <form action={signWaiverFromReady.bind(null, token)}>
+            <SubmitButton pendingLabel={t("ready.opening")} className={actionButton}>
+              {t(
+                step.item.code === "waiver_expired" ? "ready.freshWaiverLink" : "ready.signWaiver",
+              )}
+            </SubmitButton>
+          </form>
+        );
+      case "certification":
+        if (!step.item) return null;
+        return (
+          <CertificationEntries
+            token={token}
+            item={step.item}
+            offerNitrox={nitroxCardEntryOffered}
+            t={t}
+          />
+        );
+      case "pay": {
+        const payable =
+          data.canPay &&
+          (step.item?.code === "payment_due" || step.item?.code === "payment_refunded");
+        if (!payable && !depositBalanceLine) return null;
+        return (
+          <>
+            {depositBalanceLine ? (
+              <p className="text-base text-muted">{depositBalanceLine}</p>
+            ) : null}
+            {payable ? (
+              <form action={payFromReady.bind(null, token)} className="mt-3 first:mt-0">
+                <SubmitButton pendingLabel={t("ready.openingPayment")} className={actionButton}>
+                  {t("ready.payForTrip")}
+                </SubmitButton>
+              </form>
+            ) : null}
+            {/* The one term still ahead of a diver who has already decided,
+                where ADR 20260820-one-page-after-booking always meant it to
+                land — beside the money, not on the public pitch page. Once
+                Pay settles the step closes and the footer's cancel door
+                carries the same window. */}
+            {payable && fullShop && fullTrip ? (
+              <TripTerms shop={fullShop} trip={fullTrip} locale={locale} />
+            ) : null}
+          </>
+        );
+      }
+      case "gear":
+        return (
+          <RentalFitForm
+            action={saveFitFromReady.bind(null, token)}
+            rentalFit={data.rentalFit}
+            rentalItems={data.shop.rentalItems}
+            course={data.trip.course}
+            pricing={data.shop.rentalPricing}
+            currency={toShopCurrency(data.shop.currency)}
+            wantsNitrox={data.wantsNitrox}
+            nitroxCardVerified={data.nitroxCardVerified}
+            nitroxCardOnFile={data.nitroxCardOnFile}
+            nitroxCardEntryOffered={nitroxCardEntryOffered}
+            plannedDives={data.trip.plannedDives}
+            saved={saved === "fit"}
+          />
+        );
+      case "dayof":
+        return <DayOfDetails token={token} data={data} error={error} t={t} />;
+    }
+  };
+
+  const spineSteps: ThreadSpineStep[] = spine.steps.map((step) => ({
+    id: step.id,
+    state: step.state,
+    current: step.id === spine.current,
+    title: t(THREAD_STEP_TITLE_KEYS[step.id]),
+    stateWord: step.state === "done" ? null : t(THREAD_STEP_STATE_KEYS[step.state]),
+    line: stepLine(step),
+    body: stepBody(step) ?? undefined,
+  }));
 
   return (
-    // The whole page under the provider, not just the one Client Component that
-    // needs it today: a `useTranslations` call in a client child without it
-    // throws during the server render and takes the entire page down to a blank
-    // 200 (which is exactly how RentalFitForm broke this surface once). Its
-    // namespaces are "rental" (RentalFitForm's own copy), "common"
+    // The whole page under the provider, not just the one Client Component
+    // that needs it today: a `useTranslations` call in a client child without
+    // it throws during the server render and takes the entire page down to a
+    // blank 200 (which is exactly how RentalFitForm broke this surface once).
+    // Its namespaces are "rental" (RentalFitForm's own copy), "common"
     // ("common.optional", shared with several field hints), and "trip"
     // (TripActions' add-to-calendar and share-with-a-buddy row).
     <DiverIntlProvider
@@ -1459,62 +1615,64 @@ export default async function DiverReadinessPage({
       timeZone={detail.shop.timezone}
       namespaces={["rental", "common", "trip"]}
     >
-      <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
+      <ThreadShell
+        shopName={detail.shop.name}
+        title={detail.trip.title}
+        meta={
+          <>
+            <p className="mt-1 text-base text-muted">
+              {when} · {timeRange} · {relativeWhen}
+            </p>
+            {/* Today. Said once, above the only number that matters this
+                morning — plain ink, no motion: the thread's three coral
+                moments are booked, paperwork done, and welcome home, and
+                "your boat is today" is none of them. */}
+            {diveDay ? (
+              <p className="mt-2 text-lg font-semibold">{t("thread.diveDayLine")}</p>
+            ) : null}
+            {/* The one number that matters on the morning of the trip — a
+                shade stronger than the meta line above it, never shouting.
+                When a hotel pickup is scheduled, that time leads ahead of dock
+                call. */}
+            {data.pickupTime ? (
+              <p className="mt-1 text-base font-medium">
+                {t("ready.hotelPickupHeaderLine", {
+                  time: data.pickupTime,
+                  location: data.hotelPickupLocation ?? t("ready.hotelPickupLocationNotSet"),
+                })}
+              </p>
+            ) : (
+              <p className="mt-1 text-base font-medium">{dockCallLine}</p>
+            )}
+            {/* Put the day in a calendar, and send the trip to whoever is
+                coming — the same ghost-weight row, in the same place under the
+                masthead, as the public trip page carries.
+
+                `shareUrl` is the **public trip page**, never this one: this URL
+                *is* a bearer capability that can cancel the booking and move
+                its refund, and "share with a buddy" must not hand that to a
+                group chat (docs/engineering/capability-telemetry-runbook.md). */}
+            {fullShop ? (
+              <TripActions
+                calendarUrl={publicTripCalendarPath(fullShop.slug, data.trip.id)}
+                shareUrl={shareTripUrl}
+              />
+            ) : null}
+            {/* What this page *is*, said once, at the top. Divers arrive here
+                from a booking submit or an emailed link, and both of those
+                read as a confirmation — a thing you look at once and close.
+                This one is not: it is the same URL all week, it is where the
+                cards and the gear answers go, and it restates itself every
+                time the shop moves. */}
+            <p className="mt-3 text-sm text-muted">{t("ready.keepThisPage")}</p>
+          </>
+        }
+      >
         {/* `booked` among them: the celebration is the moment a seat was taken,
             not a property of the link. Leaving it in the URL would replay
             "You're on the boat" every time a diver reopened this page from
             their history three days later. */}
         <FlashParams params={["saved", "error", "pay", "booked"]} />
-        {/* One eyebrow, not two: this header used to stack "Your trip
-            readiness" and the shop's name as two identical uppercase lines — a
-            visible bug-shaped redundancy. The shop's name is the context worth
-            keeping (and it is said in full, with address and map, in the shop
-            card at the foot of the page); the page's own identity is carried by
-            the checklist heading below. So: the shop name alone, never the
-            component's two-line array form. */}
-        <TokenPageHeader eyebrow={detail.shop.name} title={detail.trip.title}>
-          <p className="mt-1 text-base text-muted">
-            {when} · {timeRange} · {relativeWhen}
-          </p>
-          {/* The one number that matters on the morning of the trip — a shade
-              stronger than the meta line above it, never shouting. When a hotel
-              pickup is scheduled, that time leads ahead of dock call. */}
-          {data.pickupTime ? (
-            <p className="mt-1 text-base font-medium">
-              {t("ready.hotelPickupHeaderLine", {
-                time: data.pickupTime,
-                location: data.hotelPickupLocation ?? t("ready.hotelPickupLocationNotSet"),
-              })}
-            </p>
-          ) : (
-            <p className="mt-1 text-base font-medium">{dockCallLine}</p>
-          )}
-          {/* Put the day in a calendar, and send the trip to whoever is coming
-              — the same ghost-weight row, in the same place under the masthead,
-              as the public trip page carries. Nothing here competes with the
-              checklist below (design/principles.md #8).
-
-              `shareUrl` is the **public trip page**, never this one: this URL
-              *is* a bearer capability that can cancel the booking and move its
-              refund, and "share with a buddy" must not hand that to a group
-              chat (docs/engineering/capability-telemetry-runbook.md). */}
-          {fullShop ? (
-            <TripActions
-              calendarUrl={publicTripCalendarPath(fullShop.slug, data.trip.id)}
-              shareUrl={shareTripUrl}
-            />
-          ) : null}
-          {/* What this page *is*, said once, at the top.
-              Divers arrive here from a booking submit or an emailed link, and
-              both of those read as a confirmation — a thing you look at once
-              and close. This one is not: it is the same URL all week, it is
-              where the cards and the gear answers go, and it restates itself
-              every time the shop moves. Nothing else on the page can say that,
-              because every other line is about the trip rather than about the
-              page. Ghost weight, under the actions, so it informs the first
-              visit and disappears into the furniture on the tenth. */}
-          <p className="mt-3 text-sm text-muted">{t("ready.keepThisPage")}</p>
-        </TokenPageHeader>
         {notice ? (
           <div className="mt-6">
             <ShopNotice tone={notice.tone} role={noticeRole(notice.tone)}>
@@ -1527,484 +1685,75 @@ export default async function DiverReadinessPage({
         {justBooked && person.email ? (
           <RememberBooker fullName={detail.person.fullName} email={person.email} />
         ) : null}
-        {/* One earned moment, never two. A diver who just booked reads that
-            they are on the boat; a diver arriving from an email reminder with
-            nothing left to do reads that they are ready. Both at once would be
-            two coral boxes celebrating two different things in one screenful,
-            and the booking is the newer news (ADR
-            20260820-one-page-after-booking). The not-ready, not-just-booked
-            state answers inside the spine card below instead, so status is
-            said once, not three times. */}
-        {/* Title only, no body. The trip page's confirmation spelled the date,
-            the time and the dock call underneath this heading because its own
-            masthead said none of them. This page's header, four lines up, says
-            all three — so the same sentence here would be the page repeating
-            itself inside one screenful. */}
+        {/* **The thread's first coral moment, and the only one this page
+            spends** (ADR 20260827-the-divers-thread, decision 6): a seat was
+            just taken. The all-set state is *not* a second one — it settles
+            into the plain success line inside the status head below, because
+            "paperwork done" is the waiver page's moment and one moment does
+            not fire twice. Title only, no body: the header three lines up
+            already says the date, the time and the dock call. */}
         {justBooked ? (
           <EarnedMoment
             className="mt-8"
             title={t("booking.confirmedHeading", { name: firstName })}
           />
-        ) : ready ? (
-          <EarnedMoment
-            className="mt-8"
-            eyebrow={t("ready.allSetHeading")}
-            title={t("ready.seeYou", { when, name: firstName })}
-          >
-            <p>{t("ready.allSetBodyReady")}</p>
-          </EarnedMoment>
         ) : null}
-        {/* Two messages land within seconds of each other; saying so up front
-            stops the second one reading as a duplicate or a mistake. Claimed
-            only when both actually left the building — a walk-in party member
-            with no address of their own gets neither. */}
-        {emailsOnTheWay ? (
-          <p className="mt-3 text-sm text-muted">{t("booking.emailsOnTheWay")}</p>
-        ) : null}
-        {/* What was actually charged. Above the checklist, because a diver who
-            has just paid is looking for exactly this, and the checklist's own
-            payment row says "done" without ever saying how much. */}
-        {paymentReceipt ? (
-          <PaymentReceiptPanel receipt={paymentReceipt} locale={locale} t={t} />
-        ) : null}
-        {/* The spine: one card that is the page's whole reason to exist —
-            "am I ready, and what's left?" answered in the first screenful.
-            The greeting, the next step, the progress bar, and the rows were
-            four same-weight blocks before; they are one object now. */}
-        {/* The card's chrome as a class string rather than `<SectionCard>`:
-            this section keeps its own `aria-labelledby` region name, and its
-            header carries a progress figure and a progress bar above a
-            full-bleed row list — anatomy the shared card does not model. The
-            shell still comes from one place, so it cannot drift again. */}
-        <section
-          className={sectionCardClass({ padding: "none", className: "mt-8 overflow-hidden" })}
-          aria-labelledby="checklist-heading"
-        >
-          <div className="p-5 sm:p-6">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-              <h2 id="checklist-heading" className="text-lg font-semibold">
-                {t("ready.checklistHeading")}
-              </h2>
-              {ready ? null : (
-                <p className="text-sm font-medium text-muted tabular-nums">
-                  {t("ready.checklistProgress", { done: checklistDone, total: checklistTotal })}
-                </p>
-              )}
-            </div>
-            {ready ? null : (
-              <>
-                <p className="mt-2 text-base text-muted">
-                  {t("ready.almostThere", { name: firstName })}{" "}
-                  {nextStep
-                    ? t("ready.nextDetail", { detail: checklistDetailText(t, nextStep) })
-                    : t("ready.allSetBody")}
-                </p>
-                <div
-                  role="progressbar"
-                  aria-valuenow={checklistDone}
-                  aria-valuemin={0}
-                  aria-valuemax={checklistTotal}
-                  aria-label={t("ready.checklistProgressAriaLabel", {
-                    done: checklistDone,
-                    total: checklistTotal,
-                  })}
-                  className="mt-4 h-3 w-full overflow-hidden rounded-full bg-surface-sunken"
-                >
-                  <div
-                    className="progress-wave-fill h-full rounded-full"
-                    style={{ width: `${(checklistDone / checklistTotal) * 100}%` }}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-          <ul className="divide-y divide-border border-t border-border">
-            {items.map((item) => (
-              <ChecklistRow
-                key={item.category}
-                label={checklistCategoryText(t, item.category)}
-                state={item.state}
-                detail={rowDetail(item)}
-                action={itemAction(
-                  item,
-                  token,
-                  data.canPay,
-                  item === primaryActionItem,
-                  nitroxCardEntryOffered,
-                  t,
-                )}
-                t={t}
-              />
-            ))}
-            {/* Gear is a pre-trip item like any other, so it is a row rather
-                than a section of its own further down. It is the first of the
-                three rows here that no readiness blocker produced — a rental
-                fit reserves nothing and gates nobody (docs/product/glossary.md)
-                — but "what the crew should have ready for me" is exactly what
-                this list is for, and a heading below the checklist made it look
-                like something else. `RentalFitForm` renders no card and no
-                title of its own for that reason: this row is its heading. */}
-            <ChecklistRow
-              label={t("ready.gearAndSetup")}
-              state={hasRentalFit ? "done" : "action"}
-              detail={t(hasRentalFit ? "ready.gearOnFile" : "ready.gearBody")}
-              action={
-                <RentalFitForm
-                  action={saveFitFromReady.bind(null, token)}
-                  rentalFit={data.rentalFit}
-                  rentalItems={data.shop.rentalItems}
-                  course={data.trip.course}
-                  pricing={data.shop.rentalPricing}
-                  currency={toShopCurrency(data.shop.currency)}
-                  wantsNitrox={data.wantsNitrox}
-                  nitroxCardVerified={data.nitroxCardVerified}
-                  nitroxCardOnFile={data.nitroxCardOnFile}
-                  nitroxCardEntryOffered={nitroxCardEntryOffered}
-                  plannedDives={data.trip.plannedDives}
-                  saved={saved === "fit"}
-                />
-              }
-              t={t}
-            />
-            {/* **The question nobody was asking.** A rung is what the shop
-                gates on; currency is what actually catches people, and an
-                honest "Advanced Open Water" from 1998 with no dive since 2013
-                clears every check in this product (ADR
-                20260821-currency-is-what-catches-people). It is a row here and
-                not a field inside the certification disclosure because it is
-                asked of *everyone* — a diver whose card the shop verified years
-                ago is exactly the person worth asking.
-
-                Gates nothing, so the row never reads "action" in a way that
-                blocks: it sits below gear, with the two other rows this list
-                carries that no blocker produced. Once answered the select keeps
-                the answer and stays editable — no separate "on file" line,
-                because the control already shows what was said. */}
-            <ChecklistRow
-              label={t("ready.lastDivedHeading")}
-              state={hasLastDived ? "done" : "action"}
-              detail={
-                hasLastDived && data.lastDivedBand
-                  ? t(DIVER_DIVE_RECENCY_KEYS[data.lastDivedBand])
-                  : null
-              }
-              action={
-                <form
-                  action={saveDiveRecencyFromReady.bind(null, token)}
-                  className="flex flex-col gap-3 sm:flex-row sm:items-center"
-                >
-                  {/* The row's own heading is this control's label — a visible
-                      `<Field>` label would print the question twice, one line
-                      apart. Same move the trip picker on this page used to
-                      make, for the same reason. */}
-                  <select
-                    name="lastDivedBand"
-                    required
-                    aria-label={t("ready.lastDivedHeading")}
-                    defaultValue={data.lastDivedBand ?? ""}
-                    className={controlClass}
-                  >
-                    <option value="">{t("ready.lastDivedChoose")}</option>
-                    {DIVE_RECENCY_BANDS.map((band) => (
-                      <option key={band} value={band}>
-                        {t(DIVER_DIVE_RECENCY_KEYS[band])}
-                      </option>
-                    ))}
-                  </select>
-                  <SubmitButton
-                    pendingLabel={t("ready.savingLastDived")}
-                    className={buttonClass({ variant: "secondary", size: "sm" })}
-                  >
-                    {t("ready.saveLastDived")}
-                  </SubmitButton>
-                </form>
-              }
-              t={t}
-            />
-            {/* **The diver's own words, and a category of their own.**
-
-                This was the last field of the gear form until issue 627,
-                which meant a diver had to open "what would you like to rent?"
-                to say "titanium hip, I run heavy" — a sentence that has nothing
-                to do with sizes and outlives every one of them. It saves on its
-                own (`saveNoteFromReady` writes the note column and nothing
-                else), so answering it cannot blank sizes set last week, and
-                saving sizes cannot blank it.
-
-                "optional", not "action": most divers have nothing to add, and a
-                row reading "Your turn" forever on a page whose job is naming
-                what is left would be this page's one nag. It is out of the
-                progress figure for the same reason. */}
-            <ChecklistRow
-              label={t("rental.anythingElse")}
-              state={data.rentalFit?.note ? "done" : "optional"}
-              detail={null}
-              action={
-                <form action={saveNoteFromReady.bind(null, token)} className="flex flex-col gap-3">
-                  {/* The row's own heading is this control's label — a visible
-                      `<Field>` label would print the question twice, one line
-                      apart. Same move the last-dived row above makes. */}
-                  <textarea
-                    name="note"
-                    rows={2}
-                    maxLength={300}
-                    aria-label={t("rental.anythingElse")}
-                    defaultValue={data.rentalFit?.note ?? ""}
-                    className={controlClass}
-                  />
-                  <div>
-                    <SubmitButton
-                      pendingLabel={t("common.saving")}
-                      className={buttonClass({ variant: "secondary", size: "sm" })}
-                    >
-                      {t("ready.saveNote")}
-                    </SubmitButton>
-                  </div>
-                </form>
-              }
-              t={t}
-            />
-            {/* **What this dive needs set up for you.**
-
-                The accessible-dive record (ADR
-                20260827-support-needs-are-a-record-about-the-dive). Asked here
-                and nowhere else: `/ready` is after the sale and is the diver's
-                own page, where the public booking form is a disclosure to a
-                stranger before a purchase, on a page the shop's competitors can
-                also load.
-
-                Every question is about the *dive* — how many hands in the
-                water, getting aboard, how the briefing reaches you — and none is
-                about the diver. There is no condition to declare and nothing
-                here is medical.
-
-                "optional", like the note above it, and out of the progress
-                figure for the same reason: most divers have nothing to say, and
-                a row reading "Your turn" forever would turn the one question
-                this page asks kindly into a nag. Nothing it records gates
-                anything. */}
-            <ChecklistRow
-              label={t("ready.supportLabel")}
-              // `supportNeedsAnswered`, not `hasSupportNeeds`: a diver who has
-              // said "I need nobody" has answered, and a row that stayed
-              // "optional" would ask them the same question on every visit —
-              // the precise experience failure this record exists to prevent
-              // (`dive-domain-expert` review, 2026-08-27).
-              state={supportNeedsAnswered(data.supportNeeds) ? "done" : "optional"}
-              detail={null}
-              action={
-                <form
-                  action={saveSupportNeedsFromReady.bind(null, token)}
-                  className="flex flex-col gap-4"
-                >
-                  {/* **How many, and who brings them.** Two questions, because
-                      the shop's action is opposite in each: "please arrange
-                      them" is two more crew to roster, "they're coming with me"
-                      is two more seats to book and a buddy team to build. One
-                      number could not say which, and the crew was reading the
-                      same sentence for both. */}
-                  <fieldset className="flex flex-col gap-2">
-                    <legend className="text-sm font-semibold">
-                      {t("ready.supportDiversLabel")}
-                    </legend>
-                    <RadioRow
-                      name="supportDiversProvidedBy"
-                      value=""
-                      label={t("ready.supportDiversNone")}
-                      defaultChecked={!data.supportNeeds?.supportDiversProvidedBy}
-                    />
-                    <RadioRow
-                      name="supportDiversProvidedBy"
-                      value="shop"
-                      label={t("ready.supportDiversFromShop")}
-                      defaultChecked={data.supportNeeds?.supportDiversProvidedBy === "shop"}
-                    />
-                    <RadioRow
-                      name="supportDiversProvidedBy"
-                      value="diver"
-                      label={t("ready.supportDiversOwn")}
-                      defaultChecked={data.supportNeeds?.supportDiversProvidedBy === "diver"}
-                    />
-                    {/* Seats, not crew. Somebody in the water who is on no
-                        manifest is a person the coastguard's copy does not
-                        know about. */}
-                    <p className="text-sm text-muted">{t("ready.supportDiversSeatNote")}</p>
-                  </fieldset>
-                  <Field
-                    label={t("ready.supportDiversCountLabel")}
-                    htmlFor="support-divers"
-                    // The ceiling is a typo guard, not a limit, and it has to
-                    // say so: a browser's own validation bubble arrives in the
-                    // wrong language and reads as a refusal on the one form
-                    // that must never feel like one.
-                    hint={t("ready.supportDiversCountHint")}
-                    error={
-                      error === "support-count" ? t("ready.supportDiversCountHint") : undefined
-                    }
-                  >
-                    <input
-                      id="support-divers"
-                      name="supportDiversNeeded"
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      max={4}
-                      defaultValue={data.supportNeeds?.supportDiversNeeded ?? ""}
-                      className={`${controlClass} max-w-24`}
-                    />
-                  </Field>
-                  <fieldset className="flex flex-col gap-2">
-                    <legend className="text-sm font-semibold">
-                      {t("ready.supportBoardingLegend")}
-                    </legend>
-                    <CheckboxRow
-                      name="needsBoardingAssistance"
-                      label={t("ready.supportBoardingAssistance")}
-                      defaultChecked={data.supportNeeds?.needsBoardingAssistance ?? false}
-                    />
-                    <CheckboxRow
-                      name="needsWaterLift"
-                      label={t("ready.supportWaterLift")}
-                      defaultChecked={data.supportNeeds?.needsWaterLift ?? false}
-                    />
-                  </fieldset>
-                  <fieldset className="flex flex-col gap-2">
-                    <legend className="text-sm font-semibold">
-                      {t("ready.supportBriefingLegend")}
-                    </legend>
-                    <CheckboxRow
-                      name="briefingInSign"
-                      label={t("ready.supportBriefingSign")}
-                      defaultChecked={data.supportNeeds?.briefingInSign ?? false}
-                    />
-                    <CheckboxRow
-                      name="briefingInWriting"
-                      label={t("ready.supportBriefingWriting")}
-                      defaultChecked={data.supportNeeds?.briefingInWriting ?? false}
-                    />
-                    {/* A briefing is delivered off a map or a slate, so the
-                        three options above are all *visual* — which is the
-                        wrong set for a blind or low-vision diver, and "in
-                        writing" is exactly the wrong answer for one. */}
-                    <CheckboxRow
-                      name="briefingAloud"
-                      label={t("ready.supportBriefingAloud")}
-                      defaultChecked={data.supportNeeds?.briefingAloud ?? false}
-                    />
-                    <CheckboxRow
-                      name="briefingBySignals"
-                      label={t("ready.supportBriefingSignals")}
-                      defaultChecked={data.supportNeeds?.briefingBySignals ?? false}
-                    />
-                  </fieldset>
-                  <Field label={t("ready.supportEquipmentLabel")} htmlFor="support-equipment">
-                    <textarea
-                      id="support-equipment"
-                      name="equipmentAdaptation"
-                      rows={2}
-                      maxLength={300}
-                      defaultValue={data.supportNeeds?.equipmentAdaptation ?? ""}
-                      className={controlClass}
-                    />
-                  </Field>
-                  <Field label={t("ready.supportDivesWithLabel")} htmlFor="support-dives-with">
-                    <input
-                      id="support-dives-with"
-                      name="divesWithName"
-                      maxLength={120}
-                      defaultValue={data.supportNeeds?.divesWithName ?? ""}
-                      className={controlClass}
-                    />
-                  </Field>
-                  <div>
-                    <SubmitButton
-                      pendingLabel={t("common.saving")}
-                      className={buttonClass({ variant: "secondary", size: "sm" })}
-                    >
-                      {t("ready.saveSupport")}
-                    </SubmitButton>
-                  </div>
-                </form>
-              }
-              t={t}
-            />
-            {/* **The hotel pickup row.** Optional free text for shops that run
-                van transfers from hotels; a diver answers once and staff assign
-                a pickup time from the prep list.
-
-                The row asks about the *service*, not the address. "Where are
-                you staying?" on a checklist of things a diver owes their shop
-                reads as a records question — the one answer nobody volunteers
-                is their hotel room to a form that has not said why it wants
-                it. The field under it keeps the address label. */}
-            <ChecklistRow
-              label={t("ready.hotelPickupLabel")}
-              state={data.hotelPickupLocation ? "done" : "optional"}
-              detail={
-                data.hotelPickupLocation
-                  ? data.pickupTime
-                    ? t("ready.hotelPickupDetailWithTime", {
-                        location: data.hotelPickupLocation,
-                        time: data.pickupTime,
-                      })
-                    : t("ready.hotelPickupDetail", { location: data.hotelPickupLocation })
-                  : null
-              }
-              action={
-                <form
-                  action={saveHotelPickupLocationFromReady.bind(null, token)}
-                  className="flex flex-col gap-3"
-                >
-                  <input
-                    type="text"
-                    name="hotelPickupLocation"
-                    maxLength={300}
-                    aria-label={t("ready.hotelPickupFieldLabel")}
-                    placeholder={t("ready.hotelPickupPlaceholder")}
-                    defaultValue={data.hotelPickupLocation ?? ""}
-                    className={controlClass}
-                  />
-                  <div>
-                    <SubmitButton
-                      pendingLabel={t("common.saving")}
-                      className={buttonClass({ variant: "secondary", size: "sm" })}
-                    >
-                      {t("ready.saveHotelPickup")}
-                    </SubmitButton>
-                  </div>
-                </form>
-              }
-              t={t}
-            />
-          </ul>
-        </section>
-        <PartyClaimPanel locale={locale} seats={partySeats} className="mt-8" />
-        {/* What the day actually is: what to bring, and what each tank dives.
-            Below the checklist — which carries the gear form as one of its rows
-            — because this page's job is still "what's left before you
-            sail", and this is what a diver reads once that is settled. It is
-            also what they used to have to leave the page to find. */}
-        {fullShop && fullTrip ? (
+        {spine.setupItem ? (
+          // Nothing on this booking is the diver's until the shop finishes its
+          // own configuration, so there is no spine and no figure — one
+          // reassuring line, in the engine's own words. Deliberately the
+          // item's *own* sentence rather than the generic setup one: H-22's
+          // minimum-age wording says something a diver can act on, and
+          // collapsing to "still finalizing" would throw it away.
+          <p className="mt-8 text-base text-muted">{checklistDetailText(t, spine.setupItem)}</p>
+        ) : (
           <>
-            <PackingSection
-              shop={fullShop}
-              trip={fullTrip}
-              rentalFit={data.rentalFit}
-              // Never the "every day follows this shape" note here, even on a
-              // course weekend: this page is what a diver reads the morning
-              // they sail, about the day in front of them. The booking page is
-              // where the whole itinerary is laid out.
-              multiDay={false}
-              siteBottomTimes={siteBottomTimes}
-              legTravelTimes={legTravelTimes}
-              // This page renders no conditions card at all, so the suit line
-              // has nowhere else to land — and the morning of a dive is exactly
-              // when a diver is deciding what to put in the car.
-              temperatureStatedAbove={false}
-              locale={locale}
+            <ThreadStatus
+              done={spine.done}
+              doneSuffix={t("thread.stepsDoneSuffix", { total: spine.countable })}
+              settled={spine.done === spine.countable}
+              trailing={
+                spine.done === spine.countable
+                  ? t("ready.allSetHeading")
+                  : spine.current
+                    ? t("thread.nextStep", {
+                        step: t(THREAD_STEP_TITLE_KEYS[spine.current]),
+                      })
+                    : t("thread.withShopHead")
+              }
             />
-            <DiveBriefingsSection briefings={diveBriefings} trip={fullTrip} locale={locale} />
+            <ThreadSpine steps={spineSteps} />
           </>
+        )}
+        <PartyClaimPanel locale={locale} seats={partySeats} className="mt-8" />
+        {partyAllSet ? (
+          <p className="mt-3">
+            <SettledCheck settled label={t("thread.partyAllSet")} className="text-sm text-muted" />
+          </p>
+        ) : null}
+        {/* What to put in the bag. Below the spine — which carries the gear
+            form as one of its steps — because this page's job is still "what's
+            left before you sail", and this is what a diver reads once that is
+            settled. The dive briefings that used to follow it are the trip
+            page's "The day" list and the after-state's keepsake now: what
+            you'll see down there is pitch and memory, not preparation. */}
+        {fullShop && fullTrip ? (
+          <PackingSection
+            shop={fullShop}
+            trip={fullTrip}
+            rentalFit={data.rentalFit}
+            // Never the "every day follows this shape" note here, even on a
+            // course weekend: this page is what a diver reads the morning they
+            // sail, about the day in front of them.
+            multiDay={false}
+            siteBottomTimes={siteBottomTimes}
+            legTravelTimes={legTravelTimes}
+            // This page renders no conditions card at all, so the suit line
+            // has nowhere else to land — and the morning of a dive is exactly
+            // when a diver is deciding what to put in the car.
+            temperatureStatedAbove={false}
+            locale={locale}
+          />
         ) : null}
         {/* The diver may release their own seat; moving it is the shop's
             (ADR 20260821-the-diver-may-release-their-own-seat). It sits last,
@@ -2013,7 +1762,7 @@ export default async function DiverReadinessPage({
             Rendered only when `selfCancelBooking` would actually honour it, so
             there is no control here that could only come back refused. */}
         {data.canCancelBooking ? (
-          <section className="border-t border-border pt-6">
+          <section className="mt-10 border-t border-border pt-6">
             {cancelPreviewKey ? (
               <p className="text-base text-muted">{t(cancelPreviewKey)}</p>
             ) : null}
@@ -2045,7 +1794,7 @@ export default async function DiverReadinessPage({
           address={shop.address}
           t={t}
         />
-      </main>
+      </ThreadShell>
     </DiverIntlProvider>
   );
 }
