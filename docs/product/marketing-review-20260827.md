@@ -1,7 +1,8 @@
 # Marketing review — 2026-08-27
 
-- **Status:** Open — argued, sliced, nothing delivered yet. Move this file to
-  [archive/](archive/) when roadmap section 12's slices have landed, the way
+- **Status:** Open — slices 12a–12e delivered 2026-08-28 (PR #1115); 12f (`/about` spends the
+  impulse it creates) remains, plus the leave-it-guides pricing-link owner call below. Move this
+  file to [archive/](archive/) when the last slice lands, the way
   [archive/marketing-review-20260723.md](archive/marketing-review-20260723.md) did.
 - **Why now:** shop owners are not converting to trials (the owner's own read, 2026-08-27), and
   the funnel pair (`demo_entered` / `trial_started`) is too thin to argue from — so this review
