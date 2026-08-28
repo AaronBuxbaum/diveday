@@ -39,15 +39,22 @@ export function activeNavIndex(pathname: string, items: readonly PublicShopNavIt
   return best;
 }
 
-// `text-sm` up to `sm`, and the full 16px from there: the chrome bar is one
-// fixed-height row at every width now (ADR
-// 20260827-clearwater-surface-language, decision 10), and at 390px the shop's
-// own name, two tabs and the language control have to share 358 points. A
-// destination label is navigation rather than critical text — nobody decides
-// anything from the word "Courses" — and the 44px target is untouched, which
-// is the measurement that matters on a thumb.
+// 16px at every width. A destination label is a control's own label, which
+// design principle 2 names as critical text with a 16px floor, and
+// `check:critical-text` already holds the staff dock's labels to exactly that.
+// This was `text-sm` below `sm`, with a comment arguing that navigation is not
+// critical text — an argument against a written rule, which is not how this
+// repository disagrees with one.
+//
+// The pixels the restore costs are bought from padding instead: `px-1.5` below
+// `sm` (and a tighter list gap) rather than smaller type, so the 44px target
+// and the legibility both survive. The chrome bar is one fixed-height row at
+// every width now (ADR 20260827-clearwater-surface-language, decision 10), so
+// at 390px the shop's own name, these two tabs and the language control share
+// 358 points — and the name, which appears nowhere else above the fold on a
+// shopfront page, is the one that must not lose.
 const linkClass =
-  "inline-flex min-h-11 items-center rounded-xl px-2 text-sm font-medium transition-colors sm:px-3 sm:text-base";
+  "inline-flex min-h-11 items-center rounded-xl px-1.5 text-base font-medium transition-colors sm:px-3";
 
 /**
  * The spine of a shop's public pages — the schedule, and the course catalog
@@ -75,7 +82,7 @@ export function PublicShopNav({
 
   return (
     <nav aria-label={ariaLabel}>
-      <ul className="flex items-center gap-1">
+      <ul className="flex items-center gap-0.5 sm:gap-1">
         {items.map((item, index) => (
           <li key={item.href}>
             <Link

@@ -52,6 +52,26 @@ describe("PublicShopNav", () => {
     expect(screen.getByRole("link", { name: "Schedule" })).not.toHaveAttribute("aria-current");
   });
 
+  it("keeps every destination label at 16px, at every width", () => {
+    // Design principle 2 counts a control's own label as critical text with a
+    // 16px floor, and `check:critical-text` already holds the staff dock to it.
+    // This shipped as `text-sm sm:text-base` behind a comment arguing that
+    // navigation is not critical text, which is an argument against a written
+    // rule rather than a way of changing one. The pixels came out of padding
+    // instead, so the responsive halves that remain are `px-*`, never `text-*`.
+    pathname = "/s/blue-mantis";
+    render(<PublicShopNav ariaLabel="Shop pages" items={ITEMS} />);
+
+    for (const label of ["Schedule", "Courses"]) {
+      const link = screen.getByRole("link", { name: label });
+      expect(link.className).toContain("text-base");
+      expect(link.className).not.toMatch(/(?:^|\s|:)text-sm\b/);
+      // The 44px target the dock test asks for, still bought separately from
+      // the type size.
+      expect(link.className).toContain("min-h-11");
+    }
+  });
+
   it("renders only the destinations it was handed — no Courses tab for a shop with none", () => {
     pathname = "/s/blue-mantis";
     render(<PublicShopNav ariaLabel="Shop pages" items={[ITEMS[0]]} />);

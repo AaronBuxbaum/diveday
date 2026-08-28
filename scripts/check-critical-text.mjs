@@ -22,6 +22,18 @@ if ((tabBar.match(/text-base font-medium leading-tight/g) ?? []).length < 2) {
   failures.push("phone tab bar labels must remain 16px");
 }
 
+// The shopfront's own destinations, for the same reason as the dock's: a
+// destination label is a control's own label. This read `text-sm sm:text-base`
+// until 2026-08-28, with a comment arguing that navigation is not critical
+// text — which is why the rule is mechanical here now rather than remembered.
+const publicNav = read("src/components/PublicShopNav.tsx");
+if (!/const linkClass =\s*\n?\s*"[^"]*\btext-base\b/.test(publicNav)) {
+  failures.push("shopfront nav labels must be 16px at every width");
+}
+if (/const linkClass =\s*\n?\s*"[^"]*\btext-sm\b/.test(publicNav)) {
+  failures.push("shopfront nav labels must not drop to 14px on phones");
+}
+
 const orders = read("src/app/shop/[shopSlug]/orders/page.tsx");
 for (const [needle, label] of [
   ["text-base font-medium text-foreground", "orders person names"],

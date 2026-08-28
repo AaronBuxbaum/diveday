@@ -29,17 +29,53 @@ import { CHROME_BAR_CLASS } from "./ChromeBar";
  */
 
 const CHROME_MODULE = path.join("src", "components", "chrome");
-const SCAN_ROOTS = ["src/app", "src/components", "src/features"];
+const SCAN_ROOTS = ["src/app", "src/components", "src/features", "e2e"];
 
 /**
- * A sticky or fixed element pinned at a hand-written distance — `top-[68px]`,
- * `top-[4.25rem]`. The offsets that are *not* this are fine: `top-0` (the top
- * of the viewport, which is where the bar itself sits and where an embed's
- * chrome-less list starts) and Tailwind's own scale, which is a spacing
- * decision rather than a measurement of the chrome.
+ * The offset properties that can pin something under the bar. A bracketed
+ * value on any of these is a *measurement*, and the rule is that the measured
+ * part must come from a variable rather than from somebody's ruler:
+ * `top-[68px]`, `pt-[68px]`, `scroll-mt-[3.5rem]` and `top-[calc(68px+1rem)]`
+ * are all refused; `top-(--chrome-h)`,
+ * `scroll-mt-[calc(var(--chrome-h)+11rem)]` and
+ * `bottom-[calc(1rem+var(--dock-clearance,0rem))]` are all fine, because in
+ * each of those the thing being cleared names itself.
+ *
+ * Property-first on purpose. The first version of this rule required the
+ * literal token `sticky` or `fixed` on the same *line*, which meant it could
+ * not see `pt-[68px]`, could not see a class string the formatter had wrapped,
+ * and could not see `cx("sticky z-20", "top-[68px]")` — three of the four
+ * shapes the ADR says it refuses.
  */
-const NUMERIC_STICKY_OFFSET =
-  /\b(?:sticky|fixed)\b[^"'`]*\btop-\[\s*-?\d|\btop-\[\s*-?\d[^"'`]*\b(?:sticky|fixed)\b/;
+const BRACKETED_OFFSET =
+  /\b(?:top|bottom|inset|inset-x|inset-y|pt|mt|scroll-mt|scroll-pt)-\[([^\]]*)\]/g;
+/** A hand-written distance: `68px`, `3.5rem`, `0.5em`, or a bare number. */
+const ABSOLUTE_LENGTH = /(?:^|[^\w.-])\d+(?:\.\d+)?(?:px|rem|em)?(?:$|[^\w.%-])/;
+
+/**
+ * Tailwind's own scale on a viewport-pinned element — `sticky top-20`, which
+ * is how the roll-call panel spent this slice pinned 24px below a bar that had
+ * become 56px. `top-0` is the top of the viewport (where the bar itself sits,
+ * and where an embed's chrome-less list starts) and `top-(--chrome-h)` is the
+ * bar reading its own height; every other value is a number somebody chose.
+ *
+ * A variant-prefixed `focus:fixed` is excluded: the skip link is a transient
+ * overlay that deliberately paints *over* the chrome, not page furniture
+ * pinned beneath it.
+ *
+ * Applied to one extracted string literal or template at a time, so a class
+ * list the formatter wrapped across lines is still one unit. The gap it
+ * cannot close is a class split across separate arguments —
+ * `cx("sticky", "top-20")` — where `BRACKETED_OFFSET` is the backstop for the
+ * literal form.
+ */
+const PINNED = /(?<![\w:-])(?:sticky|fixed)(?![\w-])/;
+const SCALE_TOP = /(?<![\w:-])top-(?!0(?![\w.])|\()[\w.]+/;
+
+/** Every quoted string and template literal, each as one token. */
+function stringTokens(source: string): string[] {
+  return source.match(/"[^"\n]*"|'[^'\n]*'|`[^`]*`/g) ?? [];
+}
 
 /** Blank comment bodies, keeping newlines so line numbers still point at code. */
 function withoutComments(source: string): string {
@@ -69,24 +105,80 @@ async function read(file: string): Promise<string> {
   return await readFile(path.join(process.cwd(), file), "utf8");
 }
 
+/**
+ * Every hand-written chrome offset in a chunk of (comment-stripped) source,
+ * as the sentence a reader needs to fix it.
+ */
+function offendingOffsets(source: string): string[] {
+  const reasons: string[] = [];
+  for (const [whole, value] of source.matchAll(BRACKETED_OFFSET)) {
+    if (!ABSOLUTE_LENGTH.test(value) || value.includes("var(--")) continue;
+    reasons.push(
+      `\`${whole}\` is a distance somebody measured; read what it clears — top-(--chrome-h), or calc(var(--chrome-h) + …)`,
+    );
+  }
+  for (const token of stringTokens(source)) {
+    if (!PINNED.test(token)) continue;
+    const scale = token.match(SCALE_TOP);
+    if (!scale) continue;
+    reasons.push(
+      `\`${scale[0]}\` pins a sticky/fixed element at a number; the bar's height is top-(--chrome-h)`,
+    );
+  }
+  return reasons;
+}
+
 describe("the chrome bar", () => {
-  it("leaves no numeric chrome offset literal anywhere outside the chrome module", async () => {
+  /**
+   * The detector, pinned against the shapes it has to catch and the ones it
+   * must not. Without this the guard is an assertion about a regex nobody has
+   * ever run against a positive case — which is what it was: it went green
+   * while `sticky top-20` sat on the roll-call panel, and it could not see
+   * `pt-[68px]` or `scroll-mt-[3.5rem]` at all.
+   */
+  it("refuses a hand-written offset, and only a hand-written offset", () => {
+    const refused = [
+      'className="sticky top-[68px] z-20"',
+      'className="pt-[68px]"',
+      'className="scroll-mt-[3.5rem]"',
+      'className="sticky top-[calc(68px+1rem)]"',
+      'cx("sticky z-20", "top-[68px]")',
+      "className={`sticky z-20\n  top-[68px]`}",
+      'className="sticky top-20 z-10"',
+      'className="fixed inset-x-0 top-20 z-40"',
+    ];
+    const allowed = [
+      'className="sticky top-0 z-30"',
+      'className="sticky top-(--chrome-h) z-20"',
+      'className="scroll-mt-[calc(var(--chrome-h)+11rem)]"',
+      'className="fixed bottom-[calc(1rem+var(--dock-clearance,0rem))]"',
+      'className="pt-[12vh]"',
+      'className="absolute top-11 bottom-2"',
+      'className="focus:fixed focus:top-2"',
+    ];
+    expect(refused.filter((sample) => offendingOffsets(sample).length === 0)).toEqual([]);
+    expect(allowed.filter((sample) => offendingOffsets(sample).length > 0)).toEqual([]);
+  });
+
+  it("leaves no hand-written chrome offset anywhere outside the chrome module", async () => {
     const offenders: string[] = [];
     for (const root of SCAN_ROOTS) {
       for (const file of await sourceFilesUnder(root)) {
         const relative = path.relative(process.cwd(), file);
         if (relative.startsWith(CHROME_MODULE)) continue;
-        withoutComments(await readFile(file, "utf8"))
-          .split("\n")
-          .forEach((line, index) => {
-            if (NUMERIC_STICKY_OFFSET.test(line)) {
-              offenders.push(
-                `${relative}:${index + 1} — a pinned offset written as a number; read the bar's own height with top-(--chrome-h)`,
-              );
-            }
-          });
+        for (const reason of offendingOffsets(withoutComments(await readFile(file, "utf8")))) {
+          offenders.push(`${relative} — ${reason}`);
+        }
       }
     }
+    expect(offenders).toEqual([]);
+  });
+
+  it("leaves no hand-written chrome offset in the stylesheet either", async () => {
+    const css = await read("src/app/globals.css");
+    const offenders = [...css.matchAll(/(?:^|[\s;{])(top|scroll-padding-top)\s*:\s*([^;}]+)/g)]
+      .filter(([, , value]) => /\d/.test(value) && !/^0\w*$/.test(value.trim()))
+      .map(([, property, value]) => `${property}: ${value.trim()}`);
     expect(offenders).toEqual([]);
   });
 

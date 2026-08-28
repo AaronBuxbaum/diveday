@@ -36,10 +36,14 @@ Both now render through one `ChromeBar` (`src/components/chrome/ChromeBar.tsx`):
 background at 85% behind a blur with a solid fallback, one hairline, no shadow, `z-30`. The height
 is a token, `--chrome-h`, that the bar sets itself from and that the board's and the public
 schedule's day headers offset by — so the two can no longer disagree, and
-`src/components/chrome/chrome.test.ts` refuses a numeric offset literal anywhere else in the tree.
-The page's `<h1>` stays in the page and the bar carries no connectivity indicator; the phone dock
-is untouched. Because the bar is one fixed-height row at every width, the shopfront's nav and
-language control tighten below `sm` so the shop's own name is never the thing that gets cut.
+`src/components/chrome/chrome.test.ts` refuses a hand-written distance anywhere else in the tree —
+a bracketed offset whose measured part is a length rather than a variable, or Tailwind's own scale
+on a sticky element — and has a fixture test of its own, so the detector is pinned rather than
+assumed. The page's `<h1>` stays in the page and the bar carries no connectivity indicator; the
+phone dock is untouched. Because the bar is one fixed-height row at every width, the shopfront's
+nav and language control tighten below `sm` — the endonym and the caret go, padding shrinks, the
+16px destination labels stay — so an ordinary shop name holds at phone width and only ellipsizes
+on the narrow handsets below it.
 
 ## The boat manifest becomes an instrument (delivered 2026-08-27)
 

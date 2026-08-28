@@ -322,6 +322,37 @@ test.describe("schedule builder", () => {
     }
   });
 
+  test("the shopfront bar holds the shop's own name whole on a phone", async ({ page }) => {
+    // The shopfront's `<h1>` reads "Schedule": this bar is the only place the
+    // page says *whose* shop it is above the fold, which is the whole reason
+    // the header exists (`PublicShopChrome`'s doc comment). One fixed-height
+    // row means the name, two destinations and the language control share
+    // 358 points at 390px, and the name is the slot that gives — so when it
+    // gave, it gave silently: "Blue Mantis Div…", green, on the standard
+    // photographed phone.
+    //
+    // 390 and 430 are the two phones the shop name has to survive whole.
+    // Below them it may ellipse, and this deliberately does not assert that it
+    // does not — that is what `truncate` is for, and a shop can always pick a
+    // longer name than any width can hold.
+    await page.goto(`/s/${SHOP}`);
+    await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();
+
+    for (const width of [390, 430]) {
+      await page.setViewportSize({ width, height: 800 });
+      const name = page.locator("header a span.truncate").first();
+      const clipped = await name.evaluate((el) => ({
+        text: el.textContent ?? "",
+        needs: el.scrollWidth,
+        has: Math.round(el.getBoundingClientRect().width),
+      }));
+      expect(
+        clipped.needs,
+        `the shop's name is cut in the bar at ${width}px ("${clipped.text}" needs ${clipped.needs}px, has ${clipped.has}px)`,
+      ).toBeLessThanOrEqual(clipped.has + 1);
+    }
+  });
+
   test("staff add a private charter, and verify its private charter badge in schedule and details", async ({
     page,
   }) => {

@@ -15,8 +15,14 @@ import type { ReactNode } from "react";
  * token (`--chrome-h`, declared in `globals.css`) rather than a number: the
  * bar sets `h-(--chrome-h)` and every surface that pins something beneath it
  * says `top-(--chrome-h)`, so the two can no longer disagree.
- * `src/components/chrome/chrome.test.ts` fails on a numeric offset literal
- * anywhere else in the tree.
+ * `src/components/chrome/chrome.test.ts` scans `src/app`, `src/components`,
+ * `src/features` and `e2e` and fails on a hand-written distance: a bracketed
+ * offset whose measured part is a length rather than a variable
+ * (`top-[68px]`, `pt-[68px]`, `scroll-mt-[3.5rem]`), or Tailwind's own scale
+ * on a sticky/fixed element (`sticky top-20`, which is how the roll-call panel
+ * spent a day pinned 24px below a bar that had become 56px). That guard has
+ * its own fixture test, because a detector nobody has run against a positive
+ * case is an assertion about a regex.
  *
  * Chrome recedes: the page background at 85% behind a blur, one hairline, no
  * shadow (decision 1 — elevation is earned, and a bar that is always there is
@@ -65,12 +71,19 @@ export function ChromeBar({
     <header className={CHROME_BAR_CLASS}>
       {/* One row, always — a fixed height cannot wrap, so every slot shrinks
           instead. `min-w-0` on the two content slots is what lets a long shop
-          name ellipse rather than push the row wider than the viewport. */}
-      <div className="mx-auto flex h-full w-full max-w-6xl items-center gap-x-3 px-4 sm:px-6">
+          name ellipse rather than push the row wider than the viewport.
+
+          The gaps tighten below `sm` and the horizontal padding does not: the
+          padding is what lines the shop's name up with the left edge of the
+          page under it, so buying phone pixels there would buy them from the
+          one thing the bar is supposed to hold still. */}
+      <div className="mx-auto flex h-full w-full max-w-6xl items-center gap-x-2 px-4 sm:gap-x-3 sm:px-6">
         <div className="flex min-w-0 shrink items-center">{leading}</div>
         {center ? <div className="flex min-w-0 flex-1 items-center">{center}</div> : null}
         {trailing ? (
-          <div className="ms-auto flex shrink-0 items-center gap-2 lg:gap-3">{trailing}</div>
+          <div className="ms-auto flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3">
+            {trailing}
+          </div>
         ) : null}
       </div>
     </header>

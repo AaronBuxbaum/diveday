@@ -23,16 +23,23 @@ import { shopAddressLines, shopMapQuery } from "@/lib/shop-address";
  * never renders in `?embed=1` mode, which already carries its own framing on
  * the page that embeds it.
  *
- * The header shows the shop's name, where a diver can go, and — beside the
- * name — which language they are reading in. Phone and email live in the
- * footer, once: repeating them up here made the top of every page a contact
- * card and left no room for the navigation that was actually missing.
+ * The header shows the shop's name, where a diver can go, and which language
+ * they are reading in. Phone and email live in the footer, once: repeating
+ * them up here made the top of every page a contact card and left no room for
+ * the navigation that was actually missing.
  *
- * The language control sits with the shop's own identity rather than in the
- * nav, because it is not a destination. It is the one control on a public page
- * whose *label* the reader may not be able to read, which is why each option
- * is its own language's name for itself and why it is on the first band of the
- * page rather than filed in the footer.
+ * **The shop's name owns the leading edge; everything else shares the trailing
+ * one.** The language control used to sit beside the name, on the grounds that
+ * it is identity rather than a destination. On a one-row bar that reasoning
+ * cost the wrong thing: the name is the only place a shopfront page states
+ * whose shop this is above the fold — the `<h1>` below it reads "Schedule" —
+ * so anything sharing its edge is competing with the answer the diver came
+ * for. Language moves in with the nav instead, where the two read as one
+ * question ("which page, in which words") at the edge the name is not at, and
+ * where each control can tighten on a phone without the name paying for it.
+ * Each language is still named in itself, and it is still on the first band of
+ * the page rather than filed in the footer, because it is the one control here
+ * whose *label* the reader may not be able to read.
  */
 export function PublicShopHeader({
   shop,
@@ -80,7 +87,9 @@ export function PublicShopHeader({
         /* The nav rides in the trailing cluster rather than the bar's centre
            slot: on a diver's page the two tabs and the language control are one
            group — which page, in which words — and both belong at the edge the
-           shop's name is not at. */
+           shop's name is not at. The centre slot would have put them between
+           the name and the picker, which on a phone is the arrangement that
+           squeezes the name from both sides. */
         <>
           <PublicShopNav ariaLabel={navAriaLabel} items={navItems} />
           <LanguagePicker

@@ -26,13 +26,16 @@ export type LanguagePickerCopy = {
  * with the shop's own navigation for the width of a phone header — with no way
  * to tell that they are alternatives to each other rather than destinations.
  *
- * A trigger plus a panel is the same shape at two languages and at twelve. The
- * trigger carries the current language's own name for itself, so a reader who
- * cannot read a word of the header can still see which language they are in and
- * that this is where language lives; the globe says the same thing without
- * words. Inside, every language is listed — including the one in force, marked
- * `aria-current` — because "which am I in?" is a question the control should be
- * able to answer.
+ * A trigger plus a panel is the same shape at two languages and at twelve.
+ * From `sm` up the trigger carries the current language's own name for itself,
+ * so a reader who cannot read a word of the header can still see which language
+ * they are in and that this is where language lives. On a phone that name is
+ * `sr-only` and the globe carries the control alone — a header that squeezed
+ * the *shop's* name to keep this one would be trading the identity a diver came
+ * for against a label the globe already says without words. Inside, every
+ * language is listed — including the one in force, marked `aria-current` —
+ * because "which am I in?" is a question the control should be able to answer,
+ * and on the phone it is the only place that answers it.
  *
  * Dismissal follows the staff header's identity menu exactly (Escape returns
  * focus to the trigger, a pointer down anywhere else closes): two disclosures
@@ -87,29 +90,30 @@ export function LanguagePicker({
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-label={copy.ariaLabel}
-        className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
+        className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg px-1.5 text-sm font-medium text-muted transition-colors hover:bg-surface-sunken hover:text-foreground sm:px-2"
       >
         {/* The globe is the half of this control that needs no language at
             all — the reader most likely to reach for it is the one who cannot
             read the label beside it. */}
         <DiveDayIcon name="globe" className="size-4 shrink-0" strokeWidth={1.75} />
         {/* `lang` so a screen reader pronounces "Español" as Spanish rather
-            than reading it through the page's own language.
-
-            Below `sm` the globe carries the control alone and the endonym goes
-            `sr-only` — it stays in the accessibility tree, so nothing is lost
-            to a screen reader, and the phone's chrome bar is one fixed-height
-            row that the shop's own name has first claim on (ADR
-            20260827-clearwater-surface-language, decision 10). The globe is
-            the half that needs no language, which is why it is the half that
-            survives the squeeze. */}
+            than reading it through the page's own language. */}
         <span lang={current} className="sr-only sm:not-sr-only">
           {currentLabel}
         </span>
+        {/* Below `sm` the globe carries the control alone: the endonym goes
+            `sr-only` and the caret is hidden outright. The phone's chrome bar
+            is one fixed-height row (ADR 20260827-clearwater-surface-language,
+            decision 10) whose first claim belongs to the shop's own name,
+            which appears nowhere else above the fold on a shopfront page,
+            while this control's meaning survives the squeeze whole: the globe
+            is the half that needs no language, `aria-label` and
+            `aria-expanded` carry the affordance the caret was drawing, and the
+            endonym is still in the accessibility tree. */}
         <DiveDayIcon
           name="caret"
           direction="down"
-          className={`size-3 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`hidden size-3 transition-transform sm:block ${open ? "rotate-180" : ""}`}
         />
       </button>
       {mounted ? (
