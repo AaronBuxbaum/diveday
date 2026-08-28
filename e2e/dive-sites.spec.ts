@@ -645,7 +645,10 @@ test("the same saved field guide reads in Spanish for a Spanish-speaking diver",
   await page.goto("/s/blue-mantis");
   await page.getByRole("banner").getByRole("button", { name: "Change language" }).click();
   await page.getByRole("banner").getByRole("button", { name: "Español" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Calendario" })).toBeVisible();
+  // The schedule section is an `h2` now: slice 6i gave the `h1` to the
+  // shop's own name, which is a proper noun and reads the same in every
+  // language. `schedule.title` is still the translated proof.
+  await expect(page.getByRole("heading", { level: 2, name: "Calendario" })).toBeVisible();
 
   await page
     .locator("li")
@@ -656,7 +659,18 @@ test("the same saved field guide reads in Spanish for a Spanish-speaking diver",
   // snapshot of what exists at that instant, so calling it straight off the
   // navigation finds nothing, opens nothing, and leaves the assertions below
   // looking for cards inside a closed `<details>`.
-  await expect(page.getByRole("heading", { level: 3, name: "Molasses Reef" })).toBeVisible();
+  //
+  // `exact: true` is what makes that wait mean "the briefing is here".
+  // `getByRole` matches an accessible name by *substring*, and the storefront
+  // this click leaves lists every departure under an `h3` of its own — one of
+  // which is "Morning Two-Tank — Molasses Reef". A loose match was therefore
+  // satisfied by the page being left, before the navigation committed, so both
+  // `.all()` calls below snapshotted the schedule rather than the briefing:
+  // zero summaries, zero clicks, no error, and the species still behind two
+  // closed folds when the assertion gave up.
+  await expect(
+    page.getByRole("heading", { level: 3, name: "Molasses Reef", exact: true }),
+  ).toBeVisible();
   for (const summary of await page.getByText("Qué buscar ahí abajo").all()) {
     await summary.click();
   }
