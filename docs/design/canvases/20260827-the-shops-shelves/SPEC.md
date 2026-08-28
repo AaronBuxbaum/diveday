@@ -66,7 +66,10 @@ export function countGlobalDiveSiteTemplates(db: AppDb): Promise<number>;
 ```
 
 - Row: name (door) · one meta line (location · fit tone word · depth) · requirement words on the
-  trailing edge. The requirement pin, precisely: **the certification-level word renders only
+  trailing edge. The fit-tone word renders only when it cuts against the group — a demanding
+  site under Beginner or Intermediate, a welcoming one under Advanced, any tone on an Unrated
+  row — never a standing column; the site page keeps the full tone. The requirement pin,
+  precisely: **the certification-level word renders only
   above Open Water; specialty and nitrox words render whenever present, in warning ink only when
   the level is also above OW.** The `◆`/`◇` provenance glyph retires; provenance renders inside
   the site page where it already speaks.
@@ -145,7 +148,10 @@ the pin "a unit appears in exactly one group" is this table:
 
 Note the widening, deliberately: today's `overdue` *phase* requires `checkedOutAt`, but the
 overdue *group* takes both lapsed phases — the distinction the dive-domain review insisted on
-(a phone call vs. a release) survives as the row's word and act, not as a fourth group.
+(a phone call vs. a release) survives as the row's word and act, not as a fourth group. And
+reserved-but-never-collected sits in **out** on purpose: the acts live where the desk works the
+reservation, and the row's "not collected" word corrects the count a boat-rigger would read off
+the heading.
 
 - The due-back clock time: `GearRowReservation` gains `tripEndsAt: Date | null`, selected
   through the bookings/trips join `listOpenReservations` already makes. Out rows whose window
@@ -226,6 +232,8 @@ export function staffWeek(input: { view: StaffingView; weekStartIso: string;
 - The celebrate state keeps its condition: at `waiverCompletion === 1` the Waivers figure's
   detail line renders through `EarnedMomentLine` with the existing celebratory key
   (`reports.metrics.waiversAllIn`) — the one warm word, and it requires counted signatures > 0.
+  Recorded, so the question stays closed: beyond that earned line, reports is deliberately
+  arithmetic-only — the comparison lines carry the pride.
 - The trips table becomes ledger rows: title+date (door), seats fact + quiet meter, waiver fact +
   the remainder-attention meter (existing `remainder="attention"` semantics — the fill stays
   quiet at every ratio), revenue right. `ShareBar` and the local meter delete in favor of the
@@ -241,21 +249,9 @@ export function staffWeek(input: { view: StaffingView; weekStartIso: string;
 
 ## 9g — The mapped surfaces
 
-Per the ADR's table, each is a mechanical restyle onto the patterns; the one behavior change is
-**Team's role editing**: the page-level bulk `saveAllStaffRolesAction` retires for per-row role
-disclosures that save on close (undo per row) — a deliberate simplification of two mental models
-into one. The interaction contract, so nobody guesses a per-row Save button:
-
-- **Close saves.** The disclosure's close — the toggle click or an outside click — is the save.
-  Escape aborts (roles revert, nothing written); navigating away aborts (the browser handles it).
-- **A refusal reopens.** A failed close-save reopens the disclosure with the error beside the
-  checkboxes via `Field`'s `error` prop — never a page banner. The zero-roles refusal keeps
-  `settings.team.notice.rolesInvalid`'s wording; the last-owner refusal keeps
-  `settings.team.notice.lastOwner`'s (both existing, both locales).
-- **Undo is one re-save.** Undo performs one immediate re-save restoring the pre-close roles,
-  offered inline until the next interaction.
-
-*Pins:* per-row save round-trip; enable/disable still immediate; invitation flow unchanged.
+Per the ADR's table, each is a mechanical restyle onto the patterns — the batch carries no
+behavior change. The one behavior change in the mapped set, Team's role editing, has its own
+section: 9h.
 
 **Promos** is one page, two ledgers. "Codes" is the shop promo codes grouped **live** /
 **scheduled** (`startsAt` in the future — `promoWindowState`'s `not_started`) / **ended**
@@ -270,9 +266,28 @@ add-booking picker takes day groups. Its second step —
 `/shop/[shopSlug]/bookings/new/[tripId]`, pick the diver — restyles onto 8a's person-row
 vocabulary in the same PR as the add-booking restyle; no behavior change.
 
-**Tests**: `e2e/promo-codes.spec.ts` retargets for the merged codes ledger; the role round-trip
-assertion in `e2e/staff-invite.spec.ts` (today driving the page-level Save) retargets to the
-per-row disclosure's close-save.
+**Tests**: `e2e/promo-codes.spec.ts` retargets for the merged codes ledger.
+
+## 9h — Team's per-row roles
+
+The one behavior change among the mapped surfaces: the page-level bulk `saveAllStaffRolesAction`
+retires for per-row role disclosures that save on close (undo per row) — a deliberate
+simplification of two mental models into one. The interaction contract, so nobody guesses a
+per-row Save button:
+
+- **Close saves.** The disclosure's close — the toggle click or an outside click — is the save.
+  Escape aborts (roles revert, nothing written); navigating away aborts (the browser handles it).
+- **A refusal reopens.** A failed close-save reopens the disclosure with the error beside the
+  checkboxes via `Field`'s `error` prop — never a page banner. The zero-roles refusal keeps
+  `settings.team.notice.rolesInvalid`'s wording; the last-owner refusal keeps
+  `settings.team.notice.lastOwner`'s (both existing, both locales).
+- **Undo is one re-save.** Undo performs one immediate re-save restoring the pre-close roles,
+  offered inline until the next interaction.
+
+*Pins:* per-row save round-trip; enable/disable still immediate; invitation flow unchanged.
+
+**Tests**: the role round-trip assertion in `e2e/staff-invite.spec.ts` (today driving the
+page-level Save) retargets to the per-row disclosure's close-save.
 
 ---
 
@@ -292,7 +307,7 @@ provenance glyph's sr-only sentence. `{depth18}` semantics untouched.
 ## Coverage updates
 
 Routes touched update their `route-coverage.json` rows; new captures: `gear-register-groups`,
-`staffing-week-gap`, `course-editor-rail`, `reports-figures`, and the 9g surfaces —
+`staffing-week-gap`, `course-editor-rail`, `reports-figures`, and the 9g/9h surfaces —
 `promos-ledgers`, `team-role-disclosure`, `add-booking-day-groups`. The board's
 `TABLET_SURFACES` membership is unchanged (staffing is not on it; the counter and board already
 are).

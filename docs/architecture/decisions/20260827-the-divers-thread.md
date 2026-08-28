@@ -69,11 +69,14 @@ what you'll see is pitch and what to bring is prep. The sticky phone pill keeps 
 
 ### 3. The thread page is a step spine
 
-`/ready` recomposes on the same spine grammar as the staff home: steps in order — **Sign · Prove
-your certification · Pay · Gear and sizes · Day-of details** — where a settled step collapses to a
+`/ready` recomposes on the same spine grammar as the staff home: steps in order — **Sign · Your
+certification · Pay · Gear and sizes · Day-of details** (the step asks in a divemaster's words,
+never a checkpoint's) — where a settled step collapses to a
 check line, the current step is open with its form inline, and future steps wait quietly. One
 status statement leads (a "N of M" figure and the next step's name); the earned moment fires only
-at `?booked=1` and at all-set; the receipt, the emails line and the per-row "Done" states collapse
+at `?booked=1` — all-set settles into a plain success-ink line, because "paperwork done" is the
+waiver page's completed state (decision 6) and one moment does not fire twice; the receipt, the
+emails line and the per-row "Done" states collapse
 into their steps. Party seats, self-cancel and the shop card keep their places at the foot.
 Recency, the note, hotel pickup and the support-needs question
 (ADR 20260827-support-needs-are-a-record-about-the-dive) fold into Day-of details; support needs
@@ -101,8 +104,12 @@ routing (field-side where the field is, banner where it is not).
 
 ### 6. Delight stays earned
 
-The thread keeps exactly three coral moments — booked, paperwork done, and the after-state's
-greeting — and loses the rest. A bar that cannot fill is not rendered: the spine's figure counts
+The thread keeps exactly three coral moments — booked (`?booked=1` on the thread), paperwork
+done (the **waiver page's completed state** — the thread's own all-set line stays plain success
+ink), and welcome home (the after-state greeting, coral until the review is in) — and loses the
+rest. The greeting's register is welcome-home, a sentence true after a hard day as well as a
+great one ("Welcome back, {name}."); any gushier artboard wording is fiction. A bar that cannot
+fill is not rendered: the spine's figure counts
 only steps a diver can finish.
 
 ## Alternatives considered

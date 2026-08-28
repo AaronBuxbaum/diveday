@@ -253,7 +253,10 @@ new strings (story metas "sailed" / "waiver signed", badge words "Waiting for ve
 "Open balance" / "Blocked — certification", act words "Collect" / "Verify it" /
 "Book a departure" / "Send options" / "+ Add a card" / "+ New invoice", `story.empty`,
 `notice.cleared`), all in `staff/divers.json`; the reviews H1 ("What divers said",
-`staff/reviews.json`); the single Publish label (`waiversStaff` namespace). Status sentences and
+`staff/reviews.json`); 8d's bulk-publish label as one ICU branch —
+"{count, plural, =2 {Publish both} other {Publish all #}}" (es-ES: "=2 {Publicar ambas}") — so
+N = 2, the most common queue, reads as the artboard draws it; the single Publish label
+(`waiversStaff` namespace). Status sentences and
 foot acts are written without third-person pronouns — the artboards' "her/she" is demo fiction;
 use the diver's name or second person ("Download this record"). Deletions (all locales): the
 record's ten section headings beyond the surviving four, the stat-tile labels, the reviews tile

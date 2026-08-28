@@ -118,7 +118,8 @@ people-not-lists status ledger and day groups, the shelves' groups) consume the 
 slice invents a second.
 
 The downstream artboards round the group-label weight (650) and row heights (50–62px); the SPEC's
-classes — `font-semibold`, `min-h-12`/`min-h-14` — are the contract.
+classes — `font-semibold`, `min-h-12`/`min-h-14` — are the contract; ramp annotations name
+classes, and drawn sizes approximate them.
 
 **Sweep obligations** (mechanical, greppable):
 
@@ -214,6 +215,9 @@ from today's crew-first ordering.
 
 - Header: eyebrow `TODAY · <date>` (existing pattern), h1 greeting (existing copy), **one** summary
   sentence naming the day's boats and the count of things blocking the next departure.
+- The morning all-clear line (the existing good-news moment) renders between the summary sentence
+  and the first station. Its condition restates in spine terms: no danger or warning rows on any
+  of today's stations or in the desk group — tomorrow's and the week's jobs may remain.
 - The spine: `grid-cols-[96px_40px_1fr]` on desktop; the middle column draws the 1px `--border`
   line and a 12px `--primary`-ring dot per station. Phone drops the rail (time becomes the
   station's first line).
@@ -224,7 +228,12 @@ from today's crew-first ordering.
   element, not a new token).
 - Station work rows: `LedgerRow` with `kind` word + one sentence + the one fix as a trailing text
   action. Severity order within a station: danger → warning → quiet, then by time-to-departure.
-- "At the desk" `GroupLabel` group for rows bound to no departure.
+- "At the desk" `GroupLabel` group for rows bound to no departure. While the shop has trips,
+  cannot accept payments, and has never taken an order, the group carries one quiet
+  presence-derived row — "Payments aren't connected — divers can book, and pay at the counter" →
+  the settings payments pane. Neutral tone, gone forever at connection, never on demo shops; it
+  is what keeps the quiet-day sentence honest, since the quiet-day collapse already yields to
+  desk rows ([first-light](../../../architecture/decisions/20260827-first-light.md), decision 6).
 - Two collapsed horizon rows. **Tomorrow** (count of departures + jobs) expands in place — 6a's one
   disclosure spelling, its body reusing the station renderer for tomorrow's stations. **This week**
   (jobs) is a plain `LedgerRow` link to the board — no expansion. Neither links to the queue; the
@@ -285,7 +294,14 @@ Route Handler re-targets its 308 to the bare home (no two-redirect chain), the w
 the home and drops its query; `e2e/blockers.spec.ts` covers the retiring view and rewrites in this
 slice. Copy: station meta and figure lines reuse existing keys where they exist; new keys land in
 `staff/shopHome.json` under a `spine.*` prefix (both locales); the deleted view-switch keys leave
-`shopHome.json`/`blockers.json` in every locale in the same change.
+`shopHome.json`/`blockers.json` in every locale in the same change. Four copy rules ride the
+slice. `shared.today.todayQueue.boatsClear` **keeps** its 🤙 — the one sanctioned word-mark emoji
+(ADR decision 11). Status sentences and action labels are written without third-person pronouns —
+the artboards' "hers"/"his"/"she" is demo fiction; use the diver's name or second person. The
+spine summary key has exactly the shape "Three boats today. Two things need you before the 7:00
+leaves the dock." — boat count · open-thing count · the next departure's time · "leaves the
+dock" — ship it verbatim. And the quiet-day pair is pinned: heading "A quiet day at the dock.",
+sentence "No boats today, and nothing is waiting on you."
 
 **Acceptance tests.**
 
@@ -313,14 +329,17 @@ existing assembly — **no second detector** (the ADR that built close-out alrea
 - A station **settles** when its departure's head count is closed (`CloseoutDepartureStatus`) or its
   `endsAt` + the standing one-hour buffer has passed; a settled station renders the check dot, the
   "N of N back by <time> · head count closed by <name>" line, recap state
-  (`CloseoutAdminTask`-derived: sent ✓ / "Send recap" secondary) and "Open the log". The log page
+  (`CloseoutAdminTask`-derived: sent ✓ / "Send recap" secondary) and "Open the log". The log door
+  renders only for readers who pass `canPersonExportIncidentRecord` (`src/db/authz.ts`) — the
+  close-out page's existing gate moves with the door. The log page
   at `/shop/[shopSlug]/trips/[id]/log` keeps its current composition, restyled only by 6a
   mechanics — no slice recomposes it.
 - The **closing block** renders only when every station of the shop day (`shopDayOf(now, tz)`) is
   settled: the leftovers group (each row = existing leftover with trailing **Dismiss** →
   `recordLeftoverDecision(db, { …, actionId, decision: "dismiss", actorPersonId })`, saved
   immediately, undo toast — H-57), then one primary "Close the day" → `closeDay(...)` with the
-  existing snapshot (`buildCloseoutSnapshot`), then the Tomorrow band. **No acknowledgement gate**
+  existing snapshot (`buildCloseoutSnapshot`), then the Tomorrow band. No caption rides the
+  closing act. **No acknowledgement gate**
   (ADR alternative) — a domain change, not just a UI one: `closeDay` (`src/db/closeout.ts`) deletes
   its `acknowledged` input and the `CloseoutAcknowledgementRequired` throw, and the UI's
   `mustAcknowledge` consumer goes with them — H-57/H-49 make the gate legacy, and the snapshot
@@ -341,11 +360,18 @@ existing assembly — **no second detector** (the ADR that built close-out alrea
 (the existing closeout counts — no new detector), the evening summary sentence renders as
 `EarnedMomentLine` (`role=status`) instead of plain muted text: key `spine.allHome` in
 `staff/shopHome.json`, both locales ("All boats are home — {out} out, {back} back."), figures
-`tabular-nums`. After `closeDay` the existing closed-state coral panel takes over and the line
-reverts to plain ink — never two coral elements on one page. Motion is `EarnedMomentLine`'s
-existing rise-in; reduced motion is the kill-switch (static line). Tests in `DaySpine.test.tsx`:
-renders only when the counts are equal and every station is settled; never renders alongside the
-closed panel; a boat with a not-back diver renders the plain sentence.
+`tabular-nums`. The h1 stays the standing time-aware greeting at every hour, and `spine.allHome`
+is the **only** rendering of "all boats are home" — the moment renders once. On the day no
+departure of the shop's has ever sailed before, the same line words as `spine.firstBoatHome`
+("Your first boat is home — {out} out, {back} back.") — condition-derived, self-expiring the
+moment an earlier day holds a sailed departure; the coral-budget row (ADR decision 11's
+home-evening entry) already sanctions the once-ever wording. After `closeDay` the existing
+closed-state coral panel takes over and the line reverts to plain ink — never two coral elements
+on one page. Motion is `EarnedMomentLine`'s existing rise-in; reduced motion is the kill-switch
+(static line). Tests in `DaySpine.test.tsx`: renders only when the counts are equal and every
+station is settled; the sentence renders once — the h1 never carries it; the once-ever wording
+renders only when no earlier day has a sailed departure; never renders alongside the closed
+panel; a boat with a not-back diver renders the plain sentence.
 
 **The fold.**
 
@@ -362,6 +388,7 @@ closed panel; a boat with a not-back diver renders the plain sentence.
 | Test | Where | Pins |
 | --- | --- | --- |
 | The closing block never renders while any station is unsettled (departure still out, buffer not passed) | `DaySpine.test.tsx` (evening cases) | decision 4 |
+| A non-owner's evening spine renders the settled station with no log door | `DaySpine.test.tsx` (evening cases) | log-door gate |
 | No acknowledgement control renders on the closing act under any leftover count | same | ADR alternative / H-57 |
 | Dismiss saves immediately and offers undo; closing does not re-ask | extend `src/db/closeout` tests + e2e | H-57 |
 | Quiet day: no departures **and no desk rows** → heading + one sentence + one act, zero group labels; no departures + one desk row → the desk group renders | `DaySpine.test.tsx` | principles §4 empty-page rule |
@@ -402,7 +429,9 @@ export function weekBoard(db: DbExecutor, shopId: string, weekStartIso: string,
   stream keeps its cursor params; the two do not mix (the grid is a different reading of the same
   rows, not a new stream).
 - Entry anatomy per `Board.dc.html`: time (12.5/700 tabular), title (2-line clamp), count · price
-  quiet, warning line (`No price set`) with glyph+word, past days at 55% with "Sailed ✓ word".
+  quiet, warning line (`No price set`) with glyph+word. A past day's entries render muted —
+  "Sailed · 9 of 12" in muted ink at 55%, no glyph, no success tone; the only toned mark in a
+  past column is the exceptional state (a cancelled or never-sailed departure).
 - Below `xl`: the existing stream renders; the `?week=` param is ignored gracefully.
 - A shop with no upcoming departures at all (the condition behind the shipped empty state) renders
   no grid at any width — the terminal empty state stands, restyled flat per 6a, and the
@@ -592,12 +621,12 @@ intended. Safety-adjacent: `dive-domain-expert` review before merge.
 **Delight.**
 
 - The last diver through: when `here === expected` for the focused boat, `EarnedMomentLine` joins
-  the figure block reusing the **existing** `checkIn.clearedTitle` key; the "N of M here" figure
-  plays a transform-only `figure-settle` keyframe (scale 1→1.04→1, 200ms, `--ease-out-soft`) fired
-  only when the optimistic tap makes the counts equal — first-paint guard, so a page loaded
-  already-complete shows the line statically. Reduced motion: the kill-switch; the words carry it.
-  Tests: the line renders only at `here === expected`; e2e asserts final DOM state, never waits on
-  animation.
+  the figure block reusing the **existing** `checkIn.clearedTitle` key; a page loaded
+  already-complete shows the line statically (first-paint guard). The figure plays no settle
+  pulse — the same instant already carries the sanctioned coral moment, and a second celebration
+  of one tap is exactly what the coral budget prevents. Reduced motion: the kill-switch; the
+  words carry it. Tests: the line renders only at `here === expected`; e2e asserts final DOM
+  state, never waits on animation.
 - A checked-in row sinks: on the optimistic tap the row plays the **existing** `fade-out` keyframe
   (150ms, `--ease-in-soft` — an exit, so the exit curve) and the settled group's "Checked in — N"
   count cross-fades 150ms on increment. State moves immediately — the animation never gates the
@@ -608,7 +637,11 @@ intended. Safety-adjacent: `dive-domain-expert` review before merge.
   semantics of `src/db/recap.ts`'s visit count, so a migrated regular is never mis-greeted) renders
   as muted text after the name's meta — deliberately never a `Badge`. Key `row.firstVisit` in
   `staff/checkIn.json`, both locales. Tests: renders at exactly one visit; imported history renders
-  nothing; blocked/unblocked states unaffected.
+  nothing; blocked/unblocked states unaffected. `firstVisit` is the count=1 case of roadmap
+  section 11's `milestoneForBooking()` idea — if that item lands, it absorbs this reader and key.
+
+**Copy.** Per ADR decision 11's emoji rule, the 🎉 leaves `checkIn.clearedTitle` in this slice —
+call site + both locales, three edits; the coral line and the drawn marks are the celebration.
 
 **Acceptance tests.**
 
@@ -641,7 +674,9 @@ are untouched. Conversion surface: `conversion-reviewer` pass before merge.
   line — it is a claims guard, never deleted.
 - The next-boat card (right column desktop, below hero phone): `pinnedNextDeparture` — relative-day
   word + time, title, one description line, spots + `formatMoneyScanned` price, the page's one
-  primary ("Book this boat" → the trip page's `#book`). The old `rounded-3xl` hero retires.
+  primary ("Book this boat" → the trip page's `#book`). The old `rounded-3xl` hero retires. The
+  pinned next departure keeps its row in the week ledger — the week stays a complete, honest
+  sequence; the hero card is a pin, not a removal.
 - The week: existing day-grouped ledger tightened to **one meta line per row** (site ·
   requirement summary via `tripRequirementMarkers` · spots state · price). When
   `tripRequirementMarkers` is empty the requirement slot renders nothing — the meta line is

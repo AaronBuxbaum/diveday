@@ -180,18 +180,28 @@ is one table, here, and nowhere else:
 
 | Where | The moment | Governed by |
 | --- | --- | --- |
-| Public pages | the review stars' fill | decision 8 |
-| The diver's thread | booked · paperwork done · welcome home (exactly three) | [20260827-the-divers-thread](20260827-the-divers-thread.md), decision 6 |
+| Public pages, and the diver's own rating input | star fill (data ink — see rule 4) | decision 8; the thread's after-state |
+| The diver's thread | booked · paperwork done (the waiver's completed state) · welcome home (the after-state greeting, coral until the review is in — exactly three) | [20260827-the-divers-thread](20260827-the-divers-thread.md), decision 6 |
 | The counter | everyone expected is here (the existing cleared line) | decision 9 |
-| The home, evening | all boats are home (yields to the closed panel) | decision 4 |
+| The home, morning | today's boats are all clear (the existing line) | [principles §3](../../design/principles.md); slice 6c |
+| The home, evening | all boats are home — worded once-ever as "your first boat is home" on the day no departure has ever sailed before; yields to the closed-day panel, which is the same moment recorded | decision 4 |
 | The home, once ever | the shop's first booking | [20260827-first-light](20260827-first-light.md), decision 6 |
 | The diver record | that was the last thing (post-action, transient) | [20260827-people-not-lists](20260827-people-not-lists.md) |
+| The gear register | everything is back on the wall | [20260827-the-shops-shelves](20260827-the-shops-shelves.md), slice 9d |
+| Reports | every waiver in (counted signatures > 0) | the shops-shelves SPEC, 9f |
+| The manifest | everyone's back aboard · dock complete | [20260827-the-departure-is-two-working-surfaces](20260827-the-departure-is-two-working-surfaces.md) |
 
-Three rules ride the table. A surface renders **at most one** coral element at a time. Every
+Five rules ride the table. A surface renders **at most one** coral element at a time. Every
 moment is **earned and transient** — condition-derived, never stored, never decorative, and each
-disappears when its condition passes. And a new coral moment **takes a row in this table in the
+disappears when its condition passes. A new coral moment **takes a row in this table in the
 same change** — a pull request that adds accent ink without amending this record is a finding
-against the pull request.
+against the pull request. **A filled rating star is data ink, not a moment**: coral fill renders
+only on public pages and in the diver's own rating input, counts as one appearance however many
+stars a page fills, and never fires beside an earned moment; staff surfaces keep the shipped
+warning-amber fill, because a moderation queue is work, not a celebration. And **the words carry
+no emoji, with one exception**: the shaka (🤙) is the product's one word-mark gesture and stays
+where it ships; every other celebration emoji (🎉 and kin) leaves its string in the slice that
+recomposes its surface — the coral, the words, and the drawn marks are the celebration.
 
 ## Alternatives considered
 

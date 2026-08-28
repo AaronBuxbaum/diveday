@@ -26,9 +26,11 @@ for booking tokens; bare `EntryDone` withholds it for account tokens). The gaps 
 - **Onboard speaks a pre-Clearwater grammar**: its two sections ("Your shop" / "You") are h2s over
   `border-b` rules, not group labels, and its reassurance footnote concatenates four sentences
   where one earns its place.
-- **The terminal glyph is an emoji.** `EntryDone` puts 📬, ⏳, 🎉 or 🔕 in its circle — the one
-  place the app decorates with type it did not draw, and the marks render differently on every
-  platform.
+- **The terminal glyph is an emoji.** `EntryDone` puts 📬, ⏳, 🎉 or 🔕 in its circle — a mark
+  rendered differently on every platform, standing where a drawn stroke should. (It is not the
+  only emoji in the app — several celebration strings carry one — but it is the only place an
+  emoji is the *structure* of a component rather than a word in a sentence; the word-borne ones
+  are governed by the Clearwater coral budget's emoji rule.)
 - **`/claim/[token]` is the odd one out**: a hand-rolled `max-w-xl` page with `TokenPageHeader`,
   duplicating the grammar the diver's thread now owns — even though its success already redirects
   into `/ready/[token]`, which *is* the thread.
@@ -98,8 +100,12 @@ step targets and test hooks — and sheds its skin: the primary-tinted card of n
 becomes one **First morning** ledger group at the top of the day spine, done steps as settled
 lines, exactly one open step carrying the page's one primary. Every fact is presence-derived
 (**zero new columns**); a completed step is a settled line, and the whole group leaves at the
-first departure, handing its one unfinished thread — payments — to the surfaces that already
-carry it (the settings rail's badge, the orders empty state). While the group renders, the
+first departure. Its one unfinished thread — payments — does not vanish into surfaces a new
+owner never visits: while trips exist, Stripe is unconnected, and no order has ever been taken,
+the day spine's desk group carries one quiet presence-derived row ("Payments aren't connected —
+divers can book, and pay at the counter" → settings), gone forever at connection, which also
+keeps the quiet day's "nothing is waiting on you" honest; the settings rail's badge and the
+orders empty state stay the standing carriers after that. While the group renders, the
 quiet-day collapse never does; the two compositions are exclusive by rule. And when the first
 real booking arrives, it takes the coral mark — the staff side's once-in-a-shop's-life entry in
 the coral budget ([20260827-clearwater-surface-language](20260827-clearwater-surface-language.md),

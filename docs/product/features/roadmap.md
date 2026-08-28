@@ -225,7 +225,8 @@ suite — every slice keeps it green.
   renders the keepsake, one review ask, and quiet doors; `/recap/[token]` renders the same surface
   (links and emails keep working); the duplicate facts delete (H-49). Closes the concept-model
   row's "folding recap into the same link" half; the second booking-time email stays an owner
-  call. *Pins:* the day's facts render once; prep-vs-after switches on the buffer rule.
+  call. The keepsake's unprompted-share artifact (save-as-image, no bearer URL) is
+  deliberately not in this slice — issue #1081 carries it. *Pins:* the day's facts render once; prep-vs-after switches on the buffer rule.
 - **7e. The waiver paces itself.** Step rail, one notice grammar, one primary; the release stays
   fully presented; signature/medical semantics untouched (H-01/H-03). *Pins:* one primary;
   banners through one component.
@@ -270,7 +271,7 @@ stack's app-wide pass (items 6–9 + the departure's own item 5). Unranked.
 - **9b/9c. The editor rail** on the course editor, then the site form. Sticky rail, unboxed
   sections, one Save; `ConflictGuardedForm`, depth markers, template-update flows untouched.
   *Pins:* every section reachable from the rail; refusal anchors land.
-- **9d. The gear register's one story.** Out / Due back / On the wall as the groups; tiles and
+- **9d. The gear register's one story.** Out / Overdue / On the wall as the groups; tiles and
   the Returns panel fold in (H-49); 23P01 truth untouched. *Pins:* a unit renders in exactly one
   group.
 - **9e. Staffing as a week.** People × days; the gap carries its act in its day; credentials stay
@@ -278,9 +279,11 @@ stack's app-wide pass (items 6–9 + the departure's own item 5). Unranked.
 - **9f. Reports sheds its chrome.** Unboxed figures; the ledger keeps the remainder-attention
   waiver meter via the shared `ProgressBar`. *Pins:* the remainder carries the tone, never the
   fill.
-- **9g. The mapped surfaces.** Courses roster, promos, team, add-booking onto the patterns; the
-  one behavior change is Team's per-row role saves replacing the page-level bulk Save. *Pins:*
-  per-row save round-trip.
+- **9g. The mapped surfaces.** Courses roster, promos, add-booking onto the patterns — mechanical
+  restyles, no behavior change.
+- **9h. Team's per-row roles.** Per-row disclosures that save on close, Escape aborts, refusal
+  reopens field-side, Undo one re-save; replaces the page-level bulk Save. *Pins:* per-row save
+  round-trip; refusal never a page banner.
 
 ### 10. First light (design complete)
 
@@ -388,7 +391,9 @@ starting trials."
   the hero still counts its controls; the price renders only via interpolation.
 - **12b. The day gets its evening.** The third moment row ("That evening", `RecapPageFallback`)
   and the mid-season sentence in the records band via a shared key. The delight thesis's first
-  appearance on `/`.
+  appearance on `/`. When thread slice 7d ships, `RecapPageFallback` re-draws as the keepsake
+  card (dive record, crew line, review ask); whichever of 12b/7d lands second carries the
+  reconciliation in its PR.
 - **12c. The trial's terms stand at its doors.** `/pricing`: the trial-terms note at both CTA
   pairs, the two-year lock under the cadence line (item5 trims), the fee-anchor rewrite, the
   two new FAQ rows (crew, setup time), the November fold-in, the offline row cut; `/onboard`'s

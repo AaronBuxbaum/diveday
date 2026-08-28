@@ -115,7 +115,9 @@ two-heading, 2×`text-2xl` sections retire) — the component's other consumer i
   field grammar) above that (`MAX_PUBLIC_PARTY_SIZE` is 20; a 20-segment row does not fit a
   phone), per-diver fields (`BookingPartyFields` keeps its behavior: lead email required,
   `useMainContactEmail`, typo suggestion, `RememberBooker` outside embed), the gear step
-  (`BookingGearFields` unboxed: a toggle row per diver + priced lines, no `<fieldset>` chrome),
+  (`BookingGearFields` unboxed: a toggle row per diver + priced lines, no `<fieldset>` chrome;
+  its caption states the consequence, never a surface name — "sizes come after you book — your
+  set will be rigged and waiting"; the artboard's "sized on your readiness page" is fiction),
   promo field when `payAtBooking`, then **the money block**:
 
 ```ts
@@ -216,8 +218,10 @@ export function buildThreadSteps(input: {
   links).
 - The status head: "N of M done" figure + "Next: <step>" — the *only* status statement. The
   progress-wave bar, the receipt panel, the emails line and the per-row Done chips delete; the
-  receipt's facts fold into the Pay step's settled line ("$235 · Thu evening"); `?booked=1` keeps
-  its single earned moment; all-set keeps its line.
+  receipt's facts fold into the Pay step's settled line ("$235 · Thu evening"); the earned moment
+  fires only at `?booked=1`; all-set settles into a plain success-ink line, never coral — its
+  coral moment is the waiver page's completed state (decision 6), and one moment does not fire
+  twice.
 - Day-of details absorbs recency, note, hotel pickup, and the support-needs question
   ("anything we should set up for you" — ADR 20260827-support-needs-are-a-record-about-the-dive,
   `saveSupportNeedsFromReady`); **the step counts, and settles when the recency question is
@@ -248,11 +252,13 @@ export function buildThreadSteps(input: {
   is claimed and every member's waiver is signed — facts the claims list already loads, never
   full per-member readiness (a cert sitting with the shop is the shop's move, not the party's) —
   one quiet `text-sm` line with `SettledCheck` as its mark. Key `thread.partyAllSet`; never
-  coral. Test: never renders for a party of one; never while any claim or waiver is outstanding.
+  coral. Precedence: once the dive-day block leads the page (`startsAt` is today in the shop's
+  timezone), `thread.partyAllSet` no longer renders — its news is yesterday's. Test: never
+  renders for a party of one; never while any claim or waiver is outstanding.
 - **"Today's the day."** The dive-day block gains that leading line (`thread.diveDayLine`) when
   `startsAt` is today in the shop's timezone and the departure has not ended (+1-hour buffer).
-  Plain ink, no motion, no reduced variant needed. Explicitly the most cuttable line here: if the
-  copy-restraint pass cuts it, the element and the key leave both locales in the same change.
+  Plain ink, no motion, no reduced variant needed. If a copy-restraint pass ever cuts it, the
+  element and the key leave both locales in the same change.
 
 **Tests.**
 
@@ -262,7 +268,7 @@ export function buildThreadSteps(input: {
 | `buildThreadSteps` unit: an unpriced, no-requirement booking still reaches M (sign · gear · dayof); a setup-only checklist yields no `your_turn` step and no figure | which-steps rule / §6 |
 | At most one open step at rest; deep link opens its step | decision 3 |
 | The page renders exactly one status statement (unit: one element matches the status test-id) | decision 3 |
-| Earned moment renders only for `?booked=1` and all-set | decision 6 |
+| The earned moment renders only at `?booked=1`; the all-set state renders as a plain success-ink line, never coral | decision 6 |
 | e2e: `readiness.spec.ts` rewrites its row assertions to steps; `seat-claim`, tampered-token, packing-on-thread | D2/D4 |
 | Visual: `booking-confirmed`, `readiness` captures | — |
 
@@ -279,9 +285,13 @@ export function buildThreadSteps(input: {
   moderation line + one primary; the strong-review Google handoff keeps its demote-and-offer
   behavior as the "Take it to Google" door lighting up) → quiet doors: photos (existing uploader
   behind the door), tip (existing presets/checkout behind the door — and only when the shop can
-  take payments, the existing tip-checkout gate), Google → the footer: a single link to the
-  shop's public schedule (`/s/<slug>`) with a `thread.*` copy key — the artboard's wreck sentence
-  is fiction, not a data contract. The Act-I map/itinerary/conditions duplicates delete.
+  take payments, the existing tip-checkout gate), Google → the footer: the shop's next upcoming
+  public departure as its one fact (title · relative-day word — the storefront's
+  `pinnedNextDeparture` data, zero crew cost) beside the "See what's next" link to the shop's
+  public schedule (`/s/<slug>`), falling back to the bare link when the board is empty — the
+  artboard's wreck sentence is fiction, not a data contract. The visit-ordinal chip renders
+  primary tint, never coral — the same rule as the milestone stamp; the artboard's coral pill is
+  superseded. The Act-I map/itinerary/conditions duplicates delete.
 - **A keepsake with few facts**: every fact line renders only when recorded — conditions (the
   shipped recap already conditionalizes them), sites and depths (`trip_dives` may be empty), crew
   (absent on self-guided departures), the shoutout quote (absent when none). The invariant floor
@@ -331,11 +341,16 @@ export function buildThreadSteps(input: {
 | A recap token and a readiness token render the same after-state for the same booking | decision 4 |
 | Review/tip/photo flows unchanged end-to-end (`recap.spec.ts` retargets, `reviews.spec.ts` green) | regression |
 | One primary at rest; Google door demotes review submit only after a strong review | decision 6 / §8 |
+| The print pass: print-preview screenshots, light and dark, attached to the PR | delight — prints like a logbook page |
 
 ## 7e — The waiver paces itself
 
 **Scope.** `/waivers/[token]` chrome and pacing; zero signature/medical semantics change.
 
+- The h1 is pinned: "A quick step before the dock" — the artboard's wording is the key's wording.
+- The settled Medical line words facts only — "11 of 11 answered", or "11 of 11 answered ·
+  1 flagged" when a follow-up is flagged — never a clearance judgment (the H-01/H-03 wording
+  freeze).
 - The step rail (Release · Medical · Sign + "N of 3 done") renders under the header, quiet,
   hairline-bounded; it reflects draft state (`QuestionnaireProgress` feeds it) and is not a
   navigator on first pass (anchors after refusal only). The counting rule: **Release** counts as
@@ -347,7 +362,8 @@ export function buildThreadSteps(input: {
 - The sign card keeps the three fields; "Save and finish later" demotes to a text link sharing a
   line with the expiry sentence; **Sign** is the page's one primary. Refusal routing (banner vs
   field-side, `?at=` nonce focus) is unchanged.
-- The completed state keeps its coral moment and its "See what's left" hand-off into the thread.
+- The completed state keeps its coral moment — that moment *is* the coral budget's "paperwork
+  done" (the ADR's decision 6) — and its "See what's left" hand-off into the thread.
 
 **Tests.**
 
@@ -363,10 +379,14 @@ export function buildThreadSteps(input: {
 ## Copy inventory
 
 Additions: step titles/settled lines (`diver.json` `thread.*`, including `thread.withShopHead`,
-`thread.partyAllSet`, `thread.diveDayLine` and the after-state's see-what's-next footer key), the
-money block's line keys, `trip.fullTermsLabel`, the rail keys, the after-state door labels, and
-the keepsake's `recap.milestoneStampFirst` / `recap.milestoneStamp` / `recap.printNotes` /
-`recap.printSignature` — every locale in the same change. Deletions (call site +
+`thread.partyAllSet`, `thread.diveDayLine` and the after-state's see-what's-next footer key);
+`thread.afterGreeting` = "Welcome back, {name}." — the register is welcome-home, a sentence true
+after a hard day as well as a great one, and the artboard's "What a day, Yara." is fiction, not
+the key's wording; the greeting carries coral until the diver's review is submitted, then renders
+quiet; the money block's line keys, `trip.fullTermsLabel`, the rail keys, the after-state door
+labels, and the keepsake's `recap.milestoneStampFirst` ("First dive day") / `recap.milestoneStamp`
+("{ordinal} dive day") / `recap.printNotes` ("Notes") / `recap.printSignature` ("Divemaster") —
+every locale in the same change. Deletions (call site +
 `en-US` + `es-ES`): the trip page's briefing section headings, packing-on-trip strings, `/ready`'s
 receipt-panel and emails-line keys, the recap Act-I itinerary strings, `TripTerms`' dead
 `cancellationOnly` branch. The trip page's `booking.heading` ("Grab a spot") becomes

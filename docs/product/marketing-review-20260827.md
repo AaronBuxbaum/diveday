@@ -59,6 +59,8 @@ slice updates the `e2e/marketing.spec.ts` assertions it moves — deliberately.
   worth sharing" · **description:** "Their dives, a note from the crew, room for their own
   photos — with your shop's name on the thing they send their buddy." This is the one change
   that argues revenue rather than administration, and the delight thesis's only home on `/`.
+  When thread slice 7d ships, `RecapPageFallback` re-draws as the keepsake card (dive record,
+  crew line, review ask); whichever of 12b/7d lands second carries the reconciliation in its PR.
 - **Mid-season answered where it disqualifies.** One sentence in the records band's arriving
   column, promoted to a shared key so the guides and the band cannot drift: **"Mid-season isn't
   a problem: run DiveDay alongside what you have for a trip cycle, and a second import updates
@@ -107,7 +109,7 @@ slice updates the `e2e/marketing.spec.ts` assertions it moves — deliberately.
 - **Credentials wording, both places** (the securityNote and the export mockup — the mockup
   mirrors the real Settings screen, so change both surfaces and the screen's own words together
   or not at all): **"The only things held back are credentials — passwords and device push
-  keys, which would open nothing anywhere else."**
+  keys, which no other system could use anyway."**
 
 ### `/onboard` — day 22 answered at the password box
 
@@ -131,7 +133,7 @@ reconciled sentence.
   stays behind."** (FareHarbor/Rezdy heroes stay.)
 - **A fifth shared cutover step** answers "what does my crew have to learn": **"Let the crew
   walk their screens first — the live demo runs the same roles your dock does. Have the captain
-  run a roll call and the desk read the blocker queue before you move a single record."**
+  run a roll call and the desk see who's not ready before you move a single record."**
 - **The spreadsheet guide gets the parallel-run note** on its import phase: **"Keep the sheet
   going as long as you like. A re-import matches divers by email and updates them instead of
   duplicating, so the day you stop keeping it is yours to pick."** And `wedgeIntro1` drops the
