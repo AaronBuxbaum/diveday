@@ -2,6 +2,8 @@ import { Fragment } from "react";
 import { canDrawRoute, DiveSiteMap } from "@/components/DiveSiteMap";
 import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
+import { type DiveSiteLandmarkKind, parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
+import { siteFit } from "@/lib/diver-planning";
 import type { DiveBriefing } from "./types";
 
 /**
@@ -128,6 +130,167 @@ export function TripRoutes({ briefings, locale }: { briefings: DiveBriefing[]; l
         {sites.map((site) => (
           <DiveSiteMap key={site.id} site={site} t={t} />
         ))}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * `siteFit` returns a tone, not prose (`src/lib/diver-planning.ts`) — these
+ * maps are where that tone becomes a sentence in the reader's own language.
+ * Spelled out rather than built with a template literal so every key stays
+ * statically visible to the message-key type checking.
+ */
+const fitLabelKey = {
+  demanding: "trip.siteFitDemandingLabel",
+  welcoming: "trip.siteFitWelcomingLabel",
+  unknown: "trip.siteFitUnknownLabel",
+} as const;
+const fitDetailKey = {
+  demanding: "trip.siteFitDemandingDetail",
+  welcoming: "trip.siteFitWelcomingDetail",
+  unknown: "trip.siteFitUnknownDetail",
+} as const;
+const landmarkKindKey = {
+  navigationMark: "site.landmarkKinds.navigationMark",
+  reefHistory: "site.landmarkKinds.reefHistory",
+  wreckFeature: "site.landmarkKinds.wreckFeature",
+  underwaterMonument: "site.landmarkKinds.underwaterMonument",
+  reefFormation: "site.landmarkKinds.reefFormation",
+  pointOfInterest: "site.landmarkKinds.pointOfInterest",
+} as const satisfies Record<DiveSiteLandmarkKind, string>;
+
+/** One labelled paragraph of the shop's own prose. */
+function SiteNote({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="mt-3">
+      <p className="text-sm font-medium">{label}</p>
+      <p className="mt-1 text-sm leading-relaxed text-muted">{children}</p>
+    </div>
+  );
+}
+
+/**
+ * **What the shop wrote about the places this day dives.**
+ *
+ * ADR 20260813-dive-site-briefings-are-the-shops-own-words turns on one
+ * sentence — *every sentence a diver reads on a briefing comes off the shop's
+ * own row, and the staff form can write all of them* — and slice 7c broke it
+ * the same way it broke the drawn route above: the prose lived inside the
+ * swipeable briefing deck, so deleting the deck left eight authored columns
+ * (`fit_tone`, `fit_note`, `dive_plan`, `current_note`, `marine_life`,
+ * `marine_life_description`, `landmarks`, `conservation_note`) reaching no
+ * diver at all, on a form that still asks for every one of them and 34 site
+ * templates that still ship them.
+ *
+ * It comes back as one ledger beat rather than the deck: no photo grid, no
+ * comparison table, no `text-2xl` heading competing with the page's own `h1` —
+ * the run of short labelled paragraphs a deciding diver reads, once per site
+ * rather than once per tank, since a two-tank day on one mooring said all of
+ * this twice.
+ *
+ * Renders nothing when no site on the day has anything written. Most shops
+ * fill in a name and a depth range and stop, and a heading over one canned
+ * sentence would be the page talking to fill the space.
+ */
+export function TripSiteNotes({
+  briefings,
+  locale,
+}: {
+  briefings: DiveBriefing[];
+  locale: string;
+}) {
+  const t = diverTranslator(locale);
+  const seen = new Set<string>();
+  const sites = [];
+  for (const { diveSite, creatures } of briefings) {
+    if (!diveSite || seen.has(diveSite.id)) continue;
+    seen.add(diveSite.id);
+    const landmarks = parseDiveSiteLandmarks(diveSite.landmarks);
+    // The species the shop *picked* are already the "Look for" beat above, so
+    // its two free-text twins — the shop's own paragraph ("Underwater
+    // briefing") and its short list ("What might divers see?") — speak only for
+    // a site that named none. Otherwise the page answers the same question
+    // twice, in two voices.
+    const lookFor =
+      creatures.length > 0
+        ? { summary: null, highlights: null }
+        : { summary: diveSite.marineLifeDescription, highlights: diveSite.marineLife };
+    const written =
+      diveSite.fitNote ||
+      diveSite.divePlan ||
+      diveSite.currentNote ||
+      diveSite.conservationNote ||
+      lookFor.summary ||
+      lookFor.highlights ||
+      landmarks.length > 0;
+    if (!written) continue;
+    sites.push({ site: diveSite, landmarks, lookFor });
+  }
+  if (sites.length === 0) return null;
+  return (
+    <section className="mt-6">
+      <GroupLabel as="h2">{t("trip.theSite", { count: sites.length })}</GroupLabel>
+      <div className="mt-2 divide-y divide-border">
+        {sites.map(({ site, landmarks, lookFor }) => {
+          const fit = siteFit(site);
+          return (
+            <div key={site.id} className="py-4 first:pt-0 last:pb-0">
+              {/* The site names itself only when the day dives more than one —
+                  on a single-mooring day "The day" above has already said it. */}
+              {sites.length > 1 ? <p className="text-sm font-semibold">{site.name}</p> : null}
+              <p className={`text-sm font-medium ${sites.length > 1 ? "mt-2" : ""}`}>
+                {t(fitLabelKey[fit.tone])}
+              </p>
+              {/* The shop's own sentence about who this site suits, when it has
+                  written one. DiveDay's canned line stands in only for a site
+                  nobody has said anything about yet. */}
+              <p className="mt-1 text-sm leading-relaxed text-muted">
+                {site.fitNote || t(fitDetailKey[fit.tone])}
+              </p>
+              {site.divePlan ? (
+                <SiteNote label={t("trip.siteHowItUnfolds")}>{site.divePlan}</SiteNote>
+              ) : null}
+              {site.currentNote ? (
+                <SiteNote label={t("trip.siteWaterMovement")}>{site.currentNote}</SiteNote>
+              ) : null}
+              {lookFor.summary || lookFor.highlights ? (
+                <div className="mt-3">
+                  <p className="text-sm font-medium">{t("trip.siteWhatToLookFor")}</p>
+                  {lookFor.summary ? (
+                    <p className="mt-1 text-sm leading-relaxed text-muted">{lookFor.summary}</p>
+                  ) : null}
+                  {lookFor.highlights ? (
+                    <p className="mt-1 text-sm text-muted">{lookFor.highlights}</p>
+                  ) : null}
+                </div>
+              ) : null}
+              {landmarks.length > 0 ? (
+                <div className="mt-3">
+                  <p className="text-sm font-medium">{t("trip.siteLandmarksHeading")}</p>
+                  <ul className="mt-1 space-y-2">
+                    {landmarks.map((landmark) => (
+                      <li key={landmark.name} className="text-sm">
+                        <span className="font-medium">{landmark.name}</span>
+                        <span className="text-muted"> · {t(landmarkKindKey[landmark.kind])}</span>
+                        {landmark.note ? (
+                          <span className="mt-0.5 block leading-relaxed text-muted">
+                            {landmark.note}
+                          </span>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              {site.conservationNote ? (
+                <SiteNote label={t("trip.siteConservationHeading")}>
+                  {site.conservationNote}
+                </SiteNote>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
     </section>
   );

@@ -248,7 +248,13 @@
       "breezy": "Mañana ventosa; espera algo de oleaje y movimiento en el barco.",
       "windy": "Vientos intensos y travesía movida. El centro puede elegir puntos resguardados.",
       "gale_warning": "Vientos muy fuertes. La tripulación evaluará las condiciones y tomará la decisión."
-    }
+    },
+    "theSite": "{count, plural, one {El sitio} other {Los sitios}}",
+    "siteHowItUnfolds": "Cómo se desarrolla la inmersión",
+    "siteWaterMovement": "Corriente",
+    "siteWhatToLookFor": "Qué buscar ahí abajo",
+    "siteLandmarksHeading": "Referencias que cuentan la historia",
+    "siteConservationHeading": "Nota de conservación"
   },
   "booking": {
     "heading": "Reserva tu plaza",

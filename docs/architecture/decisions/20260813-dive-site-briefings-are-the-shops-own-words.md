@@ -1,6 +1,7 @@
 # 20260813-dive-site-briefings-are-the-shops-own-words — Every sentence on a dive-site briefing comes off the site row
 
-- **Status:** Accepted
+- **Status:** Accepted, **amended 2026-08-28** (the reading surface changed shape — see
+  [Amendment](#amendment-20260828--the-prose-is-a-ledger-beat-on-the-departure-page))
 - **Date:** 2026-08-13
 - **Supersedes:** nothing. Extends 20260809-shop-drawn-dive-routes, which made the *route* a shop's
   own and left four other DiveDay-authored things on the same page.
@@ -97,3 +98,31 @@ written for another purpose, and there was no way for the shop to be right when 
 - A shop's briefing can now say nothing where DiveDay used to say something generic. That is the
   point: a landmark with no note renders as a name and a category, which is the whole of what the
   shop knows about it.
+
+## Amendment 2026-08-28 — the prose is a ledger beat on the departure page
+
+Nothing about provenance changes. Every sentence still comes off the shop's own row and the staff
+form still writes all of them. What changed is **where a diver reads them**, and for a while the
+answer was nowhere.
+
+Clearwater slice 7c (ADR 20260827-the-divers-thread) deleted the swipeable briefing deck —
+`DiveBriefingsSection`, `DiveBriefingCard`, `DiveSiteFieldGuide`, `DiveSiteMap`,
+`DiveSiteLandmarks` — as roughly a thousand pixels of reading sitting *below* the booking form,
+where only a diver who had already paid would reach it. That judgement stands. But the deck was
+also the only reader of eight authored columns, so deleting it left `fit_tone`, `fit_note`,
+`dive_plan`, `current_note`, `marine_life`, `marine_life_description`, `landmarks` and
+`conservation_note` reaching no diver at all — on a form that still asks for every one of them,
+with 34 site templates that still ship them, and a route map in `AGENTS.md` that still described a
+page nobody could open. The drawn route (ADR 20260809) went the same way and came back first, as
+`TripRoutes`.
+
+The prose comes back as **`TripSiteNotes`**, above the form with the rest of the pitch: a run of
+short labelled paragraphs, once per *site* rather than once per tank, with no photo grid, no
+comparison table and no heading competing with the page's own `h1`. The free-text "what might
+divers see" pair speaks only for a site that named no catalog species, since `TripLookFor`
+already answers that question for the ones that did. A site the shop has written nothing about
+renders nothing — a canned fit sentence over a bare name is the page talking to fill space.
+
+The lesson generalises past this ADR and is written into the `AGENTS.md` route-map row: a surface
+is two halves, the form that writes a column and the beat that reads it, and deleting one of them
+silently orphans the other.

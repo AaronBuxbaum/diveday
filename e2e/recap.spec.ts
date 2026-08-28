@@ -71,7 +71,11 @@ test.describe("as owner", () => {
     await page.getByRole("radio", { name: "5 out of 5 stars" }).check();
     await page.getByRole("button", { name: "Leave my review" }).click();
     await expect(page.getByText("Thanks — your rating is up.")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Share it on Google too" })).toBeVisible();
+    // Read as text, not as a heading: slice 7d folded this second ask into the
+    // after-state's run of ledger doors, where the label is a `<p>` inside the
+    // `<li>` rather than a heading of its own. The ask, its link and where the
+    // link goes are all unchanged — the three assertions below still hold.
+    await expect(page.getByText("Share it on Google too")).toBeVisible();
     const reviewLink = page.getByRole("link", { name: "Leave a public review" });
     await expect(reviewLink).toBeVisible();
     await expect(reviewLink).toHaveAttribute("href", "https://g.page/r/blue-mantis/review");
@@ -194,7 +198,10 @@ test("a booking cancelled after the recap page loaded gets an honest notice, not
   await page.getByRole("radio", { name: "5 out of 5 stars" }).check();
   await page.getByRole("button", { name: "Leave my review" }).click();
   await expect(
-    page.getByText("This booking didn’t sail, so there’s no recap to rate or add a photo to."),
+    // Reworded deliberately, and the page says so at the branch: for a no-show
+    // the boat *did* sail, without them, so the sentence stopped claiming
+    // otherwise.
+    page.getByText("There’s no recap for this booking to rate or add a photo to."),
   ).toBeVisible();
 });
 

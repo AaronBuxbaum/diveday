@@ -65,7 +65,7 @@ import { ConditionsLine } from "./_components/ConditionsLine";
 import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
 import { StaffPreviewBar } from "./_components/StaffPreviewBar";
 import { TripActions } from "./_components/TripActions";
-import { TripDayPlan, TripLookFor, TripRoutes } from "./_components/TripDayPlan";
+import { TripDayPlan, TripLookFor, TripRoutes, TripSiteNotes } from "./_components/TripDayPlan";
 import { TripHeader } from "./_components/TripHeader";
 import { TripTerms } from "./_components/TripTerms";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
@@ -509,6 +509,7 @@ export default async function TripDetailPage({
         <TripDayPlan briefings={diveBriefings} locale={locale} />
         <TripRoutes briefings={diveBriefings} locale={locale} />
         <TripLookFor briefings={diveBriefings} locale={locale} />
+        <TripSiteNotes briefings={diveBriefings} locale={locale} />
         <ConditionsLine
           shop={shop}
           trip={trip}

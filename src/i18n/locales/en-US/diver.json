@@ -248,7 +248,13 @@
       "breezy": "A breezy morning; expect some chop and motion on the boat.",
       "windy": "Strong winds and a bumpy ride. The crew may adjust dive sites for sheltered water.",
       "gale_warning": "High winds. The crew will assess conditions and make the final weather call."
-    }
+    },
+    "theSite": "{count, plural, one {The site} other {The sites}}",
+    "siteHowItUnfolds": "How the dive unfolds",
+    "siteWaterMovement": "Water movement",
+    "siteWhatToLookFor": "What to look for down there",
+    "siteLandmarksHeading": "Landmarks that tell the story",
+    "siteConservationHeading": "Conservation note"
   },
   "booking": {
     "heading": "Grab a spot",

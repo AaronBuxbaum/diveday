@@ -28,12 +28,8 @@ test.describe("staff", () => {
       .getByLabel("Underwater briefing")
       .fill("Look along the sandy edge for turtles resting below the coral heads.");
     await page.getByRole("button", { name: "Save dive site" }).click();
-    // The trip's own `h1` is the arrival gate — a property only the
-    // destination has — and the site name is then read as *text*: since slice
-    // 7c the day plan names each dive's site in a `<span>` inside its ledger
-    // row, not in a heading of its own.
-    await expect(page.getByRole("heading", { level: 1, name: tripTitle })).toBeVisible();
-    await expect(page.getByText(siteName)).toBeVisible();
+    // Saving lands on the site's own page, whose header is its name.
+    await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
 
     await page.goto("/shop/blue-mantis/schedule/board?add=full");
     await page.getByLabel("What is it").fill(tripTitle);
@@ -81,16 +77,21 @@ test.describe("staff", () => {
       .filter({ hasText: tripTitle })
       .getByRole("link")
       .click();
-    await expect(page.getByRole("heading", { name: siteName })).toBeVisible();
-    // **No tap at all now.** The species the shop picked are the day's second
-    // ledger beat — a "Look for" group label over one line of names — rather
-    // than eight photographs behind a door (slice 7c). Each name asserted on
-    // its own: the interpuncts between them are `aria-hidden` separators in
-    // spans of their own, so the joined string is a rendering detail.
-    const lookFor = page.getByRole("heading", { name: "Look for" });
-    await expect(lookFor).toBeVisible();
-    await expect(page.getByText("Green turtles")).toBeVisible();
-    await expect(page.getByText("Spotted eagle rays")).toBeVisible();
+    // **No tap at all now.** The day's reading is a run of ledger beats rather
+    // than a swipeable deck of photo cards behind a door (slice 7c): "The day"
+    // names the dives and their sites, and the shop's own words about each site
+    // follow it. The site names itself in a `<span>` inside its ledger row, so
+    // it is read as text.
+    await expect(page.getByRole("heading", { name: "The day" })).toBeVisible();
+    await expect(page.getByText(siteName)).toBeVisible();
+    // What the staffer typed into "What might divers see?" and "Underwater
+    // briefing" above. This is the assertion that matters in this spec: a shop
+    // writes a site's briefing once and every departure at that site carries it
+    // (ADR 20260813-dive-site-briefings-are-the-shops-own-words).
+    await expect(page.getByText("Green turtles · spotted eagle rays")).toBeVisible();
+    await expect(
+      page.getByText("Look along the sandy edge for turtles resting below the coral heads."),
+    ).toBeVisible();
     // Each reading is one span carrying its own noun ("27°C water"), so an
     // exact match on the number alone finds nothing. That the crew's numbers
     // and not the model's are on the page is what the note below asserts.

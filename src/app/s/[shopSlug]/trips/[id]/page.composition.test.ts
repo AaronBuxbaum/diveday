@@ -37,16 +37,22 @@ describe("the trip page's order", () => {
   it("runs pitch, then requirement, then the form, then the contact line", () => {
     const pitch = positionOf("<TripDayPlan");
     const lookFor = positionOf("<TripLookFor");
+    const siteNotes = positionOf("<TripSiteNotes");
     const conditions = positionOf("<ConditionsLine");
     const requirement = positionOf("{requirementNote ? (");
     const form = positionOf("<BookSpotSection");
     const contact = positionOf("<ShopContactLinks");
 
-    for (const marker of [pitch, lookFor, conditions, requirement, form, contact]) {
+    for (const marker of [pitch, lookFor, siteNotes, conditions, requirement, form, contact]) {
       expect(marker).toBeGreaterThan(-1);
     }
     expect(pitch).toBeLessThan(lookFor);
-    expect(lookFor).toBeLessThan(conditions);
+    // The shop's own words about each site sit with the pitch, above the form —
+    // they are what a diver reads to decide, and the whole reason
+    // ADR 20260813-dive-site-briefings-are-the-shops-own-words asks a shop to
+    // write them. They reached no diver at all between slices 7c and this.
+    expect(lookFor).toBeLessThan(siteNotes);
+    expect(siteNotes).toBeLessThan(conditions);
     expect(conditions).toBeLessThan(requirement);
     expect(requirement).toBeLessThan(form);
     expect(form).toBeLessThan(contact);
