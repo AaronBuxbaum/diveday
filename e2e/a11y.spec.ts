@@ -473,6 +473,41 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       { path: "/shop/blue-mantis/no-such-page", heading: "We couldn’t find that page" },
     ]);
   });
+
+  /**
+   * **The remaining typeable staff surfaces** (issue #1056).
+   *
+   * Seven routes that were photographed on every PR and never scanned — the
+   * gear register, the date-request queue, the add-diver form, and the four
+   * settings pages the tables above had not reached. Cheap to add: each is a
+   * `goto` and an `<h1>`, which is the whole reason the gap survived so long.
+   *
+   * `/settings/security` and `/settings/gear-import` are both forms a shop
+   * fills in once and gets wrong quietly if a field has no label, and the gear
+   * register is the densest table in the product after the orders index.
+   */
+  test("the gear, request and remaining settings surfaces have no automated a11y violations", async ({
+    page,
+  }) => {
+    // 7 scans at ~3.5s each.
+    test.setTimeout(95_000);
+    await scanStaticRoutes(page, [
+      // The register renders at all only because `blue-mantis` seeds gear —
+      // the feature is opt-in by presence (ADR 20260815-minimal-gear-register),
+      // so an empty shop would scan the empty state instead, which is a
+      // different page and not the one worth guarding.
+      { path: "/shop/blue-mantis/gear", heading: "Gear" },
+      { path: "/shop/blue-mantis/requests", heading: "Requested dates" },
+      { path: "/shop/blue-mantis/divers/new", heading: "Add a diver" },
+      { path: "/shop/blue-mantis/settings/security", heading: "Account security" },
+      { path: "/shop/blue-mantis/settings/integrations", heading: "Shop integrations" },
+      {
+        path: "/shop/blue-mantis/settings/safety-checklist",
+        heading: "Pre-departure checklist",
+      },
+      { path: "/shop/blue-mantis/settings/gear-import", heading: "Import gear history" },
+    ]);
+  });
 });
 
 /**
@@ -931,6 +966,42 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
         path: "/s/blue-mantis/trips/00000000-0000-4000-8000-000000000000",
         heading: "That page isn’t here any more",
       },
+    ]);
+  });
+
+  /**
+   * **The rest of the marketing tree** (issue #1056).
+   *
+   * Nine routes a buyer reads before they ever sign up, every one of them
+   * photographed on every PR and none of them scanned. They are the cheapest
+   * scans in the file — no sign-in, no fixture, no navigation — and the
+   * likeliest place for a contrast mistake to survive, because marketing pages
+   * are where a tinted callout or a muted caption gets written by hand.
+   *
+   * Headings are matched as "any non-empty `<h1>`" rather than by text: this
+   * table would otherwise re-state marketing copy that is meant to change, and
+   * `scanStaticRoutes` already fails loudly when a page renders no `<h1>` at
+   * all — which is itself the a11y defect worth catching here.
+   */
+  test("the marketing and switching pages have no automated a11y violations", async ({ page }) => {
+    // 9 scans at ~3.5s each, plus the first cold render.
+    test.setTimeout(90_000);
+    await scanStaticRoutes(page, [
+      { path: "/product", heading: /\S/ },
+      { path: "/pricing", heading: /\S/ },
+      { path: "/about", heading: /\S/ },
+      { path: "/terms", heading: /\S/ },
+      { path: "/privacy", heading: /\S/ },
+      // The switching hub, one competitor guide, and the spreadsheet guide —
+      // three different compositions rather than three copies of one.
+      { path: "/switching", heading: /\S/ },
+      { path: "/switching/eve", heading: /\S/ },
+      { path: "/switching/spreadsheet", heading: /\S/ },
+      // The last signed-out account form. Its two siblings (`/sign-in`,
+      // `/onboard`) are scanned above; this one is reached by somebody who is
+      // already locked out, which is the worst moment to meet a form a screen
+      // reader cannot label.
+      { path: "/forgot-password", heading: /\S/ },
     ]);
   });
 
