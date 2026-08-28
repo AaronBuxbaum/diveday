@@ -85,7 +85,15 @@ test.describe("staff", () => {
     await page.getByLabel("What’s short").fill("No M BCD today");
     await page.getByRole("button", { name: "Flag for staff fit" }).click();
     await expect(page.getByRole("status")).toContainText("Flagged for hands-on fitting");
-    await expect(page.getByText("No M BCD today")).toBeVisible();
+    // Scoped to the group: since the status ledger leads the record (ADR
+    // 20260827-people-not-lists), a raised fit flag is *also* a ledger row —
+    // "Needs staff fit — No M BCD today" — so the shop's note is on the page
+    // twice, and both are the design.
+    await expect(
+      page.getByRole("region", { name: "Gear and sizes" }).getByText("No M BCD today", {
+        exact: true,
+      }),
+    ).toBeVisible();
 
     await page.getByRole("button", { name: /Fit resolved/ }).click();
     await expect(page.getByRole("status")).toContainText("packs from their stated sizes again");

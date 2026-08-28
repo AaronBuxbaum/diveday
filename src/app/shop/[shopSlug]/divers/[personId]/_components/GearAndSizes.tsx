@@ -107,6 +107,16 @@ export function GearAndSizes({
 
   const sized = line.state === "rents" ? line.items.filter((item) => item.size) : [];
   const flagged = Boolean(profile?.needsStaffFitAt);
+  // **Only an outcome this form produced.** All four fit notices carry
+  // `form: "fit"` — the two flag controls below the disclosure share it with
+  // the size editor inside it — so `Boolean(status)` popped the editor open
+  // when a staffer merely cleared a flag, and the "Edit" control they then
+  // reached for *closed* it. Saving a fit and being refused one are the two
+  // that belong to the box.
+  const editorOutcome = status?.code === "profile-saved" || status?.code === "not-authorized-fit";
+  // The other two, which belong to the flag form below rather than to the
+  // editor — one `form: "fit"` covers all four, so the split is by code.
+  const flagOutcome = status?.code === "fit-flagged" || status?.code === "fit-cleared";
 
   return (
     <section className="mt-8" aria-labelledby="gear">
@@ -126,11 +136,13 @@ export function GearAndSizes({
         {mayEdit ? (
           <details
             className="group px-5 py-3 sm:px-6"
-            // Open when this group has an outcome to show. The save redirects
+            // Open when *this form* has an outcome to show. The save redirects
             // and the record re-renders with its disclosures shut, so the
-            // "Saved." this form is about sits inside a closed box and the
-            // staffer is told nothing at all.
-            open={Boolean(status)}
+            // "Saved." this form is about would otherwise sit inside a closed
+            // box and the staffer be told nothing at all. `undefined` rather
+            // than `false` for every other render: a `<details>` React drives
+            // to `open={false}` cannot be opened by the reader's own tap.
+            open={editorOutcome || undefined}
           >
             <summary
               className={buttonClass({
@@ -166,7 +178,7 @@ export function GearAndSizes({
                 >
                   {t("divers.rentalFit.saveRentalFit")}
                 </SubmitButton>
-                <DiverFormStatus status={status} />
+                <DiverFormStatus status={editorOutcome ? status : undefined} />
               </FieldActions>
             </FieldGrid>
           </details>
@@ -238,6 +250,10 @@ export function GearAndSizes({
                 </FieldActions>
               </FieldGrid>
             )}
+            {/* Beside the control that produced it. Flagging and resolving both
+                answer here rather than inside the size editor's disclosure,
+                which is a different form and had nothing to do with the tap. */}
+            <DiverFormStatus status={flagOutcome ? status : undefined} className="mt-3" />
           </form>
         ) : null}
       </InsetGroup>
