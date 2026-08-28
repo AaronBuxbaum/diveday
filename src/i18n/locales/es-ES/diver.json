@@ -814,7 +814,6 @@
   },
   "seatClaim": {
     "metaTitle": "Reclama tu plaza",
-    "eyebrow": "Reclama tu plaza",
     "heading": "Hay una plaza en {trip} esperándote",
     "body": "Quien organiza tu grupo reservó esta plaza con {shop} y la guardó como “{seatName}”. Tu exención y tu preparación llegarán directamente a ti, no a través de esa persona.",
     "when": "{date} · {time}",

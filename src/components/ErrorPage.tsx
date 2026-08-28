@@ -1,6 +1,7 @@
 "use client";
 
 import { type ButtonSize, buttonClass } from "@/components/ui/button";
+import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
  * The shape every `error.tsx` in this app wears.
@@ -21,6 +22,9 @@ import { type ButtonSize, buttonClass } from "@/components/ui/button";
  * 20260803-error-boundary-copy-bridge), the two staff ones through the English
  * literals that ADR names as its known remainder. This component takes strings
  * and renders them, so it reads no translator and belongs to no bundle.
+ *
+ * The heading is `SHELL_TITLE_CLASS` — the one size every page reached from
+ * a link says its own name at (ADR 20260827-the-divers-thread, decision 1).
  *
  * `size` is the one thing the eleven genuinely disagreed about, and the
  * disagreement is real rather than drift: the boat surfaces want the 56px
@@ -48,7 +52,7 @@ export function ErrorPage({
 }) {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center px-6 py-16 text-center">
-      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+      <h1 className={SHELL_TITLE_CLASS}>{title}</h1>
       <p className="mt-3 text-muted">{body}</p>
       <button type="button" onClick={onReset} className={buttonClass({ size, className: "mt-6" })}>
         {resetLabel}

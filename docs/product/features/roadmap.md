@@ -189,8 +189,10 @@ once (each SPEC's preamble points here). Everything not listed is independent:
   rather than introducing it. **6c → 6d and 10d** (they extend the spine 6c builds;
   8b's S1 journey also starts from 6c's station row); **6e → 9e** (the `?week=` grammar — 9e
   introduces it itself if 6e has not landed, per its cross-reference).
-- **7a → 7b–7e, 10a and 10c** (the thread shell and the EntryShell type-ramp land in 7a; claim's
-  recomposition and the door restyle build on them). **7b and 7c ship together, or 7c first** —
+- **7a has shipped** ([shipped.md](../shipped.md)), so `ThreadShell`, the thread's
+  `max-w-xl` measure and the `EntryShell` type-ramp are already in the tree for 7b–7e, 10a and
+  10c to build on (claim's recomposition and the door restyle build on them).
+  **7b and 7c ship together, or 7c first** —
   packing must have a destination on the thread before the trip page deletes it.
 - **8a → 8b and 8c**, and 9g's add-booking step consumes 8a's person rows.
 
@@ -203,9 +205,6 @@ One link from booking to afterglow, in the Clearwater grammar — argued in the 
 unranked against them. The regression floor is the existing booking/readiness/waiver/recap e2e
 suite — every slice keeps it green.
 
-- **7a. The thread shell and measure.** One shell (shop eyebrow, title, state slot) and one
-  `max-w-xl` measure for every page a booked diver walks; `EntryDone`/`ExpiredLinkCard` restyle
-  flat inside it. Chrome only, no behavior. *Pins:* shell renders shop-name eyebrow + one h1.
 - **7b. The trip page sells, then closes.** Hero (price once) → pitch → one-line requirement →
   the terminal form with the money as one block; packing moves to the thread; briefings collapse
   into the pitch. *Pins:* one due-now figure; the form is the last section; packing absent.

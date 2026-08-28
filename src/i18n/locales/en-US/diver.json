@@ -814,7 +814,6 @@
   },
   "seatClaim": {
     "metaTitle": "Claim your seat",
-    "eyebrow": "Claim your seat",
     "heading": "A seat on {trip} is waiting for you",
     "body": "Your organizer booked this seat with {shop} and held it as “{seatName}”. Your waiver and trip prep will come straight to you instead of through them.",
     "when": "{date} · {time}",

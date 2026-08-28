@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
+import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { REQUEST_PATH_HEADER } from "@/lib/embed-routes";
@@ -38,9 +39,7 @@ export default async function PublicShopNotFound() {
   const t = diverTranslator(await requestLocale());
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-6 py-16 text-center">
-      <h1 className="text-2xl font-semibold tracking-tight text-balance">
-        {t("notFound.shop.heading")}
-      </h1>
+      <h1 className={`${SHELL_TITLE_CLASS} text-balance`}>{t("notFound.shop.heading")}</h1>
       {/* No sentence under the heading. The root 404's "check the address" is
           advice for someone who typed a URL, and almost nobody arrives here
           that way; the button below is the whole of what to do next

@@ -14,7 +14,7 @@ import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { DiveDayIcon, type DiveDaySharedIconName } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
-import { TokenPageHeader } from "@/components/TokenPageHeader";
+import { ThreadShell } from "@/components/thread/ThreadShell";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard, sectionCardClass } from "@/components/ui/card";
@@ -1459,62 +1459,63 @@ export default async function DiverReadinessPage({
       timeZone={detail.shop.timezone}
       namespaces={["rental", "common", "trip"]}
     >
-      <main className="mx-auto w-full max-w-xl flex-1 px-6 py-10 sm:py-16">
+      <ThreadShell
+        shopName={detail.shop.name}
+        title={detail.trip.title}
+        meta={
+          <>
+            <p className="mt-1 text-base text-muted">
+              {when} · {timeRange} · {relativeWhen}
+            </p>
+            {/* The one number that matters on the morning of the trip — a
+                shade stronger than the meta line above it, never shouting.
+                When a hotel pickup is scheduled, that time leads ahead of dock
+                call. */}
+            {data.pickupTime ? (
+              <p className="mt-1 text-base font-medium">
+                {t("ready.hotelPickupHeaderLine", {
+                  time: data.pickupTime,
+                  location: data.hotelPickupLocation ?? t("ready.hotelPickupLocationNotSet"),
+                })}
+              </p>
+            ) : (
+              <p className="mt-1 text-base font-medium">{dockCallLine}</p>
+            )}
+            {/* Put the day in a calendar, and send the trip to whoever is
+                coming — the same ghost-weight row, in the same place under the
+                masthead, as the public trip page carries. Nothing here competes
+                with the checklist below (design/principles.md #8).
+
+                `shareUrl` is the **public trip page**, never this one: this URL
+                *is* a bearer capability that can cancel the booking and move
+                its refund, and "share with a buddy" must not hand that to a
+                group chat (docs/engineering/capability-telemetry-runbook.md).
+                */}
+            {fullShop ? (
+              <TripActions
+                calendarUrl={publicTripCalendarPath(fullShop.slug, data.trip.id)}
+                shareUrl={shareTripUrl}
+              />
+            ) : null}
+            {/* What this page *is*, said once, at the top.
+                Divers arrive here from a booking submit or an emailed link,
+                and both of those read as a confirmation — a thing you look at
+                once and close. This one is not: it is the same URL all week,
+                it is where the cards and the gear answers go, and it restates
+                itself every time the shop moves. Nothing else on the page can
+                say that, because every other line is about the trip rather
+                than about the page. Ghost weight, under the actions, so it
+                informs the first visit and disappears into the furniture on
+                the tenth. */}
+            <p className="mt-3 text-sm text-muted">{t("ready.keepThisPage")}</p>
+          </>
+        }
+      >
         {/* `booked` among them: the celebration is the moment a seat was taken,
             not a property of the link. Leaving it in the URL would replay
             "You're on the boat" every time a diver reopened this page from
             their history three days later. */}
         <FlashParams params={["saved", "error", "pay", "booked"]} />
-        {/* One eyebrow, not two: this header used to stack "Your trip
-            readiness" and the shop's name as two identical uppercase lines — a
-            visible bug-shaped redundancy. The shop's name is the context worth
-            keeping (and it is said in full, with address and map, in the shop
-            card at the foot of the page); the page's own identity is carried by
-            the checklist heading below. So: the shop name alone, never the
-            component's two-line array form. */}
-        <TokenPageHeader eyebrow={detail.shop.name} title={detail.trip.title}>
-          <p className="mt-1 text-base text-muted">
-            {when} · {timeRange} · {relativeWhen}
-          </p>
-          {/* The one number that matters on the morning of the trip — a shade
-              stronger than the meta line above it, never shouting. When a hotel
-              pickup is scheduled, that time leads ahead of dock call. */}
-          {data.pickupTime ? (
-            <p className="mt-1 text-base font-medium">
-              {t("ready.hotelPickupHeaderLine", {
-                time: data.pickupTime,
-                location: data.hotelPickupLocation ?? t("ready.hotelPickupLocationNotSet"),
-              })}
-            </p>
-          ) : (
-            <p className="mt-1 text-base font-medium">{dockCallLine}</p>
-          )}
-          {/* Put the day in a calendar, and send the trip to whoever is coming
-              — the same ghost-weight row, in the same place under the masthead,
-              as the public trip page carries. Nothing here competes with the
-              checklist below (design/principles.md #8).
-
-              `shareUrl` is the **public trip page**, never this one: this URL
-              *is* a bearer capability that can cancel the booking and move its
-              refund, and "share with a buddy" must not hand that to a group
-              chat (docs/engineering/capability-telemetry-runbook.md). */}
-          {fullShop ? (
-            <TripActions
-              calendarUrl={publicTripCalendarPath(fullShop.slug, data.trip.id)}
-              shareUrl={shareTripUrl}
-            />
-          ) : null}
-          {/* What this page *is*, said once, at the top.
-              Divers arrive here from a booking submit or an emailed link, and
-              both of those read as a confirmation — a thing you look at once
-              and close. This one is not: it is the same URL all week, it is
-              where the cards and the gear answers go, and it restates itself
-              every time the shop moves. Nothing else on the page can say that,
-              because every other line is about the trip rather than about the
-              page. Ghost weight, under the actions, so it informs the first
-              visit and disappears into the furniture on the tenth. */}
-          <p className="mt-3 text-sm text-muted">{t("ready.keepThisPage")}</p>
-        </TokenPageHeader>
         {notice ? (
           <div className="mt-6">
             <ShopNotice tone={notice.tone} role={noticeRole(notice.tone)}>
@@ -2045,7 +2046,7 @@ export default async function DiverReadinessPage({
           address={shop.address}
           t={t}
         />
-      </main>
+      </ThreadShell>
     </DiverIntlProvider>
   );
 }

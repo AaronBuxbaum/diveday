@@ -7,6 +7,21 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The diver's thread reads at one measure (delivered 2026-08-28)
+
+Slice 7a of [20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md)
+(decision 1), the shell the rest of that ADR's slices compose inside. `ThreadShell`
+(`src/components/thread/ThreadShell.tsx`) owns the thread's column as well as its header —
+`mx-auto w-full max-w-xl flex-1 px-5 py-8 sm:px-6 sm:py-12`, a shop-name eyebrow, one `<h1>`, one
+quiet meta slot — so the measure is a decision a component holds rather than a class string four
+pages copy. `/ready`, `/waivers`, `/recap` and `/claim` all wear it and `TokenPageHeader` is
+deleted; `/claim` loses the second eyebrow line that repeated its own heading. The type ramp
+closes with it: `SHELL_TITLE_CLASS` (`src/components/ui/typography.ts`) is the one `<h1>` spelling
+for every page reached from a link, so `EntryShell` stops forking its title by width, `EntryDone`,
+`ExpiredLinkCard`, both 404s and the eleven error boundaries stop saying it a size smaller, and
+`EntryShellSkeleton` moves with it. The doors keep `max-w-md` — `/verify` and `/reset-password`
+are account lifecycle, not a booking — and no route's behavior, copy or coral changed.
+
 ## Clearwater's language mechanics (delivered 2026-08-28)
 
 Slice 6a of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
