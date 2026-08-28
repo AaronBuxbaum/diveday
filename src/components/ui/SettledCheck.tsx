@@ -46,6 +46,10 @@ export function SettledCheck({
     previous.current = settled;
     if (firstPaint) return;
     if (rose) setSettling(true);
+    // A mark that settles and un-settles inside the 200ms — a station whose head
+    // count closes and reopens — must not keep animating as the unsettled shape.
+    // `onAnimationEnd` cannot clear it: the animation is still running.
+    else if (!settled) setSettling(false);
   }, [settled]);
 
   return (
@@ -60,7 +64,7 @@ export function SettledCheck({
         strokeLinejoin="round"
         onAnimationEnd={() => setSettling(false)}
         className={`size-5 shrink-0 ${settled ? "text-success" : "text-muted"} ${
-          settling ? "settle-in" : ""
+          settling && settled ? "settle-in" : ""
         }`.trim()}
       >
         <circle cx="12" cy="12" r="9" />

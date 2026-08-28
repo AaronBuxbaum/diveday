@@ -61,4 +61,16 @@ describe("SettledCheck", () => {
     rerender(<SettledCheck settled={false} label="Not yet here" />);
     expect(mark(container)?.getAttribute("class")).not.toContain("settle-in");
   });
+
+  it("drops the entrance when it un-settles mid-animation", () => {
+    // A head count that closes and reopens inside the 200ms used to leave the
+    // unsettled mark animating: `onAnimationEnd` is the only thing that cleared
+    // the flag, and it cannot fire while the animation is still running.
+    const { container, rerender } = render(<SettledCheck settled={false} label="Not yet here" />);
+    rerender(<SettledCheck settled label="Checked in" />);
+    expect(mark(container)?.getAttribute("class")).toContain("settle-in");
+
+    rerender(<SettledCheck settled={false} label="Not yet here" />);
+    expect(mark(container)?.getAttribute("class")).not.toContain("settle-in");
+  });
 });
