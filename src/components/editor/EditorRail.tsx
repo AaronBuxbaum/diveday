@@ -49,7 +49,7 @@ export function EditorRail({
     >
       {/* A wrap-row below `lg`, a column from `lg` up — the jump row's own
           shape, without a second landmark to carry it. */}
-      <ul className="-ml-3 flex flex-wrap items-center gap-x-1 lg:ml-0 lg:flex-col lg:items-stretch lg:gap-x-0 lg:gap-y-0.5">
+      <ul className="-ms-3 flex flex-wrap items-center gap-x-1 lg:ms-0 lg:flex-col lg:items-stretch lg:gap-x-0 lg:gap-y-0.5">
         {sections.map((section) => {
           // Current is a *desktop* state: the phone row sits above the section
           // you are already looking at, so marking one there says nothing.

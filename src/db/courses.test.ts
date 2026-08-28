@@ -1042,9 +1042,24 @@ describe("progression order (in-memory PGlite)", () => {
     const all = await listCourses(db, shop.id);
     expect(all.length).toBeGreaterThan(4);
 
-    // Never falls back: each course's own gate is non-decreasing down the list.
-    const ranks = all.map((course) => rankOf(course.minimumCertificationLevel));
-    expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
+    // **Non-decreasing within an agency, not across the catalog.** The roster
+    // groups by agency (the tab strip retired with the grouping), so the shared
+    // sort is agency-major and the ladder restarts at each group — asserting one
+    // global sequence would be asserting that the grouping does not exist.
+    for (const agency of new Set(all.map((course) => canonicalAgency(course.agency)))) {
+      const ranks = all
+        .filter((course) => canonicalAgency(course.agency) === agency)
+        .map((course) => rankOf(course.minimumCertificationLevel));
+      expect(ranks, `${agency} is out of progression order`).toEqual(
+        [...ranks].sort((a, b) => a - b),
+      );
+    }
+    // And the groups themselves do not interleave: one run per agency, or a
+    // page boundary would split one.
+    const agencies = all.map((course) => canonicalAgency(course.agency));
+    expect(new Set(agencies).size).toBe(
+      agencies.filter((agency, index) => agency !== agencies[index - 1]).length,
+    );
 
     const titles = all.map((course) => course.title);
     // The concrete progression a counter conversation walks. Alphabetical
@@ -1064,8 +1079,11 @@ describe("progression order (in-memory PGlite)", () => {
 
   it("puts a taster ahead of the certification it leads into, at the same rung", async () => {
     const { db, shop } = await seededShopContext();
+    // One agency's entry rung: the sort is agency-major, so PADI's tasters and
+    // SSI's entry certifications interleave in the full list by design.
     const entry = (await listCourses(db, shop.id)).filter(
-      (course) => course.minimumCertificationLevel === null,
+      (course) =>
+        course.minimumCertificationLevel === null && canonicalAgency(course.agency) === "padi",
     );
     // Both tasters (DSD, Try Scuba) sit above both entry certifications.
     const lastIntro = entry.findLastIndex((course) => course.isIntroCourse);

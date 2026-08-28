@@ -160,11 +160,20 @@ describe("DiverList empty state", () => {
     );
   });
 
-  /** Nothing to group when there is nothing to list — no stray letter labels. */
+  /**
+   * Nothing to group when there is nothing to list — no stray letter labels.
+   *
+   * Targeted at the letter heads by their own id rather than at every `h2` on
+   * the page: the empty state's title *is* an `h2` and should be, so a bare
+   * count of headings asserts the opposite of what this test is named for.
+   */
   it("renders no letter groups over an empty roster", () => {
     const { container } = renderList();
-    expect(container.querySelectorAll("h2")).toHaveLength(0);
+    expect(container.querySelectorAll("[id^='roster-letter-']")).toHaveLength(0);
     expect(screen.queryByRole("list")).toBeNull();
+    // The one heading that should be there, so this cannot pass by rendering
+    // nothing at all.
+    expect(screen.getByRole("heading", { name: "No divers on file yet." })).toBeInTheDocument();
   });
 
   /**

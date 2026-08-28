@@ -1135,7 +1135,13 @@ describe("IMPORT_HONESTY_TABLE", () => {
     const specialty = row("specialtyCards");
     expect(specialty.what).toMatch(/^Specialty certifications/);
     expect(specialty.scope).toBe("included");
-    expect(specialty.detail).toMatch(/verified/i);
+    // **No longer `/verified/`, and that is the point** (issue #1107). This
+    // asserted the row promised the card arrives verified, which the importer
+    // does not promise: one `cardStatus` serves every card kind on a row, and a
+    // source file's own status column downgrades all of them together. The
+    // block below pins what replaced it — what always happens, with the status
+    // left to the file.
+    //
     // The gate rule is the whole reason this row can be honest — it must be
     // stated on the row itself, not buried in a page's surrounding prose.
     expect(specialty.detail).toMatch(/confirm/i);

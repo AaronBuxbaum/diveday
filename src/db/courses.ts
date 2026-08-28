@@ -57,6 +57,13 @@ export type CoursePatch = Pick<
 export type CourseContentPatch = Omit<CourseContent, "minimumAge" | "isIntroCourse">;
 
 /**
+ * Course agency is imported shop data; one stable key per company. The
+ * TypeScript twin the roster groups by is `canonicalAgency`
+ * (`src/lib/courses.ts`) — the two spell the same rule and must not drift.
+ */
+const canonicalAgencyExpression = sql<string>`lower(trim(${courses.agency}))`;
+
+/**
  * Progression order: the sequence a shop teaches its catalog in, read off the
  * courses themselves.
  *
@@ -76,17 +83,20 @@ export type CourseContentPatch = Omit<CourseContent, "minimumAge" | "isIntroCour
  * (ADR 20260805-remove-certification-paths).
  */
 const progressionOrder = [
+  // **Agency first, and it belongs in here rather than at one call site.** The
+  // roster groups by agency now (the tab strip retired with the grouping), and
+  // a grouped list that is paged must sort group-major or one agency's run
+  // splits across a page boundary — the rule the reviews worklist states too.
+  // Slice 9g put this in front of `pagedCourses`' order alone, which silently
+  // broke the promise these three readers make: `listCourses`,
+  // `listActiveCourses` and `pagedCourses` order **identically**, so a staffer
+  // scheduling a session and a staffer reading the roster see one sequence.
+  // They had drifted, and only the test that compares the two could tell.
+  asc(canonicalAgencyExpression),
   sql`${courses.minimumCertificationLevel} asc nulls first`,
   desc(courses.isIntroCourse),
   asc(courses.title),
 ];
-
-/**
- * Course agency is imported shop data; one stable key per company. The
- * TypeScript twin the roster groups by is `canonicalAgency`
- * (`src/lib/courses.ts`) — the two spell the same rule and must not drift.
- */
-const canonicalAgencyExpression = sql<string>`lower(trim(${courses.agency}))`;
 
 function agencyScope(agency: string) {
   return sql`lower(trim(${courses.agency})) = ${canonicalAgency(agency)}`;
@@ -246,7 +256,7 @@ export async function pagedCourses(
         .select()
         .from(courses)
         .where(scope)
-        .orderBy(asc(canonicalAgencyExpression), ...progressionOrder)
+        .orderBy(...progressionOrder)
         .limit(limit)
         .offset(offset),
   });

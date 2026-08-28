@@ -688,7 +688,6 @@ describe("deleteShopPromoCode", () => {
 describe("listShopPromoCodes group ordering (in-memory PGlite)", () => {
   it("sorts live, then scheduled, then ended — newest first inside each shelf", async () => {
     const { db, shop } = await promoContext();
-    await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shop.id));
     await db.insert(shopPromoCodes).values([
       {
         shopId: shop.id,
@@ -729,13 +728,27 @@ describe("listShopPromoCodes group ordering (in-memory PGlite)", () => {
       },
     ]);
 
+    // **Filtered to this test's own four, never cleared.** Emptying the shop's
+    // codes first is what this reached for and it is refused at the database:
+    // a seeded code is referenced by a `booking_checkouts` row, so the delete
+    // violates `booking_checkouts_promo_code_id_shop_promo_codes_id_fkey`. The
+    // file's own `promoNamed` helper already says the rule — the seeded demo
+    // shop ships codes, so assert on the ones under test. A filter preserves
+    // the order the query returned, so the shelf grouping is proved exactly as
+    // well, and proved against a shop that has other codes in it, which is the
+    // only kind of shop this ever runs against in production.
     const { promos } = await listShopPromoCodes(db, shop.id, { now: NOW });
-    expect(promos.map((promo) => promo.code)).toEqual(["LIVEOFF", "LIVEOLD", "SCHEDULED", "ENDED"]);
+    const mine = new Set(["LIVEOFF", "LIVEOLD", "SCHEDULED", "ENDED"]);
+    expect(promos.map((promo) => promo.code).filter((code) => mine.has(code))).toEqual([
+      "LIVEOFF",
+      "LIVEOLD",
+      "SCHEDULED",
+      "ENDED",
+    ]);
   });
 
   it("files a code spent to its cap as ended, however open its window is", async () => {
     const { db, shop } = await promoContext();
-    await db.delete(shopPromoCodes).where(eq(shopPromoCodes.shopId, shop.id));
     const capped = await createShopPromoCode(
       db,
       promoInput(shop.id, { code: "capped", maxRedemptions: 1 }),
@@ -757,7 +770,10 @@ describe("listShopPromoCodes group ordering (in-memory PGlite)", () => {
     // CAPPED was created after OPEN, so newest-first alone would put it first.
     // The spent cap moves it onto the Ended shelf, below the older code that
     // still works — the arm of the rank that reads the redemption count.
-    expect(promos.map((promo) => promo.code)).toEqual(["OPEN", "CAPPED"]);
-    expect(promos.at(-1)?.timesRedeemed).toBe(1);
+    // Filtered rather than cleared, for the reason given in the test above.
+    const mine = new Set(["OPEN", "CAPPED"]);
+    const ordered = promos.filter((promo) => mine.has(promo.code));
+    expect(ordered.map((promo) => promo.code)).toEqual(["OPEN", "CAPPED"]);
+    expect(ordered.at(-1)?.timesRedeemed).toBe(1);
   });
 });
