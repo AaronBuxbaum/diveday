@@ -6,7 +6,8 @@ import { anonymizeDiver } from "./anonymize";
 import { mergeDiverRecords } from "./diver-merge";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
 import { saveShopIntegration } from "./integrations";
-import { integrationEvents, orders, people, personRoles } from "./schema";
+import { recordRollCall } from "./manifests";
+import { bookings, integrationEvents, orders, people, personRoles, rollCallEvents } from "./schema";
 
 async function erasureFixtures() {
   const { db, shop } = await seededShopContext({ history: true });
@@ -86,6 +87,50 @@ describe("anonymizeDiver — a merged-away record (issue #1014)", () => {
     const shell = rows.find((row) => row.id === source.id);
     expect(shell?.mergedIntoPersonId).toBe(survivor.id);
     expect(shell?.mergedAt).not.toBeNull();
+  });
+});
+
+describe("anonymizeDiver — the roll-call note (ADR 20260828-a-missing-diver-gets-a-sentence)", () => {
+  /**
+   * The note is free text a crew member typed at the rail about a person who
+   * was unaccounted for, and it sits on a row that legitimately survives an
+   * erasure: the boarding fact is a safety record, the sentence about the
+   * person is not. It was scrubbed before #1058 deleted the column, and the
+   * sweep had to come back with it — H-02's erasure promise is explicitly one
+   * of the things pre-pilot status does not relax.
+   */
+  it("clears what a crew member wrote about a diver who is erased", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    const [booking] = await db
+      .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.shopId, shop.id))
+      .limit(1);
+    if (!booking) throw new Error("expected a seeded booking");
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: booking.tripId,
+      bookingId: booking.id,
+      recordedByPersonId: owner.id,
+      status: "not_boarded",
+      checkpoint: "after_dive_1",
+      note: "Surfaced 200 m north, picked up by Reef Runner at 14:31.",
+    });
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      actorPersonId: owner.id,
+    });
+    expect(erased.ok).toBe(true);
+
+    const notes = await db
+      .select({ note: rollCallEvents.note })
+      .from(rollCallEvents)
+      .where(and(eq(rollCallEvents.shopId, shop.id), eq(rollCallEvents.bookingId, booking.id)));
+    expect(notes.length).toBeGreaterThan(0);
+    // The boarding fact stays — that is the safety record. The sentence goes.
+    expect(notes.every((row) => row.note === null)).toBe(true);
   });
 });
 

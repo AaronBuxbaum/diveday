@@ -1909,6 +1909,73 @@ describe("crew aboard attestation (in-memory PGlite)", () => {
 });
 
 /**
+ * ADR 20260828-a-missing-diver-gets-a-sentence. The note was deleted outright
+ * in 2026-08 and came back narrowed, because a roll call that records *that* a
+ * diver did not come back and never *what happened to them* leaves an
+ * unexplained red mark on the document an investigator reads.
+ *
+ * What is pinned here is the narrowing, since that is the whole of the
+ * decision: the sentence exists at an after-dive checkpoint and nowhere else,
+ * and the writer enforces it rather than trusting the surface that posted it.
+ */
+describe("a roll-call note is kept where a person can be unaccounted for", () => {
+  it("writes what the crew observed on an after-dive result", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "not_boarded",
+      checkpoint: "after_dive_1",
+      note: "  Surfaced 200 m north, picked up by Reef Runner at 14:31.  ",
+    });
+    const manifest = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
+    const diver = manifest?.divers.find((entry) => entry.bookingId === booking.booking.id);
+    // Trimmed, and reaching the surface through the ordinary manifest read —
+    // the same path the row, the offline copy and the departure log take.
+    expect(diver?.rollCall?.note).toBe("Surfaced 200 m north, picked up by Reef Runner at 14:31.");
+  });
+
+  it("drops a note posted against a departure result", async () => {
+    // At the dock `not_boarded` means "never left", which is clerical and has
+    // never needed a sentence — so no surface offers a box there, and a
+    // hand-crafted post does not get to put free text on the append-only
+    // safety trail either.
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "not_boarded",
+      checkpoint: "departure",
+      note: "should not be written",
+    });
+    const manifest = await getTripManifest(db, shop.id, reef.id, "departure");
+    const diver = manifest?.divers.find((entry) => entry.bookingId === booking.booking.id);
+    expect(diver?.rollCall?.state).toBe("not_boarded");
+    expect(diver?.rollCall?.note).toBeNull();
+  });
+
+  it("leaves an ordinary result with nothing to say", async () => {
+    const { db, shop, reef, booking, staff } = await manifestContext();
+    await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: reef.id,
+      bookingId: booking.booking.id,
+      recordedByPersonId: staff.id,
+      status: "boarded",
+      checkpoint: "after_dive_1",
+    });
+    const manifest = await getTripManifest(db, shop.id, reef.id, "after_dive_1");
+    const diver = manifest?.divers.find((entry) => entry.bookingId === booking.booking.id);
+    expect(diver?.rollCall?.state).toBe("boarded");
+    expect(diver?.rollCall?.note).toBeNull();
+  });
+});
+
+/**
  * DOM-H3. The manifest and the Today work queue read the same roll-call rows
  * and used to reach opposite conclusions from them: Today raised a
  * top-severity `roll_call_missing_diver` row while the manifest printed "Roll

@@ -26,7 +26,7 @@ import {
 import { getShopById } from "@/db/shops";
 import { trackEvent } from "@/lib/analytics";
 import { depthToMeters, MAX_ENTERED_DEPTH_METERS } from "@/lib/depth-units";
-import type { RollCallCheckpoint } from "@/lib/manifests";
+import { ROLL_CALL_NOTE_MAX, type RollCallCheckpoint } from "@/lib/manifests";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { isAllowedPushEndpoint } from "@/lib/notifications/web-push";
 import { requireStaffSession } from "@/lib/session";
@@ -105,6 +105,13 @@ function manifestBack(ctx: ManifestActionContext): string {
 const rollCallSchema = z.object({
   bookingId: z.string().uuid(),
   status: z.enum(["boarded", "not_boarded", "cleared"]),
+  /**
+   * What the crew observed about a person who is unaccounted for. Bounded here
+   * and narrowed again in the write, which keeps it only at an after-dive
+   * checkpoint (`rollCallNoteAllowed`) — so this field cannot put free text on
+   * a departure event the surface never offered a box for.
+   */
+  note: z.string().trim().max(ROLL_CALL_NOTE_MAX).optional(),
 });
 
 const executedDiveSchema = z.object({
@@ -208,6 +215,8 @@ const privateNoteSchema = z.object({
 const crewRollCallSchema = z.object({
   personId: z.string().uuid(),
   status: z.enum(["boarded", "not_boarded", "cleared"]),
+  /** The same, for the other half of the head count. */
+  note: z.string().trim().max(ROLL_CALL_NOTE_MAX).optional(),
 });
 
 /**
@@ -372,6 +381,7 @@ export async function rollCallAction(
       bookingId: parsed.data.bookingId,
       recordedByPersonId: staff.user.personId,
       status: parsed.data.status,
+      note: parsed.data.note,
       // Re-proved against this trip's own `plannedDives` inside the write's
       // transaction (`invalid_checkpoint`).
       checkpoint,
@@ -474,6 +484,7 @@ export async function crewRollCallAction(
       personId: parsed.data.personId,
       recordedByPersonId: staff.user.personId,
       status: parsed.data.status,
+      note: parsed.data.note,
       // Same re-proof the diver write runs: the checkpoint is checked against
       // the trip row inside the transaction, never against anything posted.
       checkpoint,

@@ -93,6 +93,8 @@ import {
   priorVisits,
   recapPhotos,
   rentalFitProfiles,
+  rollCallCrewEvents,
+  rollCallEvents,
   specialtyCertifications,
   staffCredentials,
   tripReviews,
@@ -741,6 +743,34 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         and(
           inArray(bookingCapabilities.bookingId, bookingIds),
           isNull(bookingCapabilities.revokedAt),
+        ),
+      );
+
+    // The roll-call note is free text a crew member typed at the rail about a
+    // person who was unaccounted for (ADR
+    // 20260828-a-missing-diver-gets-a-sentence), so an erasure has to take it
+    // even though the row it sits on is a boarding fact that stays. Both
+    // halves of the head count: this person's own bookings, and — since a crew
+    // member is a person who can be erased too — the crew events about them.
+    await tx
+      .update(rollCallEvents)
+      .set({ note: null })
+      .where(
+        and(
+          eq(rollCallEvents.shopId, shopId),
+          inArray(rollCallEvents.bookingId, bookingIds),
+          isNotNull(rollCallEvents.note),
+        ),
+      );
+
+    await tx
+      .update(rollCallCrewEvents)
+      .set({ note: null })
+      .where(
+        and(
+          eq(rollCallCrewEvents.shopId, shopId),
+          eq(rollCallCrewEvents.personId, personId),
+          isNotNull(rollCallCrewEvents.note),
         ),
       );
 

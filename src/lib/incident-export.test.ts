@@ -848,6 +848,45 @@ describe("buildIncidentExport", () => {
  * dive 1 -- a longer, more conservative-looking profile than the diver's day
  * actually was, which is the one direction this document must never err.
  */
+/**
+ * ADR 20260828-a-missing-diver-gets-a-sentence. The departure log is the
+ * document a coastguard, an insurer or DAN actually reads, and until this it
+ * could say a diver did not come back and nothing about what happened next.
+ */
+describe("the timeline carries what the crew observed", () => {
+  it("prints the sentence beside the mark it belongs to", () => {
+    const doc = buildIncidentExport(
+      baseInput({
+        events: [
+          {
+            subjectKind: "diver",
+            subjectName: "Ana Diaz",
+            checkpoint: "after_dive_1",
+            status: "not_boarded",
+            source: "offline",
+            recordedByName: "Captain Sol",
+            note: "Surfaced 200 m north, picked up by Reef Runner at 14:31.",
+            occurredAt: new Date("2026-08-04T14:31:00.000Z"),
+            createdAt: new Date("2026-08-04T14:31:00.000Z"),
+          },
+        ],
+      }),
+    );
+    expect(doc.timeline[0]).toMatchObject({
+      action: "not_boarded",
+      note: "Surfaced 200 m north, picked up by Reef Runner at 14:31.",
+    });
+  });
+
+  it("omits the key entirely when nobody wrote anything", () => {
+    // Not carried as null: a departure where nothing was written hashes to
+    // exactly what it hashed to before the field existed, so adding the
+    // capability did not invalidate a single already-generated document.
+    const doc = buildIncidentExport(baseInput());
+    expect(doc.timeline[0]).not.toHaveProperty("note");
+  });
+});
+
 describe("buildIncidentExport surface intervals", () => {
   const dive = (diveNumber: number, enteredAt: string | null, exitedAt: string | null) => ({
     id: `d${diveNumber}`,

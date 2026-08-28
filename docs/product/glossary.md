@@ -771,7 +771,9 @@ new domain concept, define it here in the same PR.
   fitness-to-dive gap, so it surfaces only as a low-priority, dock-settleable nudge on boats within
   three days.
 - **Roll-call event** — an append-only record that a staff member marked one booking boarded,
-  not boarded, or cleared, including the time and any note. Its newest event is the current state;
+  not boarded, or cleared, including the time and who recorded it. It carries **no free text**: the
+  note field was removed in 2026-08, which also means a roll call records *that* a diver did not
+  come back and never *what happened to them*. Its newest event is the current state;
   older events remain evidence of what the crew recorded. **Cleared** is an undo: staff tapped the
   current status again to correct a mistake, and the diver returns to awaiting. It is stored as its
   own event so the correction stays in the audit trail rather than deleting history. **Cleared is
@@ -793,10 +795,7 @@ new domain concept, define it here in the same PR.
   the row goes back to awaiting rather than closing every later checkpoint on a statement the server
   has moved past. Asserting **aboard over a stated "not back aboard"** takes a
   confirming second tap that names the person, on a separate control, so a wet thumb on a rolling
-  boat cannot turn the loudest row in the product green by bouncing. A note still
-  being typed is also mirrored to the crew's own device and cleared once it syncs, so a dropped
-  connection never loses it; that device draft is transient and unencrypted — separate from, and not
-  protected like, the encrypted **offline manifest snapshot**.
+  boat cannot turn the loudest row in the product green by bouncing.
 - **Held** — a roll-call *mark*, not a roll-call event: the dashed ring a diver's row wears when
   nobody has recorded anything about them **and readiness has not cleared them to board**. It exists
   only at the dock, because readiness gates boarding there and nowhere else — after a dive roll call

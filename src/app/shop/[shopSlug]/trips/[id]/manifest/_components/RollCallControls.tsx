@@ -8,6 +8,7 @@ import { ROLL_CALL_ROW_TONE } from "@/components/row-tones";
 import { buttonClass } from "@/components/ui/button";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
+  ROLL_CALL_NOTE_MAX,
   type RollCallCheckpoint,
   type RollCallRecord,
   type RollCallRowState,
@@ -38,8 +39,8 @@ import {
  *
  * Everything that is *safety* behaviour still lives in one place — the shared
  * `RollCallButton` underneath both: the instant pending state, the
- * server-authoritative confirm, the `role="alert"` refusal, the note draft that
- * rides whichever result lands, and the remount-on-checkpoint key contract.
+ * server-authoritative confirm, the `role="alert"` refusal, and the
+ * remount-on-checkpoint key contract.
  */
 
 /**
@@ -212,11 +213,6 @@ export function RollCallMarkButton({
   action: RollCallAction;
   copy: RollCallButtonCopy;
   markState: RollCallMarkState;
-  /**
-   * The row whose unsaved note draft this submit should carry, so a note typed
-   * before anybody was called rides the result that creates it. Divers only;
-   * crew rows take no note.
-   */
   t: StaffTranslator;
 }) {
   const { boarded } = rollCallRowState(checkpoint, rollCall);
@@ -308,6 +304,15 @@ export function RollCallBackAboardControl({
     <div className="mt-3 print:hidden">
       <RollCallButton
         key={isCrew ? `crew-back-aboard-${checkpoint}` : `back-aboard-${checkpoint}`}
+        // Unsaying a missing person is exactly when the sentence matters:
+        // "surfaced 200 m north, picked up by Reef Runner at 14:31" is the
+        // half of the record the mark alone cannot carry (ADR
+        // 20260828-a-missing-diver-gets-a-sentence). It rides this submit.
+        noteField={{
+          name: "note",
+          label: t("manifest.rollCallNoteLabel"),
+          maxLength: ROLL_CALL_NOTE_MAX,
+        }}
         action={action}
         subject={
           isCrew ? { field: "personId", id: subjectId } : { field: "bookingId", id: subjectId }
@@ -355,6 +360,27 @@ export function RollCallExceptionControl({
       <RollCallButton
         // Same remount-on-checkpoint reasoning as the mark button above.
         key={isCrew ? `crew-not-aboard-${checkpoint}` : `not-boarded-${checkpoint}`}
+        // **One box per row, and it belongs to whichever control is about to
+        // say something new.** This one states "did not come back", so it
+        // carries the box while nothing is recorded. Once the alarm stands,
+        // "Mark back aboard" renders beside this and takes the box over: that
+        // is the positive sighting worth describing ("I have eyes on her, she
+        // came up 200 m north"), while this control's remaining job is
+        // `cleared` — "nobody said it", a mis-tap with nothing to observe. Two
+        // boxes asking one question, side by side, is what this avoids.
+        //
+        // Never at the dock: `not_boarded` there means "never left", which is
+        // clerical and has never needed a sentence. The server drops one
+        // anyway (`rollCallNoteAllowed`).
+        noteField={
+          isDeparture || notBackAboard
+            ? undefined
+            : {
+                name: "note",
+                label: t("manifest.rollCallNoteLabel"),
+                maxLength: ROLL_CALL_NOTE_MAX,
+              }
+        }
         action={action}
         subject={
           isCrew ? { field: "personId", id: subjectId } : { field: "bookingId", id: subjectId }

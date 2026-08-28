@@ -549,6 +549,17 @@ export default async function IncidentExportPage({
                     {t("incidentExport.timelineOfflineTag")}
                   </span>
                 ) : null}
+                {/* What the crew observed, on its own full-width line below the
+                    facts rather than wrapped into them (ADR
+                    20260828-a-missing-diver-gets-a-sentence). This is the half
+                    of the record a mark alone cannot carry, and the reason an
+                    investigator reading this page meets "surfaced 200 m north,
+                    picked up by Reef Runner at 14:31" instead of an
+                    unexplained red entry. It is inside the content hash, like
+                    every other fact here. */}
+                {(entry.kind === "diver" || entry.kind === "crew") && entry.note ? (
+                  <span className="basis-full text-sm">{entry.note}</span>
+                ) : null}
               </li>
             ))}
           </ol>

@@ -17,6 +17,7 @@ import {
   type RollCallCheckpoint,
   type RollCallRecord,
   rollCallCheckpoints,
+  rollCallNoteAllowed,
   type TripManifest,
 } from "@/lib/manifests";
 import { medicalWaiverMark } from "@/lib/waivers";
@@ -226,6 +227,7 @@ async function listLatestCrewRollCalls(db: AppDb, shopId: string, tripId: string
       state: event.status,
       occurredAt: event.occurredAt,
       recordedByName: recorder.fullName,
+      note: event.note,
     });
   }
   return latest;
@@ -259,6 +261,7 @@ async function listLatestRollCallByBooking(
       state: "boarded" | "not_boarded";
       occurredAt: Date;
       recordedByName: string;
+      note: string | null;
     }
   >();
   // Rows are newest-first, so the first row per booking wins. A latest `cleared`
@@ -273,6 +276,7 @@ async function listLatestRollCallByBooking(
       state: event.status,
       occurredAt: event.occurredAt,
       recordedByName: recorder.fullName,
+      note: event.note,
     });
   }
   return latest;
@@ -810,6 +814,13 @@ export async function recordRollCall(
     /** The `clientEventId` a `cleared` undoes — see {@link offlineRetractionSuperseded}. */
     retractsClientEventId?: string;
     offlineSnapshotSavedAt?: Date;
+    /**
+     * What the crew observed about a person who is unaccounted for. Kept only
+     * at an after-dive checkpoint (`rollCallNoteAllowed`) — a note posted at
+     * departure is dropped rather than written, so the append-only trail takes
+     * no free text a surface never offered.
+     */
+    note?: string | null;
     occurredAt?: Date;
   },
 ): Promise<RecordRollCallOutcome> {
@@ -925,6 +936,7 @@ export async function recordRollCall(
         source,
         clientEventId: source === "offline" ? input.clientEventId : null,
         offlineSnapshotSavedAt: source === "offline" ? input.offlineSnapshotSavedAt : null,
+        note: rollCallNoteAllowed(checkpoint) ? input.note?.trim() || null : null,
         occurredAt,
       })
       .returning({ id: rollCallEvents.id });
@@ -1002,6 +1014,8 @@ export async function recordCrewRollCall(
     /** The `clientEventId` a `cleared` undoes — see {@link offlineRetractionSuperseded}. */
     retractsClientEventId?: string;
     offlineSnapshotSavedAt?: Date;
+    /** The same, for the other half of the head count. */
+    note?: string | null;
     occurredAt?: Date;
   },
 ): Promise<RecordCrewRollCallOutcome> {
@@ -1146,6 +1160,7 @@ export async function recordCrewRollCall(
         // evidence of which snapshot supplied the *readiness* it boarded on,
         // and a crew member has no readiness to evidence. It is still an input
         // above, where the staleness bound is computed from it.
+        note: rollCallNoteAllowed(checkpoint) ? input.note?.trim() || null : null,
         occurredAt,
       })
       .returning({ id: rollCallCrewEvents.id });

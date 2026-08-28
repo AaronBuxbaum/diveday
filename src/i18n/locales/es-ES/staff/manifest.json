@@ -126,6 +126,8 @@
   "saving": "Guardando…",
   "tapToUndoNotBackAboard": "Toca de nuevo “Sin regresar a bordo” para deshacer.",
   "diverFactsSummary": "Contacto y equipo",
+  "notBackAboardListLabel": "Quién no ha vuelto a bordo",
+  "rollCallNoteLabel": "Qué pasó (opcional)",
   "stillToCallListLabel": "Personas por pasar lista",
   "buddySummaryTeams": "{count, plural, =0 {Todavía no hay equipos de buceo} one {# equipo de buceo} other {# equipos de buceo}}",
   "buddySummaryUnteamed": " · {count, plural, one {# buceador sin equipo de buceo} other {# buceadores sin equipo de buceo}}",

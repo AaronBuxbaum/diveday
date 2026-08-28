@@ -375,11 +375,21 @@ export function DiverRollCall({
           visually-last would lack one. Each row draws its own instead, off the
           two orders it actually has — and on an inner wrapper rather than the
           `<li>`, whose tone classes set `border-danger`/`border-success` for
-          the 4px left edge and would win the top edge's colour too. */}
+          the 4px left edge and would win the top edge's colour too.
+
+          **`print:block` is what actually holds the printed order**, rather
+          than `print:order-none` alone: `order` is inert outside a flex or
+          grid container, so in block layout the DOM order is the printed order
+          by construction instead of by the cascade emitting one variant after
+          another. Block is also the layout mode browsers fragment reliably
+          across printed pages. `order-first` is paint order only — it moves
+          nothing in the DOM, tab or screen-reader order, which is why the
+          count panel names the missing people in links rather than leaving
+          this to carry the alarm on its own (dive-domain review 20260828). */}
       <ul
         className={sectionCardClass({
           padding: "none",
-          className: "mt-3 flex flex-col overflow-hidden",
+          className: "mt-3 flex flex-col overflow-hidden print:block",
         })}
       >
         {divers.map((diver, index) => {
@@ -415,7 +425,17 @@ export function DiverRollCall({
           // mis-tap `rollCallScrollMargin` exists to bound, so it is spent
           // once, on the one state that earns it.
           const alarmed = rowState.notBackAboard;
-          const rowClass = `border-l-4 ${alarmed ? "order-first print:order-none" : ""} ${rollCallScrollMargin(isDeparture)} ${
+          // `print:block` on the list above is what actually guarantees the
+          // printed order, and `print:order-none` is the belt to its braces:
+          // `order` has no effect at all outside a flex or grid container, so
+          // on paper the DOM order *is* the order by construction rather than
+          // by the cascade happening to emit the print variant last. Block
+          // layout is also the one browsers fragment reliably across printed
+          // pages, and `break-inside-avoid` then keeps a diver's row off a
+          // page boundary — a name split in half on the sheet a coastguard
+          // reads is a defect (dive-domain review 20260828). The printed table
+          // rows do the same, for the same reason (`src/components/ui/table.tsx`).
+          const rowClass = `border-l-4 break-inside-avoid ${alarmed ? "order-first print:order-none" : ""} ${rollCallScrollMargin(isDeparture)} ${
             recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : untouchedTone
           }`;
           // The hairline above this row, in each of the two orders. On screen
@@ -522,6 +542,15 @@ export function DiverRollCall({
                           </span>
                           {capsule}
                         </span>
+                        {rc?.note ? (
+                          // What the crew wrote when they recorded this. On the
+                          // row rather than behind the disclosure: a second
+                          // crew member arriving at an alarmed row needs to
+                          // read it before they type the same sentence again,
+                          // and it prints, which is the point of it existing
+                          // (ADR 20260828-a-missing-diver-gets-a-sentence).
+                          <span className="mt-0.5 block text-sm">{rc.note}</span>
+                        ) : null}
                         {supportLine ? (
                           <span className="mt-0.5 block text-sm text-muted">{supportLine}</span>
                         ) : null}

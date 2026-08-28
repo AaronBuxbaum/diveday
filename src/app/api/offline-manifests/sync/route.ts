@@ -5,7 +5,7 @@ import { recordCrewRollCall, recordRollCall } from "@/db/manifests";
 import { recordPreDepartureCheck } from "@/db/pre-departure-check";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
-import type { RollCallCheckpoint } from "@/lib/manifests";
+import { ROLL_CALL_NOTE_MAX, type RollCallCheckpoint } from "@/lib/manifests";
 
 /**
  * One event carries **exactly one** subject: a `bookingId` (a diver's paid
@@ -78,6 +78,19 @@ const eventSchema = z
      * inverts if the comparison ever moves into SQL.
      */
     retractsClientEventId: z.string().uuid().optional(),
+    /**
+     * What the crew observed about a person who is unaccounted for (ADR
+     * 20260828-a-missing-diver-gets-a-sentence). **Optional**, and its absence
+     * carries no meaning at all: most events are an ordinary "aboard" with
+     * nothing to say, and an event queued by a build that predates the field
+     * takes exactly the path it took before — the same rule
+     * `retractsClientEventId` above states, for the same dry-bag reason.
+     *
+     * The writers keep it only at an after-dive checkpoint
+     * (`rollCallNoteAllowed`), so a device cannot put free text on a departure
+     * event either.
+     */
+    note: z.string().trim().max(ROLL_CALL_NOTE_MAX).nullish(),
     occurredAt: z.iso.datetime(),
   })
   // No `message`: nothing here reaches a person. A failure of this refinement
@@ -100,7 +113,7 @@ const checklistEventSchema = z.object({
   checklistItemId: z.string().uuid(),
   status: z.enum(["checked", "cleared"]),
   retractsClientEventId: z.string().uuid().optional(),
-  note: z.string().trim().max(300).nullable(),
+  note: z.string().trim().max(ROLL_CALL_NOTE_MAX).nullable(),
   occurredAt: z.iso.datetime(),
 });
 
@@ -202,6 +215,7 @@ export async function POST(request: Request) {
       source: "offline" as const,
       clientEventId: event.clientEventId,
       retractsClientEventId: event.retractsClientEventId,
+      note: event.note,
       offlineSnapshotSavedAt: new Date(event.snapshotSavedAt),
       occurredAt: new Date(event.occurredAt),
     };

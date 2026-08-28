@@ -193,7 +193,11 @@ export function CrewRollCall({
                   // below the whole diver roster — so on a phone the chip is
                   // often several screens from the person it names.
                   id={`crew-row-${member.id}`}
-                  className={`border-l-4 ${rollCallScrollMargin(isDeparture)} ${
+                  // `break-inside-avoid` for the same reason a diver's row
+                  // carries it: this sheet is printed and goes ashore, and a
+                  // crew member's name split across a page boundary is a
+                  // defect in the record rather than a layout nit.
+                  className={`border-l-4 break-inside-avoid ${rollCallScrollMargin(isDeparture)} ${
                     recordedTone ? ROLL_CALL_ROW_TONE[recordedTone] : ROLL_CALL_ROW_TONE.awaiting
                   }`}
                 >
@@ -208,6 +212,11 @@ export function CrewRollCall({
                             <span className="text-sm text-muted">{member.roles.join(", ")}</span>
                             {capsule}
                           </span>
+                          {rc?.note ? (
+                            // The same line a diver's row carries, on the same
+                            // terms — see DiverRollCall.
+                            <span className="mt-0.5 block text-sm">{rc.note}</span>
+                          ) : null}
                           {supportLine ? (
                             <span className="mt-0.5 block text-sm text-muted">{supportLine}</span>
                           ) : null}
