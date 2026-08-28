@@ -3,9 +3,11 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { CARD_STATUS_KEYS, cardStatusTone } from "@/i18n/card-labels";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { isImportedCard, isShopIssuedCard, needsImportConfirm } from "@/lib/certification-cards";
 import { formatShortDate } from "@/lib/format";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
 import {
@@ -20,16 +22,7 @@ import { CardStatusMark } from "./CardStatusMark";
 import { MarkCertifiedControl } from "./MarkCertifiedControl";
 import { markCertifiedCopy } from "./mark-certified-copy";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
-import {
-  AGENCY_KEYS,
-  CARD_STATUS_KEYS,
-  type DiverProfile,
-  isImportedCard,
-  isShopIssuedCard,
-  needsImportConfirm,
-  type Shop,
-  statusTone,
-} from "./shared";
+import { AGENCY_KEYS, type DiverProfile, type Shop } from "./shared";
 
 export async function CertificationCards({
   diver,
@@ -258,7 +251,7 @@ export async function CertificationCards({
                 <div className="min-w-0">
                   <p className="flex items-center gap-2 font-medium">
                     <CardStatusMark
-                      tone={statusTone(display)}
+                      tone={cardStatusTone(display)}
                       label={t(CARD_STATUS_KEYS[display])}
                     />
                     <span>
