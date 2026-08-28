@@ -2739,11 +2739,24 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Emergency contact name").fill("Kojo Mensah");
         await page.getByLabel("Emergency contact phone").fill("+13055550177");
         await page.getByRole("button", { name: "Save details" }).click();
-        // Click, not `waitFor`: "Send options" is a closed `<details>` summary since the
-        // record was recomposed, and the paper-waiver control lives inside it. Waiting for
-        // the summary proves only that the disclosure exists — the button below is still
-        // hidden, and the capture then times out on it. `waivers.spec.ts` already clicks it.
-        await page.getByRole("region", { name: "Waiver" }).getByText("Send options").click();
+        // Land the save before touching the Waiver group. The save redirects and
+        // the record re-renders around the notice it carries, which is what left
+        // the paper-waiver button "not stable" and then "detached from the DOM"
+        // mid-click. Reloading is the deterministic settle — a record at rest,
+        // with its disclosures closed — rather than a wait on a moving page.
+        await page.reload();
+        await page.getByRole("heading", { level: 1, name: `Clear Diver ${stamp}` }).waitFor();
+        // Click the summary, exactly as `waivers.spec.ts` does against this same
+        // markup — `exact`, because "Send options" without it also matches the
+        // container that holds the summary, and clicking a container opens
+        // nothing. Waiting on the summary instead of clicking it is the older
+        // trap: it proves the disclosure exists while the paper-waiver control
+        // inside stays hidden, and the capture then times out on the button.
+        await page
+          .getByRole("region", { name: "Waiver" })
+          .getByText("Send options", { exact: true })
+          .click();
+        await expect(page.getByRole("button", { name: "Mark signed on paper" })).toBeVisible();
         await page.getByRole("button", { name: "Mark signed on paper" }).click();
         await page
           .getByLabel("I have this diver's signed release on file", { exact: false })

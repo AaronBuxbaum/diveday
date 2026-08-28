@@ -139,13 +139,15 @@ export function threadStatus(page: Page): Locator {
  * contents are not.
  */
 export async function openThreadStep(page: Page, step: string): Promise<Locator> {
-  // A direct child, not a descendant: slice 7c put per-card disclosures inside a step
-  // body, so the descendant selector matches the step *and* the cards within it and
-  // Playwright refuses the ambiguity.
+  // Direct children, not descendants, in BOTH steps below. Slice 7c put per-card
+  // disclosures inside a step body, so a descendant selector matches the step *and*
+  // the cards within it, and Playwright refuses the ambiguity. The certification
+  // step is the one that proves it: its body holds "Add your certification" and
+  // "Add your nitrox card", so a descendant `summary` search finds three.
   const details = page.locator(`[data-thread-step="${step}"] > details`);
   await details.waitFor();
   if (await details.evaluate((element: HTMLDetailsElement) => element.open)) return details;
-  await details.locator("summary").click();
+  await details.locator(":scope > summary").click();
   // Wait on the disclosure's own state, never on the form inside it: a step
   // whose body is slow to lay out is still open the instant the tap lands.
   await expect(details).toHaveAttribute("open", "");

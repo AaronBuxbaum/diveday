@@ -155,9 +155,16 @@ test.describe("a shop that stops filling nitrox", () => {
     // no longer a way to make this form submit — and the submit itself is the
     // whole point here, not what was typed into it.
     await anon.goto(bookingUrl);
+    // The gear step is a disclosure and the thread opens at most one at rest,
+    // so the form has to be opened before it can be read or submitted — the
+    // same act a diver performs.
+    await openThreadStep(anon, "gear");
     await expect(anon.locator('input[name="nitrox"]').filter({ visible: true })).toHaveCount(0);
     await anon.getByRole("button", { name: "Save rental fit" }).click();
-    await expect(anon.getByText("Saved.").filter({ visible: true })).toBeVisible();
+    // The page-level notice, not the form's own line: the save redirects with no
+    // hash, so the thread comes back at rest and the in-step "Saved." is shut
+    // inside a closed disclosure. `saved-fit` is what the diver actually reads.
+    await expect(anon.getByText("the crew will have your sizes")).toBeVisible();
 
     // The request survives even with nitrox off — read it back from the
     // prep list (visible with the catalog disabled per the live-data check
@@ -356,6 +363,7 @@ test("a course taught on air offers no nitrox request, at the same shop that fil
   // The rest of the rental form is untouched — this closes one box, not the
   // picker — so the assertion is about nitrox alone, not about a form that
   // failed to render.
+  await openThreadStep(page, "gear");
   await expect(page.getByRole("button", { name: "Save rental fit" })).toBeVisible();
   await expect(page.locator('input[name="nitrox"]').filter({ visible: true })).toHaveCount(0);
 });
