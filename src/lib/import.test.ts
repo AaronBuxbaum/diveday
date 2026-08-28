@@ -988,14 +988,17 @@ describe("IMPORT_HONESTY_TABLE", () => {
    *    term at all, which is exactly why the confirm can gate the fill without
    *    ever holding a diver off the boat.
    */
-  it("states nitrox as one state: imported, the confirm gates the fill, boarding does not wait", () => {
+  it("states nitrox as one state: imported, the confirm gates the fill, boarding waits only on a downgrade", () => {
     const nitrox = row("nitrox");
     expect(nitrox.what).toBe("Nitrox");
     expect(nitrox.scope).toBe("included");
     expect(nitrox.detail).toMatch(/marked imported/i);
     expect(nitrox.detail).toMatch(/one-tap confirm/i);
     expect(nitrox.detail).toMatch(/plain air/i);
-    expect(nitrox.detail).toMatch(/boarding never waits on it/i);
+    // The claim as the dive-domain review left it. "Boarding never waits on it"
+    // was true of the ordinary import and false of the downgrade the test below
+    // this one proves, so the row names the condition instead.
+    expect(nitrox.detail).toMatch(/boarding waits on it only where/i);
   });
 
   /**
@@ -1010,7 +1013,10 @@ describe("IMPORT_HONESTY_TABLE", () => {
    * The behaviour is pinned below this describe block; this is the copy half.
    */
   it("never promises the imported nitrox card lands verified — the source file can say otherwise", () => {
-    expect(row("nitrox").detail).not.toMatch(/verified/i);
+    // The promise it must not make, not the word. "Verified" survives in the
+    // row as "never verified", which is the source file's own verdict being
+    // reported rather than an outcome DiveDay is claiming.
+    expect(row("nitrox").detail).not.toMatch(/imported as verified/i);
 
     const downgraded = prepareContactImport(
       [

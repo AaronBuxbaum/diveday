@@ -636,6 +636,12 @@ const READY_NOTICES: Record<
   // Task 49: a failed gear/setup save (`saveFitFromReady`'s `?error=fit`)
   // had no entry here either — the same silent-failure gap, one field over.
   "error-fit": { tone: "danger", key: "ready.fitUnavailable" },
+  // And its success twin, which that pass missed: the form's own "Saved." sits
+  // inside the gear step, and the redirect carries no hash, so the thread comes
+  // back at rest with the confirmation shut inside a closed disclosure. The
+  // diver taps Save and is told nothing. The failure path was louder than the
+  // success path until this row existed.
+  "saved-fit": { tone: "success", key: "ready.fitSaved" },
   // Landing here fresh off a successful seat claim (docs ADR
   // 20260804-seat-claim-links) — the one moment to say whose page this now is.
   "saved-claimed": { tone: "success", key: "seatClaim.claimedNotice" },

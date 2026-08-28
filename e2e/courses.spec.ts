@@ -49,7 +49,9 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   await page.getByLabel("BCD size").selectOption("L");
   await page.getByLabel("Wetsuit size").selectOption("XL");
   await page.getByRole("button", { name: "Save rental fit" }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Saved." })).toBeVisible();
+  // The page-level notice the redirect carries, for the reason `nitrox.spec.ts`
+  // gives: the form's own "Saved." is inside the gear step, which comes back shut.
+  await expect(page.getByText("the crew will have your sizes")).toBeVisible();
 });
 
 test("a signed-out visitor browses the public course catalog, with the editor still gated", async ({

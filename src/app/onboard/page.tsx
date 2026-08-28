@@ -10,6 +10,7 @@ import { TimezoneOptions, type TimezoneZoneLabels } from "@/components/TimezoneO
 import { buttonClass } from "@/components/ui/button";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { GroupLabel } from "@/components/ui/ledger";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { eventSource } from "@/lib/funnel";
@@ -43,8 +44,6 @@ export const instant = true;
  * out of the way. The element stays an `<h2>` — the visual weight changes, the
  * document outline a screen reader walks does not.
  */
-const GROUP_LABEL_CLASS = "text-xs font-semibold tracking-[0.14em] text-muted uppercase";
-
 /**
  * Every code `onboardAction`'s `backToForm` can hand back, resolved to a
  * diver-bundle message right here — never earlier. `onboardSchema`'s
@@ -281,7 +280,7 @@ export default async function OnboardPage({
         <form action={onboardAction} className="flex flex-col gap-5">
           <input type="hidden" name="source" value={source} />
           <section className="flex flex-col gap-4">
-            <h2 className={GROUP_LABEL_CLASS}>{t("account.onboard.shopSectionTitle")}</h2>
+            <GroupLabel as="h2">{t("account.onboard.shopSectionTitle")}</GroupLabel>
             <FieldGrid columns={2}>
               <Field label={t("account.onboard.shopNameLabel")} error={fieldError("shopName")}>
                 <input
@@ -384,7 +383,7 @@ export default async function OnboardPage({
           </section>
 
           <section className="mt-2 flex flex-col gap-4">
-            <h2 className={GROUP_LABEL_CLASS}>{t("account.onboard.youSectionTitle")}</h2>
+            <GroupLabel as="h2">{t("account.onboard.youSectionTitle")}</GroupLabel>
             <FieldGrid columns={1}>
               <Field label={t("account.onboard.fullNameLabel")} error={fieldError("ownerName")}>
                 <input

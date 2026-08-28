@@ -639,6 +639,7 @@
     "gearAndSetup": "Gear and setup",
     "dockCallLine": "Aim to be at the dock by {time} — {dock} before we sail.",
     "fitUnavailable": "We couldn’t save your gear and setup just now. Try again in a moment.",
+    "fitSaved": "Saved — the crew will have your sizes.",
     "certHeading": "Add your certification",
     "certBody": "Enter your certification details for the shop's records.",
     "specialtyHeading": "Add your {specialty} card",

@@ -66,6 +66,9 @@ test("what a diver arranges on their own page reaches prep and the manifest", as
   ).toBeVisible();
 
   // Answered once: the diver's own page reads it back rather than asking again.
+  // Through the step, because the save's redirect leaves the thread at rest and
+  // a closed disclosure's fields are not visible to the fixture's filters.
+  await openThreadStep(page, "dayof");
   await expect(page.getByLabel("How many?")).toHaveValue("2");
   await expect(page.getByRole("radio", { name: "Yes — please arrange them" })).toBeChecked();
 
