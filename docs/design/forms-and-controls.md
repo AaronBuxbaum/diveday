@@ -474,11 +474,17 @@ Bold is under AA. Read off it:
   4.38–4.39, just under. `danger` needs no `-strong` and has none.
 - **On `bg-surface-sunken`, success/warning text is `-strong`** even with no tint (4.36 → 4.84).
   This is why `StatTile`'s figure uses `-strong`: the tile's `inset` variant is a sunken box.
-- **On plain `bg-surface`, the raw hue is fine** (5.02) — which is what `LedgerRow`'s kind word
-  (`src/components/ui/ledger.tsx`) relies on. Its predecessor `KindChip` was a bordered capsule that
-  had to name `bg-surface` on *itself* rather than inherit whatever it landed in; the word carries
-  no fill at all, so the question does not arise, and where a kind word lands in a sunken panel the
-  `-strong` rule above applies as it does to any other coloured ink.
+- **On plain `bg-surface`, the raw hue is fine** (5.02) — and that is exactly why a component that
+  does not know what it is mounted on may not rely on it. `KindChip` named `bg-surface` on *itself*
+  so it could; its replacement, `LedgerRow`'s kind word (`src/components/ui/ledger.tsx`), carries no
+  fill at all, so it takes `text-warning-strong` (5.56 / 4.83 / 4.86 — clears on surface, sunken and
+  tint alike) and keeps `text-danger`, which needs no `-strong` at any of them. The case is not
+  hypothetical: a `LedgerRow` that is a door hovers to `bg-surface-sunken/60`, where the raw hue is
+  4.37. **The general rule this is an instance of:** a component mounted in whatever container its
+  caller chose picks the ink that clears everywhere, rather than the one that clears where its
+  author happened to be looking — `FormStatus` and `ShopStat` already settle it the same way. A
+  `className` override is not the escape hatch, because Tailwind emits colour utilities
+  alphabetically by token name and the override would win or lose by that accident.
 - **`opacity-*` dims the ratio too.** A row greyed out with `opacity-60` takes its own status chip
   down with it — 2.81:1 on the import preview, on a table whose whole job is being read. Quiet ink
   is `text-muted`, which is a token with a measured ratio; opacity is not.

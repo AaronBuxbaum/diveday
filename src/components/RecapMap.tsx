@@ -65,7 +65,7 @@ export function RecapMap({
   }
 
   return (
-    <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-surface-sunken p-2 shadow-sm">
+    <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-surface-sunken p-2">
       <svg
         viewBox={`0 0 ${width} ${height}`}
         className="h-auto w-full select-none rounded-xl bg-surface"

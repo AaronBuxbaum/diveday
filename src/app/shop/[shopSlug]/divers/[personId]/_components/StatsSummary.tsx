@@ -41,9 +41,9 @@ function StatCard({
       // same padding, same elevation, only the border and fill change.
       className={
         success
-          ? "rounded-2xl border border-success/40 bg-success/5 p-4 shadow-sm sm:p-5"
+          ? "rounded-2xl border border-success/40 bg-success/5 p-4 sm:p-5"
           : attention
-            ? "rounded-2xl border border-warning/40 bg-warning/5 p-4 shadow-sm sm:p-5"
+            ? "rounded-2xl border border-warning/40 bg-warning/5 p-4 sm:p-5"
             : sectionCardClass()
       }
     >

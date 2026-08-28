@@ -639,9 +639,15 @@ textarea {
 
 /*
  * The settled mark landing — `SettledCheck` (ADR
- * 20260827-clearwater-surface-language). One of the four keyframes the
- * Clearwater program sanctions, beside `figure-settle`, `rise-in` and
- * `fade-out`; a fifth needs the same argument a new coral moment does.
+ * 20260827-clearwater-surface-language).
+ *
+ * The Clearwater program sanctions four names for *new* motion — `settle-in`,
+ * `figure-settle` (not yet written; it arrives with the slice that needs it),
+ * `rise-in` and `fade-out` — and a fifth needs the same argument a new coral
+ * moment does. That is a rule about what may be added, not a census of this
+ * file: the other keyframes here predate the program and are untouched by it.
+ * Nothing enforces the rule mechanically — `check-exit-curves.mjs` checks exit
+ * *curves*, never a count — so it lives in review, not in a script.
  *
  * The spring overshoots by design: the mark is a thing coming to rest, not a
  * thing appearing. It fires only on a client-side false -> true transition

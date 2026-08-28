@@ -20,11 +20,16 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
  * Three things this file deliberately owns, because owning them one place is
  * the whole point:
  *
- * - **The group label's spelling.** `tracking-[0.14em]` appears in exactly one
- *   place in `src/`, and it is `GROUP_LABEL_CLASS` below. `ledger.test.tsx`
- *   fails the build on a second copy. The eyebrow's `0.18em`
- *   (`ShopPageHeader.EYEBROW_CLASS`) is a different thing at a different
- *   volume and stays where it is.
+ * - **The group label's spelling.** `GROUP_LABEL_CLASS` below is the only place
+ *   in `src/` that *renders* `tracking-[0.14em]`; `ledger.test.tsx` names the
+ *   value once to pin it, and its sweep fails the build on a copy in any other
+ *   file — source or test, `.ts`, `.tsx` or `.css`. What that sweep catches is
+ *   the realistic drift, a paste of this class string; it cannot catch a
+ *   *different* spelling of the same idea (`tracking-wide`, `tracking-widest`),
+ *   and the SPEC's wider convergence of every `text-xs … uppercase` label onto
+ *   `GroupLabel` is deliberately not finished here — see the canvas README's
+ *   6a row. The eyebrow's `0.18em` (`ShopPageHeader.EYEBROW_CLASS`) is a
+ *   different thing at a different volume and stays where it is.
  * - **The one disclosure spelling.** A ledger group that collapses is a native
  *   `<details>` whose `<summary>` carries the group label plus the shared
  *   `DisclosureCaret` — `LedgerGroup`'s `folded` prop, and nothing else. 6c's
@@ -40,6 +45,14 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
  * now the only spelling.
  */
 const GROUP_LABEL_CLASS = "text-xs font-semibold tracking-[0.14em] text-muted uppercase";
+
+/**
+ * The quiet, tabular facts a group carries beside its label. One constant
+ * because two places render it — `GroupLabel`'s own row, and a folded group's
+ * `<summary>`, which lays the same three parts out itself so no flow element
+ * has to be nested inside phrasing content (see `LedgerGroup`).
+ */
+const GROUP_META_CLASS = "shrink-0 text-xs font-medium text-muted tabular-nums";
 
 /** Heading levels a group label may be. `p` for chrome that is not page structure (a menu section). */
 type GroupLabelElement = "h2" | "h3" | "h4" | "p";
@@ -74,7 +87,7 @@ export function GroupLabel({
   return (
     <div className="flex items-baseline justify-between gap-3">
       {label}
-      <span className="shrink-0 text-xs font-medium text-muted tabular-nums">{meta}</span>
+      <span className={GROUP_META_CLASS}>{meta}</span>
     </div>
   );
 }
@@ -107,26 +120,37 @@ export function LedgerGroup({
   className?: string;
   children: ReactNode;
 }) {
-  const heading = (
-    <GroupLabel as={as} id={id} meta={meta}>
-      {label}
-    </GroupLabel>
-  );
   if (folded === undefined) {
     return (
       <div className={className || undefined}>
-        {heading}
+        <GroupLabel as={as} id={id} meta={meta}>
+          {label}
+        </GroupLabel>
         {children}
       </div>
     );
   }
   return (
     <details open={!folded} className={`group/fold ${className}`.trim()}>
-      <summary className="-mx-2 flex cursor-pointer list-none items-baseline gap-2 rounded-lg px-2 py-1 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
+      {/* `min-h-11` is the 44px control floor (principles.md §2) — this is a
+          press target made of 12px type, and 21 other `<summary>` elements in
+          the app already carry it. `items-center` rather than `items-baseline`
+          because the box is now taller than its words.
+
+          The summary lays the three parts out itself instead of nesting
+          `GroupLabel`'s meta row: `<summary>` takes phrasing content
+          optionally intermixed with *heading* content, so a heading may sit
+          here directly but a wrapping `<div>`/`<span>` around it may not. Name
+          a heading level on a group that folds — the `p` default is chrome,
+          and only a heading is valid in here. */}
+      <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-1 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
         {/* Which way this goes, before you press it — decorative; the native
             disclosure semantics carry the state. */}
-        <DisclosureCaret className="self-center text-muted group-open/fold:rotate-90" />
-        <span className="min-w-0 flex-1">{heading}</span>
+        <DisclosureCaret className="text-muted group-open/fold:rotate-90" />
+        <GroupLabel as={as} id={id} className="min-w-0 flex-1">
+          {label}
+        </GroupLabel>
+        {meta != null ? <span className={GROUP_META_CLASS}>{meta}</span> : null}
       </summary>
       {children}
     </details>
@@ -136,14 +160,27 @@ export function LedgerGroup({
 export type LedgerRowKindTone = "danger" | "warning" | "neutral";
 
 /**
- * Tone in the ink, never in a fill. On `bg-surface` the raw hues clear AA
- * (warning 5.02:1, danger 6.47:1) and a 10% tint does not — the table is in
- * docs/design/forms-and-controls.md — and a tinted fill here would also be a
- * second pill grammar arriving by the back door.
+ * Tone in the ink, never in a fill — a tinted fill here would be a second pill
+ * grammar arriving by the back door.
+ *
+ * `warning` is the `-strong` token and `danger` is not, which is the contrast
+ * table in docs/design/forms-and-controls.md read for a component that does
+ * **not** know what it is mounted on. Raw `text-warning` clears AA on
+ * `bg-surface` (5.02:1) and fails on `bg-surface-sunken` (4.37:1) and on a tint
+ * (4.39:1); `text-warning-strong` clears all three (5.56 / 4.83 / 4.86) and
+ * every dark-palette pairing. That is not hypothetical here — a door row's own
+ * `hover:bg-surface-sunken/60` puts the word on a sunken fill on this very
+ * component — and the only override channel a call site has is `className`,
+ * which would win or lose by Tailwind's alphabetical emission rather than by
+ * intent (the trap AGENTS.md documents for `buttonClass()`). So the component
+ * that cannot know its container does not get to be the one that guessed —
+ * the same call `FormStatus` and `ShopStat` already made. `text-danger`
+ * measures 6.47 / 5.63 / 5.45 and needs no `-strong`; there is no
+ * `text-danger-strong` token.
  */
 const KIND_TONE_INK = {
   danger: "text-danger",
-  warning: "text-warning",
+  warning: "text-warning-strong",
   neutral: "text-muted",
 } as const;
 
@@ -191,6 +228,19 @@ export function RowKind({
 }
 
 /**
+ * Whether a row is a door, as one indivisible fact.
+ *
+ * A stretched overlay link with no children takes its accessible name from
+ * nothing at all — an axe `link-name` violation on a control the row's own text
+ * sits *behind*, which `e2e/a11y.spec.ts` scans for with no exclusion list, and
+ * which principles.md §4 puts outside the set of things that may ever be
+ * traded. Two independent optional props let a call site produce that by
+ * omission; one union means the type system asks for the destination's name in
+ * the same breath as the destination.
+ */
+type LedgerRowDoor = { href: string; linkLabel: string } | { href?: never; linkLabel?: never };
+
+/**
  * A hairline row on the page background — the ledger's only row shape.
  *
  * The hairline is `border-t` plus a `last:border-b`, so a group closes itself
@@ -215,15 +265,11 @@ export function LedgerRow({
   children: ReactNode;
   /** The one fix (a link or ghost button), a fact, or a chevron. */
   trailing?: ReactNode;
-  /** Whole-row link, for a row that *is* a door. The overlay makes the row the target. */
-  href?: string;
-  /** The accessible name of that whole-row link — the destination, in words. */
-  linkLabel?: string;
   /** `lg` (min-h-14) for the counter's queue and the horizon rows. */
   size?: "md" | "lg";
   as?: "li" | "div";
   className?: string;
-}) {
+} & LedgerRowDoor) {
   return (
     <Tag
       className={`relative flex items-center gap-3 border-t border-border last:border-b ${

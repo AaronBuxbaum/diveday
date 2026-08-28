@@ -36,7 +36,7 @@ export function YourSessions({
             key={session.tripId}
             // A session row is a sunken inset in the instructor lens, not a
             // page section: the lens itself already owns the section heading.
-            className="flex flex-col gap-4 rounded-2xl border border-border bg-surface-sunken p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5"
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-surface-sunken p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
           >
             <div className="min-w-0">
               <p className="font-semibold">{session.title}</p>

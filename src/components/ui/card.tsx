@@ -27,6 +27,11 @@ import { type ReactNode, useId } from "react";
  * nested inside another card could stop stacking surface on surface, and with
  * no shadow at rest there is nothing left to stack.
  *
+ * The rule reaches the panels this component does not own, too: `card.test.tsx`
+ * fails the build on any class string in `src/` that wears `rounded-2xl` and
+ * `shadow-sm` together, so a hand-rolled panel cannot end up the only raised
+ * thing on a page of flat ones.
+ *
  * There is deliberately **no `radius` prop**. A prop that lets every call site
  * keep the radius it happens to have today would preserve the drift behind an
  * abstraction and call it a design system. A card that looks wrong is fixed

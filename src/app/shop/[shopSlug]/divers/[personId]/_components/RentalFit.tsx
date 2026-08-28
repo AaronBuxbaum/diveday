@@ -181,7 +181,7 @@ function StaffFitFallback({
       // border and fill, so raising the flag never restyles the box's shape.
       className={
         flagged
-          ? "mt-4 rounded-2xl border border-warning/40 bg-warning/5 p-5 shadow-sm sm:p-6"
+          ? "mt-4 rounded-2xl border border-warning/40 bg-warning/5 p-5 sm:p-6"
           : sectionCardClass({ padding: "lg", className: "mt-4" })
       }
     >

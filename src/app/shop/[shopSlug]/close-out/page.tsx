@@ -678,7 +678,7 @@ export default async function CloseOutPage({
                   // chrome.
                   <li
                     key={departure.tripId}
-                    className={`rounded-2xl border bg-surface p-4 shadow-sm sm:p-5 ${
+                    className={`rounded-2xl border bg-surface p-4 sm:p-5 ${
                       tone === "danger" ? "border-danger/40" : "border-border"
                     }`}
                   >
