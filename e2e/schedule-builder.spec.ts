@@ -219,28 +219,54 @@ test.describe("schedule builder", () => {
             return style.position === "sticky" && Number.parseFloat(style.top) > 0;
           });
 
-        // Scroll to a position *inside* the second day rather than halfway
-        // down the page. A day header only holds its offset while its own day
-        // is on screen, so "halfway down" lands between two days as often as
-        // not — this reads where the days actually are first, which makes the
-        // measurement a fact about the page rather than a guess about it.
+        // Scroll to a position *inside* a day rather than halfway down the
+        // page. A day header only holds its offset while its own day is on
+        // screen, so "halfway down" lands between two days as often as not.
+        //
+        // Which day matters, and picking the second one is a guess that fails:
+        // a day whose section is shorter than the scroll delta has already
+        // pushed its own header off the top before the next day's arrives, so
+        // nothing is pinned and the measurement reads a dead zone rather than a
+        // regression. That is what went red on the board at 768px, where the
+        // stream renders a short day. So measure every section first and scroll
+        // into the *tallest* one — the day with the most room to hold its
+        // header pinned. That makes the scroll position a fact about the page
+        // instead of a guess about it, at any width and on either shell.
         window.scrollTo(0, 0);
         await frame();
         const headers = dayHeaders();
         const offset = headers[0] ? Number.parseFloat(getComputedStyle(headers[0]).top) : -1;
         const tops = headers.map((el) => el.getBoundingClientRect().top + window.scrollY);
-        const nextDay = tops[2] ?? (tops[1] ?? 0) + 400;
-        if (tops.length >= 2) {
-          window.scrollTo(0, tops[1] + Math.min(200, (nextDay - tops[1]) / 2));
+        const documentEnd = document.documentElement.scrollHeight;
+        // Each day's section runs from its own header to the next one, and the
+        // last runs to the end of the document.
+        const sections = tops.map((top, i) => ({
+          top,
+          height: (tops[i + 1] ?? documentEnd) - top,
+        }));
+        // "Pinned" is a header holding its sticky offset rather than flowing.
+        const pinnedNow = () =>
+          dayHeaders()
+            .map((el) => el.getBoundingClientRect())
+            .filter((rect) => Math.abs(rect.top - offset) < 1.5);
+
+        // Tallest section first, then the next — a section can still be too
+        // short to hold its header once the viewport is tall, and the last one
+        // can sit past the end of the scroll range. Exhausting every candidate
+        // without pinning anything is a real failure, not a dead zone, so this
+        // loop can only rescue a bad guess; it can never hide a regression.
+        for (const section of [...sections].sort((a, b) => b.height - a.height)) {
+          if (section.height <= 0) continue;
+          // Far enough past the header to have lifted it off its natural
+          // position, but still well inside its own section.
+          window.scrollTo(0, section.top + Math.min(150, section.height / 2));
           await frame();
+          if (pinnedNow().length > 0) break;
         }
 
         const bar = document.querySelector("header.sticky");
         const barBottom = bar ? bar.getBoundingClientRect().bottom : 0;
-        // "Pinned" is a header holding its sticky offset rather than flowing.
-        const pinned = dayHeaders()
-          .map((el) => el.getBoundingClientRect())
-          .filter((rect) => Math.abs(rect.top - offset) < 1.5);
+        const pinned = pinnedNow();
         return {
           dayCount: tops.length,
           barHeight: bar ? bar.getBoundingClientRect().height : 0,
