@@ -220,6 +220,14 @@ test("public marketing pages lead to the product and pricing details", async ({ 
       name: "A manifest that stays useful after the signal disappears.",
     }),
   ).toBeVisible();
+  // The offline claim is answered here, beside the screen it is about, and
+  // nowhere else. /pricing carried a second copy of it as a FAQ row until
+  // 2026-08-28 — a product question wearing pricing clothes, on a page whose
+  // rows are the ones that decide the purchase
+  // (docs/product/marketing-review-20260827.md). This assertion is where that
+  // deleted row's claim moved, not a new one: the pricing block below used to
+  // hold it.
+  await expect(page.getByText(/The crew saves the manifest to their phone/)).toBeVisible();
   // The money story and the full capability index — the two things a buyer
   // comparing DiveDay against an incumbent's feature page goes looking for.
   await expect(
@@ -289,7 +297,34 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     page.getByRole("heading", { name: "One flat price for the whole shop." }),
   ).toBeVisible();
   await expect(page.getByText("$99", { exact: true })).toBeVisible();
-  await expect(page.getByText(/The crew saves the manifest to their phone/)).toBeVisible();
+  // And the terms stand at the figure and at the door, which is the whole of
+  // this slice (docs/product/marketing-review-20260827.md, "the terms never
+  // stand at the doors"). The lock is a restatement of a binding commercial
+  // commitment (H-12) directly under the number it qualifies; it used to be
+  // reachable only through the included list and a FAQ row. It names its
+  // subject — the price, not the reader — because this is the fine-print slot
+  // a burned buyer scans for the catch.
+  await expect(
+    page.getByText("Today's price, locked for two years for founding shops."),
+  ).toBeVisible();
+  // The trial's own terms, at both decision points — free, three weeks, no
+  // card, and the soft expiry that src/lib/trial.ts actually implements. The
+  // demo note beside it answers only for the demo, so before this the trial
+  // button carried no terms at all.
+  const trialTerms = page.getByText(
+    "The trial is a shop of your own — free for 3 weeks, no card, and nothing switches off when the window ends.",
+  );
+  await expect(trialTerms).toHaveCount(2);
+  // The offline row is gone from this page's FAQ, deliberately — the claim
+  // lives on /product, asserted above.
+  await expect(page.getByRole("heading", { name: "Does the manifest work offline?" })).toHaveCount(
+    0,
+  );
+  // The two rows that replaced it answer questions the price itself raises.
+  await expect(
+    page.getByRole("heading", { name: "Do I pay more as my crew grows?" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "How long does setup take?" })).toBeVisible();
 
   // A flat price only means something next to the model it replaces, so the
   // page anchors against the per-booking fees the switching guides document —
@@ -304,7 +339,10 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     page.getByText(/monthly subscription plus 3% of every online booking/),
   ).toBeVisible();
   await expect(page.getByText(/publishes no rate at all/)).toBeVisible();
-  await expect(page.getByText(/third parties report that fee at around 6%/)).toBeVisible();
+  // Case-insensitive: the attribution now opens the row's last breath unit,
+  // because the second "the size of it is unpublished" announcement went — the
+  // row's first four words already say it.
+  await expect(page.getByText(/third parties report that fee at around 6%/i)).toBeVisible();
   await expect(
     page.getByRole("link", { name: /What moving off Rezdy looks like/ }),
   ).toHaveAttribute("href", "/switching/rezdy");
@@ -343,6 +381,13 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   const priceHeroDoors = page.getByRole("main").locator("section").first().locator("a, button");
   await expect(priceHeroDoors.first()).toHaveText("Try the live demo");
   await expect(priceHeroDoors.nth(1)).toHaveText("Start a trial");
+  // The trial terms are a sentence, not a third door. When a page owes a
+  // reader a fact at a door it states it rather than opening another one
+  // (docs/product/marketing.md, "The budget binds controls, not facts") — and
+  // this assertion is what stops the note growing a "See the terms" link that
+  // would re-order the two above it.
+  await expect(trialTerms.first().locator("a, button")).toHaveCount(0);
+  await expect(trialTerms.last().locator("a, button")).toHaveCount(0);
 
   // The page closes on the number it opened with, and that closing door is
   // tagged apart from the hero's. Without it there was no trial door below

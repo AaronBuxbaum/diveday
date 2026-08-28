@@ -7,6 +7,69 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The trial's terms stand at the pricing doors (delivered 2026-08-28)
+
+Slice 12c of [marketing-review-20260827.md](marketing-review-20260827.md), against that review's
+second finding — the terms never stand at the doors. `/pricing` asked for a trial at two decision
+points and named no terms at either: the demo note beside the hero pair answers for the demo alone
+and must not promise "no sign-up" on the trial's behalf, so the higher-friction door stood bare.
+`marketing.pricing.trialNote` now sits under both pairs — free, three weeks, no card, and the soft
+expiry `src/lib/trial.ts` genuinely implements (expiry blocks no route and no mutation). It is a
+sentence at both positions, never a third door; the deliberate divergence from "the demo's cost is
+stated once per page" is recorded in [marketing.md](marketing.md) beside that rule. It is set in
+`font-medium` at both, matching the demo note rather than sitting a weight beneath it: they are two
+notes of one kind, and the trial is the higher-friction door, so setting only the demo's terms in
+medium put the heavier ink on the easier ask. `/` keeps its own pairing, where the medium note sits
+beside a price *line* — context, not terms.
+
+**The two-year lock moved under the figure it qualifies** (`marketing.pricing.lockNote`), where a
+reader looking at the number is asking "for how long", so a binding commercial commitment (H-12) is
+not inventoried twice in one screen. It names its subject — "Today's price, locked for two years for
+founding shops" — because fine print under a figure is the slot a burned buyer scans for the catch,
+and a subjectless "Locked for two years" invites them to read *themselves* as the thing locked, on
+the page whose next band argues they can leave any day. `marketing.price.item5` did not trim, it
+**went**: under "What the price covers" its remainder was the one negation among five positives and
+a founding-cohort rationale rather than a thing the price buys, which `faq.whyFounding` already
+carries whole. The fee anchor stopped lecturing — the body now opens on the arithmetic the reader
+has already done — and the FareHarbor row broke its semicolon run into breath units, announcing the
+unpublished rate once rather than twice, still reported-only and attributed. `feesNote` lost its
+second sentence for the same reason: "if an integration ever costs extra, we'll say so before you
+turn it on" is a promise about a charge that does not exist, manufacturing the doubt it answers
+directly under four negations.
+
+The FAQ traded one row for two: "Does the manifest work offline?" left (a product question wearing
+pricing clothes; `/product` answers it at depth beside the screen it is about), and "Do I pay more
+as my crew grows?" and "How long does setup take?" arrived — the first counted against
+`src/lib/authz.ts`'s six staff roles and the fact that divers never authenticate at all, the second
+against the six fields `/onboard` actually asks for and its action that inserts the shop on submit.
+The setup-time row ends there: the importer's preview promise belongs to the switching row, which is
+vertically adjacent to it in the left column of the two-column grid, and the two used to close on
+the same eight words about seeing what will happen before anything is saved. `faq.trialMeaning`
+leads with the November case — what only it says — and puts the free-weeks terms the reader has met
+twice already behind it. All of it feeds the page's `FAQPage` structured data automatically, so
+every row still stands alone.
+
+**The credentials claim ships scoped, and that is the slice's one deliberate divergence from the
+review's wording.** The review's unscoped "the only things held back are credentials" is true of the
+shop's *records* and false of the export bundle, which also withholds retry queues, provider
+linkage, DiveDay's own reconciliation ledgers and the close-out and buddy-team trails — all named on
+the real Settings screen, which did not move. So the sentence carries its scope and the mockup lists
+without claiming completeness; the rule is now a claims-policy bullet in [marketing.md](marketing.md).
+The scope leads with the reassurance rather than the carve-out ("The only things held back **from
+your shop's records** are credentials…"): same claim, same scope, but a carve-out in first position
+is the construction a burned buyer reads as the catch.
+
+Pinned rather than remembered: `src/lib/marketing.test.ts` asserts the four things the trial note
+must name and that it invents no billing term `faq.trialMeaning` has not already made (H-12 leaves
+cadence, taxes and the contract flow open), the lock naming the price as the thing locked, the
+credentials scope, FareHarbor's rate staying reported-only, and four silences — no included key
+mentions the lock, `marketing.price.item5` is gone rather than reworded, `feesNote` raises no
+charge that does not exist, and no `faq.offline` key survives in either locale (with `/product`'s
+dock note still carrying the claim it held). The import preview is pinned present in the switching
+row and absent from the setup-time row above it. `e2e/marketing.spec.ts` reads both trial notes on
+the page, proves neither is a link, and asserts the offline row is gone from `/pricing` and its
+claim present on `/product`.
+
 ## The day on the homepage gets its evening (delivered 2026-08-28)
 
 Slice 12b of [marketing-review-20260827.md](marketing-review-20260827.md), against that review's

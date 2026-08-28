@@ -131,6 +131,16 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
       answer: t("marketing.pricing.faq.billing.answer"),
     },
     {
+      // The per-seat fear, answered where the flat price raises it: the
+      // number above is per *location*, and the roles it covers are the six
+      // in src/lib/authz.ts's STAFF_ROLES. Divers never authenticate at all —
+      // they book on the public shop pages and reach their own trip through a
+      // capability link, so a growing customer list is not a growing bill
+      // either.
+      question: t("marketing.pricing.faq.crewSize.question"),
+      answer: t("marketing.pricing.faq.crewSize.answer"),
+    },
+    {
       question: t("marketing.pricing.faq.trialMeaning.question"),
       // The upgrade address, not the support one: marketing.md routes "how do
       // I move a trial shop to paid" through its own inbox, and the soft
@@ -143,9 +153,22 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
       answer: t("marketing.pricing.faq.seeBefore.answer"),
     },
     {
-      question: t("marketing.pricing.faq.offline.question"),
-      answer: t("marketing.pricing.faq.offline.answer"),
+      // Counted against the real form: /onboard asks for six fields (shop
+      // name, link, timezone, then the owner's name, email and password) and
+      // its action inserts the shop row on submit. The spreadsheet is named as
+      // its own step because it is one — but the importer's preview belongs to
+      // the `switching` row below, not here: in the row-major two-column grid
+      // this row and that one are vertically adjacent in the left column, and
+      // both used to close on the same eight-word promise about seeing what
+      // will happen before anything is saved. This is the time question, so it
+      // ends on time.
+      question: t("marketing.pricing.faq.setupTime.question"),
+      answer: t("marketing.pricing.faq.setupTime.answer"),
     },
+    // "Does the manifest work offline?" left this list on 2026-08-28: a
+    // product question wearing pricing clothes, and /product answers it at
+    // depth beside the screen it is about (`marketing.product.dockNote`).
+    // Nothing on this page decides on it (docs/product/marketing-review-20260827.md).
     {
       question: t("marketing.pricing.faq.dataIfNotWorking.question"),
       answer: t("marketing.pricing.faq.dataIfNotWorking.answer", {
@@ -233,6 +256,25 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 {earlyAccessPrice.price}
               </p>
               <p className="mt-4 text-base text-muted">{t(earlyAccessPrice.cadenceKey)}</p>
+              {/* The two-year lock, under the figure it is about. It used to
+                  be reachable only by reading the included list (`item5`) and
+                  the founding-shop FAQ row — two places, neither of them where
+                  a reader is looking at the number and asking "for how long".
+                  `item5` was retired rather than trimmed, so the claim is not
+                  inventoried twice (docs/product/marketing-review-20260827.md).
+                  A restatement of a binding commercial commitment (H-12),
+                  never an extension of it.
+
+                  It names its subject — "Today's price, locked for…" — because
+                  this is fine print under a figure, the slot a reader who has
+                  been burned scans for the catch, and a subjectless "Locked
+                  for two years" lets them supply "I am" as the subject on a
+                  page whose next band argues they can leave any day. Naming it
+                  costs a second line on a phone, and `text-pretty` is what
+                  stops that line being the word "shops." alone. */}
+              <p className="mt-2 text-sm leading-6 text-pretty text-muted">
+                {t("marketing.pricing.lockNote")}
+              </p>
               {/* Two blocks, not one paragraph: as one they broke mid-clause
                   ("No cut / of your bookings") directly under the figure. The
                   split protects the break, not a line count — the longer
@@ -250,6 +292,32 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                   thousand pixels down. */}
               <p className="mx-auto mt-6 max-w-lg text-sm leading-6 font-medium text-balance text-muted">
                 {t("marketing.common.demoNote")}
+              </p>
+              {/* And what the *other* door costs. The demo note has always
+                  answered for the demo alone — it must not promise "no
+                  sign-up" on the trial's behalf — so the trial button stood
+                  here with no terms at all, at the one point on the site where
+                  the decision is made. Soft expiry is a fact, not a
+                  softener: src/lib/trial.ts blocks no route and no mutation
+                  when the window elapses. A `<p>`, deliberately: the hero's
+                  door budget is two, and the DOM order of those two is pinned
+                  in e2e/marketing.spec.ts.
+
+                  `text-pretty`, not the `text-balance` its neighbour uses:
+                  balancing two lines of this sentence puts the break inside
+                  "no / card", which is the one clause a reader is scanning
+                  for. Pretty leaves the fill alone and only guards the
+                  orphan.
+
+                  `font-medium`, matching the demo note above it rather than
+                  sitting a weight under it: these are two notes of one kind —
+                  terms at a door — and the trial is the door with the higher
+                  friction, so setting only the demo's terms in medium put the
+                  more weight on the easier ask. On `/` the medium note sits
+                  beside a regular *price line*, which is context rather than
+                  terms; that page keeps its pairing. */}
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 font-medium text-pretty text-muted">
+                {t("marketing.pricing.trialNote")}
               </p>
             </div>
 
@@ -287,7 +355,15 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 {t("marketing.pricing.seeFullList")}
               </Link>
               {/* The one cost the price does not cover, as the footnote to the
-                  list of what it does — the same thought, finished. */}
+                  list of what it does — the same thought, finished. It carried
+                  a second sentence ("if an integration ever costs extra, we'll
+                  say so before you turn it on") until 2026-08-28: a promise
+                  about an unshipped condition, sitting under "What the price
+                  covers" and telling a reader who has just absorbed four
+                  negations that a fifth charge might arrive later. It answered
+                  a question nobody asked about a charge that does not exist
+                  (AGENTS.md, "every sentence earns its place, or it is
+                  deleted"). */}
               <p className="mt-8 max-w-xl text-sm leading-6 text-muted">
                 {t("marketing.pricing.feesNote")}
               </p>
@@ -429,6 +505,17 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 page is warmest, the only door left asked for an account
                 (issue #785). */}
             <FunnelCtas locale={locale} source="pricing-close" className="mt-8 justify-center" />
+            {/* The same terms at the second door. `demoNote` is stated once
+                per page, at the first door (docs/product/marketing.md) — the
+                trial note is deliberately not: a reader who scrolled five
+                thousand pixels of objections to reach this band is being asked
+                to commit here, and the closing pair carried no terms at all.
+                The divergence is recorded in marketing.md beside that rule.
+                Same `font-medium` as the hero's copy of it, for the same
+                reason. */}
+            <p className="mx-auto mt-4 max-w-xl text-sm leading-6 font-medium text-pretty text-muted">
+              {t("marketing.pricing.trialNote")}
+            </p>
             <p className="mt-10 text-sm leading-6 text-muted">
               {t("marketing.pricing.stillQuestion")}
             </p>
