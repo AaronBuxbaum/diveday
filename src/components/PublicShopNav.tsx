@@ -39,8 +39,15 @@ export function activeNavIndex(pathname: string, items: readonly PublicShopNavIt
   return best;
 }
 
+// `text-sm` up to `sm`, and the full 16px from there: the chrome bar is one
+// fixed-height row at every width now (ADR
+// 20260827-clearwater-surface-language, decision 10), and at 390px the shop's
+// own name, two tabs and the language control have to share 358 points. A
+// destination label is navigation rather than critical text — nobody decides
+// anything from the word "Courses" — and the 44px target is untouched, which
+// is the measurement that matters on a thumb.
 const linkClass =
-  "inline-flex min-h-11 items-center rounded-xl px-3 text-base font-medium transition-colors";
+  "inline-flex min-h-11 items-center rounded-xl px-2 text-sm font-medium transition-colors sm:px-3 sm:text-base";
 
 /**
  * The spine of a shop's public pages — the schedule, and the course catalog

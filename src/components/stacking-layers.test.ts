@@ -5,7 +5,8 @@ import { describe, expect, it } from "vitest";
 /**
  * The "which one is on top" footgun, as a test.
  *
- * The staff header (`ShopNav.tsx`) is `sticky top-0 z-30`, and every in-page
+ * The one chrome bar (`chrome/ChromeBar.tsx`, worn by both shells since ADR
+ * 20260827-clearwater-surface-language) is `sticky top-0 z-30`, and every in-page
  * popover — the `<details>` panels that disclose a form beside the heading
  * that opened them — is meant to slide *under* it. They are page furniture,
  * not modals: nothing dims behind them, they do not trap focus, and a panel
@@ -68,9 +69,11 @@ describe("stacking layers", () => {
       for (const file of await tsxFilesUnder(root)) {
         const source = await readFile(file, "utf8");
         const relative = path.relative(process.cwd(), file);
-        // The header itself, and the toast/overlay layer above it, are what
-        // the rule is measured against rather than cases of it.
-        if (relative.endsWith("ShopNav.tsx") || relative.endsWith("PublicShopChrome.tsx")) continue;
+        // The bar itself, and the toast/overlay layer above it, are what the
+        // rule is measured against rather than cases of it. One file now:
+        // both shells render through `ChromeBar`, so there is one layer to
+        // measure against instead of a staff `z-30` and a public `z-40`.
+        if (relative.startsWith(path.join("src", "components", "chrome"))) continue;
         withoutComments(source)
           .split("\n")
           .forEach((line, index) => {

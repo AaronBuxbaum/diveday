@@ -22,6 +22,25 @@ by-departure view's seat capsule and the departure board's crew chips are quiet 
 settled, with the `settle-in` keyframe firing only on a client-side false→true transition and never
 on first paint. The visual baseline moved app-wide, which is the slice's whole point.
 
+## One chrome spec — both shells wear the same bar (delivered 2026-08-28)
+
+Slice 6b of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
+(decision 10). The staff app and the shopfront had two different headers — 69px of `bg-surface` at
+`z-30` and a shorter `bg-surface/95` at `z-40` — and because the staff one's height was content-
+driven, the only way to pin anything beneath it was to measure it and write the number down: the
+schedule board carried `sticky top-[68px]` three directories away, with an e2e test standing guard
+over the constant. The public schedule never got that far and pinned its day headers at `top-0`,
+where the bar simply painted over them.
+
+Both now render through one `ChromeBar` (`src/components/chrome/ChromeBar.tsx`): 56px, the page
+background at 85% behind a blur with a solid fallback, one hairline, no shadow, `z-30`. The height
+is a token, `--chrome-h`, that the bar sets itself from and that the board's and the public
+schedule's day headers offset by — so the two can no longer disagree, and
+`src/components/chrome/chrome.test.ts` refuses a numeric offset literal anywhere else in the tree.
+The page's `<h1>` stays in the page and the bar carries no connectivity indicator; the phone dock
+is untouched. Because the bar is one fixed-height row at every width, the shopfront's nav and
+language control tighten below `sm` so the shop's own name is never the thing that gets cut.
+
 ## The boat manifest becomes an instrument (delivered 2026-08-27)
 
 Slice 5a of [20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md),

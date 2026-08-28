@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChromeBar } from "@/components/chrome/ChromeBar";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { LanguagePicker, type LanguagePickerCopy } from "@/components/LanguagePicker";
 import { PublicShopNav, type PublicShopNavItem } from "@/components/PublicShopNav";
@@ -56,15 +57,31 @@ export function PublicShopHeader({
   languagePickerCopy: LanguagePickerCopy;
 }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2 sm:px-6">
+    /* The same bar the staff shell wears — one height, one z-index, one
+       translucency (ADR 20260827-clearwater-surface-language, decision 10).
+       This header used to be its own shorter bar at `z-40`, which is why the
+       schedule's sticky day headers, pinned at `top-0`, spent every scroll
+       hidden underneath it. */
+    <ChromeBar
+      leading={
+        /* A truncating span inside, which the name did not need while the row
+           could wrap onto a second line: the bar is one fixed-height row now,
+           so a long shop name has to ellipse rather than push the nav off the
+           viewport. The span rather than the link itself because
+           `text-overflow` has nothing to act on inside a flex container. */
         <Link
           href={publicSchedulePath(shop.slug)}
-          className="inline-flex min-h-11 items-center text-lg font-semibold tracking-tight"
+          className="flex min-h-11 min-w-0 items-center text-base font-semibold tracking-tight sm:text-lg"
         >
-          {shop.name}
+          <span className="truncate">{shop.name}</span>
         </Link>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      }
+      trailing={
+        /* The nav rides in the trailing cluster rather than the bar's centre
+           slot: on a diver's page the two tabs and the language control are one
+           group — which page, in which words — and both belong at the edge the
+           shop's name is not at. */
+        <>
           <PublicShopNav ariaLabel={navAriaLabel} items={navItems} />
           <LanguagePicker
             current={locale}
@@ -73,9 +90,9 @@ export function PublicShopHeader({
             setLocale={setLocale}
             copy={languagePickerCopy}
           />
-        </div>
-      </div>
-    </header>
+        </>
+      }
+    />
   );
 }
 

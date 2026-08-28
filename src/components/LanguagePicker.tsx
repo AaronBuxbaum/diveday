@@ -94,8 +94,18 @@ export function LanguagePicker({
             read the label beside it. */}
         <DiveDayIcon name="globe" className="size-4 shrink-0" strokeWidth={1.75} />
         {/* `lang` so a screen reader pronounces "Español" as Spanish rather
-            than reading it through the page's own language. */}
-        <span lang={current}>{currentLabel}</span>
+            than reading it through the page's own language.
+
+            Below `sm` the globe carries the control alone and the endonym goes
+            `sr-only` — it stays in the accessibility tree, so nothing is lost
+            to a screen reader, and the phone's chrome bar is one fixed-height
+            row that the shop's own name has first claim on (ADR
+            20260827-clearwater-surface-language, decision 10). The globe is
+            the half that needs no language, which is why it is the half that
+            survives the squeeze. */}
+        <span lang={current} className="sr-only sm:not-sr-only">
+          {currentLabel}
+        </span>
         <DiveDayIcon
           name="caret"
           direction="down"

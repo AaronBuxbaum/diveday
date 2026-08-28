@@ -835,6 +835,15 @@ export default async function SchedulePage({
               // can catch mid-scroll answers it faster than a sentence-case
               // date in small caps. Sticky, so mid-list the reader always
               // knows which day the rows under their thumb belong to.
+              //
+              // Pinned *below* the chrome bar, by the same token the bar sets
+              // its own height from (ADR 20260827-clearwater-surface-language,
+              // decision 10). It used to pin at `top-0`, which put it directly
+              // underneath a bar painting over it — so on the full page the
+              // day never actually showed once it started sticking. An embed
+              // has no chrome above it at all (the layout drops the header),
+              // so there the top of the frame is the top of the list.
+              const dayStickyTop = isEmbed ? "top-0" : "top-(--chrome-h)";
               const dayParts = formatDayParts(trip.startsAt, locale, shop.timezone);
               const dayRule =
                 dayIso === lastDayIso ? null : (
@@ -842,7 +851,7 @@ export default async function SchedulePage({
                     key={`day-${dayIso}`}
                     role="presentation"
                     aria-hidden="true"
-                    className="sticky top-0 z-20 mt-8 flex items-center gap-3 bg-background pt-2 pb-3 first:mt-0"
+                    className={`sticky ${dayStickyTop} z-20 mt-8 flex items-center gap-3 bg-background pt-2 pb-3 first:mt-0`}
                   >
                     <span className="text-3xl leading-none font-semibold tracking-tight tabular-nums">
                       {dayParts.day}

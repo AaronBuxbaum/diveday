@@ -152,9 +152,6 @@ Sequenced so the language lands before the recompositions that speak it. **Each 
 standing obligation**: the component that must not drift names the ADR in its doc comment, and a
 test pins the rule (never a pixel snapshot).
 
-- **6b. One chrome spec.** The 56px translucent header bar shared by both shells, its height a
-  token no child hard-codes. *Pins:* a test that no `top-[68px]`-style literal survives outside the
-  chrome component.
 - **6c. The home as the day's spine** (morning reading). Stations in clock order carrying their own
   work rows; the desk group; collapsed horizons; the view switch dissolves. *Pins:* a test that a
   departure's facts render once — no queue row repeats a station's title at equal weight.
@@ -188,7 +185,8 @@ once (each SPEC's preamble points here). Everything not listed is independent:
 - **6a has shipped** ([shipped.md](../shipped.md)), so the ledger primitives
   (`GroupLabel`/`LedgerGroup`/`LedgerRow`/`RowKind`/`InsetGroup`), flat-at-rest and `SettledCheck`
   are already in the tree for 6c, 6f, 6h, 7a, 7b, 8a, 8c, 8f, 9a, 9d–9g, 10a and 10d to build on.
-- **6b → 6c** (the chrome height token); **6c → 6d and 10d** (they extend the spine 6c builds;
+- **6b has landed** — `--chrome-h` and `ChromeBar` are in the tree, so 6c inherits the token
+  rather than introducing it. **6c → 6d and 10d** (they extend the spine 6c builds;
   8b's S1 journey also starts from 6c's station row); **6e → 9e** (the `?week=` grammar — 9e
   introduces it itself if 6e has not landed, per its cross-reference).
 - **7a → 7b–7e, 10a and 10c** (the thread shell and the EntryShell type-ramp land in 7a; claim's

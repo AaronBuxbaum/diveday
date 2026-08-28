@@ -211,6 +211,21 @@
    */
   --default-transition-duration: 200ms;
   --default-transition-timing-function: var(--ease-out-soft);
+
+  /*
+   * The height of the one chrome bar both shells wear (ADR
+   * 20260827-clearwater-surface-language, decision 10). 3.5rem is 56px.
+   *
+   * It lives here rather than in a component because it is read in two
+   * directions: `ChromeBar` sets its own height from it, and every surface
+   * that pins something *under* the bar — the schedule board's day headers,
+   * the public schedule's — offsets by it with `top-(--chrome-h)`. The staff
+   * bar's height used to be content-driven, so the only way to pin beneath it
+   * was to measure it and write the number down (`sticky top-[68px]`, three
+   * directories away, with an e2e test standing guard over the constant).
+   * A token cannot drift from itself.
+   */
+  --chrome-h: 3.5rem;
 }
 
 @theme inline {

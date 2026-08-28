@@ -297,8 +297,10 @@ async function PublicShopFooterSection({ params }: { params: Promise<{ shopSlug:
 
 /**
  * Holds the header band's height in the static shell, matching
- * `PublicShopHeader`'s own box exactly (`border-b`, `py-2`, and a `min-h-11`
- * row), so nothing below it moves when the real header streams in.
+ * `PublicShopHeader`'s own box exactly — which since ADR
+ * 20260827-clearwater-surface-language (decision 10) is one token,
+ * `--chrome-h`, rather than a padded row this had to re-derive — so nothing
+ * below it moves when the real header streams in.
  *
  * Wordless and `aria-hidden`: every string in that header is the shop's own —
  * its name, and which of its pages exist — and none is knowable before the shop
@@ -310,11 +312,7 @@ function PublicShopChromePlaceholder({ label }: { label: DiverTranslator }) {
   return (
     <>
       <SkipLink href="#public-shop-main-content" label={label("shopChrome.skipToContent")} />
-      <div className="border-b border-border bg-surface" aria-hidden>
-        <div className="mx-auto flex w-full max-w-6xl items-center gap-x-4 px-4 py-2 sm:px-6">
-          <div className="h-11 w-40 max-w-full" />
-        </div>
-      </div>
+      <div className="h-(--chrome-h) border-b border-border bg-background" aria-hidden />
     </>
   );
 }
