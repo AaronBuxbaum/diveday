@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;650;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7; --border-strong: #8a8577;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-tint: #e7f1f4;
+      --accent: #ff6f61; --accent-fg: #3d1410;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .speclabel { font-size: 11px; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  </style>
+</helmet>
+
+<div style="width: 1180px; height: 205px; background: var(--bg); box-sizing: border-box; overflow: hidden; padding: 40px 44px 0;">
+
+  <p class="speclabel" style="margin: 0;">The coral morning &mdash; renders while this is the only booking ever, then never again</p>
+
+  <div style="width: 1024px; margin: 18px 0 0;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent);"></span>
+      <span style="font-size: 12px; font-weight: 650; letter-spacing: .14em; text-transform: uppercase; color: var(--accent-fg);">Your first booking</span>
+    </div>
+    <div style="margin-top: 8px; display: flex; align-items: center; gap: 14px; min-height: 62px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+      <span class="tnum" style="width: 76px; font-size: 14px; font-weight: 700;">8:30 AM</span>
+      <span style="flex: 1; min-width: 0;">
+        <span style="font-size: 15px; font-weight: 600; display: block;">Ravi Chandra &middot; Two-Tank &mdash; Alligator Reef</span>
+        <span style="display: block; font-size: 13px; color: var(--muted); margin-top: 2px;">Sat, Sep 5 &middot; paid <span class="tnum">$110</span> &middot; waiver signed</span>
+      </span>
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

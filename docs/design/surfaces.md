@@ -269,3 +269,22 @@ until slice 8b ships.
   exist, and the redesign keeps it conditional.
 - **Composition:** status, story, file — a person is a readiness question, a history, and a set of
   facts, in that order; ten co-equal sections answered no question first.
+
+### The doors — `/sign-in`, `/onboard`, and the token family
+
+**Redesign proposed** — ADR
+[20260827-first-light](../architecture/decisions/20260827-first-light.md) (Proposed), drawn in
+[its canvas](canvases/20260827-first-light/README.md). One entry for the family
+(`/forgot-password`, `/reset-password`, `/verify`, `/invite`, `/unsubscribe` — and `/claim`,
+which leaves for the thread), because they are one surface: `EntryShell` is the page.
+
+- **One idea:** one column, one act — a door asks for exactly one thing and gets out of the way.
+- **The question it arrives with:** "am I in the right place, and what do I type?" — answered by
+  the wordmark (whose house this is) and a single h1 naming the act.
+- **Controls that dissolved:** onboard's h2 section rules (group labels), three of its four
+  reassurance sentences, claim's hand-rolled header and panel (ThreadShell), the emoji glyphs
+  (a closed drawn set).
+- **Remove first:** nothing standing — the family was already lean; the discipline is refusing
+  additions (a door never grows a second primary or a marketing aside).
+- **Composition:** wordmark, h1, one form or one sentence, one primary, quiet footer — and two
+  dead-link tiers: account tokens never name a shop, booking tokens always offer the shop's hand.

@@ -40,7 +40,10 @@ add-booking picker — are visited weekly rather than hourly, and their drift sh
 Every object collection — dive sites, courses, gear units, promo codes, and the pickers that
 choose among them — renders as **one ledger at every width**: a search/filter toolbar, grouped
 rows (by the collection's own shared fact: agency for courses, kind for gear, letter for divers),
-exceptional badges only, the row as the door. Starting-content catalogs (site templates, course
+exceptional badges only, the row as the door. Grouping composes with the Pager rather than
+replacing it: the row query sorts group-major then name so groups never interleave across pages,
+group headings re-render on each page, and the count keeps the row query's exact scope (ADR
+20260803-one-pagination-model). Starting-content catalogs (site templates, course
 templates) are **a quiet door at the ledger's tail** ("Browse the DiveDay catalog — 34 sites near
 you"), never a second surface style; the catalog behind the door keeps its preview-then-import
 flow in the same ledger grammar. The table-vs-card-grid split dies.
@@ -57,8 +60,11 @@ boxes. On the phone the rail collapses to a top jump-row. `ConflictGuardedForm`,
 
 ### 3. The instrument pattern (state said once)
 
-- **Gear** is one story: the register's groups are the states — Out (with due-back), Due back
-  (overdue carries the warning word), On the wall — with the kind filter above and service facts
+"Instrument" here means the Clearwater discipline of figures-over-chrome — state said once, no
+tile restating a group — not the counter's count-led anatomy.
+
+- **Gear** is one story: the register's groups are the states — Out (with due-back), Overdue
+  (carrying the warning word), On the wall — with the kind filter above and service facts
   as per-row sentences only where they have something to say. The three stat tiles and the
   separate Returns panel fold into the groups they duplicated. The unit page keeps its inset
   groups.
@@ -66,8 +72,9 @@ boxes. On the phone the rail collapses to a top jump-row. `ConflictGuardedForm`,
   departure needing crew renders in its day cell with the warning word **and its act** (Assign →
   the trip's crew section). Credentials are a quiet ledger beneath (renewal words, never gates —
   H-59); the two add-forms become one "+ Add a shift" door.
-- **Reports** keeps its shape and sheds its chrome: the six figures render as an unboxed figure
-  row (Clearwater ramp), the trips table becomes a ledger whose waiver column keeps its
+- **Reports** keeps its shape and sheds its chrome: the five figures render as an unboxed figure
+  row (Clearwater ramp; departures folds into the seats figure's subline, tax drops to the quiet
+  line beside the CSV door), the trips table becomes a ledger whose waiver column keeps its
   remainder-carries-the-attention meter, CSV stays a quiet door. No new arithmetic.
 
 ### 4. The mapping table (surfaces with no board of their own)
@@ -75,11 +82,20 @@ boxes. On the phone the rail collapses to a top jump-row. `ConflictGuardedForm`,
 | Surface | Pattern | The one change worth naming |
 | --- | --- | --- |
 | Courses roster | library (grouped by agency, progression order kept) | Schedule/Hide stay the row's two quiet acts |
-| Promos | library (codes grouped by state: live, scheduled, ended) | the two independently-paged lists become two groups of one ledger; the create card keeps its worked-in form |
+| Promos | one page, two ledgers: the codes grouped by state (live, scheduled, ended), the last-minute deals their own ledger beneath | the codes ledger keeps one Pager (`?page=`), the deals keep theirs (`?dealsPage=`); the create card keeps its worked-in form |
 | Team | inset groups + a people ledger | per-row enable/disable stays immediate; role edits become per-row disclosures saving on close — the page-level bulk Save retires |
-| Add-booking picker | library (departures grouped by day) | unchanged flow, ledger grammar |
+| Add-booking picker | library (departures grouped by day) | unchanged flow, ledger grammar; the pick-the-diver step (`bookings/new/[tripId]`) takes 8a's person rows in the same PR |
 | Order record | already one card | restyles flat, nothing moves |
 | Settings sub-pages | Clearwater 6g owns them | — |
+| `/shop/[shopSlug]/orders/new` | worked-in form card | restyles flat under 6a, no recomposition |
+| `/shop/[shopSlug]/schedule/blowout/[tripId]` | instrument grammar for its record mode (stat row + ledger), worked-in card for its confirm mode | restyled under 6a, no behavior change |
+| `/shop/[shopSlug]/trips/[id]/log` | keeps its composition | 6a mechanics only |
+| `/shop/[shopSlug]/check-in/walk-in` + `/walk-in/[tripId]` | worked-in form | 6a only |
+| `/shop/[shopSlug]/divers/new` | worked-in form | 6a only |
+| `/s/[shopSlug]/reviews` | restyles in Clearwater slice 6i | — |
+| `/s/[shopSlug]/courses` + `/courses/[slug]` | h1 joins the display scale in 6i | otherwise unchanged |
+| `/offline-manifest` | deliberately deferred | the departure canvas README records the deferral |
+| The doors (`/sign-in`, `/onboard`, `/forgot-password`, `/reset-password`, `/verify`, `/invite`, `/unsubscribe`, `/claim`) | the first-light canvas (ADR [20260827-first-light](20260827-first-light.md)) | slices 10a–10d |
 
 ## Alternatives considered
 
@@ -111,6 +127,8 @@ real idea that needs the boat-resource model (roadmap item 4) before it is hones
 - The dive-site difficulty code, fit tone, and the field-guide picker keep their vocabulary
   (ADR 20260813 pair); the editor pattern only reshapes their chrome.
 - `surfaces.md` gains entries for the gear register, staffing, and reports.
-- With this record, every staff and diver surface outside the departure pages (ADR
-  20260827-the-departure-is-two-working-surfaces) has a named composition in the Clearwater
-  stack: the language (item 6), the thread (7), the people surfaces (8), and the shelves (9).
+- With this record, every staff and diver surface has a named composition or a recorded
+  deferral across items 5–10: the departure pages (item 5, ADR
+  20260827-the-departure-is-two-working-surfaces), the language (6), the thread (7), the people
+  surfaces (8), the shelves (9) — whose mapping table above now carries every route no other
+  slice claims — and the doors (10, ADR 20260827-first-light).

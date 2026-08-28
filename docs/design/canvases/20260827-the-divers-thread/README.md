@@ -34,8 +34,11 @@ herself and **Noor Rahman** — which is what turns the storefront's "Only 2 spo
 staff board's full boat. She pays **$235** at booking ($190 fare + $45 full rental set for Noor;
 tax added at checkout). Yara's Advanced card is verified; Noor claims their seat and their
 self-declared Open Water sits with the shop for verification; both waivers are signed Thursday
-night (Yara's emergency contact: Samir Halabi). Prep state: 2 of 5 steps done (certifications sit with the shop), next is Noor's gear
-sizes. Saturday delivers 27&deg;C water, 24 m of visibility, calm seas, dives to 12 m and 14 m
+night (Yara's emergency contact: Samir Halabi). Prep state on Yara's own thread — the thread is
+strictly per-booking: 2 of 4 steps done (her waiver signed · Thu, $235 paid · Thu evening; French
+Reef gates no certification, so no such step renders), next is her own gear sizes, and Day-of
+waits. Noor's facts — seat claimed, waiver signed — read in the footer's party section, never as
+steps in Yara's spine. Saturday delivers 27&deg;C water, 24 m of visibility, calm seas, dives to 12 m and 14 m
 (French Reef swim-throughs, White Sand Bottom Cave), a green turtle on tank two, Keiko's shoutout,
 and a five-star review in the seed's own words. It is Yara's third dive day with the shop.
 

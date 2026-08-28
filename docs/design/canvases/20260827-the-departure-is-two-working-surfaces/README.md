@@ -70,6 +70,10 @@ with their dependencies, are in
 mentions this canvas's ADR id, and a canvas whose slices are all `shipped` or `dropped` may not
 still call itself `Live`.
 
+One deliberate deferral: `/offline-manifest` keeps its current composition for now — the
+divergence from the live manifest's instrument language is known and accepted until a slice
+recomposes it; it inherits component-level restyles only.
+
 ## Implementing a slice
 
 Load the [`design-implementation`](../../../../.claude/skills/design-implementation/SKILL.md) skill

@@ -75,7 +75,9 @@ check line, the current step is open with its form inline, and future steps wait
 status statement leads (a "N of M" figure and the next step's name); the earned moment fires only
 at `?booked=1` and at all-set; the receipt, the emails line and the per-row "Done" states collapse
 into their steps. Party seats, self-cancel and the shop card keep their places at the foot.
-Recency, the note and hotel pickup fold into Day-of details.
+Recency, the note, hotel pickup and the support-needs question
+(ADR 20260827-support-needs-are-a-record-about-the-dive) fold into Day-of details; support needs
+stays optional and never gates the step's settling.
 
 ### 4. After the dive, the same link (the after-state)
 
@@ -84,7 +86,8 @@ buffer), the same `/ready` link renders the afterglow — the keepsake log card 
 the day's facts render: sites, conditions, crew, the diver's dive count), the review ask as the
 page's one primary, then tip, photos and the Google share as quiet ledger doors. `/recap/[token]`
 stops being a page of its own: existing recap links keep working by rendering the thread's
-after-state (same data, one surface), and recap emails link to the thread. This closes the
+after-state (same data, one surface), and recap emails keep their `/recap` URLs, which render the
+thread's after-state. This closes the
 concept-model row's open half ("folding recap into the same link"); the row's *other* open half —
 whether the second booking-time email survives — stays an owner call and is not settled here.
 

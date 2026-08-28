@@ -186,6 +186,21 @@ The canvas carries [an implementation spec](../../design/canvases/20260827-clear
 — journeys, acceptance tests, and interface contracts per slice — written for a session with none
 of this context. Start any slice from the canvas README's "Implementing a slice" prompt.
 
+**Build order across items 6–10** — the dependency graph a scheduler of sessions needs, stated
+once (each SPEC's preamble points here). Everything not listed is independent:
+
+- **6a first, almost always.** The ledger primitives (`GroupLabel`/`LedgerRow`/`InsetGroup`),
+  flat-at-rest, and `SettledCheck` are consumed by 6c, 6f, 6h, 7a, 7b, 8a, 8c, 8f, 9a, 9d–9g,
+  10a and 10d. A session handed a downstream slice first lands 6a's primitives beneath it, in
+  the same stack.
+- **6b → 6c** (the chrome height token); **6c → 6d and 10d** (they extend the spine 6c builds;
+  8b's S1 journey also starts from 6c's station row); **6e → 9e** (the `?week=` grammar — 9e
+  introduces it itself if 6e has not landed, per its cross-reference).
+- **7a → 7b–7e, 10a and 10c** (the thread shell and the EntryShell type-ramp land in 7a; claim's
+  recomposition and the door restyle build on them). **7b and 7c ship together, or 7c first** —
+  packing must have a destination on the thread before the trip page deletes it.
+- **8a → 8b and 8c**, and 9g's add-booking step consumes 8a's person rows.
+
 ### 7. The diver's thread (design complete)
 
 One link from booking to afterglow, in the Clearwater grammar — argued in the Proposed ADR
@@ -266,6 +281,95 @@ stack's app-wide pass (items 6–9 + the departure's own item 5). Unranked.
 - **9g. The mapped surfaces.** Courses roster, promos, team, add-booking onto the patterns; the
   one behavior change is Team's per-row role saves replacing the page-level bulk Save. *Pins:*
   per-row save round-trip.
+
+### 10. First light (design complete)
+
+The doors — sign-in, onboard, the reset/verify/invite family, claim, unsubscribe — and the shop's
+first morning, argued in the Proposed ADR
+[20260827-first-light](../../architecture/decisions/20260827-first-light.md), drawn in
+[its canvas](../../design/canvases/20260827-first-light/README.md), specified in
+[its SPEC](../../design/canvases/20260827-first-light/SPEC.md). Closes the route-coverage hole the
+2026-08-27 sweep found: the pages a person meets *before* items 6–9's surfaces. Unranked.
+
+- **10a. The door speaks Clearwater.** `EntryShell`/`EntryDone` converge on the language;
+  `EntryDone`'s emoji glyph becomes the closed drawn set (`DoorGlyphId`); the dead-link law's two
+  tiers become normative. *Pins:* no emoji literal in `account/` components; a door renders one
+  primary.
+- **10b. Onboard is the shop's first form.** Group labels replace the h2 rules; the four-sentence
+  reassurance collapses to one; the slug hint reads as the storefront URL, live. Enumeration
+  safety, error routing and analytics untouched. *Pins:* the hint yields to the field error.
+- **10c. Claim joins the thread.** `/claim/[token]` adopts `ThreadShell` (its success already
+  lands on `/ready`); a readable dead claim becomes booking-tier and names the shop. *Pins:* a
+  readable dead token names the shop; an unreadable one does not.
+- **10d. The first morning.** `FirstRunChecklist` recomposes onto the ledger primitives as the
+  spine's leading group — its facts, condition, `FIRST_RUN_STEP_COUNT` and test hooks unchanged,
+  its nested step boxes gone; the first booking ever carries the coral mark (a coral-budget
+  entry, Clearwater ADR decision 11). Depends on 6a and 6c. *Pins:* the group never co-renders
+  with the quiet-day composition; two bookings ever means no mark.
+
+### 11. Product ideas from the sweep (each needs an owner's nod)
+
+Thirteen ideas from the 2026-08-27 design sweep, each composing into a surface items 6–10 already
+design — none adds a nav destination. Every one carries a schema/lib/surface sketch here so a
+green-light starts warm; none is scheduled, and several are safety-adjacent enough to need the
+standing reviews. Ordered roughly by leverage-per-effort.
+
+- **Morning conditions call.** A recorded Go / Watching word on a departure — append-only
+  `trip_condition_calls` (call enum, optional shop-worded note), latest row wins, deliberately no
+  `blown_out` value (that act stays the blowout cascade). Renders beside the station's time (6c)
+  and the week cell (6e); "watching" adds a Today urgency row. Informs, never gates; staff-only
+  until an owner call puts anything on the storefront. *Medium.*
+- **Milestone cues for the crew.** The visit ordinal (already computable) plus two nullable
+  self-reported columns (`people.logged_dives_count`, `logged_dives_as_of`) feed
+  `milestoneForBooking()` → quiet text on the counter row (6h) and record masthead (8b), one desk
+  row when milestones are aboard. Never a badge, never in readiness logic; the projection always
+  attributed ("by their own log"). *Small.*
+- **No-show frees the seat.** When a boarding-window booking is `no_show`, the boat full, and
+  live wait-list entries exist, the counter's blocked group offers one row — "Seat free — 3
+  waiting · Invite" — riding the existing freed-seat invite path. Never auto-refunds, never
+  auto-cancels; the seat is still claimed through `bookSpot`'s transaction. *Small; one money
+  policy line for the owner.*
+- **Usage-based service sentence on gear.** `usageSinceService(unitId)` counts reservation-days
+  since the last service event; above a per-kind threshold the row's existing service sentence
+  gains the usage clause ("~48 dive-days since service"). Copy says dive-days, never dives;
+  informs only (ADR 20260815). *Small.*
+- **Dive insurance completes the emergency picture.** `people.dive_insurance` exists with no
+  writer and no emergency reader: one optional field in the thread's contact step (never a sixth
+  step), rendered beside the emergency contact on the person sheet, the printed manifest, and
+  the record's file group. security-reviewer; inform-only. *Small.*
+- **Recent conditions replayed on the site library.** `latestSiteConditions(siteId)` reads the
+  newest executed-dive log ≤14 days (defensive over `observed_conditions` jsonb) → a quiet
+  second line on the 9a row and under the add panel's chosen site. Staff-only by design.
+  *Small.*
+- **Share-the-boat door, counted.** A `booking_referrals` table plus a non-secret
+  `bookings.share_ref` id: the thread offers "Bring a buddy · 4 spots left" linking to the public
+  trip page with `?via=`; `bookSpot` records the referral when the id resolves, ignores it
+  otherwise. One quiet reports line ("6 seats came from shared links"). Explicitly no credits —
+  that stays the parked referral-program call; the capability token never enters the URL.
+  *Medium.*
+- **Refresher counsel for rusty divers.** One nullable `shops.refresher_course_id` (a settings
+  course picker): when the booking's recency band is stale and the course is live, the thread's
+  prep state renders one quiet line linking to it — absent within 48h of departure. Counsel,
+  never a gate; dive-domain-expert on the wording. *Small.*
+- **Load-out checklist templates.** `checklist_template_items` (shop-worded label + trigger enum
+  always/night/nitrox/deep_site) copy into the pre-departure checklist at trip creation and
+  series materialization — copy-on-create, like site templates. Managed as one Settings inset
+  group. Safety-critical review path. *Medium.*
+- **Tips by crew.** `tipsByCrewForMonth()` joins paid tips → bookings → trips → assignments,
+  split equally per departure; one collapsed disclosure under the 9f tips figure, with an
+  "unassigned" remainder line so no money silently drops. Display arithmetic only — not payroll.
+  *Small.*
+- **Site rotation memory.** `recentSiteRuns(shopId, siteId, 14d)` under the add panel's chosen
+  site: "Ran 3× in the last 14 days." One read after selection; cancelled blowouts never count
+  as "ran". *Small.*
+- **Seasonal price windows on a series.** `trip_series_price_windows` (date range + price,
+  overlap-refused): materialization prices each new occurrence through
+  `priceForOccurrence()`; existing instances keep their price; per-trip edit stays the override.
+  One inset group in the add panel's repeat disclosure. *Medium.*
+- **One outbound review door.** `shops.external_review_url` (validated https, a settings row):
+  after the after-state's review submits, one quiet "Also share it on Google" link — shown to
+  every submitter regardless of stars (selective solicitation is the review-gating the
+  suppression floor already refuses), never pre-filling the text. *Small.*
 
 ## Concept-model simplification (proposed — each row needs an owner decision)
 

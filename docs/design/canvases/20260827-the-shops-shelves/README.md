@@ -14,9 +14,9 @@ interface contracts.
 
 | File | What it shows |
 | --- | --- |
-| `Main.dc.html` | The library pattern on dive sites: one ledger grouped by the collection's own fact, requirement words on the rows that carry one, the DiveDay catalog as a quiet door at the tail |
+| `Main.dc.html` | The library pattern on dive sites: one ledger grouped by difficulty (easiest first), requirement words on the rows that carry one, the DiveDay catalog as a quiet door at the tail |
 | `Editor.dc.html` | The long-form editor pattern on the Open Water course: a sticky section rail beside unboxed sections, the depth-marker hint inline, one Save |
-| `Gear.dc.html` | The register as one story: Out / Due back / On the wall as the groups, kind chips as the filter, service facts as per-row sentences only where they speak |
+| `Gear.dc.html` | The register as one story: Out / Overdue / On the wall as the groups, kind chips as the filter, service facts as per-row sentences only where they speak |
 | `Staffing.dc.html` | Staffing as a week: people × days, shifts as quiet chips, the crew gap in its day cell carrying its act, credentials as a quiet clock beneath |
 | `Reports.dc.html` | Reports with its chrome shed: five unboxed figures over hairlines, the departures ledger with the remainder-carries-attention waiver meter |
 
@@ -24,16 +24,17 @@ interface contracts.
 
 ## The fiction every board holds to
 
-The same Blue Mantis week. The site library holds nine sites split reefs/wrecks (Molasses, French,
-Christ of the Abyss; Spiegel Grove, USCGC Duane, Benwood, City of Washington among them), with the
-demanding wrecks carrying their requirement words (Advanced · Deep, plus Nitrox on the Duane) and
+The same Blue Mantis week. The site library holds nine sites grouped by difficulty, easiest first
+(Beginner: Molasses, Christ of the Abyss, City of Washington; Intermediate: French Reef, Benwood;
+Advanced: Spiegel Grove, USCGC Duane among them), with the
+advanced wrecks carrying their requirement words (Advanced · Deep, plus Nitrox on the Duane) and
 the catalog door offering 34 Florida sites. The course editor shows Open Water Diver ($595, five
 per instructor, three days, eLearning included, `{depth18}` marker in the pitch). Gear, Thursday
 morning: Grace Mensah's BCD-02 and WET-06 out until 11:00 AM, REG-03 overdue with Dominic Rossi
 (due yesterday), BCD-07 reserved for Noor on Saturday, REG-01's annual service due in 12 days,
 24 units total. Staffing shows the Aug 24–30 week: Sal covers Thursday 6:30 AM–11:30 PM while Keiko's split shift leaves the 1:00 PM uncovered,
-Marcus Webb teaches the OW course Friday–Sunday, and Thursday's 1:00 PM still needs a divemaster —
-the gap that Today and the record also tell. Reports, August so far: $12,480.50 revenue (up 18%),
+Marcus Webb teaches the OW course Friday–Sunday, and Thursday's 1:00 PM boat has no crew assigned
+yet — the gap that Today and the record also tell. Reports, August so far: $12,480.50 revenue (up 18%),
 $640 tips across 31, 214 seats over 24 departures, 78% fill (6 at capacity), 96% waivers signed
 with 9 unsigned — the Benwood row carrying the amber remainder (7 of 9).
 

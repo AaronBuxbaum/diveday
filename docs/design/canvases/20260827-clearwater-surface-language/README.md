@@ -49,17 +49,18 @@ Tanaka and Sal Moretti; Marcus Webb teaches the courses; Dana Reyes owns the des
 
 - **7:00–10:30 AM · Two-Tank Reef — Molasses & French** · Molasses Reef · Mantis II · $95 ·
   10 of 12 booked. Work: Grace Mensah's certification awaits verification (blocks boarding), Priya
-  Sharma's waiver has not been sent (blocks boarding), 3 divers still need rental sizes, Nadia
+  Sharma's waiver has not been sent (blocks boarding at the 6:15 reading; she signs on paper at
+  the counter at 6:41 AM, recorded by Keiko, and boards), 3 divers still need rental sizes, Nadia
   Petrov has no emergency contact on file. At the counter by 6:12 AM, seven of its ten are checked
-  in (Diego Alvarez, Ines Costa, June Park, Lena Fischer, Omar Haddad, Sam Whitfield, Tom Okafor).
+  in (Ines Costa, June Park, Lena Fischer, Marisol Vega, Omar Haddad, Sam Whitfield, Tom Okafor).
 - **1:00–5:00 PM · Wreck Trip — Spiegel Grove** · Mantis II · $145 · 10 of 10, full. Work: no
   divemaster or instructor assigned; Tomás Ferreira has no certification on file for a deep wreck.
 - **7:30–11:00 PM · Night Dive — City of Washington** · Skiff · $120 · 3 of 8. Work: 5 spots open
   with no last-minute deal sent.
 
 By 11:25 PM all three boats are home — 23 out, 23 back (10 by 10:26 AM, 10 by 4:41 PM, 3 by
-10:58 PM); the morning recap is sent, the afternoon's is ready; Priya's waiver and one waiting
-review carry to tomorrow. The week (Mon Aug 24 – Sun Aug 30): Mon 11:30 AM Benwood & Elbow (sailed,
+10:58 PM); the morning recap is sent, the afternoon's is ready; Lena Fischer's paper signature —
+recorded Wednesday, still not sealed — and one waiting review carry to tomorrow. The week (Mon Aug 24 – Sun Aug 30): Mon 11:30 AM Benwood & Elbow (sailed,
 9 of 12) · Tue 2:00 PM Discover Scuba (sailed, 2 of 4) · Wed 7:00 AM Molasses & French (sailed, 12
 of 12) · Thu as above · Fri 7:00 AM Morning Two-Tank — Molasses Reef ($95, 8 of 12) and
 8:00 AM Deep Wreck Charter — the Duane on EANx ($195, 1 of 8) · Sat 11:00 AM Two-Tank — French
@@ -97,8 +98,8 @@ bodies, with their pins and owner-call dependencies, are in
 ## Implementing a slice
 
 Load the [`design-implementation`](../../../../.claude/skills/design-implementation/SKILL.md) skill
-first — it carries the read order (ADR, roadmap, this table, **current code**, artboards last) and
-the four ship-time obligations. The prompt below is self-contained for a session with none of this
+first — it carries the read order (ADR, roadmap, this table, **current code**, the SPEC's slice
+section, artboards last) and the four ship-time obligations. The prompt below is self-contained for a session with none of this
 context; replace the slice id.
 
 ```
@@ -121,8 +122,9 @@ Non-negotiable, from the ADR:
   - Badge is the only pill; a count is quiet text; figures are tabular.
   - Every colour-carried state also carries a word. Drawn SVG, never emoji, on anything new.
   - No new tokens; hairlines are --border; tints are the existing opaque --*-tint tokens.
-  - Slices 6d and 6e have owner calls recorded in the ADR's Consequences — build the halves that
-    do not depend on them.
+  - Both owner calls are decided (H-62, H-63, 2026-08-27): 6d removes the /close-out route in the
+    same change that ships the evening reading, and 6e's week grid renders at xl (1280px) and up
+    only.
 
 Build it to this repo's standards — semantic tokens, the form/button/card primitives, copy in every
 locale's message bundle, the clock and timezone rules, a `loading.tsx` and `instant = true`. Then

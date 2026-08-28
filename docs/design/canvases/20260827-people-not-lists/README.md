@@ -35,20 +35,21 @@ moments:
   PADI Open Water (card ···7231, added Wednesday by Grace) waits for verification — the record's
   one open item; sizes BCD M · wetsuit ML long · fins 38, rents BCD and wetsuit; one note (Dana,
   Aug 26: prefers a long wetsuit); past: Jul 12 Benwood &amp; Elbow, and a Mar 3 visit brought
-  across from the old system. Roster facts: 312 divers; Diego Alvarez carries the one open
-  balance (his $120 night-dive order) and is booked Thu 7:30 PM; Priscilla Adeyemi and Bjorn
-  Aasen last aboard Wed Aug 26; Omar Haddad and Sofia Marchetti Sun Aug 23; Meera Iyer Fri Aug
-  21; Hana Kobayashi is imported history; Yara Halabi booked Sat 11:00 AM.
+  across from the old system. Roster facts: 312 divers; Diego Alvarez carries an open
+  balance (his $120 night-dive order) and is booked Thu 7:30 PM; Priscilla Adeyemi, Bjorn Aasen,
+  Sofia Marchetti and Yara Halabi last aboard Wed Aug 26; Omar Haddad Sun Aug 23; Meera Iyer Fri
+  Aug 21; Hana Kobayashi is imported history.
 - **Thursday night, Aug 27** — the waiver surface. Release v4 (published Aug 12), 27 standing
-  signatures, 4 boarding within 14 days; signed today: Yara Halabi 9:41 PM, Noor Rahman 10:07 PM
-  (one flagged medical answer); Wednesday: Grace 4:18 PM, and Lena Fischer's paper signature
-  recorded by Dana (not sealed).
+  signatures, 4 boarding within 14 days; signed today: Priya Sharma's paper signature recorded by
+  Keiko at 6:41 AM (she signed at the counter before boarding the 7:00 boat), Yara Halabi
+  9:41 PM, Noor Rahman 10:07 PM (one flagged medical answer); Wednesday: Grace 4:18 PM, and Lena
+  Fischer's paper signature recorded by Dana (not sealed).
 - **Monday, Aug 31** — reviews. ★4.3 across 83 published, 4.6 from 12 this month; waiting: Yara's
   five stars (the turtle, from Saturday's French Reef boat) and Diego's three stars (choppy
   ride, from the Thursday night dive);
   published: Lars P.'s standout, Sofia M.'s four stars, one rating-only; hidden: one one-star
-  hidden by Dana (not about the diving). Requests: Priya Sharma (3 divers, certified, Sep 5
-  flexible), Emmet O&#8217;Brien (2, Sep 5–6), June Park (2, Sep 9, Discover Scuba ask), Marisol
+  hidden by Dana (not about the diving). Requests: Priya Sharma (3 divers, certified, Fri Sep 4
+  flexible), Emmet O&#8217;Brien (2, Sep 4–5), June Park (2, Sep 9, Discover Scuba ask), Marisol
   Vega (refresher, any weekday).
 
 Every name, number and time is demo-seed fiction. Nothing here is real customer data.

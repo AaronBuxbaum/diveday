@@ -9,7 +9,11 @@
   record is normative — the split is [design/design-artifacts.md](../../design/design-artifacts.md).
   The trip and manifest surfaces are deliberately out of scope: they were designed the same day in
   [20260827-the-departure-is-two-working-surfaces](20260827-the-departure-is-two-working-surfaces.md),
-  and this language generalises that canvas's grammar rather than competing with it.
+  and this language generalises that canvas's grammar rather than competing with it. The
+  marketing, legal and error surfaces are also outside every recomposition here — they are
+  carried by decision 1's shared-primitive mechanics only (their visual diffs in the first
+  slice's re-baseline are expected), and the account doors belong to
+  [20260827-first-light](20260827-first-light.md).
 
 ## Context
 
@@ -74,8 +78,9 @@ why the borderless iOS treatment is not available to this palette.)
   configuration and object lists: settings, forms' summaries, detail panels. This is Settings'
   existing grammar, kept.
 
-The raised worked-in card survives for exactly three jobs: a form someone works inside, a
-tone-carrying operational panel, and an overlay. A page is otherwise a sequence of groups spaced by
+The bordered worked-in card survives for exactly three jobs: a form someone works inside, a
+tone-carrying operational panel, and an overlay — flat, per decision 1; only true overlays carry
+shadows. A page is otherwise a sequence of groups spaced by
 one page-level rhythm — never a stack of same-weight boxes.
 
 ### 3. One ramp, one chip, tabular figures
@@ -167,6 +172,27 @@ Both shells share one header bar: **56px**, translucent page background
 no child hard-codes `top-[68px]` again. The page's `<h1>` stays in the page (no collapsing
 large-title behavior — see Alternatives). The phone dock is unchanged.
 
+### 11. The coral budget
+
+The accent is the rarest thing the palette owns, and scarcity is what it is *for* — coral spent
+on chrome is coral the earned moments no longer have. So the accent's every sanctioned appearance
+is one table, here, and nowhere else:
+
+| Where | The moment | Governed by |
+| --- | --- | --- |
+| Public pages | the review stars' fill | decision 8 |
+| The diver's thread | booked · paperwork done · welcome home (exactly three) | [20260827-the-divers-thread](20260827-the-divers-thread.md), decision 6 |
+| The counter | everyone expected is here (the existing cleared line) | decision 9 |
+| The home, evening | all boats are home (yields to the closed panel) | decision 4 |
+| The home, once ever | the shop's first booking | [20260827-first-light](20260827-first-light.md), decision 6 |
+| The diver record | that was the last thing (post-action, transient) | [20260827-people-not-lists](20260827-people-not-lists.md) |
+
+Three rules ride the table. A surface renders **at most one** coral element at a time. Every
+moment is **earned and transient** — condition-derived, never stored, never decorative, and each
+disappears when its condition passes. And a new coral moment **takes a row in this table in the
+same change** — a pull request that adds accent ink without amending this record is a finding
+against the pull request.
+
 ## Alternatives considered
 
 **Keep polishing surfaces inside the current language.** The standing plan (the SectionCard
@@ -231,7 +257,8 @@ collisions (two boats, one boat, none) are the board's whole question.
   `pnpm check:repo` apply to every slice unchanged. A canvas colour outside the palette is a
   finding against the canvas.
 - **Accessibility commitments carry over verbatim**: every colour-carried state also carries a
-  word; targets ≥44px (≥56px at the counter); AA on every ink/tint pair; drawn SVG marks, never
+  word; targets ≥44px (≥56px for the counter's queue rows — standalone controls there meet the
+  app-wide 44px floor); AA on every ink/tint pair; drawn SVG marks, never
   emoji, on anything new. The flat-at-rest rule touches no contrast ratio (borders stay).
 - **Copy shrinks.** Settings' standing captions, the queue rows' repeated explanations, and the
   storefront rows' stacked metadata all pass through the copy-restraint filter as their surfaces

@@ -2,7 +2,7 @@
   "artboards": [
     {
       "file": "Main.dc.html",
-      "title": "The thread \u2014 one link",
+      "title": "The thread — one link",
       "x": 0,
       "y": 0,
       "w": 1360,
@@ -10,15 +10,15 @@
     },
     {
       "file": "TripPhone.dc.html",
-      "title": "Book \u2014 phone, unrolled",
+      "title": "Book — phone, unrolled",
       "x": 0,
       "y": 1020,
       "w": 390,
-      "h": 1580
+      "h": 1615
     },
     {
       "file": "TripDesktop.dc.html",
-      "title": "Book \u2014 desktop",
+      "title": "Book — desktop",
       "x": 470,
       "y": 1020,
       "w": 1440,
@@ -26,15 +26,15 @@
     },
     {
       "file": "ReadyPhone.dc.html",
-      "title": "Get ready \u2014 the step spine",
+      "title": "Get ready — the step spine",
       "x": 1990,
       "y": 1020,
       "w": 390,
-      "h": 1030
+      "h": 960
     },
     {
       "file": "WaiverPhone.dc.html",
-      "title": "Sign \u2014 the paced waiver",
+      "title": "Sign — the paced waiver",
       "x": 2460,
       "y": 1020,
       "w": 390,
@@ -42,7 +42,7 @@
     },
     {
       "file": "AfterPhone.dc.html",
-      "title": "Afterglow \u2014 the same link",
+      "title": "Afterglow — the same link",
       "x": 2930,
       "y": 1020,
       "w": 390,
@@ -55,14 +55,14 @@
       "x": 1420,
       "y": 0,
       "w": 430,
-      "text": "The diver's thread: one link from booking to afterglow, at one measure, in the Clearwater grammar. The booking page sells then closes (the form is terminal, the money is one block, packing moves to prep); /ready becomes a step spine where only the current step is open; the waiver paces itself under a step rail; and after the dive the SAME link renders the keepsake, one review ask, and quiet doors \u2014 /recap stops being a page of its own (the concept-model row's open half, proposed here)."
+      "text": "The diver's thread: one link from booking to afterglow, at one measure, in the Clearwater grammar. The booking page sells then closes (the form is terminal, the money is one block, packing moves to prep); /ready becomes a step spine where only the current step is open; the waiver paces itself under a step rail; and after the dive the SAME link renders the keepsake, one review ask, and quiet doors — /recap stops being a page of its own (the concept-model row's open half, proposed here)."
     },
     {
       "id": "thread-fiction",
       "x": 1420,
       "y": 330,
       "w": 430,
-      "text": "Fiction: Thursday evening, Yara Halabi books the last 2 spots on Saturday's Two-Tank \u2014 French Reef ($95, 11:00 AM) for herself and Noor Rahman; $235 paid at booking ($190 fare + $45 rental set for Noor). Yara is Advanced (verified); Noor's Open Water is with the shop. Saturday: 27\u00b0C, 24 m vis, a turtle on tank two, five stars. All demo-seed fiction; the Blue Mantis facts match the Clearwater canvas."
+      "text": "Fiction: Thursday evening, Yara Halabi books the last 2 spots on Saturday's Two-Tank — French Reef ($95, 11:00 AM) for herself and Noor Rahman; $235 paid at booking ($190 fare + $45 rental set for Noor). Yara is Advanced (verified); Noor's Open Water is with the shop. Saturday: 27°C, 24 m vis, a turtle on tank two, five stars. All demo-seed fiction; the Blue Mantis facts match the Clearwater canvas."
     },
     {
       "id": "thread-states",

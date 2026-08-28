@@ -145,12 +145,16 @@ with a personality.
 **Empty states follow one rule: terminal vs. section.** A **terminal/whole-page** empty state —
 nothing else renders on the page (see `src/components/OfflineManifestView.tsx`, whose "no saved
 manifests" and "nothing here offline" screens are the whole page) — uses the
-bespoke warm pattern: a large emoji in a rounded circle, a heading, and subtext, with no card
-border. An **empty section within an otherwise-populated page** — a list or panel sitting below
+bespoke warm pattern: a **drawn SVG glyph** in a rounded circle (the
+`src/components/StaffDestinationIcon.tsx` set is the existing source), a heading, and subtext,
+with no card border. The mark was an emoji until 2026-08-27; the Clearwater ADRs forbid emoji on
+anything new, so the drawn glyph is now the rule, with shipped emoji grandfathered only until
+their surfaces are next touched (`OfflineManifestView` is the one standing case). An **empty
+section within an otherwise-populated page** — a list or panel sitting below
 filters, a header, or other real content — uses the shared `EmptyState` component
 (`src/components/EmptyState.tsx`), the dashed-border card. Never a bare `<p>`/`<li>` styled
-ad hoc for either case, and never the bespoke emoji pattern for a section that isn't the whole
-page — the emoji circle reads as "you've reached the end," which is false when siblings above it
+ad hoc for either case, and never the bespoke terminal pattern for a section that isn't the whole
+page — the glyph circle reads as "you've reached the end," which is false when siblings above it
 still have content.
 
 **When every section on a page is empty at once, the page collapses to its own one-line state.**
@@ -598,8 +602,8 @@ what stop it rotting.
 - [ ] Keyboard reachable, focus visible, semantic HTML
 - [ ] One primary action per view/section; the rest are demoted, merged, or disclosed — not a
       row of same-weight buttons
-- [ ] Empty-state pattern matches terminal-vs-section (bespoke emoji pattern for a whole empty
-      page, shared `EmptyState` for an empty section within a populated page)
+- [ ] Empty-state pattern matches terminal-vs-section (bespoke drawn-glyph pattern for a whole
+      empty page, shared `EmptyState` for an empty section within a populated page)
 - [ ] No fact repeats at equal weight down a list: shared facts sit in a group header, "None"
       columns and all-clear badges are absent rather than rendered, and a badge marks only the
       exceptional state
