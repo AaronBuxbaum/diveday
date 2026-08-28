@@ -58,6 +58,49 @@ export async function acceptAgeAttestation(page: Page) {
 }
 
 /**
+ * Choose the party size on a public booking form, whichever control the boat's
+ * remaining seats put there.
+ *
+ * The count is a **segmented row of radios up to six seats and a `<select>`
+ * above that** (ADR 20260827-the-divers-thread, decision 2 —
+ * `MAX_PUBLIC_PARTY_SIZE` is 20, and a twenty-segment track fits no phone), so
+ * which shape a spec meets depends on how full the departure is, which is not
+ * a fact any of these specs is about. Both shapes answer to one accessible
+ * name, so the wait is shared; only the act differs.
+ */
+export async function choosePartySize(page: Page, count: number) {
+  const control = page.getByLabel("Number of divers");
+  await expect(control).toHaveAttribute("data-hydrated", "true");
+  if ((await control.evaluate((node: Element) => node.tagName)) === "SELECT") {
+    await control.selectOption(String(count));
+    return;
+  }
+  const label = count === 1 ? "1 diver" : `${count} divers`;
+  await page.getByRole("radio", { name: label, exact: true }).check();
+}
+
+/**
+ * Book one seat on the departure whose public page is already open, and land
+ * on the diver's own thread (`/ready/<token>`).
+ *
+ * The trip page stopped carrying the packing list and the dive briefings on
+ * 2026-08-28 (ADR 20260827-the-divers-thread, decision 2 — the page sells, then
+ * closes; what to bring and what you'll see down there are *preparation*, and
+ * preparation belongs to a diver who has a seat). A spec about that reading
+ * therefore has to hold one.
+ */
+export async function bookASeatAndOpenThread(page: Page, name: string) {
+  await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+  await page.getByLabel("Name", { exact: true }).fill(name);
+  await page
+    .getByLabel("Email", { exact: true })
+    .fill(`${name.toLowerCase().replace(/[^a-z]+/g, "-")}-${e2eNow().getTime()}@example.com`);
+  await acceptAgeAttestation(page);
+  await page.getByRole("button", { name: /^Book/ }).click();
+  await expect(page).toHaveURL(/\/ready\//);
+}
+
+/**
  * "Now" as the server sees it. The e2e fleet freezes its clock at
  * E2E_FROZEN_CLOCK (playwright.config.ts → src/lib/clock.ts), so any date a
  * test computes for a form input, or any year it asserts against a

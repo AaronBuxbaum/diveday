@@ -3,7 +3,13 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { copyToClipboard } from "@/components/Copyable";
-import { buttonClass } from "@/components/ui/button";
+
+/**
+ * The hero's two conveniences, at link weight. `min-h-11` keeps the 44px
+ * target the ghost buttons used to give them.
+ */
+const QUIET_LINK_CLASS =
+  "inline-flex min-h-11 items-center font-medium text-primary hover:underline";
 
 export function TripActions({
   calendarUrl,
@@ -59,25 +65,25 @@ export function TripActions({
         : "";
 
   return (
-    // Ghost weight, not three bordered pills: these are conveniences, and a
-    // row of same-weight boxed buttons right under the masthead outshouted
-    // the price above and the booking card below (design/principles.md #8 —
-    // nothing here competes with the one primary action).
-    <fieldset className="mt-4 -ml-3 flex flex-wrap gap-1">
+    // Two quiet text links inside the hero, not a row of buttons under it (ADR
+    // 20260827-the-divers-thread, decision 2). They were `buttonClass` ghosts
+    // until 2026-08-28, which still read as controls: a button-shaped thing
+    // sitting between the price and the one primary action competes with it
+    // however light its fill is. A convenience gets link weight.
+    <fieldset className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
       <legend className="sr-only">{t("planAndShare")}</legend>
-      <a href={calendarUrl} className={buttonClass({ variant: "ghost", size: "sm" })}>
+      <a href={calendarUrl} className={QUIET_LINK_CLASS}>
         {t("addToCalendar")}
       </a>
+      <span aria-hidden="true" className="text-muted">
+        ·
+      </span>
       {/* No "Get directions" here. The trip page already carries the site's
           own map and its link out (`DiveSiteMap`), and a *second* door to the
           same maps app — sitting in the plan-and-share row, before a diver has
           booked anything — was a third button competing with the one that
           matters on this page. Removed 2026-08-13 at the product owner's call. */}
-      <button
-        type="button"
-        onClick={shareTrip}
-        className={buttonClass({ variant: "ghost", size: "sm" })}
-      >
+      <button type="button" onClick={shareTrip} className={QUIET_LINK_CLASS}>
         {label}
       </button>
       <span className="sr-only" aria-live="polite">

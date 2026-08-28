@@ -1,6 +1,6 @@
 import type { Locator } from "@playwright/test";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signInAsOwner } from "./helpers";
+import { bookASeatAndOpenThread, daysFromNow, e2eNow, signInAsOwner } from "./helpers";
 
 /**
  * The photo an `<img>` ultimately renders, seen through `next/image`.
@@ -589,6 +589,10 @@ test("the seeded reef briefing shows a terrain map, a gentle route, landmarks, a
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
     .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
     .click();
+  // The briefing is the diver's *own* reading now, on their thread: the trip
+  // page sells and the thread prepares (ADR 20260827-the-divers-thread,
+  // decision 2), so this takes a seat before it can read one.
+  await bookASeatAndOpenThread(page, "Briefing Reader");
 
   await expect(page.getByTitle("Terrain map of Molasses Reef")).toBeVisible();
   await expect(page.getByText("Reef garden loop")).toBeVisible();
@@ -642,16 +646,21 @@ test("the same saved field guide reads in Spanish for a Spanish-speaking diver",
   // seeded rows, same eight species. What changes is who is reading, and the
   // cards follow them. Under the copy-at-pick-time model this was impossible:
   // a row held one language, whichever the staffer's browser was in.
+  // The seat is taken in English and the briefing is read in Spanish, which is
+  // exactly the claim: the row stores a slug, so the *reader* decides the
+  // language, not whoever booked. The choice is a cookie rather than a URL
+  // (`LOCALE_COOKIE`, ADR 20260812-reader-chosen-language), so it is set
+  // directly here — the header switcher belongs to the schedule, and the thread
+  // this now reads on does not carry one.
   await page.goto("/s/blue-mantis");
-  await page.getByRole("banner").getByRole("button", { name: "Change language" }).click();
-  await page.getByRole("banner").getByRole("button", { name: "Español" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Calendario" })).toBeVisible();
-
   await page
     .locator("li")
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
     .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
     .click();
+  await bookASeatAndOpenThread(page, "Lectora Espanola");
+  await page.context().addCookies([{ name: "diveday_locale", value: "es-ES", url: page.url() }]);
+  await page.reload();
   // Wait for the briefing itself before enumerating the folds. `.all()` is a
   // snapshot of what exists at that instant, so calling it straight off the
   // navigation finds nothing, opens nothing, and leaves the assertions below

@@ -71,10 +71,13 @@ test("the public schedule lists seeded trips with capacity states, a month rail,
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
     .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
     .click();
-  await expect(page.getByRole("heading", { name: "Your two-tank plan" })).toBeVisible();
-  await expect(page.getByRole("paragraph").filter({ hasText: /^Dive 1$/ })).toBeVisible();
-  await expect(page.getByRole("paragraph").filter({ hasText: /^Dive 2$/ })).toBeVisible();
-  await expect(page.getByText("French Reef is the second tank")).toBeVisible();
+  // The pitch, above the form: the run of dives in plan order (ADR
+  // 20260827-the-divers-thread, decision 2). The swipeable briefing deck this
+  // replaced is `/ready`'s now — reading for the night before, not the pitch.
+  await expect(page.getByRole("heading", { name: "The day" })).toBeVisible();
+  await expect(page.getByText("Dive 1", { exact: true })).toBeVisible();
+  await expect(page.getByText("Dive 2", { exact: true })).toBeVisible();
+  await expect(page.getByText("French Reef", { exact: true })).toBeVisible();
 });
 
 /**
@@ -93,9 +96,9 @@ test("a tank with no site yet says so on the booking page, so one site and two d
     .filter({ hasText: "Two-Tank Reef — Benwood & Elbow" })
     .getByRole("link", { name: "Two-Tank Reef — Benwood & Elbow" })
     .click();
-  await expect(page.getByRole("heading", { name: "Your two-tank plan" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "The day" })).toBeVisible();
   // Tank one has a site; tank two is the crew's call at the dock.
-  await expect(page.getByRole("heading", { level: 3, name: "Benwood Wreck" })).toBeVisible();
+  await expect(page.getByText("Benwood Wreck", { exact: true })).toBeVisible();
   await expect(page.getByText("Site to be confirmed")).toHaveCount(1);
 });
 

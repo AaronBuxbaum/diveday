@@ -54,7 +54,7 @@ Every name, number and time is demo-seed fiction. Nothing here is real customer 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
 | 7a — the thread shell and measure | shipped | `src/components/thread/ThreadShell.tsx` | `src/components/thread/ThreadShell.test.tsx` |
-| 7b — the trip page sells, then closes | open | — | — |
+| 7b — the trip page sells, then closes | shipped | `src/app/s/[shopSlug]/trips/[id]/_components/MoneyBlock.tsx` | `src/app/s/[shopSlug]/trips/[id]/page.composition.test.ts` |
 | 7c — the thread page's step spine | open | — | — |
 | 7d — the after-state and the recap fold | open | — | — |
 | 7e — the waiver paces itself | open | — | — |

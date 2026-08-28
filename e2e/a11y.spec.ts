@@ -5,6 +5,7 @@ import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
+  choosePartySize,
   createTrip,
   daysFromNow,
   e2eNow,
@@ -791,9 +792,7 @@ test.describe("automated accessibility scans of the diver bearer-token surfaces"
       .filter({ hasText: title })
       .getByRole("link")
       .click();
-    const partySize = page.getByLabel("Number of divers");
-    await expect(partySize).toHaveAttribute("data-hydrated", "true");
-    await partySize.selectOption("2");
+    await choosePartySize(page, 2);
     await page.getByLabel("Name", { exact: true }).fill("Iris Marlow");
     await page.getByLabel("Email", { exact: true }).fill(`iris-${e2eNow().getTime()}@example.com`);
     await page.getByLabel("Diver 2 name").fill("Tem Okafor");

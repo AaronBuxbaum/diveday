@@ -7,6 +7,26 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The trip page sells, then closes (delivered 2026-08-28)
+
+Slice 7b of [20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md)
+(decision 2). `/s/[shopSlug]/trips/[id]` reads in one order now — hero (the price said **once**, at
+figure scale, with the calendar and share links inside it as quiet text), then the pitch ("The day"
+in plan order, "Look for", and one conditions · languages line that keeps Open-Meteo's linked
+credit), then the requirement as one unboxed hairline-topped sentence, then **the form, terminal**,
+then the shop's contact line. It ran the other way round: the form sat directly under the hero and
+roughly a thousand pixels of forecast, packing and briefings followed it, so the page's one act
+lived in the middle of its own scroll. Packing and the swipeable briefing deck are `/ready`'s alone
+now — what to bring is preparation, and preparation is for a diver who has a seat. Inside the card,
+the five scattered money lines collapse into one `MoneyBlock`
+(`src/app/s/[shopSlug]/trips/[id]/_components/MoneyBlock.tsx`) that renders **exactly one figure at
+or above `text-lg`** and nothing at all on an unpriced departure; `TripTerms` keeps only the
+free-cancellation sentence and the rest goes behind one `trip.fullTermsLabel` disclosure; the party
+count is a segmented row of radios up to six seats and the `<select>` above that; the bordered
+party and gear fieldsets become hairline steps of one sheet; and the sticky phone pill keeps the
+verb alone. The page joins the thread's `max-w-xl`. The embed contract, the `confirm`-capability
+gate, JSON-LD and the Open Graph block are untouched.
+
 ## The diver's thread reads at one measure (delivered 2026-08-28)
 
 Slice 7a of [20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md)

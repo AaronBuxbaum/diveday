@@ -1,6 +1,7 @@
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
+  choosePartySize,
   createTrip,
   daysFromNow,
   e2eNow,
@@ -460,9 +461,7 @@ test.describe("staff", () => {
     const stamp = e2eNow().getTime();
     const bookSlots = async (count: number, offset: number) => {
       await page.goto(publicTripUrl(tripUrl));
-      const partySize = page.getByLabel("Number of divers");
-      await expect(partySize).toHaveAttribute("data-hydrated", "true");
-      await partySize.selectOption(String(count));
+      await choosePartySize(page, count);
       for (let i = 0; i < count; i++) {
         const label = offset + i;
         const nameField =

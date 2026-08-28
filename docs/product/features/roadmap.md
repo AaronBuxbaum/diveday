@@ -189,11 +189,12 @@ once (each SPEC's preamble points here). Everything not listed is independent:
   rather than introducing it. **6c → 6d and 10d** (they extend the spine 6c builds;
   8b's S1 journey also starts from 6c's station row); **6e → 9e** (the `?week=` grammar — 9e
   introduces it itself if 6e has not landed, per its cross-reference).
-- **7a has shipped** ([shipped.md](../shipped.md)), so `ThreadShell`, the thread's
-  `max-w-xl` measure and the `EntryShell` type-ramp are already in the tree for 7b–7e, 10a and
-  10c to build on (claim's recomposition and the door restyle build on them).
-  **7b and 7c ship together, or 7c first** —
-  packing must have a destination on the thread before the trip page deletes it.
+- **7a and 7b have shipped** ([shipped.md](../shipped.md)), so `ThreadShell`, the thread's
+  `max-w-xl` measure and the `EntryShell` type-ramp are already in the tree for 7c–7e, 10a and
+  10c to build on (claim's recomposition and the door restyle build on them). 7b took the packing
+  list and the dive briefings off the trip page and left them where `/ready` already rendered
+  them, so **7c inherits both components and the choice of what the prep step does with them** —
+  including whether `PackingSection`/`DiveBriefingsSection` survive as shared files at all.
 - **8a → 8b and 8c**, and 9g's add-booking step consumes 8a's person rows.
 
 ### 7. The diver's thread (design complete)
@@ -205,10 +206,6 @@ One link from booking to afterglow, in the Clearwater grammar — argued in the 
 unranked against them. The regression floor is the existing booking/readiness/waiver/recap e2e
 suite — every slice keeps it green.
 
-- **7b. The trip page sells, then closes.** Hero (price once) → pitch → one-line requirement →
-  the terminal form with the money as one block; packing moves to the thread; briefings collapse
-  into the pitch. *Pins:* one due-now figure; the form is the last section; packing absent.
-  `conversion-reviewer` pass.
 - **7c. The thread page's step spine.** Five steps, one open at rest, one status statement; the
   progress figure counts only finishable steps; the cancellation window lands in the Pay step
   (closing ADR 20260820's dead `cancellationOnly`). *Pins:* one status statement; the figure can

@@ -1,5 +1,6 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
+  choosePartySize,
   createTrip,
   daysFromNow,
   e2eNow,
@@ -57,9 +58,7 @@ test.describe("staff", () => {
     // does not have (`formatMoneyScanned`, issue #769). The order this booking
     // becomes still reconciles in two decimals.
     await expect(page.getByText("$120", { exact: true })).toBeVisible();
-    const partySize = page.getByLabel("Number of divers");
-    await expect(partySize).toHaveAttribute("data-hydrated", "true");
-    await partySize.selectOption("2");
+    await choosePartySize(page, 2);
     await page.getByLabel("Name", { exact: true }).fill("Nora Quinn");
     await page.getByLabel("Email", { exact: true }).fill(`nora-${e2eNow().getTime()}@example.com`);
     await page.getByLabel("Diver 2 name").fill("Sam Quinn");

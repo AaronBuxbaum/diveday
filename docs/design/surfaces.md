@@ -169,7 +169,7 @@ pass.
 
 ### The public trip page — `/s/[shopSlug]/trips/[id]`
 
-**Redesign proposed** — ADR
+**Built** (slice 7b, 2026-08-28) — ADR
 [20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md) (Proposed),
 drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion surface.
 
@@ -179,7 +179,8 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
 - **Controls that dissolved:** the boxed requirement note (one sentence), the boxed gear fieldsets
   (hairline steps of one sheet), the five-piece money story (one block), the sticky pill's
   duplicate seat count (verb only).
-- **Remove first:** the packing section — it is preparation, not pitch, and moves to the thread.
+- **Removed:** the packing section and the briefing deck — preparation, not pitch, and `/ready`'s
+  alone since 7b.
 - **Composition:** sell then close — the form is the page's terminal word, so the primary is where
   a decided diver already is.
 

@@ -56,15 +56,17 @@ test.describe("as owner", () => {
     await expect(page.getByRole("heading", { name: ADVANCED_CHARTER })).toBeVisible();
 
     // Stated *before* the form, not after the seat is bought. The requirement is
-    // a property of the trip, so it discloses nothing about any reader.
-    const requirementHeading = page.getByRole("heading", { name: "Who this trip is for" });
-    await expect(requirementHeading).toBeVisible();
-    await expect(
-      page.getByText("This charter is for divers with Advanced Open Water or higher."),
-    ).toBeVisible();
+    // a property of the trip, so it discloses nothing about any reader — and it
+    // is one unboxed line now, with no heading over it (ADR
+    // 20260827-the-divers-thread, decision 2: "who it's for, one line, no box").
+    const requirement = page.getByText(
+      "This charter is for divers with Advanced Open Water or higher.",
+    );
+    await expect(requirement).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Who this trip is for" })).toHaveCount(0);
     const partySize = page.getByLabel("Number of divers");
     await expect(partySize).toHaveAttribute("data-hydrated", "true");
-    const noteBox = await requirementHeading.boundingBox();
+    const noteBox = await requirement.boundingBox();
     const formBox = await partySize.boundingBox();
     expect(noteBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(formBox?.y ?? 0);
 

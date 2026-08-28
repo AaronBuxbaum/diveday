@@ -9,6 +9,8 @@ import {
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
+  bookASeatAndOpenThread,
+  choosePartySize,
   daysFromNow,
   manifestRow,
   offlineCopySaved,
@@ -1524,8 +1526,11 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "booking-confirmed-embed", scheme);
       });
 
-      // The seeded reef trip's public briefing: terrain map, gentle route,
-      // landmarks, and the field guide — DiveDay's flagship "delight" surface.
+      // The seeded reef trip's public page: hero, "The day", "Look for", the
+      // conditions line, the one-line requirement, and the form last (ADR
+      // 20260827-the-divers-thread, decision 2). The terrain map, landmarks and
+      // field guide it used to photograph are `/ready`'s reading now — see
+      // `readiness` — because a briefing is for the night before, not the pitch.
       //
       // Reached from the *standalone* schedule, never the embed: a schedule
       // loaded with `embed=1` carries the flag forward on its trip links, and
@@ -1534,7 +1539,11 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the public trip briefing renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis");
         await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
-        await page.getByTitle("Terrain map of Molasses Reef").waitFor();
+        await page.getByRole("heading", { name: "The day" }).waitFor();
+        // The form is the last section and a Client Component; waiting on it
+        // hydrating is what makes this the settled page rather than a shot of
+        // the form mounting.
+        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
         await capture(page, "site-briefing", scheme);
       });
 
@@ -1569,7 +1578,9 @@ for (const scheme of ["light", "dark"] as const) {
           ADVANCED_CHARTER,
         );
         await page.goto(`/s/blue-mantis/trips/${tripId}`);
-        await page.getByRole("heading", { name: "Who this trip is for" }).waitFor();
+        // One unboxed line above the form, no heading over it (ADR
+        // 20260827-the-divers-thread, decision 2).
+        await page.getByText(/^This charter is for divers with/).waitFor();
         // The booking form is a Client Component below the note; wait for it to
         // hydrate so the shot is of the settled page, not of the form mounting.
         await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
@@ -1592,9 +1603,12 @@ for (const scheme of ["light", "dark"] as const) {
        *
        * Its id comes off the staff board on a disposable context, the same
        * CR-019 pattern as the requirement note above, so `page` stays the
-       * unauthenticated visitor whose page is being photographed.
+       * unauthenticated visitor whose page is being photographed — who now has
+       * to *hold a seat* to read it: the dock-day rhythm moved to the diver's
+       * own thread when the trip page stopped selling and preparing at once
+       * (ADR 20260827-the-divers-thread, decision 2).
        */
-      test(`the public trip page lays the day out from its own legs (${scheme})`, async ({
+      test(`the departure's own legs lay the dock day out (${scheme})`, async ({
         page,
         browser,
         workerBaseURL,
@@ -1608,6 +1622,12 @@ for (const scheme of ["light", "dark"] as const) {
           MINIMUM_SEATS_TRIP,
         );
         await page.goto(`/s/blue-mantis/trips/${tripId}`);
+        // Fixed per scheme, like `bookAVisualRegressionSeat`: the name renders,
+        // so a random one would be a permanent diff rather than a regression.
+        await bookASeatAndOpenThread(
+          page,
+          `Leg Regression ${scheme === "light" ? "Day" : "Night"}`,
+        );
         await page.getByRole("heading", { name: "Your dock-day rhythm" }).waitFor();
         // The beat only a stated leg can produce, and the reason this capture
         // exists — waiting on it means the shot can never be of a day that
@@ -1835,9 +1855,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         await page.goto("/s/blue-mantis");
         await publicReefCard(page).getByRole("link", { name: REEF_TRIP }).click();
-        const partySize = page.getByLabel("Number of divers");
-        await expect(partySize).toHaveAttribute("data-hydrated", "true");
-        await partySize.selectOption("2");
+        await choosePartySize(page, 2);
         await page.getByLabel("Name", { exact: true }).fill("Orla Byrne");
         await page.getByLabel("Email", { exact: true }).fill(`organizer-${scheme}@example.com`);
         await page.getByLabel("Diver 2 name").fill("Sam Reyes");

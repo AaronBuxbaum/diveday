@@ -1,5 +1,6 @@
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
+  choosePartySize,
   createTrip,
   daysFromNow,
   e2eNow,
@@ -48,9 +49,7 @@ test.describe("seat claim links", () => {
       .getByRole("link")
       .click();
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
-    const partySize = page.getByLabel("Number of divers");
-    await expect(partySize).toHaveAttribute("data-hydrated", "true");
-    await partySize.selectOption("2");
+    await choosePartySize(page, 2);
     await page.getByLabel("Name", { exact: true }).fill("Orla Byrne");
     await page.getByLabel("Email", { exact: true }).fill(`orla-${e2eNow().getTime()}@example.com`);
     await page.getByLabel("Diver 2 name").fill("Sam Reyes");
