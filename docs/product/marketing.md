@@ -8,8 +8,9 @@ exists today.
 This document is the living rulebook for those pages: the positioning they argue, the claims they
 may make, the voice they use, and the maintenance loop that keeps them true. The dated case for the
 current direction is [archive/marketing-review-20260723.md](archive/marketing-review-20260723.md)
-(fully delivered, kept for rationale); the **open** conversion pass — argued, sliced in roadmap
-section 12, not yet delivered — is [marketing-review-20260827.md](marketing-review-20260827.md);
+(fully delivered, kept for rationale); the conversion pass
+[marketing-review-20260827.md](marketing-review-20260827.md) is **nearly delivered** — slices
+12a–12e landed 2026-08-28 (PR #1115), 12f remains open;
 the step-by-step editing procedure is the `marketing-page` skill.
 
 **These pages are product surface.** DiveDay is developed exclusively by AI sessions, so marketing

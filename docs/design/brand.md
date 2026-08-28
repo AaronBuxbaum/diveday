@@ -109,6 +109,11 @@ embroidery, and vendor conversations.
 Color rules:
 
 - The primary pairing is **lagoon + sand** or **lagoon + open ocean**.
+- In the product itself, coral's every sanctioned appearance is one table — **the coral budget**,
+  [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
+  decision 11: earned, transient moments only, at most one per surface, and a new one takes a
+  table row in the same change. Brand and collateral work follows the same instinct at its own
+  scale; the budget is the register to check before putting coral anywhere a shop will see daily.
 - Coral is a punctuation mark, not a field color. It should usually occupy less than 10% of a
   composition.
 - Never use safety colors as decoration or rely on color alone to communicate a status.

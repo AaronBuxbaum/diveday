@@ -470,7 +470,11 @@ dock test, and one-primary all still apply.
 Defined in `src/app/globals.css`, bound to Tailwind — see
 [ADR-0004](../architecture/decisions/0004-design-tokens.md) for the rules. Palette story: sunlit
 sand (light) / open ocean at depth (dark); **lagoon** (`--primary`) is the action color;
-**coral** (`--accent`) is rationed for earned moments; feedback colors (`--success`,
+**coral** (`--accent`) is rationed for earned moments — its every sanctioned appearance is the
+**coral budget**,
+[20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
+decision 11 (one table, at most one coral element per surface, a new moment takes a row in the
+same change); feedback colors (`--success`,
 `--warning`, `--danger`) never carry meaning alone.
 
 **Where the palette actually stands.** AA is the bar, and the light palette does not clear it
