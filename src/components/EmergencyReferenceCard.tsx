@@ -27,18 +27,21 @@ export function EmergencyReferenceCard({
   reference,
   copy,
   className = "",
+  headingId = "emergency-reference-heading",
 }: {
   reference: EmergencyReference;
   copy: EmergencyReferenceCopy;
   className?: string;
+  /** Unique when several responsive/print copies share a page. */
+  headingId?: string;
 }) {
   const filled = hasEmergencyReference(reference);
   return (
     <section
-      aria-labelledby="emergency-reference-heading"
+      aria-labelledby={headingId}
       className={`rounded-2xl border border-danger/40 bg-danger/5 p-4 sm:p-5 ${className}`}
     >
-      <h2 id="emergency-reference-heading" className="text-base font-semibold text-danger-strong">
+      <h2 id={headingId} className="text-base font-semibold text-danger-strong">
         {copy.heading}
       </h2>
       {filled ? (
