@@ -264,7 +264,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     // durable, meaningful fact is that the booking itself was refused: nobody
     // is on this trip's roster (this test never adds the fail-open walk-in),
     // and the refused diver never appears in it.
-    await expect(page.getByRole("heading", { name: /^Divers 0 of/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^Guests 0 of/ })).toBeVisible();
     await expect(page.getByText(`Young Diver ${stamp}`)).toHaveCount(0);
   });
 
