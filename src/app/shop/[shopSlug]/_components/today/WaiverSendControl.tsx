@@ -14,6 +14,7 @@ import { Copyable } from "@/components/Copyable";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
+import { StatusMark } from "@/components/ui/StatusMark";
 import { fill, pluralForm } from "@/i18n/fill";
 
 /**
@@ -175,11 +176,16 @@ export function ResultNotice({ state, copy }: { state: WaiverSendState; copy: Wa
       role="status"
       className="mt-3 rounded-xl border border-border bg-surface-sunken px-3 py-2.5 text-sm"
     >
-      {state.emptySelection ? <p className="text-danger">{copy.emptySelection}</p> : null}
+      {state.emptySelection ? (
+        <p className="flex items-start gap-1.5 text-danger">
+          <StatusMark variant="danger" />
+          <span>{copy.emptySelection}</span>
+        </p>
+      ) : null}
       {state.sent.length > 0 ? (
-        <p className="font-medium text-success">
-          <span aria-hidden="true">✅ </span>
-          {fill(copy.sent, { names: state.sent.join(", ") })}
+        <p className="flex items-start gap-1.5 font-medium text-success">
+          <StatusMark variant="success" />
+          <span>{fill(copy.sent, { names: state.sent.join(", ") })}</span>
         </p>
       ) : null}
       {state.alreadyDone.length > 0 ? (
@@ -202,7 +208,10 @@ export function ResultNotice({ state, copy }: { state: WaiverSendState; copy: Wa
         />
       ) : null}
       {state.errors.length > 0 ? (
-        <p className="mt-1 text-danger">{fill(copy.errors, { names: state.errors.join(", ") })}</p>
+        <p className="mt-1 flex items-start gap-1.5 text-danger">
+          <StatusMark variant="danger" />
+          <span>{fill(copy.errors, { names: state.errors.join(", ") })}</span>
+        </p>
       ) : null}
     </div>
   );
@@ -210,7 +219,7 @@ export function ResultNotice({ state, copy }: { state: WaiverSendState; copy: Wa
 
 /**
  * The one-tap waiver send used on Today and Blockers. It posts the shared server
- * action in place and renders the outcome inline — "Waiver sent to Diego", or a
+ * action in place and renders the outcome inline — "Waiver sent to the diver", or a
  * a way to copy the private link when there is no email — so the label never lies about
  * what the tap did and staff never leave the queue. Falls back to a plain form
  * post (the send still happens) before hydration.

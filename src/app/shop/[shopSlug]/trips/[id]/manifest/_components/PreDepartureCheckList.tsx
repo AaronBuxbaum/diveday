@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { StatusMark } from "@/components/ui/StatusMark";
 import type { PreDepartureCheckResult } from "../actions";
 
 export type PreDepartureCheckAction = (
@@ -16,16 +17,18 @@ export type PreDepartureCheckListCopy = {
   /** "Before you leave the dock — 3 of 5 checked", already filled server-side. */
   summary: string;
   errorRefusal: string;
+  checkedLabel: string;
+  uncheckedLabel: string;
 };
 
 export type PreDepartureCheckListItem = {
   id: string;
   label: string;
-  /** Already resolved server-side ("Checked by Marcus Webb · 7:12 AM") — see `formatDateTimeTz`. */
+  /** Already resolved server-side ("Checked by the recorder · 7:12 AM") — see `formatDateTimeTz`. */
   checkedByLine?: string;
   /**
    * The whole printed line, composed server-side — "Emergency oxygen kit
-   * aboard — Checked by Marcus Webb · 7:12 AM" or "…— Not checked" — never
+   * aboard — Checked by the recorder · 7:12 AM" or "…— Not checked" — never
    * assembled from parts client-side, the same rule every other sentence in
    * this app follows (word order and the separator itself are locale
    * choices, not a JSX literal's to make).
@@ -53,18 +56,20 @@ function PreDepartureCheckRow({
           type="submit"
           disabled={isPending}
           aria-busy={isPending}
+          aria-pressed={checked}
           className={buttonClass({
             variant: checked ? "primary" : "secondary",
             size: "sm",
             className: "w-full justify-start gap-2 text-start",
           })}
         >
-          <span aria-hidden="true">{checked ? "☑️" : "☐"}</span>
+          <StatusMark variant={checked ? "checked" : "unchecked"} size="md" />
           <span className="flex flex-col">
             <span>{item.label}</span>
             {item.checkedByLine ? (
               <span className="text-xs font-normal opacity-80">{item.checkedByLine}</span>
             ) : null}
+            <span className="sr-only">{checked ? copy.checkedLabel : copy.uncheckedLabel}</span>
           </span>
         </button>
       </form>
@@ -137,7 +142,10 @@ export function PreDepartureCheckList({
         <ul className="mt-1 flex flex-col gap-1">
           {items.map((item) => (
             <li key={item.id} className="text-sm">
-              <span aria-hidden="true">{item.checkedByLine !== undefined ? "☑" : "☐"}</span>{" "}
+              <StatusMark
+                variant={item.checkedByLine !== undefined ? "checked" : "unchecked"}
+                size="sm"
+              />{" "}
               {item.printLine}
             </li>
           ))}

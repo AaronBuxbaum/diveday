@@ -16,6 +16,7 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { GroupLabel } from "@/components/ui/ledger";
+import { StatusMark } from "@/components/ui/StatusMark";
 import type { listBookingNotes } from "@/db/operations";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
@@ -144,21 +145,7 @@ const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlK
  * 20260827-the-departure-is-two-working-surfaces; emoji never — decision 5).
  */
 function ReadyMark({ className = "" }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={`size-5 shrink-0 ${className}`.trim()}
-    >
-      <circle cx="12" cy="12" r="9" />
-      <path d="m8.2 12.3 2.6 2.6 5-5.4" />
-    </svg>
-  );
+  return <StatusMark variant="success" size="md" className={className} />;
 }
 
 /**
@@ -649,7 +636,7 @@ export function RosterSection({
             <ul className="mt-3 grid gap-2 rounded-lg bg-danger/5 px-3 py-2 text-sm text-danger">
               {uniqueBlockers.map(({ text }) => (
                 <li key={text} className="flex gap-2">
-                  <span aria-hidden="true">!</span>
+                  <StatusMark variant="danger" />
                   <span>{text}</span>
                 </li>
               ))}
@@ -659,7 +646,7 @@ export function RosterSection({
                   reference panel has their full list. */}
               {sharedBlockerCount > 0 ? (
                 <li className="flex gap-2">
-                  <span aria-hidden="true">!</span>
+                  <StatusMark variant="danger" />
                   <span>{t("trips.roster.sharedOnCard", { count: sharedBlockerCount })}</span>
                 </li>
               ) : null}
@@ -688,7 +675,7 @@ export function RosterSection({
             the boat shrinks to the capsule in this row's header instead. */}
         {depthText !== null && !depthShared ? (
           <p className="mt-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
-            <span aria-hidden="true">▲</span>
+            <StatusMark variant="warning" />
             <span>{depthText}</span>
           </p>
         ) : null}
@@ -700,7 +687,7 @@ export function RosterSection({
             pairing, not a refusal. */}
         {diveRecencyIsNotable(booking.lastDivedBand) ? (
           <p className="mt-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
-            <span aria-hidden="true">▲</span>
+            <StatusMark variant="warning" />
             <span>{diveRecencyText(t, booking.lastDivedBand)}</span>
           </p>
         ) : null}
@@ -888,7 +875,7 @@ export function RosterSection({
         {hasEmergencyContact ? null : (
           <details className="mt-3">
             <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong [&::-webkit-details-marker]:hidden">
-              <span aria-hidden="true">▲</span>
+              <StatusMark variant="warning" />
               <span>
                 {t("trips.roster.emergencyContactHeading")} ·{" "}
                 {t("trips.roster.emergencyContactMissing")}
@@ -1283,7 +1270,7 @@ export function RosterSection({
                           : "text-warning-strong"
                       }`}
                     >
-                      <span aria-hidden="true">{tone === "danger" ? "!" : "▲"}</span>
+                      <StatusMark variant={tone === "danger" ? "danger" : "warning"} />
                       <span>{t("trips.roster.sharedFactLine", { count, sentence })}</span>
                     </p>
                   ))}

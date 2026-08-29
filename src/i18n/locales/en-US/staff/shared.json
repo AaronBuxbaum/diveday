@@ -516,7 +516,7 @@
       "statsDivers": "Divers",
       "statsBoarded": "Boarded",
       "statsAwaiting": "Awaiting",
-      "rollCallCompleteHeading": "Roll call complete 🎉",
+      "rollCallCompleteHeading": "Roll call complete",
       "checkpointRollCallHeading": "{checkpoint} roll call",
       "allAboard": "Every diver has a result — everyone's aboard.",
       "someNotBoarded": "Every diver has a result — {count} marked not boarded. Confirm they're accounted for before moving on.",
@@ -537,9 +537,9 @@
       "diveSupport": "Dive support",
       "nitroxRequestedSuffix": "· Nitrox requested",
       "saving": "Saving…",
-      "boardedDone": "Boarded ☑️",
+      "boardedDone": "Boarded",
       "markBoarded": "Mark boarded",
-      "notBoardedDone": "Not boarded ☑️",
+      "notBoardedDone": "Not boarded",
       "markNotBoarded": "Mark not boarded",
       "notBackAboardActive": "Not back aboard",
       "markNotBackAboard": "Mark not back aboard",
@@ -557,7 +557,9 @@
         "unavailable": "This saved copy isn't available anymore — open the live manifest to record roll call."
       },
       "checklist": {
-        "heading": "Before you leave the dock"
+        "heading": "Before you leave the dock",
+        "checkedLabel": "Checked — press to clear",
+        "uncheckedLabel": "Not checked — press to mark checked"
       }
     },
     "shellVersion": {

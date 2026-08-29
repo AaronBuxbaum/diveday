@@ -7,6 +7,7 @@ import { type PrivateNoteAction, PrivateNoteForm } from "@/components/PrivateNot
 import { RollCallMark } from "@/components/RollCallMark";
 import { Badge } from "@/components/ui/badge";
 import { sectionCardClass } from "@/components/ui/card";
+import { StatusMark } from "@/components/ui/StatusMark";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
@@ -30,6 +31,7 @@ import {
 import { SHARED_FACT_MIN } from "../../_components/shared-facts";
 import { PersonBuddyList } from "./PersonBuddyList";
 import { PersonSheet, type PersonTrailEntry } from "./PersonSheet";
+import { personTrailWithCurrentRecord } from "./person-trail";
 import {
   ROLL_CALL_ROW_TONE,
   ROW_DISCLOSURE_PANEL_CLASS,
@@ -69,7 +71,7 @@ function DiverFacts({
    * the two places they render — and the answer is not the same in both.
    *
    * `1` is the on-screen panel, inset inside the row: a second column there
-   * wrapped "Asha Sharma (sister) · +1-305-555-0231" mid-number.
+   * wrapped "a contact (sister) · <phone number>" mid-number.
    *
    * `2` is paper, which has the whole page and no disclosure beside it. Single
    * column there leaves the right half of a US-Letter sheet blank and stretches
@@ -102,7 +104,7 @@ function DiverFacts({
                     used less than once a year and costs a false alarm the one
                     time it misfires.
                     The number never breaks across lines *here*. In the narrow
-                    panel it wrapped at its own hyphens — "+1-305-" / "555-0241"
+                    panel it wrapped at its own hyphens — "<phone>" / "<number>"
                     — and a number a crew member reads aloud in an emergency is
                     the last string on this page that should be reassembled by
                     eye.
@@ -354,7 +356,7 @@ export function DiverRollCall({
               key={text}
               className="flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-base text-warning-strong"
             >
-              <span aria-hidden="true">▲</span>
+              <StatusMark variant="warning" size="md" />
               <div>
                 <p>{text}</p>
                 <p className="font-semibold">
@@ -403,6 +405,14 @@ export function DiverRollCall({
           const diverStatus = diver.readiness.status;
           const ready = diverStatus === "ready";
           const rc = diver.rollCall;
+          const personTrail = personTrailWithCurrentRecord({
+            trail: todayTrailByBooking?.get(diver.bookingId) ?? [],
+            checkpoint,
+            rollCall: rc,
+            locale,
+            timezone,
+            t,
+          });
           // One derivation of what a roll-call record means, shared with the
           // crew list and the mark (`rollCallRowState`).
           const rowState = rollCallRowState(checkpoint, rc);
@@ -504,8 +514,8 @@ export function DiverRollCall({
           // (decision 5). Nothing said yet renders nothing: an untouched row is
           // a name and an empty ring, and that is the whole message.
           //
-          // **Time, not a timestamp.** "Boarded Aug 27, 2:52 PM EDT by Sal
-          // Moretti" wrapped to three lines under every settled name, which put
+          // **Time, not a timestamp.** "Boarded Aug 27, 2:52 PM EDT by the
+          // recorder" wrapped to three lines under every settled name, which put
           // 60px of date between one diver and the next on a phone — and every
           // roll call for a departure happens on that departure's own day, so
           // the date was the one part nobody could be in doubt about. The full
@@ -546,7 +556,7 @@ export function DiverRollCall({
                         {auditLabel}
                       </Badge>
                     }
-                    trail={todayTrailByBooking?.get(diver.bookingId) ?? []}
+                    trail={personTrail}
                     todayLabel={t("manifest.personSheetToday")}
                     noTodayEventsLabel={t("manifest.personSheetNoTodayEvents")}
                     buddyLabel={t("manifest.personSheetBuddyTeam")}
@@ -620,7 +630,7 @@ export function DiverRollCall({
                       {diver.depthAdvisory?.status === "exceeds" &&
                       !sharedAdvisoryTexts.has(depthWarningText(t, diver.depthAdvisory)) ? (
                         <p className="mb-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-base text-warning-strong">
-                          <span aria-hidden="true">▲</span>
+                          <StatusMark variant="warning" size="md" />
                           <span>{depthWarningText(t, diver.depthAdvisory)}</span>
                         </p>
                       ) : null}
@@ -800,10 +810,13 @@ export function DiverRollCall({
                     </ul>
                   )}
                   {diver.depthAdvisory?.status === "exceeds" ? (
-                    <p className="mt-2 text-base">▲ {depthWarningText(t, diver.depthAdvisory)}</p>
+                    <p className="mt-2 flex items-start gap-2 text-base">
+                      <StatusMark variant="warning" size="md" />
+                      <span>{depthWarningText(t, diver.depthAdvisory)}</span>
+                    </p>
                   ) : null}
                   {/* The audit line **in full** — the screen's compact
-                    "Boarded · 7:12 AM · Sal Moretti" is a same-day reading on
+                    "Boarded · 7:12 AM · the recorder" is a same-day reading on
                     the boat; the sheet that goes ashore may be read months
                     later, so it carries the date and the zone. */}
                   {rc && !rc.implied ? (

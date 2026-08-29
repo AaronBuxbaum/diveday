@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { StatusMark } from "@/components/ui/StatusMark";
 import { fill, pluralForm } from "@/i18n/fill";
 import { shiftCalendarDate } from "@/lib/calendar-date";
 import {
@@ -1371,7 +1372,7 @@ export function ScheduleBuilder({
   const unpricedCount = windowTrips.filter((trip) => trip.priceCents === null).length;
   const allUnpriced = unpricedCount >= 3 && unpricedCount === windowTrips.length;
   // The same principle, one row lower: a shop rosters the same two or three
-  // people onto nearly everything, so "Crew: Keiko Tanaka, Sal Moretti" was
+  // people onto nearly everything, so the full crew list was
   // printing on ten of fourteen rows in the same grey — a third of the board's
   // ink, saying nothing that distinguishes one departure from another (issue
   // #757). The usual crew is stated once above the list and dropped from the
@@ -1753,8 +1754,8 @@ export function ScheduleBuilder({
               ) : null}
             </div>
             {day.boatWarning ? (
-              <div className="mt-2 rounded-lg border border-warning/40 bg-warning-tint px-3 py-2 text-xs font-medium text-warning flex items-center gap-2">
-                <span aria-hidden="true">⚠️</span>
+              <div className="mt-2 flex items-center gap-2 rounded-lg border border-warning/40 bg-warning-tint px-3 py-2 text-xs font-medium text-warning">
+                <StatusMark variant="warning" size="md" />
                 <span>{day.boatWarning}</span>
               </div>
             ) : null}
@@ -1909,7 +1910,7 @@ export function ScheduleBuilder({
                         {/* One slot, one grammar (issue 758). This strip answers
                             "how is this departure doing", and it used to answer
                             it in three: muted tabular text on most rows, a green
-                            ✅ Badge on a full one, and an amber ⚠️ Badge sitting
+                            green Badge on a full one, and an amber Badge sitting
                             *beside* the count on an unpriced one — so on the
                             seeded board a sold-out Saturday was the single
                             loudest mark among seven departures a diver can see
@@ -1922,7 +1923,7 @@ export function ScheduleBuilder({
                             left behind a pill of whatever width. */}
                         {/* The loudest thing this board can say (DOM-H3): the
                             boat is back and somebody on its list was never
-                            counted. "danger" carries an aria-hidden ✕ of its
+                            counted. "danger" carries an aria-hidden drawn mark of its
                             own, so hue is never the only signal, and the whole
                             badge is a link straight to the open checkpoint. It
                             outranks the price flag rather than stacking with it

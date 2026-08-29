@@ -53,7 +53,7 @@ export function heldCardStatusTone(status: HeldCardDisplayStatus): "success" | "
  *   (20260827-clearwater-surface-language, decision 3). A green pill down
  *   every row of the file is noise pretending to be information. The `null` is
  *   the design's silence, and `rows.test.tsx` pins it.
- * - `pending` → **warning**, with the tone glyph and the word: somebody has to
+ * - `pending` → **warning**, with the tone mark and the word: somebody has to
  *   look this card up.
  * - `self_declared` → **warning**, worded as the diver's own claim. Same
  *   strength as pending because it is the same job, and the word says who said

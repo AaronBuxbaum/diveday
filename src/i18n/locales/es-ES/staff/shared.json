@@ -516,7 +516,7 @@
       "statsDivers": "Buceadores",
       "statsBoarded": "Embarcados",
       "statsAwaiting": "Pendientes",
-      "rollCallCompleteHeading": "Pase de lista completo 🎉",
+      "rollCallCompleteHeading": "Pase de lista completo",
       "checkpointRollCallHeading": "Pase de lista de {checkpoint}",
       "allAboard": "Todos tienen un resultado — todos a bordo.",
       "someNotBoarded": "Todos tienen un resultado — {count, plural, one {# marcado como no embarcado} other {# marcados como no embarcados}}. Confirma que están localizados antes de continuar.",
@@ -537,9 +537,9 @@
       "diveSupport": "Apoyo en la inmersión",
       "nitroxRequestedSuffix": "· Nitrox solicitado",
       "saving": "Guardando…",
-      "boardedDone": "Embarcado ☑️",
+      "boardedDone": "Embarcado",
       "markBoarded": "Marcar embarcado",
-      "notBoardedDone": "No embarcado ☑️",
+      "notBoardedDone": "No embarcado",
       "markNotBoarded": "Marcar no embarcado",
       "notBackAboardActive": "Sin regresar a bordo",
       "markNotBackAboard": "Marcar sin regresar a bordo",
@@ -557,7 +557,9 @@
         "unavailable": "Esta copia guardada ya no está disponible — abre el manifiesto en vivo para registrar el pase de lista."
       },
       "checklist": {
-        "heading": "Comprobación previa a la salida"
+        "heading": "Comprobación previa a la salida",
+        "checkedLabel": "Comprobado — pulsa para quitar la marca",
+        "uncheckedLabel": "No comprobado — pulsa para marcarlo"
       }
     },
     "shellVersion": {

@@ -94,7 +94,7 @@ export async function sendWaiversAction(
       continue;
     }
     if (result.delivery === "sent") {
-      // A successful send gets the "✅ Waiver sent to …" line and nothing else.
+      // A successful send gets the "Waiver sent to …" line and nothing else.
       // It used to also hand back the link for the diver record to print; that
       // page now reaches the link the way anyone else does, by asking for it.
       state.sent.push(result.diverName);

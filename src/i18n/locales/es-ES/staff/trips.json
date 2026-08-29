@@ -592,6 +592,8 @@
     "printLineChecked": "{label} — {status}",
     "printLineNotChecked": "{label} — No comprobado",
     "errorRefusal": "Eso no se guardó — inténtalo de nuevo.",
+    "checkedLabel": "Comprobado — pulsa para quitar la marca",
+    "uncheckedLabel": "No comprobado — pulsa para marcarlo",
     "summary": "Antes de salir del muelle — {checked} de {total, plural, one {# comprobado} other {# comprobados}}"
   }
 }
