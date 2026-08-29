@@ -1,11 +1,9 @@
 import type { Page } from "@playwright/test";
+import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
+import { expect, signedInAsOwner, test } from "./fixtures";
 import {
-  DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
-import { expect,
-  signedInAsOwner,
-  test } from "./fixtures";
-import { openSettingsRow,
-  tripPathByTitle,
+  openSettingsRow,
+  tripPathByTitle },
   openTripAbout,
 } from "./helpers";
 

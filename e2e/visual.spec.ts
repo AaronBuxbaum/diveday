@@ -1,18 +1,13 @@
-import {
-  readFileSync } from "node:fs";
-import type { Browser,
-  Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import type { Browser, Page } from "@playwright/test";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
 import {
   OFFLINE_MANIFEST_AGING_MS,
   OFFLINE_MANIFEST_RECORD_VERSION,
-  } from "../src/lib/offline-manifests";
+} from "../src/lib/offline-manifests";
 import { signRecapToken } from "../src/lib/recap-links";
-import { expect,
-  makeActivitySafe,
-  signedInAsOwner,
-  test } from "./fixtures";
+import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
   choosePartySize,
@@ -29,6 +24,7 @@ import {
   seededTripId,
   threadStatus,
   waiverLinkFromResult,
+  },
   openTripAbout,
 } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";

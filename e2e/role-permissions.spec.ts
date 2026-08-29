@@ -1,11 +1,8 @@
 import type { Page } from "@playwright/test";
+import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
+import { expect, READ_ONLY, signedInAs, test } from "./fixtures";
 import {
-  DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
-import { expect,
-  READ_ONLY,
-  signedInAs,
-  test } from "./fixtures";
-import { openSettingsRow,
+  openSettingsRow },
   openTripAbout,
 } from "./helpers";
 
@@ -133,7 +130,8 @@ test.describe("H-14 role permissions", () => {
       // Crew editing is unconditional (no config-gated form around it), so its
       // presence for a captain is the heading itself, not a submit button.
       await expect(page.getByRole("heading", { name: "Crew", exact: true })).toBeVisible();
-      await expect(page.getByRole("button", { name: "Cancel trip" })).toBeVisible();
+      await openTripAbout(page);
+      await expect(page.getByRole("button", { name: /Cancel (trip|this departure)/ })).toBeVisible();
     });
 
     /**
@@ -254,7 +252,7 @@ test.describe("H-14 role permissions", () => {
       // The details form waits behind its Edit disclosure (summary-first
       // Overview) — the owner sees the toggle, and the form behind it.
       await openTripAbout(page);
-  await page.getByText("Edit details", { exact: true }).click();
+      await page.getByText("Edit details", { exact: true }).click();
       await expect(page.getByRole("button", { name: "Save changes" })).toBeVisible();
     });
 

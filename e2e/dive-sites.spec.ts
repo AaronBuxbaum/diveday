@@ -1,11 +1,8 @@
+import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
-  expect,
-  makeActivitySafe,
-  signedInAsOwner,
-  test } from "./fixtures";
-import { daysFromNow,
+  daysFromNow,
   e2eNow,
-  signInAsOwner,
+  signInAsOwner },
   openTripAbout,
 } from "./helpers";
 

@@ -1,8 +1,6 @@
+import { expect, signedInAsOwner, test } from "./fixtures";
 import {
-  expect,
-  signedInAsOwner,
-  test } from "./fixtures";
-import { openOnThisPhone,
+  openOnThisPhone },
   openTripAbout,
 } from "./helpers";
 
@@ -90,11 +88,11 @@ test("staff can view or copy a trip's public booking page from its overview", as
   await page.goto("/shop/blue-mantis");
   await page.locator("ol li h3 a").first().click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
-  await openTripAbout(page);
 
   // The booking page stays on screen for a staffer now — it used to redirect
   // straight back to the management view, which made this button impossible to
   // use — and says whose view they are looking at instead.
+  await openTripAbout(page);
   const [publicPage] = await Promise.all([
     context.waitForEvent("page"),
     page.getByRole("link", { name: "View booking page" }).click(),

@@ -1,12 +1,9 @@
+import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
-  expect,
-  signedInAs,
-  signedInAsOwner,
-  test } from "./fixtures";
-import { createTrip,
+  createTrip,
   daysFromNow,
   e2eNow,
-  openTripFromBoard,
+  openTripFromBoard },
   openTripAbout,
 } from "./helpers";
 
@@ -178,7 +175,7 @@ test.describe("contact import — specialty cards", () => {
     // The requirements form waits behind its Edit disclosure (summary-first
     // Overview).
     await openTripAbout(page);
-        await page.getByText("Edit requirements", { exact: true }).click();
+    await page.getByText("Edit requirements", { exact: true }).click();
     await page.getByRole("checkbox", { name: "Deep" }).check();
     await page.getByRole("button", { name: /Save requirements/ }).click();
     await expect(page.getByRole("status")).toBeVisible();

@@ -1,8 +1,4 @@
-import {
-  expect,
-  makeActivitySafe,
-  signedInAsOwner,
-  test } from "./fixtures";
+import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   createTrip,
   daysFromNow,
@@ -10,6 +6,7 @@ import {
   findTripOnBoard,
   openRosterDetails,
   seededTripId,
+  },
   openTripAbout,
 } from "./helpers";
 
@@ -387,7 +384,7 @@ test.describe("undoing a removal after the trip is cancelled", () => {
     try {
       await other.goto(tripPath);
       await openTripAbout(other);
-      await other.getByRole("button", { name: "Cancel trip" }).click();
+      await other.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
       await expect(other.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
     } finally {
       await other.close();

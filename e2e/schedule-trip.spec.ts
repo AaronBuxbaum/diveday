@@ -1,13 +1,11 @@
-import {
-  expect,
-  signedInAsOwner,
-  test } from "./fixtures";
+import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
   daysFromNow,
   e2eNow,
   signInAsOwner,
   tripPathByTitle,
+  },
   openTripAbout,
 } from "./helpers";
 
@@ -94,7 +92,7 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   await page.getByRole("link", { name: "Manage this trip" }).click();
   await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]+$/);
   await openTripAbout(page);
-    await page.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
+  await page.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
   await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
 });
 

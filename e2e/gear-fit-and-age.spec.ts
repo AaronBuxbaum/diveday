@@ -1,11 +1,6 @@
 import type { Page } from "@playwright/test";
-import {
-  DEMO_SHOP_SLUG,
-  DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { expect,
-  signedInAs,
-  signedInAsOwner,
-  test } from "./fixtures";
+import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
+import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
   createTrip,
@@ -14,6 +9,7 @@ import {
   signInAs,
   signOut,
   tripPathByTitle,
+  },
   openTripAbout,
 } from "./helpers";
 

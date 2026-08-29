@@ -1,10 +1,8 @@
+import { expect, signedInAsOwner, test } from "./fixtures";
 import {
-  expect,
-  signedInAsOwner,
-  test } from "./fixtures";
-import { daysFromNow,
+  daysFromNow,
   e2eNow,
-  openTripFromBoard,
+  openTripFromBoard },
   openTripAbout,
 } from "./helpers";
 
@@ -56,6 +54,7 @@ test("a repeating trip is scheduled on two weekdays, stopped, and cancelled as o
   await openTripFromBoard(page, title);
   await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
   const tripUrl = page.url();
+  await openTripAbout(page);
   const series = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Repeating trip" }) })

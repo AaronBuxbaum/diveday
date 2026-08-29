@@ -1,8 +1,4 @@
-import {
-  expect,
-  signedInAs,
-  signedInAsOwner,
-  test } from "./fixtures";
+import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   choosePartySize,
   createTrip,
@@ -13,6 +9,7 @@ import {
   signInAsOwner,
   signOut,
   threadStatus,
+  },
   openTripAbout,
 } from "./helpers";
 
@@ -180,6 +177,7 @@ test.describe("staff", () => {
 
     // The conditions form waits behind the section's disclosure (summary-first
     // Overview); no prediction is published yet, so the toggle reads "Publish".
+    await openTripAbout(page);
     await page.getByText("Write a crew prediction", { exact: true }).click();
     await page.getByRole("checkbox", { name: "Conditions hold" }).check();
     await page.getByLabel("Conditions overview").fill("The captain is watching a passing squall.");
@@ -227,7 +225,7 @@ test.describe("staff", () => {
     await expect(page.getByRole("button", { name: "Book my spot" })).toHaveCount(0);
     // The details form waits behind its Edit disclosure (summary-first Overview).
     await openTripAbout(page);
-  await page.getByText("Edit details", { exact: true }).click();
+    await page.getByText("Edit details", { exact: true }).click();
     await page.getByLabel("Title").fill(renamed);
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByRole("status")).toContainText("Changes saved");

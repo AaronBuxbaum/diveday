@@ -1,8 +1,7 @@
+import { expect, test } from "./fixtures";
 import {
-  expect,
-  test } from "./fixtures";
-import { openSettingsRow,
-  seededTripId,
+  openSettingsRow,
+  seededTripId },
   openTripAbout,
 } from "./helpers";
 

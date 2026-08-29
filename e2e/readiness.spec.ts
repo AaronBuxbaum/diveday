@@ -1,7 +1,4 @@
-import {
-  expect,
-  signedInAsOwner,
-  test } from "./fixtures";
+import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   createTrip,
   daysFromNow,
@@ -10,6 +7,7 @@ import {
   openThreadStep,
   signOut,
   threadStatus,
+  },
   openTripAbout,
 } from "./helpers";
 

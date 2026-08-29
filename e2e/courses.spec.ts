@@ -1,9 +1,4 @@
-import {
-  expect,
-  makeActivitySafe,
-  READ_ONLY,
-  signedInAsOwner,
-  test } from "./fixtures";
+import { expect, makeActivitySafe, READ_ONLY, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
   choosePartySize,
@@ -13,6 +8,7 @@ import {
   findTripOnBoard,
   openThreadStep,
   publicTripUrl,
+  },
   openTripAbout,
 } from "./helpers";
 

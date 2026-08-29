@@ -1,13 +1,11 @@
-import {
-  expect,
-  signedInAsOwner,
-  test } from "./fixtures";
+import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
   daysFromNow,
   e2eNow,
   openTripFromBoard,
   seededTripId,
+  },
   openTripAbout,
 } from "./helpers";
 
