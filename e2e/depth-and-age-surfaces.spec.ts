@@ -77,16 +77,15 @@ test.describe("staff", () => {
     await expect(minorRow).not.toContainText(/under 18|too young|not permitted/i);
   });
 
-  test("a birthday within the window is celebrated on the roster and in its own section", async ({
-    page,
-  }) => {
+  test("a birthday within the window is celebrated on the diver's own row", async ({ page }) => {
     const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
     await page.goto(`${tripPath}/guests`);
 
-    // The seeded minor's birthday is two days out, so both surfaces fire. The
-    // copy is the cake plus the timing — no age, no sentence.
-    await expect(page.getByRole("heading", { name: /Celebrations/ })).toBeVisible();
-    await expect(page.getByText("in 2 days").first()).toBeVisible();
+    // The seeded minor's birthday is two days out. Since slice 5d folded the
+    // Celebrations panel into the ledger, the callout lives once, as the warm
+    // capsule on the celebrating diver's row — subject plus timing, no age,
+    // no sentence (`birthdayCalloutText`).
+    await expect(page.getByText("Birthday in 2 days").first()).toBeVisible();
   });
 
   test("the manifest carries age and the minor flag to the crew's boarding list", async ({

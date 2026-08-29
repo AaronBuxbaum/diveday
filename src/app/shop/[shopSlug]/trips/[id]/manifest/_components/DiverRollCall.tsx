@@ -579,16 +579,15 @@ export function DiverRollCall({
                               return <li key={text}>• {text}</li>;
                             })}
                           </ul>
-                          {/* `?rf=blocked` as well as the anchor: the Guests
-                            roster renders every diver on the boat, so landing
-                            on the anchor alone dropped a captain into the
-                            middle of a long list with no sign of why they were
-                            there or who else still needed the same errand. This
-                            link only renders for a diver whose readiness *is*
-                            blocked, so the filter it asks for can never hide
-                            the row it scrolls to. */}
+                          {/* The Guests ledger groups its blocked divers under
+                            "Still to clear" at the top of the list (ADR
+                            20260827-the-departure-is-two-working-surfaces,
+                            slice 5d), so the anchor alone lands the captain on
+                            this diver's row with the group band saying why —
+                            the `?rf=blocked` filter this link used to carry is
+                            retired with the chips. */}
                           <Link
-                            href={`/shop/${shopSlug}/trips/${tripId}/guests?rf=blocked#booking-${diver.bookingId}`}
+                            href={`/shop/${shopSlug}/trips/${tripId}/guests#booking-${diver.bookingId}`}
                             className="mt-2 inline-flex min-h-11 items-center text-base font-semibold text-primary hover:underline"
                           >
                             {t("manifest.resolveBlockersLink")}

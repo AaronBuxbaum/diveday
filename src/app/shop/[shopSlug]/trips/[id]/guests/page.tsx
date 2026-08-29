@@ -8,7 +8,6 @@ import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { FlashParams } from "@/components/FlashParams";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { canPersonManagePaymentSettings, canPersonRefund } from "@/db/authz";
 import { getTripGuests } from "@/db/trips-guests";
@@ -23,13 +22,12 @@ import { isFull, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { AddDiverSection } from "../_components/AddDiverSection";
-import { CelebrationsSection } from "../_components/CelebrationsSection";
 import { LastMinuteDealSection } from "../_components/LastMinuteDealSection";
-import { isRosterFilter, RosterSection } from "../_components/RosterSection";
-import { TripInvitationSection } from "../_components/TripInvitationSection";
+import { RosterSection } from "../_components/RosterSection";
+import { TripInvitationGroup } from "../_components/TripInvitationSection";
 import { resolveTripNotice, TripNoticeBanner } from "../_components/TripNoticeBanner";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
-import { WaitlistSection } from "../_components/WaitlistSection";
+import { WaitlistGroup } from "../_components/WaitlistSection";
 import {
   addInternalNoteAction,
   addToWaitlistAction,
@@ -132,6 +130,8 @@ async function TripGuestsBody({
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
+  // `rf` (the retired roster filter) is deliberately not read: old deep links
+  // still carry it, and the groups now do what the chips did.
   const {
     notice,
     bid,
@@ -139,14 +139,12 @@ async function TripGuestsBody({
     count,
     form,
     gate,
-    rf,
     noteBookingId,
     noteBody,
     confirmName,
     confirmEmail,
     confirmPhone,
   } = await searchParams;
-  const rosterFilter = isRosterFilter(rf) ? rf : "all";
   const { db, shop, session } = await requireShopSurface(shopSlug);
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
@@ -321,10 +319,11 @@ async function TripGuestsBody({
         </section>
       ) : null}
 
-      {/* Sits above the roster so the good news is read before the blockers
-          (H-21). Renders nothing when nobody on board is celebrating. */}
-      <CelebrationsSection roster={roster} tripDate={tripDateIso} locale={locale} />
-
+      {/* The birthday panel that used to sit here is gone: it restated, above
+          the roster, the same callout each celebrating diver's own row wears
+          as its warm capsule (principle 9 — say it once, on the person). H-21's
+          good news still reads before that person's blockers, on the line that
+          carries their name. */}
       <RosterSection
         locale={locale}
         shopSlug={shopSlug}
@@ -333,7 +332,6 @@ async function TripGuestsBody({
         booked={trip.booked}
         capacity={trip.capacity}
         roster={roster}
-        rosterFilter={rosterFilter}
         canAddDivers={!cancelled}
         readinessByBooking={readinessByBooking}
         waiverByBooking={waiverByBooking}
@@ -360,46 +358,49 @@ async function TripGuestsBody({
         keepOpenBookingId={keepOpenBookingId}
         depthUnit={shop.depthUnit}
         tripDate={tripDateIso}
+        // The wait list and recorded invitations are groups of the same
+        // ledger, not sibling cards — everyone this departure is about, in
+        // one object (slice 5d). Each renders only when someone is actually
+        // in it: an empty group is "None" formatted as a section
+        // (design/principles.md #9). Today's invite-from-the-wait-list row
+        // only exists when waiting > 0, so its `#waitlist` landing always
+        // finds the group's band.
+        waitingGroup={
+          waitlist.length > 0 ? (
+            <WaitlistGroup
+              waitlist={waitlist}
+              shopSlug={shopSlug}
+              tripId={tripId}
+              shopName={shop.name}
+              tripTitle={trip.title}
+              tripWhen={formatShortDate(trip.startsAt, locale, shop.timezone)}
+              inviteAction={inviteWaitlistAction.bind(null, shopSlug, tripId)}
+              certificationSummaries={certificationSummaries}
+              /* The same folded gate the deal panel below states. The shared
+                 predicate marks the row without reordering, filtering, or
+                 gating this lead list. */
+              departureRequirement={dealRequirement}
+              locale={locale}
+              timezone={shop.timezone}
+            />
+          ) : null
+        }
+        invitedGroup={
+          invitations.length > 0 ? (
+            <TripInvitationGroup
+              invitations={invitations}
+              shopSlug={shopSlug}
+              tripId={tripId}
+              shopName={shop.name}
+              tripTitle={trip.title}
+              tripStartsAt={trip.startsAt}
+              timezone={shop.timezone}
+              inviteAction={recordTripInvitationAction.bind(null, shopSlug, tripId)}
+              locale={locale}
+            />
+          ) : null
+        }
       />
-
-      {/* Below the roster and only when someone is actually waiting: an empty
-          wait list used to lead this page as a full-width dashed card — "None"
-          rendered as a status (design/principles.md #9). Today's own
-          invite-from-the-wait-list row only exists when waiting > 0, so its
-          `#waitlist` landing always finds this section. */}
-      {waitlist.length > 0 ? (
-        <WaitlistSection
-          waitlist={waitlist}
-          shopSlug={shopSlug}
-          tripId={tripId}
-          shopName={shop.name}
-          tripTitle={trip.title}
-          tripWhen={formatShortDate(trip.startsAt, locale, shop.timezone)}
-          inviteAction={inviteWaitlistAction.bind(null, shopSlug, tripId)}
-          certificationSummaries={certificationSummaries}
-          /* The same folded gate the deal panel below states — a wait list is
-             per-trip, so the departure the staffer is inviting onto is the one
-             already resolved above. The shared predicate marks the row without
-             reordering, filtering, or gating this lead list. */
-          departureRequirement={dealRequirement}
-          locale={locale}
-          timezone={shop.timezone}
-        />
-      ) : null}
-
-      {invitations.length > 0 ? (
-        <TripInvitationSection
-          invitations={invitations}
-          shopSlug={shopSlug}
-          tripId={tripId}
-          shopName={shop.name}
-          tripTitle={trip.title}
-          tripStartsAt={trip.startsAt}
-          timezone={shop.timezone}
-          inviteAction={recordTripInvitationAction.bind(null, shopSlug, tripId)}
-          locale={locale}
-        />
-      ) : null}
 
       {cancelled ? null : (
         <AddDiverSection
@@ -421,84 +422,74 @@ async function TripGuestsBody({
         />
       )}
 
-      {/* The marketing blast collapses behind its own disclosure (task 156,
-          UX persona lens 17) — Guests is "who is attending," not a promo
-          console. Collapsed by default; the trip's own recipient count still
-          shows on the closed summary, and Today's "fill seats" row still
-          lands here and auto-opens it (its href is this section's own
-          #last-minute-deal anchor). A hard navigation opens a closed
-          ancestor <details> for a same-page anchor on its own, but a
-          Next.js <Link> transition doesn't run that native "reveal"
-          algorithm — AutoOpenDetails covers both. */}
-      {showPromote ? (
-        <AutoOpenDetails
-          openOnHash="last-minute-deal"
-          // A `<details>` whose summary and panel pad themselves is a card
-          // that is a *shell* — `padding="none"`.
-          className={sectionCardClass({
-            padding: "none",
-            className: "group mt-10 scroll-mt-6",
-          })}
-        >
-          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
-            <span>{t("trips.guests.promoteHeading")}</span>
-            <span className="flex items-center gap-2 text-muted">
-              {lastMinutePromos.length > 0
-                ? t("trips.guests.promoteSentCount", { count: lastMinutePromos.length })
-                : null}
-              <DisclosureCaret direction="down" className="size-4 group-open:rotate-180" />
-            </span>
+      {/* **The quiet tail** (slice 5d, after the canvas's "quiet
+          housekeeping, no chrome"): the marketing blast and the audit trail
+          are the two things on this page that are not people, so they stop
+          wearing the same card the ledger wears and settle into two hairline
+          rows — kept at all only because a trip's history and its promotion
+          record have no other home yet (docs/design/surfaces.md, "remove
+          first"). The blast stays collapsed by default (Guests is "who is
+          attending," not a promo console — task 156); Today's "fill seats"
+          row still lands on #last-minute-deal and auto-opens it. A hard
+          navigation opens a closed ancestor <details> for a same-page anchor
+          on its own, but a Next.js <Link> transition doesn't run that native
+          "reveal" algorithm — AutoOpenDetails covers both. */}
+      <div className="mt-12">
+        {showPromote ? (
+          <AutoOpenDetails
+            openOnHash="last-minute-deal"
+            className="group/promote border-t border-border scroll-mt-6"
+          >
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:text-foreground">
+              <span>{t("trips.guests.promoteHeading")}</span>
+              <span className="flex items-center gap-2">
+                {lastMinutePromos.length > 0
+                  ? t("trips.guests.promoteSentCount", { count: lastMinutePromos.length })
+                  : null}
+                <DisclosureCaret
+                  direction="down"
+                  className="size-4 group-open/promote:rotate-180"
+                />
+              </span>
+            </summary>
+            <div className="pb-5">
+              <LastMinuteDealSection
+                shopSlug={shopSlug}
+                locale={locale}
+                recipients={lastMinuteRecipients.map(({ person }) => ({
+                  personId: person.id,
+                  fullName: person.fullName,
+                  certification: certificationSummaries.get(person.id) ?? null,
+                }))}
+                requirement={dealRequirement}
+                course={courseTarget}
+                openSeats={spotsRemaining({ capacity: trip.capacity, booked: trip.booked })}
+                cancelled={cancelled}
+                promos={lastMinutePromos}
+                promoRecipients={lastMinutePromoRecipients}
+                timezone={shop.timezone}
+                status={noticeForForm(tripNotice, "last-minute-deal")}
+                sendAction={sendLastMinuteDealAction.bind(null, shopSlug, tripId)}
+              />
+            </div>
+          </AutoOpenDetails>
+        ) : null}
+
+        <details className="group/activity border-y border-border">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:text-foreground">
+            <span>{t("trips.guests.activityHeading")}</span>
+            <DisclosureCaret direction="down" className="size-4 group-open/activity:rotate-180" />
           </summary>
-          {/* `p-4`, not `px-4`: with horizontal padding alone the panel's last
-              row — the sent-deal list, or the empty state — ran flush into the
-              card's bottom edge, while the section's own top margin left a wide
-              gap above it. On a phone, where the rows wrap and fill the width,
-              that read as a cut-off panel (2026-08-06 review). The section
-              itself no longer carries a page-level top margin here; this
-              container owns the inset, and it is the same `p-4` as the summary
-              above it. */}
-          <div className="border-t border-border p-4">
-            <LastMinuteDealSection
-              shopSlug={shopSlug}
+          <div className="pb-5">
+            <ActivityLog
+              events={activity}
               locale={locale}
-              recipients={lastMinuteRecipients.map(({ person }) => ({
-                personId: person.id,
-                fullName: person.fullName,
-                certification: certificationSummaries.get(person.id) ?? null,
-              }))}
-              requirement={dealRequirement}
-              course={courseTarget}
-              openSeats={spotsRemaining({ capacity: trip.capacity, booked: trip.booked })}
-              cancelled={cancelled}
-              promos={lastMinutePromos}
-              promoRecipients={lastMinutePromoRecipients}
-              timezone={shop.timezone}
-              status={noticeForForm(tripNotice, "last-minute-deal")}
-              sendAction={sendLastMinuteDealAction.bind(null, shopSlug, tripId)}
+              timeZone={shop.timezone}
+              emptyText={t("trips.guests.noActivity")}
             />
           </div>
-        </AutoOpenDetails>
-      ) : null}
-
-      <details
-        className={sectionCardClass({
-          padding: "none",
-          className: "group mt-10",
-        })}
-      >
-        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
-          <span>{t("trips.guests.activityHeading")}</span>
-          <DisclosureCaret direction="down" className="size-4 group-open:rotate-180" />
-        </summary>
-        <div className="border-t border-border p-4">
-          <ActivityLog
-            events={activity}
-            locale={locale}
-            timeZone={shop.timezone}
-            emptyText={t("trips.guests.noActivity")}
-          />
-        </div>
-      </details>
+        </details>
+      </div>
     </div>
   );
 }

@@ -262,10 +262,8 @@
     "addNewDiverAction": "Add diver"
   },
   "waitlist": {
-    "heading": "Wait list",
     "description": "Not booked, and not on the manifest — nobody here is promised the seat.",
     "joined": "Asked {date}",
-    "empty": "No one’s waiting yet.",
     "noEmailOnFile": "no email on file",
     "invitedRelative": "Invited {time}",
     "inviteEmailed": "Invite emailed",
@@ -282,7 +280,6 @@
     "emailBody": "Hi {firstName},\n\nA seat just opened on {tripTitle} ({tripWhen}) with {shopName}. You're on the wait list for it — grab it here before it goes:\n{bookingUrl}\n\nSee you on the boat!"
   },
   "invitations": {
-    "heading": "Invitations",
     "description": "An invitation does not hold a seat or add anyone to the manifest.",
     "fromRequest": "from a request",
     "anonymous": "No name given",
@@ -353,12 +350,11 @@
     "paymentUpdating": "Updating…",
     "heading": "Divers",
     "bookedOfCapacity": "{booked} of {capacity} booked",
+    "groupStillToClear": "Still to clear",
+    "groupReady": "Ready",
+    "groupWaiting": "Waiting for a seat",
+    "groupInvited": "Invited",
     "allClear": "Everyone's cleared to dive",
-    "filterAriaLabel": "Filter the roster",
-    "filterAll": "All ({count})",
-    "filterNeedsWaiver": "Needs waiver ({count})",
-    "filterBlocked": "Blocked ({count})",
-    "noneMatchFilter": "No divers match this filter.",
     "sending": "Sending…",
     "noBookings": "Share the trip page and they'll show up here.",
     "noEmailOnFile": "no email on file",
@@ -420,8 +416,6 @@
     "saveEmergencyContact": "Save contact",
     "emptyHeading": "No one on this boat yet",
     "emptyAction": "Add a diver",
-    "filterEmptyHeading": "Nobody matches this filter",
-    "filterEmptyAction": "{count, plural, one {Show the # diver on board} other {Show all # divers on board}}",
     "sharedFactLine": "{count, plural, one {# diver} other {# divers}}: {sentence}",
     "sharedOnCard": "{count, plural, one {# blocker} other {# blockers}} shared with other divers — listed above.",
     "reviewCertificationsLink": "Review certifications →",
@@ -437,12 +431,6 @@
     "pickupTimeLabel": "Pickup time",
     "savePickup": "Save pickup",
     "saving": "Saving…"
-  },
-  "celebrations": {
-    "heading": "Celebrations",
-    "descriptionToday": "{count, plural, one {Someone on this boat has a birthday today.} other {# people on this boat have a birthday today.}}",
-    "descriptionSoon": "{count, plural, one {Someone on this boat has a birthday coming up.} other {# people on this boat have a birthday coming up.}}",
-    "descriptionRecent": "{count, plural, one {Someone on this boat has just had a birthday.} other {# people on this boat have just had a birthday.}}"
   },
   "onThisPhone": "On this phone",
   "offlineManifestManager": {

@@ -304,7 +304,9 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
     .getByRole("navigation", { name: "Trip" })
     .getByRole("link", { name: "Guests" })
     .click();
-  await expect(page.getByRole("heading", { name: "Wait list" })).toBeVisible();
+  // The wait list is the guests ledger's own "Waiting for a seat" group now
+  // (ADR 20260827-the-departure-is-two-working-surfaces, slice 5d).
+  await expect(page.getByRole("heading", { name: /Waiting for a seat/ })).toBeVisible();
   await expect(page.getByText("Nora Quinn").last()).toBeVisible();
   // Staff read when each diver asked, not a rank: the list is unnumbered.
   await expect(page.getByText(/Asked /).last()).toBeVisible();

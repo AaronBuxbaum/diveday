@@ -262,10 +262,8 @@
     "addNewDiverAction": "Añadir buceador"
   },
   "waitlist": {
-    "heading": "Lista de espera",
     "description": "Sin reserva y fuera del manifiesto — aquí nadie tiene la plaza prometida.",
     "joined": "Lo pidió el {date}",
-    "empty": "Todavía nadie está esperando.",
     "noEmailOnFile": "sin correo registrado",
     "invitedRelative": "Invitado {time}",
     "inviteEmailed": "Invitación enviada por correo",
@@ -282,7 +280,6 @@
     "emailBody": "Hola {firstName},\n\nAcaba de liberarse una plaza en {tripTitle} ({tripWhen}) con {shopName}. Estás en su lista de espera — consíguela aquí antes de que se agote:\n{bookingUrl}\n\n¡Nos vemos en el barco!"
   },
   "invitations": {
-    "heading": "Invitaciones",
     "description": "Una invitación no reserva una plaza ni añade a nadie al manifiesto.",
     "fromRequest": "de una petición",
     "anonymous": "Sin nombre",
@@ -353,12 +350,11 @@
     "paymentUpdating": "Actualizando…",
     "heading": "Buceadores",
     "bookedOfCapacity": "{booked} de {capacity, plural, one {# reservado} other {# reservados}}",
+    "groupStillToClear": "Pendientes de resolver",
+    "groupReady": "Listos",
+    "groupWaiting": "En espera de plaza",
+    "groupInvited": "Invitados",
     "allClear": "Todos listos para bucear",
-    "filterAriaLabel": "Filtrar la lista de buceadores",
-    "filterAll": "Todos ({count})",
-    "filterNeedsWaiver": "Sin exención ({count})",
-    "filterBlocked": "Bloqueados ({count})",
-    "noneMatchFilter": "Ningún buceador coincide con este filtro.",
     "sending": "Enviando…",
     "noBookings": "Comparte la página de la salida y aparecerán aquí.",
     "noEmailOnFile": "sin correo registrado",
@@ -420,8 +416,6 @@
     "saveEmergencyContact": "Guardar contacto",
     "emptyHeading": "Todavía no hay nadie en este barco",
     "emptyAction": "Añadir un buceador",
-    "filterEmptyHeading": "Nadie coincide con este filtro",
-    "filterEmptyAction": "{count, plural, one {Ver el # buceador a bordo} other {Ver los # buceadores a bordo}}",
     "sharedFactLine": "{count, plural, one {# buceador} other {# buceadores}}: {sentence}",
     "sharedOnCard": "{count, plural, one {# bloqueo} other {# bloqueos}} en común con otros buceadores — indicados arriba.",
     "reviewCertificationsLink": "Revisar certificaciones →",
@@ -437,12 +431,6 @@
     "pickupTimeLabel": "Hora de recogida",
     "savePickup": "Guardar recogida",
     "saving": "Guardando…"
-  },
-  "celebrations": {
-    "heading": "Celebraciones",
-    "descriptionToday": "{count, plural, one {Alguien a bordo cumple años hoy.} other {# personas a bordo cumplen años hoy.}}",
-    "descriptionSoon": "{count, plural, one {Alguien a bordo cumple años dentro de poco.} other {# personas a bordo cumplen años dentro de poco.}}",
-    "descriptionRecent": "{count, plural, one {Alguien a bordo acaba de cumplir años.} other {# personas a bordo acaban de cumplir años.}}"
   },
   "onThisPhone": "En este teléfono",
   "offlineManifestManager": {
