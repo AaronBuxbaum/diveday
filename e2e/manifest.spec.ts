@@ -715,7 +715,7 @@ test("a checkpoint with every diver counted stays open until the crew are called
   // Every diver has a result — and the checkpoint is still open, naming why:
   // the crew, by name, are the whole crew half (ADR
   // 20260804-crew-roll-call-is-per-person).
-  await expect(page.getByRole("heading", { name: "Roll call complete 🎉" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Roll call complete" })).toHaveCount(0);
   await expect(page.getByText(/crew members still to call/)).toBeVisible();
 
   const crewAboardButtons = page.getByRole("button", { name: "Mark aboard" });
@@ -733,7 +733,7 @@ test("a checkpoint with every diver counted stays open until the crew are called
   await expect(crewAboardButtons).toHaveCount(0);
 
   // Every person aboard named by a human: now it closes.
-  await expect(page.getByRole("heading", { name: "Roll call complete 🎉" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Roll call complete" })).toBeVisible();
 
   // DOM-H3. Now a diver does not come back from dive one. After a dive, the
   // control that isn't "Boarded" says so in those words and never settles into
@@ -763,7 +763,7 @@ test("a checkpoint with every diver counted stays open until the crew are called
     firstDiverRow.getByRole("button", { name: "Not back aboard", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Not boarded ☑️" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Roll call complete 🎉" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Roll call complete" })).toHaveCount(0);
   await expect(page.getByText(/1 diver is not back aboard/)).toBeVisible();
   // Read back on the row, so a second crew member arriving at the alarm does
   // not type the same sentence again.
@@ -812,7 +812,7 @@ test("a checkpoint with every diver counted stays open until the crew are called
   // suppress.
   await expect(progressPanel.getByText(/1 crew member is not back aboard/)).toBeVisible();
   await expect(awaitingEntry).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Roll call complete 🎉" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Roll call complete" })).toHaveCount(0);
 });
 
 test("the manifest offers a per-device push opt-in without asking for permission first", async ({

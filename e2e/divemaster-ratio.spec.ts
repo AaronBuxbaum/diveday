@@ -1,5 +1,10 @@
-import { expect, test } from "./fixtures";
-import { openSettingsRow, seededTripId } from "./helpers";
+import {
+  expect,
+  test } from "./fixtures";
+import { openSettingsRow,
+  seededTripId,
+  openTripAbout,
+} from "./helpers";
 
 /**
  * The shop's target diver:divemaster ratio, end to end: one number typed in

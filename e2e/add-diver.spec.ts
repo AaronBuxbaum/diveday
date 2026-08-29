@@ -72,7 +72,7 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
     .filter({ has: page.getByRole("heading", { name: "Add a diver" }) })
     .filter({ visible: true });
   await addDiver.scrollIntoViewIfNeeded();
-  await page.getByRole("link", { name: "Add diver" }).click();
+  await addDiver.getByRole("link", { name: "Add diver", exact: true }).click();
   await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill("Walk-in Wanda");
   await page.getByLabel("Email").fill(`wanda-${e2eNow().getTime()}@example.com`);

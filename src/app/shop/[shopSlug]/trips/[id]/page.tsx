@@ -452,6 +452,7 @@ export default async function ManageTripPage({
                 href="#add-diver"
                 label={t("trips.addDiver.addDiver")}
                 compactLabel={t("trips.about.add")}
+                ariaLabel={t("trips.about.addDiverJump")}
               />
             ) : null}
           </div>

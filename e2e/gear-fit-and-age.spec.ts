@@ -1,6 +1,11 @@
 import type { Page } from "@playwright/test";
-import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
-import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
+import {
+  DEMO_SHOP_SLUG,
+  DEV_STAFF_LOGINS } from "../src/db/dev-credentials";
+import { expect,
+  signedInAs,
+  signedInAsOwner,
+  test } from "./fixtures";
 import {
   acceptAgeAttestation,
   createTrip,
@@ -9,6 +14,7 @@ import {
   signInAs,
   signOut,
   tripPathByTitle,
+  openTripAbout,
 } from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
@@ -187,6 +193,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     await page.goto(tripPath);
     // The crew picker is controlled: a pick before hydration silently no-ops
     // (the DOM changes, no action fires), so wait for the marker first.
+    await openTripAbout(page);
     await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
     await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
@@ -296,6 +303,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     await page.goto(tripPath);
     // The crew picker is controlled: a pick before hydration silently no-ops
     // (the DOM changes, no action fires), so wait for the marker first.
+    await openTripAbout(page);
     await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
     await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();

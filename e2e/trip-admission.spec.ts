@@ -1,5 +1,15 @@
-import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openTripTab, seededTripId } from "./helpers";
+import {
+  expect,
+  READ_ONLY,
+  signedInAsOwner,
+  test } from "./fixtures";
+import { createTrip,
+  daysFromNow,
+  e2eNow,
+  openTripTab,
+  seededTripId,
+  openTripAbout,
+} from "./helpers";
 
 /**
  * **The boat's own cert gate, at the moment the seat is sold** (DOM-M6, ADR
@@ -223,7 +233,8 @@ test.describe("as owner", () => {
     await page.goto(`/shop/blue-mantis/trips/${tripId}`);
     // The requirements form waits behind its Edit disclosure (summary-first
     // Overview).
-    await page.getByText("Edit requirements", { exact: true }).click();
+    await openTripAbout(page);
+        await page.getByText("Edit requirements", { exact: true }).click();
     await page.getByLabel("Minimum certification").selectOption("advanced_open_water");
     await page.getByRole("button", { name: "Save requirements" }).click();
     await expect(page.getByRole("status")).toContainText("Trip readiness requirements updated.");
@@ -300,7 +311,8 @@ test.describe("as owner", () => {
     await page.goto(`/shop/blue-mantis/trips/${tripId}`);
     // The requirements form waits behind its Edit disclosure (summary-first
     // Overview).
-    await page.getByText("Edit requirements", { exact: true }).click();
+    await openTripAbout(page);
+        await page.getByText("Edit requirements", { exact: true }).click();
     await page.getByLabel("Minimum certification").selectOption("advanced_open_water");
     await page.getByRole("button", { name: "Save requirements" }).click();
 

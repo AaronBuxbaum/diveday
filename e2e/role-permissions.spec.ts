@@ -1,7 +1,13 @@
 import type { Page } from "@playwright/test";
-import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
-import { expect, READ_ONLY, signedInAs, test } from "./fixtures";
-import { openSettingsRow } from "./helpers";
+import {
+  DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
+import { expect,
+  READ_ONLY,
+  signedInAs,
+  test } from "./fixtures";
+import { openSettingsRow,
+  openTripAbout,
+} from "./helpers";
 
 /**
  * H-14 (ADR 20260724-role-authorization) draws real boundaries on five staff
@@ -247,7 +253,8 @@ test.describe("H-14 role permissions", () => {
       await page.goto(await firstTripManageHref(page));
       // The details form waits behind its Edit disclosure (summary-first
       // Overview) — the owner sees the toggle, and the form behind it.
-      await page.getByText("Edit details", { exact: true }).click();
+      await openTripAbout(page);
+  await page.getByText("Edit details", { exact: true }).click();
       await expect(page.getByRole("button", { name: "Save changes" })).toBeVisible();
     });
 

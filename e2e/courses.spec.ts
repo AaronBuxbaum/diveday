@@ -1,4 +1,9 @@
-import { expect, makeActivitySafe, READ_ONLY, signedInAsOwner, test } from "./fixtures";
+import {
+  expect,
+  makeActivitySafe,
+  READ_ONLY,
+  signedInAsOwner,
+  test } from "./fixtures";
 import {
   acceptAgeAttestation,
   choosePartySize,
@@ -8,6 +13,7 @@ import {
   findTripOnBoard,
   openThreadStep,
   publicTripUrl,
+  openTripAbout,
 } from "./helpers";
 
 test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba session and save rental preferences", async ({
@@ -405,6 +411,7 @@ test.describe("staff", () => {
     // (Lens 17 task 139) — not a checkbox roster with a single submit.
     // The crew picker is controlled: a pick before hydration silently no-ops
     // (the DOM changes, no action fires), so wait for the marker first.
+    await openTripAbout(page);
     await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
     await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
@@ -459,6 +466,7 @@ test.describe("staff", () => {
     await (await findTripOnBoard(page, "blue-mantis", new RegExp(`^${sessionTitle}$`))).click();
     // The crew picker is controlled: a pick before hydration silently no-ops
     // (the DOM changes, no action fires), so wait for the marker first.
+    await openTripAbout(page);
     await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" }); // the seeded instructor
     await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();

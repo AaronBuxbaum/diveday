@@ -1,5 +1,10 @@
-import { expect, signedInAsOwner, test } from "./fixtures";
-import { openOnThisPhone } from "./helpers";
+import {
+  expect,
+  signedInAsOwner,
+  test } from "./fixtures";
+import { openOnThisPhone,
+  openTripAbout,
+} from "./helpers";
 
 /**
  * Not READ_ONLY, despite neither test submitting anything: both start from a
@@ -85,6 +90,7 @@ test("staff can view or copy a trip's public booking page from its overview", as
   await page.goto("/shop/blue-mantis");
   await page.locator("ol li h3 a").first().click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
+  await openTripAbout(page);
 
   // The booking page stays on screen for a staffer now — it used to redirect
   // straight back to the management view, which made this button impossible to

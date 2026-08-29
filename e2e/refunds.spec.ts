@@ -1,5 +1,8 @@
 import type { Page } from "@playwright/test";
-import { expect, signedInAsOwner, test } from "./fixtures";
+import {
+  expect,
+  signedInAsOwner,
+  test } from "./fixtures";
 import {
   createTrip,
   daysFromNow,
@@ -8,6 +11,7 @@ import {
   openTripActivity,
   signInAsOwner,
   signOut,
+  openTripAbout,
 } from "./helpers";
 
 /**
@@ -49,7 +53,8 @@ test.describe("refunds", () => {
     await expect(page.getByRole("heading", { name: options.title })).toBeVisible();
     // The requirements form waits behind its Edit disclosure (summary-first
     // Overview).
-    await page.getByText("Edit requirements", { exact: true }).click();
+    await openTripAbout(page);
+        await page.getByText("Edit requirements", { exact: true }).click();
     await page.getByLabel("Require payment to board").check();
     await page.getByRole("button", { name: "Save requirements" }).click();
     await expect(page.getByRole("status")).toContainText("requirements updated");

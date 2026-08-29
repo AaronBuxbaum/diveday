@@ -1,4 +1,8 @@
-import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
+import {
+  expect,
+  makeActivitySafe,
+  signedInAsOwner,
+  test } from "./fixtures";
 import {
   createTrip,
   daysFromNow,
@@ -6,6 +10,7 @@ import {
   findTripOnBoard,
   openRosterDetails,
   seededTripId,
+  openTripAbout,
 } from "./helpers";
 
 test("the public schedule lists seeded trips with capacity states, a month rail, and per-dive briefings", async ({
@@ -152,6 +157,7 @@ test.describe("per-trip crew role", () => {
 
     // The crew picker is controlled: a pick before hydration silently no-ops
     // (the DOM changes, no action fires), so wait for the marker first.
+    await openTripAbout(page);
     await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
     await page.getByLabel("Assign crew").selectOption({ label: "Keiko Tanaka" });
     await expect(page.getByRole("button", { name: "Unassign Keiko Tanaka" })).toBeVisible();
@@ -268,10 +274,11 @@ test.describe("trip print packet", () => {
   test("the Trip surface opens a complete printable trip packet", async ({ page }) => {
     const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
     await page.goto(`/shop/blue-mantis/trips/${tripId}`);
-    await expect(page.getByRole("button", { name: "Print / save PDF" })).toBeVisible();
+    await openTripAbout(page);
+    await expect(page.getByRole("button", { name: "Print packet" })).toBeVisible();
 
     const popupPromise = page.waitForEvent("popup");
-    await page.getByRole("button", { name: "Print / save PDF" }).click();
+    await page.getByRole("button", { name: "Print packet" }).click();
     const popup = await popupPromise;
     await popup.waitForLoadState("domcontentloaded");
     await expect(popup).toHaveURL(new RegExp(`/shop/blue-mantis/trips/${tripId}/print$`));
@@ -294,7 +301,7 @@ test.describe("trip print packet", () => {
     // document door; the other tabs must not quietly print only themselves.
     for (const tab of ["manifest", "prep"]) {
       await page.goto(`/shop/blue-mantis/trips/${tripId}/${tab}`);
-      await expect(page.getByRole("button", { name: "Print / save PDF" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Print packet" })).toHaveCount(0);
     }
   });
 });
@@ -379,6 +386,7 @@ test.describe("undoing a removal after the trip is cancelled", () => {
     const other = makeActivitySafe(await page.context().newPage());
     try {
       await other.goto(tripPath);
+      await openTripAbout(other);
       await other.getByRole("button", { name: "Cancel trip" }).click();
       await expect(other.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
     } finally {

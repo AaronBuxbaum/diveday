@@ -1,13 +1,18 @@
-import { readFileSync } from "node:fs";
-import type { Browser, Page } from "@playwright/test";
+import {
+  readFileSync } from "node:fs";
+import type { Browser,
+  Page } from "@playwright/test";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
 import {
   OFFLINE_MANIFEST_AGING_MS,
   OFFLINE_MANIFEST_RECORD_VERSION,
-} from "../src/lib/offline-manifests";
+  } from "../src/lib/offline-manifests";
 import { signRecapToken } from "../src/lib/recap-links";
-import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
+import { expect,
+  makeActivitySafe,
+  signedInAsOwner,
+  test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
   choosePartySize,
@@ -24,6 +29,7 @@ import {
   seededTripId,
   threadStatus,
   waiverLinkFromResult,
+  openTripAbout,
 } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 
@@ -2766,6 +2772,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Put it on the board" }).click();
         await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
         await openTripFromBoard(page, title);
+        await openTripAbout(page);
         await page.getByRole("heading", { name: "Repeating trip" }).waitFor();
         await capture(page, "trip-repeating-panel", scheme);
 
@@ -3203,6 +3210,7 @@ for (const scheme of ["light", "dark"] as const) {
 
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+        await openTripAbout(page);
         await page.getByText("Edit requirements", { exact: true }).click();
         await page.getByLabel("Minimum certification").selectOption("rescue");
         await page.getByRole("button", { name: "Save requirements" }).click();
@@ -3271,6 +3279,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Pickles Reef");
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+        await openTripAbout(page);
         await page.getByText("Edit requirements", { exact: true }).click();
         await page.getByLabel("Minimum certification").selectOption("advanced_open_water");
         await page.getByRole("button", { name: "Save requirements" }).click();

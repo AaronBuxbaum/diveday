@@ -10,6 +10,7 @@
   "about": {
     "heading": "About this departure",
     "add": "Add",
+    "addDiverJump": "Jump to add a diver",
     "details": "Details",
     "close": "Close",
     "viewPublic": "View public page",

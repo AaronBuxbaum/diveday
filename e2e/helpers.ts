@@ -256,6 +256,17 @@ export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep")
   );
 }
 
+/** Open the Trip surface's compact About disclosure before using its details. */
+export async function openTripAbout(page: Page): Promise<Locator> {
+  const about = page.locator("details#about");
+  await expect(about).toBeVisible();
+  if ((await about.getAttribute("open")) === null) {
+    await about.locator(":scope > summary").click();
+  }
+  await expect(about).toHaveAttribute("open", "");
+  return about;
+}
+
 /** Navigate to the create-diver form from an add-diver section or panel. */
 export async function openHandEntry(container: Locator): Promise<void> {
   const addLink = container.getByRole("link", { name: /Add (diver|to wait list)/i });

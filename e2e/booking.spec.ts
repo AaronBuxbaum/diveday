@@ -1,4 +1,8 @@
-import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
+import {
+  expect,
+  signedInAs,
+  signedInAsOwner,
+  test } from "./fixtures";
 import {
   choosePartySize,
   createTrip,
@@ -9,6 +13,7 @@ import {
   signInAsOwner,
   signOut,
   threadStatus,
+  openTripAbout,
 } from "./helpers";
 
 test.describe("staff", () => {
@@ -221,7 +226,8 @@ test.describe("staff", () => {
       .click();
     await expect(page.getByRole("button", { name: "Book my spot" })).toHaveCount(0);
     // The details form waits behind its Edit disclosure (summary-first Overview).
-    await page.getByText("Edit details", { exact: true }).click();
+    await openTripAbout(page);
+  await page.getByText("Edit details", { exact: true }).click();
     await page.getByLabel("Title").fill(renamed);
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByRole("status")).toContainText("Changes saved");
@@ -229,7 +235,8 @@ test.describe("staff", () => {
     const manageUrl = page.url();
 
     // Cancel: gone from public schedule; reinstate: back.
-    await page.getByRole("button", { name: "Cancel trip" }).click();
+    await openTripAbout(page);
+    await page.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
     // The danger-tone Badge prepends a decorative aria-hidden glyph
     // (Badge.tsx toneGlyph), so the element's own text is "❌Cancelled" —
     // matching the bare word would also hit the "Trip cancelled — it's off
