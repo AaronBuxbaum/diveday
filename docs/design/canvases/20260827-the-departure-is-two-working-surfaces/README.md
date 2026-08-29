@@ -1,6 +1,6 @@
 # The departure is two working surfaces — canvas
 
-- **Status:** Live (its ADR is Proposed — this canvas may still be edited)
+- **Status:** Shipped (its ADR is Proposed — the slice table is complete; the canvas remains the dated argument)
 - **Date:** 2026-08-27
 - **ADR:** [20260827-the-departure-is-two-working-surfaces](../../../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md)
 - **Published:** https://claude.ai/code/artifact/17ad2d81-4c8a-45fe-8cf3-c0d972469bd4

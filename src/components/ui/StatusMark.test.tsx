@@ -5,13 +5,7 @@ import { StatusMark, type StatusMarkVariant } from "./StatusMark";
 
 afterEach(cleanup);
 
-const variants: StatusMarkVariant[] = [
-  "success",
-  "warning",
-  "danger",
-  "checked",
-  "unchecked",
-];
+const variants: StatusMarkVariant[] = ["success", "warning", "danger", "checked", "unchecked"];
 
 describe("StatusMark", () => {
   it.each(variants)("renders %s as a decorative SVG", (variant) => {
