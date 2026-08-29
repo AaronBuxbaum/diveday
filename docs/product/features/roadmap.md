@@ -119,10 +119,10 @@ a pixel snapshot).
   the roll call rather than behind the `⋯`, which is 5c's job, and its numbers are still `tel:`
   links), and the executed-dive log still stands open on the boat although the ADR's tier list puts
   the dive log ashore.
-- **5b. The person sheet.** One tap from a roll-call row: today's trail, buddy states, emergency
+- **5b. The person sheet — shipped 2026-08-29.** One tap from a roll-call row: today's trail, buddy states, emergency
   contact as reference text, one act. Replaces the two per-row disclosures. *Pins:* a test that the
   sheet renders no control that can place a call (decision 3's "no call buttons" half).
-- **5c. Emergency numbers become buried reference.** The manifest's standing band moves behind the
+- **5c. Emergency numbers become buried reference — shipped 2026-08-29.** The manifest's standing band moves behind the
   phone's `⋯` and a desktop footer line; the printed manifest is unchanged. *Pins:* an assertion
   that the printed sheet still carries every number, since that is the fallback the burial relies
   on.
@@ -135,7 +135,7 @@ a pixel snapshot).
   See [shipped.md](../shipped.md#the-trip-surface-folds-overview-into-its-about-panel-delivered-2026-08-29).
   The owner authorized the fold by requesting implementation; the existing `/guests` path remains
   as a compatibility route, while the canonical Trip surface owns the roster and its actions.
-- **5f. Emoji status marks become drawn SVG** across both surfaces. Mechanically the smallest and
+- **5f. Emoji status marks become drawn SVG across both surfaces — shipped 2026-08-29.** Mechanically the smallest and
   independently shippable; `check:repo`'s tinted-ink gate already covers the palette half.
 
 The 5e fold was authorized on 2026-08-29 and keeps the existing roster actions intact. The separate

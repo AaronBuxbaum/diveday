@@ -1772,14 +1772,14 @@ describe("OfflineManifestView — the two meanings of not_boarded, worded the sa
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
 
     const priya = within(document.getElementById("offline-roll-call-diver-priya") as HTMLElement);
-    expect(priya.getByText("Not boarded")).toBeInTheDocument();
+    expect(priya.getAllByText("Not boarded")).toHaveLength(2);
     // Left ashore is a diver accounted for, so this one *is* a settled
     // result — carrying the undo-bearing aria-label, same reasoning as the
     // boarded control above (an aria-label replaces the accessible name,
-    // it does not append to the visible "Not boarded ☑️" text).
-    expect(
-      priya.getByRole("button", { name: "Not boarded — tap again to undo" }),
-    ).toBeInTheDocument();
+    // it does not append to the visible words).
+    const settled = priya.getByRole("button", { name: "Not boarded — tap again to undo" });
+    expect(settled).toHaveTextContent("Not boarded");
+    expect(settled.querySelector("svg[aria-hidden='true']")).not.toBeNull();
     expect(screen.queryByText("Not back aboard")).not.toBeInTheDocument();
     expect(await screen.findByText(/Roll call complete/)).toBeInTheDocument();
   });

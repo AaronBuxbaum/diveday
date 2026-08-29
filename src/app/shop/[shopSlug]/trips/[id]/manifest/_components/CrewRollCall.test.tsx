@@ -117,7 +117,7 @@ describe("a crew row obeys the diver row's gestures", () => {
     expect(within(row).queryByRole("button", { name: "Mark aboard" })).not.toBeInTheDocument();
     fireEvent.click(within(row).getByRole("button", { name: "Open details for Keiko Tanaka" }));
     const sheet = screen.getByRole("dialog");
-    expect(within(sheet).getByRole("button", { name: "Mark back aboard" })).toBeVisible();
+    expect(within(sheet).getByRole("button", { name: /^Mark back aboard/ })).toBeVisible();
     expect(within(sheet).getByRole("button", { name: "Not back aboard" })).toBeVisible();
     // …and the alarm itself is on screen, earned by that record.
     expect(dangerToned(container).length).toBeGreaterThan(0);
