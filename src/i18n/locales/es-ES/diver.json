@@ -128,6 +128,7 @@
     "fullTermsLabel": "Condiciones completas",
     "theDay": "El día",
     "lookFor": "Busca",
+    "momentsHeading": "Momentos de buceadores",
     "theRoute": "{count, plural, one {La ruta} other {Las rutas}}",
     "conditionsWater": "agua a {value}",
     "conditionsVisibility": "{value} de visibilidad",
@@ -174,6 +175,7 @@
     "meetingPointWithAddress": "{label} — {address}",
     "diveNumber": "Inmersión {number}",
     "siteToBeConfirmed": "Sitio por confirmar",
+    "sitesToBeConfirmed": "{count, plural, one {Una inmersión · sitio por confirmar} other {# inmersiones · sitios por confirmar}}",
     "automatedOutlook": "Previsión marina automática",
     "waterTemperature": "Temperatura del agua",
     "visibility": "Visibilidad",
@@ -197,11 +199,7 @@
       "return": "Regreso previsto"
     },
     "siteFitDemandingLabel": "Mejor con experiencia reciente",
-    "siteFitDemandingDetail": "La profundidad o la corriente pueden exigir más aquí. Consulta con la tripulación si hace tiempo que no buceas.",
     "siteFitWelcomingLabel": "Inmersión acogedora",
-    "siteFitWelcomingDetail": "La profundidad y la corriente publicadas hacen de esta una jornada asequible guiada por la tripulación.",
-    "siteFitUnknownLabel": "Consulta a la tripulación",
-    "siteFitUnknownDetail": "La tripulación adapta la ruta al grupo y al día.",
     "backToAllTrips": "Todas las salidas",
     "specialties": {
       "deep": "Profundidad",
@@ -250,10 +248,7 @@
       "gale_warning": "Vientos muy fuertes. La tripulación evaluará las condiciones y tomará la decisión."
     },
     "theSite": "{count, plural, one {El sitio} other {Los sitios}}",
-    "siteHowItUnfolds": "Cómo se desarrolla la inmersión",
-    "siteWaterMovement": "Corriente",
-    "siteWhatToLookFor": "Qué buscar ahí abajo",
-    "siteLandmarksHeading": "Referencias que cuentan la historia",
+    "siteLandmarksHeading": "Referencias",
     "siteConservationHeading": "Nota de conservación"
   },
   "booking": {
@@ -390,16 +385,6 @@
     "backToEditing": "Volver a la edición",
     "noCertification": "No se requiere titulación",
     "agencyCourse": "Curso {agency}",
-    "agencyFullNames": {
-      "padi": "PADI (Asociación Profesional de Instructores de Buceo)",
-      "ssi": "SSI (Scuba Schools International)",
-      "naui": "NAUI (Asociación Nacional de Instructores de Buceo)",
-      "sdi": "SDI (Scuba Diving International)",
-      "tdi": "TDI (Technical Diving International)",
-      "cmas": "CMAS (Confederación Mundial de Actividades Subacuáticas)",
-      "raid": "RAID (Dive RAID International)",
-      "gue": "GUE (Global Underwater Explorers)"
-    },
     "depthUnits": {
       "meters": "{value, plural, one {# metro} other {# metros}}",
       "feet": "{value, plural, one {# pie} other {# pies}}"
@@ -448,13 +433,13 @@
   },
   "courses": {
     "index": {
-      "eyebrow": "Cursos",
       "title": "Cursos",
       "description": "Todo lo que enseña este centro, desde un primer contacto con el buceo hasta formación avanzada.",
       "agencyTabsLabel": "Ver cursos por agencia",
       "noCoursesHeading": "Todavía no hay cursos publicados",
       "noCoursesBody": "Vuelve pronto, o escríbenos y te ayudamos a encontrar un punto de partida.",
-      "requires": "Requiere {level} o superior"
+      "requires": "Requiere {level} o superior",
+      "groupStart": "Empieza aquí"
     },
     "shelf": {
       "allCourses": "Todos los cursos"
@@ -482,7 +467,6 @@
     "count": "{count, plural, one {# opinión} other {# opiniones}}",
     "allTitle": "Todas las opiniones",
     "allDescription": "Lee lo que dijeron los buceadores que estuvieron en el barco.",
-    "backToSchedule": "Volver al calendario",
     "allEmptyHeading": "Todavía no hay opiniones escritas",
     "paginationLabel": "Páginas de opiniones",
     "previousPage": "Anterior",
@@ -1679,9 +1663,9 @@
     "orCall": "O llama a",
     "notSaid": "No indicado",
     "required": "(obligatorio)",
-    "send": "Enviar consulta",
+    "send": "Enviar",
     "sending": "Enviando…",
-    "sentHeading": "Consulta enviada",
+    "sentHeading": "Enviado",
     "sentBody": "Nos pondremos en contacto contigo.",
     "requestDateHeading": "¿No hay ninguna fecha que te sirva?",
     "requestDateBody": "Cuéntanos qué te gustaría bucear y cuándo. No se reserva ni se aparta nada — veremos quién más pide esos días y te respondemos.",

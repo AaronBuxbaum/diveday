@@ -185,8 +185,10 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
   (hairline steps of one sheet), the five-piece money story (one block), the sticky pill's
   duplicate seat count (verb only).
 - **Removed:** the packing section, which is preparation rather than pitch and moved to the thread
-  in 7b; and the swipeable briefing deck, deleted outright in 7c — "Look for" names the species and
-  that is the whole of what a deciding diver needs.
+  in 7b; and the swipeable briefing deck, deleted outright in 7c. The 2026-08-28 diver-views review
+  put the deck's *pictures* back without the deck: "Look for" shows each species' bundled photo
+  beside its name, and the published diver moments render as one capped strip (`TripMoments`) —
+  beats, not a gallery.
 - **Composition:** sell then close — the form is the page's terminal word, so the primary is where
   a decided diver already is.
 

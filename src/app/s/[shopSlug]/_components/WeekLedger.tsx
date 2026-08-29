@@ -149,17 +149,17 @@ function Row({ row }: { row: WeekLedgerRow }) {
       </span>,
     );
   }
-  // Dimmed, never disabled: the row still navigates and every control stays
-  // reachable. Opacity says nothing to a screen reader, which is why the word
-  // beside the requirement (above) and the badge (below) are the real markers.
-  const dimmed = row.capacityTone === "full" || row.aboveLevel !== null;
+  // Quiet, never disabled: the row still navigates and every control stays
+  // reachable. The quiet is *measured* ink — `text-muted` on the title and
+  // time — not a wrapper `opacity-60`, which dimmed every token on the row
+  // below its measured contrast (principles.md's tokens section names exactly
+  // that pattern; a full boat is still the wait-list candidate somebody wants
+  // to read). The Full badge and the "Above your level" word carry the state
+  // for everyone; the ink change is only the visual echo.
+  const quiet = row.capacityTone === "full" || row.aboveLevel !== null;
   return (
     <li>
-      <div
-        className={`group relative -mx-3 flex flex-col gap-2 rounded-xl px-3 py-4 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface sm:mx-0 sm:flex-row sm:items-start sm:gap-4 sm:px-4 sm:py-5${
-          dimmed ? " opacity-60 hover:opacity-100" : ""
-        }`}
-      >
+      <div className="group relative -mx-3 flex flex-col gap-2 rounded-xl px-3 py-4 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface sm:mx-0 sm:flex-row sm:items-start sm:gap-4 sm:px-4 sm:py-5">
         <Link
           href={row.href}
           className="absolute inset-0 z-0 rounded-xl"
@@ -169,10 +169,18 @@ function Row({ row }: { row: WeekLedgerRow }) {
             time — `whitespace-nowrap` so a range never breaks at the space
             before AM/PM and strands "PM" on a line of its own. */}
         <div className="shrink-0 sm:w-40">
-          <p className="text-base font-semibold tabular-nums whitespace-nowrap">{row.timeRange}</p>
+          <p
+            className={`text-base font-semibold tabular-nums whitespace-nowrap${quiet ? " text-muted" : ""}`}
+          >
+            {row.timeRange}
+          </p>
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-base font-semibold group-hover:text-primary">{row.title}</h3>
+          <h3
+            className={`text-base font-semibold group-hover:text-primary${quiet ? " text-muted" : ""}`}
+          >
+            {row.title}
+          </h3>
           {meta.length > 0 ? (
             <p className="mt-1 text-sm text-muted">
               {meta.map((part, index) => (
@@ -191,14 +199,17 @@ function Row({ row }: { row: WeekLedgerRow }) {
             (where hover does not exist) read as a text listing rather than as a
             pressable thing. */}
         <div className="flex shrink-0 items-center gap-3">
+          {/* Seat state and price are the two facts a diver decides on, so they
+              are critical text (principle 2's own definition: a status word, a
+              money amount) and hold the 16px floor the rest of the row keeps. */}
           {row.capacityTone === "quiet" ? (
-            <p className="text-sm text-muted tabular-nums">{row.capacityText}</p>
+            <p className="text-base text-muted tabular-nums">{row.capacityText}</p>
           ) : (
             <Badge tone={row.capacityTone === "full" ? "neutral" : "warning"} tabularNums>
               {row.capacityText}
             </Badge>
           )}
-          {row.price ? <p className="text-sm font-semibold tabular-nums">{row.price}</p> : null}
+          {row.price ? <p className="text-base font-semibold tabular-nums">{row.price}</p> : null}
           <DiveDayIcon
             name="chevron-right"
             className="size-4 text-muted transition-transform group-hover:translate-x-0.5"

@@ -128,6 +128,7 @@
     "fullTermsLabel": "Full terms",
     "theDay": "The day",
     "lookFor": "Look for",
+    "momentsHeading": "Moments from divers",
     "theRoute": "{count, plural, one {The route} other {The routes}}",
     "conditionsWater": "{value} water",
     "conditionsVisibility": "{value} visibility",
@@ -174,6 +175,7 @@
     "meetingPointWithAddress": "{label} — {address}",
     "diveNumber": "Dive {number}",
     "siteToBeConfirmed": "Site to be confirmed",
+    "sitesToBeConfirmed": "{count, plural, one {One dive · site to be confirmed} other {# dives · sites to be confirmed}}",
     "automatedOutlook": "Automated marine outlook",
     "waterTemperature": "Water temperature",
     "visibility": "Visibility",
@@ -197,11 +199,7 @@
       "return": "Expected return"
     },
     "siteFitDemandingLabel": "Best with recent experience",
-    "siteFitDemandingDetail": "Depth or water movement can add work here. Check with the crew if it has been a while.",
     "siteFitWelcomingLabel": "Welcoming dive",
-    "siteFitWelcomingDetail": "The published depth and water movement make this an approachable crew-led day.",
-    "siteFitUnknownLabel": "Ask the crew about fit",
-    "siteFitUnknownDetail": "The crew adapts the route to the group and the day.",
     "backToAllTrips": "All trips",
     "specialties": {
       "deep": "Deep",
@@ -250,10 +248,7 @@
       "gale_warning": "High winds. The crew will assess conditions and make the final weather call."
     },
     "theSite": "{count, plural, one {The site} other {The sites}}",
-    "siteHowItUnfolds": "How the dive unfolds",
-    "siteWaterMovement": "Water movement",
-    "siteWhatToLookFor": "What to look for down there",
-    "siteLandmarksHeading": "Landmarks that tell the story",
+    "siteLandmarksHeading": "Landmarks",
     "siteConservationHeading": "Conservation note"
   },
   "booking": {
@@ -390,16 +385,6 @@
     "backToEditing": "Back to editing",
     "noCertification": "No certification required",
     "agencyCourse": "{agency} course",
-    "agencyFullNames": {
-      "padi": "PADI (Professional Association of Diving Instructors)",
-      "ssi": "SSI (Scuba Schools International)",
-      "naui": "NAUI (National Association of Underwater Instructors)",
-      "sdi": "SDI (Scuba Diving International)",
-      "tdi": "TDI (Technical Diving International)",
-      "cmas": "CMAS (World Underwater Federation)",
-      "raid": "RAID (Dive RAID International)",
-      "gue": "GUE (Global Underwater Explorers)"
-    },
     "depthUnits": {
       "meters": "{value, plural, one {# meter} other {# meters}}",
       "feet": "{value} feet"
@@ -448,13 +433,13 @@
   },
   "courses": {
     "index": {
-      "eyebrow": "Courses",
       "title": "Courses",
       "description": "Everything this shop teaches, from a first taste of scuba to advanced training.",
       "agencyTabsLabel": "Show courses by agency",
       "noCoursesHeading": "No courses listed yet",
       "noCoursesBody": "Check back soon, or get in touch and we’ll help you find a starting point.",
-      "requires": "Requires {level} or higher"
+      "requires": "Requires {level} or higher",
+      "groupStart": "Start here"
     },
     "shelf": {
       "allCourses": "All courses"
@@ -482,7 +467,6 @@
     "count": "{count, plural, one {# review} other {# reviews}}",
     "allTitle": "All reviews",
     "allDescription": "Read what divers who were on the boat said about their day.",
-    "backToSchedule": "Back to schedule",
     "allEmptyHeading": "No written reviews yet",
     "paginationLabel": "Review pages",
     "previousPage": "Previous",
@@ -1679,9 +1663,9 @@
     "orCall": "Or call",
     "notSaid": "Not said",
     "required": "(required)",
-    "send": "Send inquiry",
+    "send": "Send",
     "sending": "Sending…",
-    "sentHeading": "Inquiry sent",
+    "sentHeading": "Sent",
     "sentBody": "We'll be in touch.",
     "requestDateHeading": "Nothing on a date that works?",
     "requestDateBody": "Tell us what you’d like to dive and when. Nothing is booked or held — we’ll see who else is asking for the same days and come back to you.",

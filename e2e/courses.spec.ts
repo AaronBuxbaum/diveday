@@ -59,8 +59,12 @@ test("a signed-out visitor browses the public course catalog, with the editor st
 }) => {
   await page.goto("/s/blue-mantis/courses");
   await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toBeVisible();
+  // Rows are h3 under the prerequisite group's own h2 ("Start here",
+  // "Requires Open Water or higher") — the ladder grouping from the
+  // 2026-08-28 diver-views review, finding 13.
+  await expect(page.getByRole("heading", { level: 2, name: "Start here" })).toBeVisible();
   await expect(
-    page.getByRole("heading", { level: 2, name: "Open Water Diver", exact: true }),
+    page.getByRole("heading", { level: 3, name: "Open Water Diver", exact: true }),
   ).toBeVisible();
   // No staff affordance renders at all — not disabled, absent (AGENTS.md
   // hard rule: gate by not rendering).
@@ -604,8 +608,8 @@ test("a diver with no workable date reaches the shop, and is offered one way to 
   await expect(inquiry.getByRole("link", { name: "Open in your email app" })).toHaveCount(0);
   await expect(inquiry.getByRole("button", { name: "Copy message" })).toHaveCount(0);
 
-  await inquiry.getByRole("button", { name: "Send inquiry" }).click();
-  await expect(inquiry.getByText("Inquiry sent")).toBeVisible();
+  await inquiry.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(inquiry.getByText("Sent", { exact: true })).toBeVisible();
   await expect(inquiry.getByRole("link", { name: "hello@demo.invalid" })).toBeVisible();
 });
 
@@ -618,26 +622,26 @@ test("a blank inquiry is rejected, not defaulted — experience and a way to rep
 
   // Nothing filled in: both refusals land at once rather than one after the
   // other, so a diver fixes the form in one pass instead of two.
-  await inquiry.getByRole("button", { name: "Send inquiry" }).click();
+  await inquiry.getByRole("button", { name: "Send", exact: true }).click();
   await expect(inquiry.getByText("Let us know where you are up to before sending.")).toBeVisible();
   await expect(
     inquiry.getByText("Leave an email or a phone number so we can reply."),
   ).toBeVisible();
-  await expect(inquiry.getByText("Inquiry sent")).toHaveCount(0);
+  await expect(inquiry.getByText("Sent", { exact: true })).toHaveCount(0);
 
   // Experience alone is not enough — a lead with no address and no number is
   // a question nobody can answer.
   await page.getByLabel("Where you are up to").selectOption("never");
-  await inquiry.getByRole("button", { name: "Send inquiry" }).click();
+  await inquiry.getByRole("button", { name: "Send", exact: true }).click();
   await expect(
     inquiry.getByText("Leave an email or a phone number so we can reply."),
   ).toBeVisible();
-  await expect(inquiry.getByText("Inquiry sent")).toHaveCount(0);
+  await expect(inquiry.getByText("Sent", { exact: true })).toHaveCount(0);
 
   // A phone number on its own clears it: either one, never both.
   await page.getByLabel("Your phone").fill("+1 305 555 0177");
-  await inquiry.getByRole("button", { name: "Send inquiry" }).click();
-  await expect(inquiry.getByText("Inquiry sent")).toBeVisible();
+  await inquiry.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(inquiry.getByText("Sent", { exact: true })).toBeVisible();
 });
 
 test("a diver's inquiry is recorded server-side and the shop's details stay reachable after sending", async ({
@@ -655,12 +659,12 @@ test("a diver's inquiry is recorded server-side and the shop's details stay reac
   await page.getByLabel("When suits you").fill("any weekend this autumn");
   await page.getByLabel("Where you are up to").selectOption("certified");
 
-  await inquiry.getByRole("button", { name: "Send inquiry" }).click();
+  await inquiry.getByRole("button", { name: "Send", exact: true }).click();
 
   // The composer collapses into a confirmation — task 7's server-recorded
   // send, not just the mailto fallback — and still leaves the shop's own
   // contact details on screen underneath it.
-  await expect(inquiry.getByText("Inquiry sent")).toBeVisible();
+  await expect(inquiry.getByText("Sent", { exact: true })).toBeVisible();
   await expect(inquiry.getByText("hello@demo.invalid")).toBeVisible();
 });
 

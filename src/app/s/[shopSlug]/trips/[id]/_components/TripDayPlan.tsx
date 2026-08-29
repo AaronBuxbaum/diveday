@@ -1,5 +1,5 @@
-import { Fragment } from "react";
 import { canDrawRoute, DiveSiteMap } from "@/components/DiveSiteMap";
+import { StoredPhoto } from "@/components/StoredPhoto";
 import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
 import { type DiveSiteLandmarkKind, parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
@@ -34,6 +34,21 @@ export function TripDayPlan({
 }) {
   if (briefings.length === 0) return null;
   const t = diverTranslator(locale);
+  // A day where nothing is decided yet says so once. Two rows both reading
+  // "Site to be confirmed" opened the sparse course session's pitch with the
+  // one thing the shop has not decided, stated twice (principle 9; 2026-08-28
+  // diver-views review, finding 10). The count survives — it is the one fact
+  // those rows carried.
+  if (briefings.every(({ dive, diveSite }) => !dive.title && !diveSite)) {
+    return (
+      <section className="mt-8">
+        <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
+        <p className="mt-2 text-sm text-muted">
+          {t("trip.sitesToBeConfirmed", { count: briefings.length })}
+        </p>
+      </section>
+    );
+  }
   return (
     <section className="mt-8">
       <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
@@ -69,32 +84,101 @@ export function TripDayPlan({
 }
 
 /**
- * The species the shop chose for this day's sites, as one line of names.
+ * The species the shop chose for this day's sites — each one a face beside its
+ * name, not a line of names.
  *
- * DiveDay writes the words and the shop picks the faces (ADR
- * 20260813-marine-life-is-diveday-copy), so these arrive already resolved into
- * the reader's language by `fieldGuideCards`. Deduplicated by name because a
- * two-tank day on one mooring carries the same guide twice, and renders nothing
- * at all when no site names a species — an empty "Look for" is a heading
- * apologising for having nothing under it.
+ * DiveDay writes the words and ships the photos (ADR
+ * 20260813-marine-life-is-diveday-copy), so every card arrives with its
+ * `imageUrl` already resolved by `fieldGuideCards`. Slice 7c rendered only the
+ * names, which left the one guaranteed-illustrated dataset in the product — 149
+ * bundled, licensed species photos — reaching no diver anywhere. The photo is
+ * decorative (`alt=""`): the visible name beside it is the content, so a screen
+ * reader hears each species once.
+ *
+ * Deduplicated by name because a two-tank day on one mooring carries the same
+ * guide twice, and renders nothing at all when no site names a species — an
+ * empty "Look for" is a heading apologising for having nothing under it.
  */
 export function TripLookFor({ briefings, locale }: { briefings: DiveBriefing[]; locale: string }) {
   const t = diverTranslator(locale);
-  const names = [
-    ...new Set(briefings.flatMap(({ creatures }) => creatures.map((creature) => creature.name))),
-  ];
-  if (names.length === 0) return null;
+  const seen = new Set<string>();
+  const cards = briefings.flatMap(({ creatures }) =>
+    creatures.filter((creature) => {
+      if (seen.has(creature.name)) return false;
+      seen.add(creature.name);
+      return true;
+    }),
+  );
+  if (cards.length === 0) return null;
   return (
     <section className="mt-6">
       <GroupLabel as="h2">{t("trip.lookFor")}</GroupLabel>
-      <p className="mt-2 flex flex-wrap items-baseline gap-x-2 text-sm">
-        {names.map((name, index) => (
-          <Fragment key={name}>
-            {index > 0 ? <span aria-hidden="true">·</span> : null}
-            <span>{name}</span>
-          </Fragment>
+      <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2.5">
+        {cards.map((card) => (
+          <li key={card.name} className="flex items-center gap-2">
+            <StoredPhoto
+              src={card.imageUrl}
+              alt=""
+              className="size-9 shrink-0 rounded-full"
+              sizes="36px"
+            />
+            <span className="text-sm">{card.name}</span>
+          </li>
         ))}
-      </p>
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * **Photos divers brought back from the places this day dives.**
+ *
+ * `dive_site_moments` rows are diver photos a staffer chose to publish — the
+ * schema calls them "staff-moderated, opt-in moments from prior divers" — and
+ * from slice 7c (which deleted the briefing deck they lived in) until now the
+ * page fetched them into every briefing and rendered none: the one place the
+ * product holds real pictures of the actual reef, invisible on the page whose
+ * whole job is "is this my Saturday?".
+ *
+ * One strip for the day, deduplicated by site, capped at four: ambience, not a
+ * gallery. The caption is the diver's own line and does the talking, so the
+ * photo itself is `alt=""` — reading the caption twice per photo is the only
+ * thing a screen reader could add. Renders nothing when no site has a
+ * published moment with a photo, which is most shops.
+ */
+export function TripMoments({ briefings, locale }: { briefings: DiveBriefing[]; locale: string }) {
+  const t = diverTranslator(locale);
+  const seen = new Set<string>();
+  const moments: { id: string; caption: string; imageUrl: string }[] = [];
+  for (const { diveSite, moments: siteMoments } of briefings) {
+    if (!diveSite || seen.has(diveSite.id)) continue;
+    seen.add(diveSite.id);
+    for (const moment of siteMoments) {
+      if (moment.imageUrl) {
+        moments.push({ id: moment.id, caption: moment.caption, imageUrl: moment.imageUrl });
+      }
+    }
+  }
+  const shown = moments.slice(0, 4);
+  if (shown.length === 0) return null;
+  return (
+    <section className="mt-6">
+      <GroupLabel as="h2">{t("trip.momentsHeading")}</GroupLabel>
+      <ul className={`mt-3 grid gap-4${shown.length > 1 ? " sm:grid-cols-2" : ""}`}>
+        {shown.map((moment) => (
+          <li key={moment.id}>
+            <figure>
+              <StoredPhoto
+                src={moment.imageUrl}
+                alt=""
+                className="aspect-[3/2] w-full rounded-2xl"
+                sizes="(min-width: 640px) 17rem, 100vw"
+              />
+              <figcaption className="mt-2 text-sm text-muted">{moment.caption}</figcaption>
+            </figure>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -136,20 +220,22 @@ export function TripRoutes({ briefings, locale }: { briefings: DiveBriefing[]; l
 }
 
 /**
- * `siteFit` returns a tone, not prose (`src/lib/diver-planning.ts`) — these
- * maps are where that tone becomes a sentence in the reader's own language.
- * Spelled out rather than built with a template literal so every key stays
- * statically visible to the message-key type checking.
+ * `siteFit` returns a tone, not prose (`src/lib/diver-planning.ts`) — this map
+ * is where that tone becomes a word in the reader's own language. Spelled out
+ * rather than built with a template literal so every key stays statically
+ * visible to the message-key type checking.
+ *
+ * No `unknown` row, and no canned detail sentences any more: "Ask the crew
+ * about fit" was a label apologising for data nobody entered, and each tone's
+ * standing explainer ("The published depth and water movement make this an
+ * approachable crew-led day.") restated the label it sat under on every site of
+ * every trip page — the exact caption-restating-its-heading class the
+ * copy-restraint rule deletes. The tone word states the fit; the shop's own
+ * `fit_note` elaborates when the shop wrote one.
  */
 const fitLabelKey = {
   demanding: "trip.siteFitDemandingLabel",
   welcoming: "trip.siteFitWelcomingLabel",
-  unknown: "trip.siteFitUnknownLabel",
-} as const;
-const fitDetailKey = {
-  demanding: "trip.siteFitDemandingDetail",
-  welcoming: "trip.siteFitWelcomingDetail",
-  unknown: "trip.siteFitUnknownDetail",
 } as const;
 const landmarkKindKey = {
   navigationMark: "site.landmarkKinds.navigationMark",
@@ -160,14 +246,9 @@ const landmarkKindKey = {
   pointOfInterest: "site.landmarkKinds.pointOfInterest",
 } as const satisfies Record<DiveSiteLandmarkKind, string>;
 
-/** One labelled paragraph of the shop's own prose. */
-function SiteNote({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="mt-3">
-      <p className="text-sm font-medium">{label}</p>
-      <p className="mt-1 text-sm leading-relaxed text-muted">{children}</p>
-    </div>
-  );
+/** One paragraph of the shop's own prose — no caption over it; the prose speaks. */
+function SitePassage({ children }: { children: React.ReactNode }) {
+  return <p className="mt-2 text-sm leading-relaxed text-muted">{children}</p>;
 }
 
 /**
@@ -183,11 +264,13 @@ function SiteNote({ label, children }: { label: string; children: React.ReactNod
  * diver at all, on a form that still asks for every one of them and 34 site
  * templates that still ship them.
  *
- * It comes back as one ledger beat rather than the deck: no photo grid, no
- * comparison table, no `text-2xl` heading competing with the page's own `h1` —
- * the run of short labelled paragraphs a deciding diver reads, once per site
- * rather than once per tank, since a two-tank day on one mooring said all of
- * this twice.
+ * It comes back as one ledger beat rather than the deck: no comparison table,
+ * no `text-2xl` heading competing with the page's own `h1` — the shop's prose
+ * as plain passages under one site line, once per site rather than once per
+ * tank, since a two-tank day on one mooring said all of this twice. The
+ * passages carry no captions: "How the dive unfolds" over a sentence that
+ * begins "Follow the coral ridge…" doubled every site's line count to caption
+ * what the prose was about to say (the 2026-08-28 diver-views design review).
  *
  * Renders nothing when no site on the day has anything written. Most shops
  * fill in a name and a depth range and stop, and a heading over one canned
@@ -234,45 +317,39 @@ export function TripSiteNotes({
       <div className="mt-2 divide-y divide-border">
         {sites.map(({ site, landmarks, lookFor }) => {
           const fit = siteFit(site);
+          const fitWord = fit.tone === "unknown" ? null : t(fitLabelKey[fit.tone]);
           return (
             <div key={site.id} className="py-4 first:pt-0 last:pb-0">
-              {/* The site names itself only when the day dives more than one —
-                  on a single-mooring day "The day" above has already said it. */}
-              {sites.length > 1 ? <p className="text-sm font-semibold">{site.name}</p> : null}
-              <p className={`text-sm font-medium ${sites.length > 1 ? "mt-2" : ""}`}>
-                {t(fitLabelKey[fit.tone])}
-              </p>
-              {/* The shop's own sentence about who this site suits, when it has
-                  written one. DiveDay's canned line stands in only for a site
-                  nobody has said anything about yet. */}
-              <p className="mt-1 text-sm leading-relaxed text-muted">
-                {site.fitNote || t(fitDetailKey[fit.tone])}
-              </p>
-              {site.divePlan ? (
-                <SiteNote label={t("trip.siteHowItUnfolds")}>{site.divePlan}</SiteNote>
-              ) : null}
-              {site.currentNote ? (
-                <SiteNote label={t("trip.siteWaterMovement")}>{site.currentNote}</SiteNote>
-              ) : null}
-              {lookFor.summary || lookFor.highlights ? (
-                <div className="mt-3">
-                  <p className="text-sm font-medium">{t("trip.siteWhatToLookFor")}</p>
-                  {lookFor.summary ? (
-                    <p className="mt-1 text-sm leading-relaxed text-muted">{lookFor.summary}</p>
+              {/* One heading line: the site (only when the day dives more than
+                  one — on a single-mooring day "The day" above has already said
+                  it) and its fit word, together rather than as two stacked
+                  labels. The word states the fit; everything under it is the
+                  shop's own prose, uncaptioned, because "How the dive unfolds"
+                  over a sentence that begins "Follow the coral ridge…" was the
+                  caption restating what its paragraph was about to say — twice
+                  per label, once per site, on every trip page. */}
+              {sites.length > 1 || fitWord ? (
+                <p className="text-sm">
+                  {sites.length > 1 ? <span className="font-semibold">{site.name}</span> : null}
+                  {sites.length > 1 && fitWord ? (
+                    <span className="text-muted" aria-hidden="true">
+                      {" · "}
+                    </span>
                   ) : null}
-                  {lookFor.highlights ? (
-                    <p className="mt-1 text-sm text-muted">{lookFor.highlights}</p>
-                  ) : null}
-                </div>
+                  {fitWord ? <span className="font-medium">{fitWord}</span> : null}
+                </p>
               ) : null}
+              {site.fitNote ? <SitePassage>{site.fitNote}</SitePassage> : null}
+              {site.divePlan ? <SitePassage>{site.divePlan}</SitePassage> : null}
+              {site.currentNote ? <SitePassage>{site.currentNote}</SitePassage> : null}
+              {lookFor.summary ? <SitePassage>{lookFor.summary}</SitePassage> : null}
+              {lookFor.highlights ? <SitePassage>{lookFor.highlights}</SitePassage> : null}
               {landmarks.length > 0 ? (
                 <div className="mt-3">
                   <p className="text-sm font-medium">{t("trip.siteLandmarksHeading")}</p>
-                  {/* More air than the other notes get: every other label is
-                      followed by muted prose, so the weight change does the
-                      separating. Here the label is followed by another
-                      `font-medium` line — a landmark's own name — and without
-                      the gap the two read as one run-on sentence. */}
+                  {/* More air than the passages get: the label is followed by
+                      another `font-medium` line — a landmark's own name — and
+                      without the gap the two read as one run-on sentence. */}
                   <ul className="mt-2 space-y-3">
                     {landmarks.map((landmark) => (
                       <li key={landmark.name} className="text-sm">
@@ -289,9 +366,10 @@ export function TripSiteNotes({
                 </div>
               ) : null}
               {site.conservationNote ? (
-                <SiteNote label={t("trip.siteConservationHeading")}>
-                  {site.conservationNote}
-                </SiteNote>
+                <div className="mt-3">
+                  <p className="text-sm font-medium">{t("trip.siteConservationHeading")}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-muted">{site.conservationNote}</p>
+                </div>
               ) : null}
             </div>
           );

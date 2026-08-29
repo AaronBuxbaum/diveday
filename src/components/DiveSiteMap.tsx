@@ -107,10 +107,17 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
               aria-hidden="true"
               preserveAspectRatio="none"
             >
+              {/* Lagoon, not coral: the route is standing chrome on every trip
+                  page with a drawn line, and the coral budget (ADR
+                  20260827-clearwater-surface-language, decision 11) sanctions
+                  no row for it — a coral route two taps from the shopfront's
+                  coral stars cheapens both. Start and finish stay
+                  distinguishable without the second hue: the start ring is
+                  hollow, the finish dot is filled. */}
               <path
                 d={path}
                 fill="none"
-                stroke="var(--accent)"
+                stroke="var(--primary)"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={strokeWidth}
@@ -120,8 +127,8 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
                 cx={start.x}
                 cy={start.y}
                 r={markerRadius}
-                fill="var(--primary)"
-                stroke="var(--surface)"
+                fill="var(--surface)"
+                stroke="var(--primary)"
                 strokeWidth={markerStroke}
                 vectorEffect="non-scaling-stroke"
               />
@@ -129,7 +136,7 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
                 cx={finish.x}
                 cy={finish.y}
                 r={markerRadius}
-                fill="var(--accent)"
+                fill="var(--primary)"
                 stroke="var(--surface)"
                 strokeWidth={markerStroke}
                 vectorEffect="non-scaling-stroke"

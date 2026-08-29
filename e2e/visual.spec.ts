@@ -2173,7 +2173,7 @@ for (const scheme of ["light", "dark"] as const) {
         // After the shot, so the composer's disclosure is closed in the
         // baseline: with no boat to book, the page's one primary is this.
         await page.locator("#request-a-date summary").click();
-        await expect(page.getByRole("button", { name: "Send inquiry" })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Send", exact: true })).toBeVisible();
 
         // **The board before anything is on it.** The `schedule-builder`
         // baseline is shot against blue-mantis, whose board always has

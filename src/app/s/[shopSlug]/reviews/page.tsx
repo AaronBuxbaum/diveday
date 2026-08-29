@@ -7,8 +7,13 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { ReviewLedger } from "@/components/ShopReviews";
 import { StarRating } from "@/components/StarRating";
 import { buttonClass } from "@/components/ui/button";
+import { ProgressBar } from "@/components/ui/ProgressBar";
 import { getDb } from "@/db/client";
-import { getShopReviewAggregate, listPublishedShopReviewsPage } from "@/db/reviews";
+import {
+  getShopRatingDistribution,
+  getShopReviewAggregate,
+  listPublishedShopReviewsPage,
+} from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
 import { requestTranslator } from "@/i18n/request";
 import { cachedFormatter } from "@/lib/intl-cache";
@@ -58,11 +63,12 @@ export default async function PublicReviewsPage({
   if (!shop) notFound();
 
   const { locale, t } = await requestTranslator(shop.defaultLocale);
-  const [aggregate, reviewPage] = await Promise.all([
+  const [aggregate, reviewPage, distribution] = await Promise.all([
     getShopReviewAggregate(db, shop.id),
     listPublishedShopReviewsPage(db, shop.id, {
       page: Number.parseInt(page ?? "", 10),
     }),
+    getShopRatingDistribution(db, shop.id),
   ]);
   const base = publicReviewsPath(shop.slug);
   const pageHref = (target: number) => (target > 1 ? `${base}?page=${target}` : base);
@@ -76,18 +82,13 @@ export default async function PublicReviewsPage({
           which is the page's own name plus the verification claim the aggregate
           line below already carries, and it is still the metadata description
           where a search result genuinely needs the sentence. */}
+      {/* The eyebrow is the way back (principle 10's one grammar for up); a
+          second "Back to schedule" button in `actions` went to the identical
+          destination, which is the second path copy-restraint deletes. */}
       <ShopPageHeader
         eyebrow={t("reviews.sectionTitle")}
         eyebrowHref={publicSchedulePath(shop.slug)}
         title={t("reviews.allTitle")}
-        actions={
-          <Link
-            href={publicSchedulePath(shop.slug)}
-            className={buttonClass({ variant: "secondary" })}
-          >
-            {t("reviews.backToSchedule")}
-          </Link>
-        }
       />
 
       <section aria-label={t("reviews.sectionTitle")}>
@@ -118,9 +119,53 @@ export default async function PublicReviewsPage({
           </p>
         ) : null}
 
-        {reviewPage.total === 0 ? (
+        {/* **The bare ratings, as five counted rows.** Two-thirds of the
+            archive used to be stars+name+date rows with nothing to read —
+            the aggregate restated one rating at a time across five pages.
+            The distribution carries every released rating in 100px (the
+            counts are the facts, principle 6; the bars are the quiet shape,
+            aria-hidden like the reports ledger's), and the paged list below
+            keeps only the reviews with words. */}
+        {average !== null ? (
+          <ul className="mt-4 flex max-w-sm flex-col gap-1.5">
+            {[5, 4, 3, 2, 1].map((rating) => {
+              const ratingCount = distribution.get(rating) ?? 0;
+              return (
+                <li key={rating} className="flex items-center gap-3 text-sm tabular-nums">
+                  {/* The row a screen reader hears: "5 out of 5 stars · 28".
+                      The numeral+dingbat is presentation. */}
+                  <span className="sr-only">{t("reviews.ratingOption", { rating })}</span>
+                  <span className="w-6 text-end" aria-hidden="true">
+                    {rating}
+                    {/* i18n-exempt: the star dingbat is a symbol, identical in every language */}
+                    <span>★</span>
+                  </span>
+                  <ProgressBar
+                    aria-hidden="true"
+                    className="h-[5px] flex-1"
+                    segments={[
+                      {
+                        key: "share",
+                        fraction: aggregate.count > 0 ? ratingCount / aggregate.count : 0,
+                        className: "bg-muted",
+                      },
+                    ]}
+                  />
+                  <span className="w-8 text-muted">{ratingCount}</span>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+
+        {/* Only a shop with no released ratings at all is empty. With bare
+            ratings and no written words, the distribution above already
+            accounts for everything — an "empty" card under it would
+            contradict the counts it sits below. */}
+        {reviewPage.total === 0 && average === null ? (
           <EmptyState title={t("reviews.allEmptyHeading")} className="mt-4" />
-        ) : (
+        ) : null}
+        {reviewPage.total > 0 ? (
           <ReviewLedger
             reviews={reviewPage.reviews}
             locale={locale}
@@ -128,7 +173,7 @@ export default async function PublicReviewsPage({
             t={t}
             showTrip={false}
           />
-        )}
+        ) : null}
       </section>
 
       {reviewPage.pageCount > 1 ? (

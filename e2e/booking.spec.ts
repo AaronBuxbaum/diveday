@@ -55,18 +55,17 @@ test.describe("staff", () => {
     await page.waitForURL(/\/s\/blue-mantis\/trips\//);
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
     await expect(page.getByText("6 spots left")).toBeVisible();
-    // "$120", not "$120.00": a price a diver is *scanning* drops minor units it
-    // does not have (`formatMoneyScanned`, issue #769). The order this booking
-    // becomes still reconciles in two decimals.
-    //
-    // The page states the figure exactly twice, and that is the composition
-    // rather than a duplication: the hero says it once at figure scale, and the
-    // card's one money block resolves what this party owes directly above the
-    // button (ADR 20260827-the-divers-thread, decision 2). Asserted as the pair
-    // it is — a page-wide unique match became a strict-mode failure the moment
-    // the second figure arrived.
-    await expect(page.getByText("$120", { exact: true })).toHaveCount(2);
-    await expect(page.getByLabel("Grab a spot").getByText("$120", { exact: true })).toBeVisible();
+    // Two spellings on purpose, one per job: the hero's "$120" is a price
+    // being *scanned*, which drops minor units it does not have
+    // (`formatMoneyScanned`, issue #769); the money block's "$120.00" is the
+    // arithmetic being *shown*, where the total carries its cents like the
+    // addends above it or the sum reads as rounding (principle 6; 2026-08-28
+    // diver-views review, finding 3).
+    await expect(page.getByText("$120", { exact: true })).toHaveCount(1);
+    // Twice inside the card: the fare line's value and the total it sums to.
+    await expect(page.getByLabel("Grab a spot").getByText("$120.00", { exact: true })).toHaveCount(
+      2,
+    );
     await choosePartySize(page, 2);
     await page.getByLabel("Name", { exact: true }).fill("Nora Quinn");
     await page.getByLabel("Email", { exact: true }).fill(`nora-${e2eNow().getTime()}@example.com`);

@@ -8,6 +8,7 @@ import {
   countReviewsAwaitingModeration,
   countStaffReviewGroups,
   getReviewForBooking,
+  getShopRatingDistribution,
   getShopReviewAggregate,
   listPublishedShopReviews,
   listPublishedShopReviewsPage,
@@ -180,7 +181,7 @@ describe("public review reads", () => {
     });
   });
 
-  it("keeps the schedule preview curated while the archive includes bare ratings", async () => {
+  it("pages only written reviews while the distribution accounts for every rating", async () => {
     const { db, shop, ownerId, bookingIds } = await reviewContext(["Silent Diver", "Chatty Diver"]);
     await submitTripReview(db, { bookingId: bookingIds[0], rating: 5 });
     await submitTripReview(db, { bookingId: bookingIds[1], rating: 3, comment: "Choppy day" });
@@ -197,13 +198,21 @@ describe("public review reads", () => {
     expect((await listPublishedShopReviews(db, shop.id)).map((r) => r.comment)).toEqual([
       "Choppy day",
     ]);
+    // The bare rating is not an archive row any more — a stars+name+date row
+    // with nothing to read restated the aggregate one rating at a time
+    // (2026-08-28 diver-views review, finding 14). It stays fully accounted
+    // for in the per-star distribution the archive renders instead, and the
+    // page count matches the rows the pager will actually serve.
     const archive = await listPublishedShopReviewsPage(db, shop.id);
-    expect(archive.total).toBe(2);
+    expect(archive.total).toBe(1);
     expect(archive.pageSize).toBe(PUBLIC_REVIEW_ARCHIVE_PAGE_SIZE);
-    expect(archive.reviews.map((r) => [r.rating, r.comment])).toEqual([
-      [5, null],
-      [3, "Choppy day"],
-    ]);
+    expect(archive.reviews.map((r) => [r.rating, r.comment])).toEqual([[3, "Choppy day"]]);
+    expect(await getShopRatingDistribution(db, shop.id)).toEqual(
+      new Map([
+        [5, 1],
+        [3, 1],
+      ]),
+    );
   });
 
   it("sorts by dive date, then puts the higher rating first on the same day", async () => {

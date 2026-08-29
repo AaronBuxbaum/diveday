@@ -121,7 +121,7 @@ describe("BookSpotSection — the money says itself once", () => {
       />,
     );
 
-    expect(loudFigures()).toEqual(["$95"]);
+    expect(loudFigures()).toEqual(["$95.00"]);
     expect(screen.getByText("Due now")).toBeInTheDocument();
   });
 
@@ -141,7 +141,7 @@ describe("BookSpotSection — the money says itself once", () => {
       />,
     );
 
-    expect(loudFigures()).toEqual(["$95"]);
+    expect(loudFigures()).toEqual(["$95.00"]);
     expect(screen.getByText("Due at the shop")).toBeInTheDocument();
   });
 
@@ -340,7 +340,7 @@ describe("BookSpotSection rental gear at checkout", () => {
     // scale — the running "total due at checkout" line is gone with the other
     // four places this form used to say the money.
     expect(screen.getByText("Rental gear", { selector: "dt" })).toBeInTheDocument();
-    expect(loudFigures()).toEqual(["$135"]);
+    expect(loudFigures()).toEqual(["$135.00"]);
   });
 
   it("shows no gear step when the shop hasn't priced any rental gear online", () => {

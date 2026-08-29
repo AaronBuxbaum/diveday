@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { formatMoneyCents, formatMoneyScanned, formatShortDate } from "@/lib/format";
+import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 
 /**
@@ -130,16 +130,18 @@ export function MoneyBlock({
       {taxLine === "checkout" ? (
         <Line label={t("money.tax")} value={t("money.taxAtCheckout")} />
       ) : null}
-      {/* The one figure this block exists to state. `formatMoneyScanned` is the
-          hero's own formatter, so the number a diver commits to is set in the
-          same shape as the number that brought them here. */}
+      {/* The one figure this block exists to state — in the *same formatter as
+          its addends*. It briefly wore the hero's `formatMoneyScanned` so the
+          number a diver commits to matched the number that brought them here,
+          but that optimized hero↔total consistency at the cost of the column:
+          "Course fee $195.00 / E-learning $150.00 / Due at the shop $345"
+          reads as rounding, and within the column is where the eye checks the
+          sum (principle 6: reconciled money carries its minor units always). */}
       <div className="flex items-baseline justify-between gap-4 border-t border-border pt-3">
         <dt className="text-sm font-medium">
           {dueNow === "checkout" ? t("money.dueNow") : t("money.dueAtShop")}
         </dt>
-        <dd className="text-lg font-semibold tabular-nums">
-          {formatMoneyScanned(dueNowCents, currency, locale)}
-        </dd>
+        <dd className="text-lg font-semibold tabular-nums">{money(dueNowCents)}</dd>
       </div>
       {deposit !== null && balanceCents > 0 && balanceDueAt ? (
         <div className="text-sm text-muted tabular-nums">
