@@ -267,7 +267,7 @@ export type CheckInOutcome =
       reason: "not_found" | "already_checked_in" | "not_bookable" | "not_ready" | "staff_not_found";
       blockers?: ReadinessResult["blockers"];
       // Only set on `not_ready` — the caller needs it to link straight back to
-      // the diver's guest row (`trips/[id]/guests#booking-<id>`), the same
+      // the diver's Trip row (`trips/[id]#booking-<id>`), the same
       // rich-link pattern the manifest's `not_ready` refusal already uses.
       tripId?: string;
     };

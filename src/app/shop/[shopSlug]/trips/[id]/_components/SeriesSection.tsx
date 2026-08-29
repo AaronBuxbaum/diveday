@@ -105,6 +105,7 @@ export function SeriesSection({
   cadenceAction,
   cancelOffCadenceAction,
   locale,
+  embedded = false,
 }: {
   intervalWeeks: number;
   weekdays: WeekdaySet;
@@ -133,6 +134,8 @@ export function SeriesSection({
   cadenceAction: (formData: FormData) => void;
   cancelOffCadenceAction: () => void;
   locale: string;
+  /** The Trip surface's About panel supplies the outer section chrome. */
+  embedded?: boolean;
 }) {
   const t = staffTranslator(locale);
   const hasFuture = futureScheduledCount > 0;
@@ -149,13 +152,15 @@ export function SeriesSection({
     // and the cadence editor all live in it. No margin of its own: the page
     // stacks its section cards and owns the rhythm between them.
     <SectionCard
-      padding="lg"
+      id="series"
+      padding={embedded ? "none" : "lg"}
       title={t("tripSeries.panel.heading")}
       description={
         hasFuture
           ? t("tripSeries.panel.summaryWithFuture", { summary, count: futureScheduledCount })
           : t("tripSeries.panel.summaryAllDone", { summary })
       }
+      className={`${embedded ? "!rounded-none !border-0 !bg-transparent" : ""} scroll-mt-24`}
     >
       <FormStatus tone={status?.tone}>{status?.text}</FormStatus>
 

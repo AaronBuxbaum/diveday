@@ -31,6 +31,7 @@ export function ConditionsSection({
   temperatureUnit,
   depthUnit,
   automatedForecast,
+  embedded = false,
 }: {
   saveAction: (formData: FormData) => void;
   /** This form's own outcome, rendered beside its Publish button. */
@@ -44,6 +45,8 @@ export function ConditionsSection({
   temperatureUnit: TemperatureUnit;
   depthUnit: DepthUnit;
   automatedForecast?: AutomatedMarineForecast | null;
+  /** The Trip surface's About panel supplies the outer section chrome. */
+  embedded?: boolean;
 }) {
   const t = staffTranslator(locale);
   // The unit belongs in the label, not as a hint beside it: a crew member
@@ -85,7 +88,12 @@ export function ConditionsSection({
     trip.surfaceConditions,
   ].filter((part): part is string => Boolean(part));
   return (
-    <SectionCard padding="lg" title={t("trips.conditions.heading")}>
+    <SectionCard
+      id="conditions"
+      padding={embedded ? "none" : "lg"}
+      title={t("trips.conditions.heading")}
+      className={`${embedded ? "!rounded-none !border-0 !bg-transparent" : ""} scroll-mt-24`}
+    >
       {/* A hold pauses real bookings, so it must be readable without opening
           anything — warning ink, not a fact that waits behind the form. */}
       {trip.conditionsHold ? (

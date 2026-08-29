@@ -275,16 +275,12 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   const tripId = page.url().match(/\/trips\/([^/?]+)/)?.[1];
   if (!tripId) throw new Error("could not read the trip id from the URL");
 
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Guests" })
-    .click();
   await page.getByRole("link", { name: "Add diver" }).click();
   await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill("Fills The Boat");
   await page.getByLabel("Email").fill(`fills-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
-  await page.waitForURL(/\/trips\/[^/]+\/guests/);
+  await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
   await expect(page.getByRole("status")).toContainText(
     "Diver added to the trip — but their waiver wasn’t emailed.",
   );

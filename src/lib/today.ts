@@ -578,7 +578,7 @@ export function blockerDestination(
     href:
       target === "diver"
         ? `/shop/${ctx.shopSlug}/divers/${ctx.personId}`
-        : `/shop/${ctx.shopSlug}/trips/${ctx.tripId}/guests#booking-${ctx.bookingId}`,
+        : `/shop/${ctx.shopSlug}/trips/${ctx.tripId}#booking-${ctx.bookingId}`,
   };
 }
 

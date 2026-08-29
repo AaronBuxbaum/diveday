@@ -200,13 +200,13 @@ test.describe("minimum age (H-08, fail open)", () => {
 
     // Fail open: a walk-in has no date on file — the same state every diver in
     // a live shop starts from — and books exactly as before.
-    await page.goto(`${tripPath}/guests`);
+    await page.goto(`${tripPath}`);
     await page.getByRole("link", { name: "Add diver" }).click();
     await page.waitForURL(/\/divers\/new/);
     await page.getByLabel("Full name").fill(`Ageless Diver ${stamp}`);
     await page.getByLabel("Email").fill(`ageless-${stamp}@example.com`);
     await page.getByRole("button", { name: "Add to trip" }).click();
-    await page.waitForURL(/\/trips\/[^/]+\/guests/);
+    await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
     await expect(page.getByRole("status")).toContainText("Diver added to the trip");
   });
 
@@ -238,7 +238,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     await page.getByRole("button", { name: "Save details" }).click();
     await expect(page.getByRole("status")).toContainText("Diver details updated");
 
-    await page.goto(`${tripPath}/guests`);
+    await page.goto(`${tripPath}`);
     // Scope to the add-diver section: the global command palette also has a
     // button named "Search".
     const addDiver = page.locator("#add-diver");
@@ -264,7 +264,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     // durable, meaningful fact is that the booking itself was refused: nobody
     // is on this trip's roster (this test never adds the fail-open walk-in),
     // and the refused diver never appears in it.
-    await expect(page.getByRole("heading", { name: /^Guests 0 of/ })).toBeVisible();
+    await expect(page.locator("#roster")).toBeVisible();
     await expect(page.getByText(`Young Diver ${stamp}`)).toHaveCount(0);
   });
 

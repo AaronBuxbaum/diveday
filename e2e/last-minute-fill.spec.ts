@@ -51,7 +51,7 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   // #last-minute-deal anchor, which is what auto-opens the "Promote this trip"
   // disclosure the deal panel lives behind (task 156).
   await nudge.getByRole("link", { name: "Open last-minute deal" }).click();
-  await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+\/guests#last-minute-deal$/);
+  await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+#last-minute-deal$/);
   await expect(page.getByRole("heading", { name: "Last-minute deal" })).toBeVisible();
   const sendButton = page.getByRole("button", { name: /Send to \d+ diver/ });
   await expect(sendButton).toBeVisible();
@@ -248,7 +248,7 @@ test("an uncertified joiner is excluded from the last-minute send list", async (
   // everywhere, but only a departure the whole seeded list matches puts eleven
   // people in front of a ten-name panel.
   const tripId = await seededTripId(page, "blue-mantis", "Night Dive — City of Washington");
-  await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#last-minute-deal`);
+  await page.goto(`/shop/blue-mantis/trips/${tripId}#last-minute-deal`);
   await expect(page.getByRole("heading", { name: "Last-minute deal" })).toBeVisible();
 
   await expect(

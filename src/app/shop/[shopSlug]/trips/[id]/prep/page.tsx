@@ -32,6 +32,7 @@ import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
+import { TripSurfaceNav } from "../_components/TripSurfaceNav";
 import { RentalUnitPicker } from "./_components/RentalUnitPicker";
 import { assignGearUnit, releaseGearUnitAction } from "./actions";
 
@@ -229,18 +230,19 @@ export default async function TripPrepPage({
         ]
           .filter(Boolean)
           .join(" · ")}
+        subNav={<TripSurfaceNav shopSlug={shopSlug} tripId={tripId} locale={locale} />}
       />
 
       {checklist.diverCount === 0 && checklist.crewCount === 0 ? (
         // The whole page's content region, so this one wears an h2 — and the
         // packing list can only become real once someone is on the boat, which
-        // happens on the Guests tab.
+        // happens on the Trip surface.
         <EmptyState
           title={t("trips.prep.emptyHeading")}
           body={t("trips.prep.noDivers")}
           action={
             <Link
-              href={`/shop/${shopSlug}/trips/${tripId}/guests`}
+              href={shopPath(shopSlug, "trips", tripId)}
               className={buttonClass({ className: "mt-4" })}
             >
               {t("trips.prep.emptyAction")}
@@ -572,7 +574,7 @@ export default async function TripPrepPage({
             {checklist.lines.length === 0 ? (
               // A section inside a larger page, so h3. Two honest readings of
               // the same empty table — a genuine nothing-to-do, or fits that
-              // were never recorded — and the Guests tab is where a fit gets
+              // were never recorded — and the Trip surface is where a fit gets
               // put on file either way.
               <EmptyState
                 titleAs="h3"
@@ -588,7 +590,7 @@ export default async function TripPrepPage({
                 }
                 action={
                   <Link
-                    href={`/shop/${shopSlug}/trips/${tripId}/guests`}
+                    href={shopPath(shopSlug, "trips", tripId)}
                     className={buttonClass({
                       variant: "secondary",
                       size: "sm",

@@ -136,16 +136,12 @@ test("a departure that filled is left alone, and stops mentioning its minimum", 
   await openTripFromBoard(page, title);
   const tripUrl = page.url();
 
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Guests" })
-    .click();
   await page.getByRole("link", { name: "Add diver" }).click();
   await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill("Meets The Minimum");
   await page.getByLabel("Email").fill(`meets-${e2eNow().getTime()}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
-  await page.waitForURL(/\/trips\/[^/]+\/guests/);
+  await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
 
   await page.goto(tripUrl);
   await expect(page.getByText("Minimum head count")).toHaveCount(0);

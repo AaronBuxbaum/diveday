@@ -465,7 +465,7 @@ export default async function OrdersIndexPage({
                   </span>
                   {opTripId ? (
                     <Link
-                      href={`/shop/${shopSlug}/trips/${opTripId}/guests`}
+                      href={`/shop/${shopSlug}/trips/${opTripId}`}
                       className="font-medium text-primary underline underline-offset-2"
                     >
                       {t("orders.index.paymentOps.openTrip")}
@@ -506,7 +506,7 @@ export default async function OrdersIndexPage({
                     {formatShortDate(owed.tripStartsAt, locale, shop.timezone)}
                   </span>
                   <Link
-                    href={`/shop/${shopSlug}/trips/${owed.tripId}/guests`}
+                    href={`/shop/${shopSlug}/trips/${owed.tripId}`}
                     className="font-medium text-primary underline underline-offset-2"
                   >
                     {t("orders.index.owedRefunds.openTrip")}

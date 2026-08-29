@@ -452,7 +452,7 @@ export default async function ReportsPage({
   // phone keep all three facts instead of hiding two behind a breakpoint.
   const departureRows: DepartureRow[] = trips.map((trip) => ({
     tripId: trip.tripId,
-    href: `/shop/${shopSlug}/trips/${trip.tripId}/guests`,
+    href: `/shop/${shopSlug}/trips/${trip.tripId}`,
     title: trip.title,
     date: formatShortDate(trip.startsAt, locale, tz),
     seats: {

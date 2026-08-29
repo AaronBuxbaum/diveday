@@ -131,14 +131,16 @@ a pixel snapshot).
   One note for 5b: the reference panel (email, rental fit, pickup, contact on file) still lives
   behind each row's trailing mark, because until the person sheet exists it has no other home —
   when 5b lands, decide whether the roster's panel defers to it.
-- **5e. Overview folds into Trip's Details panel, four tabs become three.** **Blocked on the owner
-  call below** — it is the one slice that changes where an action lives.
+- **5e. Overview folds into Trip's Details panel, four tabs become three — shipped 2026-08-29.**
+  See [shipped.md](../shipped.md#the-trip-surface-folds-overview-into-its-about-panel-delivered-2026-08-29).
+  The owner authorized the fold by requesting implementation; the existing `/guests` path remains
+  as a compatibility route, while the canonical Trip surface owns the roster and its actions.
 - **5f. Emoji status marks become drawn SVG** across both surfaces. Mechanically the smallest and
   independently shippable; `check:repo`'s tinted-ink gate already covers the palette half.
 
-**Two owner calls before 5e** (both recorded in the ADR's Consequences): whether folding Overview
-into Trip is an acceptable reading of one-home-per-action, and whether boat mode should hide the
-phone dock. Both want a `dive-domain-expert` review; 5a–5d and 5f do not depend on either.
+The 5e fold was authorized on 2026-08-29 and keeps the existing roster actions intact. The separate
+question of whether boat mode should hide the phone dock remains open for a later manifest pass;
+this slice does not change that surface's dock behavior.
 
 ### 6. Clearwater — the surface language (design complete)
 

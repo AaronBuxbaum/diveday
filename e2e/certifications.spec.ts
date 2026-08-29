@@ -135,11 +135,7 @@ test("an instructor certifies a diver from the course roster, and they can book 
   await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
   await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
 
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Guests" })
-    .click();
-  await expect(page).toHaveURL(/\/guests/);
+  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
 
   const diverName = `Cert Test Diver ${e2eNow().getTime()}`;
   const diverEmail = `cert-test-${e2eNow().getTime()}@example.com`;
@@ -148,7 +144,7 @@ test("an instructor certifies a diver from the course roster, and they can book 
   await page.getByLabel("Full name").fill(diverName);
   await page.getByLabel("Email").fill(diverEmail);
   await page.getByRole("button", { name: "Add to trip" }).click();
-  await page.waitForURL(/\/trips\/[^/]+\/guests/);
+  await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
   await expect(page.getByRole("link", { name: diverName })).toBeVisible();
 
   const row = page.locator("li").filter({ hasText: diverName });

@@ -27,7 +27,7 @@ describe("blockerFixFor", () => {
     const blockers: ReadinessBlocker[] = [{ code: "waiver_not_sent" }];
     expect(blockerFixFor(blockers, ctx)).toEqual({
       label: "Send waiver",
-      href: "/shop/reef-co/trips/trip-1/guests#booking-booking-1",
+      href: "/shop/reef-co/trips/trip-1#booking-booking-1",
       sendsWaiver: true,
       bookingId: "booking-1",
     });

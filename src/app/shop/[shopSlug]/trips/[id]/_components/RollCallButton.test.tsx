@@ -13,7 +13,7 @@ function mockAction(result: RollCallResult) {
 
 const DEFAULT_COPY: RollCallButtonCopy = {
   errorRefusal: "That didn’t save. Recheck your connection or tap again.",
-  blockedMessage: "Diver is still blocked. Open Guests to resolve the blocker, then try again.",
+  blockedMessage: "Diver is still blocked. Open Trip to resolve the blocker, then try again.",
 };
 
 function setup(action: RollCallAction, copy: RollCallButtonCopy = DEFAULT_COPY) {
@@ -71,7 +71,7 @@ describe("RollCallButton", () => {
     vi.unstubAllGlobals();
   });
 
-  it("links a readiness refusal to the Guests control", async () => {
+  it("links a readiness refusal to the Trip control", async () => {
     // `blockedMessage` is pre-rendered by the Server Component caller (see
     // manifest/page.tsx's `t.rich` call) — the test stands in for that here.
     setup(mockAction({ ok: false, reason: "not_ready" }), {
@@ -79,19 +79,17 @@ describe("RollCallButton", () => {
       blockedMessage: (
         <>
           Diver is still blocked.{" "}
-          <a href="/shop/blue-mantis/trips/trip-1/guests#booking-1">
-            Open Guests to resolve the blocker
-          </a>
-          , then try again.
+          <a href="/shop/blue-mantis/trips/trip-1#booking-1">Open Trip to resolve the blocker</a>,
+          then try again.
         </>
       ),
     });
 
     await userEvent.click(screen.getByRole("button", { name: "Board" }));
 
-    expect(await screen.findByRole("link", { name: /open guests/i })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: /open trip/i })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/trips/trip-1/guests#booking-1",
+      "/shop/blue-mantis/trips/trip-1#booking-1",
     );
   });
 

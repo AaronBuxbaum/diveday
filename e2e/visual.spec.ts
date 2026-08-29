@@ -1764,14 +1764,8 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link", { name: REEF_TRIP, exact: true })
           .click();
         await staffPage.waitForURL(/\/shop\/blue-mantis\/trips\//);
-        await staffPage
-          .getByRole("navigation", { name: "Trip" })
-          .getByRole("link", { name: "Guests" })
-          .click();
-        await staffPage.waitForURL(/\/guests/);
-        const diverSection = staffPage
-          .locator("section")
-          .filter({ has: staffPage.getByRole("heading", { name: /^Guests/ }) });
+        await staffPage.waitForURL(/\/trips\/[a-f0-9-]+$/);
+        const diverSection = staffPage.locator("#roster");
         await diverSection
           .getByRole("button", { name: "Send waiver", exact: true })
           .first()
@@ -2270,7 +2264,7 @@ for (const scheme of ["light", "dark"] as const) {
         // seat from queuing a notification whose delivery state would vary.
         await page.getByLabel("Full name").fill("Marisol Vega");
         await page.getByRole("button", { name: "Add to trip" }).click();
-        await page.waitForURL(/\/trips\/[^/]+\/guests/);
+        await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
 
         await page.goto(`/shop/${unique}`);
         // The line's own tour link, which is what the line exists to keep.
@@ -3094,14 +3088,14 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "diver-profile-payments", scheme);
       });
 
-      // The seeded reef trip's four surfaces — Overview (what the dive is),
-      // Guests (who is attending), Manifest (the day-of boarding + roll call),
-      // and Prep (the morning packing list). They share a layout that streams a
+      // The seeded reef trip's three surfaces — Trip (what the departure is and
+      // who is coming), Manifest (the day-of boarding + roll call), and Prep
+      // (the morning packing list). They share a layout that streams a
       // skeleton while the page's data loads, so every capture waits for real
       // content — never the loading fallback — before shooting. One test each:
       // they used to be four consecutive stops on one tour, which meant a
-      // renamed heading on Overview cost the manifest its baseline too.
-      test(`a trip's Overview renders true to the design (${scheme})`, async ({ page }) => {
+      // renamed heading on Trip cost the manifest its baseline too.
+      test(`a trip's Trip surface renders true to the design (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
         await page.getByRole("heading", { level: 1, name: /Two-Tank Reef/ }).waitFor();
         await capture(page, "trip-manage", scheme);
@@ -3125,10 +3119,10 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "trip-minimum-seats", scheme);
       });
 
-      test(`a trip's Guests roster renders true to the design (${scheme})`, async ({ page }) => {
+      test(`a trip's Trip roster renders true to the design (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
-        await openTripTab(page, "Guests");
-        await page.getByRole("heading", { name: /Guests/ }).waitFor();
+        await openTripTab(page, "Trip");
+        await page.locator("#roster").waitFor();
         await capture(page, "trip-guests", scheme);
       });
 
@@ -3171,7 +3165,7 @@ for (const scheme of ["light", "dark"] as const) {
         // preview bar. Neither affects the surface being photographed.
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
         // The `#last-minute-deal` anchor is what auto-opens the disclosure.
-        await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#last-minute-deal`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}#last-minute-deal`);
         await page.getByText("Open Water — unverified").waitFor();
         await capture(page, "trip-guests-deal-recipients", scheme);
       });
@@ -3218,7 +3212,7 @@ for (const scheme of ["light", "dark"] as const) {
         // Matching the stem keeps this test about the deal panel.
         await expect(page.getByRole("status")).toContainText("Requirements updated.");
 
-        await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#last-minute-deal`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}#last-minute-deal`);
         await page.getByRole("heading", { name: "Nobody to send this to yet" }).waitFor();
         await capture(page, "trip-guests-deal-below-requirement", scheme);
       });
@@ -3249,7 +3243,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the deal panel carries the demo's own declarations (${scheme})`, async ({ page }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await seededTripId(page, "blue-mantis", "Night Dive — City of Washington");
-        await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#last-minute-deal`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}#last-minute-deal`);
         await page.getByText(/Open Water — unverified/).waitFor();
         await capture(page, "trip-guests-deal-seeded", scheme);
       });
@@ -3285,7 +3279,7 @@ for (const scheme of ["light", "dark"] as const) {
         // test about the wait list.
         await expect(page.getByRole("status")).toContainText("Requirements updated.");
 
-        await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#waitlist`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}#waitlist`);
         // Scoped to the ledger: the deal panel further down the same page
         // renders the identical phrase for its own recipients, and this test is
         // about the list that was still silent until now. (`#waitlist` is the
@@ -4260,7 +4254,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the roster identity gate renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/schedule/board");
         await openTripFromBoard(page, "Night Dive — City of Washington");
-        await openTripTab(page, "Guests");
+        await openTripTab(page, "Trip");
         await page.getByText("Identity unconfirmed").first().waitFor();
         await capture(page, "trip-guests-identity", scheme);
       });
@@ -4494,7 +4488,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByText("Dive site saved.").waitFor();
 
         await openReefTrip(page);
-        await openTripTab(page, "Guests");
+        await openTripTab(page, "Trip");
         await page
           .getByText(/deeper than the/)
           .first()
@@ -4513,7 +4507,7 @@ for (const scheme of ["light", "dark"] as const) {
         // Board → trip → Guests, then an add and a delete round-trip.
         test.setTimeout(FLOW_TIMEOUT_MS);
         await openReefTrip(page);
-        await openTripTab(page, "Guests");
+        await openTripTab(page, "Trip");
         const row = page.locator("#roster li").filter({ visible: true }).first();
         const noteBody = "Visual regression seed note for the undo toast.";
         await openRosterNotes(row);
@@ -4558,7 +4552,7 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER);
         // Diego Alvarez is on file with a verified Open Water card and nothing
         // above it, so the refusal can only be about the rung.
-        await page.goto(`/shop/blue-mantis/trips/${tripId}/guests?diverq=Diego+Alvarez`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}?diverq=Diego+Alvarez`);
         await page.getByRole("button", { name: "Add Diego Alvarez to the trip" }).click();
         await page.getByText("This charter requires Advanced Open Water.").waitFor();
         await capture(page, "trip-guests-refusal-level", scheme);
@@ -4571,7 +4565,7 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = await seededTripId(page, "blue-mantis", DEEP_CHARTER);
         // Odile Marchand holds a verified Instructor card — the top rung — and
         // no specialty card at all, so nothing about her level can explain it.
-        await page.goto(`/shop/blue-mantis/trips/${tripId}/guests?diverq=Odile+Marchand`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}?diverq=Odile+Marchand`);
         await page.getByRole("button", { name: "Add Odile Marchand to the trip" }).click();
         await page.getByText("This charter requires a Deep certification.").waitFor();
         await capture(page, "trip-guests-refusal-card", scheme);

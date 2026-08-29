@@ -16,7 +16,7 @@ import { openOnThisPhone } from "./helpers";
 
 signedInAsOwner();
 
-test("the trip sub-nav reaches all four surfaces", async ({ page }) => {
+test("the trip sub-nav reaches all three surfaces", async ({ page }) => {
   await page.goto("/shop/blue-mantis");
 
   // A station's title is the door to its departure; the trip's own sub-nav is
@@ -49,13 +49,13 @@ test("the trip sub-nav reaches all four surfaces", async ({ page }) => {
   expect(distanceFromPageEnd).toBeLessThan(80);
 
   const subNav = page.getByRole("navigation", { name: "Trip" });
-  for (const tab of ["Overview", "Guests", "Manifest", "Prep"]) {
+  for (const tab of ["Trip", "Manifest", "Prep"]) {
     await expect(subNav.getByText(tab, { exact: true })).toBeVisible();
   }
 
   // Each tab is one tap away and lands on its surface.
-  await subNav.getByRole("link", { name: "Guests" }).click();
-  await expect(page).toHaveURL(/\/guests/);
+  await subNav.getByRole("link", { name: "Trip" }).click();
+  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
   await expect(page.getByRole("navigation", { name: "Trip" })).toBeVisible();
   await expect(boatMode).toHaveCount(0);
 
@@ -71,10 +71,7 @@ test("the trip sub-nav reaches all four surfaces", async ({ page }) => {
   await expect(page).toHaveURL(/\/manifest/);
   await expect(boatMode).toBeVisible();
 
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Overview" })
-    .click();
+  await page.getByRole("navigation", { name: "Trip" }).getByRole("link", { name: "Trip" }).click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
   await expect(page.getByRole("navigation", { name: "Trip" })).toBeVisible();
   await expect(boatMode).toHaveCount(0);

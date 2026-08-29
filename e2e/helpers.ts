@@ -233,17 +233,27 @@ export async function openTripFromBoard(page: Page, title: string) {
 }
 
 /**
- * Move between a trip record's surfaces (`TripSubNav` — Overview, Guests,
- * Manifest, Prep). The nav is labelled "Trip" and its links are plain
+ * Move between a trip record's surfaces (`TripSubNav` — Trip, Manifest,
+ * Prep). The nav is labelled "Trip" and its links are plain
  * `<Link>`s, so the click resolves client-side: waiting on the tab's own path
  * segment here is what keeps a caller's first assertion from racing the
  * in-flight transition. The active tab renders as an inert `<span>`, so
  * calling this for the tab you are already on would hang — navigate, don't
  * re-select.
  */
-export async function openTripTab(page: Page, tab: "Guests" | "Manifest" | "Prep") {
-  await page.getByRole("navigation", { name: "Trip" }).getByRole("link", { name: tab }).click();
-  await page.waitForURL(new RegExp(`/${tab.toLowerCase()}(\\?|$)`));
+export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep") {
+  const link = page.getByRole("navigation", { name: "Trip" }).getByRole("link", { name: tab });
+  // Trip is now the canonical root surface. A board link already lands there,
+  // so the helper treats an already-active Trip tab as a successful no-op;
+  // Manifest and Prep remain explicit navigations.
+  if (tab === "Trip" && (await link.count()) === 0) {
+    await expect(page).toHaveURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
+    return;
+  }
+  await link.click();
+  await page.waitForURL(
+    tab === "Trip" ? /\/trips\/[^/?#]+(?:[?#]|$)/ : new RegExp(`/${tab.toLowerCase()}(\\?|#|$)`),
+  );
 }
 
 /** Navigate to the create-diver form from an add-diver section or panel. */
@@ -329,25 +339,22 @@ export async function createTrip(
 }
 
 /**
- * Send the waiver to the first diver on the open trip's Guests roster and
+ * Send the waiver to the first diver on the open trip's Trip roster and
  * return the bearer link it hands back — a relative `/waivers/<token>` path.
  *
  * The e2e fleet configures no email provider, so the shared
  * `WaiverSendControl` always falls to its private-link affordance instead of
  * "Waiver sent to …", and that inline `role="status"` result is where the
  * link lives. The button label is matched exactly, and the whole thing is
- * scoped to the Divers section so it can't pick up a crew or wait-list
- * control with a similar name.
+ * scoped to the Trip roster so it can't pick up a crew or wait-list control
+ * with a similar name.
  *
- * Caller must already be on the trip's Guests tab (`openTripTab(page,
- * "Guests")`); this deliberately does not navigate, because several specs
+ * Caller must already be on the trip's Trip surface (`openTripTab(page,
+ * "Trip")`); this deliberately does not navigate, because several specs
  * need the staff URL they were on to return to afterwards.
  */
 export async function sendWaiverForFirstDiver(page: Page): Promise<string> {
-  const diverSection = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: /^Divers/ }) })
-    .filter({ visible: true });
+  const diverSection = page.locator("#roster").filter({ visible: true });
   await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
   return waiverLinkFromResult(page, diverSection.getByRole("status"));
 }
@@ -516,7 +523,7 @@ export async function openSettingsRow(page: Page, heading: string) {
 }
 
 /**
- * Open a Guests roster card's "Details" disclosure.
+ * Open a Trip roster card's "Details" disclosure.
  *
  * The roster keeps **work** in the open — blockers, the waiver control, the
  * payment selector, the emergency contact, the private notes — and files what
@@ -534,7 +541,7 @@ export async function openRosterDetails(row: Locator): Promise<void> {
 }
 
 /**
- * Open a Guests roster card's private-notes disclosure — a sibling of the
+ * Open a Trip roster card's private-notes disclosure — a sibling of the
  * "Details" one above, not nested inside it, because writing a note about a
  * diver is desk work a staffer starts from the card rather than reference.
  *

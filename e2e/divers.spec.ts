@@ -159,13 +159,13 @@ test("staff record and correct a diver's emergency contact from the roster and t
   });
 
   const tripPath = await tripPathByTitle(page, SHOP, title);
-  await page.goto(`${tripPath}/guests`);
+  await page.goto(`${tripPath}`);
   await page.getByRole("link", { name: "Add diver" }).click();
   await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill(diverName);
   await page.getByLabel("Email").fill(`contact-${stamp}@example.com`);
   await page.getByRole("button", { name: "Add to trip" }).click();
-  await page.waitForURL(/\/trips\/[^/]+\/guests/);
+  await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
   await expect(page.getByRole("status")).toContainText("Diver added to the trip");
 
   const card = page.locator("li").filter({ hasText: diverName });
@@ -236,7 +236,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
 test("a Guests card shows an emergency contact only when it is missing", async ({ page }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-  await openTripTab(page, "Guests");
+  await openTripTab(page, "Trip");
 
   // Nadia Petrov is seeded with no contact (src/db/seed.ts `customerDefs`), so
   // her card states it where a staffer will act on it.

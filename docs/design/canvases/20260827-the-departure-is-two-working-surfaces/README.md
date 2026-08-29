@@ -63,7 +63,7 @@ with their dependencies, are in
 | 5b — the person sheet | open | — | — |
 | 5c — emergency numbers become buried reference | open | — | — |
 | 5d — the roster becomes one grouped ledger | shipped | `src/app/shop/[shopSlug]/trips/[id]/_components/RosterSection.tsx` | `src/app/shop/[shopSlug]/trips/[id]/_components/RosterSection.test.tsx` |
-| 5e — Overview folds into Trip's Details panel | open | — | — |
+| 5e — Overview folds into Trip's Details panel | shipped | `src/app/shop/[shopSlug]/trips/[id]/_components/TripAboutSection.tsx` | `src/app/shop/[shopSlug]/trips/[id]/_components/TripAboutSection.test.tsx` |
 | 5f — emoji status marks become drawn SVG | open | — | — |
 
 `pnpm check:design-canvases` holds this table: a `shipped` row must name a file that exists and

@@ -89,8 +89,7 @@ export type SeatSurface = {
  * (src/lib/staff-notices.ts), so every staff URL in the app escapes the same
  * way.
  */
-const guestsPath = ({ shopSlug, tripId }: SeatLanding) =>
-  shopPath(shopSlug, "trips", tripId, "guests");
+const tripPath = ({ shopSlug, tripId }: SeatLanding) => shopPath(shopSlug, "trips", tripId);
 
 /** The trip page's vocabulary — one distinct notice per gate. */
 const TRIP_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
@@ -110,13 +109,13 @@ const TRIP_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
 };
 
 export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
-  /** The trip's Guests tab — hand entry and the returning-diver picker. */
+  /** The Trip surface — hand entry and the returning-diver picker. */
   "trip-guests": {
     entry: "roster",
     refusals: "specific",
     email: "required",
-    seatedPath: guestsPath,
-    refusedPath: guestsPath,
+    seatedPath: tripPath,
+    refusedPath: tripPath,
     gateScope: ({ tripId }) => ({ kind: "trip", id: tripId }),
     seatedNotice: "diver-added",
     seatedWaiverUndeliveredNotice: "diver-added-waiver-undelivered",
@@ -203,7 +202,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
   },
   /**
    * The global "Add a booking" door. The only surface whose success and
-   * refusal part ways: a seated diver belongs on the trip's Guests tab with
+   * refusal part ways: a seated diver belongs on the Trip surface with
    * the roster's usual toast, while a refusal stays on the form that produced
    * it, boat still chosen, so the staffer can pick someone else.
    *
@@ -217,7 +216,7 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     entry: "roster",
     refusals: "specific",
     email: "optional",
-    seatedPath: guestsPath,
+    seatedPath: tripPath,
     refusedPath: ({ shopSlug, tripId }) =>
       tripId
         ? shopPath(shopSlug, "bookings", "new", tripId)

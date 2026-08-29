@@ -1,10 +1,35 @@
 {
   "subNav": {
     "ariaLabel": "Salida",
+    "trip": "Salida",
     "overview": "Resumen",
     "guests": "Buceadores",
     "manifest": "Manifiesto",
     "prep": "Preparación"
+  },
+  "about": {
+    "heading": "Sobre esta salida",
+    "add": "Añadir",
+    "details": "Detalles",
+    "close": "Cerrar",
+    "viewPublic": "Ver página pública",
+    "printPacket": "Imprimir paquete",
+    "plan": "El plan",
+    "conditions": "Condiciones",
+    "whoCanBook": "Quién puede reservar",
+    "boatAndCrew": "Barco y tripulación",
+    "repeats": "Repetición",
+    "edit": "Editar",
+    "noneSet": "Aún no configurado",
+    "noConditions": "No hay previsión de la tripulación publicada",
+    "noRequirements": "No hay requisitos de admisión configurados",
+    "noBoat": "Barco sin asignar",
+    "noCrew": "Tripulación sin asignar",
+    "oneTime": "Salida única",
+    "perSeat": "por plaza",
+    "seatsLabel": "de {capacity, plural, one {# plaza} other {# plazas}}",
+    "openLabel": "libres",
+    "cancel": "Cancelar esta salida"
   },
   "notices": {
     "saved": "Cambios guardados.",
@@ -474,7 +499,7 @@
   },
   "rollCall": {
     "errorRefusal": "Eso no se guardó. Revisa tu conexión o vuelve a tocar.",
-    "stillBlocked": "El buceador sigue bloqueado. <guestsLink>Abre Buceadores para resolver el bloqueo</guestsLink> y vuelve a intentarlo."
+    "stillBlocked": "El buceador sigue bloqueado. <tripLink>Abre Salida para resolver el bloqueo</tripLink> y vuelve a intentarlo."
   },
   "prep": {
     "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",

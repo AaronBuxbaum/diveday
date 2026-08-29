@@ -19,7 +19,7 @@ afterEach(cleanup);
 
 const FULL: DepartureRow = {
   tripId: "trip-full",
-  href: "/shop/blue-mantis/trips/trip-full/guests",
+  href: "/shop/blue-mantis/trips/trip-full",
   title: "Two-Tank Reef — Molasses & French",
   date: "Wed, Aug 26",
   seats: { fact: "12 of 12 seats", ratio: 1 },
@@ -29,7 +29,7 @@ const FULL: DepartureRow = {
 
 const SHORT: DepartureRow = {
   tripId: "trip-short",
-  href: "/shop/blue-mantis/trips/trip-short/guests",
+  href: "/shop/blue-mantis/trips/trip-short",
   title: "Two-Tank Reef — Benwood & Elbow",
   date: "Mon, Aug 24",
   seats: { fact: "9 of 12 seats", ratio: 0.75 },
@@ -39,7 +39,7 @@ const SHORT: DepartureRow = {
 
 const UNBOOKED: DepartureRow = {
   tripId: "trip-empty",
-  href: "/shop/blue-mantis/trips/trip-empty/guests",
+  href: "/shop/blue-mantis/trips/trip-empty",
   title: "Wreck Trip — Duane",
   date: "Sun, Aug 23",
   seats: { fact: "0 of 8 seats", ratio: 0 },

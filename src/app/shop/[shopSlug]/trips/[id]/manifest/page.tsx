@@ -45,6 +45,7 @@ import { shopPath } from "@/lib/staff-notices";
 import { divesWithMatch } from "@/lib/support-needs";
 import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
+import { TripSurfaceNav } from "../_components/TripSurfaceNav";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CrewRollCall } from "./_components/CrewRollCall";
 import { DiverRollCall, type ManifestNote } from "./_components/DiverRollCall";
@@ -205,7 +206,7 @@ export default async function TripManifestPage({
     // until dissolved), while the manifest derivation already dropped that
     // member from every row's team (ADR 20260804-buddy-teams).
     listTripBuddyTeams(db, shop.id, tripId),
-    // The private staff notes written on the Guests tab. Read here, never
+    // The private staff notes written on the Trip surface. Read here, never
     // written here — see `StaffNotes`.
     listBookingNotes(db, shop.id, tripId),
     // Person-scoped notes written on the Diver record. Resolve them onto this
@@ -418,10 +419,8 @@ export default async function TripManifestPage({
     return {
       errorRefusal,
       blockedMessage: t.rich("trips.rollCall.stillBlocked", {
-        guestsLink: (chunks) => (
-          <Link href={`/shop/${shopSlug}/trips/${tripId}/guests#booking-${bookingId}`}>
-            {chunks}
-          </Link>
+        tripLink: (chunks) => (
+          <Link href={`${shopPath(shopSlug, "trips", tripId)}#booking-${bookingId}`}>{chunks}</Link>
         ),
       }),
     };
@@ -454,6 +453,7 @@ export default async function TripManifestPage({
         // Printing is an Overall-tab action. The manifest is the live dock
         // surface; keeping a second current-page printer here made it unclear
         // whether staff were getting the full packet or only this tab.
+        subNav={<TripSurfaceNav shopSlug={shopSlug} tripId={tripId} locale={locale} />}
       />
       {/* Souls on board, on paper only. The printed manifest is the document
           that goes ashore with the dock or into a coastguard's hands, and the

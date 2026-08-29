@@ -1,10 +1,35 @@
 {
   "subNav": {
     "ariaLabel": "Trip",
+    "trip": "Trip",
     "overview": "Overview",
     "guests": "Guests",
     "manifest": "Manifest",
     "prep": "Prep"
+  },
+  "about": {
+    "heading": "About this departure",
+    "add": "Add",
+    "details": "Details",
+    "close": "Close",
+    "viewPublic": "View public page",
+    "printPacket": "Print packet",
+    "plan": "The plan",
+    "conditions": "Conditions",
+    "whoCanBook": "Who can book",
+    "boatAndCrew": "Boat & crew",
+    "repeats": "Repeats",
+    "edit": "Edit",
+    "noneSet": "Not set yet",
+    "noConditions": "No crew prediction published",
+    "noRequirements": "No admission requirements set",
+    "noBoat": "Boat not assigned",
+    "noCrew": "No crew assigned",
+    "oneTime": "One-time departure",
+    "perSeat": "per seat",
+    "seatsLabel": "of {capacity, plural, one {# seat} other {# seats}}",
+    "openLabel": "open",
+    "cancel": "Cancel this departure"
   },
   "notices": {
     "saved": "Changes saved.",
@@ -474,7 +499,7 @@
   },
   "rollCall": {
     "errorRefusal": "That didn’t save. Recheck your connection or tap again.",
-    "stillBlocked": "Diver is still blocked. <guestsLink>Open Guests to resolve the blocker</guestsLink>, then try again."
+    "stillBlocked": "Diver is still blocked. <tripLink>Open Trip to resolve the blocker</tripLink>, then try again."
   },
   "prep": {
     "diverCount": "{count, plural, one {# diver} other {# divers}}",

@@ -35,7 +35,7 @@ function action(overrides: Partial<TodayAction> & { id: string }): TodayAction {
     context: "Two-Tank Reef · 7:30 AM",
     detail: "Waiver has not been sent.",
     actionLabel: "Send waiver",
-    href: "/shop/demo/trips/t1/guests#booking-b1",
+    href: "/shop/demo/trips/t1#booking-b1",
     dueAt: new Date(now.getTime() + 2 * HOUR),
     ...overrides,
   };

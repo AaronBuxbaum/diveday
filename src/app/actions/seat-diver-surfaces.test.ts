@@ -61,7 +61,7 @@ describe("every seat surface escapes what it puts in a path segment", () => {
       personId: "22222222-2222-4222-8222-222222222222",
     };
     expect(SEAT_SURFACES["trip-guests"].refusedPath(landing)).toBe(
-      "/shop/blue-mantis/trips/11111111-1111-4111-8111-111111111111/guests",
+      "/shop/blue-mantis/trips/11111111-1111-4111-8111-111111111111",
     );
     expect(SEAT_SURFACES["diver-record"].refusedPath(landing)).toBe(
       "/shop/blue-mantis/divers/22222222-2222-4222-8222-222222222222",

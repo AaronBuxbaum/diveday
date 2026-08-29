@@ -68,7 +68,7 @@ test("the demo keeps its synthetic medical-review training hold on a future trip
 }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
-  await openTripTab(page, "Guests");
+  await openTripTab(page, "Trip");
 
   const diver = page
     .locator("li")
@@ -102,17 +102,14 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   test.setTimeout(30_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
-  // The roster and its waiver control live on the Guests tab.
-  await openTripTab(page, "Guests");
+  // The roster and its waiver control live on the Trip surface.
+  await openTripTab(page, "Trip");
   const staffTripUrl = page.url();
 
   // Not `sendWaiverForFirstDiver()` like the tests below: this one asserts the
   // no-provider notice copy itself and keeps `diverSection` for the follow-up
   // assertions further down, so the send stays spelled out here.
-  const diverSection = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: /^Guests/ }) })
-    .filter({ visible: true });
+  const diverSection = page.locator("#roster").filter({ visible: true });
   // The whole waiver is a single button; for an unsent diver it reads "Send
   // waiver". Exact, so it can't pick up a longer label on a neighbouring
   // control. e2e has no email provider configured, so the shared
@@ -261,7 +258,7 @@ test("the medical questionnaire refuses to complete with an unanswered question,
 }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
-  await openTripTab(page, "Guests");
+  await openTripTab(page, "Trip");
   const waiverHref = await sendWaiverForFirstDiver(page);
 
   await page.goto(waiverHref ?? "/");
@@ -306,7 +303,7 @@ test("a waiver signed under someone else's name is refused, and the link stays s
 }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
-  await openTripTab(page, "Guests");
+  await openTripTab(page, "Trip");
   const waiverHref = await sendWaiverForFirstDiver(page);
 
   await page.goto(waiverHref ?? "/");
@@ -373,7 +370,7 @@ test("an incomplete sign submit is blocked client-side and focuses the missing f
 }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
-  await openTripTab(page, "Guests");
+  await openTripTab(page, "Trip");
   const waiverHref = await sendWaiverForFirstDiver(page);
 
   await page.goto(waiverHref ?? "/");
@@ -399,7 +396,7 @@ test("a non-English visitor sees a notice that the waiver text itself stays in E
 }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
-  await openTripTab(page, "Guests");
+  await openTripTab(page, "Trip");
   const waiverHref = await sendWaiverForFirstDiver(page);
 
   // The waiver link is a bearer-token page a diver opens on their own device,
@@ -429,7 +426,7 @@ test("a non-English visitor sees a notice that the waiver text itself stays in E
 test("saving a draft preserves partial conditional questionnaire answers", async ({ page }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
-  await openTripTab(page, "Guests");
+  await openTripTab(page, "Trip");
   const waiverHref = await sendWaiverForFirstDiver(page);
 
   await page.goto(waiverHref ?? "/");
@@ -464,7 +461,7 @@ test("the step rail paces the waiver and reaches 3 of 3 only once it is signed",
 }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
-  await openTripTab(page, "Guests");
+  await openTripTab(page, "Trip");
   const waiverHref = await sendWaiverForFirstDiver(page);
 
   await page.goto(waiverHref ?? "/");
@@ -524,7 +521,7 @@ test("the step rail paces the waiver and reaches 3 of 3 only once it is signed",
 test("a Box a diver's own yes opens keeps the rail's Medical step open", async ({ page }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
-  await openTripTab(page, "Guests");
+  await openTripTab(page, "Trip");
   const waiverHref = await sendWaiverForFirstDiver(page);
 
   await page.goto(waiverHref ?? "/");
@@ -861,7 +858,7 @@ test("the waiver page fits a phone even with unbreakable text in the template", 
   test.setTimeout(60_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, TRIP);
-  await openTripTab(page, "Guests");
+  await openTripTab(page, "Trip");
   const link = await sendWaiverForFirstDiver(page);
 
   await page.setViewportSize({ width: 390, height: 844 });

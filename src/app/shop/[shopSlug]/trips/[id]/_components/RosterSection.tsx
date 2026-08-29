@@ -214,6 +214,8 @@ export function RosterSection({
   keepOpenBookingId,
   waitingGroup,
   invitedGroup,
+  compact = false,
+  showSummaryHeading = true,
 }: {
   shopSlug: string;
   shopTimezone: string;
@@ -276,6 +278,10 @@ export function RosterSection({
   waitingGroup?: ReactNode;
   /** Recorded invitations, as the "Invited" group (`TripInvitationGroup`). */
   invitedGroup?: ReactNode;
+  /** The Trip surface already leads with its masthead capacity read. */
+  compact?: boolean;
+  /** Keep the old standalone Guests heading for the compatibility route. */
+  showSummaryHeading?: boolean;
 }) {
   const t = staffTranslator(locale);
   const WAIVER_CONTROLS = Object.fromEntries(
@@ -1202,23 +1208,32 @@ export function RosterSection({
 
   const hasTail = waitingGroup != null || invitedGroup != null;
   return (
-    <section id="roster" className="mt-10 scroll-mt-24">
-      <div>
-        <h2 className="text-lg font-semibold">
-          {t("trips.roster.heading")}{" "}
-          <span className="font-normal text-muted tabular-nums">
-            {t("trips.roster.bookedOfCapacity", { booked, capacity })}
-          </span>
-        </h2>
-        {/* The moment the last blocker clears. Nothing renders until an
+    <section
+      id="roster"
+      aria-label={showSummaryHeading ? undefined : t("trips.roster.heading")}
+      className={`${compact ? "mt-5" : "mt-10"} scroll-mt-24`}
+    >
+      {showSummaryHeading ? (
+        <div>
+          <h2 className="text-lg font-semibold">
+            {t("trips.roster.heading")}{" "}
+            <span className="font-normal text-muted tabular-nums">
+              {t("trips.roster.bookedOfCapacity", { booked, capacity })}
+            </span>
+          </h2>
+          {/* The moment the last blocker clears. Nothing renders until an
             action on this page moves the count to zero — see RosterAllClear
             for why that has to be decided in the browser rather than here.
             Held back on an empty roster: "everyone is cleared" about nobody
             is not a finished thing. */}
-        {roster.length > 0 ? (
-          <RosterAllClear blockedCount={blockedCount} label={t("trips.roster.allClear")} />
-        ) : null}
-      </div>
+          {roster.length > 0 ? (
+            <RosterAllClear blockedCount={blockedCount} label={t("trips.roster.allClear")} />
+          ) : null}
+        </div>
+      ) : null}
+      {!showSummaryHeading && roster.length > 0 ? (
+        <RosterAllClear blockedCount={blockedCount} label={t("trips.roster.allClear")} />
+      ) : null}
       {roster.length === 0 ? (
         // The shared empty state, not a bare paragraph (docs/design/
         // principles.md #4). No action of its own: the add-a-diver form is

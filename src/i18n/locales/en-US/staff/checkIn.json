@@ -50,7 +50,7 @@
     "submit": "Search queue"
   },
   "notice": {
-    "notReady": "Readiness changed. <guestsLink>Open Guests to resolve the blocker</guestsLink>, then try again.",
+    "notReady": "Readiness changed. <tripLink>Open Trip to resolve the blocker</tripLink>, then try again.",
     "notBookable": "That booking is no longer available for check-in.",
     "alreadyCheckedIn": "That diver was already checked in.",
     "notFound": "That booking could not be found.",
