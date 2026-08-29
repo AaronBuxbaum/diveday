@@ -153,7 +153,7 @@ describe("the guests ledger (slice 5d)", () => {
     renderRoster(fixtures);
 
     // The blocker sentence renders without any tap...
-    expect(screen.getByText("No certification on file for this trip.")).toBeVisible();
+    expect(screen.getByText("No certification is on file for this trip.")).toBeVisible();
     // ...with its one fix beside it, pointing at the record that clears it.
     expect(screen.getByRole("link", { name: /Review certifications/ })).toHaveAttribute(
       "href",

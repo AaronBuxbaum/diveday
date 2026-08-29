@@ -399,6 +399,15 @@ export function RosterSection({
   const ready = roster.filter((entry) => isSettled(entry));
   // The queue's own rule, stated once (src/lib/roster-filters.ts): an absent
   // readiness row is not a blocked diver.
+  //
+  // Deliberately narrower than the "Still to clear" group above it: the
+  // earned moment says "Everyone's cleared to dive", which is readiness and
+  // only readiness — a missing emergency contact or an unpaid balance is
+  // desk work, not dive clearance (principle 3 rations the moment to "the
+  // last blocker of the morning clearing"). Driving it from the group's own
+  // `isSettled` would also let a diver's buddy-group note — which keeps a
+  // row open forever by design — suppress the moment on any boat carrying
+  // one.
   const blockedCount = roster.filter(({ booking }) =>
     rosterRowIsBlocked(readinessByBooking.get(booking.id)?.readiness),
   ).length;
