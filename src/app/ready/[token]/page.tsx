@@ -1245,7 +1245,7 @@ export default async function DiverReadinessPage({
       // seat is still live under a departure that is not (`callTripBlowout`
       // cancels the trip and leaves every booking active, because whether each
       // seat is refunded stays a per-booking staff decision).
-      if (data?.departureCancelled && !data.detail.cancelled) {
+      if (data && data.departureCancelled && !data.detail.cancelled) {
         const strandedT = diverTranslator(await requestLocale(data.shop.defaultLocale));
         return (
           <ExpiredLinkCard
