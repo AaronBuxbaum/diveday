@@ -36,6 +36,7 @@ import {
   rollCallCheckpoints,
   rollCallRowState,
   splitBuddyTeamIds,
+  type TripManifest,
 } from "@/lib/manifests";
 import { webPushPublicKey } from "@/lib/notifications/web-push";
 import { serializeManifests } from "@/lib/offline-manifests";
@@ -50,6 +51,7 @@ import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CrewRollCall } from "./_components/CrewRollCall";
 import { DiverRollCall, type ManifestNote } from "./_components/DiverRollCall";
 import { type ExecutedDiveLabels, ExecutedDiveLog } from "./_components/ExecutedDiveLog";
+import type { PersonTrailEntry } from "./_components/PersonSheet";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
 import { SummaryPanel } from "./_components/SummaryPanel";
 import {
@@ -165,6 +167,63 @@ function executedDiveLabels(t: StaffTranslator, depthUnit: DepthUnit): ExecutedD
   };
 }
 
+function personTrailLabel(
+  t: StaffTranslator,
+  checkpoint: RollCallCheckpoint,
+  state: PersonTrailEntry["state"],
+): string {
+  if (checkpoint === "departure") {
+    return state === "aboard"
+      ? t("manifest.personTrailBoardedAtDock")
+      : t("manifest.personTrailNotBoardedAtDock");
+  }
+  const dive = Number(checkpoint.slice("after_dive_".length));
+  return state === "aboard"
+    ? t("manifest.personTrailBackAfterDive", { dive })
+    : t("manifest.personTrailNotBackAfterDive", { dive });
+}
+
+/**
+ * The person sheet's Today section is a small audit trail, not a second
+ * current-state calculation. It reads the same latest record each checkpoint
+ * already uses and omits carried-forward rows, so an ashore-at-the-dock result
+ * appears once instead of being repeated after every dive.
+ */
+function personTrailIndex(
+  manifests: readonly TripManifest[],
+  locale: string,
+  timezone: string,
+  t: StaffTranslator,
+): ReadonlyMap<string, readonly PersonTrailEntry[]> {
+  const index = new Map<string, PersonTrailEntry[]>();
+  const add = (
+    id: string,
+    checkpoint: RollCallCheckpoint,
+    rollCall: TripManifest["divers"][number]["rollCall"],
+  ) => {
+    if (!rollCall || rollCall.implied) return;
+    const state: PersonTrailEntry["state"] =
+      rollCall.state === "boarded" ? "aboard" : checkpoint === "departure" ? "ashore" : "notBack";
+    const entries = index.get(id) ?? [];
+    entries.push({
+      label: personTrailLabel(t, checkpoint, state),
+      detail: t("manifest.personTrailDetail", {
+        time: formatTime(rollCall.occurredAt, locale, timezone),
+        name: rollCall.recordedByName,
+      }),
+      state,
+      note: rollCall.note,
+    });
+    index.set(id, entries);
+  };
+
+  for (const snapshot of manifests) {
+    for (const diver of snapshot.divers) add(diver.bookingId, snapshot.checkpoint, diver.rollCall);
+    for (const member of snapshot.crew) add(member.id, snapshot.checkpoint, member.rollCall);
+  }
+  return index;
+}
+
 export default async function TripManifestPage({
   params,
   searchParams,
@@ -229,6 +288,7 @@ export default async function TripManifestPage({
       : "departure";
   const manifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
   if (!manifest) notFound();
+  const todayTrailBySubject = personTrailIndex(completeManifests, locale, shop.timezone, t);
   // One definition, shared with the offline copy: divers *and* crew (DOM-H1,
   // ADR 20260804-crew-roll-call-is-per-person). This used to be written inline
   // here and again in OfflineManifestView as `totalDivers > 0 && awaiting === 0`,
@@ -552,6 +612,7 @@ export default async function TripManifestPage({
           screens of context to reach the first name at roll call. */}
       <DiverRollCall
         divers={manifest.divers}
+        crew={manifest.crew}
         crewNames={manifest.crew.map((member) => member.fullName)}
         checkpoint={checkpoint}
         isDeparture={isDeparture}
@@ -560,6 +621,7 @@ export default async function TripManifestPage({
         locale={locale}
         timezone={shop.timezone}
         notesByBooking={notesByBooking}
+        todayTrailByBooking={todayTrailBySubject}
         rollCallAction={boundRollCallAction}
         addPrivateNoteAction={boundAddPrivateNoteAction}
         rollCallButtonCopy={rollCallButtonCopy}
@@ -573,12 +635,14 @@ export default async function TripManifestPage({
           subject. */}
       <CrewRollCall
         crew={manifest.crew}
+        divers={manifest.divers}
         checkpoint={checkpoint}
         isDeparture={isDeparture}
         shopSlug={shopSlug}
         tripId={tripId}
         locale={locale}
         timezone={shop.timezone}
+        todayTrailBySubject={todayTrailBySubject}
         crewRollCallAction={boundCrewRollCallAction}
         crewRollCallButtonCopy={crewRollCallButtonCopy}
         buddyTeamLabel={buddyTeamLabel}

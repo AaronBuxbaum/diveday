@@ -161,7 +161,7 @@ export function rollCallScrollMargin(isDeparture: boolean): string {
  * is the one thing a list read at a glance cannot afford.
  */
 export const ROW_DISCLOSURE_SUMMARY_CLASS =
-  "group/summary flex min-h-19 w-full cursor-pointer list-none items-center gap-2.5 py-3 ps-4 pe-2 select-none [&::-webkit-details-marker]:hidden";
+  "group/summary flex min-h-19 w-full cursor-pointer list-none items-center gap-2.5 py-3 ps-4 pe-2 text-start select-none [&::-webkit-details-marker]:hidden";
 export const ROW_DISCLOSURE_PANEL_CLASS =
   "mx-4 mb-4 rounded-xl border border-border/70 bg-surface-sunken/50 p-3";
 

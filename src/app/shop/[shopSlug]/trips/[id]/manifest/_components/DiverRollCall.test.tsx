@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { RollCallCheckpoint, RollCallRecord, TripManifest } from "@/lib/manifests";
@@ -89,27 +89,14 @@ function renderList({
   );
 }
 
-/**
- * Whether an element is out of sight on the screen a crew reads at rest —
- * either inside a collapsed person panel, or inside one of the print-only
- * blocks that keep paper carrying every fact the screen tucks away.
- *
- * Both are the point rather than a loophole: decision 4 is a rule about **what
- * the screen shows before anybody has said anything**, and the printed manifest
- * is explicitly exempt from every hiding rule on this page.
- */
+/** Every element the screen paints in the app's danger hue at rest. */
 function hiddenAtRest(element: HTMLElement): boolean {
   for (let node: HTMLElement | null = element; node; node = node.parentElement) {
     if (node.classList.contains("hidden")) return true;
-    const parent = node.parentElement;
-    if (parent instanceof HTMLDetailsElement && !parent.open && node.tagName !== "SUMMARY") {
-      return true;
-    }
   }
   return false;
 }
 
-/** Every element the screen paints in the app's danger hue at rest. */
 function dangerToned(container: HTMLElement) {
   return [...container.querySelectorAll<HTMLElement>("[class]")].filter(
     (element) =>
@@ -130,35 +117,34 @@ describe("the not-back path is a deliberate two-step (decision 3)", () => {
     // The row's own tap is the affirmative, and it is the only control on the
     // row itself.
     expect(within(row).getByRole("button", { name: "Mark boarded" })).toBeVisible();
-    const details = row.querySelector("details");
     const exception = exceptionControl(row, "Mark not back aboard");
-    // The claim that somebody did not come back exists on the row, and reaching
-    // it costs a tap on the person's own name first: it is inside the
-    // disclosure, and the disclosure is closed.
-    expect(exception).toBeDefined();
-    expect(details?.open).toBe(false);
-    expect(details?.contains(exception ?? null)).toBe(true);
-    expect(hiddenAtRest(exception as HTMLElement)).toBe(true);
-    // …and it is not the summary, which is what a tap on the row lands on.
-    expect(row.querySelector("summary")?.contains(exception ?? null)).toBe(false);
+    // The claim that somebody did not come back is absent until the person's
+    // own sheet opens; there is no hidden duplicate control in the row DOM.
+    expect(row.querySelector("details")).toBeNull();
+    expect(exception).toBeUndefined();
+    const trigger = within(row).getByRole("button", { name: "Open details for Meera Iyer" });
+    expect(trigger).toHaveAttribute("aria-haspopup", "dialog");
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 
   it("keeps the dock's wording behind the same two steps", () => {
     renderList({ divers: [diver()], checkpoint: "departure" });
     const row = screen.getByRole("listitem");
     const exception = exceptionControl(row, "Mark not boarded");
-    expect(exception).toBeDefined();
-    expect(hiddenAtRest(exception as HTMLElement)).toBe(true);
+    expect(exception).toBeUndefined();
   });
 
   it("offers it once the person's own panel is open", () => {
     renderList({ divers: [diver()] });
     const row = screen.getByRole("listitem");
-    // The disclosure is the tap on the person — the same one that reveals
-    // their contact, medical and notes.
-    const details = row.querySelector("details");
-    details?.setAttribute("open", "");
-    expect(hiddenAtRest(exceptionControl(row, "Mark not back aboard") as HTMLElement)).toBe(false);
+    // The sheet is the tap on the person — the same one that reveals their
+    // contact, medical and notes.
+    fireEvent.click(within(row).getByRole("button", { name: "Open details for Meera Iyer" }));
+    expect(screen.getByRole("dialog")).toBeVisible();
+    expect(screen.getByRole("dialog")).toHaveTextContent("Emergency contact");
+    expect(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Mark not back aboard" }),
+    ).toBeVisible();
   });
 });
 
@@ -347,10 +333,11 @@ describe("the row offers one place to say what happened, and only where it appli
 
   it("offers exactly one after a dive, on the control about to raise the alarm", () => {
     const { container } = renderList({ divers: [diver({ bookingId: "b-1" })] });
-    expect(noteBoxes(container)).toHaveLength(1);
+    fireEvent.click(within(container).getByRole("button", { name: "Open details for Meera Iyer" }));
+    expect(noteBoxes(document.body)).toHaveLength(1);
     // Inside the form that posts the mark, so there is no second save to lose
     // and nothing to mirror to the device.
-    expect(noteBoxes(container)[0]?.closest("form")).not.toBeNull();
+    expect(noteBoxes(document.body)[0]?.closest("form")).not.toBeNull();
   });
 
   it("keeps it to one once the alarm stands, on the sighting rather than the undo", () => {
@@ -361,7 +348,8 @@ describe("the row offers one place to say what happened, and only where it appli
     const { container } = renderList({
       divers: [diver({ bookingId: "b-1", rollCall: notBackAt() })],
     });
-    expect(noteBoxes(container)).toHaveLength(1);
+    fireEvent.click(within(container).getByRole("button", { name: "Open details for Meera Iyer" }));
+    expect(noteBoxes(document.body)).toHaveLength(1);
   });
 
   it("shows what was already written, so nobody types it twice", () => {
@@ -373,9 +361,11 @@ describe("the row offers one place to say what happened, and only where it appli
         }),
       ],
     });
-    expect(
-      within(container).getByText("Surfaced 200 m north, picked up by Reef Runner."),
-    ).toBeTruthy();
+    const row = within(container).getByRole("listitem");
+    fireEvent.click(within(row).getByRole("button", { name: "Open details for Meera Iyer" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "Surfaced 200 m north, picked up by Reef Runner.",
+    );
   });
 });
 
@@ -460,12 +450,12 @@ describe("asserting aboard over a missing mark is never the cheap direction", ()
   it("costs the same two gestures in both directions, from the person's panel", () => {
     renderList({ divers: [diver({ rollCall: notBackAt() })] });
     const row = screen.getByRole("listitem");
-    const backAboard = exceptionControl(row, "Mark back aboard");
-    const retract = exceptionControl(row, "Not back aboard");
+    fireEvent.click(within(row).getByRole("button", { name: "Open details for Meera Iyer" }));
+    const sheet = screen.getByRole("dialog");
+    const backAboard = within(sheet).getByRole("button", { name: "Mark back aboard" });
+    const retract = within(sheet).getByRole("button", { name: "Not back aboard" });
     expect(backAboard).toBeDefined();
     expect(retract).toBeDefined();
-    expect(hiddenAtRest(backAboard as HTMLElement)).toBe(true);
-    expect(hiddenAtRest(retract as HTMLElement)).toBe(true);
   });
 
   it("still says a diver is blocked at the dock, where readiness does gate boarding", () => {

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { RollCallCheckpoint, RollCallRecord, TripManifest } from "@/lib/manifests";
@@ -72,14 +72,9 @@ function renderCrew({
   );
 }
 
-/** Whether an element is out of sight at rest — see the diver-side twin. */
 function hiddenAtRest(element: HTMLElement): boolean {
   for (let node: HTMLElement | null = element; node; node = node.parentElement) {
     if (node.classList.contains("hidden")) return true;
-    const parent = node.parentElement;
-    if (parent instanceof HTMLDetailsElement && !parent.open && node.tagName !== "SUMMARY") {
-      return true;
-    }
   }
   return false;
 }
@@ -102,8 +97,10 @@ describe("a crew row obeys the diver row's gestures", () => {
     const row = screen.getByRole("listitem");
     expect(within(row).getByRole("button", { name: "Mark aboard" })).toBeVisible();
     const exception = control(row, "Mark not back aboard");
-    expect(exception).toBeDefined();
-    expect(hiddenAtRest(exception as HTMLElement)).toBe(true);
+    expect(exception).toBeUndefined();
+    expect(
+      within(row).getByRole("button", { name: "Open details for Keiko Tanaka" }),
+    ).toHaveAttribute("aria-expanded", "false");
   });
 
   it("renders nothing in danger tone with nothing recorded", () => {
@@ -118,8 +115,10 @@ describe("a crew row obeys the diver row's gestures", () => {
     // is on the row: asserting a divemaster is aboard over a stated
     // missing-diver mark is the tap that turns the loudest row green.
     expect(within(row).queryByRole("button", { name: "Mark aboard" })).not.toBeInTheDocument();
-    expect(hiddenAtRest(control(row, "Mark back aboard") as HTMLElement)).toBe(true);
-    expect(hiddenAtRest(control(row, "Not back aboard") as HTMLElement)).toBe(true);
+    fireEvent.click(within(row).getByRole("button", { name: "Open details for Keiko Tanaka" }));
+    const sheet = screen.getByRole("dialog");
+    expect(within(sheet).getByRole("button", { name: "Mark back aboard" })).toBeVisible();
+    expect(within(sheet).getByRole("button", { name: "Not back aboard" })).toBeVisible();
     // …and the alarm itself is on screen, earned by that record.
     expect(dangerToned(container).length).toBeGreaterThan(0);
   });
