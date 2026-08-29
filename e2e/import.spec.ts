@@ -1,11 +1,5 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import {
-  createTrip,
-  daysFromNow,
-  e2eNow,
-  openTripFromBoard },
-  openTripAbout,
-} from "./helpers";
+import { createTrip, daysFromNow, e2eNow, openTripAbout, openTripFromBoard } from "./helpers";
 
 /**
  * The contact importer (ADR 20260723-contact-importer, ADR

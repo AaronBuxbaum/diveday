@@ -1,8 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import {
-  openOnThisPhone },
-  openTripAbout,
-} from "./helpers";
+import { openOnThisPhone, openTripAbout } from "./helpers";
 
 /**
  * Not READ_ONLY, despite neither test submitting anything: both start from a

@@ -6,11 +6,10 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
+  openTripAbout,
   signInAs,
   signOut,
   tripPathByTitle,
-  },
-  openTripAbout,
 } from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;

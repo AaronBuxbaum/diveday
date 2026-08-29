@@ -3,9 +3,9 @@ import {
   createTrip,
   daysFromNow,
   e2eNow,
-  openTripTab,
-  seededTripId },
   openTripAbout,
+  openTripTab,
+  seededTripId,
 } from "./helpers";
 
 /**

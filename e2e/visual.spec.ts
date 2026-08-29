@@ -19,13 +19,12 @@ import {
   openRosterNotes,
   openSettingsRow,
   openThreadStep,
+  openTripAbout,
   openTripFromBoard,
   openTripTab,
   seededTripId,
   threadStatus,
   waiverLinkFromResult,
-  },
-  openTripAbout,
 } from "./helpers";
 import { E2E_FROZEN_CLOCK } from "./servers";
 

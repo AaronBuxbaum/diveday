@@ -1,10 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import {
-  daysFromNow,
-  e2eNow },
-  openTripAbout,
-} from "./helpers";
+import { daysFromNow, e2eNow, openTripAbout } from "./helpers";
 
 signedInAsOwner();
 

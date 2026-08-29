@@ -7,10 +7,9 @@ import {
   e2eNow,
   findTripOnBoard,
   openThreadStep,
+  openTripAbout,
   signInAsOwner,
   signOut,
-  },
-  openTripAbout,
 } from "./helpers";
 
 signedInAsOwner();

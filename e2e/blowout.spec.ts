@@ -3,10 +3,9 @@ import {
   bookASeatAndOpenThread,
   daysFromNow,
   e2eNow,
+  openTripAbout,
   openTripFromBoard,
   seededTripId,
-  },
-  openTripAbout,
 } from "./helpers";
 
 /**

@@ -1,10 +1,5 @@
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import {
-  daysFromNow,
-  e2eNow,
-  signInAsOwner },
-  openTripAbout,
-} from "./helpers";
+import { daysFromNow, e2eNow, openTripAbout, signInAsOwner } from "./helpers";
 
 test.describe("staff", () => {
   signedInAsOwner();

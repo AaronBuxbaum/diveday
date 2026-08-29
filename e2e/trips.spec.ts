@@ -5,9 +5,8 @@ import {
   e2eNow,
   findTripOnBoard,
   openRosterDetails,
-  seededTripId,
-  },
   openTripAbout,
+  seededTripId,
 } from "./helpers";
 
 test("the public schedule lists seeded trips with capacity states, a month rail, and per-dive briefings", async ({

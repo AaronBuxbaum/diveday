@@ -5,10 +5,9 @@ import {
   e2eNow,
   findTripOnBoard,
   openThreadStep,
+  openTripAbout,
   signOut,
   threadStatus,
-  },
-  openTripAbout,
 } from "./helpers";
 
 test.describe("staff-prepared trip", () => {

@@ -3,10 +3,9 @@ import {
   bookASeatAndOpenThread,
   daysFromNow,
   e2eNow,
+  openTripAbout,
   signInAsOwner,
   tripPathByTitle,
-  },
-  openTripAbout,
 } from "./helpers";
 
 signedInAsOwner();

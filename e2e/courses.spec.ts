@@ -7,9 +7,8 @@ import {
   e2eNow,
   findTripOnBoard,
   openThreadStep,
-  publicTripUrl,
-  },
   openTripAbout,
+  publicTripUrl,
 } from "./helpers";
 
 test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba session and save rental preferences", async ({

@@ -5,11 +5,10 @@ import {
   daysFromNow,
   e2eNow,
   openRosterDetails,
+  openTripAbout,
   openTripActivity,
   signInAsOwner,
   signOut,
-  },
-  openTripAbout,
 } from "./helpers";
 
 /**

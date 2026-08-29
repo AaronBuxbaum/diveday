@@ -1,10 +1,7 @@
 import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, READ_ONLY, signedInAs, test } from "./fixtures";
-import {
-  openSettingsRow },
-  openTripAbout,
-} from "./helpers";
+import { openSettingsRow, openTripAbout } from "./helpers";
 
 /**
  * H-14 (ADR 20260724-role-authorization) draws real boundaries on five staff

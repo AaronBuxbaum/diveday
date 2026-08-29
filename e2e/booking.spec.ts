@@ -5,12 +5,11 @@ import {
   daysFromNow,
   e2eNow,
   openRosterDetails,
+  openTripAbout,
   openTripActivity,
   signInAsOwner,
   signOut,
   threadStatus,
-  },
-  openTripAbout,
 } from "./helpers";
 
 test.describe("staff", () => {

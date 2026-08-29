@@ -1,10 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import {
-  daysFromNow,
-  e2eNow,
-  openTripFromBoard },
-  openTripAbout,
-} from "./helpers";
+import { daysFromNow, e2eNow, openTripAbout, openTripFromBoard } from "./helpers";
 
 signedInAsOwner();
 
