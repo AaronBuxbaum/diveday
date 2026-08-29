@@ -39,6 +39,7 @@ import { formatDateTimeTz } from "@/lib/format";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import { paymentSourceLine } from "@/lib/payment-source";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
+import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { waiverState } from "@/lib/waivers";
 import {
   type PaymentStatus,
@@ -403,8 +404,10 @@ export function RosterSection({
 
   const stillToClear = roster.filter((entry) => !isSettled(entry));
   const ready = roster.filter((entry) => isSettled(entry));
-  const blockedCount = roster.filter(
-    ({ booking }) => readinessByBooking.get(booking.id)?.readiness?.status === "blocked",
+  // The queue's own rule, stated once (src/lib/roster-filters.ts): an absent
+  // readiness row is not a blocked diver.
+  const blockedCount = roster.filter(({ booking }) =>
+    rosterRowIsBlocked(readinessByBooking.get(booking.id)?.readiness),
   ).length;
 
   const renderRow = ({ booking, person }: RosterEntry, settledRow: boolean) => {
