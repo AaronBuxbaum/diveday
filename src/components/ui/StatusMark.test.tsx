@@ -20,9 +20,7 @@ describe("StatusMark", () => {
   });
 
   it("keeps the requested size and caller class", () => {
-    const { container } = render(
-      <StatusMark variant="danger" size="lg" className="text-danger" />,
-    );
+    const { container } = render(<StatusMark variant="danger" size="lg" className="text-danger" />);
     const svg = container.querySelector("svg");
 
     expect(svg).toHaveClass("size-6", "shrink-0", "text-danger");
