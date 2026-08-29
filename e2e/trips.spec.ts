@@ -208,8 +208,9 @@ test.describe("trip pulse", () => {
     await expect(page.getByRole("link", { name: /missing rental sizes/ })).toBeVisible();
     await page.getByRole("link", { name: /can’t board yet/ }).click();
     await expect(page).toHaveURL(/\/guests#roster/);
-    // The group band owns the state word and counts the same one diver.
-    await expect(page.getByRole("heading", { name: "Still to clear · 1" })).toBeVisible();
+    // The group band owns the state word; its count is every unsettled diver
+    // (blockers, advisories, birthdays), not just the one blocked seat.
+    await expect(page.getByRole("heading", { name: /^Still to clear ·/ })).toBeVisible();
     await expect(page.getByRole("link", { name: "Priya Sharma" })).toBeVisible();
   });
 

@@ -3286,11 +3286,13 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(page.getByRole("status")).toContainText("Requirements updated.");
 
         await page.goto(`/shop/blue-mantis/trips/${tripId}/guests#waitlist`);
-        // Scoped to the wait list: the deal panel further down the same page
+        // Scoped to the ledger: the deal panel further down the same page
         // renders the identical phrase for its own recipients, and this test is
-        // about the list that was still silent until now.
+        // about the list that was still silent until now. (`#waitlist` is the
+        // group's band heading, not an ancestor of its rows — the rows are the
+        // band's sibling list, so the section is the narrowest honest scope.)
         await page
-          .locator("#waitlist")
+          .locator("#roster")
           .getByText("Open Water · below this departure's minimum")
           .waitFor();
         await capture(page, "trip-guests-waitlist", scheme);
