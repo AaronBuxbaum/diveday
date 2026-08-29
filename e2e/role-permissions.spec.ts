@@ -128,7 +128,9 @@ test.describe("H-14 role permissions", () => {
       // presence for a captain is the heading itself, not a submit button.
       await expect(page.getByRole("heading", { name: "Crew", exact: true })).toBeVisible();
       await openTripAbout(page);
-      await expect(page.getByRole("button", { name: /Cancel (trip|this departure)/ })).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: /Cancel (trip|this departure)/ }),
+      ).toBeVisible();
     });
 
     /**

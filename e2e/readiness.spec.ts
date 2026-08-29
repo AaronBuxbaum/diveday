@@ -5,7 +5,6 @@ import {
   e2eNow,
   findTripOnBoard,
   openThreadStep,
-  openTripAbout,
   signOut,
   threadStatus,
 } from "./helpers";
