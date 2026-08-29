@@ -201,7 +201,6 @@ test.describe("minimum age (H-08, fail open)", () => {
     // Fail open: a walk-in has no date on file — the same state every diver in
     // a live shop starts from — and books exactly as before.
     await page.goto(`${tripPath}/guests`);
-    await page.getByRole("link", { name: "Add a diver" }).click();
     await page.getByRole("link", { name: "Add diver" }).click();
     await page.waitForURL(/\/divers\/new/);
     await page.getByLabel("Full name").fill(`Ageless Diver ${stamp}`);

@@ -211,7 +211,6 @@ export function RosterSection({
   // formatting — nothing in this component needs it directly.
   depthUnit: _depthUnit,
   tripDate,
-  canAddDivers,
   keepOpenBookingId,
   waitingGroup,
   invitedGroup,
@@ -231,12 +230,6 @@ export function RosterSection({
    * with its panel open on the way back.
    */
   keepOpenBookingId?: string;
-  /**
-   * Whether the page above still renders its `#add-diver` section (it doesn't
-   * on a cancelled departure). The empty roster's one action anchors there, so
-   * without this the box would offer a door that isn't on the page.
-   */
-  canAddDivers: boolean;
   readinessByBooking: ReadinessByBooking;
   waiverByBooking: WaiverByBooking;
   rentalFitByBooking: RentalFitByBooking;
@@ -533,7 +526,10 @@ export function RosterSection({
             word, never an emoji mark (readiness vocabulary:
             src/i18n/readiness-labels.ts; "blocked is always danger"). */}
         {readiness && readiness.status !== "ready" ? (
-          <Badge tone={readinessStatusTone(readiness.status)} toneMark={false}>
+          // `lg`: the readiness word is the one fact on this row a staffer
+          // reads to decide, which principle 2's own definition makes
+          // critical text — 16px, not the pill default.
+          <Badge tone={readinessStatusTone(readiness.status)} toneMark={false} size="lg">
             {readinessStatusText(t, readiness.status)}
           </Badge>
         ) : null}
@@ -762,7 +758,7 @@ export function RosterSection({
               </Field>
               <SubmitButton
                 pendingLabel={t("trips.roster.certifying")}
-                className={buttonClass({ variant: "primary", size: "sm" })}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
               >
                 {t("trips.roster.certifyConfirm")}
               </SubmitButton>
@@ -803,6 +799,10 @@ export function RosterSection({
               action={markWaiverInPersonAction}
               bookingId={booking.id}
               copy={paperWaiverCopy(t)}
+              // The fallback under the row's leading action reads in quiet
+              // ink — a teal link out-shouted the bordered send pill above it
+              // (design review 2026-08-29).
+              variant="ghost"
             />
           </div>
         ) : null}
@@ -886,8 +886,8 @@ export function RosterSection({
 
         {/* One disclosure, at the top level of the row — writing a note about
             a diver is desk work a staffer starts from here. */}
-        <details className="mt-3 border-t border-border pt-3">
-          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
+        <details className="mt-3">
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-muted transition-colors hover:text-foreground">
             {/* A zero count is the absence of information formatted as
                 information (principle 9) — with no notes the disclosure is
                 simply the door to writing the first one. */}
@@ -1158,7 +1158,9 @@ export function RosterSection({
       >
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pe-11">
           {headerLeft}
-          <div className="flex flex-wrap items-center justify-end gap-2">{headerBadges}</div>
+          <div className="ms-auto flex flex-wrap items-center justify-end gap-2">
+            {headerBadges}
+          </div>
         </div>
         {/* A cleared seat is one line in the Ready group (principle 9): the
             group band says the state, the drawn mark confirms it, and
@@ -1210,20 +1212,15 @@ export function RosterSection({
       </div>
       {roster.length === 0 ? (
         // The shared empty state, not a bare paragraph (docs/design/
-        // principles.md #4). The door is the add-a-diver section on this same
-        // page — dropped when the departure is cancelled, where there is
-        // nothing to seat.
+        // principles.md #4). No action of its own: the add-a-diver form is
+        // the next thing on a page this short, and a primary-weight anchor
+        // to a control already on screen was a second path to a visible
+        // button plus a second primary (principles 4 and 8; design review
+        // 2026-08-29).
         <EmptyState
           titleAs="h3"
           title={t("trips.roster.emptyHeading")}
           body={t("trips.roster.noBookings")}
-          action={
-            canAddDivers ? (
-              <a href="#add-diver" className={buttonClass({ className: "mt-4" })}>
-                {t("trips.roster.emptyAction")}
-              </a>
-            ) : null
-          }
           className="mt-4"
         />
       ) : null}

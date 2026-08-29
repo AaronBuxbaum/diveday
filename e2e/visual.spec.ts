@@ -1771,7 +1771,7 @@ for (const scheme of ["light", "dark"] as const) {
         await staffPage.waitForURL(/\/guests/);
         const diverSection = staffPage
           .locator("section")
-          .filter({ has: staffPage.getByRole("heading", { name: /^Divers/ }) });
+          .filter({ has: staffPage.getByRole("heading", { name: /^Guests/ }) });
         await diverSection
           .getByRole("button", { name: "Send waiver", exact: true })
           .first()
@@ -3128,7 +3128,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`a trip's Guests roster renders true to the design (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
         await openTripTab(page, "Guests");
-        await page.getByRole("heading", { name: /Divers/ }).waitFor();
+        await page.getByRole("heading", { name: /Guests/ }).waitFor();
         await capture(page, "trip-guests", scheme);
       });
 

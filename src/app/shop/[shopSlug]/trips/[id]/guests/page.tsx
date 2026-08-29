@@ -299,7 +299,7 @@ async function TripGuestsBody({
 
       {demand ? (
         <section className="mt-6 rounded-xl border border-warning/40 bg-warning-tint p-5">
-          <p className="text-xs font-semibold tracking-widest text-warning uppercase">
+          <p className="text-xs font-semibold tracking-widest text-warning-strong uppercase">
             {t("trips.guests.demandSignal")}
           </p>
           <h2 className="mt-1 text-lg font-semibold">{t("trips.guests.demandHeading")}</h2>
@@ -332,7 +332,6 @@ async function TripGuestsBody({
         booked={trip.booked}
         capacity={trip.capacity}
         roster={roster}
-        canAddDivers={!cancelled}
         readinessByBooking={readinessByBooking}
         waiverByBooking={waiverByBooking}
         rentalFitByBooking={rentalFitByBooking}

@@ -160,7 +160,6 @@ test("staff record and correct a diver's emergency contact from the roster and t
 
   const tripPath = await tripPathByTitle(page, SHOP, title);
   await page.goto(`${tripPath}/guests`);
-  await page.getByRole("link", { name: "Add a diver" }).click();
   await page.getByRole("link", { name: "Add diver" }).click();
   await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill(diverName);

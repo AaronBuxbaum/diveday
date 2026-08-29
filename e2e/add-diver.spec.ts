@@ -200,7 +200,7 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
   );
   const roster = page
     .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Divers" }) });
+    .filter({ has: page.getByRole("heading", { name: "Guests" }) });
   await expect(roster.getByText("Priya Sharma").filter({ visible: true })).toBeVisible();
 
   // Picking the same diver again is no longer offered — the roster can't

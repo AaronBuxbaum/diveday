@@ -54,6 +54,11 @@ export function badgeToneGlyph(tone: BadgeTone): string | undefined {
 const sizeClass = {
   sm: "px-2.5 py-1 text-xs",
   md: "px-3 py-1 text-sm",
+  // For the rare pill whose word is *critical text* — a status a person reads
+  // to make a decision, which principles.md §2 floors at 16px. The trip
+  // roster's readiness word is the first taker; a count or a supporting fact
+  // never earns this size.
+  lg: "px-3.5 py-1 text-base",
 } as const;
 
 export type BadgeSize = keyof typeof sizeClass;

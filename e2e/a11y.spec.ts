@@ -287,7 +287,7 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
       .click();
     const diverSection = page
       .locator("section")
-      .filter({ has: page.getByRole("heading", { name: /^Divers/ }) });
+      .filter({ has: page.getByRole("heading", { name: /^Guests/ }) });
     await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
     const waiverHref = await waiverLinkFromResult(page, diverSection.getByRole("status"));
 
@@ -549,7 +549,7 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
     // a readiness chip per row. The existing waiver scan passes *through* this
     // page on its way to a bearer link and never scans it.
     await openTripTab(page, "Guests");
-    await expect(page.getByRole("heading", { name: /^Divers/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^Guests/ })).toBeVisible();
     await expectNoA11yViolations(page);
 
     // Prep: the trip's gear and briefing checklists.
@@ -569,7 +569,7 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
     await link.click();
     await expect(page).toHaveURL(/\/trips\//);
     await openTripTab(page, "Guests");
-    await expect(page.getByRole("heading", { name: /^Divers/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^Guests/ })).toBeVisible();
     await expectNoA11yViolations(page);
   });
 

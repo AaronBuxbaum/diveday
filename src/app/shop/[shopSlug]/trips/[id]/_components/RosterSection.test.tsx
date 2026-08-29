@@ -87,7 +87,6 @@ function renderRoster({
       booked={roster.length}
       capacity={12}
       roster={roster}
-      canAddDivers
       readinessByBooking={readiness}
       waiverByBooking={waivers}
       rentalFitByBooking={new Map() as RentalFitByBooking}
