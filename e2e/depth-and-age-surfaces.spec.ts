@@ -61,32 +61,29 @@ test.describe("staff", () => {
     // manifest's own "Minor · age N" badge, the same words on both surfaces.
     // An adult's age is a fact, not a flag, and waits in the row's reference
     // panel; the minor's age is the one the crew acts on at a glance (H-21).
-    //
-    // The warning-tone Badge prepends a decorative aria-hidden glyph
-    // (Badge.tsx toneGlyph), so the element's own text starts "⚠️Minor", not
-    // "Minor" alone.
-    const minorBadge = page.getByText(/⚠️Minor · age \d+/).first();
+    // No glyph before the word: the guests ledger draws its marks and drops
+    // the Badge's emoji (slice 5d) — the capsule is the word alone.
+    const minorBadge = page.getByText(/^Minor · age \d+$/).first();
     await expect(minorBadge).toBeVisible();
 
     // The whole point: being a minor is a fact the crew is told, never a gate.
     // The row that carries the badge must not have gained a blocker for it.
     const minorRow = page
-      .locator("li", { has: page.getByText("⚠️Minor") })
+      .locator("li", { has: page.getByText(/^Minor · age \d+$/) })
       .filter({ visible: true })
       .last();
     await expect(minorRow).not.toContainText(/under 18|too young|not permitted/i);
   });
 
-  test("a birthday within the window is celebrated on the roster and in its own section", async ({
-    page,
-  }) => {
+  test("a birthday within the window is celebrated on the diver's own row", async ({ page }) => {
     const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
     await page.goto(`${tripPath}/guests`);
 
-    // The seeded minor's birthday is two days out, so both surfaces fire. The
-    // copy is the cake plus the timing — no age, no sentence.
-    await expect(page.getByRole("heading", { name: /Celebrations/ })).toBeVisible();
-    await expect(page.getByText("in 2 days").first()).toBeVisible();
+    // The seeded minor's birthday is two days out. Since slice 5d folded the
+    // Celebrations panel into the ledger, the callout lives once, as the warm
+    // capsule on the celebrating diver's row — subject plus timing, no age,
+    // no sentence (`birthdayCalloutText`).
+    await expect(page.getByText("Birthday in 2 days").first()).toBeVisible();
   });
 
   test("the manifest carries age and the minor flag to the crew's boarding list", async ({
@@ -128,13 +125,14 @@ test.describe("staff", () => {
     const lenaCard = page.locator("#roster li").filter({ hasText: "Lena Fischer" }).first();
     await expect(lenaCard.getByText(/deeper than the .* allowed at their age/)).toBeVisible();
 
-    // And the diver it is about is still boardable. "Ready", not "Ready to
-    // board" — the one readiness vocabulary (src/i18n/readiness-labels.ts) that
-    // the roster and the counter share with the manifest. The roster renders
-    // ready as the quiet "✓ Ready" text (the success Badge is reserved for
-    // exceptional states — design/principles.md #9), so the glyph here is ✓,
-    // not the Badge's ✅.
-    await expect(page.getByText("🌊Ready", { exact: true }).first()).toBeVisible();
+    // And no diver on this boat is *refused*: an advisory warns, a blocker
+    // blocks, and the ledger keeps the two vocabularies apart. June's shared
+    // advisory files her under "Still to clear" as open work, so the honest
+    // assertion since slice 5d is the absence of the refusal word on her row
+    // — the per-row "🌊Ready" text this used to look for is gone with the
+    // grammar that repeated the group's own word down its rows.
+    await expect(juneCard.getByText("Blocked")).toHaveCount(0);
+    await expect(lenaCard.getByText("Blocked")).toHaveCount(0);
 
     // On the manifest the same fact is the boarding control being offered at
     // all: a blocked seat gets no "Mark boarded" at departure, and the readiness
@@ -144,7 +142,9 @@ test.describe("staff", () => {
     await expect(
       page.locator("#roll-call-list").getByRole("button", { name: "Mark boarded" }).first(),
     ).toBeVisible();
-    await expect(page.locator("#roll-call-list").getByText("🌊Ready")).toHaveCount(0);
+    await expect(page.locator("#roll-call-list").getByText("Ready", { exact: true })).toHaveCount(
+      0,
+    );
   });
 
   test("depth is entered and read back in the shop's own unit", async ({ page }) => {

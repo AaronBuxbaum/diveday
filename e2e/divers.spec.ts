@@ -160,7 +160,6 @@ test("staff record and correct a diver's emergency contact from the roster and t
 
   const tripPath = await tripPathByTitle(page, SHOP, title);
   await page.goto(`${tripPath}/guests`);
-  await page.getByRole("link", { name: "Add a diver" }).click();
   await page.getByRole("link", { name: "Add diver" }).click();
   await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill(diverName);
@@ -174,7 +173,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
 
   // Failure path: a name with no phone is not a reachable contact — the
   // save must say so, not silently claim success or a generic error.
-  await card.getByText("Add emergency contact").filter({ visible: true }).click();
+  await card.getByText("Emergency contact · Not on file").filter({ visible: true }).click();
   await card.getByLabel("Contact name").fill("Robin Diver");
   await card.getByRole("button", { name: "Save contact" }).click();
   await expect(
@@ -184,7 +183,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
   await expect(card.getByText("Not on file").filter({ visible: true })).toBeVisible();
 
   // Complete it.
-  await card.getByText("Add emergency contact").filter({ visible: true }).click();
+  await card.getByText("Emergency contact · Not on file").filter({ visible: true }).click();
   await card.getByLabel("Contact name").fill("Robin Diver");
   await card.getByLabel("Contact phone").fill("+1 305 555 0166");
   await card.getByRole("button", { name: "Save contact" }).click();
@@ -242,8 +241,12 @@ test("a Guests card shows an emergency contact only when it is missing", async (
   // Nadia Petrov is seeded with no contact (src/db/seed.ts `customerDefs`), so
   // her card states it where a staffer will act on it.
   const missing = page.locator("#roster li").filter({ hasText: "Nadia Petrov" });
-  await expect(missing.getByText("Not on file").filter({ visible: true })).toBeVisible();
-  await expect(missing.getByText("Add emergency contact").filter({ visible: true })).toBeVisible();
+  // One warning line, its fix riding the end (slice 5d): the sentence and
+  // the "Add" word share the clickable summary that opens the form.
+  await expect(
+    missing.getByText("Emergency contact · Not on file").filter({ visible: true }),
+  ).toBeVisible();
+  await expect(missing.getByText("Add", { exact: true }).filter({ visible: true })).toBeVisible();
 
   // Tom Okafor has one on file. It must not be on the face of the card — but
   // it must still be *on* the card, one tap away, not dropped.

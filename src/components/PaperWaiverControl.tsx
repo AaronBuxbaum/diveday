@@ -49,13 +49,14 @@ export function PaperWaiverControl({
   copy: PaperWaiverCopy;
   className?: string;
   /**
-   * Two genuinely different jobs, not two skins. On the roster row and the
-   * check-in card this sits *under* the primary "send the link" action, because
-   * attesting to paper is the fallback there — `link` keeps it quiet. On the
-   * diver record it is one of four peer ways to get a release signed, so
-   * `secondary` lets it stand level with the other three.
+   * Genuinely different jobs, not skins. Under a primary "send the link"
+   * action this is the fallback — `ghost` keeps it in quiet ink (the trip
+   * roster; `link`'s teal read louder than the bordered send pill above it —
+   * design review 2026-08-29). On the diver record it is one of four peer
+   * ways to get a release signed, so `secondary` lets it stand level with
+   * the other three.
    */
-  variant?: "link" | "secondary";
+  variant?: "link" | "secondary" | "ghost";
   /** Open on mount — for a refusal landing back on the form that produced it. */
   defaultOpen?: boolean;
 }) {

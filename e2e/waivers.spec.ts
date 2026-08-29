@@ -111,7 +111,7 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // assertions further down, so the send stays spelled out here.
   const diverSection = page
     .locator("section")
-    .filter({ has: page.getByRole("heading", { name: /^Divers/ }) })
+    .filter({ has: page.getByRole("heading", { name: /^Guests/ }) })
     .filter({ visible: true });
   // The whole waiver is a single button; for an unsent diver it reads "Send
   // waiver". Exact, so it can't pick up a longer label on a neighbouring

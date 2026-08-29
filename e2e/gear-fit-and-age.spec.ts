@@ -201,7 +201,6 @@ test.describe("minimum age (H-08, fail open)", () => {
     // Fail open: a walk-in has no date on file — the same state every diver in
     // a live shop starts from — and books exactly as before.
     await page.goto(`${tripPath}/guests`);
-    await page.getByRole("link", { name: "Add a diver" }).click();
     await page.getByRole("link", { name: "Add diver" }).click();
     await page.waitForURL(/\/divers\/new/);
     await page.getByLabel("Full name").fill(`Ageless Diver ${stamp}`);
@@ -265,7 +264,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     // durable, meaningful fact is that the booking itself was refused: nobody
     // is on this trip's roster (this test never adds the fail-open walk-in),
     // and the refused diver never appears in it.
-    await expect(page.getByRole("heading", { name: /^Divers 0 of/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^Guests 0 of/ })).toBeVisible();
     await expect(page.getByText(`Young Diver ${stamp}`)).toHaveCount(0);
   });
 

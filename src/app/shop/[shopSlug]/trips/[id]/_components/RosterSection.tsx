@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
@@ -12,11 +13,11 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { FilterChips } from "@/components/ui/FilterChips";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
+import { GroupLabel } from "@/components/ui/ledger";
 import type { listBookingNotes } from "@/db/operations";
-import { birthdayText } from "@/i18n/birthday-labels";
+import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
 import {
   CERTIFICATION_LEVEL_KEYS,
@@ -38,13 +39,23 @@ import { formatDateTimeTz } from "@/lib/format";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import { paymentSourceLine } from "@/lib/payment-source";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
-import { rosterRowIsBlocked, rosterRowNeedsWaiver } from "@/lib/roster-filters";
+import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { waiverState } from "@/lib/waivers";
 import {
   type PaymentStatus,
   PaymentStatusControl,
   type PaymentStatusControlCopy,
 } from "./PaymentStatusControl";
+import { RosterAllClear } from "./RosterAllClear";
+import { RosterGroupBand } from "./RosterGroupBand";
+import { SHARED_FACT_MIN, UNGROUPABLE_BLOCKER_CODES } from "./shared-facts";
+import type {
+  NitroxByBooking,
+  ReadinessByBooking,
+  RentalFitByBooking,
+  RosterEntry,
+  WaiverByBooking,
+} from "./types";
 
 /** Everything the enum holds — for a staffer who may write money off. */
 const PAYMENT_STATUSES_ALL: readonly PaymentStatus[] = [
@@ -66,16 +77,6 @@ const PAYMENT_STATUSES_RECORDING_ONLY: readonly PaymentStatus[] = [
   "deposit_paid",
   "paid",
 ];
-
-import { RosterAllClear } from "./RosterAllClear";
-import { SHARED_FACT_MIN, UNGROUPABLE_BLOCKER_CODES } from "./shared-facts";
-import type {
-  NitroxByBooking,
-  ReadinessByBooking,
-  RentalFitByBooking,
-  RosterEntry,
-  WaiverByBooking,
-} from "./types";
 
 type RosterPrivateNote = Awaited<ReturnType<typeof listBookingNotes>>[number] & {
   /** Diver-record notes are visible here but remain editable on their canonical page. */
@@ -100,17 +101,6 @@ type WaiverControlKeys = {
   action: "send" | "resend" | null;
   confirm: boolean;
 };
-
-/**
- * The roster's filter chips (server-rendered `?rf=` query param, task 69):
- * scanning a 12-person boat for who still needs a waiver, or who's flat-out
- * blocked, beats reading every ~200px card end to end.
- */
-export type RosterFilter = "all" | "needs_waiver" | "blocked";
-
-export function isRosterFilter(value: string | undefined): value is RosterFilter {
-  return value === "all" || value === "needs_waiver" || value === "blocked";
-}
 
 const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlKeys> = {
   not_sent: {
@@ -146,6 +136,50 @@ const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlK
   },
 };
 
+/**
+ * The drawn mark a cleared seat wears — the same circle-and-check geometry as
+ * `SettledCheck`, so one hand drew every settled mark in the app. Decorative:
+ * the group band above the row already says "Ready" in words, which is what
+ * lets seven rows stop repeating it (ADR
+ * 20260827-the-departure-is-two-working-surfaces; emoji never — decision 5).
+ */
+function ReadyMark({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`size-5 shrink-0 ${className}`.trim()}
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8.2 12.3 2.6 2.6 5-5.4" />
+    </svg>
+  );
+}
+
+/**
+ * **The guests ledger** — ADR 20260827-the-departure-is-two-working-surfaces,
+ * slice 5d: the roster is one grouped ledger, not a stack of per-diver cards.
+ *
+ * Groups carry the state word and the count once — **Still to clear**, then
+ * **Ready**, with the wait list and recorded invitations folding in beneath as
+ * groups of the same card (`waitingGroup`/`invitedGroup`) instead of three
+ * sibling cards restating the same grammar. A settled seat is a name, at most
+ * an exception capsule, and a drawn mark; a seat with open work keeps that
+ * work in the open, each item beside its one fix. The filter chips are gone —
+ * the groups are the filter — and so is the per-row state word the old rows
+ * repeated down the whole list (principle 9: the group owns what the rows
+ * share).
+ *
+ * What did not move: every control keeps its identity and its home. Payment,
+ * the waiver send, notes, the emergency contact and the remove action are the
+ * same controls in the same order, so the redesign changes what the page
+ * *looks* like, never what a staffer's finger knows.
+ */
 export function RosterSection({
   shopSlug,
   shopTimezone,
@@ -174,14 +208,12 @@ export function RosterSection({
   updatePickupAction,
   // Accepted for interface parity with callers/DepthUnit plumbing elsewhere
   // on this page, but `depthWarningText` already embeds its own unit
-  // formatting — nothing in this component needs it directly. Pre-existing
-  // (unrelated to manifests/roll-call); kept rather than dropped from the
-  // props contract in case another in-flight change depends on it.
+  // formatting — nothing in this component needs it directly.
   depthUnit: _depthUnit,
   tripDate,
-  rosterFilter,
-  canAddDivers,
   keepOpenBookingId,
+  waitingGroup,
+  invitedGroup,
 }: {
   shopSlug: string;
   shopTimezone: string;
@@ -192,29 +224,12 @@ export function RosterSection({
   roster: RosterEntry[];
   /**
    * The booking a staffer just acted on (`?bid=`), if any — a saved contact,
-   * an updated payment. Acting on a card can move what they touched into the
-   * reference panel or settle the card into its collapsed state, and a
-   * control must never leave from under the finger that used it: this row
-   * renders expanded with its panel open on the way back.
+   * an updated payment. Acting on a row can move what they touched into the
+   * reference panel or settle the row into the Ready group, and a control
+   * must never leave from under the finger that used it: this row renders
+   * with its panel open on the way back.
    */
   keepOpenBookingId?: string;
-  /** Server-rendered `?rf=` selection (task 69) — defaults to "all" upstream. */
-  rosterFilter: RosterFilter;
-  /**
-   * Whether the page above still renders its `#add-diver` section (it doesn't
-   * on a cancelled departure). The empty roster's one action anchors there, so
-   * without this the box would offer a door that isn't on the page.
-   *
-   * Asked and answered 2026-08-14: the *non-empty* roster deliberately gets no
-   * matching header link down to `#add-diver`. The 2026-08-11 recomposition put
-   * the roster first (the page's answer, "who is attending") and left the add
-   * form below it, which is slower for a walk-in morning — but `/check-in`
-   * already exists for exactly that moment, and this header row already carries
-   * the filter chips and the bulk waiver-send control. A third control here
-   * would be a duplicate door bought at the cost of principle 8. The empty
-   * state keeps its anchor because there is no list to scroll past.
-   */
-  canAddDivers: boolean;
   readinessByBooking: ReadinessByBooking;
   waiverByBooking: WaiverByBooking;
   rentalFitByBooking: RentalFitByBooking;
@@ -223,7 +238,7 @@ export function RosterSection({
   /**
    * Whether the shop has a Stripe account that can actually take money.
    * `orders/new` refuses without one, so the per-seat "Create order" link
-   * becomes "Connect payments" rather than a click that bounces straight back.
+   * is withheld rather than a click that bounces straight back.
    */
   paymentsConnected: boolean;
   /** When free cancellation closes, so staff see a refund cue on paid seats; null = no stated window. */
@@ -241,7 +256,7 @@ export function RosterSection({
   notesByBooking: Map<string, RosterPrivateNote[]>;
   addNoteAction: (formData: FormData) => void;
   deleteNoteAction: (formData: FormData) => void;
-  /** Staff record or correct a diver's emergency contact from their card (task 144). */
+  /** Staff record or correct a diver's emergency contact from their row (task 144). */
   saveEmergencyContactAction: (formData: FormData) => void;
   /**
    * The one path from "this shop taught and ran this course" to a
@@ -254,6 +269,13 @@ export function RosterSection({
   depthUnit: DepthUnit;
   /** The trip's own shop-local calendar date — when age and birthdays are measured. */
   tripDate: CalendarDate;
+  /**
+   * The wait list, rendered as this ledger's "Waiting for a seat" group —
+   * band plus rows, no card of its own (`WaitlistGroup`).
+   */
+  waitingGroup?: ReactNode;
+  /** Recorded invitations, as the "Invited" group (`TripInvitationGroup`). */
+  invitedGroup?: ReactNode;
 }) {
   const t = staffTranslator(locale);
   const WAIVER_CONTROLS = Object.fromEntries(
@@ -286,44 +308,11 @@ export function RosterSection({
     updating: t("trips.roster.paymentUpdating"),
   };
   const refundEligible = cancellationDeadline !== null && cancellationDeadline > nowDate();
-  // Filter chips read against the *full* roster's own signals, never a separate
-  // query, so the counts and the cards they gate can never disagree. Both
-  // predicates live in `src/lib/roster-filters.ts`, where the two bugs they fix
-  // are written down: "needs waiver" is now the bulk button's own definition (a
-  // medical-review diver has a signed waiver and nothing to send), and
-  // "blocked" is now the blocker queue's rule (an absent readiness row is not a
-  // blocked diver — `!== "ready"` counted `undefined`).
-  const needsWaiver = ({ booking }: RosterEntry) =>
-    rosterRowNeedsWaiver(waiverState(waiverByBooking.get(booking.id)?.waiver ?? null));
-  const isBlocked = ({ booking }: RosterEntry) =>
-    rosterRowIsBlocked(readinessByBooking.get(booking.id)?.readiness);
-  const filterCounts = {
-    all: roster.length,
-    needs_waiver: roster.filter(needsWaiver).length,
-    blocked: roster.filter(isBlocked).length,
-  } as const;
-  const filteredRoster =
-    rosterFilter === "needs_waiver"
-      ? roster.filter(needsWaiver)
-      : rosterFilter === "blocked"
-        ? roster.filter(isBlocked)
-        : roster;
-  const filterChipHref = (filter: RosterFilter) =>
-    `/shop/${shopSlug}/trips/${tripId}/guests${filter === "all" ? "" : `?rf=${filter}`}#roster`;
-  // Which chips have anything behind them — see the note on the FilterChips
-  // render below.
-  const chipFilters = (["all", "needs_waiver", "blocked"] as const).filter(
-    (filter) => filter === "all" || filter === rosterFilter || filterCounts[filter] > 0,
-  );
+
   // A blocker or depth advisory whose sentence renders identically for much
   // of the boat is one fact about the trip, not N facts about N divers
-  // (principle 9): on a requirement-heavy departure the same three sentences
-  // used to photocopy down nine cards. Counted over the *full* roster — the
-  // strip describes the boat, so its numbers hold still while the filter
-  // chips narrow the cards below it. Each affected card keeps a one-line
-  // count in its blocker box (so a card can never read as "fix this one
-  // thing and they're clear" when more is missing) and its full per-diver
-  // list one tap away in the reference panel.
+  // (principle 9): it renders once, under the group band, and each affected
+  // row keeps a one-line count plus its full list in the reference panel.
   const blockerSentenceCounts = new Map<string, number>();
   const advisorySentenceCounts = new Map<string, number>();
   for (const { booking } of roster) {
@@ -358,1104 +347,950 @@ export function RosterSection({
       .filter(([sentence]) => sharedAdvisoryTexts.has(sentence))
       .map(([sentence, count]) => ({ sentence, count, tone: "warning" as const })),
   ];
-  return (
-    <section id="roster" className="mt-10">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold">
-            {t("trips.roster.heading")}{" "}
-            <span className="font-normal text-muted tabular-nums">
-              {t("trips.roster.bookedOfCapacity", { booked, capacity })}
-            </span>
-          </h2>
-          {/* The moment the last blocker clears. Nothing renders until an action
-              on this page moves the count to zero — see RosterAllClear for why
-              that has to be decided in the browser rather than here. Held back
-              on an empty roster: "everyone is cleared" about nobody is not a
-              finished thing. */}
-          {roster.length > 0 ? (
-            <RosterAllClear
-              blockedCount={filterCounts.blocked}
-              label={t("trips.roster.allClear")}
-            />
-          ) : null}
-        </div>
-        {/* No bulk waiver send here. "Tick divers, then Send waivers to
-            selected" asked staff to learn a selection mode — a column of
-            checkboxes, a count, a second send control — to save taps on the
-            one control every row already carries. The per-row
-            `WaiverSendControl` below is the whole feature, and the "Needs
-            waiver" chip beside it is how staff narrow the roster to exactly
-            the rows that want one. */}
-      </div>
-      {roster.length > 0 && chipFilters.length > 1 ? (
-        // The one vocabulary for narrowing a staff list — the pill styling
-        // (including the min-h-11 dock-test floor these chips are tapped
-        // against one-handed on a moving boat) lives in FilterChips. A chip
-        // counting zero people is "None" formatted as a filter (principle 9),
-        // so only the exception filters with someone behind them render — and
-        // when none has anyone, the whole row stands down: a boat with
-        // nothing to narrow by needs no narrowing controls. The active filter
-        // always keeps its chip, so a deep link onto an emptied filter still
-        // shows the way back out.
-        <FilterChips
-          label={t("trips.roster.filterAriaLabel")}
-          className="mt-4"
-          chips={chipFilters.map((filter) => ({
-            key: filter,
-            href: filterChipHref(filter),
-            active: rosterFilter === filter,
-            label:
-              filter === "all"
-                ? t("trips.roster.filterAll", { count: filterCounts.all })
-                : filter === "needs_waiver"
-                  ? t("trips.roster.filterNeedsWaiver", { count: filterCounts.needs_waiver })
-                  : t("trips.roster.filterBlocked", { count: filterCounts.blocked }),
-          }))}
-        />
-      ) : null}
-      {sharedFacts.length > 0 ? (
-        <div className="mt-4 grid gap-2">
-          {sharedFacts.map(({ sentence, count, tone }) => (
-            <p
-              key={sentence}
-              className={`flex gap-2 rounded-lg px-3 py-2 text-sm font-medium ${
-                tone === "danger"
-                  ? // diveday:allow-tinted-ink: a 5% wash, not the status tint — `text-danger` on `danger/5` measures 5.66:1 over `--background` in the app palette (issue #874)
-                    "bg-danger/5 text-danger"
-                  : "bg-warning-tint text-warning-strong"
-              }`}
-            >
-              <span aria-hidden="true">{tone === "danger" ? "!" : "▲"}</span>
-              <span>{t("trips.roster.sharedFactLine", { count, sentence })}</span>
-            </p>
-          ))}
-        </div>
-      ) : null}
-      {roster.length === 0 ? (
-        // The shared empty state, not a bare paragraph: the wait list two
-        // sections up already wore one, so this tab was teaching two visual
-        // languages for "nothing here" on one screen (docs/design/principles.md
-        // #4). The door is the add-a-diver section on this same page — dropped
-        // when the departure is cancelled, where there is nothing to seat.
-        <EmptyState
-          titleAs="h3"
-          title={t("trips.roster.emptyHeading")}
-          body={t("trips.roster.noBookings")}
-          action={
-            canAddDivers ? (
-              <a href="#add-diver" className={buttonClass({ className: "mt-4" })}>
-                {t("trips.roster.emptyAction")}
-              </a>
-            ) : null
-          }
-          className="mt-4"
-        />
-      ) : filteredRoster.length === 0 ? (
-        // A filter that hides everyone is a dead end unless the way back out is
-        // in the box with the bad news.
-        <EmptyState
-          titleAs="h3"
-          title={t("trips.roster.filterEmptyHeading")}
-          body={t("trips.roster.noneMatchFilter")}
-          action={
-            <Link
-              href={filterChipHref("all")}
-              scroll={false}
-              className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
-            >
-              {t("trips.roster.filterEmptyAction", { count: filterCounts.all })}
-            </Link>
-          }
-          className="mt-4"
-        />
-      ) : (
-        // One ledger, not a stack of cards: the roster is a single list card
-        // with hairline-ruled rows — the same object grammar as the manifest's
-        // roll call and the check-in queue, so the four trip tabs read as
-        // views of one thing. A settled seat is one quiet line; only open work
-        // grows a row (principle 11 — the composition follows the content's
-        // own shape, and eight bordered cards of whitespace were the default
-        // stack pretending to be a design).
-        <ul
-          className={sectionCardClass({
-            padding: "none",
-            className: "mt-5 divide-y divide-border overflow-hidden",
-          })}
+
+  /**
+   * Which group a seat files under. The predicate is the old collapsed-row
+   * rule unchanged: a seat is settled when nothing on it still needs a
+   * staffer — readiness clear, waiver signed with no medical hold, identity
+   * confirmed, an emergency contact on file, no buddy request to read, no
+   * advisory particular to this diver, and the money recorded.
+   */
+  const isSettled = ({ booking, person }: RosterEntry): boolean => {
+    const readiness = readinessByBooking.get(booking.id)?.readiness;
+    const paymentStatus = readinessByBooking.get(booking.id)?.paymentStatus;
+    const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
+    const status = waiverState(currentWaiver);
+    const control = WAIVER_CONTROLS[status];
+    const identityUnconfirmed = Boolean(
+      readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"),
+    );
+    // A name with no number reads as "on file" but is unreachable in an
+    // incident — same both-fields rule Today's nudge uses (src/db/today.ts).
+    const hasEmergencyContact = Boolean(
+      person.emergencyContactName && person.emergencyContactPhone,
+    );
+    const depth = readinessByBooking.get(booking.id)?.depthAdvisory;
+    const depthText = depth?.status === "exceeds" ? depthWarningText(t, depth) : null;
+    const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
+    // `partly_refunded` settles the row: a seat that paid in full and had part
+    // handed back owes nothing (CodeRabbit review on PR #949).
+    const paymentSettled =
+      !requiresPayment ||
+      paymentStatus === "paid" ||
+      paymentStatus === "waived" ||
+      paymentStatus === "partly_refunded";
+    return (
+      readiness?.status === "ready" &&
+      control.action === null &&
+      status !== "medical_review" &&
+      !identityUnconfirmed &&
+      hasEmergencyContact &&
+      !booking.groupPreference &&
+      (depthText === null || depthShared) &&
+      // Currency informs, never gates (ADR 20260821-currency-is-what-catches-
+      // people) — but a warning filed under "Ready" is a warning nobody reads
+      // (dive-domain review 2026-08-21).
+      !diveRecencyIsNotable(booking.lastDivedBand) &&
+      paymentSettled
+    );
+  };
+
+  const stillToClear = roster.filter((entry) => !isSettled(entry));
+  const ready = roster.filter((entry) => isSettled(entry));
+  // The queue's own rule, stated once (src/lib/roster-filters.ts): an absent
+  // readiness row is not a blocked diver.
+  //
+  // Deliberately narrower than the "Still to clear" group above it: the
+  // earned moment says "Everyone's cleared to dive", which is readiness and
+  // only readiness — a missing emergency contact or an unpaid balance is
+  // desk work, not dive clearance (principle 3 rations the moment to "the
+  // last blocker of the morning clearing"). Driving it from the group's own
+  // `isSettled` would also let a diver's buddy-group note — which keeps a
+  // row open forever by design — suppress the moment on any boat carrying
+  // one.
+  const blockedCount = roster.filter(({ booking }) =>
+    rosterRowIsBlocked(readinessByBooking.get(booking.id)?.readiness),
+  ).length;
+
+  const renderRow = ({ booking, person }: RosterEntry, settledRow: boolean) => {
+    const readiness = readinessByBooking.get(booking.id)?.readiness;
+    const paymentStatus = readinessByBooking.get(booking.id)?.paymentStatus;
+    const paymentSourceCode = paymentSourceLine(
+      paymentStatus,
+      readinessByBooking.get(booking.id)?.paymentProvider,
+    );
+    const paymentSource =
+      paymentSourceCode === "online"
+        ? t("trips.roster.paymentSourceOnline")
+        : paymentSourceCode === "package"
+          ? t("trips.roster.paymentSourcePackage")
+          : paymentSourceCode === "counter"
+            ? t("trips.roster.paymentSourceCounter")
+            : paymentSourceCode === "waived"
+              ? t("trips.roster.paymentSourceWaived")
+              : null;
+    const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
+    const waiverStatus = waiverState(currentWaiver);
+    const waiverControl = WAIVER_CONTROLS[waiverStatus];
+    const flaggedPrompts =
+      waiverStatus === "medical_review" && currentWaiver?.medicalAnswers
+        ? flaggedMedicalPrompts(currentWaiver.medicalAnswers)
+        : [];
+    const nitrox = nitroxByBooking.get(booking.id);
+    const identityUnconfirmed = Boolean(
+      readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"),
+    );
+    // Age is shown only when the shop actually holds a date of birth — no
+    // date, no line, rather than an "unknown" that reads as a gap to fill on
+    // every diver who has never been asked (H-21).
+    const dateOfBirth = person.dateOfBirth;
+    const age = dateOfBirth ? ageOnDate(dateOfBirth, tripDate) : null;
+    const minor = dateOfBirth ? isMinorOnDate(dateOfBirth, tripDate) : false;
+    const birthday = birthdayCallout(dateOfBirth, tripDate);
+    const hasEmergencyContact = Boolean(
+      person.emergencyContactName && person.emergencyContactPhone,
+    );
+    // A warning, never a gate: the site goes deeper than this diver's
+    // training, which an instructor may well have already planned around
+    // (H-08). It sits apart from the blocker list for that reason.
+    const depth = readinessByBooking.get(booking.id)?.depthAdvisory;
+    const notes = notesByBooking.get(booking.id) ?? [];
+    // This row's blockers, split against the group's shared lines above: the
+    // sentences the group already states for much of the boat shrink to a
+    // one-line count here, the ones particular to this diver keep their full
+    // sentence, and the complete per-diver list waits in the reference panel.
+    const blockerTexts =
+      readiness && readiness.status !== "ready"
+        ? readiness.blockers.map((blocker) => ({
+            blocker,
+            text: readinessBlockerText(t, blocker),
+          }))
+        : [];
+    const uniqueBlockers = blockerTexts.filter(
+      ({ blocker, text }) =>
+        UNGROUPABLE_BLOCKER_CODES.has(blocker.code) || !sharedBlockerTexts.has(text),
+    );
+    const sharedBlockerCount = blockerTexts.length - uniqueBlockers.length;
+    const depthText = depth?.status === "exceeds" ? depthWarningText(t, depth) : null;
+    const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
+    const holdOpen = keepOpenBookingId === booking.id;
+
+    const headerLeft = (
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        {/* A real target, not a 21px text line: this link shares its row with
+            the disclosure mark, so it needs its own clear hit area (WCAG
+            2.5.8's 24px floor; the dock test asks for 44). Foreground ink,
+            not `text-primary` — a column of teal names made the identity
+            column the loudest thing on the ledger (principle 10: hierarchy by
+            type before colour), and the board's own trip-title doors already
+            read this way. Hover restores the link cue. */}
+        <Link
+          href={`/shop/${shopSlug}/divers/${person.id}`}
+          className="inline-flex min-h-11 items-center font-medium text-foreground hover:text-primary hover:underline"
         >
-          {/* Inside the list, so mounting proves the row it scrolls to exists.
-              Every door into this roster is a deep link at one diver — Today's
-              queue, and the manifest's "Resolve blockers" — and a `<Link>`
-              transition does not run the browser's own fragment scroll, so
-              those all landed at the top of a page of ~200px cards with the
-              named diver far below the fold. */}
-          <ScrollToHash />
-          {filteredRoster.map(({ booking, person }) => {
-            const readiness = readinessByBooking.get(booking.id)?.readiness;
-            const paymentStatus = readinessByBooking.get(booking.id)?.paymentStatus;
-            const paymentSourceCode = paymentSourceLine(
-              paymentStatus,
-              readinessByBooking.get(booking.id)?.paymentProvider,
-            );
-            const paymentSource =
-              paymentSourceCode === "online"
-                ? t("trips.roster.paymentSourceOnline")
-                : paymentSourceCode === "package"
-                  ? t("trips.roster.paymentSourcePackage")
-                  : paymentSourceCode === "counter"
-                    ? t("trips.roster.paymentSourceCounter")
-                    : paymentSourceCode === "waived"
-                      ? t("trips.roster.paymentSourceWaived")
-                      : null;
-            const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
-            const waiverStatus = waiverState(currentWaiver);
-            const waiverControl = WAIVER_CONTROLS[waiverStatus];
-            const flaggedPrompts =
-              waiverStatus === "medical_review" && currentWaiver?.medicalAnswers
-                ? flaggedMedicalPrompts(currentWaiver.medicalAnswers)
-                : [];
-            const nitrox = nitroxByBooking.get(booking.id);
-            const identityUnconfirmed = Boolean(
-              readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"),
-            );
-            // Age is shown only when the shop actually holds a date of birth —
-            // no date, no line, rather than an "unknown" that reads as a gap to
-            // fill on every diver who has never been asked (H-21).
-            const dateOfBirth = person.dateOfBirth;
-            const age = dateOfBirth ? ageOnDate(dateOfBirth, tripDate) : null;
-            const minor = dateOfBirth ? isMinorOnDate(dateOfBirth, tripDate) : false;
-            const birthday = birthdayCallout(dateOfBirth, tripDate);
-            // A name with no number reads as "on file" but is unreachable in an
-            // incident — same both-fields rule `missingEmergencyContactByTrip`
-            // (src/db/today.ts) uses for Today's nudge.
-            const hasEmergencyContact = Boolean(
-              person.emergencyContactName && person.emergencyContactPhone,
-            );
-            // A warning, never a gate: the site goes deeper than this diver's
-            // training, which an instructor may well have already planned around
-            // (H-08). It sits apart from the blocker list for that reason.
-            const depth = readinessByBooking.get(booking.id)?.depthAdvisory;
-            const notes = notesByBooking.get(booking.id) ?? [];
-            // This card's blockers, split against the shared strip above: the
-            // sentences the strip already states for much of the boat shrink
-            // to a one-line count here, the ones particular to this diver
-            // keep their full sentence, and the complete per-diver list waits
-            // in the reference panel.
-            const blockerTexts =
-              readiness && readiness.status !== "ready"
-                ? readiness.blockers.map((blocker) => ({
-                    blocker,
-                    text: readinessBlockerText(t, blocker),
-                  }))
-                : [];
-            const uniqueBlockers = blockerTexts.filter(
-              ({ blocker, text }) =>
-                UNGROUPABLE_BLOCKER_CODES.has(blocker.code) || !sharedBlockerTexts.has(text),
-            );
-            const sharedBlockerCount = blockerTexts.length - uniqueBlockers.length;
-            const depthText = depth?.status === "exceeds" ? depthWarningText(t, depth) : null;
-            const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
-            // Nothing left to chase on this seat: it collapses to its header
-            // (principle 9, "collapse the settled row"), with everything else
-            // one tap away behind its Details disclosure. `keepOpenBookingId`
-            // is the exception that keeps faith with the card's own rule that
-            // a control never moves out from under the finger that used it —
-            // the row a staffer just acted on renders expanded once more.
-            // `partly_refunded` settles the row. The question this asks is
-            // "is there anything left to chase", and a seat that paid in full
-            // and had part of it handed back owes nothing — which is why it
-            // belongs with `paid` and `waived` rather than with `deposit_paid`,
-            // where a balance genuinely is still due. Without it a part-refunded
-            // seat held its roster row open forever, on a departure that was
-            // otherwise ready (CodeRabbit review on PR #949).
-            const paymentSettled =
-              !requiresPayment ||
-              paymentStatus === "paid" ||
-              paymentStatus === "waived" ||
-              paymentStatus === "partly_refunded";
-            const settled =
-              readiness?.status === "ready" &&
-              waiverControl.action === null &&
-              waiverStatus !== "medical_review" &&
-              !identityUnconfirmed &&
-              hasEmergencyContact &&
-              !booking.groupPreference &&
-              (depthText === null || depthShared) &&
-              // Currency informs, never gates (ADR 20260821-currency-is-what-
-              // catches-people) — but a warning that collapses with the row is
-              // a warning nobody reads, and the diver it exists for (verified
-              // card, signed waiver, paid, years dry) is exactly the diver who
-              // satisfies every other condition here. The row stays open, like
-              // a missing emergency contact's does (dive-domain review
-              // 2026-08-21).
-              !diveRecencyIsNotable(booking.lastDivedBand) &&
-              paymentSettled;
-            const holdOpen = keepOpenBookingId === booking.id;
-            const headerLeft = (
-              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                {/* A real target, not a 21px text line: this link shares its
-                    row with the details caret, so it needs its own clear hit
-                    area (WCAG 2.5.8's 24px floor; the dock test asks for 44).
-                    The email and an adult's age no longer ride beside it —
-                    identity here is the name, and both facts wait in the
-                    reference panel, which is what lets a settled seat truly
-                    be one line. */}
-                <Link
-                  href={`/shop/${shopSlug}/divers/${person.id}`}
-                  className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+          {person.fullName}
+        </Link>
+        {/* Text, never colour alone — this is read in sunlight on a moving
+            boat (design/principles.md #2). A minor is the exception the crew
+            is being told about, and how old the minor is changes what the
+            crew does about it — the manifest's own "Minor · age N" capsule,
+            the same fact in the same words on both surfaces (H-21). No tone
+            mark: the word is the fact, and this surface draws its marks
+            rather than typing them (slice 5d / decision 5). */}
+        {minor && age !== null ? (
+          <Badge tone="warning" size="sm" tabularNums toneMark={false}>
+            {t("manifest.minorAge", { age })}
+          </Badge>
+        ) : null}
+        {/* The one warm capsule on the ledger — drawn from the same words the
+            manifest uses, subject included, since no cake glyph rides along
+            to say what the timing is about (`birthdayCalloutText`). It also
+            replaces the Celebrations panel that used to restate this fact
+            above the roster (principle 9: say it once, on the person). */}
+        {birthday ? (
+          <Badge tone="primary" size="sm">
+            {birthdayCalloutText(t, birthday)}
+          </Badge>
+        ) : null}
+      </div>
+    );
+    // Arrived at the counter — display only, the same capsule the manifest
+    // shows. It reads existing booking state and gates nothing.
+    const headerBadges = (
+      <>
+        {/* A note nobody knows exists was never written: the settled one-line
+            row still says there are notes to read (dive-domain review,
+            2026-08-21). An unsettled row's open half already shows the notes
+            disclosure itself. */}
+        {settledRow && !holdOpen && notes.length > 0 ? (
+          <span className="text-sm text-muted">
+            {t("trips.roster.privateStaffNotes", { count: notes.length })}
+          </span>
+        ) : null}
+        {booking.status === "checked_in" ? (
+          <Badge tone="neutral">{t("trips.roster.checkedInPill")}</Badge>
+        ) : null}
+        {/* The group band already says what the rows beneath it share, so a
+            capsule here marks only this diver's own exceptional state — the
+            word, never an emoji mark (readiness vocabulary:
+            src/i18n/readiness-labels.ts; "blocked is always danger"). */}
+        {readiness && readiness.status !== "ready" ? (
+          // `lg`: the readiness word is the one fact on this row a staffer
+          // reads to decide, which principle 2's own definition makes
+          // critical text — 16px, not the pill default.
+          <Badge tone={readinessStatusTone(readiness.status)} toneMark={false} size="lg">
+            {readinessStatusText(t, readiness.status)}
+          </Badge>
+        ) : null}
+        {/* The boat-wide advisory's mark on this diver — the group's shared
+            line above carries the sentence once. */}
+        {depthShared ? (
+          <Badge tone="warning" size="sm">
+            {t("trips.roster.depthChip")}
+          </Badge>
+        ) : null}
+      </>
+    );
+    // Staff record or correct a contact from the same form wherever it is
+    // rendered — in the open when the seat has none (that is work), behind
+    // the disclosure when it does (that is reference).
+    const contactForm = (
+      <form
+        action={saveEmergencyContactAction}
+        className="mt-2 flex max-w-md flex-col gap-3 rounded-lg border border-border bg-surface-sunken/50 p-3"
+      >
+        <input type="hidden" name="bookingId" value={booking.id} />
+        <FieldGrid columns={2}>
+          <Field label={t("trips.roster.emergencyContactNameLabel")}>
+            <input
+              name="emergencyContactName"
+              autoComplete="name"
+              maxLength={120}
+              defaultValue={person.emergencyContactName ?? ""}
+              className={controlClass}
+            />
+          </Field>
+          <Field label={t("trips.roster.emergencyContactPhoneLabel")}>
+            <input
+              name="emergencyContactPhone"
+              type="tel"
+              autoComplete="tel"
+              maxLength={40}
+              defaultValue={person.emergencyContactPhone ?? ""}
+              className={controlClass}
+            />
+          </Field>
+        </FieldGrid>
+        <div>
+          <SubmitButton
+            pendingLabel={t("trips.roster.savingContact")}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {t("trips.roster.saveEmergencyContact")}
+          </SubmitButton>
+        </div>
+      </form>
+    );
+    const emergencyContactForm = (
+      <details className="mt-2">
+        <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary hover:underline">
+          {t("trips.roster.emergencyContactEdit")}
+        </summary>
+        {contactForm}
+      </details>
+    );
+    // A contact on file is a fact about the seat, so this renders only in the
+    // reference panel; a *missing* one is work and renders in the open half
+    // as a warning line with the same edit form.
+    const emergencyContactBlock = (
+      <div>
+        <GroupLabel as="p">{t("trips.roster.emergencyContactHeading")}</GroupLabel>
+        <p className="mt-1 text-sm text-muted">
+          {t("trips.roster.emergencyContactOnFile", {
+            name: person.emergencyContactName ?? "",
+            phone: person.emergencyContactPhone ?? "",
+          })}
+        </p>
+        {emergencyContactForm}
+      </div>
+    );
+
+    /**
+     * **Work**: everything this seat still owes, always in the open — one
+     * item per line, each beside its own fix (the ADR's "open work expands
+     * inline"). Membership is decided by the kind of thing, never by its
+     * current value, so a control can never leave from under the finger that
+     * used it: payment, the contact form and the notes stay put in both
+     * states.
+     */
+    const outstanding = (
+      <>
+        {/* What the diver themselves asked for, in the open. It is the one
+            line on this row they wrote, it only renders when they wrote one,
+            and the crew forms buddy teams from it. */}
+        {booking.groupPreference ? (
+          <p className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
+            <span className="font-semibold text-foreground">
+              {t("trips.roster.buddyGroupNote")}
+            </span>{" "}
+            {booking.groupPreference}
+          </p>
+        ) : null}
+
+        {blockerTexts.length > 0 ? (
+          <>
+            {/* diveday:allow-tinted-ink: a 5% wash, not the status tint — `text-danger` on `danger/5` measures 5.66:1 over `--background` in the app palette (issue #874) */}
+            <ul className="mt-3 grid gap-2 rounded-lg bg-danger/5 px-3 py-2 text-sm text-danger">
+              {uniqueBlockers.map(({ text }) => (
+                <li key={text} className="flex gap-2">
+                  <span aria-hidden="true">!</span>
+                  <span>{text}</span>
+                </li>
+              ))}
+              {/* The row must never read as "fix the one thing listed and
+                  they're clear" when the group above holds more of this
+                  diver's blockers — the count keeps the row honest, and the
+                  reference panel has their full list. */}
+              {sharedBlockerCount > 0 ? (
+                <li className="flex gap-2">
+                  <span aria-hidden="true">!</span>
+                  <span>{t("trips.roster.sharedOnCard", { count: sharedBlockerCount })}</span>
+                </li>
+              ) : null}
+            </ul>
+            {/* Every named problem carries its handle. The waiver, payment,
+                and identity blockers already do — their controls are on this
+                row — but a certification-family blocker's fix lives on the
+                diver's record (design review 2026-08-21). */}
+            {blockerTexts.some(
+              ({ blocker }) => BLOCKER_CATEGORY[blocker.code] === "certification",
+            ) ? (
+              <Link
+                href={`/shop/${shopSlug}/divers/${person.id}#cards`}
+                className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
+              >
+                {t("trips.roster.reviewCertificationsLink")}
+              </Link>
+            ) : null}
+          </>
+        ) : null}
+
+        {/* Warning tone, not danger, and deliberately outside the blocker
+            list above: this diver can board. It says the site goes deeper
+            than their training, which the instructor may already be planning
+            around (H-08). An advisory the group already states for much of
+            the boat shrinks to the capsule in this row's header instead. */}
+        {depthText !== null && !depthShared ? (
+          <p className="mt-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
+            <span aria-hidden="true">▲</span>
+            <span>{depthText}</span>
+          </p>
+        ) : null}
+
+        {/* **Currency, which no card can express** (ADR
+            20260821-currency-is-what-catches-people). Warning tone and
+            outside the blocker list for the same reason the depth line above
+            is: this diver boards. It is a refresher conversation and a buddy
+            pairing, not a refusal. */}
+        {diveRecencyIsNotable(booking.lastDivedBand) ? (
+          <p className="mt-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
+            <span aria-hidden="true">▲</span>
+            <span>{diveRecencyText(t, booking.lastDivedBand)}</span>
+          </p>
+        ) : null}
+
+        {/* This seat reused an existing diver's email under a different name
+            (H-13). Staff verify it really is the same person before it can
+            board on that person's certs/waiver — the one action that clears
+            the identity_unconfirmed blocker above. */}
+        {identityUnconfirmed ? (
+          <form action={confirmIdentityAction} className="mt-3">
+            <input type="hidden" name="bookingId" value={booking.id} />
+            {/* Blocking confirm, not an undo banner: this attestation clears
+                the identity_unconfirmed blocker on someone else's evidence
+                (H-13) — worth the staffer re-reading before it lands
+                (docs/design/principles.md §7). */}
+            <InlineConfirm
+              triggerLabel={t("trips.roster.confirmThisIs", { name: person.fullName })}
+              message={t("trips.roster.confirmIdentityMessage", { name: person.fullName })}
+              confirmLabel={t("trips.roster.identityConfirmButton")}
+              cancelLabel={t("trips.roster.neverMind")}
+              pendingLabel={t("trips.roster.confirming")}
+              triggerClassName={buttonClass({ variant: "secondary", size: "sm" })}
+            />
+          </form>
+        ) : null}
+
+        {/* The one path from "this shop taught and ran this course" to a card
+            row (issues #717 and #975) — a per-student tap, collapsed by
+            default. Present only on a course session's own roster. */}
+        {certifyDiverAction ? (
+          <details className="mt-3">
+            <summary
+              className={buttonClass({
+                variant: "secondary",
+                size: "sm",
+                className: "cursor-pointer list-none",
+              })}
+            >
+              {t("trips.roster.certifyDiver")}
+            </summary>
+            <FieldGrid
+              as="form"
+              action={certifyDiverAction}
+              columns={1}
+              className="mt-2 gap-y-3 sm:w-72"
+            >
+              <input type="hidden" name="bookingId" value={booking.id} />
+              <input type="hidden" name="personId" value={person.id} />
+              <Field
+                label={t("trips.roster.certifyLevel")}
+                description={t("trips.roster.certifyLevelHint")}
+              >
+                <select name="award" className={controlClass}>
+                  <optgroup label={t("trips.roster.certifyLevelGroup")}>
+                    {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
+                      <option key={value} value={value}>
+                        {t(key)}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label={t("trips.roster.certifySpecialtyGroup")}>
+                    {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
+                      <option key={value} value={value}>
+                        {t(key)}
+                      </option>
+                    ))}
+                    <option value="nitrox">{t("trips.roster.certifyNitrox")}</option>
+                  </optgroup>
+                </select>
+              </Field>
+              <SubmitButton
+                pendingLabel={t("trips.roster.certifying")}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("trips.roster.certifyConfirm")}
+              </SubmitButton>
+            </FieldGrid>
+          </details>
+        ) : null}
+
+        {/* The waiver, when there is one to send. The control's own face is
+            the status and its label is the next action; a signed waiver has
+            no control at all — its date line is reference, in the panel. */}
+        {waiverControl.action ? (
+          <div className="mt-3">
+            <WaiverSendControl
+              shopSlug={shopSlug}
+              surface="roster"
+              tripId={tripId}
+              bookingIds={[booking.id]}
+              label={waiverControl.label}
+              hint={waiverControl.hint}
+              pendingLabel={
+                waiverControl.action === "send"
+                  ? t("trips.roster.sending")
+                  : t("trips.roster.resending")
+              }
+              confirmMessage={
+                waiverControl.confirm
+                  ? t("trips.roster.confirmResendWaiver", { name: person.fullName })
+                  : undefined
+              }
+              className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors ${waiverControl.tone}`}
+              wrapperClassName=""
+              copy={waiverSendCopy(t)}
+            />
+            {/* A diver who signed on paper or on shore: let a non-diver
+                record it so the waiver gate isn't held up by a signature the
+                app never sees. */}
+            <PaperWaiverControl
+              action={markWaiverInPersonAction}
+              bookingId={booking.id}
+              copy={paperWaiverCopy(t)}
+              // The fallback under the row's leading action reads in quiet
+              // ink — a teal link out-shouted the bordered send pill above it
+              // (design review 2026-08-29).
+              variant="ghost"
+            />
+          </div>
+        ) : null}
+
+        {/* Safety-critical and never disclosed: a flagged medical answer is
+            the one thing on this row that must be read before the diver
+            boards. It carries the **status word** as well as the instruction
+            (caught by waivers.spec.ts). */}
+        {waiverStatus === "medical_review" ? (
+          <div className="mt-3 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
+            <p className="font-semibold">{waiverControl.label}</p>
+            <p className="mt-0.5 font-medium">{t("trips.roster.followUpBeforeBoarding")}</p>
+            {flaggedPrompts.length > 0 ? (
+              <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
+                {flaggedPrompts.map((prompt) => (
+                  <li key={prompt}>{prompt}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-1">{t("trips.roster.medicalFollowUpDescription")}</p>
+            )}
+            {currentWaiver ? (
+              <Link
+                // The whole waiver surface is one page now (ADR
+                // 20260827-people-not-lists): `?record=` pins the row first
+                // inside its own day group, and the fragment is what opens it
+                // and scrolls past the release editor.
+                href={`/shop/${shopSlug}/waivers?record=${currentWaiver.id}#waiver-record-${currentWaiver.id}`}
+                className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline"
+              >
+                {t("trips.roster.viewSignedRecord")}
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
+
+        {/* Whenever this departure takes money — never relocated by what the
+            status happens to be, so the control a staffer just used to mark a
+            seat Paid cannot vanish into a collapsed panel at the instant it
+            lands. */}
+        {requiresPayment ? (
+          <div className="mt-3">
+            <PaymentStatusControl
+              bookingId={booking.id}
+              status={paymentStatus ?? "unpaid"}
+              action={markPaymentAction}
+              allowedStatuses={
+                mayWriteOffPayment ? PAYMENT_STATUSES_ALL : PAYMENT_STATUSES_RECORDING_ONLY
+              }
+              sourceNote={paymentSource}
+              refundNote={
+                refundEligible && cancellationDeadline
+                  ? t("trips.roster.refundEligibleUntil", {
+                      date: formatDateTimeTz(cancellationDeadline, locale, shopTimezone),
+                    })
+                  : null
+              }
+              copy={paymentStatusCopy}
+            />
+          </div>
+        ) : null}
+
+        {/* Task 144 — a *missing* contact is work and stays in the open, as
+            one line in the same warning grammar as its siblings above with
+            its fix riding the line's end: the whole line is the disclosure
+            that opens the form (`keepOpenBookingId` reopens the row a
+            just-saved contact settled). */}
+        {hasEmergencyContact ? null : (
+          <details className="mt-3">
+            <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong [&::-webkit-details-marker]:hidden">
+              <span aria-hidden="true">▲</span>
+              <span>
+                {t("trips.roster.emergencyContactHeading")} ·{" "}
+                {t("trips.roster.emergencyContactMissing")}
+              </span>
+              <span className="ms-auto font-semibold">{t("trips.roster.emergencyContactAdd")}</span>
+            </summary>
+            {contactForm}
+          </details>
+        )}
+
+        {/* One disclosure, at the top level of the row — writing a note about
+            a diver is desk work a staffer starts from here. */}
+        <details className="mt-3">
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-muted transition-colors hover:text-foreground">
+            {/* A zero count is the absence of information formatted as
+                information (principle 9) — with no notes the disclosure is
+                simply the door to writing the first one. */}
+            {notes.length === 0
+              ? t("trips.roster.addFirstNoteSummary")
+              : t("trips.roster.privateStaffNotes", { count: notes.length })}
+          </summary>
+          <div className="mt-2 grid gap-3">
+            {notes.map((entry) => {
+              const { note, authorName } = entry;
+              return (
+                <div
+                  key={note.id}
+                  className="flex items-start justify-between gap-2 rounded-lg bg-surface-sunken px-3 py-2 text-sm"
                 >
-                  {person.fullName}
-                </Link>
-                {/* Text, never colour alone — this is read in sunlight on a
-                    moving boat (design/principles.md #2). A minor is the
-                    exception the crew is being told about, and how old the
-                    minor is changes what the crew does about it — so the
-                    badge is the manifest's own "Minor · age N" pill, the same
-                    fact in the same words on both surfaces (H-21). An adult's
-                    age is a fact, not a flag, and lives in the reference
-                    panel — the same call the manifest already made. */}
-                {minor && age !== null ? (
-                  <Badge tone="warning" size="sm" tabularNums>
-                    {t("manifest.minorAge", { age })}
-                  </Badge>
-                ) : null}
-                {/* The cake carries the meaning; the words are just when.
-                    `sr-only` keeps that legible to a screen reader, which
-                    would otherwise hear "in 2 days" alone. */}
-                {birthday ? (
-                  <Badge tone="primary" size="sm">
-                    <span aria-hidden="true">🎂</span>
-                    <span className="sr-only">{t("shared.birthday.label")}</span>
-                    <span className="ms-1">{birthdayText(t, birthday)}</span>
-                  </Badge>
-                ) : null}
-              </div>
-            );
-            // Arrived at the counter — display only, the same pill the
-            // manifest shows. It reads existing booking state and gates
-            // nothing.
-            const checkedInPill =
-              booking.status === "checked_in" ? (
-                <Badge tone="neutral">{t("trips.roster.checkedInPill")}</Badge>
-              ) : null;
-            const headerBadges = (
-              <>
-                {/* A note nobody knows exists was never written: the settled
-                    one-line row still says there are notes to read
-                    (dive-domain review, 2026-08-21). An unsettled row's open
-                    half already shows the notes disclosure itself. */}
-                {settled && !holdOpen && notes.length > 0 ? (
-                  <span className="text-sm text-muted">
-                    {t("trips.roster.privateStaffNotes", { count: notes.length })}
-                  </span>
-                ) : null}
-                {checkedInPill}
-                {/* One readiness vocabulary, one tone per state
-                        (src/i18n/readiness-labels.ts): this badge said "Needs
-                        attention" about the diver the manifest called "Blocked".
-                        "Ready" wears the same quiet glyph-plus-text the settled
-                        rows use, never the green pill — a card can be expanded
-                        (missing contact, depth advisory) while still ready, and
-                        a success badge one row below eight quiet ✓s read as a
-                        second grammar for the same fact (principle 9). Badges
-                        here mark the exceptional states only. */}
-                {readiness ? (
-                  readiness.status === "ready" ? (
-                    <span className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-muted">
-                      <span aria-hidden="true">🌊</span>
-                      {readinessStatusText(t, "ready")}
-                    </span>
-                  ) : (
-                    <Badge tone={readinessStatusTone(readiness.status)}>
-                      {readinessStatusText(t, readiness.status)}
-                    </Badge>
-                  )
-                ) : null}
-                {/* The boat-wide advisory's mark on this diver — the strip
-                    above the roster carries the sentence once. */}
-                {depthShared ? (
-                  <Badge tone="warning" size="sm">
-                    {t("trips.roster.depthChip")}
-                  </Badge>
-                ) : null}
-              </>
-            );
-            // Staff record or correct a contact from the same form wherever it
-            // is rendered — in the open when the seat has none (that is work),
-            // behind the disclosure when it does (that is reference).
-            const emergencyContactForm = (
-              <details className="mt-2">
+                  <div className="min-w-0">
+                    <p className="break-words whitespace-pre-wrap">{note.body}</p>
+                    <p className="mt-1 text-xs text-muted">
+                      {authorName} · {formatDateTimeTz(note.createdAt, locale, shopTimezone)}
+                    </p>
+                  </div>
+                  {entry.deletable === false ? null : (
+                    <form action={deleteNoteAction} className="shrink-0">
+                      <input type="hidden" name="noteId" value={note.id} />
+                      {/* No confirm dialog: the delete lands and a toast
+                          offers a one-tap undo — a purely reversible edit,
+                          not a real send (principle 7). */}
+                      <SubmitButton
+                        pendingLabel={t("trips.roster.deletingEllipsis")}
+                        className={buttonClass({
+                          variant: "danger-ghost",
+                          size: "sm",
+                          busy: true,
+                        })}
+                      >
+                        {t("trips.roster.delete")}
+                      </SubmitButton>
+                    </form>
+                  )}
+                </div>
+              );
+            })}
+            {/* Keyed on the note count so a landed note empties the box. */}
+            <PrivateNoteForm
+              action={addNoteAction}
+              hiddenFields={{ bookingId: booking.id }}
+              resetKey={notes.length}
+              rows={2}
+              copy={{
+                label: t("trips.roster.addNoteLabel"),
+                add: t("trips.roster.addPrivateNote"),
+                adding: t("trips.roster.adding"),
+              }}
+            />
+          </div>
+        </details>
+      </>
+    );
+
+    /**
+     * **Reference**: what is merely true about this seat, one tap away.
+     */
+    const reference = (
+      <>
+        {/* The seat's own identity facts: the roster is scanned by name and
+            state, and the email — with an adult's age beside it — is
+            reference the moment it is needed, not a second line on every
+            row. */}
+        <p className="mt-3 text-sm text-muted">
+          <span>{person.email ?? t("trips.roster.noEmailOnFile")}</span>
+          {age !== null ? (
+            <span className="tabular-nums">
+              {" · "}
+              {t("trips.roster.ageYears", { age })}
+            </span>
+          ) : null}
+        </p>
+        <div className="mt-3 grid gap-5 sm:grid-cols-2">
+          {/* The signed waiver's own evidence — when, and by which route —
+              and nothing else. Every state that is *not* signed already says
+              so in the open half (principle 9). */}
+          {currentWaiver?.completedAt && waiverStatus === "complete" ? (
+            <div>
+              <GroupLabel as="p">{t("trips.roster.waiverColumnHeading")}</GroupLabel>
+              <p className="mt-1 text-sm text-muted">
+                {currentWaiver.signatureMethod === "in_person_attested"
+                  ? t("trips.roster.signedPaper", {
+                      date: formatDateTimeTz(currentWaiver.completedAt, locale, shopTimezone),
+                    })
+                  : currentWaiver.signatureMethod === "imported"
+                    ? t("trips.roster.signedImported", {
+                        date: formatDateTimeTz(currentWaiver.completedAt, locale, shopTimezone),
+                      })
+                    : t("trips.roster.signedPlain", {
+                        date: formatDateTimeTz(currentWaiver.completedAt, locale, shopTimezone),
+                      })}
+              </p>
+            </div>
+          ) : null}
+
+          <div>
+            <GroupLabel as="p">{t("trips.roster.rentalFitColumnHeading")}</GroupLabel>
+            <p className="mt-1 text-sm text-muted">
+              {rentalFitLineText(
+                t,
+                locale,
+                rentalFitLine(rentalFitByBooking.get(booking.id) ?? null),
+              )}
+            </p>
+            {nitrox ? (
+              <p className="mt-1 text-sm font-medium text-primary">
+                {nitrox.approved
+                  ? t("trips.roster.nitroxApproved")
+                  : t("trips.roster.nitroxUnverified")}
+              </p>
+            ) : null}
+          </div>
+
+          {/* A contact already on file: a fact about the seat, which is what
+              this panel is for. Only this state appears here — a missing one
+              is work and stays in the open above (principle 9). */}
+          {hasEmergencyContact ? emergencyContactBlock : null}
+
+          {/* The full per-diver list, only when the open half compressed part
+              of it into a count. */}
+          {depthShared && depthText !== null ? (
+            <div>
+              <GroupLabel as="p">{t("trips.roster.depthChip")}</GroupLabel>
+              <p className="mt-1 text-sm text-muted">{depthText}</p>
+            </div>
+          ) : null}
+
+          {sharedBlockerCount > 0 ? (
+            <div>
+              <GroupLabel as="p">{t("trips.roster.blockersReferenceHeading")}</GroupLabel>
+              <ul className="mt-1 grid gap-1 text-sm text-muted">
+                {blockerTexts.map(({ text }) => (
+                  <li key={text}>{text}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {/* Hotel pickup / lodging details */}
+          <div>
+            <GroupLabel as="p">{t("trips.roster.hotelPickupHeading")}</GroupLabel>
+            {booking.hotelPickupLocation || booking.pickupTime ? (
+              <p className="mt-1 text-sm text-muted">
+                {booking.hotelPickupLocation ?? t("trips.roster.hotelNotSpecified")}
+                {booking.pickupTime ? ` · ${booking.pickupTime}` : ""}
+              </p>
+            ) : (
+              <p className="mt-1 text-sm text-muted">{t("trips.roster.noPickupScheduled")}</p>
+            )}
+            {updatePickupAction ? (
+              <details className="mt-1">
                 <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary hover:underline">
-                  {hasEmergencyContact
-                    ? t("trips.roster.emergencyContactEdit")
-                    : t("trips.roster.emergencyContactAdd")}
+                  {booking.hotelPickupLocation || booking.pickupTime
+                    ? t("trips.roster.editPickup")
+                    : t("trips.roster.setPickup")}
                 </summary>
                 <form
-                  action={saveEmergencyContactAction}
-                  className="mt-2 flex max-w-md flex-col gap-3 rounded-lg border border-border bg-surface-sunken/50 p-3"
+                  action={updatePickupAction.bind(null, booking.id)}
+                  className="mt-2 flex max-w-md flex-col gap-2 rounded-lg border border-border bg-surface-sunken/50 p-2"
                 >
-                  <input type="hidden" name="bookingId" value={booking.id} />
                   <FieldGrid columns={2}>
-                    <Field label={t("trips.roster.emergencyContactNameLabel")}>
+                    <Field label={t("trips.roster.pickupLocationLabel")}>
                       <input
-                        name="emergencyContactName"
-                        autoComplete="name"
-                        maxLength={120}
-                        defaultValue={person.emergencyContactName ?? ""}
+                        name="hotelPickupLocation"
+                        maxLength={300}
+                        defaultValue={booking.hotelPickupLocation ?? ""}
+                        placeholder={t("trips.roster.pickupLocationPlaceholder")}
                         className={controlClass}
                       />
                     </Field>
-                    <Field label={t("trips.roster.emergencyContactPhoneLabel")}>
+                    <Field label={t("trips.roster.pickupTimeLabel")}>
                       <input
-                        name="emergencyContactPhone"
-                        type="tel"
-                        autoComplete="tel"
-                        maxLength={40}
-                        defaultValue={person.emergencyContactPhone ?? ""}
+                        name="pickupTime"
+                        maxLength={20}
+                        defaultValue={booking.pickupTime ?? ""}
+                        placeholder="07:15"
                         className={controlClass}
                       />
                     </Field>
                   </FieldGrid>
                   <div>
                     <SubmitButton
-                      pendingLabel={t("trips.roster.savingContact")}
+                      pendingLabel={t("trips.roster.saving")}
                       className={buttonClass({ variant: "secondary", size: "sm" })}
                     >
-                      {t("trips.roster.saveEmergencyContact")}
+                      {t("trips.roster.savePickup")}
                     </SubmitButton>
                   </div>
                 </form>
               </details>
-            );
-            // One block, rendered in exactly one of two places and never both:
-            // in the open half when the seat has no contact (that is work
-            // Today sends staff here to do, and it prints on the manifest), in
-            // the reference panel when it has one (that is a fact about the
-            // seat). Written once so the two placements cannot drift apart in
-            // heading, form, or wording.
-            const emergencyContactBlock = (
-              <div>
-                <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                  {t("trips.roster.emergencyContactHeading")}
-                </p>
-                {hasEmergencyContact ? (
-                  <p className="mt-1 text-sm text-muted">
-                    {t("trips.roster.emergencyContactOnFile", {
-                      name: person.emergencyContactName ?? "",
-                      phone: person.emergencyContactPhone ?? "",
-                    })}
-                  </p>
-                ) : (
-                  <p className="mt-1 text-sm text-warning">
-                    {t("trips.roster.emergencyContactMissing")}
-                  </p>
-                )}
-                {emergencyContactForm}
-              </div>
-            );
+            ) : null}
+          </div>
+        </div>
 
-            /**
-             * **Work**: everything this seat still owes, always in the open.
-             *
-             * The split this half is one side of — work in the open, reference
-             * behind one disclosure — replaces a card that made the choice the
-             * other way round. Every fact a booking carries used to render at
-             * full height on every row: two column headings, a rental-fit line
-             * reading "No fit on file", an emergency contact, a payment
-             * selector, an orders link and a remove button, and a notes
-             * disclosure, whether or not any of it was outstanding. A boat of
-             * nine ran past four screens, and the disclosure that could have
-             * shortened it was offered *only* to the rows with nothing in them
-             * — a diver with a blocker, which is to say every row a staffer is
-             * actually working, could not be collapsed at all.
-             *
-             * So the panel holds what this card can only *tell* you, and the
-             * open half holds everything it can also *do*. The membership is
-             * decided by the kind of thing, never by its current value — a
-             * first attempt sorted by state ("is payment still due?", "is a
-             * contact missing?") and produced a card whose controls moved the
-             * instant they were used: mark a seat Paid and the selector you
-             * just used dropped into a collapsed panel; save an emergency
-             * contact and the value you just typed did the same. A control
-             * that leaves from under the finger that operated it is worse than
-             * the line of chrome it saved, so payment, the contact, and the
-             * notes stay put in both states.
-             */
-            const outstanding = (
-              <>
-                {/* What the diver themselves asked for, in the open. It is
-                    the one line on this card they wrote, it only renders when
-                    they wrote one, and the crew forms buddy teams from it —
-                    filing a diver's own request behind a tap is the same
-                    mistake as leaving a desk note off the manifest. */}
-                {booking.groupPreference ? (
-                  <p className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
-                    <span className="font-semibold text-foreground">
-                      {t("trips.roster.buddyGroupNote")}
-                    </span>{" "}
-                    {booking.groupPreference}
-                  </p>
-                ) : null}
-
-                {blockerTexts.length > 0 ? (
-                  <>
-                    {/* diveday:allow-tinted-ink: same 5% wash, 5.66:1 — see the row tone above */}
-                    <ul className="mt-3 grid gap-2 rounded-lg bg-danger/5 px-3 py-2 text-sm text-danger">
-                      {uniqueBlockers.map(({ text }) => (
-                        <li key={text} className="flex gap-2">
-                          <span aria-hidden="true">!</span>
-                          <span>{text}</span>
-                        </li>
-                      ))}
-                      {/* The card must never read as "fix the one thing listed
-                        and they're clear" when the strip above holds more of
-                        this diver's blockers — the count keeps the card
-                        honest, and the reference panel has their full list. */}
-                      {sharedBlockerCount > 0 ? (
-                        <li className="flex gap-2">
-                          <span aria-hidden="true">!</span>
-                          <span>
-                            {t("trips.roster.sharedOnCard", { count: sharedBlockerCount })}
-                          </span>
-                        </li>
-                      ) : null}
-                    </ul>
-                    {/* Every named problem carries its handle. The waiver,
-                        payment, and identity blockers already do — their
-                        controls are on this card — but a certification-family
-                        blocker's fix lives on the diver's record, and the row
-                        used to state it and stop: the one dead end on the
-                        surface whose whole job is clearing people (design
-                        review 2026-08-21). One door however many of this
-                        diver's blockers are certification-shaped, shared ones
-                        included; the boat-wide strip above deliberately gets
-                        none, since a sentence about much of the roster names
-                        no single record to open. */}
-                    {blockerTexts.some(
-                      ({ blocker }) => BLOCKER_CATEGORY[blocker.code] === "certification",
-                    ) ? (
-                      <Link
-                        href={`/shop/${shopSlug}/divers/${person.id}#cards`}
-                        className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
-                      >
-                        {t("trips.roster.reviewCertificationsLink")}
-                      </Link>
-                    ) : null}
-                  </>
-                ) : null}
-
-                {/* Warning tone, not danger, and deliberately outside the
-                    blocker list above: this diver can board. It says the site
-                    goes deeper than their training, which the instructor may
-                    already be planning around (H-08). An advisory the strip
-                    above already states for much of the boat shrinks to the
-                    chip in this card's header instead. */}
-                {depthText !== null && !depthShared ? (
-                  <p className="mt-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
-                    <span aria-hidden="true">▲</span>
-                    <span>{depthText}</span>
-                  </p>
-                ) : null}
-
-                {/* **Currency, which no card can express.** A rung says what
-                    this diver was trained to do; this says when they last did
-                    it, in their own words, and an honest "Advanced Open Water"
-                    with no dive in five years clears every gate in the product
-                    (ADR 20260821-currency-is-what-catches-people).
-
-                    Warning tone and outside the blocker list for the same
-                    reason the depth line above is: this diver boards. It is a
-                    refresher conversation and a buddy pairing, not a refusal.
-
-                    Only the two notable bands render here. A roster line on
-                    every seat saying "last dived this season" is the noise that
-                    stops the other two being read; the full answer is the diver
-                    record's to show. */}
-                {diveRecencyIsNotable(booking.lastDivedBand) ? (
-                  <p className="mt-3 flex gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
-                    <span aria-hidden="true">▲</span>
-                    <span>{diveRecencyText(t, booking.lastDivedBand)}</span>
-                  </p>
-                ) : null}
-
-                {/* This seat reused an existing diver's email under a different
-                    name (H-13). Staff verify it really is the same person before
-                    it can board on that person's certs/waiver — the one action
-                    that clears the identity_unconfirmed blocker above. */}
-                {identityUnconfirmed ? (
-                  <form action={confirmIdentityAction} className="mt-3">
-                    <input type="hidden" name="bookingId" value={booking.id} />
-                    {/* Blocking confirm, not an undo banner: this attestation clears
-                        the identity_unconfirmed blocker on someone else's evidence
-                        (H-13) — worth the staffer re-reading before it lands
-                        (docs/design/principles.md §7). */}
-                    <InlineConfirm
-                      triggerLabel={t("trips.roster.confirmThisIs", { name: person.fullName })}
-                      message={t("trips.roster.confirmIdentityMessage", {
-                        name: person.fullName,
-                      })}
-                      confirmLabel={t("trips.roster.identityConfirmButton")}
-                      cancelLabel={t("trips.roster.neverMind")}
-                      pendingLabel={t("trips.roster.confirming")}
-                      triggerClassName={buttonClass({ variant: "secondary", size: "sm" })}
-                    />
-                  </form>
-                ) : null}
-
-                {/* The one path from "this shop taught and ran this course"
-                    to a card row (issues #717 and #975) — a per-student tap,
-                    collapsed by default like the diver record's own card
-                    sighting form. Present only on a course session's own
-                    roster (certifyDiverAction is only ever passed there);
-                    what the class awards is picked here rather than inferred,
-                    because no column anywhere records what a course grants on
-                    completion, only what it demands to enrol.
-
-                    One control for all three kinds, and the hint says the one
-                    thing that differs: a level card is live on this tap, while
-                    a specialty or nitrox card waits for the card itself. A
-                    staffer who believed a nitrox card was live when it is
-                    pending is the failure that whole design prevents, so the
-                    sentence is not decoration. */}
-                {certifyDiverAction ? (
-                  <details className="mt-3">
-                    <summary
-                      className={buttonClass({
-                        variant: "secondary",
-                        size: "sm",
-                        className: "cursor-pointer list-none",
-                      })}
-                    >
-                      {t("trips.roster.certifyDiver")}
-                    </summary>
-                    <FieldGrid
-                      as="form"
-                      action={certifyDiverAction}
-                      columns={1}
-                      className="mt-2 gap-y-3 sm:w-72"
-                    >
-                      <input type="hidden" name="bookingId" value={booking.id} />
-                      <input type="hidden" name="personId" value={person.id} />
-                      <Field
-                        label={t("trips.roster.certifyLevel")}
-                        description={t("trips.roster.certifyLevelHint")}
-                      >
-                        <select name="award" className={controlClass}>
-                          <optgroup label={t("trips.roster.certifyLevelGroup")}>
-                            {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
-                              <option key={value} value={value}>
-                                {t(key)}
-                              </option>
-                            ))}
-                          </optgroup>
-                          <optgroup label={t("trips.roster.certifySpecialtyGroup")}>
-                            {Object.entries(SPECIALTY_KEYS).map(([value, key]) => (
-                              <option key={value} value={value}>
-                                {t(key)}
-                              </option>
-                            ))}
-                            <option value="nitrox">{t("trips.roster.certifyNitrox")}</option>
-                          </optgroup>
-                        </select>
-                      </Field>
-                      <SubmitButton
-                        pendingLabel={t("trips.roster.certifying")}
-                        className={buttonClass({ variant: "primary", size: "sm" })}
-                      >
-                        {t("trips.roster.certifyConfirm")}
-                      </SubmitButton>
-                    </FieldGrid>
-                  </details>
-                ) : null}
-
-                {/* The waiver, when there is one to send. No "Waiver" column
-                    heading over it any more: the control's own face is the
-                    status and its label is the next action, so the heading was
-                    a word above a word (design principle 9). A signed waiver
-                    has no control at all — its date line is reference, and
-                    lives in the panel below. */}
-                {waiverControl.action ? (
-                  <div className="mt-3">
-                    <WaiverSendControl
-                      shopSlug={shopSlug}
-                      surface="roster"
-                      tripId={tripId}
-                      bookingIds={[booking.id]}
-                      label={waiverControl.label}
-                      hint={waiverControl.hint}
-                      pendingLabel={
-                        waiverControl.action === "send"
-                          ? t("trips.roster.sending")
-                          : t("trips.roster.resending")
-                      }
-                      confirmMessage={
-                        waiverControl.confirm
-                          ? t("trips.roster.confirmResendWaiver", { name: person.fullName })
-                          : undefined
-                      }
-                      className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors ${waiverControl.tone}`}
-                      wrapperClassName=""
-                      copy={waiverSendCopy(t)}
-                    />
-                    {/* A diver who signed on paper or on shore: let a non-diver
-                        record it so the waiver gate isn't held up by a signature
-                        the app never sees. */}
-                    <PaperWaiverControl
-                      action={markWaiverInPersonAction}
-                      bookingId={booking.id}
-                      copy={paperWaiverCopy(t)}
-                    />
-                  </div>
-                ) : null}
-
-                {/* Safety-critical and never disclosed: a flagged medical answer
-                    is the one thing on this card that must be read before the
-                    diver boards.
-                    It carries the **status word** as well as the instruction.
-                    A medical hold renders no waiver control — there is nothing
-                    to send — so without this the only place the card said
-                    "Medical review" was the reference panel, one tap away:
-                    the roster would show a warning box telling staff to follow
-                    something up without naming the state the diver is in
-                    (caught by waivers.spec.ts). */}
-                {waiverStatus === "medical_review" ? (
-                  <div className="mt-3 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
-                    <p className="font-semibold">{waiverControl.label}</p>
-                    <p className="mt-0.5 font-medium">{t("trips.roster.followUpBeforeBoarding")}</p>
-                    {flaggedPrompts.length > 0 ? (
-                      <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
-                        {flaggedPrompts.map((prompt) => (
-                          <li key={prompt}>{prompt}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="mt-1">{t("trips.roster.medicalFollowUpDescription")}</p>
-                    )}
-                    {currentWaiver ? (
-                      <Link
-                        // The whole waiver surface is one page now (ADR
-                        // 20260827-people-not-lists): `?record=` pins the row
-                        // first inside its own day group, and the fragment is
-                        // what opens it and scrolls past the release editor.
-                        href={`/shop/${shopSlug}/waivers?record=${currentWaiver.id}#waiver-record-${currentWaiver.id}`}
-                        className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline"
-                      >
-                        {t("trips.roster.viewSignedRecord")}
-                      </Link>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {/* Whenever this departure takes money — never relocated by
-                    what the status happens to be. It briefly lived in the work
-                    area while payment was a readiness blocker and behind the
-                    disclosure once it was not, which meant the control a
-                    staffer had just used to mark a seat Paid vanished into a
-                    collapsed panel at the instant it landed. A control that
-                    moves out from under the finger that used it is worse than
-                    a line of chrome, and "Payment: Paid · Paid on Stripe" is
-                    one quiet line, not the bulk this card was carrying. */}
-                {requiresPayment ? (
-                  <div className="mt-3">
-                    <PaymentStatusControl
-                      bookingId={booking.id}
-                      status={paymentStatus ?? "unpaid"}
-                      action={markPaymentAction}
-                      allowedStatuses={
-                        mayWriteOffPayment ? PAYMENT_STATUSES_ALL : PAYMENT_STATUSES_RECORDING_ONLY
-                      }
-                      sourceNote={paymentSource}
-                      refundNote={
-                        refundEligible && cancellationDeadline
-                          ? t("trips.roster.refundEligibleUntil", {
-                              date: formatDateTimeTz(cancellationDeadline, locale, shopTimezone),
-                            })
-                          : null
-                      }
-                      copy={paymentStatusCopy}
-                    />
-                  </div>
-                ) : null}
-
-                {/* Task 144 — Today used to send staff here with "ask at the
-                    counter" and no field to type it into, so a *missing*
-                    contact is work and stays in the open.
-
-                    A contact on file is reference, and lives in the panel
-                    below. It sat here in both states for one release, which
-                    cost every settled card the heading, the value and an edit
-                    link it had no reason to show — a roster of nine grew by
-                    about a thousand pixels, which is the opposite of what
-                    collapsing the cards was for. The reason given for keeping
-                    it open was that a contact just saved must not vanish from
-                    under the staffer who typed it; that is real, and it is
-                    handled where it belongs — `keepOpenBookingId` opens
-                    that row's panel on the way back. */}
-                {hasEmergencyContact ? null : <div className="mt-3">{emergencyContactBlock}</div>}
-
-                {/* One disclosure, at the top level of the card rather than
-                    nested inside "Details" — writing a note about a diver is
-                    desk work a staffer starts from here, and behind two taps it
-                    stopped being that. */}
-                <details className="mt-3 border-t border-border pt-3">
-                  <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
-                    {/* A zero count is the absence of information formatted as
-                        information (principle 9) — with no notes the disclosure
-                        is simply the door to writing the first one. */}
-                    {notes.length === 0
-                      ? t("trips.roster.addFirstNoteSummary")
-                      : t("trips.roster.privateStaffNotes", { count: notes.length })}
-                  </summary>
-                  <div className="mt-2 grid gap-3">
-                    {notes.map((entry) => {
-                      const { note, authorName } = entry;
-                      return (
-                        <div
-                          key={note.id}
-                          className="flex items-start justify-between gap-2 rounded-lg bg-surface-sunken px-3 py-2 text-sm"
-                        >
-                          <div className="min-w-0">
-                            <p className="break-words whitespace-pre-wrap">{note.body}</p>
-                            <p className="mt-1 text-xs text-muted">
-                              {authorName} ·{" "}
-                              {formatDateTimeTz(note.createdAt, locale, shopTimezone)}
-                            </p>
-                          </div>
-                          {entry.deletable === false ? null : (
-                            <form action={deleteNoteAction} className="shrink-0">
-                              <input type="hidden" name="noteId" value={note.id} />
-                              {/* No confirm dialog: the delete lands and a toast offers
-                                a one-tap undo (recreates the note) — a purely
-                                reversible edit, not a real send (principle 7). */}
-                              <SubmitButton
-                                pendingLabel={t("trips.roster.deletingEllipsis")}
-                                className={buttonClass({
-                                  variant: "danger-ghost",
-                                  size: "sm",
-                                  busy: true,
-                                })}
-                              >
-                                {t("trips.roster.delete")}
-                              </SubmitButton>
-                            </form>
-                          )}
-                        </div>
-                      );
-                    })}
-                    {/* Keyed on the note count so a landed note empties the box.
-                        Adding one no longer navigates (see `addInternalNoteAction`),
-                        and an uncontrolled textarea React never remounts would
-                        otherwise still hold the text of the note now listed
-                        above it — inviting the same note twice. */}
-                    <PrivateNoteForm
-                      action={addNoteAction}
-                      hiddenFields={{ bookingId: booking.id }}
-                      resetKey={notes.length}
-                      rows={2}
-                      copy={{
-                        label: t("trips.roster.addNoteLabel"),
-                        add: t("trips.roster.addPrivateNote"),
-                        adding: t("trips.roster.adding"),
-                      }}
-                    />
-                  </div>
-                </details>
-              </>
-            );
-
-            /**
-             * **Reference**: what is merely true about this seat, one tap away.
-             */
-            const reference = (
-              <>
-                {/* The seat's own identity facts, moved down from the header:
-                    the roster is scanned by name and state, and the email —
-                    with an adult's age beside it — is reference the moment
-                    it is needed, not a second line on every row. */}
-                <p className="mt-3 text-sm text-muted">
-                  <span>{person.email ?? t("trips.roster.noEmailOnFile")}</span>
-                  {age !== null ? (
-                    <span className="tabular-nums">
-                      {" · "}
-                      {t("trips.roster.ageYears", { age })}
-                    </span>
-                  ) : null}
-                </p>
-                <div className="mt-3 grid gap-5 sm:grid-cols-2">
-                  {/* The signed waiver's own evidence — when, and by which
-                      route — and nothing else. Every state that is *not*
-                      signed already says so in the open half, as a control to
-                      press or a medical hold to read, so a second copy of the
-                      same word down here was the card saying one thing twice
-                      (principle 9) and, worse, the only visible copy for a
-                      status that renders no control. */}
-                  {currentWaiver?.completedAt && waiverStatus === "complete" ? (
-                    <div>
-                      <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                        {t("trips.roster.waiverColumnHeading")}
-                      </p>
-                      <p className="mt-1 text-sm text-muted">
-                        {currentWaiver.signatureMethod === "in_person_attested"
-                          ? t("trips.roster.signedPaper", {
-                              date: formatDateTimeTz(
-                                currentWaiver.completedAt,
-                                locale,
-                                shopTimezone,
-                              ),
-                            })
-                          : currentWaiver.signatureMethod === "imported"
-                            ? t("trips.roster.signedImported", {
-                                date: formatDateTimeTz(
-                                  currentWaiver.completedAt,
-                                  locale,
-                                  shopTimezone,
-                                ),
-                              })
-                            : t("trips.roster.signedPlain", {
-                                date: formatDateTimeTz(
-                                  currentWaiver.completedAt,
-                                  locale,
-                                  shopTimezone,
-                                ),
-                              })}
-                      </p>
-                    </div>
-                  ) : null}
-
-                  <div>
-                    <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                      {t("trips.roster.rentalFitColumnHeading")}
-                    </p>
-                    <p className="mt-1 text-sm text-muted">
-                      {rentalFitLineText(
-                        t,
-                        locale,
-                        rentalFitLine(rentalFitByBooking.get(booking.id) ?? null),
-                      )}
-                    </p>
-                    {nitrox ? (
-                      <p className="mt-1 text-sm font-medium text-primary">
-                        {nitrox.approved
-                          ? t("trips.roster.nitroxApproved")
-                          : t("trips.roster.nitroxUnverified")}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  {/* A contact already on file: a fact about the seat, which is
-                      what this panel is for. Only this state appears here — a
-                      missing one is work and stays in the open above, so the
-                      card never states the same thing twice (principle 9). */}
-                  {hasEmergencyContact ? emergencyContactBlock : null}
-
-                  {/* The full per-diver list, only when the open half compressed
-                      part of it into a count — the one place this diver's whole
-                      answer is spelled out in their own card. */}
-                  {depthShared && depthText !== null ? (
-                    <div>
-                      <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                        {t("trips.roster.depthChip")}
-                      </p>
-                      <p className="mt-1 text-sm text-muted">{depthText}</p>
-                    </div>
-                  ) : null}
-
-                  {sharedBlockerCount > 0 ? (
-                    <div>
-                      <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                        {t("trips.roster.blockersReferenceHeading")}
-                      </p>
-                      <ul className="mt-1 grid gap-1 text-sm text-muted">
-                        {blockerTexts.map(({ text }) => (
-                          <li key={text}>{text}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
-
-                  {/* Hotel Pickup / Lodging details */}
-                  <div>
-                    <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                      {t("trips.roster.hotelPickupHeading")}
-                    </p>
-                    {booking.hotelPickupLocation || booking.pickupTime ? (
-                      <p className="mt-1 text-sm text-muted">
-                        {booking.hotelPickupLocation ?? t("trips.roster.hotelNotSpecified")}
-                        {booking.pickupTime ? ` · ${booking.pickupTime}` : ""}
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-sm text-muted">
-                        {t("trips.roster.noPickupScheduled")}
-                      </p>
-                    )}
-                    {updatePickupAction ? (
-                      <details className="mt-1">
-                        <summary className="cursor-pointer text-xs font-medium text-primary hover:underline">
-                          {booking.hotelPickupLocation || booking.pickupTime
-                            ? t("trips.roster.editPickup")
-                            : t("trips.roster.setPickup")}
-                        </summary>
-                        <form
-                          action={updatePickupAction.bind(null, booking.id)}
-                          className="mt-2 flex max-w-md flex-col gap-2 rounded-lg border border-border bg-surface-sunken/50 p-2"
-                        >
-                          <FieldGrid columns={2}>
-                            <Field label={t("trips.roster.pickupLocationLabel")}>
-                              <input
-                                name="hotelPickupLocation"
-                                maxLength={300}
-                                defaultValue={booking.hotelPickupLocation ?? ""}
-                                placeholder={t("trips.roster.pickupLocationPlaceholder")}
-                                className={controlClass}
-                              />
-                            </Field>
-                            <Field label={t("trips.roster.pickupTimeLabel")}>
-                              <input
-                                name="pickupTime"
-                                maxLength={20}
-                                defaultValue={booking.pickupTime ?? ""}
-                                placeholder="07:15"
-                                className={controlClass}
-                              />
-                            </Field>
-                          </FieldGrid>
-                          <div>
-                            <SubmitButton
-                              pendingLabel={t("trips.roster.saving")}
-                              className={buttonClass({ variant: "secondary", size: "sm" })}
-                            >
-                              {t("trips.roster.savePickup")}
-                            </SubmitButton>
-                          </div>
-                        </form>
-                      </details>
-                    ) : null}
-                  </div>
-                </div>
-
-                {/* `-mx-3` on the row, and both controls at the same `sm`
-                    padding. "Remove booking" used to carry a hand-written
-                    `px-3` while "Create order" beside it carried none, so the
-                    one destructive control on the card was also the only one
-                    whose label started a third of a centimetre further in —
-                    reading as a nested or misaligned item rather than a peer.
-                    The negative margin gives the padded pair back the text
-                    column every other line in this panel sits on. */}
-                <div className="mt-4 border-t border-border pt-4">
-                  <div className="-mx-3 flex flex-wrap items-center gap-x-1 gap-y-2">
-                    {/* One orders door per card, and only when the shop can take
-                        money at all: "Connect payments" is a shop-level fact that
-                        used to repeat on every diver (principle 9 — Settings and
-                        the Orders index own that door), and "View orders" sat
-                        beside "Create order" doing half the same job (principle
-                        8 — the orders index reachable from the diver record
-                        already lists them). */}
-                    {paymentsConnected ? (
-                      <Link
-                        href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
-                        className={buttonClass({ variant: "link", size: "sm" })}
-                      >
-                        {t("trips.roster.createOrder")}
-                      </Link>
-                    ) : null}
-                    {/* A cancel inside the shop's refund window fires an automatic
-                        Stripe refund that the Undo banner can't claw back — a real
-                        send of money, not a purely reversible edit — so this gets a
-                        blocking confirm too (docs/design/principles.md §7).
-                        Last in the row, not flung to its far right: it is already
-                        the least prominent thing here and it already confirms
-                        before it fires. */}
-                    <form action={removeBookingAction}>
-                      <input type="hidden" name="bookingId" value={booking.id} />
-                      <InlineConfirm
-                        triggerLabel={t("trips.roster.removeBooking")}
-                        message={t("trips.roster.confirmRemoveBooking", {
-                          name: person.fullName,
-                        })}
-                        confirmLabel={t("trips.roster.removeBookingConfirmButton")}
-                        cancelLabel={t("trips.roster.neverMind")}
-                        pendingLabel={t("trips.roster.removing")}
-                        triggerClassName={buttonClass({ variant: "ghost", size: "sm" })}
-                        confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
-                      />
-                    </form>
-                  </div>
-                </div>
-              </>
-            );
-            // The row's one disclosure control: a 44px caret pinned to the
-            // header line's right edge, in the same spot on every row. Ten
-            // rows used to each grow a right-aligned "Details" text line of
-            // their own — a control rendered as content, once per diver
-            // (principle 9). The summary holds only the glyph, so the
-            // diver-name link beside it is never an interactive element
-            // nested in another (axe nested-interactive); the accessible name
-            // says whose details these are.
-            const caretSummary = (
-              <summary
-                aria-label={t("trips.roster.detailsSummaryLabel", {
-                  name: person.fullName,
-                })}
-                className="absolute top-2.5 right-2 flex size-11 cursor-pointer list-none items-center justify-center rounded-lg text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground sm:right-3"
+        {/* `-mx-3` on the row, and both controls at the same `sm` padding, so
+            the padded pair sits on the text column every other line in this
+            panel sits on. */}
+        <div className="mt-4 border-t border-border pt-4">
+          <div className="-mx-3 flex flex-wrap items-center gap-x-1 gap-y-2">
+            {/* One orders door per row, and only when the shop can take money
+                at all (principle 9 — Settings and the Orders index own the
+                "Connect payments" door). */}
+            {paymentsConnected ? (
+              <Link
+                href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
+                className={buttonClass({ variant: "link", size: "sm" })}
               >
-                <DisclosureCaret
-                  direction="down"
-                  className="size-4 transition-transform group-open:rotate-180"
-                />
-              </summary>
-            );
-            return (
-              <li
-                key={booking.id}
-                // Today's queue deep-links straight to the diver it is about;
-                // scroll-mt keeps the row clear of the sticky shop header.
-                // `relative` anchors the caret summary to this row's header
-                // line. The list card owns the border now — a row is a ruled
-                // line in the ledger, not a floating card of its own.
-                id={`booking-${booking.id}`}
-                className="relative scroll-mt-24 px-4 py-2.5 sm:px-5"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pr-11">
-                  {headerLeft}
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    {headerBadges}
-                  </div>
-                </div>
-                {/* A settled seat collapses to its header line (principle 9):
-                    the "🌊 Ready" mark is the whole story, and everything the
-                    row can still tell or do — payment corrections, notes, the
-                    reference facts — waits behind the caret. A row with
-                    anything outstanding keeps its work in the open, exactly
-                    as before. Deep links (Today, the manifest's "Resolve
-                    blockers") land mid-page at one diver; AutoOpenDetails
-                    opens on the hash, so neither collapse can ever swallow
-                    what a link promised. */}
-                {settled && !holdOpen ? (
-                  <AutoOpenDetails openOnHash={`booking-${booking.id}`} className="group">
-                    {caretSummary}
-                    <div className="pb-1.5">
-                      {outstanding}
-                      {reference}
-                    </div>
-                  </AutoOpenDetails>
-                ) : (
-                  <>
-                    {outstanding}
-                    <AutoOpenDetails
-                      openOnHash={`booking-${booking.id}`}
-                      open={holdOpen}
-                      className="group"
-                    >
-                      {caretSummary}
-                      <div className="pb-1.5">{reference}</div>
-                    </AutoOpenDetails>
-                  </>
-                )}
-              </li>
-            );
+                {t("trips.roster.createOrder")}
+              </Link>
+            ) : null}
+            {/* A cancel inside the shop's refund window fires an automatic
+                Stripe refund that the Undo banner can't claw back — a real
+                send of money — so this gets a blocking confirm
+                (docs/design/principles.md §7). */}
+            <form action={removeBookingAction}>
+              <input type="hidden" name="bookingId" value={booking.id} />
+              <InlineConfirm
+                triggerLabel={t("trips.roster.removeBooking")}
+                message={t("trips.roster.confirmRemoveBooking", { name: person.fullName })}
+                confirmLabel={t("trips.roster.removeBookingConfirmButton")}
+                cancelLabel={t("trips.roster.neverMind")}
+                pendingLabel={t("trips.roster.removing")}
+                triggerClassName={buttonClass({ variant: "ghost", size: "sm" })}
+                confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
+              />
+            </form>
+          </div>
+        </div>
+      </>
+    );
+    // The row's one disclosure control, pinned to the header line's trailing
+    // edge in the same spot on every row. On a cleared seat its face *is* the
+    // row's mark — the drawn check — so the mark and the door to the seat's
+    // reference are one object rather than two trailing glyphs; a row with
+    // open work wears the caret. The summary holds only the mark, so the
+    // diver-name link beside it is never an interactive element nested in
+    // another (axe nested-interactive); the accessible name says whose
+    // details these are.
+    const markSummary = (
+      <summary
+        aria-label={t("trips.roster.detailsSummaryLabel", { name: person.fullName })}
+        className={`absolute top-2.5 end-2 flex size-11 cursor-pointer list-none items-center justify-center rounded-lg transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:end-3 ${
+          settledRow ? "text-success" : "text-muted hover:text-foreground"
+        }`}
+      >
+        {settledRow ? (
+          <ReadyMark />
+        ) : (
+          <DisclosureCaret
+            direction="down"
+            className="size-4 transition-transform group-open:rotate-180"
+          />
+        )}
+      </summary>
+    );
+    return (
+      <li
+        key={booking.id}
+        // Today's queue deep-links straight to the diver it is about;
+        // scroll-mt keeps the row clear of the sticky shop header.
+        id={`booking-${booking.id}`}
+        className="relative scroll-mt-24 px-4 py-2.5 sm:px-5"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pe-11">
+          {headerLeft}
+          <div className="ms-auto flex flex-wrap items-center justify-end gap-2">
+            {headerBadges}
+          </div>
+        </div>
+        {/* A cleared seat is one line in the Ready group (principle 9): the
+            group band says the state, the drawn mark confirms it, and
+            everything the row can still tell or do — payment corrections,
+            notes, the reference facts — waits behind the mark. A row with
+            open work keeps that work in the open. Deep links (Today, the
+            manifest's "Resolve blockers") land mid-page at one diver;
+            AutoOpenDetails opens on the hash, so the collapse can never
+            swallow what a link promised. */}
+        {settledRow && !holdOpen ? (
+          <AutoOpenDetails openOnHash={`booking-${booking.id}`} className="group">
+            {markSummary}
+            <div className="pb-1.5">
+              {outstanding}
+              {reference}
+            </div>
+          </AutoOpenDetails>
+        ) : (
+          <>
+            {outstanding}
+            <AutoOpenDetails openOnHash={`booking-${booking.id}`} open={holdOpen} className="group">
+              {markSummary}
+              <div className="pb-1.5">{reference}</div>
+            </AutoOpenDetails>
+          </>
+        )}
+      </li>
+    );
+  };
+
+  const hasTail = waitingGroup != null || invitedGroup != null;
+  return (
+    <section id="roster" className="mt-10 scroll-mt-24">
+      <div>
+        <h2 className="text-lg font-semibold">
+          {t("trips.roster.heading")}{" "}
+          <span className="font-normal text-muted tabular-nums">
+            {t("trips.roster.bookedOfCapacity", { booked, capacity })}
+          </span>
+        </h2>
+        {/* The moment the last blocker clears. Nothing renders until an
+            action on this page moves the count to zero — see RosterAllClear
+            for why that has to be decided in the browser rather than here.
+            Held back on an empty roster: "everyone is cleared" about nobody
+            is not a finished thing. */}
+        {roster.length > 0 ? (
+          <RosterAllClear blockedCount={blockedCount} label={t("trips.roster.allClear")} />
+        ) : null}
+      </div>
+      {roster.length === 0 ? (
+        // The shared empty state, not a bare paragraph (docs/design/
+        // principles.md #4). No action of its own: the add-a-diver form is
+        // the next thing on a page this short, and a primary-weight anchor
+        // to a control already on screen was a second path to a visible
+        // button plus a second primary (principles 4 and 8; design review
+        // 2026-08-29).
+        <EmptyState
+          titleAs="h3"
+          title={t("trips.roster.emptyHeading")}
+          body={t("trips.roster.noBookings")}
+          className="mt-4"
+        />
+      ) : null}
+      {roster.length > 0 || hasTail ? (
+        // One ledger, not a stack of cards: everyone this departure is about,
+        // in one card of hairline-ruled rows under group bands that own the
+        // state words — the same object grammar as the manifest's roll call
+        // and the check-in queue, so the trip tabs read as views of one
+        // thing.
+        <div
+          className={sectionCardClass({
+            padding: "none",
+            className: "mt-5 overflow-hidden",
           })}
-        </ul>
-      )}
+        >
+          {/* Inside the card, so mounting proves the rows a deep link scrolls
+              to exist: a `<Link>` transition does not run the browser's own
+              fragment scroll. */}
+          <ScrollToHash />
+          {stillToClear.length > 0 ? (
+            <>
+              <RosterGroupBand
+                label={`${t("trips.roster.groupStillToClear")} · ${stillToClear.length}`}
+              />
+              {/* The facts much of the boat shares, said once for the group
+                  instead of photocopied down its rows (principle 9). */}
+              {sharedFacts.length > 0 ? (
+                <div className="grid gap-1 px-4 py-2 sm:px-5">
+                  {sharedFacts.map(({ sentence, count, tone }) => (
+                    <p
+                      key={sentence}
+                      className={`flex gap-2 text-sm font-medium ${
+                        tone === "danger"
+                          ? // diveday:allow-tinted-ink: ink on the card surface, no wash — `text-danger` measures 6.47:1 on `--surface`
+                            "text-danger"
+                          : "text-warning-strong"
+                      }`}
+                    >
+                      <span aria-hidden="true">{tone === "danger" ? "!" : "▲"}</span>
+                      <span>{t("trips.roster.sharedFactLine", { count, sentence })}</span>
+                    </p>
+                  ))}
+                </div>
+              ) : null}
+              <ul className="divide-y divide-border">
+                {stillToClear.map((entry) => renderRow(entry, false))}
+              </ul>
+            </>
+          ) : null}
+          {ready.length > 0 ? (
+            <>
+              <RosterGroupBand label={`${t("trips.roster.groupReady")} · ${ready.length}`} />
+              <ul className="divide-y divide-border">
+                {ready.map((entry) => renderRow(entry, true))}
+              </ul>
+            </>
+          ) : null}
+          {waitingGroup}
+          {invitedGroup}
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { seededShopContext } from "@/test/db";
@@ -7,7 +7,15 @@ import { mergeDiverRecords } from "./diver-merge";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
 import { saveShopIntegration } from "./integrations";
 import { recordRollCall } from "./manifests";
-import { bookings, integrationEvents, orders, people, personRoles, rollCallEvents } from "./schema";
+import {
+  bookings,
+  integrationEvents,
+  orders,
+  people,
+  personRoles,
+  rollCallEvents,
+  trips,
+} from "./schema";
 
 async function erasureFixtures() {
   const { db, shop } = await seededShopContext({ history: true });
@@ -101,13 +109,29 @@ describe("anonymizeDiver — the roll-call note (ADR 20260828-a-missing-diver-ge
    */
   it("clears what a crew member wrote about a diver who is erased", async () => {
     const { db, shop, owner } = await erasureFixtures();
+    // A booking `recordRollCall` will actually accept, picked
+    // deterministically. This used to take the shop's *first* booking row —
+    // unordered, unfiltered — and never read the recorder's outcome, so
+    // whenever heap order handed back a cancelled seat, an unscheduled trip,
+    // or a session with no after-dive checkpoint, the recorder refused
+    // silently and the test failed three asserts later with no diagnostic
+    // (flaked on CI the day the unit shards re-shuffled).
     const [booking] = await db
       .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })
       .from(bookings)
-      .where(eq(bookings.shopId, shop.id))
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .where(
+        and(
+          eq(bookings.shopId, shop.id),
+          ne(bookings.status, "cancelled"),
+          eq(trips.status, "scheduled"),
+          gte(trips.plannedDives, 1),
+        ),
+      )
+      .orderBy(bookings.id)
       .limit(1);
-    if (!booking) throw new Error("expected a seeded booking");
-    await recordRollCall(db, {
+    if (!booking) throw new Error("expected a seeded booking on a scheduled dive trip");
+    const recorded = await recordRollCall(db, {
       shopId: shop.id,
       tripId: booking.tripId,
       bookingId: booking.id,
@@ -116,6 +140,9 @@ describe("anonymizeDiver — the roll-call note (ADR 20260828-a-missing-diver-ge
       checkpoint: "after_dive_1",
       note: "Surfaced 200 m north, picked up by Reef Runner at 14:31.",
     });
+    // A refusal here is this test's real failure — fail on it by name rather
+    // than on an empty note list downstream.
+    expect(recorded).toMatchObject({ ok: true });
 
     const erased = await anonymizeDiver(db, {
       shopId: shop.id,

@@ -202,13 +202,15 @@ test.describe("trip pulse", () => {
     await expect(page.getByText("3 spots left")).toHaveCount(0);
 
     // Each fact is a door to its fix: the blocked one lands on the Guests
-    // roster already narrowed to the divers who hold the boat up.
+    // ledger, whose "Still to clear" group leads the roster with the divers
+    // who hold the boat up (ADR 20260827-the-departure-is-two-working-
+    // surfaces, slice 5d — the `?rf=` filter retired with the chips).
     await expect(page.getByRole("link", { name: /missing rental sizes/ })).toBeVisible();
     await page.getByRole("link", { name: /can’t board yet/ }).click();
-    await expect(page).toHaveURL(/rf=blocked/);
-    // The chip row confirms the filter is on and counts the same one diver.
-    await expect(page.getByRole("link", { name: "Blocked (1)" })).toBeVisible();
-    // Role-scoped: the card renders her name twice (heading and record link).
+    await expect(page).toHaveURL(/\/guests#roster/);
+    // The group band owns the state word; its count is every unsettled diver
+    // (blockers, advisories, birthdays), not just the one blocked seat.
+    await expect(page.getByRole("heading", { name: /^Still to clear ·/ })).toBeVisible();
     await expect(page.getByRole("link", { name: "Priya Sharma" })).toBeVisible();
   });
 

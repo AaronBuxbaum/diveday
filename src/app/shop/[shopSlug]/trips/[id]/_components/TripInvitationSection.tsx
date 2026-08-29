@@ -1,13 +1,20 @@
-import { sectionCardClass } from "@/components/ui/card";
 import type { listTripInvitations } from "@/db/trip-invitations";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { publicTripPath } from "@/lib/public-routes";
+import { RosterGroupBand } from "./RosterGroupBand";
 import { WaitlistInvite, type WaitlistInviteCopy } from "./WaitlistInvite";
 
 type TripInvitation = Awaited<ReturnType<typeof listTripInvitations>>[number];
 
-export function TripInvitationSection({
+/**
+ * **The "Invited" group of the guests ledger** — ADR
+ * 20260827-the-departure-is-two-working-surfaces, slice 5d: staff outreach
+ * recorded against this departure files into the one ledger with everyone
+ * else, instead of a fourth sibling card. Only rendered when an invitation
+ * exists.
+ */
+export function TripInvitationGroup({
   invitations,
   shopSlug,
   tripId,
@@ -48,32 +55,30 @@ export function TripInvitationSection({
   const tripWhen = formatShortDate(tripStartsAt, locale, timezone);
 
   return (
-    <section id="invitations" className="mt-10 scroll-mt-24">
-      <h2 className="text-lg font-semibold">
-        {t("trips.invitations.heading")}{" "}
-        <span className="font-normal text-muted tabular-nums">{invitations.length}</span>
-      </h2>
-      <p className="mt-1 text-sm text-muted">{t("trips.invitations.description")}</p>
-      <ul
-        className={sectionCardClass({
-          padding: "none",
-          className: "mt-4 divide-y divide-border",
-        })}
+    <>
+      <RosterGroupBand
+        id="invitations"
+        label={`${t("trips.roster.groupInvited")} · ${invitations.length}`}
       >
+        {/* The consequence the group has to carry: an invitation reserves
+            nothing and manifests nobody. */}
+        <p className="text-xs text-muted">{t("trips.invitations.description")}</p>
+      </RosterGroupBand>
+      <ul className="divide-y divide-border">
         {invitations.map(({ invitation, person, request }) => {
           const name = person?.fullName ?? request?.name ?? t("trips.invitations.anonymous");
           const email = person?.email ?? request?.email ?? null;
           return (
             <li
               key={invitation.id}
-              className="flex items-start justify-between gap-3 px-4 py-3 text-sm"
+              className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2.5 text-sm sm:px-5"
             >
               <div className="min-w-0">
-                <p className="font-medium">{name}</p>
-                <p className="text-muted">{email ?? t("trips.invitations.noEmailOnFile")}</p>
-                {request ? (
-                  <p className="text-muted">{t("trips.invitations.fromRequest")}</p>
-                ) : null}
+                <p className="font-medium text-base">{name}</p>
+                <p className="text-muted">
+                  {email ?? t("trips.invitations.noEmailOnFile")}
+                  {request ? ` · ${t("trips.invitations.fromRequest")}` : ""}
+                </p>
               </div>
               <WaitlistInvite
                 entryId={invitation.id}
@@ -91,6 +96,6 @@ export function TripInvitationSection({
           );
         })}
       </ul>
-    </section>
+    </>
   );
 }

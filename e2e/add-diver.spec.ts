@@ -141,19 +141,18 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await page.waitForURL(/\/trips\/[^/]+\/guests/);
 
   await expect(page.getByRole("status")).toContainText("Diver added to the wait list.");
-  await expect(page.getByText("Wait list").first()).toBeVisible();
+  // The ledger's "Waiting for a seat" group (slice 5d) owns the state word.
+  await expect(page.getByRole("heading", { name: /Waiting for a seat/ })).toBeVisible();
   await expect(page.getByText("Waitlist Wally")).toBeVisible();
 
   // One-tap seat recovery: inviting the next-in-line stamps the entry so a
   // second staffer sees it's already handled. The button opens the mail
   // composer (mailto:) which the test can't follow, so we only assert the
   // recorded state lands.
-  const waitlist = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Wait list" }) });
-  await waitlist.getByRole("button", { name: /Email .* an invite/ }).click();
-  await expect(waitlist.getByText(/Invited/).filter({ visible: true })).toBeVisible();
-  await expect(waitlist.getByRole("button", { name: "Re-send invite" })).toBeVisible();
+  const waitRow = page.locator("li").filter({ hasText: "Waitlist Wally" });
+  await waitRow.getByRole("button", { name: /Email .* an invite/ }).click();
+  await expect(waitRow.getByText(/Invited/).filter({ visible: true })).toBeVisible();
+  await expect(waitRow.getByRole("button", { name: "Re-send invite" })).toBeVisible();
 });
 
 test("staff adds a returning diver by picking them, no re-entry", async ({ page }) => {
@@ -201,7 +200,7 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
   );
   const roster = page
     .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Divers" }) });
+    .filter({ has: page.getByRole("heading", { name: "Guests" }) });
   await expect(roster.getByText("Priya Sharma").filter({ visible: true })).toBeVisible();
 
   // Picking the same diver again is no longer offered — the roster can't

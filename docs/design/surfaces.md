@@ -57,10 +57,16 @@ Enforced beside the code: `DaySpine.tsx` and `DayStation.tsx` defer to the ADR b
 
 ### The trip page — `/shop/[shopSlug]/trips/[id]`
 
-**Designed, not yet built** — ADR
+**Half built** — ADR
 [20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md)
 (Proposed), drawn in
-[its canvas](canvases/20260827-the-departure-is-two-working-surfaces/README.md).
+[its canvas](canvases/20260827-the-departure-is-two-working-surfaces/README.md). The roster ledger
+shipped as slice 5d (2026-08-29) on the Guests tab, where `RosterSection.tsx` defers to the ADR by
+name and its test pins the rules; the fold of Overview into Trip (5e) remains designed-not-built,
+blocked on the owner call the ADR records, so the ledger's one deliberate divergence from the
+drawing stands until then: each row keeps a trailing 44px mark that doubles as the door to its
+reference panel, because with no merged Trip page and no person sheet (5b) the panel has no other
+home.
 
 - **One idea:** everyone who is coming, and whether they can. The roster *is* the page; what the
   dive is drops to a one-line summary that opens on request.

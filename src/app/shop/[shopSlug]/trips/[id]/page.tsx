@@ -208,7 +208,10 @@ export default async function ManageTripPage({
       ? [
           {
             text: t("trips.pulse.blocked", { count: pulse.blocked }),
-            href: `${shopPath(shopSlug, "trips", tripId, "guests")}?rf=blocked#roster`,
+            // The ledger's "Still to clear" group leads the roster, so the
+            // plain anchor lands on the blocked rows (slice 5d retired the
+            // `?rf=` filter with the chips).
+            href: `${shopPath(shopSlug, "trips", tripId, "guests")}#roster`,
             tone: "danger" as const,
           },
         ]

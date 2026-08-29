@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { CertificationSummary } from "@/db/self-declared-cards";
 import type { CertificationLevel, CertRequirementSource } from "@/lib/readiness";
 import type { Waitlist } from "./types";
-import { WaitlistSection } from "./WaitlistSection";
+import { WaitlistGroup } from "./WaitlistSection";
 
 afterEach(cleanup);
 
@@ -27,7 +27,7 @@ function renderSection(
   departureRequirement: CertRequirementSource | null = null,
 ) {
   return render(
-    <WaitlistSection
+    <WaitlistGroup
       departureRequirement={departureRequirement}
       waitlist={waitlist}
       shopSlug="blue-mantis"
@@ -53,7 +53,7 @@ function requirement(minimumCertificationLevel: CertificationLevel): CertRequire
  * down its left edge was the queue claim, sitting on the one surface where the
  * invite decision is actually made — so it must not come back.
  */
-describe("WaitlistSection ranking", () => {
+describe("WaitlistGroup ranking", () => {
   const waiting = [
     entry("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z")),
     entry("b", "Rafa Ortiz", new Date("2026-08-03T14:00:00Z")),
@@ -99,7 +99,7 @@ describe("WaitlistSection ranking", () => {
  * prevent — and a diver who said nothing has to say so out loud rather than
  * leaving a gap.
  */
-describe("WaitlistSection declared level", () => {
+describe("WaitlistGroup declared level", () => {
   const waiting = [entry("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z"))];
 
   it("marks a self-declared level as self-declared", () => {
@@ -126,7 +126,7 @@ describe("WaitlistSection declared level", () => {
     expect(line).toBeVisible();
     // Warning-toned, the same treatment an imported specialty card gets so it
     // is never scanned as a plain level.
-    expect(line).toHaveClass("text-warning");
+    expect(line).toHaveClass("text-warning-strong");
   });
 
   it("renders a card the shop actually holds without the self-declared mark", () => {
@@ -155,7 +155,7 @@ describe("WaitlistSection declared level", () => {
     // One unchecked claim anywhere on the line tones the whole line: the row is
     // a single decision ("do I invite this person?"), and the weakest fact on
     // it is the one that has to survive a glance.
-    expect(line).toHaveClass("text-warning");
+    expect(line).toHaveClass("text-warning-strong");
   });
 
   it("states that a joiner said nothing, rather than leaving the row blank", () => {
@@ -196,7 +196,7 @@ describe("WaitlistSection declared level", () => {
     expect(line).toBeVisible();
     // Somebody's word, nobody's card — the same tone every unchecked claim on
     // this row wears.
-    expect(line).toHaveClass("text-warning");
+    expect(line).toHaveClass("text-warning-strong");
   });
 });
 
@@ -210,7 +210,7 @@ describe("WaitlistSection declared level", () => {
  * must never do is what the deal list does with the same fact: lift, hide, or
  * gate. The order here is who asked first (ADR 20260813-wait-list-is-a-lead-list).
  */
-describe("WaitlistSection below the departure's bar", () => {
+describe("WaitlistGroup below the departure's bar", () => {
   const waiting = [entry("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z"))];
   const card = (over: Partial<CertificationSummary> = {}): CertificationSummary => ({
     level: "open_water",
@@ -243,7 +243,7 @@ describe("WaitlistSection below the departure's bar", () => {
     const line = screen.getByText("Open Water — unverified · below this departure's minimum");
     expect(line).toBeVisible();
     // Two facts, two carriers: unchecked tones the row, under the bar is words.
-    expect(line).toHaveClass("text-warning");
+    expect(line).toHaveClass("text-warning-strong");
   });
 
   it("says nothing of the sort about a diver at or above the bar", () => {

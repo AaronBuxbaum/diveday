@@ -910,16 +910,12 @@ test("resolving a blocker from the manifest lands on that diver, under the block
   expect(bookingAnchor, "the resolve link must name the diver it is about").toBeTruthy();
 
   await resolve.click();
-  // The roster's own "Blocked" chip, so the captain arrives at the short list
-  // of people who still need something rather than the whole boat.
-  await expect(page).toHaveURL(/rf=blocked/);
-  const blockedChip = page
-    .getByRole("navigation", { name: "Filter the roster" })
-    .getByRole("link", { name: /^Blocked/ });
-  const blockedCount = Number(/\((\d+)\)/.exec((await blockedChip.textContent()) ?? "")?.[1]);
-  expect(blockedCount).toBeGreaterThan(0);
-  // The list is now exactly that set, not the whole boat.
-  await expect(page.locator('li[id^="booking-"]')).toHaveCount(blockedCount);
+  // The Guests ledger files everyone with open work under its "Still to
+  // clear" group (ADR 20260827-the-departure-is-two-working-surfaces, slice
+  // 5d), so the captain arrives with the group band saying why this diver
+  // needs them — the retired `?rf=blocked` filter is not asked for.
+  await expect(page).toHaveURL(/\/guests#booking-/);
+  await expect(page.getByRole("heading", { name: /Still to clear/ })).toBeVisible();
 
   // And actually scrolled to them: a `<Link>` transition does not run the
   // browser's own fragment scroll, so this used to land at the top of a page
