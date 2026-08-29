@@ -126,9 +126,11 @@ a pixel snapshot).
   phone's `⋯` and a desktop footer line; the printed manifest is unchanged. *Pins:* an assertion
   that the printed sheet still carries every number, since that is the fallback the burial relies
   on.
-- **5d. The Guests roster becomes one grouped ledger.** Groups carry the state word and the count;
-  a settled row is a name and a mark; blocked rows carry their fix inline. Drops the filter chips
-  and the per-row caret.
+- **5d. The Guests roster becomes one grouped ledger — shipped 2026-08-29.** See
+  [shipped.md](../shipped.md#the-guests-roster-becomes-one-grouped-ledger-delivered-2026-08-29).
+  One note for 5b: the reference panel (email, rental fit, pickup, contact on file) still lives
+  behind each row's trailing mark, because until the person sheet exists it has no other home —
+  when 5b lands, decide whether the roster's panel defers to it.
 - **5e. Overview folds into Trip's Details panel, four tabs become three.** **Blocked on the owner
   call below** — it is the one slice that changes where an action lives.
 - **5f. Emoji status marks become drawn SVG** across both surfaces. Mechanically the smallest and

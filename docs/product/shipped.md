@@ -1524,6 +1524,22 @@ nav and language control tighten below `sm` — the endonym and the caret go, pa
 16px destination labels stay — so an ordinary shop name holds at phone width and only ellipsizes
 on the narrow handsets below it.
 
+## The Guests roster becomes one grouped ledger (delivered 2026-08-29)
+
+Slice 5d of
+[20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md).
+The departure's Guests tab is one ledger card of hairline rows under group bands that own the state
+word and the count — **Still to clear**, **Ready**, **Waiting for a seat**, **Invited** — instead
+of a card stack with two visual grammars. A cleared seat is a name, at most one exception capsule,
+and a drawn check; open work stays in the open with each item beside its fix. The filter chips are
+gone (the groups are the filter), the Celebrations panel folded into the celebrating diver's own
+row capsule, the wait list and recorded invitations stopped being sibling cards, and
+Activity/Promote settled into two chromeless hairline rows at the page's tail. Every emoji mark on
+the surface became drawn SVG or a plain word (`ReadyMark`, `birthdayCalloutText`, a mark-free
+Minor capsule), and every control kept its identity and order — waiver send, paper waiver,
+payment, notes, contact, pickup, certify, remove. `RosterSection.test.tsx` pins the rules: the
+band says the state word once, no row repeats it, open work renders with its fix, no chips.
+
 ## The boat manifest becomes an instrument (delivered 2026-08-27)
 
 Slice 5a of [20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md),
