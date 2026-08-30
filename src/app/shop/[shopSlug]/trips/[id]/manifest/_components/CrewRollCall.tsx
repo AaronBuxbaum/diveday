@@ -7,17 +7,18 @@ import { RollCallMark } from "@/components/RollCallMark";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { rollCallLabelText } from "@/i18n/manifest-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatDateTimeTz, formatTime } from "@/lib/format";
+import { formatDateTimeTz } from "@/lib/format";
 import {
   type ManifestBuddyTeam,
   type RollCallCheckpoint,
   rollCallLabel,
   type TripManifest,
 } from "@/lib/manifests";
+import { PersonBuddyList } from "./PersonBuddyList";
+import { PersonSheet, type PersonTrailEntry } from "./PersonSheet";
 import {
   ROLL_CALL_ROW_TONE,
   ROW_DISCLOSURE_PANEL_CLASS,
@@ -36,7 +37,7 @@ import {
  * diver's `DiverFacts` emergency-contact line, and rendered by the same rule:
  * behind the row's disclosure on screen, unconditionally on paper.
  *
- * Twice per row, deliberately, exactly as a diver's is: a closed `<details>`
+ * Twice per row, deliberately, exactly as a diver's is: the person sheet
  * contributes nothing to print, and the printed manifest is the document a
  * coastguard reads, so it keeps every fact without asking paper to disclose.
  *
@@ -91,6 +92,8 @@ export function CrewRollCall({
   tripId,
   locale,
   timezone,
+  divers,
+  todayTrailBySubject,
   crewRollCallAction,
   crewRollCallButtonCopy,
   buddyTeamLabel,
@@ -103,6 +106,10 @@ export function CrewRollCall({
   tripId: string;
   locale: string;
   timezone: string;
+  /** Full diver rows for resolving buddy states inside a crew member's sheet. */
+  divers?: TripManifest["divers"];
+  /** The non-implied roll-call events for each crew member across today. */
+  todayTrailBySubject?: ReadonlyMap<string, readonly PersonTrailEntry[]>;
   crewRollCallAction: RollCallAction;
   crewRollCallButtonCopy: RollCallButtonCopy;
   /** "Buddy team: Ana and Ben", already localized and list-formatted. */
@@ -168,14 +175,6 @@ export function CrewRollCall({
               // Time, not a timestamp — the same rule, and the same reason, as
               // a diver's row: same-day at the rail, full on the sheet below.
               const auditLabel = rollCallLabelText(t, rollCallLabel(checkpoint, rc));
-              const supportLine =
-                rc && !rc.implied
-                  ? t("manifest.rollCallRecordedShort", {
-                      label: auditLabel,
-                      time: formatTime(rc.occurredAt, locale, timezone),
-                      name: rc.recordedByName,
-                    })
-                  : null;
               // Crew wear the same capsule rule as a diver — exceptions only,
               // at most one — so a split team reads identically on a
               // divemaster's row and on the row of the diver they lead.
@@ -202,8 +201,46 @@ export function CrewRollCall({
                   }`}
                 >
                   <div className="flex items-start">
-                    <details className="group/person min-w-0 flex-1">
-                      <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
+                    <PersonSheet
+                      name={member.fullName}
+                      triggerLabel={t("manifest.openPersonDetails", { name: member.fullName })}
+                      subtitle={t("manifest.personSheetCrewSubtitle", {
+                        roles: member.roles.join(", "),
+                      })}
+                      status={
+                        <Badge
+                          tone={
+                            rowState.notBackAboard
+                              ? "danger"
+                              : rowState.boarded
+                                ? "success"
+                                : rowState.recordedNotBoarded || rowState.impliedNotBoarded
+                                  ? "warning"
+                                  : "neutral"
+                          }
+                          size="sm"
+                        >
+                          {auditLabel}
+                        </Badge>
+                      }
+                      trail={todayTrailBySubject?.get(member.id) ?? []}
+                      todayLabel={t("manifest.personSheetToday")}
+                      noTodayEventsLabel={t("manifest.personSheetNoTodayEvents")}
+                      buddyLabel={t("manifest.personSheetBuddyTeam")}
+                      buddy={
+                        member.buddyTeams && member.buddyTeams.length > 0 ? (
+                          <PersonBuddyList
+                            teammates={member.buddyTeams.flatMap((team) => team.others)}
+                            divers={divers ?? []}
+                            crew={crew}
+                            checkpoint={checkpoint}
+                            t={t}
+                          />
+                        ) : null
+                      }
+                      closeLabel={t("manifest.closePersonDetails")}
+                      triggerClassName={ROW_DISCLOSURE_SUMMARY_CLASS}
+                      trigger={
                         <span className="min-w-0 flex-1">
                           <span className="flex flex-wrap items-center gap-2">
                             <span className="text-lg font-semibold group-hover/summary:underline">
@@ -212,28 +249,10 @@ export function CrewRollCall({
                             <span className="text-sm text-muted">{member.roles.join(", ")}</span>
                             {capsule}
                           </span>
-                          {rc?.note ? (
-                            // The same line a diver's row carries, on the same
-                            // terms — see DiverRollCall.
-                            <span className="mt-0.5 block text-sm">{rc.note}</span>
-                          ) : null}
-                          {supportLine ? (
-                            <span className="mt-0.5 block text-sm text-muted">{supportLine}</span>
-                          ) : null}
                         </span>
-                        <DisclosureCaret className="group-open/person:rotate-90 print:hidden" />
-                        <span className="sr-only">{t("manifest.personDetails")}</span>
-                      </summary>
+                      }
+                    >
                       <div className={ROW_DISCLOSURE_PANEL_CLASS}>
-                        {teamLabel ? (
-                          <p className="mb-3">
-                            <Badge tone={member.buddyAlert ? "danger" : "neutral"}>
-                              {member.buddyAlert
-                                ? `${teamLabel} · ${buddyAlertText(t, member.buddyAlert)}`
-                                : teamLabel}
-                            </Badge>
-                          </p>
-                        ) : null}
                         <CrewFacts member={member} labelled t={t} />
                         {/* Both directions out of a stated "not back aboard",
                             at the same cost and neither on the row — the same
@@ -265,7 +284,7 @@ export function CrewRollCall({
                           t={t}
                         />
                       </div>
-                    </details>
+                    </PersonSheet>
                     <div className="shrink-0 pt-2.5 ps-3 pe-3 print:hidden">
                       {rowState.notBackAboard ? (
                         <RollCallMark state="notBack" />
@@ -283,7 +302,7 @@ export function CrewRollCall({
                       )}
                     </div>
                   </div>
-                  {/* Paper keeps what the tap hides: the recorded state as a
+                  {/* Paper keeps what the sheet hides: the recorded state as a
                       word, the team, and the contact. The summary above prints
                       as it stands, so the name, role and who-and-when are
                       already on the sheet. */}

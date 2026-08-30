@@ -7,7 +7,6 @@ import { type PrivateNoteAction, PrivateNoteForm } from "@/components/PrivateNot
 import { RollCallMark } from "@/components/RollCallMark";
 import { Badge } from "@/components/ui/badge";
 import { sectionCardClass } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
@@ -20,7 +19,7 @@ import {
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { supportNeedsLines } from "@/i18n/support-needs-labels";
-import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
+import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
   type ManifestBuddyTeam,
@@ -29,6 +28,8 @@ import {
   type TripManifest,
 } from "@/lib/manifests";
 import { SHARED_FACT_MIN } from "../../_components/shared-facts";
+import { PersonBuddyList } from "./PersonBuddyList";
+import { PersonSheet, type PersonTrailEntry } from "./PersonSheet";
 import {
   ROLL_CALL_ROW_TONE,
   ROW_DISCLOSURE_PANEL_CLASS,
@@ -48,9 +49,9 @@ import {
  * one tap, and these facts have their moment either before the boat leaves
  * (Prep owns chasing gaps) or when something has gone wrong (one tap away, and
  * always on the paper the boat carries). Rendered twice per row: inside the
- * screen-only person panel, and in a print-only block — a closed `<details>`
- * contributes nothing to print, and the printed manifest is the document a
- * coastguard reads, so it keeps every fact without asking paper to disclose.
+ * screen-only person sheet, and in a print-only block — the sheet contributes
+ * nothing to print, and the printed manifest is the document a coastguard
+ * reads, so it keeps every fact without asking paper to disclose.
  */
 function DiverFacts({
   diver,
@@ -253,6 +254,7 @@ export type ManifestNote = {
 export function DiverRollCall({
   divers,
   crewNames,
+  crew,
   checkpoint,
   isDeparture,
   shopSlug,
@@ -260,6 +262,7 @@ export function DiverRollCall({
   locale,
   timezone,
   notesByBooking,
+  todayTrailByBooking,
   rollCallAction,
   addPrivateNoteAction,
   rollCallButtonCopy,
@@ -274,6 +277,8 @@ export function DiverRollCall({
    * would answer "not booked" about somebody standing next to them.
    */
   crewNames: readonly string[];
+  /** Full crew rows for resolving buddy states inside a diver's sheet. */
+  crew?: TripManifest["crew"];
   checkpoint: RollCallCheckpoint;
   isDeparture: boolean;
   shopSlug: string;
@@ -282,6 +287,8 @@ export function DiverRollCall({
   timezone: string;
   /** All staff context for this booking, regardless of where it was written. */
   notesByBooking: ReadonlyMap<string, ReadonlyArray<ManifestNote>>;
+  /** The non-implied roll-call events for this diver across today's checkpoints. */
+  todayTrailByBooking?: ReadonlyMap<string, readonly PersonTrailEntry[]>;
   rollCallAction: RollCallAction;
   addPrivateNoteAction: PrivateNoteAction;
   /**
@@ -505,19 +512,6 @@ export function DiverRollCall({
           // timestamp is not lost: it prints, below, on the sheet that goes
           // ashore and may be read months later.
           const auditLabel = rollCallLabelText(t, rollCallLabel(checkpoint, rc));
-          const supportLine =
-            rc && !rc.implied
-              ? t("manifest.rollCallRecordedShort", {
-                  label: auditLabel,
-                  time: formatTime(rc.occurredAt, locale, timezone),
-                  name: rc.recordedByName,
-                })
-              : impliedNotBoarded
-                ? // The only thing that carries forward is a departure result:
-                  // this diver never left the dock (DOM-H3). Boarding after a
-                  // dive is a head count, so it never depends on readiness.
-                  t("manifest.carriedForwardFromDock")
-                : null;
           const bookingNotes = notesByBooking.get(diver.bookingId) ?? [];
           const teamLabel = buddyTeamLabel(diver.buddyTeam ? [diver.buddyTeam] : []);
           return (
@@ -530,37 +524,61 @@ export function DiverRollCall({
                     row at rest be a name and a mark instead of the name, two
                     badges, a blocker list, a link, a note thread and two
                     summary lines it used to be. */}
-                  <details className="group/person min-w-0 flex-1">
-                    <summary className={ROW_DISCLOSURE_SUMMARY_CLASS}>
-                      <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-sm font-bold tabular-nums">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex flex-wrap items-center gap-2">
-                          <span className="text-lg font-semibold group-hover/summary:underline">
-                            {diver.fullName}
-                          </span>
-                          {capsule}
+                  <PersonSheet
+                    name={diver.fullName}
+                    triggerLabel={t("manifest.openPersonDetails", { name: diver.fullName })}
+                    subtitle={t("manifest.personSheetDiverSubtitle", {
+                      rental: rentalFitLineText(t, locale, diver.rentalFit),
+                    })}
+                    status={
+                      <Badge
+                        tone={
+                          rowState.notBackAboard
+                            ? "danger"
+                            : rowState.boarded
+                              ? "success"
+                              : rowState.recordedNotBoarded || rowState.impliedNotBoarded
+                                ? "warning"
+                                : "neutral"
+                        }
+                        size="sm"
+                      >
+                        {auditLabel}
+                      </Badge>
+                    }
+                    trail={todayTrailByBooking?.get(diver.bookingId) ?? []}
+                    todayLabel={t("manifest.personSheetToday")}
+                    noTodayEventsLabel={t("manifest.personSheetNoTodayEvents")}
+                    buddyLabel={t("manifest.personSheetBuddyTeam")}
+                    buddy={
+                      diver.buddyTeam ? (
+                        <PersonBuddyList
+                          teammates={diver.buddyTeam.others}
+                          divers={divers}
+                          crew={crew ?? []}
+                          checkpoint={checkpoint}
+                          t={t}
+                        />
+                      ) : null
+                    }
+                    closeLabel={t("manifest.closePersonDetails")}
+                    triggerClassName={ROW_DISCLOSURE_SUMMARY_CLASS}
+                    trigger={
+                      <>
+                        <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-sm font-bold tabular-nums">
+                          {String(index + 1).padStart(2, "0")}
                         </span>
-                        {rc?.note ? (
-                          // What the crew wrote when they recorded this. On the
-                          // row rather than behind the disclosure: a second
-                          // crew member arriving at an alarmed row needs to
-                          // read it before they type the same sentence again,
-                          // and it prints, which is the point of it existing
-                          // (ADR 20260828-a-missing-diver-gets-a-sentence).
-                          <span className="mt-0.5 block text-sm">{rc.note}</span>
-                        ) : null}
-                        {supportLine ? (
-                          <span className="mt-0.5 block text-sm text-muted">{supportLine}</span>
-                        ) : null}
-                      </span>
-                      {/* The caret is the only thing on the summary that says
-                        "this opens" — the label is the person's own name, which
-                        cannot also be a verb. Screen readers get the word. */}
-                      <DisclosureCaret className="group-open/person:rotate-90 print:hidden" />
-                      <span className="sr-only">{t("manifest.personDetails")}</span>
-                    </summary>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span className="text-lg font-semibold group-hover/summary:underline">
+                              {diver.fullName}
+                            </span>
+                            {capsule}
+                          </span>
+                        </span>
+                      </>
+                    }
+                  >
                     <div className={ROW_DISCLOSURE_PANEL_CLASS}>
                       {/* Blockers, and their one fix, at the dock only. After a
                         dive readiness gates nothing — the diver is already
@@ -622,19 +640,6 @@ export function DiverRollCall({
                         be with?" is a question asked at the rail and the answer
                         has to be on the screen as well as on paper. */}
                       <ul className="mt-3 flex flex-wrap gap-2">
-                        {teamLabel ? (
-                          <li>
-                            {/* The team, and — when the row's capsule is
-                              shouting about it — *who* is unaccounted for.
-                              The capsule can only carry the alert; this is
-                              where a crew member finds the name behind it. */}
-                            <Badge tone={diver.buddyAlert ? "danger" : "neutral"}>
-                              {diver.buddyAlert
-                                ? `${teamLabel} · ${buddyAlertText(t, diver.buddyAlert)}`
-                                : teamLabel}
-                            </Badge>
-                          </li>
-                        ) : null}
                         {diver.checkedIn ? (
                           <li>
                             <Badge tone="neutral">{t("manifest.checkedInPill")}</Badge>
@@ -712,7 +717,7 @@ export function DiverRollCall({
                         t={t}
                       />
                     </div>
-                  </details>
+                  </PersonSheet>
                   {/* The row's one tap, at the trailing edge where every row's
                     mark lands. `pt-2.5` centres the 56px circle against the
                     76px summary line rather than against the panel below it,
@@ -737,7 +742,7 @@ export function DiverRollCall({
                   </div>
                 </div>
                 {/* **Paper keeps everything the screen tucks away** (decision 2).
-                  A closed `<details>` contributes nothing to print, so every
+                  The person sheet contributes nothing to print, so every
                   fact behind the tap above is restated here unconditionally:
                   the recorded state as a word, the exceptions the one capsule
                   could not carry, the blockers at any checkpoint, the full
