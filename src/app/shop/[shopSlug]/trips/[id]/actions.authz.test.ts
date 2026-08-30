@@ -426,7 +426,7 @@ describe("removing a paid diver from the manifest", () => {
     const to = await redirectedTo(() => removeBookingAction(shop.slug, tripId, formData));
 
     expect(to).toBe(
-      `/shop/${shop.slug}/trips/${tripId}/guests?notice=booking-removed-refund-owner&bid=${bookingId}`,
+      `/shop/${shop.slug}/trips/${tripId}?notice=booking-removed-refund-owner&bid=${bookingId}`,
     );
     // The seat really is free — this is not a blanket refusal of the action.
     expect((await bookingRow(db, bookingId)).status).toBe("cancelled");
@@ -445,7 +445,7 @@ describe("removing a paid diver from the manifest", () => {
     const to = await redirectedTo(() => removeBookingAction(shop.slug, tripId, formData));
 
     expect(to).toBe(
-      `/shop/${shop.slug}/trips/${tripId}/guests?notice=booking-removed-refunded&bid=${bookingId}`,
+      `/shop/${shop.slug}/trips/${tripId}?notice=booking-removed-refunded&bid=${bookingId}`,
     );
     expect(refundBookingOnCancellation).toHaveBeenCalledWith(expect.anything(), {
       shopId: shop.id,

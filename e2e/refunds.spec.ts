@@ -85,11 +85,6 @@ test.describe("refunds", () => {
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
     await page.locator("li").filter({ hasText: title }).getByRole("link").click();
-    await page
-      .getByRole("navigation", { name: "Trip" })
-      .getByRole("link", { name: "Guests" })
-      .click();
-
     const noraRow = page.locator("li").filter({ hasText: "Nora Quinn" }).filter({ visible: true });
     await noraRow.getByRole("combobox").selectOption("paid");
     await noraRow.getByRole("button", { name: "Update" }).click();

@@ -18,7 +18,7 @@ import {
  * refusal:
  *
  * ```
- * /shop/<slug>/trips/<id>/guests?notice=diver-trip-prerequisite&gate=~~deep~0
+ * /shop/<slug>/trips/<id>?notice=diver-trip-prerequisite&gate=~~deep~0
  * ```
  *
  * — "…their Deep card isn't on file", which is exactly the sentence that points
@@ -41,7 +41,7 @@ import {
  * carries the id of the *route segment the landing page owns*, and the reader
  * re-supplies it from its own `params` rather than from the query:
  *
- * - the trip surfaces (`/trips/[id]`, `/trips/[id]/guests`,
+ * - the trip surfaces (`/trips/[id]` and its compatibility `/trips/[id]/guests`,
  *   `/bookings/new/[tripId]`) bind to the **trip id**;
  * - the diver record (`/divers/[personId]`), which has no departure in its URL
  *   at all, binds to the **person id**.

@@ -24,7 +24,7 @@ export function AutoOpenDetails({
 }: {
   /** The fragment (no leading "#") this disclosure answers to — usually an
    * anchor inside `children`, or this element itself when `id` names it. */
-  openOnHash: string;
+  openOnHash: string | string[];
   /** Server-decided initial state (e.g. "this section just saved") — the hash
    * check can only ever open, never close, so the two compose. */
   open?: boolean;
@@ -45,8 +45,9 @@ export function AutoOpenDetails({
   const ref = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
+    const hashes = Array.isArray(openOnHash) ? openOnHash : [openOnHash];
     const sync = () => {
-      if (window.location.hash === `#${openOnHash}`) {
+      if (hashes.some((hash) => window.location.hash === `#${hash}`)) {
         const details = ref.current;
         if (details) details.open = true;
       }

@@ -544,10 +544,6 @@ export function openLastMinuteDealActionText(t: StaffTranslator): string {
   return t("shared.today.actionLabel.openLastMinuteDeal");
 }
 
-export function openGuestsActionText(t: StaffTranslator): string {
-  return t("shared.today.actionLabel.openGuests");
-}
-
 export function inviteFromWaitlistActionText(t: StaffTranslator): string {
   return t("shared.today.actionLabel.inviteFromWaitlist");
 }

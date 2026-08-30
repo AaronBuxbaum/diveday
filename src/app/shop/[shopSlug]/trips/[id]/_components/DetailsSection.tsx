@@ -30,6 +30,7 @@ export function DetailsSection({
   locale,
   currency,
   warnNoPrice = true,
+  embedded = false,
   boats,
   hasBoatDiving,
   hasShoreDiving,
@@ -58,6 +59,8 @@ export function DetailsSection({
    * departure, whose booking page isn't selling anything.
    */
   warnNoPrice?: boolean;
+  /** The Trip surface's About panel supplies the outer section chrome. */
+  embedded?: boolean;
 }) {
   const t = staffTranslator(locale);
   // Both price boxes follow the shop's currency: whole-number entry and a
@@ -102,9 +105,9 @@ export function DetailsSection({
     // no warning; this is where staff land to fix it.
     <SectionCard
       id="details"
-      padding="lg"
+      padding={embedded ? "none" : "lg"}
       title={t("trips.details.heading")}
-      className="scroll-mt-24"
+      className={`${embedded ? "!rounded-none !border-0 !bg-transparent" : ""} scroll-mt-24`}
     >
       {trip.description ? <p className="max-w-2xl text-sm text-muted">{trip.description}</p> : null}
       {/* The missing price is a problem and wears warning ink alone; settled

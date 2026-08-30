@@ -139,10 +139,6 @@ test.describe("seat claim links", () => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await page.locator("li").filter({ hasText: title }).getByRole("link").click();
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
-    await page
-      .getByRole("navigation", { name: "Trip" })
-      .getByRole("link", { name: "Guests" })
-      .click();
     await expect(page.locator("#roster").getByText("Sam Reyes").first()).toBeVisible();
     await openTripActivity(page);
     await expect(page.getByText(/Sam Reyes claimed their seat/)).toBeVisible();

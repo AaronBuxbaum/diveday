@@ -397,7 +397,7 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
   await page.keyboard.press("Enter");
 
   // Seated: the shared seat-a-diver action lands on the trip's roster.
-  await page.waitForURL(/\/trips\/[^/]+\/guests/);
+  await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
   await expect(page.getByRole("link", { name: diver })).toBeVisible();
 
   // And the outcome was *announced*, not merely rendered. The e2e fleet

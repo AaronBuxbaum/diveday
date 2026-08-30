@@ -22,7 +22,6 @@ import {
   openDataSettingsActionText,
   openGearRegisterActionText,
   openGearUnitActionText,
-  openGuestsActionText,
   openLastMinuteDealActionText,
   openOrdersActionText,
   openPrepListActionText,
@@ -1147,7 +1146,7 @@ export async function getTodayWork(
     // Who is even reachable by a blast. Not scoped to a trip: an entry is a
     // standing "I'm around these dates" preference, and which departures it
     // covers is arithmetic (`lastMinuteEntryMatchesTripDate`), done per trip
-    // below against the same predicate the trip's own Guests tab uses.
+    // below against the same predicate the trip's own roster uses.
     listActiveLastMinuteWindows(db, shopId),
     // Deliberately not derived from `inWindow`/`todayTrips`: those look only
     // forward, and a boat that is out or already came back is exactly what this
@@ -1494,8 +1493,8 @@ export async function getTodayWork(
         detail: lone
           ? missingContactNamedDetailText(t)
           : missingContactDetailText(t, withoutContact.length),
-        actionLabel: openGuestsActionText(t),
-        href: `${tripHref}/guests`,
+        actionLabel: openTripActionText(t),
+        href: tripHref,
         dueAt: trip.startsAt,
       });
     }
@@ -1513,7 +1512,7 @@ export async function getTodayWork(
     // Why it is there at all — a shop with an empty last-minute list, or one
     // whose members all stated dates that miss this departure, was being told
     // to "fill these seats" and handed a panel whose only content was an empty
-    // state. The trip's Guests tab now hides that panel outright when nobody
+    // state. The Trip surface now hides that panel outright when nobody
     // matches, so this row's own `#last-minute-deal` anchor would land on
     // nothing. A queue row must be work someone can actually do
     // (design/principles.md #10).
@@ -1535,7 +1534,7 @@ export async function getTodayWork(
         aboutDeparture: true,
         detail: lastMinuteFillDetailText(t, openSeats),
         actionLabel: openLastMinuteDealActionText(t),
-        href: `${tripHref}/guests#last-minute-deal`,
+        href: `${tripHref}#last-minute-deal`,
         dueAt: trip.startsAt,
       });
     }
@@ -1556,7 +1555,7 @@ export async function getTodayWork(
         // stays the row's real destination — a pre-hydration tap, a middle-click
         // or an open-in-new-tab lands on the trip's wait-list section.
         actionLabel: inviteFromWaitlistActionText(t),
-        href: `${tripHref}/guests#waitlist`,
+        href: `${tripHref}#waitlist`,
         invite: {
           tripId: trip.id,
           entryId: front.entryId,
@@ -1574,7 +1573,7 @@ export async function getTodayWork(
 
   for (const issue of deliveryIssues) {
     const isWaiver = issue.delivery.kind !== "booking_confirmation";
-    const roster = `/shop/${shopSlug}/trips/${issue.trip.id}/guests#booking-${issue.booking.id}`;
+    const roster = `/shop/${shopSlug}/trips/${issue.trip.id}#booking-${issue.booking.id}`;
     actions.push({
       id: `email:${issue.delivery.id}`,
       kind: "email_delivery",
@@ -1658,9 +1657,7 @@ export async function getTodayWork(
         // Orders, which carries the reconciliation detail (Stripe id, exact
         // timestamp) to act from. That panel used to live on Reports.
         actionLabel: op.tripId ? openTripActionText(t) : openOrdersActionText(t),
-        href: op.tripId
-          ? `/shop/${shopSlug}/trips/${op.tripId}/guests`
-          : `/shop/${shopSlug}/orders`,
+        href: op.tripId ? `/shop/${shopSlug}/trips/${op.tripId}` : `/shop/${shopSlug}/orders`,
         dueAt: null,
       });
     }
@@ -1708,10 +1705,10 @@ export async function getTodayWork(
           tripTitle: owed.tripTitle,
           when: formatShortDate(owed.tripStartsAt, locale, timeZone),
         }),
-        // The departure's Guests tab, which is both where the seat is and where
+        // The departure's Trip surface, which is both where the seat is and where
         // the payment gets marked refunded once the cash is back in a hand.
-        actionLabel: openGuestsActionText(t),
-        href: `/shop/${shopSlug}/trips/${owed.tripId}/guests`,
+        actionLabel: openTripActionText(t),
+        href: `/shop/${shopSlug}/trips/${owed.tripId}`,
         dueAt: null,
       });
     }

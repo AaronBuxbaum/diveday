@@ -116,10 +116,6 @@ test.describe("staff", () => {
     await page.locator("li").filter({ hasText: title }).getByRole("link").click();
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
     // The roster lives on the Guests tab now.
-    await page
-      .getByRole("navigation", { name: "Trip" })
-      .getByRole("link", { name: "Guests" })
-      .click();
     await expect(page.getByText("Nora Quinn").first()).toBeVisible();
     await expect(page.getByText("Sam Quinn").first()).toBeVisible();
     await expect(page.getByText("Buddy-group note:").first()).toBeVisible();
@@ -299,10 +295,6 @@ test("a full boat lets a diver join the wait list without taking a seat", async 
     .filter({ hasText: "Wreck Trip — Spiegel Grove" })
     .getByRole("link", { name: "Wreck Trip — Spiegel Grove", exact: true })
     .click();
-  await page
-    .getByRole("navigation", { name: "Trip" })
-    .getByRole("link", { name: "Guests" })
-    .click();
   // The wait list is the guests ledger's own "Waiting for a seat" group now
   // (ADR 20260827-the-departure-is-two-working-surfaces, slice 5d).
   await expect(page.getByRole("heading", { name: /Waiting for a seat/ })).toBeVisible();
@@ -386,11 +378,6 @@ test.describe("as owner", () => {
       // substring.
       .getByRole("link", { name: tripB, exact: true })
       .click();
-    await page
-      .getByRole("navigation", { name: "Trip" })
-      .getByRole("link", { name: "Guests" })
-      .click();
-
     const row = page.locator("li").filter({ hasText: "Nora Quinn" }).filter({ visible: true });
     await expect(row).toContainText("Identity unconfirmed");
 

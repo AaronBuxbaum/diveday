@@ -188,7 +188,7 @@ test.describe("staffing", () => {
     await page.waitForURL(/\/divers\/new/);
     await page.getByLabel("Full name").fill("Waiting On Crew");
     await page.getByRole("button", { name: "Add to trip" }).click();
-    await expect(page).toHaveURL(new RegExp(`/trips/${tripId}/guests`));
+    await expect(page).toHaveURL(new RegExp(`/trips/${tripId}`));
 
     await page.goto(STAFFING);
     // The gap is named, worded and actionable in the day it sails — not a

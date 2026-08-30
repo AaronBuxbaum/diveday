@@ -126,7 +126,7 @@ test.describe("as owner", () => {
     page,
   }) => {
     const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER);
-    await page.goto(`/shop/blue-mantis/trips/${tripId}/guests?diverq=Diego+Alvarez`);
+    await page.goto(`/shop/blue-mantis/trips/${tripId}?diverq=Diego+Alvarez`);
     await page.getByRole("button", { name: "Add Diego Alvarez to the trip" }).click();
 
     // The structured refusal rides the redirect as a single `gate=` param and
@@ -162,7 +162,7 @@ test.describe("as owner", () => {
     // (security review finding).
     const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER);
     await page.goto(
-      `/shop/blue-mantis/trips/${tripId}/guests?notice=diver-trip-prerequisite&gate=~~deep~0`,
+      `/shop/blue-mantis/trips/${tripId}?notice=diver-trip-prerequisite&gate=~~deep~0`,
     );
 
     // The banner still appears — a refusal nobody can read is worse than a
@@ -253,7 +253,7 @@ test.describe("as owner", () => {
     test.setTimeout(30_000);
     const tripId = await seededTripId(page, "blue-mantis", AOW_COURSE);
 
-    await page.goto(`/shop/blue-mantis/trips/${tripId}/guests?diverq=Kwame+Asante`);
+    await page.goto(`/shop/blue-mantis/trips/${tripId}?diverq=Kwame+Asante`);
     await page.getByRole("button", { name: "Add Kwame Asante to the trip" }).click();
     // The seated notice, not the URL: `FlashParams` strips `notice` on mount
     // (by `replaceState`, so the server-rendered banner itself stays).
@@ -293,7 +293,7 @@ test.describe("as owner", () => {
 
     // Seated while the trip states the shop's Open Water default, which his
     // verified card clears.
-    await page.goto(`/shop/blue-mantis/trips/${tripId}/guests?diverq=Diego+Alvarez`);
+    await page.goto(`/shop/blue-mantis/trips/${tripId}?diverq=Diego+Alvarez`);
     await page.getByRole("button", { name: "Add Diego Alvarez to the trip" }).click();
     await expect(page.getByRole("status")).toContainText("Diver added to the trip");
 
@@ -320,7 +320,7 @@ test.describe("as owner", () => {
       .locator("section")
       .filter({ has: page.getByRole("heading", { name: "Readiness requirements" }) });
     await expect(requirements.getByRole("status")).toContainText("Requirements updated.");
-    await openTripTab(page, "Guests");
+    await openTripTab(page, "Trip");
     await expect(page.locator("#roster").getByText("Diego Alvarez").first()).toBeVisible();
   });
 });

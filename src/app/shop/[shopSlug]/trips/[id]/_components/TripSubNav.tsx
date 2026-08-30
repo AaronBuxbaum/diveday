@@ -6,27 +6,24 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 /**
  * The boat loop's spine: one compact bar on every trip surface so a captain who
  * wanders can always reach the others in a tap. The tabs split by question:
- * Overview is *what the dive is* (details, plan, conditions, requirements,
- * crew); Guests is *who is attending* — the one place the roster, wait list,
- * and every per-diver action live. Manifest and Prep are the dock surfaces.
+ * Trip is *what the dive is* and *who is coming*; Manifest is who is aboard;
+ * Prep is what is loaded. This is the three-surface vocabulary from ADR
+ * 20260827-the-departure-is-two-working-surfaces (slice 5e).
  * Current page is marked and inert.
  *
  * The Manifest is both the pre-departure boarding pass (its "Before departure"
  * checkpoint) and the full safety document across every later checkpoint —
  * there is no separate Boarding surface.
  *
- * It reads the active tab from the pathname rather than a prop so it can live in
- * the shared trip layout: that keeps the nav mounted across tab switches instead
- * of re-rendering it on every navigation, which is what makes hopping between
- * surfaces feel instant.
+ * It reads the active tab from the pathname rather than a prop so each surface
+ * can render the same server-localized spine without duplicating route logic.
  */
-export type TripSubNavPage = "overview" | "guests" | "manifest" | "prep";
+export type TripSubNavPage = "trip" | "manifest" | "prep";
 
 /** Every word this nav renders, resolved on the server — see the note in `src/i18n/staff-messages.ts`. */
 export type TripSubNavCopy = {
   ariaLabel: string;
-  overview: string;
-  guests: string;
+  trip: string;
   manifest: string;
   prep: string;
 };
@@ -36,8 +33,7 @@ const TAB_ORDER: {
   copyKey: keyof Omit<TripSubNavCopy, "ariaLabel">;
   suffix: string;
 }[] = [
-  { page: "overview", copyKey: "overview", suffix: "" },
-  { page: "guests", copyKey: "guests", suffix: "/guests" },
+  { page: "trip", copyKey: "trip", suffix: "" },
   { page: "manifest", copyKey: "manifest", suffix: "/manifest" },
   { page: "prep", copyKey: "prep", suffix: "/prep" },
 ];
@@ -45,13 +41,11 @@ const TAB_ORDER: {
 export function TripSubNav({
   shopSlug,
   tripId,
-  guestCount = 0,
   copy,
   className = "",
 }: {
   shopSlug: string;
   tripId: string;
-  guestCount?: number;
   copy: TripSubNavCopy;
   className?: string;
 }) {
@@ -59,30 +53,19 @@ export function TripSubNav({
   const pathname = usePathname();
   const TABS = TAB_ORDER.map((tab) => ({
     ...tab,
-    label:
-      tab.page === "guests" ? (
-        <span className="inline-flex items-center gap-1.5">
-          <span>{copy[tab.copyKey]}</span>
-          <span
-            aria-hidden="true"
-            className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary-tint px-1.5 text-xs tabular-nums text-primary"
-          >
-            {guestCount}
-          </span>
-        </span>
-      ) : (
-        copy[tab.copyKey]
-      ),
+    label: copy[tab.copyKey],
   }));
-  // Overview is the bare trip route; any suffixed surface wins over it. Match on
-  // the exact segment (or a deeper path under it) so a query string never throws
-  // the highlight off. A path that matches no tab (e.g. the departure log) highlights
-  // nothing rather than falsely claiming Overview.
+  // Trip is the bare route; any suffixed surface wins over it. Match on the
+  // exact segment (or a deeper path under it) so a query string never throws
+  // the highlight off. The legacy `/guests` route is still a Trip reading, so
+  // old bookmarks get the same active state while its visible tab points at
+  // the canonical root. A path that matches no tab (e.g. the departure log)
+  // highlights nothing rather than falsely claiming Trip.
   const current: TripSubNavPage | null =
     TABS.find((tab) =>
       tab.suffix
         ? pathname === `${root}${tab.suffix}` || pathname.startsWith(`${root}${tab.suffix}/`)
-        : pathname === root,
+        : pathname === root || pathname.startsWith(`${root}/guests`),
     )?.page ?? null;
 
   return (

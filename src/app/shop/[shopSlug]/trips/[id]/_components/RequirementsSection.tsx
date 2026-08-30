@@ -37,6 +37,7 @@ export function RequirementsSection({
   siteRequirement,
   siteNames,
   locale,
+  embedded = false,
 }: {
   action: (formData: FormData) => void;
   /** This form's own outcome, rendered beside its Save button. */
@@ -52,6 +53,8 @@ export function RequirementsSection({
    */
   siteNames: string[];
   locale: string;
+  /** The Trip surface's About panel supplies the outer section chrome. */
+  embedded?: boolean;
 }) {
   const t = staffTranslator(locale);
   // The site's extra rules read as one locale-appropriate list ("X, Y and Z"),
@@ -149,7 +152,8 @@ export function RequirementsSection({
     );
   return (
     <SectionCard
-      padding="lg"
+      id="requirements"
+      padding={embedded ? "none" : "lg"}
       title={t("trips.requirements.heading")}
       // A course session keeps the rules it was created with, which is a fact
       // about *this* session that nothing else on screen carries. An ordinary
@@ -157,6 +161,7 @@ export function RequirementsSection({
       // sentence ("A diver stays blocked until every one of them checks out"),
       // and it is gone — the list below is the answer.
       description={trip.course ? t("trips.requirements.courseDescription") : undefined}
+      className={`${embedded ? "!rounded-none !border-0 !bg-transparent" : ""} scroll-mt-24`}
     >
       {trip.course ? (
         <>

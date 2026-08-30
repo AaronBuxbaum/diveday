@@ -281,13 +281,7 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
       .filter({ hasText: "Two-Tank Reef — Molasses & French" })
       .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
       .click();
-    await page
-      .getByRole("navigation", { name: "Trip" })
-      .getByRole("link", { name: "Guests" })
-      .click();
-    const diverSection = page
-      .locator("section")
-      .filter({ has: page.getByRole("heading", { name: /^Guests/ }) });
+    const diverSection = page.locator("#roster");
     await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
     const waiverHref = await waiverLinkFromResult(page, diverSection.getByRole("status"));
 
@@ -540,16 +534,16 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, REEF_TRIP);
 
-    // Overview: the trip's editable record — dates, capacity, crew, dive plan.
+    // Trip: the departure's compact definition and working roster.
     await expect(page.getByRole("heading", { level: 1, name: REEF_TRIP })).toBeVisible();
     await expectNoA11yViolations(page);
 
-    // Guests: the roster. The single densest staff surface there is — a
-    // per-diver waiver control, a bulk-select column, an add-a-diver form, and
+    // The Trip surface carries the roster. It is the single densest staff
+    // surface there is — a per-diver waiver control, an add-a-diver form, and
     // a readiness chip per row. The existing waiver scan passes *through* this
     // page on its way to a bearer link and never scans it.
-    await openTripTab(page, "Guests");
-    await expect(page.getByRole("heading", { name: /^Guests/ })).toBeVisible();
+    await openTripTab(page, "Trip");
+    await expect(page.locator("#roster")).toBeVisible();
     await expectNoA11yViolations(page);
 
     // Prep: the trip's gear and briefing checklists.
@@ -568,8 +562,8 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
     const link = await findTripOnBoard(page, "blue-mantis", /^Advanced Open Water Diver/);
     await link.click();
     await expect(page).toHaveURL(/\/trips\//);
-    await openTripTab(page, "Guests");
-    await expect(page.getByRole("heading", { name: /^Guests/ })).toBeVisible();
+    await openTripTab(page, "Trip");
+    await expect(page.locator("#roster")).toBeVisible();
     await expectNoA11yViolations(page);
   });
 

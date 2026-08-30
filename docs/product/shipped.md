@@ -7,6 +7,19 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The Trip surface folds Overview into its About panel (delivered 2026-08-29)
+
+Slice 5e of [20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md)
+puts the departure's three questions in one loop: **Trip** says what the departure is and who is
+coming, **Manifest** says who is aboard, and **Prep** says what is loaded. The old Overview editor
+now lives behind a compact About panel on the canonical Trip route, with label/value rows for the
+plan, conditions, admission, boat and crew, repeats, public/print/cancel actions, and the existing
+editors. The grouped roster is the Trip body, so the working page opens on the people and actions
+staff use most; every waiver, payment, note, pickup, wait-list, invitation, identity, and removal
+control remains available. The old `/guests` path remains as a compatibility route for bookmarks,
+while first-party links and redirects land on Trip. `TripAboutSection.test.tsx` pins the compact
+summary, disclosure, rows, and edit anchors.
+
 ## Reviews is a worklist (delivered 2026-08-28)
 
 Slice 8d of [20260827-people-not-lists](../architecture/decisions/20260827-people-not-lists.md),

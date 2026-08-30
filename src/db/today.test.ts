@@ -762,7 +762,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     expect(contactAction?.kind).toBe("emergency_contact");
     expect(contactAction?.detail).toContain("no emergency contact");
     // Never a boarding blocker; it points at the guests roster to settle at the counter.
-    expect(contactAction?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}/guests`);
+    expect(contactAction?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}`);
 
     // A name with no phone is unreachable in an incident — still flagged.
     for (const entry of roster) {
@@ -1349,7 +1349,7 @@ describe("role lens raw material", () => {
       expect(row?.subject).toBe(seat.person.fullName);
       // The Guests tab is both where the seat is and where staff mark it
       // refunded once the cash is back in a hand.
-      expect(row?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}/guests`);
+      expect(row?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}`);
 
       // And it is opt-in like every other ops alert.
       const withoutFlag = await getTodayWork(db, shop.id, shop.slug, shop.timezone, tomorrow);

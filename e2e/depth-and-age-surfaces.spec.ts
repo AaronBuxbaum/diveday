@@ -54,7 +54,7 @@ test.describe("staff", () => {
     page,
   }) => {
     const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
-    await page.goto(`${tripPath}/guests`);
+    await page.goto(`${tripPath}`);
 
     // The seed gives one diver on this trip a date of birth putting them at 13
     // (src/db/seed.ts), so the roster carries both facts in one pill — the
@@ -77,7 +77,7 @@ test.describe("staff", () => {
 
   test("a birthday within the window is celebrated on the diver's own row", async ({ page }) => {
     const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
-    await page.goto(`${tripPath}/guests`);
+    await page.goto(`${tripPath}`);
 
     // The seeded minor's birthday is two days out. Since slice 5d folded the
     // Celebrations panel into the ledger, the callout lives once, as the warm
@@ -103,7 +103,7 @@ test.describe("staff", () => {
     await setSiteDepth(page, "Molasses Reef", "32", /Maximum depth/);
 
     const tripPath = await tripPathByTitle(page, SHOP, REEF_TRIP);
-    await page.goto(`${tripPath}/guests`);
+    await page.goto(`${tripPath}`);
 
     // The warning names both numbers and says plainly that it is not a block.
     // Eight Open Water divers resolve to the identical sentence, so it is

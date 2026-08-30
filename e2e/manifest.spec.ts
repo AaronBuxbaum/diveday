@@ -400,8 +400,8 @@ test("the offline fallback never reaches beyond the manifest route", async ({ pa
 
   // Move to a *different* trip surface — the worker's live-manifest pattern
   // is scoped to the manifest route alone and must not swallow this one too.
-  await openTripTab(page, "Guests");
-  await expect(page).toHaveURL(/\/guests$/);
+  await openTripTab(page, "Trip");
+  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
 
   await context.setOffline(true);
   let reloadError: Error | undefined;
@@ -455,7 +455,8 @@ test("the offline fallback never reaches beyond the manifest route", async ({ pa
   // **only** when the navigation went through a service worker's fetch
   // handler — the browser's own record of whether the worker answered. If the
   // reload succeeded without the worker, that is the HTTP cache doing its job
-  // and no concern of this spec; if the worker answered a `/guests` URL, that
+  // and no concern of this spec; if the worker answered a legacy compatibility
+  // URL, that
   // is exactly the regression, and it fails here whatever the error shape.
   if (reloadError) {
     expect(reloadError.message).toMatch(
@@ -914,7 +915,7 @@ test("resolving a blocker from the manifest lands on that diver, under the block
   // clear" group (ADR 20260827-the-departure-is-two-working-surfaces, slice
   // 5d), so the captain arrives with the group band saying why this diver
   // needs them — the retired `?rf=blocked` filter is not asked for.
-  await expect(page).toHaveURL(/\/guests#booking-/);
+  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+#booking-/);
   await expect(page.getByRole("heading", { name: /Still to clear/ })).toBeVisible();
 
   // And actually scrolled to them: a `<Link>` transition does not run the

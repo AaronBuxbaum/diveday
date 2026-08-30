@@ -19,7 +19,7 @@ export type RollCallAction = (prev: RollCallResult, formData: FormData) => Promi
  * control flow, gating, or roll-call logic below changed.
  *
  * `blockedMessage` is pre-rendered JSX rather than a string: the "not ready"
- * refusal embeds one rich element (the "Open Guests" link to the specific
+ * refusal embeds one rich element (the "Open Trip" link to the specific
  * booking), and a translated sentence cannot correctly be reassembled here
  * from separate prefix/link/suffix string fragments — the composed-string
  * rule this codebase's i18n work follows. Passing already-rendered JSX

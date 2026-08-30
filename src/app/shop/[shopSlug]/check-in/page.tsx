@@ -174,20 +174,18 @@ export default async function CheckInPage({
   const upcomingDepartures =
     queue.length === 0 && !query ? (await upcomingScheduleStats(db, shop.id)).departures : 0;
   const copy = noticeFromParam(notice, noticeCopy);
-  // The `not_ready` refusal links straight to the diver's guest row instead
+  // The `not_ready` refusal links straight to the diver's Trip row instead
   // of just naming the problem — the same rich-link pattern the manifest's
   // `not_ready` refusal already uses (trips/[id]/manifest/page.tsx). The
-  // message itself always carries the `<guestsLink>` tag, so this always
+  // message itself always carries the `<tripLink>` tag, so this always
   // resolves with `t.rich`, never plain `t()` — falling back to the queue
   // itself on the vanishingly unlikely chance `bid`/`tid` didn't round-trip.
   const notReadyHref =
-    bid && tid
-      ? `/shop/${shopSlug}/trips/${tid}/guests#booking-${bid}`
-      : `/shop/${shopSlug}/check-in`;
+    bid && tid ? `/shop/${shopSlug}/trips/${tid}#booking-${bid}` : `/shop/${shopSlug}/check-in`;
   const noticeContent =
     copy?.key === "checkIn.notice.notReady"
       ? t.rich("checkIn.notice.notReady", {
-          guestsLink: (chunks) => <Link href={notReadyHref}>{chunks}</Link>,
+          tripLink: (chunks) => <Link href={notReadyHref}>{chunks}</Link>,
         })
       : copy
         ? t(copy.key)

@@ -587,7 +587,7 @@ export function DiverRollCall({
                             the `?rf=blocked` filter this link used to carry is
                             retired with the chips. */}
                           <Link
-                            href={`/shop/${shopSlug}/trips/${tripId}/guests#booking-${diver.bookingId}`}
+                            href={`/shop/${shopSlug}/trips/${tripId}#booking-${diver.bookingId}`}
                             className="mt-2 inline-flex min-h-11 items-center text-base font-semibold text-primary hover:underline"
                           >
                             {t("manifest.resolveBlockersLink")}

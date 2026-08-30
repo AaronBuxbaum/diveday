@@ -247,9 +247,9 @@ function parseAddDiver(formData: FormData) {
 }
 
 // Trip-config actions (details, conditions, crew, requirements, cancel) settle
-// back on Overview — "what the dive is". Roster actions (add/remove diver,
-// wait list, waiver, payment) settle on Guests — "who is attending" — the one
-// place they live, so a mutation never bounces staff to a page without the row.
+// back on Trip — "what the dive is". Roster actions (add/remove diver, wait
+// list, waiver, payment) settle on Trip — "who is attending" — the one place
+// they live, so a mutation never bounces staff to a page without the row.
 //
 // Built through `shopPath` rather than a template literal: `shopSlug` arrives
 // as a server-action argument, so it is client-supplied, and interpolating it
@@ -259,11 +259,10 @@ function parseAddDiver(formData: FormData) {
 // hostile value stays inside one path segment and 404s
 // (src/lib/staff-notices.ts).
 const backPath = (shopSlug: string, tripId: string) => shopPath(shopSlug, "trips", tripId);
-const guestsPath = (shopSlug: string, tripId: string) =>
-  shopPath(shopSlug, "trips", tripId, "guests");
+const tripPath = (shopSlug: string, tripId: string) => shopPath(shopSlug, "trips", tripId);
 
 /**
- * Record the Overview tab's complete trip-packet action. The printable route
+ * Record the Trip surface's complete trip-packet action. The printable route
  * is opened by the browser in the same click, while this server action keeps
  * the event behind the same shop/session boundary as every other trip action.
  * It carries no trip id or diver data: the useful question is whether the
@@ -746,7 +745,7 @@ export async function cancelOffCadenceSeriesAction(
  * page to read the outcome from, so it keeps the banner it has always had.
  */
 export async function addInternalNoteAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = guestsPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   const body = String(formData.get("note") ?? "");
@@ -773,7 +772,7 @@ export async function deleteInternalNoteAction(
   tripId: string,
   formData: FormData,
 ) {
-  const back = guestsPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const noteId = String(formData.get("noteId") ?? "");
   const result = await deleteInternalNote(await getDb(), {
@@ -807,7 +806,7 @@ export async function restoreInternalNoteAction(
   tripId: string,
   formData: FormData,
 ) {
-  const back = guestsPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   const body = String(formData.get("body") ?? "");
@@ -828,7 +827,7 @@ export async function restoreInternalNoteAction(
 
 /** Staff-entered wait-list entry — only valid once the trip is actually full. */
 export async function addToWaitlistAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = guestsPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const parsed = parseAddDiver(formData);
   if (!parsed.success) redirect(noticeUrl(back, "diver-invalid"));
@@ -873,7 +872,7 @@ export async function inviteWaitlistAction(
     shopSlug,
     entryId,
   });
-  revalidatePath(guestsPath(shopSlug, tripId));
+  revalidatePath(tripPath(shopSlug, tripId));
   // The freed-seat row also lives on Today, so refresh the queue after an invite
   // whether it was sent from the roster or straight from Today (WP-9 → §7).
   revalidatePath(shopPath(shopSlug));
@@ -899,7 +898,7 @@ export async function recordTripInvitationAction(
     tripId,
     invitationId,
   });
-  revalidatePath(guestsPath(shopSlug, tripId));
+  revalidatePath(tripPath(shopSlug, tripId));
   return result;
 }
 
@@ -909,7 +908,7 @@ export async function createDirectTripInvitationAction(
   tripId: string,
   formData: FormData,
 ) {
-  const guests = guestsPath(shopSlug, tripId);
+  const guests = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const parsed = directInvitationSchema.safeParse({ personId: formData.get("personId") });
   if (!uuidParam(tripId) || !parsed.success) redirect(`${guests}#invite-person`);
@@ -986,7 +985,7 @@ export async function sendLastMinuteDealAction(
   tripId: string,
   formData: FormData,
 ) {
-  const back = guestsPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const anchor = "#last-minute-deal";
   // **Discounting is money work, wherever the button sits.** This mints a real
   // percentage coupon on the shop's connected Stripe account and mails it to a
@@ -1000,7 +999,7 @@ export async function sendLastMinuteDealAction(
   const s = (
     await requireShopSurface(shopSlug, {
       allow: canPersonManagePaymentSettings,
-      refusal: { notice: "not-authorized", landing: ["trips", tripId, "guests"] },
+      refusal: { notice: "not-authorized", landing: ["trips", tripId] },
     })
   ).session;
   const discountPercent = Number(formData.get("discountPercent"));
@@ -1082,7 +1081,7 @@ function refundNotice(refund: CancellationRefundOutcome): string {
 }
 
 export async function removeBookingAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = guestsPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(back);
@@ -1090,7 +1089,7 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   await cancelBooking(dbi, s.user.shopId, bookingId);
   await trackEvent({ name: "booking_cancelled", source: "staff" });
   // Same activity line an add writes (addBookingAction), for the same reason:
-  // the trip's log, read from the Guests tab, is the record of who touched
+  // the trip's log, read from the Trip surface, is the record of who touched
   // the roster and when. A removal is the entry that matters most of the two
   // — "who took this diver off the manifest?" is a question asked at the
   // dock, and until now the log could not answer it.
@@ -1133,7 +1132,7 @@ export async function undoRemoveBookingAction(
   tripId: string,
   formData: FormData,
 ) {
-  const back = guestsPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(back);
@@ -1181,7 +1180,7 @@ export async function confirmDiverIdentityAction(
   tripId: string,
   formData: FormData,
 ) {
-  const back = guestsPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(back);
@@ -1204,7 +1203,7 @@ export async function certifyDiverFromRosterAction(
   tripId: string,
   formData: FormData,
 ) {
-  const back = guestsPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   const personId = String(formData.get("personId") ?? "");
@@ -1264,7 +1263,7 @@ export async function markWaiverInPersonAction(
   tripId: string,
   formData: FormData,
 ) {
-  const back = guestsPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!bookingId) redirect(noticeUrl(back, "waiver-error"));
@@ -1302,7 +1301,7 @@ export async function saveRosterEmergencyContactAction(
   tripId: string,
   formData: FormData,
 ) {
-  const back = guestsPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   const parsed = emergencyContactSchema.safeParse(Object.fromEntries(formData));
@@ -1325,7 +1324,7 @@ export async function saveRosterEmergencyContactAction(
 }
 
 export async function markPaymentAction(shopSlug: string, tripId: string, formData: FormData) {
-  const back = guestsPath(shopSlug, tripId);
+  const back = tripPath(shopSlug, tripId);
   const bookingId = String(formData.get("bookingId") ?? "");
   const status = paymentStatusSchema.safeParse(formData.get("status"));
   // **Recording money is crew work; deciding about money is not.** Counter cash
@@ -1479,7 +1478,7 @@ export async function updateTripCrewAction(
   const success = await changeTripCrew(db, s.user.shopId, tripId, change);
   if (success) {
     // One write path for crew (Today's board and the trip's CrewSection both
-    // call this), so the trip's activity log — read from the Guests tab —
+    // call this), so the trip's activity log — read from the Trip surface —
     // stays the single record of who touched the crew and when, regardless of
     // which surface they used.
     const [person] = await db
@@ -1518,7 +1517,7 @@ export async function updateBookingPickupAction(
   formData: FormData,
 ) {
   const s = (await requireShopSurface(shopSlug)).session;
-  const back = shopPath(shopSlug, "trips", tripId, "guests");
+  const back = shopPath(shopSlug, "trips", tripId);
   const parsed = updatePickupSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     redirect(noticeUrl(back, "pickup-invalid", { bid: bookingId }));

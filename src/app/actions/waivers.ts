@@ -34,14 +34,14 @@ import {
 const SURFACE_PATH: Record<WaiverSendSurface, (shopSlug: string, tripId?: string) => string> = {
   today: (shopSlug) => `/shop/${shopSlug}`,
   check_in: (shopSlug) => `/shop/${shopSlug}/check-in`,
-  roster: (shopSlug, tripId) => `/shop/${shopSlug}/trips/${tripId}/guests`,
+  roster: (shopSlug, tripId) => `/shop/${shopSlug}/trips/${tripId}`,
   diver: (shopSlug, _tripId) => `/shop/${shopSlug}/divers`,
 };
 
 export async function sendWaiversAction(
   shopSlug: string,
   surface: WaiverSendSurface,
-  /** Only meaningful (and required) for the "roster" surface — which trip's guests page to revalidate. */
+  /** Only meaningful (and required) for the "roster" surface — which Trip page to revalidate. */
   tripId: string | undefined,
   _prev: WaiverSendState,
   formData: FormData,

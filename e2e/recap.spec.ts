@@ -179,7 +179,7 @@ test("a booking cancelled after the recap page loaded gets an honest notice, not
   const tripId = staffPage.url().match(/\/trips\/([^/?]+)/)?.[1];
   if (!tripId) throw new Error("could not resolve the reef trip id from the URL");
   // The roster lives on the Guests tab now, not the trip overview.
-  await staffPage.goto(`/shop/blue-mantis/trips/${tripId}/guests`);
+  await staffPage.goto(`/shop/blue-mantis/trips/${tripId}`);
   const diverRow = staffPage.locator("li").filter({ hasText: "Priya Sharma" });
   // Removing a seat is administrative rather than the work of the day, so it
   // sits behind the card's own "Details" disclosure.

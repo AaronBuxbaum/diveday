@@ -173,10 +173,6 @@ test.describe("contact import — specialty cards", () => {
     await page.getByRole("button", { name: /Save requirements/ }).click();
     await expect(page.getByRole("status")).toBeVisible();
 
-    await page
-      .getByRole("navigation", { name: "Trip" })
-      .getByRole("link", { name: "Guests" })
-      .click();
     const addDiver = page
       .locator("section")
       .filter({ has: page.getByRole("heading", { name: "Add a diver" }) });
@@ -211,10 +207,6 @@ test.describe("contact import — specialty cards", () => {
 
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);
-    await page
-      .getByRole("navigation", { name: "Trip" })
-      .getByRole("link", { name: "Guests" })
-      .click();
     await expect(page.getByText(/came across in an import/)).toHaveCount(0);
   });
 });

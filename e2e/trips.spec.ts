@@ -178,7 +178,7 @@ test.describe("per-trip crew role", () => {
 });
 
 /**
- * The pulse: a trip's Overview opens with the state of the boat — seats in
+ * The pulse: a trip's Trip surface opens with the state of the boat — seats in
  * words and numbers, then only the facts that need someone, each one a link
  * to the surface that fixes it (design principle 10). The seeded reef trip
  * carries one blocked diver (an unsent waiver) and several rental-fit gaps,
@@ -188,7 +188,7 @@ test.describe("per-trip crew role", () => {
 test.describe("trip pulse", () => {
   signedInAsOwner();
 
-  test("the Overview answers how the boat stands, and the blocked fact lands on the filtered roster", async ({
+  test("the Trip surface answers how the boat stands, and the blocked fact lands on the roster", async ({
     page,
   }) => {
     const link = await findTripOnBoard(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
@@ -198,16 +198,16 @@ test.describe("trip pulse", () => {
 
     // The caption carries the numbers the bar draws — and because it does,
     // the capacity pill must not repeat them above it.
-    await expect(page.getByText("9 of 12 booked · 3 seats open")).toBeVisible();
+    await expect(page.getByRole("img", { name: "9 of 12 seats, 3 open" })).toBeVisible();
     await expect(page.getByText("3 spots left")).toHaveCount(0);
 
-    // Each fact is a door to its fix: the blocked one lands on the Guests
+    // Each fact is a door to its fix: the blocked one lands on the Trip
     // ledger, whose "Still to clear" group leads the roster with the divers
     // who hold the boat up (ADR 20260827-the-departure-is-two-working-
     // surfaces, slice 5d — the `?rf=` filter retired with the chips).
     await expect(page.getByRole("link", { name: /missing rental sizes/ })).toBeVisible();
     await page.getByRole("link", { name: /can’t board yet/ }).click();
-    await expect(page).toHaveURL(/\/guests#roster/);
+    await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+#roster/);
     // The group band owns the state word; its count is every unsettled diver
     // (blockers, advisories, birthdays), not just the one blocked seat.
     await expect(page.getByRole("heading", { name: /^Still to clear ·/ })).toBeVisible();
@@ -229,7 +229,7 @@ test.describe("trip pulse", () => {
     const shopWide = await rows.count();
     expect(shopWide).toBeGreaterThan(1);
 
-    // Clicked on the Overview rather than reconstructed, now that the seed puts
+    // Clicked on the Trip surface rather than reconstructed, now that the seed puts
     // one open invoice on this departure (src/db/seed-open-invoice.ts). The
     // difference matters: reconstructing the URL only ever proved the URL, and
     // would have kept passing if the fact stopped rendering at all.
@@ -265,7 +265,7 @@ test.describe("trip pulse", () => {
 test.describe("trip print packet", () => {
   signedInAsOwner();
 
-  test("the Overview opens a complete printable trip packet", async ({ page }) => {
+  test("the Trip surface opens a complete printable trip packet", async ({ page }) => {
     const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
     await page.goto(`/shop/blue-mantis/trips/${tripId}`);
     await expect(page.getByRole("button", { name: "Print / save PDF" })).toBeVisible();
@@ -277,12 +277,12 @@ test.describe("trip print packet", () => {
     await expect(popup).toHaveURL(new RegExp(`/shop/blue-mantis/trips/${tripId}/print$`));
     await expect(popup.getByRole("heading", { name: "Trip packet" })).toBeVisible();
     // **Three sections, not four.** The packet stopped composing the two tabs
-    // that are working pages rather than documents (issue #814): Overview *is*
-    // the trip's edit form, and Guests is all actions — send a waiver, remove a
+    // that are working pages rather than documents (issue #814): Trip *is* the
+    // trip's edit form and roster, while its actions — send a waiver, remove a
     // booking — none of which can happen on paper. Their facts are not lost:
     // the dive plan that only ever lived inside Overview's form is rendered as
-    // words in "Dives", and the roster Guests showed is the manifest's, already
-    // read-only and already carrying each diver's emergency contact.
+    // words in "Dives", and the roster's operational facts are already present
+    // in the manifest's read-only document.
     await expect(popup.getByRole("heading", { name: "Dives", exact: true })).toHaveCount(1);
     await expect(popup.getByRole("heading", { name: "Manifest", exact: true })).toHaveCount(1);
     await expect(popup.getByRole("heading", { name: "Prep", exact: true })).toHaveCount(1);
@@ -290,9 +290,9 @@ test.describe("trip print packet", () => {
     await expect(popup.getByRole("heading", { name: "Guests", exact: true })).toHaveCount(0);
     await popup.close();
 
-    // Printing is intentionally owned by Overall. The packet is the one
+    // Printing is intentionally owned by Trip. The packet is the one
     // document door; the other tabs must not quietly print only themselves.
-    for (const tab of ["guests", "manifest", "prep"]) {
+    for (const tab of ["manifest", "prep"]) {
       await page.goto(`/shop/blue-mantis/trips/${tripId}/${tab}`);
       await expect(page.getByRole("button", { name: "Print / save PDF" })).toHaveCount(0);
     }
@@ -341,13 +341,13 @@ test.describe("undoing a removal after the trip is cancelled", () => {
     const tripPath = await link.getAttribute("href");
     if (!tripPath) throw new Error(`no trip card found for ${title}`);
 
-    await page.goto(`${tripPath}/guests`);
+    await page.goto(`${tripPath}`);
     await page.getByRole("link", { name: "Add diver" }).click();
     await page.waitForURL(/\/divers\/new/);
     await page.getByLabel("Full name").fill(diver);
     await page.getByLabel("Email").fill(`ursula-${e2eNow().getTime()}@example.com`);
     await page.getByRole("button", { name: "Add to trip" }).click();
-    await page.waitForURL(/\/trips\/[^/]+\/guests/);
+    await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
     // Prefix match: with no email provider configured the fleet gets the
     // honest "…but their waiver wasn't emailed" variant of this notice.
     await expect(page.getByRole("status")).toContainText("Diver added to the trip");
@@ -427,7 +427,7 @@ async function overflowingControls(page: import("@playwright/test").Page) {
 /** Every departure sub-page, measured at the narrowest viewport we design for. */
 async function assertNoSidewaysScroll(page: import("@playwright/test").Page, tripPath: string) {
   await page.setViewportSize({ width: 390, height: 900 });
-  for (const suffix of ["", "/guests", "/manifest", "/prep"]) {
+  for (const suffix of ["", "/manifest", "/prep"]) {
     await page.goto(`${tripPath}${suffix}`);
     // The segmented track itself, not the first `nav` on the page — that one
     // is the shop header's, which is hidden at this width. Waiting for the

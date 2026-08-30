@@ -69,6 +69,7 @@ export function CrewSection({
   shopSlug,
   updateCrewAction,
   copy,
+  embedded = false,
 }: {
   tripId: string;
   staff: StaffList;
@@ -87,6 +88,8 @@ export function CrewSection({
   shopSlug: string;
   updateCrewAction: (tripId: string, change: TripCrewChange) => Promise<{ ok: boolean }>;
   copy: CrewSectionCopy;
+  /** The Trip surface's About panel supplies the outer section chrome. */
+  embedded?: boolean;
 }) {
   const availableStaff = staff.map((entry) => ({
     id: entry.person.id,
@@ -203,13 +206,13 @@ export function CrewSection({
   return (
     <SectionCard
       id="crew"
-      padding="lg"
+      padding={embedded ? "none" : "lg"}
       title={copy.heading}
       // `scroll-mt-24`, the family convention (DetailsSection, RosterSection):
       // the shop header is sticky, so anything shallower parks an anchored
       // heading underneath it — and the pulse's "needs an instructor" fact
       // links straight to #crew.
-      className="scroll-mt-24"
+      className={`${embedded ? "!rounded-none !border-0 !bg-transparent" : ""} scroll-mt-24`}
       actions={
         <Link
           href={`/shop/${shopSlug}/staffing`}

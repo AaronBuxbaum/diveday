@@ -688,7 +688,7 @@ describe("payment rows", () => {
           id: "counter-row",
           kind: "payment",
           actionLabel: "Take payment",
-          href: "/shop/blue-mantis/trips/t1/guests#booking-2",
+          href: "/shop/blue-mantis/trips/t1#booking-2",
           departure: boat("t1"),
           payment: { bookingId: "booking-2" },
         }),
@@ -696,7 +696,7 @@ describe("payment rows", () => {
     });
     expect(screen.getByRole("link", { name: "Take payment" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/trips/t1/guests#booking-2",
+      "/shop/blue-mantis/trips/t1#booking-2",
     );
     expect(screen.queryByRole("button", { name: "Copy payment link" })).toBeNull();
   });
