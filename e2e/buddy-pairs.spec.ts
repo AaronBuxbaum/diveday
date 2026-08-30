@@ -113,8 +113,9 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   ).toBeVisible();
   await openManifestPerson(omarRow);
   await expect(
-    page.getByRole("dialog").getByText("Buddy team: Sam Whitfield · Someone unaccounted for"),
-  ).toBeVisible();
+    page.getByRole("dialog").getByRole("region", { name: "Buddy team" }),
+  ).toContainText("Sam Whitfield");
+  await expect(page.getByRole("dialog")).toContainText("Someone unaccounted for");
   await expect(
     page.getByText("1 buddy team is split. Someone is back aboard, someone is not."),
   ).toBeVisible();
