@@ -1736,7 +1736,7 @@
     },
     "signIn": {
       "metaTitle": "Iniciar sesión — DiveDay",
-      "title": "Iniciar sesión",
+      "title": "Bienvenido de nuevo",
       "error": "Ese correo y contraseña no coinciden.",
       "twoFactorCode": "Código de autenticación o recuperación",
       "twoFactorHint": "Escribe el código de seis cifras de tu aplicación o un código de recuperación sin usar.",

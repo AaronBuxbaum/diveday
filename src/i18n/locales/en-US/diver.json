@@ -1736,7 +1736,7 @@
     },
     "signIn": {
       "metaTitle": "Sign in — DiveDay",
-      "title": "Sign in",
+      "title": "Welcome back",
       "error": "That email and password don't match.",
       "twoFactorCode": "Authenticator or recovery code",
       "twoFactorHint": "Enter the six-digit code from your app, or one unused recovery code.",
