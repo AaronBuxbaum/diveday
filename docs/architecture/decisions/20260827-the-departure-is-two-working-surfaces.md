@@ -86,6 +86,17 @@ blank form it used to print.
 Paper is unaffected: the printed manifest keeps every contact, number and advisory in full. Screens
 hide; the sheet that goes ashore never does.
 
+### Responsive follow-up — the phone is a first-class surface
+
+The two working surfaces keep their roles at phone width rather than inheriting desktop
+competition. The Trip surface collapses secondary configuration into its inline About disclosure
+and reflows its roster rows. The live Manifest owns the phone viewport: its staff dock and staff
+phone header are hidden so the roll-call instrument gets the whole screen. The deferred
+/offline-manifest route keeps the staff shell and inherits the shared control styling until it has
+its own surface slice. The complete cross-page contract is [ADR
+20260830-responsive-surface-consistency](20260830-responsive-surface-consistency.md) and its
+[responsive surface review](../../design/20260830-responsive-surface-review.md).
+
 ### 3. Consequence decides the gesture
 
 - **Aboard is a plain tap**, on the row's trailing edge — high frequency, reversible by re-tap.

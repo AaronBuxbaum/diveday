@@ -89,8 +89,8 @@ export function LandmarkEditor({
               key={index}
               className="rounded-lg border border-border bg-surface-sunken p-3"
             >
-              <div className="flex flex-wrap items-end gap-3">
-                <label className="min-w-48 flex-1 text-sm font-medium">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                <label className="min-w-0 flex-1 text-sm font-medium sm:min-w-48">
                   {copy.nameLabel}
                   <input
                     value={landmark.name}
@@ -100,7 +100,7 @@ export function LandmarkEditor({
                     className={`${controlClass} mt-1`}
                   />
                 </label>
-                <label className="min-w-40 text-sm font-medium">
+                <label className="w-full text-sm font-medium sm:w-auto sm:min-w-40">
                   {copy.kindLabel}
                   <select
                     value={landmark.kind}
@@ -120,7 +120,11 @@ export function LandmarkEditor({
                   type="button"
                   aria-label={copy.removeAriaLabel.replace("{name}", landmark.name)}
                   onClick={() => setLandmarks((current) => current.filter((_, at) => at !== index))}
-                  className={buttonClass({ variant: "ghost", size: "sm" })}
+                  className={buttonClass({
+                    variant: "ghost",
+                    size: "sm",
+                    className: "w-full sm:w-auto",
+                  })}
                 >
                   {copy.remove}
                 </button>
@@ -141,7 +145,7 @@ export function LandmarkEditor({
         </ul>
       )}
 
-      <div className="mt-3 flex flex-wrap items-center gap-3">
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <button
           type="button"
           disabled={full}

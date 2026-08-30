@@ -279,6 +279,7 @@ type LedgerRowDoor = { href: string; linkLabel: string } | { href?: never; linkL
  * without any row having to know it is last.
  *
  * **`stacked` is the phone reading of a row that carries a whole sentence**
+ * (the cross-page phone contract is ADR 20260830-responsive-surface-consistency).
  * (ADR 20260827-clearwater-surface-language; the `TodayPhone` artboard draws
  * it). One line holds the kind and the fix, and the sentence takes the full
  * width beneath them — because at 390px a kind word, a sentence and a named

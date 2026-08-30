@@ -74,7 +74,7 @@ function ShareMeter({
   const attention = remainder === "attention" && share.ratio !== null && share.ratio < 1;
   return (
     <span
-      className={`flex shrink-0 items-center gap-2 text-sm tabular-nums ${
+      className={`flex min-w-0 max-w-full items-center gap-2 text-sm whitespace-normal tabular-nums ${
         attention ? "font-medium text-warning-strong" : "text-muted"
       } ${className}`.trim()}
     >
@@ -122,23 +122,23 @@ export function DepartureLedger({
       <ul className="mt-2">
         {rows.map((row) => (
           <LedgerRow key={row.tripId} href={row.href} linkLabel={row.title}>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2">
-              <p className="min-w-0 flex-1 text-base font-medium">
+            <div className="min-w-0 py-2">
+              <p className="min-w-0 text-base font-medium break-words">
                 {row.title}
                 <span className="font-normal text-muted tabular-nums">
                   {" · "}
                   {row.date}
                 </span>
               </p>
-              <ShareMeter share={row.seats} className="lg:w-52" />
-              <span className="shrink-0 text-sm text-muted tabular-nums lg:w-20">{row.crew}</span>
-              {row.waivers ? (
-                <ShareMeter share={row.waivers} remainder="attention" className="lg:w-52" />
-              ) : (
-                // The slot is kept so the columns above and below it stay in
-                // line; a departure nobody booked has no waivers to report.
-                <span aria-hidden="true" className="hidden shrink-0 lg:block lg:w-52" />
-              )}
+              <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 text-sm sm:mt-1 lg:flex-nowrap">
+                <ShareMeter share={row.seats} className="lg:w-52" />
+                <span className="shrink-0 text-muted tabular-nums lg:w-20">{row.crew}</span>
+                {row.waivers ? (
+                  <ShareMeter share={row.waivers} remainder="attention" className="lg:w-52" />
+                ) : (
+                  <span aria-hidden="true" className="hidden shrink-0 lg:block lg:w-52" />
+                )}
+              </div>
             </div>
           </LedgerRow>
         ))}

@@ -26,7 +26,7 @@ export default function StaffingLoading() {
           <div className="ms-2 h-5 w-40 rounded bg-surface-sunken" />
         </div>
 
-        <div className="mt-4 border-t border-border">
+        <div className="mt-4 hidden border-t border-border lg:block">
           <div className="grid grid-cols-[9rem_repeat(7,minmax(0,1fr))]">
             <div className="px-2 pt-3 pb-2" />
             {[0, 1, 2, 3, 4, 5, 6].map((day) => (
@@ -56,6 +56,19 @@ export default function StaffingLoading() {
             </div>
           ))}
           <div className="h-12 border-t border-b border-border" />
+        </div>
+
+        <div className="mt-4 space-y-7 lg:hidden">
+          {[0, 1, 2].map((day) => (
+            <div key={day} className="border-t border-border pt-3">
+              <div className="h-3 w-32 rounded bg-surface-sunken" />
+              <div className="mt-3 space-y-2">
+                {[0, 1, 2].map((row) => (
+                  <div key={row} className="h-12 rounded-lg bg-surface-sunken" />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
 
         <div className="mt-10">

@@ -480,12 +480,20 @@ describe("the first booking ever", () => {
     tripTitle: "Two-Tank — Alligator Reef",
     startsAt: hoursFromNow(96),
     diverName: "Ravi Chandra",
+    priceCents: 9500,
+    currency: "usd",
+    paymentStatus: "paid",
+    paymentAmountCents: 9500,
+    paymentCurrency: "usd",
+    waiverSigned: true,
   };
 
   it("says the moment in words beside the coral, and puts the seat under it", () => {
     renderSpine({ firstBooking: mark, actions: [action({ id: "b", departure: boat("t1") })] });
     expect(screen.getByText("Your first booking")).toBeInTheDocument();
     expect(screen.getByText("Ravi Chandra")).toBeInTheDocument();
+    expect(screen.getByText(/paid \$95/)).toBeInTheDocument();
+    expect(screen.getByText("waiver signed")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Two-Tank — Alligator Reef" })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/trips/t9",

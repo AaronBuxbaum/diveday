@@ -249,3 +249,11 @@ describe("the chrome bar", () => {
     expect(publicSchedule).toContain('"top-(--chrome-h)"');
   });
 });
+
+describe("staff chrome marker", () => {
+  it("keeps the live manifest selector scoped to the staff shell", async () => {
+    const css = await read("src/app/globals.css");
+    expect(css).toContain('[data-staff-chrome="true"]');
+    expect(css).toContain("data-offline-rejected-notice");
+  });
+});

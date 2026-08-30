@@ -502,7 +502,8 @@
       "phoneLabel": "Teléfono del contacto de emergencia",
       "save": "Guardar contacto",
       "saving": "Guardando…"
-    }
+    },
+    "languagesEmpty": "No indicado"
   },
   "safetyChecklist": {
     "eyebrow": "Ajustes",

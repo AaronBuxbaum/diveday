@@ -127,6 +127,7 @@ export function ShopNav({
        * whose button and label both carry `min-w-0`).
        */}
       <ChromeBar
+        staffChrome
         leading={
           /* The identity block is this reader's own disclosure — language and
              Sign out — rather than standing in permanent chrome: the rarest

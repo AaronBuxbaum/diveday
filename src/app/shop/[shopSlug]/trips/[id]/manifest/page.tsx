@@ -837,7 +837,7 @@ export default async function TripManifestPage({
             every iPhone (src/components/haptics.ts). */}
           <HapticsToggle copy={{ label: t("shared.haptics.toggleLabel") }} className="h-full" />
           <AmbientContrastControl
-            className="rounded-xl border border-border bg-surface-sunken p-3"
+            className="h-full rounded-xl border border-border bg-surface-sunken p-3"
             copy={{
               modeLabel: t("shared.boatMode.modeLabel"),
               labelAuto: t("shared.boatMode.labelAuto"),

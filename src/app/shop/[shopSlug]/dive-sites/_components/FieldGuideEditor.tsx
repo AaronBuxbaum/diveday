@@ -141,8 +141,8 @@ export function FieldGuideEditor({
           the last species has to be savable too. */}
       <input type="hidden" name="creatures" value={JSON.stringify(chosen)} />
 
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="min-w-56 flex-1 text-sm font-medium">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <label className="min-w-0 flex-1 text-sm font-medium sm:min-w-56">
           {copy.searchLabel}
           <input
             list={listId}
@@ -177,7 +177,11 @@ export function FieldGuideEditor({
           type="button"
           onClick={addFromQuery}
           disabled={full || query.trim() === ""}
-          className={buttonClass({ variant: "secondary", size: "sm" })}
+          className={buttonClass({
+            variant: "secondary",
+            size: "sm",
+            className: "w-full sm:w-auto",
+          })}
         >
           {copy.add}
         </button>

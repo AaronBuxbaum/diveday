@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 /**
  * The one header bar both shells wear — the staff app's and the shopfront's.
+ * Its phone behavior is part of ADR 20260830-responsive-surface-consistency.
  *
  * ADR 20260827-clearwater-surface-language, decision 10 ("One chrome spec").
  * **This component must not drift.** Before it, the two shells were two bars:
@@ -53,6 +54,7 @@ export function ChromeBar({
   leading,
   center,
   trailing,
+  staffChrome = false,
 }: {
   /** The shop's own identity — the staff shell's menu, the shopfront's name. */
   leading: ReactNode;
@@ -66,9 +68,11 @@ export function ChromeBar({
   center?: ReactNode;
   /** Search, language, the reader's own controls — always at the far edge. */
   trailing?: ReactNode;
+  /** Marks the staff shell for the full-viewport live manifest exception. */
+  staffChrome?: boolean;
 }) {
   return (
-    <header className={CHROME_BAR_CLASS}>
+    <header className={CHROME_BAR_CLASS} data-staff-chrome={staffChrome || undefined}>
       {/* One row, always — a fixed height cannot wrap, so every slot shrinks
           instead. `min-w-0` on the two content slots is what lets a long shop
           name ellipse rather than push the row wider than the viewport.

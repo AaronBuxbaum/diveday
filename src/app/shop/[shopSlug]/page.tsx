@@ -15,7 +15,10 @@ import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessio
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { UndoToast } from "@/components/UndoToast";
+import { buttonClass } from "@/components/ui/button";
+import { LedgerRow } from "@/components/ui/ledger";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { inHorizonReadiness } from "@/db/blockers";
 import { getDb } from "@/db/client";
@@ -591,9 +594,11 @@ async function TodayBody({
         // a *when* rather than a *where* (issue #824).
         eyebrow={`${t(STAFF_DESTINATION_LABEL_KEYS.today)} · ${formatShortDate(now, locale, shop.timezone)}`}
         title={
-          quietDay
-            ? t("shopHome.spine.quietHeading")
-            : t(GREETING_KEYS[getTimeOfDayGreeting(now, shop.timezone)], { name: firstName })
+          showFirstRunChecklist
+            ? t("shopHome.firstRun.pageTitle")
+            : quietDay
+              ? t("shopHome.spine.quietHeading")
+              : t(GREETING_KEYS[getTimeOfDayGreeting(now, shop.timezone)], { name: firstName })
         }
         meta={
           <>
@@ -601,13 +606,20 @@ async function TodayBody({
                 "No boats out today" is right for a quiet Tuesday and wrong for
                 a shop that has never had a board, and anything else here would
                 restate the setup ledger directly beneath it (issue #711). */}
-            {quietDay ? (
+            {showFirstRunChecklist ? (
+              <p className="max-w-2xl text-lg text-muted">
+                {t.rich("shopHome.firstRun.pageIntro", {
+                  address: (chunks) => <address className="inline not-italic">{chunks}</address>,
+                  url: publicScheduleUrl,
+                })}
+              </p>
+            ) : quietDay ? (
               <p className="max-w-2xl text-lg text-muted">{t("shopHome.spine.quietSentence")}</p>
             ) : daySummaryText ? (
               <p className="max-w-2xl text-lg text-muted">{daySummaryText}</p>
             ) : null}
             {/* A day with no boats answers its follow-up question right here. */}
-            {spine.stations.length === 0 && nextDeparture ? (
+            {!quietDay && spine.stations.length === 0 && nextDeparture ? (
               <p className="mt-1 max-w-2xl text-muted">
                 {t.rich("shopHome.nextDeparture", {
                   link: (chunks) => (
@@ -627,9 +639,12 @@ async function TodayBody({
             {/* Nothing on the books at all (and past first-run, whose ledger
                 owns "schedule your first trip"): one teaching sentence and the
                 door, not a boxed section. */}
-            {spine.stations.length === 0 && !nextDeparture && !showFirstRunChecklist ? (
+            {!quietDay &&
+            spine.stations.length === 0 &&
+            !nextDeparture &&
+            !showFirstRunChecklist ? (
               <p className="mt-1 max-w-2xl text-muted">
-                {quietDay ? null : <>{t("shopHome.noDeparturesEmpty")} </>}
+                {t("shopHome.noDeparturesEmpty")}{" "}
                 <Link
                   href={`/shop/${shopSlug}/schedule/board?add=1`}
                   className="font-medium text-primary hover:underline"
@@ -787,7 +802,41 @@ async function TodayBody({
           })()
         : null}
 
-      {quietDay ? null : (
+      {quietDay ? (
+        <div className="mt-8 flex flex-col gap-4">
+          <Link
+            href={`/shop/${shopSlug}/schedule/board?add=1`}
+            className={buttonClass({ className: "w-full justify-center sm:w-auto" })}
+          >
+            {t("shopHome.quietAddDeparture")}
+          </Link>
+          {nextDeparture ? (
+            <ul>
+              <LedgerRow
+                href={`/shop/${shopSlug}/trips/${nextDeparture.tripId}`}
+                linkLabel={nextDeparture.title}
+                trailing={
+                  <DiveDayIcon name="chevron-right" className="size-4 shrink-0 text-muted" />
+                }
+              >
+                <div className="min-w-0 py-2">
+                  <p className="font-medium break-words">{nextDeparture.title}</p>
+                  <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 text-sm text-muted tabular-nums">
+                    <span>{t("shopHome.quietNextDepartureLabel")}</span>
+                    <span>
+                      {formatShortDate(nextDeparture.startsAt, locale, shop.timezone)} ·{" "}
+                      {formatTime(nextDeparture.startsAt, locale, shop.timezone)}
+                    </span>
+                    <span>
+                      {nextDeparture.booked}/{nextDeparture.capacity}
+                    </span>
+                  </p>
+                </div>
+              </LedgerRow>
+            </ul>
+          ) : null}
+        </div>
+      ) : (
         <DaySpine
           spine={spine}
           shopSlug={shopSlug}

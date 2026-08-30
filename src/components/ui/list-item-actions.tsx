@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
-/** Actions get a full, right-aligned line below sm so list labels keep their measure. */
+/** Actions get a full, right-aligned line below sm so list labels keep their measure.
+ * Responsive list actions follow ADR 20260830-responsive-surface-consistency. */
 export function ListItemActions({
   children,
   className = "",
