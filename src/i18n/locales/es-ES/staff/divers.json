@@ -146,6 +146,7 @@
   "header": {
     "noContactDetails": "Aún sin datos de contacto",
     "diveInsurancePrefix": "Seguro de buceo: ",
+    "diveInsuranceOnFile": "Seguro DAN archivado",
     "editDetails": "Editar datos",
     "fullNameLabel": "Nombre completo",
     "emailLabel": "Correo electrónico",
