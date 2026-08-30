@@ -22,6 +22,7 @@ export type DiveDaySharedIconName =
   | "chevron-right"
   | "more"
   | "warning"
+  | "boat"
   | `waiver-action-${WaiverActionIconName}`
   | `waiver-mark-${WaiverDeliveryMarkName}`;
 
@@ -59,6 +60,14 @@ const SHARED_ICON_PATHS: Record<Exclude<DiveDaySharedIconName, "caret">, ReactNo
       <path d="M12 3.4 21.6 20H2.4L12 3.4Z" />
       <path d="M12 10v3.6" />
       <path d="M12 16.8h.01" />
+    </>
+  ),
+  boat: (
+    <>
+      <path d="M3 14.5h18l-2.5 4H5.5L3 14.5Z" />
+      <path d="M6 14.5 8 6h8l2 8.5" />
+      <path d="M12 6V3" />
+      <path d="M12 3 18 7" />
     </>
   ),
   "arrow-right": (

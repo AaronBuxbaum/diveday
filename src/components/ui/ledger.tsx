@@ -350,8 +350,8 @@ export function LedgerRow({
         <div
           className={
             stacked
-              ? "relative z-10 shrink-0 max-sm:order-2 max-sm:ms-auto"
-              : "relative z-10 shrink-0"
+              ? "relative z-10 min-w-0 max-w-full shrink-0 max-sm:order-2 max-sm:ms-auto"
+              : "relative z-10 min-w-0 max-w-full shrink-0"
           }
         >
           {trailing}

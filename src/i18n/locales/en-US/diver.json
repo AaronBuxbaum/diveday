@@ -1736,8 +1736,7 @@
     },
     "signIn": {
       "metaTitle": "Sign in — DiveDay",
-      "title": "Welcome back",
-      "description": "Sign in to run the shop.",
+      "title": "Sign in",
       "error": "That email and password don't match.",
       "twoFactorCode": "Authenticator or recovery code",
       "twoFactorHint": "Enter the six-digit code from your app, or one unused recovery code.",
@@ -1751,9 +1750,8 @@
       "publicSchedule": "Looking for the dive schedule?"
     },
     "onboard": {
-      "eyebrow": "Founding shop",
-      "title": "Set up your shop",
-      "description": "A few details, and you'll be looking at your own working shop. DiveDay is early, and the first shops steer it.",
+      "eyebrow": "Start a shop",
+      "title": "Open your shop",
       "shopSectionTitle": "Your shop",
       "shopNameLabel": "Shop name",
       "shopNamePlaceholder": "e.g. Green Lagoon Divers",
