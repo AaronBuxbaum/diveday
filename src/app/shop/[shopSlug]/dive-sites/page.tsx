@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
-import { LedgerRow } from "@/components/ui/ledger";
+import { groupLabelClass, LedgerRow } from "@/components/ui/ledger";
 import { QueryForm } from "@/components/ui/QueryForm";
 import { getDb } from "@/db/client";
 import {
@@ -535,9 +535,7 @@ function TemplatePreview({
         >
           {facts.map((fact) => (
             <div key={fact.label}>
-              <dt className="text-xs font-medium tracking-widest text-muted uppercase">
-                {fact.label}
-              </dt>
+              <dt className={groupLabelClass()}>{fact.label}</dt>
               <dd className="mt-1 text-sm font-medium">{fact.value}</dd>
             </div>
           ))}

@@ -9,6 +9,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { canPersonManagePaymentSettings, canPersonRefund } from "@/db/authz";
 import { getTripGuests } from "@/db/trips-guests";
 import { requestLocale } from "@/i18n/request";
@@ -301,9 +302,7 @@ async function TripGuestsBody({
 
       {demand ? (
         <section className="mt-6 rounded-xl border border-warning/40 bg-warning-tint p-5">
-          <p className="text-xs font-semibold tracking-widest text-warning-strong uppercase">
-            {t("trips.guests.demandSignal")}
-          </p>
+          <p className={groupLabelClass("warning")}>{t("trips.guests.demandSignal")}</p>
           <h2 className="mt-1 text-lg font-semibold">{t("trips.guests.demandHeading")}</h2>
           <p className="mt-1 text-sm text-muted">{demand.message}</p>
           {/* Opens the board's add panel already dated to *this* departure's

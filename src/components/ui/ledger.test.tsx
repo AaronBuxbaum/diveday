@@ -32,6 +32,29 @@ function sourceFiles(dir: string): string[] {
 const SWEEP_EXEMPT = new Set([LEDGER, join(HERE, "ledger.test.tsx")]);
 
 /**
+ * These are small-caps by design but are not group labels: the public eyebrow,
+ * the earned-moment eyebrow, the shop initials, the schedule's calendar header,
+ * the print and legal eyebrows, the demo chip, the held-water status, the
+ * selected-trip/request context labels, and the offline manifest specimen.
+ */
+const LABEL_SWEEP_EXEMPT = new Set([
+  join(SRC_DIR, "components/ShopIdentityMenu.tsx"),
+  join(SRC_DIR, "components/EarnedMoment.tsx"),
+  join(SRC_DIR, "components/ShopPageHeader.tsx"),
+  join(SRC_DIR, "components/DemoBanner.tsx"),
+  join(SRC_DIR, "components/LegalDocument.tsx"),
+  join(SRC_DIR, "components/WaterLocker.tsx"),
+  join(SRC_DIR, "components/seat-diver/SelectedTripCard.tsx"),
+  join(SRC_DIR, "components/seat-diver/BookingRequestCards.tsx"),
+  join(SRC_DIR, "components/OfflineManifestView.tsx"),
+  join(SRC_DIR, "app/s/[shopSlug]/_components/NextBoatCard.tsx"),
+  join(SRC_DIR, "app/s/[shopSlug]/_components/WeekLedger.tsx"),
+  join(SRC_DIR, "app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx"),
+  join(SRC_DIR, "app/shop/[shopSlug]/trips/[id]/print/page.tsx"),
+  join(SRC_DIR, "app/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]/page.tsx"),
+]);
+
+/**
  * Read out of `ledger.tsx` rather than written here, for two reasons: this file
  * then holds the value in exactly one place — the pin below — rather than
  * scattering copies of the thing it is policing, and a later adjustment to the
@@ -59,16 +82,25 @@ describe("the group label is single-sourced", () => {
     //
     // What this can and cannot catch, stated so nobody reads it as more than it
     // is: it catches a *paste* of the group label's class string, which is the
-    // realistic drift once `GroupLabel` exists. It cannot catch a different
-    // spelling of the same idea (`tracking-wide`, `tracking-widest`), and the
-    // SPEC's wider convergence of every `text-xs … uppercase` label onto
-    // `GroupLabel` is deliberately unfinished — the canvas README's 6a row
-    // records the deferral and what is left.
+    // realistic drift once `GroupLabel` exists. A second test below catches
+    // hand-rolled small-caps group labels while exempting the distinct eyebrow,
+    // initials and offline specimen grammars.
     const offenders = sourceFiles(SRC_DIR)
       .filter((file) => !SWEEP_EXEMPT.has(file))
       .filter((file) => readFileSync(file, "utf8").includes(spelling ?? "\0"))
       .map((file) => relative(SRC_DIR, file));
     // Listed, not counted — nothing on screen will name the file.
+    expect(offenders).toEqual([]);
+  });
+
+  it("routes designed small-caps labels through the shared helper", () => {
+    const labelPattern =
+      /className="[^"]*(?:\btext-xs\b[^"]*\buppercase\b|\buppercase\b[^"]*\btext-xs\b)[^"]*"/;
+    const offenders = sourceFiles(SRC_DIR)
+      .filter((file) => !SWEEP_EXEMPT.has(file) && !LABEL_SWEEP_EXEMPT.has(file))
+      .filter((file) => labelPattern.test(readFileSync(file, "utf8")))
+      .map((file) => relative(SRC_DIR, file));
+
     expect(offenders).toEqual([]);
   });
 });

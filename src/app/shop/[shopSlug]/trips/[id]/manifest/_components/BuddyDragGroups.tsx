@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { fill } from "@/i18n/fill";
 import type { BuddyMemberOption } from "./BuddyTeamsPanel";
 
@@ -166,9 +167,7 @@ export function BuddyDragGroups({
       <p className="mt-3 text-sm text-muted">{copy.hint}</p>
       {groups.map((group) => (
         <div key={group.heading}>
-          <p className="mt-3 text-xs font-semibold tracking-wide text-muted uppercase">
-            {group.heading}
-          </p>
+          <p className={`mt-3 ${groupLabelClass()}`}>{group.heading}</p>
           <div className="mt-1 flex flex-wrap gap-x-5 gap-y-2">
             {group.options.map((option) => (
               // A horizontal checkbox row is not a stacked `Field`

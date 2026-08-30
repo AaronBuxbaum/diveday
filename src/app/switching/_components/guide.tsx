@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { ScrollToHash } from "@/components/ScrollToHash";
 import { SectionCard } from "@/components/ui/card";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import type { FunnelSource } from "@/lib/funnel";
@@ -83,9 +84,7 @@ export function GuideHero({
         <dl className="mt-10 grid grid-cols-2 gap-x-8 gap-y-6 border-t border-border pt-6 lg:grid-cols-4">
           {GUIDE_FACTS.map((fact) => (
             <div key={fact}>
-              <dt className="text-xs font-semibold tracking-wider text-muted uppercase">
-                {t(`switching.common.facts.${fact}.label`)}
-              </dt>
+              <dt className={groupLabelClass()}>{t(`switching.common.facts.${fact}.label`)}</dt>
               <dd className="mt-1 text-sm font-medium leading-6">
                 {t(`switching.common.facts.${fact}.value`)}
               </dd>
@@ -309,9 +308,7 @@ export function ScopePhase({ locale, number }: { locale: DiverLocale; number: nu
                 signal. Set in the same small-caps as the hero's fact labels
                 and the sources footnote, so one page has one voice for
                 "this names what follows". */}
-            <h4 className="text-xs font-semibold tracking-wider text-muted uppercase">
-              {group.label}
-            </h4>
+            <h4 className={groupLabelClass()}>{group.label}</h4>
             <ul className="mt-3 divide-y divide-border border-y border-border">
               {IMPORT_HONESTY_TABLE.filter((row) => row.scope === group.scope).map((row) => (
                 <li
@@ -483,9 +480,7 @@ export function SourcesFootnote({
   return (
     <section className="border-t border-border">
       <div className="mx-auto max-w-4xl px-6 py-8">
-        <h2 className="text-xs font-semibold tracking-widest text-muted uppercase">
-          {t("switching.competitor.sources")}
-        </h2>
+        <h2 className={groupLabelClass()}>{t("switching.competitor.sources")}</h2>
         <ul className="mt-3 flex flex-col gap-1.5 text-sm text-muted">
           {sources.map((source) => (
             <li key={source.url}>

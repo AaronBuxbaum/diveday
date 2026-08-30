@@ -6,6 +6,7 @@ import { PrintButton } from "@/components/PrintButton";
 import { ShopStat } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { Table, type TableMinWidth, TBody, Td, THead, Th } from "@/components/ui/table";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getIncidentExport } from "@/db/incident-export";
@@ -138,9 +139,7 @@ export default async function IncidentExportPage({
       <header className="border-b border-border pb-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-bold tracking-[0.16em] text-primary uppercase">
-              {t("incidentExport.title")}
-            </p>
+            <p className={groupLabelClass("primary")}>{t("incidentExport.title")}</p>
             <h1 className="mt-1 text-3xl font-semibold tracking-tight">{doc.meta.tripTitle}</h1>
             <p className="mt-1 text-muted">
               {formatShortDate(new Date(doc.meta.tripStartsAt), locale, doc.meta.timezone)} ·{" "}

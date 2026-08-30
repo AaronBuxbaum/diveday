@@ -4,6 +4,7 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { groupLabelClass } from "@/components/ui/ledger";
 import type { Course } from "@/db/schema";
 import type { DiverTranslator } from "@/i18n/messages";
 import {
@@ -114,9 +115,7 @@ export function CourseHero({
         >
           {facts.map((fact) => (
             <div key={fact.label} className="min-w-0">
-              <dt className="text-xs font-semibold tracking-wide text-muted uppercase">
-                {fact.label}
-              </dt>
+              <dt className={groupLabelClass()}>{fact.label}</dt>
               <dd className="mt-0.5 text-sm font-medium">{fact.value}</dd>
             </div>
           ))}
@@ -150,7 +149,7 @@ export function CourseAdmission({
 }) {
   return (
     <section aria-labelledby="who-can-enroll" className="mt-8 max-w-2xl">
-      <h2 id="who-can-enroll" className="text-xs font-semibold tracking-wide text-muted uppercase">
+      <h2 id="who-can-enroll" className={groupLabelClass()}>
         {t("course.whoCanEnroll")}
       </h2>
       <p className="mt-1.5 text-lg font-medium">
@@ -171,9 +170,7 @@ export function CourseAdmission({
       </p>
       {shopNote ? (
         <>
-          <h3 className="mt-4 text-xs font-semibold tracking-wide text-muted uppercase">
-            {t("course.fromTheShop")}
-          </h3>
+          <h3 className={`mt-4 ${groupLabelClass()}`}>{t("course.fromTheShop")}</h3>
           <p className="mt-1 text-sm leading-relaxed text-muted">{shopNote}</p>
         </>
       ) : null}
@@ -276,9 +273,7 @@ export function CourseIncludes({
       <div className="mt-6 grid max-w-3xl gap-x-12 gap-y-8 sm:grid-cols-2">
         {includes.length > 0 ? (
           <div>
-            <h3 className="text-xs font-semibold tracking-wide text-success uppercase">
-              {t("trip.packProvided")}
-            </h3>
+            <h3 className={groupLabelClass("success")}>{t("trip.packProvided")}</h3>
             <ul className="mt-3 grid gap-2 text-sm">
               {includes.map((item) => (
                 <li key={item} className="flex gap-2">
@@ -291,9 +286,7 @@ export function CourseIncludes({
         ) : null}
         {excludes.length > 0 ? (
           <div>
-            <h3 className="text-xs font-semibold tracking-wide text-muted uppercase">
-              {t("course.notIncludedHeading")}
-            </h3>
+            <h3 className={groupLabelClass()}>{t("course.notIncludedHeading")}</h3>
             <ul className="mt-3 grid gap-2 text-sm text-muted">
               {excludes.map((item) => (
                 <li key={item} className="flex gap-2">
@@ -449,7 +442,7 @@ export function CourseSessions({
               return (
                 <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold tracking-wide text-primary uppercase">
+                    <p className={groupLabelClass("primary")}>
                       {nextIsSoonest ? t("course.nextDate") : t("course.nextOpenDate")}
                     </p>
                     <p className="mt-1 text-xl font-semibold">{facts.dates}</p>
@@ -471,9 +464,7 @@ export function CourseSessions({
             })()}
             {later.length > 0 ? (
               <div className="mt-8">
-                <h3 className="text-xs font-semibold tracking-wide text-muted uppercase">
-                  {t("course.moreDates")}
-                </h3>
+                <h3 className={groupLabelClass()}>{t("course.moreDates")}</h3>
                 <ul className="mt-1 divide-y divide-border">
                   {later.map((session) => {
                     const facts = sessionFacts(session, timezone, locale, t);

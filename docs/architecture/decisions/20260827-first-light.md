@@ -61,8 +61,11 @@ The slug field's hint becomes the storefront URL it will produce, live as they t
 ### 2. The terminal glyph is drawn, never typed
 
 `EntryDone`'s emoji becomes a stroked SVG mark in the same `size-14` circle — a closed set,
-`DoorGlyphId = "sent" | "expired" | "done" | "quiet"` (mail for a sent reset, a clock for a dead
-link, a check for a confirmed act, a resting bell for unsubscribed). One component owns the
+`DoorGlyphId = "sent" | "expired" | "done" | "quiet" | "cancelled"` (mail for a sent reset, a clock for a dead
+link, a check for a confirmed act, a resting bell for unsubscribed, and a calendar for a cancelled
+booking). The four account-door marks remain closed; `cancelled` is the booking-token amendment used
+by `/ready/[token]`, where a live link can lead to a booking that was cancelled underneath the diver.
+One component owns the
 strokes; no caller passes markup or emoji. The marks are `currentColor` strokes so they follow
 tone and theme for free.
 

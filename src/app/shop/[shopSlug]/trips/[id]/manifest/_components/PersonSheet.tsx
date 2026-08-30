@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useFocusTrap } from "@/components/useFocusTrap";
 
@@ -175,7 +176,7 @@ export function PersonSheet({
         </header>
 
         <section className="mt-5" aria-label={todayLabel}>
-          <p className="text-xs font-bold tracking-[0.11em] text-muted uppercase">{todayLabel}</p>
+          <p className={groupLabelClass()}>{todayLabel}</p>
           {trail.length > 0 ? (
             <ol className="mt-1">
               {trail.map((entry, index) => (
@@ -207,7 +208,7 @@ export function PersonSheet({
 
         {buddy ? (
           <section className="mt-4" aria-label={buddyLabel}>
-            <p className="text-xs font-bold tracking-[0.11em] text-muted uppercase">{buddyLabel}</p>
+            <p className={groupLabelClass()}>{buddyLabel}</p>
             <div className="mt-1">{buddy}</div>
           </section>
         ) : null}

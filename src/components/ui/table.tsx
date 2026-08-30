@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { tapTargetLinkClass } from "./button";
 
 /**
@@ -160,9 +161,7 @@ export function THead({
 }) {
   return (
     <thead className={className || undefined}>
-      <tr className="border-b border-border text-left text-xs tracking-wide text-muted uppercase">
-        {children}
-      </tr>
+      <tr className={`border-b border-border text-left ${groupLabelClass()}`}>{children}</tr>
     </thead>
   );
 }

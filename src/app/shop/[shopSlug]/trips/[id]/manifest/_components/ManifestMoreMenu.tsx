@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { groupLabelClass } from "@/components/ui/ledger";
 
 /**
  * The manifest-local rare-doors menu (ADR
@@ -84,7 +85,7 @@ export function ManifestMoreMenu({
             className="absolute end-0 top-full z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-border bg-surface p-3 shadow-xl"
           >
             <div className="mb-2 flex items-center justify-between gap-3 px-1">
-              <p className="text-xs font-bold tracking-[0.11em] text-muted uppercase">{label}</p>
+              <p className={groupLabelClass()}>{label}</p>
               <button
                 type="button"
                 aria-label={closeLabel}

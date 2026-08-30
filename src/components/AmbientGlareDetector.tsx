@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { groupLabelClass } from "@/components/ui/ledger";
 
 export const GLARE_LUX_THRESHOLD = 10000; // 10,000 lux (outdoor bright sunlight)
 
@@ -222,9 +223,7 @@ export function AmbientContrastControl({
     // is on, arrow keys move between them for free, and the legend names the
     // group without a second visible heading.
     <fieldset className={`select-none text-left print:hidden ${className}`.trim()}>
-      <legend className="text-xs font-bold tracking-wide text-muted uppercase">
-        {copy.modeLabel}
-      </legend>
+      <legend className={groupLabelClass()}>{copy.modeLabel}</legend>
       <div className="mt-1.5 flex max-w-full overflow-x-auto overscroll-x-contain rounded-full border border-border bg-surface-sunken p-1">
         {CONTRAST_MODES.map((value) => {
           const active = value === mode;

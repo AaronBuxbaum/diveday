@@ -57,16 +57,14 @@ Enforced beside the code: `DaySpine.tsx` and `DayStation.tsx` defer to the ADR b
 
 ### The trip page — `/shop/[shopSlug]/trips/[id]`
 
-**Half built** — ADR
+**Built 2026-08-29** — ADR
 [20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md)
-(Proposed), drawn in
-[its canvas](canvases/20260827-the-departure-is-two-working-surfaces/README.md). The roster ledger
-shipped as slice 5d (2026-08-29) on the Guests tab, where `RosterSection.tsx` defers to the ADR by
-name and its test pins the rules; the fold of Overview into Trip (5e) remains designed-not-built,
-blocked on the owner call the ADR records, so the ledger's one deliberate divergence from the
-drawing stands until then: each row keeps a trailing 44px mark that doubles as the door to its
-reference panel, because with no merged Trip page and no person sheet (5b) the panel has no other
-home.
+(Accepted), drawn in
+[its canvas](canvases/20260827-the-departure-is-two-working-surfaces/README.md). Slices 5d and 5e
+now make Trip the canonical working surface: the compact About disclosure owns the departure facts,
+and the roster ledger owns who is coming and what still needs attention. The historical Guests route
+remains available as a compatibility redirect, so consolidating the visible surfaces did not remove
+the roster's actions or deep links.
 
 - **One idea:** everyone who is coming, and whether they can. The roster *is* the page; what the
   dive is drops to a one-line summary that opens on request.
@@ -137,7 +135,7 @@ below `xl` (1280px), on tablets and phones.
 
 ### Orders — `/shop/[shopSlug]/orders`
 
-**Redesign proposed** — same ADR and canvas.
+**Built 2026-08-29** — same ADR and canvas.
 
 - **One idea:** the money ledger, day by day.
 - **The question it arrives with:** "what came in, and is anything still open?" — answered by day
@@ -180,8 +178,8 @@ routes took the display-scale h1 only.
 
 ### The public trip page — `/s/[shopSlug]/trips/[id]`
 
-**Built** (slice 7b, 2026-08-28) — ADR
-[20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md) (Proposed),
+**Built 2026-08-28** (slice 7b) — ADR
+[20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md) (Accepted),
 drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion surface.
 
 - **One idea:** this boat is worth your Saturday — and here is the one place to say yes.
@@ -200,8 +198,8 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
 
 ### The thread — `/ready/[token]` (and every state after booking)
 
-**Prep state built** (slice 7c, 2026-08-28); the after-state (7d) is still proposed — same ADR and
-canvas. Extends ADR 20260820-one-page-after-booking.
+**Built 2026-08-29** (slices 7c and 7d) — same ADR and canvas. Extends ADR
+20260820-one-page-after-booking.
 
 - **One idea:** the one link that answers "am I ready, and what's next?" for this trip — before,
   during, and after.
@@ -215,7 +213,7 @@ canvas. Extends ADR 20260820-one-page-after-booking.
 
 ### The waiver — `/waivers/[token]`
 
-**Redesign proposed** — same ADR and canvas. Legal surface: wording and presentation floor are
+**Built 2026-08-29** — same ADR and canvas. Legal surface: wording and presentation floor are
 H-01/H-03's.
 
 - **One idea:** two minutes of paperwork, paced so it feels like two minutes.
@@ -227,8 +225,8 @@ H-01/H-03's.
 
 ### The gear register — `/shop/[shopSlug]/gear`
 
-**Redesign proposed** — ADR
-[20260827-the-shops-shelves](../architecture/decisions/20260827-the-shops-shelves.md) (Proposed),
+**Built 2026-08-29** — ADR
+[20260827-the-shops-shelves](../architecture/decisions/20260827-the-shops-shelves.md) (Accepted),
 drawn in [its canvas](canvases/20260827-the-shops-shelves/README.md).
 
 - **One idea:** where every unit is, said once.
@@ -243,7 +241,7 @@ drawn in [its canvas](canvases/20260827-the-shops-shelves/README.md).
 
 ### Staffing — `/shop/[shopSlug]/staffing`
 
-**Redesign proposed** — same ADR and canvas.
+**Built 2026-08-29** — same ADR and canvas.
 
 - **One idea:** the week's crew, and the one hole in it.
 - **The question it arrives with:** "is every boat covered?" — answered by the Needs-crew row's
@@ -256,7 +254,7 @@ drawn in [its canvas](canvases/20260827-the-shops-shelves/README.md).
 
 ### Reports — `/shop/[shopSlug]/reports`
 
-**Redesign proposed** — same ADR and canvas.
+**Built 2026-08-29** — same ADR and canvas.
 
 - **One idea:** how the month is going, in five figures and the boats behind them.
 - **The question it arrives with:** "how are we doing, and what needs chasing?" — the figures
@@ -291,8 +289,8 @@ primary-weight control lives on the page (`_lib/record-primaries.test.ts`).
 
 ### The doors — `/sign-in`, `/onboard`, and the token family
 
-**Redesign proposed** — ADR
-[20260827-first-light](../architecture/decisions/20260827-first-light.md) (Proposed), drawn in
+**Built 2026-08-29** — ADR
+[20260827-first-light](../architecture/decisions/20260827-first-light.md) (Accepted), drawn in
 [its canvas](canvases/20260827-first-light/README.md). One entry for the family
 (`/forgot-password`, `/reset-password`, `/verify`, `/invite`, `/unsubscribe` — and `/claim`,
 which leaves for the thread), because they are one surface: `EntryShell` is the page.

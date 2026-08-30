@@ -8,6 +8,7 @@ import { MarketingFooter, MarketingFooterFallback } from "@/components/Marketing
 import { CaptainPhoneFrame } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -383,19 +384,19 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
                 component grows an answer for a card that is not `bg-surface`. */}
             <dl className="divide-y divide-border rounded-2xl border border-border bg-background">
               <div className="p-6">
-                <dt className="text-xs font-semibold tracking-widest text-primary uppercase">
+                <dt className={groupLabelClass("primary")}>
                   {t("marketing.about.whereLiveLabel")}
                 </dt>
                 <dd className="mt-2 leading-7">{t("marketing.about.whereLiveValue")}</dd>
               </div>
               <div className="p-6">
-                <dt className="text-xs font-semibold tracking-widest text-primary uppercase">
+                <dt className={groupLabelClass("primary")}>
                   {t("marketing.about.committingLabel")}
                 </dt>
                 <dd className="mt-2 leading-7">{t("marketing.about.committingValue")}</dd>
               </div>
               <div className="p-6">
-                <dt className="text-xs font-semibold tracking-widest text-primary uppercase">
+                <dt className={groupLabelClass("primary")}>
                   {t("marketing.about.whoAnswersLabel")}
                 </dt>
                 <dd className="mt-2 leading-7">

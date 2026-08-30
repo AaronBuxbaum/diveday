@@ -1,4 +1,5 @@
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 
@@ -27,9 +28,7 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
       <AppBar label={t("fallback.offlineCopy")} />
       <div className="space-y-4 p-4">
         <div>
-          <p className="text-xs font-medium tracking-widest text-primary uppercase">
-            {t("fallback.boatManifest")}
-          </p>
+          <p className={groupLabelClass("primary")}>{t("fallback.boatManifest")}</p>
           <h3 className="mt-1 text-lg font-semibold tracking-tight">{t("fallback.tripName")}</h3>
           <p className="text-xs text-muted">{t("fallback.tripTime")}</p>
         </div>
@@ -87,9 +86,7 @@ export function FrontDeskReadinessFallback({ locale }: { locale: DiverLocale }) 
     <div className="bg-background">
       <AppBar label={t("fallback.tripDetail")} />
       <div className="p-5">
-        <p className="text-xs font-medium tracking-widest text-primary uppercase">
-          {t("fallback.readiness")}
-        </p>
+        <p className={groupLabelClass("primary")}>{t("fallback.readiness")}</p>
         <h3 className="mt-1 text-xl font-semibold tracking-tight">
           {t("fallback.answerBeforeDock")}
         </h3>
@@ -132,9 +129,7 @@ export function ImportPreviewFallback({ locale }: { locale: DiverLocale }) {
     <div className="bg-background">
       <AppBar label={t("fallback.import.label")} />
       <div className="p-5">
-        <p className="text-xs font-medium tracking-widest text-primary uppercase">
-          {t("fallback.import.eyebrow")}
-        </p>
+        <p className={groupLabelClass("primary")}>{t("fallback.import.eyebrow")}</p>
         <h3 className="mt-1 text-xl font-semibold tracking-tight">{t("fallback.import.title")}</h3>
         <div className="mt-4 flex flex-wrap gap-2">
           {[
@@ -242,9 +237,7 @@ export function ExportBundleFallback({ locale }: { locale: DiverLocale }) {
       <div className="p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-medium tracking-widest text-primary uppercase">
-              {t("fallback.export.eyebrow")}
-            </p>
+            <p className={groupLabelClass("primary")}>{t("fallback.export.eyebrow")}</p>
             <h3 className="mt-1 text-xl font-semibold tracking-tight">
               {t("fallback.export.title")}
             </h3>
@@ -298,9 +291,7 @@ export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
     <div className="bg-background">
       <AppBar label={t("fallback.schedule")} />
       <div className="p-5">
-        <p className="text-xs font-medium tracking-widest text-primary uppercase">
-          {t("fallback.upcomingTrips")}
-        </p>
+        <p className={groupLabelClass("primary")}>{t("fallback.upcomingTrips")}</p>
         <h3 className="mt-1 text-xl font-semibold tracking-tight">{t("fallback.findNextDive")}</h3>
         <div className="mt-4 space-y-3">
           {trips.map((trip) => (
@@ -432,9 +423,7 @@ export function NightBeforeBriefFallback({ locale }: { locale: DiverLocale }) {
     <div className="bg-background">
       <AppBar label={t("fallback.nightBefore.label")} />
       <div className="p-5">
-        <p className="text-xs font-medium tracking-widest text-primary uppercase">
-          {t("fallback.nightBefore.eyebrow")}
-        </p>
+        <p className={groupLabelClass("primary")}>{t("fallback.nightBefore.eyebrow")}</p>
         <h3 className="mt-1 text-xl font-semibold tracking-tight">
           {t("fallback.nightBefore.title")}
         </h3>
@@ -498,9 +487,7 @@ export function ShopPrepListFallback({ locale }: { locale: DiverLocale }) {
     <div className="bg-background">
       <AppBar label={t("fallback.shopPrep.label")} />
       <div className="p-5">
-        <p className="text-xs font-medium tracking-widest text-primary uppercase">
-          {t("fallback.shopPrep.eyebrow")}
-        </p>
+        <p className={groupLabelClass("primary")}>{t("fallback.shopPrep.eyebrow")}</p>
         <h3 className="mt-1 text-xl font-semibold tracking-tight">
           {t("fallback.shopPrep.title")}
         </h3>

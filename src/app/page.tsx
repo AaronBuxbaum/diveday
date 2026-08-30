@@ -15,6 +15,7 @@ import {
 } from "@/components/MarketingSections";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -340,9 +341,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             <div className="mx-auto w-full max-w-sm lg:max-w-md">
               <CaptainPhoneFrame label={t("marketing.home.phoneFrameLabel")} locale={locale} />
               <div className="relative z-10 mx-auto -mt-5 w-[88%] rounded-xl border border-border bg-surface px-4 py-3 shadow-lg">
-                <p className="text-xs font-semibold tracking-widest text-primary uppercase">
-                  {t("marketing.home.dockEyebrow")}
-                </p>
+                <p className={groupLabelClass("primary")}>{t("marketing.home.dockEyebrow")}</p>
                 <p className="mt-1 text-sm font-medium">{t("marketing.home.dockDetail")}</p>
               </div>
             </div>

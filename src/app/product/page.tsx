@@ -16,6 +16,7 @@ import {
 import { CaptainPhoneFrame, MarketingMockup } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -287,9 +288,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             <div className="mt-12 grid gap-10 md:grid-cols-2 lg:gap-12 items-start">
               <div className="space-y-6">
                 <div>
-                  <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                    {t("marketing.product.prepShopLabel")}
-                  </p>
+                  <p className={groupLabelClass()}>{t("marketing.product.prepShopLabel")}</p>
                   <h3 className="mt-2 text-xl font-semibold tracking-tight">
                     {t("marketing.product.prepShopTitle")}
                   </h3>
@@ -304,9 +303,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               </div>
               <div className="space-y-6">
                 <div>
-                  <p className="text-xs font-semibold tracking-widest text-muted uppercase">
-                    {t("marketing.product.prepDiverLabel")}
-                  </p>
+                  <p className={groupLabelClass()}>{t("marketing.product.prepDiverLabel")}</p>
                   <h3 className="mt-2 text-xl font-semibold tracking-tight">
                     {t("marketing.product.nightBeforeTitle")}
                   </h3>
