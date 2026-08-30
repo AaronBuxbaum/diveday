@@ -96,7 +96,7 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   );
 
   // The schedule-link step always offers the link, independent of "done" state.
-  await expect(page.getByText(`/s/${unique}`)).toBeVisible();
+  await expect(page.getByText(`/s/${unique}`).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible();
 });
 
