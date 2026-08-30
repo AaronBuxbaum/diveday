@@ -22,10 +22,7 @@ test("an owner records a captain's languages, and the public schedule says so", 
   // language's own endonym. A Spanish-reading staffer would see "alemán",
   // not "Deutsch"; this session reads English. The choices are intentionally
   // collapsed at rest so a long roster stays calm on narrow screens.
-  await captainCard
-    .locator("summary")
-    .filter({ hasText: "Languages this person speaks" })
-    .click();
+  await captainCard.locator("summary").filter({ hasText: "Languages this person speaks" }).click();
   await captainCard.getByLabel("German").check();
   await captainCard.getByLabel("Japanese").check();
   await captainCard.getByRole("button", { name: "Save" }).click();
