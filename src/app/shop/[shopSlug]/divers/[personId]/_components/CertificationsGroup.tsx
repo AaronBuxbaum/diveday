@@ -144,9 +144,7 @@ export function CertificationsGroup({
     ...diver.nitroxCertifications,
   ].filter(
     (card) =>
-      isUnsightedSelfDeclaration(card) ||
-      card.status === "pending" ||
-      needsImportConfirm(card),
+      isUnsightedSelfDeclaration(card) || card.status === "pending" || needsImportConfirm(card),
   ).length;
 
   const markCertified = markCertifiedCopy(t);
