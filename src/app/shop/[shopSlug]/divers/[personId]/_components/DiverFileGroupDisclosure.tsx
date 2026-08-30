@@ -63,7 +63,7 @@ export function DiverFileGroupDisclosure({
       <details
         ref={detailsRef}
         open={open || undefined}
-        className="group/diver-file"
+        className="group/diver-file diver-file-group"
         data-testid={`diver-file-group-${id}`}
       >
         <summary
@@ -74,7 +74,7 @@ export function DiverFileGroupDisclosure({
           <span className="min-w-0 flex-1 text-base font-medium">{label}</span>
           <span className="shrink-0 text-sm text-muted tabular-nums">{summary}</span>
         </summary>
-        <div id={`${id}-content`} className="diver-file-group-content sm:block">
+        <div id={`${id}-content`} className="diver-file-group-content sm:!block">
           {children}
         </div>
       </details>

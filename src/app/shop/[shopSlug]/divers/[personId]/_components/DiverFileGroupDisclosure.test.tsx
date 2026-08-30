@@ -9,18 +9,14 @@ afterEach(cleanup);
 describe("DiverFileGroupDisclosure", () => {
   it("starts closed on a phone with the group's fact in the door", () => {
     render(
-      <DiverFileGroupDisclosure
-        id="gear"
-        label="Gear and sizes"
-        summary="BCD M · ML long · 38"
-      >
+      <DiverFileGroupDisclosure id="gear" label="Gear and sizes" summary="BCD M · ML long · 38">
         <p>Gear rows</p>
       </DiverFileGroupDisclosure>,
     );
 
     const details = screen.getByTestId("diver-file-group-gear");
     expect(details).not.toHaveAttribute("open");
-    expect(screen.getByRole("button", { name: /gear and sizes/i })).toBeInTheDocument();
+    expect(details.querySelector("summary")).toHaveTextContent(/gear and sizes/i);
     expect(screen.getByText("BCD M · ML long · 38")).toHaveClass("tabular-nums");
     expect(screen.getByText("Gear rows")).toBeInTheDocument();
   });
@@ -34,7 +30,7 @@ describe("DiverFileGroupDisclosure", () => {
 
     const details = screen.getByTestId("diver-file-group-notes");
     expect(details).toHaveAttribute("open");
-    expect(screen.getByRole("button", { name: /notes 1/i })).toBeInTheDocument();
+    expect(details.querySelector("summary")).toHaveTextContent(/notes 1/i);
   });
 
   it("gives the summary a touch floor and one content region", () => {
@@ -44,11 +40,12 @@ describe("DiverFileGroupDisclosure", () => {
       </DiverFileGroupDisclosure>,
     );
 
-    const summary = screen.getByRole("button", { name: /certifications 1 waiting/i });
+    const details = screen.getByTestId("diver-file-group-certifications");
+    const summary = details.querySelector("summary");
+    expect(summary).toHaveTextContent(/certifications 1 waiting/i);
+    expect(summary).not.toBeNull();
     expect(summary).toHaveClass("min-h-11", "sm:hidden");
     expect(summary).toHaveAttribute("aria-controls", "certifications-content");
-    expect(screen.getByTestId("diver-file-group-certifications")).toHaveClass(
-      "group/diver-file",
-    );
+    expect(screen.getByTestId("diver-file-group-certifications")).toHaveClass("group/diver-file");
   });
 });

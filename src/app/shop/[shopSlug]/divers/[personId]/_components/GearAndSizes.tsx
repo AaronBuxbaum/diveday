@@ -10,8 +10,8 @@ import { rentalFitLine } from "@/lib/dive-prep";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { offeredRentableItems } from "@/lib/rentals";
 import { saveProfileAction, setNeedsStaffFitAction } from "../actions";
-import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
+import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import { RentalFitFields, type RentalFitSize } from "./RentalFitFields";
 import type { DiverProfile } from "./shared";
 

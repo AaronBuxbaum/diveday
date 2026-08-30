@@ -10,8 +10,8 @@ import { type WaiverRowState, waiverRowStateText } from "@/i18n/waiver-labels";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { smsRecipient } from "@/lib/notifications/sms";
 import { markWaiverInPersonAction } from "../actions";
-import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
+import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile } from "./shared";
 import { WaiverDeliveryActions } from "./WaiverDeliveryActions";
 

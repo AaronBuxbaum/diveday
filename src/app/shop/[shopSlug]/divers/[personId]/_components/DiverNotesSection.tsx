@@ -8,8 +8,8 @@ import type { listDiverRecordNotes } from "@/db/operations";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { addDiverNoteAction, deleteDiverNoteAction } from "../actions";
-import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
+import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 
 type DiverRecordNote = Awaited<ReturnType<typeof listDiverRecordNotes>>[number];
 
