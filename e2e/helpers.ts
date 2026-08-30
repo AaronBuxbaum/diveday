@@ -586,7 +586,9 @@ export async function openRosterNotes(row: Locator): Promise<void> {
 export function manifestRow(page: Page, name: string): Locator {
   return page
     .locator("#roll-call-list > ul > li")
-    .filter({ has: page.locator("summary", { hasText: name }) });
+    .filter({
+      has: page.locator('button[aria-haspopup="dialog"]', { hasText: name }),
+    });
 }
 
 /**
@@ -636,7 +638,16 @@ export async function openOnThisPhone(page: Page): Promise<void> {
  * the row tucks away (contact, medical, notes, buddy team).
  */
 export async function openManifestPerson(row: Locator): Promise<void> {
-  await openIfClosed(row.locator("details").first());
+  const body = row.locator("xpath=ancestor::body");
+  const existingDialog = body.getByRole("dialog");
+  if (await existingDialog.count()) {
+    await existingDialog.getByRole("button", { name: "Close person details" }).click();
+    await expect(existingDialog).toHaveCount(0);
+  }
+  const trigger = row.locator('button[aria-haspopup="dialog"]').first();
+  await expect(trigger).toBeVisible();
+  await trigger.click();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
 }
 
 /** Open the Guests page activity log when a spec needs to inspect its audit trail. */

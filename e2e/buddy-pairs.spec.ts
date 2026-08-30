@@ -69,9 +69,9 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   const omarRow = manifestRow(page, "Omar Haddad");
   const samRow = manifestRow(page, "Sam Whitfield");
   await openManifestPerson(omarRow);
-  await expect(omarRow.getByText("Buddy team: Sam Whitfield")).toBeVisible();
+  await expect(page.getByRole("dialog").getByText("Buddy team: Sam Whitfield")).toBeVisible();
   await openManifestPerson(samRow);
-  await expect(samRow.getByText("Buddy team: Omar Haddad")).toBeVisible();
+  await expect(page.getByRole("dialog").getByText("Buddy team: Omar Haddad")).toBeVisible();
 
   // After dive 1: Omar is recorded back aboard while Sam has no result yet.
   // **That is not a split** — an alarm is earned by a recorded fact, never by
@@ -95,13 +95,13 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   // two-step (decision 3) — and *now* the split is the loudest thing on the
   // page, on the row of the diver who is aboard.
   await openManifestPerson(samRow);
-  const samNotBack = samRow.getByRole("button", { name: "Mark not back aboard" });
+  const samNotBack = page.getByRole("dialog").getByRole("button", { name: "Mark not back aboard" });
   await samNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await samNotBack.click();
-  await expect(samRow.getByRole("button", { name: "Not back aboard", exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog").getByRole("button", { name: "Not back aboard", exact: true })).toBeVisible();
   await openManifestPerson(omarRow);
   await expect(
-    omarRow.getByText("Buddy team: Sam Whitfield · Someone unaccounted for"),
+    page.getByRole("dialog").getByText("Buddy team: Sam Whitfield · Someone unaccounted for"),
   ).toBeVisible();
   await expect(
     page.getByText("1 buddy team is split. Someone is back aboard, someone is not."),
@@ -123,13 +123,13 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   // no tap at all while the mark stands.
   await expect(samRow.getByRole("button", { name: "Mark boarded" })).toHaveCount(0);
   await openManifestPerson(samRow);
-  const boardSam = samRow.getByRole("button", { name: /^Mark back aboard/ });
+  const boardSam = page.getByRole("dialog").getByRole("button", { name: /^Mark back aboard/ });
   await boardSam.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await boardSam.click();
   await expect(samRow.getByRole("button", { name: "Boarded — tap again to undo" })).toBeVisible();
   await openManifestPerson(omarRow);
-  await expect(omarRow.getByText("Buddy team: Sam Whitfield", { exact: true })).toBeVisible();
-  await expect(omarRow.getByText("Someone unaccounted for")).toHaveCount(0);
+  await expect(page.getByRole("dialog").getByText("Buddy team: Sam Whitfield", { exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog").getByText("Someone unaccounted for")).toHaveCount(0);
   await expect(page.getByText("buddy team is split", { exact: false })).toHaveCount(0);
 });
 
@@ -194,5 +194,5 @@ test("a team grows, a member leaves, and dissolving is the explicit act", async 
   // found via some other row's chip text.
   const tomRow = manifestRow(page, "Tom Okafor");
   await openManifestPerson(tomRow);
-  await expect(tomRow.getByText("Buddy team:", { exact: false })).toHaveCount(0);
+  await expect(page.getByRole("dialog").getByText("Buddy team:", { exact: false })).toHaveCount(0);
 });

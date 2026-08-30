@@ -131,8 +131,8 @@ test("a diver note is shared with the live boat manifest", async ({ page }) => {
   // (ADR 20260827-the-departure-is-two-working-surfaces, decision 2).
   const row = manifestRow(page, "Priya Sharma");
   await openManifestPerson(row);
-  await expect(row.getByText("Diver notes", { exact: true })).toBeVisible();
-  await expect(row).toContainText(note);
+  await expect(page.getByRole("dialog").getByText("Diver notes", { exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog")).toContainText(note);
 });
 
 // Task 144 (safety-adjacent — this prints on the manifest): Today used to
@@ -213,8 +213,8 @@ test("staff record and correct a diver's emergency contact from the roster and t
   await page.goto(`${tripPath}/manifest`);
   const manifestDiverRow = manifestRow(page, diverName);
   await openManifestPerson(manifestDiverRow);
-  await expect(manifestDiverRow.getByText("Casey Diver ·")).toBeVisible();
-  await expect(manifestDiverRow.locator('a[href^="tel:"]')).toHaveCount(0);
+  await expect(page.getByRole("dialog").getByText("Casey Diver ·")).toBeVisible();
+  await expect(page.getByRole("dialog").locator('a[href^="tel:"]')).toHaveCount(0);
 });
 
 /**

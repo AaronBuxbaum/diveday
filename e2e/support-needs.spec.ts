@@ -97,8 +97,9 @@ test("what a diver arranges on their own page reaches prep and the manifest", as
   await page.goto(`${tripPath}/manifest`);
   const row = page.locator("#roll-call-list > ul > li").filter({ hasText: diverName });
   await openManifestPerson(row);
-  await expect(row.getByText("2 support divers in the water — the shop arranges")).toBeVisible();
-  await expect(row.getByText("Dives with Marisol Vega")).toBeVisible();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText("2 support divers in the water — the shop arranges")).toBeVisible();
+  await expect(dialog.getByText("Dives with Marisol Vega")).toBeVisible();
 
   // The last refusal, checked where it would actually bite. This diver was
   // booked minutes ago, so they carry the two blockers anybody in that state
@@ -107,7 +108,7 @@ test("what a diver arranges on their own page reaches prep and the manifest", as
   // count, no lift, no briefing, no named buddy (ADR
   // 20260827-support-needs-are-a-record-about-the-dive, fourth refusal —
   // nothing here gates).
-  const blockers = row.getByRole("listitem");
+  const blockers = dialog.getByRole("listitem");
   await expect(blockers).not.toHaveCount(0);
   for (const reason of await blockers.allInnerTexts()) {
     expect(reason).not.toMatch(/support|lift|aboard|briefing|adapt|Marisol/i);

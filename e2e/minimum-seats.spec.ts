@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, openTripAbout, openTripFromBoard } from "./helpers";
 import { E2E_CRON_SECRET } from "./servers";
 
 /**
@@ -78,6 +78,7 @@ test("a short departure cancels itself at its deadline, and reinstating it overr
   expect((await swept.json()).cancelled).toBeGreaterThanOrEqual(1);
 
   await page.goto(tripUrl);
+  await openTripAbout(page);
   await expect(page.getByText("Cancelled").first()).toBeVisible();
 
   // The shop always gets the last word. Reinstating *is* "run it anyway", so it
