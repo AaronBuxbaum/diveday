@@ -26,6 +26,7 @@ export function MarketingNavView({
   shopSlug,
   locale,
   hideCta,
+  compactMobile = false,
   demoAction,
 }: {
   /**
@@ -36,6 +37,8 @@ export function MarketingNavView({
   shopSlug: string | null;
   locale: DiverLocale;
   hideCta: boolean;
+  /** The onboard artboard keeps only the wordmark in the phone header. */
+  compactMobile?: boolean;
   // i18n-exempt: type annotation, not copy.
   demoAction: (formData: FormData) => void | Promise<void>;
 }) {
@@ -48,7 +51,9 @@ export function MarketingNavView({
   ];
 
   return (
-    <header className="border-b border-border bg-background/95">
+    <header
+      className={`bg-background/95 ${compactMobile ? "border-b-0 sm:border-b sm:border-border" : "border-b border-border"}`}
+    >
       {/*
        * Phone layout is two deliberate rows — brand + CTA first, page links
        * second — rather than free wrapping, which used to stack the link
@@ -57,10 +62,10 @@ export function MarketingNavView({
        */}
       <nav
         aria-label={t("nav.mainNavigation")}
-        className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-4 sm:flex-nowrap"
+        className={`mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-4 sm:flex-nowrap ${compactMobile ? "max-sm:h-[52px] max-sm:flex-nowrap max-sm:px-5 max-sm:py-0" : ""}`}
       >
         <Wordmark href="/" className="text-foreground" />
-        <div className="order-3 -mx-2 flex basis-full flex-wrap items-center gap-x-1 sm:order-none sm:mx-0 sm:ml-auto sm:basis-auto sm:justify-end sm:gap-x-2">
+        <div className={`order-3 -mx-2 flex basis-full flex-wrap items-center gap-x-1 sm:order-none sm:mx-0 sm:ml-auto sm:basis-auto sm:justify-end sm:gap-x-2 ${compactMobile ? "max-sm:hidden" : ""}`}>
           {links.map((link) => (
             <Link key={link.href} href={link.href} className={navLinkClassName}>
               {link.label}
@@ -88,7 +93,7 @@ export function MarketingNavView({
             href={staffShopRoot(shopSlug)}
             className={buttonClass({
               variant: "secondary",
-              className: "ml-auto font-semibold whitespace-nowrap sm:ml-0",
+              className: `ml-auto font-semibold whitespace-nowrap sm:ml-0 ${compactMobile ? "max-sm:hidden" : ""}`,
             })}
           >
             {t("nav.goToShop")}
@@ -100,7 +105,7 @@ export function MarketingNavView({
           // rather than the trial it used to. Secondary weight: each marketing
           // page carries its own primary CTA, and two competing primaries on
           // first paint was a real "what do I click?" cost (design review).
-          <form action={demoAction} className="ml-auto sm:ml-0">
+          <form action={demoAction} className={`ml-auto sm:ml-0 ${compactMobile ? "max-sm:hidden" : ""}`}>
             <FunnelTag source="nav" />
             <SubmitButton
               pendingLabel={t("nav.gettingReady")}
