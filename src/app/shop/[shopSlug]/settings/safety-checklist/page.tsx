@@ -6,6 +6,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
+import { ListItemActions } from "@/components/ui/list-item-actions";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { listChecklistItems } from "@/db/pre-departure-check";
 import { requestLocale } from "@/i18n/request";
@@ -91,39 +92,44 @@ export default async function SafetyChecklistPage({
             {items.map((item, index) => (
               <li
                 key={item.id}
-                className="flex items-center gap-2 rounded-lg border border-border bg-surface p-3"
+                className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-3"
               >
-                <span className="flex-1 text-sm">{item.label}</span>
-                <form action={moveChecklistItemAction.bind(null, shopSlug)}>
-                  <input type="hidden" name="itemId" value={item.id} />
-                  <input type="hidden" name="direction" value="up" />
-                  <button
-                    type="submit"
-                    disabled={index === 0}
-                    aria-label={t("settings.safetyChecklist.moveUp")}
-                    className={buttonClass({ variant: "ghost", size: "sm" })}
-                  >
-                    <DiveDayIcon name="arrow-up" className="size-4" />
-                  </button>
-                </form>
-                <form action={moveChecklistItemAction.bind(null, shopSlug)}>
-                  <input type="hidden" name="itemId" value={item.id} />
-                  <input type="hidden" name="direction" value="down" />
-                  <button
-                    type="submit"
-                    disabled={index === items.length - 1}
-                    aria-label={t("settings.safetyChecklist.moveDown")}
-                    className={buttonClass({ variant: "ghost", size: "sm" })}
-                  >
-                    <DiveDayIcon name="arrow-down" className="size-4" />
-                  </button>
-                </form>
-                <form action={deleteChecklistItemAction.bind(null, shopSlug)}>
-                  <input type="hidden" name="itemId" value={item.id} />
-                  <button type="submit" className={buttonClass({ variant: "danger", size: "sm" })}>
-                    {t("settings.safetyChecklist.delete")}
-                  </button>
-                </form>
+                <span className="min-w-0 flex-1 break-words text-sm">{item.label}</span>
+                <ListItemActions>
+                  <form action={moveChecklistItemAction.bind(null, shopSlug)}>
+                    <input type="hidden" name="itemId" value={item.id} />
+                    <input type="hidden" name="direction" value="up" />
+                    <button
+                      type="submit"
+                      disabled={index === 0}
+                      aria-label={t("settings.safetyChecklist.moveUp")}
+                      className={buttonClass({ variant: "ghost", size: "sm" })}
+                    >
+                      <DiveDayIcon name="arrow-up" className="size-4" />
+                    </button>
+                  </form>
+                  <form action={moveChecklistItemAction.bind(null, shopSlug)}>
+                    <input type="hidden" name="itemId" value={item.id} />
+                    <input type="hidden" name="direction" value="down" />
+                    <button
+                      type="submit"
+                      disabled={index === items.length - 1}
+                      aria-label={t("settings.safetyChecklist.moveDown")}
+                      className={buttonClass({ variant: "ghost", size: "sm" })}
+                    >
+                      <DiveDayIcon name="arrow-down" className="size-4" />
+                    </button>
+                  </form>
+                  <form action={deleteChecklistItemAction.bind(null, shopSlug)}>
+                    <input type="hidden" name="itemId" value={item.id} />
+                    <button
+                      type="submit"
+                      className={buttonClass({ variant: "danger", size: "sm" })}
+                    >
+                      {t("settings.safetyChecklist.delete")}
+                    </button>
+                  </form>
+                </ListItemActions>
               </li>
             ))}
           </ol>

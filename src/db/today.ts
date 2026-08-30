@@ -267,7 +267,13 @@ export type TodayWork = {
   /** How many actions were filtered out for the reader's role lens (issue #715). */
   withheldCount: number;
   /** Shown only when nothing sails today, so the page still orients the crew. */
-  nextDeparture: { tripId: string; title: string; startsAt: Date } | null;
+  nextDeparture: {
+    tripId: string;
+    title: string;
+    startsAt: Date;
+    booked: number;
+    capacity: number;
+  } | null;
   /**
    * The role lens's raw material (20260721-role-aware-landing): which of the
    * window's trips the signed-in person crews, and a per-session readiness
@@ -2017,7 +2023,15 @@ export async function getTodayWork(
     departures,
     actions: visibleActions,
     withheldCount,
-    nextDeparture: next ? { title: next.title, startsAt: next.startsAt, tripId: next.id } : null,
+    nextDeparture: next
+      ? {
+          title: next.title,
+          startsAt: next.startsAt,
+          tripId: next.id,
+          booked: next.booked,
+          capacity: next.capacity,
+        }
+      : null,
     crewedTripIds,
     crewedSessions,
     availableStaff,

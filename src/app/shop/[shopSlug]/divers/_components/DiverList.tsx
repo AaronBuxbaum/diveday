@@ -444,9 +444,9 @@ export function DiverList({
                     // down the right of every row on a page whose whole
                     // interaction is "tap the row".
                     <LedgerRow key={row.personId} href={row.href} linkLabel={row.fullName}>
-                      <span className="flex min-w-0 items-center gap-3">
-                        <span className="flex min-w-0 items-center gap-2">
-                          <span className="truncate font-semibold">{row.fullName}</span>
+                      <div className="min-w-0 flex-1 py-2 sm:flex sm:items-center sm:gap-3">
+                        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                          <span className="break-words font-semibold">{row.fullName}</span>
                           {row.badges.map((badge) => (
                             <Badge
                               key={badge.label}
@@ -457,12 +457,18 @@ export function DiverList({
                               {badge.label}
                             </Badge>
                           ))}
-                        </span>
-                        <span className="ms-auto flex shrink-0 items-center gap-2 text-sm text-muted tabular-nums">
-                          {row.fact}
-                          <DiveDayIcon name="chevron-right" className="size-4" aria-hidden="true" />
-                        </span>
-                      </span>
+                        </div>
+                        {row.fact ? (
+                          <div className="mt-1 flex min-w-0 shrink-0 items-center gap-2 text-sm text-muted tabular-nums sm:mt-0 sm:max-w-[45%]">
+                            <span className="min-w-0 truncate">{row.fact}</span>
+                            <DiveDayIcon
+                              name="chevron-right"
+                              className="size-4 shrink-0"
+                              aria-hidden="true"
+                            />
+                          </div>
+                        ) : null}
+                      </div>
                     </LedgerRow>
                   ))}
                 </ul>

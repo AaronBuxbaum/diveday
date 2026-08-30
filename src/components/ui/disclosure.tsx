@@ -85,7 +85,7 @@ export function DisclosureRow({
 }
 
 /**
- * A compact secondary-detail row. The settled value stays visible at rest;
+ * A compact secondary-detail row (ADR 20260830-responsive-surface-consistency). The settled value stays visible at rest;
  * the editable form opens in place behind one native disclosure control.
  * Labels and values stack below sm so the row remains legible on narrow phones.
  */

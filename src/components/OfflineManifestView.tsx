@@ -22,6 +22,7 @@ import { PullToRefresh } from "@/components/PullToRefresh";
 import { OFFLINE_CREW_ROW_TONE, ROLL_CALL_ROW_TONE } from "@/components/row-tones";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SkipLink } from "@/components/SkipLink";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -933,7 +934,7 @@ export function OfflineManifestView() {
               className="mx-auto grid size-12 place-items-center rounded-2xl bg-surface text-2xl"
               aria-hidden="true"
             >
-              📋
+              <DiveDayIcon name="empty" className="size-7 text-primary" />
             </div>
             <p className="mx-auto mt-4 max-w-md text-muted">
               {t("shared.offlineManifest.list.emptyHint")}
@@ -984,7 +985,7 @@ export function OfflineManifestView() {
             className="mx-auto grid size-12 place-items-center rounded-2xl bg-surface text-2xl"
             aria-hidden="true"
           >
-            ⛵
+            <DiveDayIcon name="empty" className="size-7 text-primary" />
           </div>
           <p className="mx-auto mt-4 max-w-md text-muted">
             {removedForOtherShop

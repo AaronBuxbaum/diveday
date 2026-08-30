@@ -297,6 +297,7 @@ body {
  */
 
 /*
+ * Responsive shell exception — ADR 20260830-responsive-surface-consistency.
  * The live manifest is the only `.boat-mode` surface inside the staff shell.
  * It owns the mobile viewport, so it must not reserve space for the phone dock.
  * `/offline-manifest` renders outside `#shop-main-content` and is therefore
@@ -304,6 +305,19 @@ body {
  */
 #shop-main-content:has(> main > div.boat-mode) {
   --dock-clearance: 0rem;
+}
+
+/* The live manifest owns the whole phone viewport. Its staff chrome is useful
+ * everywhere else, but would consume the roll-call surface here; the deferred
+ * /offline-manifest route intentionally stays in the normal staff shell. */
+@media (max-width: 1023px) {
+  body:has(#shop-main-content > main > div.boat-mode) [data-staff-chrome="true"] {
+    display: none;
+  }
+
+  body:has(#shop-main-content > main > div.boat-mode) [data-offline-rejected-notice="true"] {
+    top: 0;
+  }
 }
 
 .boat-mode {

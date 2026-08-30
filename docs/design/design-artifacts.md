@@ -9,7 +9,9 @@ from screenshots of the thing already built — which works for *refining* a sur
 *reshaping* one, because the cheapest moment to move a control is before it exists. The trip/manifest
 redesign ([20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md))
 was the first design drawn before the code, and it forced every question below. These are its
-answers, and they bind the next one.
+answers, and they bind the next one. The responsive follow-up is recorded in
+[the surface review](20260830-responsive-surface-review.md) and decided by
+[ADR 20260830-responsive-surface-consistency](../architecture/decisions/20260830-responsive-surface-consistency.md).
 
 ## The split: three homes, exactly one of them normative
 

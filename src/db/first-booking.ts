@@ -1,7 +1,17 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { DEPARTURE_BUFFER_MS } from "@/lib/closeout";
-import type { DbExecutor } from "./client";
-import { bookings, people, trips } from "./schema";
+import { isCompletedWaiverCurrent } from "@/lib/waivers";
+import { type DbExecutor, queryAll } from "./client";
+import type { PaymentStatus, WaiverRecord } from "./schema";
+import {
+  bookingPayments,
+  bookings,
+  people,
+  shops,
+  trips,
+  waiverRecords,
+  waiverTemplates,
+} from "./schema";
 
 /**
  * **The shop's first booking, while it is still the only one.**
@@ -18,6 +28,12 @@ export type FirstBooking = {
   tripTitle: string;
   startsAt: Date;
   diverName: string;
+  priceCents: number | null;
+  currency: string;
+  paymentStatus: PaymentStatus | null;
+  paymentAmountCents: number | null;
+  paymentCurrency: string | null;
+  waiverSigned: boolean;
 };
 
 /** Statuses a booking that is still standing can be in. */
@@ -68,10 +84,13 @@ export async function shopFirstBooking(
       startsAt: trips.startsAt,
       tripDeletedAt: trips.deletedAt,
       diverName: people.fullName,
+      priceCents: trips.priceCents,
+      currency: shops.currency,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .innerJoin(people, eq(people.id, bookings.personId))
+    .innerJoin(shops, eq(shops.id, bookings.shopId))
     .where(eq(bookings.shopId, shopId))
     .orderBy(asc(bookings.createdAt))
     .limit(2);
@@ -81,11 +100,59 @@ export async function shopFirstBooking(
   if (!LIVE_BOOKING_STATUSES.includes(only.status)) return null;
   if (only.tripDeletedAt !== null) return null;
   if (only.startsAt.getTime() + DEPARTURE_BUFFER_MS <= now.getTime()) return null;
+
+  let paymentRows: { status: PaymentStatus; amountCents: number | null; currency: string }[] = [];
+  let templateRows: { materialGeneration: number }[] = [];
+  let waiverRows: WaiverRecord[] = [];
+  [paymentRows, templateRows, waiverRows] = await queryAll(db, [
+    () =>
+      db
+        .select({
+          status: bookingPayments.status,
+          amountCents: bookingPayments.amountCents,
+          currency: bookingPayments.currency,
+        })
+        .from(bookingPayments)
+        .where(
+          and(eq(bookingPayments.shopId, shopId), eq(bookingPayments.bookingId, only.bookingId)),
+        )
+        .limit(1),
+    () =>
+      db
+        .select({ materialGeneration: waiverTemplates.materialGeneration })
+        .from(waiverTemplates)
+        .where(and(eq(waiverTemplates.shopId, shopId), isNull(waiverTemplates.deletedAt)))
+        .orderBy(desc(waiverTemplates.version))
+        .limit(1),
+    () =>
+      db
+        .select()
+        .from(waiverRecords)
+        .where(
+          and(
+            eq(waiverRecords.shopId, shopId),
+            eq(waiverRecords.bookingId, only.bookingId),
+            eq(waiverRecords.status, "completed"),
+          ),
+        )
+        .orderBy(desc(waiverRecords.createdAt))
+        .limit(1),
+  ]);
+  const payment = paymentRows[0];
+  const waiver = waiverRows[0];
+  const currentTemplateGeneration = templateRows[0]?.materialGeneration ?? null;
+
   return {
     bookingId: only.bookingId,
     tripId: only.tripId,
     tripTitle: only.tripTitle,
     startsAt: only.startsAt,
     diverName: only.diverName,
+    priceCents: only.priceCents,
+    currency: only.currency,
+    paymentStatus: payment?.status ?? null,
+    paymentAmountCents: payment?.amountCents ?? null,
+    paymentCurrency: payment?.currency ?? null,
+    waiverSigned: waiver ? isCompletedWaiverCurrent(waiver, currentTemplateGeneration, now) : false,
   };
 }

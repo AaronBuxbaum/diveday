@@ -221,7 +221,7 @@ export function TripAddDiverLink({
     <a
       href={href}
       aria-label={ariaLabel}
-      className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full bg-primary px-3 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:min-h-11 sm:rounded-xl sm:px-4"
+      className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:min-h-11 sm:rounded-xl sm:px-4"
     >
       <DiveDayIcon name="addBooking" className="size-4" />
       <span className="sm:hidden">{compactLabel}</span>
