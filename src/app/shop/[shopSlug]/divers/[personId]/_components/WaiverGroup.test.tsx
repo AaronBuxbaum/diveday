@@ -111,7 +111,7 @@ describe("the waiver group", () => {
       }),
     );
 
-    expect(screen.getByText("Signed")).toBeTruthy();
+    expect(screen.getAllByText("Signed").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Mark signed on paper" })).toBeNull();
   });

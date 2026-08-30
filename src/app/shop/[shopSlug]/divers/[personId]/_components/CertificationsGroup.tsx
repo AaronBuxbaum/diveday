@@ -26,6 +26,7 @@ import {
   reviewSpecialtyAction,
 } from "../actions";
 import { CardSightingForm } from "./CardSightingForm";
+import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { MarkCertifiedControl } from "./MarkCertifiedControl";
 import { markCertifiedCopy } from "./mark-certified-copy";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
@@ -137,6 +138,15 @@ export function CertificationsGroup({
   const numberErrorFor = (cardId: string) =>
     numberError && status?.cardId === cardId ? numberError : undefined;
   const groupStatus = numberError && status?.cardId ? undefined : status;
+  const waitingCount = [
+    ...diver.certifications,
+    ...diver.specialtyCertifications,
+    ...diver.nitroxCertifications,
+  ].filter(
+    (card) =>
+      isUnsightedSelfDeclaration(card) || card.status === "pending" || needsImportConfirm(card),
+  ).length;
+
   const markCertified = markCertifiedCopy(t);
   const markCertify = markCertifiedAction.bind(null, shopSlug, personId);
   const deleteLevel = deleteCertificationAction.bind(null, shopSlug, personId);
@@ -355,7 +365,17 @@ export function CertificationsGroup({
   }
 
   return (
-    <section className="mt-10" aria-labelledby="certifications">
+    <DiverFileGroupDisclosure
+      id="certifications"
+      label={t("divers.certifications.heading")}
+      summary={
+        waitingCount > 0
+          ? t("divers.file.certificationsWaiting", { count: waitingCount })
+          : t("divers.file.certificationsClear")
+      }
+      open={Boolean(status)}
+      className="mt-10"
+    >
       <InsetGroup
         as="h2"
         // A list of cards is a list: each row is one record a staffer can act
@@ -365,6 +385,7 @@ export function CertificationsGroup({
         bodyAs="ul"
         id="certifications"
         label={t("divers.certifications.heading")}
+        labelClassName="max-sm:hidden"
         className="scroll-mt-24"
       >
         {rows}
@@ -504,6 +525,6 @@ export function CertificationsGroup({
           <DiverFormStatus status={groupStatus} className="mt-3" />
         </li>
       </InsetGroup>
-    </section>
+    </DiverFileGroupDisclosure>
   );
 }

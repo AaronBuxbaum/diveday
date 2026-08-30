@@ -10,6 +10,7 @@ import { rentalFitLine } from "@/lib/dive-prep";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { offeredRentableItems } from "@/lib/rentals";
 import { saveProfileAction, setNeedsStaffFitAction } from "../actions";
+import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import { RentalFitFields, type RentalFitSize } from "./RentalFitFields";
 import type { DiverProfile } from "./shared";
@@ -106,6 +107,12 @@ export function GearAndSizes({
   ].filter((size) => size !== false);
 
   const sized = line.state === "rents" ? line.items.filter((item) => item.size) : [];
+  const gearSummary =
+    line.state === "rents"
+      ? sized.length > 0
+        ? sized.map((item) => `${rentalItemLabel(t, item.kind)} ${item.size}`).join(" · ")
+        : t("divers.file.noSizes")
+      : rentalFitLineText(t, locale, line);
   const flagged = Boolean(profile?.needsStaffFitAt);
   // **Only an outcome this form produced.** All four fit notices carry
   // `form: "fit"` — the two flag controls below the disclosure share it with
@@ -119,8 +126,20 @@ export function GearAndSizes({
   const flagOutcome = status?.code === "fit-flagged" || status?.code === "fit-cleared";
 
   return (
-    <section className="mt-8" aria-labelledby="gear">
-      <InsetGroup as="h2" id="gear" label={t("divers.file.gearHeading")} className="scroll-mt-24">
+    <DiverFileGroupDisclosure
+      id="gear"
+      label={t("divers.file.gearHeading")}
+      summary={gearSummary}
+      open={Boolean(status)}
+      className="mt-8"
+    >
+      <InsetGroup
+        as="h2"
+        id="gear"
+        label={t("divers.file.gearHeading")}
+        labelClassName="max-sm:hidden"
+        className="scroll-mt-24"
+      >
         <FactRow label={t("divers.file.rentsFromUs")}>
           {line.state === "rents"
             ? list.format(line.items.map((item) => rentalItemLabel(t, item.kind)))
@@ -257,6 +276,6 @@ export function GearAndSizes({
           </form>
         ) : null}
       </InsetGroup>
-    </section>
+    </DiverFileGroupDisclosure>
   );
 }

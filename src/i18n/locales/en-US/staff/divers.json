@@ -406,6 +406,10 @@
     "newInvoice": "+ New invoice"
   },
   "file": {
+    "certificationsWaiting": "{count, plural, one {# waiting} other {# waiting}}",
+    "certificationsClear": "None waiting",
+    "noteCount": "{count}",
+    "noNotes": "None",
     "gearHeading": "Gear and sizes",
     "rentsFromUs": "Rents from us",
     "sizes": "Sizes",

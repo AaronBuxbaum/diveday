@@ -1095,6 +1095,23 @@ details[open]::details-content {
   transition-timing-function: var(--ease-out-soft);
 }
 
+/*
+ * The diver file is a phone-only disclosure. At the desktop breakpoint its
+ * summary disappears and the record's four groups must stay in the reading
+ * flow even though the native `<details>` element remains closed. Chromium's
+ * `::details-content` pseudo-element can keep a closed body content-hidden
+ * after the child receives `display: block`, so open the pseudo-element here
+ * as well. The child utility above handles the older display-only behavior.
+ */
+@media (min-width: 40rem) {
+  .diver-file-group::details-content {
+    /* biome-ignore lint/complexity/noImportantStyles: desktop must override the UA closed-details rule */
+    content-visibility: visible !important;
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
