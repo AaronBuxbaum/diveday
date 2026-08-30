@@ -4601,6 +4601,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await seededTripId(page, "blue-mantis", AOW_COURSE);
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+        await openTripAbout(page);
         await page
           .locator("section")
           .filter({ has: page.getByRole("heading", { name: "Readiness requirements" }) })
@@ -5001,7 +5002,9 @@ test.describe("print", () => {
     await page.goto(`${tripPath}/print`);
     await page.getByRole("heading", { name: "Trip packet" }).waitFor();
     await page.emulateMedia({ media: "print" });
-    await expect(page.locator('nav[aria-label="Trip"]')).not.toBeVisible();
+    const packetNavs = page.locator('nav[aria-label="Trip"]');
+    await expect(packetNavs).toHaveCount(2);
+    for (const nav of await packetNavs.all()) await expect(nav).not.toBeVisible();
     await page.emulateMedia({ media: "screen" });
     await capturePrint(page, "trip-packet");
   });
@@ -5105,6 +5108,10 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto(`/shop/${privateShop.slug}/schedule/board`);
       await openTripFromBoard(page, REEF_TRIP);
       await openTripTab(page, "Manifest");
+      await page
+        .getByRole("button", { name: "Emergency numbers & response plan" })
+        .filter({ visible: true })
+        .click();
       // The prompt itself, not just the heading — the whole point of the
       // capture is the state where there is nothing under it.
       await page.getByText("No emergency numbers recorded").waitFor();

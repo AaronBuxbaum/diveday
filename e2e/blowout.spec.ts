@@ -72,6 +72,9 @@ test.describe("weather blow-out cascade", () => {
     // The trip record now reads cancelled and keeps the way back to the
     // cascade; the quiet per-trip cancel control is gone with it.
     await page.getByRole("link", { name: "Back to the trip" }).click();
+    await openTripAbout(page);
+    // The cancellation badge lives in the shared masthead; the About panel is
+    // open here so the trip's lifecycle controls remain in the same reading.
     // Not `exact: true`: the status is a `<Badge tone="danger">`, which renders
     // an aria-hidden glyph inside the same span as the label, so the element's
     // text is "❌Cancelled" and no element has the exact text "Cancelled".

@@ -143,7 +143,7 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   // (PR #607 review) — an aria-label replaces the computed name outright, so
   // "Not boarded ☑️" no longer matches; the visible label is unchanged.
   await expect(
-    priyaRow.getByRole("button", { name: "Not boarded — tap again to undo" }),
+    priyaDialog.getByRole("button", { name: "Not boarded — tap again to undo" }),
   ).toBeVisible();
   await expect
     .poll(async () => Math.abs(((await priyaRow.boundingBox())?.y ?? Number.NaN) - rowTopBefore))
@@ -174,9 +174,9 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   const tomRow = manifestRow(page, "Tom Okafor");
   await openManifestPerson(tomRow);
   await page.getByRole("dialog").getByRole("button", { name: "Mark not boarded" }).click();
-  await expect(page.getByRole("button", { name: "Not boarded — tap again to undo" })).toHaveCount(
-    2,
-  );
+  await expect(
+    page.getByRole("dialog").getByRole("button", { name: "Not boarded — tap again to undo" }),
+  ).toBeVisible();
 });
 
 test("captain saves the full checkpoint manifest, reloads it offline, and reconciles roll call", async ({

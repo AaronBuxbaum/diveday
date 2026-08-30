@@ -69,9 +69,13 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   const omarRow = manifestRow(page, "Omar Haddad");
   const samRow = manifestRow(page, "Sam Whitfield");
   await openManifestPerson(omarRow);
-  await expect(page.getByRole("dialog").getByText("Buddy team: Sam Whitfield")).toBeVisible();
+  await expect(
+    page.getByRole("dialog").getByRole("region", { name: "Buddy team" }),
+  ).toContainText("Sam Whitfield");
   await openManifestPerson(samRow);
-  await expect(page.getByRole("dialog").getByText("Buddy team: Omar Haddad")).toBeVisible();
+  await expect(
+    page.getByRole("dialog").getByRole("region", { name: "Buddy team" }),
+  ).toContainText("Omar Haddad");
 
   // After dive 1: Omar is recorded back aboard while Sam has no result yet.
   // **That is not a split** — an alarm is earned by a recorded fact, never by
@@ -131,8 +135,8 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   await expect(samRow.getByRole("button", { name: "Boarded — tap again to undo" })).toBeVisible();
   await openManifestPerson(omarRow);
   await expect(
-    page.getByRole("dialog").getByText("Buddy team: Sam Whitfield", { exact: true }),
-  ).toBeVisible();
+    page.getByRole("dialog").getByRole("region", { name: "Buddy team" }),
+  ).toContainText("Sam Whitfield");
   await expect(page.getByRole("dialog").getByText("Someone unaccounted for")).toHaveCount(0);
   await expect(page.getByText("buddy team is split", { exact: false })).toHaveCount(0);
 });

@@ -37,7 +37,12 @@ import { RequirementsSection } from "./_components/RequirementsSection";
 import { recurrenceSummaryText, SeriesSection } from "./_components/SeriesSection";
 import { TripAboutSection } from "./_components/TripAboutSection";
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
-import { TripAddDiverLink, TripCapacityRing, TripPageHeader } from "./_components/TripPageHeader";
+import {
+  TripAddDiverLink,
+  TripCapacityBadge,
+  TripCapacityRing,
+  TripPageHeader,
+} from "./_components/TripPageHeader";
 import { TripRosterContent } from "./_components/TripRosterContent";
 import { TripSurfaceNav } from "./_components/TripSurfaceNav";
 import {
@@ -432,6 +437,15 @@ export default async function ManageTripPage({
         trip={trip}
         locale={locale}
         timeZone={shop.timezone}
+        badge={
+          cancelled ? (
+            <TripCapacityBadge
+              trip={trip}
+              cancelledLabel={t("trips.detail.cancelledBadge")}
+              t={t}
+            />
+          ) : undefined
+        }
         price={
           trip.priceCents === null
             ? undefined

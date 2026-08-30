@@ -272,6 +272,7 @@ test.describe("as owner", () => {
     // edit it, it used to be invisible entirely — and it says out loud that it
     // never blocks enrolment.
     await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+    await openTripAbout(page);
     const requirements = page
       .locator("section")
       .filter({ has: page.getByRole("heading", { name: "Readiness requirements" }) });

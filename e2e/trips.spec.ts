@@ -164,6 +164,7 @@ test.describe("per-trip crew role", () => {
 
     // It is a write, not a client-side toggle: the ratio reads this column.
     await page.reload();
+    await openTripAbout(page);
     await expect(page.getByLabel("Job Keiko Tanaka is doing on this trip")).toHaveValue("captain");
 
     // And "not specified" is reachable again — it is the honest default, not a
@@ -175,6 +176,7 @@ test.describe("per-trip crew role", () => {
     // the old role back — the captain step above already waits the same way.
     await expect(page.getByLabel("Job Keiko Tanaka is doing on this trip")).toHaveValue("");
     await page.reload();
+    await openTripAbout(page);
     await expect(page.getByLabel("Job Keiko Tanaka is doing on this trip")).toHaveValue("");
   });
 });

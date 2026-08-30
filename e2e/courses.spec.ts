@@ -399,6 +399,7 @@ test.describe("staff", () => {
     // carries a "Set a price for {title}, ..." link whose name contains the
     // session title as a substring, so an unanchored pattern matches both.
     await (await findTripOnBoard(page, "blue-mantis", new RegExp(`^${sessionTitle}$`))).click();
+    await openTripAbout(page);
     await expect(
       page.getByText("cannot take bookings until one assigned crew member has the instructor role"),
     ).toBeVisible();
