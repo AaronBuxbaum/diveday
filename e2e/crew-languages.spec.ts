@@ -20,7 +20,12 @@ test("an owner records a captain's languages, and the public schedule says so", 
   // Each option is named in the *staffer's own reading language* here
   // ("German", "Japanese") — unlike the public badge below, which uses each
   // language's own endonym. A Spanish-reading staffer would see "alemán",
-  // not "Deutsch"; this session reads English.
+  // not "Deutsch"; this session reads English. The choices are intentionally
+  // collapsed at rest so a long roster stays calm on narrow screens.
+  await captainCard
+    .locator("summary")
+    .filter({ hasText: "Languages this person speaks" })
+    .click();
   await captainCard.getByLabel("German").check();
   await captainCard.getByLabel("Japanese").check();
   await captainCard.getByRole("button", { name: "Save" }).click();
@@ -30,6 +35,12 @@ test("an owner records a captain's languages, and the public schedule says so", 
   // confirmation banner with nothing actually stored.
   await page.reload();
   const reloadedCard = page.locator("li").filter({ hasText: "Sal Moretti" });
+  const reloadedLanguages = reloadedCard
+    .locator("details")
+    .filter({ hasText: "Languages this person speaks" });
+  if ((await reloadedLanguages.getAttribute("open")) === null) {
+    await reloadedLanguages.locator("summary").click();
+  }
   await expect(reloadedCard.getByLabel("German")).toBeChecked();
   await expect(reloadedCard.getByLabel("Japanese")).toBeChecked();
 
