@@ -16,7 +16,10 @@ import { auth } from "@/lib/auth";
 export async function MarketingNav({
   hideCta = false,
   compactMobile = false,
-}: { hideCta?: boolean; compactMobile?: boolean } = {}) {
+}: {
+  hideCta?: boolean;
+  compactMobile?: boolean;
+} = {}) {
   const session = await auth();
   const locale = await requestLocale();
   return (
@@ -39,7 +42,10 @@ export async function MarketingNav({
 export function MarketingNavFallback({
   hideCta = false,
   compactMobile = false,
-}: { hideCta?: boolean; compactMobile?: boolean } = {}) {
+}: {
+  hideCta?: boolean;
+  compactMobile?: boolean;
+} = {}) {
   return (
     <MarketingNavView
       shopSlug={null}

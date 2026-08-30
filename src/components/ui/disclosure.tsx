@@ -113,7 +113,9 @@ export function CompactDisclosureRow({
           <DisclosureCaret className="shrink-0 text-muted group-open/compact-row:rotate-90" />
           <span className="font-medium">{label}</span>
         </span>
-        {value != null ? <span className="min-w-0 max-w-full truncate text-muted sm:text-end">{value}</span> : null}
+        {value != null ? (
+          <span className="min-w-0 max-w-full truncate text-muted sm:text-end">{value}</span>
+        ) : null}
       </summary>
       <div className={bodyClassName}>{children}</div>
     </details>
