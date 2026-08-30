@@ -98,7 +98,9 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   const samNotBack = page.getByRole("dialog").getByRole("button", { name: "Mark not back aboard" });
   await samNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await samNotBack.click();
-  await expect(page.getByRole("dialog").getByRole("button", { name: "Not back aboard", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("dialog").getByRole("button", { name: "Not back aboard", exact: true }),
+  ).toBeVisible();
   await openManifestPerson(omarRow);
   await expect(
     page.getByRole("dialog").getByText("Buddy team: Sam Whitfield · Someone unaccounted for"),
@@ -128,7 +130,9 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   await boardSam.click();
   await expect(samRow.getByRole("button", { name: "Boarded — tap again to undo" })).toBeVisible();
   await openManifestPerson(omarRow);
-  await expect(page.getByRole("dialog").getByText("Buddy team: Sam Whitfield", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("dialog").getByText("Buddy team: Sam Whitfield", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("dialog").getByText("Someone unaccounted for")).toHaveCount(0);
   await expect(page.getByText("buddy team is split", { exact: false })).toHaveCount(0);
 });

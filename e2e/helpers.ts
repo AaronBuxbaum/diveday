@@ -584,11 +584,9 @@ export async function openRosterNotes(row: Locator): Promise<void> {
  * on their own row and nowhere else.
  */
 export function manifestRow(page: Page, name: string): Locator {
-  return page
-    .locator("#roll-call-list > ul > li")
-    .filter({
-      has: page.locator('button[aria-haspopup="dialog"]', { hasText: name }),
-    });
+  return page.locator("#roll-call-list > ul > li").filter({
+    has: page.locator('button[aria-haspopup="dialog"]', { hasText: name }),
+  });
 }
 
 /**

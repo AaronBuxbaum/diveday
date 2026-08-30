@@ -4296,7 +4296,9 @@ for (const scheme of ["light", "dark"] as const) {
         // claim lives in the person's own panel, never on the row.
         const missingRow = page.locator("#roll-call-list > ul > li").first();
         await openManifestPerson(missingRow);
-        const markNotBack = page.getByRole("dialog").getByRole("button", { name: "Mark not back aboard" });
+        const markNotBack = page
+          .getByRole("dialog")
+          .getByRole("button", { name: "Mark not back aboard" });
         await markNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
         await markNotBack.click();
         await expect(
@@ -4305,7 +4307,10 @@ for (const scheme of ["light", "dark"] as const) {
         // Closed again for the shot: the alarm this capture is about is what
         // the *list* shows — the pinned danger line and the one red row — and a
         // panel left open would photograph a person's contact card instead.
-        await page.getByRole("dialog").getByRole("button", { name: "Close person details" }).click();
+        await page
+          .getByRole("dialog")
+          .getByRole("button", { name: "Close person details" })
+          .click();
         await page.mouse.move(0, 0);
         await capture(page, "manifest-not-back-aboard", scheme);
       });
@@ -4417,7 +4422,9 @@ for (const scheme of ["light", "dark"] as const) {
         await boardTom.evaluate((button) => button.scrollIntoView({ block: "center" }));
         await boardTom.click();
         await openManifestPerson(lenaRow);
-        const lenaNotBack = page.getByRole("dialog").getByRole("button", { name: "Mark not back aboard" });
+        const lenaNotBack = page
+          .getByRole("dialog")
+          .getByRole("button", { name: "Mark not back aboard" });
         await lenaNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
         await lenaNotBack.click();
         await expect(
@@ -4425,7 +4432,10 @@ for (const scheme of ["light", "dark"] as const) {
         ).toBeVisible();
         // Closed again: this capture is about what the list says, not what a
         // panel holds — that is `manifest-person-panel`'s job.
-        await page.getByRole("dialog").getByRole("button", { name: "Close person details" }).click();
+        await page
+          .getByRole("dialog")
+          .getByRole("button", { name: "Close person details" })
+          .click();
         await expect(tomRow.getByText("Someone unaccounted for")).toBeVisible();
         await page.mouse.move(0, 0);
         await capture(page, "manifest-buddy-divergence", scheme);

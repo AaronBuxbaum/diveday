@@ -805,7 +805,9 @@ test("a checkpoint with every diver counted stays open until the crew are called
   // claim about the same kind of body.
   const crewRow = page.locator("li[id^='crew-row-']").first();
   await openManifestPerson(crewRow);
-  const crewNotBack = page.getByRole("dialog").getByRole("button", { name: "Mark not back aboard" });
+  const crewNotBack = page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Mark not back aboard" });
   await crewNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await crewNotBack.click();
 
