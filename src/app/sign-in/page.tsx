@@ -109,7 +109,6 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
   return (
     <EntryShell
       title={t("account.signIn.title")}
-      description={t("account.signIn.description")}
       footer={
         <>
           {/* A diver who followed a staff link isn't lost — their shop's own

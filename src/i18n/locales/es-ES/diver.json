@@ -1736,8 +1736,7 @@
     },
     "signIn": {
       "metaTitle": "Iniciar sesión — DiveDay",
-      "title": "Bienvenido de nuevo",
-      "description": "Inicia sesión para llevar el centro.",
+      "title": "Iniciar sesión",
       "error": "Ese correo y contraseña no coinciden.",
       "twoFactorCode": "Código de autenticación o recuperación",
       "twoFactorHint": "Escribe el código de seis cifras de tu aplicación o un código de recuperación sin usar.",
@@ -1751,9 +1750,8 @@
       "publicSchedule": "¿Buscas el calendario de buceo?"
     },
     "onboard": {
-      "eyebrow": "Centro fundador",
-      "title": "Configura tu centro",
-      "description": "Unos pocos datos, y estarás viendo tu propio centro en funcionamiento. DiveDay es reciente, y los primeros centros lo orientan.",
+      "eyebrow": "Empieza un centro",
+      "title": "Abre tu centro",
       "shopSectionTitle": "Tu centro",
       "shopNameLabel": "Nombre del centro",
       "shopNamePlaceholder": "p. ej. Green Lagoon Divers",

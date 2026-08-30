@@ -54,6 +54,44 @@ const SUMMARY_CLASS =
 /** The row's body inset — the same horizontal padding as the summary above it. */
 const BODY_CLASS = "px-5 pb-6 sm:px-6";
 
+/**
+ * A compact secondary-detail row. The settled value stays visible at rest;
+ * the editable form opens in place behind one native disclosure control.
+ * Labels and values stack below sm so the row remains legible on narrow phones.
+ */
+export function CompactDisclosureRow({
+  id,
+  label,
+  value,
+  open,
+  className = "",
+  bodyClassName = "mt-3",
+  children,
+}: {
+  id?: string;
+  label: ReactNode;
+  value?: ReactNode;
+  open?: boolean;
+  className?: string;
+  bodyClassName?: string;
+  children: ReactNode;
+}) {
+  return (
+    <details id={id} open={open} className={`group/compact-row ${className}`.trim()}>
+      <summary className="flex min-h-11 cursor-pointer list-none flex-col items-start justify-center gap-1 py-2 text-sm select-none transition-brand [&::-webkit-details-marker]:hidden hover:text-primary sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <span className="flex min-w-0 items-center gap-2">
+          <DisclosureCaret className="text-muted group-open/compact-row:rotate-90" />
+          <span className="min-w-0 font-medium">{label}</span>
+        </span>
+        {value != null ? (
+          <span className="min-w-0 max-w-full text-sm text-muted sm:truncate sm:text-end">{value}</span>
+        ) : null}
+      </summary>
+      <div className={bodyClassName}>{children}</div>
+    </details>
+  );
+}
+
 export function DisclosureRow({
   id,
   heading,

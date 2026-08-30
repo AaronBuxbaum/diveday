@@ -13,7 +13,10 @@ import { auth } from "@/lib/auth";
  * nesting it inside the cached scope — see the marketing pages under
  * `src/app`.
  */
-export async function MarketingNav({ hideCta = false }: { hideCta?: boolean } = {}) {
+export async function MarketingNav({
+  hideCta = false,
+  compactMobile = false,
+}: { hideCta?: boolean; compactMobile?: boolean } = {}) {
   const session = await auth();
   const locale = await requestLocale();
   return (
@@ -21,6 +24,7 @@ export async function MarketingNav({ hideCta = false }: { hideCta?: boolean } = 
       shopSlug={session?.user?.shopSlug ?? null}
       locale={locale}
       hideCta={hideCta}
+      compactMobile={compactMobile}
       demoAction={enterDemoAction}
     />
   );
@@ -32,12 +36,16 @@ export async function MarketingNav({ hideCta = false }: { hideCta?: boolean } = 
  * the overwhelming majority of marketing-page visitors (anonymous, no
  * session), and what actually renders for them with zero streaming delay.
  */
-export function MarketingNavFallback({ hideCta = false }: { hideCta?: boolean } = {}) {
+export function MarketingNavFallback({
+  hideCta = false,
+  compactMobile = false,
+}: { hideCta?: boolean; compactMobile?: boolean } = {}) {
   return (
     <MarketingNavView
       shopSlug={null}
       locale={DEFAULT_DIVER_LOCALE}
       hideCta={hideCta}
+      compactMobile={compactMobile}
       demoAction={enterDemoAction}
     />
   );
