@@ -77,6 +77,15 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
     "Omar Haddad",
   );
 
+  // Checkpoint navigation belongs to the manifest surface, so close the
+  // Person Sheet before using the tab's link; its backdrop otherwise correctly
+  // intercepts the click as a modal interaction.
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Close person details" })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
   // After dive 1: Omar is recorded back aboard while Sam has no result yet.
   // **That is not a split** — an alarm is earned by a recorded fact, never by
   // the absence of one (ADR 20260827-the-departure-is-two-working-surfaces,

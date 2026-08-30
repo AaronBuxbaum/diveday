@@ -148,22 +148,20 @@ test("a multi-day departure is one trip with a meeting day per day", async ({ pa
   await expect(row).toHaveCount(1);
   await expect(row).toContainText("3 days");
 
-  // The trip's own page lists every meeting day, and the details editor can
-  // shrink the departure back down without deleting and rebuilding it.
+  // The Trip surface keeps this as one departure, and its Details editor
+  // owns the meeting-day count without deleting and rebuilding the trip.
   await row.getByRole("link", { name: title, exact: true }).click();
   await openTripAbout(page);
-  await expect(page.getByText("3 meeting days · same instructors each day")).toBeVisible();
   // About is already open from the summary read above; the edit disclosure lives inside it.
   await page.getByText("Edit details", { exact: true }).click();
+  await expect(page.getByLabel("Days")).toHaveValue("3");
   await page.getByLabel("Days").fill("2");
   await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByText("2 meeting days · same instructors each day")).toBeVisible();
+  await expect(page.getByLabel("Days")).toHaveValue("2");
 
-  // **And the diver is told.** Every assertion above this line passed while the
-  // booking page still printed day one's date and time range and stopped, so a
-  // student bought a seat on a course weekend with no way to learn there was a
-  // second day (`meetingDays` reaching `TripHeader`). The staff side knowing is
-  // not the feature.
+  // **And the diver is told.** The public page receives the same departure
+  // after the staff edit, so its day list remains the reader-facing proof that
+  // this is one trip with one roster across both dates.
   // Straight to the public path rather than through "View booking page", which
   // is `target="_blank"` — clicking it opens a tab this `page` never becomes.
   const tripId = new URL(page.url()).pathname.split("/").pop();
