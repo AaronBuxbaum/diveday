@@ -51,6 +51,7 @@ import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CrewRollCall } from "./_components/CrewRollCall";
 import { DiverRollCall, type ManifestNote } from "./_components/DiverRollCall";
 import { type ExecutedDiveLabels, ExecutedDiveLog } from "./_components/ExecutedDiveLog";
+import { ManifestMoreMenu } from "./_components/ManifestMoreMenu";
 import type { PersonTrailEntry } from "./_components/PersonSheet";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
 import { SummaryPanel } from "./_components/SummaryPanel";
@@ -486,6 +487,14 @@ export default async function TripManifestPage({
     };
   }
 
+  const emergencyCopy = {
+    heading: t("trips.emergency.heading"),
+    empty: t("trips.emergency.empty"),
+    vesselLabel: t("trips.emergency.vesselLabel"),
+    shoreContactLabel: t("trips.emergency.shoreContactLabel"),
+    planLabel: t("trips.emergency.planLabel"),
+  };
+
   return (
     <div className="boat-mode">
       <AmbientGlareDetector />
@@ -513,6 +522,20 @@ export default async function TripManifestPage({
         // Printing is an Overall-tab action. The manifest is the live dock
         // surface; keeping a second current-page printer here made it unclear
         // whether staff were getting the full packet or only this tab.
+        actions={
+          <ManifestMoreMenu
+            variant="header"
+            label={t("manifest.emergencyMenuLabel")}
+            closeLabel={t("manifest.closeEmergencyReference")}
+          >
+            <EmergencyReferenceCard
+              className="mt-0"
+              headingId="emergency-reference-phone-heading"
+              reference={shop.emergencyReference}
+              copy={emergencyCopy}
+            />
+          </ManifestMoreMenu>
+        }
         subNav={<TripSurfaceNav shopSlug={shopSlug} tripId={tripId} locale={locale} />}
       />
       {/* Souls on board, on paper only. The printed manifest is the document
@@ -677,23 +700,19 @@ export default async function TripManifestPage({
         />
       ) : null}
 
-      {/* **The numbers a crew dials during**, above the roster and on paper.
-          This screen and its printout are what a crew has at the rail, and
-          until issue #688 the only phone numbers on either were the ones you
-          ring a diver's family on afterwards. Not `print:hidden`: paper is the
-          fallback under the fallback, and a laminated card in the shop is worth
-          nothing on the boat. */}
-      <EmergencyReferenceCard
-        className="mt-6"
-        reference={shop.emergencyReference}
-        copy={{
-          heading: t("trips.emergency.heading"),
-          empty: t("trips.emergency.empty"),
-          vesselLabel: t("trips.emergency.vesselLabel"),
-          shoreContactLabel: t("trips.emergency.shoreContactLabel"),
-          planLabel: t("trips.emergency.planLabel"),
-        }}
-      />
+      {/* **The numbers a crew dials during** are a rare reference, behind the
+          manifest-local ellipsis on a phone and a quiet footer line on desktop
+          (ADR 20260827-the-departure-is-two-working-surfaces, decision 2). The
+          printed manifest is the fallback under the fallback, so its complete
+          copy is rendered outside either interactive disclosure below. */}
+      <div className="hidden print:block">
+        <EmergencyReferenceCard
+          className="mt-6"
+          headingId="emergency-reference-print-heading"
+          reference={shop.emergencyReference}
+          copy={emergencyCopy}
+        />
+      </div>
       {/* Buddy teams are dock/desk prep, not mid-roll-call work: grouping
           people happens before the boat leaves, while the lists above are
           worked at the rail. Below the lists, still expanded — the teams
@@ -826,6 +845,19 @@ export default async function TripManifestPage({
           />
         </div>
       </OfflineManifestManager>
+
+      <ManifestMoreMenu
+        variant="footer"
+        label={t("manifest.emergencyMenuLabel")}
+        closeLabel={t("manifest.closeEmergencyReference")}
+      >
+        <EmergencyReferenceCard
+          className="mt-0"
+          headingId="emergency-reference-desktop-heading"
+          reference={shop.emergencyReference}
+          copy={emergencyCopy}
+        />
+      </ManifestMoreMenu>
 
       <WaterLocker
         copy={{

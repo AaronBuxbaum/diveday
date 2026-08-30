@@ -144,6 +144,8 @@
   "personSheetNoTodayEvents": "Todavía no hay eventos del pase de lista.",
   "personSheetBuddyTeam": "Equipo de buceo",
   "personSheetBuddyAwaiting": "Pendiente",
+  "emergencyMenuLabel": "Números de emergencia y plan de respuesta",
+  "closeEmergencyReference": "Cerrar referencia de emergencia",
   "personTrailBoardedAtDock": "Embarcó en el muelle",
   "personTrailNotBoardedAtDock": "No embarcó en el muelle",
   "personTrailBackAfterDive": "De vuelta a bordo tras la inmersión {dive}",
