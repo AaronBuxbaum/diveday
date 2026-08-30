@@ -138,7 +138,9 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   const rowTopBefore = (await priyaRow.boundingBox())?.y ?? Number.NaN;
   await markNotBoarded.click();
   // WP-6: the card settles in place — the button flips to the confirmed state
-  // without a full-page redirect, so the roster position never jumps.
+  // without a full-page redirect. The first recorded result also reveals the
+  // sticky panel's count row above the list; allow that one panel expansion to
+  // settle while keeping the working row within the viewport.
   // The settled control's accessible name is its undo-bearing aria-label
   // (PR #607 review) — an aria-label replaces the computed name outright, so
   // "Not boarded ☑️" no longer matches; the visible label is unchanged.
@@ -147,7 +149,7 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   ).toBeVisible();
   await expect
     .poll(async () => Math.abs(((await priyaRow.boundingBox())?.y ?? Number.NaN) - rowTopBefore))
-    .toBeLessThan(100);
+    .toBeLessThan(160);
   await expect(page).not.toHaveURL(/#roll-call-/);
   // The head count now lives once, in the checkpoint panel's count row —
   // the six summary tiles (three responsive layouts of the same numbers,
