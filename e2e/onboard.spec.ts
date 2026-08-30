@@ -45,7 +45,7 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   await expect(page.getByText("Add your first dive site")).toBeVisible();
   await expect(page.getByText("Put a departure on the board")).toBeVisible();
   await expect(page.getByText("Share your public schedule")).toBeVisible();
-  await expect(page.getByText("Connect payments")).toBeVisible();
+  await expect(page.getByText("Connect payments", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("0 of 5 done")).toBeVisible();
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveCount(1);
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveText("Add contact details");
