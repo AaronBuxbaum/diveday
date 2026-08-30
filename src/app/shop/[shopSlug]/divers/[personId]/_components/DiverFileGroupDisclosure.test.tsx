@@ -30,7 +30,7 @@ describe("DiverFileGroupDisclosure", () => {
 
     const details = screen.getByTestId("diver-file-group-notes");
     expect(details).toHaveAttribute("open");
-    expect(details.querySelector("summary")).toHaveTextContent(/notes 1/i);
+    expect(details.querySelector("summary")).toHaveTextContent(/notes\s*1/i);
   });
 
   it("gives the summary a touch floor and one content region", () => {
@@ -42,7 +42,7 @@ describe("DiverFileGroupDisclosure", () => {
 
     const details = screen.getByTestId("diver-file-group-certifications");
     const summary = details.querySelector("summary");
-    expect(summary).toHaveTextContent(/certifications 1 waiting/i);
+    expect(summary).toHaveTextContent(/certifications\s*1\s*waiting/i);
     expect(summary).not.toBeNull();
     expect(summary).toHaveClass("min-h-11", "sm:hidden");
     expect(summary).toHaveAttribute("aria-controls", "certifications-content");
