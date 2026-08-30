@@ -238,8 +238,10 @@ export default async function ShopLayout({
           content wrapper both publishes the clearance it demands and pads
           itself by it — pages never end underneath the dock, and any fixed
           element that shares the bottom edge (UndoToast) adds the same
-          `--dock-clearance` to its own offset. One variable, one owner: from
-          `lg` up it collapses to zero and everything sits where it always did. */}
+          `--dock-clearance` to its own offset. The live manifest's `.boat-mode`
+          root under the trip main is the deliberate full-viewport exception;
+          globals.css clears the variable there. From `lg` up it collapses to
+          zero and everything sits where it always did. */}
       <div
         id="shop-main-content"
         tabIndex={-1}
