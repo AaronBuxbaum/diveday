@@ -65,7 +65,9 @@ export function MarketingNavView({
         className={`mx-auto flex w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-4 sm:flex-nowrap ${compactMobile ? "max-sm:h-[52px] max-sm:flex-nowrap max-sm:px-5 max-sm:py-0" : ""}`}
       >
         <Wordmark href="/" className="text-foreground" />
-        <div className={`order-3 -mx-2 flex basis-full flex-wrap items-center gap-x-1 sm:order-none sm:mx-0 sm:ml-auto sm:basis-auto sm:justify-end sm:gap-x-2 ${compactMobile ? "max-sm:hidden" : ""}`}>
+        <div
+          className={`order-3 -mx-2 flex basis-full flex-wrap items-center gap-x-1 sm:order-none sm:mx-0 sm:ml-auto sm:basis-auto sm:justify-end sm:gap-x-2 ${compactMobile ? "max-sm:hidden" : ""}`}
+        >
           {links.map((link) => (
             <Link key={link.href} href={link.href} className={navLinkClassName}>
               {link.label}
@@ -105,7 +107,10 @@ export function MarketingNavView({
           // rather than the trial it used to. Secondary weight: each marketing
           // page carries its own primary CTA, and two competing primaries on
           // first paint was a real "what do I click?" cost (design review).
-          <form action={demoAction} className={`ml-auto sm:ml-0 ${compactMobile ? "max-sm:hidden" : ""}`}>
+          <form
+            action={demoAction}
+            className={`ml-auto sm:ml-0 ${compactMobile ? "max-sm:hidden" : ""}`}
+          >
             <FunnelTag source="nav" />
             <SubmitButton
               pendingLabel={t("nav.gettingReady")}

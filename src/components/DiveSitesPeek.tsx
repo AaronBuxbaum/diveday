@@ -1,3 +1,4 @@
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { SectionCard } from "@/components/ui/card";
 import type { TripSitePeek } from "@/db/trips";
@@ -41,8 +42,8 @@ export function DiveSitesPeek({
                 sizes="(min-width: 640px) 50vw, 100vw"
               />
             ) : (
-              <div className="h-32 w-full bg-surface-sunken flex items-center justify-center text-3xl">
-                🐠
+              <div className="flex h-32 w-full items-center justify-center bg-surface-sunken text-primary">
+                <DiveDayIcon name="diveSites" className="size-10" />
               </div>
             )}
             <div className="p-4">

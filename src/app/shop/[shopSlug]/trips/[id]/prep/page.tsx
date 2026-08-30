@@ -512,30 +512,44 @@ export default async function TripPrepPage({
                 </span>
               </div>
               <p className="mt-1 text-sm text-muted">{t("trips.prep.hotelPickupsDescription")}</p>
-              <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-surface">
-                <Table>
-                  <THead>
-                    <tr>
-                      <Th>{t("trips.prep.pickupTimeColumn")}</Th>
-                      <Th>{t("trips.prep.pickupHotelColumn")}</Th>
-                      <Th>{t("trips.prep.pickupDiverColumn")}</Th>
-                    </tr>
-                  </THead>
-                  <TBody>
-                    {hotelPickups.map((pickup) => (
-                      <tr key={pickup.bookingId}>
-                        <Td className="font-medium">
-                          {pickup.pickupTime ?? (
-                            <span className="text-muted">{t("trips.prep.pickupTimeUnset")}</span>
-                          )}
-                        </Td>
-                        <Td className="font-medium">{pickup.hotelPickupLocation}</Td>
-                        <Td>{pickup.diverName}</Td>
-                      </tr>
-                    ))}
-                  </TBody>
-                </Table>
+              <div className="mt-3 sm:hidden">
+                <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
+                  {hotelPickups.map((pickup) => (
+                    <li key={pickup.bookingId} className="px-4 py-3">
+                      <p className="font-medium tabular-nums">
+                        {pickup.pickupTime ?? (
+                          <span className="text-muted">{t("trips.prep.pickupTimeUnset")}</span>
+                        )}
+                      </p>
+                      <p className="mt-1 text-sm text-muted">
+                        {pickup.hotelPickupLocation} · {pickup.diverName}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
               </div>
+              <Table shellClassName="mt-3 hidden sm:block">
+                <THead>
+                  <tr>
+                    <Th>{t("trips.prep.pickupTimeColumn")}</Th>
+                    <Th>{t("trips.prep.pickupHotelColumn")}</Th>
+                    <Th>{t("trips.prep.pickupDiverColumn")}</Th>
+                  </tr>
+                </THead>
+                <TBody>
+                  {hotelPickups.map((pickup) => (
+                    <tr key={pickup.bookingId}>
+                      <Td className="font-medium">
+                        {pickup.pickupTime ?? (
+                          <span className="text-muted">{t("trips.prep.pickupTimeUnset")}</span>
+                        )}
+                      </Td>
+                      <Td className="font-medium">{pickup.hotelPickupLocation}</Td>
+                      <Td>{pickup.diverName}</Td>
+                    </tr>
+                  ))}
+                </TBody>
+              </Table>
             </section>
           ) : null}
 

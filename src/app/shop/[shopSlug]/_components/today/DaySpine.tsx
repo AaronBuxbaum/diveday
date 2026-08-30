@@ -14,7 +14,8 @@ import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS, seasonalBriefingText } from "@/i18n/today-labels";
 import type { EveningClose } from "@/lib/closeout";
-import { formatShortDate, formatTime } from "@/lib/format";
+import { formatMoneyScanned, formatShortDate, formatTime } from "@/lib/format";
+import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import {
   ACTION_KIND_META,
   type DaySpine as DaySpineData,
@@ -497,12 +498,39 @@ export function DaySpine({
               linkLabel={firstBooking.tripTitle}
               trailing={<DiveDayIcon name="chevron-right" className="size-4 shrink-0 text-muted" />}
             >
-              <p className="text-base font-medium">{firstBooking.diverName}</p>
-              <p className="mt-0.5 text-sm text-muted tabular-nums">
-                {firstBooking.tripTitle} ·{" "}
-                {formatShortDate(firstBooking.startsAt, locale, timeZone)} ·{" "}
-                {formatTime(firstBooking.startsAt, locale, timeZone)}
-              </p>
+              <div className="min-w-0 py-2">
+                <p className="text-base font-medium break-words">
+                  {firstBooking.diverName}{" "}
+                  <span className="font-normal text-muted">· {firstBooking.tripTitle}</span>
+                </p>
+                <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted tabular-nums">
+                  <span>
+                    {formatShortDate(firstBooking.startsAt, locale, timeZone)} ·{" "}
+                    {formatTime(firstBooking.startsAt, locale, timeZone)}
+                  </span>
+                  <span>
+                    {firstBooking.paymentStatus &&
+                    isCapturedPaymentStatus(firstBooking.paymentStatus)
+                      ? firstBooking.paymentAmountCents != null || firstBooking.priceCents != null
+                        ? t("shopHome.spine.firstBookingPaid", {
+                            amount: formatMoneyScanned(
+                              firstBooking.paymentAmountCents ?? firstBooking.priceCents ?? 0,
+                              firstBooking.paymentCurrency ?? firstBooking.currency,
+                              locale,
+                            ),
+                          })
+                        : t("shopHome.spine.firstBookingPaidNoAmount")
+                      : firstBooking.paymentStatus === "waived"
+                        ? t("shopHome.spine.firstBookingWaived")
+                        : t("shopHome.spine.firstBookingPaymentDue")}
+                  </span>
+                  <span>
+                    {firstBooking.waiverSigned
+                      ? t("shopHome.spine.firstBookingWaiverSigned")
+                      : t("shopHome.spine.firstBookingWaiverNeeded")}
+                  </span>
+                </p>
+              </div>
             </LedgerRow>
           </ul>
         </div>

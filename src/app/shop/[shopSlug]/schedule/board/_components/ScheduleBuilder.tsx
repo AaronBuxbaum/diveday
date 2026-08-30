@@ -1838,7 +1838,12 @@ export function ScheduleBuilder({
                           </Link>
                           <p className="mt-0.5 text-sm text-muted">
                             {[
-                              trip.boatName ? `⛵ ${trip.boatName}` : null,
+                              trip.boatName ? (
+                                <span key="boat" className="inline-flex items-center gap-1">
+                                  <DiveDayIcon name="boat" className="size-3.5" />
+                                  {trip.boatName}
+                                </span>
+                              ) : null,
                               trip.diveMode === "shore" ? copy.modeShore : null,
                               trip.diveMode === "pool" ? copy.modePool : null,
                               trip.courseTitle

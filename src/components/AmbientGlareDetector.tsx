@@ -168,7 +168,7 @@ const CONTRAST_MODES = ["auto", "standard", "full"] as const;
  */
 export function AmbientContrastControl({
   copy,
-  className = "",
+  className = "rounded-xl border border-border bg-surface-sunken p-3",
 }: {
   copy: AmbientContrastCopy;
   className?: string;

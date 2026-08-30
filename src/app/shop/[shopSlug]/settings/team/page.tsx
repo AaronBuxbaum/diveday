@@ -8,9 +8,10 @@ import { UndoToast } from "@/components/UndoToast";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
+import { InsetGroup } from "@/components/ui/ledger";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { listShopStaff, type StaffMember } from "@/db/staff-accounts";
 import { languageNameIn } from "@/i18n/language-labels";
@@ -208,10 +209,7 @@ function StaffRow({
   const contactStatus = noticeForForm(notice, TEAM_FORMS.contact(member.personId));
   const languagesStatus = noticeForForm(notice, TEAM_FORMS.languages(member.personId));
   return (
-    // A person's row on the roster is the same card as everything else on the
-    // page — one radius, one elevation — so the list reads as a list of cards
-    // rather than a second, flatter kind of box.
-    <SectionCard as="li" id={`staff-${member.personId}`} className="scroll-mt-24">
+    <li id={`staff-${member.personId}`} className="min-w-0 scroll-mt-24 px-5 py-4 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="font-medium">{member.fullName}</p>
@@ -280,20 +278,34 @@ function StaffRow({
           (issue #708). Its own immediate form, like the emergency contact
           below. */}
       <div className="mt-4">
-        <p className="mb-2 text-sm font-medium text-muted">{t("settings.team.languagesLabel")}</p>
-        <form action={saveStaffLanguagesAction} className="flex flex-col gap-3">
-          <input type="hidden" name="personId" value={member.personId} />
-          <LanguageCheckboxes defaultLanguages={member.spokenLanguages} locale={locale} t={t} />
-          <div className="flex items-center gap-3">
-            <SubmitButton
-              pendingLabel={t("settings.team.languagesSaving")}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {t("settings.team.languagesSave")}
-            </SubmitButton>
-            <FormStatus tone={languagesStatus?.tone}>{languagesStatus?.text}</FormStatus>
-          </div>
-        </form>
+        <CompactDisclosureRow
+          id={`languages-${member.personId}`}
+          label={t("settings.team.languagesLabel")}
+          value={
+            member.spokenLanguages.length > 0
+              ? cachedListFormat(locale).format(
+                  member.spokenLanguages.map(
+                    (language) => languageNameIn(language, locale) ?? language,
+                  ),
+                )
+              : t("settings.team.languagesEmpty")
+          }
+          open={Boolean(languagesStatus)}
+        >
+          <form action={saveStaffLanguagesAction} className="flex flex-col gap-3">
+            <input type="hidden" name="personId" value={member.personId} />
+            <LanguageCheckboxes defaultLanguages={member.spokenLanguages} locale={locale} t={t} />
+            <div className="flex flex-wrap items-center gap-3">
+              <SubmitButton
+                pendingLabel={t("settings.team.languagesSaving")}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("settings.team.languagesSave")}
+              </SubmitButton>
+              <FormStatus tone={languagesStatus?.tone}>{languagesStatus?.text}</FormStatus>
+            </div>
+          </form>
+        </CompactDisclosureRow>
       </div>
 
       {/* Who to call for this person, and the one place a shop can say so.
@@ -306,47 +318,53 @@ function StaffRow({
           the sheet a coastguard reads answered "who do we call?" for every
           paying diver and for neither of the two staff most reliably in the
           water (dive-domain review 20260810). */}
-      <details className="group/contact mt-4">
-        <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-sm text-muted select-none hover:text-primary [&::-webkit-details-marker]:hidden">
-          <DisclosureCaret className="group-open/contact:rotate-90" />
-          <span className="hover:underline">
-            {member.emergencyContactName && member.emergencyContactPhone
-              ? t("settings.team.emergencyContact.summaryOnFile", {
-                  name: member.emergencyContactName,
-                })
-              : t("settings.team.emergencyContact.summaryEmpty")}
-          </span>
-        </summary>
-        <FieldGrid as="form" action={saveStaffEmergencyContactAction} columns={2} className="mt-3">
-          <input type="hidden" name="personId" value={member.personId} />
-          <Field label={t("settings.team.emergencyContact.nameLabel")}>
-            <input
-              name="emergencyContactName"
-              defaultValue={member.emergencyContactName ?? ""}
-              autoComplete="off"
-              className={controlClass}
-            />
-          </Field>
-          <Field label={t("settings.team.emergencyContact.phoneLabel")}>
-            <input
-              name="emergencyContactPhone"
-              type="tel"
-              defaultValue={member.emergencyContactPhone ?? ""}
-              autoComplete="off"
-              className={controlClass}
-            />
-          </Field>
-          <FieldActions>
-            <FormStatus tone={contactStatus?.tone}>{contactStatus?.text}</FormStatus>
-            <SubmitButton
-              pendingLabel={t("settings.team.emergencyContact.saving")}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {t("settings.team.emergencyContact.save")}
-            </SubmitButton>
-          </FieldActions>
-        </FieldGrid>
-      </details>
+      <div className="mt-4">
+        <CompactDisclosureRow
+          id={`emergency-contact-${member.personId}`}
+          label={t("settings.team.emergencyContact.summaryEmpty")}
+          value={
+            member.emergencyContactName && member.emergencyContactPhone
+              ? member.emergencyContactName
+              : undefined
+          }
+          open={Boolean(contactStatus)}
+        >
+          <FieldGrid
+            as="form"
+            action={saveStaffEmergencyContactAction}
+            columns={2}
+            className="mt-3"
+          >
+            <input type="hidden" name="personId" value={member.personId} />
+            <Field label={t("settings.team.emergencyContact.nameLabel")}>
+              <input
+                name="emergencyContactName"
+                defaultValue={member.emergencyContactName ?? ""}
+                autoComplete="off"
+                className={controlClass}
+              />
+            </Field>
+            <Field label={t("settings.team.emergencyContact.phoneLabel")}>
+              <input
+                name="emergencyContactPhone"
+                type="tel"
+                defaultValue={member.emergencyContactPhone ?? ""}
+                autoComplete="off"
+                className={controlClass}
+              />
+            </Field>
+            <FieldActions>
+              <FormStatus tone={contactStatus?.tone}>{contactStatus?.text}</FormStatus>
+              <SubmitButton
+                pendingLabel={t("settings.team.emergencyContact.saving")}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("settings.team.emergencyContact.save")}
+              </SubmitButton>
+            </FieldActions>
+          </FieldGrid>
+        </CompactDisclosureRow>
+      </div>
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -423,7 +441,7 @@ function StaffRow({
           </div>
         ) : null}
       </div>
-    </SectionCard>
+    </li>
   );
 }
 
@@ -605,7 +623,7 @@ export default async function TeamSettingsPage({
               className="mt-4"
             />
           ) : (
-            <ul className="mt-4 flex flex-col gap-3">
+            <InsetGroup className="mt-4" bodyAs="ul">
               {staff.map((member) => (
                 <StaffRow
                   key={member.personId}
@@ -616,7 +634,7 @@ export default async function TeamSettingsPage({
                   t={t}
                 />
               ))}
-            </ul>
+            </InsetGroup>
           )}
         </section>
       </div>

@@ -43,9 +43,9 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   await expect(page.getByRole("heading", { name: "First morning" })).toBeVisible();
   await expect(page.getByText("Add your contact details")).toBeVisible();
   await expect(page.getByText("Add your first dive site")).toBeVisible();
-  await expect(page.getByText("Schedule your first trip")).toBeVisible();
+  await expect(page.getByText("Put a departure on the board")).toBeVisible();
   await expect(page.getByText("Share your public schedule")).toBeVisible();
-  await expect(page.getByText("Connect Stripe (optional)")).toBeVisible();
+  await expect(page.getByText("Connect payments", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("0 of 5 done")).toBeVisible();
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveCount(1);
   await expect(page.locator('[data-first-run-primary="true"]')).toHaveText("Add contact details");
@@ -96,7 +96,7 @@ test("a freshly onboarded shop sees a first-run checklist on Today, and a step c
   );
 
   // The schedule-link step always offers the link, independent of "done" state.
-  await expect(page.getByText(`/s/${unique}`)).toBeVisible();
+  await expect(page.getByText(`/s/${unique}`).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible();
 });
 
@@ -135,15 +135,15 @@ test("a shop outside the curated dive regions can pick its own timezone", async 
     .fill("trial-pass-123");
   await page.getByRole("button", { name: "Create shop & start trial" }).click();
 
-  // The zone was accepted (an invalid one bounces back to the form with an
-  // error) and it is what the new shop reads the clock in: the frozen harness
-  // instant is mid-morning in New York and late evening in Papua, so the
-  // greeting proves the stored zone rather than the default. "Working late" is
-  // Today's 22:00–05:00 band (src/lib/today.ts) — the English there is not
-  // "Good night", which is what you say on the way out rather than to somebody
-  // who has just opened the app.
+  // The zone was accepted (an invalid one bounces back to the form) and is
+  // persisted on the new shop. First-run intentionally leads with its setup
+  // surface instead of the time-of-day greeting, so verify the stored value
+  // directly in the settings editor (the same value drives every later Today
+  // greeting).
   await expect(page).toHaveURL(new RegExp(`/shop/${unique}$`));
-  await expect(page.getByRole("heading", { name: /Working late, Sari/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your shop is live." })).toBeVisible();
+  await page.goto(`/shop/${unique}/settings#timezone`);
+  await expect(page.locator('select[name="timezone"]')).toHaveValue("Asia/Jayapura");
 });
 
 /**

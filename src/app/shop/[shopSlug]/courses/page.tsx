@@ -136,7 +136,7 @@ export default async function CoursesPage({
     meta: <span className="tabular-nums">{metaLine(course)}</span>,
     ...(course.isActive ? {} : { hiddenLabel: st("courses.list.hidden") }),
     actions: (
-      <div className="flex items-center gap-1">
+      <div className="flex max-w-full flex-wrap items-center gap-1">
         {/* The catalog's whole point is that a course gets taught. This hands
             the board's add panel (`?course=` opens it with the course
             preselected and shapes the title) the one fact staff would

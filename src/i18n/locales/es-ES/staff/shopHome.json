@@ -82,20 +82,20 @@
     "profileAction": "Configurar perfil",
     "profileDone": "Perfil del centro configurado.",
     "siteTitle": "Añade tu primer sitio de buceo",
-    "siteBody": "El lugar al que asignarás tus salidas.",
+    "siteBody": "El catálogo tiene 34 sitios de Florida listos para copiar",
     "siteAction": "Añadir un sitio de buceo",
     "siteDone": "{count, plural, one {# sitio de buceo añadido.} other {# sitios de buceo añadidos.}}",
-    "tripTitle": "Programa tu primera salida",
-    "tripBody": "Los buceadores no pueden reservar hasta que exista una.",
+    "tripTitle": "Añade una salida al calendario",
+    "tripBody": "Aparecerá en tu calendario en cuanto la guardes.",
     "tripAction": "Programar una salida",
     "scheduleTitle": "Comparte tu calendario público",
     "scheduleBody": "Pega el enlace en tu web o redes sociales.",
     "scheduleCopy": "Copiar enlace",
     "scheduleCopied": "Copiado",
     "scheduleCopyFailed": "No se pudo copiar — selecciona el enlace de arriba.",
-    "stripeTitle": "Conecta Stripe (opcional)",
-    "stripeBody": "Cobra en línea.",
-    "stripeAction": "Conectar Stripe",
+    "stripeTitle": "Conecta los pagos",
+    "stripeBody": "Los buceadores pagan al reservar; los fondos llegan a tu cuenta",
+    "stripeAction": "Conectar pagos",
     "stripeDone": "Stripe conectado.",
     "doneBadge": "Hecho",
     "unitsTitle": "Revisa tu moneda y tu unidad de profundidad",
@@ -103,7 +103,9 @@
     "unitsAction": "Revisar unidades",
     "unitsDone": "Unidades confirmadas.",
     "unitsFeet": "pies",
-    "unitsMeters": "metros"
+    "unitsMeters": "metros",
+    "pageTitle": "Tu centro está listo.",
+    "pageIntro": "Los buceadores ya pueden encontrarte en <address>{url}</address>. Tres cosas ponen una salida en el calendario."
   },
   "spine": {
     "summaryBoats": "{count, plural, one {# salida hoy.} other {# salidas hoy.}}",
@@ -138,6 +140,14 @@
       "back": "{back} de {booked} de vuelta",
       "backBy": "{back} de {booked} de vuelta a las {time}",
       "closedBy": "lista cerrada por {name}"
-    }
-  }
+    },
+    "firstBookingPaid": "pagado {amount}",
+    "firstBookingPaidNoAmount": "pagado",
+    "firstBookingWaived": "pago exento",
+    "firstBookingPaymentDue": "pago pendiente",
+    "firstBookingWaiverSigned": "exención firmada",
+    "firstBookingWaiverNeeded": "falta la exención"
+  },
+  "quietAddDeparture": "+ Añadir una salida",
+  "quietNextDepartureLabel": "Próxima salida"
 }

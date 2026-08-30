@@ -80,6 +80,12 @@ describe("shopFirstBooking", () => {
       tripId: trip.id,
       tripTitle: "Two-Tank — Alligator Reef",
       diverName: "Ravi Chandra",
+      priceCents: null,
+      currency: "usd",
+      paymentStatus: null,
+      paymentAmountCents: null,
+      paymentCurrency: null,
+      waiverSigned: false,
     });
   });
 

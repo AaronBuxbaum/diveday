@@ -111,6 +111,7 @@ export function CourseRoster({
                   href={course.href}
                   linkLabel={course.linkLabel}
                   trailing={course.actions}
+                  stacked
                   className="py-3"
                 >
                   <div className="min-w-0">
