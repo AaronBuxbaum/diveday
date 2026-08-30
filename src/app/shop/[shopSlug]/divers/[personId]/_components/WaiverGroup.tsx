@@ -6,11 +6,12 @@ import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { InsetGroup } from "@/components/ui/ledger";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import type { WaiverRowState } from "@/i18n/waiver-labels";
+import { type WaiverRowState, waiverRowStateText } from "@/i18n/waiver-labels";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { smsRecipient } from "@/lib/notifications/sms";
 import { markWaiverInPersonAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
+import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import type { DiverProfile } from "./shared";
 import { WaiverDeliveryActions } from "./WaiverDeliveryActions";
 
@@ -93,8 +94,20 @@ export function WaiverGroup({
       : diver.waiver.state;
   const needsAction = diver.waiver.state === "none" || diver.waiver.state === "expired";
   return (
-    <section className="mt-8" aria-labelledby="waiver">
-      <InsetGroup as="h2" id="waiver" label={t("divers.stats.waiver")} className="scroll-mt-24">
+    <DiverFileGroupDisclosure
+      id="waiver"
+      label={t("divers.stats.waiver")}
+      summary={waiverRowStateText(t, state)}
+      open={Boolean(status)}
+      className="mt-8"
+    >
+      <InsetGroup
+        as="h2"
+        id="waiver"
+        label={t("divers.stats.waiver")}
+        labelClassName="max-sm:hidden"
+        className="scroll-mt-24"
+      >
         <WaiverStateRow
           as="div"
           t={t}
@@ -170,6 +183,6 @@ export function WaiverGroup({
           </div>
         ) : null}
       </InsetGroup>
-    </section>
+    </DiverFileGroupDisclosure>
   );
 }

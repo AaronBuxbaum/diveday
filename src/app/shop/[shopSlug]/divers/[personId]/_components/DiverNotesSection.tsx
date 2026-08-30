@@ -9,6 +9,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { addDiverNoteAction, deleteDiverNoteAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
+import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 
 type DiverRecordNote = Awaited<ReturnType<typeof listDiverRecordNotes>>[number];
 
@@ -40,9 +41,26 @@ export function DiverNotesSection({
   t: StaffTranslator;
   status?: DiverNotice;
 }) {
+  const noteSummary =
+    notes.length > 0
+      ? t("divers.file.noteCount", { count: notes.length })
+      : t("divers.file.noNotes");
+
   return (
-    <section className="mt-8" aria-labelledby="notes">
-      <InsetGroup as="h2" id="notes" label={t("divers.notes.heading")} className="scroll-mt-24">
+    <DiverFileGroupDisclosure
+      id="notes"
+      label={t("divers.notes.heading")}
+      summary={noteSummary}
+      open={Boolean(status)}
+      className="mt-8"
+    >
+      <InsetGroup
+        as="h2"
+        id="notes"
+        label={t("divers.notes.heading")}
+        labelClassName="max-sm:hidden"
+        className="scroll-mt-24"
+      >
         {notes.map(({ note, authorName, tripId, tripTitle, tripStartsAt }) => (
           <div key={note.id} className="flex items-start justify-between gap-3 px-5 py-4 sm:px-6">
             <div className="min-w-0">
@@ -98,6 +116,6 @@ export function DiverNotesSection({
           </FieldActions>
         </div>
       </InsetGroup>
-    </section>
+    </DiverFileGroupDisclosure>
   );
 }

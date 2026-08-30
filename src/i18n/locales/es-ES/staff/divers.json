@@ -406,6 +406,10 @@
     "newInvoice": "+ Nueva factura"
   },
   "file": {
+    "certificationsWaiting": "{count, plural, one {# pendiente} other {# pendientes}}",
+    "certificationsClear": "Ninguna pendiente",
+    "noteCount": "{count}",
+    "noNotes": "Ninguna",
     "gearHeading": "Equipo y tallas",
     "rentsFromUs": "Renta con nosotros",
     "sizes": "Tallas",

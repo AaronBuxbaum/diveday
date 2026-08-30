@@ -380,6 +380,7 @@ export function InsetGroup({
   bodyAs = "div",
   id,
   className = "",
+  labelClassName = "",
   children,
 }: {
   label?: ReactNode;
@@ -394,12 +395,22 @@ export function InsetGroup({
   bodyAs?: "div" | "ul";
   id?: string;
   className?: string;
+  /**
+   * Lets a responsive wrapper hide the desktop group label while keeping the
+   * same InsetGroup markup and its semantic heading.
+   */
+  labelClassName?: string;
   children: ReactNode;
 }) {
   return (
     <div className={className || undefined}>
       {label != null ? (
-        <GroupLabel as={as} id={id} meta={meta} className="mb-3">
+        <GroupLabel
+          as={as}
+          id={id}
+          meta={meta}
+          className={labelClassName ? `mb-3 ${labelClassName}` : "mb-3"}
+        >
           {label}
         </GroupLabel>
       ) : null}
