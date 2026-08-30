@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { groupLabelClass } from "@/components/ui/ledger";
 
 export type TripAboutRow = {
   label: string;
@@ -94,9 +95,7 @@ export function TripAboutSection({
               key={row.label}
               className="grid gap-1 py-3 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:items-start sm:gap-4"
             >
-              <span className="text-xs font-semibold uppercase tracking-wide text-muted">
-                {row.label}
-              </span>
+              <span className={groupLabelClass()}>{row.label}</span>
               <div className="min-w-0 text-sm">{row.value}</div>
               {row.editHref ? (
                 <Link

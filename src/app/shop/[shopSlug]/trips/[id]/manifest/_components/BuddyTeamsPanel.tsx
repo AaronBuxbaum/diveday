@@ -4,6 +4,7 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FormStatus } from "@/components/ui/form";
+import { groupLabelClass } from "@/components/ui/ledger";
 import type { TripBuddyTeam } from "@/db/buddy-pairs";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { BuddyDragGroups } from "./BuddyDragGroups";
@@ -165,7 +166,7 @@ export function BuddyTeamsPanel({
                       freely without stranding the button. */}
                   <div className="flex flex-wrap items-start gap-3">
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                      <p className={groupLabelClass()}>
                         {t("manifest.buddyTeamLabel", { number: index + 1 })}
                       </p>
                       <ul className="mt-1.5 flex flex-wrap items-center gap-2">

@@ -1,3 +1,4 @@
+import { groupLabelClass } from "@/components/ui/ledger";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
@@ -258,9 +259,7 @@ export function SummaryPanel({
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-bold tracking-[0.16em] text-primary uppercase">
-              {t("manifest.activeCheckpoint")}
-            </p>
+            <p className={groupLabelClass("primary")}>{t("manifest.activeCheckpoint")}</p>
             <h2
               id="roll-call-progress-heading"
               className="mt-1 flex items-center gap-2 text-lg font-bold"

@@ -5,6 +5,7 @@ import {
   FrontDeskReadinessFallback,
   RecapPageFallback,
 } from "@/components/MarketingScreenFallbacks";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { productFeatureGroups } from "@/lib/marketing";
@@ -148,9 +149,7 @@ export function FeatureGroupsGrid({ locale }: { locale: DiverLocale }) {
           >
             {index + 1}
           </span>
-          <p className="mt-4 text-xs font-semibold tracking-widest text-primary uppercase">
-            {t(group.eyebrow)}
-          </p>
+          <p className={`mt-4 ${groupLabelClass("primary")}`}>{t(group.eyebrow)}</p>
           <h3 className="mt-3 font-semibold leading-6">{t(group.title)}</h3>
           <p className="mt-3 text-sm leading-6 text-muted">{t(group.summary)}</p>
         </li>

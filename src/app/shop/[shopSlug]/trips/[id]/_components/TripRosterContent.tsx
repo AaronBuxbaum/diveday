@@ -4,6 +4,7 @@ import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { groupLabelClass } from "@/components/ui/ledger";
 import type { TripGuests } from "@/db/trips-guests";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { cancellationDeadline } from "@/lib/deposits";
@@ -140,9 +141,7 @@ export function TripRosterContent({
 
       {demand ? (
         <section className="mt-6 rounded-xl border border-warning/40 bg-warning-tint p-5">
-          <p className="text-xs font-semibold tracking-widest text-warning-strong uppercase">
-            {t("trips.guests.demandSignal")}
-          </p>
+          <p className={groupLabelClass("warning")}>{t("trips.guests.demandSignal")}</p>
           <h2 className="mt-1 text-lg font-semibold">{t("trips.guests.demandHeading")}</h2>
           <p className="mt-1 text-sm text-muted">{demand.message}</p>
           <Link

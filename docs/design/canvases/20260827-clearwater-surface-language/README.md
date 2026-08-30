@@ -128,18 +128,12 @@ build on any class string in `src/` wearing `rounded-2xl` and `shadow-sm` togeth
 cannot drift back to two elevations on one page). The table's "Lands in" column names one file per
 slice.
 
-**What 6a deliberately left.** Of its sweep obligations, "every `text-xs … uppercase` group-label
-spelling converges on `GroupLabel`" is **not finished**: `GroupLabel` exists and owns the one
-`tracking-[0.14em]` spelling (pinned by a sweep in `ledger.test.tsx` that fails on any second copy
-of that class string), but roughly sixty hand-rolled labels still spell the idea their own way —
-`tracking-wide`, `tracking-widest`, `tracking-[0.16em]`. Three reasons they stayed: most are on the
-marketing, legal, course and public surfaces that this ADR's scope note puts outside every
-recomposition here; a large block belongs to the trip and manifest surfaces, which are
-[the departure canvas](../20260827-the-departure-is-two-working-surfaces/README.md)'s, not this
-one's; and the rest sit inside surfaces 6c–6i recompose anyway, where converting them twice is
-worse than converting them once. The residue is greppable in one line —
-`grep -rn "text-xs" src --include=*.tsx | grep uppercase` — and each later slice converts what it
-touches. Nothing in this canvas depends on the sweep being complete.
+**The label sweep.** `GroupLabel` and `groupLabelClass` now own the small-caps group-label
+spelling across the designed staff, public, course and marketing surfaces. The shared helper carries
+the ink as well as the typography, so muted, primary, success and warning headings do not drift back
+to hand-rolled tracking. Distinct grammars remain deliberate: the 0.18em public/earned eyebrow, the
+calendar's weekday/month header, shop initials, and the compact offline-manifest specimen are not
+group labels and stay with their own components.
 
 ## Implementing a slice
 

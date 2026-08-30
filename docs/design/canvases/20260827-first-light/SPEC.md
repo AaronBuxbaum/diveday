@@ -46,8 +46,8 @@ words arrive as props; sign-in's success is always `redirect("/shop")` (the prox
 
 ```ts
 // src/components/account/EntryShell.tsx — EntryDone's glyph becomes a closed drawn set:
-export type DoorGlyphId = "sent" | "expired" | "done" | "quiet";
-// sent: mail stroke · expired: clock stroke · done: check stroke · quiet: resting bell
+export type DoorGlyphId = "sent" | "expired" | "done" | "quiet" | "cancelled";
+// sent: mail stroke · expired: clock stroke · done: check stroke · quiet: resting bell · cancelled: calendar
 export function EntryDone(props: {
   glyph: DoorGlyphId;
   title: string;

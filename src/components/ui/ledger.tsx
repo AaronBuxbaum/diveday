@@ -25,10 +25,9 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
  *   value once to pin it, and its sweep fails the build on a copy in any other
  *   file — source or test, `.ts`, `.tsx` or `.css`. What that sweep catches is
  *   the realistic drift, a paste of this class string; it cannot catch a
- *   *different* spelling of the same idea (`tracking-wide`, `tracking-widest`),
- *   and the SPEC's wider convergence of every `text-xs … uppercase` label onto
- *   `GroupLabel` is deliberately not finished here — see the canvas README's
- *   6a row. It is a *function* of the tone rather than a bare constant because
+ *   *different* spelling of the same idea (`tracking-wide`, `tracking-widest`).
+ *   The designed surfaces now route their small-caps group labels through this
+ *   helper as well. It is a *function* of the tone rather than a bare constant because
  *   the ink is part of the spelling: appending `text-primary` at a call site
  *   would race `text-muted` in a stylesheet Tailwind orders by token name, the
  *   same trap `buttonClass` carries a warning about. The eyebrow's `0.18em`
@@ -46,12 +45,18 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 
 /**
  * The inks a group label may be set in. `primary` is for the one group in a
- * run that is *current* — the week board's today column — and nothing else;
- * a group label is quiet by default and stays that way.
+ * run that is *current* — the week board's today column. `success` and
+ * `warning` keep exceptional group headings in the same typography while
+ * letting the state speak through ink; a group label is quiet by default.
  */
-const GROUP_LABEL_INK = { muted: "text-muted", primary: "text-primary" } as const;
+const GROUP_LABEL_INK = {
+  muted: "text-muted",
+  primary: "text-primary",
+  success: "text-success",
+  warning: "text-warning-strong",
+} as const;
 
-/** Which ink a group label is set in. `muted` unless the group is the current one. */
+/** Which ink a group label is set in. `muted` unless the group has a state to carry. */
 export type GroupLabelTone = keyof typeof GROUP_LABEL_INK;
 
 /**
@@ -62,9 +67,9 @@ export type GroupLabelTone = keyof typeof GROUP_LABEL_INK;
  * spelling: a caller that appended its own `text-primary` would be racing
  * `text-muted` in the emitted stylesheet, which Tailwind orders by token name
  * rather than by where the class was written (AGENTS.md's `buttonClass`
- * warning, the same failure at 31 call sites). Exported for the one caller
- * that needs the class without the element — the week board's day columns,
- * whose header is a `<span>` inside its own `<h3>` beside the "Today" word.
+ * warning, the same failure at 31 call sites). Exported for callers that need
+ * the spelling without changing their existing semantic element — table headers,
+ * definition labels and compact group headings.
  */
 export function groupLabelClass(tone: GroupLabelTone = "muted") {
   return `text-xs font-semibold tracking-[0.14em] ${GROUP_LABEL_INK[tone]} uppercase`;

@@ -1,6 +1,6 @@
 # 20260827-the-departure-is-two-working-surfaces — Overview folds into Trip, the Manifest becomes a boat instrument, and emergency numbers are buried reference
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-08-27
 - **Design:** [the canvas](../../design/canvases/20260827-the-departure-is-two-working-surfaces/README.md)
   — twelve artboards on two pages: **Surfaces** (Trip and Manifest at desktop and phone, plus the
