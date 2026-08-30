@@ -2,7 +2,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
-import { DiverFormStatus, NoticeBanner, resolveDiverNotice } from "./NoticeBanner";
+import { DiverFormStatus, NoticeBanner } from "./NoticeBanner";
+import { resolveDiverNotice } from "./record-notices";
 
 afterEach(cleanup);
 

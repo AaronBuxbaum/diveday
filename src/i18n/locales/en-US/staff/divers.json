@@ -146,6 +146,7 @@
   "header": {
     "noContactDetails": "No contact details yet",
     "diveInsurancePrefix": "Dive insurance: ",
+    "diveInsuranceOnFile": "DAN insurance on file",
     "editDetails": "Edit details",
     "fullNameLabel": "Full name",
     "emailLabel": "Email",

@@ -33,9 +33,10 @@ import { DownloadDiverExportButton } from "./_components/DownloadDiverExportButt
 import { ErasePersonalData } from "./_components/ErasePersonalData";
 import { GearAndSizes } from "./_components/GearAndSizes";
 import { MergeDiver } from "./_components/MergeDiver";
-import { NoticeBanner, resolveDiverNotice } from "./_components/NoticeBanner";
+import { NoticeBanner } from "./_components/NoticeBanner";
 import { RemoveDiver } from "./_components/RemoveDiver";
 import { RestoreDiver } from "./_components/RestoreDiver";
+import { resolveDiverNotice } from "./_components/record-notices";
 import { SupportNeedsPanel } from "./_components/SupportNeedsPanel";
 import { WaiverGroup } from "./_components/WaiverGroup";
 import { bookingIsAhead } from "./_lib/status";

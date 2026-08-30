@@ -118,10 +118,7 @@ export function DiverHeader({
               <span>{t("divers.header.noContactDetails")}</span>
             ) : null}
             {diver.person.diveInsurance ? (
-              <span>
-                <span className="sr-only">{t("divers.header.diveInsurancePrefix")}</span>
-                {diver.person.diveInsurance}
-              </span>
+              <span>{t("divers.header.diveInsuranceOnFile")}</span>
             ) : null}
             {visits > 0 ? (
               <span className="tabular-nums">{t("divers.header.visits", { count: visits })}</span>
