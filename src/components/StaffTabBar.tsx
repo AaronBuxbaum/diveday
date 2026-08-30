@@ -15,6 +15,7 @@ import { useExitAnimation } from "@/components/useExitAnimation";
 import { useMenuDismissal } from "@/components/useMenuDismissal";
 import {
   currentStaffNavDestinationId,
+  isLiveManifestPath,
   STAFF_DESTINATION_BADGE_TONES,
   type StaffDestinationBadge,
   type StaffDestinationLabels,
@@ -48,17 +49,7 @@ import {
  * fixed elements that share the bottom edge (UndoToast) add the same variable
  * to their offset, so the dock never covers what a page just said.
  */
-export function StaffTabBar({
-  root,
-  gates,
-  counts,
-  labels,
-  navAriaLabel,
-  badgeLabels,
-  moreLabel,
-  groupDailyLabel,
-  groupSetupLabel,
-}: {
+type StaffTabBarProps = {
   root: string;
   gates: ShopNavGates;
   counts?: ShopNavCounts;
@@ -71,8 +62,29 @@ export function StaffTabBar({
   groupDailyLabel: string;
   /** Heading over the configure-once half. */
   groupSetupLabel: string;
-}) {
+};
+
+export function StaffTabBar(props: StaffTabBarProps) {
   const pathname = usePathname();
+  // Boat Mode is a full-viewport working surface. Keep the route exception at
+  // the dock boundary so the desktop header remains unchanged and every other
+  // staff page keeps the standard phone chrome.
+  if (isLiveManifestPath(pathname, props.root)) return null;
+  return <StaffTabBarContent {...props} pathname={pathname} />;
+}
+
+function StaffTabBarContent({
+  pathname,
+  root,
+  gates,
+  counts,
+  labels,
+  navAriaLabel,
+  badgeLabels,
+  moreLabel,
+  groupDailyLabel,
+  groupSetupLabel,
+}: StaffTabBarProps & { pathname: string }) {
   const destinations = staffNavDestinations("primary", gates);
   const daily = staffNavDestinations("daily", gates);
   const setup = staffNavDestinations("setup", gates);

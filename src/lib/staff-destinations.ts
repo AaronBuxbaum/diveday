@@ -359,6 +359,24 @@ export function staffShopRoot(shopSlug: string): string {
 }
 
 /**
+ * Whether a pathname is the live manifest surface for this shop.
+ *
+ * The staff phone dock is deliberately absent on that surface: Boat Mode owns
+ * the full mobile viewport. Keep this as a segment check rather than a loose
+ * prefix match so another shop, another trip sub-route, and `/offline-manifest`
+ * can never borrow the exception.
+ */
+export function isLiveManifestPath(pathname: string, root: string): boolean {
+  const normalizedPath = pathname.split(/[?#]/, 1)[0].replace(/\/+$/, "");
+  const normalizedRoot = root.replace(/\/+$/, "");
+  const tripsPrefix = `${normalizedRoot}/trips/`;
+  if (!normalizedPath.startsWith(tripsPrefix)) return false;
+
+  const segments = normalizedPath.slice(tripsPrefix.length).split("/");
+  return segments.length === 2 && segments[0].length > 0 && segments[1] === "manifest";
+}
+
+/**
  * Everything below `/shop/<shopSlug>` for one destination.
  *
  * It used to append a view query for the one destination that was a *view* of

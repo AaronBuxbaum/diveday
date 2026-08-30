@@ -295,6 +295,17 @@ body {
  * as AAA. Big touch targets live in the components. Keep this semantic so the
  * roll-call screens can opt in without changing the app.
  */
+
+/*
+ * The live manifest is the only `.boat-mode` surface inside the staff shell.
+ * It owns the mobile viewport, so it must not reserve space for the phone dock.
+ * `/offline-manifest` renders outside `#shop-main-content` and is therefore
+ * intentionally unaffected by this exception.
+ */
+#shop-main-content:has(> main > div.boat-mode) {
+  --dock-clearance: 0rem;
+}
+
 .boat-mode {
   --surface-sunken: #edf2f1;
   --border: #8ba0a4;

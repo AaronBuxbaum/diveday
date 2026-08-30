@@ -182,6 +182,15 @@ describe("the chrome bar", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("clears phone dock clearance only for the live manifest inside the staff shell", async () => {
+    const css = await read("src/app/globals.css");
+    expect(css).toContain("#shop-main-content:has(> main > div.boat-mode)");
+    expect(css).toContain("--dock-clearance: 0rem;");
+    // The offline manifest has its own shell, so this selector must stay
+    // anchored to the staff layout rather than to `.boat-mode` globally.
+    expect(css).not.toContain(".boat-mode {\n  --dock-clearance: 0rem;");
+  });
+
   it("declares its height once, as a token, at the 56px the ADR names", async () => {
     const css = await read("src/app/globals.css");
     // Inside `@theme`, which is what publishes it to `:root` for the
