@@ -6,6 +6,7 @@ import {
 import { RollCallMark, type RollCallMarkState } from "@/components/RollCallMark";
 import { ROLL_CALL_ROW_TONE } from "@/components/row-tones";
 import { buttonClass } from "@/components/ui/button";
+import { StatusMark } from "@/components/ui/StatusMark";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import {
   ROLL_CALL_NOTE_MAX,
@@ -155,7 +156,7 @@ export function rollCallScrollMargin(isDeparture: boolean): string {
  * slice 5a called this the worst mis-tap on the surface).
  *
  * Everything else on the line is measured against what is left for the name at
- * 390px: `gap-2.5` and a `size-7` index, because "Kiona Blackfeather" at 18px
+ * 390px: `gap-2.5` and a `size-7` index, because a long diver name at 18px
  * semibold wants 165px and the column has 176 to give it. A name that wraps
  * pushes its own audit line down and makes every row a different height, which
  * is the one thing a list read at a glance cannot afford.
@@ -276,10 +277,10 @@ export function RollCallMarkButton({
  * the moment the checkpoint was after a dive, which meant the ordinary opening
  * of every surface-interval count was red.
  *
- * The recorded states keep the words they had: at the dock a settled "Not
- * boarded ☑️", after a dive a danger-toned "Not back aboard" that never carries
- * a done-check — the worst string this surface ever produced was a green-checked
- * "Not boarded ✓" beside a diver who had not come back from dive one (DOM-H3).
+ * The recorded states keep their words: at the dock a settled "Not boarded"
+ * carries a drawn check, while after a dive a danger-toned "Not back aboard"
+ * carries a cross — never a done-check for the person still in the water
+ * (DOM-H3).
  */
 /**
  * "Mark back aboard" — the affirmative for a person a human has recorded **not
@@ -316,7 +317,7 @@ export function RollCallBackAboardControl({
       <RollCallButton
         key={isCrew ? `crew-back-aboard-${checkpoint}` : `back-aboard-${checkpoint}`}
         // Unsaying a missing person is exactly when the sentence matters:
-        // "surfaced 200 m north, picked up by Reef Runner at 14:31" is the
+        // "surfaced 200 m north, picked up by the rescue boat at 14:31" is the
         // half of the record the mark alone cannot carry (ADR
         // 20260828-a-missing-diver-gets-a-sentence). It rides this submit.
         noteField={{
@@ -414,7 +415,12 @@ export function RollCallExceptionControl({
                 ? t("manifest.crewMarkNotBackAboard")
                 : t("manifest.markNotBackAboard")
         }
-        // Only the departure ☑️ states get a words-say-it-too accessible name.
+        leadingMark={
+          recordedNotBoarded ? (
+            <StatusMark variant={isDeparture ? "checked" : "danger"} />
+          ) : undefined
+        }
+        // Only the departure settled states get a words-say-it-too accessible name.
         // "Not back aboard" is principle 7's one *visible* exception — it
         // already carries its own on-screen undo sentence just below, which a
         // screen reader reaches in the same forward read, so duplicating it

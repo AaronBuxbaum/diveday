@@ -5,6 +5,7 @@ import {
   daysFromNow,
   e2eNow,
   openRosterDetails,
+  openTripAbout,
   openTripActivity,
   signInAsOwner,
   signOut,
@@ -49,6 +50,7 @@ test.describe("refunds", () => {
     await expect(page.getByRole("heading", { name: options.title })).toBeVisible();
     // The requirements form waits behind its Edit disclosure (summary-first
     // Overview).
+    await openTripAbout(page);
     await page.getByText("Edit requirements", { exact: true }).click();
     await page.getByLabel("Require payment to board").check();
     await page.getByRole("button", { name: "Save requirements" }).click();

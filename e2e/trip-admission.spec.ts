@@ -1,5 +1,12 @@
 import { expect, READ_ONLY, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openTripTab, seededTripId } from "./helpers";
+import {
+  createTrip,
+  daysFromNow,
+  e2eNow,
+  openTripAbout,
+  openTripTab,
+  seededTripId,
+} from "./helpers";
 
 /**
  * **The boat's own cert gate, at the moment the seat is sold** (DOM-M6, ADR
@@ -223,6 +230,7 @@ test.describe("as owner", () => {
     await page.goto(`/shop/blue-mantis/trips/${tripId}`);
     // The requirements form waits behind its Edit disclosure (summary-first
     // Overview).
+    await openTripAbout(page);
     await page.getByText("Edit requirements", { exact: true }).click();
     await page.getByLabel("Minimum certification").selectOption("advanced_open_water");
     await page.getByRole("button", { name: "Save requirements" }).click();
@@ -264,6 +272,7 @@ test.describe("as owner", () => {
     // edit it, it used to be invisible entirely — and it says out loud that it
     // never blocks enrolment.
     await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+    await openTripAbout(page);
     const requirements = page
       .locator("section")
       .filter({ has: page.getByRole("heading", { name: "Readiness requirements" }) });
@@ -300,6 +309,7 @@ test.describe("as owner", () => {
     await page.goto(`/shop/blue-mantis/trips/${tripId}`);
     // The requirements form waits behind its Edit disclosure (summary-first
     // Overview).
+    await openTripAbout(page);
     await page.getByText("Edit requirements", { exact: true }).click();
     await page.getByLabel("Minimum certification").selectOption("advanced_open_water");
     await page.getByRole("button", { name: "Save requirements" }).click();

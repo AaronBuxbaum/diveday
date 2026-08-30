@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow } from "./helpers";
+import { daysFromNow, e2eNow, openTripAbout } from "./helpers";
 
 signedInAsOwner();
 
@@ -123,7 +123,8 @@ test.describe("schedule builder", () => {
     // Details summary states it at rest, and the form behind the Edit
     // disclosure comes back pre-filled with what the board was told.
     await row.getByRole("link", { name: title }).click();
-    await expect(page.getByText("$129.00 per diver")).toBeVisible();
+    await expect(page.getByText("$129.00 per seat")).toBeVisible();
+    await openTripAbout(page);
     await page.getByText("Edit details", { exact: true }).click();
     await expect(page.getByLabel(/Price per diver/)).toHaveValue("129");
   });
@@ -434,6 +435,7 @@ test.describe("schedule builder", () => {
 
     await week.getByRole("link", { name: new RegExp(`^Set a price for ${title},`) }).click();
     await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+#details$/);
+    await openTripAbout(page);
     await page.getByText("Edit details", { exact: true }).click();
     await page.getByLabel(/Price per diver/).fill("110");
     await page.getByRole("button", { name: "Save changes" }).click();

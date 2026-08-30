@@ -19,6 +19,7 @@ import {
   openRosterNotes,
   openSettingsRow,
   openThreadStep,
+  openTripAbout,
   openTripFromBoard,
   openTripTab,
   seededTripId,
@@ -2766,6 +2767,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Put it on the board" }).click();
         await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
         await openTripFromBoard(page, title);
+        await openTripAbout(page);
         await page.getByRole("heading", { name: "Repeating trip" }).waitFor();
         await capture(page, "trip-repeating-panel", scheme);
 
@@ -3203,6 +3205,7 @@ for (const scheme of ["light", "dark"] as const) {
 
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+        await openTripAbout(page);
         await page.getByText("Edit requirements", { exact: true }).click();
         await page.getByLabel("Minimum certification").selectOption("rescue");
         await page.getByRole("button", { name: "Save requirements" }).click();
@@ -3271,6 +3274,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Pickles Reef");
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+        await openTripAbout(page);
         await page.getByText("Edit requirements", { exact: true }).click();
         await page.getByLabel("Minimum certification").selectOption("advanced_open_water");
         await page.getByRole("button", { name: "Save requirements" }).click();
@@ -4292,16 +4296,21 @@ for (const scheme of ["light", "dark"] as const) {
         // claim lives in the person's own panel, never on the row.
         const missingRow = page.locator("#roll-call-list > ul > li").first();
         await openManifestPerson(missingRow);
-        const markNotBack = missingRow.getByRole("button", { name: "Mark not back aboard" });
+        const markNotBack = page
+          .getByRole("dialog")
+          .getByRole("button", { name: "Mark not back aboard" });
         await markNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
         await markNotBack.click();
         await expect(
-          missingRow.getByRole("button", { name: "Not back aboard", exact: true }),
+          page.getByRole("dialog").getByRole("button", { name: "Not back aboard", exact: true }),
         ).toBeVisible();
         // Closed again for the shot: the alarm this capture is about is what
         // the *list* shows — the pinned danger line and the one red row — and a
         // panel left open would photograph a person's contact card instead.
-        await missingRow.locator("summary").first().click();
+        await page
+          .getByRole("dialog")
+          .getByRole("button", { name: "Close person details" })
+          .click();
         await page.mouse.move(0, 0);
         await capture(page, "manifest-not-back-aboard", scheme);
       });
@@ -4336,7 +4345,7 @@ for (const scheme of ["light", "dark"] as const) {
         await offlineCopySaved(page);
         const row = page.locator("#roll-call-list > ul > li").filter({ hasText: "Diego Alvarez" });
         await openManifestPerson(row);
-        await expect(row.getByText("Dive support")).toBeVisible();
+        await expect(page.getByRole("dialog").getByText("Dive support")).toBeVisible();
         // The click leaves the pointer on the summary, which would bank a
         // hover-underlined name into the baseline.
         await page.mouse.move(0, 0);
@@ -4368,8 +4377,8 @@ for (const scheme of ["light", "dark"] as const) {
         // heading and the note field its input. Scoped to the disclosure — the
         // print-only copy of the same facts is in the DOM on every row,
         // carrying the identical heading.
-        await expect(row.locator("details").first().getByText("Emergency contact")).toBeVisible();
-        await expect(row.getByRole("textbox", { name: "Note" })).toBeVisible();
+        await expect(page.getByRole("dialog").getByText("Emergency contact")).toBeVisible();
+        await expect(page.getByRole("dialog").getByRole("textbox", { name: "Note" })).toBeVisible();
         // The pointer is left on the summary by the click above, which would
         // bank a hover-underlined name into the baseline.
         await page.mouse.move(0, 0);
@@ -4413,15 +4422,20 @@ for (const scheme of ["light", "dark"] as const) {
         await boardTom.evaluate((button) => button.scrollIntoView({ block: "center" }));
         await boardTom.click();
         await openManifestPerson(lenaRow);
-        const lenaNotBack = lenaRow.getByRole("button", { name: "Mark not back aboard" });
+        const lenaNotBack = page
+          .getByRole("dialog")
+          .getByRole("button", { name: "Mark not back aboard" });
         await lenaNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
         await lenaNotBack.click();
         await expect(
-          lenaRow.getByRole("button", { name: "Not back aboard", exact: true }),
+          page.getByRole("dialog").getByRole("button", { name: "Not back aboard", exact: true }),
         ).toBeVisible();
         // Closed again: this capture is about what the list says, not what a
         // panel holds — that is `manifest-person-panel`'s job.
-        await lenaRow.locator("summary").first().click();
+        await page
+          .getByRole("dialog")
+          .getByRole("button", { name: "Close person details" })
+          .click();
         await expect(tomRow.getByText("Someone unaccounted for")).toBeVisible();
         await page.mouse.move(0, 0);
         await capture(page, "manifest-buddy-divergence", scheme);
@@ -4587,6 +4601,7 @@ for (const scheme of ["light", "dark"] as const) {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await seededTripId(page, "blue-mantis", AOW_COURSE);
         await page.goto(`/shop/blue-mantis/trips/${tripId}`);
+        await openTripAbout(page);
         await page
           .locator("section")
           .filter({ has: page.getByRole("heading", { name: "Readiness requirements" }) })
@@ -4987,7 +5002,9 @@ test.describe("print", () => {
     await page.goto(`${tripPath}/print`);
     await page.getByRole("heading", { name: "Trip packet" }).waitFor();
     await page.emulateMedia({ media: "print" });
-    await expect(page.locator('nav[aria-label="Trip"]')).not.toBeVisible();
+    const packetNavs = page.locator('nav[aria-label="Trip"]');
+    await expect(packetNavs).toHaveCount(2);
+    for (const nav of await packetNavs.all()) await expect(nav).not.toBeVisible();
     await page.emulateMedia({ media: "screen" });
     await capturePrint(page, "trip-packet");
   });
@@ -5091,6 +5108,10 @@ for (const scheme of ["light", "dark"] as const) {
       await page.goto(`/shop/${privateShop.slug}/schedule/board`);
       await openTripFromBoard(page, REEF_TRIP);
       await openTripTab(page, "Manifest");
+      await page
+        .getByRole("button", { name: "Emergency numbers & response plan" })
+        .filter({ visible: true })
+        .click();
       // The prompt itself, not just the heading — the whole point of the
       // capture is the state where there is nothing under it.
       await page.getByText("No emergency numbers recorded").waitFor();

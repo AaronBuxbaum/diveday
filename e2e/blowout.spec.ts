@@ -3,6 +3,7 @@ import {
   bookASeatAndOpenThread,
   daysFromNow,
   e2eNow,
+  openTripAbout,
   openTripFromBoard,
   seededTripId,
 } from "./helpers";
@@ -35,6 +36,7 @@ test.describe("weather blow-out cascade", () => {
 
     // One tap on the trip page leads to a real confirm page — never a
     // zero-confirm cancel of live bookings (the feature's guardrail).
+    await openTripAbout(page);
     await page.getByRole("link", { name: "Weather blow-out…" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Call a blow-out?" })).toBeVisible();
     // The confirm names the roster it is about to message.
@@ -70,6 +72,9 @@ test.describe("weather blow-out cascade", () => {
     // The trip record now reads cancelled and keeps the way back to the
     // cascade; the quiet per-trip cancel control is gone with it.
     await page.getByRole("link", { name: "Back to the trip" }).click();
+    await openTripAbout(page);
+    // The cancellation badge lives in the shared masthead; the About panel is
+    // open here so the trip's lifecycle controls remain in the same reading.
     // Not `exact: true`: the status is a `<Badge tone="danger">`, which renders
     // an aria-hidden glyph inside the same span as the label, so the element's
     // text is "❌Cancelled" and no element has the exact text "Cancelled".
@@ -98,6 +103,7 @@ test.describe("weather blow-out cascade", () => {
     await expect(page.getByRole("status")).toContainText(`“${title}” is on the board.`);
 
     await openTripFromBoard(page, title);
+    await openTripAbout(page);
     await page.getByRole("link", { name: "Weather blow-out…" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Call a blow-out?" })).toBeVisible();
     await expect(page.getByText("Nobody is booked on this departure.")).toBeVisible();
@@ -138,6 +144,7 @@ test.describe("weather blow-out cascade", () => {
     // The captain calls it off.
     await page.goto(`/shop/${SHOP}/schedule/board`);
     await openTripFromBoard(page, REEF_TRIP);
+    await openTripAbout(page);
     await page.getByRole("link", { name: "Weather blow-out…" }).click();
     // Wait on what the confirm page itself renders before clicking through it
     // — the click is a navigation, not an in-place toggle.

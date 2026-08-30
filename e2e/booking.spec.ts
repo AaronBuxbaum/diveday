@@ -5,6 +5,7 @@ import {
   daysFromNow,
   e2eNow,
   openRosterDetails,
+  openTripAbout,
   openTripActivity,
   signInAsOwner,
   signOut,
@@ -175,6 +176,7 @@ test.describe("staff", () => {
 
     // The conditions form waits behind the section's disclosure (summary-first
     // Overview); no prediction is published yet, so the toggle reads "Publish".
+    await openTripAbout(page);
     await page.getByText("Write a crew prediction", { exact: true }).click();
     await page.getByRole("checkbox", { name: "Conditions hold" }).check();
     await page.getByLabel("Conditions overview").fill("The captain is watching a passing squall.");
@@ -221,6 +223,7 @@ test.describe("staff", () => {
       .click();
     await expect(page.getByRole("button", { name: "Book my spot" })).toHaveCount(0);
     // The details form waits behind its Edit disclosure (summary-first Overview).
+    await openTripAbout(page);
     await page.getByText("Edit details", { exact: true }).click();
     await page.getByLabel("Title").fill(renamed);
     await page.getByRole("button", { name: "Save changes" }).click();
@@ -229,13 +232,12 @@ test.describe("staff", () => {
     const manageUrl = page.url();
 
     // Cancel: gone from public schedule; reinstate: back.
-    await page.getByRole("button", { name: "Cancel trip" }).click();
-    // The danger-tone Badge prepends a decorative aria-hidden glyph
-    // (Badge.tsx toneGlyph), so the element's own text is "❌Cancelled" —
-    // matching the bare word would also hit the "Trip cancelled — it's off
-    // the public schedule." alert on the same page (getByText is
-    // case-insensitive substring by default).
-    await expect(page.getByText("❌Cancelled")).toBeVisible();
+    await openTripAbout(page);
+    await page.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
+    // The cancellation badge is in the shared masthead and keeps the state
+    // visible after the redirect; match the word rather than the lifecycle
+    // notice, which is also present on this page.
+    await expect(page.getByText("Cancelled").filter({ visible: true }).first()).toBeVisible();
     await page.goto("/shop/blue-mantis/schedule/board");
     await expect(
       page.locator("li").filter({ hasText: renamed }).filter({ visible: true }),

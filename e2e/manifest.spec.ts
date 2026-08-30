@@ -103,14 +103,15 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   // One disclosure per row now, not two: the person's own panel holds the
   // contact block, the notes, and the exception control together (ADR
   // 20260827-the-departure-is-two-working-surfaces, decision 2).
-  const priyaPanel = priyaRow.locator("details").first();
-  await expect(priyaPanel).toHaveJSProperty("open", false);
+  const priyaTrigger = priyaRow.locator('button[aria-haspopup="dialog"]');
+  await expect(priyaTrigger).toHaveAttribute("aria-expanded", "false");
   await openManifestPerson(priyaRow);
-  await priyaRow
+  const priyaDialog = page.getByRole("dialog");
+  await priyaDialog
     .getByLabel("Add a note only staff can see")
     .fill("Guest asked to sit out before departure.");
   const manifestUrl = page.url();
-  await priyaRow.getByRole("button", { name: "Add private note" }).click();
+  await priyaDialog.getByRole("button", { name: "Add private note" }).click();
   // Private notes are independent of roll-call state: the desk can save
   // context before anyone is marked boarded, and the action revalidates this
   // page in place rather than redirecting it.
@@ -124,7 +125,7 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   // is blocked and carries no boarding mark at all, so hers is the row whose
   // only recordable result is this one.
   await openManifestPerson(priyaRow);
-  const markNotBoarded = priyaRow.getByRole("button", { name: "Mark not boarded" });
+  const markNotBoarded = priyaDialog.getByRole("button", { name: "Mark not boarded" });
   await markNotBoarded.evaluate((button) => button.scrollIntoView({ block: "center" }));
   // **Where the diver is on screen, not what `window.scrollY` reads.** Those
   // were the same question until the count panel started naming who is still
@@ -137,16 +138,18 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   const rowTopBefore = (await priyaRow.boundingBox())?.y ?? Number.NaN;
   await markNotBoarded.click();
   // WP-6: the card settles in place — the button flips to the confirmed state
-  // without a full-page redirect, so the roster position never jumps.
+  // without a full-page redirect. The first recorded result also reveals the
+  // sticky panel's count row above the list; allow that one panel expansion to
+  // settle while keeping the working row within the viewport.
   // The settled control's accessible name is its undo-bearing aria-label
   // (PR #607 review) — an aria-label replaces the computed name outright, so
   // "Not boarded ☑️" no longer matches; the visible label is unchanged.
   await expect(
-    priyaRow.getByRole("button", { name: "Not boarded — tap again to undo" }),
+    priyaDialog.getByRole("button", { name: "Not boarded — tap again to undo" }),
   ).toBeVisible();
   await expect
     .poll(async () => Math.abs(((await priyaRow.boundingBox())?.y ?? Number.NaN) - rowTopBefore))
-    .toBeLessThan(100);
+    .toBeLessThan(160);
   await expect(page).not.toHaveURL(/#roll-call-/);
   // The head count now lives once, in the checkpoint panel's count row —
   // the six summary tiles (three responsive layouts of the same numbers,
@@ -172,10 +175,10 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   // A second row, through the same two steps.
   const tomRow = manifestRow(page, "Tom Okafor");
   await openManifestPerson(tomRow);
-  await tomRow.getByRole("button", { name: "Mark not boarded" }).click();
-  await expect(page.getByRole("button", { name: "Not boarded — tap again to undo" })).toHaveCount(
-    2,
-  );
+  await page.getByRole("dialog").getByRole("button", { name: "Mark not boarded" }).click();
+  await expect(
+    page.getByRole("dialog").getByRole("button", { name: "Not boarded — tap again to undo" }),
+  ).toBeVisible();
 });
 
 test("captain saves the full checkpoint manifest, reloads it offline, and reconciles roll call", async ({
@@ -715,7 +718,7 @@ test("a checkpoint with every diver counted stays open until the crew are called
   // Every diver has a result — and the checkpoint is still open, naming why:
   // the crew, by name, are the whole crew half (ADR
   // 20260804-crew-roll-call-is-per-person).
-  await expect(page.getByRole("heading", { name: "Roll call complete 🎉" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Roll call complete" })).toHaveCount(0);
   await expect(page.getByText(/crew members still to call/)).toBeVisible();
 
   const crewAboardButtons = page.getByRole("button", { name: "Mark aboard" });
@@ -733,7 +736,7 @@ test("a checkpoint with every diver counted stays open until the crew are called
   await expect(crewAboardButtons).toHaveCount(0);
 
   // Every person aboard named by a human: now it closes.
-  await expect(page.getByRole("heading", { name: "Roll call complete 🎉" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Roll call complete" })).toBeVisible();
 
   // DOM-H3. Now a diver does not come back from dive one. After a dive, the
   // control that isn't "Boarded" says so in those words and never settles into
@@ -745,12 +748,13 @@ test("a checkpoint with every diver counted stays open until the crew are called
   // from the person's own panel, never from the row a wet thumb runs down.
   const firstDiverRow = page.locator("#roll-call-list > ul > li").first();
   await openManifestPerson(firstDiverRow);
-  const markNotBack = firstDiverRow.getByRole("button", { name: "Mark not back aboard" });
+  const firstDiverDialog = page.getByRole("dialog");
+  const markNotBack = firstDiverDialog.getByRole("button", { name: "Mark not back aboard" });
   // The sentence rides the same submit as the mark (ADR
   // 20260828-a-missing-diver-gets-a-sentence). What is being pinned is the
   // pairing: there is no separate save, so nothing can record the alarm and
   // lose the observation behind it.
-  await firstDiverRow
+  await firstDiverDialog
     .getByRole("textbox", { name: "What happened (optional)" })
     .first()
     .fill("Surfaced 200 m north, picked up by Reef Runner at 14:31.");
@@ -760,15 +764,15 @@ test("a checkpoint with every diver counted stays open until the crew are called
   // *other* rows' still-unpressed "Mark not back aboard" buttons and settles
   // instantly, so the assertion never waits for this write at all.
   await expect(
-    firstDiverRow.getByRole("button", { name: "Not back aboard", exact: true }),
+    firstDiverDialog.getByRole("button", { name: "Not back aboard", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Not boarded ☑️" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Roll call complete 🎉" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Roll call complete" })).toHaveCount(0);
   await expect(page.getByText(/1 diver is not back aboard/)).toBeVisible();
   // Read back on the row, so a second crew member arriving at the alarm does
   // not type the same sentence again.
   await expect(
-    firstDiverRow.getByText("Surfaced 200 m north, picked up by Reef Runner at 14:31."),
+    firstDiverDialog.getByText("Surfaced 200 m north, picked up by Reef Runner at 14:31."),
   ).toBeVisible();
   // And the panel names who it is about, not just how many. `order-first` is
   // paint order: it reaches neither a keyboard nor the crew list, so this link
@@ -790,7 +794,7 @@ test("a checkpoint with every diver counted stays open until the crew are called
   // Set exactly that state up: clear the diver's result so they are awaiting
   // again, then record a crew member as not back aboard.
   await openManifestPerson(firstDiverRow);
-  const clearNotBack = firstDiverRow.getByRole("button", {
+  const clearNotBack = firstDiverDialog.getByRole("button", {
     name: "Not back aboard",
     exact: true,
   });
@@ -803,7 +807,9 @@ test("a checkpoint with every diver counted stays open until the crew are called
   // claim about the same kind of body.
   const crewRow = page.locator("li[id^='crew-row-']").first();
   await openManifestPerson(crewRow);
-  const crewNotBack = crewRow.getByRole("button", { name: "Mark not back aboard" });
+  const crewNotBack = page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Mark not back aboard" });
   await crewNotBack.evaluate((button) => button.scrollIntoView({ block: "center" }));
   await crewNotBack.click();
 
@@ -812,7 +818,7 @@ test("a checkpoint with every diver counted stays open until the crew are called
   // suppress.
   await expect(progressPanel.getByText(/1 crew member is not back aboard/)).toBeVisible();
   await expect(awaitingEntry).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Roll call complete 🎉" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Roll call complete" })).toHaveCount(0);
 });
 
 test("the manifest offers a per-device push opt-in without asking for permission first", async ({
@@ -904,7 +910,7 @@ test("resolving a blocker from the manifest lands on that diver, under the block
   // blocker is ashore work, not something the rail needs standing on the row).
   const blockedRow = manifestRow(page, "Priya Sharma");
   await openManifestPerson(blockedRow);
-  const resolve = blockedRow.getByRole("link", { name: /Resolve/i });
+  const resolve = page.getByRole("dialog").getByRole("link", { name: /Resolve/i });
   await expect(resolve).toBeVisible();
   const href = await resolve.getAttribute("href");
   const bookingAnchor = href?.split("#")[1];

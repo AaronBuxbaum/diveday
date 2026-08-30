@@ -72,7 +72,7 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
     .filter({ has: page.getByRole("heading", { name: "Add a diver" }) })
     .filter({ visible: true });
   await addDiver.scrollIntoViewIfNeeded();
-  await page.getByRole("link", { name: "Add diver" }).click();
+  await addDiver.getByRole("link", { name: "Add diver", exact: true }).click();
   await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill("Walk-in Wanda");
   await page.getByLabel("Email").fill(`wanda-${e2eNow().getTime()}@example.com`);
@@ -83,11 +83,9 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
     "Diver added to the trip — but their waiver wasn’t emailed.",
   );
   await expect(page.getByRole("link", { name: "Walk-in Wanda" })).toBeVisible();
-  // The success-tone Badge prepends a decorative aria-hidden glyph
-  // (Badge.tsx toneGlyph), so the element's own text is "✅Full", not
-  // "Full" alone — and a bare substring match risks colliding with an
-  // unrelated "full" elsewhere on the page.
-  await expect(page.getByText("✅Full")).toBeVisible();
+  // The masthead ring owns the capacity read on the Trip surface now, so a
+  // full boat is stated in its accessible label without a second badge.
+  await expect(page.getByRole("img", { name: "1 of 1 seat, 0 open" })).toBeVisible();
 
   const privateNotes = await openPrivateNotes(page);
   await privateNotes.scrollIntoViewIfNeeded();

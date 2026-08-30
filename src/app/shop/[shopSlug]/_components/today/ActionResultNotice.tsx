@@ -1,3 +1,5 @@
+import { StatusMark } from "@/components/ui/StatusMark";
+
 /**
  * The one-line sent/error readout under a Today-queue inline action (resend an
  * invoice, resend a booking confirmation). One implementation — the two
@@ -19,16 +21,10 @@ export function ActionResultNotice({
   return (
     <p
       role="status"
-      className={`mt-2 text-sm font-medium ${status === "sent" ? "text-success" : "text-danger"}`}
+      className={`mt-2 inline-flex items-center gap-1.5 text-sm font-medium ${status === "sent" ? "text-success" : "text-danger"}`}
     >
-      {status === "sent" ? (
-        <>
-          <span aria-hidden="true">✅ </span>
-          {sentMessage}
-        </>
-      ) : (
-        errorMessage
-      )}
+      <StatusMark variant={status === "sent" ? "success" : "danger"} />
+      <span>{status === "sent" ? sentMessage : errorMessage}</span>
     </p>
   );
 }

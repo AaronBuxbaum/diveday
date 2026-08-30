@@ -10,6 +10,7 @@
   "about": {
     "heading": "About this departure",
     "add": "Add",
+    "addDiverJump": "Jump to add a diver",
     "details": "Details",
     "close": "Close",
     "viewPublic": "View public page",
@@ -592,6 +593,8 @@
     "printLineChecked": "{label} — {status}",
     "printLineNotChecked": "{label} — Not checked",
     "errorRefusal": "That didn't save — try it again.",
+    "checkedLabel": "Checked — press to clear",
+    "uncheckedLabel": "Not checked — press to mark checked",
     "summary": "Before you leave the dock — {checked} of {total} checked"
   }
 }

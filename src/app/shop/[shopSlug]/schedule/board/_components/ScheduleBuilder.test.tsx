@@ -1059,7 +1059,8 @@ describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
     // Badge's own aria-hidden mark for the three status tones — a colorblind
     // scan gets the mark before it gets to the words (design/principles.md #6).
     const badge = container.querySelector("a span.bg-danger-tint");
-    expect(badge?.textContent).toContain("❌");
+    expect(badge).not.toBeNull();
+    expect(badge?.querySelector("svg[aria-hidden='true']")).not.toBeNull();
   });
 
   it("confirms a removal in a panel below the row, and only submits on the second press", async () => {

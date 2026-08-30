@@ -26,7 +26,7 @@ import type { CertificationCardRowState } from "@/lib/certification-cards";
  *   renders no badge at all; a signed waiver renders no colour. The silence is
  *   the design, which is why the tests assert absence as hard as presence.
  * - **Colour never carries a state alone.** Every non-expected state renders a
- *   word, and the tone glyph rides the badge for the pass/fail tones.
+ *   word, and the drawn tone mark rides the badge for the pass/fail tones.
  * - **These rows compose no copy and format no value.** `date`, `meta` and a
  *   money `label` arrive pre-formatted, locale- and timezone-aware, from the
  *   caller — no row here constructs an `Intl` formatter, which is also what
@@ -77,7 +77,7 @@ export function CertificationCardRow({
   t: StaffTranslator;
   /** The card in words — "PADI Open Water". Composed by the caller. */
   title: ReactNode;
-  /** The card's small print — "card ···7231 · added Wed by Grace". Pre-formatted. */
+  /** The card's small print — "card · last four · added Wed by the recorder". Pre-formatted. */
   detail?: ReactNode;
   state: CertificationCardRowState;
   /** Set for a card the importer brought across; `source` names the old system when known. */

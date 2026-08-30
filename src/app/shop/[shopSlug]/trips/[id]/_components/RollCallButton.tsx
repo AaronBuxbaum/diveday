@@ -62,6 +62,7 @@ export function RollCallButton({
   ariaLabel,
   mark,
   pendingMark,
+  leadingMark,
   className,
   formClassName,
   copy,
@@ -92,8 +93,8 @@ export function RollCallButton({
    * Overrides the accessible name while the visible `label` stays put — the
    * one case is a settled control with no done-check to point at nearby
    * (principle 7 carves out "Not back aboard" as the sole *visible* exception;
-   * every other settled state, "Boarded ☑️" and its siblings, reads its own
-   * re-tap affordance to a sighted user from the ☑️ and the row's own green
+   * every other settled state, "Boarded" and its siblings, reads its own
+   * re-tap affordance to a sighted user from the drawn mark and the row's own green
    * fill, neither of which reaches a screen reader). Undefined leaves the
    * accessible name as the rendered text, unchanged for every unrecorded and
    * pending state.
@@ -115,6 +116,8 @@ export function RollCallButton({
   mark?: ReactNode;
   /** The same, while this control's own submit is in flight. */
   pendingMark?: ReactNode;
+  /** A small drawn state mark kept beside visible status words. */
+  leadingMark?: ReactNode;
   className: string;
   /**
    * Sizing for the `<form>` the button posts through. In the control
@@ -221,6 +224,11 @@ export function RollCallButton({
             <span aria-hidden="true">{isPending ? (pendingMark ?? mark) : mark}</span>
           ) : isPending ? (
             pendingLabel
+          ) : leadingMark ? (
+            <span className="inline-flex items-center gap-1.5">
+              <span aria-hidden="true">{leadingMark}</span>
+              <span>{label}</span>
+            </span>
           ) : (
             label
           )}

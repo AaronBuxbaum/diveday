@@ -452,7 +452,7 @@ describe("asserting aboard over a missing mark is never the cheap direction", ()
     const row = screen.getByRole("listitem");
     fireEvent.click(within(row).getByRole("button", { name: "Open details for Meera Iyer" }));
     const sheet = screen.getByRole("dialog");
-    const backAboard = within(sheet).getByRole("button", { name: "Mark back aboard" });
+    const backAboard = within(sheet).getByRole("button", { name: /^Mark back aboard/ });
     const retract = within(sheet).getByRole("button", { name: "Not back aboard" });
     expect(backAboard).toBeDefined();
     expect(retract).toBeDefined();

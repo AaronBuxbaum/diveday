@@ -1,5 +1,5 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
+import { createTrip, daysFromNow, e2eNow, openTripAbout, openTripFromBoard } from "./helpers";
 
 /**
  * The contact importer (ADR 20260723-contact-importer, ADR
@@ -168,6 +168,7 @@ test.describe("contact import — specialty cards", () => {
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
     // The requirements form waits behind its Edit disclosure (summary-first
     // Overview).
+    await openTripAbout(page);
     await page.getByText("Edit requirements", { exact: true }).click();
     await page.getByRole("checkbox", { name: "Deep" }).check();
     await page.getByRole("button", { name: /Save requirements/ }).click();

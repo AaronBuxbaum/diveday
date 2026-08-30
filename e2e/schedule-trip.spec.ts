@@ -3,6 +3,7 @@ import {
   bookASeatAndOpenThread,
   daysFromNow,
   e2eNow,
+  openTripAbout,
   signInAsOwner,
   tripPathByTitle,
 } from "./helpers";
@@ -89,7 +90,8 @@ test("staff schedules a trip and it appears on shop and public schedules", async
   // overview's own "View booking page" button impossible to use.
   await page.getByRole("link", { name: "Manage this trip" }).click();
   await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]+$/);
-  await page.getByRole("button", { name: "Cancel trip" }).click();
+  await openTripAbout(page);
+  await page.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
   await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
 });
 
@@ -146,21 +148,20 @@ test("a multi-day departure is one trip with a meeting day per day", async ({ pa
   await expect(row).toHaveCount(1);
   await expect(row).toContainText("3 days");
 
-  // The trip's own page lists every meeting day, and the details editor can
-  // shrink the departure back down without deleting and rebuilding it.
+  // The Trip surface keeps this as one departure, and its Details editor
+  // owns the meeting-day count without deleting and rebuilding the trip.
   await row.getByRole("link", { name: title, exact: true }).click();
-  await expect(page.getByText("3 meeting days · same instructors each day")).toBeVisible();
-  // The details form waits behind its Edit disclosure (summary-first Overview).
+  await openTripAbout(page);
+  // About is already open from the summary read above; the edit disclosure lives inside it.
   await page.getByText("Edit details", { exact: true }).click();
+  await expect(page.getByLabel("Days")).toHaveValue("3");
   await page.getByLabel("Days").fill("2");
   await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByText("2 meeting days · same instructors each day")).toBeVisible();
+  await expect(page.getByLabel("Days")).toHaveValue("2");
 
-  // **And the diver is told.** Every assertion above this line passed while the
-  // booking page still printed day one's date and time range and stopped, so a
-  // student bought a seat on a course weekend with no way to learn there was a
-  // second day (`meetingDays` reaching `TripHeader`). The staff side knowing is
-  // not the feature.
+  // **And the diver is told.** The public page receives the same departure
+  // after the staff edit, so its day list remains the reader-facing proof that
+  // this is one trip with one roster across both dates.
   // Straight to the public path rather than through "View booking page", which
   // is `target="_blank"` — clicking it opens a tab this `page` never becomes.
   const tripId = new URL(page.url()).pathname.split("/").pop();
@@ -189,6 +190,7 @@ test("staff moves a departure to a different boat after it is on the board", asy
   // settled facts and opens to edit them, as a `<details>`/`<summary>` rather
   // than a button (a focusable descendant of a summary fails axe's
   // nested-interactive rule). Every field below is inside it.
+  await openTripAbout(page);
   await page.getByText("Edit details", { exact: true }).click();
   // Located by its form name, the same shape `visual.spec.ts` uses for the
   // onboarding inputs. Not by label: `Field` renders its `(optional)` hint
@@ -228,6 +230,7 @@ test("staff moves a departure to a different boat after it is on the board", asy
   // Read back off a fresh render: the point is that it *stored*, not that the
   // select kept what was typed into it.
   await page.goto(tripPath);
+  await openTripAbout(page);
   await page.getByText("Edit details", { exact: true }).click();
   await expect(page.locator('select[name="boatId"]')).toHaveValue(other[0]);
 });
@@ -249,6 +252,7 @@ test("a departure's own meeting point reaches the diver on their thread", async 
   const tripPath = await tripPathByTitle(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
   await page.goto(tripPath);
 
+  await openTripAbout(page);
   await page.getByText("Edit details", { exact: true }).click();
   // By form name, not label: `Field` renders its "(optional)" hint inside
   // the caption, so an accessible-name match here is fragile — same reason

@@ -209,14 +209,18 @@ export function TripAddDiverLink({
   href,
   label,
   compactLabel = label,
+  ariaLabel,
 }: {
   href: string;
   label: string;
   compactLabel?: string;
+  /** Distinguishes the masthead jump from the inline add form for assistive tech. */
+  ariaLabel?: string;
 }) {
   return (
     <a
       href={href}
+      aria-label={ariaLabel}
       className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full bg-primary px-3 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:min-h-11 sm:rounded-xl sm:px-4"
     >
       <DiveDayIcon name="addBooking" className="size-4" />

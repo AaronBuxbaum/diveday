@@ -20,6 +20,16 @@ control remains available. The old `/guests` path remains as a compatibility rou
 while first-party links and redirects land on Trip. `TripAboutSection.test.tsx` pins the compact
 summary, disclosure, rows, and edit anchors.
 
+
+## The person sheet and buried emergency reference (delivered 2026-08-29)
+
+Slices 5b and 5c of [20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md). A roll-call row now opens one person sheet with the diver or crew member's contact reference, readiness facts, buddy context, today's trail, and the one deliberate exception act; it carries no call or `tel:` button. The manifest's emergency numbers are quiet at rest, available through More on mobile and a desktop footer, and remain complete in the printed packet. `PersonSheet.test.tsx` and `ManifestMoreMenu.test.tsx` pin both contracts.
+
+## Staff status marks are drawn, not typed (delivered 2026-08-29)
+
+Slice 5f replaces status emoji with the shared `StatusMark` SVG primitive across live and offline manifests, prep, Today, forms, badges, notices, and trip surfaces. The words remain the accessible status; the marks provide a distinct monochrome shape. `StatusMark.test.tsx` and the migrated surface suites pin the mapping and the absence of decorative emoji.
+
+
 ## Reviews is a worklist (delivered 2026-08-28)
 
 Slice 8d of [20260827-people-not-lists](../architecture/decisions/20260827-people-not-lists.md),

@@ -46,7 +46,8 @@ describe("CertificationCardRow — the state→badge table", () => {
     );
     const badge = badgeIn(container);
     expect(badge).toHaveClass("bg-warning-tint", "text-warning-strong");
-    expect(badge?.textContent).toContain("⚠️");
+    expect(badge).not.toBeNull();
+    expect(badge?.querySelector("svg[aria-hidden='true']")).not.toBeNull();
     expect(badge?.textContent).toContain(t("divers.shared.cardStatus.pending"));
   });
 

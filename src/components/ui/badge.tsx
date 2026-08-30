@@ -1,4 +1,5 @@
-import { toneGlyph } from "./tone";
+import { StatusMark } from "./StatusMark";
+import { toneMark as toneToMark } from "./tone";
 
 /**
  * Canonical status pill. Every hand-rolled "rounded-full bg-X/10 text-X" span
@@ -34,7 +35,7 @@ const toneClass = {
 export type BadgeTone = keyof typeof toneClass;
 
 /**
- * The same mark, for a status that is **not** wearing a pill.
+ * The same drawn mark, for a status that is **not** wearing a pill.
  *
  * A pill is right when a status needs to stand apart from body text. It is
  * wrong in a row of 44px controls, where a 24px pill reads as a shrunken
@@ -44,11 +45,11 @@ export type BadgeTone = keyof typeof toneClass;
  * mark alone carries it. Returns `undefined` for the two tones that are labels
  * rather than statuses, so a caller cannot mark a count.
  *
- * The marks themselves, and the argument for emoji over text dingbats, live in
- * `./tone` — one declaration shared with `FormStatus` and `ShopNotice`.
+ * The mark mapping lives in `./tone`, while the SVG geometry lives in the
+ * shared `StatusMark` primitive used by `FormStatus` and `ShopNotice` too.
  */
-export function badgeToneGlyph(tone: BadgeTone): string | undefined {
-  return toneGlyph(tone);
+export function badgeToneMark(tone: BadgeTone) {
+  return toneToMark(tone);
 }
 
 const sizeClass = {
@@ -81,7 +82,7 @@ export function Badge({
    * badge that is a **count wearing a tone**, not a status: the rule above is
    * that `primary`/`neutral` count badges get no mark, and a `danger`-toned
    * count is the same kind of thing. The nav's blocked-diver count is the one
-   * in the tree — a header tab reading "Today ❌ 19" spends a third of a phone
+   * in the tree — a header tab reading "Today · 19" spends a third of a phone
    * header on a mark that disambiguates nothing the number and the red pill
    * have not already said.
    */
@@ -89,16 +90,17 @@ export function Badge({
   className?: string;
   children: React.ReactNode;
 }) {
-  const glyph = toneMark ? toneGlyph(tone) : undefined;
+  const mark = toneMark ? toneToMark(tone) : undefined;
+  const markSize = size === "lg" ? "md" : "sm";
   return (
     <span
       className={`inline-flex items-center rounded-full font-medium ${
-        glyph ? "gap-1" : ""
+        mark ? "gap-1" : ""
       } ${sizeClass[size]} ${toneClass[tone]}${tabularNums ? " tabular-nums" : ""}${
         className ? ` ${className}` : ""
       }`}
     >
-      {glyph ? <span aria-hidden="true">{glyph}</span> : null}
+      {mark ? <StatusMark variant={mark} size={markSize} /> : null}
       {children}
     </span>
   );

@@ -124,8 +124,8 @@ export function SiteFormShell({
           nowhere (ADR 20260827-the-shops-shelves).
 
           `FormStatus` is the shared shape for that (components/ui/form.tsx),
-          and it brings the ❌ glyph a danger banner carried but a bare
-          paragraph did not; `FieldErrorFocus` is the shared scroll-and-focus
+          and it brings the drawn danger mark a danger banner carried but a
+          bare paragraph did not; `FieldErrorFocus` is the shared scroll-and-focus
           that this file used to re-implement with its own effect, ref and
           `tabIndex={-1}`. Between them the hand-rolled half of this component
           is gone — and the focus target picks up the brief ring the rest of the

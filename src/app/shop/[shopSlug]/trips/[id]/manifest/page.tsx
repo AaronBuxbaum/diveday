@@ -626,6 +626,8 @@ export default async function TripManifestPage({
             total: checklistListItems.length,
           }),
           errorRefusal: t("trips.preDepartureCheck.errorRefusal"),
+          checkedLabel: t("trips.preDepartureCheck.checkedLabel"),
+          uncheckedLabel: t("trips.preDepartureCheck.uncheckedLabel"),
         }}
       />
       {/* The page's job, as high as it can go: the divers, immediately under

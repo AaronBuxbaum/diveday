@@ -1,5 +1,5 @@
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, signInAsOwner } from "./helpers";
+import { daysFromNow, e2eNow, openTripAbout, signInAsOwner } from "./helpers";
 
 test.describe("staff", () => {
   signedInAsOwner();
@@ -55,6 +55,7 @@ test.describe("staff", () => {
     const manageTripUrl = page.url();
 
     // The conditions form waits behind its disclosure (summary-first Overview).
+    await openTripAbout(page);
     await page.getByText(/Write a crew prediction|Edit crew prediction/).click();
     await page
       .getByLabel("Conditions overview")
@@ -113,6 +114,7 @@ test.describe("staff", () => {
     await signInAsOwner(page);
     await page.goto(manageTripUrl);
     // Published, so the disclosure reads "Edit"; the clear control sits inside.
+    await openTripAbout(page);
     await page.getByText("Edit crew prediction", { exact: true }).click();
     await page.getByRole("button", { name: "Return to automated outlook" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction cleared");
@@ -124,7 +126,8 @@ test.describe("staff", () => {
     // Cancel the trip — this leg exercises the cancel/reinstate controls
     // themselves; test isolation is already handled by the per-test demo
     // reset in fixtures.ts.
-    await page.getByRole("button", { name: "Cancel trip" }).click();
+    await openTripAbout(page);
+    await page.getByRole("button", { name: /Cancel (trip|this departure)/ }).click();
     await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
   });
 

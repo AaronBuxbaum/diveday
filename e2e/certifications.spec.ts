@@ -7,6 +7,7 @@ import {
   e2eNow,
   findTripOnBoard,
   openThreadStep,
+  openTripAbout,
   signInAsOwner,
   signOut,
 } from "./helpers";
@@ -131,6 +132,7 @@ test("an instructor certifies a diver from the course roster, and they can book 
   });
 
   await (await findTripOnBoard(page, "blue-mantis", new RegExp(`^${sessionTitle}$`))).click();
+  await openTripAbout(page);
   await expect(page.getByLabel("Assign crew")).toHaveAttribute("data-hydrated", "true");
   await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
   await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();

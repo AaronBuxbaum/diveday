@@ -101,6 +101,9 @@ test.describe("demo billing history", () => {
     // and an order id is unique where a diver-and-amount label need not be.
     const firstOrder = rows.first().getByRole("link").first();
     const firstHref = await firstOrder.getAttribute("href");
+    if (!firstHref) {
+      throw new Error("First order row is missing its destination.");
+    }
 
     // The toolbar states the whole set, not just what is on screen.
     await expect(orderCount(page)).toBeVisible();
@@ -112,14 +115,14 @@ test.describe("demo billing history", () => {
     await page.waitForURL(/[?&]page=2/);
     await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
     // Different orders, not the same screen re-rendered.
-    await expect(rows.first().getByRole("link").first()).not.toHaveAttribute("href", firstHref!);
+    await expect(rows.first().getByRole("link").first()).not.toHaveAttribute("href", firstHref);
 
     // And back, without losing the pager.
     await page
       .getByRole("navigation", { name: "Pages" })
       .getByRole("link", { name: "Previous" })
       .click();
-    await expect(rows.first().getByRole("link").first()).toHaveAttribute("href", firstHref!);
+    await expect(rows.first().getByRole("link").first()).toHaveAttribute("href", firstHref);
   });
 
   /**

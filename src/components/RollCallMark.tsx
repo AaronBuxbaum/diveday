@@ -3,11 +3,11 @@
  * that says where a person is (ADR
  * 20260827-the-departure-is-two-working-surfaces, decision 5).
  *
- * **Drawn, never typed.** These were `☑️` and `❌` in a message bundle until
- * this slice: emoji render as a different picture on every platform, cannot be
- * styled, and are the wrong size at arm's length — on the one surface in the
- * product read in direct sun, off a wet screen, at a distance. An inline SVG on
- * the 16/20/24px grid is the same shape everywhere and takes the row's own ink.
+ * **Drawn, never typed.** These used to be emoji in a message bundle: they
+ * render as a different picture on every platform, cannot be styled, and are
+ * the wrong size at arm's length — on the one surface in the product read in
+ * direct sun, off a wet screen, at a distance. An inline SVG on the 16/20/24px
+ * grid is the same shape everywhere and takes the row's own ink.
  *
  * **Colour never carries a state by itself.** Every mark here has a *shape* a
  * monochrome reader can tell apart — a check, a minus, a cross, an empty ring,
@@ -65,7 +65,7 @@ const MARK_CLASS: Record<RollCallMarkState, string> = {
 };
 
 /**
- * The glyph inside the circle. `stroke="currentColor"` throughout, so the mark
+ * The drawn mark inside the circle. `stroke="currentColor"` throughout, so the mark
  * takes the state's ink from the class above and needs no colour of its own —
  * which is also what lets `.boat-mode`'s contrast-boosted palette reach it.
  */

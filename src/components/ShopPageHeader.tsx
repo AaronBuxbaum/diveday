@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { sectionCardClass } from "@/components/ui/card";
-import { toneGlyph } from "@/components/ui/tone";
+import { StatusMark } from "@/components/ui/StatusMark";
+import { toneMark } from "@/components/ui/tone";
 
 export const EYEBROW_CLASS = "text-xs font-semibold tracking-[0.18em] text-primary uppercase";
 
@@ -231,8 +232,8 @@ export function ShopStat({
   value: string | number;
   detail?: string;
   /**
-   * A baseline reading beside this month's own (issue #700) — "vs $6,690
-   * last August" or "+12% vs $6,690 last August". A distinct line from
+   * A baseline reading beside this month's own (issue #700) — "vs last August"
+   * or "up vs last August". A distinct line from
    * `detail` rather than folded into it: `detail` states a fact about this
    * month alone ("8 bookings this month"), and a baseline is a second,
    * separable fact a reader may not want translated as one interpolated
@@ -379,21 +380,14 @@ export function ShopNotice({
         : tone === "neutral"
           ? "border-border bg-surface-sunken text-foreground"
           : "border-success/20 bg-success-tint text-success-strong";
-  const glyph = toneGlyph(tone);
+  const mark = toneMark(tone);
 
   return (
     <div
       role={role}
       className={`rounded-xl border px-4 py-3 text-sm font-medium ${toneClass} ${className}`}
     >
-      {/* `mr-1` rather than a space baked into the glyph string: the mark is
-          one shared declaration (ui/tone.ts) and the gap belongs to whichever
-          surface is rendering it. */}
-      {glyph ? (
-        <span aria-hidden="true" className="mr-1">
-          {glyph}
-        </span>
-      ) : null}
+      {mark ? <StatusMark variant={mark} className="me-1" /> : null}
       {children}
     </div>
   );

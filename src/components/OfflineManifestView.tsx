@@ -1,7 +1,15 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { AmbientContrastControl, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
@@ -20,6 +28,7 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass } from "@/components/ui/form";
+import { StatusMark, type StatusMarkVariant } from "@/components/ui/StatusMark";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import { matchLocale } from "@/i18n/negotiate";
@@ -94,6 +103,21 @@ const OFFLINE_BOAT_TARGET_CLASS = buttonClass({
   busy: true,
   className: "w-full sm:w-auto",
 });
+
+function OfflineStatusLabel({
+  variant,
+  children,
+}: {
+  variant: StatusMarkVariant;
+  children: ReactNode;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <StatusMark variant={variant} />
+      <span>{children}</span>
+    </span>
+  );
+}
 
 function deviceLocale(): string | undefined {
   return typeof navigator === "undefined" ? undefined : navigator.language;
@@ -228,7 +252,7 @@ type OfflineStatement = Pick<OfflineRollCallEvent, "status" | "retractsClientEve
  * would apply blind.
  */
 /**
- * The box a crew member writes "surfaced 200 m north, picked up by Reef Runner"
+ * The box a crew member writes "surfaced 200 m north, picked up by the rescue boat"
  * into, on the copy they are actually holding when a diver does not come back
  * (ADR 20260828-a-missing-diver-gets-a-sentence).
  *
@@ -1312,6 +1336,7 @@ export function OfflineManifestView() {
                   item.id,
                   envelope.checklistEvents,
                 );
+                const checked = check !== undefined;
                 const busy = busyChecklistItem === item.id;
                 return (
                   <li key={item.id}>
@@ -1319,15 +1344,23 @@ export function OfflineManifestView() {
                       type="button"
                       disabled={busy || expired}
                       aria-busy={busy}
-                      onClick={() => recordChecklistCheck(item.id, check ? "cleared" : "checked")}
+                      aria-pressed={checked}
+                      onClick={() => recordChecklistCheck(item.id, checked ? "cleared" : "checked")}
                       className={buttonClass({
-                        variant: check ? "primary" : "secondary",
+                        variant: checked ? "primary" : "secondary",
                         size: "boat",
-                        className: "w-full justify-start text-start",
+                        className: "w-full justify-start gap-2 text-start",
                       })}
                     >
-                      <span aria-hidden="true">{check ? "☑️" : "☐"}</span>
-                      <span className="ms-2">{item.label}</span>
+                      <StatusMark variant={checked ? "checked" : "unchecked"} size="md" />
+                      <span className="flex min-w-0 flex-col">
+                        <span>{item.label}</span>
+                        <span className="sr-only">
+                          {checked
+                            ? t("shared.offlineManifest.single.checklist.checkedLabel")
+                            : t("shared.offlineManifest.single.checklist.uncheckedLabel")}
+                        </span>
+                      </span>
                     </button>
                   </li>
                 );
@@ -1385,12 +1418,15 @@ export function OfflineManifestView() {
         </section>
 
         <section className="mt-8">
-          <h2 className="text-xl font-semibold">
-            {rollCallComplete
-              ? t("shared.offlineManifest.single.rollCallCompleteHeading")
-              : t("shared.offlineManifest.single.checkpointRollCallHeading", {
-                  checkpoint: rollCallCheckpointText(t, checkpoint),
-                })}
+          <h2 className="flex items-center gap-2 text-xl font-semibold">
+            {rollCallComplete ? <StatusMark variant="success" size="md" /> : null}
+            <span>
+              {rollCallComplete
+                ? t("shared.offlineManifest.single.rollCallCompleteHeading")
+                : t("shared.offlineManifest.single.checkpointRollCallHeading", {
+                    checkpoint: rollCallCheckpointText(t, checkpoint),
+                  })}
+            </span>
           </h2>
           {rollCallComplete ? (
             <p className="mt-1 text-sm font-semibold text-muted" role="status" aria-live="polite">
@@ -1555,17 +1591,22 @@ export function OfflineManifestView() {
                                     : "border border-primary bg-surface text-primary"
                               }`}
                             >
-                              {busyBooking === crewPersonId
-                                ? t("shared.offlineManifest.single.saving")
-                                : missingCrew && confirmAboardFor === crewPersonId
-                                  ? t("shared.offlineManifest.single.confirmAboardCancel")
-                                  : member.state?.state === "boarded"
-                                    ? t("manifest.crewAboardCheck")
-                                    : t("manifest.crewMarkAboard")}
+                              {busyBooking === crewPersonId ? (
+                                t("shared.offlineManifest.single.saving")
+                              ) : missingCrew && confirmAboardFor === crewPersonId ? (
+                                t("shared.offlineManifest.single.confirmAboardCancel")
+                              ) : member.state?.state === "boarded" ? (
+                                <OfflineStatusLabel variant="success">
+                                  {t("manifest.crewAboardCheck")}
+                                </OfflineStatusLabel>
+                              ) : (
+                                t("manifest.crewMarkAboard")
+                              )}
                             </button>
                             {/* The exception control, at the live page's weights
                               and by the live page's rules — and never a
-                              done-check after a dive, because "Not aboard ☑️"
+                              done-check after a dive, because a settled
+                              "Not aboard" mark
                               beside a divemaster still in the water is the
                               string every one of these rules exists to
                               delete (DOM-H3).
@@ -1590,7 +1631,7 @@ export function OfflineManifestView() {
                                 )
                               }
                               aria-busy={busyBooking === crewPersonId}
-                              // Only the departure ☑️ state gets the undo-bearing
+                              // Only the departure settled state gets the undo-bearing
                               // name, same rule as the live page: after a dive
                               // "not back aboard" already carries its own visible
                               // undo sentence, which duplicating here would say
@@ -1610,15 +1651,23 @@ export function OfflineManifestView() {
                                       : `${OFFLINE_BOAT_TARGET_CLASS} text-danger hover:bg-danger-tint`
                               }
                             >
-                              {busyBooking === crewPersonId
-                                ? t("shared.offlineManifest.single.saving")
-                                : crewRecordedNotBoarded
-                                  ? isDeparture
-                                    ? t("manifest.crewNotAboardCheck")
-                                    : t("manifest.crewNotBackAboardActive")
-                                  : isDeparture
-                                    ? t("manifest.crewMarkNotAboard")
-                                    : t("manifest.crewMarkNotBackAboard")}
+                              {busyBooking === crewPersonId ? (
+                                t("shared.offlineManifest.single.saving")
+                              ) : crewRecordedNotBoarded ? (
+                                isDeparture ? (
+                                  <OfflineStatusLabel variant="checked">
+                                    {t("manifest.crewNotAboardCheck")}
+                                  </OfflineStatusLabel>
+                                ) : (
+                                  <OfflineStatusLabel variant="danger">
+                                    {t("manifest.crewNotBackAboardActive")}
+                                  </OfflineStatusLabel>
+                                )
+                              ) : isDeparture ? (
+                                t("manifest.crewMarkNotAboard")
+                              ) : (
+                                t("manifest.crewMarkNotBackAboard")
+                              )}
                             </button>
                           </div>
                         )}
@@ -1912,7 +1961,7 @@ export function OfflineManifestView() {
                                 }
                                 void record(
                                   { bookingId: diver.bookingId },
-                                  // Re-tapping a settled "Boarded ☑️" retracts
+                                  // Re-tapping a settled "Boarded" mark retracts
                                   // it, exactly as the live control does: a
                                   // sighting recorded against the wrong row is
                                   // taken back as a retraction, not restated as
@@ -1945,13 +1994,17 @@ export function OfflineManifestView() {
                                     : "border border-primary bg-surface text-primary"
                               }`}
                             >
-                              {busyBooking === diver.bookingId
-                                ? t("shared.offlineManifest.single.saving")
-                                : missing && confirmAboardFor === diver.bookingId
-                                  ? t("shared.offlineManifest.single.confirmAboardCancel")
-                                  : state?.state === "boarded"
-                                    ? t("shared.offlineManifest.single.boardedDone")
-                                    : t("shared.offlineManifest.single.markBoarded")}
+                              {busyBooking === diver.bookingId ? (
+                                t("shared.offlineManifest.single.saving")
+                              ) : missing && confirmAboardFor === diver.bookingId ? (
+                                t("shared.offlineManifest.single.confirmAboardCancel")
+                              ) : state?.state === "boarded" ? (
+                                <OfflineStatusLabel variant="success">
+                                  {t("shared.offlineManifest.single.boardedDone")}
+                                </OfflineStatusLabel>
+                              ) : (
+                                t("shared.offlineManifest.single.markBoarded")
+                              )}
                             </button>
                           ) : null}
                           <button
@@ -1999,7 +2052,7 @@ export function OfflineManifestView() {
                             // person missing, and it must be findable at the rail
                             // without reading every word.
                             //
-                            // Only the departure ☑️ state gets the undo-bearing
+                            // Only the departure settled state gets the undo-bearing
                             // accessible name — after a dive, "not back aboard"
                             // already carries its own visible undo sentence
                             // below, and duplicating it here would say it twice.
@@ -2020,18 +2073,26 @@ export function OfflineManifestView() {
                                     : `${OFFLINE_BOAT_TARGET_CLASS} border border-border hover:bg-surface-sunken`
                             }
                           >
-                            {/* No done-check after a dive: "Not boarded ✓" beside a
+                            {/* No done-check after a dive: a "Not boarded" mark beside a
                               diver still in the water is the string this whole
                               change exists to delete (DOM-H3). */}
-                            {busyBooking === diver.bookingId
-                              ? t("shared.offlineManifest.single.saving")
-                              : recordedNotBoarded
-                                ? isDeparture
-                                  ? t("shared.offlineManifest.single.notBoardedDone")
-                                  : t("shared.offlineManifest.single.notBackAboardActive")
-                                : isDeparture
-                                  ? t("shared.offlineManifest.single.markNotBoarded")
-                                  : t("shared.offlineManifest.single.markNotBackAboard")}
+                            {busyBooking === diver.bookingId ? (
+                              t("shared.offlineManifest.single.saving")
+                            ) : recordedNotBoarded ? (
+                              isDeparture ? (
+                                <OfflineStatusLabel variant="checked">
+                                  {t("shared.offlineManifest.single.notBoardedDone")}
+                                </OfflineStatusLabel>
+                              ) : (
+                                <OfflineStatusLabel variant="danger">
+                                  {t("shared.offlineManifest.single.notBackAboardActive")}
+                                </OfflineStatusLabel>
+                              )
+                            ) : isDeparture ? (
+                              t("shared.offlineManifest.single.markNotBoarded")
+                            ) : (
+                              t("shared.offlineManifest.single.markNotBackAboard")
+                            )}
                           </button>
                           {/* The box only where the row's next act can take a
                             sentence: while nothing is recorded (the exception

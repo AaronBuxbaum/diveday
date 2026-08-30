@@ -1,6 +1,6 @@
 # The departure is two working surfaces — canvas
 
-- **Status:** Live (its ADR is Proposed — this canvas may still be edited)
+- **Status:** Shipped (its ADR is Proposed — the slice table is complete; the canvas remains the dated argument)
 - **Date:** 2026-08-27
 - **ADR:** [20260827-the-departure-is-two-working-surfaces](../../../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md)
 - **Published:** https://claude.ai/code/artifact/17ad2d81-4c8a-45fe-8cf3-c0d972469bd4
@@ -60,11 +60,11 @@ with their dependencies, are in
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
 | 5a — the boat manifest at phone size | shipped | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/RollCallControls.tsx` | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCall.test.tsx` |
-| 5b — the person sheet | open | — | — |
-| 5c — emergency numbers become buried reference | open | — | — |
+| 5b — the person sheet | shipped | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/PersonSheet.tsx` | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/PersonSheet.test.tsx` |
+| 5c — emergency numbers become buried reference | shipped | `src/components/EmergencyReferenceCard.tsx` | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/ManifestMoreMenu.test.tsx` |
 | 5d — the roster becomes one grouped ledger | shipped | `src/app/shop/[shopSlug]/trips/[id]/_components/RosterSection.tsx` | `src/app/shop/[shopSlug]/trips/[id]/_components/RosterSection.test.tsx` |
 | 5e — Overview folds into Trip's Details panel | shipped | `src/app/shop/[shopSlug]/trips/[id]/_components/TripAboutSection.tsx` | `src/app/shop/[shopSlug]/trips/[id]/_components/TripAboutSection.test.tsx` |
-| 5f — emoji status marks become drawn SVG | open | — | — |
+| 5f — emoji status marks become drawn SVG | shipped | `src/components/ui/StatusMark.tsx` | `src/components/ui/StatusMark.test.tsx` |
 
 `pnpm check:design-canvases` holds this table: a `shipped` row must name a file that exists and
 mentions this canvas's ADR id, and a canvas whose slices are all `shipped` or `dropped` may not

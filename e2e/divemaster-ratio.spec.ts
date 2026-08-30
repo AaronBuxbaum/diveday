@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { openSettingsRow, seededTripId } from "./helpers";
+import { openSettingsRow, openTripAbout, seededTripId } from "./helpers";
 
 /**
  * The shop's target diver:divemaster ratio, end to end: one number typed in
@@ -46,6 +46,7 @@ test("a shop's target ratio reaches the departure, and refuses nothing", async (
 
   const tripId = await seededTripId(page, SHOP, "Two-Tank Reef — Molasses & French");
   await page.goto(`/shop/${SHOP}/trips/${tripId}`);
+  await openTripAbout(page);
 
   // `#crew`, not a heading filter: the conditions panel further down is also a
   // `<section>` whose text starts "Crew prediction", and a name filter matches
@@ -67,5 +68,6 @@ test("a shop's target ratio reaches the departure, and refuses nothing", async (
   await expect(page.getByText("20:1 divers per divemaster")).toBeVisible();
 
   await page.goto(`/shop/${SHOP}/trips/${tripId}`);
+  await openTripAbout(page);
   await expect(crew).toContainText("your 20:1 target wants 1 divemaster");
 });

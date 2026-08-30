@@ -256,6 +256,17 @@ export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep")
   );
 }
 
+/** Open the Trip surface's compact About disclosure before using its details. */
+export async function openTripAbout(page: Page): Promise<Locator> {
+  const about = page.locator("details#about");
+  await expect(about).toBeVisible();
+  if ((await about.getAttribute("open")) === null) {
+    await about.locator(":scope > summary").click();
+  }
+  await expect(about).toHaveAttribute("open", "");
+  return about;
+}
+
 /** Navigate to the create-diver form from an add-diver section or panel. */
 export async function openHandEntry(container: Locator): Promise<void> {
   const addLink = container.getByRole("link", { name: /Add (diver|to wait list)/i });
@@ -573,9 +584,9 @@ export async function openRosterNotes(row: Locator): Promise<void> {
  * on their own row and nowhere else.
  */
 export function manifestRow(page: Page, name: string): Locator {
-  return page
-    .locator("#roll-call-list > ul > li")
-    .filter({ has: page.locator("summary", { hasText: name }) });
+  return page.locator("#roll-call-list > ul > li").filter({
+    has: page.locator('button[aria-haspopup="dialog"]', { hasText: name }),
+  });
 }
 
 /**
@@ -625,7 +636,16 @@ export async function openOnThisPhone(page: Page): Promise<void> {
  * the row tucks away (contact, medical, notes, buddy team).
  */
 export async function openManifestPerson(row: Locator): Promise<void> {
-  await openIfClosed(row.locator("details").first());
+  const body = row.locator("xpath=ancestor::body");
+  const existingDialog = body.getByRole("dialog");
+  if (await existingDialog.count()) {
+    await existingDialog.getByRole("button", { name: "Close person details" }).click();
+    await expect(existingDialog).toHaveCount(0);
+  }
+  const trigger = row.locator('button[aria-haspopup="dialog"]').first();
+  await expect(trigger).toBeVisible();
+  await trigger.click();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
 }
 
 /** Open the Guests page activity log when a spec needs to inspect its audit trail. */

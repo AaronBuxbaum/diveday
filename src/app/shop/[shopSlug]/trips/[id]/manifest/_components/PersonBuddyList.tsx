@@ -38,9 +38,10 @@ export function PersonBuddyList({
             ? diverById.get(teammate.bookingId)
             : crewById.get(teammate.personId);
         const rowState = person ? rollCallRowState(checkpoint, person.rollCall) : null;
-        const status = rowState
-          ? rollCallLabelText(t, rollCallLabel(checkpoint, person.rollCall))
-          : t("manifest.personSheetBuddyAwaiting");
+        const status =
+          rowState && person
+            ? rollCallLabelText(t, rollCallLabel(checkpoint, person.rollCall))
+            : t("manifest.personSheetBuddyAwaiting");
         const statusClass = rowState?.notBackAboard
           ? "text-danger"
           : rowState?.boarded

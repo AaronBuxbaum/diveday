@@ -10,6 +10,7 @@ import {
   daysFromNow,
   e2eNow,
   findTripOnBoard,
+  openTripAbout,
   openTripFromBoard,
   openTripTab,
   signOut,
@@ -738,6 +739,7 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
     // every booked diver, and the cascade record they work from afterwards.
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, REEF_TRIP);
+    await openTripAbout(page);
     await page.getByRole("link", { name: "Weather blow-out…" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Call a blow-out?" })).toBeVisible();
     await expectNoA11yViolations(page);

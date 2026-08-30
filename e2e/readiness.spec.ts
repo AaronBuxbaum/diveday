@@ -5,6 +5,7 @@ import {
   e2eNow,
   findTripOnBoard,
   openThreadStep,
+  openTripAbout,
   signOut,
   threadStatus,
 } from "./helpers";
@@ -43,6 +44,7 @@ test.describe("staff-prepared trip", () => {
     // has to say so itself — the row under test only exists on a departure
     // that gates on it.
     await (await findTripOnBoard(page, "blue-mantis", title)).click();
+    await openTripAbout(page);
     await page.getByRole("heading", { name: "Readiness requirements" }).waitFor();
     const requirements = page
       .locator("section")

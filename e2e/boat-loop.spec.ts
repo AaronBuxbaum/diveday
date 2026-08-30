@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { openOnThisPhone } from "./helpers";
+import { openOnThisPhone, openTripAbout } from "./helpers";
 
 /**
  * Not READ_ONLY, despite neither test submitting anything: both start from a
@@ -46,7 +46,9 @@ test("the trip sub-nav reaches all three surfaces", async ({ page }) => {
   });
   // The grouped device controls sit near the end of the manifest while still
   // leaving room for the page's footer spacing.
-  expect(distanceFromPageEnd).toBeLessThan(80);
+  // The quiet desktop emergency footer is part of this surface's document
+  // flow, so leave room for its 44px target and the page's bottom padding.
+  expect(distanceFromPageEnd).toBeLessThan(120);
 
   const subNav = page.getByRole("navigation", { name: "Trip" });
   for (const tab of ["Trip", "Manifest", "Prep"]) {
@@ -89,9 +91,10 @@ test("staff can view or copy a trip's public booking page from its overview", as
   // The booking page stays on screen for a staffer now — it used to redirect
   // straight back to the management view, which made this button impossible to
   // use — and says whose view they are looking at instead.
+  await openTripAbout(page);
   const [publicPage] = await Promise.all([
     context.waitForEvent("page"),
-    page.getByRole("link", { name: "View booking page" }).click(),
+    page.getByRole("link", { name: "View public page" }).click(),
   ]);
   await publicPage.waitForLoadState("domcontentloaded");
   await expect(publicPage).toHaveURL(/\/s\/blue-mantis\/trips\/[a-f0-9-]+$/);

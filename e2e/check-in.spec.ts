@@ -27,8 +27,8 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
   // (src/i18n/readiness-labels.ts): the counter used to call this diver "Needs
   // attention" in warning while the manifest called the same person "Blocked"
   // in danger. The danger-tone Badge prepends a decorative aria-hidden glyph
-  // (Badge.tsx toneGlyph), so the element's own text is "❌Blocked".
-  await expect(card.getByText("❌Blocked")).toBeVisible();
+  // (Badge.tsx toneGlyph), so the element's own text is "Blocked".
+  await expect(card.getByText("Blocked")).toBeVisible();
   // **The one reason is on the row, full stop.** A disclosure hiding a
   // single reason made the row a staffer must act on the least informative
   // thing in the queue (issue #759). Priya has exactly one, so there is
@@ -190,7 +190,7 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
   );
   await expect(page.getByText(/can’t board yet/)).toBeVisible();
   await expect(
-    page.locator("article").filter({ hasText: "❌Blocked" }).filter({ visible: true }).first(),
+    page.locator("article").filter({ hasText: "Blocked" }).filter({ visible: true }).first(),
   ).toBeVisible();
 });
 
@@ -330,7 +330,7 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
     .locator("article")
     .filter({ hasText: "Priya Sharma" })
     .filter({ visible: true });
-  await expect(card.getByText("❌Blocked")).toBeVisible();
+  await expect(card.getByText("Blocked")).toBeVisible();
   // **Wait for the counter to actually be in search mode before touching a row
   // on it**, which is the one assertion that distinguishes the two: Priya's row
   // is on screen in *either* mode, because her boat is also the one the

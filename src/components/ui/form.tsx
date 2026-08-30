@@ -9,7 +9,8 @@ import {
 } from "react";
 import { currencyFractionDigits, currencySymbol, maxPriceMajor, minorToMajor } from "@/lib/money";
 import { type NoticeTone, noticeRole } from "@/lib/staff-notices";
-import { toneGlyph } from "./tone";
+import { StatusMark } from "./StatusMark";
+import { toneMark } from "./tone";
 
 /**
  * Canonical form primitives.
@@ -442,19 +443,20 @@ export function FormStatus({
   // **`Children.toArray`, not `!children`.** The falsy check held only while
   // every caller passed exactly one expression: `{undefined}` is falsy, but
   // `{undefined}{null}` is an *array*, which is truthy — so a caller that
-  // appended a conditional second child rendered a bare ✅ with no message
+  // appended a conditional second child rendered a bare status mark with no
+  // message
   // beside it, on a page at rest, and nothing failed. `Children.toArray` drops
   // null, undefined and booleans, which is precisely the question being asked
   // (found on the waiver editor, issue #790).
   if (Children.toArray(children).length === 0) return null;
-  const glyph = toneGlyph(tone);
+  const mark = toneMark(tone);
   return (
     <p
       id={id}
       role={noticeRole(tone)}
       className={`flex items-baseline gap-1.5 text-sm font-medium ${STATUS_TONE[tone]} ${className}`}
     >
-      {glyph ? <span aria-hidden="true">{glyph}</span> : null}
+      {mark ? <StatusMark variant={mark} /> : null}
       <span>{children}</span>
     </p>
   );

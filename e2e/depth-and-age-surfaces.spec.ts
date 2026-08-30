@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { openSettingsRow, tripPathByTitle } from "./helpers";
+import { openSettingsRow, openTripAbout, tripPathByTitle } from "./helpers";
 
 const SHOP = DEMO_SHOP_SLUG;
 
@@ -191,6 +191,7 @@ test.describe("staff", () => {
     // The conditions form waits behind its disclosure (summary-first
     // Overview) — Publish or Edit, depending on whether the seed already
     // published a prediction for this trip.
+    await openTripAbout(page);
     await page.getByText(/Write a crew prediction|Edit crew prediction/).click();
     await page.getByLabel("Water temp °C").fill("27");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
@@ -209,6 +210,7 @@ test.describe("staff", () => {
     // 27°C reads back as 81°F — the stored Celsius never moved.
     await page.goto(tripPath);
     // A prediction is published now, so the disclosure reads "Edit".
+    await openTripAbout(page);
     await page.getByText("Edit crew prediction", { exact: true }).click();
     await expect(page.getByLabel("Water temp °F")).toHaveValue("81");
     await expect(page.getByLabel("Visibility m")).toBeVisible();
@@ -219,6 +221,7 @@ test.describe("staff", () => {
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
     await expect(page.getByRole("status")).toContainText("Crew prediction published");
     await page.goto(tripPath);
+    await openTripAbout(page);
     await page.getByText("Edit crew prediction", { exact: true }).click();
     await expect(page.getByLabel("Water temp °F")).toHaveValue("76");
   });

@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
+import { daysFromNow, e2eNow, openTripAbout, openTripFromBoard } from "./helpers";
 
 signedInAsOwner();
 
@@ -49,6 +49,7 @@ test("a repeating trip is scheduled on two weekdays, stopped, and cancelled as o
   await openTripFromBoard(page, title);
   await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
   const tripUrl = page.url();
+  await openTripAbout(page);
   const series = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Repeating trip" }) })
@@ -75,6 +76,7 @@ test("a repeating trip is scheduled on two weekdays, stopped, and cancelled as o
   // Narrowing it back is never a silent bulk cancellation: the dates that no
   // longer fit are listed, with head counts, and left on the board until asked.
   await page.goto(tripUrl);
+  await openTripAbout(page);
   await series.getByText("Change the days it runs").click();
   await series.getByText(thirdDay, { exact: true }).click();
   await series.getByRole("button", { name: "Save the days" }).click();
@@ -83,11 +85,13 @@ test("a repeating trip is scheduled on two weekdays, stopped, and cancelled as o
 
   // Stopping the repeat keeps every date already on the board and closes the run.
   await page.goto(tripUrl);
+  await openTripAbout(page);
   await series.getByRole("button", { name: "Stop repeating" }).click();
   await expect(page.getByRole("status")).toContainText("Stopped repeating");
 
   // Reload to clear the notice, then cancel every upcoming date at once.
   await page.goto(tripUrl);
+  await openTripAbout(page);
   await page.getByRole("button", { name: "Cancel every upcoming date" }).click();
   await expect(page.getByText(/Cancelled every upcoming date in this series/)).toBeVisible();
 });

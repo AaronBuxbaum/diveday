@@ -377,9 +377,9 @@ export function CrewSection({
           )}
           {/* `FormStatus`, not a hand-rolled `role="alert"` paragraph: it is
               the shared shape for "this control's own attempt was refused"
-              (docs/design/forms-and-controls.md), and it carries the ❌ glyph
-              this was missing — without one the refusal reached a colourblind
-              reader as ordinary small text (design/principles.md #6). It sits
+              (docs/design/forms-and-controls.md), and it carries the drawn
+              danger mark this was missing — without one the refusal reached a
+              colourblind reader as ordinary small text (design/principles.md #6). It sits
               at the foot of the block rather than beside one control because
               any of the three writes here — assign, unassign, change the job —
               can raise it. Renders nothing when there is nothing to say. */}

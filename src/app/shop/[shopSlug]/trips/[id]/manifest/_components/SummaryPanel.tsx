@@ -1,4 +1,5 @@
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { StatusMark } from "@/components/ui/StatusMark";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessStatusText } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -232,7 +233,7 @@ export function SummaryPanel({
       key: `crew-${member.id}`,
       href: `#crew-row-${member.id}`,
       // The buddy panel's marker, reused rather than re-worded: a crew member
-      // reads as "Keiko Tanaka (crew)" in both places on this page.
+      // reads as "the crew member (crew)" in both places on this page.
       label: t("manifest.buddyCrewName", { name: member.fullName }),
       // Crew carry no readiness at all, so there is no blocked state to say.
       blocked: false,
@@ -260,10 +261,16 @@ export function SummaryPanel({
             <p className="text-xs font-bold tracking-[0.16em] text-primary uppercase">
               {t("manifest.activeCheckpoint")}
             </p>
-            <h2 id="roll-call-progress-heading" className="mt-1 text-lg font-bold">
-              {rollCallComplete
-                ? t("manifest.rollCallComplete")
-                : rollCallCheckpointText(t, checkpoint)}
+            <h2
+              id="roll-call-progress-heading"
+              className="mt-1 flex items-center gap-2 text-lg font-bold"
+            >
+              {rollCallComplete ? <StatusMark variant="success" size="md" /> : null}
+              <span>
+                {rollCallComplete
+                  ? t("manifest.rollCallComplete")
+                  : rollCallCheckpointText(t, checkpoint)}
+              </span>
             </h2>
           </div>
           {/* **The count leads the boat screen** (ADR

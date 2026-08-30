@@ -151,7 +151,7 @@ export function MissingDiversGrid({
                   line, so one blocked diver doesn't push their own tile's
                   labels a line out of step with the rest of the row. */}
               {/* `toneMark={false}`: the canonical danger `Badge`, minus its
-                  ❌ — a tile is 80px wide and the mark would take a third of
+                  status mark — a tile is 80px wide and the mark would take a third of
                   the chip from a word the red fill has already coloured. Same
                   exemption the nav's blocked count takes. */}
               {diver.blocked ? (

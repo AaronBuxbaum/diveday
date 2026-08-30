@@ -186,7 +186,9 @@ describe("FormStatus", () => {
     // `❌`/`⚠️` are the colourblind-safe cue, not words — a screen reader that
     // reads them aloud is reading punctuation at someone.
     const status = screen.getByRole("status");
-    expect(status.querySelector("[aria-hidden='true']")?.textContent).toBe("⚠️");
+    expect(status.querySelector("svg[aria-hidden='true']")).not.toBeNull();
+    expect(status.textContent).not.toContain("⚠️");
+    expect(status.textContent).not.toContain("❌");
   });
 
   it("sits inside the form it belongs to", () => {

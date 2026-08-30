@@ -9,6 +9,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { StatusMark } from "@/components/ui/StatusMark";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
 import { getTripPrep } from "@/db/trips-prep";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
@@ -175,7 +176,7 @@ export default async function TripPrepPage({
     if (!diveRecencyIsNotable(band)) return null;
     return (
       <span className="mt-0.5 flex items-center gap-1 text-sm font-normal text-warning-strong">
-        <span aria-hidden="true">▲</span>
+        <StatusMark variant="warning" size="md" />
         {diveRecencyText(t, band)}
       </span>
     );

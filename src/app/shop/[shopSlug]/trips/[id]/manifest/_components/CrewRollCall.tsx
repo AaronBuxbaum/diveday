@@ -19,6 +19,7 @@ import {
 } from "@/lib/manifests";
 import { PersonBuddyList } from "./PersonBuddyList";
 import { PersonSheet, type PersonTrailEntry } from "./PersonSheet";
+import { personTrailWithCurrentRecord } from "./person-trail";
 import {
   ROLL_CALL_ROW_TONE,
   ROW_DISCLOSURE_PANEL_CLASS,
@@ -112,7 +113,7 @@ export function CrewRollCall({
   todayTrailBySubject?: ReadonlyMap<string, readonly PersonTrailEntry[]>;
   crewRollCallAction: RollCallAction;
   crewRollCallButtonCopy: RollCallButtonCopy;
-  /** "Buddy team: Ana and Ben", already localized and list-formatted. */
+  /** A localized, list-formatted buddy-team sentence. */
   buddyTeamLabel: (teams: ReadonlyArray<ManifestBuddyTeam>) => string | null;
   t: StaffTranslator;
 }) {
@@ -163,6 +164,14 @@ export function CrewRollCall({
           >
             {crew.map((member) => {
               const rc = member.rollCall;
+              const personTrail = personTrailWithCurrentRecord({
+                trail: todayTrailBySubject?.get(member.id) ?? [],
+                checkpoint,
+                rollCall: rc,
+                locale,
+                timezone,
+                t,
+              });
               // The same derivation and the same tone order the diver rows
               // read (`rollCallRowState`) — written out twice, the two lists
               // once disagreed about what a colour meant. Crew carry no
@@ -223,7 +232,7 @@ export function CrewRollCall({
                           {auditLabel}
                         </Badge>
                       }
-                      trail={todayTrailBySubject?.get(member.id) ?? []}
+                      trail={personTrail}
                       todayLabel={t("manifest.personSheetToday")}
                       noTodayEventsLabel={t("manifest.personSheetNoTodayEvents")}
                       buddyLabel={t("manifest.personSheetBuddyTeam")}
