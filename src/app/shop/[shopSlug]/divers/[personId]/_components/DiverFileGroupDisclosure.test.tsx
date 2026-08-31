@@ -30,7 +30,66 @@ describe("DiverFileGroupDisclosure", () => {
 
     const details = screen.getByTestId("diver-file-group-notes");
     expect(details).toHaveAttribute("open");
-    expect(details.querySelector("summary")).toHaveTextContent(/notes\s*1/i);
+    const summary = details.querySelector("summary");
+    expect(summary).toHaveTextContent(/notes\s*1/i);
+    expect(summary).toHaveClass("border-y", "max-sm:group-open/diver-file:border-b-0");
+    expect(summary).not.toHaveClass("max-sm:border-b-0");
+  });
+
+  it("keeps the lower phone border closed and only removes it while open", () => {
+    const { rerender } = render(
+      <DiverFileGroupDisclosure id="notes" label="Notes" summary="1">
+        <p>Note body</p>
+      </DiverFileGroupDisclosure>,
+    );
+
+    const getSummary = () => screen.getByTestId("diver-file-group-notes").querySelector("summary");
+
+    expect(screen.getByTestId("diver-file-group-notes")).not.toHaveAttribute("open");
+    expect(getSummary()).toHaveClass("border-y", "max-sm:group-open/diver-file:border-b-0");
+    expect(getSummary()).not.toHaveClass("max-sm:border-b-0");
+
+    rerender(
+      <DiverFileGroupDisclosure id="notes" label="Notes" summary="1" open>
+        <p>Note body</p>
+      </DiverFileGroupDisclosure>,
+    );
+
+    expect(screen.getByTestId("diver-file-group-notes")).toHaveAttribute("open");
+    expect(getSummary()).toHaveClass("border-y", "max-sm:group-open/diver-file:border-b-0");
+    expect(getSummary()).not.toHaveClass("max-sm:border-b-0");
+  });
+
+  it("uses the same open-state border rule for every disclosure variant", () => {
+    render(
+      <>
+        <DiverFileGroupDisclosure id="notes" label="Notes" summary="1">
+          <p>Note body</p>
+        </DiverFileGroupDisclosure>
+        <DiverFileGroupDisclosure id="gear" label="Gear and sizes" summary="Gear details" stacked>
+          <p>Gear rows</p>
+        </DiverFileGroupDisclosure>
+        <DiverFileGroupDisclosure
+          id="support"
+          label="Dive support"
+          summary="None stated"
+          desktopCollapsible
+          open
+        >
+          <p>Support facts</p>
+        </DiverFileGroupDisclosure>
+      </>,
+    );
+
+    for (const id of ["notes", "gear", "support"]) {
+      const summary = screen.getByTestId(`diver-file-group-${id}`).querySelector("summary");
+      expect(summary).toHaveClass("border-y", "max-sm:group-open/diver-file:border-b-0");
+      expect(summary).not.toHaveClass("max-sm:border-b-0");
+    }
+
+    expect(screen.getByTestId("diver-file-group-notes")).not.toHaveAttribute("open");
+    expect(screen.getByTestId("diver-file-group-gear")).not.toHaveAttribute("open");
+    expect(screen.getByTestId("diver-file-group-support")).toHaveAttribute("open");
   });
 
   it("gives the summary a touch floor and one content region", () => {
@@ -72,7 +131,7 @@ describe("DiverFileGroupDisclosure", () => {
       "max-sm:flex-col",
       "max-sm:items-stretch",
       "max-sm:py-2",
-      "max-sm:border-b-0",
+      "max-sm:group-open/diver-file:border-b-0",
     );
     expect(label).toHaveClass("min-w-0", "flex-1");
     expect(value).toHaveClass(

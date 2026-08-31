@@ -414,6 +414,7 @@
     "supportCount": "{count, plural, one {# arrangement} other {# arrangements}}",
     "noSupport": "None stated",
     "gearHeading": "Gear and sizes",
+    "rentalFitOnFile": "Rental fit on file",
     "rentsFromUs": "Rents from us",
     "sizes": "Sizes",
     "noSizes": "No sizes on file",
