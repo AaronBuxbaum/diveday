@@ -71,12 +71,14 @@ the roster's actions or deep links.
 - **The question it arrives with:** "who still needs something before this boat sails?" — answered by
   the first group in the ledger, which is the only group carrying open work.
 - **Controls that dissolved:** the filter chips (the groups do the filtering), the per-row Details
-  caret (a row at rest is a name and a mark; open work is simply open), and the Overview tab itself
-  (a disclosure on this page).
+  caret (a row at rest is a name and a mark; open work is simply open), the Overview tab itself
+  (a disclosure on this page), and `Add a diver` as a second page section (it is the ledger's
+  terminal group, even when no one is booked yet).
 - **Remove first:** the Activity and Promote footer rows — kept only because a trip's history has no
   other home yet.
 - **Composition:** one grouped ledger under a masthead, not a card stack — a roster is a list of
-  people in states, and the state belongs to the group rather than repeated down every row.
+  people in states, and the state belongs to the group rather than repeated down every row; invite
+  and add actions are its terminal bands, not detached forms.
 
 ### The boat manifest — `/shop/[shopSlug]/trips/[id]/manifest`
 
@@ -183,8 +185,8 @@ routes took the display-scale h1 only.
 drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion surface.
 
 - **One idea:** this boat is worth your Saturday — and here is the one place to say yes.
-- **The question it arrives with:** "what will I see, and can I get on?" — answered by the pitch
-  and the scarcity word before any scrolling.
+- **The question it arrives with:** "what will I see, where do I meet, and can I get on?" —
+  answered by the pitch, meeting point, and scarcity word before any scrolling or booking work.
 - **Controls that dissolved:** the boxed requirement note (one sentence), the boxed gear fieldsets
   (hairline steps of one sheet), the five-piece money story (one block), the sticky pill's
   duplicate seat count (verb only).
@@ -195,6 +197,22 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
   beats, not a gallery.
 - **Composition:** sell then close — the form is the page's terminal word, so the primary is where
   a decided diver already is.
+
+### The product page — `/product`
+
+**Reviewed 2026-08-31** — conversion surface, governed by
+[marketing.md](../product/marketing.md)'s claims and control budget.
+
+- **One idea:** the whole dive day can run from one shared record, and a shop can try it before it
+  makes a buying decision.
+- **The question it arrives with:** "will this cover the day, what does it cost, and can I see it?"
+  — answered by the capability proof, a sourced price line in the first screen, and the demo door.
+- **Controls that dissolved:** a second hero action for price; cost is a quiet sentence under the
+  existing demo note, leaving the demo as the one action.
+- **Remove first:** any repeated price story above the capability proof; the source-backed hero
+  sentence answers the comparison question without competing with the page's argument.
+- **Composition:** claim, price, proof, then door — not a sales dashboard. The page earns a trial
+  by showing a shop's day, then gives the interested visitor one place to continue.
 
 ### The thread — `/ready/[token]` (and every state after booking)
 

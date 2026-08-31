@@ -216,29 +216,30 @@ export function TripRosterContent({
             />
           ) : null
         }
+        addDiverGroup={
+          cancelled ? null : (
+            <AddDiverSection
+              shopSlug={shopSlug}
+              full={isFull(trip)}
+              query={diverQuery}
+              candidates={diverCandidates}
+              tripId={trip.id}
+              addBookingAction={actions.addBookingAction}
+              addToWaitlistAction={actions.addToWaitlistAction}
+              addExistingDiverAction={actions.addExistingDiverAction}
+              inviteAction={actions.createDirectTripInvitationAction}
+              status={noticeForForm(tripNotice, "add-diver")}
+              locale={locale}
+              confirmName={confirmName}
+              confirmEmail={confirmEmail}
+              confirmPhone={confirmPhone}
+              confirmMatches={confirmMatches}
+            />
+          )
+        }
         compact={compact}
         showSummaryHeading={!compact}
       />
-
-      {cancelled ? null : (
-        <AddDiverSection
-          shopSlug={shopSlug}
-          full={isFull(trip)}
-          query={diverQuery}
-          candidates={diverCandidates}
-          tripId={trip.id}
-          addBookingAction={actions.addBookingAction}
-          addToWaitlistAction={actions.addToWaitlistAction}
-          addExistingDiverAction={actions.addExistingDiverAction}
-          inviteAction={actions.createDirectTripInvitationAction}
-          status={noticeForForm(tripNotice, "add-diver")}
-          locale={locale}
-          confirmName={confirmName}
-          confirmEmail={confirmEmail}
-          confirmPhone={confirmPhone}
-          confirmMatches={confirmMatches}
-        />
-      )}
 
       <div className="mt-8">
         {showPromote ? (

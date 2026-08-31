@@ -3125,6 +3125,7 @@ for (const scheme of ["light", "dark"] as const) {
         await openReefTrip(page);
         await openTripTab(page, "Trip");
         await page.locator("#roster").waitFor();
+        await page.locator("#add-diver").waitFor();
         await capture(page, "trip-guests", scheme);
       });
 

@@ -67,10 +67,7 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   // Who is attending — and adding one — lives on the Trip surface now.
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
 
-  const addDiver = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Add a diver" }) })
-    .filter({ visible: true });
+  const addDiver = page.locator("#add-diver").filter({ visible: true });
   await addDiver.scrollIntoViewIfNeeded();
   await addDiver.getByRole("link", { name: "Add diver", exact: true }).click();
   await page.waitForURL(/\/divers\/new/);
@@ -170,10 +167,7 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
   await openTripFromBoard(page, title);
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
 
-  const addDiver = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Add a diver" }) })
-    .filter({ visible: true });
+  const addDiver = page.locator("#add-diver").filter({ visible: true });
   await addDiver.scrollIntoViewIfNeeded();
 
   // Search the shop's existing people and add one by identity — their record,

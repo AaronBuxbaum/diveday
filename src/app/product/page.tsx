@@ -200,6 +200,12 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               verifying claims. Same one-primary block as the home hero. */}
           <FunnelCtas locale={locale} source="product" className="mt-8 justify-center" />
           <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
+          <p className="mt-2 text-sm text-muted">
+            {t("marketing.home.heroPriceLine", {
+              price: earlyAccessPrice.price,
+              cadence: t(earlyAccessPrice.cadenceKey),
+            })}
+          </p>
         </div>
       </section>
 
