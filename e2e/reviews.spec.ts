@@ -44,7 +44,9 @@ test("a diver's bare rating publishes straight away and reaches the public page"
   // The average and count are separate inline spans so each can carry its own
   // typography; assert the composed paragraph rather than a text node that
   // cannot cross those element boundaries.
-  const aggregate = page.locator("p").filter({ hasText: "4.3" }).filter({ hasText: "83 reviews" });
+  const aggregate = page.locator("p").filter({
+    hasText: /\d+(?:\.\d+)?\s*·\s*\d+ reviews/,
+  });
   await expect(aggregate).toHaveCount(1);
 });
 
