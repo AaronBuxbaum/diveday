@@ -137,7 +137,9 @@ export function buildDiverStatus(
 - One composition at all widths: below `sm` the four file groups collapse to door rows
   (`DiverPhone.dc.html`); each door is an in-page disclosure that opens that group's rows in
   place — no new routes, no navigation state. The door's fact is the group's one summary fact
-  (pending count, waiver state word, sizes, note count).
+  (pending count, waiver state word, sizes, note count). A long fact such as the Gear size list
+  stacks beneath its title on a phone and wraps within the page; short facts stay on one compact
+  line, and the stacked door does not add a second lower rule to the file rhythm.
 - Deletes (H-49): `DiverSections` jump nav, `NoticeBanner`'s router (514 lines — notices route by
   `noticeForForm` to the group that owns the form), `SpecialtyCards.tsx` and
   `CertificationCards.tsx` (the twins fold into the group via 8a's row), `StatsSummary` tiles

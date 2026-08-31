@@ -56,4 +56,14 @@ describe("StaffTabBar live manifest exception", () => {
     rerender(<StaffTabBar {...PROPS} />);
     expect(screen.getByRole("navigation", { name: "Staff navigation" })).toBeInTheDocument();
   });
+
+  it("keeps the dock as a fixed, safe-area-aware single boundary", () => {
+    render(<StaffTabBar {...PROPS} />);
+
+    const nav = screen.getByRole("navigation", { name: "Staff navigation" });
+    expect(nav).toHaveClass("fixed", "inset-x-0", "bottom-0", "lg:hidden");
+
+    const surface = nav.firstElementChild;
+    expect(surface).toHaveClass("border-t", "border-border", "pb-[env(safe-area-inset-bottom)]");
+  });
 });

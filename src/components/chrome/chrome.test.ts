@@ -194,7 +194,7 @@ describe("the chrome bar", () => {
   it("includes the device safe area in phone dock clearance", async () => {
     const css = await read("src/app/globals.css");
     expect(css).toMatch(
-      /#shop-main-content\s*\{\s*--dock-clearance:\s*calc\(3\.5rem \+ env\(safe-area-inset-bottom\)\);/,
+      /#shop-main-content\s*\{\s*--dock-clearance:\s*calc\(3\.5rem \+ 1px \+ env\(safe-area-inset-bottom\)\);/,
     );
     expect(css).toContain("@media (min-width: 1024px)");
   });

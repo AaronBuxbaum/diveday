@@ -42,11 +42,47 @@ describe("DiverFileGroupDisclosure", () => {
 
     const details = screen.getByTestId("diver-file-group-certifications");
     const summary = details.querySelector("summary");
+    const summaryFact = screen.getByText("1 waiting");
     expect(summary).toHaveTextContent(/certifications\s*1\s*waiting/i);
     expect(summary).not.toBeNull();
     expect(summary).toHaveClass("min-h-11", "sm:hidden");
+    expect(summary).not.toHaveClass("max-sm:flex-col", "max-sm:border-b-0");
+    expect(summaryFact).toHaveClass("shrink-0");
     expect(summary).toHaveAttribute("aria-controls", "certifications-content");
     expect(screen.getByTestId("diver-file-group-certifications")).toHaveClass("group/diver-file");
+  });
+
+  it("puts a long phone summary on its own wrapped line", () => {
+    render(
+      <DiverFileGroupDisclosure
+        id="gear"
+        label="Gear and sizes"
+        summary="BCD M · Wetsuit M · Boots 8 · Mask & fins M · Weights 6 kg"
+        stacked
+      >
+        <p>Gear rows</p>
+      </DiverFileGroupDisclosure>,
+    );
+
+    const summary = screen.getByTestId("diver-file-group-gear").querySelector("summary");
+    const label = summary?.querySelector("span.text-base");
+    const value = summary?.querySelector("span.text-sm");
+
+    expect(summary).toHaveClass(
+      "max-sm:flex-col",
+      "max-sm:items-stretch",
+      "max-sm:py-2",
+      "max-sm:border-b-0",
+    );
+    expect(label).toHaveClass("min-w-0", "flex-1");
+    expect(value).toHaveClass(
+      "min-w-0",
+      "max-w-full",
+      "max-sm:ms-6",
+      "max-sm:whitespace-normal",
+      "max-sm:break-words",
+    );
+    expect(value).not.toHaveClass("shrink-0");
   });
 
   it("keeps legacy Notes expanded on larger screens", () => {

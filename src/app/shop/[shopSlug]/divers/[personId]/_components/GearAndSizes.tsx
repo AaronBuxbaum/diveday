@@ -131,6 +131,7 @@ export function GearAndSizes({
       label={t("divers.file.gearHeading")}
       summary={gearSummary}
       open={Boolean(status)}
+      stacked
       className="mt-8"
     >
       <InsetGroup
