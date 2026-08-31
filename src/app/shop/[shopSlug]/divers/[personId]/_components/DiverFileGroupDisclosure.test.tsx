@@ -32,7 +32,7 @@ describe("DiverFileGroupDisclosure", () => {
     expect(details).toHaveAttribute("open");
     const summary = details.querySelector("summary");
     expect(summary).toHaveTextContent(/notes\s*1/i);
-    expect(summary).toHaveClass("border-y", "max-sm:group-open/diver-file:border-b-0");
+    expect(summary).toHaveClass("border-y", "group-open/diver-file:border-b-0");
     expect(summary).not.toHaveClass("max-sm:border-b-0");
   });
 
@@ -46,7 +46,7 @@ describe("DiverFileGroupDisclosure", () => {
     const getSummary = () => screen.getByTestId("diver-file-group-notes").querySelector("summary");
 
     expect(screen.getByTestId("diver-file-group-notes")).not.toHaveAttribute("open");
-    expect(getSummary()).toHaveClass("border-y", "max-sm:group-open/diver-file:border-b-0");
+    expect(getSummary()).toHaveClass("border-y", "group-open/diver-file:border-b-0");
     expect(getSummary()).not.toHaveClass("max-sm:border-b-0");
 
     rerender(
@@ -56,7 +56,7 @@ describe("DiverFileGroupDisclosure", () => {
     );
 
     expect(screen.getByTestId("diver-file-group-notes")).toHaveAttribute("open");
-    expect(getSummary()).toHaveClass("border-y", "max-sm:group-open/diver-file:border-b-0");
+    expect(getSummary()).toHaveClass("border-y", "group-open/diver-file:border-b-0");
     expect(getSummary()).not.toHaveClass("max-sm:border-b-0");
   });
 
@@ -83,7 +83,7 @@ describe("DiverFileGroupDisclosure", () => {
 
     for (const id of ["notes", "gear", "support"]) {
       const summary = screen.getByTestId(`diver-file-group-${id}`).querySelector("summary");
-      expect(summary).toHaveClass("border-y", "max-sm:group-open/diver-file:border-b-0");
+      expect(summary).toHaveClass("border-y", "group-open/diver-file:border-b-0");
       expect(summary).not.toHaveClass("max-sm:border-b-0");
     }
 
@@ -131,7 +131,7 @@ describe("DiverFileGroupDisclosure", () => {
       "max-sm:flex-col",
       "max-sm:items-stretch",
       "max-sm:py-2",
-      "max-sm:group-open/diver-file:border-b-0",
+      "group-open/diver-file:border-b-0",
     );
     expect(label).toHaveClass("min-w-0", "flex-1");
     expect(value).toHaveClass(

@@ -87,7 +87,7 @@ export function DiverFileGroupDisclosure({
       >
         <summary
           aria-controls={`${id}-content`}
-          className={`flex min-h-11 cursor-pointer items-center gap-3 border-y border-border px-1 py-3 max-sm:group-open/diver-file:border-b-0 ${summaryLayoutClass} ${summaryVisibility}`.trim()}
+          className={`flex min-h-11 cursor-pointer items-center gap-3 border-y border-border px-1 py-3 group-open/diver-file:border-b-0 ${summaryLayoutClass} ${summaryVisibility}`.trim()}
         >
           <span className={`flex min-w-0 items-center gap-3 ${summaryGroupClass} sm:flex-1`.trim()}>
             <DisclosureCaret className="shrink-0 text-muted group-open/diver-file:rotate-90" />
