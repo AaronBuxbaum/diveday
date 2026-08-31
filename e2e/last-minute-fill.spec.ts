@@ -287,7 +287,7 @@ test("a self-declared card cannot be certified without verified evidence", async
   await page.goto("/shop/blue-mantis/divers?q=Milo+Vance");
   await page.getByRole("link", { name: "Milo Vance" }).click();
   const card = page.locator("li").filter({ hasText: "Rescue" }).filter({ visible: true }).first();
-  await expect(card).toContainText("Self-declared — no certification number yet");
+  await expect(card).toContainText("Self-declared — certification card not sighted yet");
   // The one-tap control every staff-captured pending card wears is absent here.
   await expect(card.getByRole("button", { name: "Mark certified" })).toBeHidden();
 
@@ -311,7 +311,7 @@ test("a self-declared card cannot be certified without verified evidence", async
   await expect(certified).toContainText(/Certified by .+ on /);
   await expect(certified).toContainText("Open Water");
   await expect(certified).not.toContainText("Rescue");
-  await expect(certified).not.toContainText("Self-declared — no certification number yet");
+  await expect(certified).not.toContainText("Self-declared — certification card not sighted yet");
 });
 
 /**
