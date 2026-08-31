@@ -41,7 +41,11 @@ test("a diver's bare rating publishes straight away and reaches the public page"
   // The aggregate is said once, in the shop's identity band — the shelf below
   // quotes divers and opens the archive (ADR
   // 20260827-clearwater-surface-language, decision 8).
-  await expect(page.getByText("4.3 · 83 reviews")).toHaveCount(1);
+  // The average and count are separate inline spans so each can carry its own
+  // typography; assert the composed paragraph rather than a text node that
+  // cannot cross those element boundaries.
+  const aggregate = page.locator("p").filter({ hasText: "4.3" }).filter({ hasText: "83 reviews" });
+  await expect(aggregate).toHaveCount(1);
 });
 
 test.describe("as owner", () => {
