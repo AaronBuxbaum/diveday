@@ -54,7 +54,7 @@
     "markingCertified": "Marking certified…",
     "confirmCard": "Confirm certification",
     "verifiedBy": "Certified by {name} on {date}.",
-    "selfDeclaredLabel": "Self-declared — no certification number yet",
+    "selfDeclaredLabel": "Self-declared — certification card not sighted yet",
     "declaredNumber": "Diver says {number}",
     "shopIssuedLabel": "issued by your shop",
     "shopIssuedNoNumberLabel": "Certification number not on file yet",

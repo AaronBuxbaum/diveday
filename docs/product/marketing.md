@@ -193,11 +193,11 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   the price for now** (H-12, 2026-07-24; early-access and still moving), so it may be shown from
   `marketing.ts` as today's price. `src/lib/marketing.test.ts` enforces the single source where it
   is easiest to break — no `marketing.*` message in either locale may carry a currency figure, and
-  the two sentences that show the price must carry `{price}` and `{cadence}`. H-12 also closed two
+  every sentence that shows the price must carry `{price}` and `{cadence}`. H-12 also closed two
   commercial terms, now published as
   founding-shop claims (the price hero's "What the price covers" list + FAQ in
-  `src/app/pricing/page.tsx`, hero and closing band in
-  `src/app/page.tsx`, all sourced from `earlyAccessPrice` in `marketing.ts`): **price locked for
+  `src/app/pricing/page.tsx`, the home and product heroes plus the home closing
+  band, all sourced from `earlyAccessPrice` in `marketing.ts`): **price locked for
   two years for the founding cohort** and **founder-direct support** for the founding cohort.
   **H-26 (2026-08-02) confirmed DiveDay's posture is deliberately lifestyle-scale, not
   venture-scale** (see [vision.md](vision.md#what-kind-of-business-this-is)) and dropped the
@@ -377,7 +377,8 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   that the terms never stand at the doors, and the flat price reached the homepage hero on
   2026-08-28 as a consequence — as a muted *sentence* under the demo note ("One flat price — {price}
   {cadence}. No cut of your bookings."), never a "See pricing" link, which would have spent the
-  budget to answer a question the sentence already answers. That is the general move when a page
+  budget to answer a question the sentence already answers. The same line sits under `/product`'s
+  hero: both are first-screen evaluation surfaces. That is the general move when a page
   owes a reader a fact at a door: state it, do not open a third one. The closing band keeps the
   two-year lock and the door to `/pricing`, so the figure now renders on two bands of `/` and both
   interpolate it.

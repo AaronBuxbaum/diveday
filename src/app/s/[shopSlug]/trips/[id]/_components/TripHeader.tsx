@@ -127,6 +127,16 @@ export function TripHeader({
                 {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
               </p>
             )}
+            {trip.meetingPointLabel ? (
+              <p className="mt-2 text-sm font-medium text-muted">
+                {trip.meetingPointAddress
+                  ? t("trip.meetingPointWithAddress", {
+                      label: trip.meetingPointLabel,
+                      address: trip.meetingPointAddress,
+                    })
+                  : trip.meetingPointLabel}
+              </p>
+            ) : null}
             {trip.isPrivate ? (
               <p className="mt-2 text-sm font-medium text-primary">{t("trip.privateCharter")}</p>
             ) : null}

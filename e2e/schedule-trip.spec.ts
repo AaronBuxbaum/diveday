@@ -1,12 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import {
-  bookASeatAndOpenThread,
-  daysFromNow,
-  e2eNow,
-  openTripAbout,
-  signInAsOwner,
-  tripPathByTitle,
-} from "./helpers";
+import { daysFromNow, e2eNow, openTripAbout, signInAsOwner, tripPathByTitle } from "./helpers";
 
 signedInAsOwner();
 
@@ -239,15 +232,11 @@ test("staff moves a departure to a different boat after it is on the board", asy
  * A departure's own meeting point, when it isn't the shop's own front door
  * (issue #704 slice 2) — a marina three miles out, a shore dive's beach car
  * park. Staff sets it on the trip's own details form; the diver reads it on
- * the exact line ("Arrive and check in") that used to say only a time.
- *
- * That line is the dock-day rhythm, and the rhythm moved to the diver's thread
- * with `PackingSection` (ADR 20260827-the-divers-thread, decision 2 — what to
- * bring and when to be there is preparation, and preparation is for a diver who
- * has a seat). So this takes a seat before it reads the meeting point, exactly
- * as the three journeys in `dock-day-rhythm.spec.ts` do for the same line.
+ * the public hero before the booking form. Arrival instructions still repeat on
+ * the diver's thread, but "where" is a decision fact: no one should have to
+ * claim a seat to learn which marina they need to reach.
  */
-test("a departure's own meeting point reaches the diver on their thread", async ({ page }) => {
+test("a departure's own meeting point reaches the diver before booking", async ({ page }) => {
   test.setTimeout(BOARD_FLOW_TIMEOUT_MS);
   const tripPath = await tripPathByTitle(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
   await page.goto(tripPath);
@@ -263,8 +252,8 @@ test("a departure's own meeting point reaches the diver on their thread", async 
   await expect(page.getByRole("status")).toContainText("Changes saved");
 
   const tripId = tripPath.split("/").pop();
+  await page.context().clearCookies();
   await page.goto(`/s/blue-mantis/trips/${tripId}`);
-  await bookASeatAndOpenThread(page, "Jetty Reader");
   await expect(page.getByText("North Jetty Marina")).toBeVisible();
   await expect(page.getByText("12 Dock Rd")).toBeVisible();
 });

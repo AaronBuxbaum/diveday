@@ -266,6 +266,18 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(page.getByRole("heading", { name: "The whole list, plainly." })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Booking and the public pages" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Your records" })).toBeVisible();
+  // The product hero has the same decision budget as the homepage hero: the
+  // live demo and trial are its two doors, while the price is a fact stated
+  // under them rather than a third way out to /pricing.
+  const productMain = page.getByRole("main");
+  const productHero = productMain.locator("section").first();
+  await expect(productHero.locator("button:not([disabled])")).toHaveCount(1);
+  await expect(productHero.getByRole("link")).toHaveCount(1);
+  const productHeroPrice = productHero.getByText(/^One flat price —/);
+  await expect(productHeroPrice).toBeVisible();
+  await expect(productHeroPrice).toContainText(earlyAccessPrice.price);
+  await expect(productHeroPrice).toContainText("No cut of your bookings.");
+  await expect(productHeroPrice.locator("a, button")).toHaveCount(0);
   // The hero says what the trip holds together, in the reader's own terms. It
   // opened "DiveDay is organized around the trip itself:" until 2026-08-28 — a
   // sentence about the software's shape, spent on the page's second-most-read
@@ -295,7 +307,6 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // Scoped through `<main>` for the same reason the sign-up test is: a previous
   // route's hidden `input[name="source"]` stays reachable while Activity keeps
   // it in the DOM, and a raw `page.locator` would count it.
-  const productMain = page.getByRole("main");
   await expect(productMain.locator('input[name="source"][value="product-mid"]')).toHaveCount(1);
   await expect(productMain.locator('input[name="source"][value="product-index"]')).toHaveCount(1);
   await expect(productMain.locator('input[name="source"][value="product"]')).toHaveCount(2);

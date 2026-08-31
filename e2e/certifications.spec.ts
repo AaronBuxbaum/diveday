@@ -357,7 +357,7 @@ test("a diver types their card in from the readiness page, and staff verify it t
   // row says which weak state it is in rather than the bare "pending" it used
   // to wear — one badge per row, and every non-certified state carries a word
   // (ADR 20260827-people-not-lists, decision 6).
-  await expect(card).toContainText("Self-declared");
+  await expect(card).toContainText("Self-declared — certification card not sighted yet");
 
   // And the confirm is **not** the one-tap promote a staff-captured card gets.
   // A diver-typed row wears `self_declared_at`, so `reviewCertification` refuses

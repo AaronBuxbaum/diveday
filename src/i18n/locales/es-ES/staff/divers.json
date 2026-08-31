@@ -54,7 +54,7 @@
     "markingCertified": "Marcando certificado…",
     "confirmCard": "Confirmar certificación",
     "verifiedBy": "Certificado por {name} el {date}.",
-    "selfDeclaredLabel": "Autodeclarado — aún sin número de certificación",
+    "selfDeclaredLabel": "Autodeclarado — aún no se ha visto la tarjeta de certificación",
     "declaredNumber": "El buceador dice {number}",
     "shopIssuedLabel": "emitido por tu centro",
     "shopIssuedNoNumberLabel": "Número de certificación aún no registrado",

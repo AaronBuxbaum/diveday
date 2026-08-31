@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
+
 import { cleanup, render, screen, within } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { RosterSection } from "./RosterSection";
 import type {
@@ -74,11 +76,13 @@ function renderRoster({
   readiness,
   waivers,
   compact = false,
+  addDiverGroup,
 }: {
   roster: RosterEntry[];
   readiness: ReadinessByBooking;
   waivers: WaiverByBooking;
   compact?: boolean;
+  addDiverGroup?: ReactNode;
 }) {
   return render(
     <RosterSection
@@ -108,6 +112,7 @@ function renderRoster({
       depthUnit="meters"
       tripDate="2026-08-28"
       compact={compact}
+      addDiverGroup={addDiverGroup}
     />,
   );
 }
@@ -202,5 +207,22 @@ describe("the guests ledger (slice 5d)", () => {
     renderRoster(fixtures);
 
     expect(screen.queryByRole("navigation", { name: /filter/i })).toBeNull();
+  });
+
+  it("makes add diver the terminal ledger group, including on an empty roster", () => {
+    const { container } = renderRoster({
+      roster: [],
+      readiness: new Map() as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+      addDiverGroup: <p data-testid="add-diver-form">Find a returning diver</p>,
+    });
+
+    const addDiver = container.querySelector("#add-diver");
+    expect(addDiver).not.toBeNull();
+    expect(
+      within(addDiver as HTMLElement).getByRole("heading", { name: "Add a diver" }),
+    ).toBeVisible();
+    expect(within(addDiver as HTMLElement).getByTestId("add-diver-form")).toBeVisible();
+    expect(screen.queryByText("No one on this boat yet")).toBeNull();
   });
 });

@@ -67,6 +67,10 @@ block** directly above the pay button — fare × party, gear, fee, tax, deposit
 now" figure. **Packing moves to the thread's prep step**; the briefing digest stays here, because
 what you'll see is pitch and what to bring is prep. The sticky phone pill keeps only the verb.
 
+When a departure has its own meeting point, **where** is a hero metadata line before the form;
+the day-of thread repeats arrival instructions, but a diver does not need a seat to learn where to
+go.
+
 ### 3. The thread page is a step spine
 
 `/ready` recomposes on the same spine grammar as the staff home: steps in order — **Sign · Your

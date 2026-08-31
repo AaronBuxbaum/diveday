@@ -108,6 +108,9 @@ two-heading, 2×`text-2xl` sections retire) — the component's other consumer i
 7c must land in an order that never breaks it (the shared component deletes only when 7c takes
 `/ready` off it); `TripActions` (calendar/share) moves into the hero as two quiet text links.
 
+When a departure has its own meeting point, it appears in hero metadata before the form. The
+thread repeats arrival instructions, but a buyer never needs to book before learning where to go.
+
 **The form card** (`BookSpotSection` recomposition):
 
 - One `SectionCard padding="lg"`; internal steps separated by hairlines only — the party count as

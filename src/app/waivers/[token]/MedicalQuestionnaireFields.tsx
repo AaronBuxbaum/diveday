@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MedicalQuestion, MedicalQuestionnaire } from "@/lib/medical";
 import { medicalProgress, medicalQuestionField } from "@/lib/medical";
 
@@ -38,6 +38,10 @@ function RadioQuestion({
   // doctor should confirm you're fit to dive" states a consequence that has not
   // happened and may never — the 2026-08-06 review's finding.
   const reassurance = question.referral ? copy.referralReassurance : copy.followUpReassurance;
+  // These stay uncontrolled, as a real paper-like form should: a diver can
+  // answer before its JavaScript finishes loading and hydration must not erase
+  // that choice. The parent reconciles the live DOM once into its state so
+  // dynamic Boxes and the outcome line learn the same answer.
   return (
     <fieldset className="rounded-lg border border-border bg-surface p-4">
       <legend className="px-1 text-base font-medium">{question.prompt}</legend>
@@ -52,7 +56,7 @@ function RadioQuestion({
             // ids, which are the published form's numbering, not a contract).
             data-question-scope={question.section === "primary" ? "primary" : "follow-up"}
             value="yes"
-            checked={answer === true}
+            defaultChecked={answer === true}
             onChange={() => onAnswer(question.id, true)}
             required
           />
@@ -64,7 +68,7 @@ function RadioQuestion({
             name={medicalQuestionField(question.id)}
             data-question-scope={question.section === "primary" ? "primary" : "follow-up"}
             value="no"
-            checked={answer === false}
+            defaultChecked={answer === false}
             onChange={() => onAnswer(question.id, false)}
             required
           />
@@ -128,10 +132,18 @@ export function MedicalQuestionnaireFields({
   initialResponses?: Readonly<Record<string, boolean>>;
   copy: MedicalQuestionnaireCopy;
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const [responses, setResponses] = useState<Record<string, boolean>>(() => ({
     ...(initialResponses ?? {}),
   }));
   const primary = questionnaire.questions.filter((question) => question.section === "primary");
+  const questionIdByField = useMemo(
+    () =>
+      new Map(
+        questionnaire.questions.map((question) => [medicalQuestionField(question.id), question.id]),
+      ),
+    [questionnaire.questions],
+  );
   const byParent = useMemo(() => {
     const result = new Map<string, MedicalQuestion[]>();
     for (const question of questionnaire.questions) {
@@ -142,6 +154,33 @@ export function MedicalQuestionnaireFields({
     }
     return result;
   }, [questionnaire.questions]);
+
+  useEffect(() => {
+    // Server HTML remains usable before this component hydrates. Reconcile any
+    // choice made in that interval, so neither the answer nor a Box it opens
+    // disappears when JavaScript arrives.
+    const root = rootRef.current;
+    if (root) {
+      const selected = new Map<string, boolean>();
+      for (const input of root.querySelectorAll<HTMLInputElement>('input[type="radio"]:checked')) {
+        const questionId = questionIdByField.get(input.name);
+        if (questionId) selected.set(questionId, input.value === "yes");
+      }
+      if (selected.size > 0) {
+        setResponses((previous) => {
+          const next = { ...previous };
+          let changed = false;
+          for (const [questionId, answer] of selected) {
+            if (next[questionId] !== answer) {
+              next[questionId] = answer;
+              changed = true;
+            }
+          }
+          return changed ? next : previous;
+        });
+      }
+    }
+  }, [questionIdByField]);
 
   function answer(id: string, value: boolean) {
     setResponses((previous) => {
@@ -198,7 +237,7 @@ export function MedicalQuestionnaireFields({
   }
 
   return (
-    <div className="mt-4 flex flex-col gap-3">
+    <div ref={rootRef} className="mt-4 flex flex-col gap-3">
       {primary.map(renderQuestion)}
       <QuestionnaireOutcome questionnaire={questionnaire} responses={responses} copy={copy} />
     </div>

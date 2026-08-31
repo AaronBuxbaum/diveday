@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
-import { EmptyState } from "@/components/EmptyState";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { PrivateNoteForm } from "@/components/PrivateNoteForm";
 import { paperWaiverCopy } from "@/components/paper-waiver-copy";
@@ -154,9 +153,9 @@ function ReadyMark({ className = "" }: { className?: string }) {
  * slice 5d: the roster is one grouped ledger, not a stack of per-diver cards.
  *
  * Groups carry the state word and the count once — **Still to clear**, then
- * **Ready**, with the wait list and recorded invitations folding in beneath as
- * groups of the same card (`waitingGroup`/`invitedGroup`) instead of three
- * sibling cards restating the same grammar. A settled seat is a name, at most
+ * **Ready**, with the wait list, recorded invitations, and add-diver action
+ * folding in beneath as groups of the same card instead of sibling cards
+ * restating the same grammar. A settled seat is a name, at most
  * an exception capsule, and a drawn mark; a seat with open work keeps that
  * work in the open, each item beside its one fix. The filter chips are gone —
  * the groups are the filter — and so is the per-row state word the old rows
@@ -202,6 +201,7 @@ export function RosterSection({
   keepOpenBookingId,
   waitingGroup,
   invitedGroup,
+  addDiverGroup,
   compact = false,
   showSummaryHeading = true,
 }: {
@@ -266,6 +266,8 @@ export function RosterSection({
   waitingGroup?: ReactNode;
   /** Recorded invitations, as the "Invited" group (`TripInvitationGroup`). */
   invitedGroup?: ReactNode;
+  /** The one terminal action group in the guests ledger, supplied by the page. */
+  addDiverGroup?: ReactNode;
   /** The Trip surface already leads with its masthead capacity read. */
   compact?: boolean;
   /** Keep the old standalone Guests heading for the compatibility route. */
@@ -1205,7 +1207,7 @@ export function RosterSection({
     );
   };
 
-  const hasTail = waitingGroup != null || invitedGroup != null;
+  const hasTail = waitingGroup != null || invitedGroup != null || addDiverGroup != null;
   return (
     <section
       id="roster"
@@ -1232,20 +1234,6 @@ export function RosterSection({
       ) : null}
       {!showSummaryHeading && roster.length > 0 ? (
         <RosterAllClear blockedCount={blockedCount} label={t("trips.roster.allClear")} />
-      ) : null}
-      {roster.length === 0 ? (
-        // The shared empty state, not a bare paragraph (docs/design/
-        // principles.md #4). No action of its own: the add-a-diver form is
-        // the next thing on a page this short, and a primary-weight anchor
-        // to a control already on screen was a second path to a visible
-        // button plus a second primary (principles 4 and 8; design review
-        // 2026-08-29).
-        <EmptyState
-          titleAs="h3"
-          title={t("trips.roster.emptyHeading")}
-          body={t("trips.roster.noBookings")}
-          className="mt-4"
-        />
       ) : null}
       {roster.length > 0 || hasTail ? (
         // One ledger, not a stack of cards: everyone this departure is about,
@@ -1303,6 +1291,12 @@ export function RosterSection({
           ) : null}
           {waitingGroup}
           {invitedGroup}
+          {addDiverGroup ? (
+            <div id="add-diver" className="scroll-mt-24">
+              <RosterGroupBand label={t("trips.addDiver.heading")} />
+              <div className="px-4 pt-3 pb-5 sm:px-5">{addDiverGroup}</div>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </section>

@@ -68,8 +68,7 @@ export function AddDiverSection({
   const t = staffTranslator(locale);
   const searched = query.length > 0;
   return (
-    <section id="add-diver" className="mt-10 scroll-mt-24">
-      <h2 className="text-lg font-semibold">{t("trips.addDiver.heading")}</h2>
+    <>
       <FormStatus tone={status?.tone} className="mt-2">
         {status?.text}
       </FormStatus>
@@ -191,6 +190,6 @@ export function AddDiverSection({
           ) : null}
         </>
       )}
-    </section>
+    </>
   );
 }
