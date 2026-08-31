@@ -36,7 +36,11 @@ describe("Trip About panel (slice 5e)", () => {
     const about = container.querySelector("#about");
     expect(about).not.toHaveAttribute("open");
     expect(screen.getByText(props.summary)).toBeVisible();
-    expect(screen.getAllByText(props.conditionsSummary)).toHaveLength(2);
+    const conditionLines = screen.getAllByText(props.conditionsSummary);
+    expect(conditionLines).toHaveLength(2);
+    // The desktop canvas keeps a second, quieter conditions line, while the
+    // phone canvas keeps About to one line so the roster arrives sooner.
+    expect(conditionLines[0]).toHaveClass("hidden", "sm:block");
     expect(screen.getByText("Details editor")).not.toBeVisible();
   });
 

@@ -266,6 +266,25 @@ describe("assembleDayCloseout", () => {
     expect(state.leftovers.map((a) => a.id)).toEqual(["a-today", "a-undated"]);
   });
 
+  it("leaves the standing units confirmation with Today instead of close-out", () => {
+    const state = assembleDayCloseout({
+      trips: [],
+      gaps: [],
+      actions: [
+        action({
+          id: "units:unconfirmed",
+          kind: "units_unconfirmed",
+          dueAt: null,
+          subject: "Check your currency and depth unit",
+        }),
+      ],
+      timeZone: TZ,
+      now,
+    });
+
+    expect(state.leftovers).toEqual([]);
+  });
+
   it("leaves tomorrow entirely to the spine — no row dated tomorrow is a leftover", () => {
     // The evening used to end on a parting glance that tallied tomorrow's
     // queue by kind. That card went with the page (H-62): the home's own

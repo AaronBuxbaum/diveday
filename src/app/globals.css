@@ -297,6 +297,23 @@ body {
  */
 
 /*
+ * The phone dock is 56px tall, plus any home-indicator inset. Keep the same
+ * clearance on page padding, sticky form actions, and fixed toasts; a fixed
+ * 4.5rem guess is correct only on a device with no inset and drifts on
+ * edge-to-edge phones. The desktop media rule below removes it where the dock
+ * is hidden.
+ */
+#shop-main-content {
+  --dock-clearance: calc(3.5rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1024px) {
+  #shop-main-content {
+    --dock-clearance: 0rem;
+  }
+}
+
+/*
  * Responsive shell exception — ADR 20260830-responsive-surface-consistency.
  * The live manifest is the only `.boat-mode` surface inside the staff shell.
  * It owns the mobile viewport, so it must not reserve space for the phone dock.

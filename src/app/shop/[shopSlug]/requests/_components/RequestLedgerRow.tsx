@@ -86,9 +86,12 @@ export function RequestLedgerRow({
 
   // The row's quiet facts, in planning order: how many of them, where they are
   // up to, why they are filed here, and how long the lead has been sitting.
+  const experienceFact = request.experienceLevel
+    ? t(EXPERIENCE_KEYS[request.experienceLevel])
+    : null;
   const facts = [
     request.divers ? t("requests.divers", { count: request.divers }) : null,
-    t(EXPERIENCE_KEYS[request.experienceLevel]),
+    experienceFact,
     match === "alternate" && namedDate
       ? t("requests.alternateOf", { date: formatCalendarDate(namedDate, locale) })
       : null,

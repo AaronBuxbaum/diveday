@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { RosterSection } from "./RosterSection";
 import type {
@@ -73,10 +73,12 @@ function renderRoster({
   roster,
   readiness,
   waivers,
+  compact = false,
 }: {
   roster: RosterEntry[];
   readiness: ReadinessByBooking;
   waivers: WaiverByBooking;
+  compact?: boolean;
 }) {
   return render(
     <RosterSection
@@ -105,6 +107,7 @@ function renderRoster({
       saveEmergencyContactAction={noop}
       depthUnit="meters"
       tripDate="2026-08-28"
+      compact={compact}
     />,
   );
 }
@@ -163,6 +166,36 @@ describe("the guests ledger (slice 5d)", () => {
     // And the groups order the page's answer: open work above cleared seats.
     const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
     expect(headings.indexOf("Still to clear · 1")).toBeLessThan(headings.indexOf("Ready · 1"));
+  });
+
+  it("keeps critical names readable and shared blockers on their group band", () => {
+    const secondBlocked = entry("c", "Mina Patel");
+    const thirdBlocked = entry("d", "Owen Reed");
+    const roster = [blocked, secondBlocked, thirdBlocked];
+    const readiness = new Map([
+      ["a", readinessRow("blocked", [{ code: "certification_missing", params: undefined }])],
+      ["c", readinessRow("blocked", [{ code: "certification_missing", params: undefined }])],
+      ["d", readinessRow("blocked", [{ code: "certification_missing", params: undefined }])],
+    ]) as ReadinessByBooking;
+    const { container } = renderRoster({
+      roster,
+      readiness,
+      waivers: new Map([
+        ["a", signedWaiver],
+        ["c", signedWaiver],
+        ["d", signedWaiver],
+      ]) as WaiverByBooking,
+      compact: true,
+    });
+
+    expect(screen.getByRole("link", { name: "Asha Osei" })).toHaveClass(
+      "text-base",
+      "font-semibold",
+    );
+    const band = screen.getByRole("heading", { name: "Still to clear · 3" }).parentElement;
+    expect(band).not.toBeNull();
+    expect(within(band as HTMLElement).getByText(/3 divers: No certification/)).toBeVisible();
+    expect(container.querySelector("#roster > div.mt-5")).toBeNull();
   });
 
   it("offers no filter chips: the groups are the filter", () => {

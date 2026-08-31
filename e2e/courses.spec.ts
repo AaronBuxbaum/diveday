@@ -581,7 +581,7 @@ test.describe("staff", () => {
   });
 });
 
-test("a diver with no workable date reaches the shop, and is offered one way to do it", async ({
+test("a diver with no workable date reaches the shop, and is offered flexible timing", async ({
   page,
 }) => {
   // Signed out: this is the composer a prospective diver meets, not staff.
@@ -592,10 +592,9 @@ test("a diver with no workable date reaches the shop, and is offered one way to 
   await page.getByLabel("Your name").fill("Mira Delgado");
   await page.getByLabel("Your email").fill("mira.delgado.e2e@example.com");
   await page.getByLabel("How many divers").fill("3");
-  // One free-text answer, as exact or as loose as the diver wants — the date
-  // picker beside it is gone, because a date typed here is a request the shop
-  // answers, never a hold the picker implied.
-  await page.getByLabel("When suits you").fill("the week of 12 August");
+  // The flexible option accepts an exact or loose answer; the two date fields
+  // above it are optional first and alternative choices, never a hold.
+  await page.getByLabel("Flexible timing").fill("the week of 12 August");
   // The option's value is now the code ("never"), not its rendered label —
   // src/lib/course-inquiry.ts returns codes, and the diver bundle supplies
   // the sentence.
@@ -617,7 +616,7 @@ test("a diver with no workable date reaches the shop, and is offered one way to 
   await expect(inquiry.getByRole("link", { name: "hello@demo.invalid" })).toBeVisible();
 });
 
-test("a blank inquiry is rejected, not defaulted — experience and a way to reply are required", async ({
+test("a blank inquiry is rejected, not defaulted — a way to reply is required", async ({
   page,
 }) => {
   await page.goto("/s/blue-mantis/courses/open-water-diver");
@@ -627,14 +626,13 @@ test("a blank inquiry is rejected, not defaulted — experience and a way to rep
   // Nothing filled in: both refusals land at once rather than one after the
   // other, so a diver fixes the form in one pass instead of two.
   await inquiry.getByRole("button", { name: "Send", exact: true }).click();
-  await expect(inquiry.getByText("Let us know where you are up to before sending.")).toBeVisible();
   await expect(
     inquiry.getByText("Leave an email or a phone number so we can reply."),
   ).toBeVisible();
   await expect(inquiry.getByText("Sent", { exact: true })).toHaveCount(0);
 
-  // Experience alone is not enough — a lead with no address and no number is
-  // a question nobody can answer.
+  // Experience is useful context, but a lead with no address and no number is
+  // still a question nobody can answer.
   await page.getByLabel("Where you are up to").selectOption("never");
   await inquiry.getByRole("button", { name: "Send", exact: true }).click();
   await expect(
@@ -660,7 +658,7 @@ test("a diver's inquiry is recorded server-side and the shop's details stay reac
   // One diver is already in the box — nobody fills in a field to say the
   // obvious.
   await expect(page.getByLabel("How many divers")).toHaveValue("1");
-  await page.getByLabel("When suits you").fill("any weekend this autumn");
+  await page.getByLabel("Flexible timing").fill("any weekend this autumn");
   await page.getByLabel("Where you are up to").selectOption("certified");
 
   await inquiry.getByRole("button", { name: "Send", exact: true }).click();

@@ -191,6 +191,14 @@ describe("the chrome bar", () => {
     expect(css).not.toContain(".boat-mode {\n  --dock-clearance: 0rem;");
   });
 
+  it("includes the device safe area in phone dock clearance", async () => {
+    const css = await read("src/app/globals.css");
+    expect(css).toMatch(
+      /#shop-main-content\s*\{\s*--dock-clearance:\s*calc\(3\.5rem \+ env\(safe-area-inset-bottom\)\);/,
+    );
+    expect(css).toContain("@media (min-width: 1024px)");
+  });
+
   it("declares its height once, as a token, at the 56px the ADR names", async () => {
     const css = await read("src/app/globals.css");
     // Inside `@theme`, which is what publishes it to `:root` for the

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { tapTargetLinkClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { toneMark } from "@/components/ui/tone";
@@ -12,7 +13,7 @@ export const EYEBROW_CLASS = "text-xs font-semibold tracking-[0.18em] text-prima
  * `TripPageHeader` is the one — the four trip surfaces share their own header,
  * and they were the only staff pages at depth 2–3 with no way back to their
  * parent at all (issue #823). Exported rather than copied so the chevron, the
- * sizing and the `-my-1 py-1` thumb slop stay one decision: a second hand-rolled
+ * sizing and the `min-h-11` thumb target stay one decision: a second hand-rolled
  * back link is how three ways up became three (a linked eyebrow, an explicit
  * "← Parent", and the global nav).
  */
@@ -28,7 +29,7 @@ export function EyebrowBackLink({
   return (
     <Link
       href={href}
-      className={`${EYEBROW_CLASS} -my-1 inline-flex items-center gap-1 py-1 hover:underline ${className}`.trim()}
+      className={`${tapTargetLinkClass} ${EYEBROW_CLASS} -my-2 gap-1 py-2 hover:underline ${className}`.trim()}
     >
       <svg
         aria-hidden="true"

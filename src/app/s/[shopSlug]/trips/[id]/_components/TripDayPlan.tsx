@@ -84,14 +84,16 @@ export function TripDayPlan({
 }
 
 /**
- * The species the shop chose for this day's sites — each one a face beside its
- * name, not a line of names.
+ * The species the shop chose for this day's sites — each one a face, a quick
+ * field note, and a way to spot it, not a line of names.
  *
  * DiveDay writes the words and ships the photos (ADR
  * 20260813-marine-life-is-diveday-copy), so every card arrives with its
  * `imageUrl` already resolved by `fieldGuideCards`. Slice 7c rendered only the
  * names, which left the one guaranteed-illustrated dataset in the product — 149
- * bundled, licensed species photos — reaching no diver anywhere. The photo is
+ * bundled, licensed species photos — reaching no diver anywhere. The
+ * description and preparation tip are the same localized catalog copy used by
+ * the field-guide editor; no public claim is invented here. The photo is
  * decorative (`alt=""`): the visible name beside it is the content, so a screen
  * reader hears each species once.
  *
@@ -104,8 +106,9 @@ export function TripLookFor({ briefings, locale }: { briefings: DiveBriefing[]; 
   const seen = new Set<string>();
   const cards = briefings.flatMap(({ creatures }) =>
     creatures.filter((creature) => {
-      if (seen.has(creature.name)) return false;
-      seen.add(creature.name);
+      const key = creature.slug ?? creature.name;
+      if (seen.has(key)) return false;
+      seen.add(key);
       return true;
     }),
   );
@@ -113,16 +116,24 @@ export function TripLookFor({ briefings, locale }: { briefings: DiveBriefing[]; 
   return (
     <section className="mt-6">
       <GroupLabel as="h2">{t("trip.lookFor")}</GroupLabel>
-      <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2.5">
+      <ul className="mt-3 grid gap-x-6 gap-y-5 sm:grid-cols-2">
         {cards.map((card) => (
-          <li key={card.name} className="flex items-center gap-2">
+          <li key={card.slug ?? card.name} className="flex min-w-0 gap-3">
             <StoredPhoto
               src={card.imageUrl}
               alt=""
-              className="size-9 shrink-0 rounded-full"
-              sizes="36px"
+              className="size-12 shrink-0 rounded-2xl"
+              sizes="48px"
             />
-            <span className="text-sm">{card.name}</span>
+            <div className="min-w-0">
+              <p className="font-medium">{card.name}</p>
+              {card.description ? (
+                <p className="mt-1 text-sm leading-relaxed text-muted">{card.description}</p>
+              ) : null}
+              {card.preparationTip ? (
+                <p className="mt-1 text-sm leading-relaxed text-muted">{card.preparationTip}</p>
+              ) : null}
+            </div>
           </li>
         ))}
       </ul>

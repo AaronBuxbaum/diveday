@@ -3,7 +3,14 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "./form";
+import {
+  controlClass,
+  Field,
+  FieldActions,
+  FieldGrid,
+  FormStatus,
+  StickyFormActions,
+} from "./form";
 
 afterEach(cleanup);
 
@@ -207,6 +214,19 @@ describe("FormStatus", () => {
     );
     const form = container.querySelector("form");
     expect(form?.contains(screen.getByRole("alert"))).toBe(true);
+  });
+});
+
+describe("StickyFormActions", () => {
+  it("stays above the staff phone dock when the shell provides clearance", () => {
+    const { container } = render(
+      <StickyFormActions>
+        <button type="submit">Save</button>
+      </StickyFormActions>,
+    );
+
+    expect(container.firstElementChild).toHaveClass("sticky");
+    expect(container.firstElementChild).toHaveClass("bottom-[var(--dock-clearance,0rem)]");
   });
 });
 

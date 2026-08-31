@@ -68,12 +68,9 @@ describe("DiveDeclarationFields", () => {
     // blank", because `DiveCardFields` renders only once a level is picked — a
     // sentence naming a box that is not on screen is worse than no sentence.
     expect(screen.getByText(/Answer it even if your card isn't to hand/)).toBeInTheDocument();
-    // Two promises this sentence used to carry and no longer does. "Nothing
-    // here is checked" stopped being true at the sale; "they'll confirm it
-    // against your card" is still true and is still said — by
-    // `booking.noAccountNeeded`, on this same page, under the button ("The shop
-    // will confirm your certification and rental fit when you arrive"). Saying
-    // it twice spent the room the line above needed.
+    // The explanation stays focused on why the shop asks. It does not repeat
+    // the booking action's downstream reassurance or claim that the answer is
+    // merely informational now that certification can gate a sale.
     expect(screen.queryByText(/Nothing here is checked/)).not.toBeInTheDocument();
     expect(screen.queryByText(/confirm it against your card/)).not.toBeInTheDocument();
   });

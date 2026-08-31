@@ -202,6 +202,7 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
       // sentence takes the width beneath them, which is the phone artboard's
       // reading and the only one where a full sentence has room to be read.
       stacked
+      className="-mx-2 px-2"
       kind={{
         word: t(ACTION_KIND_KEYS[action.kind]),
         tone: ACTION_KIND_META[action.kind].tone,
@@ -442,6 +443,10 @@ export function DaySpine({
   const boatsClearLine =
     !closedPanel && !allHomeLine && !firstBookingMark && todaysBoatsAreClear(spine);
   const closing = evening?.close.closing === true;
+  const closingLeftoverIds = new Set(
+    closing && evening ? evening.leftovers.map((leftover) => leftover.id) : [],
+  );
+  const deskActions = spine.desk.filter((action) => !closingLeftoverIds.has(action.id));
 
   return (
     <div className="flex flex-col gap-10">
@@ -494,6 +499,7 @@ export function DaySpine({
           <ul className="mt-3">
             <LedgerRow
               size="lg"
+              className="-mx-2 px-2"
               href={`/shop/${shopSlug}/trips/${firstBooking.tripId}`}
               linkLabel={firstBooking.tripTitle}
               trailing={<DiveDayIcon name="chevron-right" className="size-4 shrink-0 text-muted" />}
@@ -602,14 +608,17 @@ export function DaySpine({
         />
       ) : null}
 
-      {spine.desk.length > 0 || showPaymentsRow ? (
+      {deskActions.length > 0 || showPaymentsRow ? (
         <LedgerGroup as="h2" label={t("shopHome.spine.deskLabel")}>
-          <ul className="mt-3">
-            {spine.desk.map((action) => (
+          <ul className="mt-1.5">
+            {/* A closing leftover owns the row once the day settles. Keep
+                standing desk work here, but never paint one action twice. */}
+            {deskActions.map((action) => (
               <StationRow key={rowKey(action)} action={action} controls={controls} />
             ))}
             {showPaymentsRow ? (
               <LedgerRow
+                className="-mx-2 px-2"
                 href={`/shop/${shopSlug}/settings#stripe`}
                 linkLabel={t("shopHome.spine.deskPaymentsAction")}
                 trailing={
@@ -651,11 +660,13 @@ export function DaySpine({
           a plain row pointing at the board, because a week is a board
           question. Neither links to a queue view — there is no longer one. */}
       {spine.tomorrow.stations.length > 0 || spine.week.jobs > 0 ? (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col">
           {spine.tomorrow.stations.length > 0 ? (
             <LedgerGroup
               as="h2"
               folded
+              summaryVariant="row"
+              className={spine.week.jobs > 0 ? "[&>summary]:border-t-0" : "[&>summary]:border-b"}
               label={t("shopHome.spine.tomorrow", {
                 date: tomorrowDate ? formatShortDate(tomorrowDate, locale, timeZone) : "",
               })}
@@ -680,6 +691,7 @@ export function DaySpine({
             <ul>
               <LedgerRow
                 size="lg"
+                className="-mx-2 px-2"
                 href={`/shop/${shopSlug}/schedule/board`}
                 linkLabel={t("shopHome.spine.openBoard")}
                 trailing={
@@ -689,7 +701,7 @@ export function DaySpine({
                   </span>
                 }
               >
-                <p className="text-base">{t("shopHome.spine.week")}</p>
+                <p className="text-base font-semibold tracking-tight">{t("shopHome.spine.week")}</p>
               </LedgerRow>
             </ul>
           ) : null}

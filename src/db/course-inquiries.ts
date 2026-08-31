@@ -24,7 +24,7 @@ export type RecordCourseInquiryInput = {
   name?: string | null;
   email?: string | null;
   phone?: string | null;
-  experienceLevel: CourseInquiryExperience;
+  experienceLevel?: CourseInquiryExperience | null;
   timing?: string | null;
   preferredDate?: CalendarDate | null;
   alternateDate?: CalendarDate | null;
@@ -115,7 +115,7 @@ export async function recordCourseInquiry(
       name: normalizeOptional(input.name),
       email,
       phone: normalizeOptional(input.phone),
-      experienceLevel: input.experienceLevel,
+      experienceLevel: input.experienceLevel ?? null,
       timing: normalizeOptional(input.timing),
       preferredDate: input.preferredDate ?? null,
       alternateDate: input.alternateDate ?? null,
@@ -144,7 +144,7 @@ export type DateRequestRow = {
   name: string | null;
   email: string | null;
   phone: string | null;
-  experienceLevel: CourseInquiryExperience;
+  experienceLevel: CourseInquiryExperience | null;
   timing: string | null;
   preferredDate: CalendarDate | null;
   alternateDate: CalendarDate | null;

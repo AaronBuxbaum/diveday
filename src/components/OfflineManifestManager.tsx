@@ -497,30 +497,34 @@ export function OfflineManifestManager({
         aria-labelledby="offline-heading"
       >
         <details className="group/phone">
-          <summary className="group/summary flex min-h-14 cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 select-none [&::-webkit-details-marker]:hidden">
+          <summary className="group/summary flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-2xl px-4 py-3 select-none transition-colors hover:bg-surface-sunken/70 focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
             <DisclosureCaret className="group-open/phone:rotate-90" />
             {/* A deliberate eyebrow rather than a section heading, which is a
                 scale `SectionCard`'s own `title` does not render. */}
-            <GroupLabel as="h2" id="offline-heading" className="group-hover/summary:underline">
-              {copy.groupHeading}
-            </GroupLabel>
-            <span className="flex flex-wrap items-center gap-2">
-              <ConnectivityStatus
-                offlineLabel={saved ? copy.connectivityOfflineWithCopy : copy.connectivityOffline}
-                copy={{
-                  online: copy.connectivityOnline,
-                  onlineTitle: copy.connectivityOnlineTitle,
-                  offlineTitle: copy.connectivityOfflineTitle,
-                }}
-              />
-              {freshness ? (
-                <OfflineFreshnessPill freshness={freshness}>{freshnessLabel}</OfflineFreshnessPill>
-              ) : null}
+            <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
+              <GroupLabel as="h2" id="offline-heading" className="group-hover/summary:underline">
+                {copy.groupHeading}
+              </GroupLabel>
+              <span className="flex min-w-0 flex-wrap items-center gap-2">
+                <ConnectivityStatus
+                  offlineLabel={saved ? copy.connectivityOfflineWithCopy : copy.connectivityOffline}
+                  copy={{
+                    online: copy.connectivityOnline,
+                    onlineTitle: copy.connectivityOnlineTitle,
+                    offlineTitle: copy.connectivityOfflineTitle,
+                  }}
+                />
+                {freshness ? (
+                  <OfflineFreshnessPill freshness={freshness}>
+                    {freshnessLabel}
+                  </OfflineFreshnessPill>
+                ) : null}
+              </span>
             </span>
           </summary>
-          <div className="px-4 pb-4">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="max-w-2xl">
+          <div className="space-y-5 px-4 pb-4 pt-3">
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(13rem,auto)] sm:items-start">
+              <div className="min-w-0 max-w-2xl">
                 <h3 className="font-semibold">{copy.heading}</h3>
                 <p className="mt-1 text-sm leading-6 text-muted">{copy.body}</p>
                 {/* The live region stays mounted whether or not it currently has
@@ -543,12 +547,16 @@ export function OfflineManifestManager({
                   </p>
                 ) : null}
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-col gap-3 sm:min-w-52">
                 <button
                   type="button"
                   disabled={busy}
                   onClick={() => refresh({ manual: true })}
-                  className={buttonClass({ variant: "secondary" })}
+                  className={buttonClass({
+                    variant: "secondary",
+                    size: "boat",
+                    className: "w-full",
+                  })}
                 >
                   {busy ? copy.refreshingLabel : copy.refreshNowLabel}
                 </button>
@@ -561,7 +569,11 @@ export function OfflineManifestManager({
                   // the moment it is needed is the moment of wet hands.
                   <a
                     href={`/offline-manifest?trip=${tripId}`}
-                    className={buttonClass({ variant: "secondary", size: "boat" })}
+                    className={buttonClass({
+                      variant: "secondary",
+                      size: "boat",
+                      className: "w-full",
+                    })}
                   >
                     {copy.openOfflineRollCall}
                   </a>
@@ -574,9 +586,7 @@ export function OfflineManifestManager({
                 keys, the spray-guard toggle until it has read this device's
                 stored preference — and a separator above nothing is a rule
                 across an empty band. */}
-            <div className="mt-4 space-y-4 border-t border-border pt-4 empty:hidden">
-              {children}
-            </div>
+            <div className="border-t border-border pt-5 empty:hidden">{children}</div>
           </div>
         </details>
       </section>

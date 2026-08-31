@@ -1064,8 +1064,8 @@ export const courseInquiries = pgTable(
     name: text("name"),
     email: text("email"),
     phone: text("phone"),
-    /** The one field the form requires — see courseInquiryExperience above. */
-    experienceLevel: courseInquiryExperience("experience_level").notNull(),
+    /** Optional context from the diver; a date request does not require it. */
+    experienceLevel: courseInquiryExperience("experience_level"),
     /**
      * Free prose — "the week of 12 August", "any weekend in the autumn". Kept
      * exactly as it was when the date columns arrived: the dates do not replace

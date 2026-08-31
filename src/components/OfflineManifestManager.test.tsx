@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   loadOfflineManifest,
@@ -243,5 +243,30 @@ describe("OfflineManifestManager", () => {
     expect(
       await screen.findByText(new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))),
     ).toBeInTheDocument();
+  });
+
+  it("keeps status visible while grouping full-size offline actions inside the disclosure", async () => {
+    setOnline(false);
+    const saved = envelope();
+    vi.mocked(loadOfflineManifest).mockResolvedValue(saved);
+
+    render(
+      <OfflineManifestManager payload={payload} locale="en-US" copy={copy}>
+        <div data-testid="device-settings">Device settings</div>
+      </OfflineManifestManager>,
+    );
+
+    const heading = await screen.findByRole("heading", { name: "On this phone" });
+    const disclosure = heading.closest("details");
+    expect(disclosure).not.toBeNull();
+    expect((disclosure as HTMLDetailsElement).open).toBe(false);
+    expect(screen.getByText("No signal · device copy")).toBeVisible();
+
+    const group = within(disclosure as HTMLElement);
+    expect(group.getByRole("button", { name: "Refresh now" }).className).toContain("min-h-14");
+    expect(group.getByRole("link", { name: "Open offline roll call" }).className).toContain(
+      "min-h-14",
+    );
+    expect(group.getByTestId("device-settings")).toBeInTheDocument();
   });
 });

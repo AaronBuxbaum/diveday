@@ -276,6 +276,12 @@ const ROLL_CALL_KINDS: ReadonlySet<TodayActionKind> = new Set([
   "roll_call_not_started",
 ]);
 
+// A units confirmation is standing shop setup, not work left by today's
+// boats. Keeping it out of the closing ledger leaves its single owner — the
+// Today desk group — and avoids offering a dismiss action for a fact that
+// still needs to be confirmed.
+const STANDING_SETUP_KINDS: ReadonlySet<TodayActionKind> = new Set(["units_unconfirmed"]);
+
 function departureStatus(
   trip: CloseoutTripInput,
   gap: CloseoutRollCallGap | undefined,
@@ -355,7 +361,9 @@ export function assembleDayCloseout(input: {
   // Tomorrow disclosure is what the evening ends on now (ADR
   // 20260827-clearwater-surface-language, decision 4), and it is built from
   // the queue rather than from a second tally of it.
-  const carriable = input.actions.filter((action) => !ROLL_CALL_KINDS.has(action.kind));
+  const carriable = input.actions.filter(
+    (action) => !ROLL_CALL_KINDS.has(action.kind) && !STANDING_SETUP_KINDS.has(action.kind),
+  );
   const leftovers = sortActions(
     carriable.filter((action) => action.dueAt === null || action.dueAt < today.to),
   );

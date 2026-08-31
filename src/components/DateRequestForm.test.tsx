@@ -10,8 +10,11 @@ const copy: DateRequestCopy = {
   intro: "No date that works?",
   whatToDive: "What would you like to dive?",
   whatToDivePlaceholder: "Two dives on the wrecks",
-  preferredDate: "Date you’d like",
-  alternateDate: "Or this date",
+  dateOptionsHeading: "When would you like to dive?",
+  dateOptionsHint:
+    "Choose a preferred date, an alternative, or tell us when your timing is flexible.",
+  preferredDate: "Preferred date",
+  alternateDate: "Alternative date",
   yourName: "Your name",
   namePlaceholder: "Priya Sharma",
   yourEmail: "Your email",
@@ -23,8 +26,8 @@ const copy: DateRequestCopy = {
   required: "(required)",
   orPhone: "(or phone)",
   orEmail: "(or email)",
-  whenSuits: "When suits you",
-  whenSuitsPlaceholder: "12 August, or any weekend this autumn",
+  whenSuits: "Flexible timing",
+  whenSuitsPlaceholder: "Any weekend in August",
   whereYouAreUpTo: "Where you are up to",
   chooseOne: "Choose one",
   anythingElse: "Anything else",
@@ -89,32 +92,24 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("DateRequestForm — experience is required (task 8)", () => {
-  it("blocks the send and shows an inline error when no experience is picked", () => {
-    const submitInquiry = vi.fn();
+describe("DateRequestForm — experience is optional", () => {
+  it("lets a contact send without choosing where they are up to", async () => {
+    const submitInquiry = succeeds();
     renderInquiry(submitInquiry);
 
     fillEmail();
     fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
 
-    expect(screen.getByText("Let us know where you are up to before sending.")).toBeInTheDocument();
-    expect(submitInquiry).not.toHaveBeenCalled();
+    await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
+    expect(submitInquiry.mock.calls[0]?.[1].get("experience")).toBeNull();
   });
 
-  it("clears the inline error once an experience level is picked", () => {
-    const submitInquiry = vi.fn();
-    renderInquiry(submitInquiry);
-
-    fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
-    expect(screen.getByText("Let us know where you are up to before sending.")).toBeInTheDocument();
-
-    pickExperience();
-    expect(
-      screen.queryByText("Let us know where you are up to before sending."),
-    ).not.toBeInTheDocument();
+  it("does not require the experience control in the browser", () => {
+    renderInquiry(vi.fn());
+    expect(screen.getByRole("combobox", { name: /Where you are up to/ })).not.toBeRequired();
   });
 
-  it("lets the send through once an experience level is picked", async () => {
+  it("includes the experience answer when the diver volunteers it", async () => {
     const submitInquiry = succeeds();
     renderInquiry(submitInquiry);
 
@@ -123,9 +118,7 @@ describe("DateRequestForm — experience is required (task 8)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
 
     await waitFor(() => expect(submitInquiry).toHaveBeenCalledTimes(1));
-    expect(
-      screen.queryByText("Let us know where you are up to before sending."),
-    ).not.toBeInTheDocument();
+    expect(submitInquiry.mock.calls[0]?.[1].get("experience")).toBe("never");
   });
 });
 
@@ -368,7 +361,7 @@ describe("DateRequestForm — one way out of the form", () => {
     renderInquiry(submitInquiry);
 
     fillEmail();
-    fireEvent.change(screen.getByLabelText(/When suits you/), {
+    fireEvent.change(screen.getByLabelText(/Flexible timing/), {
       target: { value: "any weekend this autumn" },
     });
     pickExperience();
@@ -391,10 +384,12 @@ describe("DateRequestForm — asking for a date", () => {
     renderInquiry(submitInquiry);
 
     fillEmail();
-    fireEvent.change(screen.getByLabelText(/Date you’d like/), {
+    fireEvent.change(screen.getByLabelText(/Preferred date/), {
       target: { value: "2026-09-12" },
     });
-    fireEvent.change(screen.getByLabelText(/Or this date/), { target: { value: "2026-09-19" } });
+    fireEvent.change(screen.getByLabelText(/Alternative date/), {
+      target: { value: "2026-09-19" },
+    });
     pickExperience();
     fireEvent.click(screen.getByRole("button", { name: "Send inquiry" }));
 

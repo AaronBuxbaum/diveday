@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { GroupLabel } from "@/components/ui/ledger";
@@ -479,7 +480,7 @@ export function RosterSection({
             read this way. Hover restores the link cue. */}
         <Link
           href={`/shop/${shopSlug}/divers/${person.id}`}
-          className="inline-flex min-h-11 items-center font-medium text-foreground hover:text-primary hover:underline"
+          className="inline-flex min-h-11 items-center font-semibold leading-tight text-base text-foreground hover:text-primary hover:underline"
         >
           {person.fullName}
         </Link>
@@ -585,12 +586,13 @@ export function RosterSection({
       </form>
     );
     const emergencyContactForm = (
-      <details className="mt-2">
-        <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary hover:underline">
-          {t("trips.roster.emergencyContactEdit")}
-        </summary>
+      <CompactDisclosureRow
+        className="mt-1"
+        bodyClassName="mt-0"
+        label={t("trips.roster.emergencyContactEdit")}
+      >
         {contactForm}
-      </details>
+      </CompactDisclosureRow>
     );
     // A contact on file is a fact about the seat, so this renders only in the
     // reference panel; a *missing* one is work and renders in the open half
@@ -873,14 +875,18 @@ export function RosterSection({
             that opens the form (`keepOpenBookingId` reopens the row a
             just-saved contact settled). */}
         {hasEmergencyContact ? null : (
-          <details className="mt-3">
-            <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong [&::-webkit-details-marker]:hidden">
+          <details className="group/missing-contact mt-3">
+            <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong transition-colors hover:bg-warning-tint [&::-webkit-details-marker]:hidden">
               <StatusMark variant="warning" />
               <span>
                 {t("trips.roster.emergencyContactHeading")} ·{" "}
                 {t("trips.roster.emergencyContactMissing")}
               </span>
               <span className="ms-auto font-semibold">{t("trips.roster.emergencyContactAdd")}</span>
+              <DisclosureCaret
+                direction="down"
+                className="size-4 group-open/missing-contact:rotate-180"
+              />
             </summary>
             {contactForm}
           </details>
@@ -888,16 +894,19 @@ export function RosterSection({
 
         {/* One disclosure, at the top level of the row — writing a note about
             a diver is desk work a staffer starts from here. */}
-        <details className="mt-3">
-          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-muted transition-colors hover:text-foreground">
-            {/* A zero count is the absence of information formatted as
-                information (principle 9) — with no notes the disclosure is
-                simply the door to writing the first one. */}
-            {notes.length === 0
+        <CompactDisclosureRow
+          className="mt-3"
+          bodyClassName="mt-2"
+          label={
+            // A zero count is the absence of information formatted as
+            // information (principle 9) — with no notes the disclosure is
+            // simply the door to writing the first one.
+            notes.length === 0
               ? t("trips.roster.addFirstNoteSummary")
-              : t("trips.roster.privateStaffNotes", { count: notes.length })}
-          </summary>
-          <div className="mt-2 grid gap-3">
+              : t("trips.roster.privateStaffNotes", { count: notes.length })
+          }
+        >
+          <div className="grid gap-3">
             {notes.map((entry) => {
               const { note, authorName } = entry;
               return (
@@ -945,7 +954,7 @@ export function RosterSection({
               }}
             />
           </div>
-        </details>
+        </CompactDisclosureRow>
       </>
     );
 
@@ -1045,12 +1054,15 @@ export function RosterSection({
               <p className="mt-1 text-sm text-muted">{t("trips.roster.noPickupScheduled")}</p>
             )}
             {updatePickupAction ? (
-              <details className="mt-1">
-                <summary className="inline-flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary hover:underline">
-                  {booking.hotelPickupLocation || booking.pickupTime
+              <CompactDisclosureRow
+                className="mt-1"
+                bodyClassName="mt-0"
+                label={
+                  booking.hotelPickupLocation || booking.pickupTime
                     ? t("trips.roster.editPickup")
-                    : t("trips.roster.setPickup")}
-                </summary>
+                    : t("trips.roster.setPickup")
+                }
+              >
                 <form
                   action={updatePickupAction.bind(null, booking.id)}
                   className="mt-2 flex max-w-md flex-col gap-2 rounded-lg border border-border bg-surface-sunken/50 p-2"
@@ -1084,7 +1096,7 @@ export function RosterSection({
                     </SubmitButton>
                   </div>
                 </form>
-              </details>
+              </CompactDisclosureRow>
             ) : null}
           </div>
         </div>
@@ -1136,7 +1148,7 @@ export function RosterSection({
     const markSummary = (
       <summary
         aria-label={t("trips.roster.detailsSummaryLabel", { name: person.fullName })}
-        className={`absolute top-2.5 end-2 flex size-11 cursor-pointer list-none items-center justify-center rounded-lg transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:end-3 ${
+        className={`absolute top-2.5 end-2 flex size-11 cursor-pointer list-none items-center justify-center rounded-lg transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary sm:end-3 ${
           settledRow ? "text-success" : "text-muted hover:text-foreground"
         }`}
       >
@@ -1156,7 +1168,7 @@ export function RosterSection({
         // Today's queue deep-links straight to the diver it is about;
         // scroll-mt keeps the row clear of the sticky shop header.
         id={`booking-${booking.id}`}
-        className="relative scroll-mt-24 px-4 py-2.5 sm:px-5"
+        className="relative scroll-mt-24 px-4 py-1 sm:px-5"
       >
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pe-11">
           {headerLeft}
@@ -1244,7 +1256,7 @@ export function RosterSection({
         <div
           className={sectionCardClass({
             padding: "none",
-            className: "mt-5 overflow-hidden",
+            className: `${compact ? "" : "mt-5"} overflow-hidden`,
           })}
         >
           {/* Inside the card, so mounting proves the rows a deep link scrolls
@@ -1255,27 +1267,27 @@ export function RosterSection({
             <>
               <RosterGroupBand
                 label={`${t("trips.roster.groupStillToClear")} · ${stillToClear.length}`}
-              />
-              {/* The facts much of the boat shares, said once for the group
-                  instead of photocopied down its rows (principle 9). */}
-              {sharedFacts.length > 0 ? (
-                <div className="grid gap-1 px-4 py-2 sm:px-5">
-                  {sharedFacts.map(({ sentence, count, tone }) => (
-                    <p
-                      key={sentence}
-                      className={`flex gap-2 text-sm font-medium ${
-                        tone === "danger"
-                          ? // diveday:allow-tinted-ink: ink on the card surface, no wash — `text-danger` measures 6.47:1 on `--surface`
-                            "text-danger"
-                          : "text-warning-strong"
-                      }`}
-                    >
-                      <StatusMark variant={tone === "danger" ? "danger" : "warning"} />
-                      <span>{t("trips.roster.sharedFactLine", { count, sentence })}</span>
-                    </p>
-                  ))}
-                </div>
-              ) : null}
+              >
+                {/* The facts much of the boat shares, said once in the group
+                    band instead of photocopied down its rows (principle 9).
+                    They move below the label on a phone so the state word keeps
+                    its own readable line. */}
+                {sharedFacts.length > 0 ? (
+                  <div className="flex w-full min-w-0 flex-col gap-1 text-xs sm:w-auto sm:max-w-[68%] sm:items-end">
+                    {sharedFacts.map(({ sentence, count, tone }) => (
+                      <p
+                        key={sentence}
+                        className={`flex min-w-0 items-start gap-1.5 ${
+                          tone === "danger" ? "text-danger" : "text-warning-strong"
+                        }`}
+                      >
+                        <StatusMark variant={tone === "danger" ? "danger" : "warning"} />
+                        <span>{t("trips.roster.sharedFactLine", { count, sentence })}</span>
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
+              </RosterGroupBand>
               <ul className="divide-y divide-border">
                 {stillToClear.map((entry) => renderRow(entry, false))}
               </ul>

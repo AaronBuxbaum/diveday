@@ -240,13 +240,13 @@ export function TripRosterContent({
         />
       )}
 
-      <div className="mt-12">
+      <div className="mt-8">
         {showPromote ? (
           <AutoOpenDetails
             openOnHash="last-minute-deal"
             className="group/promote scroll-mt-6 border-t border-border"
           >
-            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:text-foreground">
+            <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground">
               <span>{t("trips.guests.promoteHeading")}</span>
               <span className="flex items-center gap-2">
                 {lastMinute.promos.length > 0
@@ -282,7 +282,7 @@ export function TripRosterContent({
         ) : null}
 
         <details className="group/activity border-y border-border">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:text-foreground">
+          <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground">
             <span>{t("trips.guests.activityHeading")}</span>
             <DisclosureCaret direction="down" className="size-4 group-open/activity:rotate-180" />
           </summary>

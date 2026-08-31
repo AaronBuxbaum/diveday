@@ -29,13 +29,13 @@ import {
  * neither is a request nobody can act on (the check constraint on
  * `course_inquiries` says the same thing in SQL).
  *
- * The dates are real `<input type="date">` fields, and the free-text "when
- * suits you" box stays beside them: "any weekend in the autumn" is still a true
- * answer, and a date field cannot hold it. A preferred date with an alternate
- * beside it is a diver stating a range rather than booking a slot — nothing is
- * held, and the staff list at /shop/<shop>/requests is what makes the dates
- * worth collecting at all (it groups by them: "four people could make the
- * 12th" is a departure waiting to be scheduled).
+ * The dates are real `<input type="date">` fields, grouped with the free-text
+ * flexible-timing answer: "any weekend in the autumn" is still a true answer,
+ * and a date field cannot hold it. A preferred date with an alternate beside
+ * it is a diver stating a range rather than booking a slot — nothing is held,
+ * and the staff list at /shop/<shop>/requests is what makes the dates worth
+ * collecting at all (it groups by them: "four people could make the 12th" is a
+ * departure waiting to be scheduled).
  *
  * Submitting records the request server-side (a `course_inquiries` row, via
  * `submitRequest`) and best-effort notifies the shop's own inbox, so a diver on
@@ -97,7 +97,6 @@ export function DateRequestForm({
   const [diversInput, setDiversInput] = useState("1");
   const [experience, setExperience] = useState<CourseInquiryExperience | "">("");
   const [message, setMessage] = useState("");
-  const [experienceMissing, setExperienceMissing] = useState(false);
   const [contactMissing, setContactMissing] = useState(false);
   const [interestMissing, setInterestMissing] = useState(false);
 
@@ -106,24 +105,21 @@ export function DateRequestForm({
   /**
    * What a submission requires before it is worth sending.
    *
-   * Three things, and only three: what it is about (on the schedule page,
-   * where nothing else says), where the diver is up to, because it is the
-   * field the shop reads before anything else they typed, and *some* way to
-   * answer them. Email or phone — either one, never both — because a diver
-   * standing on a dock may only have one of the two, but a lead with neither is
-   * a question nobody can reply to.
+   * Two things, and only two: what it is about (on the schedule page, where
+   * nothing else says) and *some* way to answer them. Email or phone — either
+   * one, never both — because a diver standing on a dock may only have one of
+   * the two, but a lead with neither is a question nobody can reply to. The
+   * experience answer is useful context for the shop, but never a gate.
    *
    * All are evaluated before returning, so a submission missing several shows
    * every refusal at once rather than one, then the next.
    */
   function requireAnswerable(): boolean {
     const hasInterest = !askInterest || Boolean(interest.trim());
-    const hasExperience = Boolean(experience);
     const hasContact = Boolean(email.trim() || phone.trim());
     setInterestMissing(!hasInterest);
-    setExperienceMissing(!hasExperience);
     setContactMissing(!hasContact);
-    return hasInterest && hasExperience && hasContact;
+    return hasInterest && hasContact;
   }
 
   function sendRequest() {
@@ -137,7 +133,7 @@ export function DateRequestForm({
     if (alternateDate) formData.set("alternateDate", alternateDate);
     if (timing) formData.set("timing", timing);
     if (diversInput) formData.set("divers", diversInput);
-    formData.set("experience", experience);
+    if (experience) formData.set("experience", experience);
     if (message) formData.set("message", message);
     startTransition(async () => {
       setState(await submitRequest({}, formData));
@@ -289,52 +285,51 @@ export function DateRequestForm({
               className={controlClass}
             />
           </Field>
-          {/* Two dates rather than one, and both optional. One date on its own
-              reads like a slot being claimed; a first choice with a fallback
-              beside it reads like what it is — a range the shop can answer. */}
-          <Field label={copy.preferredDate} hint={copy.optional}>
-            <input
-              name="preferredDate"
-              type="date"
-              value={preferredDate}
-              onChange={(event) => setPreferredDate(event.target.value)}
-              className={controlClass}
-            />
-          </Field>
-          <Field label={copy.alternateDate} hint={copy.optional}>
-            <input
-              name="alternateDate"
-              type="date"
-              value={alternateDate}
-              onChange={(event) => setAlternateDate(event.target.value)}
-              className={controlClass}
-            />
-          </Field>
-          <Field label={copy.whenSuits} hint={copy.optional} className="sm:col-span-2">
-            <input
-              name="timing"
-              maxLength={200}
-              value={timing}
-              onChange={(event) => setTiming(event.target.value)}
-              placeholder={copy.whenSuitsPlaceholder}
-              className={controlClass}
-            />
-          </Field>
-          <Field
-            label={copy.whereYouAreUpTo}
-            hint={copy.required}
-            className="sm:col-span-2"
-            error={experienceMissing ? t("inquiry.errors.experienceRequired") : null}
-          >
+          {/* These are three ways to describe one answer: a first choice, an
+              alternative, or a flexible window. The fieldset gives them one
+              accessible question and the labels say exactly how each answer is
+              used by the shop. */}
+          <fieldset className="sm:col-span-2">
+            <legend className="text-sm font-semibold">{copy.dateOptionsHeading}</legend>
+            <p className="mt-1 text-sm text-muted">{copy.dateOptionsHint}</p>
+            <div className="mt-3 grid gap-5 sm:grid-cols-2">
+              <Field label={copy.preferredDate} hint={copy.optional}>
+                <input
+                  name="preferredDate"
+                  type="date"
+                  value={preferredDate}
+                  onChange={(event) => setPreferredDate(event.target.value)}
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={copy.alternateDate} hint={copy.optional}>
+                <input
+                  name="alternateDate"
+                  type="date"
+                  value={alternateDate}
+                  onChange={(event) => setAlternateDate(event.target.value)}
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={copy.whenSuits} hint={copy.optional} className="sm:col-span-2">
+                <input
+                  name="timing"
+                  maxLength={200}
+                  value={timing}
+                  onChange={(event) => setTiming(event.target.value)}
+                  placeholder={copy.whenSuitsPlaceholder}
+                  className={controlClass}
+                />
+              </Field>
+            </div>
+          </fieldset>
+          <Field label={copy.whereYouAreUpTo} hint={copy.optional} className="sm:col-span-2">
             <select
               name="experience"
-              required
-              aria-required="true"
               value={experience}
-              onChange={(event) => {
-                setExperience(event.target.value as CourseInquiryExperience | "");
-                setExperienceMissing(false);
-              }}
+              onChange={(event) =>
+                setExperience(event.target.value as CourseInquiryExperience | "")
+              }
               className={controlClass}
             >
               <option value="">{copy.chooseOne}</option>
