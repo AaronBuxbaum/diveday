@@ -411,6 +411,8 @@
     "certificationsClear": "None waiting",
     "noteCount": "{count}",
     "noNotes": "None",
+    "supportCount": "{count, plural, one {# arrangement} other {# arrangements}}",
+    "noSupport": "None stated",
     "gearHeading": "Gear and sizes",
     "rentsFromUs": "Rents from us",
     "sizes": "Sizes",

@@ -48,4 +48,40 @@ describe("DiverFileGroupDisclosure", () => {
     expect(summary).toHaveAttribute("aria-controls", "certifications-content");
     expect(screen.getByTestId("diver-file-group-certifications")).toHaveClass("group/diver-file");
   });
+
+  it("keeps legacy Notes expanded on larger screens", () => {
+    render(
+      <DiverFileGroupDisclosure id="notes" label="Notes" summary="1">
+        <p>Note body</p>
+      </DiverFileGroupDisclosure>,
+    );
+
+    const details = screen.getByTestId("diver-file-group-notes");
+    expect(details.querySelector("summary")).toHaveClass("sm:hidden");
+    expect(details.querySelector(".diver-file-group-content")).toHaveClass("sm:!block");
+    expect(details).not.toHaveClass("diver-file-group--desktop-collapsible");
+  });
+
+  it("keeps a desktop-collapsible group's door and body governed by native details", () => {
+    render(
+      <DiverFileGroupDisclosure
+        id="support"
+        label="Dive support"
+        summary="6 arrangements"
+        desktopCollapsible
+      >
+        <p>Support facts</p>
+      </DiverFileGroupDisclosure>,
+    );
+
+    const details = screen.getByTestId("diver-file-group-support");
+    const summary = details.querySelector("summary");
+    const content = details.querySelector(".diver-file-group-content");
+
+    expect(details).not.toHaveAttribute("open");
+    expect(details).toHaveClass("diver-file-group--desktop-collapsible");
+    expect(summary).not.toHaveClass("sm:hidden");
+    expect(content).not.toHaveClass("sm:!block");
+    expect(summary).toHaveAttribute("aria-controls", "support-content");
+  });
 });

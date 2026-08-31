@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 50425)
+Total output lines: 3224
+
 {
   "conservation": {
     "shopClaimsDisclaimer": "Stated by the shop, not verified by DiveDay.",
@@ -445,7 +448,6 @@
   },
   "reviews": {
     "sectionTitle": "What divers say",
-    "verifiedNote": "every one from a diver who was on the boat",
     "askHeading": "How was your day?",
     "askBody": "Words are welcome but never required.",
     "ratingLegend": "Your rating",
@@ -1876,29 +1878,7 @@
       "switchingFrom": "Switching from {competitor}",
       "previewEyebrow": "Before anything saves",
       "previewTitle": "You see the whole file before a single row lands.",
-      "previewBody": "Upload the CSV and DiveDay shows you its own reading of it: the columns it matched, the ones it will ignore, the divers and certification records it counted, and every row it intends to skip.",
-      "previewMockupLabel": "The DiveDay import preview, showing matched columns, ignored columns, counts, and a skipped row.",
-      "dontSeeSystem": "Something else, or nothing at all?",
-      "dontSeeSystemBody": "Most exports come in as-is — recognizable name, certification, and size columns are all it takes."
-    },
-    "competitor": {
-      "keepOrLeaveEyebrow": "Keep it, or leave it",
-      "forExportPrefix": "For a {competitor} export:",
-      "runTheDay": "Run the dive day {competitor} can't.",
-      "readyToMove": "Ready to make the move off {competitor}?",
-      "walkDemoFirst": "Walk the demo first, then bring your export — the cert checks, waivers, and roll call are already in place.",
-      "otherGuides": "Other switching guides →",
-      "sources": "Sources"
-    },
-    "spreadsheet": {
-      "eyebrow": "Coming from a spreadsheet",
-      "title": "The spreadsheet got you this far.",
-      "heroLede": "It won't flag an unverified certification, chase an unsigned waiver, or let a diver book a seat on a Sunday night. DiveDay reads the sheet you already keep and takes the rest off your hands.",
-      "wedgeIntro1": "A spreadsheet remembers everything and checks nothing. It holds the names and the numbers; the checking — cards, waivers, who's still not ready — is what you're doing by hand right now.",
-      "wedgeIntro2": "That's the trade DiveDay makes worth it. Not a prettier list — the jobs a list can't hold:",
-      "wedge": {
-        "cardsChecked": {
-          "title": "Every certification checked before the boat leaves",
+      "previewBody": "Upload the CSV and DiveDay shows you its own reading of i…425 tokens truncated…boat leaves",
           "body": "DiveDay re-reads each diver's certification against what the trip and the site require, and the ones who can't board yet surface on their own."
         },
         "blockersOnePlace": {

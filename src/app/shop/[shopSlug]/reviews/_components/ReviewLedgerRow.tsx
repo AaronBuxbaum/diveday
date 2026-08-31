@@ -16,8 +16,9 @@ import { ReviewRowActions, type ReviewRowCopy } from "./ReviewRowActions";
  * wherever they are on this page: the stars, the words, the meta line, the
  * acts. What changes between groups is **weight, not anatomy** — a review
  * waiting on a read carries its words at reading size, and one already ruled
- * on carries them quietly on one clipped line, because it is a record rather
- * than work.
+ * on carries them quietly at record size. Both keep the complete words
+ * readable: moderation state changes their weight, not whether a staffer can
+ * read the review.
  *
  * **No state badge.** "Published" / "Hidden" / "Waiting on you" used to ride
  * every row as a pill; it is the one fact every row in a group shares, so it
@@ -79,31 +80,31 @@ export function ReviewLedgerRow({
       }
     >
       <div id={`review-${review.id}`} className="min-w-0 scroll-mt-24">
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
           <StarRating
             rating={review.rating}
             label={t("reviews.rating", { rating: review.rating })}
             className="shrink-0"
           />
-          {review.comment ? (
-            <p
-              className={
-                waiting
-                  ? "min-w-0 flex-1 text-base text-pretty"
-                  : "min-w-0 flex-1 truncate text-sm text-muted"
-              }
-            >
-              {review.comment}
-            </p>
-          ) : (
-            <p className="min-w-0 flex-1 text-sm text-muted italic">{t("reviews.ratingOnly")}</p>
-          )}
           {review.isStandout && review.isPublished ? (
             <Badge tone="primary" size="sm" className="shrink-0">
               {t("reviews.standout")}
             </Badge>
           ) : null}
         </div>
+        {review.comment ? (
+          <p
+            className={
+              waiting
+                ? "mt-1 break-words text-base text-pretty"
+                : "mt-1 break-words text-sm text-muted text-pretty"
+            }
+          >
+            {review.comment}
+          </p>
+        ) : (
+          <p className="mt-1 text-sm text-muted italic">{t("reviews.ratingOnly")}</p>
+        )}
         <p className="mt-1 text-xs text-muted">
           {t.rich("reviews.reviewMeta", {
             diverName: review.diverName,

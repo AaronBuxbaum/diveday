@@ -77,12 +77,7 @@ export function ShopfrontHero({
           </span>
           <span className="tabular-nums">
             {" · "}
-            {t("reviews.count", { count: aggregate.count })} ·{" "}
-            {/* The claim that makes the number mean anything: every one of them
-                came from a diver whose booking sailed. It is a verification
-                promise, so it travels with the figure instead of sitting in a
-                footnote nobody reaches. */}
-            {t("reviews.verifiedNote")}
+            {t("reviews.count", { count: aggregate.count })}
           </span>
         </p>
       )}

@@ -41,9 +41,7 @@ test("a diver's bare rating publishes straight away and reaches the public page"
   // The aggregate is said once, in the shop's identity band — the shelf below
   // quotes divers and opens the archive (ADR
   // 20260827-clearwater-surface-language, decision 8).
-  await expect(page.getByText(/reviews · every one from a diver who was on the boat/)).toHaveCount(
-    1,
-  );
+  await expect(page.getByText("4.3 · 83 reviews")).toHaveCount(1);
 });
 
 test.describe("as owner", () => {
@@ -420,14 +418,11 @@ test("the public review count opens all reviews without trip names", async ({ pa
 
   const heading = page.getByRole("heading", { level: 1, name: "All reviews" });
   await expect(heading).toBeVisible();
-  // The archive joins the display scale, and says the aggregate exactly once —
-  // it used to say it on three lines (stars, then the average and count, then
-  // the verification claim) under a standing description that repeated the
-  // claim a fourth time (ADR 20260827-clearwater-surface-language, decision 8).
+  // The archive joins the display scale, and keeps the aggregate to the count;
+  // the hero owns the average-plus-count line (ADR
+  // 20260827-clearwater-surface-language, decision 8).
   await expect(heading).toHaveClass(/text-4xl/);
-  await expect(page.getByText(/reviews · every one from a diver who was on the boat/)).toHaveCount(
-    1,
-  );
+  await expect(page.getByText(/^\d+ reviews$/)).toHaveCount(1);
   await expect(page.getByText("Read what divers who were on the boat said")).toHaveCount(0);
   await expect(page.getByText("Two-Tank Reef — Molasses & French")).toHaveCount(0);
   await expect(

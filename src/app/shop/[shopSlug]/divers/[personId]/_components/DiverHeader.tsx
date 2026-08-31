@@ -130,7 +130,11 @@ export function DiverHeader({
       {status?.tone === "success" ? <DiverFormStatus status={status} className="-mt-4" /> : null}
       <div className="mt-1 flex flex-wrap items-start gap-2">
         {book}
-        <details open={editOpen} className="group open:w-full">
+        {/* The summary and the full-width form need different flex slots. When
+            open, let the native disclosure keep owning both while its children
+            participate directly in this row: the summary stays beside Book,
+            and the form wraps below without moving that control. */}
+        <details open={editOpen} className="group open:contents">
           <summary
             id="edit-details"
             className={buttonClass({
