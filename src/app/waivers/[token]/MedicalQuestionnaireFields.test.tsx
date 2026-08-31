@@ -2,6 +2,8 @@
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { afterEach, describe, expect, it } from "vitest";
 import type { MedicalQuestionnaire } from "@/lib/medical";
 import { RSTC_QUESTIONNAIRE } from "@/lib/medical";
@@ -209,6 +211,39 @@ describe("prefilled answers", () => {
 
     await user.click(radiosFor("Have you ever had problems with your heart?").no);
     expect(initial).toEqual({ p1: true, box_a_1: true });
+  });
+});
+
+describe("answers made before hydration", () => {
+  it("keeps the answer and opens its Box when JavaScript arrives", async () => {
+    // This is the progressively enhanced path a real diver can take on slow
+    // dock wifi: the server-rendered radio is usable before the client bundle
+    // attaches. Hydration must learn that DOM choice rather than redraw the
+    // question as unanswered.
+    const host = document.createElement("div");
+    document.body.append(host);
+    host.innerHTML = renderToString(
+      <MedicalQuestionnaireFields questionnaire={BRANCHING} {...LABELS} />,
+    );
+    const heart = within(host).getByRole("group", {
+      name: "Have you ever had problems with your heart?",
+    });
+    const yes = within(heart).getByRole("radio", { name: COPY.yesLabel });
+    yes.click();
+    expect(yes).toBeChecked();
+
+    const root = hydrateRoot(
+      host,
+      <MedicalQuestionnaireFields questionnaire={BRANCHING} {...LABELS} />,
+    );
+    try {
+      await expect
+        .poll(() => within(host).queryByRole("group", { name: "Heart surgery" }))
+        .not.toBeNull();
+    } finally {
+      root.unmount();
+      host.remove();
+    }
   });
 });
 
