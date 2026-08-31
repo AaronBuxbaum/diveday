@@ -7,7 +7,8 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
  * Diver record file groups use one native disclosure tree at every viewport.
  * Legacy groups become doors on a phone, while `desktopCollapsible` groups
  * retain their door on larger screens too. A group's summary is its one useful
- * fact, not a second version of the group.
+ * fact, not a second version of the group. Long facts can opt into `stacked`
+ * so they get a full-width line beneath the group label on a phone.
  */
 export function DiverFileGroupDisclosure({
   id,
@@ -15,6 +16,7 @@ export function DiverFileGroupDisclosure({
   summary,
   open = false,
   desktopCollapsible = false,
+  stacked = false,
   className = "",
   children,
 }: {
@@ -24,6 +26,8 @@ export function DiverFileGroupDisclosure({
   open?: boolean;
   /** Keep the native door on larger screens too; legacy file groups stay open there. */
   desktopCollapsible?: boolean;
+  /** Put a long summary on its own, label-aligned line below `sm`. */
+  stacked?: boolean;
   className?: string;
   children: ReactNode;
 }) {
@@ -65,6 +69,13 @@ export function DiverFileGroupDisclosure({
   const summaryVisibility = desktopCollapsible ? "" : "sm:hidden";
   const contentVisibility = desktopCollapsible ? "" : "sm:!block";
   const desktopModeClass = desktopCollapsible ? "diver-file-group--desktop-collapsible" : "";
+  const summaryLayoutClass = stacked
+    ? "max-sm:flex-col max-sm:items-stretch max-sm:gap-1 max-sm:py-2 max-sm:border-b-0"
+    : "";
+  const summaryGroupClass = stacked ? "max-sm:w-full" : "";
+  const summaryFactClass = stacked
+    ? "min-w-0 max-w-full text-sm text-muted tabular-nums max-sm:ms-6 max-sm:whitespace-normal max-sm:break-words sm:shrink-0 sm:text-end"
+    : "shrink-0 text-sm text-muted tabular-nums";
 
   return (
     <section aria-label={label} className={className || undefined}>
@@ -76,11 +87,13 @@ export function DiverFileGroupDisclosure({
       >
         <summary
           aria-controls={`${id}-content`}
-          className={`flex min-h-11 cursor-pointer items-center gap-3 border-y border-border px-1 py-3 ${summaryVisibility}`.trim()}
+          className={`flex min-h-11 cursor-pointer items-center gap-3 border-y border-border px-1 py-3 ${summaryLayoutClass} ${summaryVisibility}`.trim()}
         >
-          <DisclosureCaret className="shrink-0 text-muted group-open/diver-file:rotate-90" />
-          <span className="min-w-0 flex-1 text-base font-medium">{label}</span>
-          <span className="shrink-0 text-sm text-muted tabular-nums">{summary}</span>
+          <span className={`flex min-w-0 items-center gap-3 ${summaryGroupClass} sm:flex-1`.trim()}>
+            <DisclosureCaret className="shrink-0 text-muted group-open/diver-file:rotate-90" />
+            <span className="min-w-0 flex-1 text-base font-medium">{label}</span>
+          </span>
+          <span className={summaryFactClass}>{summary}</span>
         </summary>
         <div
           id={`${id}-content`}

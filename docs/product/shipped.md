@@ -1289,7 +1289,9 @@ record-level facts. **It renders nothing at all when the diver is clear**, and t
 pinned twice. The story folds Payments, Upcoming and Shop history into one chronological ledger
 where a seat appears exactly once carrying its own money fact, imported visits interleaved and
 never doors; the file is Certifications (all three card kinds as one group with one add flow),
-Waiver, Gear and sizes, Dive support, Notes, and the audit trail as a folded group. **Book a
+Waiver, Gear and sizes, Dive support, Notes, and the audit trail as a folded group. On a phone,
+the long Gear summary stacks beneath its title so the size list stays readable without widening
+the record; compact file facts remain single-line doors. **Book a
 departure is the one primary**, pinned by a source sweep. Deleted (H-49): the jump nav, the stat
 tiles, `CertificationCards`/`SpecialtyCards`, `PaymentsSection`/`UpcomingTripsSection`/`ShopHistory`
 /`BookingMoneyCell`, `RentalFit`, `CardStatusMark`, the record's refund control and its four notice
