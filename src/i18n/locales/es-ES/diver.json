@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 55573)
-Total output lines: 3224
-
 {
   "conservation": {
     "shopClaimsDisclaimer": "Declarado por el centro, no verificado por DiveDay.",
@@ -1718,7 +1715,417 @@ Total output lines: 3224
       "submit": "Crear contraseña e iniciar sesión"
     },
     "verify": {
-      "title": "Confirma…5573 tokens truncated…te certificado para lo que va a bucear a continuación.",
+      "title": "Confirma tu correo electrónico",
+      "confirming": "Confirmando…",
+      "submit": "Confirmar mi correo",
+      "confirmedTitle": "Correo confirmado",
+      "confirmedText": "Todo listo.",
+      "unavailableTitle": "Este enlace de confirmación no está disponible",
+      "unavailableText": "Si ya confirmaste tu correo, todo listo — inicia sesión y continúa."
+    },
+    "resetPassword": {
+      "unavailableTitle": "Este enlace de restablecimiento no está disponible",
+      "unavailableText": "Puede haber caducado o haberse usado ya. Pide uno nuevo desde la página de inicio de sesión.",
+      "title": "Crea una nueva contraseña",
+      "description": "Elige una nueva contraseña para tu cuenta de DiveDay.",
+      "newPassword": "Nueva contraseña",
+      "confirmPassword": "Confirmar nueva contraseña",
+      "submit": "Guardar nueva contraseña"
+    },
+    "signIn": {
+      "metaTitle": "Iniciar sesión — DiveDay",
+      "title": "Bienvenido de nuevo",
+      "error": "Ese correo y contraseña no coinciden.",
+      "twoFactorCode": "Código de autenticación o recuperación",
+      "twoFactorHint": "Escribe el código de seis cifras de tu aplicación o un código de recuperación sin usar.",
+      "twoFactorRequired": "Esta cuenta necesita un segundo factor antes de iniciar sesión.",
+      "sessionEnded": "Se cerró tu sesión porque esta cuenta ya no está activa. Contacta al propietario del centro si esto no era lo esperado.",
+      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "signingIn": "Iniciando sesión…",
+      "submit": "Iniciar sesión",
+      "needShop": "¿Necesitas un centro?",
+      "createShop": "Crear un centro",
+      "publicSchedule": "¿Buscas el calendario de buceo?"
+    },
+    "onboard": {
+      "eyebrow": "Empieza un centro",
+      "title": "Abre tu centro",
+      "shopSectionTitle": "Tu centro",
+      "shopNameLabel": "Nombre del centro",
+      "shopNamePlaceholder": "p. ej. Green Lagoon Divers",
+      "shopLinkLabel": "Enlace del centro",
+      "shopLinkUrlHint": "Tu horario estará en",
+      "shopLinkPlaceholder": "p. ej. green-lagoon",
+      "shopLinkTitle": "Letras minúsculas, números y guiones — esto se convierte en la dirección web de tu centro",
+      "timezoneLabel": "Zona horaria",
+      "timezoneGroup": {
+        "americas": "América",
+        "caribbean": "Caribe y México",
+        "europeRedSea": "Europa y mar Rojo",
+        "asiaPacific": "Asia-Pacífico",
+        "allZones": "Todas las zonas horarias"
+      },
+      "timezone": {
+        "eastern": "Hora del Este (Nueva York)",
+        "central": "Hora Central (Chicago)",
+        "mountain": "Hora de Montaña (Denver)",
+        "pacific": "Hora del Pacífico (Los Ángeles)",
+        "hawaii": "Hawái (Honolulu)",
+        "cancun": "Cancún / Cozumel",
+        "belize": "Belice",
+        "roatan": "Roatán / Honduras",
+        "cayman": "Islas Caimán",
+        "puertoRico": "Puerto Rico / Caribe oriental",
+        "nassau": "Nasáu, Bahamas",
+        "bonaire": "Bonaire / Curazao",
+        "london": "Londres",
+        "cairo": "El Cairo / mar Rojo",
+        "maldives": "Maldivas",
+        "singapore": "Singapur",
+        "bangkok": "Bangkok",
+        "jakarta": "Yakarta / Indonesia occidental",
+        "bali": "Bali / Komodo (Indonesia central)",
+        "manila": "Manila",
+        "sydney": "Sídney",
+        "auckland": "Auckland",
+        "palau": "Palaos",
+        "fiji": "Fiyi"
+      },
+      "youSectionTitle": "Tú",
+      "fullNameLabel": "Nombre completo",
+      "fullNamePlaceholder": "p. ej. Dana Reyes",
+      "emailPlaceholder": "p. ej. owner@example.com",
+      "passwordPlaceholder": "Al menos 8 caracteres",
+      "demoNote": "¿Quieres explorar primero un centro de muestra?",
+      "tryLiveDemo": "Probar la demo en vivo",
+      "settingUp": "Configurando tu centro…",
+      "submit": "Crear centro y empezar la prueba",
+      "trialNote": "Gratis durante 3 semanas, sin tarjeta — y nada se apaga cuando termina el plazo.",
+      "alreadyHaveShop": "¿Ya tienes un centro?",
+      "signIn": "Iniciar sesión",
+      "errors": {
+        "invalidInput": "Revisa el formulario e inténtalo de nuevo",
+        "shopNameRequired": "El nombre del centro es obligatorio",
+        "shopSlugRequired": "El enlace del centro es obligatorio",
+        "shopSlugInvalid": "El enlace del centro solo puede contener letras, números y guiones",
+        "timezoneRequired": "La zona horaria es obligatoria",
+        "timezoneInvalid": "No es una zona horaria reconocida",
+        "ownerNameRequired": "El nombre completo es obligatorio",
+        "ownerEmailInvalid": "Dirección de correo electrónico no válida",
+        "ownerPasswordTooShort": "La contraseña debe tener al menos {min} caracteres",
+        "ownerPasswordTooLong": "La contraseña debe tener como máximo {max} caracteres",
+        "shopSlugTaken": "El enlace del centro “{slug}” ya está en uso.",
+        "emailTaken": "Este correo ya está registrado.",
+        "emailReserved": "Esa dirección de correo no puede usarse para una cuenta de centro. Usa una dirección que pueda recibir correo.",
+        "createFailed": "Algo salió mal al crear tu centro.",
+        "signinFailed": "Tu centro se creó, pero no pudimos iniciar tu sesión. Prueba a iniciar sesión más abajo."
+      }
+    }
+  },
+  "switching": {
+    "common": {
+      "backToGuides": "← Todas las guías de cambio",
+      "contextEyebrow": "Dónde estás hoy",
+      "heroCtaNote": "La demo es un centro que funciona de verdad — sin registro, sin nada que importar y sin nada que deshacer.",
+      "facts": {
+        "moves": {
+          "label": "Qué se traslada",
+          "value": "Lo que traiga tu archivo: personas, registros de certificación, tallas, exenciones, historial de visitas."
+        },
+        "time": {
+          "label": "Cuánto tarda",
+          "value": "Una tarde. Exportar, revisar, importar — de una sentada."
+        },
+        "preview": {
+          "label": "Antes de guardar",
+          "value": "No entra nada hasta que leas la vista previa y digas adelante."
+        },
+        "back": {
+          "label": "La salida",
+          "value": "Lo que llega puede salir por el mismo sitio."
+        }
+      },
+      "moveTitle": "Cómo funciona el cambio",
+      "moveIntro": "Cada paso lo llevas tú, a tu ritmo. ¿Prefieres delegarlo? Envíanos el archivo y una persona trae a tus buceadores contigo, gratis.",
+      "scopeTableTitle": "Qué se traslada — y qué no",
+      "scopeTableDescription": "La misma tabla que DiveDay te muestra antes de importar una sola fila.",
+      "comesAcross": "Se traslada",
+      "seePricing": "Ver cuánto cuesta DiveDay →",
+      "staysBehind": "Se queda atrás",
+      "bothWaysTitle": "La misma tabla, leída al revés.",
+      "bothWaysBody": "Todo lo de arriba es lo que llega. Lo que llega también es lo que sale: {claim}",
+      "bringFileTitle": "Trae el archivo a DiveDay",
+      "bringFileIntro": "El resto está en DiveDay y lleva minutos.",
+      "openSettingsTitle": "Abre Ajustes → Importar contactos",
+      "openSettingsBody": "El propietario o gerente sube el CSV en tu centro de DiveDay.",
+      "checkPreviewTitle": "Revisa la vista previa",
+      "checkPreviewBody": "DiveDay mapea tus columnas y muestra cómo quedó cada una, qué deja fuera y las filas que no puede traer. Un buceador con correo coincidente se actualiza, no se duplica. No se guarda nada hasta que confirmes.",
+      "importReadyTitle": "Importar — tu plantel está listo",
+      "importReadyBody": "El plantel, las tallas y los registros de certificación quedan listos de inmediato. Llegan verificados y marcados como importados, con una confirmación de un toque para el personal; solo una inmersión que exige una especialidad espera esa confirmación.",
+      "openImportCta": "Abrir Importar en tu centro",
+      "midCtaTitle": "¿Prefieres verlo a leerlo?",
+      "midCtaBody": "Recorre la demo en vivo como propietario, capitán o buceador — con las mismas verificaciones de certificación, exenciones y pase de lista donde aterriza tu archivo."
+    },
+    "hub": {
+      "eyebrow": "Cambiarte a DiveDay",
+      "title": "La puerta se abre en ambos sentidos.",
+      "description": "Entrar cuesta un archivo. Salir cuesta un botón. Encuentra lo que usas hoy — cada guía muestra ambas cosas.",
+      "spreadsheetTitle": "Vienes de una hoja de cálculo",
+      "spreadsheetDescription": "Trae la hoja que ya llevas y añade los trabajos que una lista no puede hacer, como verificar cada certificación antes de que salga el barco.",
+      "switchingFrom": "Cambiando desde {competitor}",
+      "previewEyebrow": "Antes de guardar nada",
+      "previewTitle": "Ves el archivo entero antes de que caiga una sola fila.",
+      "previewBody": "Sube el CSV y DiveDay te muestra su propia lectura: las columnas que reconoció, las que va a ignorar, los buceadores y registros de certificación que contó, y cada fila que piensa omitir.",
+      "previewMockupLabel": "La vista previa de importación de DiveDay, con las columnas reconocidas, las ignoradas, los recuentos y una fila omitida.",
+      "dontSeeSystem": "¿Otra cosa, o nada en absoluto?",
+      "dontSeeSystemBody": "La mayoría de las exportaciones entran tal cual — basta con columnas reconocibles de nombre, certificación y talla."
+    },
+    "competitor": {
+      "keepOrLeaveEyebrow": "Consérvalo, o déjalo",
+      "forExportPrefix": "Para una exportación de {competitor}:",
+      "runTheDay": "Lleva el día de buceo que {competitor} no puede.",
+      "readyToMove": "¿Listo para dejar {competitor}?",
+      "walkDemoFirst": "Recorre primero la demo, luego trae tu exportación — las verificaciones de certificación, las exenciones y el pase de lista ya están en marcha.",
+      "otherGuides": "Otras guías de cambio →",
+      "sources": "Fuentes"
+    },
+    "spreadsheet": {
+      "eyebrow": "Vienes de una hoja de cálculo",
+      "title": "La hoja de cálculo te trajo hasta aquí.",
+      "heroLede": "No marcará una certificación sin verificar, no perseguirá una exención sin firmar ni dejará que un buceador reserve plaza un domingo por la noche. DiveDay lee la hoja que ya llevas y se encarga del resto.",
+      "wedgeIntro1": "Una hoja de cálculo lo recuerda todo y no verifica nada. Guarda los nombres y los números; verificar — tarjetas, exenciones, quién sigue sin estar listo — es lo que ahora haces a mano.",
+      "wedgeIntro2": "Ese es el cambio que hace que valga la pena. No una lista más bonita — los trabajos que una lista no puede sostener:",
+      "wedge": {
+        "cardsChecked": {
+          "title": "Cada certificación verificada antes de que salga el barco",
+          "body": "DiveDay vuelve a leer la certificación de cada buceador frente a lo que exigen el viaje y el sitio, y quienes todavía no pueden embarcar salen a la superficie solos."
+        },
+        "blockersOnePlace": {
+          "title": "Los bloqueos del día en un solo lugar",
+          "body": "Una pantalla muestra quién todavía no puede embarcar y por qué — una exención que falta, una certificación por verificar — para que nada se recuerde en el muelle."
+        },
+        "diversBookThemselves": {
+          "title": "Los buceadores reservan y firman solos",
+          "body": "Un buceador elige su plaza y firma la exención desde un enlace, sin cuenta y sin app — la persecución de firmas en el muelle casi desaparece."
+        },
+        "manifestHeadCount": {
+          "title": "Un listado que es un recuento, no una impresión",
+          "body": "El capitán marca a los buceadores inmersión por inmersión en un teléfono — trabajando desde una copia guardada en él antes de salir del muelle, así que el pase de lista sigue funcionando cuando falla la señal, y luego se verifica contra el listado en vivo cuando vuelve el servicio."
+        }
+      },
+      "columnsTitle": "¿Tu hoja tiene estas columnas?",
+      "columnsIntro": "Una fila por buceador, guardada como CSV. Tus encabezados no tienen que coincidir con nada — DiveDay reconoce los nombres habituales y marca los que no.",
+      "downloadTemplate": "Descargar la plantilla inicial (CSV)",
+      "columns": {
+        "name": {
+          "column": "Nombre",
+          "detail": "Nombre y apellido en dos columnas, o una sola columna con el nombre completo. Es lo único que una fila necesita de verdad."
+        },
+        "email": {
+          "column": "Correo",
+          "detail": "Así DiveDay contacta a un buceador y reconoce a quien vuelve, de modo que una segunda importación lo actualiza en vez de duplicarlo. Una fila sin correo también entra."
+        },
+        "phone": {
+          "column": "Teléfono",
+          "detail": "Móvil o fijo, como lo tengas escrito."
+        },
+        "dateOfBirth": {
+          "column": "Fecha de nacimiento",
+          "detail": "Una fecha real de nacimiento se traslada cuando el archivo la incluye."
+        },
+        "emergencyContact": {
+          "column": "Contacto de emergencia",
+          "detail": "Un nombre y un teléfono, cuando los tengas, aterrizan en la ficha del buceador."
+        },
+        "diveInsurance": {
+          "column": "Seguro de buceo",
+          "detail": "Un número de DAN, el nombre de un proveedor — se traslada tal cual. Nunca es una barrera; es lo que la tripulación quiere a mano en un incidente."
+        },
+        "certification": {
+          "column": "Certificación",
+          "detail": "Agencia, nivel y número de certificación. El número de certificación es lo que permite trasladar el registro."
+        },
+        "specialty": {
+          "column": "Especialidad",
+          "detail": "Profundidad, naufragios, nocturna o traje seco. Una celda puede nombrar varias (“Profundidad, Naufragios”) y cada una se convierte en su propia certificación bajo el número de agencia del buceador."
+        },
+        "nitrox": {
+          "column": "Nitrox",
+          "detail": "Una columna de sí/no, más el número de certificación de nitrox si lo llevas — eso es lo que la traslada."
+        },
+        "rentalSizes": {
+          "column": "Tallas de alquiler",
+          "detail": "BCD, traje, bota y aleta — las tallas que ya llevas se convierten en un perfil de ajuste."
+        },
+        "pastVisits": {
+          "column": "Visitas anteriores",
+          "detail": "Una fecha, el nombre del viaje y el precio por fila se vuelven el historial de ese buceador, así un habitual llega como habitual. Repite su correo en cada fila para asociarlo a la persona correcta."
+        },
+        "waivers": {
+          "column": "Exenciones y documentos",
+          "detail": "Puede trasladarse una exención firmada y enlaces seguros; no se trasladan respuestas médicas individuales."
+        },
+        "paymentHistory": {
+          "column": "Historial de pagos",
+          "detail": "Los pagos, reembolsos y recibos pueden conservarse como historial sin verificar, nunca como datos de tarjeta activos."
+        },
+        "notes": {
+          "column": "Notas",
+          "detail": "Las notas del personal y del buceador se convierten en notas privadas del perfil."
+        },
+        "gearHistory": {
+          "column": "Historial del equipo",
+          "detail": "Un CSV separado trae las unidades etiquetadas y sus registros fechados de mantenimiento, inspección y estado."
+        }
+      },
+      "parallelRunNote": "Sigue usando la hoja todo el tiempo que quieras. Una reimportación reconoce a los buceadores por correo y los actualiza en vez de duplicarlos, así que el día que dejes de mantenerla lo eliges tú.",
+      "closingTitle": "Míralo antes de cambiar nada.",
+      "closingDescription": "Recorre la demo en vivo como propietario, capitán o buceador — sin registro, solo el centro funcionando.",
+      "otherSystems": "Cambiar desde otro software →"
+    },
+    "concierge": {
+      "eyebrow": "Una persona, no un asistente automático",
+      "title": "Te ayudamos a cambiarte — y a salir — nosotros mismos.",
+      "description": "Envíanos lo que tengas —una exportación limpia o una década de pestañas desordenadas— y mapeamos las columnas y traemos a tus buceadores contigo, gratis. Si algún día DiveDay no encaja, te ayudamos a llevártelo todo de vuelta con la misma cercanía.",
+      "emailCta": "Escríbenos a {email}"
+    }
+  },
+  "nav": {
+    "product": "Producto",
+    "pricing": "Precios",
+    "switch": "Cambiar",
+    "about": "Quiénes somos",
+    "signIn": "Iniciar sesión",
+    "goToShop": "Ir a tu centro",
+    "mainNavigation": "Navegación principal",
+    "skipToContent": "Saltar al contenido principal",
+    "tagline": "Una forma más tranquila de llevar un día de buceo.",
+    "sayHello": "Escríbenos — siempre es bienvenido",
+    "gettingReady": "Preparando tu centro…",
+    "tryDemo": "Probar la demo en vivo"
+  },
+  "fallback": {
+    "offlineCopy": "Copia sin conexión · al día",
+    "tripDetail": "Detalle del viaje",
+    "schedule": "Horario",
+    "boatManifest": "Listado del barco",
+    "tripName": "Arrecife de dos tanques",
+    "tripTime": "Hoy · 7:30–11:00",
+    "diversLabel": "Buceadores",
+    "readyLabel": "Listos",
+    "boardedLabel": "Embarcados",
+    "rollCall": "Pase de lista",
+    "readyToBoard": "Listo para embarcar",
+    "markBoarded": "Marcar embarcado",
+    "readiness": "Preparación",
+    "answerBeforeDock": "La respuesta antes del muelle",
+    "noDiverClears": "Ningún buceador se autoriza hasta que todo esté en orden.",
+    "waiverNeedsAttention": "La exención necesita atención",
+    "certificationPending": "Certificación pendiente",
+    "upcomingTrips": "Próximos viajes",
+    "findNextDive": "Encuentra tu próxima inmersión",
+    "nightDive": "Inmersión nocturna",
+    "tomorrowTime": "Mañana · 7:30",
+    "fridayTime": "Viernes · 19:30",
+    "spotsLeft": "{count, plural, one {queda # plaza} other {quedan # plazas}}",
+    "full": "Completo",
+    "recap": {
+      "label": "Resumen de la inmersión",
+      "greeting": "Qué buena inmersión, Priya.",
+      "tripLine": "Arrecife de dos tanques · Sábado · 14 de junio",
+      "completed": "Completada",
+      "visibility": "Visibilidad",
+      "water": "Agua",
+      "crewNoteLabel": "De tu tripulación",
+      "crewNote": "Una primera inmersión tranquila y después una deriva brillante sobre el arrecife. Gracias por bucear con nosotros.",
+      "recordHeading": "Registro de la inmersión",
+      "visits": "Tu 3.er día de buceo",
+      "boatLabel": "Barco",
+      "sitesLabel": "Puntos",
+      "conditionsLabel": "Condiciones",
+      "reviewAsk": "¿Qué tal tu día?",
+      "reviewSubmit": "Enviar mi opinión"
+    },
+    "import": {
+      "label": "Vista previa de importación",
+      "eyebrow": "Trayendo a tus buceadores",
+      "title": "No se guarda nada hasta que tú lo digas.",
+      "fieldName": "Nombre completo",
+      "fieldEmail": "Correo",
+      "fieldCard": "Nivel de certificación",
+      "fieldSuit": "Talla de traje",
+      "ignored": "No reconocidas, así que se ignoran: legacy_id, pos_sync_id.",
+      "statDivers": "Buceadores en el archivo",
+      "statCards": "Certificaciones",
+      "statSkipped": "Omitidos",
+      "noName": "— sin nombre —",
+      "skippedBadge": "omitido",
+      "cardLine": "{level} · importado",
+      "emptyValue": "—"
+    },
+    "export": {
+      "label": "Exportar datos",
+      "eyebrow": "Ajustes",
+      "title": "Todo, en CSV normal.",
+      "download": "Descargar exportación",
+      "bundleHeading": "Qué incluye el paquete",
+      "fileCount": "44 archivos, con el número de filas de cada uno",
+      "contactsNote": "Una fila por persona, con el formato que espera el importador de otro sistema.",
+      "waiversNote": "Exenciones firmadas con su hash de integridad y el texto que se firmó.",
+      "bookingsNote": "Cada reserva con su salida, su buceador y su estado de pago.",
+      "rowCount": "{count, plural, one {# fila} other {# filas}}",
+      "notIncludedLabel": "Lo que no se incluye, a propósito:",
+      "notIncludedText": "contraseñas y claves push de cada dispositivo: credenciales que ningún otro sistema podría usar de todos modos."
+    },
+    "nightBefore": {
+      "label": "Resumen de preparación",
+      "eyebrow": "Breve de mañana",
+      "title": "Arrecife de dos tanques",
+      "time": "Mañana · llegada a las 7:30",
+      "weatherLabel": "Clima",
+      "weatherValue": "Soleado",
+      "checklist": "Tu lista de control previa al viaje",
+      "waiver": "Exención",
+      "cert": "Certificación",
+      "payment": "Pago"
+    },
+    "shopPrep": {
+      "label": "Preparación de salida",
+      "eyebrow": "Organización de equipo y tripulación",
+      "title": "Arrecife dos botellas matinal",
+      "time": "Mañana · Salida a las 8:00",
+      "diversLabel": "Buceadores",
+      "rentalsLabel": "Kits de alquiler",
+      "tanksLabel": "Botellas cargadas",
+      "checklistHeading": "Lista de preparación",
+      "gearStaged": "Equipos de alquiler preparados",
+      "tanksReady": "Botellas analizadas y a bordo",
+      "crewAssigned": "Tripulación asignada (Mateo y Sarah)",
+      "manifestReady": "Lista y manifiesto listos"
+    }
+  },
+  "demo": {
+    "shopLabel": "Centro de demostración",
+    "viewingAs": "Viendo como",
+    "switchRole": "Cambiar de rol",
+    "sharedWarning": "Enlace de demo compartido — no introduzcas datos reales de clientes.",
+    "sessionExpired": "¿Sesión caducada? Vuelve a iniciar sesión en",
+    "withCredentials": "con",
+    "active": "Activo",
+    "tryLabel": "Prueba:",
+    "current": "Actual",
+    "switchAction": "Cambiar",
+    "switchFailed": "El cambio de rol no se realizó.",
+    "switchToAria": "Cambiar a {role}",
+    "roles": {
+      "owner": {
+        "title": "Administrador / Propietario",
+        "desc": "Control total del negocio. Crea viajes, gestiona al personal y consulta los informes operativos.",
+        "tryThis": "Revisa el panel de Informes o programa un viaje."
+      },
+      "instructor": {
+        "title": "Instructor",
+        "desc": "Asignado a impartir cursos, y se asegura de que cada estudiante esté realmente certificado para lo que va a bucear a continuación.",
         "tryThis": "Abre un viaje de curso Discover Scuba para ver las asignaciones de personal."
       },
       "divemaster": {

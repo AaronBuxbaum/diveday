@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 67006)
-Total output lines: 3307
-
 # Shipped
 
 What DiveDay has already built, as a scannable index. This is the "what exists" map; the *why* and
@@ -1234,7 +1231,851 @@ comes from the caller's translated label.
 
 ## The homepage says the morning (delivered 2026-08-28)
 
-Slice 12a of [marketing-review-20260827.md](marketing-review-20260827.md), the firs…17006 tokens truncated… shared or reassigned boat tablet, never ran one. The shell runs it on load and
+Slice 12a of [marketing-review-20260827.md](marketing-review-20260827.md), the first of that
+review's six to land, against its first two diagnoses: the persuasion gradient is inverted, and the
+terms never stand at the doors. **The hero asks the questions only a dive shop asks** — "Who's
+booked, who's cleared, who's on the boat — one answer, all day." — and its description drops the
+internal word *readiness* for the differentiator underneath it: when a diver isn't ready, DiveDay
+says so at the desk, not at the dock. **The flat price reaches the first screen** as a muted
+sentence under the demo note, interpolated from `earlyAccessPrice` like every other rendering of
+the figure; it is deliberately not a third door, so the hero's one-primary-one-secondary budget is
+exactly what it was. The closing band keeps the two-year lock.
+
+Two cuts and a rewrite came with it. The moments band said the same sentence twice, as an `h2` and
+as the lede under it, so the lede is **gone** and the sentence promoted: "The desk clears it in the
+morning. The captain sees it at the dock." The diver row now leads with the clause that was buried
+at the end of it. And the four breadth cards stopped listing capabilities and started describing an
+owner's day — divers booking and paying themselves with no phone tag, the missing waiver found
+while there is still time to fix it, the captain leaving with the head count you cleared, tomorrow's
+shift opening on what actually happened. `diveDay`'s card lost "one source of truth", software
+jargon standing where its own closing clause already said it better: the counter and the boat read
+the same thing.
+
+Two rules are pinned rather than remembered: `e2e/marketing.spec.ts` still counts the hero's
+enabled controls (and now asserts the price arrived inside that budget as text carrying no link or
+button), and `src/lib/marketing.test.ts` refuses a currency figure anywhere in a `marketing.*`
+message in either locale, so H-12's single price source cannot be quietly copied into a bundle.
+## Onboard is the shop's first form (delivered 2026-08-28)
+
+Slice 10b of [20260827-first-light](../architecture/decisions/20260827-first-light.md). `/onboard`
+stops speaking a pre-Clearwater grammar: its two `text-lg` h2s over `border-b` hairlines become the
+program's one **group label** spelling ("Your shop" / "You" — the element stays an `<h2>`, so the
+outline a screen reader walks is unchanged), and the four-sentence reassurance under the primary
+collapses to **one** — *"Free for 3 weeks, no card — and nothing switches off when the window
+ends."* That sentence is also the marketing review's day-22 answer
+([marketing-review-20260827.md](marketing-review-20260827.md), the `/onboard` half of slice 12c):
+the old line said "free for 3 weeks" and never said what happens on the 22nd day, which a burned
+buyer reads as a card wall. Soft expiry is real — `src/lib/trial.ts` switches nothing off.
+
+The shop-link field's description is no longer a sentence about what the field is for; it is the
+**storefront address the box produces, written live as the owner types** — "Your schedule will live
+at dive.day/s/torchlight", normalized (a capital or a trailing hyphen never renders as a broken
+address) and built from the configured `APP_HOST` rather than a literal. `SuggestShopLink` owns
+both halves and mounts in that description slot; it renders **nothing** while the field carries a
+refusal, because a cheerful address under "that link is taken" argues with the refusal. Field
+order, names, the timezone picker, error routing, value echo, the `trial_started` event and the
+`after()` alert fan-out are all untouched — the last of those now pinned, along with the sign-up
+form's deliberate "this address is already registered" exception to the account doors'
+enumeration silence.
+## The diver record answers one question (delivered 2026-08-28)
+
+Slice 8b of [20260827-people-not-lists](../architecture/decisions/20260827-people-not-lists.md),
+decision 1, closing issue #780's "unanswered" record. `/shop/[shopSlug]/divers/[personId]` is now a
+masthead, a **status ledger**, one **story**, and the **file** as inset groups. The status ledger
+is the record's idea: zero or more open items in the home's station grammar — a kind word with the
+tone in its ink, one sentence, one fix — assembled by `_lib/status.ts` from the readiness of the
+diver's next departure (through `getBookingReadiness`, never a second detector) plus four
+record-level facts. **It renders nothing at all when the diver is clear**, and that silence is
+pinned twice. The story folds Payments, Upcoming and Shop history into one chronological ledger
+where a seat appears exactly once carrying its own money fact, imported visits interleaved and
+never doors; the file is Certifications (all three card kinds as one group with one add flow),
+Waiver, Gear and sizes, Dive support, Notes, and the audit trail as a folded group. **Book a
+departure is the one primary**, pinned by a source sweep. Deleted (H-49): the jump nav, the stat
+tiles, `CertificationCards`/`SpecialtyCards`, `PaymentsSection`/`UpcomingTripsSection`/`ShopHistory`
+/`BookingMoneyCell`, `RentalFit`, `CardStatusMark`, the record's refund control and its four notice
+codes (money out is the Orders ledger's act, where the form can send back a partial amount), and
+the Connect-payments CTA. The record's one coral moment is `diver-clear`: the verify and paper-waiver
+actions re-read the record and, when nothing is left waiting, answer with "That was the last thing"
+instead of their ordinary success code. Pinned by `_lib/status.test.ts`,
+`_lib/record-primaries.test.ts`, `_components/DiverStatusLedger.test.tsx`,
+`_components/DiverStory.test.tsx` and `paper-waiver.action.test.ts`.
+## The storefront leads with the shop (delivered 2026-08-28)
+
+Slice 6i of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
+decision 8. `/s/[shopSlug]` opens on **the shop**, not on the word "Schedule": the name at display
+scale as the page's `h1`, the shop's own tagline, the review aggregate — drawn stars in the accent,
+the figure and the count — and one conservation line joining every commitment the shop ticked,
+with the "stated by the shop, not verified by DiveDay" guard intact behind it. The band renders
+**only what the shop authored**: no tagline it
+has not written, no rating nobody has left, no DiveDay filler in place of either. Day zero is a
+name and nothing else, and it is a shape rather than a failure state.
+
+Immediately beneath it in the same reading flow, the **next boat as a bookable object** — the
+page's one card and its one primary, "Book this boat" into the trip page's `#book`.
+`pinnedNextDeparture` became `nextBookableDeparture`: the
+pin used to stand down whenever the week's own first row already had room, and the storefront makes
+the next boat the page's subject instead, so the card always renders and the week below keeps that
+departure's row. The week is the same day-grouped ledger at **one meta line per row** — course
+session, where it goes, what it asks of you — with the seat state and the price as its trailing
+facts; the shop's description, the labelled dive-site and certification lines and the two-tank
+aside all left, and their keys left both locales with them. Full rows dim under a neutral badge,
+scarcity keeps its warning words, and a departure with no price shows no price. Courses and reviews
+follow as shelves (a drawn swell stands in for a course with no photo, in the primary tint, never
+the accent), the review archive restyles to the same ledger and says its aggregate once, and the
+two public course routes took the display-scale `h1` and nothing else. `?embed=1` renders neither
+the band nor the shelves — the widget stays the list-first window onto the schedule.
+
+## The counter becomes a boarding instrument (delivered 2026-08-28)
+
+Slice 6h of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
+decision 9. `/shop/[shopSlug]/check-in` **counts before it lists**: one departure is in focus, its
+head count leads as a figure over a 5px meter, and the day's other boats are a strip of segmented
+chips above it. **The focus lives in the URL** (`?trip=`, server-selected), so it survives a
+bookmark, a back button and — the reason it is a URL — a `?notice=` refusal, which now lands back on
+the boat the staffer was working instead of silently re-pointing the instrument at the morning run.
+The default is the next un-departed boat; once the day's boats have all sailed it is **the most
+recent one, with its receipts open**, because the arrivals window reaches backwards for the late
+walk-in inside the standing one-hour buffer.
+
+A row at rest is a name and one 56px tap. Checked-in rows **sink** into one collapsed disclosure
+("Checked in — N", 6a's spelling), dimmed, wearing the drawn `SettledCheck`, truncating to "and N
+more" beyond three; blocked rows keep their badge, every reason and their one fix, and never a
+check-in control. Two quiet facts joined the queue reader, batched over the whole queue: a diver
+with no reachable emergency contact wears a neutral badge, and a **first visit** is muted text —
+counted over merged native *and* imported history, so a regular whose ten years arrived in a CSV is
+never greeted as a newcomer. The 🎉 left `checkIn.clearedTitle` in both locales, and the counter's
+tinted row fills retired with the card stack (`CHECK_IN_ROW_TONE` is gone; the boat keeps its own).
+The coral is unchanged and unmoved: the cleared line, once, when everyone expected is here.
+
+## Settings is a rail and a pane (delivered 2026-08-28)
+
+Slice 6g of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
+decision 6. From `lg` up, `/shop/[shopSlug]/settings/**` opens as a two-column frame: the whole map
+of the shop's switches on the left, the destination on the right. The rail is one registry —
+`SETTINGS_RAIL_ROWS` in `settings-groups.ts`, which now also owns `SECTION_IDS` — covering every
+hub section and every door the hub renders, including the three outside the `/settings` namespace
+(dive sites, waiver template, promo codes), and it wraps the sub-routes too, so team, security,
+WhatsApp, calendar, imports and the export all read as panes without moving a path. The selection
+model is stated once and cannot blur: a sub-route row selects by pathname, a hub-section row is a
+`#fragment` link selected by a client scroll-spy. The rail carries at most one badge per row, only
+for a warning, and only from a summary reader the hub row already uses. Below `lg` nothing changes
+but the words. **Fourteen standing captions are deleted** in both locales — a door row is its label
+and the page it opens; explanation lives inside the row that opens, or on the destination. The
+hub's three groups now compose from 6a's `InsetGroup`, and the second spelling of that shell
+(`SettingsRowList`) is gone.
+## Team's roles are edited a row at a time (delivered 2026-08-28)
+
+Slice 9h of [20260827-the-shops-shelves](../architecture/decisions/20260827-the-shops-shelves.md).
+The team page's page-level "Save changes" — one button batching every teammate's role checkboxes
+into a single all-or-nothing write, so one row left blank refused every other row's edit — is gone.
+Each row's roles now read as words and open in place: **closing the row is the save**, Escape
+abandons the edit and puts the boxes back, a refusal reopens that row with its words beside the
+checkboxes (never a banner above a roster of eleven people), and Undo is one re-save that offers
+nothing to undo back. Enable, Disable and Delete stay the immediate acts they always were, so the
+page finally carries one mental model instead of two. The `?notice=` routing behind it is one
+table (`settings/team/notices.ts`) read through `noticeForForm`, which is what makes "this refusal
+belongs to that row" a fact a test can hold rather than a habit — and a per-row answer whose row is
+no longer on the roster is demoted back to the page banner rather than swallowed.
+
+The write carries the roles the row was rendered with, so two people with this page open cannot
+revert each other: a close (or an Undo left on screen) whose baseline no longer matches refuses and
+writes nothing, the answer `ConflictGuardedForm` already gives the course editor (issue #820), on
+the one surface where what would be reverted is who may reach every other gated surface in the shop.
+
+## The shared person-row vocabulary (delivered 2026-08-28)
+
+Slice 8a of [20260827-people-not-lists](../architecture/decisions/20260827-people-not-lists.md),
+decision 6: the three rows every staff surface about people repeats now have one spelling each, in
+`src/components/person/rows.tsx` — `CertificationCardRow`, `WaiverStateRow` and `BookingStoryRow`.
+A certified card renders **no badge at all** (a badge marks the exceptional state), every other
+state carries a word rather than a colour, an imported card says so on every surface that shows it,
+and an imported visit is never a door. The state vocabulary moved out of the diver record's own
+`_components/shared.ts` to homes the shared rows can reach: predicates and the H-24
+level/specialty asymmetry to `src/lib/certification-cards.ts` (where
+`certificationCardRowState` flattens the two display unions exactly once), words and tones to
+`src/i18n/card-labels.ts`, and the waiver row's five states to `src/i18n/waiver-labels.ts`. No
+surface adopts them yet — 8b, 8c and 9g do. Pinned by `src/components/person/rows.test.tsx` and
+`src/lib/certification-cards.test.ts`.
+
+## The schedule board is a week (delivered 2026-08-28)
+
+Slice 6e of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
+(decision 5, width floor H-63). From `xl` (1280px) up, `/shop/[shopSlug]/schedule/board` composes
+as **seven columns, one per day** — departures as compact time-led entries, a multi-day course as
+one bar spanning the days it owns rather than repeated into each of them, today marked with a disc
+*and* the word, past columns set down and offered no "+ Add". Paging is by week (`?week=<any date
+in it>`, normalised to that week's Monday in `src/lib/week-board.ts` — the grammar slice 9e's
+staffing week reads too). Below `xl`, tablets and phones keep the vertical day stream exactly as
+it was, cursor pager and all: the two are readings of the same departures, not two streams, and
+their parameters never mix. The reader is `weekBoard()` (`src/db/trips-queries.ts`), one bounded
+week through `liveTrip()`; the move/copy/remove panels and the day's add panel are the board's
+existing ones, opened full width beneath the grid.
+## The thread page is a step spine (delivered 2026-08-28)
+
+Slice 7c of [20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md)
+(decisions 3 and 6). `/ready/[token]` was 1,828 lines: nine checklist rows of which five were
+inline forms open at once, a progress bar whose own copy admitted it "can never fill", and the
+booking's status stated four times in one screenful — an earned moment, an emails line, a receipt
+panel and the checklist's own "Almost there" sentence. It is a spine now: **Sign · Your
+certification · Pay · Gear and sizes · Day-of details**, in that order, over **one** status
+statement — a figure and the next step's name (`ThreadStatus`,
+`src/app/ready/[token]/_components/ThreadSpine.tsx`). A settled step is a check line with the one
+fact it states; the current step is open with its form inline; every other openable step is a
+closed line, held there by one native `<details name>` accordion, so at most one is ever open and
+`AutoOpenDetails` still answers a deep link. Which steps exist varies honestly per booking
+(`src/lib/thread-steps.ts`, framework-free): certification renders only where the engine gates on
+it, Pay only where the booking carries an order, and **every step it emits is finishable** — which
+is what lets the figure always fill. Day-of details absorbed the three rows that could never
+settle (the note, hotel pickup, the support-needs record) and settles on the recency question
+alone. The receipt's figure is the Pay step's settled line, the cancellation window is the Pay
+step's fine print (closing ADR 20260820's dead `cancellationOnly`), and the emails line and the
+progress bar are gone. Coral fires once here, at `?booked=1`; all-set settles into plain success
+ink, because "paperwork done" is the waiver page's moment. The party footer gains one quiet
+"Everyone's set — see you at the dock." line, and the dive-day block leads with "Today's the day."
+from midnight in the shop's own zone. `DiveBriefingsSection` and the four components under it are
+deleted (H-49): what you'll see down there is the trip page's pitch, and this page is preparation.
+
+## The trip page sells, then closes (delivered 2026-08-28)
+
+Slice 7b of [20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md)
+(decision 2). `/s/[shopSlug]/trips/[id]` reads in one order now — hero (the price said **once**, at
+figure scale, with the calendar and share links inside it as quiet text), then the pitch ("The day"
+in plan order, "Look for", and one conditions · languages line that keeps Open-Meteo's linked
+credit), then the requirement as one unboxed hairline-topped sentence, then **the form, terminal**,
+then the shop's contact line. It ran the other way round: the form sat directly under the hero and
+roughly a thousand pixels of forecast, packing and briefings followed it, so the page's one act
+lived in the middle of its own scroll. Packing and the swipeable briefing deck are `/ready`'s alone
+now — what to bring is preparation, and preparation is for a diver who has a seat. Inside the card,
+the five scattered money lines collapse into one `MoneyBlock`
+(`src/app/s/[shopSlug]/trips/[id]/_components/MoneyBlock.tsx`) that renders **exactly one figure at
+or above `text-lg`** and nothing at all on an unpriced departure; `TripTerms` keeps only the
+free-cancellation sentence; the former full-terms disclosure and no-account line are removed as
+redundant; the party
+count is a segmented row of radios up to six seats and the `<select>` above that; the bordered
+party and gear fieldsets become hairline steps of one sheet; and the sticky phone pill keeps the
+verb alone. The page joins the thread's `max-w-xl`. The embed contract, the `confirm`-capability
+gate, JSON-LD and the Open Graph block are untouched.
+
+## The diver's thread reads at one measure (delivered 2026-08-28)
+
+Slice 7a of [20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md)
+(decision 1), the shell the rest of that ADR's slices compose inside. `ThreadShell`
+(`src/components/thread/ThreadShell.tsx`) owns the thread's column as well as its header —
+`mx-auto w-full max-w-xl flex-1 px-5 py-8 sm:px-6 sm:py-12`, a shop-name eyebrow, one `<h1>`, one
+quiet meta slot — so the measure is a decision a component holds rather than a class string four
+pages copy. `/ready`, `/waivers`, `/recap` and `/claim` all wear it and `TokenPageHeader` is
+deleted; `/claim` loses the second eyebrow line that repeated its own heading. The type ramp
+closes with it: `SHELL_TITLE_CLASS` (`src/components/ui/typography.ts`) is the one `<h1>` spelling
+for every page reached from a link, so `EntryShell` stops forking its title by width, `EntryDone`,
+`ExpiredLinkCard`, both 404s and the eleven error boundaries stop saying it a size smaller, and
+`EntryShellSkeleton` moves with it. The doors keep `max-w-md` — `/verify` and `/reset-password`
+are account lifecycle, not a booking — and no route's behavior, copy or coral changed.
+
+## Clearwater's language mechanics (delivered 2026-08-28)
+
+Slice 6a of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
+the vocabulary the rest of that ADR's slices speak. **Elevation is earned**: `sectionCardClass()`
+and the `<Table>` shell drop `shadow-sm` from their resting output and the `elevated` prop is gone,
+so a shadow now means one thing only — this floats above the page. The two grouped anatomies get
+components (`src/components/ui/ledger.tsx`: `GroupLabel`, `LedgerGroup`, `LedgerRow`, `RowKind`,
+`InsetGroup`), which is also where the group label's one small-caps spelling and the app's **one
+disclosure spelling** — a native `<details>` under the shared `DisclosureCaret` — now live.
+`Badge` is the only pill left: `KindChip` is deleted, and the queue's count capsule, the
+by-departure view's seat capsule and the departure board's crew chips are quiet text.
+`SettledCheck` (`src/components/ui/SettledCheck.tsx`) is the drawn mark a thing wears once it has
+settled, with the `settle-in` keyframe firing only on a client-side false→true transition and never
+on first paint. The visual baseline moved app-wide, which is the slice's whole point.
+
+## The shop home is the day's spine (delivered 2026-08-28)
+
+Slice 6c of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
+(decision 4). `/shop/[shopSlug]` had two views over one set of evidence — ranked by urgency, or
+grouped by the departure each job held up — chosen by `?view=` and switched by a control on the
+queue, and between them they rendered one departure's title eight times down twelve near-identical
+cards. Both views are gone. Today's departures are **stations on a chronological spine**: each owns
+its time, title, site, hull, crew, price and head count, and carries its own blockers and chores as
+ledger rows ranked danger → warning → quiet with the one fix beside each. Work bound to no boat
+pools under **At the desk**; tomorrow is a collapsed disclosure whose body reuses the station
+renderer, and the rest of the week is one link to the board. A day with no boats and nothing waiting
+collapses to a heading, one sentence and the one act.
+
+Nothing about *what counts as work* moved: `assembleDaySpine` (`src/lib/today.ts`) is a pure
+re-filing of the queue `getTodayWork` already ranked — a `tripId` picks the station, its absence
+picks the desk — and tomorrow comes from a second bounded read of the next shop-day sharing the same
+readiness pass, never a widened window. `DepartureSummary` gained the station's three meta facts
+(dive site, boat, price) in that one departures pass. The role lens survives: rows arrive
+pre-filtered, the withheld line keeps its place under the summary sentence, `YourSessions` is its
+own labeled group — and `leadWithCrewed` is gone, because clock order now wins for every reader.
+Both good-news moments still render on their exact conditions and nothing at all otherwise, and the
+morning all-clear line is the surface's one coral element.
+
+On the phone a work row stacks, because that is the only width where it has to: the kind and the
+fix share the first line and the sentence takes the width beneath them (`LedgerRow`'s new opt-in
+`stacked`, the `TodayPhone` artboard's reading). Unstacked, at 390px, the desk's sentences had about
+80px to wrap in and ran six lines deep. Nothing else opts in — a row that carries a name and a state
+rather than a sentence reads better on one line at every width.
+
+`?view=` (and its `?page=`) 308 to the bare home from the edge, `/shop/[shopSlug]/blockers` 308s
+there in a single hop, the "Not ready" staff destination is gone rather than pointing at Today's own
+URL, and the first-run setup checklist re-expressed as a ledger group with exactly one open step
+carrying the page's one primary. `TodayQueue`, `BlockerGroups`, `DepartureBoard`, `UrgencyBand`,
+`QueueViewSwitch`, `getBlockerQueue` and the by-departure grouping helpers are deleted, and so are
+the things that only they had used: the in-memory `pageOf` and its `BLOCKERS_TRIPS_PER_PAGE`, the
+`blockers` waiver-send and analytics surface, and five orphaned message keys in both locales.
+`DaySpine.test.tsx` carries every assertion they held. Two other emoji left the page with the
+recomposition, per the coral budget's one-word-mark rule: the 🎉 on "your shop is bookable" and the
+🤿 on the demo-reset notice. The 🤙 on the morning all-clear line stays, and a test says so.
+
+## One chrome spec — both shells wear the same bar (delivered 2026-08-28)
+
+Slice 6b of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
+(decision 10). The staff app and the shopfront had two different headers — 69px of `bg-surface` at
+`z-30` and a shorter `bg-surface/95` at `z-40` — and because the staff one's height was content-
+driven, the only way to pin anything beneath it was to measure it and write the number down: the
+schedule board carried `sticky top-[68px]` three directories away, with an e2e test standing guard
+over the constant. The public schedule never got that far and pinned its day headers at `top-0`,
+where the bar simply painted over them.
+
+Both now render through one `ChromeBar` (`src/components/chrome/ChromeBar.tsx`): 56px, the page
+background at 85% behind a blur with a solid fallback, one hairline, no shadow, `z-30`. The height
+is a token, `--chrome-h`, that the bar sets itself from and that the board's and the public
+schedule's day headers offset by — so the two can no longer disagree, and
+`src/components/chrome/chrome.test.ts` refuses a hand-written distance anywhere else in the tree —
+a bracketed offset whose measured part is a length rather than a variable, or Tailwind's own scale
+on a sticky element — and has a fixture test of its own, so the detector is pinned rather than
+assumed. The page's `<h1>` stays in the page and the bar carries no connectivity indicator; the
+phone dock is untouched. Because the bar is one fixed-height row at every width, the shopfront's
+nav and language control tighten below `sm` — the endonym and the caret go, padding shrinks, the
+16px destination labels stay — so an ordinary shop name holds at phone width and only ellipsizes
+on the narrow handsets below it.
+
+## The Guests roster becomes one grouped ledger (delivered 2026-08-29)
+
+Slice 5d of
+[20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md).
+The departure's Guests tab is one ledger card of hairline rows under group bands that own the state
+word and the count — **Still to clear**, **Ready**, **Waiting for a seat**, **Invited** — instead
+of a card stack with two visual grammars. A cleared seat is a name, at most one exception capsule,
+and a drawn check; open work stays in the open with each item beside its fix. The filter chips are
+gone (the groups are the filter), the Celebrations panel folded into the celebrating diver's own
+row capsule, the wait list and recorded invitations stopped being sibling cards, and
+Activity/Promote settled into two chromeless hairline rows at the page's tail. Every emoji mark on
+the surface became drawn SVG or a plain word (`ReadyMark`, `birthdayCalloutText`, a mark-free
+Minor capsule), and every control kept its identity and order — waiver send, paper waiver,
+payment, notes, contact, pickup, certify, remove. `RosterSection.test.tsx` pins the rules: the
+band says the state word once, no row repeats it, open work renders with its fix, no chips.
+
+## The boat manifest becomes an instrument (delivered 2026-08-27)
+
+Slice 5a of [20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md),
+the first slice of that ADR to land. The manifest is worked one-handed at the rail, and it now
+reads like it: **the count leads** the page, a row at rest is a number, a name, at most one
+exception capsule and **one 56px tap**, and everything else is one tap away inside that person's
+own panel — contact as reference text, rental fit, medical mark, staff notes, the readiness
+blockers and their fix. The boat check and the whole "On this phone" group each collapse to a
+single line (the offline copy's connectivity and freshness ride that line, because a stale copy
+that looks current is the failure the mechanism exists to prevent). The seeded ten-diver departure
+went from **5,731px to about 2,700px** at 390px wide.
+
+Three rules moved with it. **Consequence decides the gesture**: aboard is a plain tap on the row's
+trailing edge, undone by tapping it again, while "not back aboard" is a deliberate two-step
+recorded from the person's panel — it is the highest-consequence claim the app can make and it
+must not be brushable with a wet thumb. **An alarm is earned by a recorded fact, never by the
+absence of one**: an open circle mid-count means "not yet", the split-buddy-team alert now waits
+for a human to record a teammate not back rather than firing on the first uncalled name, and the
+after-dive readiness sentence lost its danger tone. **Status is drawn, not typed**: the five
+roll-call marks are inline SVG on the 16/20/24px grid (`src/components/RollCallMark.tsx`), and
+every colour-carried state still says its word — the audit line under the name keeps every
+result's who-and-when. Paper is untouched: the printed manifest carries every fact the screen
+tucks away, including the full timestamp the screen shortens to a time.
+
+## The gear register — the shop's own fleet, reservations, and service clocks (delivered 2026-08-20)
+
+Roadmap §3's M5 reversal, accepted and built on the product owner's instruction
+([20260815-minimal-gear-register](../architecture/decisions/20260815-minimal-gear-register.md) and
+its 2026-08-20 amendment). Opt-in by presence — a shop with zero `gear_items` rows sees no gear UI
+and keeps sizes-only prep. What shipped: the fleet register at `/shop/[shopSlug]/gear` (tagged
+units, kind/size/serial, retire-not-delete lifecycle) with a per-unit record page; append-only
+service clocks (`gear_service_events` — annual service, tank hydro/VIP, O2-clean, condition
+notes) that inform and never gate; date-ranged per-booking reservations whose double-booking
+guard is a database `EXCLUDE USING gist` constraint (raced under real Postgres in
+`gear-reservations.postgres.test.ts`), with check-out/return stamps and a returns panel; the prep
+page's assignment panel suggesting free units ranked by the diver's own fit sizes; three Today
+rows (`gear_overdue`, `gear_due_back`, `gear_service_due`) that flow into close-out leftovers for
+free; three export CSVs riding every bundle and backup; and the seeded demo fleet. Rental only —
+never retail POS or repair work orders (vision non-goals), and `rental_fit_profiles` stays the
+universal always-on layer beneath it.
+
+Two later pieces the same day (its 2026-08-20 amendment, second half): a **printable per-booking
+rental slip** at `/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]` — what a diver has and when
+it is due back, with deliberately no signature line and no money on it — and **dual-clocked service
+intervals**, where a service event may carry `next_due_dives` beside `next_due_on` and a unit falls
+due at whichever comes first. The dive count is derived from the departures a unit came back from,
+presents itself as "at least N", and only ever escalates a clock.
+
+## Imported payment and receipt history remains evidence, not a synthetic order (delivered 2026-08-16)
+
+The contact importer can now carry a prior system's payment, refund, receipt, and source Stripe
+reference rows without pretending the current shop issued or confirmed them. They render in their
+own unverified section of Orders, linked to the diver and any safely re-stored receipt rather than
+to a fictional order page. A monthly report may include only the clearly parsed, matching-currency
+payment/refund slice — it names the source contribution, shows the components, and links directly
+to those rows. Card numbers, CVCs, reusable payment methods, and tokens still never enter DiveDay;
+there is no automatic Stripe replication. The exported bundle carries the source history back out
+as its own CSV and includes safely stored receipt documents under `photos/`.
+[20260816-imported-payment-history-is-evidence](../architecture/decisions/20260816-imported-payment-history-is-evidence.md).
+
+## A diver can ask for a date, and the shop has somewhere to read it (delivered 2026-08-14)
+
+Asking a shop to run something on a day that is not on the board is an ordinary request, and DiveDay
+answered it in one place and badly: course pages carried a composer whose only timing field was free
+prose, the schedule page had nothing at all, and no surface under `/shop` ever rendered what either
+collected. Now one composer stands on both public pages — with real date fields, an alternate beside
+the first choice, and a "few days either side" flag — and writes the same `course_inquiries` row,
+whose `course_id` is nullable and whose new `interest` column says what an ordinary dive request is
+about (a check constraint refuses a row that names neither). `/shop/<shop>/requests` groups them by
+day: a diver appears under every date they could make, each group says how many of those asked for it
+first, and each group's own link opens the schedule builder already on that date. The dates are a
+deliberate re-add of a column dropped on 2026-08-12 — a date nobody groups by is false precision, a
+date something groups by is a departure waiting to be scheduled — and the free-text "when suits you"
+box stays, because "any weekend this autumn" is still the truest answer a diver has.
+[20260814-a-date-request-is-a-course-inquiry](../architecture/decisions/20260814-a-date-request-is-a-course-inquiry.md).
+
+## Review moderation states its case, and a curated record loses its star rating (delivered 2026-08-13)
+
+A shop could hide any review with one unrecorded tap, and the average over what survived went out as
+schema.org `aggregateRating` — the field a search engine renders as stars beside a result. Nothing
+prevented, recorded, or disclosed a shop hiding everything below five stars and keeping a credible
+5.0. The power to take a review down is untouched, because a shop that cannot remove a review naming
+a diver by name will be angry with DiveDay rather than with the reviewer. What changes is that a hide
+now states a case — a code from a short list, `other` in the shop's own words, refused outright
+without one — and appends to an `review_moderation_events` trail. That trail is also what makes the
+second half possible: once more than one in five of the reviews a shop has *ruled on* are hidden,
+DiveDay stops publishing the rating as a machine-readable claim. A review waiting on a read has never
+been hidden and never counts against the shop. The stars stay on the shop's own page throughout,
+where they sit above the reviews they are drawn from.
+[20260813-review-moderation-has-a-floor](../architecture/decisions/20260813-review-moderation-has-a-floor.md).
+
+## A shop chooses whether it is in search results (delivered 2026-08-13)
+
+Creating a shop published it to Google, with no step in between and no switch anywhere: the sitemap
+query filtered on `is_demo` and nothing else, so a trial shop's half-typed schedule was crawled on
+its first afternoon, and a shop that evaluated DiveDay and walked away had left a page indexed
+against its business name under someone else's domain. Indexing stays **on by default** — a public
+schedule nobody can find is most of the value gone — and gains the three things it was missing. A
+nullable `search_listing_opt_out_at` drops the shop from the sitemap *and* makes its public pages
+emit `robots: noindex`, because leaving the sitemap alone would not un-index anything already found.
+A readiness condition holds a brand-new shop out until it has published at least one departure,
+which fixes most of the "indexed before it is ready" case without asking anybody anything —
+deliberately not *future* departures, so a shop between seasons stays indexed. And the sign-up form
+says so, under the box where the owner picks their public address, with the switch in Settings
+beside the review link.
+[20260813-search-listing-is-a-choice](../architecture/decisions/20260813-search-listing-is-a-choice.md).
+
+## A shop-cancelled departure returns the money by itself (delivered 2026-08-13)
+
+DiveDay automated the refund for the cancellation the *diver* causes and automated nothing for the
+two it causes itself. Both now refund. A weather blow-out reverses each seat's capture inside the
+cascade row it already claims, before composing that diver's message; the hourly minimum-head-count
+sweep refunds every active seat on each departure it cancels — including the walk-ins it has no
+address for, because money comes back whether or not anyone can be told. The stated cancellation
+window is *bypassed* rather than reused: it answers "may this diver cancel free?", and a diver who
+did nothing should not be measured against it. Degradation is unchanged — a counter payment, a
+disconnected account, or a Stripe refusal still leaves the refund to staff — and the diver is now
+told which of the two happened rather than that their money is "safe". The ledger records
+`shop_cancellation_refund` so the two kinds of cancellation stay distinguishable.
+[20260813-shop-cancellation-refunds-itself](../architecture/decisions/20260813-shop-cancellation-refunds-itself.md),
+amending [20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md) and
+[20260813-minimum-head-count-departures](../architecture/decisions/20260813-minimum-head-count-departures.md).
+
+## A reader picks their own language (delivered 2026-08-12)
+
+**The switcher DiveDay deliberately did not have.** Language was negotiated from `Accept-Language`
+alone, so a diver on a borrowed phone and a staffer whose laptop somebody else configured both read
+a language they might not, with nothing on the page to do about it. A reader now chooses, and the
+choice is a cookie rather than a URL segment — the shop's schedule keeps exactly one address in
+either language, which is the part of the original decision that still holds. Three doors, all
+naming each language in itself ("English", "español", from CLDR rather than a bundle, because the
+reader who needs this control is the one who cannot read the label above it): the public shop header
+beside the shop's name, the staff header's shop-name menu, and the command palette. Precedence lives
+in one function — the reader's choice, then the device's header, then `shops.default_locale` — and an
+explicit pick also silences the "you asked for a language we don't have" notice, which would
+otherwise argue with a decision the app just honoured.
+[20260812-reader-chosen-language](../architecture/decisions/20260812-reader-chosen-language.md),
+partly superseding
+[20260729-diver-copy-localization](../architecture/decisions/20260729-diver-copy-localization.md).
+
+## Dive-site briefings: uploads, terrain, and a site's own bottom time (delivered 2026-08-12)
+
+**Photos are files now, not pasted links.** The three URL boxes on a site briefing (satellite map,
+route image, and the one-per-line gallery) are file inputs — the same shape the course editor has
+used since CR-011. That removes a class of problem rather than defending against it: no external URL
+to fetch means no SSRF surface on this path and no link that can quietly change or 404 six months
+later on a page a diver reads before a dive. Replaced and removed photos queue through the
+media-deletion ledger (a new `dive_site_photo` kind) so nothing is orphaned. 2026-08-12 amendment to
+[20260724-dive-site-media-ingestion](../architecture/decisions/20260724-dive-site-media-ingestion.md);
+`ingestImageUrl` and its defenses live on for contact-import waiver documents, which really do
+arrive as URLs in a CSV.
+
+**The map is terrain, not satellite.** A satellite photo of open water is a flat blue rectangle: it
+shows a shop's drawn route over nothing readable, and the one thing a diver wants — how the bottom
+is shaped — is exactly what the photo cannot show. `t=p` renders bathymetric shading and depth
+contours instead, at the same projection, so every stored route still lands on the water it
+describes.
+
+**A site can name its own time in the water.** `dive_sites.expected_bottom_time_minutes` overrides
+the shop-wide figure wherever the dock-day rhythm is laid over a departure, per dive rather than per
+trip — a two-tank morning routinely visits a wall run at 30 minutes and a reef run at 60, and one
+number told the diver the wrong time on whichever it was not. Blank is the ordinary case and means
+the shop's own figure stands.
+
+## The course catalog and its "get in touch" (delivered 2026-08-12)
+
+**Divers get the agency toggle staff already had.** `/s/<slug>/courses` reads one agency's ladder at
+a time with a PADI/SSI tab strip, the same `AgencyTabs` the staff roster wears — the catalog sorts in
+*progression order*, which only means anything inside one agency's ladder, and interleaving two put
+an Open Water next to an Open Water. The per-row agency pill went with it, for the reason the roster
+dropped its own: a badge repeating one of two answers, replaced by the control that acts on it.
+
+**The inquiry composer asks less and answers more.** The date picker beside "When suits you" is gone
+— a date typed there is a request the shop replies to, never a hold, so a picker only ever promised a
+precision the answer does not have; one free-text field now takes anything from "12 August" to
+"sometime this autumn". "How many divers" starts at 1. Email or phone is required — either one,
+never both — because a lead with neither is a question nobody can reply to, enforced in the composer
+*and* in the server action. And the "your message so far" preview is gone: it showed a diver their
+own answers written back to them a second time. The composed message still reaches the mail app and
+the clipboard exactly as before.
+
+## The departure log moves to the evening (delivered 2026-08-12)
+
+See the [Departure log](#departure-log-delivered-2026-08-04-moved-and-renamed-2026-08-12) entry
+below: the "incident-ready export" is the **departure log**, generated from close-out rather than
+from the manifest header a crew works at the rail.
+
+## Surface consolidation — fewer, obvious places to go (delivered 2026-08-06)
+
+Eleven PRs (#397–#413) against one finding: staff surfaces answering the same question at two URLs.
+The fix followed doctrine already on file — a route needs its own question, mutation, and moment
+([20260804-day-closeout](../architecture/decisions/20260804-day-closeout.md)); a re-render of another
+surface's evidence is a view
+([20260803-not-ready-is-a-view](../architecture/decisions/20260803-not-ready-is-a-view.md)); a
+removed surface keeps its destination as a permanent 308.
+
+**Routes.** Dive-site catalog → `?view=catalog` of the library
+([20260806-dive-site-catalog-is-a-view](../architecture/decisions/20260806-dive-site-catalog-is-a-view.md)).
+Trip creation → the board's add panel, "More options" disclosing the full former `/trips/new` form;
+that route 308s ([20260806-one-trip-create-form](../architecture/decisions/20260806-one-trip-create-form.md)).
+Export + Backups → one data-out surface, `/settings/backup` a 308 into `#backups`
+([20260806-one-data-out-surface](../architecture/decisions/20260806-one-data-out-surface.md)).
+Staffing → the shift roster; its twin crew-gap detector became one count and a hand-off to Today
+([20260806-staffing-is-the-shift-roster](../architecture/decisions/20260806-staffing-is-the-shift-roster.md)).
+Reports → a report again; its three queues moved to Orders and Settings' Data group (amendments to
+the three ADRs that had named Reports their home).
+
+**Shared components.** One seat-a-diver UI family driven by `SEAT_SURFACES`; one `SiteFields`; a
+settings layout + sub-nav derived from one `settings-destinations.ts` registry; one `KindChip` and
+`BlockedDiverRow` across the day-of-ops family; close-out's "Tomorrow" and Today's evening
+close-the-day card as mutual handoffs. Each IA change carried an independent design review; both
+security-sensitive changes carried independent security reviews (merge-safe, LOW hardenings applied).
+
+Deliberately left alone: the waivers tabs (the model pattern), the orders triad, the trip tab split,
+the manifest's self-containment, check-in/walk-in/divers as routes, the `/s` namespace, and
+marketing-page copy overlap (thematic, constrained by the claims policy — not mechanical).
+
+## The 2026-08-02 review's data, i18n and telemetry residue (delivered 2026-08-06)
+
+The buildable tail of the same review. Three of its items turned out to already be closed and were
+re-verified rather than rebuilt; the rest are below. Two of them found live bugs while being built,
+which is the argument for building them.
+
+**A contracting migration cannot reach the database unannounced** (DATA-L5). Migrations apply inside
+the Vercel production build, while the *previous* release is still serving traffic, and there are no
+down migrations — and nothing checked that a migration was safe under those conditions.
+`scripts/check-migrations.mjs` refuses fourteen destructive statement shapes in anything newer than
+the previous release, and what it deliberately allows matters as much: `ALTER TYPE … ADD VALUE`,
+`CREATE INDEX` and `ADD COLUMN` all pass, because a guard that refuses the common safe case teaches
+everyone to wave it through. Its escape hatch is a marker in the migration SQL naming the rule and a
+reason, not an env var a rushed deploy can flip. It refused a migration in its own pull request on
+the first run.
+[20260806-destructive-migration-guard](../architecture/decisions/20260806-destructive-migration-guard.md).
+
+**Two arrays that had to agree became one object per photo** (DATA-L4). `courses.image_urls` and
+`image_alts` were parallel jsonb arrays paired by position and nothing else, so one drifted row
+captioned every photo after it with the previous photo's words — invisible on screen, and wrong for
+exactly the readers alt text exists for. The backfill decides what an already-drifted row becomes
+rather than leaving it to whichever array was shorter. It shipped expand-only, with the old columns
+still written; `20260806105408_drop-course-legacy-gallery` is the contract half that drops them and
+deletes the dual-write, accepting a deploy window in which the previous release cannot read or write
+`courses` at all — the migration SQL states that cost and carries the guard's acknowledgement. Three
+uncovered `ILIKE`
+arms gained trigram indexes; a fourth the review named turned out to be indexed already (DATA-L6).
+And CMAS, RAID and GUE joined the agency enum, so a diver holding one of those cards can be recorded
+honestly instead of as "other" (DOM-L1).
+
+**The offline shell stopped downloading a roster to learn one word** (new in the same review). It
+needed a single string — which shop this browser is signed in as, for the cross-shop purge — and got
+it by asking for the shop's entire 48-hour board: diver names, emergency contacts, readiness
+blockers, on the one surface that runs on a shared boat tablet. A separate identity route now answers
+`{ shop: { slug } }` and nothing else; a path was chosen over a query flag because a dropped or
+mistyped flag degrades to the full roster with a 200 and a path cannot fail open. Both routes send
+`no-store` on every response including refusals — load-bearing rather than hygiene, since a cached
+answer would have the purge delete the current captain's manifests and keep the previous shop's.
+Found while building it: the service worker's push refresh had been reading the wrong key and had
+never saved a snapshot.
+
+**A diver whose language DiveDay does not carry is now told so** (I18N-L1..L3) — one band naming the
+requested language by its own endonym, so the token they recognise sits inside a sentence they
+cannot read. No switcher: the finding was silence, not absence of choice. Trip times name their zone
+on the screen where a diver commits, stated once per page rather than stamped on every row. The a11y
+scan reaches twenty-one surfaces, chosen by consequence, including two post-write renders no
+route-level scan can produce.
+
+**The capability-URL residual is written down** (OPS-L1). Vercel's access logs retain every raw
+bearer-capability URL and the app's redaction provably cannot reach them — it runs in-process, in
+three `beforeSend` hooks, while the platform records the request line before any DiveDay code is
+entered. The runbook now carries the exposure, the compensating controls with their limits rather
+than their headlines, an audit procedure, and why the alternatives all break the paste-into-an-SMS
+property the design exists for. Writing it up found `/unsubscribe/[token]`, a tenth capability route
+the redaction list had never covered; the list is now asserted against the `[token]` directories on
+disk, so the next one fails on the commit that creates it rather than on the review that happens to
+look.
+
+## The 2026-08-02 review's operations, testing and payments residue (delivered 2026-08-06)
+
+Ten findings closed together, all of them the same species: a mechanism that was written down
+correctly and never proved, or arithmetic that described a system nobody had built.
+
+**Production is no longer the first real Postgres a migration meets** (OPS-2/TEST-2). A CI job with a
+`postgres:16` service container applies `drizzle/` from empty *and* from the previous release's
+schema, then races two genuinely concurrent connections for the last seat on a trip. The `FOR UPDATE`
+oversell guard in `src/db/bookings.ts` was dead code under test — PGlite is single-connection and
+cannot exhibit the race — and is now provably load-bearing: with the lock removed a one-seat trip
+sells two. Gated on `src/db/**`/`drizzle/**` plus a nightly run, so it is not a per-PR tax.
+[20260806-real-postgres-ci-job](../architecture/decisions/20260806-real-postgres-ci-job.md).
+
+**The notification retry ladder stopped describing a system that does not exist** (OPS-6). The code
+computed a 30s → 1h exponential backoff; nothing polls that queue but the daily tick, so every rung
+collapsed to "tomorrow" and the eight attempts sized for a two-hour ladder quietly meant *eight
+days*. A retry now lands on the next daily pass, the budget is stated in days (three) rather than as
+an attempt count, and `src/lib/cron-schedule.ts` is the one place the cadence lives — its test reads
+`vercel.json`, so "must stay in lockstep" is a failing test instead of a comment.
+
+**Two silences got a voice.** `checkRateLimit`'s fail-open catch stays fail-open — a limiter that
+500s a legitimate request is worse than none — but now logs and captures to Sentry, damped, never
+carrying the key (OPS-7). And the manifest SSE channel's LISTEN connection, which was *never* torn
+down, now closes after 120s idle behind a generation counter, with the Neon connection ceiling and
+its escalation written down at last (OPS-8).
+[20260806-manifest-listen-connection-ceiling](../architecture/decisions/20260806-manifest-listen-connection-ceiling.md).
+
+**Cost guardrails reach past the smallest bill** (OPS-9). AWS had a budget and anomaly detection;
+Vercel and Neon — the ones that actually scale with traffic — had nothing. A daily cron polls each
+provider's usage against a ceiling registry and mails the founder alert inbox once per ceiling per
+period. Unmeasurable is not the same as fine: a probe with no credentials reports `not_configured`,
+never `ok`.
+[20260806-provider-usage-guardrails](../architecture/decisions/20260806-provider-usage-guardrails.md).
+
+**A pending checkout is a quote with an expiry, not a permanent price** (PAY-L2/L3). Stripe holds a
+session's amounts for its whole life, so a session minted on Monday still charged Monday's fare on
+Friday — through a "Finish paying" link that bypassed the pricing code entirely. Reuse now re-derives
+the figure and re-mints when it moved. And `refundOrder` claims the order row locally before asking
+Stripe, instead of relying on Stripe's over-refund rejection to catch a double tap.
+[20260806-stale-quote-and-refund-lock](../architecture/decisions/20260806-stale-quote-and-refund-lock.md).
+
+**Testing got the three layers it was missing** (TEST-M1/M2/M3). Stripe is no longer tested only
+against shapes the tests themselves invented: contract fixtures pinned to an API version drive the
+real parsers, and a guard fails when the pin and the fixtures diverge. That immediately earned its
+keep — it caught `refundInvoice` asking Stripe to expand a field current accounts reject, then
+reading the intent from a field Stripe has removed, so *every* invoiced refund failed with no money
+moved while the hand-written tests stayed green. Component tests now cover three risk-picked
+surfaces (medical questionnaire, blocker groups, roll call), each proven able to fail by mutation.
+And the residual CI flake was root-caused rather than retried away: the `Intl` memoization that fixed
+most of it had stopped at `format.ts`'s file boundary, leaving `src/lib/zoned.ts` building *three*
+formatters per wall-clock conversion on a module 26 others import, and several surfaces building one
+inside a `.map()` — 12x measured overhead, now one shared cache in `src/lib/intl-cache.ts`.
+
+## Dive sites and dive briefings, reconciled (delivered 2026-08-05)
+
+A shop owner read "a two-tank dive with one dive site and 2 dive briefings" and could not tell
+whether the app was confused or they were. Both counts were right — a **dive site** is a place in
+the shop's library, a **dive briefing** is one tank on one dated trip — but nothing said so, and
+the surfaces that named "the trip's site" all read `trips.dive_site_id`, which holds only dive
+one's site. A two-site day named one site; a day whose *open* tank was the first one named none.
+Every such surface now composes the dives through one function
+(`summarizeTripDiveSites`): the schedule card and staff trip header list every site the departure
+visits and how many tanks are still open, and a per-dive card with no site says **"Site to be
+confirmed"** rather than leaving the reader to notice the gap. The trip's requirements note stops
+attributing the *combined* site gate to dive one's site — on a two-site day whose Deep gate comes
+from tank two, it named the wrong card to go change. The compatibility pointer now tracks the first
+*chosen* site, so a departure planned second-tank-first gets its marine forecast, calendar
+`LOCATION`, and directions back. In the library, "briefing" no longer names the record: it is a
+**dive site** in every picker, label, button, and empty state, and "briefing" survives only where
+briefing content is written or read. See
+[20260719-trip-dive-briefings](../architecture/decisions/20260719-trip-dive-briefings.md)
+(amendment 2026-08-05) and the **Dive site** / **Dive briefing** entries in
+[glossary.md](glossary.md).
+
+## Trip surfaces after a walk-through (delivered 2026-08-04)
+
+A product-owner pass over the boat loop, mostly subtraction. The manifest's typed **"crew aboard at
+&lt;checkpoint&gt;" attestation is gone**: the named crew list is now the whole crew half of a head
+count, and a trip with nobody on its crew list holds the checkpoint open under its own reason
+(`crew_none_assigned`) with an **"Add crew to trip"** button as the way out, instead of a number to
+type. Roll-call rows tell their two recorded outcomes apart by hue — aboard green, left ashore amber
+— with awaiting in neutral slate; the status pill and the "Ready" chip now appear only where the
+buttons beside them do not already say the same thing. **Boat mode** (was "Contrast: Auto / Standard
+/ Maximum", plus a redundant "Glare mode active ☀" chip) is now one Auto / Land mode / Boat mode
+control that belongs to the whole trip, not the Manifest tab alone. Print / save PDF sits in the
+same place on every tab. The **departure log is owner-only** — the manifest stays open to the
+crew who run the roll call, but the shop's evidentiary account of a departure is the owner's to
+produce, and the route refuses however it is reached. Smaller: the Celebrations line now says
+*today* / *coming up* / *just had* rather than one sentence for all three; a confirm-guarded resend
+settles back to its status instead of sitting open on an answered question; and a waiver that could
+not be mailed because `APP_HOST` is unset says exactly that rather than blaming a missing email
+provider. See
+[20260804-crew-roll-call-is-per-person](../architecture/decisions/20260804-crew-roll-call-is-per-person.md).
+
+## Weather blow-out cancellation cascade (delivered 2026-08-04)
+
+The brainstorm's Revenue And Recovery big bet, first slice. Staff tap "Weather blow-out…" on a
+departure and confirm once: the trip is cancelled through the existing `setTripStatus` machinery,
+and every booked diver gets one message — what happened, their money story, and up to three
+rebooking links filtered through the real booking-time admission gate (`decideTripAdmission`) to
+departures they actually qualify for. A cascade record at
+`/shop/[shopSlug]/schedule/blowout/[tripId]` tracks per diver: message state (sent / retrying /
+failed / no email), payment position, the offers their message carried, and a live
+rebooked-vs-unresolved state — the blow-out isn't over until that column empties. Sends are
+idempotent and resumable; no money moves (refunds stay per-booking, H-14 gate intact).
+Alternative-day salvage and a courtesy text channel are the named follow-ons. See
+[20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md).
+
+## Buddy teams in roll call (delivered 2026-08-04)
+
+Staff group a departure the way it will dive, and roll call stops being a flat list: when someone
+is back aboard and someone on their team is not — the state a real deck watches for — that person's
+row and the checkpoint panel both say so, loud after a dive and as a heads-up at the dock. A team is
+**two or more**, and a member is a seated diver *or* a crew person, so the divemaster leading a
+group is recordable — before that, a diver deliberately placed with a DM printed on the incident
+export identically to a diver nobody paired. A diver is DB-enforced to at most one team per
+departure; a divemaster may lead several. Every act — form, add, remove, dissolve — is explicit and
+appends to a **pairing trail** carrying the member names as they stood, which outlives the
+membership rows a dissolve deletes and renders in the departure log's roll-call timeline, closing
+the one fact on that document that had no audit entry. Teams **inform only** — never readiness,
+admission, capacity, or checkpoint completeness — and a shop that records none is unremarked. The
+offline copy shows teams read-only by name (divers *and* crew) and says the split-team read belongs
+to the live roll call; the export bundle carries standing teams as `buddy_pairs.csv`, crew rows
+included. Seeded on the demo reef boat: a pair, a divemaster-led trio, and the normal odd remainder.
+See [20260804-buddy-teams](../architecture/decisions/20260804-buddy-teams.md), which supersedes
+[20260804-buddy-pairs](../architecture/decisions/20260804-buddy-pairs.md).
+
+## Scheduled backup export to shop-owned storage (2026-08-04)
+
+Roadmap §1's first remaining bullet, delivered: every week a shop's full export bundle — the same
+documented CSVs, README, and bundled photos as the on-demand download, with the shop-wide
+`trips.ics` calendar riding along — lands in an S3-compatible bucket the *shop* owns (AWS S3,
+Cloudflare R2, Backblaze B2, MinIO). Configured at Settings → Backups: destination form, one-click
+test delivery, and a paged delivery history where every failure is a named, coded row. The secret
+access key is sealed with `secret-box` and never returned to anyone; uploads are hand-signed SigV4
+(no SDK dependency); the weekly cron is idempotent per shop per ISO week and treats next week as
+the only retry. "Switching is safe" is now a standing fact in the shop's own bucket, not a button
+someone has to remember. See
+[20260804-shop-owned-backup-export](../architecture/decisions/20260804-shop-owned-backup-export.md)
+and §2b of the [backup-and-restore runbook](../engineering/backup-and-restore-runbook.md).
+
+## End-of-day close-out — the "everyone is home" ritual (2026-08-04)
+
+The brainstorm's end-of-day close-out, delivered as Today's evening mirror at
+`/shop/<slug>/close-out`: every departure of the shop-local day judged by its head count (read off
+`listRollCallGaps`, never re-derived), today's unresolved queue rows each given an explicit
+**carry/dismiss** choice, and tomorrow's first blockers as the parting glance. Closing the day is
+an append-only recorded act (`day_closeouts`: who, when, and the outstanding snapshot recomputed
+server-side at close time) — **never a gate**: an open after-dive count or a boat still out makes
+the close a by-name acknowledgement, not an impossibility, and nothing downstream conditions on the
+row. Carry/dismiss is a memory, not a filter — tomorrow's queue keeps deriving from the source of
+truth. Gear-return reconciliation from the original idea is deliberately out of scope until a gear
+register exists. See [20260804-day-closeout](../architecture/decisions/20260804-day-closeout.md)
+and the glossary's "Close-out".
+
+## Departure log (delivered 2026-08-04, moved and renamed 2026-08-12)
+
+- **One tap on a departure produces the document a shop hands to authorities or insurers.** From
+  close-out, "Generate log" opens a staff-only, print-optimized page
+  (`/shop/<slug>/trips/<id>/log`) assembling the departure's recorded facts: the
+  manifest roster with each diver's per-checkpoint roll-call state, the complete append-only
+  roll-call timeline (corrections included — history is never laundered), each diver's
+  certification evidence as held (imported cards marked distinctly), waiver **status** only — state,
+  date, template version; medical questionnaire answers never appear — the buddy pair staff
+  recorded for the departure (team number, buddy name, and who paired them when), plus crew, crew counts, and
+  generation metadata. A SHA-256 integrity code over the printed facts sits in the footer, so a
+  printout can be checked against a fresh export.
+- **Facts, not judgments.** The document states what was recorded, with timestamps and recorders;
+  it computes no safety verdict, and every absence (no roll call yet, no cards on file, superseded
+  or unsigned waiver) is stated explicitly rather than left blank. Assembly is pure
+  (`src/lib/incident-export.ts` over the same manifest/readiness readers every safety surface
+  uses); print-ready HTML, no PDF dependency. No insurer-facing marketing claim ships with this —
+  that stays parked per the brainstorm's insurance-leverage entry until real operators validate it.
+- **Written up in the evening, not at the rail (2026-08-12).** It shipped as an "incident-ready
+  export" in the manifest header, one tap from "Mark boarded" — an authority-facing document on the
+  surface a crew works mid-departure, framed by the worst day rather than by what it is. It is the
+  **departure log** now, generated from close-out (one link per departure row, beside the recap
+  note), and the route moved to match. Offered on every row rather than only the boats that are
+  back: the moment a shop most needs a departure's recorded facts is while the departure is still
+  happening. See the 2026-08-12 amendment to
+  [20260804-incident-export-owner-gate](../architecture/decisions/20260804-incident-export-owner-gate.md).
+
+## Seat claim links for party bookings (delivered 2026-08-04)
+
+The first slice of the group-organizer bet: every party seat beyond the organizer's own gets a
+claimable bearer link, so the people the shop has never met stop being names the organizer typed.
+`/claim/<token>` is a third `booking_capabilities` purpose (`claim`) — hashed-only storage, the
+same expiry and live-cap rules as its siblings, redacted before telemetry. Only the organizer's
+already-verified surfaces mint them (the confirmation panel and their `/ready` page), and only for
+unclaimed, non-cancelled member seats on a not-yet-departed trip. Claiming resolves the claimant by
+email with `findOrCreatePerson` semantics — a non-matching name stamps `identity_unconfirmed_at`,
+so nobody inherits verified evidence by typing an email (H-13) — re-runs the gates a fresh booking
+would face, supersedes any waiver signed by the placeholder, and revokes every outstanding
+capability on the booking. Claiming never weakens a gate, and an unclaimed seat simply boards under
+the organizer's party as before. Pay-your-own-share stays out of scope. See
+[20260804-seat-claim-links](../architecture/decisions/20260804-seat-claim-links.md).
+
+## The 2026-08-02 review's last buildable residues (delivered 2026-08-06)
+
+The tail of the [2026-08-02 review](archive/comprehensive-review-20260802.md): the residues
+that were still an agent's to close, plus the half of OPS-4 the owner unblocked by creating the
+mailbox. What this did *not* touch is now the whole rest of that document — every remaining row is
+a human decision or a conversation with a real shop.
+
+**Portability (DATA-A10).** The export bundle gained **seven files**, closing the residue that had
+listed five record families as "still undecided and still unrecorded". A leaving shop now takes its
+**private staff notes** and its **staff activity trail** (who did what to which departure, and when
+— append-only, so it reconstructs how a trip reached the state the other files describe), the
+**delivery outcome of every message it ever sent a diver** (`notification_deliveries.csv` — the
+answer to "did this diver ever get their waiver request", which no other file could give), its
+**checkout attempts** and the seats each was paying for (the asks nobody finished, which
+`bookings.csv` and `orders.csv` structurally cannot show), its **promo redemptions** — resolvable at
+last, because the checkout each one points at now travels with it — and its **course leads**,
+including the ones that never converted. Two families stayed out and now say why where a human
+reads it rather than only in a test comment: `day_closeouts`, an attestation over facts the bundle
+already carries, and `processor_erasure_obligations`, which is deliberate under
+[20260803-processor-erasure-obligations](../architecture/decisions/20260803-processor-erasure-obligations.md)
+— an obligation carried into a system that cannot discharge it would read as done. The export
+page's own "not included" line had drifted into naming three things that now export; it, and the
+bundle README, were rewritten to match.
+
+**Safety (DOM-L4, DOM-M7).** `canRecordOfflineStatus` read `manifests[0]` no matter which checkpoint
+it was asked about, while `latestOfflineRollCall` beside it already looked the checkpoint up —
+survivable only because every snapshot so far carries an identical roster per checkpoint, and a trap
+the moment one doesn't. It reads the checkpoint's own manifest now, and a checkpoint the snapshot
+does not carry fails closed rather than borrowing a verdict. The test fixture that hid this for
+years — one manifest where a real snapshot has one per checkpoint — was corrected too. Separately,
+the demo shop gained a **second instructor**, rostered as a session's **divemaster**: the one
+(shop role × trip role) combination the seed had never shown, and the only one that is a genuine
+downgrade rather than a roster over-claim (`inWaterCrewRole` counts her as a certified assistant,
+not an instructor). The reset's stable-staff allowlist turned out to be a second hand-typed copy of
+the cast and now reads off the one definition.
+
+**Cross-tenant residency (SEC-D3).** The offline manifest store's cross-shop purge ran only from
+`OfflineManifestAutoSave`, which mounts in the staff shop layout — so a captain who lives on the
+offline shell, on a shared or reassigned boat tablet, never ran one. The shell runs it on load and
 on every reconnect now, against the same server-verified slug, and lists nothing until it has.
 
 **Units (DOM-L2).** The automated marine forecast composed an English metric sentence in `src/lib`
