@@ -259,7 +259,7 @@ export function StaffRolesDisclosure({
         onClick={() => (open ? closeAndSave() : setOpen(true))}
         onKeyDown={onEscape}
         onBlur={onFocusLeave}
-        className="flex min-h-11 w-fit items-center gap-2 text-sm text-muted select-none hover:text-primary"
+        className="-mx-2 flex min-h-11 w-fit items-center gap-2 rounded-lg px-2 text-sm text-muted select-none transition-colors hover:bg-surface-sunken hover:text-primary"
       >
         <DisclosureCaret className={open ? "rotate-90" : ""} />
         <span className="hover:underline">{summary}</span>

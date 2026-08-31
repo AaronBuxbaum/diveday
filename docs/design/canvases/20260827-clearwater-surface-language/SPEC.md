@@ -667,16 +667,16 @@ are untouched. Conversion surface: `conversion-reviewer` pass before merge.
 
 - Hero: shop name at display scale (`text-5xl`-class, 700), the shop's own tagline
   (`shops.tagline`; the hero renders only what the shop authored — no DiveDay filler), the
-  aggregate line (`getShopReviewAggregate`: stars drawn SVG in `--accent`, "4.3 · 83 reviews · every
-  one from a diver who was on the boat" — existing verified-reviews key), one conservation line
+  aggregate line (`getShopReviewAggregate`: stars drawn SVG in `--accent`, "4.3 · 83 reviews"), one
+  conservation line
   replacing the standing conservation card: **all** chosen commitments joined by " · " (drawn
   glyph), with `conservation.shopClaimsDisclaimer` surviving as a quiet suffix sentence after the
   line — it is a claims guard, never deleted.
-- The next-boat card (right column desktop, below hero phone): `pinnedNextDeparture` — relative-day
-  word + time, title, one description line, spots + `formatMoneyScanned` price, the page's one
-  primary ("Book this boat" → the trip page's `#book`). The old `rounded-3xl` hero retires. The
-  pinned next departure keeps its row in the week ledger — the week stays a complete, honest
-  sequence; the hero card is a pin, not a removal.
+- The next-boat card (directly below the hero in the same reading column): `pinnedNextDeparture` —
+  relative-day word + time, title, one description line, spots + `formatMoneyScanned` price, the
+  page's one primary ("Book this boat" → the trip page's `#book`). The old `rounded-3xl` hero
+  retires. The pinned next departure keeps its row in the week ledger — the week stays a complete,
+  honest sequence; the hero card is a pin, not a removal.
 - The week: existing day-grouped ledger tightened to **one meta line per row** (site ·
   requirement summary via `tripRequirementMarkers` · spots state · price). When
   `tripRequirementMarkers` is empty the requirement slot renders nothing — the meta line is

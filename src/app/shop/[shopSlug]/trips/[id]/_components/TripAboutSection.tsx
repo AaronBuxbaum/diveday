@@ -16,7 +16,7 @@ export type TripAboutRow = {
  *
  * ADR 20260827-the-departure-is-two-working-surfaces, slice 5e, keeps the
  * departure's definition available without making it the first thing a crew
- * member has to work through. At rest this is one two-line summary; on intent
+ * member has to work through. At rest this is one compact summary; on intent
  * it opens into the old, complete editors and the five label/value beats from
  * the design. The roster remains below it as the page's main working surface.
  */
@@ -58,10 +58,10 @@ export function TripAboutSection({
         className: "group/about scroll-mt-24 overflow-hidden",
       })}
     >
-      <summary className="flex min-h-16 cursor-pointer list-none items-center gap-3 px-4 py-2.5 text-sm transition-colors [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary sm:px-5">
+      <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2.5 px-4 py-2 text-sm transition-colors [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary sm:min-h-16 sm:gap-3 sm:px-5 sm:py-2.5">
         <svg
           aria-hidden="true"
-          className="size-5 shrink-0 text-muted"
+          className="size-4 shrink-0 text-muted sm:size-5"
           viewBox="0 0 22 22"
           fill="none"
           stroke="currentColor"
@@ -73,22 +73,24 @@ export function TripAboutSection({
           <path d="m13.8 8.2-1.7 4-4 1.7 1.7-4z" />
         </svg>
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-semibold group-open/about:hidden">{summary}</span>
+          <span className="block truncate font-semibold leading-snug group-open/about:hidden">
+            {summary}
+          </span>
           <span className="hidden font-semibold group-open/about:block">{heading}</span>
           {conditionsSummary ? (
-            <span className="mt-0.5 block truncate text-xs text-muted group-open/about:hidden">
+            <span className="mt-0.5 hidden truncate text-xs text-muted group-open/about:hidden sm:block sm:group-open/about:hidden">
               {conditionsSummary}
             </span>
           ) : null}
         </span>
-        <span className="inline-flex min-h-11 shrink-0 items-center gap-1 font-semibold text-primary">
+        <span className="-mx-2 inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg px-2 font-semibold text-primary transition-colors hover:bg-surface-sunken">
           <span className="group-open/about:hidden">{detailsLabel}</span>
           <span className="hidden group-open/about:inline">{closeLabel}</span>
           <DisclosureCaret direction="right" className="size-4 group-open/about:rotate-90" />
         </span>
       </summary>
       <div className="border-t border-border px-4 pb-4 sm:px-5 sm:pb-5">
-        {actions ? <div className="flex flex-wrap gap-x-2 gap-y-1 py-3">{actions}</div> : null}
+        {actions ? <div className="flex flex-wrap gap-2 py-3">{actions}</div> : null}
         <div className="divide-y divide-border border-y border-border">
           {rows.map((row) => (
             <div
@@ -100,7 +102,7 @@ export function TripAboutSection({
               {row.editHref ? (
                 <Link
                   href={row.editHref}
-                  className="min-h-11 self-start text-start text-sm font-semibold text-primary hover:underline sm:text-end"
+                  className="-mx-2 inline-flex min-h-11 w-fit self-start items-center rounded-lg px-2 text-start text-sm font-semibold text-primary transition-colors hover:bg-surface-sunken hover:underline sm:mx-0 sm:justify-self-end sm:text-end"
                 >
                   {editLabel}
                 </Link>

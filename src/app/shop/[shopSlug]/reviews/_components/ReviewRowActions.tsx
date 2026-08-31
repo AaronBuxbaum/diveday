@@ -6,6 +6,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
+import { ListItemActions } from "@/components/ui/list-item-actions";
 import type { NoticeTone } from "@/lib/staff-notices";
 import { type ReviewActionResult, reviewRowAction } from "../actions";
 import { ReviewHideForm } from "./ReviewHideForm";
@@ -39,6 +40,20 @@ export type ReviewRowCopy = {
   noteTooLong: string;
   error: string;
 };
+
+/** Keep the three quiet moderation controls aligned at every breakpoint. */
+const REVIEW_GHOST_ACTION_CLASS = buttonClass({
+  variant: "ghost",
+  size: "sm",
+  className: "whitespace-nowrap",
+});
+
+/** The release control shares the same height and label protection. */
+const REVIEW_SECONDARY_ACTION_CLASS = buttonClass({
+  variant: "secondary",
+  size: "sm",
+  className: "whitespace-nowrap",
+});
 
 /**
  * What the tap did, as a sentence and a tone — or nothing.
@@ -148,10 +163,10 @@ export function ReviewRowActions({
     <>
       {/* The row's trailing slot, not a bar across the bottom of a card: the
           hairline above the row is the ledger's, and a second rule inside every
-          row would be a card drawn in pieces. Right-aligned so a column of rows
-          ends on one edge, and `w-64` on what the disclosure opens because a
-          reason picker needs a width and the slot itself is content-sized. */}
-      <div className="flex flex-wrap items-center justify-end gap-1">
+          row would be a card drawn in pieces. `ListItemActions` gives this
+          slot the same full phone line and inline desktop line as the other
+          responsive list surfaces; the disclosure still gets its own width. */}
+      <ListItemActions>
         {!isHidden ? (
           /* Hiding states a case, so it cannot be a bare button (ADR
              20260813-review-moderation-has-a-floor). The picker waits behind a
@@ -160,12 +175,9 @@ export function ReviewRowActions({
              true is telling itself something. Available before publication as
              well: hiding a waiting review records the decision and keeps it out
              of the public set. */
-          <details>
+          <details className="shrink-0">
             <summary
-              className={`${buttonClass({
-                variant: "ghost",
-                size: "sm",
-              })} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+              className={`${REVIEW_GHOST_ACTION_CLASS} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
             >
               {copy.hide}
             </summary>
@@ -190,10 +202,7 @@ export function ReviewRowActions({
                 rows each offering the same act; a stack of solid buttons down
                 it makes the page shout, and the one act that carries the page's
                 weight is the group header's "Publish all N". */}
-            <SubmitButton
-              pendingLabel={copy.saving}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
+            <SubmitButton pendingLabel={copy.saving} className={REVIEW_SECONDARY_ACTION_CLASS}>
               {isHidden ? copy.republish : copy.publish}
             </SubmitButton>
           </form>
@@ -203,10 +212,7 @@ export function ReviewRowActions({
             <input type="hidden" name="intent" value="standout" />
             <input type="hidden" name="reviewId" value={reviewId} />
             <input type="hidden" name="standout" value={isStandout ? "false" : "true"} />
-            <SubmitButton
-              pendingLabel={copy.saving}
-              className={buttonClass({ variant: "ghost", size: "sm" })}
-            >
+            <SubmitButton pendingLabel={copy.saving} className={REVIEW_GHOST_ACTION_CLASS}>
               {isStandout ? copy.removeStandout : copy.markStandout}
             </SubmitButton>
           </form>
@@ -218,7 +224,7 @@ export function ReviewRowActions({
             {status.text}
           </FormStatus>
         ) : null}
-      </div>
+      </ListItemActions>
     </>
   );
 }

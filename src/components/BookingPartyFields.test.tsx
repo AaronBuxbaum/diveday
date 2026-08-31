@@ -27,7 +27,7 @@ describe("BookingPartyFields", () => {
     );
   });
 
-  it("makes a non-lead diver's email optional via the 'use main contact' checkbox (task 21)", () => {
+  it("hides a non-lead diver's email when they use the main contact (task 21)", () => {
     renderDiver(<BookingPartyFields maxPartySize={2} />);
     fireEvent.click(screen.getByRole("radio", { name: "2 divers" }));
 
@@ -35,12 +35,10 @@ describe("BookingPartyFields", () => {
     expect(email2).toBeRequired();
 
     fireEvent.click(screen.getByRole("checkbox", { name: /use the main contact's email/i }));
-    expect(email2).toBeDisabled();
-    expect(email2).not.toBeRequired();
+    expect(screen.queryByRole("textbox", { name: "Diver 2 email" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("checkbox", { name: /use the main contact's email/i }));
-    expect(email2).not.toBeDisabled();
-    expect(email2).toBeRequired();
+    expect(screen.getByRole("textbox", { name: "Diver 2 email" })).toBeRequired();
   });
 
   it("asks nothing about anybody's diving", () => {

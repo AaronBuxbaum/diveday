@@ -1141,7 +1141,7 @@ type CourseInquiryEmailInput = {
   inquirerName?: string;
   inquirerEmail?: string;
   inquirerPhone?: string;
-  experience: CourseInquiryExperience;
+  experience?: CourseInquiryExperience;
   timing?: string;
   /**
    * The dates the diver named, if they named any. Unlike every other blank
@@ -1171,7 +1171,9 @@ export function courseInquiryEmail(input: CourseInquiryEmailInput): Notification
   const phone = input.inquirerPhone?.trim() || notSaid;
   const timing = input.timing?.trim() || notSaid;
   const divers = input.divers != null ? String(input.divers) : notSaid;
-  const experience = t(COURSE_INQUIRY_EXPERIENCE_KEYS[input.experience]);
+  const experience = input.experience
+    ? t(COURSE_INQUIRY_EXPERIENCE_KEYS[input.experience])
+    : notSaid;
   const message = input.message?.trim() || "";
 
   const courseTitle = escapeHtml(input.courseTitle);

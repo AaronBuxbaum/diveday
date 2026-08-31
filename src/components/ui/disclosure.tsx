@@ -108,13 +108,15 @@ export function CompactDisclosureRow({
 }) {
   return (
     <details id={id} open={open} className={`group/compact-row ${className}`.trim()}>
-      <summary className="flex min-h-11 cursor-pointer list-none flex-col items-start justify-center gap-1 py-2 text-sm select-none transition-brand [&::-webkit-details-marker]:hidden hover:text-primary sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+      <summary className="-mx-2 flex min-h-11 cursor-pointer list-none flex-col items-start justify-center gap-1 rounded-lg px-2 py-2 text-sm select-none transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-primary sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <span className="flex min-w-0 items-center gap-2">
           <DisclosureCaret className="shrink-0 text-muted group-open/compact-row:rotate-90" />
           <span className="font-medium">{label}</span>
         </span>
         {value != null ? (
-          <span className="min-w-0 max-w-full truncate text-muted sm:text-end">{value}</span>
+          <span className="min-w-0 max-w-full whitespace-normal break-words text-muted sm:truncate sm:text-end">
+            {value}
+          </span>
         ) : null}
       </summary>
       <div className={bodyClassName}>{children}</div>

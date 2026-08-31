@@ -212,8 +212,8 @@ describe("BookSpotSection — the money says itself once", () => {
 
 /**
  * The fine print under the button, and nothing else under it. `TripTerms`
- * arrives as a node from the page; "no account needed" was a standalone
- * paragraph of reassurance and now lives behind the one disclosure.
+ * arrives as a node from the page; the retired full-terms disclosure must not
+ * leave a second, redundant surface behind.
  */
 describe("BookSpotSection — under the button", () => {
   function renderWithTerms(payAtBooking: boolean) {
@@ -234,12 +234,11 @@ describe("BookSpotSection — under the button", () => {
     );
   }
 
-  it("puts the full terms behind one disclosure, with no account needed inside it", () => {
+  it("keeps only the cancellation fine print", () => {
     renderWithTerms(true);
-    const summary = screen.getByText("Full terms");
-    const details = summary.closest("details");
-    expect(details).not.toBeNull();
-    expect(details).toContainElement(screen.getByText(/No account needed/i));
+    expect(screen.getByText(/Free cancellation until/)).toBeInTheDocument();
+    expect(screen.queryByText("Full terms")).not.toBeInTheDocument();
+    expect(screen.queryByText(/No account needed/i)).not.toBeInTheDocument();
   });
 
   it("promises a secure page only when there is a checkout to reach", () => {

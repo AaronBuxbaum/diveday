@@ -345,18 +345,6 @@ export default async function DiverDetailPage({
         t={t}
         status={noticeForForm(diverNotice, "fit")}
       />
-      {/* Beside the gear, because the record is: one row per person per shop,
-          upserted, a living preference rather than evidence. A staffer arriving
-          from the prep panel's link lands on the record and finds what they
-          were just reading (issue #1069). */}
-      <SupportNeedsPanel
-        needs={supportNeeds}
-        shopSlug={shopSlug}
-        personId={personId}
-        canOverride={canOverrideFit}
-        t={t}
-        status={noticeForForm(diverNotice, "support")}
-      />
       <DiverNotesSection
         notes={notes}
         shopSlug={shopSlug}
@@ -365,6 +353,18 @@ export default async function DiverDetailPage({
         timezone={shop.timezone}
         t={t}
         status={notesStatus}
+      />
+      {/* After notes in the file, because support is a quieter planning fact
+          than the record context staff write for the crew. A staffer arriving
+          from the prep panel's link still lands on this group's own #support
+          target (issue #1069). */}
+      <SupportNeedsPanel
+        needs={supportNeeds}
+        shopSlug={shopSlug}
+        personId={personId}
+        canOverride={canOverrideFit}
+        t={t}
+        status={noticeForForm(diverNotice, "support")}
       />
       <ActivitySection
         page={activityPage}

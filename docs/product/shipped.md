@@ -1304,14 +1304,15 @@ instead of their ordinary success code. Pinned by `_lib/status.test.ts`,
 Slice 6i of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
 decision 8. `/s/[shopSlug]` opens on **the shop**, not on the word "Schedule": the name at display
 scale as the page's `h1`, the shop's own tagline, the review aggregate — drawn stars in the accent,
-the figure, the count, and the claim that makes the number mean anything — and one conservation
-line joining every commitment the shop ticked, with the "stated by the shop, not verified by
-DiveDay" guard intact behind it. The band renders **only what the shop authored**: no tagline it
+the figure and the count — and one conservation line joining every commitment the shop ticked,
+with the "stated by the shop, not verified by DiveDay" guard intact behind it. The band renders
+**only what the shop authored**: no tagline it
 has not written, no rating nobody has left, no DiveDay filler in place of either. Day zero is a
 name and nothing else, and it is a shape rather than a failure state.
 
-Beside it, the **next boat as a bookable object** — the page's one card and its one primary, "Book
-this boat" into the trip page's `#book`. `pinnedNextDeparture` became `nextBookableDeparture`: the
+Immediately beneath it in the same reading flow, the **next boat as a bookable object** — the
+page's one card and its one primary, "Book this boat" into the trip page's `#book`.
+`pinnedNextDeparture` became `nextBookableDeparture`: the
 pin used to stand down whenever the week's own first row already had room, and the storefront makes
 the next boat the page's subject instead, so the card always renders and the week below keeps that
 departure's row. The week is the same day-grouped ledger at **one meta line per row** — course
@@ -1448,7 +1449,8 @@ now — what to bring is preparation, and preparation is for a diver who has a s
 the five scattered money lines collapse into one `MoneyBlock`
 (`src/app/s/[shopSlug]/trips/[id]/_components/MoneyBlock.tsx`) that renders **exactly one figure at
 or above `text-lg`** and nothing at all on an unpriced departure; `TripTerms` keeps only the
-free-cancellation sentence and the rest goes behind one `trip.fullTermsLabel` disclosure; the party
+free-cancellation sentence; the former full-terms disclosure and no-account line are removed as
+redundant; the party
 count is a segmented row of radios up to six seats and the `<select>` above that; the bordered
 party and gear fieldsets become hairline steps of one sheet; and the sticky phone pill keeps the
 verb alone. The page joins the thread's `max-w-xl`. The embed contract, the `confirm`-capability

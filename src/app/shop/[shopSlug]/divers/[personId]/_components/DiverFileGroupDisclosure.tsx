@@ -4,15 +4,17 @@ import { type ReactNode, useEffect, useRef } from "react";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 
 /**
- * Diver record file groups become doors on a phone while keeping one content
- * tree for desktop and assistive technology. A group's summary is its one
- * useful fact, not a second version of the group.
+ * Diver record file groups use one native disclosure tree at every viewport.
+ * Legacy groups become doors on a phone, while `desktopCollapsible` groups
+ * retain their door on larger screens too. A group's summary is its one useful
+ * fact, not a second version of the group.
  */
 export function DiverFileGroupDisclosure({
   id,
   label,
   summary,
   open = false,
+  desktopCollapsible = false,
   className = "",
   children,
 }: {
@@ -20,6 +22,8 @@ export function DiverFileGroupDisclosure({
   label: string;
   summary: string;
   open?: boolean;
+  /** Keep the native door on larger screens too; legacy file groups stay open there. */
+  desktopCollapsible?: boolean;
   className?: string;
   children: ReactNode;
 }) {
@@ -58,23 +62,30 @@ export function DiverFileGroupDisclosure({
     return () => window.removeEventListener("hashchange", openHashTarget);
   }, []);
 
+  const summaryVisibility = desktopCollapsible ? "" : "sm:hidden";
+  const contentVisibility = desktopCollapsible ? "" : "sm:!block";
+  const desktopModeClass = desktopCollapsible ? "diver-file-group--desktop-collapsible" : "";
+
   return (
     <section aria-label={label} className={className || undefined}>
       <details
         ref={detailsRef}
         open={open || undefined}
-        className="group/diver-file diver-file-group"
+        className={`group/diver-file diver-file-group ${desktopModeClass}`.trim()}
         data-testid={`diver-file-group-${id}`}
       >
         <summary
           aria-controls={`${id}-content`}
-          className="flex min-h-11 cursor-pointer items-center gap-3 border-y border-border px-1 py-3 sm:hidden"
+          className={`flex min-h-11 cursor-pointer items-center gap-3 border-y border-border px-1 py-3 ${summaryVisibility}`.trim()}
         >
           <DisclosureCaret className="shrink-0 text-muted group-open/diver-file:rotate-90" />
           <span className="min-w-0 flex-1 text-base font-medium">{label}</span>
           <span className="shrink-0 text-sm text-muted tabular-nums">{summary}</span>
         </summary>
-        <div id={`${id}-content`} className="diver-file-group-content sm:!block">
+        <div
+          id={`${id}-content`}
+          className={`diver-file-group-content ${contentVisibility}`.trim()}
+        >
           {children}
         </div>
       </details>

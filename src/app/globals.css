@@ -297,6 +297,23 @@ body {
  */
 
 /*
+ * The phone dock is 56px tall, plus any home-indicator inset. Keep the same
+ * clearance on page padding, sticky form actions, and fixed toasts; a fixed
+ * 4.5rem guess is correct only on a device with no inset and drifts on
+ * edge-to-edge phones. The desktop media rule below removes it where the dock
+ * is hidden.
+ */
+#shop-main-content {
+  --dock-clearance: calc(3.5rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1024px) {
+  #shop-main-content {
+    --dock-clearance: 0rem;
+  }
+}
+
+/*
  * Responsive shell exception — ADR 20260830-responsive-surface-consistency.
  * The live manifest is the only `.boat-mode` surface inside the staff shell.
  * It owns the mobile viewport, so it must not reserve space for the phone dock.
@@ -1121,15 +1138,21 @@ details[open]::details-content {
 }
 
 /*
- * The diver file is a phone-only disclosure. At the desktop breakpoint its
- * summary disappears and the record's four groups must stay in the reading
- * flow even though the native `<details>` element remains closed. Chromium's
- * `::details-content` pseudo-element can keep a closed body content-hidden
- * after the child receives `display: block`, so open the pseudo-element here
- * as well. The child utility above handles the older display-only behavior.
+ * Legacy diver-file groups are phone-only disclosures. At the desktop
+ * breakpoint their summary disappears and the record's groups must stay in the
+ * reading flow even though the native `<details>` element remains closed.
+ * Chromium's `::details-content` pseudo-element can keep a closed body
+ * content-hidden after the child receives `display: block`, so open the
+ * pseudo-element here as well. The child utility above handles the older
+ * display-only behavior.
+ *
+ * `DiverFileGroupDisclosure` marks a group that is meant to stay collapsible on
+ * desktop with `diver-file-group--desktop-collapsible`. It keeps the native
+ * closed state intact here: the visible summary is its desktop door, and the
+ * pseudo-element must not turn the body back on behind it.
  */
 @media (min-width: 40rem) {
-  .diver-file-group::details-content {
+  .diver-file-group:not(.diver-file-group--desktop-collapsible)::details-content {
     /* biome-ignore lint/complexity/noImportantStyles: desktop must override the UA closed-details rule */
     content-visibility: visible !important;
     opacity: 1;

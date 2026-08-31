@@ -53,6 +53,17 @@ describe("the disclosure body's motion", () => {
     expect(rule("details::details-content")).toContain("var(--ease-in-soft)");
   });
 
+  it("force-opens only legacy diver-file groups at desktop", () => {
+    const desktop = rule(
+      ".diver-file-group:not(.diver-file-group--desktop-collapsible)::details-content",
+    );
+    expect(desktop).toContain("content-visibility: visible !important");
+
+    const mediaStart = CSS.indexOf("@media (min-width: 40rem) {");
+    const mediaBlock = CSS.slice(mediaStart, CSS.indexOf("\n}", mediaStart));
+    expect(mediaBlock).not.toContain(".diver-file-group::details-content {");
+  });
+
   /**
    * `*, *::before, *::after` does not reach `::details-content` — it is not one
    * of the two pseudo-elements the universal selector names. Without an

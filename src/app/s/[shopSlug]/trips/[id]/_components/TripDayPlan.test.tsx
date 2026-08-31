@@ -62,8 +62,22 @@ describe("TripDayPlan", () => {
 
 describe("TripLookFor", () => {
   const creatures = [
-    { id: "c1", name: "Stoplight parrotfish", imageUrl: "/marine-life/stoplight-parrotfish.jpg" },
-    { id: "c2", name: "Green turtle", imageUrl: "/marine-life/green-turtle.jpg" },
+    {
+      id: "c1",
+      slug: "stoplight-parrotfish",
+      name: "Stoplight parrotfish",
+      description: "A reef fish with a face that changes as it grows.",
+      preparationTip: "Look along the coral edge and let it come to you.",
+      imageUrl: "/marine-life/stoplight-parrotfish.jpg",
+    },
+    {
+      id: "c2",
+      slug: "green-sea-turtle",
+      name: "Green turtle",
+      description: "A calm grazer often seen moving over the reef.",
+      preparationTip: "Watch the sand beside the reef for a slow, steady glide.",
+      imageUrl: "/marine-life/green-turtle.jpg",
+    },
   ] as unknown as DiveBriefing["creatures"];
 
   it("names the species once each, however many dives share a site", () => {
@@ -77,6 +91,12 @@ describe("TripLookFor", () => {
     expect(screen.getByText("Look for")).toBeInTheDocument();
     expect(screen.getAllByText("Stoplight parrotfish")).toHaveLength(1);
     expect(screen.getAllByText("Green turtle")).toHaveLength(1);
+    expect(
+      screen.getByText("A reef fish with a face that changes as it grows."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Look along the coral edge and let it come to you."),
+    ).toBeInTheDocument();
   });
 
   it("shows each species' face as a decorative photo beside its name", () => {

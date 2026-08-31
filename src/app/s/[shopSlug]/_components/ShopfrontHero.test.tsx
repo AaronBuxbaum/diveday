@@ -86,9 +86,7 @@ describe("the hero renders only what the shop authored", () => {
       />,
     );
 
-    expect(visibleText(screen.getByRole("paragraph"))).toBe(
-      "4.3 · 83 reviews · every one from a diver who was on the boat",
-    );
+    expect(visibleText(screen.getByRole("paragraph"))).toBe("4.3 · 83 reviews");
   });
 
   it("formats the figure for the reader's own locale", () => {

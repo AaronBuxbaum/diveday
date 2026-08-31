@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatTime } from "@/lib/format";
 import type { AboardBlockerKind } from "@/lib/readiness";
@@ -123,7 +123,7 @@ export function DayStation({
             <h3 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-lg font-semibold tracking-tight">
               <Link
                 href={`/shop/${shopSlug}/trips/${station.tripId}`}
-                className="group/station inline-flex items-center gap-1.5 hover:underline"
+                className={`${tapTargetLinkClass} group/station -mx-2 rounded-lg px-2 transition-colors hover:bg-surface-sunken hover:no-underline`}
               >
                 {station.title}
                 <DiveDayIcon

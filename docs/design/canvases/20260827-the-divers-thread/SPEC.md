@@ -144,9 +144,9 @@ export function MoneyBlock(props: {
 - The submit row: one primary (label carries the verb; the secure-pay hint only when `dueNow` is
   `"checkout"`), `TripTerms` collapses to the single "free cancellation until <date>" sentence
   under the button — its course-fee/e-learning breakdown and deposit-vs-balance figures move into
-  `MoneyBlock` (`courseFeeCents`/`eLearningFeeCents`/`balanceDueAt` above); full terms behind a
-  `DisclosureRow` (`src/components/ui/disclosure.tsx`) whose summary label is a new
-  `trip.fullTermsLabel` key; "no account needed" joins that line.
+  `MoneyBlock` (`courseFeeCents`/`eLearningFeeCents`/`balanceDueAt` above). `TripTerms` keeps only
+  the free-cancellation sentence; the former full-terms disclosure and no-account reassurance are
+  removed as redundant.
 - The sticky phone pill keeps the verb only ("Book") and scrolls to `#book`; it renders exactly
   when it does today.
 - State slot behavior (`WaitlistConfirmation`, `TripFullSection`, `TripSailedNotice`,
@@ -383,7 +383,7 @@ Additions: step titles/settled lines (`diver.json` `thread.*`, including `thread
 `thread.afterGreeting` = "Welcome back, {name}." — the register is welcome-home, a sentence true
 after a hard day as well as a great one, and the artboard's "What a day, Yara." is fiction, not
 the key's wording; the greeting carries coral until the diver's review is submitted, then renders
-quiet; the money block's line keys, `trip.fullTermsLabel`, the rail keys, the after-state door
+quiet; the money block's line keys, the rail keys, the after-state door
 labels, and the keepsake's `recap.milestoneStampFirst` ("First dive day") / `recap.milestoneStamp`
 ("{ordinal} dive day") / `recap.printNotes` ("Notes") / `recap.printSignature` ("Divemaster") —
 every locale in the same change. Deletions (call site +

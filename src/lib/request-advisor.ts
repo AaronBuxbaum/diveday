@@ -9,7 +9,7 @@ import { divemastersNeeded } from "./divemaster-ratio";
 export type RequestAdvisorInput = {
   id: string;
   divers: number | null;
-  experienceLevel: CourseInquiryExperience;
+  experienceLevel: CourseInquiryExperience | null;
   courseId: string | null;
 };
 
@@ -81,7 +81,7 @@ export const transparentHeadcountAdvisor: RequestAdvisor = (requests, shape) => 
     lapsed: 0,
   };
   const estimatedDivers = requests.reduce((total, request) => {
-    experienceMix[request.experienceLevel] += 1;
+    if (request.experienceLevel) experienceMix[request.experienceLevel] += 1;
     return total + Math.max(1, request.divers ?? 1);
   }, 0);
 

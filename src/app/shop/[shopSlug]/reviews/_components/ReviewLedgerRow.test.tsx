@@ -164,6 +164,18 @@ describe("a review row", () => {
     expect(screen.getByText(/Dana Reyes/)).toBeInTheDocument();
   });
 
+  /** Full review words stay readable after moderation, including on long rows. */
+  it("keeps a moderated review's complete words in a wrapping paragraph", () => {
+    const comment =
+      "The current was gentle, the visibility opened up, and the crew found a turtle on the second tank.";
+    const { container } = row({ comment, isPublished: true }, "published");
+    const reviewText = screen.getByText(comment);
+
+    expect(reviewText).toHaveClass("break-words", "text-pretty");
+    expect(reviewText).not.toHaveClass("truncate");
+    expect(container.querySelector(".truncate")).toBeNull();
+  });
+
   /** A rating with no words says so rather than rendering an empty line. */
   it("names a bare rating", () => {
     row({ comment: null, isPublished: true }, "published");

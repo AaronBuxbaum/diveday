@@ -83,6 +83,12 @@ export function groupLabelClass(tone: GroupLabelTone = "muted") {
  */
 const GROUP_META_CLASS = "shrink-0 text-xs font-medium text-muted tabular-nums";
 
+/** The row grammar used by a collapsed horizon such as Tomorrow. */
+const HORIZON_SUMMARY_CLASS =
+  "-mx-2 flex min-h-14 cursor-pointer list-none items-center gap-3 border-t border-border px-2 py-1 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken";
+const HORIZON_LABEL_CLASS = "min-w-0 flex-1 text-base font-semibold tracking-tight";
+const HORIZON_META_CLASS = "shrink-0 text-sm font-medium text-muted tabular-nums";
+
 /** Heading levels a group label may be. `p` for chrome that is not page structure (a menu section). */
 type GroupLabelElement = "h2" | "h3" | "h4" | "p";
 
@@ -140,6 +146,7 @@ export function LedgerGroup({
   as = "p",
   id,
   folded,
+  summaryVariant = "group",
   className = "",
   children,
 }: {
@@ -149,9 +156,12 @@ export function LedgerGroup({
   id?: string;
   /** Omit for a group that never collapses; `true` renders it closed, `false` open. */
   folded?: boolean;
+  /** `row` keeps collapsed horizons in the same grammar as their link rows. */
+  summaryVariant?: "group" | "row";
   className?: string;
   children: ReactNode;
 }) {
+  const SummaryLabel = as;
   if (folded === undefined) {
     return (
       <div className={className || undefined}>
@@ -164,26 +174,30 @@ export function LedgerGroup({
   }
   return (
     <details open={!folded} className={`group/fold ${className}`.trim()}>
-      {/* `min-h-11` is the 44px control floor (principles.md §2) — this is a
-          press target made of 12px type, and 21 other `<summary>` elements in
-          the app already carry it. `items-center` rather than `items-baseline`
-          because the box is now taller than its words.
-
-          The summary lays the three parts out itself instead of nesting
-          `GroupLabel`'s meta row: `<summary>` takes phrasing content
-          optionally intermixed with *heading* content, so a heading may sit
-          here directly but a wrapping `<div>`/`<span>` around it may not. Name
-          a heading level on a group that folds — the `p` default is chrome,
-          and only a heading is valid in here. */}
-      <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-1 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
-        {/* Which way this goes, before you press it — decorative; the native
-            disclosure semantics carry the state. */}
-        <DisclosureCaret className="text-muted group-open/fold:rotate-90" />
-        <GroupLabel as={as} id={id} className="min-w-0 flex-1">
-          {label}
-        </GroupLabel>
-        {meta != null ? <span className={GROUP_META_CLASS}>{meta}</span> : null}
-      </summary>
+      {/* The default summary keeps the quiet group-label grammar used by
+          settings and other folded groups. Horizons opt into the row grammar
+          below so their label, count and door match the sibling week row. */}
+      {summaryVariant === "row" ? (
+        <summary className={HORIZON_SUMMARY_CLASS}>
+          {/* The caret stays at the edge of a horizon row, beside its counts,
+              so Tomorrow and This week read as the same door. */}
+          <SummaryLabel id={id} className={HORIZON_LABEL_CLASS}>
+            {label}
+          </SummaryLabel>
+          {meta != null ? <span className={HORIZON_META_CLASS}>{meta}</span> : null}
+          <DisclosureCaret className="text-muted group-open/fold:rotate-90" />
+        </summary>
+      ) : (
+        <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-1 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
+          {/* Which way this goes, before you press it — decorative; the native
+              disclosure semantics carry the state. */}
+          <DisclosureCaret className="text-muted group-open/fold:rotate-90" />
+          <GroupLabel as={as} id={id} className="min-w-0 flex-1">
+            {label}
+          </GroupLabel>
+          {meta != null ? <span className={GROUP_META_CLASS}>{meta}</span> : null}
+        </summary>
+      )}
       {children}
     </details>
   );

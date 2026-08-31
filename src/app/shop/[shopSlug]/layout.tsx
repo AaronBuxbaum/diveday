@@ -245,7 +245,7 @@ export default async function ShopLayout({
       <div
         id="shop-main-content"
         tabIndex={-1}
-        className="flex-1 outline-none [--dock-clearance:4.5rem] pb-(--dock-clearance) lg:[--dock-clearance:0rem]"
+        className="min-h-0 flex-1 outline-none pb-(--dock-clearance)"
       >
         {children}
       </div>

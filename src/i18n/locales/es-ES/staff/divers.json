@@ -411,6 +411,8 @@
     "certificationsClear": "Ninguna pendiente",
     "noteCount": "{count}",
     "noNotes": "Ninguna",
+    "supportCount": "{count, plural, one {# arreglo} other {# arreglos}}",
+    "noSupport": "Sin arreglos indicados",
     "gearHeading": "Equipo y tallas",
     "rentsFromUs": "Renta con nosotros",
     "sizes": "Tallas",

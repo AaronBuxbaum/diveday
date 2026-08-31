@@ -526,7 +526,7 @@ const courseInquirySchema = z.object({
   inquirerName: z.string().trim().min(1).max(120).optional(),
   inquirerEmail: emailAddressSchema.optional(),
   inquirerPhone: z.string().trim().min(1).max(30).optional(),
-  experience: z.enum(COURSE_INQUIRY_EXPERIENCE),
+  experience: z.enum(COURSE_INQUIRY_EXPERIENCE).optional(),
   timing: z.string().trim().min(1).max(200).optional(),
   // The dates the diver actually named, which is the fact that decides whether
   // a boat goes up — carried here as calendar dates rather than folded into

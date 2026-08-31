@@ -177,7 +177,7 @@ describe("after the dive", () => {
     // place a cancelled departure's token ever arrives.
     const gate = positionOf("const capability = await verifyBookingCapability");
     const deadEnd = positionOf("if (!capability) {");
-    const departure = positionOf("data.departureCancelled");
+    const departure = positionOf("data?.departureCancelled");
     const liveShop = positionOf("const shopContact = {");
     for (const marker of [gate, deadEnd, departure, liveShop]) {
       expect(marker).toBeGreaterThan(-1);

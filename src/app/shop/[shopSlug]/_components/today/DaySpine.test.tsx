@@ -580,6 +580,27 @@ describe("the two horizon rows", () => {
     );
   });
 
+  it("uses the same row grammar for Tomorrow and This week", () => {
+    const { container } = renderSpine({
+      actions: [
+        action({ id: "today", departure: boat("t1") }),
+        action({ id: "tomorrow", departure: boat("t2") }),
+        action({ id: "friday", departure: boat("t9") }),
+      ],
+      tomorrow: [departure({ tripId: "t2", title: "Night Dive", startsAt: hoursFromNow(26) })],
+    });
+
+    const summary = container.querySelector("details summary");
+    expect(summary).toHaveClass("min-h-14", "-mx-2", "px-2");
+    expect(summary?.querySelector("h2")).toHaveClass("text-base", "font-semibold");
+    // The caret is at the row's trailing edge, like the week link's chevron.
+    expect(summary?.lastElementChild?.tagName).toBe("svg");
+
+    const week = screen.getByText("This week").closest("li");
+    expect(week).toHaveClass("min-h-14", "-mx-2", "px-2");
+    expect(screen.getByText("This week")).toHaveClass("text-base", "font-semibold");
+  });
+
   it("renders no Tomorrow row on a day with nothing sailing tomorrow", () => {
     renderSpine({ actions: [action({ id: "today", departure: boat("t1") })] });
     expect(screen.queryByText(/^Tomorrow/)).toBeNull();
@@ -852,6 +873,27 @@ describe("the evening reading", () => {
     expect(screen.getByRole("button", { name: "Close the day" })).toBeInTheDocument();
     expect(screen.getByText("Still open — carries to tomorrow")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
+  });
+
+  it("gives a desk action one owner when close-out also carries it", () => {
+    const units = action({
+      id: "units:unconfirmed",
+      kind: "units_unconfirmed",
+      subject: "Confirm the shop units",
+      detail: "Currency and depth still need confirmation.",
+      actionLabel: "Check units",
+      href: "/shop/blue-mantis/settings#units",
+    });
+
+    renderSpine({
+      departures: [],
+      actions: [units],
+      evening: evening([closed({ tripId: "t1" })], { leftovers: [units] }),
+    });
+
+    expect(screen.getAllByText("Confirm the shop units", { exact: true })).toHaveLength(1);
+    expect(screen.queryByText("At the desk")).toBeNull();
+    expect(screen.getByText("Still open — carries to tomorrow")).toBeInTheDocument();
   });
 
   it("puts no acknowledgement control on the closing act, at any leftover count", () => {

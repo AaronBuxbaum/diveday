@@ -888,7 +888,7 @@ export function OfflineManifestView() {
                   <li key={tripManifest.trip.id}>
                     <a
                       href={`/offline-manifest?trip=${tripManifest.trip.id}`}
-                      className="flex min-h-14 flex-col gap-2 p-4 hover:bg-surface-sunken sm:flex-row sm:items-center sm:justify-between sm:p-5"
+                      className="flex min-h-14 flex-col gap-2 p-4 transition-colors hover:bg-surface-sunken focus-visible:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary sm:flex-row sm:items-center sm:justify-between sm:p-5"
                     >
                       <div>
                         <p className="text-lg font-semibold">{tripManifest.trip.title}</p>
@@ -1371,7 +1371,7 @@ export function OfflineManifestView() {
         ) : null}
 
         <nav
-          className="mt-6 flex flex-wrap items-center gap-2 overflow-x-auto pb-2"
+          className="mt-6 flex flex-wrap items-center gap-3 pb-1"
           aria-label={t("shared.offlineManifest.single.checkpointNavAria")}
         >
           {rollCallCheckpoints(manifest.trip.plannedDives).map((value) => (
@@ -1394,9 +1394,6 @@ export function OfflineManifestView() {
               {rollCallCheckpointText(t, value)}
             </button>
           ))}
-          <WaterLockerToggle
-            copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
-          />
         </nav>
 
         <section
@@ -1861,7 +1858,7 @@ export function OfflineManifestView() {
                         offline-manifests.ts) — so this is always the plain
                         two-fact summary, never the "& medical" variant. */}
                       <details className="group/offlinefacts mt-2 max-w-xl">
-                        <summary className="group/summary flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 text-base font-medium text-muted select-none hover:text-primary [&::-webkit-details-marker]:hidden">
+                        <summary className="group/summary -mx-2 flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-base font-medium text-muted select-none transition-colors hover:bg-surface-sunken/70 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
                           <DisclosureCaret className="group-open/offlinefacts:rotate-90" />
                           <span className="group-hover/summary:underline">
                             {t("manifest.diverFactsSummary")}
@@ -2203,10 +2200,55 @@ export function OfflineManifestView() {
           }}
         />
 
+        {/* Per-device controls are secondary to roll call. Keep them in the
+          same disclosure on the offline surface as the live manifest's
+          "On this phone" group, rather than mixing one toggle into the
+          checkpoint selector and leaving the others at the page foot. */}
+        <section
+          className="mt-8 border-t border-border pt-5 print:hidden"
+          aria-labelledby="offline-phone-heading"
+        >
+          <details id="offline-phone-settings" className="group/offline-phone">
+            <summary className="group/summary flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-surface-sunken/70 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
+              <DisclosureCaret className="group-open/offline-phone:rotate-90" />
+              <h2
+                id="offline-phone-heading"
+                className="text-base font-semibold group-hover/summary:underline"
+              >
+                {t("trips.onThisPhone")}
+              </h2>
+            </summary>
+            <div className="grid gap-3 pt-4 sm:grid-cols-2">
+              <WaterLockerToggle
+                copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
+                className="h-full w-full justify-start"
+              />
+              {/* Renders nothing on a phone with no vibration motor — which is
+                every iPhone (src/components/haptics.ts). */}
+              <HapticsToggle
+                copy={{ label: t("shared.haptics.toggleLabel") }}
+                className="h-full w-full justify-start"
+              />
+              <AmbientContrastControl
+                className="h-full w-full rounded-xl border border-border bg-surface-sunken p-3"
+                copy={{
+                  modeLabel: t("shared.boatMode.modeLabel"),
+                  labelAuto: t("shared.boatMode.labelAuto"),
+                  labelLand: t("shared.boatMode.labelLand"),
+                  labelBoat: t("shared.boatMode.labelBoat"),
+                }}
+              />
+            </div>
+          </details>
+        </section>
+
         <footer className="mt-8 flex flex-wrap items-center gap-4 border-t border-border pt-5">
           <a
             href={`/shop/${envelope.snapshot.shop.slug}/trips/${tripId}/manifest?checkpoint=${checkpoint}`}
-            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 py-2.5 font-semibold text-primary-foreground"
+            className={buttonClass({
+              size: "boat",
+              className: "w-full sm:w-auto",
+            })}
           >
             {t("shared.offlineManifest.single.openLiveManifest")}
           </a>
@@ -2256,19 +2298,6 @@ export function OfflineManifestView() {
             message: t("shared.subSurfaceRipple.message"),
           }}
         />
-        <div className="mt-8 flex flex-wrap items-start justify-start gap-3 print:hidden">
-          <AmbientContrastControl
-            copy={{
-              modeLabel: t("shared.boatMode.modeLabel"),
-              labelAuto: t("shared.boatMode.labelAuto"),
-              labelLand: t("shared.boatMode.labelLand"),
-              labelBoat: t("shared.boatMode.labelBoat"),
-            }}
-          />
-          {/* Renders nothing on a phone with no vibration motor — which is every
-            iPhone (src/components/haptics.ts). */}
-          <HapticsToggle copy={{ label: t("shared.haptics.toggleLabel") }} />
-        </div>
       </PullToRefresh>
     </main>
   );

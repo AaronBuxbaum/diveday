@@ -28,7 +28,7 @@ const inquirySchema = z.object({
   dateFlexible: z.boolean(),
   timing: z.string().trim().max(200).optional(),
   divers: z.coerce.number().int().min(1).max(12).optional(),
-  experience: z.enum(COURSE_INQUIRY_EXPERIENCE),
+  experience: z.enum(COURSE_INQUIRY_EXPERIENCE).optional(),
   message: z.string().trim().max(1500).optional(),
 });
 

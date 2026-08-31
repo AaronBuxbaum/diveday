@@ -56,6 +56,12 @@ describe("StaffRolesDisclosure", () => {
     expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 
+  it("keeps the role disclosure hover state padded", () => {
+    renderRow();
+
+    expect(toggle()).toHaveClass("-mx-2", "px-2", "hover:bg-surface-sunken");
+  });
+
   it("saves the row when it closes, posting that person and their checked roles", async () => {
     const action = vi.fn();
     renderRow({ action });

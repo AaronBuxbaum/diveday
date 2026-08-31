@@ -800,51 +800,58 @@ export default async function TripManifestPage({
           } satisfies OfflineManifestManagerCopy
         }
       >
-        <PushOptIn
-          publicKey={webPushPublicKey()}
-          subscribeAction={subscribePushAction.bind(null, tripId)}
-          unsubscribeAction={unsubscribePushAction.bind(null, tripId)}
-          isSubscribedAction={isPushSubscribedAction.bind(null, tripId)}
-          isSubscribedAnyAction={isPushSubscribedAnywhereAction}
-          copy={
-            {
-              heading: t("trips.offlineManifestManager.pushHeading"),
-              body: t("trips.offlineManifestManager.pushBody"),
-              enable: t("trips.offlineManifestManager.pushEnable"),
-              enabling: t("trips.offlineManifestManager.pushEnabling"),
-              disable: t("trips.offlineManifestManager.pushDisable"),
-              on: t("trips.offlineManifestManager.pushOn"),
-              unsupported: t("trips.offlineManifestManager.pushUnsupported"),
-              homeScreenHint: t("trips.offlineManifestManager.pushHomeScreenHint"),
-              denied: t("trips.offlineManifestManager.pushDenied"),
-              error: t("trips.offlineManifestManager.pushError"),
-            } satisfies PushOptInCopy
-          }
-        />
+        <div className="grid gap-5">
+          {/* Push is an optional device capability. The empty guard keeps a
+            browser without notification support from leaving a blank inset
+            behind while the device settings below keep their place. */}
+          <div className="rounded-xl bg-surface-sunken/70 p-4 empty:hidden">
+            <PushOptIn
+              publicKey={webPushPublicKey()}
+              subscribeAction={subscribePushAction.bind(null, tripId)}
+              unsubscribeAction={unsubscribePushAction.bind(null, tripId)}
+              isSubscribedAction={isPushSubscribedAction.bind(null, tripId)}
+              isSubscribedAnyAction={isPushSubscribedAnywhereAction}
+              copy={
+                {
+                  heading: t("trips.offlineManifestManager.pushHeading"),
+                  body: t("trips.offlineManifestManager.pushBody"),
+                  enable: t("trips.offlineManifestManager.pushEnable"),
+                  enabling: t("trips.offlineManifestManager.pushEnabling"),
+                  disable: t("trips.offlineManifestManager.pushDisable"),
+                  on: t("trips.offlineManifestManager.pushOn"),
+                  unsupported: t("trips.offlineManifestManager.pushUnsupported"),
+                  homeScreenHint: t("trips.offlineManifestManager.pushHomeScreenHint"),
+                  denied: t("trips.offlineManifestManager.pushDenied"),
+                  error: t("trips.offlineManifestManager.pushError"),
+                } satisfies PushOptInCopy
+              }
+            />
+          </div>
 
-        {/* The spray guard is a *this device* preference like the two above it,
-          not a checkpoint. It used to sit in the checkpoint nav, where it read
-          as a fifth destination beside "Before departure" and "After dive 1"
-          and put a settings toggle in the one row a captain taps to change
-          what the page is showing — and then spent a while as a lone checkbox
-          below the offline card, which is what this group fixes. */}
-        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
-          <WaterLockerToggle
-            copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
-            className="h-full"
-          />
-          {/* Renders nothing on a phone with no vibration motor — which is
-            every iPhone (src/components/haptics.ts). */}
-          <HapticsToggle copy={{ label: t("shared.haptics.toggleLabel") }} className="h-full" />
-          <AmbientContrastControl
-            className="h-full rounded-xl border border-border bg-surface-sunken p-3"
-            copy={{
-              modeLabel: t("shared.boatMode.modeLabel"),
-              labelAuto: t("shared.boatMode.labelAuto"),
-              labelLand: t("shared.boatMode.labelLand"),
-              labelBoat: t("shared.boatMode.labelBoat"),
-            }}
-          />
+          {/* These are all *this device* preferences, not checkpoint
+            destinations. They share one responsive grid so their labels and
+            touch targets stay together on a phone and align at desk width. */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <WaterLockerToggle
+              copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
+              className="h-full w-full justify-start"
+            />
+            {/* Renders nothing on a phone with no vibration motor — which is
+              every iPhone (src/components/haptics.ts). */}
+            <HapticsToggle
+              copy={{ label: t("shared.haptics.toggleLabel") }}
+              className="h-full w-full justify-start"
+            />
+            <AmbientContrastControl
+              className="h-full w-full rounded-xl border border-border bg-surface-sunken p-3"
+              copy={{
+                modeLabel: t("shared.boatMode.modeLabel"),
+                labelAuto: t("shared.boatMode.labelAuto"),
+                labelLand: t("shared.boatMode.labelLand"),
+                labelBoat: t("shared.boatMode.labelBoat"),
+              }}
+            />
+          </div>
         </div>
       </OfflineManifestManager>
 

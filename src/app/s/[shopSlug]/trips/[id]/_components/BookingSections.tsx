@@ -9,7 +9,6 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
@@ -289,9 +288,9 @@ const GEAR_SLOTS = ["gear-one", "gear-two", "gear-three", "gear-four", "gear-fiv
  *   checkout total, the fee line and the tax line — the hero says the price
  *   once, this block says the total once, and nothing in between says it again.
  * - **Nothing under the button but fine print.** The free-cancellation sentence
- *   (`TripTerms`), then the full terms behind one disclosure. The requirement
- *   note that used to sit *inside* this card in a sunken box is the page's now,
- *   above the form, where a diver reads it before starting to type.
+ *   (`TripTerms`) is the only copy below the action. The requirement note that
+ *   used to sit *inside* this card in a sunken box is the page's now, above the
+ *   form, where a diver reads it before starting to type.
  */
 export function BookSpotSection({
   trip,
@@ -366,7 +365,6 @@ export function BookSpotSection({
 }) {
   const t = useTranslations("booking");
   const tRoot = useTranslations();
-  const tTrip = useTranslations("trip");
   const money = (cents: number) => formatMoneyCents(cents, currency, locale);
   const [state, formAction] = useActionState(bookSpot.bind(null, tripRef), INITIAL_BOOKING_STATE);
   // `BookingPartyFields` owns the party-count control, so it reports changes
@@ -552,17 +550,6 @@ export function BookSpotSection({
           {payAtBooking ? <p className="mt-2 text-xs text-muted">{t("stripeHint")}</p> : null}
           {/* The one sentence still ahead of a diver who has decided. */}
           {terms}
-          {/* Everything else that qualifies the tap, behind one door. It was a
-              standalone paragraph of reassurance under the button — a second
-              body-weight sentence competing with the terms above it for a
-              reader who had already committed. */}
-          <details className="group/terms mt-2">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-medium text-primary [&::-webkit-details-marker]:hidden">
-              {tTrip("fullTermsLabel")}
-              <DisclosureCaret direction="down" className="size-4 group-open/terms:rotate-180" />
-            </summary>
-            <p className="text-sm text-muted">{t("noAccountNeeded")}</p>
-          </details>
           {/* The refusal used to render above the whole form — above the party
               fields, the gear fields, and the promo box. On a phone that is
               several thumb-scrolls from the button the diver just tapped, so a

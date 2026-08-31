@@ -2,20 +2,20 @@ import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * Content-shaped skeleton for the shopfront (design principle 1): the identity
- * band and the next boat share one row at desktop, and the week follows.
+ * band leads into the next boat, and the week follows.
  */
 export default function TripsLoading() {
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       {/* The identity band — the shop's name at display scale, its tagline and
-          the rating line — beside the next boat's card. */}
-      <div className="grid animate-pulse gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+          the rating line — followed by the next boat's card. */}
+      <div className="animate-pulse">
         <div>
           <div className="h-10 w-72 max-w-full rounded bg-surface-sunken" />
           <div className="mt-3 h-6 w-96 max-w-full rounded bg-surface-sunken" />
           <div className="mt-4 h-5 w-80 max-w-full rounded bg-surface-sunken" />
+          <div className={sectionCardClass({ className: "mt-6 h-56 max-w-md" })} />
         </div>
-        <div className={sectionCardClass({ className: "h-56" })} />
       </div>
       {/* The week: its heading and timezone line, the month rail and the filter
           row — present in the shell so the streamed list lands where the

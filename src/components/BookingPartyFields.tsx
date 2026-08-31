@@ -295,40 +295,41 @@ export function BookingPartyFields({
                     className={controlClass}
                   />
                 </Field>
-                <Field
-                  label={
-                    index === 0
-                      ? t("party.emailLabel")
-                      : t("party.diverEmailLabel", { number: index + 1 })
-                  }
-                  className="text-base"
-                  error={emailError}
-                  description={
-                    suggestion ? (
-                      <button
-                        type="button"
-                        onClick={() => updateMember(index, { email: suggestion })}
-                        className="justify-self-start text-xs font-medium text-primary hover:underline"
-                      >
-                        {t("party.didYouMeanEmail", { email: suggestion })}
-                      </button>
-                    ) : undefined
-                  }
-                >
-                  <input
-                    name={`email-${index}`}
-                    type="email"
-                    required={index === 0 || !useLeadEmail[index]}
-                    disabled={index > 0 && useLeadEmail[index]}
-                    maxLength={200}
-                    inputMode="email"
-                    autoComplete={index === 0 ? "email" : `section-diver${index} email`}
-                    value={member.email}
-                    onChange={(event) => updateMember(index, { email: event.target.value })}
-                    onBlur={() => setBlurred((current) => ({ ...current, [index]: true }))}
-                    className={controlClass}
-                  />
-                </Field>
+                {index === 0 || !useLeadEmail[index] ? (
+                  <Field
+                    label={
+                      index === 0
+                        ? t("party.emailLabel")
+                        : t("party.diverEmailLabel", { number: index + 1 })
+                    }
+                    className="text-base"
+                    error={emailError}
+                    description={
+                      suggestion ? (
+                        <button
+                          type="button"
+                          onClick={() => updateMember(index, { email: suggestion })}
+                          className="justify-self-start text-xs font-medium text-primary hover:underline"
+                        >
+                          {t("party.didYouMeanEmail", { email: suggestion })}
+                        </button>
+                      ) : undefined
+                    }
+                  >
+                    <input
+                      name={`email-${index}`}
+                      type="email"
+                      required={index === 0 || !useLeadEmail[index]}
+                      maxLength={200}
+                      inputMode="email"
+                      autoComplete={index === 0 ? "email" : `section-diver${index} email`}
+                      value={member.email}
+                      onChange={(event) => updateMember(index, { email: event.target.value })}
+                      onBlur={() => setBlurred((current) => ({ ...current, [index]: true }))}
+                      className={controlClass}
+                    />
+                  </Field>
+                ) : null}
                 {index > 0 ? (
                   <label className="flex min-h-11 items-center gap-2 text-sm text-muted sm:col-span-2">
                     <input

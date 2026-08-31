@@ -66,6 +66,22 @@ function bar(reviewId: string, isPublished: boolean) {
   );
 }
 
+function moderatedBar(isStandout = false) {
+  return (
+    <ReviewRowProvider>
+      <ReviewRowActions
+        reviewId={A}
+        isPublished
+        isHidden={false}
+        isStandout={isStandout}
+        canStandout
+        reasons={[{ value: "spam", label: "Spam or a test" }]}
+        copy={copy}
+      />
+    </ReviewRowProvider>
+  );
+}
+
 /** The page's shape: three independent lists a review moves between. */
 function page({ waiting, published }: { waiting: string[]; published: string[] }) {
   return (
@@ -118,6 +134,30 @@ describe("the review row's outcome", () => {
     await userEvent.click(buttons[1]);
 
     expect(await screen.findAllByText(copy.published)).toHaveLength(1);
+  });
+});
+
+describe("the review row's responsive actions", () => {
+  it("keeps Hide and both standout labels on the shared touch-target line", () => {
+    const { container } = render(moderatedBar());
+    const actionLine = container.querySelector("div.w-full");
+    if (!actionLine) throw new Error("the review action line did not render");
+
+    expect(actionLine).toHaveClass("w-full", "sm:w-auto");
+    for (const control of [
+      screen.getByText(copy.hide),
+      screen.getByRole("button", { name: copy.markStandout }),
+    ]) {
+      expect(control).toHaveClass("min-h-11", "items-center", "whitespace-nowrap");
+    }
+
+    cleanup();
+    render(moderatedBar(true));
+    expect(screen.getByRole("button", { name: copy.removeStandout })).toHaveClass(
+      "min-h-11",
+      "items-center",
+      "whitespace-nowrap",
+    );
   });
 });
 

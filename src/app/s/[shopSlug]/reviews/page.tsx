@@ -79,9 +79,9 @@ export default async function PublicReviewsPage({
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       {/* No standing description under the title. `reviews.allDescription`
           said "read what divers who were on the boat said about their day" —
-          which is the page's own name plus the verification claim the aggregate
-          line below already carries, and it is still the metadata description
-          where a search result genuinely needs the sentence. */}
+          which is the page's own name plus a redundant explanation. It remains
+          the metadata description where a search result genuinely needs a
+          sentence, but does not add another paragraph to the page. */}
       {/* The eyebrow is the way back (principle 10's one grammar for up); a
           second "Back to schedule" button in `actions` went to the identical
           destination, which is the second path copy-restraint deletes. */}
@@ -94,9 +94,9 @@ export default async function PublicReviewsPage({
       <section aria-label={t("reviews.sectionTitle")}>
         {/* **The aggregate, exactly once** (ADR
             20260827-clearwater-surface-language, decision 8): the stars, the
-            figure, the count and the claim that makes the number mean anything,
-            on one line — where it used to be a star row, a second line
-            repeating the average and count, and a third line for the claim. The
+            figure and the count on one line — where it used to be a star row,
+            a second line repeating the average and count, and a third line of
+            explanatory copy. The
             fill is `--accent` because this is a public page and a filled rating
             star is data ink (decision 11). */}
         {average !== null ? (
@@ -113,9 +113,7 @@ export default async function PublicReviewsPage({
                 maximumFractionDigits: 1,
               }).format(average)}
             </span>
-            <span className="tabular-nums">
-              {t("reviews.count", { count: aggregate.count })} · {t("reviews.verifiedNote")}
-            </span>
+            <span className="tabular-nums">{t("reviews.count", { count: aggregate.count })}</span>
           </p>
         ) : null}
 

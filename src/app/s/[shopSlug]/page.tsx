@@ -512,20 +512,21 @@ export default async function SchedulePage({
           reading "Schedule" over a DiveDay sentence about finding your next day
           on the water — identical on every shop in the product — with the
           shop's conservation claims in a bordered card beneath it. The identity
-          band and the next boat share one row at desktop and stack on a phone;
-          neither renders inside the frame, where the widget stays the
-          list-first window onto the schedule that issue #805 made it. */}
+          band and the next boat now share one vertical reading flow, so the
+          bookable object sits right under the shop's own words. Neither renders
+          inside the frame, where the widget stays the list-first window onto the
+          schedule that issue #805 made it. */}
       {isEmbed ? null : (
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-          <div className="flex min-w-0 items-start gap-4">
-            {shop.logoUrl ? (
-              // biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo
-              <img
-                src={shop.logoUrl}
-                alt=""
-                className="size-16 shrink-0 rounded-2xl border border-border bg-surface object-cover"
-              />
-            ) : null}
+        <div className="flex min-w-0 items-start gap-4">
+          {shop.logoUrl ? (
+            // biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo
+            <img
+              src={shop.logoUrl}
+              alt=""
+              className="size-16 shrink-0 rounded-2xl border border-border bg-surface object-cover"
+            />
+          ) : null}
+          <div className="min-w-0 flex-1">
             <ShopfrontHero
               name={shop.name}
               tagline={shop.tagline}
@@ -534,23 +535,25 @@ export default async function SchedulePage({
               locale={locale}
               t={t}
             />
+            {nextBoat ? (
+              <div className="mt-6 max-w-md">
+                <NextBoatCard
+                  href={`${publicTripPath(shopSlug, nextBoat.id)}#book`}
+                  when={whenWord(nextBoat.startsAt)}
+                  time={formatTime(nextBoat.startsAt, locale, shop.timezone)}
+                  title={nextBoat.title}
+                  description={nextBoat.description}
+                  spots={seatState(nextBoat).text}
+                  price={
+                    nextBoat.priceCents !== null
+                      ? formatMoneyScanned(nextBoat.priceCents, currency, locale)
+                      : null
+                  }
+                  t={t}
+                />
+              </div>
+            ) : null}
           </div>
-          {nextBoat ? (
-            <NextBoatCard
-              href={`${publicTripPath(shopSlug, nextBoat.id)}#book`}
-              when={whenWord(nextBoat.startsAt)}
-              time={formatTime(nextBoat.startsAt, locale, shop.timezone)}
-              title={nextBoat.title}
-              description={nextBoat.description}
-              spots={seatState(nextBoat).text}
-              price={
-                nextBoat.priceCents !== null
-                  ? formatMoneyScanned(nextBoat.priceCents, currency, locale)
-                  : null
-              }
-              t={t}
-            />
-          ) : null}
         </div>
       )}
 
