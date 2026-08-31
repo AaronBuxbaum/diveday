@@ -107,12 +107,11 @@ export function GearAndSizes({
   ].filter((size) => size !== false);
 
   const sized = line.state === "rents" ? line.items.filter((item) => item.size) : [];
+  // Keep the door a status, not a packing list. The domain line still carries
+  // every item and size for the expanded facts below; the short state is enough
+  // to tell a staffer whether there is anything to inspect or act on.
   const gearSummary =
-    line.state === "rents"
-      ? sized.length > 0
-        ? sized.map((item) => `${rentalItemLabel(t, item.kind)} ${item.size}`).join(" · ")
-        : t("divers.file.noSizes")
-      : rentalFitLineText(t, locale, line);
+    line.state === "rents" ? t("divers.file.rentalFitOnFile") : rentalFitLineText(t, locale, line);
   const flagged = Boolean(profile?.needsStaffFitAt);
   // **Only an outcome this form produced.** All four fit notices carry
   // `form: "fit"` — the two flag controls below the disclosure share it with

@@ -414,6 +414,7 @@
     "supportCount": "{count, plural, one {# arreglo} other {# arreglos}}",
     "noSupport": "Sin arreglos indicados",
     "gearHeading": "Equipo y tallas",
+    "rentalFitOnFile": "Ajuste de alquiler registrado",
     "rentsFromUs": "Renta con nosotros",
     "sizes": "Tallas",
     "noSizes": "Sin tallas archivadas",
