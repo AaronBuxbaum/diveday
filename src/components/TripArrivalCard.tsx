@@ -4,6 +4,7 @@ import { SectionCard } from "@/components/ui/card";
 import { diverTranslator } from "@/i18n/messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { googleMapsUrl } from "@/lib/maps";
+import { publicTripArrivalCardPath } from "@/lib/public-routes";
 import { type ShopAddressParts, shopAddressLines, shopMapQuery } from "@/lib/shop-address";
 
 export type ArrivalCardShop = {
@@ -84,11 +85,21 @@ export function TripArrivalCard({
 }) {
   const t = diverTranslator(locale);
   const facts = arrivalCardFacts(shop, trip);
+  const arrivalUrl = publicTripArrivalCardPath(shop.slug, trip.id);
   return (
     <SectionCard
       title={t("trip.arrivalHeading")}
       description={t("trip.arrivalBody")}
       className={className}
+      actions={
+        <a
+          href={arrivalUrl}
+          download
+          className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+        >
+          {t("trip.saveArrivalCard")}
+        </a>
+      }
     >
       {facts.photoUrl ? (
         <StoredPhoto
