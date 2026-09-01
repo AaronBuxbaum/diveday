@@ -356,6 +356,7 @@
       "mediaKind": {
         "course_photo": "Foto del curso",
         "recap_photo": "Foto del resumen",
+        "arrival_photo": "Foto de llegada",
         "certification_card": "Evidencia de certificación",
         "waiver_document": "Documento de exención",
         "dive_site_photo": "Foto del sitio de buceo"
