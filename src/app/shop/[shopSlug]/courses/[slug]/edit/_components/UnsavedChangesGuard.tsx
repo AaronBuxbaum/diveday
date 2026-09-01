@@ -141,6 +141,12 @@ export function UnsavedChangesGuard({
 }) {
   const [dirty, setDirty] = useState(false);
   const [restored, setRestored] = useState(false);
+  // The e2e suite waits on this before it types: the dirty flag is React's
+  // `onInputCapture`, so a keystroke that lands before hydration is a native
+  // event nobody is listening to — the box holds the text and the bar never
+  // says so. The same signal the orders and counter search boxes carry.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   const wrapper = useRef<HTMLDivElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -221,6 +227,7 @@ export function UnsavedChangesGuard({
     <DirtyContext.Provider value={{ dirty, restored }}>
       <div
         ref={wrapper}
+        data-hydrated={hydrated ? "true" : undefined}
         onInputCapture={(event) => {
           formEl.current = (event.target as HTMLElement).closest("form");
           setDirty(true);
