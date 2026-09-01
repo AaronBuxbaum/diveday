@@ -7,6 +7,22 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The product page's "whole list" is the whole list (delivered 2026-09-01)
+
+`/product`'s reference index (`productCapabilityIndex`, `marketing.capabilities.*`) grew from 49
+chosen lines in seven groups to 94 in eight — every shipped workflow in this file, consolidated once
+under the job it does. The band's heading had always promised "the whole list, plainly", and the
+list under it was a highlight reel: reminders and the night-before brief, WhatsApp from the shop's
+own number, buddy teams, the blow-out cascade, the close-out and departure log, multi-day
+departures, self-service cancel and reschedule, seat claim links, checkout upsells, Stripe Tax,
+abandoned-checkout nudges, invites and two-factor, the staffing week, backups to the shop's own
+bucket, calendar subscriptions, QuickBooks, Shopify, Zapier and legal erasure were all shipped and
+none were listed. A new "Reaching divers" group holds the messages, which had been scattered as
+half-lines across the others. The bar for a line is unchanged — walkable in the live demo, shipped-
+only, in the buyer's words, no software jargon — and the lede still counts the lines off the
+registry rather than stating a number. Rule recorded in [marketing.md](marketing.md) ("Show the
+screen before describing it").
+
 ## The Trip surface folds Overview into its About panel (delivered 2026-08-29)
 
 Slice 5e of [20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md)

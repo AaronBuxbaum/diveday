@@ -87,9 +87,7 @@ export function TripChangeLedger({
       <ol className="flex flex-col gap-4">
         {events.map((event) => (
           <li key={event.id} className="border-s-2 border-border ps-4">
-            <p className="text-sm font-medium">
-              {changeText(event, t, revealArrivalDetails)}
-            </p>
+            <p className="text-sm font-medium">{changeText(event, t, revealArrivalDetails)}</p>
             <p className="mt-1 text-xs text-muted">
               {event.source === "crew" ? t("trip.changeSourceCrew") : t("trip.changeSourceShop")} ·{" "}
               {formatDateTimeTz(event.occurredAt, locale, timeZone)}
