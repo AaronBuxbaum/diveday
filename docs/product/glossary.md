@@ -10,8 +10,10 @@ new domain concept, define it here in the same PR.
   their money story, and rebooking options filtered to departures they qualify for, and staff work
   the cascade record until nobody is left unresolved (ADR
   [20260804-blowout-cascade](../architecture/decisions/20260804-blowout-cascade.md)). A blow-out
-  moves no money on its own — refunds stay a per-booking staff decision. **That is why it cancels
-  the *trip* and leaves every booking active**, and every reader downstream has to expect that
+  refunds each seat's card capture by itself as of 2026-08-13 (ADR
+  [20260813-shop-cancellation-refunds-itself](../architecture/decisions/20260813-shop-cancellation-refunds-itself.md));
+  a counter payment, a disconnected account, or a Stripe refusal still leaves the refund to staff.
+  **It cancels the *trip* and leaves every booking active**, and every reader downstream has to expect that
   shape: `bookings.status` says nothing about a blow-out, so a surface asking "was this seat
   cancelled" gets `false` for all twelve people who drove to the dock and were sent home. The
   diver's own thread therefore says the departure was cancelled on its own authority, the **dive

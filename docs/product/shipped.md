@@ -7,6 +7,22 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## The product page's "whole list" is the whole list (delivered 2026-09-01)
+
+`/product`'s reference index (`productCapabilityIndex`, `marketing.capabilities.*`) grew from 49
+chosen lines in seven groups to 94 in eight — every shipped workflow in this file, consolidated once
+under the job it does. The band's heading had always promised "the whole list, plainly", and the
+list under it was a highlight reel: reminders and the night-before brief, WhatsApp from the shop's
+own number, buddy teams, the blow-out cascade, the close-out and departure log, multi-day
+departures, self-service cancel and reschedule, seat claim links, checkout upsells, Stripe Tax,
+abandoned-checkout nudges, invites and two-factor, the staffing week, backups to the shop's own
+bucket, calendar subscriptions, QuickBooks, Shopify, Zapier and legal erasure were all shipped and
+none were listed. A new "Reaching divers" group holds the messages, which had been scattered as
+half-lines across the others. The bar for a line is unchanged — walkable in the live demo, shipped-
+only, in the buyer's words, no software jargon — and the lede still counts the lines off the
+registry rather than stating a number. Rule recorded in [marketing.md](marketing.md) ("Show the
+screen before describing it").
+
 ## The Trip surface folds Overview into its About panel (delivered 2026-08-29)
 
 Slice 5e of [20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md)
@@ -2901,15 +2917,16 @@ archived.
 
 ## Cert checks (M4)
 
-- **Cards captured pending** — agency, level, number, optional expiry, durable card-image reference;
-  new evidence is never implicitly trusted.
+- **Cards captured pending** — agency, level, number, optional expiry; new evidence is never
+  implicitly trusted. The card photo this once carried was retired by
+  [20260811-retire-the-digital-card](../architecture/decisions/20260811-retire-the-digital-card.md).
 - **Fail-closed readiness** — a typed result combines waiver + cert evidence and explains missing,
   pending, expired, insufficient, medical-review, and unconfigured states; shared by staff roster,
   booking confirmation, and manifest.
 - **Specialty + site/trip cert gates** — Deep/Wreck/Night/Drysuit captured and verified; readiness
   composes trip and site gates (stricter level, union of specialties); nitrox gates the mix request
   ([specialty-site-cert-requirements](../architecture/decisions/20260718-specialty-site-cert-requirements.md)).
-- **Direct card-image upload** to Vercel Blob behind `src/lib/storage`, validated at the seam
+- **Direct card-image upload** (retired 2026-08-11 with the card photo, above) to Vercel Blob behind `src/lib/storage`, validated at the seam
   ([card-photo-only](../architecture/decisions/20260719-card-photo-only.md),
   [card-image-storage](../architecture/decisions/20260718-card-image-storage.md)).
 - **Manual certification** — staff look the number up with the agency and click Mark certified; the
