@@ -119,9 +119,12 @@ a pixel snapshot).
   the roll call rather than behind the `⋯`, which is 5c's job, and its numbers are still `tel:`
   links), and the executed-dive log still stands open on the boat although the ADR's tier list puts
   the dive log ashore.
-- **5b. The person sheet.** One tap from a roll-call row: today's trail, buddy states, emergency
-  contact as reference text, one act. Replaces the two per-row disclosures. *Pins:* a test that the
-  sheet renders no control that can place a call (decision 3's "no call buttons" half).
+- **5b. The person sheet — shipped 2026-09-01.** See
+  [shipped.md](../shipped.md#a-roll-call-row-opens-the-persons-sheet-delivered-2026-09-01). Two
+  notes for the slices after it: the roster's own reference panel (5d's note below) now has a
+  sibling with a richer vocabulary, and whether the two converge is a question for whoever touches
+  the Trip page next; and the sheet is the surface 5c's `⋯` menu sits beside, so the emergency
+  burial lands in a page that already has a one-tap tier to put things in.
 - **5c. Emergency numbers become buried reference.** The manifest's standing band moves behind the
   phone's `⋯` and a desktop footer line; the printed manifest is unchanged. *Pins:* an assertion
   that the printed sheet still carries every number, since that is the fallback the burial relies

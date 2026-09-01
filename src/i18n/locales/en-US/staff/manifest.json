@@ -139,5 +139,11 @@
   "rollCallRecordedShort": "{label} · {time} · {name}",
   "markBackAboard": "Mark back aboard",
   "crewMarkBackAboard": "Mark back aboard",
-  "supportNeedsLabel": "Dive support"
+  "supportNeedsLabel": "Dive support",
+  "personSheet": {
+    "todayHeading": "Today",
+    "trailAt": "{label} · {checkpoint}",
+    "trailWho": "{time} · {name}",
+    "buddyHeading": "Buddy team"
+  }
 }

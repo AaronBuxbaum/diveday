@@ -139,5 +139,11 @@
   "rollCallRecordedShort": "{label} · {time} · {name}",
   "markBackAboard": "Marcar de vuelta a bordo",
   "crewMarkBackAboard": "Marcar de vuelta a bordo",
-  "supportNeedsLabel": "Apoyo en la inmersión"
+  "supportNeedsLabel": "Apoyo en la inmersión",
+  "personSheet": {
+    "todayHeading": "Hoy",
+    "trailAt": "{label} · {checkpoint}",
+    "trailWho": "{time} · {name}",
+    "buddyHeading": "Equipo de compañeros"
+  }
 }

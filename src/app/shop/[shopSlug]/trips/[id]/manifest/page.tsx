@@ -47,8 +47,9 @@ import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
 import { BuddyTeamsPanel } from "./_components/BuddyTeamsPanel";
 import { CrewRollCall } from "./_components/CrewRollCall";
-import { DiverRollCall, type ManifestNote } from "./_components/DiverRollCall";
+import { DiverRollCall } from "./_components/DiverRollCall";
 import { type ExecutedDiveLabels, ExecutedDiveLog } from "./_components/ExecutedDiveLog";
+import type { ManifestNote } from "./_components/PersonSheet";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
 import { SummaryPanel } from "./_components/SummaryPanel";
 import {

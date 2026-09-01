@@ -1524,6 +1524,32 @@ nav and language control tighten below `sm` — the endonym and the caret go, pa
 16px destination labels stay — so an ordinary shop name holds at phone width and only ellipsizes
 on the narrow handsets below it.
 
+## A roll-call row opens the person's sheet (delivered 2026-09-01)
+
+Slice 5b of
+[20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md),
+decisions 2 and 3. The panel behind a diver's name on the manifest became a **person sheet**
+(`manifest/_components/PersonSheet.tsx`), and it opens with the two questions actually asked at the
+rail. **Today** lists every result a human recorded about this diver, in checkpoint order — "Boarded
+· Before departure · 6:51 · Dana", "Not back aboard · After dive 1 · 8:29 · Keiko" — which the row
+above can never carry, because a row only knows the checkpoint it is on. Carried-forward results are
+deliberately absent: nobody said them, they have no time and no recorder, and one statement rendered
+once per later checkpoint reads as four; the row's own "Ashore since the dock" already says a result
+was carried. **Buddy team** then names each teammate with the word their own row wears
+(`buddyTeammateStatesIn` derives it), so "team split" stops being a state with no person in it —
+and a teammate nobody has called yet stays quiet muted text, because an alarm is earned by a
+recorded fact. The team-label badge the panel used to carry is gone; naming the people strictly
+supersedes it.
+
+The data was already read and thrown away: `getTripManifests` reads every checkpoint's records to
+compute carry-forward, so each diver now carries a `trail` truncated at the checkpoint being viewed,
+and `listLatestRollCallByBooking`'s map is typed as `RollCallRecord` so the carried flag stays
+visible to the readers that must exclude it. `PersonSheet.test.tsx` pins the rules: the sheet holds
+no `tel:`/`sms:` href and no control whose words offer to place a call (decision 3's "no call
+buttons" half), the trail names the checkpoint, the time and the recorder, an empty trail renders no
+section at all, and nothing in the team block paints danger while the only fact is that nobody has
+spoken.
+
 ## The Guests roster becomes one grouped ledger (delivered 2026-08-29)
 
 Slice 5d of

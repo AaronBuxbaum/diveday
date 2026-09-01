@@ -255,15 +255,12 @@ async function listLatestRollCallByBooking(
       desc(rollCallEvents.createdAt),
       desc(rollCallEvents.seq),
     );
-  const latest = new Map<
-    string,
-    {
-      state: "boarded" | "not_boarded";
-      occurredAt: Date;
-      recordedByName: string;
-      note: string | null;
-    }
-  >();
+  // Typed as the shared record rather than an inline shape: `implied` is
+  // optional on `RollCallRecord` and is what `carryForwardNotBoarded` stamps on
+  // a result it carries to a later checkpoint, so a narrower literal type here
+  // makes the carried flag invisible to every reader downstream — including the
+  // person sheet's trail, which exists precisely to leave carried results out.
+  const latest = new Map<string, RollCallRecord>();
   // Rows are newest-first, so the first row per booking wins. A latest `cleared`
   // event is staff undoing a mistake: record the booking as seen so no older
   // event resurfaces, but leave it out of the map so the diver reads as awaiting.
@@ -640,6 +637,29 @@ export async function getTripManifests(
       ),
     ]),
   );
+  // What a human actually said about each diver today, in checkpoint order —
+  // the person sheet's "Today" list (ADR
+  // 20260827-the-departure-is-two-working-surfaces, decision 2).
+  //
+  // Read off the same carried-forward series every row already reads, and
+  // filtered to results somebody **recorded**: an implied result is the
+  // carry-forward rule speaking, not a person, and it has neither a time nor a
+  // recorder to show. A trail is truncated at the checkpoint being read, so
+  // the sheet at "after dive 1" cannot show what dive 2 will say.
+  const trailByBooking = new Map(
+    diverInputs.map((diver) => {
+      const effective = effectiveByBooking.get(diver.bookingId) ?? [];
+      return [
+        diver.bookingId,
+        checkpoints.map((_, index) =>
+          checkpoints.slice(0, index + 1).flatMap((checkpoint, earlier) => {
+            const record = effective[earlier];
+            return record && !record.implied ? [{ checkpoint, record }] : [];
+          }),
+        ),
+      ] as const;
+    }),
+  );
   return checkpoints.map((checkpoint, index) =>
     buildTripManifest({
       trip: tripInput,
@@ -652,6 +672,7 @@ export async function getTripManifests(
       divers: diverInputs.map((diver) => ({
         ...diver,
         rollCall: effectiveByBooking.get(diver.bookingId)?.[index],
+        trail: trailByBooking.get(diver.bookingId)?.[index] ?? [],
       })),
     }),
   );

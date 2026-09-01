@@ -1036,3 +1036,43 @@ test("a transposed dive log entry is refused out loud and keeps what was typed",
   await expect(summary).not.toContainText("not recorded yet");
   await expect(summary).toContainText("27");
 });
+
+test("a person's sheet carries today's trail and never a way to dial it", async ({ page }) => {
+  // Slice 5b of ADR 20260827-the-departure-is-two-working-surfaces. Two of the
+  // ADR's decisions are only observable across a checkpoint boundary, which is
+  // why this runs the dock and the first surface interval rather than asserting
+  // on one screen: the trail's whole job is to say what the *row* cannot,
+  // because a row only knows the checkpoint it is on.
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  await openTripTab(page, "Manifest");
+
+  const tom = manifestRow(page, "Tom Okafor");
+  const boardTom = tom.getByRole("button", { name: "Mark boarded" });
+  await boardTom.evaluate((button) => button.scrollIntoView({ block: "center" }));
+  await boardTom.click();
+  await expect(page.getByRole("button", { name: "Boarded — tap again to undo" })).toBeVisible();
+
+  // At the dock the trail already holds the one thing somebody said.
+  await openManifestPerson(tom);
+  const dockTrail = tom.getByRole("list", { name: "Today" });
+  await expect(dockTrail.getByRole("listitem")).toHaveCount(1);
+  await expect(dockTrail).toContainText("Before departure");
+
+  await page
+    .getByRole("link", { name: "After dive 1" })
+    .evaluate((link: HTMLElement) => link.click());
+  await expect(page).toHaveURL(/checkpoint=after_dive_1/);
+
+  // **The line the row can no longer carry.** After a dive Tom's row says
+  // whatever this checkpoint says about him; that he left the dock at all is
+  // now stated only here.
+  const tomAfterDive = manifestRow(page, "Tom Okafor");
+  await openManifestPerson(tomAfterDive);
+  const trail = tomAfterDive.getByRole("list", { name: "Today" });
+  await expect(trail).toContainText("Before departure");
+
+  // **No call buttons anywhere on the boat** (decision 3). The contact is on
+  // the sheet as words; nothing in the row can dial it.
+  await expect(tomAfterDive.locator("a[href^='tel:'], a[href^='sms:']")).toHaveCount(0);
+});

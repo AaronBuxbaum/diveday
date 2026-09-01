@@ -60,7 +60,7 @@ with their dependencies, are in
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
 | 5a — the boat manifest at phone size | shipped | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/RollCallControls.tsx` | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCall.test.tsx` |
-| 5b — the person sheet | open | — | — |
+| 5b — the person sheet | shipped | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/PersonSheet.tsx` | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/PersonSheet.test.tsx` |
 | 5c — emergency numbers become buried reference | open | — | — |
 | 5d — the roster becomes one grouped ledger | shipped | `src/app/shop/[shopSlug]/trips/[id]/_components/RosterSection.tsx` | `src/app/shop/[shopSlug]/trips/[id]/_components/RosterSection.test.tsx` |
 | 5e — Overview folds into Trip's Details panel | open | — | — |

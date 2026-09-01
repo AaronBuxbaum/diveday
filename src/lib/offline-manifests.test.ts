@@ -944,6 +944,7 @@ describe("offline manifest policy", () => {
             implied: true,
           },
           buddyAlert: null,
+          buddyStates: [],
         },
       ],
       summary: {
@@ -1011,6 +1012,7 @@ describe("offline manifest policy", () => {
           checkedIn: false,
           rollCall: undefined,
           buddyAlert: null,
+          buddyStates: [],
         },
       ],
       summary: {
@@ -1048,6 +1050,7 @@ describe("offline manifest policy", () => {
           checkedIn: false,
           rollCall: undefined,
           buddyAlert: null,
+          buddyStates: [],
           supportNeeds: {
             supportDiversNeeded: 2,
             supportDiversProvidedBy: "shop",
@@ -1164,6 +1167,15 @@ describe("offline manifest policy", () => {
             recordedByName: "Dana Divemaster",
           },
           buddyAlert: "separated_after_dive",
+          buddyStates: [
+            {
+              kind: "diver",
+              bookingId: "booking-lena",
+              fullName: "Lena Fischer",
+              label: "not_back_aboard",
+            },
+            { kind: "crew", personId: "person-keiko", fullName: "Keiko Tanaka", label: "boarded" },
+          ],
         },
         {
           bookingId: "booking-omar",
@@ -1177,6 +1189,7 @@ describe("offline manifest policy", () => {
           checkedIn: false,
           rollCall: undefined,
           buddyAlert: null,
+          buddyStates: [],
         },
       ],
       summary: {
@@ -1259,6 +1272,7 @@ describe("offline manifest policy", () => {
           birthday: { status: "today" },
           rollCall: undefined,
           buddyAlert: null,
+          buddyStates: [],
         },
       ],
       summary: {

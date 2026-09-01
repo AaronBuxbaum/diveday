@@ -4359,6 +4359,14 @@ for (const scheme of ["light", "dark"] as const) {
        * exists at all — the deliberate second step that records "not back
        * aboard" (decision 3).
        *
+       * Since slice 5b the panel is the **person sheet**, and this shot is the
+       * calm end of it: at the dock with nothing recorded and nobody paired,
+       * both of the sheet's new sections render nothing at all, which is the
+       * behaviour worth photographing here (principle 9 — an empty "Today" is
+       * not a heading over a blank). The populated ends are already banked by
+       * `manifest-not-back-aboard` and `manifest-buddy-divergence`, both of
+       * which open a person after a dive with a result recorded against them.
+       *
        * It replaced a capture of two side-by-side disclosures ("Contact &
        * gear" / "Add a note") that the row no longer has.
        */

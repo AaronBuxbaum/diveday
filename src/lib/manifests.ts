@@ -111,6 +111,16 @@ export function maxRecordedDiveNumber(
   return max;
 }
 
+/**
+ * One statement a human made about one person at one checkpoint. The unit of
+ * the person sheet's "Today" list — a checkpoint, and the record standing at
+ * it.
+ */
+export type RollCallTrailEntry = {
+  checkpoint: RollCallCheckpoint;
+  record: RollCallRecord;
+};
+
 export type ManifestDiverInput = {
   bookingId: string;
   fullName: string;
@@ -171,6 +181,19 @@ export type ManifestDiverInput = {
   /** Staff-set pickup time for this booking (e.g. "07:15"). */
   pickupTime?: string | null;
   rollCall?: RollCallRecord;
+  /**
+   * What a human has actually said about this diver **today**, in checkpoint
+   * order, up to and including the checkpoint being read (ADR
+   * 20260827-the-departure-is-two-working-surfaces, decision 2 — the person
+   * sheet's "today's audit trail").
+   *
+   * Only *recorded* results appear. A carried-forward result is not an event:
+   * nobody said it, it has no time and no recorder, and listing "Ashore since
+   * the dock" once per later checkpoint would turn one statement by one person
+   * into a column of four. The row already says a result was carried
+   * (`rollCallLabel`'s `not_boarded_carried`); the trail says who spoke.
+   */
+  trail?: readonly RollCallTrailEntry[];
   /**
    * The buddy team staff put this diver on, when they did
    * (ADR 20260804-buddy-teams). Teammates are only ever people who are
@@ -728,6 +751,12 @@ export type TripManifest = {
      * know who came back, so it displays teams and computes nothing.
      */
     buddyAlert: BuddyAlert | null;
+    /**
+     * This diver's teammates, each carrying the word their own row wears
+     * (`buddyTeammateStatesIn`). Empty when the diver is on no team, or on one
+     * whose other members are not aboard.
+     */
+    buddyStates: readonly BuddyTeammateState[];
   })[];
   summary: {
     totalDivers: number;
@@ -777,6 +806,47 @@ function teammateRollCallsIn(
     ),
   );
 }
+
+/**
+ * Each teammate on this row's team, with **the word their own row is wearing**
+ * at this checkpoint (ADR 20260827-the-departure-is-two-working-surfaces,
+ * decision 2 — the person sheet's buddy states).
+ *
+ * The question a crew member asks at the rail is "who am I supposed to be with,
+ * and where are they?", and until now the manifest could only answer the first
+ * half: a row carried a team label and, when the team had split, an alert that
+ * named the state but never the person in it. Resolving each teammate to a
+ * `RollCallLabel` answers the second half with the same vocabulary the
+ * teammate's own row uses, so the two readings of one fact cannot disagree.
+ *
+ * A teammate the caller cannot resolve is **dropped**, on the same terms as
+ * `teammateRollCallsIn`: a stale reference is an assembly bug, and a bug may
+ * not put a name on the boat that nobody can find on it.
+ *
+ * Derived, never a gate — this reads state and decides nothing.
+ */
+function buddyTeammateStatesIn(
+  checkpoint: RollCallCheckpoint,
+  team: ManifestBuddyTeam | null | undefined,
+  byBooking: ReadonlyMap<string, MaybeRollCall>,
+  byCrewId: ReadonlyMap<string, MaybeRollCall>,
+): BuddyTeammateState[] {
+  return (team?.others ?? []).flatMap((other) => {
+    const resolved =
+      other.kind === "diver"
+        ? byBooking.has(other.bookingId)
+          ? { found: true as const, rollCall: byBooking.get(other.bookingId) }
+          : { found: false as const }
+        : byCrewId.has(other.personId)
+          ? { found: true as const, rollCall: byCrewId.get(other.personId) }
+          : { found: false as const };
+    if (!resolved.found) return [];
+    return [{ ...other, label: rollCallLabel(checkpoint, resolved.rollCall) }];
+  });
+}
+
+/** A teammate, plus the roll-call word standing at their own row. */
+export type BuddyTeammateState = BuddyTeammate & { label: RollCallLabel };
 
 /**
  * The teams that are split at this checkpoint, by team id.
@@ -840,6 +910,12 @@ export function buildTripManifest(input: {
     readiness: diver.readiness ?? unavailableReadiness(),
     rollCall: diver.rollCall,
     buddyAlert: buddyAlertFor(checkpoint, diver.rollCall, teammateRollCalls([diver.buddyTeam])),
+    buddyStates: buddyTeammateStatesIn(
+      checkpoint,
+      diver.buddyTeam,
+      rollCallByBooking,
+      rollCallByCrewId,
+    ),
   }));
   const crew = input.crew.map((member) => ({
     ...member,
