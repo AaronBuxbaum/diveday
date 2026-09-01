@@ -34,7 +34,7 @@ function clean(value: string | null | undefined): string | null {
   return value?.trim() || null;
 }
 
-/** The public, non-sensitive arrival projection shared by trip and Ready. */
+/** The arrival projection shared by the booked Ready view and saved card. */
 export function arrivalCardFacts(shop: ArrivalCardShop, trip: ArrivalCardTrip) {
   const shopLines = shopAddressLines(shop.address);
   const customLabel = clean(trip.meetingPointLabel);
@@ -70,7 +70,7 @@ function ArrivalFact({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** One compact, public place-to-go card. No booking, waiver, or capability state crosses in. */
+/** One compact, booked-flow place-to-go card. No waiver or other capability state crosses in. */
 export function TripArrivalCard({
   shop,
   trip,

@@ -1984,7 +1984,9 @@ export default async function DiverReadinessPage({
             }}
             trip={fullTrip}
             locale={locale}
-            downloadHref={`${publicTripArrivalCardPath(fullShop.slug, fullTrip.id)}?booking=${encodeURIComponent(token)}`}
+            downloadHref={`${publicTripArrivalCardPath(fullShop.slug, fullTrip.id)}?booking=${encodeURIComponent(
+              token,
+            )}`}
             className="mt-8"
           />
         ) : null}

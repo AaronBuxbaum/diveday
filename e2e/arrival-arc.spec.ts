@@ -53,11 +53,17 @@ test.describe("the dive arrival arc", () => {
     await page.goto(publicPath);
     await expect(page.getByRole("heading", { name: "Where to go" })).not.toBeVisible();
     await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
-    await expect(page.getByText("Blue Mantis sign by the fuel dock", { exact: true })).not.toBeVisible();
+    await expect(
+      page.getByText("Blue Mantis sign by the fuel dock", { exact: true }),
+    ).not.toBeVisible();
     await expect(page.getByText("North Jetty Marina", { exact: true })).not.toBeVisible();
     await expect(page.getByText("12 Dock Rd", { exact: true })).not.toBeVisible();
-    await expect(page.getByText("Look for the yellow dive flag", { exact: true })).not.toBeVisible();
-    await expect(page.getByText("Ask for Dana at the dock desk", { exact: true })).not.toBeVisible();
+    await expect(
+      page.getByText("Look for the yellow dive flag", { exact: true }),
+    ).not.toBeVisible();
+    await expect(
+      page.getByText("Ask for Dana at the dock desk", { exact: true }),
+    ).not.toBeVisible();
 
     const publicCardResponse = await page.request.get(`${publicPath}/arrival-card`);
     expect(publicCardResponse.status()).toBe(404);
@@ -69,7 +75,9 @@ test.describe("the dive arrival arc", () => {
     const bookingToken = readyUrl.pathname.split("/").filter(Boolean).at(-1);
     expect(bookingToken).toBeTruthy();
     await expect(page.getByRole("heading", { name: "Where to go" })).toBeVisible();
-    await expect(page.getByText("Blue Mantis sign by the fuel dock", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("Blue Mantis sign by the fuel dock", { exact: true }),
+    ).toBeVisible();
     await expect(page.getByText("North Jetty Marina", { exact: true })).toBeVisible();
     await expect(page.getByText("12 Dock Rd", { exact: true })).toBeVisible();
 
