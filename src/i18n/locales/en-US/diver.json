@@ -151,6 +151,7 @@
     "changeLedgerHeading": "What changed",
     "changeLedgerBody": "Material updates to the meeting point and conditions appear here with who supplied them and when.",
     "changeMeetingPoint": "Meeting point: {label}",
+    "changeMeetingPointUpdated": "Meeting point updated",
     "changeMeetingPointWithAddress": "Meeting point: {label} · {address}",
     "changeArrivalGuidance": "Arrival guidance updated",
     "changeArrivalPhoto": "Arrival photo updated",

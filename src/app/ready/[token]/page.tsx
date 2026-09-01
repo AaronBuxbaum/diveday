@@ -82,7 +82,12 @@ import {
 import { googleMapEmbedUrl, googleMapsUrl } from "@/lib/maps";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
-import { publicSchedulePath, publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
+import {
+  publicSchedulePath,
+  publicTripArrivalCardPath,
+  publicTripCalendarPath,
+  publicTripPath,
+} from "@/lib/public-routes";
 import { combineCertRequirements, type ReadinessBlockerCode } from "@/lib/readiness";
 import { buildDiverChecklist, type DiverChecklistItem } from "@/lib/readiness-summary";
 import { signRecapToken } from "@/lib/recap-links";
@@ -1979,6 +1984,9 @@ export default async function DiverReadinessPage({
             }}
             trip={fullTrip}
             locale={locale}
+            downloadHref={`${publicTripArrivalCardPath(fullShop.slug, fullTrip.id)}?booking=${encodeURIComponent(
+              token,
+            )}`}
             className="mt-8"
           />
         ) : null}
