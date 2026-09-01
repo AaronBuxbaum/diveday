@@ -1,0 +1,28 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Three directions — read me first", "x": 0, "y": 0, "w": 1180, "h": 760 },
+
+    { "file": "TideSystem.dc.html", "title": "Tide — the system", "x": 0, "y": 900, "w": 1180, "h": 2400 },
+    { "file": "DeckSystem.dc.html", "title": "Deck — the system", "x": 1560, "y": 900, "w": 1180, "h": 2400 },
+    { "file": "ReefSystem.dc.html", "title": "Reef — the system", "x": 3120, "y": 900, "w": 1180, "h": 2400 },
+
+    { "file": "TideHome.dc.html", "title": "Tide — the shop home, morning", "x": 0, "y": 3440, "w": 1440, "h": 1500 },
+    { "file": "DeckHome.dc.html", "title": "Deck — the shop home, morning", "x": 1560, "y": 3440, "w": 1440, "h": 1500 },
+    { "file": "ReefHome.dc.html", "title": "Reef — the shop home, morning", "x": 3120, "y": 3440, "w": 1440, "h": 1500 },
+
+    { "file": "TideStorefront.dc.html", "title": "Tide — the storefront", "x": 0, "y": 5080, "w": 1440, "h": 1700 },
+    { "file": "DeckStorefront.dc.html", "title": "Deck — the storefront", "x": 1560, "y": 5080, "w": 1440, "h": 1700 },
+    { "file": "ReefStorefront.dc.html", "title": "Reef — the storefront", "x": 3120, "y": 5080, "w": 1440, "h": 1700 },
+
+    { "file": "TideSwitch.dc.html", "title": "Tide — leaving FareHarbor", "x": 0, "y": 6920, "w": 1440, "h": 1900 },
+    { "file": "DeckSwitch.dc.html", "title": "Deck — leaving FareHarbor", "x": 1560, "y": 6920, "w": 1440, "h": 1900 },
+    { "file": "ReefSwitch.dc.html", "title": "Reef — leaving FareHarbor", "x": 3120, "y": 6920, "w": 1440, "h": 1900 }
+  ],
+  "annotations": [
+    { "id": "row-systems", "x": -320, "y": 900, "w": 260, "text": "Row 1 — the system\nFaces, palette, spacing, the core components, and the three wow moments each direction bets on." },
+    { "id": "row-home", "x": -320, "y": 3440, "w": 260, "text": "Row 2 — the staff home\nBlue Mantis Divers, Thursday Aug 27, morning. Same three departures and open work on every board." },
+    { "id": "row-storefront", "x": -320, "y": 5080, "w": 260, "text": "Row 3 — the storefront\nThe public page a diver books from. One primary action." },
+    { "id": "row-switch", "x": -320, "y": 6920, "w": 260, "text": "Row 4 — leaving FareHarbor\nThe page a shop reads when it is deciding. Only claims the demo can do today." }
+  ],
+  "launch": { "view": "canvas" }
+}
