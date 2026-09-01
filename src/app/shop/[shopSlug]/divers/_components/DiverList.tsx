@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -461,11 +460,6 @@ export function DiverList({
                         {row.fact ? (
                           <div className="mt-1 flex min-w-0 shrink-0 items-center gap-2 text-sm text-muted tabular-nums sm:mt-0 sm:max-w-[45%]">
                             <span className="min-w-0 truncate">{row.fact}</span>
-                            <DiveDayIcon
-                              name="chevron-right"
-                              className="size-4 shrink-0"
-                              aria-hidden="true"
-                            />
                           </div>
                         ) : null}
                       </div>

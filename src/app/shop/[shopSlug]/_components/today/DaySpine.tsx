@@ -6,7 +6,6 @@ import {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
@@ -207,12 +206,10 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
       </SubmitButton>
     </form>
   ) : (
-    <span
-      aria-hidden="true"
-      className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary"
-    >
+    // The word only: this row is a door, and `LedgerRow` draws the door's
+    // chevron itself — a second one here read as "Open crew › ›".
+    <span aria-hidden="true" className="shrink-0 text-sm font-medium text-primary">
       {action.actionLabel}
-      <DiveDayIcon name="chevron-right" className="size-4" />
     </span>
   );
 
@@ -532,7 +529,6 @@ export function DaySpine({
               className="-mx-2 px-2"
               href={`/shop/${shopSlug}/trips/${firstBooking.tripId}`}
               linkLabel={firstBooking.tripTitle}
-              trailing={<DiveDayIcon name="chevron-right" className="size-4 shrink-0 text-muted" />}
             >
               <div className="min-w-0 py-2">
                 <p className="text-base font-medium break-words">
@@ -657,7 +653,6 @@ export function DaySpine({
                     className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary"
                   >
                     {t("shopHome.spine.deskPaymentsAction")}
-                    <DiveDayIcon name="chevron-right" className="size-4" />
                   </span>
                 }
               >
@@ -727,7 +722,6 @@ export function DaySpine({
                 trailing={
                   <span className="flex items-center gap-2 text-sm text-muted tabular-nums">
                     {t("shopHome.spine.jobs", { count: spine.week.jobs })}
-                    <DiveDayIcon name="chevron-right" className="size-4" aria-hidden="true" />
                   </span>
                 }
               >

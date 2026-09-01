@@ -40,11 +40,18 @@ function mintedUrl(panel: Locator): Locator {
  * with nothing subscribed, so the first call takes the "Create subscription
  * link" path and a second call in the same test takes "Replace link" — which
  * is the state the rotation test is actually about.
+ *
+ * The panel has to be on screen before the branch is chosen. `count()` is a
+ * snapshot, and on CI it answered 0 while the segment was still streaming in
+ * behind its `loading.tsx` shell — which sent a never-subscribed shop down the
+ * "Replace link" path, waiting on a button that shop can never show. Waiting
+ * for whichever door the panel renders is what makes the choice deterministic.
  */
 async function mintLink(panel: Locator): Promise<string> {
   const create = panel.getByRole("button", { name: "Create subscription link" });
   const replace = panel.getByRole("button", { name: "Replace link" });
-  if ((await create.count()) > 0) {
+  await expect(create.or(replace)).toBeVisible();
+  if (await create.isVisible()) {
     await create.click();
   } else {
     await replace.click();

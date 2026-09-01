@@ -44,6 +44,14 @@ function Editor({ subhead = "" }: { subhead?: string }) {
  * that cover what the framework does not.
  */
 describe("UnsavedChangesGuard", () => {
+  it("says it is listening once mounted, so a spec can type after hydration", () => {
+    // The dirty flag is a React handler; a keystroke before hydration is a
+    // native event nobody hears. The attribute is the signal the e2e suite
+    // waits on before it fills a box (e2e/courses.spec.ts).
+    const { container } = render(<Editor />);
+    expect(container.querySelector('[data-hydrated="true"]')).not.toBeNull();
+  });
+
   it("says nothing until something is typed", () => {
     render(<Editor subhead="Become a certified diver" />);
     expect(screen.queryByText("Unsaved changes")).toBeNull();
