@@ -10,6 +10,8 @@ import {
   gearNeverPickedUpDetailText,
   gearOverdueDetailText,
   gearServiceDueDetailText,
+  helpRequestActionText,
+  helpRequestDetailText,
   highWindAlertDetailText,
   instructorMissingDetailText,
   inviteFromWaitlistActionText,
@@ -90,6 +92,7 @@ import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { type HorizonReadinessEvidence, inHorizonReadiness } from "./blockers";
 import type { AppDb } from "./client";
 import { listGearDueBack, listGearServiceDue, listOverdueGearReservations } from "./gear";
+import { listTodayHelpRequests } from "./help-requests";
 import { listActiveLastMinuteWindows } from "./last-minute-list";
 import { listDepartureCrewRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
 import { listPendingMediaDeletions, STALE_PENDING_AFTER_MS } from "./media-deletions";
@@ -1160,6 +1163,19 @@ export async function getTodayWork(
     listRollCallGaps(db, shopId, now),
   ]);
 
+  const helpRequests = await listTodayHelpRequests(
+    db,
+    shopId,
+    todayTrips.map((trip) => trip.id),
+    now,
+  );
+  const helpRequestsByTrip = new Map<string, typeof helpRequests>();
+  for (const request of helpRequests) {
+    const requests = helpRequestsByTrip.get(request.tripId) ?? [];
+    requests.push(request);
+    helpRequestsByTrip.set(request.tripId, requests);
+  }
+
   const rawStaff = await listStaff(db, shopId);
   const availableStaff = rawStaff.map((s) => ({
     id: s.person.id,
@@ -1288,6 +1304,26 @@ export async function getTodayWork(
     // Every row this trip contributes shares one departure header in the
     // queue; the rows themselves then never repeat the boat's name.
     const departure = { tripId: trip.id, label: `${trip.title} · ${when}` };
+
+    for (const request of helpRequestsByTrip.get(trip.id) ?? []) {
+      actions.push({
+        id: `help-request:${request.id}`,
+        kind: "help_request",
+        urgency: urgencyFor(trip.startsAt, now),
+        subject: request.personName,
+        context: when,
+        departure,
+        detail: helpRequestDetailText(t, {
+          personName: request.personName,
+          kind: request.kind,
+          status: request.status,
+        }),
+        actionLabel: helpRequestActionText(t, request.status),
+        href: `${tripHref}#booking-${request.bookingId}`,
+        helpRequest: { requestId: request.id, status: request.status },
+        dueAt: trip.startsAt,
+      });
+    }
 
     const blockedDivers = (readinessByTrip.get(trip.id) ?? [])
       .filter((row) => row.readiness.status === "blocked")

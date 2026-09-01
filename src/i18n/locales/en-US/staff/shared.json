@@ -237,6 +237,18 @@
         "failed": "Still couldn’t resend it — open the trip to check the order."
       }
     },
+    "helpRequest": {
+      "kind": {
+        "carryGear": "Carry gear",
+        "firstTimer": "First-timer orientation",
+        "findGroup": "Find their group"
+      },
+      "detailRequested": "{name} asked for help: {help}.",
+      "detailAcknowledged": "{name} is waiting for help: {help}.",
+      "acknowledge": "Acknowledge",
+      "markHandled": "Mark handled",
+      "saving": "Saving…"
+    },
     "yourSessions": {
       "heading": "Your sessions",
       "studentsCount": "{count, plural, one {# student} other {# students}}",
@@ -276,7 +288,8 @@
       "gearDueBack": "Gear due back",
       "gearServiceDue": "Gear service",
       "staffCredentialDue": "Credential",
-      "unitsUnconfirmed": "Setup"
+      "unitsUnconfirmed": "Setup",
+      "helpRequest": "Help request"
     },
     "blockerAction": {
       "setRequirements": "Set requirements",
@@ -407,6 +420,7 @@
       "mediaKind": {
         "coursePhoto": "Course photo",
         "recapPhoto": "Recap photo",
+        "arrivalPhoto": "Arrival photo",
         "certificationCard": "Certification evidence",
         "waiverDocument": "Waiver document",
         "diveSitePhoto": "Dive-site photo"

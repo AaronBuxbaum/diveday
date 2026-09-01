@@ -7,6 +7,7 @@ import {
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { DayCloseoutRecord } from "@/db/closeout";
@@ -87,6 +88,10 @@ import { WaiverSendControl } from "./WaiverSendControl";
 
 /** Binds shopSlug + tripId server-side; the client control supplies the entry. */
 export type SpineInviteAction = (tripId: string, entryId: string) => Promise<"sent" | "fallback">;
+export type SpineHelpRequestAction = (
+  requestId: string,
+  status: "acknowledged" | "handled",
+) => Promise<void>;
 
 type RowControls = {
   shopSlug: string;
@@ -96,6 +101,7 @@ type RowControls = {
   resendCopy: ResendConfirmationCopy;
   inviteCopy: WaitlistInviteCopy;
   paymentCopy: PaymentActionCopy;
+  helpRequestAction?: SpineHelpRequestAction;
   t: StaffTranslator;
 };
 
@@ -130,13 +136,18 @@ function rowKey(action: TodayAction): string {
   if (action.resend) return `resend:${action.resend.bookingId}`;
   if (action.invite) return `invite:${action.invite.entryId}`;
   if (action.payment?.orderId) return `payment:${action.payment.orderId}`;
+  if (action.helpRequest) return `help-request:${action.helpRequest.requestId}`;
   return action.id;
 }
 
 function StationRow({ action, controls }: { action: TodayAction; controls: RowControls }) {
   const { t } = controls;
   const performs = Boolean(
-    action.waiver || action.resend || action.invite || action.payment?.orderId,
+    action.waiver ||
+      action.resend ||
+      action.invite ||
+      action.payment?.orderId ||
+      action.helpRequest,
   );
   const body = (
     <div className="min-w-0 py-2">
@@ -179,6 +190,22 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
       hostedInvoiceUrl={action.payment.hostedInvoiceUrl ?? null}
       copy={controls.paymentCopy}
     />
+  ) : action.helpRequest && controls.helpRequestAction ? (
+    <form
+      action={controls.helpRequestAction.bind(
+        null,
+        action.helpRequest.requestId,
+        action.helpRequest.status === "requested" ? "acknowledged" : "handled",
+      )}
+      className="flex sm:inline-flex"
+    >
+      <SubmitButton
+        pendingLabel={t("shared.today.helpRequest.saving")}
+        className={buttonClass({ variant: "secondary", size: "sm", className: "shrink-0" })}
+      >
+        {action.actionLabel}
+      </SubmitButton>
+    </form>
   ) : (
     <span
       aria-hidden="true"
@@ -318,6 +345,7 @@ export function DaySpine({
   crewedTripIds,
   withheldCount = 0,
   inviteAction,
+  helpRequestAction,
   showPaymentsRow = false,
   firstRun,
   firstBooking,
@@ -336,6 +364,7 @@ export function DaySpine({
   /** How many rows the reader's role lens withheld (issue #715). */
   withheldCount?: number;
   inviteAction: SpineInviteAction;
+  helpRequestAction?: SpineHelpRequestAction;
   /**
    * The desk group's one presence-derived row: the shop has departures, cannot
    * accept payments, and has never taken an order
@@ -365,6 +394,7 @@ export function DaySpine({
     shopSlug,
     shopName,
     inviteAction,
+    helpRequestAction,
     t,
     waiverCopy: waiverSendCopy(t),
     resendCopy: {

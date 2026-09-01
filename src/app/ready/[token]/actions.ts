@@ -6,6 +6,7 @@ import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { selfCancelBooking, setBookingHotelPickup, setBookingLastDived } from "@/db/bookings";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
+import { saveHelpRequest } from "@/db/help-requests";
 import { createNitroxCertification, setBookingNitrox } from "@/db/nitrox";
 import { recordDiverOwnLocale } from "@/db/people";
 import { createCertification, createSpecialtyCertification } from "@/db/readiness";
@@ -238,6 +239,30 @@ export async function saveHotelPickupLocationFromReady(token: string, formData: 
     hotelPickupLocation: location,
   });
   revalidateAndRedirect(base(token), `${base(token)}?${saved ? "saved=pickup" : "error=pickup"}`);
+}
+
+const helpRequestSchema = z.object({
+  kind: z.enum(["carry_gear", "first_timer", "find_group", "none"]),
+});
+
+/** Capture one small day-of request and let the shop visibly settle it. */
+export async function saveHelpRequestFromReady(token: string, formData: FormData) {
+  const ctx = await contextFor(token);
+  if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  const parsed = helpRequestSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(`${base(token)}?error=help`);
+  const result = await saveHelpRequest(ctx.db, {
+    shopId: ctx.data.shop.id,
+    bookingId: ctx.bookingId,
+    kind: parsed.data.kind,
+  });
+  if (!result.ok) {
+    revalidateAndRedirect(
+      base(token),
+      `${base(token)}?error=${result.reason === "handled" ? "help-handled" : "help"}`,
+    );
+  }
+  revalidateAndRedirect(base(token), `${base(token)}?saved=help`);
 }
 
 const fitSchema = z.object({

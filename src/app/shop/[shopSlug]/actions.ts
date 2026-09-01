@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
 import { closeDay, recordLeftoverDecision } from "@/db/closeout";
+import { updateHelpRequestStatus } from "@/db/help-requests";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import {
   addCrewRecapPhoto,
@@ -25,6 +26,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
+import { uuidParam } from "@/lib/uuid";
 
 /**
  * **The shop home's evening acts** (ADR 20260827-clearwater-surface-language,
@@ -47,6 +49,23 @@ import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
 async function shopHome() {
   const staff = await requireStaffSession();
   return { staff, home: shopPath(staff.user.shopSlug) };
+}
+
+/** Move one diver's day-of request through the visible shop hand-off. */
+export async function updateHelpRequestAction(
+  requestId: string,
+  status: "acknowledged" | "handled",
+) {
+  const { staff, home } = await shopHome();
+  if (!uuidParam(requestId) || (status !== "acknowledged" && status !== "handled")) redirect(home);
+  const result = await updateHelpRequestStatus(await getDb(), {
+    shopId: staff.user.shopId,
+    requestId,
+    status,
+    actorPersonId: staff.user.personId,
+  });
+  if (!result.ok) redirect(home);
+  revalidateAndRedirect(home, home);
 }
 
 /**
