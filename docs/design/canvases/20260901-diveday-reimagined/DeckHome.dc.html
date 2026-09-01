@@ -1,0 +1,289 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #04121a; --surface: #0a1e29; --sunken: #020c12;
+      --rule: #173442; --rule-hi: #2c5568;
+      --ink: #eaf4f6; --dim: #93aeb7;
+      --lagoon: #22d3ee; --coral: #ff8a7e; --ok: #3dd68c; --warn: #f0b429; --stop: #ff6b6b;
+    }
+    body { margin: 0; background: #04121a; color: #eaf4f6; font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    a { color: #22d3ee; text-decoration: none; }
+    a:hover { color: #67e8f9; }
+    .mono { font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .lbl { font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); }
+    .fig { font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-variant-numeric: tabular-nums; font-weight: 600; letter-spacing: -0.02em; line-height: 1; }
+    .spec { font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+    .tab { font-size: 16px; font-weight: 500; color: var(--dim); padding: 0 4px; height: 60px; display: inline-flex; align-items: center; box-sizing: border-box; }
+    .tab-on { color: var(--ink); border-bottom: 2px solid var(--lagoon); }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 48px; padding: 0 22px; border-radius: 3px; font-size: 16px; font-weight: 600; background: var(--lagoon); color: #04121a; border: 1px solid var(--lagoon); box-sizing: border-box; }
+    .act { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 16px; border-radius: 3px; font-size: 16px; font-weight: 500; color: var(--ink); border: 1px solid var(--rule-hi); background: transparent; box-sizing: border-box; flex: none; }
+    .row { display: flex; align-items: center; gap: 16px; min-height: 52px; border-top: 1px solid var(--rule); }
+    .kind { font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; width: 96px; flex: none; }
+    .readout { display: flex; flex-direction: column; gap: 9px; padding: 0 26px; border-left: 1px solid var(--rule); }
+  </style>
+</helmet>
+
+<div style="width: 1440px; min-height: 1400px; background: #04121a; box-sizing: border-box; overflow: hidden;">
+
+  <!-- ========== CHROME ========== -->
+  <div style="height: 60px; display: flex; align-items: center; gap: 28px; padding: 0 44px; border-bottom: 1px solid var(--rule); background: var(--sunken); box-sizing: border-box;">
+    <div style="display: flex; align-items: center; gap: 11px;">
+      <div style="width: 28px; height: 28px; border-radius: 3px; border: 1px solid var(--rule-hi); display: flex; align-items: center; justify-content: center;">
+        <span class="fig" style="font-size: 12px; color: var(--lagoon);">BM</span>
+      </div>
+      <span style="font-size: 16px; font-weight: 600; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#93aeb7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.5l3 3 3-3"></path></svg>
+    </div>
+    <div style="display: flex; align-items: center; gap: 26px;">
+      <span class="tab tab-on">Today</span>
+      <span class="tab">Check-in</span>
+      <span class="tab">Divers</span>
+      <span class="tab">Board</span>
+      <span class="tab">More</span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 18px;">
+      <div style="display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 14px; border: 1px solid var(--rule-hi); border-radius: 3px; box-sizing: border-box; width: 300px;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#93aeb7" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.6"></circle><path d="M10.6 10.6L13.9 13.9"></path></svg>
+        <span style="font-size: 16px; color: var(--dim);">Diver, departure, order</span>
+        <span class="spec" style="margin-left: auto; border: 1px solid var(--rule-hi); border-radius: 3px; padding: 2px 7px;">&#8984;K</span>
+      </div>
+      <div style="width: 32px; height: 32px; border-radius: 3px; border: 1px solid var(--rule-hi); display: flex; align-items: center; justify-content: center;">
+        <span class="fig" style="font-size: 12px;">DR</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding: 34px 44px 40px; box-sizing: border-box; display: flex; flex-direction: column; gap: 30px;">
+
+    <!-- ========== HEADER + INSTRUMENT STRIP ========== -->
+    <div style="display: flex; align-items: flex-end; gap: 40px;">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span class="lbl">Day sheet &middot; Thu 27 Aug 2026 &middot; Key Largo</span>
+        <h1 style="margin: 0; font-size: 38px; font-weight: 600; letter-spacing: -0.03em; line-height: 1;">Good morning, Dana.</h1>
+        <p style="margin: 0; font-size: 16px; color: var(--dim);">The 07:00 leaves in 48 minutes.</p>
+      </div>
+      <div style="margin-left: auto; display: flex; align-items: stretch;">
+        <div class="readout">
+          <span class="lbl">Now &middot; EDT</span>
+          <span class="fig" style="font-size: 34px; color: var(--lagoon);">06:12</span>
+        </div>
+        <div class="readout">
+          <span class="lbl">Divers booked</span>
+          <span class="fig" style="font-size: 34px;">23</span>
+        </div>
+        <div class="readout">
+          <span class="lbl">Seats open</span>
+          <span class="fig" style="font-size: 34px;">7</span>
+        </div>
+        <div class="readout">
+          <span class="lbl" style="color: var(--stop);">Cannot board</span>
+          <div style="display: flex; align-items: center; gap: 9px;">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#ff6b6b" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="9" r="7.1"></circle><path d="M6.3 6.3l5.4 5.4M11.7 6.3l-5.4 5.4"></path></svg>
+            <span class="fig" style="font-size: 34px; color: var(--stop);">3</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== BAY 1 &middot; 07:00 ========== -->
+    <div style="display: flex; gap: 20px; border-top: 1px solid var(--rule-hi); padding-top: 22px;">
+      <div style="width: 3px; background: var(--lagoon); flex: none;"></div>
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 18px;">
+
+        <div style="display: flex; align-items: flex-start; gap: 32px;">
+          <div style="width: 132px; flex: none; display: flex; flex-direction: column; gap: 8px;">
+            <span class="fig" style="font-size: 32px;">07:00<span style="font-size: 15px; color: var(--dim);">&#8202;AM</span></span>
+            <span class="lbl">Until 10:30</span>
+          </div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span class="lbl" style="color: var(--lagoon);">Live &middot; boarding</span>
+              <span class="fig" style="font-size: 15px; color: var(--lagoon);">T&#8722;00:48</span>
+            </div>
+            <p style="margin: 0; font-size: 23px; font-weight: 600; letter-spacing: -0.02em;">Two-Tank Reef &mdash; Molasses &amp; French</p>
+            <span class="lbl">Molasses Reef &middot; Mantis II &middot; Keiko Tanaka, Sal Moretti &middot; $95</span>
+          </div>
+          <div style="width: 250px; flex: none; display: flex; flex-direction: column; gap: 10px; align-items: flex-end;">
+            <div style="display: flex; align-items: baseline; gap: 8px;">
+              <span class="fig" style="font-size: 54px;">10</span>
+              <span class="fig" style="font-size: 24px; color: var(--dim);">/&#8202;12</span>
+            </div>
+            <span class="lbl">2 seats open &middot; 7 checked in</span>
+            <div style="width: 250px; height: 5px; background: var(--sunken); display: flex; border-radius: 2px;">
+              <div style="width: 83.3%; background: var(--rule-hi); border-radius: 2px;"></div>
+              <div style="flex: 1; background: rgba(240,180,41,.55); border-radius: 2px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column;">
+          <div class="row">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#ff6b6b" stroke-width="1.8" stroke-linecap="round" style="flex: none;" aria-hidden="true"><circle cx="9" cy="9" r="7.1"></circle><path d="M6.3 6.3l5.4 5.4M11.7 6.3l-5.4 5.4"></path></svg>
+            <span class="kind" style="color: var(--stop);">Cert</span>
+            <span style="flex: 1; font-size: 16px;">Grace Mensah&#8217;s card is waiting for verification &mdash; she cannot board until it clears.</span>
+            <span class="act">Verify card</span>
+          </div>
+          <div class="row">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#ff6b6b" stroke-width="1.8" stroke-linecap="round" style="flex: none;" aria-hidden="true"><circle cx="9" cy="9" r="7.1"></circle><path d="M6.3 6.3l5.4 5.4M11.7 6.3l-5.4 5.4"></path></svg>
+            <span class="kind" style="color: var(--stop);">Waiver</span>
+            <span style="flex: 1; font-size: 16px;">Priya Sharma hasn&#8217;t been sent hers. She can sign on paper at the counter.</span>
+            <span class="act">Send waiver</span>
+          </div>
+          <div class="row">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#93aeb7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;" aria-hidden="true"><rect x="3.4" y="2.6" width="11.2" height="12.8" rx="1.6"></rect><path d="M6.2 6.4h5.6M6.2 9.2h5.6M6.2 12h3.2"></path></svg>
+            <span class="kind">Prep</span>
+            <span style="flex: 1; font-size: 16px; color: var(--dim);">3 divers still need rental sizes.</span>
+            <span class="act">Prep list</span>
+          </div>
+          <div class="row" style="border-bottom: 1px solid var(--rule);">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#93aeb7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;" aria-hidden="true"><circle cx="9" cy="6.4" r="2.7"></circle><path d="M3.8 14.8c.9-2.9 2.8-4.3 5.2-4.3s4.3 1.4 5.2 4.3"></path></svg>
+            <span class="kind">Contact</span>
+            <span style="flex: 1; font-size: 16px; color: var(--dim);">No emergency contact for Nadia Petrov &mdash; ask her when she arrives.</span>
+            <span class="act">Open guests</span>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 18px;">
+          <span class="btn">Open the counter
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#04121a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h9.4M8.6 4.2L12.8 8l-4.2 3.8"></path></svg>
+          </span>
+          <span class="spec">7 of 10 are already here &middot; Ines Costa, June Park, Lena Fischer, Marisol Vega, Omar Haddad, Sam Whitfield, Tom Okafor</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== BAY 2 &middot; 13:00 ========== -->
+    <div style="display: flex; gap: 20px; border-top: 1px solid var(--rule-hi); padding-top: 22px;">
+      <div style="width: 3px; background: var(--rule-hi); flex: none;"></div>
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 18px;">
+
+        <div style="display: flex; align-items: flex-start; gap: 32px;">
+          <div style="width: 132px; flex: none; display: flex; flex-direction: column; gap: 8px;">
+            <span class="fig" style="font-size: 32px; color: var(--dim);">01:00<span style="font-size: 15px;">&#8202;PM</span></span>
+            <span class="lbl">Until 5:00</span>
+          </div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span class="lbl">Next</span>
+              <span class="fig" style="font-size: 15px; color: var(--dim);">T&#8722;06:48</span>
+            </div>
+            <p style="margin: 0; font-size: 23px; font-weight: 600; letter-spacing: -0.02em;">Wreck Trip &mdash; Spiegel Grove</p>
+            <span class="lbl">Spiegel Grove &middot; Mantis II &middot; no crew assigned &middot; $145</span>
+          </div>
+          <div style="width: 250px; flex: none; display: flex; flex-direction: column; gap: 10px; align-items: flex-end;">
+            <div style="display: flex; align-items: baseline; gap: 8px;">
+              <span class="fig" style="font-size: 54px;">10</span>
+              <span class="fig" style="font-size: 24px; color: var(--dim);">/&#8202;10</span>
+            </div>
+            <span class="lbl">Full &middot; wait list is empty</span>
+            <div style="width: 250px; height: 5px; background: var(--rule-hi); border-radius: 2px;"></div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column;">
+          <div class="row">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#ff6b6b" stroke-width="1.8" stroke-linecap="round" style="flex: none;" aria-hidden="true"><circle cx="9" cy="9" r="7.1"></circle><path d="M6.3 6.3l5.4 5.4M11.7 6.3l-5.4 5.4"></path></svg>
+            <span class="kind" style="color: var(--stop);">Cert</span>
+            <span style="flex: 1; font-size: 16px;">Tom&aacute;s Ferreira has no card on file, and this wreck needs Advanced with Deep.</span>
+            <span class="act">Add a card</span>
+          </div>
+          <div class="row" style="border-bottom: 1px solid var(--rule);">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#f0b429" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;" aria-hidden="true"><circle cx="9" cy="9" r="7.1"></circle><path d="M9 5.2v4l2.6 1.8"></path></svg>
+            <span class="kind" style="color: var(--warn);">Crew</span>
+            <span style="flex: 1; font-size: 16px;">No divemaster or instructor on this boat yet. Keiko and Sal are back at 10:30.</span>
+            <span class="act">Assign crew</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== BAY 3 &middot; 19:30 ========== -->
+    <div style="display: flex; gap: 20px; border-top: 1px solid var(--rule-hi); padding-top: 22px;">
+      <div style="width: 3px; background: var(--rule); flex: none;"></div>
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 18px;">
+
+        <div style="display: flex; align-items: flex-start; gap: 32px;">
+          <div style="width: 132px; flex: none; display: flex; flex-direction: column; gap: 8px;">
+            <span class="fig" style="font-size: 32px; color: var(--dim);">07:30<span style="font-size: 15px;">&#8202;PM</span></span>
+            <span class="lbl">Until 11:00</span>
+          </div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span class="lbl" style="opacity: .8;">Later</span>
+              <span class="fig" style="font-size: 15px; color: var(--dim);">T&#8722;13:18</span>
+            </div>
+            <p style="margin: 0; font-size: 23px; font-weight: 600; letter-spacing: -0.02em; color: var(--dim);">Night Dive &mdash; City of Washington</p>
+            <span class="lbl">City of Washington &middot; Skiff &middot; $120</span>
+          </div>
+          <div style="width: 250px; flex: none; display: flex; flex-direction: column; gap: 10px; align-items: flex-end;">
+            <div style="display: flex; align-items: baseline; gap: 8px;">
+              <span class="fig" style="font-size: 54px; color: var(--dim);">3</span>
+              <span class="fig" style="font-size: 24px; color: var(--dim);">/&#8202;8</span>
+            </div>
+            <span class="lbl" style="color: var(--warn);">5 seats open</span>
+            <div style="width: 250px; height: 5px; background: var(--sunken); display: flex; border-radius: 2px;">
+              <div style="width: 37.5%; background: var(--rule-hi); border-radius: 2px;"></div>
+              <div style="flex: 1; background: rgba(240,180,41,.55); border-radius: 2px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column;">
+          <div class="row" style="border-bottom: 1px solid var(--rule);">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#f0b429" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;" aria-hidden="true"><path d="M2.6 3.4h12.8v9.2H6.4L2.6 15.4z"></path></svg>
+            <span class="kind" style="color: var(--warn);">Seats</span>
+            <span style="flex: 1; font-size: 16px;">5 open tonight and no last-minute deal has gone out. 41 divers are on the list.</span>
+            <span class="act">Send a deal</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== AT THE DESK ========== -->
+    <div style="display: flex; gap: 20px; border-top: 1px solid var(--rule-hi); padding-top: 22px;">
+      <div style="width: 3px; background: var(--rule); flex: none;"></div>
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; align-items: baseline; gap: 16px;">
+          <span class="lbl" style="color: var(--ink);">At the desk</span>
+          <span class="lbl">No boat waiting on these</span>
+        </div>
+        <div style="display: flex; flex-direction: column;">
+          <div class="row">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#f0b429" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;" aria-hidden="true"><path d="M2.8 12.6c1.6-.9 2.4-2.4 3.4-4.6C7.4 5.2 8.6 4 10 4c1.2 0 2 .9 2 2 0 2.6-4.2 4.4-4.2 6.2 0 .8.6 1.3 1.5 1.3 1.6 0 3-1.1 4.9-1.1"></path></svg>
+            <span class="kind" style="color: var(--warn);">Signature</span>
+            <span style="flex: 1; font-size: 16px;">Lena Fischer signed on paper on Wednesday and it hasn&#8217;t been sealed yet.</span>
+            <span class="act">Seal it</span>
+          </div>
+          <div class="row" style="border-bottom: 1px solid var(--rule);">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#93aeb7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;" aria-hidden="true"><path d="M9 2.6l1.94 3.93 4.34.63-3.14 3.06.74 4.32L9 12.53l-3.88 2.01.74-4.32-3.14-3.06 4.34-.63z"></path></svg>
+            <span class="kind">Review</span>
+            <span style="flex: 1; font-size: 16px; color: var(--dim);">One review from Wednesday&#8217;s boat is waiting for you to publish it.</span>
+            <span class="act">Read it</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== TOMORROW ========== -->
+    <div style="display: flex; align-items: center; gap: 20px; border-top: 1px solid var(--rule); padding-top: 20px;">
+      <span class="lbl" style="width: 132px; flex: none;">Fri 28 Aug</span>
+      <span style="font-size: 16px; color: var(--dim);">Two departures and the Open Water course starts. Nothing is blocked yet.</span>
+      <span class="fig" style="margin-left: auto; font-size: 20px; color: var(--dim);">9<span style="font-size: 13px;">&#8202;booked</span></span>
+      <span class="fig" style="font-size: 20px; color: var(--dim);">11<span style="font-size: 13px;">&#8202;seats open</span></span>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#93aeb7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5L10.5 8 6 12.5"></path></svg>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

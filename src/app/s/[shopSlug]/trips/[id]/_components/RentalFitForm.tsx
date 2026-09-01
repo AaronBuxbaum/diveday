@@ -186,9 +186,7 @@ export function RentalFitForm({
         role="status"
         aria-live="polite"
         className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
-          isConfirmed
-            ? "border-success/30 bg-success/5 shadow-sm"
-            : "border-border bg-surface-sunken/40"
+          isConfirmed ? "border-success/30 bg-success/5" : "border-border bg-surface-sunken/40"
         }`}
       >
         <div className="flex gap-2">
