@@ -82,6 +82,14 @@ the implementation. Do not send a screenshot of the website as the artwork.
 
 ## Color system
 
+> **Direction change, 2026-09-01 (H-64, ADR 20260901-diveday-reimagined).** The staff app moves to
+> Reef's warmer palette — sand `#fbf7ef`, shell `#fffdf8`, tideline `#f3ecdd`, rope `#e6dcc8`, the
+> lagoon opened to a deep `#0a4d61` and a decorative shallows `#7fd0d6`, washes for coral and each
+> signal — landing with slice 13a; the values below describe the tree until it does. Diver-facing
+> surfaces wear the **shop's** brand (Harbor), with these tokens as the default for a shop that has
+> set none.
+
+
 The product's source of truth is the semantic token set in `src/app/globals.css`, governed by
 [ADR-0004](../architecture/decisions/0004-design-tokens.md). The table below makes the current
 palette usable outside the app; the hex values are intentionally recorded here for print, textile,
@@ -131,6 +139,12 @@ Color rules:
   as unread dark-on-dark in somebody's inbox rather than merely off-brand (issue #771).
 
 ## Typography
+
+> **Settled 2026-09-01 (H-64):** Geist stays the only face on DiveDay's own surfaces. A display
+> serif was drawn for Reef and declined because it moves the brand voice too far; Reef's display
+> moments are Geist at weight and size. A shop's storefront may carry the shop's own display face for
+> headings only — never for a fact.
+
 
 The current product type system is:
 

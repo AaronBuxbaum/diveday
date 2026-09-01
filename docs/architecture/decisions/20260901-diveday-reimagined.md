@@ -1,8 +1,9 @@
-# 20260901-diveday-reimagined — Choose one bold direction for the whole product
+# 20260901-diveday-reimagined — Reef for the shop, Harbor for the diver
 
-- **Status:** Proposed — three directions drawn, a fourth axis added the same day, the pick pending
+- **Status:** Accepted — decided 2026-09-01 (Aaron Buxbaum, in session; H-64)
 - **Date:** 2026-09-01
-- **Scope:** Every surface — the design system, the staff app, the public shopfront, the marketing pages
+- **Scope:** Every surface — the design system, the staff app, the public shopfront, the embeds a shop
+  puts on its own website, the marketing pages, and the offer
 
 ## Context
 
@@ -14,67 +15,151 @@ and I want potential customers to be easily swayed to join, especially when leav
 
 That is a direction question, not a refinement, and the repo's own rule for a direction question is
 to argue it on paper before arguing it in TypeScript ([design-artifacts.md](../../design/design-artifacts.md),
-"When a canvas is warranted"). Committing to one aesthetic without the owner's pick is how a product
-gets a generic face, so the canvas draws three genuinely different directions and this record holds
-the decision open until one is chosen.
+"When a canvas is warranted"). The canvas drew three directions for DiveDay's own face — **Tide**
+(editorial daylight), **Deck** (the instrument), **Reef** (warm and alive) — on the same four surfaces
+for the same shop on the same day, so they compared like for like.
 
-## Decision (proposed)
+A second brief the same day asked what a dive shop's identity looks like, and for an embed system to
+match FareHarbor's. The research (public dive-shop websites in Key Largo, agency portfolios that build
+for dive shops, logo galleries, FareHarbor's public plugin listings — recorded in the canvas README,
+nothing copied) found strong, personal shop brands — ocean blue with one warm accent, underwater
+photography on every page, a creature for a mark, a wall of badges — and every one of them ends at a
+"Book Now" button that hands the diver to a page that looks nothing like the shop. FareHarbor's
+answer is a modal over the shop's site plus a hosted website product sold for about $10,000 a year.
+The canvas's second page drew **Harbor**: DiveDay wears the shop's brand, not its own.
 
-Draw three directions on one canvas, each redrawing the same four surfaces for the same shop on the
-same day so they compare like for like: the design system sheet, the staff shop home on the morning
-of the fiction's day, the public storefront a diver books from, and the page a shop reads when it is
-leaving FareHarbor.
+## Decision
 
-| Direction | Axis | The bet | The tradeoff it must answer |
-| --- | --- | --- | --- |
-| **Tide** | Editorial daylight | Big, confident display type; generous space; sunlit sand and lagoon; drawn water forms. The wow is restraint plus one perfect earned moment. | Restraint asks the most of every sentence and gap; a dense counter morning must stay legible without chrome. |
-| **Deck** | The instrument | The product speaks the grammar of the boat's own instruments: large tabular figures lead, dark-at-depth is the default scheme, structure is hairline and dense. The wow is speed and legibility on a wet deck. | Precision can read as cold to a diver booking a holiday; the storefront has to be warmer than the console without becoming a second product. |
-| **Reef** | Warm and alive | A fuller lagoon-to-coral range used with intent, soft forms, a line-drawn reef and its creatures as an illustration system, moments that feel like a good day on the water. | Personality drifts toward mascot; the safety surfaces stay exact and the illustration rule says where a drawing may never appear. |
+The owner picked on 2026-09-01. Two axes, answered separately, because they are separate questions.
 
-**Harbor, added the same day.** The owner's second brief asked what a dive shop's identity looks like
-and for an embed system to match FareHarbor's. The research (public dive-shop websites, agency
-portfolios, FareHarbor's public plugin listings — recorded in the canvas README) found strong, personal
-shop brands that end at a "Book Now" button handing the diver to a page that looks nothing like the
-shop. **Harbor** is the proposed answer: DiveDay wears the shop's brand on every diver-facing surface —
-the hosted storefront becomes the shop's website in its own colour, mark, display face and photographs,
-and every embed on the shop's own site inherits that site's font and colour — while everything that
-carries a fact keeps DiveDay's tokens, and the brand may never reach a manifest, roll call, cert
-check, waiver, payment step or status. Harbor is an axis, not a fourth taste: it composes with Tide,
-Deck or Reef, so the pick becomes two questions — which direction DiveDay itself wears, and whether the
-diver-facing surfaces go Harbor. With it comes a proposed **embed catalogue** — button, lightbox sheet,
-inline calendar, grid, one departure, courses, QR code, partner link, each a one-line paste chosen in
-Settings — of which only the calendar iframe and the plain button ship today
-([20260726-schedule-embed](20260726-schedule-embed.md)); the rest would each amend that record when built.
+### 1. The staff app wears Reef — with Geist, not Fraunces
 
-Every direction keeps what is not a matter of taste: the name and the bubble mark
-([brand.md](../../design/brand.md)), the divemaster's voice, the dock test (44px targets, readable
-in glare, never colour alone for a status — [principles.md](../../design/principles.md) §2 and §6),
-the coral discipline in spirit (each direction may argue its own budget, in writing), and the
-marketing claims policy ([marketing.md](../../product/marketing.md)): nothing on a marketing board the
-demo cannot do today.
+Every `/shop/**` surface takes Reef's warmth: the warmer sand ground, the opened lagoon-to-coral
+range, the soft panel, the drawn hand, and the three earned moments. **The type does not change.**
+Reef as drawn paired Fraunces with Geist; the owner declined the display face because it moves
+DiveDay's brand voice too far, so Geist stays the only face on every staff surface, and Reef's
+display-scale moments are made with Geist's own weight and size, never a second family.
 
-**What the pick decides.** When the owner chooses a direction (and answers Harbor) this record moves
-to **Accepted**, names the chosen direction, and gains the decisions the pick implies — the type pairing, the palette
-and token changes, the elevation and radius rules, the illustration rule (or its absence), the coral
-budget, and which Clearwater decisions survive. The unchosen directions stay on the canvas as the
-dated argument. Implementation then proceeds as slices in the canvas README's slice table, tokens
-first (so every surface moves together), then the staff app, the storefront, and the marketing pages,
-each slice pinned by a test that names this ADR.
+What lands, and where each rule comes from:
+
+| Rule | Value | Supersedes |
+| --- | --- | --- |
+| Ground | sand `#fbf7ef`, shell (surface) `#fffdf8`, tideline (sunken) `#f3ecdd`, rope (border) `#e6dcc8`, rope-strong `#8a8065` | Clearwater's `#faf9f6` / `#ffffff` / `#f1efe9` / `#e3e0d7` / `#8a8577` |
+| Ink | ink `#0c2a35`, muted `#5b6f77` | unchanged |
+| Lagoon | primary `#0e7490`, hover (lagoon-deep) `#0a4d61`, wash (tint) `#dceef0`, and a new decorative **shallows** `#7fd0d6` for water fills that carry no fact | hover `#155e75`; tint was a 10% mix |
+| Coral | `#ff6f61`, deep `#a83a2c` as ink on a coral wash `#ffeee9` | unchanged values; the wash is new |
+| Signals | success / warning / danger keep their values; each gains a wash (`#e6f0e8`, `#f8eee2`, `#f8e8e6`) as its tint | tints were 10% mixes |
+| Radii | control 10 · inset 18 · panel 28 · pill 999 | panel 16 (`rounded-2xl`), control 10 |
+| Elevation | a resting panel sits on the **warm bed**, `0 2px 10px rgba(88, 66, 30, 0.06)`; menus, sheets and toasts keep their own lift | Clearwater decision 1 ("a panel at rest is flat"), deliberately, and only for the panel — the header tiles, logos and markers retired in #1228 stay flat |
+| Coral budget | three sanctioned appearances per surface, and a harder ban: never a status, never a fill behind reading text, never on a manifest, roll call, cert, waiver or payment surface | Clearwater's one earned moment |
+| Illustration | a line-drawn reef and its creatures, one hand, used as a departure's site mark and in the three moments; **no drawing may appear on a manifest, roll call, cert check, waiver or payment surface** | none existed |
+| The three moments | the water closing over a departure's finished work; the count that fills as divers come back; the diver's day drawn as a postcard on the recap | Clearwater's earned-moment ration |
+| Dark scheme | Reef drew none. The current night palette stays until one is drawn; only the tokens whose *shape* changed (the washes, the radii, the bed) apply in both schemes | — |
+
+The safety floor is untouched: 44px targets, 16px critical text, AA contrast, never colour alone, and
+principle 9 in full.
+
+### 2. The diver-facing surfaces wear Harbor — the shop's brand, with whatever it has set
+
+`/s/<slug>/**` and every embed a shop pastes on its own website take the **shop's** brand: its
+colour, its mark, one display face it chose from a curated list, its photographs, its badge wall,
+its review quotes and its boats. DiveDay is three bubbles and a credit line in the footer. A shop
+that has set nothing sees today's storefront in DiveDay's own tokens — the brand layer is an
+overlay with a default, never a requirement.
+
+- **What the shop owns** (`shops` gains these, edited in Settings under a new *Brand* group):
+  `brand_color` (one hex), `brand_display_font` (one of six curated Google faces, or none),
+  `brand_hero_image_url` + alt, `established_year`, and an ordered list of badges chosen from a
+  fixed code list (`shop_badges`: PADI 5★, PADI IDC, SSI, NAUI, TripAdvisor, Blue Star, Green Fins,
+  DAN partner, Readers' Choice — codes, so they arrive in every language and no logo is drawn that
+  DiveDay has no right to show). `logo_url` and `tagline` already exist.
+- **The derivation rule** (`src/lib/brand.ts`, pure): the brand colour is checked for 4.5:1 against
+  the shop's ground and against white; if it fails as a button fill it is darkened until it passes
+  and the storefront says nothing about it; hover is the colour darkened 12%; the tint is a 10% mix
+  over the surface; ink-on-brand is white or ink by contrast. The result is emitted as the public
+  layout's `--primary`, `--primary-hover`, `--primary-tint`, `--primary-foreground` — so every
+  existing primitive re-skins with no per-component work.
+- **The display face** labels headings only — the shop's name, a section title, the trip's title.
+  Every fact (a time, a price, a seat count, a state, a control) stays in Geist and in ink.
+- **Where the brand may never go**: the waiver text, the payment step, any status, the manifest,
+  roll call, cert check — those keep DiveDay's tokens whatever the shop chose.
+- **The embeds**: one loader, `/embed.js`, and one `data-diveday` element per widget. The catalogue:
+  **button** (a link in the shop's colour), **lightbox** (the booking page in an overlay sheet over
+  the shop's site; payment still opens the real page, stated), **calendar** (the inline week ledger),
+  **grid** (trips and courses as cards), **one departure** (a card for a blog post), **courses** (a
+  list), **QR code** (for the counter and the boat), **partner link** (a referral URL for a hotel or
+  resort). Each is chosen in Settings → Website embed from what it shows (everything, one departure,
+  one course, a named set), how it looks (**inherit the host page** — the loader reads the page's
+  font and link colour and passes them to the frame — or DiveDay light or dark) and which language
+  (follow the visitor's browser, or fixed). The snippet is the same HTML on every platform;
+  WordPress, Squarespace and Wix get their own instructions, not their own code. This amends
+  [20260726-schedule-embed](20260726-schedule-embed.md), which rejected a script loader when the
+  only embed was one iframe; a catalogue of eight is what a loader is for.
+
+### 3. The offer gains a hosted website, built to order
+
+Alongside Harbor's storefront — which is already a website a shop can point a domain at — DiveDay
+offers **a website, built for you**: a shop asks, and DiveDay builds it for them (with Claude, when
+someone asks; nothing is built ahead of a request). It is an **authorized service offer** under the
+marketing claims policy, not a product feature: phrased as a human commitment, never a turnaround
+time, never a page-count. It appears on `/pricing`, `/product` and the FareHarbor guide, priced as
+part of the subscription until the owner says otherwise (H-65 asks). FareHarbor's equivalent is a
+$10,000-a-year line item, and that comparison may be stated as the number they publish, never as
+the shop's own cost.
+
+### 4. What does not change
+
+The name and the bubble mark, the divemaster's voice, the door order (the demo leads, the trial
+follows — [marketing.md](../../product/marketing.md), 2026-08-22), the single-sourced price, the
+claims policy, and every safety surface's vocabulary.
+
+## Slices
+
+Sequenced so the tokens land before anything that reads them, and the shop's brand settings before
+the surfaces that wear them. Each slice ends with the standing obligation: the component that must
+not drift names this ADR in its doc comment, and a test pins the rule. The canvas README's slice
+table is the record of which have landed.
+
+| Slice | What | Depends on |
+| --- | --- | --- |
+| 13a | Reef's tokens for the staff app: ground, lagoon, washes, radii, the warm bed, `shallows`; `SectionCard` at 28px on the bed; brand.md updated | — |
+| 13b | The shop's brand: schema (`shops` columns + `shop_badges`), `src/lib/brand.ts` (derivation, curated faces, badge codes), the Settings *Brand* group, the demo shop seeded with a brand | — |
+| 13c | Harbor's storefront: the public layout emits the brand tokens; hero photo, badge wall, review quotes, boats, established year, the credit line; embed mode inherits | 13b |
+| 13d | The embed catalogue: `/embed.js`, the widget views (`calendar`, `grid`, `departure`, `courses`) under `/s/<slug>/embed/*`, host-inherit look, the lightbox, the QR code, the partner link; Settings → Website embed as the generator; the embed ADR amended | 13c |
+| 13e | The offer: `/pricing`, `/product` and the FareHarbor guide say Harbor, the embeds and the built-to-order website; the switching page's mapping ledger | 13d |
+| 13f | Reef's site mark: each departure's marker on the home and the board is a drawn site mark, the illustration set's first use | 13a |
+| 13g | The water closes over finished work: a station's rows settle into one warm sentence when its last blocker clears | 13a, 13f |
+| 13h | The count that fills: roll call's head count raises the water as divers are counted back; "All home" is the word, the fill is decoration | 13a |
+| 13i | The diver's day, drawn: the recap becomes a postcard in the shop's brand with the site in the illustration hand | 13c, 13f |
+| 13j | The night palette for Reef, drawn and applied | 13a |
 
 ## Alternatives considered
 
-- **Refine Clearwater further.** Rejected for this decision: the review that preceded it found the
-  remaining gaps mechanical (a chevron, a search box, a caption), and mechanical fixes do not produce
-  "wow". They shipped separately (#1225–#1228) so this decision starts from a clean base.
-- **Pick a direction without asking.** Rejected: an aesthetic chosen by the agent is the one most
-  likely to be generic, and the owner is the one person whose taste this product has to carry.
-- **One direction, three surfaces.** Rejected: a single candidate cannot be judged; three candidates
-  on the same four surfaces can.
+- **Refine Clearwater further.** Rejected: the review that preceded this found the remaining gaps
+  mechanical, and mechanical fixes do not produce "wow". They shipped separately (#1225–#1228).
+- **Tide or Deck for the staff app.** Not chosen: the owner's read was that Reef is the one that
+  feels like the water the product is about; Deck's severity and Tide's air were the costs named on
+  the canvas, and both stand as the dated argument.
+- **Reef with Fraunces.** Declined by the owner: the display face moves DiveDay's brand voice too far
+  for a product whose brand is "calm competence". Geist stays.
+- **DiveDay's brand on the diver's screen.** Rejected by the research: the shops' identities are the
+  asset, and every competitor spends them at the button.
+- **Build the hosted website product.** Rejected: nothing is built ahead of a request. The storefront
+  already is a website; the offer is a person who will make a fuller one when asked.
+- **Keep a single iframe as the whole embed story.** Rejected: FareHarbor's shops arrive expecting a
+  catalogue, and one loader serving eight widgets is less to maintain than eight snippets.
 
 ## Consequences
 
-Until the pick, nothing in code changes on this decision's account and the canvas is illustrative.
-After the pick, the token layer changes first and every surface inherits it in one release; the
-existing visual-regression baseline will move on essentially every capture, and the slice that moves
-tokens explains that in its pull request as the direction landing. Two directions' worth of artboards
-become the dated argument and are never freshened.
+- The token layer changes first and every staff surface inherits it in one release; the visual
+  baseline moves on essentially every capture, and 13a's pull request explains that as the direction
+  landing, family by family.
+- The panel regains a shadow. That is a reversal of Clearwater decision 1 for exactly one element
+  and it is written here so the next reader does not "fix" it back.
+- The storefront becomes conditionally the shop's: a shop with an ugly brand gets an ugly
+  storefront, and DiveDay's own brand is a footer line to divers. That is the point and a marketing
+  cost the owner accepted.
+- A script loader is a maintained surface with a compatibility promise: a snippet a shop pasted must
+  keep working, so `embed.js`'s data attributes are a contract with a test.
+- Two directions' worth of artboards and Harbor's alternates stay on the canvas as the dated argument
+  and are never freshened.

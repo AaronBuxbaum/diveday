@@ -304,6 +304,30 @@ starting trials."
 **12a–12f all shipped 2026-08-28** ([shipped.md](../shipped.md)). What is left of the review is
 not a slice: the leave-it guides' pricing link stays where the review left it, an owner call.
 
+### 13. Reef for the shop, Harbor for the diver (design complete)
+
+The whole-product direction the owner picked on 2026-09-01 (H-64), argued in the Accepted ADR
+[20260901-diveday-reimagined](../../architecture/decisions/20260901-diveday-reimagined.md), drawn on
+[its canvas](../../design/canvases/20260901-diveday-reimagined/README.md). Two answers to two
+questions: the staff app wears **Reef** — the warmer sand, the opened lagoon-to-coral range, the soft
+panel on a warm bed, a drawn hand and three earned moments — **with Geist kept** (Fraunces declined);
+every diver-facing surface wears **Harbor** — the shop's own colour, mark, display face, photographs
+and badge wall, DiveDay a credit line — and a shop puts any of eight embeds on its own website from a
+generator in Settings. The offer gains a website built to order (H-65 sets its price and scope).
+
+Sequenced so the tokens land before anything that reads them and the brand settings before the
+surfaces that wear them; the dependency graph and each slice's contents are the ADR's slice table.
+**Each slice ends with the standing obligation**: the component that must not drift names the ADR in
+its doc comment, and a test pins the rule (never a pixel snapshot).
+
+- **13a** — Reef's tokens for the staff app, `SectionCard` at 28px on the warm bed, `brand.md` updated.
+- **13b** — the shop's brand: schema, `src/lib/brand.ts`, the Settings *Brand* group, the demo shop seeded with one.
+- **13c** — Harbor's storefront: the public layout emits the brand tokens; hero, badge wall, quotes, boats, the credit line.
+- **13d** — the embed catalogue: `/embed.js`, the widget views, host-inherit look, lightbox, QR code, partner link, the generator; ADR 20260726-schedule-embed amended.
+- **13e** — the offer on `/pricing`, `/product` and the FareHarbor guide, with the mapping ledger.
+- **13f–13i** — Reef's moments: the drawn site mark, the water closing over finished work, the count that fills, the diver's day as a postcard.
+- **13j** — the night palette, drawn and applied.
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)
