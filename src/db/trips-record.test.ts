@@ -4,6 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { createBoat, deleteBoat } from "./boats";
 import { people, rollCallEvents, userAccounts } from "./schema";
+import { listTripChangeEvents } from "./trip-change-events";
 import {
   createTrip,
   getShopTripTitle,
@@ -16,6 +17,7 @@ import {
   tripCrewSpokenLanguages,
   upcomingTripsWithCounts,
   updateTrip,
+  updateTripConditions,
 } from "./trips";
 
 describe("trip records (in-memory PGlite)", () => {
@@ -137,6 +139,55 @@ describe("trip records (in-memory PGlite)", () => {
     const cleared = await getTripWithBooked(db, shop.id, trip.id);
     expect(cleared?.meetingPointLabel).toBeNull();
     expect(cleared?.meetingPointAddress).toBeNull();
+  });
+
+  it("records material arrival and conditions changes in the public ledger", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Two-Tank Reef — ledger",
+      startsAt: new Date("2030-08-04T13:00:00.000Z"),
+      endsAt: new Date("2030-08-04T17:00:00.000Z"),
+      capacity: 10,
+    });
+    if (!trip) throw new Error("trip not created");
+
+    await updateTrip(db, shop.id, trip.id, {
+      title: trip.title,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      capacity: trip.capacity,
+      plannedDives: trip.plannedDives,
+      meetingPointLabel: "North Jetty",
+      meetingPointAddress: "12 Dock Road",
+      arrivalLookFor: "Blue sign",
+    });
+    const afterArrival = await listTripChangeEvents(db, shop.id, trip.id);
+    expect(afterArrival).toHaveLength(1);
+    expect(afterArrival[0]).toMatchObject({
+      kind: "meeting_point",
+      source: "shop",
+      beforeValue: { meetingPointLabel: null },
+      afterValue: {
+        meetingPointLabel: "North Jetty",
+        meetingPointAddress: "12 Dock Road",
+        arrivalLookFor: "Blue sign",
+      },
+    });
+
+    await updateTripConditions(db, shop.id, trip.id, {
+      conditionsSummary: "Calm water",
+      visibilityMeters: 18,
+    });
+    expect(await listTripChangeEvents(db, shop.id, trip.id)).toHaveLength(2);
+
+    // Re-saving the same facts is not a material change and must not make the
+    // ledger look busier than the plan actually was.
+    await updateTripConditions(db, shop.id, trip.id, {
+      conditionsSummary: "Calm water",
+      visibilityMeters: 18,
+    });
+    expect(await listTripChangeEvents(db, shop.id, trip.id)).toHaveLength(2);
   });
 
   it("names a departure by id, and never one belonging to another shop", async () => {

@@ -6,6 +6,8 @@ import { FlashParams } from "@/components/FlashParams";
 import { JsonLd } from "@/components/JsonLd";
 import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { TripArrivalCard } from "@/components/TripArrivalCard";
+import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { buttonClass } from "@/components/ui/button";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { getBookingForTrip } from "@/db/bookings";
@@ -16,6 +18,7 @@ import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getShopReviewAggregate } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
+import { listTripChangeEvents } from "@/db/trip-change-events";
 import {
   getTripWithBooked,
   getWaitlistEntryForTrip,
@@ -233,6 +236,21 @@ export default async function TripDetailPage({
     crewLanguageNames.length === 0
       ? null
       : cachedListFormat(locale, { style: "long", type: "conjunction" }).format(crewLanguageNames);
+  const changeEvents = await listTripChangeEvents(db, shop.id, tripId);
+  const arrivalShop = {
+    name: shop.name,
+    slug: shop.slug,
+    timezone: shop.timezone,
+    contactPhone: shop.contactPhone,
+    contactEmail: shop.contactEmail,
+    address: {
+      street: shop.addressStreet,
+      locality: shop.addressLocality,
+      region: shop.addressRegion,
+      postalCode: shop.addressPostalCode,
+      country: shop.addressCountry,
+    },
+  };
   const crewPrediction = hasCrewPrediction(trip);
   const forecastPoint =
     trip.diveSite &&
@@ -449,6 +467,7 @@ export default async function TripDetailPage({
         {/* The hero's two conveniences, inside the hero rather than as a row of
             buttons under it. */}
         {isEmbed ? null : <TripActions calendarUrl={publicTripCalendarPath(shopSlug, tripId)} />}
+        <TripArrivalCard shop={arrivalShop} trip={trip} locale={locale} className="mt-6" />
         {/* The one warning panel this page ever wears — the same shape as the
             conditions-changed panel below, on purpose. Two amber boxes with
             different radii and border weights read as two different systems
@@ -523,6 +542,12 @@ export default async function TripDetailPage({
           automatedForecast={automatedForecast}
           crewLanguages={crewLanguagesLine}
           locale={locale}
+        />
+        <TripChangeLedger
+          events={changeEvents}
+          locale={locale}
+          timeZone={shop.timezone}
+          className="mt-6"
         />
         {confirmed &&
         conditionsChangedSinceBooking(

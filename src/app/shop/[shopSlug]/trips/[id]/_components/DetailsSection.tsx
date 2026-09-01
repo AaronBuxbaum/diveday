@@ -1,3 +1,5 @@
+import { ImageFileInput } from "@/components/ImageFileInput";
+import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripDiveFields } from "@/components/TripDiveFields";
 import { buttonClass } from "@/components/ui/button";
@@ -13,6 +15,7 @@ import {
 } from "@/lib/minimum-seats";
 import { currencyFractionDigits, maxPriceMajor, minorToMajor } from "@/lib/money";
 import type { FormNotice } from "@/lib/staff-notices";
+import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { toDateInputValue, toTimeInputValue, type WallTime } from "@/lib/zoned";
 import { EditDisclosure } from "./EditDisclosure";
@@ -122,7 +125,7 @@ export function DetailsSection({
         <p className="mt-1 text-sm text-muted">{moneyFacts.join(" · ")}</p>
       ) : null}
       <EditDisclosure label={t("trips.details.edit")} open={Boolean(status)}>
-        <form action={action} className="mt-2 flex flex-col gap-5">
+        <form action={action} encType="multipart/form-data" className="mt-2 flex flex-col gap-5">
           <FieldGrid columns={1} className="max-w-2xl gap-y-5">
             <Field label={t("trips.details.titleLabel")}>
               <input
@@ -180,6 +183,110 @@ export function DetailsSection({
               />
             </Field>
           </FieldGrid>
+          <fieldset className="rounded-xl bg-surface-sunken p-4 sm:p-5">
+            <legend className="px-1 text-sm font-medium">
+              {t("trips.details.arrivalGuidanceLegend")}
+            </legend>
+            <p className="text-sm text-muted">{t("trips.details.arrivalGuidanceDescription")}</p>
+            <FieldGrid columns={2} className="mt-4 gap-x-5 gap-y-5">
+              <Field
+                label={t("trips.details.arrivalLandmarkLabel")}
+                hint={t("trips.details.optionalHint")}
+                description={t("trips.details.arrivalLandmarkDescription")}
+              >
+                <textarea
+                  name="arrivalLandmark"
+                  rows={2}
+                  maxLength={300}
+                  defaultValue={trip.arrivalLandmark ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+              <Field
+                label={t("trips.details.arrivalLookForLabel")}
+                hint={t("trips.details.optionalHint")}
+                description={t("trips.details.arrivalLookForDescription")}
+              >
+                <textarea
+                  name="arrivalLookFor"
+                  rows={2}
+                  maxLength={300}
+                  defaultValue={trip.arrivalLookFor ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+              <Field
+                label={t("trips.details.arrivalFirstInteractionLabel")}
+                hint={t("trips.details.optionalHint")}
+                description={t("trips.details.arrivalFirstInteractionDescription")}
+              >
+                <textarea
+                  name="arrivalFirstInteraction"
+                  rows={2}
+                  maxLength={300}
+                  defaultValue={trip.arrivalFirstInteraction ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+              <Field
+                label={t("trips.details.arrivalParkingLabel")}
+                hint={t("trips.details.optionalHint")}
+                description={t("trips.details.arrivalParkingDescription")}
+              >
+                <textarea
+                  name="arrivalParkingNote"
+                  rows={2}
+                  maxLength={300}
+                  defaultValue={trip.arrivalParkingNote ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+              <Field
+                label={t("trips.details.arrivalTransitLabel")}
+                hint={t("trips.details.optionalHint")}
+                description={t("trips.details.arrivalTransitDescription")}
+              >
+                <textarea
+                  name="arrivalTransitNote"
+                  rows={2}
+                  maxLength={300}
+                  defaultValue={trip.arrivalTransitNote ?? ""}
+                  className={controlClass}
+                />
+              </Field>
+              <Field
+                label={t("trips.details.arrivalPhotoLabel")}
+                hint={t("trips.details.optionalHint")}
+                description={t("trips.details.arrivalPhotoDescription")}
+                htmlFor="arrival-photo"
+              >
+                {trip.arrivalPhotoUrl ? (
+                  <div className="mb-3 flex flex-wrap items-start gap-3">
+                    <StoredPhoto
+                      src={trip.arrivalPhotoUrl}
+                      alt=""
+                      className="h-20 w-32 rounded-lg border border-border"
+                      sizes="128px"
+                    />
+                    <label className="flex min-h-11 items-center gap-2 text-sm">
+                      <input type="checkbox" name="removeArrivalPhoto" className="size-4" />
+                      {t("trips.details.arrivalPhotoRemove")}
+                    </label>
+                  </div>
+                ) : null}
+                <ImageFileInput
+                  id="arrival-photo"
+                  name="arrivalPhoto"
+                  copy={{
+                    wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+                    tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+                    choose: t("trips.details.arrivalPhotoChoose"),
+                    chooseAnother: t("trips.details.arrivalPhotoReplace"),
+                  }}
+                />
+              </Field>
+            </FieldGrid>
+          </fieldset>
           <TripDiveFields
             diveSites={diveSiteList.map((site) => ({ id: site.id, name: site.name }))}
             initialCount={trip.plannedDives}

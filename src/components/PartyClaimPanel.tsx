@@ -8,6 +8,8 @@ export type PartyClaimSeat = {
   /** The name on the seat — the organizer's own typing until claimed, the claimant after. */
   seatName: string;
   claimed: boolean;
+  /** Whether this seat's current waiver is complete, without exposing readiness state. */
+  waiverSigned: boolean;
   /** A shareable claim URL for a still-unclaimed seat; null once claimed (or unmintable). */
   claimUrl: string | null;
 };
@@ -61,12 +63,15 @@ export function PartyClaimPanel({
                 </span>
               )}
             </div>
+            <p className="mt-1 text-sm text-muted">
+              {seat.waiverSigned ? t("seatClaim.waiverComplete") : t("seatClaim.waiverNeeded")}
+            </p>
             {!seat.claimed && seat.claimUrl ? (
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
                 <Copyable
                   layout="inline"
                   value={seat.claimUrl}
-                  copyLabel={t("seatClaim.copyLabel")}
+                  copyLabel={t("seatClaim.copyReminder")}
                   copiedLabel={t("seatClaim.copiedLabel")}
                   failedLabel={t("seatClaim.copyFailedLabel")}
                 />
@@ -85,6 +90,9 @@ export function PartyClaimPanel({
                   </p>
                 </details>
               </div>
+            ) : null}
+            {seat.claimed && !seat.waiverSigned ? (
+              <p className="mt-2 text-sm text-muted">{t("seatClaim.claimedNeedsWaiver")}</p>
             ) : null}
           </li>
         ))}

@@ -19,6 +19,18 @@ new domain concept, define it here in the same PR.
 - **Conditions hold** — a reversible crew call while weather or sea state is uncertain. Existing
   bookings remain valid, new bookings pause, and booked divers are notified. It is not a
   cancellation and never implies a refund.
+- **Arrival card** — the public, non-sensitive place-to-go projection for one departure: meeting
+  label and address, optional shop-authored landmark guidance, a map hand-off, public support
+  contacts, and the departure time. It appears on the public trip and `/ready`, and its opt-in
+  download is a small HTML copy that contains no booking, waiver, readiness, or medical state.
+- **Change ledger** — the chronological, diver-visible record of material meeting-point and
+  conditions changes. Each event stores before/after public-safe snapshots, a broad source
+  (`shop` or `crew`), and a timestamp; it never names a staffer or carries private operational
+  notes. Re-saving the same facts is not a new event.
+- **Day-of help request** — one controlled, non-medical request a diver can make from `/ready`
+  (`carry gear`, `first-timer orientation`, or `find my group`). It is scoped to one booking,
+  expires from active Today work when the trip ends, and moves through `requested`,
+  `acknowledged`, and `handled`; it is not a social feed, medical record, or free-text inbox.
 - **Staff note** — shop-private operational context written for the next person on the team. A
   note has one general kind for now and attaches either to a **diver** (shared across that diver's
   record and the live boat manifest) or to one **booking** (departure-specific desk context). It is

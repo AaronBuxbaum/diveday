@@ -237,6 +237,18 @@
         "failed": "Sigue sin poder reenviarse — abre la salida para revisar el pedido."
       }
     },
+    "helpRequest": {
+      "kind": {
+        "carryGear": "Ayuda con el equipo",
+        "firstTimer": "Orientación para principiantes",
+        "findGroup": "Encontrar su grupo"
+      },
+      "detailRequested": "{name} ha pedido ayuda: {help}.",
+      "detailAcknowledged": "{name} espera ayuda: {help}.",
+      "acknowledge": "Confirmar recibida",
+      "markHandled": "Marcar como atendida",
+      "saving": "Guardando…"
+    },
     "yourSessions": {
       "heading": "Tus sesiones",
       "studentsCount": "{count, plural, one {# estudiante} other {# estudiantes}}",
@@ -276,7 +288,8 @@
       "gearDueBack": "Devolución hoy",
       "gearServiceDue": "Mantenimiento",
       "staffCredentialDue": "Credencial",
-      "unitsUnconfirmed": "Configuración"
+      "unitsUnconfirmed": "Configuración",
+      "helpRequest": "Solicitud de ayuda"
     },
     "blockerAction": {
       "setRequirements": "Configurar requisitos",
@@ -407,6 +420,7 @@
       "mediaKind": {
         "coursePhoto": "Foto del curso",
         "recapPhoto": "Foto del resumen",
+        "arrivalPhoto": "Foto de llegada",
         "certificationCard": "Evidencia de certificación",
         "waiverDocument": "Documento de exención",
         "diveSitePhoto": "Foto del sitio de buceo"
