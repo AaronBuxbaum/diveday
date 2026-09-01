@@ -9,6 +9,7 @@ import {
   FieldActions,
   FieldGrid,
   FormStatus,
+  SearchField,
   StickyFormActions,
 } from "./form";
 
@@ -19,6 +20,38 @@ afterEach(cleanup);
  * puts it on the control, `FormStatus` puts it in the action row. Both are
  * wired for assistive tech, which is the part a screenshot cannot check.
  */
+describe("SearchField", () => {
+  it("is a named searchbox with the magnifier inset and no caption or button", () => {
+    const { container } = render(
+      <SearchField id="site-search" name="q" label="Find a site" placeholder="Name or location" />,
+    );
+    const box = screen.getByRole("searchbox", { name: "Find a site" });
+    // The name is there for a screen reader and nowhere else: the glyph and
+    // the placeholder already say "search" to a sighted reader.
+    expect(screen.getByText("Find a site")).toHaveClass("sr-only");
+    expect(box).toHaveAttribute("type", "search");
+    expect(box).toHaveClass("ps-9");
+    expect(container.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("passes every native prop through, so a surface never spells the box by hand", () => {
+    render(
+      <SearchField
+        id="orders-search"
+        name="q"
+        label="Search orders"
+        defaultValue="reef"
+        data-hydrated="true"
+      />,
+    );
+    const box = screen.getByRole("searchbox", { name: "Search orders" });
+    expect(box).toHaveValue("reef");
+    expect(box).toHaveAttribute("data-hydrated", "true");
+    expect(box).toHaveAttribute("name", "q");
+  });
+});
+
 describe("Field error", () => {
   it("renders nothing and wires nothing when the field is fine", () => {
     render(

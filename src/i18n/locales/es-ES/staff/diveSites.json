@@ -13,7 +13,6 @@
     "searchAriaLabel": "Buscar en la biblioteca de sitios de buceo",
     "searchLabel": "Encuentra un sitio",
     "searchPlaceholder": "Nombre o ubicación",
-    "searchApply": "Buscar",
     "searchClear": "Borrar la búsqueda",
     "noMatchHeading": "Ningún sitio coincide con esa búsqueda",
     "templateUpdateReady": "Actualización de plantilla v{version} disponible.",

@@ -8,7 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FilterChips } from "@/components/ui/FilterChips";
-import { controlClass } from "@/components/ui/form";
+import { SearchField } from "@/components/ui/form";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { DiverFilter } from "@/db/divers";
 import { groupByLetter } from "@/lib/roster-rows";
@@ -325,21 +325,16 @@ export function DiverList({
           phone moved the box under the thumb typing into it (#781). */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex w-full max-w-full flex-wrap items-center gap-2 sm:w-auto">
-          <div className="w-full min-w-0 sm:w-80">
-            <label className="sr-only" htmlFor="diver-search">
-              {copy.searchDiversLabel}
-            </label>
-            <input
-              ref={searchRef}
-              id="diver-search"
-              type="search"
-              value={typed}
-              onChange={(event) => search(event.target.value)}
-              onKeyDown={submitSearch}
-              placeholder={copy.searchPlaceholder}
-              className={`${controlClass} min-w-0`}
-            />
-          </div>
+          <SearchField
+            ref={searchRef}
+            id="diver-search"
+            label={copy.searchDiversLabel}
+            value={typed}
+            onChange={(event) => search(event.target.value)}
+            onKeyDown={submitSearch}
+            placeholder={copy.searchPlaceholder}
+            className="w-full min-w-0 sm:w-80"
+          />
           {/* One offer, two doors, and deliberately the same words on both so
               the swap on the first keystroke is invisible. With something
               typed, one tap creates that person and lands on their record.

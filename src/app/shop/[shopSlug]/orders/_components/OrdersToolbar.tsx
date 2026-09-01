@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { controlClass } from "@/components/ui/form";
+import { controlClass, SearchField } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
 
 /**
@@ -131,25 +131,18 @@ export function OrdersToolbar({
           they were written, so a `w-auto` beside it would win or lose by
           accident (AGENTS.md's `buttonClass` warning). The wrapper decides the
           box; the control fills it. */}
-      <div className="w-full sm:w-80">
-        <label className="sr-only" htmlFor="orders-search">
-          {copy.searchLabel}
-        </label>
-        <input
-          id="orders-search"
-          name="q"
-          type="search"
-          inputMode="search"
-          defaultValue={q}
-          placeholder={copy.searchPlaceholder}
-          maxLength={120}
-          onInput={applySearchOnInput}
-          // The e2e suite waits on this before relying on type-to-apply — the
-          // deterministic signal that the handler above is live.
-          data-hydrated={hydrated ? "true" : undefined}
-          className={controlClass}
-        />
-      </div>
+      <SearchField
+        id="orders-search"
+        name="q"
+        label={copy.searchLabel}
+        defaultValue={q}
+        placeholder={copy.searchPlaceholder}
+        onInput={applySearchOnInput}
+        // The e2e suite waits on this before relying on type-to-apply — the
+        // deterministic signal that the handler above is live.
+        data-hydrated={hydrated ? "true" : undefined}
+        className="w-full sm:w-80"
+      />
 
       <div className={FIELD_CLASS}>
         <label className="sr-only" htmlFor="orders-status">

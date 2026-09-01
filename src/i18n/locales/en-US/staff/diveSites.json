@@ -13,7 +13,6 @@
     "searchAriaLabel": "Search the dive-site library",
     "searchLabel": "Find a site",
     "searchPlaceholder": "Name or location",
-    "searchApply": "Search",
     "searchClear": "Clear search",
     "noMatchHeading": "No sites match that search",
     "templateUpdateReady": "Template update v{version} ready.",
