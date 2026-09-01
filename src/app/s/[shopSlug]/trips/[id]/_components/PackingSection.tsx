@@ -366,7 +366,7 @@ export function PackingSection({
                               aria-hidden="true"
                             />
                           ) : null}
-                          <div className="absolute left-0 top-0.5 flex size-6 items-center justify-center rounded-full border border-border bg-surface text-muted shadow-xs z-10">
+                          <div className="absolute left-0 top-0.5 flex size-6 items-center justify-center rounded-full border border-border bg-surface text-muted z-10">
                             <StepIcon step={entry.step} className="size-3.5" />
                           </div>
                           <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-4">
