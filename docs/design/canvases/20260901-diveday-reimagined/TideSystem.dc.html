@@ -1,0 +1,348 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&amp;family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --sand: #faf9f6; --shore: #f2eee4; --paper: #ffffff; --line: #e4dfd2; --edge: #8a8577;
+      --ink: #0b2833; --muted: #5b6f77;
+      --lagoon: #0e7490; --lagoon-deep: #155e75; --openwater: #0b3a47; --foam: #eaf2f3; --lagoon-tint: #e7f1f4;
+      --coral: #ff6f61; --coral-ink: #a8362b;
+      --success: #15803d; --success-tint: #e8f2ec;
+      --warning: #b45309; --warning-tint: #f8eee6;
+      --danger: #b91c1c; --danger-tint: #f8e8e8;
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; text-decoration: none; }
+    a:hover { color: #155e75; }
+    .d { font-family: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif; font-optical-sizing: auto; letter-spacing: -0.015em; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .lab { font-size: 11.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+    .spec { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .body { font-size: 15px; color: var(--muted); max-width: 62ch; }
+    .sec { display: flex; flex-direction: column; gap: 22px; }
+    .rule { height: 1px; background: var(--line); }
+    .h2 { font-family: 'Fraunces', 'Iowan Old Style', Georgia, serif; font-optical-sizing: auto; font-size: 27px; font-weight: 500; letter-spacing: -0.015em; line-height: 1.2; margin: 0; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 26px; border-radius: 999px; font-size: 16px; font-weight: 600; box-sizing: border-box; }
+    .swatch { display: flex; flex-direction: column; gap: 9px; }
+    .chip { height: 78px; border-radius: 12px; }
+    .row { display: flex; align-items: center; gap: 16px; min-height: 64px; border-top: 1px solid var(--line); }
+  </style>
+</helmet>
+
+<div style="width: 1180px; min-height: 2410px; background: var(--sand); box-sizing: border-box; overflow: hidden;">
+<div style="padding: 64px 56px 72px; box-sizing: border-box; display: flex; flex-direction: column; gap: 64px;">
+
+  <!-- ============ MASTHEAD ============ -->
+  <div style="display: flex; flex-direction: column; gap: 20px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+        <circle cx="6.5" cy="19" r="4.6" fill="#0e7490"></circle>
+        <circle cx="15" cy="11.5" r="3.2" fill="#0e7490"></circle>
+        <circle cx="21.2" cy="5.2" r="2.1" fill="#ff6f61"></circle>
+      </svg>
+      <span class="lab">DiveDay &middot; design direction</span>
+    </div>
+    <h1 class="d" style="margin: 0; font-size: 78px; font-weight: 400; line-height: .98; letter-spacing: -0.028em;">Tide</h1>
+    <p class="d" style="margin: 0; font-size: 27px; font-weight: 400; line-height: 1.35; max-width: 900px; color: var(--ink);">Editorial daylight. A dive shop&#8217;s day, set like a field guide &mdash; wide margins, one confident voice, and nothing on the page that has not earned the ink.</p>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 44px; padding-top: 8px;">
+      <div style="display: flex; flex-direction: column; gap: 7px;">
+        <p class="d" style="margin: 0; font-size: 20px; font-weight: 500;">The page answers, in a sentence.</p>
+        <p class="body" style="margin: 0; font-size: 14.5px;">Every surface opens with one line of display type stating what is actually true this morning. It replaces the row of stat tiles, and it is built from the same facts the rows carry.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 7px;">
+        <p class="d" style="margin: 0; font-size: 20px; font-weight: 500;">Space is the structure.</p>
+        <p class="body" style="margin: 0; font-size: 14.5px;">Hairlines and whitespace do the work boxes used to. There is one card shape in the whole system and most screens never reach for it.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 7px;">
+        <p class="d" style="margin: 0; font-size: 20px; font-weight: 500;">Coral is the smallest bubble.</p>
+        <p class="body" style="margin: 0; font-size: 14.5px;">One warm mark per surface, and only when something finished. A shop&#8217;s working morning is deliberately a screen with no coral on it at all.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule"></div>
+
+  <!-- ============ TYPE ============ -->
+  <div class="sec">
+    <div style="display: flex; align-items: baseline; gap: 20px;">
+      <h2 class="h2">Two faces. Fraunces speaks, Geist works.</h2>
+      <span class="spec" style="margin-left: auto;">Fraunces (Google Fonts, variable opsz&nbsp;9&ndash;144) &middot; Geist</span>
+    </div>
+    <p class="body" style="margin: 0;">Fraunces is a warm, soft-cornered old-style with real optical sizing: at 72px it is a magazine, at 21px it is a section heading, and it never turns brittle the way a high-contrast display serif does on a sunlit phone. It carries page titles, the briefing sentence, section headings and departure names &mdash; anything a person reads once. Geist carries everything a person <em>uses</em>: rows, labels, counts, controls. Fallbacks: <span class="spec">Iowan Old Style, Palatino Linotype, Georgia, serif</span> and <span class="spec">-apple-system, SF Pro Text, system-ui, sans-serif</span>.</p>
+
+    <div style="display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: baseline; gap: 28px; padding: 22px 0; border-top: 1px solid var(--line);">
+        <span class="d" style="font-size: 68px; font-weight: 400; line-height: 1; letter-spacing: -0.028em;">Blue Mantis Divers</span>
+        <span class="spec" style="margin-left: auto; text-align: right;">Hero &middot; Fraunces 400 / 68&ndash;78px / &minus;0.028em<br>one per marketing or storefront page</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 28px; padding: 22px 0; border-top: 1px solid var(--line);">
+        <span class="d" style="font-size: 44px; font-weight: 400; line-height: 1.06; letter-spacing: -0.022em;">Thursday, August 27</span>
+        <span class="spec" style="margin-left: auto; text-align: right;">Page title &middot; Fraunces 400 / 44px<br>in the page, never in the chrome</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 28px; padding: 22px 0; border-top: 1px solid var(--line);">
+        <span class="d" style="font-size: 28px; font-weight: 400; line-height: 1.34; max-width: 640px;">Two divers can&#8217;t board the 7:00 yet. Everything else can wait.</span>
+        <span class="spec" style="margin-left: auto; text-align: right;">The briefing &middot; Fraunces 400 / 28px / 1.34<br>one sentence, assembled from the day&#8217;s own facts</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 28px; padding: 22px 0; border-top: 1px solid var(--line);">
+        <span class="d" style="font-size: 21px; font-weight: 500;">Before the first boat</span>
+        <span class="spec" style="margin-left: auto; text-align: right;">Section &middot; Fraunces 500 / 21px</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 28px; padding: 22px 0; border-top: 1px solid var(--line);">
+        <span style="font-size: 16px; font-weight: 600;">Grace Mensah</span>
+        <span class="spec" style="margin-left: auto; text-align: right;">Row title &middot; Geist 600 / 16px &mdash; a name is critical text</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 28px; padding: 22px 0; border-top: 1px solid var(--line);">
+        <span style="font-size: 15px; color: var(--muted); max-width: 560px;">Molasses Reef &middot; Mantis II &middot; Keiko Tanaka and Sal Moretti</span>
+        <span class="spec" style="margin-left: auto; text-align: right;">Row meta &middot; Geist 400 / 15px / tidewater</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 28px; padding: 22px 0; border-top: 1px solid var(--line);">
+        <span class="lab">Tomorrow &middot; Friday</span>
+        <span class="spec" style="margin-left: auto; text-align: right;">Group label &middot; Geist 600 / 11.5px / +0.16em / caps</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 28px; padding: 22px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+        <span class="tnum" style="font-size: 40px; font-weight: 700; letter-spacing: -0.02em; line-height: 1;">10<span style="font-size: 17px; font-weight: 600; color: var(--muted);">&nbsp;of 12</span></span>
+        <span class="spec" style="margin-left: auto; text-align: right;">Figure &middot; Geist 700 / tabular / 32&ndash;44px<br>a count is a number and a preposition, never a sentence</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PALETTE ============ -->
+  <div class="sec">
+    <h2 class="h2">Sunlit sand, one lagoon, one deep band.</h2>
+    <p class="body" style="margin: 0;">The family is unchanged &mdash; sand, lagoon, coral &mdash; tuned warmer and one shade deeper for print-weight reading. Three values are new: <strong style="font-weight: 600; color: var(--ink);">wet sand</strong> for banded sections, <strong style="font-weight: 600; color: var(--ink);">open water</strong> for the single dark band a marketing page is allowed, and <strong style="font-weight: 600; color: var(--ink);">coral ink</strong>, the only coral dark enough to carry a word (6.2:1 on sand).</p>
+
+    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px 20px;">
+      <div class="swatch"><div class="chip" style="background: #faf9f6; border: 1px solid var(--line);"></div><div><p style="margin: 0; font-size: 14px; font-weight: 600;">Sunlit sand</p><p class="spec" style="margin: 0;">#FAF9F6 &middot; page ground</p></div></div>
+      <div class="swatch"><div class="chip" style="background: #f2eee4;"></div><div><p style="margin: 0; font-size: 14px; font-weight: 600;">Wet sand <span style="color: var(--coral-ink); font-weight: 500;">new</span></p><p class="spec" style="margin: 0;">#F2EEE4 &middot; banded section</p></div></div>
+      <div class="swatch"><div class="chip" style="background: #ffffff; border: 1px solid var(--line);"></div><div><p style="margin: 0; font-size: 14px; font-weight: 600;">Paper</p><p class="spec" style="margin: 0;">#FFFFFF &middot; the one card</p></div></div>
+      <div class="swatch"><div class="chip" style="background: #e4dfd2;"></div><div><p style="margin: 0; font-size: 14px; font-weight: 600;">Tideline</p><p class="spec" style="margin: 0;">#E4DFD2 &middot; hairline</p></div></div>
+      <div class="swatch"><div class="chip" style="background: #8a8577;"></div><div><p style="margin: 0; font-size: 14px; font-weight: 600;">Control edge</p><p class="spec" style="margin: 0;">#8A8577 &middot; field borders, 3:1</p></div></div>
+
+      <div class="swatch"><div class="chip" style="background: #0b2833;"></div><div><p style="margin: 0; font-size: 14px; font-weight: 600;">Deep-sea ink</p><p class="spec" style="margin: 0;">#0B2833 &middot; reading ink</p></div></div>
+      <div class="swatch"><div class="chip" style="background: #5b6f77;"></div><div><p style="margin: 0; font-size: 14px; font-weight: 600;">Tidewater</p><p class="spec" style="margin: 0;">#5B6F77 &middot; secondary ink</p></div></div>
+      <div class="swatch"><div class="chip" style="background: #0e7490;"></div><div><p style="margin: 0; font-size: 14px; font-weight: 600;">Lagoon</p><p class="spec" style="margin: 0;">#0E7490 &middot; every action</p></div></div>
+      <div class="swatch"><div class="chip" style="background: #155e75;"></div><div><p style="margin: 0; font-size: 14px; font-weight: 600;">Lagoon deep</p><p class="spec" style="margin: 0;">#155E75 &middot; hover, pressed</p></div></div>
+      <div class="swatch"><div class="chip" style="background: #0b3a47;"></div><div><p style="margin: 0; font-size: 14px; font-weight: 600;">Open water <span style="color: var(--coral-ink); font-weight: 500;">new</span></p><p class="spec" style="margin: 0;">#0B3A47 &middot; one dark band</p></div></div>
+
+      <div class="swatch"><div class="chip" style="background: #eaf2f3;"></div><div><p style="margin: 0; font-size: 14px; font-weight: 600;">Foam <span style="color: var(--coral-ink); font-weight: 500;">new</span></p><p class="spec" style="margin: 0;">#EAF2F3 &middot; drawn water</p></div></div>
+      <div class="swatch"><div class="chip" style="background: #ff6f61;"></div><div><p style="margin: 0; font-size: 14px; font-weight: 600;">Coral</p><p class="spec" style="margin: 0;">#FF6F61 &middot; the finish, once</p></div></div>
+      <div class="swatch"><div class="chip" style="background: #a8362b;"></div><div><p style="margin: 0; font-size: 14px; font-weight: 600;">Coral ink <span style="color: var(--coral-ink); font-weight: 500;">new</span></p><p class="spec" style="margin: 0;">#A8362B &middot; a coral word</p></div></div>
+      <div class="swatch"><div class="chip" style="background: #15803d;"></div><div><p style="margin: 0; font-size: 14px; font-weight: 600;">Clear</p><p class="spec" style="margin: 0;">#15803D on #E8F2EC</p></div></div>
+      <div class="swatch"><div class="chip" style="background: #b45309;"></div><div><p style="margin: 0; font-size: 14px; font-weight: 600;">Waiting</p><p class="spec" style="margin: 0;">#B45309 on #F8EEE6</p></div></div>
+    </div>
+    <p class="body" style="margin: 0;">Blocked stays <span style="color: var(--danger); font-weight: 600;">#B91C1C</span> on <span class="spec">#F8E8E8</span>; every tint is opaque, so a mark reads the same on paper, on sand and inside another tint. The amber above doubles as the rating star on a shop&#8217;s own page &mdash; a five-star row in coral would spend the whole surface&#8217;s warmth on a number nobody finished.</p>
+  </div>
+
+  <!-- ============ MEASURE / SHAPE / ELEVATION ============ -->
+  <div class="sec">
+    <h2 class="h2">Measure, shape, elevation.</h2>
+    <div style="display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 44px;">
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <p class="lab" style="margin: 0;">The grid</p>
+        <div style="display: flex; gap: 6px; align-items: stretch; height: 92px;">
+          <div style="width: 44px; background: var(--shore); border-radius: 4px;"></div>
+          <div style="width: 86px; background: var(--foam); border-radius: 4px;"></div>
+          <div style="width: 18px;"></div>
+          <div style="flex: 1; background: var(--lagoon-tint); border-radius: 4px;"></div>
+          <div style="width: 44px; background: var(--shore); border-radius: 4px;"></div>
+        </div>
+        <p class="body" style="margin: 0; font-size: 14px;">1440 desktop: 144px margins, a 288px rail, a 64px gutter and an 800px column. Reading copy never exceeds 62 characters. Section rhythm is 64px in the app and 96px on a marketing page. Everything else is a multiple of 8.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <p class="lab" style="margin: 0;">Three radii, and that is all</p>
+        <div style="display: flex; gap: 10px; align-items: flex-end;">
+          <div style="width: 78px; height: 56px; background: var(--paper); border: 1px solid var(--line); border-radius: 16px;"></div>
+          <div style="min-width: 96px; height: 48px; border-radius: 999px; background: var(--lagoon);"></div>
+          <div style="width: 78px; height: 2px; background: var(--line);"></div>
+        </div>
+        <p class="body" style="margin: 0; font-size: 14px;">16px for the one card, 999px for anything you press, and a 1px square rule for the ledger. No third box shape exists to drift into.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <p class="lab" style="margin: 0;">Elevation</p>
+        <div style="display: flex; gap: 14px; align-items: flex-start;">
+          <div style="flex: 1; background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px;"><p style="margin: 0; font-size: 14px; font-weight: 600;">At rest</p><p class="spec" style="margin: 0;">Hairline, flat.</p></div>
+          <div style="flex: 1; background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; box-shadow: 0 18px 48px rgba(11,40,51,.16);"><p style="margin: 0; font-size: 14px; font-weight: 600;">Floating</p><p class="spec" style="margin: 0;">It will leave.</p></div>
+        </div>
+        <p class="body" style="margin: 0; font-size: 14px;">A shadow is a promise that the thing is temporary &mdash; a sheet, a menu, a confirmation. Nothing that stays on the page casts one.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="rule"></div>
+
+  <!-- ============ COMPONENTS ============ -->
+  <div class="sec">
+    <h2 class="h2">The parts, drawn at working size.</h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 52px 56px;">
+
+      <!-- buttons -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <p class="lab" style="margin: 0;">Actions</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+          <span class="btn" style="background: var(--lagoon); color: #ffffff;">Verify the card</span>
+          <span class="btn" style="background: transparent; color: var(--ink); border: 1px solid var(--edge);">Send waiver</span>
+          <span class="btn" style="background: transparent; color: var(--lagoon); padding: 0 8px;">Open prep list</span>
+          <span class="btn" style="background: transparent; color: var(--danger); border: 1px solid var(--danger); font-size: 15px;">Delete trip</span>
+        </div>
+        <p class="body" style="margin: 0; font-size: 14px;">48px tall, 999px, 16px label, one filled action per surface. Everything else is an outline or a plain lagoon word with a 44px target around it. A delete says Delete.</p>
+      </div>
+
+      <!-- search -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <p class="lab" style="margin: 0;">Search</p>
+        <div style="display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 18px; border-radius: 999px; background: var(--paper); border: 1px solid var(--edge); box-sizing: border-box; max-width: 380px;">
+          <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="#5b6f77" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="7.6" cy="7.6" r="5"></circle><path d="M11.4 11.4L15.4 15.4"></path></svg>
+          <span style="font-size: 16px; color: var(--muted);">A diver, a boat, a day</span>
+          <span class="spec" style="margin-left: auto; font-size: 12px; border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px;">&#8984;K</span>
+        </div>
+        <p class="body" style="margin: 0; font-size: 14px;">One field, one placeholder that names what it will find. It is the same control in the chrome and in the palette.</p>
+      </div>
+
+      <!-- ledger row + group header -->
+      <div style="display: flex; flex-direction: column; gap: 14px; grid-column: span 2;">
+        <p class="lab" style="margin: 0;">The group header owns what the rows share</p>
+        <div style="display: flex; flex-direction: column;">
+          <div style="display: flex; align-items: flex-end; gap: 20px; padding-bottom: 14px;">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <p class="lab" style="margin: 0;">7:00 AM &middot; until 10:30 &middot; Mantis II</p>
+              <p class="d" style="margin: 0; font-size: 21px; font-weight: 500;">Two-Tank Reef &mdash; Molasses &amp; French</p>
+            </div>
+            <div style="margin-left: auto; text-align: right;">
+              <p class="tnum" style="margin: 0; font-size: 32px; font-weight: 700; line-height: 1; letter-spacing: -0.02em;">10<span style="font-size: 15px; font-weight: 600; color: var(--muted);">&nbsp;of 12</span></p>
+            </div>
+          </div>
+          <div class="row">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#b91c1c" stroke-width="1.7" stroke-linecap="round" aria-hidden="true" style="flex-shrink: 0;"><circle cx="10" cy="10" r="8"></circle><path d="M7 7l6 6M13 7l-6 6"></path></svg>
+            <span style="font-size: 13px; font-weight: 600; color: var(--danger); min-width: 104px; letter-spacing: .01em;">Blocked</span>
+            <span style="flex: 1; font-size: 16px;"><strong style="font-weight: 600;">Grace Mensah</strong> &mdash; her certification is waiting for someone to verify it.</span>
+            <span style="font-size: 16px; font-weight: 600; color: var(--lagoon); white-space: nowrap;">Verify the card</span>
+          </div>
+          <div class="row" style="border-bottom: 1px solid var(--line);">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#5b6f77" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><rect x="4" y="3.4" width="12" height="13.2" rx="2.4"></rect><path d="M7.4 8.2h5.2M7.4 11.6h3.4"></path></svg>
+            <span style="font-size: 13px; font-weight: 600; color: var(--muted); min-width: 104px; letter-spacing: .01em;">Prep</span>
+            <span style="flex: 1; font-size: 16px; color: var(--muted);">Three divers still need rental sizes.</span>
+            <span style="font-size: 16px; font-weight: 600; color: var(--lagoon); white-space: nowrap;">Open prep list</span>
+          </div>
+        </div>
+        <p class="body" style="margin: 0; font-size: 14px; max-width: none;">64px rows on the page itself &mdash; no box, no fill, one hairline between. The boat, the time and the head count are said once above; each row carries only what differs and the single act that clears it. A row with nothing wrong does not render.</p>
+      </div>
+
+      <!-- status marks + badge -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <p class="lab" style="margin: 0;">Status: a mark, a word, a tone &mdash; all three</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+          <span style="display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; padding: 8px 15px; font-size: 14px; font-weight: 600; background: var(--danger-tint); color: var(--danger);">
+            <svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="#b91c1c" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6.2 6.2l5.6 5.6M11.8 6.2l-5.6 5.6"></path></svg>Blocked</span>
+          <span style="display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; padding: 8px 15px; font-size: 14px; font-weight: 600; background: var(--warning-tint); color: var(--warning);">
+            <svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="#b45309" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2.6L16.4 15H1.6L9 2.6z"></path><path d="M9 7.3v3.2"></path></svg>Waiting</span>
+          <span style="display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; padding: 8px 15px; font-size: 14px; font-weight: 600; background: var(--success-tint); color: var(--success);">
+            <svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="#15803d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.4l3.6 3.6L14.4 5"></path></svg>All home</span>
+          <span style="display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; padding: 8px 15px; font-size: 14px; font-weight: 600; background: var(--shore); color: var(--muted);">Full</span>
+        </div>
+        <p class="body" style="margin: 0; font-size: 14px;">A badge marks only the exceptional state. The expected one renders as nothing at all &mdash; no green tick beside every ready diver, no &ldquo;None&rdquo; in an empty column.</p>
+      </div>
+
+      <!-- field -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <p class="lab" style="margin: 0;">A field, and a field that refused</p>
+        <div style="display: flex; gap: 16px;">
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 7px;">
+            <span style="font-size: 14px; font-weight: 600;">Certification number</span>
+            <div style="height: 48px; border-radius: 12px; border: 1px solid var(--edge); background: var(--paper); display: flex; align-items: center; padding: 0 14px; box-sizing: border-box;"><span class="tnum" style="font-size: 16px;">1907C24118</span></div>
+          </div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 7px;">
+            <span style="font-size: 14px; font-weight: 600;">Agency</span>
+            <div style="height: 48px; border-radius: 12px; border: 1.5px solid var(--danger); background: var(--paper); display: flex; align-items: center; padding: 0 14px; box-sizing: border-box;"><span style="font-size: 16px; color: var(--muted);">Choose one</span></div>
+            <span style="font-size: 14px; color: var(--danger);">Pick the agency on the card.</span>
+          </div>
+        </div>
+        <p class="body" style="margin: 0; font-size: 14px;">The refusal sits on the field that caused it, never in a banner at the top of the page.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="rule"></div>
+
+  <!-- ============ THREE WOW MOMENTS ============ -->
+  <div class="sec">
+    <h2 class="h2">Three moments this direction bets on.</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px;">
+
+      <!-- 1. horizon -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 22px 22px 18px; display: flex; flex-direction: column; gap: 10px;">
+          <svg width="280" height="104" viewBox="0 0 280 104" fill="none" aria-hidden="true">
+            <path d="M0 58C34 46 62 44 96 51C130 58 158 67 192 62C226 57 250 47 280 50" stroke="#0e7490" stroke-opacity=".42" stroke-width="1.4"></path>
+            <path d="M0 72C36 63 66 62 100 68C134 74 160 81 194 77C228 73 252 65 280 67" stroke="#0e7490" stroke-opacity=".2" stroke-width="1.4"></path>
+            <path d="M22 52v-19" stroke="#0b2833" stroke-opacity=".35" stroke-width="1"></path><circle cx="22" cy="52" r="3.4" fill="#0b2833"></circle>
+            <path d="M128 60v-27" stroke="#0b2833" stroke-opacity=".35" stroke-width="1"></path><circle cx="128" cy="60" r="3.4" fill="#0b2833"></circle>
+            <path d="M232 51v-19" stroke="#0b2833" stroke-opacity=".35" stroke-width="1"></path><circle cx="232" cy="51" r="3.4" fill="#0b2833"></circle>
+            <path d="M6 96V40" stroke="#5b6f77" stroke-width="1" stroke-dasharray="3 3"></path>
+            <text x="16" y="30" font-family="Geist, sans-serif" font-size="10.5" fill="#5b6f77">7:00</text>
+            <text x="122" y="30" font-family="Geist, sans-serif" font-size="10.5" fill="#5b6f77">1:00</text>
+            <text x="222" y="29" font-family="Geist, sans-serif" font-size="10.5" fill="#5b6f77">7:30</text>
+          </svg>
+          <p class="spec" style="margin: 0;">6 AM &mdash;&mdash; 10 PM &middot; now 6:12</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <p class="d" style="margin: 0; font-size: 20px; font-weight: 500;">1 &middot; The horizon</p>
+          <p class="body" style="margin: 0; font-size: 14.5px;">The day drawn as a waterline: today&#8217;s departures standing on it at their real hours, the dashed line where the shop is standing now. It is the only illustration on the page and every mark on it is a fact.</p>
+        </div>
+      </div>
+
+      <!-- 2. ascent -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 22px; display: flex; align-items: center; gap: 20px; min-height: 148px; box-sizing: border-box;">
+          <div>
+            <p class="tnum" style="margin: 0; font-size: 46px; font-weight: 700; line-height: 1; letter-spacing: -0.022em;">10<span style="font-size: 18px; font-weight: 600; color: var(--muted);">&nbsp;of 10</span></p>
+            <p style="margin: 6px 0 0; font-size: 15px; font-weight: 600; color: var(--coral-ink);">Everyone&#8217;s aboard.</p>
+          </div>
+          <svg width="58" height="96" viewBox="0 0 58 96" fill="none" aria-hidden="true">
+            <circle cx="16" cy="80" r="8" fill="#0e7490" fill-opacity=".18"></circle>
+            <circle cx="16" cy="80" r="8" stroke="#0e7490" stroke-opacity=".5" stroke-width="1.2"></circle>
+            <circle cx="31" cy="50" r="5.6" fill="#0e7490" fill-opacity=".22"></circle>
+            <circle cx="31" cy="50" r="5.6" stroke="#0e7490" stroke-opacity=".6" stroke-width="1.2"></circle>
+            <circle cx="43" cy="20" r="4.2" fill="#ff6f61"></circle>
+            <path d="M20 70c4-6 6-10 8-15" stroke="#0e7490" stroke-opacity=".28" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 4"></path>
+            <path d="M35 42c3-6 5-11 6-16" stroke="#0e7490" stroke-opacity=".28" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 4"></path>
+          </svg>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <p class="d" style="margin: 0; font-size: 20px; font-weight: 500;">2 &middot; The ascent</p>
+          <p class="body" style="margin: 0; font-size: 14.5px;">When the last diver is aboard, three bubbles rise once past the count and the smallest arrives coral. 320ms, no sound, no confetti &mdash; and it is the only coral the screen ever shows. Nothing else in Tide is allowed to borrow it.</p>
+        </div>
+      </div>
+
+      <!-- 3. briefing -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 22px; display: flex; flex-direction: column; gap: 12px; min-height: 148px; box-sizing: border-box; justify-content: center;">
+          <p class="d" style="margin: 0; font-size: 23px; font-weight: 400; line-height: 1.3;">Two divers can&#8217;t board the 7:00 yet. Everything else can wait.</p>
+          <div style="display: flex; gap: 8px;">
+            <span class="spec" style="border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px;">2 blocked</span>
+            <span class="spec" style="border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px;">3 boats</span>
+            <span class="spec" style="border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px;">6:12 AM</span>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <p class="d" style="margin: 0; font-size: 20px; font-weight: 500;">3 &middot; The briefing line</p>
+          <p class="body" style="margin: 0; font-size: 14.5px;">Where every other product puts four stat tiles, Tide puts one sentence written from the same facts &mdash; and it changes through the day. At 4 PM it reads &ldquo;Two boats out, both due back before dark.&rdquo; On a clear morning it says so and stops.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</div>
+</x-dc>
+</body>
+</html>

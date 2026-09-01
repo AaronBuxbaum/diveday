@@ -1,0 +1,20 @@
+# Tide — editorial daylight
+
+**In one sentence.** Tide sets a dive shop's day the way a good field guide sets a species plate: sunlit sand, wide margins, one confident display voice, drawn water instead of photographs, and nothing on the page that hasn't earned its ink.
+
+**Why.** Every competitor in this market — and FareHarbor most of all — looks like a database with a stylesheet, so the buyer's instinct is that dive software is something you tolerate. Restraint is the fastest way to break that instinct: a shop owner who opens DiveDay beside their current tool should feel the difference before reading a word. It also happens to be the honest reading of the brand DiveDay already has ("calm competence", "gentle and nice, never pointy"), pushed to the point where it becomes a position rather than a preference.
+
+**The tradeoff, honestly.** Tide spends its screen on air. The staff home shows three departures and their open work where a denser direction would show three departures, their work, the week, the money and the counter queue — so a busy owner scrolls more, and a 13" laptop at the desk gets less per screen than Deck would give them. It is a bet that the first ten seconds matter more than the tenth minute, and it is the wrong bet if the buyer is a five-boat operation living in a spreadsheet. The mitigation is that the *dense* surfaces (the counter, the manifest, the board) keep Clearwater's information density; Tide's generosity is spent on the surfaces people arrive at, not the ones they work in.
+
+**Three wow moments.**
+1. **The horizon** — the day drawn as a single waterline with today's departures standing on it at their real hours and a dashed mark where the shop is standing now. One illustration per page, every mark on it a fact.
+2. **The ascent** — when the last diver is aboard, three bubbles rise once past the head count and the smallest arrives coral, 320ms, no sound. It is the only coral the product ever shows, which is why it lands.
+3. **The briefing line** — where every other product puts four stat tiles, Tide puts one sentence of display type built from the same facts: "Two divers can't board the 7:00 yet. Everything else can wait." It rewrites itself through the day and says nothing when there is nothing to say.
+
+**Kept from Clearwater.** The ledger over the card stack; group headers owning the shared fact; the closed status vocabulary (a tone never travels without a drawn mark and a word); badges only for the exceptional state; counts as tabular figures rather than pills; earned-not-decorative elevation; and the whole safety floor — 44px targets, 16px critical text, AA, never colour alone.
+
+**Thrown out.** Geist as the voice of the product — it stays as the working face and loses every heading. The stat-tile row on the shop home, replaced by the briefing sentence. The timeline spine with its dots and connector, replaced by a horizon that carries the same three departures with none of the vertical rail. Coral on rating stars (amber now, so the finish keeps its colour). And the assumption that a screen with nothing wrong on it needs something on it: on the fiction's 6:12 AM home, Tide renders no coral at all, and that is the point.
+
+**Display face.** **Fraunces** (Google Fonts, variable optical size 9–144, weights 300–700, with an italic for pull quotes), fallback `Iowan Old Style, Palatino Linotype, Georgia, serif`. A warm, soft-cornered old-style whose real optical sizing means a 72px hero and a 21px section heading are genuinely different drawings rather than one letterform scaled — and it stays readable in glare where a high-contrast Didone hairline disappears. Geist keeps every row, label, control and figure.
+
+**New palette values** (stated in full on `TideSystem.dc.html`): wet sand `#F2EEE4` for banded sections, open water `#0B3A47` for the one dark band a marketing page gets, foam `#EAF2F3` for drawn water, coral ink `#A8362B` for the rare coral word (6.2:1 on sand). Ink deepens to `#0B2833` and the hairline warms to `#E4DFD2`; lagoon, coral, and the three feedback tones are unchanged.

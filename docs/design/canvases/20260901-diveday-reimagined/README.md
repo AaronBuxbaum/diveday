@@ -3,7 +3,7 @@
 - **Status:** Live (its ADR is Proposed — the pick is pending)
 - **Date:** 2026-09-01
 - **ADR:** [20260901-diveday-reimagined](../../../architecture/decisions/20260901-diveday-reimagined.md)
-- **Published:** _pending first save_
+- **Published:** https://claude.ai/code/artifact/b4b4c1a1-987d-4d98-b754-5beea4814108
 
 The seventh design canvas, and the first that argues a *direction* rather than a surface. The owner's
 brief: nothing needs to stay the way it is; people should think "wow" using DiveDay, and a shop
