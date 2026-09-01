@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
+import { buttonClass } from "@/components/ui/button";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { capacityLabel, isFull, type TripCapacity } from "@/lib/trips";
@@ -221,7 +222,11 @@ export function TripAddDiverLink({
     <a
       href={href}
       aria-label={ariaLabel}
-      className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:min-h-11 sm:rounded-xl sm:px-4"
+      // The one primary spelling (`buttonClass`), not a hand-rolled twin of it:
+      // this was the only primary in the app typing its own class string, and
+      // it had drifted to `font-semibold` and a `sm:` re-statement of its own
+      // radius. The glyph and the width-forked label are the children.
+      className={buttonClass({ className: "gap-1.5" })}
     >
       <DiveDayIcon name="addBooking" className="size-4" />
       <span className="sm:hidden">{compactLabel}</span>

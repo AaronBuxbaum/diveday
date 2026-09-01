@@ -174,7 +174,6 @@ export default async function CoursesPage({
       <ShopPageHeader
         eyebrow={st("courses.list.eyebrow")}
         title={st("courses.list.title")}
-        description={st("courses.list.description")}
         actions={
           // The one door to the catalog a diver sees — replacing the
           // arrow-out-of-a-box icon every row used to carry. "How does my

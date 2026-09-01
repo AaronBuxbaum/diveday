@@ -854,6 +854,11 @@ test.describe("the course editor over a wander through the app", () => {
     await page.goto(url);
     const summary = page.locator('[name="summary"]');
     await expect(summary).toBeVisible();
+    // The first keystroke after a navigation can land before React attaches
+    // to the form — a native event the dirty flag never hears, so the bar
+    // below never says "Unsaved changes". Wait for the guard to say it is
+    // listening, the way the orders and counter searches are waited on.
+    await page.locator('[data-hydrated="true"]:has([name="summary"])').waitFor();
     await summary.fill("Half a thought, never saved");
     // The bar says so, pinned to the bottom edge rather than four thousand
     // pixels down where Save used to be the only sign this was a form — and it

@@ -41,10 +41,10 @@ test.describe("the dive arrival arc", () => {
     await page.getByText("Edit details", { exact: true }).click();
     await page.locator('input[name="meetingPointLabel"]').fill("North Jetty Marina");
     await page.locator('input[name="meetingPointAddress"]').fill("12 Dock Rd");
-    // Exact: the form also carries a "Landmark photo (optional)" file input,
-    // and a substring match on "Landmark" resolves to both.
+    // By form name: "Landmark" is a substring of the photo control's own label
+    // ("Landmark photo"), so a label match resolves to two elements.
     await page
-      .getByLabel("Landmark (optional)", { exact: true })
+      .locator('textarea[name="arrivalLandmark"]')
       .fill("Blue Mantis sign by the fuel dock");
     await page.getByLabel("What to look for").fill("Look for the yellow dive flag");
     await page.getByLabel("When you arrive").fill("Ask for Dana at the dock desk");
@@ -110,8 +110,8 @@ test.describe("the dive arrival arc", () => {
     await expect(page.getByText(/Arrival Diver is waiting for help/)).not.toBeVisible();
 
     await page.goto(readyPath);
-    // At most one step is open at rest, so the handled line sits behind the
-    // same door the request was filed through.
+    // The response lives in the day-of step's body, and at most one step is
+    // open at rest — the spec opens it exactly as the diver would.
     await openThreadStep(page, "dayof");
     await expect(page.getByText("The crew handled this request.")).toBeVisible();
   });

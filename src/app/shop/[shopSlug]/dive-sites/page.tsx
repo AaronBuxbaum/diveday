@@ -10,7 +10,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
-import { controlClass, Field } from "@/components/ui/form";
+import { SearchField } from "@/components/ui/form";
 import { groupLabelClass, LedgerRow } from "@/components/ui/ledger";
 import { QueryForm } from "@/components/ui/QueryForm";
 import { getDb } from "@/db/client";
@@ -134,7 +134,6 @@ export default async function DiveSitesPage({
       <ShopPageHeader
         eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
         title={t("diveSites.list.title")}
-        description={t("diveSites.list.description")}
         // An empty library gets no header action: the empty card below is
         // already the whole page, and it carries both doors. Two identical
         // primaries on one screen is what principle 8 forbids — so the card
@@ -166,57 +165,37 @@ export default async function DiveSitesPage({
       {librarySize > 0 ? (
         <QueryForm
           aria-label={t("diveSites.list.searchAriaLabel")}
-          // The card's chrome without its anatomy: `QueryForm` is a `<form>`,
-          // which `SectionCard`'s closed element set deliberately excludes, and
-          // the band has no heading of its own.
-          className={sectionCardClass({ className: "mb-6" })}
+          // A toolbar, not a card: the one search box every staff list wears
+          // (`SearchField`), and beside it only the way back out. The bordered
+          // band with a "Find a site" caption and a Search button that stood
+          // here was the third grammar for the same control in the app.
+          className="mb-6 flex items-center gap-2"
         >
-          {/* One line: box, then the button that acts on it, then the way
-            back. Submit used to sit in a `FieldActions` row, which is
-            `col-span-full` — so "Search" landed on a line of its own *below*
-            the box it belonged to, reading as the band's own action rather
-            than as the box's. `items-end` is what keeps the two buttons on
-            the input's baseline while the caption sits above it; the input
-            stays the only thing that grows. */}
-          <div className="flex flex-wrap items-end gap-2">
-            {/* The `<input>` is `Field`'s direct child on purpose: that is the
-              branch that clones the generated id onto the real control, so
-              "Find a site" stays the box's accessible name. Wrapping the row
-              in the `<label>` instead would hand a caption click to whichever
-              control came first. */}
-            <Field label={t("diveSites.list.searchLabel")} className="min-w-56 flex-1">
-              <input
-                type="search"
-                name="q"
-                defaultValue={query}
-                placeholder={t("diveSites.list.searchPlaceholder")}
-                maxLength={120}
-                className={controlClass}
-              />
-            </Field>
-            {/* Secondary: the page's one primary is the header's create
-              action (principle 8). */}
-            <button type="submit" className={buttonClass({ variant: "secondary" })}>
-              {t("diveSites.list.searchApply")}
-            </button>
-            {query ? (
-              // The glyph a search box clears with everywhere else, through the
-              // shared `size: "icon"` box rather than a hand-spelled square —
-              // 44px, and the same construction as the crew chip's unassign and
-              // the report navigator's arrows. The words survive as the
-              // accessible name, so nothing is lost to a screen reader or to
-              // the e2e spec that clicks it by name.
-              <Link
-                href={`/shop/${shopSlug}/dive-sites`}
-                scroll={false}
-                aria-label={t("diveSites.list.searchClear")}
-                title={t("diveSites.list.searchClear")}
-                className={buttonClass({ variant: "ghost", size: "icon" })}
-              >
-                <span aria-hidden="true">×</span>
-              </Link>
-            ) : null}
-          </div>
+          <SearchField
+            id="site-search"
+            name="q"
+            label={t("diveSites.list.searchLabel")}
+            defaultValue={query}
+            placeholder={t("diveSites.list.searchPlaceholder")}
+            className="w-full min-w-0 sm:w-80"
+          />
+          {query ? (
+            // The glyph a search box clears with everywhere else, through the
+            // shared `size: "icon"` box rather than a hand-spelled square —
+            // 44px, and the same construction as the crew chip's unassign and
+            // the report navigator's arrows. The words survive as the
+            // accessible name, so nothing is lost to a screen reader or to
+            // the e2e spec that clicks it by name.
+            <Link
+              href={`/shop/${shopSlug}/dive-sites`}
+              scroll={false}
+              aria-label={t("diveSites.list.searchClear")}
+              title={t("diveSites.list.searchClear")}
+              className={buttonClass({ variant: "ghost", size: "icon" })}
+            >
+              <span aria-hidden="true">×</span>
+            </Link>
+          ) : null}
         </QueryForm>
       ) : null}
 

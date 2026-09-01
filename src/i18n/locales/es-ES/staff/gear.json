@@ -1,7 +1,6 @@
 {
   "eyebrow": "Operar el centro",
   "title": "Equipo",
-  "description": "Tu propia flota de alquiler — quién tiene qué, cuándo vuelve y qué mantenimiento toca.",
   "itemKinds": {
     "mask": "Máscara",
     "fins": "Aletas",

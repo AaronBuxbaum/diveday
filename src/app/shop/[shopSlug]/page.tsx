@@ -15,7 +15,6 @@ import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessio
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
@@ -809,16 +808,13 @@ async function TodayBody({
             href={`/shop/${shopSlug}/schedule/board?add=1`}
             className={buttonClass({ className: "w-full justify-center sm:w-auto" })}
           >
-            {t("shopHome.quietAddDeparture")}
+            <span aria-hidden="true">+</span> {t("shopHome.quietAddDeparture")}
           </Link>
           {nextDeparture ? (
             <ul>
               <LedgerRow
                 href={`/shop/${shopSlug}/trips/${nextDeparture.tripId}`}
                 linkLabel={nextDeparture.title}
-                trailing={
-                  <DiveDayIcon name="chevron-right" className="size-4 shrink-0 text-muted" />
-                }
               >
                 <div className="min-w-0 py-2">
                   <p className="font-medium break-words">{nextDeparture.title}</p>

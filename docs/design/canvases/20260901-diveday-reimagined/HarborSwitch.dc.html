@@ -1,0 +1,231 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #0e7490; }
+    a:hover { color: #155e75; }
+    .dd { --bg: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --border: #e3e0d7;
+          --border-strong: #8a8577; --ink: #0c2a35; --muted: #5b6f77;
+          --primary: #0e7490; --primary-hover: #155e75; --coral: #ff6f61; --success: #15803d; }
+    .dd-body { font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+               color: #0c2a35; font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+    .tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+    .dd-label { font-size: 11.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #5b6f77; }
+    .dd-panel { background: #ffffff; border: 1px solid #e3e0d7; border-radius: 16px; }
+    .dd-btn { display: inline-flex; align-items: center; justify-content: center; height: 44px;
+              padding: 0 22px; border-radius: 10px; font-size: 15px; font-weight: 600; text-decoration: none; }
+    .dd-btn-primary { background: #0e7490; color: #ffffff; }
+    .dd-btn-secondary { background: #ffffff; color: #0c2a35; border: 1px solid #e3e0d7; }
+    .dd-chip { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600;
+               text-transform: uppercase; letter-spacing: .1em; border: 1px solid #8a8577;
+               border-radius: 999px; padding: 2px 8px; color: #5b6f77; }
+    .dd-mrow { display: grid; grid-template-columns: 300px 26px 1fr 132px; align-items: center;
+               column-gap: 18px; height: 46px; border-top: 1px solid #e3e0d7; }
+    .dd-mini { border: 1px solid #e3e0d7; border-radius: 12px; overflow: hidden; background: #ffffff; }
+    .dd-minibar { height: 22px; background: #f1efe9; border-bottom: 1px solid #e3e0d7; display: flex;
+                  align-items: center; gap: 4px; padding: 0 8px; }
+    .dd-dot { width: 5px; height: 5px; border-radius: 999px; background: #d6d2c7; }
+  </style>
+</helmet>
+
+<div class="dd dd-body" style="width: 1440px; min-height: 1560px; background: #faf9f6; box-sizing: border-box; overflow: hidden; padding: 72px 84px 64px;">
+
+  <!-- 1 — The argument -->
+  <div class="dd-label" style="color: #0e7490;">Leaving FareHarbor</div>
+  <h1 style="margin: 12px 0 0; font-size: 44px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.12;">Your website keeps every button.</h1>
+  <p style="margin: 16px 0 0; max-width: 780px; font-size: 17px; line-height: 1.6; color: #0c2a35;">The brand stays yours &mdash; your colours, your mark, your photographs, your badge wall. The booking sheet opens in those colours on your own page instead of handing the diver somewhere else. And the storefront at <span class="tnum">diveday.example/s/blue-mantis</span> is part of the price, not a product sold beside it.</p>
+
+  <!-- 2 — Side by side -->
+  <div style="margin-top: 44px; display: grid; grid-template-columns: 620px 620px; gap: 32px;">
+
+    <!-- Today -->
+    <div>
+      <div class="dd-panel" style="padding: 20px; box-sizing: border-box; height: 404px;">
+        <div class="dd-label">Today</div>
+
+        <div class="dd-mini" style="margin-top: 14px; height: 168px;">
+          <div class="dd-minibar"><span class="dd-dot"></span><span class="dd-dot"></span><span class="dd-dot"></span>
+            <span class="tnum" style="margin-left: 6px; font-size: 9.5px; color: #5b6f77;">bluemantisdivers.example</span>
+          </div>
+          <div style="height: 145px; background: linear-gradient(150deg, #0b1f2e 0%, #10465a 52%, #178f6a 100%); position: relative; padding: 16px 18px; box-sizing: border-box;">
+            <div style="width: 148px; height: 9px; border-radius: 3px; background: rgba(255,255,255,.9);"></div>
+            <div style="margin-top: 8px; width: 210px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.5);"></div>
+            <div style="margin-top: 6px; width: 172px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.32);"></div>
+            <div style="position: absolute; left: 18px; bottom: 16px; display: inline-flex; align-items: center; justify-content: center; height: 26px; padding: 0 14px; border-radius: 6px; background: #178f6a; color: #ffffff; font-size: 11.5px; font-weight: 600;">Book Now</div>
+            <div style="position: absolute; right: 18px; bottom: 16px; display: flex; gap: 6px;">
+              <div style="width: 44px; height: 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,.4);"></div>
+              <div style="width: 34px; height: 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,.4);"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: center; padding: 8px 0 6px;">
+          <svg width="18" height="20" viewBox="0 0 18 20" fill="none" stroke="#8a8577" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 2v14"></path><path d="M4 12l5 5 5-5"></path>
+          </svg>
+        </div>
+
+        <div class="dd-mini" style="height: 138px; border-color: #8a8577;">
+          <div class="dd-minibar" style="background: #e9e7e1;"><span class="dd-dot"></span><span class="dd-dot"></span><span class="dd-dot"></span>
+            <span class="tnum" style="margin-left: 6px; font-size: 9.5px; color: #5b6f77;">someone-elses-checkout.example</span>
+          </div>
+          <div style="height: 115px; background: #f1efe9; padding: 14px 18px; box-sizing: border-box; position: relative;">
+            <div style="width: 120px; height: 8px; border-radius: 3px; background: #c9c5ba;"></div>
+            <div style="margin-top: 12px; display: flex; gap: 8px;">
+              <div style="width: 150px; height: 22px; border-radius: 4px; border: 1px solid #d6d2c7; background: #ffffff;"></div>
+              <div style="width: 150px; height: 22px; border-radius: 4px; border: 1px solid #d6d2c7; background: #ffffff;"></div>
+            </div>
+            <div style="margin-top: 10px; width: 96px; height: 22px; border-radius: 4px; background: #8a8577;"></div>
+            <span style="position: absolute; right: 16px; bottom: 14px; font-size: 11.5px; font-weight: 600; color: #5b6f77;">their page, their colours</span>
+          </div>
+        </div>
+      </div>
+      <p style="margin: 14px 0 0; font-size: 15px; color: #5b6f77;">A diver taps the button on your page and finishes the booking on a page that carries nobody's name but the vendor's.</p>
+    </div>
+
+    <!-- With DiveDay -->
+    <div>
+      <div class="dd-panel" style="padding: 20px; box-sizing: border-box; height: 404px;">
+        <div class="dd-label" style="color: #0e7490;">With DiveDay</div>
+
+        <div class="dd-mini" style="margin-top: 14px; height: 320px;">
+          <div class="dd-minibar"><span class="dd-dot"></span><span class="dd-dot"></span><span class="dd-dot"></span>
+            <span class="tnum" style="margin-left: 6px; font-size: 9.5px; color: #5b6f77;">bluemantisdivers.example</span>
+          </div>
+          <div style="height: 297px; background: linear-gradient(150deg, #0b1f2e 0%, #10465a 52%, #178f6a 100%); position: relative; padding: 16px 18px; box-sizing: border-box;">
+            <div style="width: 148px; height: 9px; border-radius: 3px; background: rgba(255,255,255,.9);"></div>
+            <div style="margin-top: 8px; width: 210px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.5);"></div>
+
+            <div style="position: absolute; inset: 0; background: rgba(11,31,46,.5);"></div>
+
+            <!-- the sheet, in the shop's green -->
+            <div style="position: absolute; left: 50%; transform: translateX(-50%); bottom: 0; width: 400px; background: #ffffff; border-radius: 14px 14px 0 0; padding: 18px 20px 16px; box-sizing: border-box;">
+              <div style="width: 40px; height: 4px; border-radius: 999px; background: #e2dccf; margin: 0 auto 14px;"></div>
+              <div class="tnum" style="font-size: 11.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #5c6b72;">Thu 7:00 AM</div>
+              <div style="margin-top: 6px; font-size: 15.5px; font-weight: 700; color: #0b1f2e;">Two-Tank Reef &mdash; Molasses &amp; French</div>
+              <div style="margin-top: 6px; display: flex; align-items: baseline; gap: 8px;">
+                <span class="tnum" style="font-size: 14px; font-weight: 700; color: #0b1f2e;">$95</span>
+                <span style="font-size: 13px; color: #5c6b72;">per diver &bull; Mantis II</span>
+              </div>
+              <div class="tnum" style="margin-top: 6px; font-size: 13px; font-weight: 700; color: #f07d2a;">2 seats left</div>
+              <div style="margin-top: 12px; display: flex; gap: 8px;">
+                <div style="flex: 1; height: 30px; border-radius: 8px; border: 1px solid #e2dccf; background: #ffffff;"></div>
+                <div style="flex: 1; height: 30px; border-radius: 8px; border: 1px solid #e2dccf; background: #ffffff;"></div>
+              </div>
+              <div style="margin-top: 10px; height: 34px; border-radius: 8px; background: #178f6a; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 13.5px; font-weight: 700;">Book this boat</div>
+              <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #e2dccf; display: flex; align-items: center; gap: 7px;">
+                <svg width="22" height="12" viewBox="0 0 26 14" fill="none" aria-hidden="true">
+                  <circle cx="4.5" cy="10" r="3.4" fill="#0e7490"></circle>
+                  <circle cx="13" cy="7.6" r="2.6" fill="#5b6f77"></circle>
+                  <circle cx="20.4" cy="5.2" r="1.9" fill="#ff6f61"></circle>
+                </svg>
+                <span style="font-size: 10.5px; color: #5c6b72;">Bookings by DiveDay</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p style="margin: 14px 0 0; font-size: 15px; color: #5b6f77;">The same tap opens the sheet over your own page, in your green, and the only DiveDay pixels are the credit at its foot.</p>
+    </div>
+  </div>
+
+  <!-- 3 — The mapping ledger -->
+  <div style="margin-top: 48px;">
+    <h2 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.018em;">Every embed you have has a match</h2>
+    <div class="dd-panel" style="margin-top: 16px; padding: 0 24px 18px; box-sizing: border-box;">
+      <div class="dd-mrow" style="border-top: 0; height: 42px;">
+        <span class="dd-label">What you have</span>
+        <span></span>
+        <span class="dd-label">What you paste</span>
+        <span class="dd-label" style="text-align: right;">Status</span>
+      </div>
+
+      <div class="dd-mrow">
+        <span style="font-weight: 500;">Book Now button</span>
+        <svg width="18" height="10" viewBox="0 0 18 10" fill="none" stroke="#8a8577" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 5h15"></path><path d="M12 1l4 4-4 4"></path></svg>
+        <span>DiveDay button</span>
+        <span style="text-align: right; font-size: 14px; font-weight: 600; color: #15803d;">Ships today</span>
+      </div>
+
+      <div class="dd-mrow">
+        <span style="font-weight: 500;">Lightframe</span>
+        <svg width="18" height="10" viewBox="0 0 18 10" fill="none" stroke="#8a8577" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 5h15"></path><path d="M12 1l4 4-4 4"></path></svg>
+        <span>Lightbox sheet</span>
+        <span style="text-align: right;"><span class="dd-chip">Proposed</span></span>
+      </div>
+
+      <div class="dd-mrow">
+        <span style="font-weight: 500;">Embedded calendar</span>
+        <svg width="18" height="10" viewBox="0 0 18 10" fill="none" stroke="#8a8577" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 5h15"></path><path d="M12 1l4 4-4 4"></path></svg>
+        <span>Calendar, as an iframe</span>
+        <span style="text-align: right; font-size: 14px; font-weight: 600; color: #15803d;">Ships today</span>
+      </div>
+
+      <div class="dd-mrow">
+        <span style="font-weight: 500;">Item grid</span>
+        <svg width="18" height="10" viewBox="0 0 18 10" fill="none" stroke="#8a8577" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 5h15"></path><path d="M12 1l4 4-4 4"></path></svg>
+        <span>Grid</span>
+        <span style="text-align: right;"><span class="dd-chip">Proposed</span></span>
+      </div>
+
+      <div class="dd-mrow">
+        <span style="font-weight: 500;">Flows</span>
+        <svg width="18" height="10" viewBox="0 0 18 10" fill="none" stroke="#8a8577" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 5h15"></path><path d="M12 1l4 4-4 4"></path></svg>
+        <span>Sets</span>
+        <span style="text-align: right;"><span class="dd-chip">Proposed</span></span>
+      </div>
+
+      <div class="dd-mrow">
+        <span style="font-weight: 500;">QR codes</span>
+        <svg width="18" height="10" viewBox="0 0 18 10" fill="none" stroke="#8a8577" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 5h15"></path><path d="M12 1l4 4-4 4"></path></svg>
+        <span>QR code</span>
+        <span style="text-align: right;"><span class="dd-chip">Proposed</span></span>
+      </div>
+
+      <div class="dd-mrow">
+        <span style="font-weight: 500;">Affiliate links</span>
+        <svg width="18" height="10" viewBox="0 0 18 10" fill="none" stroke="#8a8577" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 5h15"></path><path d="M12 1l4 4-4 4"></path></svg>
+        <span>Partner link</span>
+        <span style="text-align: right;"><span class="dd-chip">Proposed</span></span>
+      </div>
+
+      <div class="dd-mrow">
+        <span style="font-weight: 500;">WordPress shortcodes</span>
+        <svg width="18" height="10" viewBox="0 0 18 10" fill="none" stroke="#8a8577" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 5h15"></path><path d="M12 1l4 4-4 4"></path></svg>
+        <span>WordPress plugin</span>
+        <span style="text-align: right;"><span class="dd-chip">Proposed</span></span>
+      </div>
+
+      <div class="dd-mrow">
+        <span style="font-weight: 500;">Sites, at <span class="tnum">$10,000</span> a year</span>
+        <svg width="18" height="10" viewBox="0 0 18 10" fill="none" stroke="#8a8577" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 5h15"></path><path d="M12 1l4 4-4 4"></path></svg>
+        <span>The storefront</span>
+        <span style="text-align: right; font-size: 14px; font-weight: 600; color: #15803d;">Included</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 — The price line -->
+  <div style="margin-top: 44px; display: flex; align-items: center; gap: 28px; flex-wrap: wrap;">
+    <p class="tnum" style="margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.012em;">$99 per location per month. Three weeks free, card or no card.</p>
+    <div style="display: flex; gap: 12px;">
+      <a class="dd-btn dd-btn-primary" href="#demo">See the demo</a>
+      <a class="dd-btn dd-btn-secondary" href="#trial">Start the trial</a>
+    </div>
+  </div>
+
+  <!-- 5 — The quiet last line -->
+  <p style="margin: 32px 0 0; font-size: 15px; color: #5b6f77;">Your divers, your photos, your badges, your reviews &mdash; exported on day one if you ever leave.</p>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,5 +1,12 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { daysFromNow, e2eNow, openTripAbout, signInAsOwner, tripPathByTitle } from "./helpers";
+import {
+  bookASeatAndOpenThread,
+  daysFromNow,
+  e2eNow,
+  openTripAbout,
+  signInAsOwner,
+  tripPathByTitle,
+} from "./helpers";
 
 signedInAsOwner();
 
@@ -231,13 +238,16 @@ test("staff moves a departure to a different boat after it is on the board", asy
 /**
  * A departure's own meeting point, when it isn't the shop's own front door
  * (issue #704 slice 2) — a marina three miles out, a shore dive's beach car
- * park. Staff sets it on the trip's own details form. The exact place is a
- * booked diver's benefit (PR #1223): the public page records *that* the
- * meeting point changed in its "What changed" ledger, and never the label or
- * the address — those reach the diver on the Ready thread once a seat is
- * held, which `arrival-arc.spec.ts` covers end to end.
+ * park. Staff sets it on the trip's own details form; the diver reads it on
+ * their thread once they hold a seat. It used to sit on the public hero as
+ * well, and left it on 2026-09-01 (ADR 20260901-dive-arrival-arc, "Keep exact
+ * arrival details post-booking", #1223): the exact place a boat leaves from is
+ * a booked diver's fact, not a public listing's. So the public page must
+ * *not* carry it, and the thread must.
  */
-test("a departure's own meeting point stays off the public page until booked", async ({ page }) => {
+test("a departure's own meeting point reaches the diver once they hold a seat", async ({
+  page,
+}) => {
   test.setTimeout(BOARD_FLOW_TIMEOUT_MS);
   const tripPath = await tripPathByTitle(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
   await page.goto(tripPath);
@@ -255,12 +265,11 @@ test("a departure's own meeting point stays off the public page until booked", a
   const tripId = tripPath.split("/").pop();
   await page.context().clearCookies();
   await page.goto(`/s/blue-mantis/trips/${tripId}`);
-  // The ledger is the page's own proof the save landed and rendered — wait on
-  // it first, so the two negative assertions below cannot pass against a page
-  // that simply has not painted yet.
-  await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
-  await expect(page.getByText("Meeting point updated", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Where to go" })).not.toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.getByText("North Jetty Marina", { exact: true })).not.toBeVisible();
   await expect(page.getByText("12 Dock Rd", { exact: true })).not.toBeVisible();
+
+  await bookASeatAndOpenThread(page, "Meeting Point Diver");
+  await expect(page.getByText("North Jetty Marina", { exact: true })).toBeVisible();
+  await expect(page.getByText("12 Dock Rd", { exact: true })).toBeVisible();
 });

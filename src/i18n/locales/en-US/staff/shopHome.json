@@ -148,6 +148,6 @@
     "firstBookingWaiverSigned": "waiver signed",
     "firstBookingWaiverNeeded": "waiver needed"
   },
-  "quietAddDeparture": "+ Add a departure",
+  "quietAddDeparture": "Add a departure",
   "quietNextDepartureLabel": "Next departure"
 }

@@ -1,0 +1,511 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&amp;family=Bricolage+Grotesque:opsz,wght@12..96,400..800&amp;family=Geist:wght@400;500;600;700&amp;family=Lora:wght@400;500;600;700&amp;family=Outfit:wght@400;500;600;700&amp;family=Playfair+Display:wght@400;500;600;700&amp;family=Sora:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --sand: #faf9f6; --surface: #ffffff; --sunken: #f1efe9; --line: #e3e0d7; --edge: #8a8577;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --primary: #0e7490; --primary-hover: #155e75; --primary-tint: #e7f1f4;
+      --coral: #ff6f61; --success: #15803d; --warning: #b45309; --danger: #b91c1c;
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; text-decoration: none; }
+    a:hover { color: #155e75; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .lab { margin: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+    .spec { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .body { margin: 0; font-size: 15px; line-height: 1.55; color: var(--muted); max-width: 66ch; }
+    .h2 { margin: 0; font-size: 27px; font-weight: 700; letter-spacing: -0.018em; line-height: 1.2; }
+    .h3 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.008em; }
+    .sec { display: flex; flex-direction: column; gap: 18px; }
+    .rule { height: 1px; background: var(--line); }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-sizing: border-box; }
+    .chip { height: 44px; border-radius: 10px; }
+    .btn { display: flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 10px; font-size: 15px; font-weight: 600; color: #ffffff; box-sizing: border-box; }
+    .badge { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; box-sizing: border-box; }
+    .tag { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; background: #f8eee6; color: var(--warning); font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; box-sizing: border-box; }
+    .face { margin: 0; font-size: 22px; line-height: 1.25; letter-spacing: -0.012em; color: var(--ink); }
+    .row { display: flex; align-items: center; gap: 14px; min-height: 56px; border-top: 1px solid var(--line); box-sizing: border-box; }
+    .never { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; background: #f8e8e8; color: var(--danger); font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; box-sizing: border-box; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; min-height: 2400px; background: var(--sand); box-sizing: border-box; overflow: hidden;">
+<div style="padding: 56px 52px 60px; box-sizing: border-box; display: flex; flex-direction: column; gap: 46px;">
+
+  <!-- ============ MASTHEAD ============ -->
+  <div style="display: flex; flex-direction: column; gap: 16px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+        <circle cx="6.5" cy="19" r="4.6" fill="#0e7490"></circle>
+        <circle cx="15" cy="11.5" r="3.2" fill="#0e7490"></circle>
+        <circle cx="21.2" cy="5.2" r="2.1" fill="#ff6f61"></circle>
+      </svg>
+      <span class="lab">DiveDay &middot; design direction &middot; round two</span>
+      <span class="tag" style="margin-left: 6px;">Proposed</span>
+    </div>
+    <h1 style="margin: 0; font-size: 68px; font-weight: 700; line-height: 1; letter-spacing: -0.032em;">Harbor</h1>
+    <p style="margin: 0; font-size: 26px; font-weight: 500; line-height: 1.32; max-width: 940px;">The shop&#8217;s own colours. A shop&#8217;s brand colour, mark, one display face and photographs drive its storefront and every embed on its own website &mdash; and DiveDay&#8217;s safety vocabulary never moves.</p>
+    <p class="lab" style="color: var(--primary);">Axis &middot; The product is a frame; the shop is the picture</p>
+  </div>
+
+  <div class="rule"></div>
+
+  <!-- ============ TWO TOKEN LAYERS ============ -->
+  <div class="sec">
+    <div style="display: flex; align-items: baseline; gap: 20px;">
+      <h2 class="h2">Two layers. The shop paints one; DiveDay owns the other.</h2>
+      <p class="spec" style="margin-left: auto; text-align: right;">Four settings on the left. Nothing on the right is settable.</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; align-items: start;">
+
+      <!-- OWNED BY THE SHOP -->
+      <div class="card" style="padding: 22px; display: flex; flex-direction: column; gap: 18px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h3 class="h3">Owned by the shop</h3>
+          <span class="spec" style="margin-left: auto;">4 inputs</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 9px;">
+          <p class="lab">1 &middot; Brand colour</p>
+          <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;">
+            <div style="display: flex; flex-direction: column; gap: 6px;"><div class="chip" style="background: #128f9e;"></div><p class="spec" style="font-size: 12.5px;">Brand<br>#128F9E</p></div>
+            <div style="display: flex; flex-direction: column; gap: 6px;"><div class="chip" style="background: #0d6f7a;"></div><p class="spec" style="font-size: 12.5px;">Hover<br>derived</p></div>
+            <div style="display: flex; flex-direction: column; gap: 6px;"><div class="chip" style="background: #e6f3f5;"></div><p class="spec" style="font-size: 12.5px;">Tint<br>derived</p></div>
+            <div style="display: flex; flex-direction: column; gap: 6px;"><div class="chip" style="background: #ffffff; border: 1px solid var(--line); box-sizing: border-box;"></div><p class="spec" style="font-size: 12.5px;">Ink on brand<br>derived</p></div>
+          </div>
+          <p class="spec">One value is typed; the other three are computed and never editable.</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 9px;">
+          <p class="lab">2 &middot; The mark</p>
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 78px; height: 62px; border: 1px dashed var(--edge); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg width="46" height="34" viewBox="0 0 64 44" fill="none" aria-hidden="true">
+                <ellipse cx="29" cy="24" rx="15" ry="12" stroke="#128f9e" stroke-width="2"></ellipse>
+                <circle cx="49" cy="19" r="5" stroke="#128f9e" stroke-width="2"></circle>
+                <path d="M19 13L9 5l8 12M19 35L9 43l8-12" stroke="#128f9e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </div>
+            <p class="spec">SVG or PNG, and it must survive being drawn one colour: it appears on the brand colour at checkout and in black on a printed manifest header.</p>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 9px;">
+          <p class="lab">3 &middot; One display face, from six</p>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px;">
+            <p class="face" style="font-family: 'Bricolage Grotesque', 'Geist', system-ui, sans-serif; font-weight: 700;">Bricolage Grotesque</p>
+            <p class="face" style="font-family: 'Playfair Display', Georgia, serif; font-weight: 600;">Playfair Display</p>
+            <p class="face" style="font-family: 'Outfit', 'Geist', system-ui, sans-serif; font-weight: 600;">Outfit</p>
+            <p class="face" style="font-family: 'Archivo Black', 'Geist', system-ui, sans-serif; font-weight: 400;">Archivo Black</p>
+            <p class="face" style="font-family: 'Sora', 'Geist', system-ui, sans-serif; font-weight: 600;">Sora</p>
+            <p class="face" style="font-family: 'Lora', Georgia, serif; font-weight: 600;">Lora</p>
+          </div>
+          <p class="spec">Headings and the shop&#8217;s name only. No font-file upload: six known faces are six known metrics, six known licences, and six shapes we can promise stay legible in glare.</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 9px;">
+          <p class="lab">4 &middot; Photographs</p>
+          <div style="display: flex; gap: 10px;">
+            <div style="flex: 1; height: 54px; border-radius: 8px; background: linear-gradient(150deg, #084f5a, #128f9e 60%, #9dd7da); display: flex; align-items: flex-end; padding: 6px; box-sizing: border-box;"><span style="font-size: 10.5px; font-weight: 600; color: #ffffff; background: rgba(12,42,53,.42); border-radius: 5px; padding: 2px 5px;">[photo: hero]</span></div>
+            <div style="flex: 1; height: 54px; border-radius: 8px; background: linear-gradient(150deg, #0f3b45, #17708a 60%, #a9d3d8); display: flex; align-items: flex-end; padding: 6px; box-sizing: border-box;"><span style="font-size: 10.5px; font-weight: 600; color: #ffffff; background: rgba(12,42,53,.42); border-radius: 5px; padding: 2px 5px;">[photo: trip card]</span></div>
+            <div style="flex: 1; height: 54px; border-radius: 8px; background: linear-gradient(150deg, #123f3a, #1f7d70 60%, #a5d8cd); display: flex; align-items: flex-end; padding: 6px; box-sizing: border-box;"><span style="font-size: 10.5px; font-weight: 600; color: #ffffff; background: rgba(12,42,53,.42); border-radius: 5px; padding: 2px 5px;">[photo: the crew]</span></div>
+          </div>
+          <p class="spec">Hero, one per trip, one per course, the badge wall. A shop with no photographs gets drawn water, not a grey box.</p>
+        </div>
+      </div>
+
+      <!-- OWNED BY DIVEDAY -->
+      <div class="card" style="padding: 22px; display: flex; flex-direction: column; gap: 18px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h3 class="h3">Owned by DiveDay</h3>
+          <span class="spec" style="margin-left: auto;">no setting reaches these</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 9px;">
+          <p class="lab">Ground and ink</p>
+          <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px;">
+            <div style="display: flex; flex-direction: column; gap: 6px;"><div class="chip" style="background: #faf9f6; border: 1px solid var(--line); box-sizing: border-box;"></div><p class="spec" style="font-size: 12px;">Sand<br>#FAF9F6</p></div>
+            <div style="display: flex; flex-direction: column; gap: 6px;"><div class="chip" style="background: #ffffff; border: 1px solid var(--line); box-sizing: border-box;"></div><p class="spec" style="font-size: 12px;">Surface<br>#FFFFFF</p></div>
+            <div style="display: flex; flex-direction: column; gap: 6px;"><div class="chip" style="background: #f1efe9;"></div><p class="spec" style="font-size: 12px;">Sunken<br>#F1EFE9</p></div>
+            <div style="display: flex; flex-direction: column; gap: 6px;"><div class="chip" style="background: #e3e0d7;"></div><p class="spec" style="font-size: 12px;">Border<br>#E3E0D7</p></div>
+            <div style="display: flex; flex-direction: column; gap: 6px;"><div class="chip" style="background: #0c2a35;"></div><p class="spec" style="font-size: 12px;">Ink<br>#0C2A35</p></div>
+            <div style="display: flex; flex-direction: column; gap: 6px;"><div class="chip" style="background: #5b6f77;"></div><p class="spec" style="font-size: 12px;">Muted<br>#5B6F77</p></div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 9px;">
+          <p class="lab">Signal colours &mdash; the same on every shop</p>
+          <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
+            <div style="display: flex; flex-direction: column; gap: 6px;"><div class="chip" style="background: #15803d;"></div><p class="spec" style="font-size: 12px;">Ready<br>#15803D</p></div>
+            <div style="display: flex; flex-direction: column; gap: 6px;"><div class="chip" style="background: #b45309;"></div><p class="spec" style="font-size: 12px;">Waiting<br>#B45309</p></div>
+            <div style="display: flex; flex-direction: column; gap: 6px;"><div class="chip" style="background: #b91c1c;"></div><p class="spec" style="font-size: 12px;">Blocked<br>#B91C1C</p></div>
+            <div style="display: flex; flex-direction: column; gap: 6px;"><div class="chip" style="background: #ff6f61;"></div><p class="spec" style="font-size: 12px;">Bubble<br>#FF6F61</p></div>
+          </div>
+          <p class="spec">A shop cannot restyle a status, and there is no setting that would let it. The coral bubble stays DiveDay&#8217;s one moment of warmth.</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 9px;">
+          <p class="lab">Structure</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <span class="badge tnum" style="background: var(--sunken); color: var(--ink);">Spacing 4 &middot; 8 &middot; 12 &middot; 16 &middot; 24 &middot; 32</span>
+            <span class="badge tnum" style="background: var(--sunken); color: var(--ink);">Radius 12, cards 16</span>
+            <span class="badge tnum" style="background: var(--sunken); color: var(--ink);">Controls 44px</span>
+            <span class="badge" style="background: var(--sunken); color: var(--ink);">1px border, no shadow</span>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 9px;">
+          <p class="lab">The operational type ramp &mdash; Geist</p>
+          <div style="display: flex; flex-direction: column;">
+            <div class="row" style="border-top: none;"><span class="tnum" style="font-size: 30px; font-weight: 700; letter-spacing: -0.02em;">10<span style="font-size: 15px; font-weight: 600; color: var(--muted);">&nbsp;of 12</span></span><span class="spec" style="margin-left: auto; text-align: right;">Figure &middot; 700 / tabular</span></div>
+            <div class="row"><span style="font-size: 16px; font-weight: 600;">Grace Mensah</span><span class="spec" style="margin-left: auto; text-align: right;">Row title &middot; 600 / 16px</span></div>
+            <div class="row"><span style="font-size: 15px; color: var(--muted);">Molasses Reef &middot; Mantis II</span><span class="spec" style="margin-left: auto; text-align: right;">Row meta &middot; 400 / 15px</span></div>
+            <div class="row" style="border-bottom: 1px solid var(--line);"><span class="lab">Tomorrow &middot; Friday</span><span class="spec" style="margin-left: auto; text-align: right;">Label &middot; 600 / 11.5px / +.16em</span></div>
+          </div>
+          <p class="spec">Every count, row, label and control is Geist, on every shop. The display face never touches a number.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ THE DERIVATION RULE ============ -->
+  <div class="sec">
+    <h2 class="h2">One colour in, three out &mdash; and a check between them.</h2>
+    <div class="card" style="padding: 22px; display: flex; align-items: center; gap: 18px;">
+
+      <div style="width: 190px; flex-shrink: 0; display: flex; flex-direction: column; gap: 9px;">
+        <p class="lab">In</p>
+        <div style="display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;">
+          <div style="width: 34px; height: 34px; border-radius: 8px; background: #128f9e; flex-shrink: 0;"></div>
+          <span class="tnum" style="font-size: 15px; font-weight: 600;">#128F9E</span>
+        </div>
+        <p class="spec" style="font-size: 12.5px;">Typed once, in Settings.</p>
+      </div>
+
+      <svg width="34" height="22" viewBox="0 0 34 22" fill="none" aria-hidden="true" style="flex-shrink: 0;">
+        <path d="M2 11h27M22 3l8 8-8 8" stroke="#8a8577" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+
+      <div style="width: 220px; flex-shrink: 0; display: flex; flex-direction: column; gap: 9px;">
+        <p class="lab">Contrast check</p>
+        <div style="border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;">
+          <p class="spec" style="font-size: 13px; color: var(--ink);">Against sand #FAF9F6 &mdash; needs 4.5:1</p>
+          <p class="spec" style="font-size: 13px; color: var(--ink);">Against white #FFFFFF &mdash; needs 4.5:1</p>
+          <p class="spec" style="font-size: 13px; color: var(--ink);">White or ink on the brand &mdash; 4.5:1</p>
+        </div>
+      </div>
+
+      <svg width="34" height="22" viewBox="0 0 34 22" fill="none" aria-hidden="true" style="flex-shrink: 0;">
+        <path d="M2 11h27M22 3l8 8-8 8" stroke="#8a8577" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 9px;">
+        <p class="lab">Out</p>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
+          <div style="display: flex; flex-direction: column; gap: 6px;"><div class="chip" style="background: #0d6f7a;"></div><p class="spec" style="font-size: 12.5px;">Hover<br>#0D6F7A</p></div>
+          <div style="display: flex; flex-direction: column; gap: 6px;"><div class="chip" style="background: #e6f3f5;"></div><p class="spec" style="font-size: 12.5px;">Tint 10%<br>#E6F3F5</p></div>
+          <div style="display: flex; flex-direction: column; gap: 6px;"><div class="chip" style="background: #ffffff; border: 1px solid var(--line); box-sizing: border-box;"></div><p class="spec" style="font-size: 12.5px;">Ink on brand<br>#FFFFFF</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: flex-start; gap: 12px; background: #f8eee6; border-radius: 12px; padding: 14px 16px;">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px;">
+        <circle cx="10" cy="10" r="8.4" stroke="#b45309" stroke-width="1.8"></circle>
+        <path d="M10 5.6v5.2M10 14.2v.2" stroke="#b45309" stroke-width="2" stroke-linecap="round"></path>
+      </svg>
+      <p style="margin: 0; font-size: 14.5px; line-height: 1.5; color: #7a3a06;">If the brand colour fails against sand, DiveDay darkens it and says so, in the shop&#8217;s own words rather than a ratio: &ldquo;We darkened your turquoise to #0B5B66 where it sits behind text, so prices and seat counts stay readable. Your logo keeps the colour you gave us.&rdquo; The shop can accept the darker value or pick another; it cannot ship the failing one.</p>
+    </div>
+  </div>
+
+  <!-- ============ THREE SHOPS, ONE COMPONENT SET ============ -->
+  <div class="sec">
+    <div style="display: flex; align-items: baseline; gap: 20px;">
+      <h2 class="h2">Three shops, one component set.</h2>
+      <p class="spec" style="margin-left: auto; text-align: right;">Same four components &middot; same departure &middot; same data</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px;">
+
+      <!-- MANTA POINT -->
+      <div class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <p style="margin: 0; font-family: 'Bricolage Grotesque', 'Geist', system-ui, sans-serif; font-size: 19px; font-weight: 700; letter-spacing: -0.018em; color: #1c7a5e;">Manta Point</p>
+          <div style="margin-left: auto; display: flex; gap: 5px;">
+            <div style="width: 15px; height: 15px; border-radius: 999px; background: #1c7a5e;"></div>
+            <div style="width: 15px; height: 15px; border-radius: 999px; background: #e2622a;"></div>
+          </div>
+        </div>
+        <div class="btn" style="background: #1c7a5e;">Book this trip</div>
+
+        <div style="border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: baseline; gap: 8px;">
+            <span class="tnum" style="font-size: 15px; font-weight: 700;">7:00 AM</span>
+            <span class="tnum" style="font-size: 15px; font-weight: 700; margin-left: auto;">$95</span>
+          </div>
+          <p style="margin: 0; font-size: 15px; font-weight: 600; line-height: 1.35;">Two-Tank Reef &mdash; Molasses &amp; French</p>
+          <p class="spec">Mantis II &middot; <span class="tnum">2 seats left</span></p>
+          <div style="min-height: 44px; border-radius: 10px; background: #e7f2ee; color: #14563f; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center;">Book</div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          <span class="badge" style="background: #e7f2ee; color: #14563f;">PADI 5&#9733;</span>
+          <span class="badge" style="background: #e7f2ee; color: #14563f;">TripAdvisor</span>
+          <span class="badge" style="background: #e7f2ee; color: #14563f;">Blue Star</span>
+        </div>
+
+        <div style="border-radius: 12px; overflow: hidden; border: 1px solid var(--line);">
+          <div style="height: 62px; background: linear-gradient(150deg, #0f4a3c, #1c7a5e 55%, #7bbf9a); display: flex; align-items: flex-end; padding: 7px;"><span style="font-size: 10.5px; font-weight: 600; color: #ffffff; background: rgba(12,42,53,.42); border-radius: 5px; padding: 2px 5px;">[photo: the boat at the mooring]</span></div>
+          <div style="padding: 11px 12px; display: flex; flex-direction: column; gap: 4px;">
+            <p class="lab" style="color: #1c7a5e;">Next boat</p>
+            <p style="margin: 0; font-size: 14.5px; font-weight: 600;">Thursday, 7:00 AM</p>
+            <p class="spec tnum" style="font-size: 13px;">10 of 12 booked</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- BARRACUDA REEF DIVERS -->
+      <div class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <p style="margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: 19px; font-weight: 700; letter-spacing: -0.01em; color: #14315c;">Barracuda Reef Divers</p>
+          <div style="margin-left: auto; display: flex; gap: 5px;">
+            <div style="width: 15px; height: 15px; border-radius: 999px; background: #14315c;"></div>
+            <div style="width: 15px; height: 15px; border-radius: 999px; background: #c9962f;"></div>
+          </div>
+        </div>
+        <div class="btn" style="background: #14315c;">Book this trip</div>
+
+        <div style="border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: baseline; gap: 8px;">
+            <span class="tnum" style="font-size: 15px; font-weight: 700;">7:00 AM</span>
+            <span class="tnum" style="font-size: 15px; font-weight: 700; margin-left: auto;">$95</span>
+          </div>
+          <p style="margin: 0; font-size: 15px; font-weight: 600; line-height: 1.35;">Two-Tank Reef &mdash; Molasses &amp; French</p>
+          <p class="spec">Mantis II &middot; <span class="tnum">2 seats left</span></p>
+          <div style="min-height: 44px; border-radius: 10px; background: #e8ecf3; color: #14315c; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center;">Book</div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          <span class="badge" style="background: #e8ecf3; color: #14315c;">PADI 5&#9733;</span>
+          <span class="badge" style="background: #e8ecf3; color: #14315c;">TripAdvisor</span>
+          <span class="badge" style="background: #e8ecf3; color: #14315c;">Blue Star</span>
+        </div>
+
+        <div style="border-radius: 12px; overflow: hidden; border: 1px solid var(--line);">
+          <div style="height: 62px; background: linear-gradient(150deg, #08182f, #14315c 55%, #3f6f9c); display: flex; align-items: flex-end; padding: 7px;"><span style="font-size: 10.5px; font-weight: 600; color: #ffffff; background: rgba(12,42,53,.42); border-radius: 5px; padding: 2px 5px;">[photo: the wreck&#8217;s bow, two divers]</span></div>
+          <div style="padding: 11px 12px; display: flex; flex-direction: column; gap: 4px;">
+            <p class="lab" style="color: #14315c;">Next boat</p>
+            <p style="margin: 0; font-size: 14.5px; font-weight: 600;">Thursday, 7:00 AM</p>
+            <p class="spec tnum" style="font-size: 13px;">10 of 12 booked</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- HORIZON BLUE -->
+      <div class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <p style="margin: 0; font-family: 'Outfit', 'Geist', system-ui, sans-serif; font-size: 19px; font-weight: 600; letter-spacing: -0.01em; color: #0d6f7a;">Horizon Blue</p>
+          <div style="margin-left: auto; display: flex; gap: 5px;">
+            <div style="width: 15px; height: 15px; border-radius: 999px; background: #128f9e;"></div>
+            <div style="width: 15px; height: 15px; border-radius: 999px; background: #e0855f;"></div>
+          </div>
+        </div>
+        <div class="btn" style="background: #128f9e;">Book this trip</div>
+
+        <div style="border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: baseline; gap: 8px;">
+            <span class="tnum" style="font-size: 15px; font-weight: 700;">7:00 AM</span>
+            <span class="tnum" style="font-size: 15px; font-weight: 700; margin-left: auto;">$95</span>
+          </div>
+          <p style="margin: 0; font-size: 15px; font-weight: 600; line-height: 1.35;">Two-Tank Reef &mdash; Molasses &amp; French</p>
+          <p class="spec">Mantis II &middot; <span class="tnum">2 seats left</span></p>
+          <div style="min-height: 44px; border-radius: 10px; background: #e6f3f5; color: #0b5b66; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center;">Book</div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          <span class="badge" style="background: #e6f3f5; color: #0b5b66;">PADI 5&#9733;</span>
+          <span class="badge" style="background: #e6f3f5; color: #0b5b66;">TripAdvisor</span>
+          <span class="badge" style="background: #e6f3f5; color: #0b5b66;">Blue Star</span>
+        </div>
+
+        <div style="border-radius: 12px; overflow: hidden; border: 1px solid var(--line);">
+          <div style="height: 62px; background: linear-gradient(150deg, #084f5a, #128f9e 55%, #9dd7da); display: flex; align-items: flex-end; padding: 7px;"><span style="font-size: 10.5px; font-weight: 600; color: #ffffff; background: rgba(12,42,53,.42); border-radius: 5px; padding: 2px 5px;">[photo: reef wall, diver, sunlight]</span></div>
+          <div style="padding: 11px 12px; display: flex; flex-direction: column; gap: 4px;">
+            <p class="lab" style="color: #0d6f7a;">Next boat</p>
+            <p style="margin: 0; font-size: 14.5px; font-weight: 600;">Thursday, 7:00 AM</p>
+            <p class="spec tnum" style="font-size: 13px;">10 of 12 booked</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <p class="body" style="max-width: none;">Everything that carries a fact keeps DiveDay&#8217;s ink and figures; only the frame changes colour.</p>
+  </div>
+
+  <!-- ============ WHERE THE BRAND MAY NEVER GO ============ -->
+  <div class="sec">
+    <h2 class="h2">Where the brand may never go.</h2>
+
+    <div style="display: grid; grid-template-columns: minmax(0, 40fr) minmax(0, 60fr); gap: 22px; align-items: start;">
+
+      <div style="display: flex; flex-direction: column;">
+        <div class="row" style="border-top: none;"><span style="font-size: 15.5px; font-weight: 600;">The boat manifest</span></div>
+        <div class="row"><span style="font-size: 15.5px; font-weight: 600;">Roll call</span></div>
+        <div class="row"><span style="font-size: 15.5px; font-weight: 600;">The certification check</span></div>
+        <div class="row"><span style="font-size: 15.5px; font-weight: 600;">The waiver</span></div>
+        <div class="row"><span style="font-size: 15.5px; font-weight: 600;">The payment step</span></div>
+        <div class="row" style="border-bottom: 1px solid var(--line);"><span style="font-size: 15.5px; font-weight: 600;">Any status word or colour</span></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;"><span class="never">Never</span><span class="spec" style="font-size: 12.5px;">the shop&#8217;s gold on a status</span></div>
+          <div style="border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--surface); display: flex; align-items: center; gap: 10px; min-height: 62px; box-sizing: border-box;">
+            <div style="width: 30px; height: 30px; border-radius: 999px; background: #f3e9d3; flex-shrink: 0;"></div>
+            <div style="min-width: 0;">
+              <p style="margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-weight: 700; color: #14315c;">Grace Mensah</p>
+              <p style="margin: 0; font-size: 13.5px; font-weight: 600; color: #c9962f;">Not verified</p>
+            </div>
+          </div>
+          <p class="spec" style="font-size: 12.5px;">Gold at 2.1:1 on white, in a face the crew does not read anywhere else.</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;"><span class="badge" style="background: #e8f2ec; color: #15803d;">Always</span><span class="spec" style="font-size: 12.5px;">DiveDay&#8217;s plain tokens</span></div>
+          <div style="border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--surface); display: flex; align-items: center; gap: 10px; min-height: 62px; box-sizing: border-box;">
+            <div style="width: 30px; height: 30px; border-radius: 999px; background: var(--sunken); flex-shrink: 0;"></div>
+            <div style="min-width: 0;">
+              <p style="margin: 0; font-size: 15px; font-weight: 600; color: var(--ink);">Grace Mensah</p>
+              <p style="margin: 0; font-size: 13.5px; font-weight: 600; color: var(--danger);">Blocked &middot; certification not verified</p>
+            </div>
+          </div>
+          <p class="spec" style="font-size: 12.5px;">Blocked is #B91C1C, in Geist, with the reason attached.</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="body" style="max-width: none;">A shop&#8217;s gold is a beautiful colour and it means nothing at the rail. Blocked reads the same red, in the same face, with the same word, on every shop and in every language &mdash; which is the only reason a divemaster can trust it at a glance on a wet deck.</p>
+  </div>
+
+  <!-- ============ THREE WOW MOMENTS ============ -->
+  <div class="sec">
+    <div style="display: flex; align-items: baseline; gap: 20px;">
+      <h2 class="h2">Three moments Harbor bets on.</h2>
+      <span class="tag" style="margin-left: auto;">Proposed</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px;">
+
+      <!-- 1 · the mirror -->
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 10px; min-height: 168px; justify-content: center;">
+          <div style="background: var(--sunken); border-radius: 8px; padding: 9px 11px;">
+            <span class="tnum" style="font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; color: var(--ink);">&lt;div data-diveday="calendar"&gt;&lt;/div&gt;</span>
+          </div>
+          <svg width="20" height="18" viewBox="0 0 20 18" fill="none" aria-hidden="true" style="align-self: center;">
+            <path d="M10 2v13M4.5 10L10 15.5 15.5 10" stroke="#8a8577" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+          <div style="border: 1px solid var(--line); border-radius: 10px; overflow: hidden;">
+            <div style="height: 22px; background: #128f9e;"></div>
+            <div style="padding: 9px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px;">
+              <div style="height: 15px; border-radius: 3px; background: #e6f3f5;"></div>
+              <div style="height: 15px; border-radius: 3px; background: #e6f3f5;"></div>
+              <div style="height: 15px; border-radius: 3px; background: #128f9e;"></div>
+              <div style="height: 15px; border-radius: 3px; background: #e6f3f5;"></div>
+              <div style="height: 15px; border-radius: 3px; background: #128f9e;"></div>
+              <div style="height: 15px; border-radius: 3px; background: #e6f3f5;"></div>
+              <div style="height: 15px; border-radius: 3px; background: #e6f3f5;"></div>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <p class="h3">1 &middot; The mirror</p>
+          <p class="body" style="font-size: 14.5px;">Paste one line on your website and the calendar is already wearing your colour and your heading face, read from the page it landed on. No configuration screen, no ticket to your web person.</p>
+        </div>
+      </div>
+
+      <!-- 2 · the wall -->
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 10px; min-height: 168px; justify-content: center;">
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            <span class="badge" style="background: #e6f3f5; color: #0b5b66;">PADI 5&#9733;</span>
+            <span class="badge" style="background: #e6f3f5; color: #0b5b66;">TripAdvisor</span>
+            <span class="badge" style="background: #e6f3f5; color: #0b5b66;">Blue Star</span>
+            <span class="badge" style="background: #e6f3f5; color: #0b5b66;">Nitrox</span>
+            <span class="badge" style="background: #e6f3f5; color: #0b5b66;">Since 1998</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="tnum" style="font-size: 22px; font-weight: 700;">&#9733;4.3</span>
+            <span class="spec tnum">across 83 reviews</span>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <div style="flex: 1; height: 40px; border-radius: 7px; background: linear-gradient(150deg, #084f5a, #128f9e 60%, #9dd7da);"></div>
+            <div style="flex: 1; height: 40px; border-radius: 7px; background: linear-gradient(150deg, #0f3b45, #17708a 60%, #a9d3d8);"></div>
+            <div style="flex: 1; height: 40px; border-radius: 7px; background: linear-gradient(150deg, #123f3a, #1f7d70 60%, #a5d8cd);"></div>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <p class="h3">2 &middot; The wall</p>
+          <p class="body" style="font-size: 14.5px;">Badges, reviews and photographs are objects a shop fills in Settings and the storefront lays out &mdash; not an afterthought pasted into a description field. This is the wall these shops already build by hand.</p>
+        </div>
+      </div>
+
+      <!-- 3 · the handover that never happens -->
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 9px; min-height: 168px; justify-content: center;">
+          <div style="border: 1px solid var(--line); border-radius: 10px; overflow: hidden;">
+            <div style="height: 20px; background: #128f9e; display: flex; align-items: center; padding: 0 8px;"><span style="font-family: 'Outfit', 'Geist', system-ui, sans-serif; font-size: 10px; font-weight: 600; color: #ffffff;">horizonblue.example</span></div>
+            <div style="padding: 9px; display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; align-items: center; gap: 7px;"><div style="width: 16px; height: 16px; border-radius: 999px; background: #e8f2ec; color: #15803d; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center;">1</div><span style="font-size: 12.5px; font-weight: 600;">Seats</span></div>
+              <div style="display: flex; align-items: center; gap: 7px;"><div style="width: 16px; height: 16px; border-radius: 999px; background: #e8f2ec; color: #15803d; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center;">2</div><span style="font-size: 12.5px; font-weight: 600;">Waiver</span></div>
+              <div style="display: flex; align-items: center; gap: 7px;"><div style="width: 16px; height: 16px; border-radius: 999px; background: #128f9e; color: #ffffff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center;">3</div><span style="font-size: 12.5px; font-weight: 600;">Pay</span></div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 7px; padding-top: 2px;">
+            <svg width="15" height="15" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+              <circle cx="6.5" cy="19" r="4.6" fill="#5b6f77"></circle>
+              <circle cx="15" cy="11.5" r="3.2" fill="#5b6f77"></circle>
+              <circle cx="21.2" cy="5.2" r="2.1" fill="#ff6f61"></circle>
+            </svg>
+            <span class="spec" style="font-size: 12px;">Booking by DiveDay</span>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <p class="h3">3 &middot; The handover that never happens</p>
+          <p class="body" style="font-size: 14.5px;">The diver picks a seat, signs the waiver and pays without the address bar changing. DiveDay appears once, as a credit line in the footer, which is the whole product decision written small.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="rule"></div>
+
+  <!-- ============ KEPT, AND THE TRADEOFF ============ -->
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px;">
+    <div style="display: flex; flex-direction: column; gap: 7px;">
+      <p class="lab">Kept from Clearwater</p>
+      <p class="body" style="font-size: 14.5px;">The staff side is untouched: one chronological spine on the shop home, the day&#8217;s stations in clock order, the closing block in the evening. Harbor changes what a diver sees, never what a shop works in.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 7px;">
+      <p class="lab">The honest tradeoff</p>
+      <p class="body" style="font-size: 14.5px;">A shop with an ugly brand gets an ugly storefront, and we will have shipped it. And DiveDay goes nearly invisible to divers &mdash; which is the point, and a marketing cost we pay in full: no logo on the page thousands of divers book from, only a credit line in the footer.</p>
+    </div>
+  </div>
+
+</div>
+</div>
+</x-dc>
+</body>
+</html>

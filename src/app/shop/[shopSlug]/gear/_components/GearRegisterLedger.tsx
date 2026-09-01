@@ -264,10 +264,10 @@ function GearUnitRow({
       // The tag, and nothing appended: the e2e suite, the visual captures and
       // a staffer with wet hands all address a unit by exactly this.
       linkLabel={item.label}
+      // A unit on the wall has no act to ride its row; the door's own chevron
+      // is the whole trailing edge.
       trailing={
-        group === "onWall" ? (
-          <DiveDayIcon name="chevron-right" className="pointer-events-none size-4 text-muted" />
-        ) : (
+        group === "onWall" ? null : (
           <GearRowActs reservation={reservation} label={item.label} t={t} acts={acts} />
         )
       }

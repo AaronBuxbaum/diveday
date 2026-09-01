@@ -344,14 +344,6 @@ export default async function ReportsPage({
     ? t("reports.metrics.bookingsThisMonth", { count: report.tripCount })
     : t("reports.metrics.bookingsOther", { count: report.tripCount });
 
-  // Honest framing: a past month has fully sailed; the current one is still
-  // filling, so it never claims trips have "sailed" when some are still upcoming.
-  const description = isThisMonth
-    ? t("reports.description.thisMonth")
-    : isFuture
-      ? t("reports.description.future")
-      : t("reports.description.past");
-
   // A square 44px target holding one glyph, through the shared `size: "icon"`
   // rather than a hand-spelled `size-11` — this pair was one of the four
   // spellings that size exists to end (see components/ui/button.ts). Plain
@@ -479,7 +471,6 @@ export default async function ReportsPage({
       <ShopPageHeader
         eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.reports)}
         title={t("reports.title")}
-        description={description}
       />
 
       {/*

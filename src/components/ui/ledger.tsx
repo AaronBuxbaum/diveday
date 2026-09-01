@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 
@@ -188,14 +189,20 @@ export function LedgerGroup({
           <DisclosureCaret className="text-muted group-open/fold:rotate-90" />
         </summary>
       ) : (
-        <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-1 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
+        <summary className="-mx-2 flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-2 rounded-lg px-2 py-1 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
           {/* Which way this goes, before you press it — decorative; the native
               disclosure semantics carry the state. */}
           <DisclosureCaret className="text-muted group-open/fold:rotate-90" />
           <GroupLabel as={as} id={id} className="min-w-0 flex-1">
             {label}
           </GroupLabel>
-          {meta != null ? <span className={GROUP_META_CLASS}>{meta}</span> : null}
+          {/* Below `sm` the meta takes its own line under the label rather than
+              squeezing it: "Imported payment history" beside "2 imported source
+              records" and an Unverified badge left the label 100px to wrap in
+              on a 390px phone, three lines deep, with the badge overlapping it. */}
+          {meta != null ? (
+            <span className={`${GROUP_META_CLASS} max-sm:basis-full max-sm:text-end`}>{meta}</span>
+          ) : null}
         </summary>
       )}
       {children}
@@ -292,6 +299,16 @@ type LedgerRowDoor = { href: string; linkLabel: string } | { href?: never; linkL
  * The hairline is `border-t` plus a `last:border-b`, so a group closes itself
  * without any row having to know it is last.
  *
+ * **A door draws its own chevron.** A row with an `href` ends in the shared
+ * `chevron-right` glyph, after whatever `trailing` carries, so the affordance
+ * that says "this row opens" is one decision rather than one per surface.
+ * Before this it was drawn by hand on nine surfaces and left off on five —
+ * the orders ledger, the promo ledger, the reports ledger, the course roster
+ * and the departure picker were doors with nothing on them saying so, while
+ * the diver roster tucked its chevron inside the row's own content where the
+ * phone layout dropped it to a second line. A caller never renders the glyph
+ * in `trailing`; the primitive already did.
+ *
  * **`stacked` is the phone reading of a row that carries a whole sentence**
  * (the cross-page phone contract is ADR 20260830-responsive-surface-consistency).
  * (ADR 20260827-clearwater-surface-language; the `TodayPhone` artboard draws
@@ -300,7 +317,17 @@ type LedgerRowDoor = { href: string; linkLabel: string } | { href?: never; linkL
  * fix on one line leave the sentence about 80px to wrap in, which is where the
  * day spine's desk rows first ran six lines deep. Every class it adds is a
  * `max-sm:` one, so from `sm` up an opted-in row is byte-for-byte the row it
- * always was. It is opt-in rather than the default because a row whose content
+ * always was.
+ *
+ * **A stacked row with no kind leads with its content.** The artboard's first
+ * line is *the kind and the fix*; a row that names no kind has nothing to put
+ * on the left of that line, and the first reading of this rule gave the
+ * dive-site library and the course roster a first line holding only a
+ * right-aligned chevron (or "Schedule · Hide") floating above the row's own
+ * name — an affordance detached from the thing it opened, on every row, down
+ * the whole page. So without a kind the content and the door's chevron take
+ * the first line and `trailing` drops beneath them, end-aligned, where the
+ * eye reads it as the row's second line rather than its heading. It is opt-in rather than the default because a row whose content
  * is a name and a state (the counter's queue, the gear register) reads better
  * on one line at every width, and changing those would be restyling surfaces
  * this decision has not reached yet.
@@ -357,7 +384,13 @@ export function LedgerRow({
           the row must render byte-for-byte as it always has, so opting a
           surface in can only ever change the phone. */}
       <div
-        className={stacked ? "min-w-0 flex-1 max-sm:order-3 max-sm:basis-full" : "min-w-0 flex-1"}
+        className={
+          stacked
+            ? kind
+              ? "min-w-0 flex-1 max-sm:order-3 max-sm:basis-full"
+              : "min-w-0 flex-1 max-sm:order-1"
+            : "min-w-0 flex-1"
+        }
       >
         {children}
       </div>
@@ -365,12 +398,23 @@ export function LedgerRow({
         <div
           className={
             stacked
-              ? "relative z-10 min-w-0 max-w-full shrink-0 max-sm:order-2 max-sm:ms-auto"
+              ? kind
+                ? "relative z-10 min-w-0 max-w-full shrink-0 max-sm:order-2 max-sm:ms-auto"
+                : "relative z-10 min-w-0 max-w-full shrink-0 max-sm:order-3 max-sm:flex max-sm:basis-full max-sm:justify-end"
               : "relative z-10 min-w-0 max-w-full shrink-0"
           }
         >
           {trailing}
         </div>
+      ) : null}
+      {href ? (
+        // The door's glyph, last on the line at every width. It sits below
+        // the overlay link (static, so the absolutely positioned link paints
+        // over it) — a tap on it is a tap on the row.
+        <DiveDayIcon
+          name="chevron-right"
+          className={`size-4 shrink-0 text-muted ${stacked ? "max-sm:order-2" : ""}`.trim()}
+        />
       ) : null}
       {href ? (
         // The stretched link, the same construction the public schedule's

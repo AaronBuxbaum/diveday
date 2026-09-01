@@ -99,12 +99,12 @@ export function ShopIdentityMenu({
         className="flex min-h-11 min-w-0 shrink cursor-pointer items-center gap-2 font-semibold tracking-tight"
       >
         {logoUrl ? (
-          <span className="relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition-transform hover:rotate-6">
+          <span className="relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-xl border border-border bg-surface transition-transform hover:rotate-6">
             {/* biome-ignore lint/performance/noImgElement: dynamic user-uploaded logo */}
             <img src={logoUrl} alt="" className="size-full object-cover" />
           </span>
         ) : (
-          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-xs font-bold uppercase tracking-wider text-primary-foreground shadow-sm transition-transform hover:rotate-6">
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-xs font-bold uppercase tracking-wider text-primary-foreground transition-transform hover:rotate-6">
             {initials}
           </span>
         )}

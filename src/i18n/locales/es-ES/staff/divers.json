@@ -404,7 +404,7 @@
     "sailed": "zarpó",
     "waiverSigned": "exención firmada",
     "showAll": "Ver las {count}",
-    "newInvoice": "+ Nueva factura"
+    "newInvoice": "Nueva factura"
   },
   "file": {
     "certificationsWaiting": "{count, plural, one {# pendiente} other {# pendientes}}",

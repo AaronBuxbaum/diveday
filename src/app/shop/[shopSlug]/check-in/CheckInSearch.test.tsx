@@ -19,7 +19,6 @@ afterEach(() => {
 const copy = {
   label: "Scan or search diver",
   placeholder: "Name, email, or booking ID",
-  submit: "Search",
 };
 
 describe("CheckInSearch", () => {
