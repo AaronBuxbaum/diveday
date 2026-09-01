@@ -49,6 +49,17 @@ The name and the bubble mark, the divemaster's voice, the dock test (44px target
 never colour alone for a status), and the claims policy — nothing on a marketing board that the demo
 cannot do today. Each direction argues its own coral budget and says so in its `.md`.
 
+## Known deviations, on purpose left in
+
+The boards are arguments, not the funnel. Two things the pick corrects rather than the canvas:
+
+- **Door order.** [marketing.md](../../../product/marketing.md) decided on 2026-08-22 that the demo
+  leads everywhere and the trial follows. Deck's FareHarbor page keeps that order; Tide's and Reef's
+  put the trial first. The chosen direction implements the decided order through `FunnelCtas`.
+- **Price and trial.** Every board says $99 per location per month and a three-week trial, which
+  is what `/pricing` says today; the figure stays single-sourced in `src/lib/marketing.ts` and is
+  never restated in code.
+
 ## Slices
 
 The pick comes first; the implementation slices are written into this table when the ADR moves to
