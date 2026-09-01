@@ -3,6 +3,11 @@ import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
+import {
+  tripArrivalSnapshot,
+  tripChangeSnapshotsEqual,
+  tripConditionsSnapshot,
+} from "@/lib/trip-change-events";
 import type { TripDiveMode } from "@/lib/trip-details";
 import type { AppDb, DbExecutor } from "./client";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
@@ -21,6 +26,7 @@ import {
   trips,
   userAccounts,
 } from "./schema";
+import { recordTripChangeEvent } from "./trip-change-events";
 import {
   normalizedDiveCount,
   normalizedDiveDrafts,
@@ -206,6 +212,14 @@ export type TripPatch = {
   /** Where this departure meets, when it isn't the shop's own front door (issue #704 slice 2). */
   meetingPointLabel?: string | null;
   meetingPointAddress?: string | null;
+  arrivalLandmark?: string | null;
+  arrivalParkingNote?: string | null;
+  arrivalTransitNote?: string | null;
+  arrivalLookFor?: string | null;
+  arrivalFirstInteraction?: string | null;
+  arrivalPhotoUrl?: string | null;
+  /** The staffer who authored a material public change, when known. */
+  changeActorPersonId?: string | null;
   startsAt: Date;
   endsAt: Date;
   capacity: number;
@@ -269,7 +283,17 @@ export async function updateTrip(
     if (!plannedDives) return { ok: false, reason: "invalid" };
 
     const [existing] = await tx
-      .select({ id: trips.id })
+      .select({
+        id: trips.id,
+        meetingPointLabel: trips.meetingPointLabel,
+        meetingPointAddress: trips.meetingPointAddress,
+        arrivalLandmark: trips.arrivalLandmark,
+        arrivalParkingNote: trips.arrivalParkingNote,
+        arrivalTransitNote: trips.arrivalTransitNote,
+        arrivalLookFor: trips.arrivalLookFor,
+        arrivalFirstInteraction: trips.arrivalFirstInteraction,
+        arrivalPhotoUrl: trips.arrivalPhotoUrl,
+      })
       .from(trips)
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
       .limit(1)
@@ -321,6 +345,8 @@ export async function updateTrip(
         .limit(1);
       if (!hull) return { ok: false, reason: "boat_not_found" };
     }
+    const changedAt = nowDate();
+    const beforeArrival = tripArrivalSnapshot(existing);
     const [trip] = await tx
       .update(trips)
       .set({
@@ -328,6 +354,18 @@ export async function updateTrip(
         description: patch.description ?? null,
         meetingPointLabel: patch.meetingPointLabel ?? null,
         meetingPointAddress: patch.meetingPointAddress ?? null,
+        ...(patch.arrivalLandmark === undefined ? {} : { arrivalLandmark: patch.arrivalLandmark }),
+        ...(patch.arrivalParkingNote === undefined
+          ? {}
+          : { arrivalParkingNote: patch.arrivalParkingNote }),
+        ...(patch.arrivalTransitNote === undefined
+          ? {}
+          : { arrivalTransitNote: patch.arrivalTransitNote }),
+        ...(patch.arrivalLookFor === undefined ? {} : { arrivalLookFor: patch.arrivalLookFor }),
+        ...(patch.arrivalFirstInteraction === undefined
+          ? {}
+          : { arrivalFirstInteraction: patch.arrivalFirstInteraction }),
+        ...(patch.arrivalPhotoUrl === undefined ? {} : { arrivalPhotoUrl: patch.arrivalPhotoUrl }),
         startsAt: patch.startsAt,
         endsAt: patch.endsAt,
         capacity: patch.capacity,
@@ -357,6 +395,19 @@ export async function updateTrip(
         .insert(tripScheduleDays)
         .values(patch.scheduleDays.map((day, index) => ({ tripId, ...day, dayNumber: index + 1 })));
     }
+    const afterArrival = tripArrivalSnapshot(trip);
+    if (!tripChangeSnapshotsEqual(beforeArrival, afterArrival)) {
+      await recordTripChangeEvent(tx, {
+        shopId,
+        tripId,
+        kind: "meeting_point",
+        source: "shop",
+        beforeValue: beforeArrival,
+        afterValue: afterArrival,
+        actorPersonId: patch.changeActorPersonId,
+        occurredAt: changedAt,
+      });
+    }
     return { ok: true, trip };
   });
 }
@@ -378,6 +429,8 @@ export type TripConditionsPatch = {
   waterTemperatureC?: number;
   visibilityMeters?: number;
   surfaceConditions?: string;
+  /** The staffer who published this conditions update, when known. */
+  changeActorPersonId?: string | null;
 };
 
 /** Forecasts belong to the dated charter and are explicitly timestamped. */
@@ -389,13 +442,21 @@ export async function updateTripConditions(
 ) {
   return db.transaction(async (tx) => {
     const [before] = await tx
-      .select({ conditionsHold: trips.conditionsHold })
+      .select({
+        conditionsHold: trips.conditionsHold,
+        conditionsSummary: trips.conditionsSummary,
+        waterTemperatureC: trips.waterTemperatureC,
+        visibilityMeters: trips.visibilityMeters,
+        surfaceConditions: trips.surfaceConditions,
+      })
       .from(trips)
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
       .limit(1)
       .for("update");
     if (!before) return { trip: null, holdStarted: false };
 
+    const changedAt = nowDate();
+    const beforeConditions = tripConditionsSnapshot(before);
     const [trip] = await tx
       .update(trips)
       .set({
@@ -405,10 +466,22 @@ export async function updateTripConditions(
         waterTemperatureC: patch.waterTemperatureC ?? null,
         visibilityMeters: patch.visibilityMeters ?? null,
         surfaceConditions: patch.surfaceConditions || null,
-        conditionsUpdatedAt: nowDate(),
+        conditionsUpdatedAt: changedAt,
       })
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .returning();
+    if (trip && !tripChangeSnapshotsEqual(beforeConditions, tripConditionsSnapshot(trip))) {
+      await recordTripChangeEvent(tx, {
+        shopId,
+        tripId,
+        kind: "conditions",
+        source: "crew",
+        beforeValue: beforeConditions,
+        afterValue: tripConditionsSnapshot(trip),
+        actorPersonId: patch.changeActorPersonId,
+        occurredAt: changedAt,
+      });
+    }
     return {
       trip: trip ?? null,
       holdStarted: patch.conditionsHold === true && !before.conditionsHold,

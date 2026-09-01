@@ -75,7 +75,9 @@ import {
   staffShifts,
   tips,
   tripAssignments,
+  tripChangeEvents,
   tripDives,
+  tripHelpRequests,
   tripInvitations,
   tripLastMinutePromoRecipients,
   tripLastMinutePromos,
@@ -351,6 +353,16 @@ export async function loadShopExportBundleInput(
       const tripTitle = new Map(tripRows.map((row) => [row.id, row.title]));
       const tripStartsAt = new Map(tripRows.map((row) => [row.id, row.startsAt]));
 
+      const tripChangeEventRows = await tx
+        .select()
+        .from(tripChangeEvents)
+        .where(eq(tripChangeEvents.shopId, shopId))
+        .orderBy(
+          asc(tripChangeEvents.occurredAt),
+          asc(tripChangeEvents.seq),
+          asc(tripChangeEvents.id),
+        );
+
       const scheduleDayRows = await tx
         .select()
         .from(tripScheduleDays)
@@ -400,6 +412,12 @@ export async function loadShopExportBundleInput(
         .where(eq(bookings.shopId, shopId))
         .orderBy(asc(bookings.createdAt), asc(bookings.id));
       const bookingPerson = new Map(bookingRows.map((row) => [row.id, row.personId]));
+
+      const tripHelpRequestRows = await tx
+        .select()
+        .from(tripHelpRequests)
+        .where(eq(tripHelpRequests.shopId, shopId))
+        .orderBy(asc(tripHelpRequests.createdAt), asc(tripHelpRequests.id));
 
       const tipRows = await tx
         .select()
@@ -695,6 +713,7 @@ export async function loadShopExportBundleInput(
       const photoUrls = [
         ...recapPhotoRows.map((row) => row.imageUrl),
         ...tripRecapPhotoRows.map(({ photo }) => photo.imageUrl),
+        ...tripRows.map((row) => row.arrivalPhotoUrl),
         ...siteRows.flatMap((row) => [row.satelliteImageUrl, row.routeImageUrl, ...row.imageUrls]),
         // No field-guide photos: a creature row is a catalog slug, and the
         // picture on its card is DiveDay's own asset under `public/marine-life`
@@ -1187,6 +1206,12 @@ export async function loadShopExportBundleInput(
             // door (issue #704 slice 2) — both empty means "the shop".
             "meeting_point_label",
             "meeting_point_address",
+            "arrival_landmark",
+            "arrival_parking_note",
+            "arrival_transit_note",
+            "arrival_look_for",
+            "arrival_first_interaction",
+            "arrival_photo_url",
             "is_private",
             // The shop's own answer about this departure, not a derived fact,
             // so it leaves with the shop (issue #973).
@@ -1229,12 +1254,50 @@ export async function loadShopExportBundleInput(
             row.description,
             row.meetingPointLabel,
             row.meetingPointAddress,
+            row.arrivalLandmark,
+            row.arrivalParkingNote,
+            row.arrivalTransitNote,
+            row.arrivalLookFor,
+            row.arrivalFirstInteraction,
+            row.arrivalPhotoUrl,
             row.isPrivate,
             row.selfGuided,
             row.deletedAt,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["trips.csv"],
+        },
+        {
+          file: "trip_change_events.csv",
+          header: [
+            "id",
+            "trip_id",
+            "trip_title",
+            "trip_starts_at",
+            "kind",
+            "source",
+            "before_value",
+            "after_value",
+            "actor_person_id",
+            "actor_name",
+            "occurred_at",
+            "seq",
+          ],
+          rows: tripChangeEventRows.map((row) => [
+            row.id,
+            row.tripId,
+            tripTitle.get(row.tripId),
+            tripStartsAt.get(row.tripId),
+            row.kind,
+            row.source,
+            row.beforeValue ? JSON.stringify(row.beforeValue) : null,
+            JSON.stringify(row.afterValue),
+            row.actorPersonId,
+            row.actorPersonId ? personName.get(row.actorPersonId) : null,
+            row.occurredAt,
+            row.seq,
+          ]),
+          note: EXPORT_FILE_NOTES["trip_change_events.csv"],
         },
         {
           file: "trip_series.csv",
@@ -1505,6 +1568,47 @@ export async function loadShopExportBundleInput(
             ];
           }),
           note: EXPORT_FILE_NOTES["bookings.csv"],
+        },
+        {
+          file: "trip_help_requests.csv",
+          header: [
+            "id",
+            "trip_id",
+            "trip_title",
+            "trip_starts_at",
+            "booking_id",
+            "person_id",
+            "person_name",
+            "kind",
+            "status",
+            "created_at",
+            "updated_at",
+            "acknowledged_at",
+            "handled_at",
+            "resolved_by_person_id",
+            "resolved_by_name",
+          ],
+          rows: tripHelpRequestRows.map((row) => {
+            const personId = bookingPerson.get(row.bookingId) ?? null;
+            return [
+              row.id,
+              row.tripId,
+              tripTitle.get(row.tripId),
+              tripStartsAt.get(row.tripId),
+              row.bookingId,
+              personId,
+              personId ? personName.get(personId) : null,
+              row.kind,
+              row.status,
+              row.createdAt,
+              row.updatedAt,
+              row.acknowledgedAt,
+              row.handledAt,
+              row.resolvedByPersonId,
+              row.resolvedByPersonId ? personName.get(row.resolvedByPersonId) : null,
+            ];
+          }),
+          note: EXPORT_FILE_NOTES["trip_help_requests.csv"],
         },
         {
           file: "waitlist_entries.csv",
@@ -4216,6 +4320,9 @@ export async function loadShopExportCounts(
     "trips.csv": await countOf(
       db.select({ n: count() }).from(trips).where(eq(trips.shopId, shopId)),
     ),
+    "trip_change_events.csv": await countOf(
+      db.select({ n: count() }).from(tripChangeEvents).where(eq(tripChangeEvents.shopId, shopId)),
+    ),
     "trip_series.csv": await countOf(
       db.select({ n: count() }).from(tripSeries).where(eq(tripSeries.shopId, shopId)),
     ),
@@ -4254,6 +4361,9 @@ export async function loadShopExportCounts(
     ),
     "bookings.csv": await countOf(
       db.select({ n: count() }).from(bookings).where(eq(bookings.shopId, shopId)),
+    ),
+    "trip_help_requests.csv": await countOf(
+      db.select({ n: count() }).from(tripHelpRequests).where(eq(tripHelpRequests.shopId, shopId)),
     ),
     "booking_payment_events.csv": await countOf(
       db

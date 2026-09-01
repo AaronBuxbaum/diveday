@@ -206,6 +206,11 @@ const NOTICE_KEYS: Record<
     tone: "success",
     key: "trips.notices.recapPhotoRemoved",
   },
+  "arrival-photo-failed": {
+    form: "details",
+    tone: "danger",
+    key: "trips.notices.arrivalPhotoFailed",
+  },
   requirements: { form: "requirements", tone: "success", key: "trips.notices.requirements" },
   // Saved, and it left booked divers behind. Warning rather than success: the
   // save worked and nothing needs undoing, but the staffer now owes those
