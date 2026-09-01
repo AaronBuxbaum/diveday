@@ -246,6 +246,10 @@ describe("LedgerGroup", () => {
     );
     expect(summary).toContainElement(screen.getByText("3 departures"));
     expect(screen.getByText("3 departures")).toHaveClass("tabular-nums");
+    // Below `sm` the meta drops under the label instead of squeezing it — a
+    // long heading beside a count and a badge ran three lines deep on a phone.
+    expect(summary).toHaveClass("flex-wrap");
+    expect(screen.getByText("3 departures")).toHaveClass("max-sm:basis-full", "max-sm:text-end");
   });
 });
 

@@ -2,8 +2,7 @@
   "backToLibrary": "← Dive-site library",
   "list": {
     "title": "Dive-site library",
-    "description": "Save a place once, then attach it to any dive on any trip.",
-    "createSite": "Create a site",
+    "createSite": "Add a dive site",
     "browseTemplates": "Browse the DiveDay catalog",
     "catalogSiteCount": "{count, plural, one {# published site} other {# published sites}}",
     "siteDeletedNotice": "Site deleted.",

@@ -2,8 +2,7 @@
   "backToLibrary": "← Biblioteca de sitios de buceo",
   "list": {
     "title": "Biblioteca de sitios de buceo",
-    "description": "Guarda un lugar una vez y añádelo a cualquier inmersión de cualquier salida.",
-    "createSite": "Crear un sitio",
+    "createSite": "Añadir un sitio de buceo",
     "browseTemplates": "Explora el catálogo de DiveDay",
     "catalogSiteCount": "{count, plural, one {# sitio publicado} other {# sitios publicados}}",
     "siteDeletedNotice": "Sitio eliminado.",

@@ -1,10 +1,5 @@
 {
   "title": "Cómo va tu mes",
-  "description": {
-    "thisMonth": "Reservas, ingresos, ocupación y hojas de exención de las salidas de este mes — hasta ahora.",
-    "future": "Reservas, ingresos, ocupación y hojas de exención de las salidas de este mes.",
-    "past": "Reservas, ingresos, ocupación y hojas de exención de las salidas que zarparon."
-  },
   "soFar": "hasta ahora",
   "chooseMonth": "Elegir mes",
   "previousMonth": "Mes anterior",

@@ -134,7 +134,6 @@ export default async function DiveSitesPage({
       <ShopPageHeader
         eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
         title={t("diveSites.list.title")}
-        description={t("diveSites.list.description")}
         // An empty library gets no header action: the empty card below is
         // already the whole page, and it carries both doors. Two identical
         // primaries on one screen is what principle 8 forbids — so the card
