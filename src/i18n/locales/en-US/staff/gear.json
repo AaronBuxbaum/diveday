@@ -1,7 +1,6 @@
 {
   "eyebrow": "Run the shop",
   "title": "Gear",
-  "description": "Your own rental fleet — who has what, when it's due back, and what's due for service.",
   "itemKinds": {
     "mask": "Mask",
     "fins": "Fins",

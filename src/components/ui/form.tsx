@@ -1,6 +1,7 @@
 import {
   Children,
   type ComponentPropsWithoutRef,
+  type ComponentPropsWithRef,
   cloneElement,
   type ElementType,
   isValidElement,
@@ -28,6 +29,77 @@ import { toneMark } from "./tone";
 /** Shared control styling for inputs, selects, and textareas. */
 export const controlClass =
   "min-h-11 w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-base font-normal transition-colors focus:border-primary";
+
+/**
+ * **The one search box** — a `type="search"` control wearing `controlClass`,
+ * a magnifier in its leading inset, and its label off-screen.
+ *
+ * Every staff list that can be searched renders this and nothing else around
+ * it: no caption above the box, no "Search" button beside it. Four grammars
+ * used to coexist — the orders toolbar's bare box, the diver roster's bare box,
+ * the dive-site library's bordered card with a "Find a site" caption and a
+ * Search button, and the counter's captioned box with a "Search queue" button
+ * — and which one a page got was a function of when it was written. The
+ * Clearwater decision that demoted the orders filter card to a toolbar (ADR
+ * 20260827-clearwater-surface-language, decision 7) is the precedent: a search
+ * is a toolbar control, and the glyph is what says so.
+ *
+ * The label is `sr-only` because the glyph and the placeholder already say
+ * "search" to a sighted reader, and a caption restating them is what
+ * copy-restraint deletes — but the accessible name is not the sighted reader's
+ * convenience and stays. No submit button: a form with one text control
+ * submits on Enter, and the surfaces that want type-to-apply drive
+ * `requestSubmit()` themselves through `onInput`.
+ *
+ * Every native input prop passes through — `ref`, `value`/`onChange` for a
+ * controlled box, `defaultValue` for a form-owned one, `data-*` hooks the e2e
+ * suite waits on — so a surface never has a reason to spell the box by hand.
+ */
+export function SearchField({
+  id,
+  label,
+  className = "",
+  ...input
+}: {
+  id: string;
+  /** The accessible name — "Search divers", "Scan or search diver". */
+  label: string;
+  /** Sizes the box. `controlClass` already sets `w-full`; the wrapper decides the width. */
+  className?: string;
+} & Omit<ComponentPropsWithRef<"input">, "id" | "type" | "className" | "children">) {
+  return (
+    <div className={`relative ${className}`.trim()}>
+      <label className="sr-only" htmlFor={id}>
+        {label}
+      </label>
+      {/* The same magnifier the ⌘K trigger draws, so a search box and the
+          search door share one face. Positioned on the input's own inset and
+          inert, so a tap on it lands in the box. */}
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted"
+      >
+        <circle cx="11" cy="11" r="7" />
+        <path d="m21 21-4.3-4.3" />
+      </svg>
+      <input
+        id={id}
+        type="search"
+        inputMode="search"
+        autoComplete="off"
+        maxLength={120}
+        {...input}
+        className={`${controlClass} ps-9`}
+      />
+    </div>
+  );
+}
 
 const columnClass = {
   1: "",

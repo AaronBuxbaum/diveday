@@ -46,8 +46,7 @@
   "addWalkInAction": "Añadir a “{query}” sin reserva",
   "search": {
     "label": "Escanear o buscar buceador",
-    "placeholder": "Nombre, correo o ID de reserva",
-    "submit": "Buscar en la cola"
+    "placeholder": "Nombre, correo o ID de reserva"
   },
   "notice": {
     "notReady": "La preparación ha cambiado. <tripLink>Abre Salida para resolver el bloqueo</tripLink> y vuelve a intentarlo.",

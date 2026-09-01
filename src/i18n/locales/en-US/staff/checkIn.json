@@ -46,8 +46,7 @@
   "addWalkInAction": "Add “{query}” as a walk-in",
   "search": {
     "label": "Scan or search diver",
-    "placeholder": "Name, email, or booking ID",
-    "submit": "Search queue"
+    "placeholder": "Name, email, or booking ID"
   },
   "notice": {
     "notReady": "Readiness changed. <tripLink>Open Trip to resolve the blocker</tripLink>, then try again.",

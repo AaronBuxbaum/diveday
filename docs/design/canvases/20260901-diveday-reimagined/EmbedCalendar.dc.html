@@ -1,0 +1,373 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #178f6a; text-decoration: none; }
+    a:hover { color: #0f6b52; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .bri { font-family: 'Bricolage Grotesque', 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+    .dd { font-family: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+    .lbl { font-size: 11.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 44px; border-radius: 10px; background: #178f6a; color: #ffffff; font-size: 14.5px; font-weight: 700; letter-spacing: -0.005em; box-sizing: border-box; }
+    .btn-quiet { display: inline-flex; align-items: center; justify-content: center; height: 44px; border-radius: 10px; background: #ffffff; border: 1.5px solid #178f6a; color: #178f6a; font-size: 14px; font-weight: 700; box-sizing: border-box; }
+    .pill { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border: 1px solid #e2dccf; border-radius: 999px; background: #ffffff; font-size: 13.5px; font-weight: 600; color: #0b1f2e; box-sizing: border-box; }
+    .row { display: flex; align-items: center; gap: 16px; padding: 0 22px; height: 58px; border-top: 1px solid #f0ebe0; box-sizing: border-box; }
+    .dayhead { display: flex; align-items: center; gap: 10px; padding: 0 22px; height: 28px; background: #faf8f3; border-top: 1px solid #e2dccf; color: #5c6b72; box-sizing: border-box; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; border: 1px solid #e2dccf; border-radius: 8px; background: #ffffff; font-size: 12.5px; font-weight: 700; color: #0b1f2e; box-sizing: border-box; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; min-height: 1330px; background: #f6f1e7; box-sizing: border-box; overflow: hidden; font-family: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif; color: #0b1f2e; -webkit-font-smoothing: antialiased;">
+
+  <!-- ============ the shop's own chrome ============ -->
+  <div style="height: 74px; background: #ffffff; border-bottom: 1px solid #e2dccf; display: flex; align-items: center; gap: 12px; padding: 0 40px; box-sizing: border-box;">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#178f6a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 13.2C10 9.8 16 9.8 20 12.4"></path>
+      <path d="M6 18.4C10 21.4 16 21.2 20 17.6"></path>
+      <path d="M9.8 10.9v9.6"></path>
+      <path d="M13.4 10.3v10.5"></path>
+      <path d="M17 10.9v9.4"></path>
+      <path d="M6 13.2 2.6 10.6"></path>
+      <path d="M5.6 15.8H1.9"></path>
+      <path d="M6 18.4 2.7 21"></path>
+      <path d="M19.8 12 22.6 9.2"></path>
+      <path d="M20.4 13.7 24 12"></path>
+      <path d="M19.6 17.9l3.4 1.2-1 2.5"></path>
+      <circle cx="23.3" cy="8.5" r="1.2"></circle>
+      <circle cx="25.1" cy="11.3" r="1.2"></circle>
+    </svg>
+    <span class="bri" style="font-size: 19.5px; font-weight: 700; letter-spacing: -0.02em;">Blue Mantis Divers</span>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 24px;">
+      <span style="font-size: 14.5px; font-weight: 600; color: #5c6b72;">Diving</span>
+      <span style="font-size: 14.5px; font-weight: 600; color: #5c6b72;">Courses</span>
+      <span style="font-size: 14.5px; font-weight: 600; color: #5c6b72;">Boats</span>
+      <span style="font-size: 14.5px; font-weight: 700; color: #178f6a; border-bottom: 2px solid #178f6a; padding-bottom: 3px;">Schedule</span>
+      <span style="font-size: 14.5px; font-weight: 600; color: #5c6b72;">About</span>
+    </div>
+    <a class="btn" style="margin-left: 26px; padding: 0 20px;">Book now</a>
+  </div>
+
+  <!-- ============ the shop's page header ============ -->
+  <div style="display: flex; align-items: flex-end; gap: 48px; padding: 26px 80px 16px; box-sizing: border-box;">
+    <div style="flex: 1 1 auto; min-width: 0;">
+      <div class="lbl" style="color: #178f6a;">Key Largo, Florida</div>
+      <h1 class="bri" style="margin: 8px 0 0; font-size: 40px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.05;">This week on the water</h1>
+    </div>
+    <p style="margin: 0; width: 520px; flex: 0 0 520px; font-size: 16px; line-height: 1.5; color: #5c6b72;">Mantis II runs the reef and wreck trips; the Skiff takes the night dives and Discover Scuba. Everything below books here, on this page.</p>
+  </div>
+
+  <!-- ============ widget + rail ============ -->
+  <div style="display: flex; align-items: flex-start; gap: 40px; padding: 0 80px 30px; box-sizing: border-box;">
+
+    <!-- ---------- the embedded DiveDay calendar ---------- -->
+    <div style="width: 960px; flex: 0 0 960px;">
+      <div style="background: #ffffff; border: 1px solid #e2dccf; border-radius: 14px; overflow: hidden; box-sizing: border-box;">
+
+        <!-- week strip -->
+        <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; padding: 18px 22px 14px; box-sizing: border-box;">
+
+          <div style="border: 1px solid #ece7db; border-radius: 10px; padding: 8px 6px; text-align: center; box-sizing: border-box;">
+            <div class="lbl" style="color: #a5aeb2; font-size: 10.5px;">Mon</div>
+            <div class="tnum" style="font-size: 20px; font-weight: 700; color: #a5aeb2; margin-top: 2px; letter-spacing: -0.02em;">24</div>
+            <div style="font-size: 11.5px; color: #a5aeb2; margin-top: 3px;">sailed</div>
+          </div>
+          <div style="border: 1px solid #ece7db; border-radius: 10px; padding: 8px 6px; text-align: center; box-sizing: border-box;">
+            <div class="lbl" style="color: #a5aeb2; font-size: 10.5px;">Tue</div>
+            <div class="tnum" style="font-size: 20px; font-weight: 700; color: #a5aeb2; margin-top: 2px; letter-spacing: -0.02em;">25</div>
+            <div style="font-size: 11.5px; color: #a5aeb2; margin-top: 3px;">sailed</div>
+          </div>
+          <div style="border: 1px solid #ece7db; border-radius: 10px; padding: 8px 6px; text-align: center; box-sizing: border-box;">
+            <div class="lbl" style="color: #a5aeb2; font-size: 10.5px;">Wed</div>
+            <div class="tnum" style="font-size: 20px; font-weight: 700; color: #a5aeb2; margin-top: 2px; letter-spacing: -0.02em;">26</div>
+            <div style="font-size: 11.5px; color: #a5aeb2; margin-top: 3px;">sailed</div>
+          </div>
+
+          <div style="border: 1px solid transparent; box-shadow: inset 0 0 0 2px #178f6a; background: #f1f9f5; border-radius: 10px; padding: 8px 6px; text-align: center; box-sizing: border-box;">
+            <div class="lbl" style="color: #178f6a; font-size: 10.5px;">Thu</div>
+            <div class="tnum" style="font-size: 20px; font-weight: 800; color: #0b1f2e; margin-top: 2px; letter-spacing: -0.02em;">27</div>
+            <div class="tnum" style="font-size: 11.5px; font-weight: 700; color: #178f6a; margin-top: 3px;">3 today</div>
+          </div>
+          <div style="border: 1px solid #e2dccf; border-radius: 10px; padding: 8px 6px; text-align: center; box-sizing: border-box;">
+            <div class="lbl" style="color: #5c6b72; font-size: 10.5px;">Fri</div>
+            <div class="tnum" style="font-size: 20px; font-weight: 700; color: #0b1f2e; margin-top: 2px; letter-spacing: -0.02em;">28</div>
+            <div class="tnum" style="font-size: 11.5px; color: #5c6b72; margin-top: 3px;">2 out</div>
+          </div>
+          <div style="border: 1px solid #e2dccf; border-radius: 10px; padding: 8px 6px; text-align: center; box-sizing: border-box;">
+            <div class="lbl" style="color: #5c6b72; font-size: 10.5px;">Sat</div>
+            <div class="tnum" style="font-size: 20px; font-weight: 700; color: #0b1f2e; margin-top: 2px; letter-spacing: -0.02em;">29</div>
+            <div class="tnum" style="font-size: 11.5px; color: #5c6b72; margin-top: 3px;">2 out</div>
+          </div>
+          <div style="border: 1px solid #e2dccf; border-radius: 10px; padding: 8px 6px; text-align: center; box-sizing: border-box;">
+            <div class="lbl" style="color: #5c6b72; font-size: 10.5px;">Sun</div>
+            <div class="tnum" style="font-size: 20px; font-weight: 700; color: #0b1f2e; margin-top: 2px; letter-spacing: -0.02em;">30</div>
+            <div class="tnum" style="font-size: 11.5px; color: #5c6b72; margin-top: 3px;">1 out</div>
+          </div>
+        </div>
+
+        <!-- filters -->
+        <div style="display: flex; align-items: center; gap: 10px; padding: 0 22px 14px; box-sizing: border-box;">
+          <span class="pill">All boats
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#5c6b72" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"></path></svg>
+          </span>
+          <span class="pill">Any time
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#5c6b72" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"></path></svg>
+          </span>
+          <span class="pill" style="color: #5c6b72;">
+            <span style="width: 14px; height: 14px; border: 1.5px solid #cfc6b4; border-radius: 4px; display: inline-block;"></span>
+            Courses too
+          </span>
+          <span class="tnum" style="margin-left: auto; font-size: 13px; color: #5c6b72;">8 departures this week</span>
+        </div>
+
+        <!-- past band -->
+        <div style="padding: 0 22px; height: 34px; display: flex; align-items: center; background: #faf8f3; border-top: 1px solid #e2dccf; box-sizing: border-box;">
+          <span style="font-size: 13px; color: #a5aeb2;">Monday 24 to Wednesday 26 have sailed.</span>
+        </div>
+
+        <!-- ===== Thursday ===== -->
+        <div class="dayhead"><span class="lbl">Thursday, August 27</span><span class="lbl" style="color: #178f6a;">Today</span></div>
+
+        <div class="row">
+          <div class="tnum" style="flex: 0 0 84px; font-size: 15px; font-weight: 700; letter-spacing: -0.01em;">7:00 AM</div>
+          <div style="flex: 1 1 auto; min-width: 0;">
+            <div style="font-size: 15.5px; font-weight: 700; letter-spacing: -0.012em;">Two-Tank Reef</div>
+            <div style="font-size: 13px; color: #5c6b72; margin-top: 2px;">Molasses &amp; French · Mantis II</div>
+          </div>
+          <div class="tnum" style="flex: 0 0 72px; text-align: right; font-size: 15.5px; font-weight: 700;">$95</div>
+          <div class="tnum" style="flex: 0 0 140px; text-align: right; font-size: 13.5px; font-weight: 700; color: #f07d2a;">2 seats left</div>
+          <a class="btn" style="flex: 0 0 116px; width: 116px;">Book</a>
+        </div>
+
+        <div class="row">
+          <div class="tnum" style="flex: 0 0 84px; font-size: 15px; font-weight: 700; letter-spacing: -0.01em;">1:00 PM</div>
+          <div style="flex: 1 1 auto; min-width: 0;">
+            <div style="font-size: 15.5px; font-weight: 700; letter-spacing: -0.012em;">Wreck Trip</div>
+            <div style="font-size: 13px; color: #5c6b72; margin-top: 2px;">Spiegel Grove · Mantis II</div>
+          </div>
+          <div class="tnum" style="flex: 0 0 72px; text-align: right; font-size: 15.5px; font-weight: 700;">$145</div>
+          <div style="flex: 0 0 140px; text-align: right;">
+            <span style="display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border: 1px solid #f07d2a; background: #fdf0e5; border-radius: 7px; font-size: 12.5px; font-weight: 700; color: #f07d2a;">Full · wait list</span>
+          </div>
+          <a class="btn-quiet" style="flex: 0 0 116px; width: 116px;">Join wait list</a>
+        </div>
+
+        <div class="row">
+          <div class="tnum" style="flex: 0 0 84px; font-size: 15px; font-weight: 700; letter-spacing: -0.01em;">7:30 PM</div>
+          <div style="flex: 1 1 auto; min-width: 0;">
+            <div style="font-size: 15.5px; font-weight: 700; letter-spacing: -0.012em;">Night Dive</div>
+            <div style="font-size: 13px; color: #5c6b72; margin-top: 2px;">City of Washington · Skiff</div>
+          </div>
+          <div class="tnum" style="flex: 0 0 72px; text-align: right; font-size: 15.5px; font-weight: 700;">$120</div>
+          <div class="tnum" style="flex: 0 0 140px; text-align: right; font-size: 13.5px; font-weight: 600; color: #5c6b72;">5 seats left</div>
+          <a class="btn" style="flex: 0 0 116px; width: 116px;">Book</a>
+        </div>
+
+        <!-- ===== Friday ===== -->
+        <div class="dayhead"><span class="lbl">Friday, August 28</span></div>
+
+        <div class="row">
+          <div class="tnum" style="flex: 0 0 84px; font-size: 15px; font-weight: 700; letter-spacing: -0.01em;">7:00 AM</div>
+          <div style="flex: 1 1 auto; min-width: 0;">
+            <div style="font-size: 15.5px; font-weight: 700; letter-spacing: -0.012em;">Two-Tank Reef</div>
+            <div style="font-size: 13px; color: #5c6b72; margin-top: 2px;">Benwood &amp; Elbow · Mantis II</div>
+          </div>
+          <div class="tnum" style="flex: 0 0 72px; text-align: right; font-size: 15.5px; font-weight: 700;">$95</div>
+          <div class="tnum" style="flex: 0 0 140px; text-align: right; font-size: 13.5px; font-weight: 600; color: #5c6b72;">6 seats left</div>
+          <a class="btn" style="flex: 0 0 116px; width: 116px;">Book</a>
+        </div>
+
+        <div class="row">
+          <div class="tnum" style="flex: 0 0 84px; font-size: 15px; font-weight: 700; letter-spacing: -0.01em;">1:00 PM</div>
+          <div style="flex: 1 1 auto; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 15.5px; font-weight: 700; letter-spacing: -0.012em;">Deep Wreck</span>
+              <span style="display: inline-flex; align-items: center; height: 21px; padding: 0 8px; border: 1px solid #cfe4da; background: #f1f9f5; border-radius: 6px; font-size: 11.5px; font-weight: 700; color: #0f6b52;">Advanced + Nitrox</span>
+            </div>
+            <div style="font-size: 13px; color: #5c6b72; margin-top: 2px;">The Duane on EANx · Mantis II</div>
+          </div>
+          <div class="tnum" style="flex: 0 0 72px; text-align: right; font-size: 15.5px; font-weight: 700;">$165</div>
+          <div class="tnum" style="flex: 0 0 140px; text-align: right; font-size: 13.5px; font-weight: 600; color: #5c6b72;">4 seats left</div>
+          <a class="btn" style="flex: 0 0 116px; width: 116px;">Book</a>
+        </div>
+
+        <!-- ===== Saturday ===== -->
+        <div class="dayhead"><span class="lbl">Saturday, August 29</span></div>
+
+        <div class="row">
+          <div class="tnum" style="flex: 0 0 84px; font-size: 15px; font-weight: 700; letter-spacing: -0.01em;">7:00 AM</div>
+          <div style="flex: 1 1 auto; min-width: 0;">
+            <div style="font-size: 15.5px; font-weight: 700; letter-spacing: -0.012em;">Tortugas Run</div>
+            <div style="font-size: 13px; color: #5c6b72; margin-top: 2px;">Three days out · Mantis II</div>
+          </div>
+          <div class="tnum" style="flex: 0 0 72px; text-align: right; font-size: 15.5px; font-weight: 700;">$1,150</div>
+          <div class="tnum" style="flex: 0 0 140px; text-align: right; font-size: 13.5px; font-weight: 700; color: #f07d2a;">2 seats left</div>
+          <a class="btn" style="flex: 0 0 116px; width: 116px;">Book</a>
+        </div>
+
+        <div class="row">
+          <div class="tnum" style="flex: 0 0 84px; font-size: 15px; font-weight: 700; letter-spacing: -0.01em;">1:00 PM</div>
+          <div style="flex: 1 1 auto; min-width: 0;">
+            <div style="font-size: 15.5px; font-weight: 700; letter-spacing: -0.012em;">Discover Scuba</div>
+            <div style="font-size: 13px; color: #5c6b72; margin-top: 2px;">Pool then reef · Skiff · no certification needed</div>
+          </div>
+          <div class="tnum" style="flex: 0 0 72px; text-align: right; font-size: 15.5px; font-weight: 700;">$189</div>
+          <div class="tnum" style="flex: 0 0 140px; text-align: right; font-size: 13.5px; font-weight: 600; color: #5c6b72;">3 seats left</div>
+          <a class="btn" style="flex: 0 0 116px; width: 116px;">Book</a>
+        </div>
+
+        <!-- ===== Sunday ===== -->
+        <div class="dayhead"><span class="lbl">Sunday, August 30</span></div>
+
+        <div class="row">
+          <div class="tnum" style="flex: 0 0 84px; font-size: 15px; font-weight: 700; letter-spacing: -0.01em;">7:00 AM</div>
+          <div style="flex: 1 1 auto; min-width: 0;">
+            <div style="font-size: 15.5px; font-weight: 700; letter-spacing: -0.012em;">Two-Tank Reef</div>
+            <div style="font-size: 13px; color: #5c6b72; margin-top: 2px;">Christ of the Abyss · Mantis II</div>
+          </div>
+          <div class="tnum" style="flex: 0 0 72px; text-align: right; font-size: 15.5px; font-weight: 700;">$95</div>
+          <div class="tnum" style="flex: 0 0 140px; text-align: right; font-size: 13.5px; font-weight: 600; color: #5c6b72;">8 seats left</div>
+          <a class="btn" style="flex: 0 0 116px; width: 116px;">Book</a>
+        </div>
+
+      </div>
+
+      <!-- credit -->
+      <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 12px; color: #5c6b72;">
+        <svg width="22" height="14" viewBox="0 0 22 14" fill="none">
+          <circle cx="3" cy="11" r="1.9" fill="#ff6f61"></circle>
+          <circle cx="10" cy="7.4" r="2.7" fill="#0e7490"></circle>
+          <circle cx="18" cy="4" r="3.6" fill="#0e7490"></circle>
+        </svg>
+        <span>Schedule by DiveDay</span>
+      </div>
+    </div>
+
+    <!-- ---------- the shop's right rail ---------- -->
+    <div style="width: 280px; flex: 0 0 280px; display: flex; flex-direction: column; gap: 16px;">
+
+      <div style="border-radius: 14px; overflow: hidden; border: 1px solid #e2dccf;">
+        <div style="height: 150px; background: linear-gradient(150deg, #178f6a 0%, #0f5f57 45%, #0b1f2e 100%); display: flex; align-items: flex-end; padding: 12px; box-sizing: border-box;">
+          <span style="font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,.88);">[photo: Mantis II at the dock, first light]</span>
+        </div>
+      </div>
+
+      <div style="background: #ffffff; border: 1px solid #e2dccf; border-radius: 14px; padding: 16px; box-sizing: border-box;">
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <span class="badge">PADI 5★ Dive Centre</span>
+          <span class="badge">Blue Star operator</span>
+          <span class="badge tnum">★ 4.3</span>
+          <span class="badge tnum">83 reviews</span>
+        </div>
+      </div>
+
+      <div style="background: #ffffff; border: 1px solid #e2dccf; border-radius: 14px; padding: 16px; box-sizing: border-box;">
+        <div class="bri" style="font-size: 17px; font-weight: 700; letter-spacing: -0.02em;">Can't see your day?</div>
+        <p style="margin: 7px 0 0; font-size: 13.5px; line-height: 1.5; color: #5c6b72;">Name the date and how many of you are coming. We answer with a yes, a no, or a nearby morning that already sails.</p>
+        <a class="btn-quiet" style="width: 100%; margin-top: 12px;">Ask for a date</a>
+        <div style="display: flex; align-items: center; gap: 7px; margin-top: 10px; font-size: 11.5px; color: #5c6b72;">
+          <svg width="20" height="13" viewBox="0 0 22 14" fill="none">
+            <circle cx="3" cy="11" r="1.9" fill="#ff6f61"></circle>
+            <circle cx="10" cy="7.4" r="2.7" fill="#0e7490"></circle>
+            <circle cx="18" cy="4" r="3.6" fill="#0e7490"></circle>
+          </svg>
+          <span>Requests by DiveDay</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ DiveDay's own caption strip ============ -->
+  <div class="dd" style="background: #faf9f6; border-top: 1px solid #e3e0d7; padding: 20px 80px 22px; box-sizing: border-box; color: #0c2a35; font-size: 15px; line-height: 1.55;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border: 1px solid #ff6f61; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #ff6f61;">Proposed</span>
+      <span style="font-size: 11.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #5b6f77;">Embed appearance</span>
+    </div>
+    <p style="margin: 10px 0 0; max-width: 780px; color: #5b6f77;">One switch in Settings. The embed either inherits the host page's colour and typeface, or wears DiveDay's own — the second is for a shop whose site has no design to inherit.</p>
+
+    <div style="display: flex; gap: 28px; margin-top: 16px;">
+
+      <!-- mini A: inherits the host page -->
+      <div style="width: 300px; flex: 0 0 300px;">
+        <div style="background: #ffffff; border: 1px solid #e2dccf; border-radius: 10px; overflow: hidden; font-family: 'Manrope', system-ui, sans-serif;">
+          <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; padding: 8px;">
+            <div style="height: 26px; border-radius: 5px; background: #f5f2ea;"></div>
+            <div style="height: 26px; border-radius: 5px; background: #f5f2ea;"></div>
+            <div style="height: 26px; border-radius: 5px; background: #f5f2ea;"></div>
+            <div style="height: 26px; border-radius: 5px; background: #f1f9f5; box-shadow: inset 0 0 0 1.5px #178f6a;"></div>
+            <div style="height: 26px; border-radius: 5px; border: 1px solid #e2dccf; box-sizing: border-box;"></div>
+            <div style="height: 26px; border-radius: 5px; border: 1px solid #e2dccf; box-sizing: border-box;"></div>
+            <div style="height: 26px; border-radius: 5px; border: 1px solid #e2dccf; box-sizing: border-box;"></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; padding: 0 10px; height: 28px; border-top: 1px solid #f0ebe0;">
+            <span class="tnum" style="font-size: 10.5px; font-weight: 700; width: 46px;">7:00 AM</span>
+            <span style="font-size: 10.5px; font-weight: 700; flex: 1 1 auto;">Two-Tank Reef</span>
+            <span class="tnum" style="font-size: 10px; font-weight: 700; color: #f07d2a;">2 left</span>
+            <span style="width: 34px; height: 18px; border-radius: 5px; background: #178f6a;"></span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; padding: 0 10px; height: 28px; border-top: 1px solid #f0ebe0;">
+            <span class="tnum" style="font-size: 10.5px; font-weight: 700; width: 46px;">1:00 PM</span>
+            <span style="font-size: 10.5px; font-weight: 700; flex: 1 1 auto;">Wreck Trip</span>
+            <span class="tnum" style="font-size: 10px; font-weight: 700; color: #f07d2a;">Full</span>
+            <span style="width: 34px; height: 18px; border-radius: 5px; border: 1.5px solid #178f6a; box-sizing: border-box;"></span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; padding: 0 10px; height: 28px; border-top: 1px solid #f0ebe0;">
+            <span class="tnum" style="font-size: 10.5px; font-weight: 700; width: 46px;">7:30 PM</span>
+            <span style="font-size: 10.5px; font-weight: 700; flex: 1 1 auto;">Night Dive</span>
+            <span class="tnum" style="font-size: 10px; color: #5c6b72;">5 left</span>
+            <span style="width: 34px; height: 18px; border-radius: 5px; background: #178f6a;"></span>
+          </div>
+        </div>
+        <div style="margin-top: 8px; font-size: 12.5px; font-weight: 600;">Inherits the host page</div>
+        <div style="font-size: 12px; color: #5b6f77;">Mantis green, Manrope, the shop's own sand.</div>
+      </div>
+
+      <!-- mini B: DiveDay light -->
+      <div style="width: 300px; flex: 0 0 300px;">
+        <div class="dd" style="background: #faf9f6; border: 1px solid #e3e0d7; border-radius: 12px; overflow: hidden;">
+          <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; padding: 8px;">
+            <div style="height: 26px; border-radius: 5px; background: #f1efe9;"></div>
+            <div style="height: 26px; border-radius: 5px; background: #f1efe9;"></div>
+            <div style="height: 26px; border-radius: 5px; background: #f1efe9;"></div>
+            <div style="height: 26px; border-radius: 5px; background: #ffffff; box-shadow: inset 0 0 0 1.5px #0e7490;"></div>
+            <div style="height: 26px; border-radius: 5px; border: 1px solid #e3e0d7; box-sizing: border-box;"></div>
+            <div style="height: 26px; border-radius: 5px; border: 1px solid #e3e0d7; box-sizing: border-box;"></div>
+            <div style="height: 26px; border-radius: 5px; border: 1px solid #e3e0d7; box-sizing: border-box;"></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; padding: 0 10px; height: 28px; border-top: 1px solid #e3e0d7; background: #ffffff;">
+            <span class="tnum" style="font-size: 10.5px; font-weight: 600; width: 46px;">7:00 AM</span>
+            <span style="font-size: 10.5px; font-weight: 600; flex: 1 1 auto;">Two-Tank Reef</span>
+            <span class="tnum" style="font-size: 10px; font-weight: 600; color: #ff6f61;">2 left</span>
+            <span style="width: 34px; height: 18px; border-radius: 5px; background: #0e7490;"></span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; padding: 0 10px; height: 28px; border-top: 1px solid #e3e0d7; background: #ffffff;">
+            <span class="tnum" style="font-size: 10.5px; font-weight: 600; width: 46px;">1:00 PM</span>
+            <span style="font-size: 10.5px; font-weight: 600; flex: 1 1 auto;">Wreck Trip</span>
+            <span class="tnum" style="font-size: 10px; font-weight: 600; color: #ff6f61;">Full</span>
+            <span style="width: 34px; height: 18px; border-radius: 5px; border: 1.5px solid #0e7490; box-sizing: border-box;"></span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; padding: 0 10px; height: 28px; border-top: 1px solid #e3e0d7; background: #ffffff;">
+            <span class="tnum" style="font-size: 10.5px; font-weight: 600; width: 46px;">7:30 PM</span>
+            <span style="font-size: 10.5px; font-weight: 600; flex: 1 1 auto;">Night Dive</span>
+            <span class="tnum" style="font-size: 10px; color: #5b6f77;">5 left</span>
+            <span style="width: 34px; height: 18px; border-radius: 5px; background: #0e7490;"></span>
+          </div>
+        </div>
+        <div style="margin-top: 8px; font-size: 12.5px; font-weight: 600;">DiveDay light</div>
+        <div style="font-size: 12px; color: #5b6f77;">Same ledger, DiveDay teal and Geist.</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -18,7 +18,7 @@ test.describe("staff", () => {
 
     // "Dive sites" now lives in the nav's "More" group; navigate directly.
     await page.goto("/shop/blue-mantis/dive-sites");
-    await page.getByRole("link", { name: "Create a site" }).click();
+    await page.getByRole("link", { name: "Add a dive site" }).click();
     await page.getByLabel("Name").fill(siteName);
     await page.getByLabel("Location").fill("Key Largo");
     await page.getByLabel("Latitude").fill("25.123");
@@ -143,12 +143,9 @@ test.describe("staff", () => {
     // the scope: the staff chrome's own menus sit outside it.
     const library = page.getByRole("main");
     const rows = library.getByRole("listitem");
+    // The one search box (`SearchField`): no Search button beside it, so a
+    // query is submitted the way a staffer submits it — Enter.
     const search = page.getByLabel("Find a site");
-    // Scoped to the band itself: the staff chrome's ⌘K trigger is also a
-    // button named "Search", so an unscoped locator resolves to both.
-    const submit = page
-      .getByRole("form", { name: "Search the dive-site library" })
-      .getByRole("button", { name: "Search" });
 
     await page.goto("/shop/blue-mantis/dive-sites");
     // Wait for a real row before counting. `locator.count()` is a one-shot
@@ -163,7 +160,7 @@ test.describe("staff", () => {
     // A name search narrows the ledger to the one row and says so in the URL,
     // so a found site is a link a staffer can send to a colleague.
     await search.fill("spiegel");
-    await submit.click();
+    await search.press("Enter");
     await expect(page).toHaveURL(/\?q=spiegel/);
     await expect(rows).toHaveCount(1);
     await expect(library.getByRole("link", { name: "Spiegel Grove", exact: true })).toBeVisible();
@@ -183,7 +180,7 @@ test.describe("staff", () => {
 
     // Location is searchable too: "Pennekamp" appears in no site's *name*.
     await search.fill("pennekamp");
-    await submit.click();
+    await search.press("Enter");
     await expect(rows).toHaveCount(1);
     await expect(
       library.getByRole("link", { name: "Christ of the Abyss", exact: true }),
@@ -192,7 +189,7 @@ test.describe("staff", () => {
     // A search that matches nothing says so rather than showing the library's
     // "start your first site" pitch to a shop that already has seven.
     await search.fill("nowhere in particular");
-    await submit.click();
+    await search.press("Enter");
     await expect(page.getByText("No sites match that search")).toBeVisible();
     await expect(page.getByText("Start with a site your crew knows well")).toHaveCount(0);
 

@@ -1,0 +1,371 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #178f6a; }
+    a:hover { color: #0f6b52; }
+    .bm { --green: #178f6a; --green-deep: #0f6b52; --orange: #f07d2a; --ink: #0b1f2e;
+          --sand: #f6f1e7; --paper: #ffffff; --hair: #e2dccf; --muted: #5c6b72; }
+    .bm-body { font-family: 'Manrope', 'Avenir Next', 'Segoe UI', system-ui, -apple-system, sans-serif; color: #0b1f2e; -webkit-font-smoothing: antialiased; }
+    .bm-display { font-family: 'Bricolage Grotesque', 'Bricolage Grotesque 96pt', Georgia, 'Times New Roman', serif; }
+    .tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+    .bm-nav { font-size: 15px; font-weight: 600; color: #0b1f2e; text-decoration: none; }
+    .bm-badge { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px;
+                border: 1px solid #e2dccf; border-radius: 999px; background: #ffffff;
+                font-size: 14px; font-weight: 600; color: #0b1f2e; }
+    .bm-btn { display: inline-flex; align-items: center; justify-content: center;
+              background: #178f6a; color: #ffffff; border-radius: 10px;
+              font-size: 15px; font-weight: 700; text-decoration: none; letter-spacing: .002em; }
+    .bm-btn-quiet { display: inline-flex; align-items: center; justify-content: center;
+              background: #ffffff; color: #0b1f2e; border: 1px solid #e2dccf; border-radius: 10px;
+              font-size: 15px; font-weight: 700; text-decoration: none; }
+    .bm-chip { display: inline-flex; align-items: center; height: 26px; padding: 0 10px;
+               border: 1px solid #e2dccf; border-radius: 999px; background: #f6f1e7;
+               font-size: 12.5px; font-weight: 700; color: #0b1f2e; letter-spacing: .01em; }
+    .bm-row { display: grid; grid-template-columns: 104px 1fr 156px 78px 116px 96px;
+              align-items: center; column-gap: 20px; height: 54px; border-top: 1px solid #e2dccf; }
+    .bm-label { font-size: 11.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #5c6b72; }
+    .bm-h2 { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+    .bm-photo { position: relative; overflow: hidden; }
+    .bm-cap { position: absolute; left: 14px; bottom: 12px; font-size: 12px; font-weight: 600;
+              color: rgba(255,255,255,.86); letter-spacing: .01em; }
+  </style>
+</helmet>
+
+<div class="bm bm-body" style="width: 1440px; min-height: 2220px; background: #f6f1e7; box-sizing: border-box; overflow: hidden;">
+
+  <!-- 1 — Header, 72px, the shop's own -->
+  <div style="height: 72px; display: flex; align-items: center; gap: 32px; padding: 0 84px; background: #ffffff; border-bottom: 1px solid #e2dccf; box-sizing: border-box;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="#178f6a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M5.5 20.5c2.6-6.4 7.4-10.2 13.6-10.9"></path>
+        <path d="M19.1 9.6c4.4-.4 7.6 1.4 9.4 5.1"></path>
+        <path d="M28.5 14.7c-1.2 4.6-4.3 7.6-8.4 8.8"></path>
+        <path d="M8.9 15.7l1.6 3.1M12.3 13.1l1.8 3.2M16 11.3l1.7 3.3"></path>
+        <path d="M20.1 23.5c-3.1.9-5.9.2-8.2-1.8"></path>
+        <path d="M11.9 21.7l-4.6 3.6M11.9 21.7l-1 5.5"></path>
+        <circle cx="21.6" cy="12.4" r="1.5"></circle>
+        <circle cx="25.4" cy="11.6" r="1.5"></circle>
+        <path d="M22.6 10.9l1.3-2.6M26.3 10.5l2-2.1"></path>
+      </svg>
+      <span class="bm-display" style="font-size: 21px; font-weight: 700; letter-spacing: -0.015em;">Blue Mantis Divers</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 26px;">
+      <a class="bm-nav" href="#diving">Diving</a>
+      <a class="bm-nav" href="#courses">Courses</a>
+      <a class="bm-nav" href="#boats">Boats</a>
+      <a class="bm-nav" href="#about">About</a>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 18px;">
+      <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #5c6b72;">EN
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#5c6b72" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"></path></svg>
+      </span>
+      <a class="bm-btn" href="#diving" style="height: 44px; padding: 0 22px;">Book now</a>
+    </div>
+  </div>
+
+  <!-- 2 — Hero, 1440 x 560 -->
+  <div class="bm-photo" style="width: 1440px; height: 560px; background: linear-gradient(158deg, #0b1f2e 0%, #10465a 46%, #178f6a 100%);">
+    <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11,31,46,0) 42%, rgba(11,31,46,.62) 100%);"></div>
+    <div style="position: absolute; left: 84px; bottom: 132px; max-width: 720px;">
+      <h1 class="bm-display" style="margin: 0; font-size: 64px; font-weight: 800; line-height: 1.02; letter-spacing: -0.03em; color: #ffffff;">Two tanks before lunch.</h1>
+      <p style="margin: 20px 0 0; font-size: 19px; line-height: 1.5; color: rgba(255,255,255,.9); max-width: 560px;">Molasses and French Reef, off the dock at 7:00 and back by 10:30, on a boat that takes twelve.</p>
+    </div>
+    <span class="bm-cap" style="left: auto; right: 20px; top: 20px; bottom: auto;">[photo: Christ of the Abyss, from above]</span>
+  </div>
+
+  <!-- 3 — Badge wall, sand strip, with the next-boat card overlapping the hero edge -->
+  <div style="position: relative; height: 150px; background: #f6f1e7; box-sizing: border-box;">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 0 84px; height: 150px; box-sizing: border-box;">
+      <span class="bm-badge">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="#178f6a" aria-hidden="true"><path d="M9 1.6l2.1 4.4 4.8.7-3.5 3.3.9 4.8L9 12.5l-4.3 2.3.9-4.8L2.1 6.7l4.8-.7L9 1.6z"></path></svg>
+        PADI 5-star centre
+      </span>
+      <span class="bm-badge">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="#178f6a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2.2l5.4 2.2v4.1c0 3.5-2.2 6.2-5.4 7.3-3.2-1.1-5.4-3.8-5.4-7.3V4.4L9 2.2z"></path><path d="M6.6 8.9l1.7 1.7 3.2-3.4"></path></svg>
+        Blue Star operator
+      </span>
+      <span class="bm-badge">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="#f07d2a" aria-hidden="true"><path d="M9 1.6l2.1 4.4 4.8.7-3.5 3.3.9 4.8L9 12.5l-4.3 2.3.9-4.8L2.1 6.7l4.8-.7L9 1.6z"></path></svg>
+        <span class="tnum">4.3</span>
+      </span>
+      <span class="bm-badge"><span class="tnum">83</span> reviews</span>
+      <span class="bm-badge">Since <span class="tnum">1998</span></span>
+    </div>
+
+    <!-- Next boat card, floating over the hero's bottom edge -->
+    <div style="position: absolute; right: 84px; top: -112px; width: 432px; background: #ffffff; border-radius: 16px; border: 1px solid #e2dccf; box-shadow: 0 18px 40px rgba(11,31,46,.18); padding: 22px 24px 24px; box-sizing: border-box;">
+      <div class="bm-label">Next boat</div>
+      <div class="tnum" style="margin-top: 10px; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: #0b1f2e;">Thu 7:00 AM</div>
+      <div style="margin-top: 6px; font-size: 18px; font-weight: 700; color: #0b1f2e; line-height: 1.3;">Two-Tank Reef &mdash; Molasses &amp; French</div>
+      <div style="margin-top: 8px; display: flex; align-items: baseline; gap: 10px;">
+        <span style="font-size: 14.5px; color: #5c6b72;">Mantis II</span>
+        <span style="font-size: 14.5px; color: #e2dccf;">&bull;</span>
+        <span class="tnum" style="font-size: 15px; font-weight: 700; color: #0b1f2e;">$95</span>
+        <span style="font-size: 14.5px; color: #5c6b72;">per diver</span>
+      </div>
+      <div class="tnum" style="margin-top: 12px; font-size: 15px; font-weight: 700; color: #f07d2a;">2 seats left</div>
+      <a class="bm-btn" href="#diving" style="margin-top: 16px; height: 52px; width: 100%; font-size: 16px;">Book this boat</a>
+    </div>
+  </div>
+
+  <!-- 4 — This week -->
+  <div id="diving" style="padding: 60px 84px 0; box-sizing: border-box;">
+    <div style="display: flex; align-items: baseline; justify-content: space-between;">
+      <h2 class="bm-h2">This week</h2>
+      <span class="tnum" style="font-size: 14.5px; color: #5c6b72;">Key Largo &bull; times are local</span>
+    </div>
+
+    <div style="margin-top: 20px; background: #ffffff; border: 1px solid #e2dccf; border-radius: 16px; padding: 0 24px; box-sizing: border-box;">
+
+      <div style="height: 46px; display: flex; align-items: center; font-size: 14px; color: #5c6b72;">Mon&ndash;Wed have sailed</div>
+
+      <div class="bm-row">
+        <span class="tnum" style="font-size: 15px; font-weight: 700;">Thu 7:00 AM</span>
+        <span>
+          <span style="font-size: 16px; font-weight: 700;">Two-Tank Reef &mdash; Molasses &amp; French</span>
+          <span style="display: block; font-size: 13.5px; color: #5c6b72; margin-top: 2px;">Mantis II</span>
+        </span>
+        <span></span>
+        <span class="tnum" style="font-size: 15px; font-weight: 700; text-align: right;">$95</span>
+        <span class="tnum" style="font-size: 14.5px; font-weight: 700; color: #f07d2a; text-align: right;">2 seats left</span>
+        <a class="bm-btn" href="#diving" style="height: 44px;">Book</a>
+      </div>
+
+      <div class="bm-row">
+        <span class="tnum" style="font-size: 15px; font-weight: 700;">Thu 1:00 PM</span>
+        <span>
+          <span style="font-size: 16px; font-weight: 700;">Wreck Trip &mdash; Spiegel Grove</span>
+          <span style="display: block; font-size: 13.5px; color: #5c6b72; margin-top: 2px;">Mantis II</span>
+        </span>
+        <span></span>
+        <span class="tnum" style="font-size: 15px; font-weight: 700; text-align: right;">$145</span>
+        <span style="font-size: 14.5px; font-weight: 700; color: #5c6b72; text-align: right;">Full</span>
+        <a class="bm-btn-quiet" href="#diving" style="height: 44px;">Wait list</a>
+      </div>
+
+      <div class="bm-row">
+        <span class="tnum" style="font-size: 15px; font-weight: 700;">Thu 7:30 PM</span>
+        <span>
+          <span style="font-size: 16px; font-weight: 700;">Night Dive &mdash; City of Washington</span>
+          <span style="display: block; font-size: 13.5px; color: #5c6b72; margin-top: 2px;">Skiff</span>
+        </span>
+        <span></span>
+        <span class="tnum" style="font-size: 15px; font-weight: 700; text-align: right;">$120</span>
+        <span class="tnum" style="font-size: 14.5px; font-weight: 600; color: #0b1f2e; text-align: right;">5 seats left</span>
+        <a class="bm-btn" href="#diving" style="height: 44px;">Book</a>
+      </div>
+
+      <div class="bm-row">
+        <span class="tnum" style="font-size: 15px; font-weight: 700;">Fri 7:00 AM</span>
+        <span style="font-size: 16px; font-weight: 700;">Two-Tank Reef &mdash; Benwood &amp; Elbow</span>
+        <span></span>
+        <span class="tnum" style="font-size: 15px; font-weight: 700; text-align: right;">$95</span>
+        <span class="tnum" style="font-size: 14.5px; font-weight: 600; color: #0b1f2e; text-align: right;">6 seats left</span>
+        <a class="bm-btn" href="#diving" style="height: 44px;">Book</a>
+      </div>
+
+      <div class="bm-row">
+        <span class="tnum" style="font-size: 15px; font-weight: 700;">Fri 1:00 PM</span>
+        <span style="font-size: 16px; font-weight: 700;">Deep Wreck &mdash; the Duane on EANx</span>
+        <span><span class="bm-chip">Advanced + Nitrox</span></span>
+        <span class="tnum" style="font-size: 15px; font-weight: 700; text-align: right;">$165</span>
+        <span class="tnum" style="font-size: 14.5px; font-weight: 600; color: #0b1f2e; text-align: right;">4 seats left</span>
+        <a class="bm-btn" href="#diving" style="height: 44px;">Book</a>
+      </div>
+
+      <div class="bm-row">
+        <span class="tnum" style="font-size: 15px; font-weight: 700;">Sat 7:00 AM</span>
+        <span>
+          <span style="font-size: 16px; font-weight: 700;">Tortugas Run</span>
+          <span style="display: block; font-size: 13.5px; color: #5c6b72; margin-top: 2px;">Three days out</span>
+        </span>
+        <span></span>
+        <span class="tnum" style="font-size: 15px; font-weight: 700; text-align: right;">$1,150</span>
+        <span class="tnum" style="font-size: 14.5px; font-weight: 700; color: #f07d2a; text-align: right;">2 seats left</span>
+        <a class="bm-btn" href="#diving" style="height: 44px;">Book</a>
+      </div>
+
+      <div class="bm-row">
+        <span class="tnum" style="font-size: 15px; font-weight: 700;">Sat 1:00 PM</span>
+        <span style="font-size: 16px; font-weight: 700;">Discover Scuba</span>
+        <span><span class="bm-chip">No certification</span></span>
+        <span class="tnum" style="font-size: 15px; font-weight: 700; text-align: right;">$189</span>
+        <span class="tnum" style="font-size: 14.5px; font-weight: 700; color: #f07d2a; text-align: right;">3 seats left</span>
+        <a class="bm-btn" href="#diving" style="height: 44px;">Book</a>
+      </div>
+
+      <div class="bm-row" style="border-bottom: 0;">
+        <span class="tnum" style="font-size: 15px; font-weight: 700;">Sun 7:00 AM</span>
+        <span style="font-size: 16px; font-weight: 700;">Two-Tank Reef &mdash; Christ of the Abyss</span>
+        <span></span>
+        <span class="tnum" style="font-size: 15px; font-weight: 700; text-align: right;">$95</span>
+        <span class="tnum" style="font-size: 14.5px; font-weight: 600; color: #0b1f2e; text-align: right;">8 seats left</span>
+        <a class="bm-btn" href="#diving" style="height: 44px;">Book</a>
+      </div>
+
+      <div style="height: 20px;"></div>
+    </div>
+  </div>
+
+  <!-- 5 — Learn with us -->
+  <div id="courses" style="padding: 56px 84px 0; box-sizing: border-box;">
+    <h2 class="bm-h2">Learn with us</h2>
+    <p style="margin: 10px 0 0; font-size: 15.5px; color: #5c6b72;">Marcus Webb teaches every course on this list.</p>
+    <div style="margin-top: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
+
+      <div style="background: #ffffff; border: 1px solid #e2dccf; border-radius: 16px; overflow: hidden;">
+        <div class="bm-photo" style="height: 116px; background: linear-gradient(140deg, #0b1f2e 0%, #178f6a 100%);">
+          <span class="bm-cap">[photo: pool session, first regulator]</span>
+        </div>
+        <div style="padding: 18px 20px 20px;">
+          <div style="font-size: 18px; font-weight: 700;">Open Water Diver</div>
+          <div style="margin-top: 8px; display: flex; align-items: baseline; gap: 10px;">
+            <span class="tnum" style="font-size: 14.5px; color: #5c6b72;">4 days</span>
+            <span style="font-size: 14.5px; color: #e2dccf;">&bull;</span>
+            <span class="tnum" style="font-size: 15px; font-weight: 700;">$549</span>
+          </div>
+          <div class="tnum" style="margin-top: 6px; font-size: 14.5px; color: #5c6b72;">Next start Sep 7</div>
+          <a class="bm-btn" href="#courses" style="margin-top: 16px; height: 44px; width: 100%;">Enrol</a>
+        </div>
+      </div>
+
+      <div style="background: #ffffff; border: 1px solid #e2dccf; border-radius: 16px; overflow: hidden;">
+        <div class="bm-photo" style="height: 116px; background: linear-gradient(140deg, #0b1f2e 0%, #f07d2a 100%);">
+          <span class="bm-cap">[photo: navigation reel at dusk]</span>
+        </div>
+        <div style="padding: 18px 20px 20px;">
+          <div style="font-size: 18px; font-weight: 700;">Advanced Open Water</div>
+          <div style="margin-top: 8px; display: flex; align-items: baseline; gap: 10px;">
+            <span class="tnum" style="font-size: 14.5px; color: #5c6b72;">2 days</span>
+            <span style="font-size: 14.5px; color: #e2dccf;">&bull;</span>
+            <span class="tnum" style="font-size: 15px; font-weight: 700;">$399</span>
+          </div>
+          <div class="tnum" style="margin-top: 6px; font-size: 14.5px; color: #5c6b72;">Next start Sep 12</div>
+          <a class="bm-btn" href="#courses" style="margin-top: 16px; height: 44px; width: 100%;">Enrol</a>
+        </div>
+      </div>
+
+      <div style="background: #ffffff; border: 1px solid #e2dccf; border-radius: 16px; overflow: hidden;">
+        <div class="bm-photo" style="height: 116px; background: linear-gradient(140deg, #0b1f2e 0%, #10465a 55%, #178f6a 100%);">
+          <span class="bm-cap">[photo: tired-diver tow, surface drill]</span>
+        </div>
+        <div style="padding: 18px 20px 20px;">
+          <div style="font-size: 18px; font-weight: 700;">Rescue Diver</div>
+          <div style="margin-top: 8px; display: flex; align-items: baseline; gap: 10px;">
+            <span class="tnum" style="font-size: 14.5px; color: #5c6b72;">3 days</span>
+            <span style="font-size: 14.5px; color: #e2dccf;">&bull;</span>
+            <span class="tnum" style="font-size: 15px; font-weight: 700;">$499</span>
+          </div>
+          <div class="tnum" style="margin-top: 6px; font-size: 14.5px; color: #5c6b72;">Next start Sep 19</div>
+          <a class="bm-btn" href="#courses" style="margin-top: 16px; height: 44px; width: 100%;">Enrol</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 6 — Divers say -->
+  <div style="padding: 56px 84px 0; box-sizing: border-box;">
+    <h2 class="bm-h2">Divers say</h2>
+    <div style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+      <div style="background: #ffffff; border: 1px solid #e2dccf; border-radius: 16px; padding: 24px 26px;">
+        <p class="bm-display" style="margin: 0; font-size: 22px; font-weight: 500; line-height: 1.38; letter-spacing: -0.012em;">&ldquo;Keiko found us a nurse shark under the ledge and then just waited while we stared.&rdquo;</p>
+        <div class="tnum" style="margin-top: 14px; font-size: 14px; font-weight: 600; color: #5c6b72;">Priya S. &bull; Aug 2026</div>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #e2dccf; border-radius: 16px; padding: 24px 26px;">
+        <p class="bm-display" style="margin: 0; font-size: 22px; font-weight: 500; line-height: 1.38; letter-spacing: -0.012em;">&ldquo;First time back after ten years. Sal checked my kit twice and never made me feel it.&rdquo;</p>
+        <div class="tnum" style="margin-top: 14px; font-size: 14px; font-weight: 600; color: #5c6b72;">Tom&aacute;s F. &bull; Jul 2026</div>
+      </div>
+    </div>
+    <div style="margin-top: 16px;">
+      <a class="tnum" href="#reviews" style="font-size: 15px; font-weight: 700;">83 reviews</a>
+    </div>
+  </div>
+
+  <!-- 7 — The boats -->
+  <div id="boats" style="padding: 56px 84px 0; box-sizing: border-box;">
+    <h2 class="bm-h2">The boats</h2>
+    <div style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+      <div style="display: flex; gap: 20px; background: #ffffff; border: 1px solid #e2dccf; border-radius: 16px; padding: 20px;">
+        <div class="bm-photo" style="width: 150px; height: 104px; flex: none; border-radius: 12px; background: linear-gradient(140deg, #0b1f2e 0%, #178f6a 100%);"></div>
+        <div>
+          <div style="font-size: 18px; font-weight: 700;">Mantis II</div>
+          <div class="tnum" style="margin-top: 6px; font-size: 14.5px; color: #5c6b72;">12 divers</div>
+          <p style="margin: 8px 0 0; font-size: 14.5px; line-height: 1.5; color: #0b1f2e;">Twin engines and a dedicated camera rinse tank on the stern.</p>
+        </div>
+      </div>
+      <div style="display: flex; gap: 20px; background: #ffffff; border: 1px solid #e2dccf; border-radius: 16px; padding: 20px;">
+        <div class="bm-photo" style="width: 150px; height: 104px; flex: none; border-radius: 12px; background: linear-gradient(140deg, #0b1f2e 0%, #f07d2a 100%);"></div>
+        <div>
+          <div style="font-size: 18px; font-weight: 700;">Skiff</div>
+          <div class="tnum" style="margin-top: 6px; font-size: 14.5px; color: #5c6b72;">8 divers</div>
+          <p style="margin: 8px 0 0; font-size: 14.5px; line-height: 1.5; color: #0b1f2e;">The boat that runs the night dives.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8 — Footer -->
+  <div id="about" style="margin-top: 56px; background: #0b1f2e; padding: 44px 84px 40px; box-sizing: border-box;">
+    <div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 40px; align-items: start;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <svg width="30" height="30" viewBox="0 0 34 34" fill="none" stroke="#178f6a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5.5 20.5c2.6-6.4 7.4-10.2 13.6-10.9"></path>
+            <path d="M19.1 9.6c4.4-.4 7.6 1.4 9.4 5.1"></path>
+            <path d="M28.5 14.7c-1.2 4.6-4.3 7.6-8.4 8.8"></path>
+            <path d="M8.9 15.7l1.6 3.1M12.3 13.1l1.8 3.2M16 11.3l1.7 3.3"></path>
+            <path d="M20.1 23.5c-3.1.9-5.9.2-8.2-1.8"></path>
+            <path d="M11.9 21.7l-4.6 3.6M11.9 21.7l-1 5.5"></path>
+            <circle cx="21.6" cy="12.4" r="1.5"></circle>
+            <circle cx="25.4" cy="11.6" r="1.5"></circle>
+            <path d="M22.6 10.9l1.3-2.6M26.3 10.5l2-2.1"></path>
+          </svg>
+          <span class="bm-display" style="font-size: 19px; font-weight: 700; color: #ffffff; letter-spacing: -0.015em;">Blue Mantis Divers</span>
+        </div>
+        <div class="tnum" style="margin-top: 14px; font-size: 14.5px; line-height: 1.7; color: rgba(246,241,231,.82);">
+          100 Ocean Drive, Key Largo<br>
+          +1 305 555 0142<br>
+          hello@demo.invalid
+        </div>
+      </div>
+      <div>
+        <div class="bm-label" style="color: rgba(246,241,231,.6);">Boats leave</div>
+        <div class="tnum" style="margin-top: 12px; font-size: 14.5px; line-height: 1.7; color: rgba(246,241,231,.82);">
+          Mornings at 7:00 AM<br>
+          Afternoons at 1:00 PM<br>
+          Night dives at 7:30 PM
+        </div>
+      </div>
+      <div>
+        <div class="bm-label" style="color: rgba(246,241,231,.6);">Already booked</div>
+        <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start;">
+          <a href="#find" style="font-size: 14.5px; font-weight: 600; color: #ffffff;">Find my booking</a>
+          <a href="#request" style="font-size: 14.5px; font-weight: 600; color: #ffffff;">Ask for a date</a>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 34px; padding-top: 20px; border-top: 1px solid rgba(246,241,231,.16); display: flex; align-items: center; gap: 9px;">
+      <svg width="26" height="14" viewBox="0 0 26 14" fill="none" aria-hidden="true">
+        <circle cx="4.5" cy="10" r="3.4" fill="#0e7490"></circle>
+        <circle cx="13" cy="7.6" r="2.6" fill="#5b6f77"></circle>
+        <circle cx="20.4" cy="5.2" r="1.9" fill="#ff6f61"></circle>
+      </svg>
+      <span style="font-size: 12px; color: rgba(246,241,231,.6);">Website and bookings by DiveDay</span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

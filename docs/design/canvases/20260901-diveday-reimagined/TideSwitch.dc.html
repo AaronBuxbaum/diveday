@@ -1,0 +1,303 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&amp;family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --sand: #faf9f6; --shore: #f2eee4; --paper: #ffffff; --line: #e4dfd2; --edge: #8a8577;
+      --ink: #0b2833; --muted: #5b6f77;
+      --lagoon: #0e7490; --lagoon-deep: #155e75; --openwater: #0b3a47; --foam: #eaf2f3; --lagoon-tint: #e7f1f4;
+      --coral: #ff6f61; --coral-ink: #a8362b;
+      --success: #15803d; --success-tint: #e8f2ec;
+      --warning: #b45309; --warning-tint: #f8eee6;
+      --danger: #b91c1c; --danger-tint: #f8e8e8;
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; text-decoration: none; }
+    a:hover { color: #155e75; }
+    .d { font-family: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif; font-optical-sizing: auto; letter-spacing: -0.018em; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .lab { font-size: 11.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+    .nav { display: inline-flex; align-items: center; height: 44px; padding: 0 14px; border-radius: 999px; font-size: 15px; font-weight: 500; color: var(--muted); }
+    .navcur { color: var(--ink); font-weight: 600; box-shadow: inset 0 -2px 0 0 var(--ink); border-radius: 0; }
+    .sect { font-family: 'Fraunces', 'Iowan Old Style', Georgia, serif; font-optical-sizing: auto; font-size: 34px; font-weight: 500; letter-spacing: -0.018em; line-height: 1.16; margin: 0; }
+    .pill { display: inline-flex; align-items: center; justify-content: center; min-height: 52px; padding: 0 30px; border-radius: 999px; font-size: 17px; font-weight: 600; box-sizing: border-box; white-space: nowrap; }
+    .lede { font-size: 19px; line-height: 1.55; color: var(--ink); }
+    .item { display: flex; gap: 14px; align-items: flex-start; padding: 16px 0; border-top: 1px solid var(--line); }
+    .mock { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; }
+    .mrow { display: flex; align-items: center; gap: 11px; min-height: 46px; border-top: 1px solid var(--line); }
+  </style>
+</helmet>
+
+<div style="width: 1440px; min-height: 1980px; background: var(--sand); box-sizing: border-box; overflow: hidden;">
+
+  <!-- ============ HEADER ============ -->
+  <div style="height: 76px; display: flex; align-items: center; gap: 28px; padding: 0 144px; box-sizing: border-box; border-bottom: 1px solid var(--line);">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg width="24" height="24" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+        <circle cx="6.5" cy="19" r="4.6" fill="#0e7490"></circle>
+        <circle cx="15" cy="11.5" r="3.2" fill="#0e7490"></circle>
+        <circle cx="21.2" cy="5.2" r="2.1" fill="#ff6f61"></circle>
+      </svg>
+      <span style="font-size: 18px; font-weight: 600; letter-spacing: -0.015em;">DiveDay</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px; margin-left: 12px;">
+      <span class="nav">What it does</span>
+      <span class="nav">Pricing</span>
+      <span class="nav navcur">Switching</span>
+      <span class="nav">Demo</span>
+    </div>
+    <span class="pill" style="margin-left: auto; background: var(--lagoon); color: #ffffff; min-height: 48px; font-size: 16px; padding: 0 24px;">Start your shop</span>
+  </div>
+
+  <!-- ============ HERO ============ -->
+  <div style="padding: 72px 144px 76px; box-sizing: border-box; display: flex; gap: 56px; align-items: center;">
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 24px;">
+      <p class="lab" style="margin: 0;">FareHarbor + DiveDay</p>
+      <h1 class="d" style="margin: 0; font-size: 68px; font-weight: 400; line-height: 1.02; letter-spacing: -0.03em; max-width: 13ch;">FareHarbor fills the seats. DiveDay runs the boat.</h1>
+      <p class="lede" style="margin: 0; max-width: 56ch;">Keep FareHarbor for the storefront and run the dive day it was never built for &mdash; cert checks, waivers that fail closed, and a roll call at the rail &mdash; or take the booking here too and leave the per-booking fee behind.</p>
+      <div style="display: flex; align-items: center; gap: 16px; padding-top: 4px;">
+        <span class="pill" style="background: var(--lagoon); color: #ffffff;">Start your shop</span>
+        <span class="pill" style="background: transparent; color: var(--ink); border: 1px solid var(--edge);">Open the live demo</span>
+      </div>
+      <p style="margin: 0; font-size: 16px; color: var(--muted);">One flat price &mdash; <strong style="font-weight: 600; color: var(--ink);">$99</strong> per location / month. DiveDay takes no cut of a booking.</p>
+    </div>
+    <div style="flex-shrink: 0;">
+      <svg width="420" height="300" viewBox="0 0 420 300" fill="none" aria-hidden="true">
+        <circle cx="286" cy="86" r="70" stroke="#0e7490" stroke-opacity=".18" stroke-width="1.4"></circle>
+        <circle cx="286" cy="86" r="46" stroke="#0e7490" stroke-opacity=".12" stroke-width="1.4"></circle>
+        <path d="M0 176C54 156 100 152 154 163C208 174 250 197 304 192C358 187 392 168 420 163" stroke="#0e7490" stroke-opacity=".45" stroke-width="1.6"></path>
+        <path d="M0 200C56 182 102 179 156 189C210 199 252 219 306 214C360 209 394 192 420 188" stroke="#0e7490" stroke-opacity=".3" stroke-width="1.6"></path>
+        <path d="M0 224C58 208 104 205 158 214C212 223 254 240 308 236C362 232 396 217 420 213" stroke="#0e7490" stroke-opacity=".18" stroke-width="1.6"></path>
+        <path d="M0 248C60 234 106 231 160 239C214 247 256 261 310 257" stroke="#0e7490" stroke-opacity=".1" stroke-width="1.6"></path>
+        <circle cx="108" cy="128" r="11" stroke="#0e7490" stroke-opacity=".5" stroke-width="1.3"></circle>
+        <circle cx="129" cy="98" r="7.2" stroke="#0e7490" stroke-opacity=".42" stroke-width="1.3"></circle>
+        <circle cx="145" cy="74" r="4.4" fill="#ff6f61" fill-opacity=".6"></circle>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ============ THE HONEST COMPARISON ============ -->
+  <div style="background: var(--shore); padding: 64px 144px 68px; box-sizing: border-box; display: flex; flex-direction: column; gap: 34px;">
+    <h2 class="sect" style="max-width: 22ch;">What it does, and what it hands back to you.</h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 56px;">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <p class="lab" style="margin: 0 0 8px;">What FareHarbor does well</p>
+        <div class="item">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#15803d" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 3px;"><path d="M4 10.4l4 4 8-8.4"></path></svg>
+          <span style="font-size: 16.5px;">Guests book and pay online on a page that works, and you never touch a card machine for it.</span>
+        </div>
+        <div class="item">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#15803d" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 3px;"><path d="M4 10.4l4 4 8-8.4"></path></svg>
+          <span style="font-size: 16.5px;">Its distribution network puts your trips in front of hotels, concierges and resellers you would never reach on your own. DiveDay has no equivalent and will not pretend to.</span>
+        </div>
+        <div class="item" style="border-bottom: 1px solid var(--line);">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#15803d" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 3px;"><path d="M4 10.4l4 4 8-8.4"></path></svg>
+          <span style="font-size: 16.5px;">Nothing to pay monthly.</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <p class="lab" style="margin: 0 0 8px;">What it leaves on the clipboard</p>
+        <div class="item">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#5b6f77" stroke-width="1.7" stroke-linecap="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 3px;"><circle cx="10" cy="10" r="7.4"></circle><path d="M6.4 10h7.2"></path></svg>
+          <span style="font-size: 16.5px;">No certification record. A tours booking engine has no concept of one, so the level a diver holds lives wherever you last wrote it down.</span>
+        </div>
+        <div class="item">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#5b6f77" stroke-width="1.7" stroke-linecap="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 3px;"><circle cx="10" cy="10" r="7.4"></circle><path d="M6.4 10h7.2"></path></svg>
+          <span style="font-size: 16.5px;">No dive-medical waiver that fails closed &mdash; nothing that keeps an unsigned diver off the boat rather than merely noting it.</span>
+        </div>
+        <div class="item">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#5b6f77" stroke-width="1.7" stroke-linecap="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 3px;"><circle cx="10" cy="10" r="7.4"></circle><path d="M6.4 10h7.2"></path></svg>
+          <span style="font-size: 16.5px;">Its manifest is a passenger list you can download. It is not a roll call you run at the rail, twice, in the sun.</span>
+        </div>
+        <div class="item" style="border-bottom: 1px solid var(--line);">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#5b6f77" stroke-width="1.7" stroke-linecap="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 3px;"><circle cx="10" cy="10" r="7.4"></circle><path d="M6.4 10h7.2"></path></svg>
+          <span style="font-size: 16.5px;">No rental fit, so the sizes each diver takes stay in your head or on a whiteboard.</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 56px; padding-top: 6px;">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <p class="lab" style="margin: 0;">The fee</p>
+        <p class="d" style="margin: 0; font-size: 25px; font-weight: 400; line-height: 1.36;">FareHarbor publishes no rate at all. Nothing monthly &mdash; instead a fee on every booking, added to your guest&#8217;s checkout price, for as long as you use it.</p>
+        <p style="margin: 0; font-size: 15px; color: var(--muted);">FareHarbor doesn&#8217;t publish the number; you hear it on a sales call. Third parties report it at around 6%.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <p class="lab" style="margin: 0;">Ours</p>
+        <p class="d" style="margin: 0; font-size: 25px; font-weight: 400; line-height: 1.36;">DiveDay takes no cut of a booking. Checkout runs through your own Stripe account, and what you pay us is the same number in a busy August as in a quiet January.</p>
+        <p style="margin: 0; font-size: 15px; color: var(--muted);">$99 per location / month, all of it, every feature. No setup fee, no per-seat maths.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PROOF ============ -->
+  <div style="padding: 68px 144px 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 30px;">
+    <div style="display: flex; align-items: flex-end; gap: 40px;">
+      <h2 class="sect" style="max-width: 20ch;">The three screens a booking engine hasn&#8217;t got.</h2>
+      <p style="margin: 0 0 6px; font-size: 16px; color: var(--muted); max-width: 40ch;">Everything below is a real DiveDay surface from a demo shop&#8217;s Thursday. You can open the same shop yourself.</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;">
+
+      <!-- cert check -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="mock">
+          <p class="lab" style="margin: 0;">Certification</p>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 17px; font-weight: 600;">Grace Mensah</span>
+            <span class="tnum" style="font-size: 14px; color: var(--muted);">PADI Open Water &middot; card 1907C24118</span>
+          </div>
+          <span style="display: inline-flex; align-self: flex-start; align-items: center; gap: 7px; border-radius: 999px; padding: 7px 14px; font-size: 14px; font-weight: 600; background: var(--danger-tint); color: var(--danger);">
+            <svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="#b91c1c" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6.2 6.2l5.6 5.6M11.8 6.2l-5.6 5.6"></path></svg>Blocked &mdash; not verified</span>
+          <p style="margin: 0; font-size: 15px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px;">Molasses &amp; French needs Open Water or above. She cannot be added to the manifest until someone looks at the card.</p>
+        </div>
+        <p style="margin: 0; font-size: 15px; color: var(--muted);">A certification is a record with an agency, a level and a number &mdash; and the trip knows what it requires.</p>
+      </div>
+
+      <!-- waivers -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="mock">
+          <p class="lab" style="margin: 0;">Waivers &middot; 7:00 AM boat</p>
+          <div style="display: flex; flex-direction: column;">
+            <div class="mrow" style="border-top: none;">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#b45309" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 2.6L16.4 15H1.6L9 2.6z"></path><path d="M9 7.3v3.2"></path></svg>
+              <span style="flex: 1; font-size: 16px; font-weight: 600;">Priya Sharma</span>
+              <span style="font-size: 14px; font-weight: 600; color: var(--warning);">Not sent</span>
+            </div>
+            <div class="mrow">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M3.6 9.4l3.4 3.4L14.4 5.2"></path></svg>
+              <span style="flex: 1; font-size: 16px;">Ines Costa</span>
+              <span class="tnum" style="font-size: 14px; color: var(--muted);">Signed 6:02 AM</span>
+            </div>
+            <div class="mrow">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M3.6 9.4l3.4 3.4L14.4 5.2"></path></svg>
+              <span style="flex: 1; font-size: 16px;">Omar Haddad</span>
+              <span style="font-size: 14px; color: var(--muted);">Signed Tuesday</span>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 15px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px;">Unsigned means not aboard. The dock doesn&#8217;t argue about it.</p>
+        </div>
+        <p style="margin: 0; font-size: 15px; color: var(--muted);">Sent by text or email before arrival, signed on a phone, stored against the diver and the booking. No printer anywhere.</p>
+      </div>
+
+      <!-- manifest -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="mock">
+          <div style="display: flex; align-items: flex-start; gap: 14px;">
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+              <p class="lab" style="margin: 0;">Roll call &middot; Mantis II</p>
+              <p class="tnum" style="margin: 0; font-size: 40px; font-weight: 700; line-height: 1; letter-spacing: -0.02em;">10<span style="font-size: 16px; font-weight: 600; color: var(--muted);">&nbsp;of 10</span></p>
+              <p style="margin: 2px 0 0; font-size: 15px; font-weight: 600; color: var(--coral-ink);">Everyone&#8217;s aboard.</p>
+            </div>
+            <svg width="46" height="80" viewBox="0 0 46 80" fill="none" aria-hidden="true" style="flex-shrink: 0;">
+              <circle cx="13" cy="66" r="7" stroke="#0e7490" stroke-opacity=".5" stroke-width="1.2" fill="#0e7490" fill-opacity=".14"></circle>
+              <circle cx="25" cy="41" r="5" stroke="#0e7490" stroke-opacity=".55" stroke-width="1.2" fill="#0e7490" fill-opacity=".18"></circle>
+              <circle cx="34" cy="17" r="3.6" fill="#ff6f61"></circle>
+              <path d="M16 57c3-5 5-8 6-11" stroke="#0e7490" stroke-opacity=".26" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 4"></path>
+              <path d="M28 34c2-5 4-8 5-11" stroke="#0e7490" stroke-opacity=".26" stroke-width="1" stroke-linecap="round" stroke-dasharray="2 4"></path>
+            </svg>
+          </div>
+          <div style="display: flex; flex-direction: column;">
+            <div class="mrow">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M3.6 9.4l3.4 3.4L14.4 5.2"></path></svg>
+              <span style="flex: 1; font-size: 16px;">Sam Whitfield</span>
+              <span style="font-size: 14px; color: var(--muted);">Aboard</span>
+            </div>
+            <div class="mrow">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M3.6 9.4l3.4 3.4L14.4 5.2"></path></svg>
+              <span style="flex: 1; font-size: 16px;">Tom Okafor</span>
+              <span style="font-size: 14px; color: var(--muted);">Aboard</span>
+            </div>
+          </div>
+          <p style="margin: 0; font-size: 15px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px;">Works with no signal. Counted again after every dive.</p>
+        </div>
+        <p style="margin: 0; font-size: 15px; color: var(--muted);">A safety document first and a screen second: big targets, high contrast, and a count that has to be right.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============ THE HUMAN MOVE ============ -->
+  <div style="margin-top: 72px; background: var(--openwater); padding: 62px 144px 66px; box-sizing: border-box; display: flex; gap: 64px; align-items: flex-start;">
+    <div style="flex: 1.15; display: flex; flex-direction: column; gap: 20px;">
+      <p style="margin: 0; font-size: 11.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #9dc3ce;">Moving your divers over</p>
+      <h2 class="d" style="margin: 0; font-size: 40px; font-weight: 400; line-height: 1.12; color: var(--sand); max-width: 18ch;">Send us the file. A person brings your divers in with you, free.</h2>
+      <p style="margin: 0; font-size: 18px; line-height: 1.55; color: #cfe0e4; max-width: 52ch;">Run the Contacts report out of your FareHarbor dashboard, then the Bookings report over the same dates, and mail us both. Someone here sits with the columns, maps them to your shop, and shows you exactly what landed where before anything is saved. If DiveDay is ever not right for you, the same person helps you carry it all back out.</p>
+      <p style="margin: 0; font-size: 17px; color: var(--sand); font-weight: 600;">switch@dive.day</p>
+    </div>
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 0; padding-top: 6px;">
+      <div style="display: flex; gap: 12px; align-items: flex-start; padding: 16px 0; border-top: 1px solid rgba(250,249,246,.18);">
+        <svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="#8fd3e3" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 3px;"><path d="M4 10.4l4 4 8-8.4"></path></svg>
+        <span style="font-size: 16.5px; color: #e4eef0;">Your people come across: names, email, phone, and any emergency contact FareHarbor holds.</span>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: flex-start; padding: 16px 0; border-top: 1px solid rgba(250,249,246,.18);">
+        <svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="#8fd3e3" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 3px;"><path d="M4 10.4l4 4 8-8.4"></path></svg>
+        <span style="font-size: 16.5px; color: #e4eef0;">So do their bookings, so a regular arrives with a visit history instead of as a new name.</span>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: flex-start; padding: 16px 0; border-top: 1px solid rgba(250,249,246,.18); border-bottom: 1px solid rgba(250,249,246,.18);">
+        <svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="#9dc3ce" stroke-width="1.7" stroke-linecap="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 3px;"><circle cx="10" cy="10" r="7.4"></circle><path d="M6.4 10h7.2"></path></svg>
+        <span style="font-size: 16.5px; color: #cfe0e4;">Certifications and rental sizes don&#8217;t, because FareHarbor never held them. You build those as divers arrive &mdash; and that is the whole point of the move.</span>
+      </div>
+      <p style="margin: 18px 0 0; font-size: 15px; color: #9dc3ce;">Your records stay yours either way: every diver, booking, signed waiver and payment downloads as documented CSVs from Settings, on any day including the first.</p>
+    </div>
+  </div>
+
+  <!-- ============ A SHOP'S OWN WORDS (placeholder) ============ -->
+  <div style="padding: 56px 144px 0; box-sizing: border-box;">
+    <div style="border: 1.5px dashed var(--edge); border-radius: 16px; padding: 28px 32px; display: flex; gap: 24px; align-items: center;">
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+        <p class="lab" style="margin: 0;">Placeholder &mdash; not for publication</p>
+        <p class="d" style="margin: 0; font-size: 24px; font-weight: 400; line-height: 1.35; color: var(--muted);">[SHOP QUOTE &mdash; a founding shop, in its own words, once one has run a full season on DiveDay. Nothing goes here until then.]</p>
+      </div>
+      <p style="margin: 0; font-size: 15px; color: var(--muted); max-width: 24ch;">[SHOP NAME, TOWN] &middot; [ROLE OF THE PERSON QUOTED]</p>
+    </div>
+  </div>
+
+  <!-- ============ CLOSE ============ -->
+  <div style="padding: 64px 144px 0; box-sizing: border-box; display: flex; gap: 56px; align-items: center;">
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 18px;">
+      <h2 class="sect" style="font-size: 40px; max-width: 18ch;">Keep the storefront, or keep the fee. Not both.</h2>
+      <p class="lede" style="margin: 0; max-width: 52ch;">Run DiveDay beside FareHarbor and the dive day stops living on a clipboard. Point your booking link here instead and the per-booking fee stops with it. Either way your divers come across once, with a person beside you.</p>
+      <div style="display: flex; align-items: center; gap: 16px; padding-top: 2px;">
+        <span class="pill" style="background: var(--lagoon); color: #ffffff;">Start your shop</span>
+        <span style="font-size: 16px; color: var(--muted);">$99 per location / month &middot; free for 3 weeks, no card</span>
+      </div>
+    </div>
+    <div style="flex-shrink: 0;">
+      <svg width="300" height="150" viewBox="0 0 300 150" fill="none" aria-hidden="true">
+        <path d="M0 78C40 62 74 59 114 68C154 77 184 96 224 92C264 88 282 74 300 70" stroke="#0e7490" stroke-opacity=".4" stroke-width="1.5"></path>
+        <path d="M0 98C42 84 76 81 116 89C156 97 186 113 226 109C266 105 284 92 300 89" stroke="#0e7490" stroke-opacity=".24" stroke-width="1.5"></path>
+        <path d="M0 118C44 106 78 103 118 110C158 117 188 130 228 126" stroke="#0e7490" stroke-opacity=".12" stroke-width="1.5"></path>
+        <circle cx="70" cy="42" r="8" stroke="#0e7490" stroke-opacity=".45" stroke-width="1.3"></circle>
+        <circle cx="86" cy="24" r="5" stroke="#0e7490" stroke-opacity=".35" stroke-width="1.3"></circle>
+        <circle cx="98" cy="11" r="3.2" fill="#ff6f61" fill-opacity=".6"></circle>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ============ FOOTER ============ -->
+  <div style="margin-top: 60px; border-top: 1px solid var(--line); padding: 28px 144px 40px; box-sizing: border-box; display: flex; align-items: center; gap: 24px;">
+    <div style="display: flex; align-items: center; gap: 9px;">
+      <svg width="20" height="20" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+        <circle cx="6.5" cy="19" r="4.6" fill="#5b6f77"></circle>
+        <circle cx="15" cy="11.5" r="3.2" fill="#5b6f77"></circle>
+        <circle cx="21.2" cy="5.2" r="2.1" fill="#ff6f61"></circle>
+      </svg>
+      <span style="font-size: 15px; color: var(--muted);">DiveDay &mdash; a calmer way to run a dive day</span>
+    </div>
+    <span style="margin-left: auto; font-size: 15px; color: var(--muted);">Questions before you move? Write to support@dive.day and a real person reads it.</span>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

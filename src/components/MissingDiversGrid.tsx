@@ -124,7 +124,7 @@ export function MissingDiversGrid({
               className="group flex max-w-20 cursor-pointer flex-col items-center text-center transition-transform active:scale-95"
             >
               <div
-                className={`flex h-14 w-14 items-center justify-center rounded-full border-2 text-lg font-black shadow-sm ${colorClass} transition-transform group-hover:scale-105`}
+                className={`flex h-14 w-14 items-center justify-center rounded-full border-2 text-lg font-black ${colorClass} transition-transform group-hover:scale-105`}
               >
                 {getInitials(diver.fullName)}
               </div>

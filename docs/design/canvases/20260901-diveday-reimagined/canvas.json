@@ -1,0 +1,282 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Three directions \u2014 read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 760,
+      "page": "page-1"
+    },
+    {
+      "file": "TideSystem.dc.html",
+      "title": "Tide \u2014 the system",
+      "x": 0,
+      "y": 900,
+      "w": 1180,
+      "h": 2400,
+      "page": "page-1"
+    },
+    {
+      "file": "DeckSystem.dc.html",
+      "title": "Deck \u2014 the system",
+      "x": 1560,
+      "y": 900,
+      "w": 1180,
+      "h": 2400,
+      "page": "page-1"
+    },
+    {
+      "file": "ReefSystem.dc.html",
+      "title": "Reef \u2014 the system",
+      "x": 3120,
+      "y": 900,
+      "w": 1180,
+      "h": 2400,
+      "page": "page-1"
+    },
+    {
+      "file": "TideHome.dc.html",
+      "title": "Tide \u2014 the shop home, morning",
+      "x": 0,
+      "y": 3440,
+      "w": 1440,
+      "h": 1500,
+      "page": "page-1"
+    },
+    {
+      "file": "DeckHome.dc.html",
+      "title": "Deck \u2014 the shop home, morning",
+      "x": 1560,
+      "y": 3440,
+      "w": 1440,
+      "h": 1500,
+      "page": "page-1"
+    },
+    {
+      "file": "ReefHome.dc.html",
+      "title": "Reef \u2014 the shop home, morning",
+      "x": 3120,
+      "y": 3440,
+      "w": 1440,
+      "h": 1500,
+      "page": "page-1"
+    },
+    {
+      "file": "TideStorefront.dc.html",
+      "title": "Tide \u2014 the storefront",
+      "x": 0,
+      "y": 5080,
+      "w": 1440,
+      "h": 1700,
+      "page": "page-1"
+    },
+    {
+      "file": "DeckStorefront.dc.html",
+      "title": "Deck \u2014 the storefront",
+      "x": 1560,
+      "y": 5080,
+      "w": 1440,
+      "h": 1700,
+      "page": "page-1"
+    },
+    {
+      "file": "ReefStorefront.dc.html",
+      "title": "Reef \u2014 the storefront",
+      "x": 3120,
+      "y": 5080,
+      "w": 1440,
+      "h": 1700,
+      "page": "page-1"
+    },
+    {
+      "file": "TideSwitch.dc.html",
+      "title": "Tide \u2014 leaving FareHarbor",
+      "x": 0,
+      "y": 6920,
+      "w": 1440,
+      "h": 1900,
+      "page": "page-1"
+    },
+    {
+      "file": "DeckSwitch.dc.html",
+      "title": "Deck \u2014 leaving FareHarbor",
+      "x": 1560,
+      "y": 6920,
+      "w": 1440,
+      "h": 1900,
+      "page": "page-1"
+    },
+    {
+      "file": "ReefSwitch.dc.html",
+      "title": "Reef \u2014 leaving FareHarbor",
+      "x": 3120,
+      "y": 6920,
+      "w": 1440,
+      "h": 1900,
+      "page": "page-1"
+    },
+    {
+      "file": "Round2.dc.html",
+      "title": "Round two \u2014 read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 1700,
+      "page": "page-2"
+    },
+    {
+      "file": "HarborSystem.dc.html",
+      "title": "Harbor \u2014 the system",
+      "x": 1260,
+      "y": 0,
+      "w": 1180,
+      "h": 2400,
+      "page": "page-2"
+    },
+    {
+      "file": "HarborStorefront.dc.html",
+      "title": "Harbor \u2014 the storefront as the shop's website",
+      "x": 0,
+      "y": 2560,
+      "w": 1440,
+      "h": 2220,
+      "page": "page-2"
+    },
+    {
+      "file": "EmbedLightbox.dc.html",
+      "title": "Embed \u2014 the sheet over the shop's site",
+      "x": 1560,
+      "y": 2560,
+      "w": 1440,
+      "h": 1500,
+      "page": "page-2"
+    },
+    {
+      "file": "EmbedPhone.dc.html",
+      "title": "Embed \u2014 on a phone",
+      "x": 3120,
+      "y": 2560,
+      "w": 900,
+      "h": 980,
+      "page": "page-2"
+    },
+    {
+      "file": "EmbedCalendar.dc.html",
+      "title": "Embed \u2014 the inline calendar",
+      "x": 0,
+      "y": 4920,
+      "w": 1440,
+      "h": 1330,
+      "page": "page-2"
+    },
+    {
+      "file": "EmbedGrid.dc.html",
+      "title": "Embed \u2014 grid, courses, one departure",
+      "x": 1560,
+      "y": 4920,
+      "w": 1440,
+      "h": 1530,
+      "page": "page-2"
+    },
+    {
+      "file": "EmbedGenerator.dc.html",
+      "title": "Settings \u2014 the embed generator",
+      "x": 0,
+      "y": 6600,
+      "w": 1440,
+      "h": 1880,
+      "page": "page-2"
+    },
+    {
+      "file": "HarborSwitch.dc.html",
+      "title": "Leaving FareHarbor \u2014 the website half",
+      "x": 1560,
+      "y": 6600,
+      "w": 1440,
+      "h": 1560,
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "row-systems",
+      "x": -320,
+      "y": 900,
+      "w": 260,
+      "text": "Row 1 \u2014 the system\nFaces, palette, spacing, the core components, and the three wow moments each direction bets on.",
+      "page": "page-1"
+    },
+    {
+      "id": "row-home",
+      "x": -320,
+      "y": 3440,
+      "w": 260,
+      "text": "Row 2 \u2014 the staff home\nBlue Mantis Divers, Thursday Aug 27, morning. Same three departures and open work on every board.",
+      "page": "page-1"
+    },
+    {
+      "id": "row-storefront",
+      "x": -320,
+      "y": 5080,
+      "w": 260,
+      "text": "Row 3 \u2014 the storefront\nThe public page a diver books from. One primary action.",
+      "page": "page-1"
+    },
+    {
+      "id": "row-switch",
+      "x": -320,
+      "y": 6920,
+      "w": 260,
+      "text": "Row 4 \u2014 leaving FareHarbor\nThe page a shop reads when it is deciding. Only claims the demo can do today.",
+      "page": "page-1"
+    },
+    {
+      "id": "r2-row-a",
+      "x": -320,
+      "y": 0,
+      "w": 260,
+      "page": "page-2",
+      "text": "Page 2 \u2014 their brand, not ours\nStart with the cover. Harbor's system sheet beside it: what the shop owns, what DiveDay keeps."
+    },
+    {
+      "id": "r2-row-b",
+      "x": -320,
+      "y": 2560,
+      "w": 260,
+      "page": "page-2",
+      "text": "Row 2 \u2014 the diver never leaves the shop\nThe storefront as the shop's website, and the booking sheet over the shop's own site, desktop and phone."
+    },
+    {
+      "id": "r2-row-c",
+      "x": -320,
+      "y": 4920,
+      "w": 260,
+      "page": "page-2",
+      "text": "Row 3 \u2014 the inline embeds\nCalendar, grid, courses list, one-departure card, each inheriting the host page."
+    },
+    {
+      "id": "r2-row-d",
+      "x": -320,
+      "y": 6600,
+      "w": 260,
+      "page": "page-2",
+      "text": "Row 4 \u2014 how a shop gets it\nThe generator in Settings, and the website half of the FareHarbor page. Proposed where it says so."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-2"
+  },
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Three directions"
+    },
+    {
+      "id": "page-2",
+      "name": "Their brand, not ours"
+    }
+  ]
+}

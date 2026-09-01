@@ -4,12 +4,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { FilterChips } from "@/components/ui/FilterChips";
-import { controlClass } from "@/components/ui/form";
+import { SearchField } from "@/components/ui/form";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { DiverFilter } from "@/db/divers";
 import { groupByLetter } from "@/lib/roster-rows";
@@ -326,21 +325,16 @@ export function DiverList({
           phone moved the box under the thumb typing into it (#781). */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex w-full max-w-full flex-wrap items-center gap-2 sm:w-auto">
-          <div className="w-full min-w-0 sm:w-80">
-            <label className="sr-only" htmlFor="diver-search">
-              {copy.searchDiversLabel}
-            </label>
-            <input
-              ref={searchRef}
-              id="diver-search"
-              type="search"
-              value={typed}
-              onChange={(event) => search(event.target.value)}
-              onKeyDown={submitSearch}
-              placeholder={copy.searchPlaceholder}
-              className={`${controlClass} min-w-0`}
-            />
-          </div>
+          <SearchField
+            ref={searchRef}
+            id="diver-search"
+            label={copy.searchDiversLabel}
+            value={typed}
+            onChange={(event) => search(event.target.value)}
+            onKeyDown={submitSearch}
+            placeholder={copy.searchPlaceholder}
+            className="w-full min-w-0 sm:w-80"
+          />
           {/* One offer, two doors, and deliberately the same words on both so
               the swap on the first keystroke is invisible. With something
               typed, one tap creates that person and lands on their record.
@@ -461,11 +455,6 @@ export function DiverList({
                         {row.fact ? (
                           <div className="mt-1 flex min-w-0 shrink-0 items-center gap-2 text-sm text-muted tabular-nums sm:mt-0 sm:max-w-[45%]">
                             <span className="min-w-0 truncate">{row.fact}</span>
-                            <DiveDayIcon
-                              name="chevron-right"
-                              className="size-4 shrink-0"
-                              aria-hidden="true"
-                            />
                           </div>
                         ) : null}
                       </div>

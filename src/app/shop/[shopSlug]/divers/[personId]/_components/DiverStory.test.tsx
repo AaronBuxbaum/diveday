@@ -211,10 +211,10 @@ describe("the story's bounds and its foot", () => {
    */
   it("offers the invoice door only when the shop can take money", () => {
     renderStory(diver({ bookings: [AHEAD] }), false);
-    expect(screen.queryByRole("link", { name: "+ New invoice" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "New invoice" })).toBeNull();
     cleanup();
     renderStory(diver({ bookings: [AHEAD] }), true);
-    expect(screen.getByRole("link", { name: "+ New invoice" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "New invoice" })).toHaveAttribute(
       "href",
       "/shop/reef-shop/orders/new?personId=person-1",
     );

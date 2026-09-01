@@ -2,7 +2,6 @@
   "list": {
     "eyebrow": "Catalog",
     "title": "Courses",
-    "description": "Your shop copy of the PADI and SSI catalog. Open a course to edit its page and pricing, or hide the ones you don't offer.",
     "hidden": "Hidden",
     "orHigher": "{level} or higher",
     "openToUncertified": "Open to uncertified divers",

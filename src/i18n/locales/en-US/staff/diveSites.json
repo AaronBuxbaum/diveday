@@ -2,8 +2,7 @@
   "backToLibrary": "← Dive-site library",
   "list": {
     "title": "Dive-site library",
-    "description": "Save a place once, then attach it to any dive on any trip.",
-    "createSite": "Create a site",
+    "createSite": "Add a dive site",
     "browseTemplates": "Browse the DiveDay catalog",
     "catalogSiteCount": "{count, plural, one {# published site} other {# published sites}}",
     "siteDeletedNotice": "Site deleted.",
@@ -13,7 +12,6 @@
     "searchAriaLabel": "Search the dive-site library",
     "searchLabel": "Find a site",
     "searchPlaceholder": "Name or location",
-    "searchApply": "Search",
     "searchClear": "Clear search",
     "noMatchHeading": "No sites match that search",
     "templateUpdateReady": "Template update v{version} ready.",

@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    body { margin: 0; font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; color: #0c2a35; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #155e75; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: #0e7490; margin: 0; }
+    .lede { font-size: 17px; line-height: 1.5; color: #5b6f77; margin: 0; }
+    .dir-name { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+    .dir-axis { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; margin: 0; }
+    .dir-body { font-size: 15px; line-height: 1.5; color: #0c2a35; margin: 0; }
+    .dir-trade { font-size: 14px; line-height: 1.5; color: #5b6f77; margin: 0; }
+    .how { font-size: 14px; line-height: 1.55; color: #5b6f77; margin: 0; }
+  </style>
+</helmet>
+<div style="width: 1180px; min-height: 760px; background: #faf9f6; box-sizing: border-box; overflow: hidden; padding: 56px 60px;">
+
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 40px;">
+    <div style="max-width: 720px; display: flex; flex-direction: column; gap: 14px;">
+      <p class="eyebrow">DiveDay, reimagined · 2026-09-01</p>
+      <h1 style="margin: 0; font-size: 44px; font-weight: 700; letter-spacing: -0.028em; line-height: 1.04;">Three directions for the whole product.</h1>
+      <p class="lede">Nothing here is normative. Each direction redraws the same four surfaces for the same shop on the same day — a design system, the staff home, the public storefront, and the page a shop reads when it is leaving FareHarbor — so they compare like for like. Pick one; the pick becomes an ADR, and the ADR is what code obeys.</p>
+    </div>
+    <svg aria-hidden="true" viewBox="0 0 64 64" width="64" height="64" fill="none" style="flex-shrink: 0; margin-top: 8px;">
+      <circle cx="22" cy="44" r="12" stroke="#0c2a35" stroke-width="2.5"></circle>
+      <circle cx="40" cy="26" r="8" stroke="#0c2a35" stroke-width="2.5"></circle>
+      <circle cx="52" cy="12" r="4.5" fill="#ff6f61"></circle>
+    </svg>
+  </div>
+
+  <div style="margin-top: 48px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 36px;">
+
+    <div style="display: flex; flex-direction: column; gap: 12px; padding-top: 18px; border-top: 3px solid #0e7490;">
+      <p class="dir-axis" style="color: #0e7490;">Direction A · Editorial daylight</p>
+      <p class="dir-name">Tide</p>
+      <p class="dir-body">The calm-luxury reading of the brand. Big, confident display type, generous white space, sunlit sand and lagoon, drawn water forms instead of photographs. The wow is restraint plus one perfect earned moment.</p>
+      <p class="dir-trade">Tradeoff: restraint asks the most of every sentence and every gap; a dense morning at the counter has to stay legible without leaning on chrome.</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px; padding-top: 18px; border-top: 3px solid #0c2a35;">
+      <p class="dir-axis" style="color: #0c2a35;">Direction B · The instrument</p>
+      <p class="dir-name">Deck</p>
+      <p class="dir-body">The product speaks the grammar of the boat's own instruments. Large tabular figures lead every surface, dark-at-depth is the default scheme, structure is hairline and dense. The wow is speed and legibility on a wet deck.</p>
+      <p class="dir-trade">Tradeoff: precision can read as cold to a diver booking a holiday; the storefront has to be warmer than the console without becoming a second product.</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px; padding-top: 18px; border-top: 3px solid #ff6f61;">
+      <p class="dir-axis" style="color: #c2473b;">Direction C · Warm and alive</p>
+      <p class="dir-name">Reef</p>
+      <p class="dir-body">The joyful reading. A fuller lagoon-to-coral range used with intent, soft forms, a line-drawn reef and its creatures as a real illustration system, moments that feel like a good day on the water.</p>
+      <p class="dir-trade">Tradeoff: personality drifts toward mascot; the safety surfaces must stay exact and the illustration rule must say where a drawing may never appear.</p>
+    </div>
+
+  </div>
+
+  <div style="margin-top: 52px; padding-top: 24px; border-top: 1px solid #e3e0d7; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px;">
+    <p class="how"><strong style="color: #0c2a35;">How to read the canvas.</strong> One row per surface, one column per direction. The system sheet names the faces, the palette and the components; the three product boards apply them to Blue Mantis Divers on Thursday, August 27 — the same departures, the same open work, the same people on every board.</p>
+    <p class="how"><strong style="color: #0c2a35;">What every direction keeps.</strong> The name, the bubble mark, the divemaster's voice, the dock test (44px targets, readable in glare, never colour alone for a status), and the claims policy: nothing on a marketing board that the demo cannot do today.</p>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

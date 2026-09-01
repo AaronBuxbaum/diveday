@@ -1,0 +1,466 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --bg: #04121a; --surface: #0a1e29; --sunken: #020c12;
+      --rule: #173442; --rule-hi: #2c5568;
+      --ink: #eaf4f6; --dim: #93aeb7;
+      --lagoon: #22d3ee; --lagoon-hi: #67e8f9;
+      --coral: #ff8a7e; --ok: #3dd68c; --warn: #f0b429; --stop: #ff6b6b;
+    }
+    body { margin: 0; background: #04121a; color: #eaf4f6; font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+    a { color: #22d3ee; text-decoration: none; }
+    a:hover { color: #67e8f9; }
+    .mono { font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .lbl { font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); }
+    .fig { font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-variant-numeric: tabular-nums; font-weight: 600; letter-spacing: -0.02em; line-height: 1; }
+    .spec { font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+    .h2 { font-size: 21px; font-weight: 600; letter-spacing: -0.015em; margin: 0; }
+    .note { font-size: 14px; color: var(--dim); margin: 0; max-width: 760px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 48px; padding: 0 22px; border-radius: 3px; font-size: 16px; font-weight: 600; background: var(--lagoon); color: #04121a; border: 1px solid var(--lagoon); box-sizing: border-box; }
+    .btn2 { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 48px; padding: 0 22px; border-radius: 3px; font-size: 16px; font-weight: 500; background: transparent; color: var(--ink); border: 1px solid var(--rule-hi); box-sizing: border-box; }
+    .act { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 16px; border-radius: 3px; font-size: 16px; font-weight: 500; color: var(--ink); border: 1px solid var(--rule-hi); background: transparent; box-sizing: border-box; flex: none; }
+    .row { display: flex; align-items: center; gap: 16px; min-height: 52px; border-top: 1px solid var(--rule); }
+    .kind { font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; width: 92px; flex: none; }
+    .cell { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; box-sizing: border-box; }
+    .sw { border-radius: 4px; border: 1px solid rgba(255,255,255,.09); box-sizing: border-box; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; min-height: 2430px; background: #04121a; box-sizing: border-box; overflow: hidden;">
+<div style="padding: 56px 56px 64px; box-sizing: border-box; display: flex; flex-direction: column; gap: 58px;">
+
+  <!-- ============ HEADER ============ -->
+  <div style="display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+        <circle cx="8" cy="18.5" r="4.4" stroke="#22d3ee" stroke-width="1.6"></circle>
+        <circle cx="16" cy="11" r="3" stroke="#22d3ee" stroke-width="1.6"></circle>
+        <circle cx="20.6" cy="5.4" r="1.9" fill="#ff8a7e"></circle>
+      </svg>
+      <span class="lbl" style="color: var(--lagoon);">DiveDay &middot; design direction</span>
+      <span class="lbl">02 of 03 &middot; 1 Sep 2026</span>
+    </div>
+    <h1 style="margin: 0; font-size: 58px; font-weight: 600; letter-spacing: -0.035em; line-height: 1;">Deck<span style="color: var(--lagoon);">.</span></h1>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; max-width: 1000px;">
+      <p style="margin: 0; font-size: 16px; line-height: 1.5;">The whole product speaks the grammar of the boat&#8217;s own instruments: figures first, hairlines for structure, nothing decorative on the glass.</p>
+      <p style="margin: 0; font-size: 16px; line-height: 1.5;">Dark at depth is the default, because the shop reads this at 6 AM on a dock and at 11 PM on a night boat. Sunlit is the alternate, not an afterthought.</p>
+      <p style="margin: 0; font-size: 16px; line-height: 1.5;">Dense, never cluttered. Every pixel spent buys a fact a staffer would otherwise have to go and find.</p>
+    </div>
+  </div>
+
+  <!-- ============ THE RULE OF THE READOUT ============ -->
+  <div style="display: flex; flex-direction: column; gap: 20px;">
+    <p class="h2">Every surface leads with its number.</p>
+    <p class="note">The count is not a statistic on a screen &mdash; it is the answer the person came for, so it is the largest object in the frame and it is set in the data face with tabular figures. Beside it, always, the word that says what it counts and the state that says whether it is right.</p>
+    <div style="display: grid; grid-template-columns: 340px 1fr; gap: 32px; align-items: stretch;">
+      <div class="cell" style="padding: 24px 26px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <span class="lbl">Aboard</span>
+          <span class="lbl" style="margin-left: auto; color: var(--lagoon);">T&#8722;00:48</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <span class="fig" style="font-size: 76px;">10</span>
+          <span class="fig" style="font-size: 30px; color: var(--dim);">/&#8202;12</span>
+          <span class="lbl" style="margin-left: auto;">2 seats</span>
+        </div>
+        <div style="height: 6px; background: var(--sunken); border-radius: 2px; display: flex;">
+          <div style="width: 83%; background: var(--rule-hi); border-radius: 2px;"></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 9px; border-top: 1px solid var(--rule); padding-top: 14px;">
+          <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="#ff6b6b" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="9" r="7.1"></circle><path d="M6.3 6.3l5.4 5.4M11.7 6.3l-5.4 5.4"></path></svg>
+          <span class="lbl" style="color: var(--stop);">2 blocked</span>
+          <span style="font-size: 14px; color: var(--dim);">cert, waiver</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 0; justify-content: center;">
+        <div style="display: flex; align-items: baseline; gap: 20px; padding: 14px 0; border-top: 1px solid var(--rule);">
+          <span class="fig" style="font-size: 24px; width: 120px;">76 / 30 px</span>
+          <span class="spec">the readout and its denominator &mdash; one pair per surface, never two competing</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 20px; padding: 14px 0; border-top: 1px solid var(--rule);">
+          <span class="fig" style="font-size: 24px; width: 120px;">tabular</span>
+          <span class="spec">every figure in the product, so a column of counts never dances as it updates</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 20px; padding: 14px 0; border-top: 1px solid var(--rule);">
+          <span class="fig" style="font-size: 24px; width: 120px;">icon + word</span>
+          <span class="spec">a state is never a colour alone &mdash; the mark and the word carry it, the hue only sharpens it</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 20px; padding: 14px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);">
+          <span class="fig" style="font-size: 24px; width: 120px;">the gap</span>
+          <span class="spec">a progress track colours the remainder, never the achievement &mdash; empty seats are the news</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TYPE ============ -->
+  <div style="display: flex; flex-direction: column; gap: 20px;">
+    <div style="display: flex; align-items: baseline; gap: 18px;">
+      <p class="h2">Two faces. Words in Geist, data in IBM Plex Mono.</p>
+      <span class="spec" style="margin-left: auto;">fallbacks: system-ui, sans-serif &middot; ui-monospace, SF Mono, Menlo</span>
+    </div>
+    <p class="note">Geist keeps DiveDay&#8217;s voice: open, modern, quietly capable. IBM Plex Mono is the instrument face &mdash; drawn for engineering documents, with numerals that hold their shape at 76px and at 11px, and a grid that makes a column of times, seats and money line up without a table. Mono is never used for a sentence a person reads for meaning.</p>
+    <div style="display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: baseline; gap: 24px; padding: 16px 0; border-top: 1px solid var(--rule);">
+        <span class="fig" style="font-size: 46px;">10&#8202;/&#8202;12</span>
+        <span class="spec" style="margin-left: auto;">READOUT &middot; Plex Mono 600 &middot; 46&#8211;76px &middot; &#8722;0.02em &middot; tabular</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 24px; padding: 16px 0; border-top: 1px solid var(--rule);">
+        <span class="fig" style="font-size: 28px;">07:00 &middot; $95 &middot; T&#8722;00:48</span>
+        <span class="spec" style="margin-left: auto;">FIGURE &middot; Plex Mono 600 &middot; 20&#8211;30px &middot; times, money, countdowns</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 24px; padding: 16px 0; border-top: 1px solid var(--rule);">
+        <span style="font-size: 34px; font-weight: 600; letter-spacing: -0.025em;">Three boats today</span>
+        <span class="spec" style="margin-left: auto;">PAGE TITLE &middot; Geist 600 &middot; 34px &middot; &#8722;0.025em &middot; one per page</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 24px; padding: 16px 0; border-top: 1px solid var(--rule);">
+        <span style="font-size: 20px; font-weight: 600; letter-spacing: -0.015em;">Two-Tank Reef &mdash; Molasses &amp; French</span>
+        <span class="spec" style="margin-left: auto;">OBJECT &middot; Geist 600 &middot; 20px &middot; the name of a thing</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 24px; padding: 16px 0; border-top: 1px solid var(--rule);">
+        <span style="font-size: 16px;">Grace Mensah&#8217;s certification is waiting for verification.</span>
+        <span class="spec" style="margin-left: auto;">ROW &middot; Geist 450 &middot; 16px &middot; the critical-text floor, never smaller</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 24px; padding: 16px 0; border-top: 1px solid var(--rule);">
+        <span style="font-size: 15px; color: var(--dim);">Small-boat reef and wreck diving out of Key Largo.</span>
+        <span class="spec" style="margin-left: auto;">BODY &middot; Geist 400 &middot; 15px &middot; dim ink &middot; supporting prose only</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 24px; padding: 16px 0; border-top: 1px solid var(--rule);">
+        <span class="lbl">Departure &middot; Molasses Reef &middot; Mantis II</span>
+        <span class="spec" style="margin-left: auto;">LABEL &middot; Plex Mono 700 &middot; 11px &middot; +0.16em &middot; uppercase</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 24px; padding: 16px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);">
+        <span class="spec">Signed 06:41 &middot; recorded by Keiko Tanaka &middot; EDT</span>
+        <span class="spec" style="margin-left: auto;">MICRO &middot; Plex Mono 400 &middot; 12px &middot; provenance, never a decision</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PALETTE ============ -->
+  <div style="display: flex; flex-direction: column; gap: 22px;">
+    <div style="display: flex; align-items: baseline; gap: 18px;">
+      <p class="h2">Two schemes, one family. Depth is the default.</p>
+      <span class="spec" style="margin-left: auto;">ocean &middot; lagoon &middot; coral, retuned for instrument contrast</span>
+    </div>
+    <p class="note">Depth runs deeper and colder than today&#8217;s dark theme so that a panel actually lifts off the ground and a hairline reads without glowing. Sunlit is the same structure in daylight, for the diver-facing shopfront and for a shop that works at a bright counter. Every ink pair below clears 6.2:1 against its own surface &mdash; the boat-mode bar, applied everywhere rather than only on the water.</p>
+
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <span class="lbl" style="color: var(--lagoon);">Depth &middot; default</span>
+      <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px;">
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #04121a;"></div><span class="spec" style="color: var(--ink);">#04121A</span><span class="spec">Abyss &middot; page</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #0a1e29;"></div><span class="spec" style="color: var(--ink);">#0A1E29</span><span class="spec">Deck &middot; panel</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #020c12;"></div><span class="spec" style="color: var(--ink);">#020C12</span><span class="spec">Well &middot; recessed</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #173442;"></div><span class="spec" style="color: var(--ink);">#173442</span><span class="spec">Hairline</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #2c5568;"></div><span class="spec" style="color: var(--ink);">#2C5568</span><span class="spec">Control edge</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #eaf4f6;"></div><span class="spec" style="color: var(--ink);">#EAF4F6</span><span class="spec">Ink</span></div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px;">
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #93aeb7;"></div><span class="spec" style="color: var(--ink);">#93AEB7</span><span class="spec">Dim ink</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #22d3ee;"></div><span class="spec" style="color: var(--ink);">#22D3EE</span><span class="spec">Lagoon &middot; action</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #67e8f9;"></div><span class="spec" style="color: var(--ink);">#67E8F9</span><span class="spec">Lagoon &middot; hover</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #3dd68c;"></div><span class="spec" style="color: var(--ink);">#3DD68C</span><span class="spec">Clear &middot; ready</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #f0b429;"></div><span class="spec" style="color: var(--ink);">#F0B429</span><span class="spec">Waiting</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #ff6b6b;"></div><span class="spec" style="color: var(--ink);">#FF6B6B</span><span class="spec">Blocked</span></div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px;">
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 44px; background: #ff8a7e;"></div><span class="spec" style="color: var(--ink);">#FF8A7E</span><span class="spec">Coral &middot; earned only</span></div>
+        <div style="grid-column: span 5; display: flex; align-items: center;"><p class="note" style="margin: 0;">Coral is spent on one thing per surface and only when something completed: the last diver aboard, the last waiver signed, all boats home. It never marks a state, never a brand flourish, never a chart.</p></div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <span class="lbl">Sunlit &middot; alternate</span>
+      <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px;">
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #f6f4ee;"></div><span class="spec" style="color: var(--ink);">#F6F4EE</span><span class="spec">Sand &middot; page</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #ffffff;"></div><span class="spec" style="color: var(--ink);">#FFFFFF</span><span class="spec">Deck &middot; panel</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #eae7dd;"></div><span class="spec" style="color: var(--ink);">#EAE7DD</span><span class="spec">Well &middot; recessed</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #dcd7ca;"></div><span class="spec" style="color: var(--ink);">#DCD7CA</span><span class="spec">Hairline</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #8a8577;"></div><span class="spec" style="color: var(--ink);">#8A8577</span><span class="spec">Control edge</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #0b2029;"></div><span class="spec" style="color: var(--ink);">#0B2029</span><span class="spec">Ink</span></div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px;">
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #4f6670;"></div><span class="spec" style="color: var(--ink);">#4F6670</span><span class="spec">Dim ink</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #0b6e88;"></div><span class="spec" style="color: var(--ink);">#0B6E88</span><span class="spec">Lagoon &middot; action</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #08556a;"></div><span class="spec" style="color: var(--ink);">#08556A</span><span class="spec">Lagoon &middot; hover</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #0f7a46;"></div><span class="spec" style="color: var(--ink);">#0F7A46</span><span class="spec">Clear &middot; ready</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #8a5a06;"></div><span class="spec" style="color: var(--ink);">#8A5A06</span><span class="spec">Waiting</span></div>
+        <div style="display: flex; flex-direction: column; gap: 8px;"><div class="sw" style="height: 76px; background: #b3261e;"></div><span class="spec" style="color: var(--ink);">#B3261E</span><span class="spec">Blocked</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ STRUCTURE ============ -->
+  <div style="display: flex; flex-direction: column; gap: 22px;">
+    <p class="h2">Hairlines, not boxes. Corners barely turn.</p>
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px;">
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <span class="lbl">Radius</span>
+        <div style="display: flex; align-items: flex-end; gap: 10px;">
+          <div style="width: 56px; height: 56px; border: 1px solid var(--rule-hi); border-radius: 0;"></div>
+          <div style="width: 56px; height: 56px; border: 1px solid var(--rule-hi); border-radius: 3px;"></div>
+          <div style="width: 56px; height: 56px; border: 1px solid var(--rule-hi); border-radius: 6px;"></div>
+        </div>
+        <p class="note" style="font-size: 13px;">0 for cells and rules, 3 for controls, 6 for panels. Nothing rounder &mdash; a soft corner reads as a consumer app, not an instrument.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <span class="lbl">Spacing</span>
+        <div style="display: flex; align-items: flex-end; gap: 6px; height: 56px;">
+          <div style="width: 4px; height: 12px; background: var(--rule-hi);"></div>
+          <div style="width: 8px; height: 20px; background: var(--rule-hi);"></div>
+          <div style="width: 12px; height: 28px; background: var(--rule-hi);"></div>
+          <div style="width: 16px; height: 36px; background: var(--rule-hi);"></div>
+          <div style="width: 24px; height: 44px; background: var(--rule-hi);"></div>
+          <div style="width: 32px; height: 56px; background: var(--rule-hi);"></div>
+        </div>
+        <p class="note" style="font-size: 13px;">4 &middot; 8 &middot; 12 &middot; 16 &middot; 24 &middot; 32 &middot; 56. Rows are 52px, controls 44px, primary controls 48px. Density comes from short gaps, never from small type.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <span class="lbl">Elevation</span>
+        <div style="display: flex; align-items: flex-end; gap: 10px; height: 56px;">
+          <div style="width: 88px; height: 44px; border-top: 1px solid var(--rule); display: flex; align-items: center;"><span class="spec">at rest</span></div>
+          <div style="width: 88px; height: 44px; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; display: flex; align-items: center; justify-content: center;"><span class="spec">panel</span></div>
+          <div style="width: 88px; height: 44px; background: var(--surface); border: 1px solid var(--rule-hi); border-radius: 6px; box-shadow: 0 12px 28px rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center;"><span class="spec">floats</span></div>
+        </div>
+        <p class="note" style="font-size: 13px;">Two levels and a shadow reserved for what genuinely floats &mdash; a menu, a sheet, the command palette. Resting surfaces are flat.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <span class="lbl">The state edge</span>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 12px; height: 24px;"><div style="width: 3px; height: 24px; background: var(--lagoon);"></div><span class="lbl" style="color: var(--lagoon);">Live</span></div>
+          <div style="display: flex; align-items: center; gap: 12px; height: 24px;"><div style="width: 3px; height: 24px; background: var(--rule-hi);"></div><span class="lbl">Next</span></div>
+          <div style="display: flex; align-items: center; gap: 12px; height: 24px;"><div style="width: 3px; height: 24px; background: var(--rule);"></div><span class="lbl" style="opacity: .7;">Later</span></div>
+        </div>
+        <p class="note" style="font-size: 13px;">A 3px rule down the left of a band says where the day is. It always carries its word, so the edge is a shortcut and never the message.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ COMPONENTS ============ -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+    <p class="h2">The parts, drawn at working size.</p>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 44px;">
+
+      <!-- controls -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <span class="lbl">Controls &middot; 48px primary, 44px everything else</span>
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <span class="btn">Open the counter</span>
+          <span class="btn2">Send waiver</span>
+          <span class="act">Verify</span>
+          <span class="act" style="border-color: rgba(255,107,107,.5); color: #ff9d9d;">Remove</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span class="btn" style="background: var(--rule); border-color: var(--rule); color: var(--dim);">Board the boat</span>
+          <span class="spec">disabled while 2 divers are blocked</span>
+        </div>
+      </div>
+
+      <!-- search -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <span class="lbl">Search &middot; the one door to everything</span>
+        <div style="display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 16px; border: 1px solid var(--rule-hi); border-radius: 3px; background: var(--sunken); box-sizing: border-box;">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#93aeb7" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.6"></circle><path d="M10.6 10.6L13.9 13.9"></path></svg>
+          <span style="font-size: 16px; color: var(--dim);">Diver, departure, order&#8230;</span>
+          <span class="spec" style="margin-left: auto; border: 1px solid var(--rule-hi); border-radius: 3px; padding: 2px 7px;">&#8984;K</span>
+        </div>
+        <p class="note" style="font-size: 13px;">Focus draws a 2px lagoon ring outside the edge, never a glow.</p>
+      </div>
+
+      <!-- group header + ledger -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <span class="lbl">Group header &amp; ledger rows</span>
+        <div style="display: flex; align-items: baseline; gap: 14px; padding-bottom: 10px;">
+          <span class="fig" style="font-size: 22px;">07:00</span>
+          <span style="font-size: 17px; font-weight: 600; letter-spacing: -0.012em;">Two-Tank Reef</span>
+          <span class="lbl" style="margin-left: auto;">Mantis II</span>
+          <span class="fig" style="font-size: 22px;">10<span style="font-size: 14px; color: var(--dim);">/12</span></span>
+        </div>
+        <div style="display: flex; flex-direction: column;">
+          <div class="row">
+            <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="#ff6b6b" stroke-width="1.8" stroke-linecap="round" style="flex: none;" aria-hidden="true"><circle cx="9" cy="9" r="7.1"></circle><path d="M6.3 6.3l5.4 5.4M11.7 6.3l-5.4 5.4"></path></svg>
+            <span class="kind" style="color: var(--stop);">Cert</span>
+            <span style="flex: 1; font-size: 16px;">Grace Mensah &mdash; awaiting verification</span>
+            <span class="act">Verify</span>
+          </div>
+          <div class="row" style="border-bottom: 1px solid var(--rule);">
+            <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="#93aeb7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none;" aria-hidden="true"><rect x="3.4" y="2.6" width="11.2" height="12.8" rx="1.6"></rect><path d="M6.2 6.4h5.6M6.2 9.2h5.6M6.2 12h3.2"></path></svg>
+            <span class="kind">Prep</span>
+            <span style="flex: 1; font-size: 16px; color: var(--dim);">3 divers still need rental sizes</span>
+            <span class="act">Prep list</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- status marks + badge -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <span class="lbl">Status marks &middot; mark and word, always both</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+          <span style="display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 11px; border-radius: 3px; border: 1px solid rgba(61,214,140,.45); background: rgba(61,214,140,.10);">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#3dd68c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 8.4l3.2 3.2 6.4-7"></path></svg>
+            <span class="lbl" style="color: #3dd68c;">Ready</span>
+          </span>
+          <span style="display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 11px; border-radius: 3px; border: 1px solid rgba(255,107,107,.45); background: rgba(255,107,107,.10);">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#ff6b6b" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"></circle><path d="M5.6 5.6l4.8 4.8M10.4 5.6l-4.8 4.8"></path></svg>
+            <span class="lbl" style="color: #ff6b6b;">Blocked</span>
+          </span>
+          <span style="display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 11px; border-radius: 3px; border: 1px solid rgba(240,180,41,.45); background: rgba(240,180,41,.10);">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#f0b429" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"></circle><path d="M8 4.6V8l2.4 1.6"></path></svg>
+            <span class="lbl" style="color: #f0b429;">Waiting</span>
+          </span>
+          <span style="display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 11px; border-radius: 3px; border: 1px solid var(--rule-hi);">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#93aeb7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.6 10.4l5.4 2.6 5.4-2.6"></path><path d="M2.6 6.8L8 9.4l5.4-2.6"></path><path d="M8 3l5.4 2.6"></path></svg>
+            <span class="lbl">Ashore</span>
+          </span>
+        </div>
+        <p class="note" style="font-size: 13px;">Badges mark the exception. A row that is simply fine wears nothing at all &mdash; the affordance beside it is the status.</p>
+      </div>
+
+      <!-- field -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <span class="lbl">Field &middot; label above, refusal beneath, never a banner</span>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <span class="lbl" style="color: var(--ink);">Certification number</span>
+          <div style="height: 48px; border: 1px solid var(--rule-hi); border-radius: 3px; background: var(--sunken); display: flex; align-items: center; padding: 0 14px; box-sizing: border-box;">
+            <span class="mono" style="font-size: 16px;">PADI 1804267</span>
+          </div>
+          <span class="spec">Agency and level come from the card photo when there is one.</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <span class="lbl" style="color: var(--ink);">Seats on this boat</span>
+          <div style="height: 48px; border: 1px solid var(--stop); border-radius: 3px; background: rgba(255,107,107,.07); display: flex; align-items: center; padding: 0 14px; box-sizing: border-box;">
+            <span class="mono" style="font-size: 16px;">14</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#ff6b6b" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"></circle><path d="M8 4.8v3.6"></path><circle cx="8" cy="11.3" r=".45" fill="#ff6b6b"></circle></svg>
+            <span style="font-size: 14px; color: #ff9d9d;">Mantis II is rated for 12. Pick a different boat or lower the count.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- roll call -->
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <span class="lbl">Roll call &middot; 56px cells, one tap, reversible</span>
+        <div style="display: flex; flex-direction: column;">
+          <div style="display: flex; align-items: center; gap: 14px; height: 56px; border-top: 1px solid var(--rule); background: rgba(61,214,140,.07); padding: 0 12px; box-sizing: border-box;">
+            <span class="fig" style="font-size: 15px; color: var(--dim); width: 22px;">01</span>
+            <span style="font-size: 17px; font-weight: 500; flex: 1;">Ines Costa</span>
+            <span class="lbl" style="color: #3dd68c;">Aboard</span>
+            <span style="width: 34px; height: 34px; border-radius: 3px; border: 1px solid rgba(61,214,140,.55); background: rgba(61,214,140,.16); display: inline-flex; align-items: center; justify-content: center;">
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="#3dd68c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 8.4l3.2 3.2 6.4-7"></path></svg>
+            </span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 14px; height: 56px; border-top: 1px solid var(--rule); padding: 0 12px; box-sizing: border-box;">
+            <span class="fig" style="font-size: 15px; color: var(--dim); width: 22px;">02</span>
+            <span style="font-size: 17px; font-weight: 500; flex: 1;">June Park</span>
+            <span class="lbl">Not yet</span>
+            <span style="width: 34px; height: 34px; border-radius: 3px; border: 1px solid var(--rule-hi);"></span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 14px; height: 56px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 0 12px; box-sizing: border-box; background: rgba(255,107,107,.06);">
+            <span class="fig" style="font-size: 15px; color: var(--dim); width: 22px;">03</span>
+            <span style="font-size: 17px; font-weight: 500; flex: 1;">Grace Mensah</span>
+            <span class="lbl" style="color: #ff6b6b;">Blocked &middot; cert</span>
+            <span style="width: 34px; height: 34px; border-radius: 3px; border: 1px solid rgba(255,107,107,.5); display: inline-flex; align-items: center; justify-content: center;">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#ff6b6b" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4.6 4.6l6.8 6.8M11.4 4.6l-6.8 6.8"></path></svg>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ THREE WOW MOMENTS ============ -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+    <div style="display: flex; align-items: baseline; gap: 18px;">
+      <p class="h2">Three things Deck bets on.</p>
+      <span class="spec" style="margin-left: auto;">the moments a shop shows someone else</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px;">
+
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="cell" style="padding: 20px; display: flex; flex-direction: column; gap: 12px; min-height: 186px;">
+          <span class="lbl">Aboard &middot; 07:00 Mantis II</span>
+          <div style="display: flex; align-items: baseline; gap: 10px;">
+            <span class="fig" style="font-size: 60px; color: var(--coral);">12</span>
+            <span class="fig" style="font-size: 24px; color: var(--dim);">/&#8202;12</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 9px;">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#ff8a7e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 8.4l3.2 3.2 6.4-7"></path></svg>
+            <span class="lbl" style="color: var(--coral);">Everyone is on the boat</span>
+          </div>
+          <span class="spec">Sealed 06:58 &middot; Keiko Tanaka</span>
+        </div>
+        <p style="margin: 0; font-size: 16px; font-weight: 600;">1 &middot; The readout</p>
+        <p class="note" style="font-size: 14px;">One figure answers the question every surface exists for, at a size that reads from the far end of the dock. It is the only place coral is ever spent: the instant the count reaches parity, the number turns and says so in words.</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="cell" style="padding: 20px; display: flex; flex-direction: column; gap: 0; min-height: 186px;">
+          <div style="display: flex; align-items: center; gap: 14px; padding: 12px 0;">
+            <div style="width: 3px; height: 34px; background: var(--lagoon);"></div>
+            <div style="display: flex; flex-direction: column; gap: 3px;"><span class="fig" style="font-size: 19px;">07:00</span><span class="lbl" style="font-size: 10px;">Two-Tank</span></div>
+            <div style="margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 3px;"><span class="fig" style="font-size: 19px; color: var(--lagoon);">T&#8722;00:48</span><span class="lbl" style="font-size: 10px; color: var(--stop);">2 blocked</span></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--rule);">
+            <div style="width: 3px; height: 34px; background: var(--rule-hi);"></div>
+            <div style="display: flex; flex-direction: column; gap: 3px;"><span class="fig" style="font-size: 19px;">13:00</span><span class="lbl" style="font-size: 10px;">Wreck</span></div>
+            <div style="margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 3px;"><span class="fig" style="font-size: 19px; color: var(--dim);">T&#8722;06:48</span><span class="lbl" style="font-size: 10px; color: var(--stop);">2 blocked</span></div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--rule);">
+            <div style="width: 3px; height: 34px; background: var(--rule);"></div>
+            <div style="display: flex; flex-direction: column; gap: 3px;"><span class="fig" style="font-size: 19px;">19:30</span><span class="lbl" style="font-size: 10px;">Night</span></div>
+            <div style="margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 3px;"><span class="fig" style="font-size: 19px; color: var(--dim);">T&#8722;13:18</span><span class="lbl" style="font-size: 10px;">5 seats</span></div>
+          </div>
+        </div>
+        <p style="margin: 0; font-size: 16px; font-weight: 600;">2 &middot; T&#8722;minus</p>
+        <p class="note" style="font-size: 14px;">The day is a countdown, not a calendar. Every departure carries the time left until the lines come off and the number of people who cannot board yet &mdash; so the order of work is decided before anyone has read a word.</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="cell" style="padding: 20px; display: flex; flex-direction: column; gap: 12px; min-height: 186px;">
+          <div style="display: flex; align-items: baseline; gap: 10px;">
+            <span class="lbl">Roll call &middot; second dive</span>
+            <span class="lbl" style="margin-left: auto; color: #3dd68c;">Offline &middot; saved here</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+            <div style="height: 42px; border: 1px solid rgba(61,214,140,.5); background: rgba(61,214,140,.14); border-radius: 3px; display: flex; align-items: center; justify-content: center;"><span class="fig" style="font-size: 15px; color: #3dd68c;">01</span></div>
+            <div style="height: 42px; border: 1px solid rgba(61,214,140,.5); background: rgba(61,214,140,.14); border-radius: 3px; display: flex; align-items: center; justify-content: center;"><span class="fig" style="font-size: 15px; color: #3dd68c;">02</span></div>
+            <div style="height: 42px; border: 1px solid var(--rule-hi); border-radius: 3px; display: flex; align-items: center; justify-content: center;"><span class="fig" style="font-size: 15px; color: var(--dim);">03</span></div>
+            <div style="height: 42px; border: 1px solid rgba(61,214,140,.5); background: rgba(61,214,140,.14); border-radius: 3px; display: flex; align-items: center; justify-content: center;"><span class="fig" style="font-size: 15px; color: #3dd68c;">04</span></div>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 10px; border-top: 1px solid var(--rule); padding-top: 12px;">
+            <span class="fig" style="font-size: 30px;">9</span><span class="fig" style="font-size: 16px; color: var(--dim);">/&#8202;10 back</span>
+            <span class="lbl" style="margin-left: auto; color: var(--warn);">1 still in the water</span>
+          </div>
+        </div>
+        <p style="margin: 0; font-size: 16px; font-weight: 600;">3 &middot; Roll call at depth</p>
+        <p class="note" style="font-size: 14px;">The one surface built for a wet hand and no signal: 56px cells, a tap that undoes itself, a count that will not round up, and a scheme that does not blind a crew on a night dive.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- footer -->
+  <div style="display: flex; align-items: center; gap: 14px; border-top: 1px solid var(--rule); padding-top: 22px;">
+    <svg width="18" height="18" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+      <circle cx="8" cy="18.5" r="4.4" stroke="#93aeb7" stroke-width="1.8"></circle>
+      <circle cx="16" cy="11" r="3" stroke="#93aeb7" stroke-width="1.8"></circle>
+      <circle cx="20.6" cy="5.4" r="1.9" fill="#ff8a7e"></circle>
+    </svg>
+    <span class="lbl">DiveDay &middot; Deck &middot; design direction, not shipped code</span>
+    <span class="lbl" style="margin-left: auto;">Fiction: Blue Mantis Divers, Key Largo &middot; Thu 27 Aug 2026</span>
+  </div>
+
+</div>
+</div>
+</x-dc>
+</body>
+</html>

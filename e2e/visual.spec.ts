@@ -2882,13 +2882,17 @@ for (const scheme of ["light", "dark"] as const) {
        * worker owns its database and resets before each test.
        */
       test(`a clear diver's record renders true to the design (${scheme})`, async ({ page }) => {
-        const stamp = Date.now();
+        // Deterministic, not `Date.now()`: the name renders in the h1, the
+        // email line, the earned-moment banner and the delete button, so a live
+        // stamp made this capture differ on every run. The reset before each
+        // test purges every non-staff person, so the fixed identity is free.
+        const name = "Clear Diver";
         await page.goto("/shop/blue-mantis/divers/new");
         await page.getByRole("heading", { level: 1, name: "Add a diver" }).waitFor();
-        await page.getByLabel("Full name").fill(`Clear Diver ${stamp}`);
-        await page.getByLabel("Email").fill(`clear-${stamp}@example.com`);
+        await page.getByLabel("Full name").fill(name);
+        await page.getByLabel("Email").fill("clear-diver@example.com");
         await page.getByRole("button", { name: "Add diver", exact: true }).click();
-        await page.getByRole("heading", { level: 1, name: `Clear Diver ${stamp}` }).waitFor();
+        await page.getByRole("heading", { level: 1, name }).waitFor();
         // The roster's add form lands here with the details editor open.
         await page.getByLabel("Emergency contact name").fill("Kojo Mensah");
         await page.getByLabel("Emergency contact phone").fill("+13055550177");
@@ -2899,7 +2903,7 @@ for (const scheme of ["light", "dark"] as const) {
         // mid-click. Reloading is the deterministic settle — a record at rest,
         // with its disclosures closed — rather than a wait on a moving page.
         await page.reload();
-        await page.getByRole("heading", { level: 1, name: `Clear Diver ${stamp}` }).waitFor();
+        await page.getByRole("heading", { level: 1, name }).waitFor();
         // Click the summary, exactly as `waivers.spec.ts` does against this same
         // markup — `exact`, because "Send options" without it also matches the
         // container that holds the summary, and clicking a container opens
@@ -4108,6 +4112,12 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await page.goto("/shop/blue-mantis/reports");
         await page.getByRole("link", { name: "Previous month" }).click();
+        // The current month renders a "Trips this month" region too, so waiting
+        // on the region alone is satisfied before the click has landed — which
+        // is how one baseline of this capture came to show July "so far" over
+        // June's final figures. The arrow's destination carries `?month=`; the
+        // landing page does not.
+        await expect(page).toHaveURL(/[?&]month=/);
         await page.getByRole("region", { name: "Trips this month" }).waitFor();
         await capture(page, "reports-figures", scheme);
       });
