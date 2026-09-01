@@ -1332,6 +1332,33 @@ async function savedOfflineRecordFor(page: Page): Promise<string> {
 }
 
 for (const scheme of ["light", "dark"] as const) {
+  /**
+   * "June 2026" for a frozen July: the month before the fleet's frozen instant,
+   * spelled the way the reports page heads it (`monthLabel`, en-US). Computed
+   * rather than hard-coded so it moves with `E2E_FROZEN_CLOCK`; no `Intl` so it
+   * cannot disagree with the pinned locale and zone by a day at a month boundary.
+   */
+  function previousMonthLabel(): string {
+    const months = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    const previous = new Date(E2E_FROZEN_CLOCK);
+    previous.setUTCDate(1);
+    previous.setUTCMonth(previous.getUTCMonth() - 1);
+    return `${months[previous.getUTCMonth()]} ${previous.getUTCFullYear()}`;
+  }
+
   test.describe(`${scheme} mode`, () => {
     // Base viewport for navigation and clicks; `capture` resizes to each entry
     // in VIEWPORTS for the screenshots and restores this afterward.
@@ -2882,7 +2909,11 @@ for (const scheme of ["light", "dark"] as const) {
        * worker owns its database and resets before each test.
        */
       test(`a clear diver's record renders true to the design (${scheme})`, async ({ page }) => {
-        const stamp = Date.now();
+        // The frozen instant, not `Date.now()`: this runs in the runner process,
+        // whose clock nothing freezes, and the stamp is rendered into the page
+        // heading, the email line and the delete button — so it diffed on every
+        // single run, as a real pixel change, for as long as it was live time.
+        const stamp = Date.parse(E2E_FROZEN_CLOCK);
         await page.goto("/shop/blue-mantis/divers/new");
         await page.getByRole("heading", { level: 1, name: "Add a diver" }).waitFor();
         await page.getByLabel("Full name").fill(`Clear Diver ${stamp}`);
@@ -4108,6 +4139,13 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await page.goto("/shop/blue-mantis/reports");
         await page.getByRole("link", { name: "Previous month" }).click();
+        // Wait for the *destination* month's own heading. The trips region is
+        // on the current month's page too, so waiting for it resolved before
+        // the navigation landed, and one viewport in four photographed July
+        // "so far" while the other three photographed June.
+        await page
+          .getByRole("heading", { level: 2, name: previousMonthLabel(), exact: true })
+          .waitFor();
         await page.getByRole("region", { name: "Trips this month" }).waitFor();
         await capture(page, "reports-figures", scheme);
       });
