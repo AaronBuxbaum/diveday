@@ -296,6 +296,40 @@ describe("LedgerRow", () => {
     );
   });
 
+  it("draws the door's chevron itself, after the trailing slot", () => {
+    // One decision, not one per surface: nine surfaces drew this glyph by
+    // hand and five doors carried nothing saying they opened. The chevron is
+    // the last visible child, so `trailing` reads as the row's facts and the
+    // glyph as the row's edge; the overlay link comes after it in the DOM.
+    const { container } = render(
+      <LedgerRow
+        as="div"
+        href="/shop/blue-mantis/orders/1"
+        linkLabel="Open the order"
+        trailing={<span>$148.00</span>}
+      >
+        Amara Osei
+      </LedgerRow>,
+    );
+    const row = container.firstElementChild as HTMLElement;
+    const children = [...row.children];
+    const link = screen.getByRole("link", { name: "Open the order" });
+    const chevron = children[children.indexOf(link) - 1];
+    expect(chevron?.tagName).toBe("svg");
+    expect(chevron).toHaveAttribute("aria-hidden", "true");
+    expect(chevron).toHaveClass("size-4", "shrink-0", "text-muted");
+    expect(screen.getByText("$148.00").parentElement?.nextElementSibling).toBe(chevron);
+  });
+
+  it("draws no chevron on a row that is not a door", () => {
+    const { container } = render(
+      <LedgerRow as="div" trailing={<span>Send waiver</span>}>
+        Priya Sharma
+      </LedgerRow>,
+    );
+    expect(container.querySelector("svg")).toBeNull();
+  });
+
   it("gives the sentence its own line below sm, and one line from sm up", () => {
     // The phone reading the `TodayPhone` artboard draws: the kind and the fix
     // share the first line, the sentence takes the width beneath them. It is a
@@ -323,6 +357,39 @@ describe("LedgerRow", () => {
       "max-sm:order-2",
       "max-sm:ms-auto",
     );
+  });
+
+  it("leads with its content when stacked without a kind", () => {
+    // The artboard's first line is *the kind and the fix*. A row that names
+    // no kind has nothing for the left of that line, and the first reading of
+    // the rule put a lone chevron (or "Schedule · Hide") on a line above the
+    // row's own name. So: content and the door's chevron on line one, the
+    // trailing slot end-aligned on its own line beneath — every class still a
+    // `max-sm:` one.
+    render(
+      <LedgerRow
+        as="div"
+        stacked
+        href="/shop/blue-mantis/dive-sites/1"
+        linkLabel="Christ of the Abyss"
+        trailing={<span>Advanced Open Water · Deep</span>}
+      >
+        <p>Christ of the Abyss</p>
+      </LedgerRow>,
+    );
+    const content = screen.getByText("Christ of the Abyss", { selector: "p" })
+      .parentElement as HTMLElement;
+    expect(content).toHaveClass("max-sm:order-1", "flex-1");
+    expect(content.className).not.toMatch(/basis-full/);
+    const trailing = screen.getByText("Advanced Open Water · Deep").parentElement as HTMLElement;
+    expect(trailing).toHaveClass(
+      "max-sm:order-3",
+      "max-sm:basis-full",
+      "max-sm:flex",
+      "max-sm:justify-end",
+    );
+    expect(trailing.className).not.toMatch(/ms-auto/);
+    expect(content.parentElement?.querySelector("svg")).toHaveClass("max-sm:order-2");
   });
 
   it("stays one line when a row is not stacked — the default is unchanged", () => {

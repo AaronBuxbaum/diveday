@@ -1,4 +1,3 @@
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import type { CrewedSessionSummary } from "@/db/today";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -35,9 +34,6 @@ export function YourSessions({
             key={session.tripId}
             href={`/shop/${shopSlug}/trips/${session.tripId}`}
             linkLabel={t("shared.today.yourSessions.openRoster")}
-            trailing={
-              <DiveDayIcon name="chevron-right" className="size-4 text-muted" aria-hidden="true" />
-            }
           >
             <div className="min-w-0 py-2">
               <p className="font-medium">{session.title}</p>

@@ -169,14 +169,15 @@ function SiteRow({
       // At 390px a name, a location, a depth and "Advanced Open Water · Deep ·
       // Nitrox" on one line leave the name about 90px to wrap in. `stacked` is
       // the primitive's own answer (ADR 20260827-clearwater-surface-language):
-      // the trailing facts keep the first line, the name and its meta take the
-      // full width beneath, and from `sm` up the row is byte-for-byte the row
+      // the name and its meta lead, the requirement words drop to a line of
+      // their own beneath, and from `sm` up the row is byte-for-byte the row
       // the artboard draws.
       stacked
       trailing={
         // Nothing in here is interactive, and `LedgerRow` lifts its trailing
         // slot above the row-wide link overlay — so without this a tap landing
-        // on the requirement words or the badge would do nothing at all.
+        // on the requirement words or the badge would do nothing at all. The
+        // door's chevron is the row's own.
         <div className="pointer-events-none flex items-center gap-3">
           {updateReady ? (
             <Badge tone="primary" size="sm">
@@ -194,7 +195,6 @@ function SiteRow({
               {requirementWords.join(" · ")}
             </span>
           ) : null}
-          <DiveDayIcon name="chevron-right" className="size-4 text-muted" />
         </div>
       }
     >
@@ -227,9 +227,6 @@ function CatalogDoor({ href, count, t }: { href: string; count: number; t: Staff
         href={href}
         linkLabel={title}
         leading={<DiveDayIcon name="diveSites" className="size-5 text-muted" />}
-        trailing={
-          <DiveDayIcon name="chevron-right" className="pointer-events-none size-4 text-muted" />
-        }
       >
         <div className="min-w-0 py-2">
           <p className="font-medium">{title}</p>
