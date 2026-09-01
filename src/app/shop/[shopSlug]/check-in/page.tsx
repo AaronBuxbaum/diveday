@@ -457,7 +457,6 @@ export default async function CheckInPage({
         copy={{
           label: t("checkIn.search.label"),
           placeholder: t("checkIn.search.placeholder"),
-          submit: t("checkIn.search.submit"),
         }}
       />
 

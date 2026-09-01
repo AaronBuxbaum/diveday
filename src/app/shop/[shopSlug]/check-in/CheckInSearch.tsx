@@ -1,8 +1,7 @@
 "use client";
 
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { buttonClass } from "@/components/ui/button";
-import { controlClass } from "@/components/ui/form";
+import { SearchField } from "@/components/ui/form";
 import { QueryForm } from "@/components/ui/QueryForm";
 
 export function CheckInSearch({
@@ -23,7 +22,7 @@ export function CheckInSearch({
    * change boats (`./focus.ts`).
    */
   trip: string | undefined;
-  copy: { label: string; placeholder: string; submit: string };
+  copy: { label: string; placeholder: string };
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -46,8 +45,9 @@ export function CheckInSearch({
   /**
    * Apply after a short pause so a typed no-match never leaves the full queue
    * on screen. The delay is long enough for a scanner to finish its barcode,
-   * while ordinary typing still feels immediate; pressing Enter or the button
-   * continues to submit immediately through the real form.
+   * while ordinary typing still feels immediate; pressing Enter (which is what
+   * a scanner sends after the code) still submits immediately through the
+   * real form.
    */
   function applySearchOnInput(event: FormEvent<HTMLInputElement>) {
     clearSearchTimer();
@@ -76,35 +76,24 @@ export function CheckInSearch({
       // close enough that the earned "Everyone's checked in" line read as a
       // caption on the search box rather than as the instrument's closing
       // statement.
-      className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-end"
+      className="mt-8"
     >
-      {/* No hint line under the label. "A barcode scanner can type a booking
-          ID here" said in prose what the label's own first word ("Scan") and
-          the placeholder ("Name, email, or booking ID") already say between
-          them — three pieces of text for one input. */}
-      <label className="min-w-0 flex-1 text-sm font-medium" htmlFor="check-in-search">
-        {copy.label}
-        <input
-          ref={inputRef}
-          id="check-in-search"
-          name="q"
-          type="search"
-          inputMode="search"
-          defaultValue={query}
-          placeholder={copy.placeholder}
-          onInput={applySearchOnInput}
-          // The e2e suite waits on this before relying on clear-to-apply — the
-          // deterministic signal that the handler above is live.
-          data-hydrated={hydrated ? "true" : undefined}
-          className={`${controlClass} mt-1`}
-        />
-      </label>
-      <button
-        type="submit"
-        className={buttonClass({ variant: "secondary", className: "shrink-0" })}
-      >
-        {copy.submit}
-      </button>
+      {/* The one search box (`SearchField`): its label is the accessible name
+          and the placeholder ("Name, email, or booking ID") is the visible
+          one. The "Search queue" button that stood beside it repeated what
+          Enter — and the scanner's own carriage return — already does. */}
+      <SearchField
+        ref={inputRef}
+        id="check-in-search"
+        name="q"
+        label={copy.label}
+        defaultValue={query}
+        placeholder={copy.placeholder}
+        onInput={applySearchOnInput}
+        // The e2e suite waits on this before relying on clear-to-apply — the
+        // deterministic signal that the handler above is live.
+        data-hydrated={hydrated ? "true" : undefined}
+      />
     </QueryForm>
   );
 }

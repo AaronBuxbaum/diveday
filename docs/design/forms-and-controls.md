@@ -656,6 +656,32 @@ because every entry is on this screen. Two controls that look identical and mean
 is the exact drift both components exist to end, so never dress a jump row as a track, or a tab bar
 as a row of links.
 
+## Searching a list: `SearchField`
+
+A staff list that can be searched renders **one search box and nothing around it** —
+`SearchField` in `src/components/ui/form.tsx`: a `type="search"` control wearing `controlClass`, a
+magnifier in its leading inset, its label `sr-only`, no caption above it and no "Search" button
+beside it. A form with one text control submits on Enter; surfaces that want type-to-apply drive
+`requestSubmit()` from `onInput`, as the orders toolbar and the counter do.
+
+```tsx
+import { SearchField } from "@/components/ui/form";
+
+<QueryForm aria-label={t("diveSites.list.searchAriaLabel")} className="mb-6 flex items-center gap-2">
+  <SearchField id="site-search" name="q" label={t("diveSites.list.searchLabel")}
+    defaultValue={query} placeholder={t("diveSites.list.searchPlaceholder")} className="w-full sm:w-80" />
+</QueryForm>
+```
+
+Four grammars for this control coexisted until 2026-09-01 — the orders toolbar's bare box, the
+diver roster's bare box, the dive-site library's bordered card with a "Find a site" caption and a
+Search button, and the counter's captioned box with a "Search queue" button — and which one a page
+got was a function of when it was written. The Clearwater decision that demoted the orders filter
+card to a toolbar is the precedent (ADR 20260827-clearwater-surface-language, decision 7): a search
+is a toolbar control, and the glyph is what says so. The seat-diver picker (`PersonSearchForm`) is
+the one search that still carries a visible caption and a Search button: it is a step in a flow
+rather than a list's toolbar, and its button is a keyboard-reachable target the e2e suite drives.
+
 ## Action rows: one primary, not many
 
 Principle 8 ([principles.md](principles.md)) says a screen gets one obvious next action **per
