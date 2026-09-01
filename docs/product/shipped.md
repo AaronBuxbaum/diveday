@@ -2917,15 +2917,16 @@ archived.
 
 ## Cert checks (M4)
 
-- **Cards captured pending** — agency, level, number, optional expiry, durable card-image reference;
-  new evidence is never implicitly trusted.
+- **Cards captured pending** — agency, level, number, optional expiry; new evidence is never
+  implicitly trusted. The card photo this once carried was retired by
+  [20260811-retire-the-digital-card](../architecture/decisions/20260811-retire-the-digital-card.md).
 - **Fail-closed readiness** — a typed result combines waiver + cert evidence and explains missing,
   pending, expired, insufficient, medical-review, and unconfigured states; shared by staff roster,
   booking confirmation, and manifest.
 - **Specialty + site/trip cert gates** — Deep/Wreck/Night/Drysuit captured and verified; readiness
   composes trip and site gates (stricter level, union of specialties); nitrox gates the mix request
   ([specialty-site-cert-requirements](../architecture/decisions/20260718-specialty-site-cert-requirements.md)).
-- **Direct card-image upload** to Vercel Blob behind `src/lib/storage`, validated at the seam
+- **Direct card-image upload** (retired 2026-08-11 with the card photo, above) to Vercel Blob behind `src/lib/storage`, validated at the seam
   ([card-photo-only](../architecture/decisions/20260719-card-photo-only.md),
   [card-image-storage](../architecture/decisions/20260718-card-image-storage.md)).
 - **Manual certification** — staff look the number up with the agency and click Mark certified; the
