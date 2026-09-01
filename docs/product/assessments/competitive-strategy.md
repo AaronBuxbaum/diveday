@@ -6,6 +6,12 @@
 > against the running codebase. Companion to [competitive-analysis.md](competitive-analysis.md)
 > (the buyer's whole-market view); this document is the operator's view of two specific fights.
 > An assessment, not a commitment; items that survive review move to [roadmap.md](../features/roadmap.md).
+> Both rival profiles were re-verified on 2026-09-01 in
+> [competitive-landscape-20260901.md](competitive-landscape-20260901.md): DiveShop360 is Rain
+> Retail Software's vertical (Provo, Utah, founded 2006; the Quilt/PSG ownership stated below was
+> not re-verified), still reviewless on every platform, still without an API or offline mode; DiveAdmin has
+> shipped payroll, equipment pools, booking pages, cabins, a WhatsApp inbox and an MCP story since
+> July and is still at zero independent reviews. The battle plan below is unchanged by either.
 
 ## The two rivals, verified
 

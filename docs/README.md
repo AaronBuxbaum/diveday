@@ -65,6 +65,7 @@ context. When an assessment's recommendations ship, delete them from it and reco
 | [assessments/switching-guide-landscape.md](product/assessments/switching-guide-landscape.md) | Survey of switching-guide candidates beyond the four shipped, ranked by dive adoption and verified export path |
 | [assessments/paid-acquisition-assessment.md](product/assessments/paid-acquisition-assessment.md) | 2026-08-12 channel-by-channel verdict on paid advertising, the corrected US/Florida market size, and why the cohort is a list rather than an audience |
 | [assessments/experience-review-20260831.md](product/assessments/experience-review-20260831.md) | 2026-08-31 whole-app experience review through 24 product, UX, marketing, feature, and delight lenses; its buildable findings are linked to their GitHub issues |
+| [assessments/competitive-landscape-20260901.md](product/assessments/competitive-landscape-20260901.md) | 2026-09-01 whole-field feature comparison: the incumbents re-verified, the 2026 newcomers (DivePrep, ScubaHub, DiveCrewPro), a 32-product market map and feature-frequency table with DiveDay's status on every row, owner sentiment from forums and review sites, and a gap catalog whose seven buildable gaps are GitHub issues #1234–#1240 (parent #1248) |
 
 **Archive** ([product/archive/](product/archive/)) — delivered or superseded snapshots, kept for
 rationale. Not open work; do not plan from them.
