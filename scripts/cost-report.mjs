@@ -42,7 +42,11 @@ export const PROVIDER_INVENTORY = [
   {
     provider: "AWS",
     tier: "CDK Stack (22 subsystems)",
-    monthlyBaseUsd: 1.2, // Secrets Manager floor ($0.40 * 3) + CloudWatch
+    // Three Secrets Manager secrets ($0.40 each), the custom CloudWatch metrics
+    // past the ten free ($0.30 each) and one alarm past the ten free. Read off
+    // infra/lib/infra-stack.ts on 2026-09-01; the runbook's "Where the money
+    // actually goes" section is the reasoning.
+    monthlyBaseUsd: 2.4,
     variableElements:
       "SES ($0.10/k), SNS SMS ($0.0075/ea), CloudWatch Logs/RUM, S3 (backups & media), CodeBuild",
     overflowBehavior: "alert_only",

@@ -287,11 +287,14 @@ Anomaly Detection does**: it depends on Cost Explorer, which is a one-time conso
 API, and reports nothing until it has accumulated spend history. That is a prerequisite in
 [manual-actions.md](manual-actions.md), not something the stack handles.
 
-**What this account costs when idle:** two Secrets Manager secrets at $0.80/month
-([§10](#10-the-credentials-secret)) plus two CloudWatch custom metrics past the always-free ten at
-$0.60/month ([cloudwatch-observability-runbook.md](cloudwatch-observability-runbook.md)) — about
-**$1.40/month** of cost that exists whether or not anyone uses DiveDay. Everything else here is
-per-use or genuinely free at this volume.
+**What this account costs when idle:** three Secrets Manager secrets at $1.20/month
+([§10](#10-the-credentials-secret), plus the database dump's URL) plus the CloudWatch custom metrics
+past the always-free ten at $0.30 each and one alarm past the free ten
+([cloudwatch-observability-runbook.md](cloudwatch-observability-runbook.md)) — between **$1.60 and
+$3.40/month** of cost that exists whether or not anyone uses DiveDay, depending on how many of the
+traffic-dependent metrics receive data. Everything else here is per-use or genuinely free at this
+volume. The whole bill, and what moving a service would and would not save, is in
+[cost-guardrails-runbook.md](cost-guardrails-runbook.md)'s "Where the money actually goes".
 
 That $1.40 is the number the `monthlyBudgetLimit` default of `30` is set against. It was `5` until
 2026-08-12, at which point the fixed floor was over a quarter of the cap and the 50% and 80%

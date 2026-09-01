@@ -63,9 +63,19 @@ spoken for; and when it *becomes* the bottom, the cascading rebase force-pushes 
 | `stack.position == stack.size` | the top layer | runs |
 | otherwise | a middle layer | **skipped** |
 
-`repo-safeguards`, `lint`, `typecheck`, the four unit shards, the four Playwright shards and
-`db-surface-changes` carry it. `real-postgres` needs nothing: a skipped `db-surface-changes` leaves
-`outputs.changed` empty, which is not `'true'`.
+`repo-safeguards`, `lint`, `typecheck`, the four unit shards and the four Playwright shards carry
+it. `real-postgres` reads the same answer from the `changes` gate job's `middle_layer` output.
+
+> **Amended 2026-09-01.** `db-surface-changes` used to carry the condition too, and `real-postgres`
+> followed it for free: a skipped dependency leaves `outputs.changed` empty, which is not `'true'`.
+> That job is now `changes`, and it answers a second question — whether the diff touched anything
+> a browser could see, or only `docs/`, Markdown and `.claude/` — which `build` reads to skip the
+> Playwright and visual half of the workflow on a docs-only change. `build` runs on every layer
+> (below), so a gate it depends on cannot skip on a middle layer without skipping `build` by
+> propagation. The gate therefore runs everywhere and states the stack question as an output
+> instead; the skip list in `scripts/check-stack-ci-skip.mjs` shrank by that one job and the
+> run-everywhere list grew by it. A docs-only layer publishes no snapshot, so the baseline
+> resolver (`scripts/wait-for-baseline.mjs`) walks past it to the nearest ancestor that did.
 
 The condition is repeated rather than factored because a job-level `if:` cannot read a
 workflow-level `env:` — the `env` context is not available there. `scripts/check-stack-ci-skip.mjs`

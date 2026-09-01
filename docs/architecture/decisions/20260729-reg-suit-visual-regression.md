@@ -114,3 +114,20 @@ Use `reg-suit` with the `reg-publish-s3-plugin` and `reg-keygen-git-hash-plugin`
   path as a missing snapshot: every screenshot read as new, none as compared. Reproduced by merging
   twice in quick succession on main (427 new items, 0 compared, 0 deleted). Fixed by pinning the
   checkout to `github.sha` for push events too, matching every other job.
+
+### Amended 2026-09-01: the baseline is the nearest published ancestor
+
+The expected key still comes from the graph (`scripts/reg-suit-keys.mjs`), but the graph does not
+know which commits published. Three things leave a commit with no snapshot: a change touching only
+`docs/`, Markdown or `.claude/` now skips the visual half of CI outright (the `changes` gate in
+`ci.yml`); a push to `main` whose run was cancelled or lost a capture shard published nothing (five
+consecutive main runs were cancelled on 2026-09-01 and the next one compared 0 of 696 surfaces);
+and a stacked layer whose layer below never finished. `scripts/wait-for-baseline.mjs` now runs on
+every `visual-report`, not only a stacked one: after any wait, if the expected key has no `out.json`
+it walks up to forty first-parent ancestors and substitutes the nearest one that published, writing
+the substitution into `REG_EXPECTED_KEY` and a `REG_BASELINE_NOTE` the sticky comment renders. The
+diff may then include main's own movement between the two commits, and says so; the alternative was
+comparing nothing under a reassuring `Changed: 0`. `pnpm visual` does the same locally. Main pushes
+also get a concurrency group per commit, since `cancel-in-progress: false` never protected a
+*queued* run.
+

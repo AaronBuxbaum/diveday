@@ -41,7 +41,11 @@ test.describe("the dive arrival arc", () => {
     await page.getByText("Edit details", { exact: true }).click();
     await page.locator('input[name="meetingPointLabel"]').fill("North Jetty Marina");
     await page.locator('input[name="meetingPointAddress"]').fill("12 Dock Rd");
-    await page.getByLabel("Landmark").fill("Blue Mantis sign by the fuel dock");
+    // Exact: the form also carries a "Landmark photo (optional)" file input,
+    // and a substring match on "Landmark" resolves to both.
+    await page
+      .getByLabel("Landmark (optional)", { exact: true })
+      .fill("Blue Mantis sign by the fuel dock");
     await page.getByLabel("What to look for").fill("Look for the yellow dive flag");
     await page.getByLabel("When you arrive").fill("Ask for Dana at the dock desk");
     await page.getByLabel("Parking note").fill("Use the north gravel lot");
@@ -99,8 +103,16 @@ test.describe("the dive arrival arc", () => {
     await page.getByRole("button", { name: "Acknowledge" }).click();
     await expect(page.getByText(/Arrival Diver is waiting for help/)).toBeVisible();
     await page.getByRole("button", { name: "Mark handled" }).click();
+    // Wait for the write to *land* before navigating away: the action ends in
+    // `revalidateAndRedirect(home, home)`, and Today lists only open requests,
+    // so the row leaving is the destination's own proof. Without it the `goto`
+    // below can preempt the in-flight action and the thread reads "acknowledged".
+    await expect(page.getByText(/Arrival Diver is waiting for help/)).not.toBeVisible();
 
     await page.goto(readyPath);
+    // At most one step is open at rest, so the handled line sits behind the
+    // same door the request was filed through.
+    await openThreadStep(page, "dayof");
     await expect(page.getByText("The crew handled this request.")).toBeVisible();
   });
 });

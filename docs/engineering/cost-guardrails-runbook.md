@@ -39,6 +39,44 @@ provider since [ADR 20260803-ses-sole-email-provider](../architecture/decisions/
 and SES spend sits inside the AWS budget above. If you are reading a finding that says otherwise,
 the finding predates that ADR.
 
+## Where the money actually goes
+
+Read before proposing to "move a service to save money". Measured and read off the stack on
+2026-09-01, pre-pilot, with essentially no traffic.
+
+| Line | $/month | What it buys |
+| --- | ---: | --- |
+| Vercel Pro, one seat | 20 | Hosting, previews, crons, Analytics, Speed Insights. The only fixed cost of any size |
+| AWS floor | 2–3 | Three Secrets Manager secrets ($1.20), the custom metrics past the ten free ($0.30 each), one alarm past the ten free, cents of S3 and CodeBuild. `infra/lib/infra-stack.ts` §16, §13 |
+| Neon | 0 | Free tier; **suspends** past 300 CU-hours, which is the one ceiling that is an outage rather than an invoice |
+| Sentry, Meta, Stripe | 0 | Free tiers and per-transaction |
+| GitHub Actions | 0 | The repository is public, so runner minutes are free. They cost **wall-clock**: the workflow's nineteen jobs sit one under the twenty-concurrent-job cap, and a run that starts while another is in flight queues behind it — a green main run on 2026-08-31 waited ten minutes for a runner before its first job started |
+| reg-suit S3 bucket | <1 | ~700 PNGs per run, every run; bounded by a 30-day lifecycle rule and the nightly pruner |
+
+So the bill is **$22–24 a month**, and $20 of it is Vercel. What moving would and would not do:
+
+- **Vercel → AWS (Lambda + CloudFront via OpenNext, or Amplify).** Saves the $20 and costs a
+  deploy pipeline this repo does not have: previews, the eleven `vercel.json` crons, Analytics and
+  Speed Insights all need replacing, `scripts/vercel-build.mjs` runs the production migration, and
+  ADR 20260718-vercel-hosting chose Vercel for exactly those. Weeks of agent time to save the price
+  of one lunch a month, before a single shop is paying. Not worth it pre-pilot; revisit when Vercel
+  usage lines (function GB-hours, bandwidth) start to show on the invoice, which they do not today.
+- **Neon → RDS / Aurora Serverless v2.** Costs *more* (Aurora's floor is ~$40/month at 0.5 ACU)
+  and buys durability the free tier lacks. The right move is the one `pnpm cost:report` already
+  names: Neon Launch at $19/month before the first pilot shop, because the free tier's ceiling
+  suspends the endpoint rather than billing.
+- **AWS trimming.** Real but small, and each item is filed rather than done here: the
+  `MutationDuration` metric is dimensioned by action label and will cost $0.30 per distinct label
+  once traffic arrives; three implicit Lambda log groups never expire; two IAM users exist for an
+  MCP consumer that no longer does; the visual bucket's 30-day lifecycle rule can delete a main
+  baseline the pruner is preserving; RUM samples 100% of sessions. Together they are under $10 a
+  month at pilot scale, and all of them are one-line changes in the stack.
+
+The cost worth engineering against is therefore **CI wall-clock**, not dollars — see
+`.github/workflows/ci.yml`'s `changes` gate (a docs-only change skips the build, the Playwright
+shards, the visual shards and the compare) and `src/test/shard-sequencer.ts` (unit shards dealt by
+cost rather than by count).
+
 ## What actually happens when a ceiling is hit
 
 This is the question worth being precise about, because the three answers are not equally urgent
