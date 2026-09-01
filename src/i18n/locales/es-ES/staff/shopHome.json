@@ -148,6 +148,6 @@
     "firstBookingWaiverSigned": "exención firmada",
     "firstBookingWaiverNeeded": "falta la exención"
   },
-  "quietAddDeparture": "+ Añadir una salida",
+  "quietAddDeparture": "Añadir una salida",
   "quietNextDepartureLabel": "Próxima salida"
 }

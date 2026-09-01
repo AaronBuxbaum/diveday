@@ -808,7 +808,7 @@ async function TodayBody({
             href={`/shop/${shopSlug}/schedule/board?add=1`}
             className={buttonClass({ className: "w-full justify-center sm:w-auto" })}
           >
-            {t("shopHome.quietAddDeparture")}
+            <span aria-hidden="true">+</span> {t("shopHome.quietAddDeparture")}
           </Link>
           {nextDeparture ? (
             <ul>

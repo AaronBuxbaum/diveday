@@ -404,7 +404,7 @@
     "sailed": "sailed",
     "waiverSigned": "waiver signed",
     "showAll": "Show all {count}",
-    "newInvoice": "+ New invoice"
+    "newInvoice": "New invoice"
   },
   "file": {
     "certificationsWaiting": "{count, plural, one {# waiting} other {# waiting}}",

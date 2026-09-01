@@ -18,7 +18,7 @@ test.describe("staff", () => {
 
     // "Dive sites" now lives in the nav's "More" group; navigate directly.
     await page.goto("/shop/blue-mantis/dive-sites");
-    await page.getByRole("link", { name: "Create a site" }).click();
+    await page.getByRole("link", { name: "Add a dive site" }).click();
     await page.getByLabel("Name").fill(siteName);
     await page.getByLabel("Location").fill("Key Largo");
     await page.getByLabel("Latitude").fill("25.123");

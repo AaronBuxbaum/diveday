@@ -243,7 +243,6 @@ export default async function GearRegisterPage({
       <ShopPageHeader
         eyebrow={t("gear.eyebrow")}
         title={t("gear.title")}
-        description={t("gear.description")}
         // An empty register gets no header action: the empty card below is
         // the whole page and owns the one door (principle 8).
         actions={

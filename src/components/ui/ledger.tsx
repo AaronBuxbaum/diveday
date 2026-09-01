@@ -189,14 +189,20 @@ export function LedgerGroup({
           <DisclosureCaret className="text-muted group-open/fold:rotate-90" />
         </summary>
       ) : (
-        <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-1 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
+        <summary className="-mx-2 flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-2 rounded-lg px-2 py-1 transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
           {/* Which way this goes, before you press it — decorative; the native
               disclosure semantics carry the state. */}
           <DisclosureCaret className="text-muted group-open/fold:rotate-90" />
           <GroupLabel as={as} id={id} className="min-w-0 flex-1">
             {label}
           </GroupLabel>
-          {meta != null ? <span className={GROUP_META_CLASS}>{meta}</span> : null}
+          {/* Below `sm` the meta takes its own line under the label rather than
+              squeezing it: "Imported payment history" beside "2 imported source
+              records" and an Unverified badge left the label 100px to wrap in
+              on a 390px phone, three lines deep, with the badge overlapping it. */}
+          {meta != null ? (
+            <span className={`${GROUP_META_CLASS} max-sm:basis-full max-sm:text-end`}>{meta}</span>
+          ) : null}
         </summary>
       )}
       {children}

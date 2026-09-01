@@ -1,10 +1,5 @@
 {
   "title": "How's your month",
-  "description": {
-    "thisMonth": "Bookings, revenue, seat fill, and waivers for this month's trips — so far.",
-    "future": "Bookings, revenue, seat fill, and waivers for this month's trips.",
-    "past": "Bookings, revenue, seat fill, and waivers for the trips that sailed."
-  },
   "soFar": "so far",
   "chooseMonth": "Choose month",
   "previousMonth": "Previous month",
