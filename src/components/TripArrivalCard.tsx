@@ -4,7 +4,6 @@ import { SectionCard } from "@/components/ui/card";
 import { diverTranslator } from "@/i18n/messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { googleMapsUrl } from "@/lib/maps";
-import { publicTripArrivalCardPath } from "@/lib/public-routes";
 import { type ShopAddressParts, shopAddressLines, shopMapQuery } from "@/lib/shop-address";
 
 export type ArrivalCardShop = {
@@ -76,29 +75,33 @@ export function TripArrivalCard({
   shop,
   trip,
   locale,
+  downloadHref,
   className = "",
 }: {
   shop: ArrivalCardShop;
   trip: ArrivalCardTrip;
   locale: string;
+  /** A post-booking download URL carrying the Ready capability. */
+  downloadHref?: string | null;
   className?: string;
 }) {
   const t = diverTranslator(locale);
   const facts = arrivalCardFacts(shop, trip);
-  const arrivalUrl = publicTripArrivalCardPath(shop.slug, trip.id);
   return (
     <SectionCard
       title={t("trip.arrivalHeading")}
       description={t("trip.arrivalBody")}
       className={className}
       actions={
-        <a
-          href={arrivalUrl}
-          download
-          className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
-        >
-          {t("trip.saveArrivalCard")}
-        </a>
+        downloadHref ? (
+          <a
+            href={downloadHref}
+            download
+            className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+          >
+            {t("trip.saveArrivalCard")}
+          </a>
+        ) : undefined
       }
     >
       {facts.photoUrl ? (

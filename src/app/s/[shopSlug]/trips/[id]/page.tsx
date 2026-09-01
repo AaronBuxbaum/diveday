@@ -6,7 +6,6 @@ import { FlashParams } from "@/components/FlashParams";
 import { JsonLd } from "@/components/JsonLd";
 import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
-import { TripArrivalCard } from "@/components/TripArrivalCard";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { buttonClass } from "@/components/ui/button";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
@@ -237,20 +236,6 @@ export default async function TripDetailPage({
       ? null
       : cachedListFormat(locale, { style: "long", type: "conjunction" }).format(crewLanguageNames);
   const changeEvents = await listTripChangeEvents(db, shop.id, tripId);
-  const arrivalShop = {
-    name: shop.name,
-    slug: shop.slug,
-    timezone: shop.timezone,
-    contactPhone: shop.contactPhone,
-    contactEmail: shop.contactEmail,
-    address: {
-      street: shop.addressStreet,
-      locality: shop.addressLocality,
-      region: shop.addressRegion,
-      postalCode: shop.addressPostalCode,
-      country: shop.addressCountry,
-    },
-  };
   const crewPrediction = hasCrewPrediction(trip);
   const forecastPoint =
     trip.diveSite &&
@@ -463,11 +448,11 @@ export default async function TripDetailPage({
           meetingDays={meetingDays}
           locale={locale}
           embed={isEmbed}
+          showMeetingPoint={false}
         />
         {/* The hero's two conveniences, inside the hero rather than as a row of
             buttons under it. */}
         {isEmbed ? null : <TripActions calendarUrl={publicTripCalendarPath(shopSlug, tripId)} />}
-        <TripArrivalCard shop={arrivalShop} trip={trip} locale={locale} className="mt-6" />
         {/* The one warning panel this page ever wears — the same shape as the
             conditions-changed panel below, on purpose. Two amber boxes with
             different radii and border weights read as two different systems
@@ -547,6 +532,7 @@ export default async function TripDetailPage({
           events={changeEvents}
           locale={locale}
           timeZone={shop.timezone}
+          revealArrivalDetails={false}
           className="mt-6"
         />
         {confirmed &&

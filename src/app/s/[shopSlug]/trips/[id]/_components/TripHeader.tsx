@@ -23,9 +23,15 @@ export function TripHeader({
   meetingDays,
   locale,
   embed,
+  showMeetingPoint = true,
 }: {
   shop: Shop;
   trip: Trip;
+  /**
+   * Exact meeting details are a booked-diver benefit. Public booking pages
+   * still answer when and how much without publishing the arrival destination.
+   */
+  showMeetingPoint?: boolean;
   /**
    * Every consecutive day this departure meets on, in order. One entry is an
    * ordinary single-day trip; more is an Open Water weekend or a liveaboard,
@@ -127,7 +133,7 @@ export function TripHeader({
                 {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
               </p>
             )}
-            {trip.meetingPointLabel ? (
+            {showMeetingPoint && trip.meetingPointLabel ? (
               <p className="mt-2 text-sm font-medium text-muted">
                 {trip.meetingPointAddress
                   ? t("trip.meetingPointWithAddress", {

@@ -151,6 +151,7 @@
     "changeLedgerHeading": "Qué ha cambiado",
     "changeLedgerBody": "Aquí aparecen las actualizaciones importantes del punto de encuentro y las condiciones, con quién las comunicó y cuándo.",
     "changeMeetingPoint": "Punto de encuentro: {label}",
+    "changeMeetingPointUpdated": "Punto de encuentro actualizado",
     "changeMeetingPointWithAddress": "Punto de encuentro: {label} · {address}",
     "changeArrivalGuidance": "Indicaciones de llegada actualizadas",
     "changeArrivalPhoto": "Foto de llegada actualizada",

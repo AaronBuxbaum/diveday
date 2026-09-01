@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
+import { getReadyPageData } from "@/db/ready";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
@@ -30,8 +32,8 @@ function field(label: string, value: string | null | undefined): string {
 }
 
 /**
- * A deliberately boring HTML download: it is a saved public place card, never
- * a second capability or a copy of the private Ready page.
+ * A deliberately boring HTML download: it is a saved post-booking place card,
+ * authorized by the Ready capability and never a copy of the private Ready page.
  */
 export async function GET(
   request: NextRequest,
@@ -40,6 +42,23 @@ export async function GET(
   const { shopSlug, id } = await params;
   if (!uuidParam(id)) return new NextResponse("Not found", { status: 404 });
   const db = await getDb();
+  const bookingToken = request.nextUrl.searchParams.get("booking")?.trim();
+  if (!bookingToken) return new NextResponse("Not found", { status: 404 });
+  const capability = await verifyBookingCapability(db, {
+    token: bookingToken,
+    purpose: "readiness",
+  });
+  if (!capability) return new NextResponse("Not found", { status: 404 });
+  const ready = await getReadyPageData(db, capability.bookingId);
+  if (
+    !ready ||
+    ready.shop.slug !== shopSlug ||
+    ready.detail.trip.id !== id ||
+    ready.detail.cancelled
+  ) {
+    return new NextResponse("Not found", { status: 404 });
+  }
+
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) return new NextResponse("Not found", { status: 404 });
   const trip = await getTripWithBooked(db, shop.id, id);
