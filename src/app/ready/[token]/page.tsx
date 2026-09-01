@@ -26,6 +26,8 @@ import { RememberBooker } from "@/components/RememberBooker";
 import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
+import { TripArrivalCard } from "@/components/TripArrivalCard";
+import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { ThreadShell } from "@/components/thread/ThreadShell";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
@@ -53,6 +55,7 @@ import {
 } from "@/db/schema";
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopById, getShopBySlug } from "@/db/shops";
+import { listTripChangeEvents } from "@/db/trip-change-events";
 import { getTripWithBooked, listTripDives } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
@@ -101,6 +104,7 @@ import {
   saveCertificationFromReady,
   saveDiveRecencyFromReady,
   saveFitFromReady,
+  saveHelpRequestFromReady,
   saveHotelPickupLocationFromReady,
   saveNitroxCertificationFromReady,
   saveNoteFromReady,
@@ -692,6 +696,9 @@ const READY_NOTICES: Record<
   // The count is refused on its own field (see `saveSupportNeedsFromReady`);
   // the banner stays quiet so the page does not shout about one number.
   "error-support-count": { tone: "neutral", key: "ready.supportDiversCountHint" },
+  "saved-help": { tone: "success", key: "ready.helpRequestSent" },
+  "error-help": { tone: "danger", key: "ready.helpRequestUnavailable" },
+  "error-help-handled": { tone: "neutral", key: "ready.helpRequestHandled" },
 };
 
 /**
@@ -1020,6 +1027,56 @@ function DayOfDetails({
             </SubmitButton>
           </div>
         </form>
+      </div>
+      <div className="py-5">
+        <h3 className="text-base font-semibold">{t("ready.helpHeading")}</h3>
+        <p className="mt-1 text-sm text-muted">{t("ready.helpBody")}</p>
+        {data.helpRequest?.status === "handled" ? (
+          <p className="mt-3 text-sm font-medium text-success-strong">{t("ready.helpHandled")}</p>
+        ) : (
+          <form
+            action={saveHelpRequestFromReady.bind(null, token)}
+            className="mt-3 flex flex-col gap-3"
+          >
+            <fieldset className="flex flex-col gap-2">
+              <legend className="sr-only">{t("ready.helpHeading")}</legend>
+              <RadioRow
+                name="kind"
+                value="none"
+                label={t("ready.helpNone")}
+                defaultChecked={!data.helpRequest}
+              />
+              <RadioRow
+                name="kind"
+                value="carry_gear"
+                label={t("ready.helpCarryGear")}
+                defaultChecked={data.helpRequest?.kind === "carry_gear"}
+              />
+              <RadioRow
+                name="kind"
+                value="first_timer"
+                label={t("ready.helpFirstTimer")}
+                defaultChecked={data.helpRequest?.kind === "first_timer"}
+              />
+              <RadioRow
+                name="kind"
+                value="find_group"
+                label={t("ready.helpFindGroup")}
+                defaultChecked={data.helpRequest?.kind === "find_group"}
+              />
+            </fieldset>
+            {data.helpRequest?.status === "acknowledged" ? (
+              <p className="text-sm font-medium text-success-strong">
+                {t("ready.helpAcknowledged")}
+              </p>
+            ) : null}
+            <div>
+              <SubmitButton pendingLabel={t("ready.helpSaving")} className={saveButton}>
+                {t("ready.helpSubmit")}
+              </SubmitButton>
+            </div>
+          </form>
+        )}
       </div>
       {/* **What this dive needs set up for you** — the accessible-dive record
           (ADR 20260827-support-needs-are-a-record-about-the-dive). Asked here
@@ -1459,6 +1516,7 @@ export default async function DiverReadinessPage({
     bookingId: seat.bookingId,
     seatName: seat.seatName,
     claimed: seat.claimed,
+    waiverSigned: seat.waiverSigned,
     claimUrl: seat.claim
       ? claimOrigin
         ? new URL(claimLinkPath(seat.claim.token), `${claimOrigin}/`).toString()
@@ -1482,10 +1540,11 @@ export default async function DiverReadinessPage({
   // One round trip, not two: the trip reads are scoped by `shop.id`, which the
   // verified capability already resolved, so none of them has to wait on the
   // shop row `PackingSection` needs for its units and rental catalogue.
-  const [fullShop, fullTrip, tripDives] = await Promise.all([
+  const [fullShop, fullTrip, tripDives, changeEvents] = await Promise.all([
     getShopBySlug(db, shop.slug),
     getTripWithBooked(db, shop.id, data.trip.id),
     listTripDives(db, shop.id, data.trip.id),
+    listTripChangeEvents(db, shop.id, data.trip.id),
   ]);
   // What one seat on this departure costs. Null on an unpriced trip, which
   // then quotes nothing rather than guessing — see `resolvePaymentReceipt`,
@@ -1902,6 +1961,33 @@ export default async function DiverReadinessPage({
             <ThreadSpine steps={spineSteps} />
           </>
         )}
+        {fullShop && fullTrip ? (
+          <TripArrivalCard
+            shop={{
+              name: fullShop.name,
+              slug: fullShop.slug,
+              timezone: fullShop.timezone,
+              contactPhone: fullShop.contactPhone,
+              contactEmail: fullShop.contactEmail,
+              address: {
+                street: fullShop.addressStreet,
+                locality: fullShop.addressLocality,
+                region: fullShop.addressRegion,
+                postalCode: fullShop.addressPostalCode,
+                country: fullShop.addressCountry,
+              },
+            }}
+            trip={fullTrip}
+            locale={locale}
+            className="mt-8"
+          />
+        ) : null}
+        <TripChangeLedger
+          events={changeEvents}
+          locale={locale}
+          timeZone={detail.shop.timezone}
+          className="mt-6"
+        />
         <PartyClaimPanel locale={locale} seats={partySeats} className="mt-8" />
         {partyAllSet ? (
           <p className="mt-3">
