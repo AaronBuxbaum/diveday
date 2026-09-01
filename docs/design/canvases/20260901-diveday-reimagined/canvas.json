@@ -168,7 +168,7 @@
       "x": 0,
       "y": 4920,
       "w": 1440,
-      "h": 1300,
+      "h": 1330,
       "page": "page-2"
     },
     {
@@ -177,14 +177,14 @@
       "x": 1560,
       "y": 4920,
       "w": 1440,
-      "h": 1440,
+      "h": 1530,
       "page": "page-2"
     },
     {
       "file": "EmbedGenerator.dc.html",
       "title": "Settings \u2014 the embed generator",
       "x": 0,
-      "y": 6500,
+      "y": 6600,
       "w": 1440,
       "h": 1880,
       "page": "page-2"
@@ -193,7 +193,7 @@
       "file": "HarborSwitch.dc.html",
       "title": "Leaving FareHarbor \u2014 the website half",
       "x": 1560,
-      "y": 6500,
+      "y": 6600,
       "w": 1440,
       "h": 1560,
       "page": "page-2"
@@ -259,7 +259,7 @@
     {
       "id": "r2-row-d",
       "x": -320,
-      "y": 6500,
+      "y": 6600,
       "w": 260,
       "page": "page-2",
       "text": "Row 4 \u2014 how a shop gets it\nThe generator in Settings, and the website half of the FareHarbor page. Proposed where it says so."
