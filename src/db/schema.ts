@@ -1577,6 +1577,14 @@ export const trips = pgTable(
      */
     meetingPointLabel: text("meeting_point_label"),
     meetingPointAddress: text("meeting_point_address"),
+    /** Optional shop-authored arrival guidance for the public card and `/ready`. */
+    arrivalLandmark: text("arrival_landmark"),
+    arrivalParkingNote: text("arrival_parking_note"),
+    arrivalTransitNote: text("arrival_transit_note"),
+    arrivalLookFor: text("arrival_look_for"),
+    arrivalFirstInteraction: text("arrival_first_interaction"),
+    /** A first-party stored photo or bundled illustration; never a raw remote URL. */
+    arrivalPhotoUrl: text("arrival_photo_url"),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
     capacity: integer("capacity").notNull(),
@@ -1950,6 +1958,30 @@ export const bookingStatus = pgEnum("booking_status", [
   "no_show",
 ]);
 
+/** A small, non-medical day-of request a diver can make from `/ready`. */
+export const tripHelpRequestKind = pgEnum("trip_help_request_kind", [
+  "carry_gear",
+  "first_timer",
+  "find_group",
+]);
+
+/** The visible hand-off state for a day-of request. */
+export const tripHelpRequestStatus = pgEnum("trip_help_request_status", [
+  "requested",
+  "acknowledged",
+  "handled",
+  "withdrawn",
+]);
+
+/** The public fact that changed in a departure's plan ledger. */
+export const tripChangeEventKind = pgEnum("trip_change_event_kind", [
+  "meeting_point",
+  "conditions",
+]);
+
+/** The broad source of a published change, not a staff member's private name. */
+export const tripChangeEventSource = pgEnum("trip_change_event_source", ["shop", "crew"]);
+
 /**
  * **How recently this diver has been in the water** — their own word, in coarse
  * bands rather than a date (ADR 20260821-currency-is-what-catches-people).
@@ -2079,6 +2111,43 @@ export const bookings = pgTable(
   ],
 );
 
+/**
+ * One small, non-medical request from a diver for this departure. It is a
+ * single mutable hand-off rather than a notes stream: the staff queue needs
+ * one thing to settle, and the diver needs one visible answer. Past trips keep
+ * their rows for auditability, but readers only surface requests before the
+ * departure has ended.
+ */
+export const tripHelpRequests = pgTable(
+  "trip_help_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id, { onDelete: "cascade" }),
+    kind: tripHelpRequestKind("kind").notNull(),
+    status: tripHelpRequestStatus("status").notNull().default("requested"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
+    handledAt: timestamp("handled_at", { withTimezone: true }),
+    resolvedByPersonId: uuid("resolved_by_person_id").references(() => people.id, {
+      onDelete: "set null",
+    }),
+  },
+  (table) => [
+    uniqueIndex("trip_help_requests_booking_unique").on(table.bookingId),
+    index("trip_help_requests_shop_status_idx").on(table.shopId, table.status, table.createdAt),
+    index("trip_help_requests_trip_idx").on(table.tripId, table.createdAt),
+  ],
+);
+
 /** Staff-only context attached to a diver or one specific booking. */
 export const internalNotes = pgTable(
   "internal_notes",
@@ -2164,6 +2233,43 @@ export const activityEvents = pgTable(
       table.occurredAt,
     ),
     check("activity_events_message_not_blank", sql`length(trim(${table.message})) > 0`),
+  ],
+);
+
+/**
+ * Publicly safe, append-only facts about material changes to one departure.
+ * Snapshots contain only meeting-point or conditions values; no contact data,
+ * readiness state, waiver, or capability token belongs in this table.
+ */
+export const tripChangeEvents = pgTable(
+  "trip_change_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    kind: tripChangeEventKind("kind").notNull(),
+    source: tripChangeEventSource("source").notNull(),
+    beforeValue: jsonb("before_value")
+      .$type<Record<string, string | number | boolean | null> | null>()
+      .default(null),
+    afterValue: jsonb("after_value")
+      .$type<Record<string, string | number | boolean | null>>()
+      .notNull(),
+    actorPersonId: uuid("actor_person_id").references(() => people.id, { onDelete: "set null" }),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+    seq: bigserial("seq", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    index("trip_change_events_shop_trip_idx").on(
+      table.shopId,
+      table.tripId,
+      table.occurredAt,
+      table.seq,
+    ),
   ],
 );
 
@@ -6533,6 +6639,7 @@ export const mediaDeletionKind = pgEnum("media_deletion_kind", [
   "waiver_document",
   "dive_site_photo",
   "shop_logo",
+  "arrival_photo",
 ]);
 
 export const mediaDeletionStatus = pgEnum("media_deletion_status", [

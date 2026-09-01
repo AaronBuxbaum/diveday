@@ -47,9 +47,10 @@ So an entry here is the index; the constraint lives beside the code it constrain
   [settled-questions.md](settled-questions.md)).
 - **Composition:** **the day's spine.** Today's departures are stations in clock order, each owning
   its time, title, site, hull, crew, price and head count, with its own blockers and chores as
-  ledger rows beneath it; work bound to no boat pools under "At the desk"; tomorrow is a collapsed
-  disclosure and the rest of the week one link to the board. A departure's facts are said once, at
-  its station, instead of once per card.
+  ledger rows beneath it; a diver's open day-of help request is one neutral row on that departure;
+  work bound to no boat pools under "At the desk"; tomorrow is a collapsed disclosure and the rest
+  of the week one link to the board. A departure's facts are said once, at its station, instead of
+  once per card.
 
 Enforced beside the code: `DaySpine.tsx` and `DayStation.tsx` defer to the ADR by name,
 `DaySpine.test.tsx` pins the composition (including its silences), and
@@ -77,8 +78,9 @@ the roster's actions or deep links.
 - **Remove first:** the Activity and Promote footer rows — kept only because a trip's history has no
   other home yet.
 - **Composition:** one grouped ledger under a masthead, not a card stack — a roster is a list of
-  people in states, and the state belongs to the group rather than repeated down every row; invite
-  and add actions are its terminal bands, not detached forms.
+  people in states, and the state belongs to the group rather than repeated down every row; arrival
+  guidance is authored with the departure details, while invite and add actions are its terminal
+  bands, not detached forms.
 
 ### The boat manifest — `/shop/[shopSlug]/trips/[id]/manifest`
 
@@ -185,18 +187,20 @@ routes took the display-scale h1 only.
 drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion surface.
 
 - **One idea:** this boat is worth your Saturday — and here is the one place to say yes.
-- **The question it arrives with:** "what will I see, where do I meet, and can I get on?" —
-  answered by the pitch, meeting point, and scarcity word before any scrolling or booking work.
+- **The question it arrives with:** "what will I see, where do I meet, what changed, and can I get
+  on?" — answered by the pitch, arrival card, change ledger and scarcity word before any booking
+  work.
 - **Controls that dissolved:** the boxed requirement note (one sentence), the boxed gear fieldsets
-  (hairline steps of one sheet), the five-piece money story (one block), the sticky pill's
-  duplicate seat count (verb only).
+  (hairline steps of one sheet), the five-piece money story (one block), and the sticky pill's
+  duplicate seat count (verb only); saving the arrival card is an opt-in link on the card itself.
 - **Removed:** the packing section, which is preparation rather than pitch and moved to the thread
   in 7b; and the swipeable briefing deck, deleted outright in 7c. The 2026-08-28 diver-views review
   put the deck's *pictures* back without the deck: "Look for" shows each species' bundled photo
   beside its name, and the published diver moments render as one capped strip (`TripMoments`) —
   beats, not a gallery.
 - **Composition:** sell then close — the form is the page's terminal word, so the primary is where
-  a decided diver already is.
+  a decided diver already is; the arrival card follows the hero and the change ledger follows the
+  conditions reading so practical wayfinding never competes with the pitch.
 
 ### The product page — `/product`
 
@@ -221,13 +225,16 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
 
 - **One idea:** the one link that answers "am I ready, and what's next?" for this trip — before,
   during, and after.
-- **The question it arrives with:** "what do I still have to do?" — answered by one figure and the
-  named next step, first.
+- **The question it arrives with:** "what do I still have to do, where do I go, and who has my
+  hand-off?" — answered by one figure and the named next step first, then the shared arrival card,
+  change ledger, party status and one small help request.
 - **Controls that dissolved:** the receipt panel, the emails line and the per-row Done chips (the
-  steps' settled lines say it once); the four inline forms at rest (one open step at a time).
+  steps' settled lines say it once); the four inline forms at rest (one open step at a time); help
+  is a controlled choice, never a free-text support inbox.
 - **Remove first:** nothing after the fold — the after-state already absorbed the recap page.
-- **Composition:** a step spine, because getting ready is a sequence, and the same spine grammar
-  the staff home speaks makes the product one product.
+- **Composition:** a step spine, because getting ready is a sequence, followed by the reusable
+  arrival/change reading and the party hand-off; the same spine grammar the staff home speaks makes
+  the product one product.
 
 ### The waiver — `/waivers/[token]`
 

@@ -74,7 +74,9 @@ import {
   tripAssignments,
   tripBlowoutDivers,
   tripBlowouts,
+  tripChangeEvents,
   tripDives,
+  tripHelpRequests,
   tripInvitations,
   tripLastMinutePromoRecipients,
   tripLastMinutePromos,
@@ -1037,6 +1039,7 @@ export async function resetDemoSchedule(
   // comment above describes (ADR 20260804-blowout-cascade).
   await db.delete(tripBlowoutDivers).where(eq(tripBlowoutDivers.shopId, shopId));
   await db.delete(tripBlowouts).where(eq(tripBlowouts.shopId, shopId));
+  await db.delete(tripHelpRequests).where(eq(tripHelpRequests.shopId, shopId));
   // The buddy-team trail references trips and people and outlives the
   // membership rows by design (ADR 20260804-buddy-teams), so it clears before
   // both parents — same ordering rule the cascade comments above walk.
@@ -1047,6 +1050,7 @@ export async function resetDemoSchedule(
   await db.delete(buddyPairMembers).where(eq(buddyPairMembers.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
   await db.delete(tripRequirements).where(eq(tripRequirements.shopId, shopId));
+  await db.delete(tripChangeEvents).where(eq(tripChangeEvents.shopId, shopId));
   if (tripIds.length > 0) {
     await db.delete(tripAssignments).where(inArray(tripAssignments.tripId, tripIds));
     await db.delete(tripDives).where(inArray(tripDives.tripId, tripIds));

@@ -42,6 +42,8 @@ export const EXPORT_FILE_NOTES = {
   "nitrox_certifications.csv": "Nitrox (EANx) certifications with verification status.",
   "trips.csv":
     "Every trip ever scheduled, including cancelled ones, with sites and predicted conditions.",
+  "trip_change_events.csv":
+    "The public-safe change ledger for departures: what meeting point or conditions snapshot changed, the before and after values, broad source, and timestamp. No readiness, waiver, contact, or capability state is included.",
   "trip_series.csv":
     "Recurring-trip cadences; every materialized instance is its own row in trips.csv carrying series_id. A blank ends_on means the trip simply keeps repeating.",
   "trip_series_skips.csv":
@@ -58,6 +60,8 @@ export const EXPORT_FILE_NOTES = {
     "Staff-owned ratings, insurance, and safety credentials, including their review status and renewal dates.",
   "bookings.csv":
     "Every booking with its trip, diver, and payment state. wants_nitrox is a request, never a fill authorization — honor it only against a verified Nitrox card, checked at fill time.",
+  "trip_help_requests.csv":
+    "One non-medical day-of help request per booking, with its visible hand-off status and timestamps. The request is retained with the trip history; resolved staff identity is included when available.",
   "waitlist_entries.csv":
     "Divers in line for full trips. A wait-list entry never consumed a seat and never appears on a manifest.",
   "trip_invitations.csv":

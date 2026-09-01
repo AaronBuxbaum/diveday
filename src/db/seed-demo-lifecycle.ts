@@ -76,7 +76,9 @@ import {
   tripAssignments,
   tripBlowoutDivers,
   tripBlowouts,
+  tripChangeEvents,
   tripDives,
+  tripHelpRequests,
   tripInvitations,
   tripLastMinutePromoRecipients,
   tripLastMinutePromos,
@@ -212,6 +214,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // references `trips` (ADR 20260804-blowout-cascade).
   await db.delete(tripBlowoutDivers).where(eq(tripBlowoutDivers.shopId, shopId));
   await db.delete(tripBlowouts).where(eq(tripBlowouts.shopId, shopId));
+  await db.delete(tripHelpRequests).where(eq(tripHelpRequests.shopId, shopId));
   // The buddy-team trail references trips and people (ADR 20260804-buddy-teams).
   await db.delete(buddyTeamEvents).where(eq(buddyTeamEvents.shopId, shopId));
   // Buddy pairs reference bookings, so they go before the bookings delete
@@ -225,6 +228,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(priorGearAssignments).where(eq(priorGearAssignments.shopId, shopId));
   await db.delete(gearItems).where(eq(gearItems.shopId, shopId));
   await db.delete(bookings).where(eq(bookings.shopId, shopId));
+  await db.delete(tripChangeEvents).where(eq(tripChangeEvents.shopId, shopId));
   await db.delete(trips).where(eq(trips.shopId, shopId));
   // Before the series it points at, and after the trips: a skip is the
   // memory of a date that is no longer there.
