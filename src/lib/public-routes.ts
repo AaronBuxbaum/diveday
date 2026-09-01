@@ -34,6 +34,11 @@ export function publicTripCalendarPath(shopSlug: string, tripId: string): string
   return `${publicTripPath(shopSlug, tripId)}/calendar`;
 }
 
+/** A small, public HTML arrival card that can be saved for a no-signal morning. */
+export function publicTripArrivalCardPath(shopSlug: string, tripId: string): string {
+  return `${publicTripPath(shopSlug, tripId)}/arrival-card`;
+}
+
 /** The diver-facing course catalog (the staff roster is /shop/<slug>/courses). */
 export function publicCoursesPath(shopSlug: string): string {
   return `${PUBLIC_SHOP_PREFIX}/${shopSlug}/courses`;
