@@ -1,0 +1,346 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..700,0..100,0..1&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #dceef0;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --warning: #b45309; --danger: #b91c1c;
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p { margin: 0; }
+    .disp { font-family: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif; font-optical-sizing: auto; font-variation-settings: 'SOFT' 50, 'WONK' 1; }
+    .num { font-variant-numeric: tabular-nums; }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .h2 { font-family: 'Fraunces', 'Iowan Old Style', Palatino, Georgia, serif; font-optical-sizing: auto; font-variation-settings: 'SOFT' 50, 'WONK' 1; font-size: 30px; font-weight: 600; letter-spacing: -0.018em; }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: 0 2px 10px rgba(88, 66, 30, .045); }
+    .trow { display: flex; align-items: center; gap: 20px; min-height: 62px; padding: 0 26px; border-top: 1px solid var(--rope); }
+    .daybar { display: flex; align-items: center; gap: 12px; min-height: 38px; padding: 0 26px; background: var(--tideline); }
+  </style>
+</helmet>
+
+<div style="width: 1440px; min-height: 1800px; background: var(--sand); box-sizing: border-box; overflow: hidden;">
+
+  <!-- Public chrome -->
+  <div style="height: 60px; display: flex; align-items: center; gap: 20px; padding: 0 44px; background: rgba(251,247,239,.9); border-bottom: 1px solid var(--rope); box-sizing: border-box;">
+    <span class="disp" style="font-size: 20px; font-weight: 600; letter-spacing: -0.012em;">Blue Mantis Divers</span>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 6px;">
+      <span style="font-size: 15px; font-weight: 600; color: var(--lagoon-deep); background: var(--lagoon-wash); padding: 10px 18px; border-radius: 999px;">Schedule</span>
+      <span style="font-size: 15px; font-weight: 500; color: var(--muted); padding: 10px 18px;">Courses</span>
+      <span style="font-size: 14px; font-weight: 500; color: var(--muted); padding: 10px 14px; display: inline-flex; align-items: center; gap: 6px;">English
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5 6 7.5 9 4.5"></path></svg>
+      </span>
+    </div>
+  </div>
+
+  <!-- Hero: the one drawn scene in the whole system -->
+  <div style="position: relative; background: linear-gradient(180deg, #dceef0 0%, #e9f2ee 58%, #fbf7ef 100%); padding: 52px 0 60px; overflow: hidden;">
+    <svg width="1440" height="120" viewBox="0 0 1440 120" preserveAspectRatio="none" fill="none" stroke="#0a4d61" stroke-width="1.6" stroke-linecap="round" style="position: absolute; left: 0; bottom: 0; opacity: .14;">
+      <path d="M0 54c120-28 240-28 360 0s240 28 360 0 240-28 360 0 240 28 360 0"></path>
+      <path d="M0 84c120-28 240-28 360 0s240 28 360 0 240-28 360 0 240 28 360 0" opacity=".6"></path>
+    </svg>
+
+    <div style="width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 404px; column-gap: 64px; align-items: start; position: relative;">
+
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <p class="disp" style="font-size: 58px; font-weight: 700; letter-spacing: -0.032em; line-height: 1.0;">Blue Mantis Divers</p>
+        <p style="font-size: 19px; color: var(--muted); max-width: 520px;">Small-boat reef and wreck diving out of Key Largo. Six divers to a guide, and the briefing takes as long as it takes.</p>
+
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="display: inline-flex; gap: 3px;">
+            <svg width="17" height="17" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8Z"></path></svg>
+            <svg width="17" height="17" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8Z"></path></svg>
+            <svg width="17" height="17" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8Z"></path></svg>
+            <svg width="17" height="17" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8Z"></path></svg>
+            <svg width="17" height="17" viewBox="0 0 18 18" fill="none" stroke="#8a8065" stroke-width="1.5" stroke-linejoin="round"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8Z"></path></svg>
+          </span>
+          <span class="num" style="font-size: 15px; font-weight: 600;">4.3</span>
+          <span class="num" style="font-size: 15px; color: var(--muted);">&middot; 83 reviews, every one from a diver who was on the boat</span>
+        </div>
+
+        <!-- the scene -->
+        <svg width="640" height="188" viewBox="0 0 640 188" fill="none" stroke="#0a4d61" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <!-- turtle -->
+          <g transform="translate(6 34) scale(1.28)">
+            <path d="M44 32C56 20 84 20 95 33c9 11 1 25-16 29-17 4-33-2-37-14-2-6 0-12 2-16Z" fill="#fffdf8"></path>
+            <path d="M44 36c-8-5-17-5-22 0-4 4-2 10 4 11 5 1 11-1 14-4"></path>
+            <circle cx="27" cy="39" r="1.6" fill="#0a4d61" stroke="none"></circle>
+            <path d="M57 27c-4-12-16-18-24-16 6 6 10 14 16 20"></path>
+            <path d="M84 59c4 10 14 14 18 10-4-4-8-8-12-12"></path>
+            <path d="M55 28c2 10 2 24-2 32M70 24c2 12 2 26-2 34M46 44c16 4 34 4 48 0"></path>
+          </g>
+          <!-- parrotfish -->
+          <g transform="translate(226 74) scale(.92)">
+            <path d="M26 40c9-16 34-23 54-15 12 5 20 13 20 15 0 2-8 10-20 15-20 8-45 1-54-15Z" fill="#fffdf8"></path>
+            <path d="M26 40 13 22c4 11 4 25 0 36l13-18Z" fill="#fffdf8"></path>
+            <path d="M50 22c8-9 20-9 27-1"></path>
+            <path d="M68 46c-2 8 2 14 8 14"></path>
+            <path d="M44 28c4 12 4 20 0 30M58 24c4 13 4 22 0 33"></path>
+            <circle cx="88" cy="36" r="2" fill="#0a4d61" stroke="none"></circle>
+            <path d="M99 36c4 2 4 6 0 8"></path>
+          </g>
+          <!-- sea fan -->
+          <g transform="translate(346 84) scale(1.1)">
+            <path d="M60 74c0-14-2-22-5-28"></path>
+            <path d="M55 46c-6-8-14-12-22-18M55 46c1-12 3-18 3-28M55 46c8-6 16-8 26-14"></path>
+            <path d="M40 34c-6-2-10-6-12-10M46 28c0-6 1-10 0-14M58 30c4-4 8-6 13-8M64 38c6-2 11-4 16-8"></path>
+            <path d="M33 28c-4 0-7-2-9-5M52 20c-2-4-2-7-2-10M70 24c2-4 5-6 8-8"></path>
+          </g>
+          <!-- brain coral -->
+          <g transform="translate(462 106) scale(.86)">
+            <path d="M22 62c0-19 16-33 38-33s38 14 38 33Z" fill="#fffdf8"></path>
+            <path d="M30 58c6-9 13-3 19-11 5-7 12-1 18-8M32 63c8-10 15-3 22-11 6-7 13-1 20-8"></path>
+          </g>
+          <!-- bubbles -->
+          <circle cx="176" cy="52" r="7" fill="#fffdf8"></circle>
+          <circle cx="196" cy="34" r="4.6" fill="#fffdf8"></circle>
+          <circle cx="211" cy="20" r="3" fill="#ff6f61" stroke="#a83a2c"></circle>
+          <!-- sea floor -->
+          <path d="M0 168c80-8 160-6 240 2s160 10 240 2 120-10 160-6" opacity=".5"></path>
+        </svg>
+      </div>
+
+      <!-- The next boat: the page's one primary -->
+      <div class="panel" style="padding: 28px 30px 30px; display: flex; flex-direction: column; gap: 14px;">
+        <p class="eyebrow">Next boat out</p>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <p class="num" style="font-size: 30px; font-weight: 700; letter-spacing: -0.02em; line-height: 1;">Tonight &middot; 7:30 PM</p>
+          <p style="font-size: 18px; font-weight: 600;">Night Dive &mdash; City of Washington</p>
+          <p style="font-size: 15px; color: var(--muted);">Torches down over the old wreck. Tarpon hunt in the beams, and the sand lights up when you wave a hand through it.</p>
+        </div>
+        <div style="height: 1px; background: var(--rope);"></div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 15px; font-weight: 600;">5 spots left</span>
+          <span class="num" style="margin-left: auto; font-size: 26px; font-weight: 700;">$120</span>
+        </div>
+        <span style="display: flex; align-items: center; justify-content: center; height: 54px; border-radius: 16px; background: var(--lagoon); color: #ffffff; font-size: 17px; font-weight: 600;">Book this boat</span>
+        <p style="font-size: 13.5px; color: var(--muted); text-align: center;">No account needed. Sign the waiver from the confirmation.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="width: 1200px; margin: 0 auto; padding: 60px 0 48px; box-sizing: border-box; display: flex; flex-direction: column; gap: 58px;">
+
+    <!-- The week -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      <div style="display: flex; align-items: baseline; gap: 20px;">
+        <p class="h2">This week on the water</p>
+        <span style="margin-left: auto; font-size: 15px; font-weight: 600; color: var(--lagoon);">September &#8250;</span>
+      </div>
+
+      <div class="panel" style="overflow: hidden;">
+        <div class="daybar"><span class="glabel">Today &middot; Thu, Aug 27</span></div>
+        <div class="trow" style="border-top: 0; opacity: .55;">
+          <span class="num" style="width: 96px; font-size: 16px; font-weight: 700;">1:00 PM</span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 17px; font-weight: 600;">Wreck Trip &mdash; Spiegel Grove</span>
+            <span style="font-size: 14px; color: var(--muted);">Spiegel Grove &middot; Advanced, Deep</span>
+          </span>
+          <span style="display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 14px; font-size: 13px; font-weight: 650; background: var(--tideline); border: 1px solid var(--rope); color: var(--muted);">Full</span>
+          <span class="num" style="width: 76px; text-align: right; font-size: 17px; font-weight: 650;">$145</span>
+        </div>
+        <div class="trow">
+          <span class="num" style="width: 96px; font-size: 16px; font-weight: 700;">7:30 PM</span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 17px; font-weight: 600;">Night Dive &mdash; City of Washington</span>
+            <span style="font-size: 14px; color: var(--muted);">City of Washington &middot; Open Water or higher, at night</span>
+          </span>
+          <span style="font-size: 14px; color: var(--muted);">5 spots left</span>
+          <span class="num" style="width: 76px; text-align: right; font-size: 17px; font-weight: 650;">$120</span>
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+        </div>
+
+        <div class="daybar"><span class="glabel">Fri, Aug 28</span></div>
+        <div class="trow" style="border-top: 0;">
+          <span class="num" style="width: 96px; font-size: 16px; font-weight: 700;">7:00 AM</span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 17px; font-weight: 600;">Morning Two-Tank &mdash; Molasses Reef</span>
+            <span style="font-size: 14px; color: var(--muted);">Molasses Reef &middot; Open Water or higher</span>
+          </span>
+          <span style="font-size: 14px; color: var(--muted);">4 spots left</span>
+          <span class="num" style="width: 76px; text-align: right; font-size: 17px; font-weight: 650;">$95</span>
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+        </div>
+        <div class="trow">
+          <span class="num" style="width: 96px; font-size: 16px; font-weight: 700;">8:00 AM</span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 17px; font-weight: 600;">Deep Wreck Charter &mdash; the Duane on EANx</span>
+            <span style="font-size: 14px; color: var(--muted);">USCGC Duane &middot; Advanced, Deep, Nitrox</span>
+          </span>
+          <span style="font-size: 14px; color: var(--muted);">7 spots left</span>
+          <span class="num" style="width: 76px; text-align: right; font-size: 17px; font-weight: 650;">$195</span>
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+        </div>
+        <div class="trow">
+          <span class="num" style="width: 96px; font-size: 16px; font-weight: 700;">Fri &ndash; Sun</span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 17px; font-weight: 600;">Open Water Diver &mdash; three-day course</span>
+            <span style="font-size: 14px; color: var(--muted);">Pool, classroom, and four ocean dives &middot; no experience required</span>
+          </span>
+          <span style="font-size: 14px; font-weight: 650; color: var(--warning);">1 spot left</span>
+          <span class="num" style="width: 76px; text-align: right; font-size: 17px; font-weight: 650;">$595</span>
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+        </div>
+
+        <div class="daybar"><span class="glabel">Sat, Aug 29</span></div>
+        <div class="trow" style="border-top: 0;">
+          <span class="num" style="width: 96px; font-size: 16px; font-weight: 700;">11:00 AM</span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 17px; font-weight: 600;">Two-Tank &mdash; French Reef</span>
+            <span style="font-size: 14px; color: var(--muted);">French Reef &middot; Open Water or higher</span>
+          </span>
+          <span style="font-size: 14px; font-weight: 650; color: var(--warning);">Only 2 spots left</span>
+          <span class="num" style="width: 76px; text-align: right; font-size: 17px; font-weight: 650;">$95</span>
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+        </div>
+
+        <div class="daybar"><span class="glabel">Sun, Aug 30</span></div>
+        <div class="trow" style="border-top: 0;">
+          <span class="num" style="width: 96px; font-size: 16px; font-weight: 700;">11:30 AM</span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 17px; font-weight: 600;">Two-Tank Reef &mdash; Christ of the Abyss</span>
+            <span style="font-size: 14px; color: var(--muted);">Christ of the Abyss &middot; good for refreshers and new divers</span>
+          </span>
+          <span style="font-size: 14px; color: var(--muted);">12 spots left</span>
+          <span style="width: 76px;"></span>
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Courses -->
+    <div style="display: flex; flex-direction: column; gap: 22px;">
+      <p class="h2">Learn with us</p>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px;">
+
+        <div class="panel" style="overflow: hidden; display: flex; flex-direction: column;">
+          <div style="height: 132px; background: var(--lagoon-wash); display: flex; align-items: center; justify-content: center;">
+            <svg width="150" height="100" viewBox="0 0 120 80" fill="none" stroke="#0a4d61" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="36" cy="54" r="12" fill="#fffdf8"></circle>
+              <circle cx="66" cy="34" r="8" fill="#fffdf8"></circle>
+              <circle cx="90" cy="19" r="5" fill="#ff6f61" stroke="#a83a2c"></circle>
+              <path d="M18 72c6-6 10-10 14-16" opacity=".45"></path>
+            </svg>
+          </div>
+          <div style="padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 6px;">
+            <p style="font-size: 18px; font-weight: 650;">Discover Scuba</p>
+            <p style="font-size: 14.5px; color: var(--muted);">Half a day &middot; no experience needed</p>
+            <p class="num" style="font-size: 18px; font-weight: 650; padding-top: 6px;">$195</p>
+          </div>
+        </div>
+
+        <div class="panel" style="overflow: hidden; display: flex; flex-direction: column;">
+          <div style="height: 132px; background: var(--lagoon-wash); display: flex; align-items: center; justify-content: center;">
+            <svg width="150" height="100" viewBox="0 0 120 80" fill="none" stroke="#0a4d61" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M60 74c0-14-2-22-5-28"></path>
+              <path d="M55 46c-6-8-14-12-22-18M55 46c1-12 3-18 3-28M55 46c8-6 16-8 26-14"></path>
+              <path d="M40 34c-6-2-10-6-12-10M46 28c0-6 1-10 0-14M58 30c4-4 8-6 13-8M64 38c6-2 11-4 16-8"></path>
+              <path d="M33 28c-4 0-7-2-9-5M52 20c-2-4-2-7-2-10M70 24c2-4 5-6 8-8"></path>
+              <path d="M50 74h20"></path>
+              <circle cx="92" cy="20" r="3.2" fill="#ff6f61" stroke="none"></circle>
+            </svg>
+          </div>
+          <div style="padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 6px;">
+            <p style="font-size: 18px; font-weight: 650;">Open Water Diver</p>
+            <p style="font-size: 14.5px; color: var(--muted);">Three days &middot; your first certification</p>
+            <p class="num" style="font-size: 18px; font-weight: 650; padding-top: 6px;">$595</p>
+          </div>
+        </div>
+
+        <div class="panel" style="overflow: hidden; display: flex; flex-direction: column;">
+          <div style="height: 132px; background: var(--lagoon-wash); display: flex; align-items: center; justify-content: center;">
+            <svg width="150" height="100" viewBox="0 0 120 80" fill="none" stroke="#0a4d61" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 62c0-19 16-33 38-33s38 14 38 33Z" fill="#fffdf8"></path>
+              <path d="M30 58c6-9 13-3 19-11 5-7 12-1 18-8M32 63c8-10 15-3 22-11 6-7 13-1 20-8M48 33c5 5 10 0 15 4"></path>
+              <path d="M14 62h92"></path>
+              <circle cx="104" cy="24" r="3.2" fill="#ff6f61" stroke="none"></circle>
+            </svg>
+          </div>
+          <div style="padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 6px;">
+            <p style="font-size: 18px; font-weight: 650;">Nitrox Diver</p>
+            <p style="font-size: 14.5px; color: var(--muted);">Classroom and two dives</p>
+            <p class="num" style="font-size: 18px; font-weight: 650; padding-top: 6px;">$150</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reviews -->
+    <div style="display: flex; flex-direction: column; gap: 22px;">
+      <div style="display: flex; align-items: baseline; gap: 16px;">
+        <p class="h2">What divers say</p>
+        <span class="num" style="font-size: 15px; color: var(--muted);">4.3 across 83 reviews</span>
+        <span style="margin-left: auto; font-size: 15px; font-weight: 600; color: var(--lagoon);">Read them all &#8250;</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 26px;">
+        <div class="panel" style="padding: 26px 28px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="display: inline-flex; gap: 3px;">
+            <svg width="15" height="15" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8Z"></path></svg>
+            <svg width="15" height="15" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8Z"></path></svg>
+            <svg width="15" height="15" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8Z"></path></svg>
+            <svg width="15" height="15" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8Z"></path></svg>
+            <svg width="15" height="15" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8Z"></path></svg>
+          </span>
+          <p class="disp" style="font-size: 21px; line-height: 1.45;">&#8220;Vis was unreal and the crew found us a turtle on the second tank.&#8221;</p>
+          <p style="font-size: 14px; color: var(--muted);">Grace H. &middot; Two-Tank Reef &mdash; Molasses &amp; French &middot; Wed, Aug 26</p>
+        </div>
+        <div class="panel" style="padding: 26px 28px; display: flex; flex-direction: column; gap: 12px;">
+          <span style="display: inline-flex; gap: 3px;">
+            <svg width="15" height="15" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8Z"></path></svg>
+            <svg width="15" height="15" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8Z"></path></svg>
+            <svg width="15" height="15" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8Z"></path></svg>
+            <svg width="15" height="15" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8Z"></path></svg>
+            <svg width="15" height="15" viewBox="0 0 18 18" fill="#ff6f61"><path d="M9 1.8l2.1 4.4 4.8.6-3.5 3.3.9 4.8L9 12.6l-4.3 2.3.9-4.8L2.1 6.8l4.8-.6L9 1.8Z"></path></svg>
+          </span>
+          <p class="disp" style="font-size: 21px; line-height: 1.45;">&#8220;Calm, unhurried briefing &mdash; exactly what I wanted for my first boat dive back.&#8221;</p>
+          <p style="font-size: 14px; color: var(--muted);">Lars P. &middot; Wreck Trip &mdash; Duane &middot; Sun, Aug 23</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- The other doors -->
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px;">
+      <div class="panel" style="padding: 22px 24px; display: flex; align-items: center; gap: 14px; background: var(--tideline); box-shadow: none;">
+        <span style="font-size: 16px; font-weight: 600;">Nothing on a day that works? Ask for it.</span>
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: auto; flex-shrink: 0;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="panel" style="padding: 22px 24px; display: flex; align-items: center; gap: 14px; background: var(--tideline); box-shadow: none;">
+        <span style="font-size: 16px; font-weight: 600;">Want a last-minute spot when one frees up?</span>
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: auto; flex-shrink: 0;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="panel" style="padding: 22px 24px; display: flex; align-items: center; gap: 14px; background: var(--tideline); box-shadow: none;">
+        <span style="font-size: 16px; font-weight: 600;">Lost your booking link?</span>
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: auto; flex-shrink: 0;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="display: flex; align-items: center; gap: 14px; padding-top: 10px; border-top: 1px solid var(--rope); font-size: 14px; color: var(--muted);">
+      <span class="num" style="padding-top: 24px;">Blue Mantis Divers &middot; 100 Ocean Drive, Key Largo, FL &middot; +1 305 555 0142 &middot; hello@demo.invalid</span>
+      <span style="margin-left: auto; display: inline-flex; align-items: center; gap: 8px; padding-top: 24px;">
+        <svg width="20" height="16" viewBox="0 0 120 80" fill="none" stroke="#5b6f77" stroke-width="5" stroke-linecap="round">
+          <circle cx="34" cy="56" r="14"></circle>
+          <circle cx="68" cy="34" r="9"></circle>
+          <circle cx="94" cy="16" r="6" fill="#ff6f61" stroke="#ff6f61"></circle>
+        </svg>
+        Powered by DiveDay
+      </span>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

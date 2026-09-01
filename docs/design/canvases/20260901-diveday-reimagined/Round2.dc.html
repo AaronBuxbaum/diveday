@@ -1,0 +1,309 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&amp;family=Geist:wght@400;500;600;700&amp;family=Outfit:wght@400;500;600;700&amp;family=Playfair+Display:wght@400;500;600;700&amp;display=swap">
+  <style>
+    body { margin: 0; background: #faf9f6; color: #0c2a35; font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; text-decoration: none; }
+    a:hover { color: #155e75; }
+    .lab { font-size: 11.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #5b6f77; margin: 0; }
+    .h2 { margin: 0; font-size: 27px; font-weight: 700; letter-spacing: -0.018em; line-height: 1.2; }
+    .body { margin: 0; font-size: 15px; line-height: 1.55; color: #5b6f77; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .spec { margin: 0; font-size: 13.5px; line-height: 1.5; color: #5b6f77; }
+    .card { background: #ffffff; border: 1px solid #e3e0d7; border-radius: 16px; box-sizing: border-box; }
+    .badge { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; box-sizing: border-box; }
+    .btn { display: flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 10px; font-size: 15px; font-weight: 600; color: #ffffff; box-sizing: border-box; }
+    .tag { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; background: #f8eee6; color: #b45309; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; box-sizing: border-box; }
+    .tag-live { background: #e8f2ec; color: #15803d; }
+    .td { padding: 11px 0; font-size: 14px; line-height: 1.45; border-top: 1px solid #e3e0d7; box-sizing: border-box; }
+    .strip { height: 30px; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; min-height: 1700px; background: #faf9f6; box-sizing: border-box; overflow: hidden;">
+<div style="padding: 56px 60px 60px; box-sizing: border-box; display: flex; flex-direction: column; gap: 44px;">
+
+  <!-- ================= 1 · MASTHEAD ================= -->
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 40px;">
+    <div style="max-width: 800px; display: flex; flex-direction: column; gap: 14px;">
+      <p class="lab" style="color: #0e7490;">Round two &middot; 2026-09-01</p>
+      <h1 style="margin: 0; font-size: 46px; font-weight: 700; letter-spacing: -0.028em; line-height: 1.04;">Their brand, not ours.</h1>
+      <p class="body" style="font-size: 16.5px;">The brief was to find the thing that actually sells, and to match the embedding FareHarbor already gives these shops. So we read what dive shops build for themselves: a strong personal identity, a creature mark, a wall of certifications, and photographs of their own reef &mdash; and then a Book Now button that hands the diver to a page wearing somebody else&#8217;s clothes. Round two answers with a fourth direction, <strong style="color: #0c2a35; font-weight: 600;">Harbor</strong>: DiveDay wears the shop&#8217;s brand, not its own, so a shop&#8217;s colour, mark, one display face and photographs drive its public storefront <em>and</em> every embed on its own website, while DiveDay&#8217;s safety vocabulary &mdash; the signal colours, the ledger, the manifest &mdash; never changes.</p>
+    </div>
+    <svg aria-hidden="true" viewBox="0 0 64 64" width="60" height="60" fill="none" style="flex-shrink: 0; margin-top: 10px;">
+      <circle cx="22" cy="44" r="12" stroke="#0c2a35" stroke-width="2.5"></circle>
+      <circle cx="40" cy="26" r="8" stroke="#0c2a35" stroke-width="2.5"></circle>
+      <circle cx="52" cy="12" r="4.5" fill="#ff6f61"></circle>
+    </svg>
+  </div>
+
+  <div style="height: 1px; background: #e3e0d7;"></div>
+
+  <!-- ================= 2 · WHAT AN IDENTITY LOOKS LIKE ================= -->
+  <div style="display: flex; flex-direction: column; gap: 20px;">
+    <div style="display: flex; align-items: baseline; gap: 20px;">
+      <h2 class="h2">What a dive shop&#8217;s identity looks like.</h2>
+      <p class="spec" style="margin-left: auto; text-align: right;">Composites, not copies &middot; three invented shops</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+
+      <!-- Manta Point -->
+      <div class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+          <div>
+            <p style="margin: 0; font-family: 'Bricolage Grotesque', 'Geist', system-ui, sans-serif; font-size: 21px; font-weight: 700; letter-spacing: -0.02em; color: #1c7a5e;">Manta Point</p>
+            <p class="spec" style="font-size: 13px;">Mantis green, shrimp orange</p>
+          </div>
+          <svg width="52" height="36" viewBox="0 0 64 44" fill="none" aria-hidden="true" style="flex-shrink: 0;">
+            <path d="M32 10C20 10 8 18 4 30c10-2 20-4 28-4s18 2 28 4C56 18 44 10 32 10Z" stroke="#1c7a5e" stroke-width="2" stroke-linejoin="round"></path>
+            <path d="M32 26v15" stroke="#1c7a5e" stroke-width="2" stroke-linecap="round"></path>
+            <path d="M26 13l-4-6M38 13l4-6" stroke="#1c7a5e" stroke-width="2" stroke-linecap="round"></path>
+          </svg>
+        </div>
+        <div style="display: flex; border-radius: 8px; overflow: hidden;">
+          <div class="strip" style="flex: 1; background: #0f4a3c;"></div>
+          <div class="strip" style="flex: 1; background: #1c7a5e;"></div>
+          <div class="strip" style="flex: 1; background: #7bbf9a;"></div>
+          <div class="strip" style="flex: 1; background: #e2622a;"></div>
+          <div class="strip" style="flex: 1; background: #f4ece0;"></div>
+        </div>
+        <div style="height: 96px; border-radius: 10px; background: linear-gradient(158deg, #0f4a3c 0%, #1c7a5e 52%, #7bbf9a 100%); display: flex; align-items: flex-end; padding: 10px; box-sizing: border-box;">
+          <span style="font-size: 11.5px; font-weight: 600; color: #ffffff; background: rgba(12,42,53,.42); border-radius: 6px; padding: 3px 7px;">[photo: the boat at the mooring]</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          <span class="badge" style="background: #e7f2ee; color: #14563f;">PADI 5&#9733;</span>
+          <span class="badge" style="background: #e7f2ee; color: #14563f;">TripAdvisor</span>
+          <span class="badge" style="background: #e7f2ee; color: #14563f;">Blue Star</span>
+        </div>
+        <div class="btn" style="background: #1c7a5e;">Book Now</div>
+      </div>
+
+      <!-- Barracuda Reef Divers -->
+      <div class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+          <div>
+            <p style="margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: 21px; font-weight: 700; letter-spacing: -0.012em; color: #14315c;">Barracuda Reef Divers</p>
+            <p class="spec" style="font-size: 13px;">Deep navy, gold</p>
+          </div>
+          <svg width="52" height="34" viewBox="0 0 64 40" fill="none" aria-hidden="true" style="flex-shrink: 0;">
+            <path d="M4 20c8-9 26-11 40-4 3 1.5 5 3 5 4s-2 2.5-5 4c-14 7-32 5-40-4Z" stroke="#14315c" stroke-width="2" stroke-linejoin="round"></path>
+            <path d="M49 20l11-8-2 8 2 8-11-8Z" stroke="#14315c" stroke-width="2" stroke-linejoin="round"></path>
+            <path d="M26 13l6-6 4 7" stroke="#c9962f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            <circle cx="13" cy="18" r="1.8" fill="#14315c"></circle>
+          </svg>
+        </div>
+        <div style="display: flex; border-radius: 8px; overflow: hidden;">
+          <div class="strip" style="flex: 1; background: #0b2242;"></div>
+          <div class="strip" style="flex: 1; background: #14315c;"></div>
+          <div class="strip" style="flex: 1; background: #6e8bb5;"></div>
+          <div class="strip" style="flex: 1; background: #c9962f;"></div>
+          <div class="strip" style="flex: 1; background: #f1ece1;"></div>
+        </div>
+        <div style="height: 96px; border-radius: 10px; background: linear-gradient(158deg, #08182f 0%, #14315c 50%, #3f6f9c 100%); display: flex; align-items: flex-end; padding: 10px; box-sizing: border-box;">
+          <span style="font-size: 11.5px; font-weight: 600; color: #ffffff; background: rgba(12,42,53,.42); border-radius: 6px; padding: 3px 7px;">[photo: the wreck&#8217;s bow, two divers]</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          <span class="badge" style="background: #e8ecf3; color: #14315c;">PADI 5&#9733;</span>
+          <span class="badge" style="background: #e8ecf3; color: #14315c;">TripAdvisor</span>
+          <span class="badge" style="background: #e8ecf3; color: #14315c;">Blue Star</span>
+        </div>
+        <div class="btn" style="background: #14315c;">Book Now</div>
+      </div>
+
+      <!-- Horizon Blue -->
+      <div class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+          <div>
+            <p style="margin: 0; font-family: 'Outfit', 'Geist', system-ui, sans-serif; font-size: 21px; font-weight: 600; letter-spacing: -0.01em; color: #0d6f7a;">Horizon Blue</p>
+            <p class="spec" style="font-size: 13px;">Turquoise, coral sand</p>
+          </div>
+          <svg width="52" height="38" viewBox="0 0 64 48" fill="none" aria-hidden="true" style="flex-shrink: 0;">
+            <ellipse cx="29" cy="24" rx="15" ry="12" stroke="#128f9e" stroke-width="2"></ellipse>
+            <circle cx="49" cy="19" r="5" stroke="#128f9e" stroke-width="2"></circle>
+            <path d="M19 13L9 5l8 12M19 35L9 43l8-12M41 34l6 9" stroke="#128f9e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            <path d="M29 12v24M17 21h24" stroke="#e0855f" stroke-width="1.6"></path>
+          </svg>
+        </div>
+        <div style="display: flex; border-radius: 8px; overflow: hidden;">
+          <div class="strip" style="flex: 1; background: #0b5b66;"></div>
+          <div class="strip" style="flex: 1; background: #128f9e;"></div>
+          <div class="strip" style="flex: 1; background: #7fcbd0;"></div>
+          <div class="strip" style="flex: 1; background: #e0855f;"></div>
+          <div class="strip" style="flex: 1; background: #f5eee6;"></div>
+        </div>
+        <div style="height: 96px; border-radius: 10px; background: linear-gradient(158deg, #084f5a 0%, #128f9e 50%, #9dd7da 100%); display: flex; align-items: flex-end; padding: 10px; box-sizing: border-box;">
+          <span style="font-size: 11.5px; font-weight: 600; color: #ffffff; background: rgba(12,42,53,.42); border-radius: 6px; padding: 3px 7px;">[photo: reef wall, diver, sunlight]</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          <span class="badge" style="background: #e6f3f5; color: #0b5b66;">PADI 5&#9733;</span>
+          <span class="badge" style="background: #e6f3f5; color: #0b5b66;">TripAdvisor</span>
+          <span class="badge" style="background: #e6f3f5; color: #0b5b66;">Blue Star</span>
+        </div>
+        <div class="btn" style="background: #128f9e;">Book Now</div>
+      </div>
+
+    </div>
+
+    <p class="body">Each of these shops paid for that identity, and each of them ends it at the Book Now button.</p>
+  </div>
+
+  <!-- ================= 3 + 4 · HANDOVER, AND HARBOR ================= -->
+  <div style="display: grid; grid-template-columns: minmax(0, 47fr) minmax(0, 53fr); gap: 32px; align-items: start;">
+
+    <!-- 3 · the handover -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <h2 class="h2">What the button hands them to today.</h2>
+      <div style="display: flex; align-items: center; gap: 14px;">
+
+        <div class="card" style="flex: 1; overflow: hidden;">
+          <div style="height: 34px; background: #128f9e; display: flex; align-items: center; padding: 0 12px;">
+            <span style="font-family: 'Outfit', 'Geist', system-ui, sans-serif; font-size: 13px; font-weight: 600; color: #ffffff;">Horizon Blue</span>
+          </div>
+          <div style="padding: 12px; display: flex; flex-direction: column; gap: 9px;">
+            <div style="height: 54px; border-radius: 8px; background: linear-gradient(158deg, #084f5a, #128f9e 60%, #9dd7da);"></div>
+            <div style="height: 8px; border-radius: 4px; background: #e3e0d7; width: 82%;"></div>
+            <div style="height: 8px; border-radius: 4px; background: #e3e0d7; width: 58%;"></div>
+            <div style="min-height: 44px; border-radius: 10px; background: #128f9e; color: #ffffff; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center;">Book Now</div>
+            <p class="spec" style="font-size: 12.5px; text-align: center;">the shop&#8217;s own page</p>
+          </div>
+        </div>
+
+        <svg width="34" height="26" viewBox="0 0 34 26" fill="none" aria-hidden="true" style="flex-shrink: 0;">
+          <path d="M2 13h27M22 5l8 8-8 8" stroke="#8a8577" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+
+        <div style="flex: 1; border: 1px solid #dddddd; border-radius: 16px; background: #f6f6f6; overflow: hidden;">
+          <div style="height: 34px; background: #e9e9e9; display: flex; align-items: center; padding: 0 12px; gap: 6px;">
+            <div style="width: 7px; height: 7px; border-radius: 999px; background: #c4c4c4;"></div>
+            <div style="width: 7px; height: 7px; border-radius: 999px; background: #c4c4c4;"></div>
+            <span style="font-size: 11.5px; font-weight: 600; color: #6b7280; margin-left: 4px;">booking.example</span>
+          </div>
+          <div style="padding: 12px; display: flex; flex-direction: column; gap: 9px;">
+            <div style="height: 54px; border-radius: 8px; background: #ededed; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; padding: 6px; box-sizing: border-box;">
+              <div style="background: #dcdcdc; border-radius: 2px;"></div><div style="background: #dcdcdc; border-radius: 2px;"></div><div style="background: #dcdcdc; border-radius: 2px;"></div><div style="background: #dcdcdc; border-radius: 2px;"></div><div style="background: #dcdcdc; border-radius: 2px;"></div><div style="background: #dcdcdc; border-radius: 2px;"></div><div style="background: #dcdcdc; border-radius: 2px;"></div>
+            </div>
+            <div style="height: 8px; border-radius: 4px; background: #e0e0e0; width: 82%;"></div>
+            <div style="height: 8px; border-radius: 4px; background: #e0e0e0; width: 58%;"></div>
+            <div style="min-height: 44px; border-radius: 4px; background: #2563eb; color: #ffffff; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center;">Continue</div>
+            <p style="margin: 0; font-size: 12.5px; line-height: 1.5; color: #6b7280; text-align: center;">third-party booking page</p>
+          </div>
+        </div>
+
+      </div>
+      <p class="body">The diver leaves the shop&#8217;s site mid-decision and lands somewhere that shares none of its colour, type or photographs. The waiver then sends them somewhere else again.</p>
+    </div>
+
+    <!-- 4 · Harbor -->
+    <div class="card" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <h2 class="h2">Harbor</h2>
+        <span class="lab" style="color: #0e7490;">Direction D</span>
+        <span class="tag" style="margin-left: auto;">Proposed</span>
+      </div>
+      <p style="margin: 0; font-size: 19px; line-height: 1.4; font-weight: 500;">DiveDay wears the shop&#8217;s brand, not its own &mdash; on the storefront and inside every embed on the shop&#8217;s own website.</p>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px;">
+        <div style="display: flex; flex-direction: column; gap: 7px;">
+          <p class="lab">The shop owns</p>
+          <p class="body" style="font-size: 14.5px; color: #0c2a35;">One brand colour. Its mark. One display face, chosen from six. Its photographs.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 7px;">
+          <p class="lab">DiveDay keeps</p>
+          <p class="body" style="font-size: 14.5px; color: #0c2a35;">The signal colours. The ledger. The manifest and roll call. The coral bubble.</p>
+        </div>
+      </div>
+      <div style="height: 1px; background: #e3e0d7;"></div>
+      <p class="body" style="font-size: 14.5px;"><strong style="color: #0c2a35; font-weight: 600;">The honest tradeoff.</strong> A shop with an ugly brand gets an ugly storefront, and we will have shipped it. DiveDay&#8217;s own brand goes nearly invisible to divers &mdash; which is the point, and a real marketing cost.</p>
+    </div>
+
+  </div>
+
+  <!-- ================= 5 · THE EMBED CATALOGUE ================= -->
+  <div style="display: flex; flex-direction: column; gap: 16px;">
+    <div style="display: flex; align-items: baseline; gap: 20px;">
+      <h2 class="h2">The embed catalogue.</h2>
+      <p class="spec" style="margin-left: auto; text-align: right;">Today DiveDay ships two of the eight: an iframe calendar snippet and a plain link button.</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 210px 128px;">
+      <div class="td" style="border-top: none; padding-right: 16px;"><span class="lab">Embed</span></div>
+      <div class="td" style="border-top: none; padding-right: 16px;"><span class="lab">What the diver sees</span></div>
+      <div class="td" style="border-top: none; padding-right: 16px;"><span class="lab">What FareHarbor calls it</span></div>
+      <div class="td" style="border-top: none;"><span class="lab">Status</span></div>
+
+      <div class="td" style="font-weight: 600; padding-right: 16px;">Button</div>
+      <div class="td" style="padding-right: 16px;">A Book Now button in the shop&#8217;s own colour, in the page they are already reading.</div>
+      <div class="td" style="color: #5b6f77; padding-right: 16px;">Book Now button</div>
+      <div class="td"><span class="tag tag-live">Ships today</span></div>
+
+      <div class="td" style="font-weight: 600; padding-right: 16px;">Lightbox</div>
+      <div class="td" style="padding-right: 16px;">Booking opens over the shop&#8217;s site; the site behind it never goes away.</div>
+      <div class="td" style="color: #5b6f77; padding-right: 16px;">Lightframe</div>
+      <div class="td"><span class="tag">Proposed</span></div>
+
+      <div class="td" style="font-weight: 600; padding-right: 16px;">Calendar</div>
+      <div class="td" style="padding-right: 16px;">This month&#8217;s departures inline on the page, with seats left and prices.</div>
+      <div class="td" style="color: #5b6f77; padding-right: 16px;">Embedded calendar</div>
+      <div class="td"><span class="tag tag-live">Ships today</span></div>
+
+      <div class="td" style="font-weight: 600; padding-right: 16px;">Grid</div>
+      <div class="td" style="padding-right: 16px;">Every trip and course as a photographed card, in the shop&#8217;s own type.</div>
+      <div class="td" style="color: #5b6f77; padding-right: 16px;">Item grid</div>
+      <div class="td"><span class="tag">Proposed</span></div>
+
+      <div class="td" style="font-weight: 600; padding-right: 16px;">One departure</div>
+      <div class="td" style="padding-right: 16px;">A single date and time, for a page written about that one trip.</div>
+      <div class="td" style="color: #5b6f77; padding-right: 16px;">&mdash;</div>
+      <div class="td"><span class="tag">Proposed</span></div>
+
+      <div class="td" style="font-weight: 600; padding-right: 16px;">Courses</div>
+      <div class="td" style="padding-right: 16px;">The course catalogue with prices and the next start date for each.</div>
+      <div class="td" style="color: #5b6f77; padding-right: 16px;">&mdash;</div>
+      <div class="td"><span class="tag">Proposed</span></div>
+
+      <div class="td" style="font-weight: 600; padding-right: 16px;">QR code</div>
+      <div class="td" style="padding-right: 16px;">A code on the counter or a flyer that opens the right departure on a phone.</div>
+      <div class="td" style="color: #5b6f77; padding-right: 16px;">QR code</div>
+      <div class="td"><span class="tag">Proposed</span></div>
+
+      <div class="td" style="font-weight: 600; padding-right: 16px; border-bottom: 1px solid #e3e0d7;">Partner link</div>
+      <div class="td" style="padding-right: 16px; border-bottom: 1px solid #e3e0d7;">A hotel or dive club books on the shop&#8217;s behalf and is credited for it.</div>
+      <div class="td" style="color: #5b6f77; padding-right: 16px; border-bottom: 1px solid #e3e0d7;">Affiliate link</div>
+      <div class="td" style="border-bottom: 1px solid #e3e0d7;"><span class="tag">Proposed</span></div>
+    </div>
+  </div>
+
+  <!-- ================= 6 · HOW TO READ THIS PAGE ================= -->
+  <div style="display: flex; flex-direction: column; gap: 16px;">
+    <h2 class="h2">How to read this page.</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px;">
+      <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 14px; border-top: 3px solid #0e7490;">
+        <p style="margin: 0; font-size: 16px; font-weight: 600;">HarborSystem, then HarborStorefront</p>
+        <p class="body" style="font-size: 14.5px;">The system sheet carries the two token layers and the derivation rule; the storefront applies them to one shop&#8217;s public page.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 14px; border-top: 3px solid #0c2a35;">
+        <p style="margin: 0; font-size: 16px; font-weight: 600;">EmbedLightbox, EmbedPhone, EmbedCalendar, EmbedGrid</p>
+        <p class="body" style="font-size: 14.5px;">Four of the eight rows above, drawn on a shop&#8217;s own website rather than on ours &mdash; desktop and phone.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 14px; border-top: 3px solid #ff6f61;">
+        <p style="margin: 0; font-size: 16px; font-weight: 600;">EmbedGenerator, then HarborSwitch</p>
+        <p class="body" style="font-size: 14.5px;">Where a shop copies the one line of code, and what a shop reads on the day it decides to leave FareHarbor.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="height: 1px; background: #e3e0d7;"></div>
+  <p class="spec">Sources were public dive-shop websites and FareHarbor&#8217;s public plugin listings, read on 2026-09-01. Nothing on this canvas copies any of them; every shop, mark, badge and photograph drawn here is invented.</p>
+
+</div>
+</div>
+</x-dc>
+</body>
+</html>

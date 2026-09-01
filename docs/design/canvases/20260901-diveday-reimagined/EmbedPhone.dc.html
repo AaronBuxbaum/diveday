@@ -1,0 +1,226 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #178f6a; }
+    a:hover { color: #0f6b52; }
+    .bm { font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; }
+    .bmbody { font-family: 'Manrope', system-ui, sans-serif; }
+    .dd { font-family: 'Geist', system-ui, sans-serif; }
+    .num { font-variant-numeric: tabular-nums; }
+    .phone { width: 390px; height: 844px; border-radius: 40px; border: 1px solid rgba(12,42,53,.25); background: #ffffff; overflow: hidden; position: relative; box-sizing: border-box; }
+    .photo { background: linear-gradient(135deg, #178f6a 0%, #0f5f57 46%, #0b1f2e 100%); }
+    .pill { font-family: 'Manrope', system-ui, sans-serif; font-size: 13px; font-weight: 600; color: #0b1f2e; border: 1px solid #e2dccf; border-radius: 999px; padding: 8px 13px; background: #ffffff; }
+    .trow { display: flex; align-items: center; gap: 14px; padding: 15px 0; border-top: 1px solid #e2dccf; }
+    .daytile { width: 62px; flex: none; height: 86px; border: 1px solid #e2dccf; border-radius: 10px; background: #ffffff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; box-sizing: border-box; }
+    .ddlabel { font-family: 'Geist', system-ui, sans-serif; font-size: 11.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #5b6f77; }
+    .cap { font-family: 'Geist', system-ui, sans-serif; font-size: 14px; line-height: 1.55; color: #0c2a35; }
+  </style>
+</helmet>
+
+<div style="width: 900px; min-height: 980px; background: #faf9f6; box-sizing: border-box; overflow: hidden; position: relative; padding: 34px 30px 30px;">
+
+  <div class="ddlabel">Harbor on a phone &#183; Blue Mantis Divers, Thursday, August 27</div>
+
+  <div style="margin-top: 22px; display: flex; gap: 60px;">
+
+    <!-- ================= LEFT: the shop's mobile site ================= -->
+    <div style="width: 390px; display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone">
+
+        <!-- header -->
+        <div style="height: 60px; display: flex; align-items: center; gap: 10px; padding: 0 18px; border-bottom: 1px solid #e2dccf; box-sizing: border-box;">
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none" stroke="#178f6a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 24 Q 12 9 26 8.5"></path>
+            <path d="M10 19.2 L 14.4 21.4"></path>
+            <path d="M12.8 14.6 L 17.2 16.6"></path>
+            <path d="M16.4 11.2 L 20 13.4"></path>
+            <path d="M7 24 L 3 26.6"></path>
+            <path d="M7 24 L 5.2 20.4"></path>
+            <path d="M7 24 L 9.6 27"></path>
+            <path d="M23.6 11 L 28 13.8 L 25 17"></path>
+            <circle cx="27.4" cy="6.4" r="1.7"></circle>
+          </svg>
+          <span class="bm" style="font-size: 17px; font-weight: 700; color: #0b1f2e; letter-spacing: -0.015em;">Blue Mantis Divers</span>
+          <span style="margin-left: auto; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center;">
+            <svg width="20" height="14" viewBox="0 0 20 14" fill="none" stroke="#0b1f2e" stroke-width="1.8" stroke-linecap="round">
+              <path d="M2 2 L 18 2"></path>
+              <path d="M2 7 L 18 7"></path>
+              <path d="M2 12 L 18 12"></path>
+            </svg>
+          </span>
+        </div>
+
+        <!-- hero -->
+        <div class="photo" style="height: 330px; position: relative; padding: 18px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-end;">
+          <span class="bmbody" style="position: absolute; top: 14px; left: 18px; font-size: 12px; color: rgba(246,241,231,.72); border: 1px solid rgba(246,241,231,.28); border-radius: 999px; padding: 5px 10px;">[photo: Mantis II at the Molasses mooring]</span>
+          <div class="bm" style="font-size: 36px; font-weight: 800; line-height: 1.04; letter-spacing: -0.03em; color: #ffffff;">Two tanks before lunch.</div>
+          <div class="bmbody" style="margin-top: 12px; font-size: 15px; line-height: 1.5; color: rgba(246,241,231,.88);">Molasses and French Reef, off the dock at 7:00 and back by 10:30.</div>
+        </div>
+
+        <!-- badges -->
+        <div style="padding: 14px 18px; display: flex; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid #e2dccf;">
+          <span class="pill">PADI 5&#9733; centre</span>
+          <span class="pill">Blue Star operator</span>
+          <span class="pill num">&#9733; 4.3 &#183; 83 reviews</span>
+        </div>
+
+        <!-- this week -->
+        <div style="padding: 16px 18px 0;">
+          <div class="bm" style="font-size: 22px; font-weight: 700; color: #0b1f2e; letter-spacing: -0.02em;">Thursday, August 27</div>
+          <div class="trow" style="border-top: none; padding-top: 12px;">
+            <div style="flex: 1;">
+              <div class="bmbody num" style="font-size: 11.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #178f6a;">7:00 &#8211; 10:30 AM</div>
+              <div class="bmbody" style="margin-top: 5px; font-size: 15px; font-weight: 700; color: #0b1f2e;">Two-Tank Reef &#8212; Molasses &amp; French</div>
+              <div class="bmbody num" style="margin-top: 4px; font-size: 14px; color: rgba(11,31,46,.62);">Mantis II &#183; $95</div>
+            </div>
+            <span class="bmbody num" style="font-size: 13px; font-weight: 700; color: #a4531a; background: #fdf0e4; border-radius: 999px; padding: 6px 11px;">2 left</span>
+          </div>
+          <div class="trow">
+            <div style="flex: 1;">
+              <div class="bmbody num" style="font-size: 11.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #178f6a;">1:00 &#8211; 5:00 PM</div>
+              <div class="bmbody" style="margin-top: 5px; font-size: 15px; font-weight: 700; color: #0b1f2e;">Wreck Trip &#8212; Spiegel Grove</div>
+              <div class="bmbody num" style="margin-top: 4px; font-size: 14px; color: rgba(11,31,46,.62);">Mantis II &#183; $145</div>
+            </div>
+            <span class="bmbody" style="font-size: 13px; font-weight: 700; color: rgba(11,31,46,.6); background: #efeade; border-radius: 999px; padding: 6px 11px;">Full</span>
+          </div>
+          <div class="trow">
+            <div style="flex: 1;">
+              <div class="bmbody num" style="font-size: 11.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #178f6a;">7:30 &#8211; 11:00 PM</div>
+              <div class="bmbody" style="margin-top: 5px; font-size: 15px; font-weight: 700; color: #0b1f2e;">Night Dive &#8212; City of Washington</div>
+              <div class="bmbody num" style="margin-top: 4px; font-size: 14px; color: rgba(11,31,46,.62);">Skiff &#183; $120</div>
+            </div>
+            <span class="bmbody num" style="font-size: 13px; font-weight: 700; color: #0f6b52; background: #e6f2ec; border-radius: 999px; padding: 6px 11px;">5 left</span>
+          </div>
+        </div>
+
+        <!-- sticky book bar -->
+        <div class="bmbody" style="position: absolute; left: 0; right: 0; bottom: 0; height: 56px; background: #178f6a; color: #ffffff; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center;">Book now</div>
+      </div>
+
+      <div class="cap">The shop&#8217;s site, their button.</div>
+    </div>
+
+    <!-- ================= RIGHT: the DiveDay sheet risen over it ================= -->
+    <div style="width: 390px; display: flex; flex-direction: column; gap: 14px;">
+      <div class="phone">
+
+        <!-- header -->
+        <div style="height: 60px; display: flex; align-items: center; gap: 10px; padding: 0 18px; border-bottom: 1px solid #e2dccf; box-sizing: border-box;">
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none" stroke="#178f6a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 24 Q 12 9 26 8.5"></path>
+            <path d="M10 19.2 L 14.4 21.4"></path>
+            <path d="M12.8 14.6 L 17.2 16.6"></path>
+            <path d="M16.4 11.2 L 20 13.4"></path>
+            <path d="M7 24 L 3 26.6"></path>
+            <path d="M7 24 L 5.2 20.4"></path>
+            <path d="M7 24 L 9.6 27"></path>
+            <path d="M23.6 11 L 28 13.8 L 25 17"></path>
+            <circle cx="27.4" cy="6.4" r="1.7"></circle>
+          </svg>
+          <span class="bm" style="font-size: 17px; font-weight: 700; color: #0b1f2e; letter-spacing: -0.015em;">Blue Mantis Divers</span>
+        </div>
+
+        <!-- hero -->
+        <div class="photo" style="height: 330px; padding: 18px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-end;">
+          <div class="bm" style="font-size: 36px; font-weight: 800; line-height: 1.04; letter-spacing: -0.03em; color: #ffffff;">Two tanks before lunch.</div>
+        </div>
+
+        <!-- badges -->
+        <div style="padding: 14px 18px; display: flex; flex-wrap: wrap; gap: 8px;">
+          <span class="pill">PADI 5&#9733; centre</span>
+          <span class="pill">Blue Star operator</span>
+          <span class="pill num">&#9733; 4.3 &#183; 83 reviews</span>
+        </div>
+
+        <!-- scrim -->
+        <div style="position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(11,31,46,.55);"></div>
+
+        <!-- the sheet -->
+        <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #ffffff; border-radius: 24px 24px 0 0; overflow: hidden;">
+          <div style="display: flex; justify-content: center; padding: 10px 0 2px;">
+            <span style="width: 42px; height: 4px; border-radius: 999px; background: #e2dccf;"></span>
+          </div>
+
+          <div style="padding: 12px 18px 0;">
+            <div class="bm" style="font-size: 23px; font-weight: 700; line-height: 1.15; letter-spacing: -0.022em; color: #0b1f2e;">Two-Tank Reef &#8212; Molasses &amp; French</div>
+            <div class="bmbody num" style="margin-top: 7px; font-size: 14px; color: rgba(11,31,46,.68);">Thu Aug 27 &#183; 7:00 AM &#183; Mantis II</div>
+
+            <div style="margin-top: 16px; display: flex; gap: 8px; overflow: hidden;">
+              <div class="daytile" style="background: #178f6a; border-color: #178f6a;">
+                <span class="bmbody" style="font-size: 13px; font-weight: 700; color: rgba(255,255,255,.82);">Thu</span>
+                <span class="bmbody num" style="font-size: 20px; font-weight: 700; color: #ffffff;">27</span>
+                <span class="bmbody num" style="font-size: 13px; font-weight: 600; color: rgba(255,255,255,.86);">2 left</span>
+              </div>
+              <div class="daytile">
+                <span class="bmbody" style="font-size: 13px; font-weight: 700; color: rgba(11,31,46,.6);">Fri</span>
+                <span class="bmbody num" style="font-size: 20px; font-weight: 700; color: #0b1f2e;">28</span>
+                <span class="bmbody num" style="font-size: 13px; font-weight: 600; color: #0f6b52;">6 left</span>
+              </div>
+              <div class="daytile" style="background: #faf7f1;">
+                <span class="bmbody" style="font-size: 13px; font-weight: 700; color: rgba(11,31,46,.42);">Sat</span>
+                <span class="bmbody num" style="font-size: 20px; font-weight: 700; color: rgba(11,31,46,.42);">29</span>
+                <span class="bmbody" style="font-size: 13px; font-weight: 600; color: rgba(11,31,46,.42);">Full</span>
+              </div>
+              <div class="daytile">
+                <span class="bmbody" style="font-size: 13px; font-weight: 700; color: rgba(11,31,46,.6);">Sun</span>
+                <span class="bmbody num" style="font-size: 20px; font-weight: 700; color: #0b1f2e;">30</span>
+                <span class="bmbody num" style="font-size: 13px; font-weight: 600; color: #0f6b52;">4 left</span>
+              </div>
+              <div class="daytile">
+                <span class="bmbody" style="font-size: 13px; font-weight: 700; color: rgba(11,31,46,.6);">Mon</span>
+                <span class="bmbody num" style="font-size: 20px; font-weight: 700; color: #0b1f2e;">31</span>
+                <span class="bmbody num" style="font-size: 13px; font-weight: 600; color: #0f6b52;">9 left</span>
+              </div>
+            </div>
+
+            <div style="margin-top: 16px; display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1px solid #e2dccf; border-radius: 12px;">
+              <span class="bmbody" style="font-size: 16px; font-weight: 700; color: #0b1f2e;">Seats</span>
+              <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                <span style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid #e2dccf; display: inline-flex; align-items: center; justify-content: center;">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#0b1f2e" stroke-width="1.8" stroke-linecap="round"><path d="M3 8 L 13 8"></path></svg>
+                </span>
+                <span class="bmbody num" style="width: 40px; text-align: center; font-size: 21px; font-weight: 700; color: #0b1f2e;">2</span>
+                <span style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid #178f6a; background: #e6f2ec; display: inline-flex; align-items: center; justify-content: center;">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#0f6b52" stroke-width="1.8" stroke-linecap="round"><path d="M8 3 L 8 13"></path><path d="M3 8 L 13 8"></path></svg>
+                </span>
+              </div>
+            </div>
+
+            <div style="margin-top: 14px; display: flex; align-items: baseline; gap: 10px;">
+              <span class="bmbody num" style="font-size: 19px; font-weight: 700; color: #0b1f2e;">2 divers &#183; $190</span>
+              <span class="bmbody num" style="font-size: 14px; color: rgba(11,31,46,.62);">$95 each</span>
+            </div>
+
+            <div class="bmbody" style="margin-top: 14px; height: 54px; border-radius: 12px; background: #178f6a; color: #ffffff; font-size: 17px; font-weight: 700; display: flex; align-items: center; justify-content: center;">Continue</div>
+
+            <div class="bmbody num" style="margin-top: 10px; margin-bottom: 14px; font-size: 14px; color: rgba(11,31,46,.58);">Cancellation window closes Aug 26, 7:00 AM.</div>
+          </div>
+
+          <div style="border-top: 1px solid #e2dccf; padding: 12px 18px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <svg width="26" height="14" viewBox="0 0 26 14" fill="none">
+              <circle cx="5" cy="9.4" r="3.9" stroke="#5b6f77" stroke-width="1.3"></circle>
+              <circle cx="14" cy="6.4" r="2.7" stroke="#5b6f77" stroke-width="1.2"></circle>
+              <circle cx="21" cy="3.4" r="1.8" fill="#ff6f61"></circle>
+            </svg>
+            <span class="bmbody" style="font-size: 12px; color: #5b6f77;">Booking by DiveDay</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="cap">The sheet, in their colours. Proposed.</div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

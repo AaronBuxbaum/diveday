@@ -1,0 +1,280 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&amp;family=Manrope:wght@400;500;600;700&amp;family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #178f6a; text-decoration: none; }
+    a:hover { color: #0f6b52; }
+    .tnum { font-variant-numeric: tabular-nums; }
+    .bri { font-family: 'Bricolage Grotesque', 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+    .dd { font-family: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+    .lbl { font-size: 11.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 44px; border-radius: 10px; background: #178f6a; color: #ffffff; font-size: 14.5px; font-weight: 700; letter-spacing: -0.005em; box-sizing: border-box; }
+    .btn-quiet { display: inline-flex; align-items: center; justify-content: center; height: 44px; border-radius: 10px; background: #ffffff; border: 1.5px solid #178f6a; color: #178f6a; font-size: 14px; font-weight: 700; box-sizing: border-box; }
+    .card { background: #ffffff; border: 1px solid #e2dccf; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box; }
+    .photo { height: 206px; position: relative; display: flex; align-items: flex-end; padding: 11px 12px; box-sizing: border-box; }
+    .pcap { font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,.88); }
+    .chip { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border-radius: 7px; font-size: 11.5px; font-weight: 700; box-sizing: border-box; }
+    .ctitle { font-size: 17.5px; font-weight: 700; letter-spacing: -0.022em; }
+    .cmeta { font-size: 13px; color: #5c6b72; margin-top: 4px; }
+    .cprice { font-size: 14.5px; font-weight: 700; margin-top: 9px; }
+    .cnext { font-size: 13.5px; color: #5c6b72; margin-top: 5px; }
+    .crow { display: flex; align-items: center; gap: 14px; padding: 0 20px; height: 54px; border-top: 1px solid #f0ebe0; box-sizing: border-box; }
+    .credit { display: flex; align-items: center; gap: 8px; margin-top: 11px; font-size: 12px; color: #5c6b72; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; min-height: 1530px; background: #f6f1e7; box-sizing: border-box; overflow: hidden; font-family: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif; color: #0b1f2e; -webkit-font-smoothing: antialiased;">
+
+  <!-- ============ the shop's own chrome ============ -->
+  <div style="height: 74px; background: #ffffff; border-bottom: 1px solid #e2dccf; display: flex; align-items: center; gap: 12px; padding: 0 40px; box-sizing: border-box;">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#178f6a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 13.2C10 9.8 16 9.8 20 12.4"></path>
+      <path d="M6 18.4C10 21.4 16 21.2 20 17.6"></path>
+      <path d="M9.8 10.9v9.6"></path>
+      <path d="M13.4 10.3v10.5"></path>
+      <path d="M17 10.9v9.4"></path>
+      <path d="M6 13.2 2.6 10.6"></path>
+      <path d="M5.6 15.8H1.9"></path>
+      <path d="M6 18.4 2.7 21"></path>
+      <path d="M19.8 12 22.6 9.2"></path>
+      <path d="M20.4 13.7 24 12"></path>
+      <path d="M19.6 17.9l3.4 1.2-1 2.5"></path>
+      <circle cx="23.3" cy="8.5" r="1.2"></circle>
+      <circle cx="25.1" cy="11.3" r="1.2"></circle>
+    </svg>
+    <span class="bri" style="font-size: 19.5px; font-weight: 700; letter-spacing: -0.02em;">Blue Mantis Divers</span>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 24px;">
+      <span style="font-size: 14.5px; font-weight: 700; color: #178f6a; border-bottom: 2px solid #178f6a; padding-bottom: 3px;">Diving</span>
+      <span style="font-size: 14.5px; font-weight: 600; color: #5c6b72;">Courses</span>
+      <span style="font-size: 14.5px; font-weight: 600; color: #5c6b72;">Boats</span>
+      <span style="font-size: 14.5px; font-weight: 600; color: #5c6b72;">Schedule</span>
+      <span style="font-size: 14.5px; font-weight: 600; color: #5c6b72;">About</span>
+    </div>
+    <a class="btn" style="margin-left: 26px; padding: 0 20px;">Book now</a>
+  </div>
+
+  <!-- ============ the shop's page header ============ -->
+  <div style="display: flex; align-items: flex-end; gap: 48px; padding: 24px 200px 16px; box-sizing: border-box;">
+    <div style="flex: 1 1 auto; min-width: 0;">
+      <div class="lbl" style="color: #178f6a;">Key Largo, Florida</div>
+      <h1 class="bri" style="margin: 8px 0 0; font-size: 38px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.05;">What we run</h1>
+    </div>
+    <p style="margin: 0; width: 520px; flex: 0 0 520px; font-size: 16px; line-height: 1.5; color: #5c6b72;">Six trips, two boats. Pick one to see the dates it sails; the Duane asks for an Advanced card and Nitrox.</p>
+  </div>
+
+  <!-- ============ the embedded DiveDay item grid ============ -->
+  <div style="padding: 0 200px; box-sizing: border-box;">
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 25px;">
+
+      <!-- 1 -->
+      <div class="card">
+        <div class="photo" style="background: linear-gradient(155deg, #2fae86 0%, #178f6a 40%, #0b1f2e 100%);">
+          <span class="pcap">[photo: Molasses Reef, the mooring line]</span>
+        </div>
+        <div style="padding: 12px 16px 14px; box-sizing: border-box;">
+          <div class="ctitle">Two-Tank Reef</div>
+          <div class="cmeta">Molasses &amp; French · Mantis II · mornings</div>
+          <div class="cprice">From $95 per diver</div>
+          <div class="cnext tnum">Next: Thu 7:00 AM · <span style="font-weight: 700; color: #f07d2a;">2 seats left</span></div>
+          <a class="btn" style="width: 100%; margin-top: 12px;">See dates</a>
+        </div>
+      </div>
+
+      <!-- 2 -->
+      <div class="card">
+        <div class="photo" style="background: linear-gradient(160deg, #1c9d78 0%, #10604f 48%, #0b1f2e 100%);">
+          <span class="pcap">[photo: Spiegel Grove, the bow]</span>
+        </div>
+        <div style="padding: 12px 16px 14px; box-sizing: border-box;">
+          <div class="ctitle">Wreck Trip — Spiegel Grove</div>
+          <div class="cmeta">Spiegel Grove · Mantis II · afternoons</div>
+          <div class="cprice">From $145 per diver</div>
+          <div class="cnext tnum">Next: Thu 1:00 PM · <span style="font-weight: 700; color: #f07d2a;">full, wait list open</span></div>
+          <a class="btn" style="width: 100%; margin-top: 12px;">See dates</a>
+        </div>
+      </div>
+
+      <!-- 3 -->
+      <div class="card">
+        <div class="photo" style="background: linear-gradient(170deg, #157f68 0%, #0d4457 55%, #0b1f2e 100%);">
+          <span class="pcap">[photo: City of Washington after dark]</span>
+        </div>
+        <div style="padding: 12px 16px 14px; box-sizing: border-box;">
+          <div class="ctitle">Night Dive</div>
+          <div class="cmeta">City of Washington · Skiff · evenings</div>
+          <div class="cprice">From $120 per diver</div>
+          <div class="cnext tnum">Next: Thu 7:30 PM · 5 seats left</div>
+          <a class="btn" style="width: 100%; margin-top: 12px;">See dates</a>
+        </div>
+      </div>
+
+      <!-- 4 -->
+      <div class="card">
+        <div class="photo" style="background: linear-gradient(150deg, #1a8f7d 0%, #0e4a58 50%, #0b1f2e 100%);">
+          <span class="chip" style="position: absolute; top: 11px; left: 12px; background: rgba(255,255,255,.94); color: #0f6b52;">Advanced + Nitrox</span>
+          <span class="pcap">[photo: the Duane, wheelhouse at depth]</span>
+        </div>
+        <div style="padding: 12px 16px 14px; box-sizing: border-box;">
+          <div class="ctitle">Deep Wreck — the Duane</div>
+          <div class="cmeta">The Duane on EANx · Mantis II · afternoons</div>
+          <div class="cprice">From $165 per diver</div>
+          <div class="cnext tnum">Next: Fri 1:00 PM · 4 seats left</div>
+          <a class="btn" style="width: 100%; margin-top: 12px;">See dates</a>
+        </div>
+      </div>
+
+      <!-- 5 -->
+      <div class="card">
+        <div class="photo" style="background: linear-gradient(165deg, #23a582 0%, #0f5a63 45%, #0b1f2e 100%);">
+          <span class="chip" style="position: absolute; top: 11px; left: 12px; background: rgba(255,255,255,.94); color: #f07d2a;">3 days · 2 seats left</span>
+          <span class="pcap">[photo: Dry Tortugas, open water at the stern]</span>
+        </div>
+        <div style="padding: 12px 16px 14px; box-sizing: border-box;">
+          <div class="ctitle">Tortugas Run</div>
+          <div class="cmeta">Dry Tortugas · Mantis II · three days out</div>
+          <div class="cprice">From $1,150 per diver</div>
+          <div class="cnext tnum">Next: Sat 7:00 AM · <span style="font-weight: 700; color: #f07d2a;">2 seats left</span></div>
+          <a class="btn" style="width: 100%; margin-top: 12px;">See dates</a>
+        </div>
+      </div>
+
+      <!-- 6 -->
+      <div class="card">
+        <div class="photo" style="background: linear-gradient(145deg, #35b892 0%, #14735f 45%, #0b1f2e 100%);">
+          <span class="pcap">[photo: the pool, first breaths on a regulator]</span>
+        </div>
+        <div style="padding: 12px 16px 14px; box-sizing: border-box;">
+          <div class="ctitle">Discover Scuba</div>
+          <div class="cmeta">Pool then reef · Skiff · half day</div>
+          <div class="cprice">From $189 per diver</div>
+          <div class="cnext tnum">Next: Sat 1:00 PM · 3 seats left</div>
+          <a class="btn" style="width: 100%; margin-top: 12px;">See dates</a>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="credit">
+      <svg width="22" height="14" viewBox="0 0 22 14" fill="none">
+        <circle cx="3" cy="11" r="1.9" fill="#ff6f61"></circle>
+        <circle cx="10" cy="7.4" r="2.7" fill="#0e7490"></circle>
+        <circle cx="18" cy="4" r="3.6" fill="#0e7490"></circle>
+      </svg>
+      <span>Trips by DiveDay</span>
+    </div>
+  </div>
+
+  <!-- ============ two more embeds on the same page ============ -->
+  <div style="display: flex; align-items: flex-start; gap: 40px; padding: 30px 160px 26px; box-sizing: border-box;">
+
+    <!-- ---------- courses ledger ---------- -->
+    <div style="width: 720px; flex: 0 0 720px;">
+      <h2 class="bri" style="margin: 0 0 10px; font-size: 22px; font-weight: 700; letter-spacing: -0.028em;">Learn to dive</h2>
+      <div style="background: #ffffff; border: 1px solid #e2dccf; border-radius: 14px; overflow: hidden; box-sizing: border-box;">
+
+        <div class="crow" style="border-top: none;">
+          <div style="flex: 1 1 auto; min-width: 0;">
+            <div style="font-size: 15.5px; font-weight: 700; letter-spacing: -0.012em;">Open Water Diver</div>
+            <div style="font-size: 12.5px; color: #5c6b72; margin-top: 2px;">Your first certification</div>
+          </div>
+          <div class="tnum" style="flex: 0 0 78px; font-size: 13.5px; color: #5c6b72;">4 days</div>
+          <div class="tnum" style="flex: 0 0 66px; text-align: right; font-size: 15.5px; font-weight: 700;">$549</div>
+          <div class="tnum" style="flex: 0 0 116px; text-align: right; font-size: 13.5px; font-weight: 600; color: #5c6b72;">Starts Sep 7</div>
+          <a class="btn" style="flex: 0 0 92px; width: 92px;">Enrol</a>
+        </div>
+
+        <div class="crow">
+          <div style="flex: 1 1 auto; min-width: 0;">
+            <div style="font-size: 15.5px; font-weight: 700; letter-spacing: -0.012em;">Advanced Open Water</div>
+            <div style="font-size: 12.5px; color: #5c6b72; margin-top: 2px;">Opens the Duane and the deeper wrecks</div>
+          </div>
+          <div class="tnum" style="flex: 0 0 78px; font-size: 13.5px; color: #5c6b72;">2 days</div>
+          <div class="tnum" style="flex: 0 0 66px; text-align: right; font-size: 15.5px; font-weight: 700;">$399</div>
+          <div class="tnum" style="flex: 0 0 116px; text-align: right; font-size: 13.5px; font-weight: 600; color: #5c6b72;">Starts Sep 12</div>
+          <a class="btn" style="flex: 0 0 92px; width: 92px;">Enrol</a>
+        </div>
+
+        <div class="crow">
+          <div style="flex: 1 1 auto; min-width: 0;">
+            <div style="font-size: 15.5px; font-weight: 700; letter-spacing: -0.012em;">Rescue Diver</div>
+            <div style="font-size: 12.5px; color: #5c6b72; margin-top: 2px;">Looking after the diver next to you</div>
+          </div>
+          <div class="tnum" style="flex: 0 0 78px; font-size: 13.5px; color: #5c6b72;">3 days</div>
+          <div class="tnum" style="flex: 0 0 66px; text-align: right; font-size: 15.5px; font-weight: 700;">$499</div>
+          <div class="tnum" style="flex: 0 0 116px; text-align: right; font-size: 13.5px; font-weight: 600; color: #5c6b72;">Starts Sep 19</div>
+          <a class="btn" style="flex: 0 0 92px; width: 92px;">Enrol</a>
+        </div>
+
+        <div class="crow">
+          <div style="flex: 1 1 auto; min-width: 0;">
+            <div style="font-size: 15.5px; font-weight: 700; letter-spacing: -0.012em;">Discover Scuba</div>
+            <div style="font-size: 12.5px; color: #5c6b72; margin-top: 2px;">No certification, no commitment</div>
+          </div>
+          <div class="tnum" style="flex: 0 0 78px; font-size: 13.5px; color: #5c6b72;">Half day</div>
+          <div class="tnum" style="flex: 0 0 66px; text-align: right; font-size: 15.5px; font-weight: 700;">$189</div>
+          <div class="tnum" style="flex: 0 0 116px; text-align: right; font-size: 13.5px; font-weight: 600; color: #5c6b72;">Most Saturdays</div>
+          <a class="btn" style="flex: 0 0 92px; width: 92px;">Enrol</a>
+        </div>
+
+      </div>
+      <div class="credit">
+        <svg width="22" height="14" viewBox="0 0 22 14" fill="none">
+          <circle cx="3" cy="11" r="1.9" fill="#ff6f61"></circle>
+          <circle cx="10" cy="7.4" r="2.7" fill="#0e7490"></circle>
+          <circle cx="18" cy="4" r="3.6" fill="#0e7490"></circle>
+        </svg>
+        <span>Courses by DiveDay</span>
+      </div>
+    </div>
+
+    <!-- ---------- one-departure card ---------- -->
+    <div style="width: 360px; flex: 0 0 360px;">
+      <h2 class="bri" style="margin: 0 0 10px; font-size: 22px; font-weight: 700; letter-spacing: -0.028em;">Today's first boat</h2>
+      <div class="card">
+        <div class="photo" style="height: 100px; background: linear-gradient(155deg, #2fae86 0%, #178f6a 40%, #0b1f2e 100%);">
+          <span class="pcap">[photo: French Reef, the swim-through]</span>
+        </div>
+        <div style="padding: 13px 16px 14px; box-sizing: border-box;">
+          <div class="ctitle">Two-Tank Reef — Molasses &amp; French</div>
+          <div class="cmeta tnum">Thu Aug 27 · 7:00 AM · Mantis II</div>
+          <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 10px;">
+            <span class="tnum" style="font-size: 22px; font-weight: 800; letter-spacing: -0.03em;">$95</span>
+            <span style="font-size: 13px; color: #5c6b72;">per diver</span>
+            <span class="tnum" style="margin-left: auto; font-size: 13.5px; font-weight: 700; color: #f07d2a;">2 seats left</span>
+          </div>
+          <a class="btn" style="width: 100%; margin-top: 13px;">Book this boat</a>
+        </div>
+      </div>
+      <div class="credit">
+        <svg width="22" height="14" viewBox="0 0 22 14" fill="none">
+          <circle cx="3" cy="11" r="1.9" fill="#ff6f61"></circle>
+          <circle cx="10" cy="7.4" r="2.7" fill="#0e7490"></circle>
+          <circle cx="18" cy="4" r="3.6" fill="#0e7490"></circle>
+        </svg>
+        <span>Booking by DiveDay</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ DiveDay's own caption strip ============ -->
+  <div class="dd" style="background: #faf9f6; border-top: 1px solid #e3e0d7; padding: 20px 80px 22px; box-sizing: border-box; color: #0c2a35; font-size: 15px; line-height: 1.55;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border: 1px solid #ff6f61; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #ff6f61;">Proposed</span>
+      <span style="font-size: 11.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #5b6f77;">What an embed shows</span>
+    </div>
+    <p style="margin: 10px 0 0; max-width: 900px; color: #5b6f77;">Three embeds, one line each — what it shows is chosen in Settings: everything, one departure, one course, or a named set. A named set is how the wreck trips land on one page and the courses on another without either page carrying the whole schedule.</p>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

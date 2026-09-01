@@ -1,0 +1,526 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..700,0..100,0..1&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #5b6f77;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #dceef0;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p { margin: 0; }
+    .disp { font-family: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif; font-optical-sizing: auto; font-variation-settings: 'SOFT' 50, 'WONK' 1; }
+    .num { font-variant-numeric: tabular-nums; }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .spec { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .note { font-size: 13.5px; color: var(--muted); max-width: 780px; }
+    .h2 { font-family: 'Fraunces', 'Iowan Old Style', Palatino, Georgia, serif; font-optical-sizing: auto; font-variation-settings: 'SOFT' 50, 'WONK' 1; font-size: 27px; font-weight: 600; letter-spacing: -0.012em; line-height: 1.15; }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: 0 2px 10px rgba(88, 66, 30, .045); }
+    .tile { background: var(--lagoon-wash); border-radius: 22px; display: flex; align-items: center; justify-content: center; height: 108px; }
+    .row { display: flex; align-items: center; gap: 14px; min-height: 52px; border-top: 1px solid var(--rope); }
+    .kind { font-size: 13px; font-weight: 650; min-width: 96px; }
+    .act { font-size: 14px; font-weight: 600; color: var(--lagoon); white-space: nowrap; }
+    .badge { display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; padding: 7px 15px; font-size: 13px; font-weight: 650; }
+    .sw { display: flex; flex-direction: column; gap: 8px; }
+    .swblock { height: 62px; border-radius: 16px; border: 1px solid rgba(12,42,53,.08); }
+    .swname { font-size: 13.5px; font-weight: 600; }
+    .swmeta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  </style>
+</helmet>
+
+<div style="width: 1180px; min-height: 2460px; background: var(--sand); box-sizing: border-box; overflow: hidden;">
+<div style="padding: 56px 60px 64px; box-sizing: border-box; display: flex; flex-direction: column; gap: 62px;">
+
+  <!-- ============ Masthead ============ -->
+  <div style="display: flex; flex-direction: column; gap: 22px;">
+    <div style="display: flex; align-items: flex-end; gap: 28px;">
+      <div style="display: flex; flex-direction: column; gap: 12px; flex: 1;">
+        <p class="eyebrow">Design direction &middot; one of three</p>
+        <p class="disp" style="font-size: 68px; font-weight: 700; letter-spacing: -0.03em; line-height: 0.98;">Reef</p>
+        <p style="font-size: 17px; color: var(--muted); max-width: 620px;">Warm and alive. The same water, a warmer shore, and a drawn hand that stops at the rail.</p>
+      </div>
+      <svg width="180" height="110" viewBox="0 0 180 110" fill="none" stroke="#0a4d61" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+        <path d="M12 52c14-11 28-11 42 0s28 11 42 0 28-11 42 0 22 9 30 5" opacity=".5"></path>
+        <path d="M12 70c14-11 28-11 42 0s28 11 42 0 28-11 42 0 22 9 30 5" opacity=".3"></path>
+        <circle cx="42" cy="26" r="11" fill="#dceef0"></circle>
+        <circle cx="70" cy="16" r="7" fill="#dceef0"></circle>
+        <circle cx="90" cy="8" r="4.4" fill="#ff6f61" stroke="#a83a2c"></circle>
+      </svg>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px;">
+      <p style="font-size: 15.5px; line-height: 1.55;">Reef keeps DiveDay&#8217;s water and warms the sand it sits on: one family from lagoon to coral, used with intent instead of rationed down to nothing.</p>
+      <p style="font-size: 15.5px; line-height: 1.55;">The hand is soft &mdash; wide radii, a swell line where other systems put a rule, and drawn marine life in one consistent stroke &mdash; so a shop&#8217;s day looks like a day on the water.</p>
+      <p style="font-size: 15.5px; line-height: 1.55;">And it stops at the rail. Manifests, roll call, cert gating and waivers keep Geist, exact figures and a glyph beside every word. A boat is not a place for personality.</p>
+    </div>
+  </div>
+
+  <!-- ============ Type ============ -->
+  <div style="display: flex; flex-direction: column; gap: 20px;">
+    <div style="display: flex; align-items: baseline; gap: 16px;">
+      <p class="h2">Two faces, one job each.</p>
+      <p class="spec" style="margin-left: auto;">Fraunces (variable, SOFT 50 / WONK 1) &middot; Geist</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 340px 1fr; gap: 32px; align-items: start;">
+      <div class="panel" style="padding: 26px 28px; display: flex; flex-direction: column; gap: 10px;">
+        <p class="disp" style="font-size: 56px; font-weight: 600; line-height: 1;">Aa</p>
+        <p class="disp" style="font-size: 22px; font-weight: 600;">Fraunces</p>
+        <p class="note" style="font-size: 13.5px;">A warm, slightly wonky old-style with soft terminals. It carries the shop&#8217;s name, the greeting, the marketing headline and a finished moment &mdash; nothing that a person acts on.</p>
+        <p class="spec">Fallback: Iowan Old Style, Palatino, Georgia, serif</p>
+        <div style="height: 1px; background: var(--rope);"></div>
+        <p style="font-size: 34px; font-weight: 600; line-height: 1;">Aa</p>
+        <p style="font-size: 15px; font-weight: 600;">Geist</p>
+        <p class="note" style="font-size: 13.5px;">Every operational word: rows, counts, controls, states, forms, money, times.</p>
+        <p class="spec">Fallback: -apple-system, SF Pro Text, system-ui, sans-serif</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column;">
+        <div style="height: 1px; background: var(--rope);"></div>
+        <div style="display: flex; align-items: baseline; gap: 20px; padding: 13px 0; border-bottom: 1px solid var(--rope);">
+          <span class="disp" style="font-size: 44px; font-weight: 700; letter-spacing: -0.025em;">Marketing hero</span>
+          <span class="spec" style="margin-left: auto;">Fraunces 56 / 700 / -0.03em</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 20px; padding: 13px 0; border-bottom: 1px solid var(--rope);">
+          <span class="disp" style="font-size: 32px; font-weight: 700; letter-spacing: -0.02em;">Page title &amp; shop name</span>
+          <span class="spec" style="margin-left: auto;">Fraunces 40 / 700</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 20px; padding: 13px 0; border-bottom: 1px solid var(--rope);">
+          <span class="disp" style="font-size: 24px; font-weight: 600;">Section heading</span>
+          <span class="spec" style="margin-left: auto;">Fraunces 26 / 600</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 20px; padding: 13px 0; border-bottom: 1px solid var(--rope);">
+          <span class="eyebrow">Eyebrow &middot; where you are</span>
+          <span class="spec" style="margin-left: auto;">Geist 11 / 700 / +0.16em / lagoon</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 20px; padding: 13px 0; border-bottom: 1px solid var(--rope);">
+          <span class="glabel">Group label</span>
+          <span class="spec" style="margin-left: auto;">Geist 12 / 650 / +0.12em / caps / muted</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 20px; padding: 13px 0; border-bottom: 1px solid var(--rope);">
+          <span style="font-size: 16px; font-weight: 600;">Row title &mdash; a person, a boat, a time</span>
+          <span class="spec" style="margin-left: auto;">Geist 16 / 600</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 20px; padding: 13px 0; border-bottom: 1px solid var(--rope);">
+          <span style="font-size: 14px; color: var(--muted);">Row meta &mdash; what differs about this row, once</span>
+          <span class="spec" style="margin-left: auto;">Geist 14 / 400 / muted</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 20px; padding: 13px 0; border-bottom: 1px solid var(--rope);">
+          <span class="num" style="font-size: 34px; font-weight: 700; letter-spacing: -0.02em;">10<span style="font-size: 18px; font-weight: 600; color: var(--muted);"> of 12</span></span>
+          <span class="spec" style="margin-left: auto;">Geist 34 / 700 / tabular &mdash; a count is never set in Fraunces</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 16px 0 0;">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#a83a2c" stroke-width="1.9" stroke-linecap="round"><circle cx="9" cy="9" r="7.2"></circle><path d="M9 5.4v4.4M9 12.6v.2"></path></svg>
+          <span style="font-size: 14.5px; font-weight: 600; color: var(--coral-deep);">Fraunces never labels an operational fact.</span>
+          <span class="note" style="font-size: 13.5px;">No display type on a manifest row, a count, a status, a money figure or a control. That single rule is what keeps warmth from becoming costume.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Palette ============ -->
+  <div style="display: flex; flex-direction: column; gap: 20px;">
+    <div style="display: flex; align-items: baseline; gap: 16px;">
+      <p class="h2">The family runs shore to coral.</p>
+      <p class="spec" style="margin-left: auto;">Evolved from the shipped tokens &middot; signal colours deliberately unchanged</p>
+    </div>
+
+    <p class="glabel">Shore &mdash; grounds and structure</p>
+    <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px;">
+      <div class="sw"><div class="swblock" style="background: #fbf7ef;"></div><p class="swname">Sunlit sand</p><p class="swmeta">#FBF7EF &middot; page ground</p></div>
+      <div class="sw"><div class="swblock" style="background: #fffdf8;"></div><p class="swname">Shell</p><p class="swmeta">#FFFDF8 &middot; panel surface</p></div>
+      <div class="sw"><div class="swblock" style="background: #f3ecdd;"></div><p class="swname">Tideline</p><p class="swmeta">#F3ECDD &middot; sunken, tracks</p></div>
+      <div class="sw"><div class="swblock" style="background: #e6dcc8;"></div><p class="swname">Rope</p><p class="swmeta">#E6DCC8 &middot; hairline</p></div>
+      <div class="sw"><div class="swblock" style="background: #8a8065;"></div><p class="swname">Rope, strong</p><p class="swmeta">#8A8065 &middot; control edge, 3.4:1</p></div>
+      <div class="sw"><div class="swblock" style="background: #0c2a35;"></div><p class="swname">Deep-sea ink</p><p class="swmeta">#0C2A35 &middot; reading ink, 14.2:1</p></div>
+    </div>
+
+    <p class="glabel" style="margin-top: 8px;">Water &mdash; action and depth</p>
+    <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px;">
+      <div class="sw"><div class="swblock" style="background: #0e7490;"></div><p class="swname">Lagoon</p><p class="swmeta">#0E7490 &middot; the one action</p></div>
+      <div class="sw"><div class="swblock" style="background: #0a4d61;"></div><p class="swname">Lagoon, deep</p><p class="swmeta">#0A4D61 &middot; hover, drawn stroke</p></div>
+      <div class="sw"><div class="swblock" style="background: #7fd0d6;"></div><p class="swname">Shallows</p><p class="swmeta">#7FD0D6 &middot; fills only, never ink</p></div>
+      <div class="sw"><div class="swblock" style="background: #dceef0;"></div><p class="swname">Lagoon wash</p><p class="swmeta">#DCEEF0 &middot; tint, illustration bed</p></div>
+      <div class="sw"><div class="swblock" style="background: #5b6f77;"></div><p class="swname">Muted</p><p class="swmeta">#5B6F77 &middot; secondary ink, 5.6:1</p></div>
+      <div class="sw"><div class="swblock" style="background: linear-gradient(180deg, #dceef0 0%, #fbf7ef 100%);"></div><p class="swname">The water band</p><p class="swmeta">wash &rarr; sand &middot; page tops only</p></div>
+    </div>
+
+    <p class="glabel" style="margin-top: 8px;">Life &mdash; the rationed warmth</p>
+    <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px;">
+      <div class="sw"><div class="swblock" style="background: #ff6f61;"></div><p class="swname">Coral</p><p class="swmeta">#FF6F61 &middot; the earned accent</p></div>
+      <div class="sw"><div class="swblock" style="background: #a83a2c;"></div><p class="swname">Coral, deep</p><p class="swmeta">#A83A2C &middot; ink on coral wash, 5.9:1</p></div>
+      <div class="sw"><div class="swblock" style="background: #ffeee9;"></div><p class="swname">Coral wash</p><p class="swmeta">#FFEEE9 &middot; earned-moment bed</p></div>
+      <div class="sw" style="grid-column: span 3;">
+        <div style="display: flex; gap: 10px; align-items: flex-start;">
+          <svg width="20" height="20" viewBox="0 0 18 18" fill="none" stroke="#a83a2c" stroke-width="1.9" stroke-linecap="round" style="flex-shrink: 0; margin-top: 2px;"><circle cx="9" cy="9" r="7.2"></circle><path d="M9 5.4v4.4M9 12.6v.2"></path></svg>
+          <p class="note" style="font-size: 13.5px;"><span style="color: var(--ink); font-weight: 600;">Reef asks for a bigger coral budget, and says so.</span> Clearwater allows one coral moment per surface. Reef allows up to three, and only these: the mark&#8217;s smallest bubble, one drawn creature&#8217;s single warm detail, and one earned moment. Coral is still never a status, never a fill behind reading text, and never on a manifest, roll call, cert or waiver surface at all.</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="glabel" style="margin-top: 8px;">Signal &mdash; unchanged on purpose</p>
+    <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px;">
+      <div class="sw"><div class="swblock" style="background: #15803d;"></div><p class="swname">Success</p><p class="swmeta">#15803D &middot; on #E6F0E8</p></div>
+      <div class="sw"><div class="swblock" style="background: #b45309;"></div><p class="swname">Warning</p><p class="swmeta">#B45309 &middot; on #F8EEE2</p></div>
+      <div class="sw"><div class="swblock" style="background: #b91c1c;"></div><p class="swname">Danger</p><p class="swmeta">#B91C1C &middot; on #F8E8E6</p></div>
+      <div class="sw" style="grid-column: span 3;">
+        <p class="note" style="font-size: 13.5px;">A redesign that retunes the three colours a captain reads at the rail has redesigned the wrong thing. Their washes warm by a hair to sit on sand; the inks do not move, and every one still arrives with a drawn glyph and a word.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Illustration ============ -->
+  <div style="display: flex; flex-direction: column; gap: 20px;">
+    <div style="display: flex; align-items: baseline; gap: 16px;">
+      <p class="h2">One hand, six drawings, a short leash.</p>
+      <p class="spec" style="margin-left: auto;">1.7px stroke &middot; round caps and joins &middot; lagoon-deep line on a lagoon wash &middot; one coral detail each</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px;">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div class="tile">
+          <svg width="120" height="80" viewBox="0 0 120 80" fill="none" stroke="#0a4d61" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M44 32C56 20 84 20 95 33c9 11 1 25-16 29-17 4-33-2-37-14-2-6 0-12 2-16Z" fill="#fffdf8"></path>
+            <path d="M44 36c-8-5-17-5-22 0-4 4-2 10 4 11 5 1 11-1 14-4"></path>
+            <circle cx="27" cy="39" r="1.6" fill="#0a4d61" stroke="none"></circle>
+            <path d="M57 27c-4-12-16-18-24-16 6 6 10 14 16 20"></path>
+            <path d="M84 59c4 10 14 14 18 10-4-4-8-8-12-12"></path>
+            <path d="M55 28c2 10 2 24-2 32M70 24c2 12 2 26-2 34M46 44c16 4 34 4 48 0"></path>
+            <circle cx="106" cy="17" r="3.4" fill="#ff6f61" stroke="none"></circle>
+          </svg>
+        </div>
+        <p class="swname">Green turtle</p>
+        <p class="swmeta">the all-clear</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div class="tile">
+          <svg width="120" height="80" viewBox="0 0 120 80" fill="none" stroke="#0a4d61" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M26 40c9-16 34-23 54-15 12 5 20 13 20 15 0 2-8 10-20 15-20 8-45 1-54-15Z" fill="#fffdf8"></path>
+            <path d="M26 40 13 22c4 11 4 25 0 36l13-18Z" fill="#fffdf8"></path>
+            <path d="M50 22c8-9 20-9 27-1"></path>
+            <path d="M68 46c-2 8 2 14 8 14"></path>
+            <path d="M44 28c4 12 4 20 0 30M58 24c4 13 4 22 0 33"></path>
+            <circle cx="88" cy="36" r="2" fill="#0a4d61" stroke="none"></circle>
+            <path d="M99 36c4 2 4 6 0 8"></path>
+            <circle cx="110" cy="18" r="3.2" fill="#ff6f61" stroke="none"></circle>
+          </svg>
+        </div>
+        <p class="swname">Parrotfish</p>
+        <p class="swmeta">the reef trip</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div class="tile">
+          <svg width="120" height="80" viewBox="0 0 120 80" fill="none" stroke="#0a4d61" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M60 74c0-14-2-22-5-28"></path>
+            <path d="M55 46c-6-8-14-12-22-18M55 46c1-12 3-18 3-28M55 46c8-6 16-8 26-14"></path>
+            <path d="M40 34c-6-2-10-6-12-10M46 28c0-6 1-10 0-14M58 30c4-4 8-6 13-8M64 38c6-2 11-4 16-8"></path>
+            <path d="M33 28c-4 0-7-2-9-5M52 20c-2-4-2-7-2-10M70 24c2-4 5-6 8-8"></path>
+            <path d="M50 74h20"></path>
+            <circle cx="90" cy="20" r="3.2" fill="#ff6f61" stroke="none"></circle>
+          </svg>
+        </div>
+        <p class="swname">Sea fan</p>
+        <p class="swmeta">courses, learning</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div class="tile">
+          <svg width="120" height="80" viewBox="0 0 120 80" fill="none" stroke="#0a4d61" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 62c0-19 16-33 38-33s38 14 38 33Z" fill="#fffdf8"></path>
+            <path d="M30 58c6-9 13-3 19-11 5-7 12-1 18-8M32 63c8-10 15-3 22-11 6-7 13-1 20-8M48 33c5 5 10 0 15 4"></path>
+            <path d="M16 62h88"></path>
+            <circle cx="104" cy="24" r="3.2" fill="#ff6f61" stroke="none"></circle>
+          </svg>
+        </div>
+        <p class="swname">Brain coral</p>
+        <p class="swmeta">the dive site</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div class="tile">
+          <svg width="120" height="80" viewBox="0 0 120 80" fill="none" stroke="#0a4d61" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="36" cy="54" r="12" fill="#fffdf8"></circle>
+            <circle cx="66" cy="34" r="8" fill="#fffdf8"></circle>
+            <circle cx="90" cy="19" r="5" fill="#ff6f61" stroke="#a83a2c"></circle>
+            <path d="M18 72c6-6 10-10 14-16" opacity=".45"></path>
+          </svg>
+        </div>
+        <p class="swname">Bubble trail</p>
+        <p class="swmeta">the mark, at size</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div class="tile">
+          <svg width="120" height="80" viewBox="0 0 120 80" fill="none" stroke="#0a4d61" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 32c12-10 24-10 36 0s24 10 36 0 24-10 32-2"></path>
+            <path d="M8 46c12-10 24-10 36 0s24 10 36 0 24-10 32-2" opacity=".6"></path>
+            <path d="M8 60c12-10 24-10 36 0s24 10 36 0 24-10 32-2" opacity=".32"></path>
+            <circle cx="96" cy="18" r="3.2" fill="#ff6f61" stroke="none"></circle>
+          </svg>
+        </div>
+        <p class="swname">Swell</p>
+        <p class="swmeta">the divider, the band</p>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 4px;">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <p class="swname" style="color: var(--success);">Where a drawing may appear</p>
+        <p class="note" style="font-size: 13.5px;">The storefront and the marketing pages. A course, a dive site, or a trip that has no photograph of its own. An empty state that is teaching rather than reporting. The diver&#8217;s recap. One earned moment on a staff surface, once a day. Never smaller than 20px, where the line stops reading and starts looking like a dingbat.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <p class="swname" style="color: var(--danger);">Where it may not</p>
+        <p class="note" style="font-size: 13.5px;">Inside a manifest, a roll call, a cert check, a waiver or a payment. As a status glyph &mdash; those come from the shipped icon family and nowhere else. More than one creature on a staff screen; the storefront hero is the single place a whole scene is drawn, and it is drawn once. Beside a refusal, a warning, or anything a person is about to be told they cannot do. And never animated on a work queue: a turtle that swims while somebody is blocked is the software enjoying itself.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Form ============ -->
+  <div style="display: flex; flex-direction: column; gap: 20px;">
+    <p class="h2">Soft forms, one bed, two rungs.</p>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;">
+      <div class="panel" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px;">
+        <p class="glabel">Radius</p>
+        <div style="display: flex; align-items: flex-end; gap: 12px;">
+          <div style="width: 46px; height: 46px; background: var(--tideline); border: 1px solid var(--rope); border-radius: 10px;"></div>
+          <div style="width: 56px; height: 56px; background: var(--tideline); border: 1px solid var(--rope); border-radius: 18px;"></div>
+          <div style="width: 72px; height: 72px; background: var(--tideline); border: 1px solid var(--rope); border-radius: 28px;"></div>
+          <div style="width: 46px; height: 46px; background: var(--tideline); border: 1px solid var(--rope); border-radius: 999px;"></div>
+        </div>
+        <p class="spec">10 control &middot; 18 inset &middot; 28 panel &middot; 999 pill. Nothing square, nothing sharper than 10.</p>
+      </div>
+      <div class="panel" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px;">
+        <p class="glabel">Spacing</p>
+        <div style="display: flex; align-items: flex-end; gap: 8px; height: 72px;">
+          <div style="width: 22px; height: 4px; background: var(--shallows);"></div>
+          <div style="width: 22px; height: 8px; background: var(--shallows);"></div>
+          <div style="width: 22px; height: 12px; background: var(--shallows);"></div>
+          <div style="width: 22px; height: 20px; background: var(--shallows);"></div>
+          <div style="width: 22px; height: 32px; background: var(--shallows);"></div>
+          <div style="width: 22px; height: 52px; background: var(--shallows);"></div>
+          <div style="width: 22px; height: 72px; background: var(--shallows);"></div>
+        </div>
+        <p class="spec">4 &middot; 8 &middot; 12 &middot; 20 &middot; 32 &middot; 52 &middot; 84. Sections breathe at 52 and 84; rows never tighter than 52 tall.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="panel" style="padding: 16px 20px;">
+          <p style="font-size: 14.5px; font-weight: 600;">At rest</p>
+          <p class="spec">Hairline plus one soft warm bed &mdash; 0 2px 10px rgba(88,66,30,.045). It sits on sand, not above it.</p>
+        </div>
+        <div style="background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; padding: 16px 20px; box-shadow: 0 18px 48px rgba(12,42,53,.16);">
+          <p style="font-size: 14.5px; font-weight: 600;">Floating</p>
+          <p class="spec">A menu, a sheet, a toast. The shadow says it will leave.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Components ============ -->
+  <div style="display: flex; flex-direction: column; gap: 22px;">
+    <p class="h2">The parts, drawn as they ship.</p>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+
+      <!-- left column -->
+      <div style="display: flex; flex-direction: column; gap: 28px;">
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <p class="glabel">Buttons &mdash; 48px tall, 16px label, one primary per surface</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+            <span style="display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 24px; border-radius: 14px; background: var(--lagoon); color: #ffffff; font-size: 16px; font-weight: 600;">Verify her card</span>
+            <span style="display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 22px; border-radius: 14px; background: var(--shell); border: 1px solid var(--rope-strong); color: var(--ink); font-size: 16px; font-weight: 600;">Send waiver</span>
+            <span style="display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 16px; border-radius: 14px; color: var(--lagoon); font-size: 16px; font-weight: 600;">Open her record</span>
+            <span style="display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 22px; border-radius: 14px; background: var(--shell); border: 1px solid var(--danger); color: var(--danger); font-size: 16px; font-weight: 600;">Delete trip</span>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <p class="glabel">Search</p>
+          <div style="display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 18px; border-radius: 999px; background: var(--shell); border: 1px solid var(--rope-strong); max-width: 400px;">
+            <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="#5b6f77" stroke-width="1.8" stroke-linecap="round"><circle cx="7" cy="7" r="4.6"></circle><path d="M10.6 10.6 13.6 13.6"></path></svg>
+            <span style="font-size: 16px; color: var(--muted); flex: 1;">Find a diver, a boat, a day</span>
+            <span class="spec" style="border: 1px solid var(--rope); border-radius: 7px; padding: 2px 7px;">&#8984;K</span>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <p class="glabel">Form field</p>
+          <div style="display: flex; flex-direction: column; gap: 7px; max-width: 400px;">
+            <span style="font-size: 14px; font-weight: 600;">Certification number</span>
+            <div style="display: flex; align-items: center; height: 48px; padding: 0 16px; border-radius: 14px; background: var(--shell); border: 1px solid var(--rope-strong);">
+              <span class="num" style="font-size: 16px;">PADI 1908457</span>
+            </div>
+            <span style="font-size: 13px; color: var(--muted);">On the back of the card, under the name.</span>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <p class="glabel">States &mdash; glyph, word and ink, every time</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+            <span class="badge" style="background: var(--danger-wash); color: var(--danger);">
+              <svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="#b91c1c" stroke-width="2.2" stroke-linecap="round"><path d="M6.2 6.2 11.8 11.8M11.8 6.2 6.2 11.8"></path></svg>
+              Blocked &mdash; certification
+            </span>
+            <span class="badge" style="background: var(--warning-wash); color: var(--warning);">
+              <svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="#b45309" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.4 16.6 15.2H1.4L9 2.4Z"></path><path d="M9 7.2v3.4"></path></svg>
+              Waiver not sent
+            </span>
+            <span class="badge" style="background: var(--success-wash); color: var(--success);">
+              <svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="#15803d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5 7.5 13 14.5 5"></path></svg>
+              All home
+            </span>
+            <span class="badge" style="background: var(--tideline); border: 1px solid var(--rope); color: var(--muted);">Full</span>
+          </div>
+          <p class="spec">A count is quiet text, never a pill: <span class="num" style="color: var(--ink); font-weight: 600;">10 of 12</span>. Coral appears in none of these.</p>
+        </div>
+      </div>
+
+      <!-- right column -->
+      <div style="display: flex; flex-direction: column; gap: 28px;">
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <p class="glabel">Group header and ledger rows</p>
+          <div style="display: flex; flex-direction: column;">
+            <div style="display: flex; align-items: baseline; gap: 12px; padding-bottom: 8px;">
+              <span style="font-size: 16px; font-weight: 600;">7:00 AM &middot; Two-Tank Reef &mdash; Molasses &amp; French</span>
+              <span class="num" style="margin-left: auto; font-size: 14px; color: var(--muted);">10 of 12</span>
+            </div>
+            <div class="row">
+              <svg width="19" height="19" viewBox="0 0 18 18" fill="none" stroke="#b91c1c" stroke-width="1.8" stroke-linecap="round" style="flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M6.2 6.2 11.8 11.8M11.8 6.2 6.2 11.8"></path></svg>
+              <span class="kind" style="color: var(--danger);">Certification</span>
+              <span style="flex: 1; font-size: 15px;">Grace Mensah&#8217;s is waiting for verification.</span>
+              <span class="act">Verify it</span>
+            </div>
+            <div class="row" style="border-bottom: 1px solid var(--rope);">
+              <svg width="19" height="19" viewBox="0 0 18 18" fill="none" stroke="#b45309" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M9 2.4 16.6 15.2H1.4L9 2.4Z"></path><path d="M9 7.2v3.4"></path><circle cx="9" cy="12.9" r=".5" fill="#b45309"></circle></svg>
+              <span class="kind" style="color: var(--warning);">Waiver</span>
+              <span style="flex: 1; font-size: 15px;">Priya Sharma hasn&#8217;t been sent hers.</span>
+              <span class="act">Send waiver</span>
+            </div>
+          </div>
+          <p class="spec">Group owns time, trip and count. The row carries a glyph, one word of kind, one sentence, one fix.</p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <p class="glabel">The count figure</p>
+          <div style="display: flex; align-items: center; gap: 22px;">
+            <div style="position: relative; width: 104px; height: 104px; border-radius: 999px; background: var(--tideline); border: 1px solid var(--rope); overflow: hidden; flex-shrink: 0;">
+              <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 68%; background: var(--lagoon-wash);"></div>
+              <svg width="104" height="16" viewBox="0 0 104 16" fill="none" stroke="#7fd0d6" stroke-width="1.6" style="position: absolute; left: 0; bottom: 68%;"><path d="M-4 9c10-7 20-7 30 0s20 7 30 0 20-7 30 0 16 6 22 3"></path></svg>
+              <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <span class="num" style="font-size: 34px; font-weight: 700; line-height: 1;">17</span>
+                <span class="num" style="font-size: 13px; font-weight: 600; color: var(--muted);">of 25</span>
+              </div>
+            </div>
+            <p class="note" style="font-size: 13.5px;">The water behind the figure is decoration and nothing else. The tabular number and the words carry the fact; on a roll-call surface the fill is drawn at a fixed 30% opacity so that a screen in full sun still reads the same either way.</p>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <p class="glabel">Earned moment &mdash; the one coral field in the product</p>
+          <div style="background: var(--coral-wash); border: 1px solid #f6d8d0; border-radius: 28px; padding: 20px 24px; display: flex; align-items: center; gap: 20px;">
+            <svg width="76" height="52" viewBox="0 0 120 80" fill="none" stroke="#a83a2c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+              <path d="M44 32C56 20 84 20 95 33c9 11 1 25-16 29-17 4-33-2-37-14-2-6 0-12 2-16Z" fill="#fffdf8"></path>
+              <path d="M44 36c-8-5-17-5-22 0-4 4-2 10 4 11 5 1 11-1 14-4"></path>
+              <circle cx="27" cy="39" r="1.8" fill="#a83a2c" stroke="none"></circle>
+              <path d="M57 27c-4-12-16-18-24-16 6 6 10 14 16 20"></path>
+              <path d="M84 59c4 10 14 14 18 10-4-4-8-8-12-12"></path>
+              <path d="M55 28c2 10 2 24-2 32M70 24c2 12 2 26-2 34M46 44c16 4 34 4 48 0"></path>
+            </svg>
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+              <p class="disp" style="font-size: 21px; font-weight: 600; color: var(--coral-deep);">Mantis II is ready.</p>
+              <p style="font-size: 15px; color: var(--ink);">Ten aboard, every card checked, every waiver signed. Keiko has the manifest.</p>
+            </div>
+          </div>
+          <p class="spec">Renders only when the last blocker clears, once per boat per day, and renders nothing otherwise.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Wow moments ============ -->
+  <div style="display: flex; flex-direction: column; gap: 20px;">
+    <div style="display: flex; align-items: baseline; gap: 16px;">
+      <p class="h2">The three moments this direction bets on.</p>
+      <p class="spec" style="margin-left: auto;">Each &le; 400ms, each renders nothing when it hasn&#8217;t been earned</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px;">
+
+      <div class="panel" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px;">
+        <p class="disp" style="font-size: 20px; font-weight: 600;">1 &middot; The water closes over the work</p>
+        <div style="background: var(--sand); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <svg width="15" height="15" viewBox="0 0 18 18" fill="none" stroke="#b91c1c" stroke-width="1.8" stroke-linecap="round" opacity=".3"><circle cx="9" cy="9" r="7.2"></circle><path d="M6.2 6.2 11.8 11.8M11.8 6.2 6.2 11.8"></path></svg>
+            <span style="font-size: 13px; color: var(--muted); text-decoration: line-through;">Grace Mensah &mdash; certification</span>
+          </div>
+          <svg width="100%" height="26" viewBox="0 0 260 26" preserveAspectRatio="none" fill="none" stroke="#0a4d61" stroke-width="1.6" stroke-linecap="round"><path d="M0 14c26-11 52-11 78 0s52 11 78 0 52-11 78 0 22 6 26 4"></path><path d="M0 22c26-11 52-11 78 0s52 11 78 0 52-11 78 0 22 6 26 4" opacity=".4"></path></svg>
+          <p style="font-size: 14px; font-weight: 600;">Nothing left before 7:00.</p>
+        </div>
+        <p class="note" style="font-size: 13px;">The last blocker on a boat clears and its rows do not simply vanish &mdash; a swell draws across where they were and the station settles into one warm sentence. The morning&#8217;s work visibly finishing is the feeling a shop pays for.</p>
+      </div>
+
+      <div class="panel" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px;">
+        <p class="disp" style="font-size: 20px; font-weight: 600;">2 &middot; The count fills as they come back</p>
+        <div style="background: var(--sand); border-radius: 18px; padding: 16px; display: flex; align-items: center; gap: 16px;">
+          <div style="position: relative; width: 76px; height: 76px; border-radius: 999px; background: var(--tideline); border: 1px solid var(--rope); overflow: hidden; flex-shrink: 0;">
+            <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 100%; background: var(--lagoon-wash);"></div>
+            <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <span class="num" style="font-size: 26px; font-weight: 700; line-height: 1;">23</span>
+              <span class="num" style="font-size: 11px; font-weight: 600; color: var(--muted);">of 23</span>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 14 14" style="position: absolute; top: 6px; right: 9px;"><circle cx="7" cy="7" r="4" fill="#ff6f61"></circle></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <span class="badge" style="background: var(--success-wash); color: var(--success); align-self: flex-start;">
+              <svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="#15803d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5 7.5 13 14.5 5"></path></svg>
+              All home
+            </span>
+            <span style="font-size: 13px; color: var(--muted);">Twenty-three out, twenty-three back.</span>
+          </div>
+        </div>
+        <p class="note" style="font-size: 13px;">Each diver counted back raises the water a little. At full it settles and one coral bubble leaves. The figure is exact and tabular the whole way; the fill never says anything the number and the word do not.</p>
+      </div>
+
+      <div class="panel" style="padding: 22px 24px; display: flex; flex-direction: column; gap: 14px;">
+        <p class="disp" style="font-size: 20px; font-weight: 600;">3 &middot; The diver&#8217;s day, drawn</p>
+        <div style="background: var(--lagoon-wash); border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <svg width="58" height="38" viewBox="0 0 120 80" fill="none" stroke="#0a4d61" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 62c0-19 16-33 38-33s38 14 38 33Z" fill="#fffdf8"></path>
+              <path d="M30 58c6-9 13-3 19-11 5-7 12-1 18-8M32 63c8-10 15-3 22-11 6-7 13-1 20-8"></path>
+              <path d="M16 62h88"></path>
+            </svg>
+            <div style="display: flex; flex-direction: column;">
+              <span class="disp" style="font-size: 17px; font-weight: 600;">Molasses &amp; French</span>
+              <span class="num" style="font-size: 12.5px; color: var(--muted);">Thu, Aug 27 &middot; 62 ft &middot; 47 min</span>
+            </div>
+          </div>
+          <p style="font-size: 13px;">Green turtle, two nurse sharks, a parrotfish that would not leave Keiko alone.</p>
+        </div>
+        <p class="note" style="font-size: 13px;">The recap a diver already gets becomes something they screenshot: the site drawn in the shop&#8217;s own hand, what was actually logged, and the review ask underneath it. The prettiest page in the product is the one a diver shows a friend.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+</x-dc>
+</body>
+</html>
