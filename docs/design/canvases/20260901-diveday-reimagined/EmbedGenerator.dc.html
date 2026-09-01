@@ -1,0 +1,428 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Manrope:wght@400;500;600;700&amp;display=swap">
+  <style>
+    body { margin: 0; }
+    a { color: #0e7490; }
+    a:hover { color: #155e75; }
+    p { margin: 0; }
+    .dd { font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; color: #0c2a35; font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+    .lbl { font-size: 11.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #5b6f77; line-height: 1.3; }
+    .tag { display: inline-flex; align-items: center; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #5b6f77; border: 1px solid #8a8577; border-radius: 999px; padding: 2px 8px; line-height: 1.3; white-space: nowrap; }
+    .num { font-variant-numeric: tabular-nums; }
+    .mono { font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .host { font-family: 'Manrope', 'Geist', system-ui, sans-serif; }
+    .tile { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px; border-radius: 10px; font-size: 15px; font-weight: 500; box-sizing: border-box; }
+    .rail { display: flex; align-items: center; height: 36px; padding: 0 8px; border-radius: 8px; font-size: 14px; font-weight: 500; color: #5b6f77; }
+    .tab { display: inline-flex; align-items: center; height: 44px; padding: 0 14px; border-radius: 10px; font-size: 15px; font-weight: 500; box-sizing: border-box; }
+  </style>
+</helmet>
+
+<div class="dd" style="width: 1440px; min-height: 1880px; background: #faf9f6; box-sizing: border-box; overflow: hidden;">
+
+  <!-- ============ staff header bar ============ -->
+  <div style="height: 72px; box-sizing: border-box; background: #faf9f6; border-bottom: 1px solid #e3e0d7; padding: 0 72px; display: flex; align-items: center; gap: 28px;">
+
+    <!-- identity -->
+    <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+      <div style="width: 32px; height: 32px; border-radius: 9px; background: #0e7490; color: #ffffff; font-size: 12px; font-weight: 700; letter-spacing: .06em; display: flex; align-items: center; justify-content: center;">BM</div>
+      <span style="font-size: 16px; font-weight: 600; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+      <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#5b6f77" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+    </div>
+
+    <!-- tabs -->
+    <div style="display: flex; align-items: center; gap: 4px;">
+      <div style="display: flex; align-items: center; gap: 7px; height: 40px; padding: 0 12px; border-radius: 12px; font-size: 14px; font-weight: 500; color: #5b6f77;">
+        <span>Today</span>
+        <span class="num" style="display: inline-flex; align-items: center; height: 19px; padding: 0 6px; border-radius: 999px; background: #e7f1f4; color: #0e7490; font-size: 12px; font-weight: 600;">20</span>
+      </div>
+      <div style="display: flex; align-items: center; height: 40px; padding: 0 12px; border-radius: 12px; font-size: 14px; font-weight: 500; color: #5b6f77;">Check-in</div>
+      <div style="display: flex; align-items: center; height: 40px; padding: 0 12px; border-radius: 12px; font-size: 14px; font-weight: 500; color: #5b6f77;">Divers</div>
+      <div style="display: flex; align-items: center; height: 40px; padding: 0 12px; border-radius: 12px; font-size: 14px; font-weight: 500; color: #5b6f77;">Board</div>
+      <div style="display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border-radius: 12px; font-size: 14px; font-weight: 600; color: #0e7490; background: #e7f1f4;">
+        <span>More</span>
+        <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+      </div>
+    </div>
+
+    <!-- search -->
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 8px; width: 232px; height: 40px; box-sizing: border-box; padding: 0 12px; border: 1px solid #e3e0d7; border-radius: 10px; background: #ffffff;">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#5b6f77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      <span style="font-size: 14px; color: #5b6f77;">Search</span>
+      <span class="num" style="margin-left: auto; font-size: 12px; font-weight: 600; color: #5b6f77;">&#8984;K</span>
+    </div>
+  </div>
+
+  <!-- ============ rail + pane ============ -->
+  <div style="display: flex; gap: 40px; padding: 0 72px 48px;">
+
+    <!-- settings rail -->
+    <div style="width: 264px; flex-shrink: 0; padding-top: 40px;">
+      <div style="display: flex; flex-direction: column; gap: 24px;">
+
+        <div>
+          <p class="lbl" style="margin: 0 0 8px; padding-left: 8px;">Your shop</p>
+          <div class="rail">Team</div>
+          <div class="rail">Dive sites</div>
+          <div class="rail">Waiver template</div>
+          <div class="rail">Pre-departure checklist</div>
+          <div class="rail">Account security</div>
+          <div class="rail">Timezone</div>
+          <div class="rail">Public contact details</div>
+          <div class="rail">Shop profile &amp; branding</div>
+          <div class="rail">Shop address</div>
+          <div class="rail">Units</div>
+        </div>
+
+        <div>
+          <p class="lbl" style="margin: 0 0 8px; padding-left: 8px;">Money</p>
+          <div class="rail">Promo codes</div>
+          <div class="rail">What we rent</div>
+          <div class="rail">Dive packages</div>
+          <div class="rail">Sales tax &amp; VAT</div>
+          <div class="rail">Stripe</div>
+        </div>
+
+        <div>
+          <p class="lbl" style="margin: 0 0 8px; padding-left: 8px;">Data &amp; integrations</p>
+          <div class="rail" style="background: #e7f1f4; color: #0e7490; font-weight: 600;">Website embed</div>
+          <div class="rail">Calendar subscriptions</div>
+          <div class="rail">Shopify, QuickBooks &amp; Zapier</div>
+          <div class="rail">WhatsApp</div>
+          <div class="rail">Backups</div>
+          <div class="rail">Import contacts</div>
+          <div class="rail">Data export</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- pane -->
+    <div style="width: 992px; flex-shrink: 0; padding-top: 40px;">
+
+      <!-- page header -->
+      <div style="margin-bottom: 32px;">
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#0e7490" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+          <span style="font-size: 11.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #0e7490;">Settings</span>
+        </div>
+        <h1 style="margin: 8px 0 0; font-size: 34px; line-height: 1.15; font-weight: 600; letter-spacing: -0.02em;">Website embed</h1>
+        <p style="margin-top: 8px; font-size: 16px; color: #5b6f77; max-width: 660px;">Put your schedule on your own website, so divers browse and book without leaving it.</p>
+      </div>
+
+      <!-- ============ generator card ============ -->
+      <div style="box-sizing: border-box; width: 992px; background: #ffffff; border: 1px solid #e3e0d7; border-radius: 16px; box-shadow: 0 1px 2px rgba(12, 42, 53, .04); padding: 24px;">
+        <h2 style="margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Build your embed</h2>
+
+        <div style="margin-top: 16px; display: flex; gap: 24px; align-items: flex-start;">
+
+          <!-- ---------- controls ---------- -->
+          <div style="width: 440px; flex-shrink: 0; display: flex; flex-direction: column; gap: 22px;">
+
+            <!-- 1. what to embed -->
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <p class="lbl">What to embed</p>
+                <span class="tag">Proposed</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 214px 214px; gap: 10px 12px;">
+
+                <div class="tile" style="border: 1px solid #e3e0d7; background: #ffffff; color: #0c2a35;">
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#5b6f77" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="10" rx="5"></rect><path d="M8 12h8"></path></svg>
+                  <span>Button</span>
+                </div>
+
+                <div class="tile" style="border: 1px solid #e3e0d7; background: #ffffff; color: #0c2a35;">
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#5b6f77" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"></rect><rect x="6.5" y="8.5" width="11" height="7" rx="1.5"></rect></svg>
+                  <span>Lightbox</span>
+                </div>
+
+                <div class="tile" style="border: 1px solid #0e7490; background: #e7f1f4; color: #0e7490; font-weight: 600;">
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>
+                  <span>Calendar</span>
+                </div>
+
+                <div class="tile" style="border: 1px solid #e3e0d7; background: #ffffff; color: #0c2a35;">
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#5b6f77" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"></rect><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"></rect><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"></rect><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"></rect></svg>
+                  <span>Grid</span>
+                </div>
+
+                <div class="tile" style="border: 1px solid #e3e0d7; background: #ffffff; color: #0c2a35;">
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#5b6f77" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.5"></rect><path d="M6.5 10.5h6M6.5 14h3"></path><circle cx="17.5" cy="12" r="1.6"></circle></svg>
+                  <span>One departure</span>
+                </div>
+
+                <div class="tile" style="border: 1px solid #e3e0d7; background: #ffffff; color: #0c2a35;">
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#5b6f77" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10.2 5.2 8 4.8 4.5 5v12c3.5-.2 5.7.2 7.5 1.5 1.8-1.3 4-1.7 7.5-1.5V5c-3.5-.2-5.7.2-7.5 1.5Z"></path><path d="M12 6.5v12"></path></svg>
+                  <span>Courses</span>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- 2. what it shows -->
+            <div>
+              <p class="lbl" style="margin-bottom: 10px;">What it shows</p>
+
+              <div style="box-sizing: border-box; height: 44px; border: 1px solid #8a8577; border-radius: 10px; background: #ffffff; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 15px;">
+                <span>Everything on the board</span>
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#5b6f77" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+              </div>
+
+              <div style="margin-top: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 4px;">
+                  <span style="width: 18px; height: 18px; border-radius: 999px; border: 1.5px solid #8a8577; flex-shrink: 0;"></span>
+                  <span style="font-size: 15px;">One departure</span>
+                  <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="#5b6f77" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+                  <span style="font-size: 14px; color: #5b6f77;">Two-Tank Reef &#8212; Molasses &amp; French</span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 4px;">
+                  <span style="width: 18px; height: 18px; border-radius: 999px; border: 1.5px solid #8a8577; flex-shrink: 0;"></span>
+                  <span style="font-size: 15px;">One course</span>
+                  <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="#5b6f77" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+                  <span style="font-size: 14px; color: #5b6f77;">Open Water Diver</span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 4px;">
+                  <span style="width: 18px; height: 18px; border-radius: 999px; border: 1.5px solid #8a8577; flex-shrink: 0;"></span>
+                  <span style="font-size: 15px;">A set</span>
+                  <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="#5b6f77" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+                  <span style="font-size: 14px; color: #5b6f77;">Reef mornings (3 departures)</span>
+                  <span class="tag" style="margin-left: auto;">Proposed</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. look -->
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <p class="lbl">Look</p>
+                <span class="tag">Proposed</span>
+              </div>
+
+              <div style="box-sizing: border-box; display: flex; gap: 3px; height: 44px; padding: 3px; border: 1px solid #e3e0d7; border-radius: 10px; background: #f1efe9;">
+                <div style="flex: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: #ffffff; border: 1px solid #e3e0d7; color: #0e7490; font-size: 14px; font-weight: 600;">Your site</div>
+                <div style="flex: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; color: #5b6f77; font-size: 14px; font-weight: 500;">DiveDay light</div>
+                <div style="flex: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; color: #5b6f77; font-size: 14px; font-weight: 500;">DiveDay dark</div>
+              </div>
+
+              <div style="margin-top: 12px; display: flex; align-items: center; gap: 10px; height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; background: #f1efe9;">
+                <span class="host" style="width: 24px; height: 24px; border-radius: 6px; background: #ffffff; border: 1px solid #e3e0d7; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #0c2a35; flex-shrink: 0;">Aa</span>
+                <span style="font-size: 14px;"><span style="font-weight: 600;">Font</span> <span style="color: #5b6f77;">&#183; Manrope, read from your page</span></span>
+                <a href="#" style="margin-left: auto; font-size: 14px; font-weight: 600; line-height: 44px; text-decoration: none;">Override</a>
+              </div>
+
+              <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px; height: 44px; box-sizing: border-box; padding: 0 12px; border-radius: 10px; background: #f1efe9;">
+                <span style="width: 24px; height: 24px; border-radius: 6px; background: #178f6a; border: 1px solid rgba(12, 42, 53, .12); flex-shrink: 0;"></span>
+                <span style="font-size: 14px;"><span style="font-weight: 600;">Colour</span> <span class="num" style="color: #5b6f77;">&#183; #178f6a, read from your page</span></span>
+                <a href="#" style="margin-left: auto; font-size: 14px; font-weight: 600; line-height: 44px; text-decoration: none;">Override</a>
+              </div>
+
+              <div style="margin-top: 8px; display: flex; align-items: center; gap: 14px; height: 44px; box-sizing: border-box; padding: 0 12px;">
+                <span style="font-size: 14px;"><span style="font-weight: 600;">Corners</span> <span class="num" style="color: #5b6f77;">&#183; 12px</span></span>
+                <span style="position: relative; flex: 1; height: 4px; border-radius: 999px; background: #e3e0d7;">
+                  <span style="position: absolute; left: 0; top: 0; width: 96px; height: 4px; border-radius: 999px; background: #0e7490;"></span>
+                  <span style="position: absolute; left: 88px; top: -6px; width: 16px; height: 16px; border-radius: 999px; background: #ffffff; border: 2px solid #0e7490;"></span>
+                </span>
+              </div>
+
+              <p style="margin-top: 10px; font-size: 13px; line-height: 1.5; color: #5b6f77;">If your colour fails contrast on white, the button darkens itself.</p>
+            </div>
+
+            <!-- 4. language -->
+            <div>
+              <p class="lbl" style="margin-bottom: 10px;">Language</p>
+              <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                <div style="box-sizing: border-box; height: 44px; display: flex; align-items: center; padding: 0 16px; border-radius: 10px; border: 1px solid #0e7490; background: #e7f1f4; color: #0e7490; font-size: 15px; font-weight: 600;">Follow the visitor&#8217;s browser</div>
+                <div style="box-sizing: border-box; height: 44px; display: flex; align-items: center; padding: 0 16px; border-radius: 10px; border: 1px solid #e3e0d7; background: #ffffff; font-size: 15px; font-weight: 500;">English</div>
+                <div style="box-sizing: border-box; height: 44px; display: flex; align-items: center; padding: 0 16px; border-radius: 10px; border: 1px solid #e3e0d7; background: #ffffff; font-size: 15px; font-weight: 500;">Espa&#241;ol</div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ---------- preview ---------- -->
+          <div style="width: 480px; flex-shrink: 0;">
+
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+              <div style="height: 32px; display: flex; align-items: center; padding: 0 14px; border-radius: 999px; border: 1px solid #0e7490; background: #e7f1f4; color: #0e7490; font-size: 13px; font-weight: 600;">Desktop</div>
+              <div style="height: 32px; display: flex; align-items: center; padding: 0 14px; border-radius: 999px; border: 1px solid #e3e0d7; background: #ffffff; color: #5b6f77; font-size: 13px; font-weight: 500;">Phone</div>
+            </div>
+
+            <div style="box-sizing: border-box; width: 480px; background: #f1efe9; border: 1px solid #e3e0d7; border-radius: 16px; padding: 14px;">
+
+              <!-- host page chrome -->
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                <span style="width: 7px; height: 7px; border-radius: 999px; background: #d8d2c4;"></span>
+                <span style="width: 7px; height: 7px; border-radius: 999px; background: #d8d2c4;"></span>
+                <span style="width: 7px; height: 7px; border-radius: 999px; background: #d8d2c4;"></span>
+                <span style="margin-left: 4px; padding: 3px 10px; border-radius: 999px; background: #ffffff; font-size: 12px; color: #5b6f77;">bluemantisdivers.example</span>
+              </div>
+
+              <!-- the shop's own page -->
+              <div class="host" style="box-sizing: border-box; background: #f6f1e7; border-radius: 12px; padding: 16px; color: #16211f;">
+
+                <p style="font-size: 18px; font-weight: 700; letter-spacing: -0.01em;">Dive with us this week</p>
+
+                <!-- week strip -->
+                <div style="margin-top: 12px; display: flex; align-items: center; gap: 8px;">
+                  <span style="width: 22px; height: 22px; border-radius: 999px; background: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="#178f6a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+                  </span>
+                  <span class="num" style="font-size: 13px; font-weight: 600; color: #4a5a55;">Mon 24 &#8211; Sun 30</span>
+                  <span style="width: 22px; height: 22px; border-radius: 999px; background: #ffffff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="#178f6a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                  </span>
+                </div>
+
+                <div style="margin-top: 10px; display: flex; gap: 6px;">
+                  <div style="flex: 1; height: 50px; border-radius: 10px; background: #ffffff; border: 1px solid #eae1cf; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
+                    <span style="font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #8c9490;">Mon</span>
+                    <span class="num" style="font-size: 15px; font-weight: 600;">24</span>
+                  </div>
+                  <div style="flex: 1; height: 50px; border-radius: 10px; background: #ffffff; border: 1px solid #eae1cf; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
+                    <span style="font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #8c9490;">Tue</span>
+                    <span class="num" style="font-size: 15px; font-weight: 600;">25</span>
+                  </div>
+                  <div style="flex: 1; height: 50px; border-radius: 10px; background: #ffffff; border: 1px solid #eae1cf; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
+                    <span style="font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #8c9490;">Wed</span>
+                    <span class="num" style="font-size: 15px; font-weight: 600;">26</span>
+                  </div>
+                  <div style="flex: 1; height: 50px; border-radius: 10px; background: #178f6a; border: 1px solid #178f6a; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
+                    <span style="font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.8);">Thu</span>
+                    <span class="num" style="font-size: 15px; font-weight: 700; color: #ffffff;">27</span>
+                  </div>
+                  <div style="flex: 1; height: 50px; border-radius: 10px; background: #ffffff; border: 1px solid #eae1cf; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
+                    <span style="font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #8c9490;">Fri</span>
+                    <span class="num" style="font-size: 15px; font-weight: 600;">28</span>
+                  </div>
+                  <div style="flex: 1; height: 50px; border-radius: 10px; background: #ffffff; border: 1px solid #eae1cf; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
+                    <span style="font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #8c9490;">Sat</span>
+                    <span class="num" style="font-size: 15px; font-weight: 600;">29</span>
+                  </div>
+                  <div style="flex: 1; height: 50px; border-radius: 10px; background: #ffffff; border: 1px solid #eae1cf; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
+                    <span style="font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #8c9490;">Sun</span>
+                    <span class="num" style="font-size: 15px; font-weight: 600;">30</span>
+                  </div>
+                </div>
+
+                <!-- departures -->
+                <div style="margin-top: 12px; background: #ffffff; border: 1px solid #eae1cf; border-radius: 12px;">
+
+                  <div style="display: flex; align-items: center; gap: 12px; padding: 11px 14px;">
+                    <div style="min-width: 0; flex: 1;">
+                      <p style="font-size: 14px; font-weight: 700; letter-spacing: -0.01em;">Two-Tank Reef &#8212; Molasses &amp; French</p>
+                      <p class="num" style="margin-top: 3px; font-size: 12px; color: #6d7a75;">Thu 7:00 AM &#183; $95 &#183; <span style="color: #f07d2a; font-weight: 600;">2 seats left</span></p>
+                    </div>
+                    <div style="height: 36px; display: flex; align-items: center; padding: 0 16px; border-radius: 8px; background: #178f6a; color: #ffffff; font-size: 13px; font-weight: 700; flex-shrink: 0;">Book</div>
+                  </div>
+
+                  <div style="height: 1px; background: #f0e9d9;"></div>
+
+                  <div style="display: flex; align-items: center; gap: 12px; padding: 11px 14px;">
+                    <div style="min-width: 0; flex: 1;">
+                      <p style="font-size: 14px; font-weight: 700; letter-spacing: -0.01em;">Wreck Trip &#8212; Spiegel Grove</p>
+                      <p class="num" style="margin-top: 3px; font-size: 12px; color: #6d7a75;">Thu 1:00 PM &#183; $125 &#183; <span style="font-weight: 600;">Full</span></p>
+                    </div>
+                    <div style="height: 36px; display: flex; align-items: center; padding: 0 16px; border-radius: 8px; border: 1px solid #178f6a; color: #178f6a; font-size: 13px; font-weight: 700; flex-shrink: 0;">Wait list</div>
+                  </div>
+
+                  <div style="height: 1px; background: #f0e9d9;"></div>
+
+                  <div style="display: flex; align-items: center; gap: 12px; padding: 11px 14px;">
+                    <div style="min-width: 0; flex: 1;">
+                      <p style="font-size: 14px; font-weight: 700; letter-spacing: -0.01em;">Night Dive &#8212; City of Washington</p>
+                      <p class="num" style="margin-top: 3px; font-size: 12px; color: #6d7a75;">Thu 7:30 PM &#183; $120 &#183; 5 seats left</p>
+                    </div>
+                    <div style="height: 36px; display: flex; align-items: center; padding: 0 16px; border-radius: 8px; background: #178f6a; color: #ffffff; font-size: 13px; font-weight: 700; flex-shrink: 0;">Book</div>
+                  </div>
+
+                  <div style="height: 1px; background: #f0e9d9;"></div>
+
+                  <div style="display: flex; align-items: center; gap: 12px; padding: 11px 14px;">
+                    <div style="min-width: 0; flex: 1;">
+                      <p style="font-size: 14px; font-weight: 700; letter-spacing: -0.01em;">Two-Tank Reef &#8212; Molasses &amp; French</p>
+                      <p class="num" style="margin-top: 3px; font-size: 12px; color: #6d7a75;">Fri 7:00 AM &#183; $95 &#183; 6 seats left</p>
+                    </div>
+                    <div style="height: 36px; display: flex; align-items: center; padding: 0 16px; border-radius: 8px; background: #178f6a; color: #ffffff; font-size: 13px; font-weight: 700; flex-shrink: 0;">Book</div>
+                  </div>
+
+                </div>
+
+                <!-- credit -->
+                <div style="margin-top: 12px; display: flex; align-items: center; gap: 7px;">
+                  <svg viewBox="0 0 24 14" width="24" height="14" fill="none" aria-hidden="true">
+                    <circle cx="4" cy="11" r="2.2" fill="#ff6f61"></circle>
+                    <circle cx="11.5" cy="8.4" r="3.2" fill="#0e7490"></circle>
+                    <circle cx="19.3" cy="5.2" r="4.2" fill="#0c2a35"></circle>
+                  </svg>
+                  <span style="font-size: 12px; color: #6d7a75;">Schedule by DiveDay</span>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ============ snippet card ============ -->
+      <div style="margin-top: 40px; box-sizing: border-box; width: 992px; background: #ffffff; border: 1px solid #e3e0d7; border-radius: 16px; box-shadow: 0 1px 2px rgba(12, 42, 53, .04); padding: 24px;">
+        <h2 style="margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Put it on your site</h2>
+
+        <div style="margin-top: 16px; display: flex; align-items: center; gap: 8px;">
+          <div class="tab" style="border: 1px solid #0e7490; background: #e7f1f4; color: #0e7490; font-weight: 600;">HTML</div>
+          <div class="tab" style="border: 1px solid #e3e0d7; background: #ffffff; color: #5b6f77;">WordPress</div>
+          <div class="tab" style="border: 1px solid #e3e0d7; background: #ffffff; color: #5b6f77;">Squarespace</div>
+          <div class="tab" style="border: 1px solid #e3e0d7; background: #ffffff; color: #5b6f77;">Wix</div>
+          <div class="tab" style="border: 1px solid #e3e0d7; background: #ffffff; color: #5b6f77;">Link</div>
+          <div class="tab" style="border: 1px solid #e3e0d7; background: #ffffff; color: #5b6f77;">QR code</div>
+          <span class="tag" style="margin-left: auto;">Proposed</span>
+        </div>
+
+        <p class="lbl" style="margin: 20px 0 8px;">Embed code</p>
+
+        <div class="mono" style="box-sizing: border-box; min-height: 104px; border: 1px solid #8a8577; border-radius: 10px; background: #ffffff; padding: 10px 12px; font-size: 13px; line-height: 1.6; color: #0c2a35;">
+          <div>&lt;script src="https://diveday.example/embed.js" async&gt;&lt;/script&gt;</div>
+          <div>&lt;div data-diveday="calendar" data-shop="blue-mantis" data-look="site"&gt;&lt;/div&gt;</div>
+        </div>
+
+        <div style="margin-top: 12px;">
+          <div style="display: inline-flex; align-items: center; gap: 8px; height: 44px; box-sizing: border-box; padding: 0 16px; border: 1px solid #e3e0d7; border-radius: 10px; background: #ffffff; font-size: 15px; font-weight: 600;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2.5"></rect><path d="M6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"></path></svg>
+            <span>Copy</span>
+          </div>
+        </div>
+
+        <p style="margin-top: 14px; font-size: 14px; color: #5b6f77;">One line per widget. Change what it shows here and every site updates.</p>
+      </div>
+
+      <!-- ============ coming from FareHarbor ============ -->
+      <div style="margin-top: 40px; box-sizing: border-box; width: 992px; background: #ffffff; border: 1px solid #e3e0d7; border-radius: 16px; padding: 24px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h2 style="margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Coming from FareHarbor</h2>
+          <span class="tag">Proposed</span>
+        </div>
+        <p style="margin-top: 8px; font-size: 14px; color: #5b6f77; max-width: 660px;">Paste your DiveDay button where your Book Now button was; your pages keep their layout.</p>
+        <div style="margin-top: 16px;">
+          <div style="display: inline-flex; align-items: center; height: 44px; box-sizing: border-box; padding: 0 16px; border: 1px solid #e3e0d7; border-radius: 10px; background: #ffffff; font-size: 15px; font-weight: 600;">Map my FareHarbor items</div>
+        </div>
+      </div>
+
+      <p style="margin-top: 24px; font-size: 14px; color: #5b6f77;">Preview the live schedule at <a href="#" style="text-decoration: underline;">diveday.example/s/blue-mantis</a></p>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

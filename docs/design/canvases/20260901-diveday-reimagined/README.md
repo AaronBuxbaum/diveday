@@ -1,4 +1,4 @@
-# DiveDay, reimagined — three directions
+# DiveDay, reimagined — three directions, and a second page
 
 - **Status:** Live (its ADR is Proposed — the pick is pending)
 - **Date:** 2026-09-01
@@ -11,9 +11,13 @@ leaving FareHarbor should be easily swayed. Three directions redraw the same fou
 shop on the same day so they compare like for like. **Nothing here is normative**; the ADR carries the
 decision, and it holds that decision open until one direction is picked.
 
+A second page, added the same day, answers the owner's second brief — research what a dive shop's
+identity looks like, and match what FareHarbor offers for embedding — with a fourth direction,
+**Harbor**, and the embed system drawn as artboards. See "Page 2" below.
+
 ## Artboards
 
-One page. One row per surface, one column per direction; the cover sits above the grid.
+Two pages. On the first, one row per surface, one column per direction; the cover sits above the grid.
 
 | File | What it shows |
 | --- | --- |
@@ -26,6 +30,35 @@ One page. One row per surface, one column per direction; the cover sits above th
 `Tide.md`, `Deck.md` and `Reef.md` carry each direction's own case in prose: the sentence, the
 motivation, the honest tradeoff, the three wow moments, and what it keeps from Clearwater.
 `canvas.json` lays the grid out and pins a note at the head of each row.
+
+## Page 2 — their brand, not ours
+
+The research, done 2026-09-01 on public dive-shop websites in Key Largo, agency portfolios that build
+for dive shops, logo galleries, and FareHarbor's public plugin listings (nothing on the canvas copies
+any of them): dive shops have strong, personal identities — ocean blue with one warm accent,
+underwater photography everywhere, a creature for a mark, a wall of badges, navigation by product —
+and every "Book Now" button hands the diver to a third-party page that looks nothing like the shop.
+FareHarbor's embed catalogue is a button that opens a modal over the shop's site, an inline
+availability calendar, an item grid, curated "flows", price sheets, a language override, affiliate
+links and QR codes, WordPress shortcodes, Wix inline-or-popup, and a hosted "Sites" website product
+sold for about $10,000 a year.
+
+The page draws one answer to both findings: **Harbor**, where DiveDay wears the shop's brand and the
+diver never leaves it. `Harbor.md` carries its case. Harbor is an axis rather than a fourth taste —
+it composes with Tide, Deck or Reef, which is why the ADR's pick becomes two questions.
+
+| File | What it shows |
+| --- | --- |
+| `Round2.dc.html` | The page's cover: the research as three abstract brand cards, the handover the button makes today, Harbor in a block, the embed catalogue with what ships and what is proposed |
+| `HarborSystem.dc.html` | Harbor's system sheet: the two token layers (owned by the shop, owned by DiveDay), the derivation rule, three shops on one component set, where the brand may never go, the three wow moments |
+| `HarborStorefront.dc.html` | `/s/blue-mantis` as the shop's own website: hero, next boat, badge wall, the week ledger, courses, reviews, boats, and DiveDay as a credit line |
+| `EmbedLightbox.dc.html` · `EmbedPhone.dc.html` | The shop's own site with the DiveDay booking sheet open over it, desktop and phone, in the shop's colours |
+| `EmbedCalendar.dc.html` · `EmbedGrid.dc.html` | The inline calendar on the shop's schedule page; the item grid, the courses list and the one-departure card on its diving page |
+| `EmbedGenerator.dc.html` | Settings → Website embed rebuilt as a generator, in DiveDay's current staff look: what to embed, what it shows, how it looks, which platform, the snippet |
+| `HarborSwitch.dc.html` | The website half of the leaving-FareHarbor page: today beside DiveDay, the mapping from each FareHarbor embed to its DiveDay equivalent, the price line, the two doors in the decided order |
+
+Every embed but the calendar iframe and the plain button is tagged *Proposed* on the boards, because
+that is all the shipped generator emits today (ADR 20260726-schedule-embed).
 
 ## The fiction every board holds to
 
@@ -68,10 +101,11 @@ Accepted, tokens first so every surface moves together.
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
 | 1 — the pick: one direction chosen, the ADR Accepted with its decisions | open | — | — |
+| 2 — the second pick: whether the diver-facing surfaces go Harbor, and which embeds ship first | open | — | — |
 
 ## Working on it
 
 The sources here are the working files. To change a board, edit its `.dc.html`, re-seed a fresh
-copy with the design skill's helper (every artboard, `canvas.json`, the title "DiveDay, reimagined"),
-check it, and republish to the URL above. The seeded output is build output and is never committed
+copy with the design skill's helper (every artboard on both pages, `canvas.json`, the title
+"DiveDay, reimagined"), check it, and republish to the URL above. The seeded output is build output and is never committed
 ([design-artifacts.md](../../design-artifacts.md)).

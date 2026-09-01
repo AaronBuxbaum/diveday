@@ -1,6 +1,6 @@
 # 20260901-diveday-reimagined — Choose one bold direction for the whole product
 
-- **Status:** Proposed — three directions drawn, the pick pending
+- **Status:** Proposed — three directions drawn, a fourth axis added the same day, the pick pending
 - **Date:** 2026-09-01
 - **Scope:** Every surface — the design system, the staff app, the public shopfront, the marketing pages
 
@@ -31,6 +31,21 @@ leaving FareHarbor.
 | **Deck** | The instrument | The product speaks the grammar of the boat's own instruments: large tabular figures lead, dark-at-depth is the default scheme, structure is hairline and dense. The wow is speed and legibility on a wet deck. | Precision can read as cold to a diver booking a holiday; the storefront has to be warmer than the console without becoming a second product. |
 | **Reef** | Warm and alive | A fuller lagoon-to-coral range used with intent, soft forms, a line-drawn reef and its creatures as an illustration system, moments that feel like a good day on the water. | Personality drifts toward mascot; the safety surfaces stay exact and the illustration rule says where a drawing may never appear. |
 
+**Harbor, added the same day.** The owner's second brief asked what a dive shop's identity looks like
+and for an embed system to match FareHarbor's. The research (public dive-shop websites, agency
+portfolios, FareHarbor's public plugin listings — recorded in the canvas README) found strong, personal
+shop brands that end at a "Book Now" button handing the diver to a page that looks nothing like the
+shop. **Harbor** is the proposed answer: DiveDay wears the shop's brand on every diver-facing surface —
+the hosted storefront becomes the shop's website in its own colour, mark, display face and photographs,
+and every embed on the shop's own site inherits that site's font and colour — while everything that
+carries a fact keeps DiveDay's tokens, and the brand may never reach a manifest, roll call, cert
+check, waiver, payment step or status. Harbor is an axis, not a fourth taste: it composes with Tide,
+Deck or Reef, so the pick becomes two questions — which direction DiveDay itself wears, and whether the
+diver-facing surfaces go Harbor. With it comes a proposed **embed catalogue** — button, lightbox sheet,
+inline calendar, grid, one departure, courses, QR code, partner link, each a one-line paste chosen in
+Settings — of which only the calendar iframe and the plain button ship today
+([20260726-schedule-embed](20260726-schedule-embed.md)); the rest would each amend that record when built.
+
 Every direction keeps what is not a matter of taste: the name and the bubble mark
 ([brand.md](../../design/brand.md)), the divemaster's voice, the dock test (44px targets, readable
 in glare, never colour alone for a status — [principles.md](../../design/principles.md) §2 and §6),
@@ -38,8 +53,8 @@ the coral discipline in spirit (each direction may argue its own budget, in writ
 marketing claims policy ([marketing.md](../../product/marketing.md)): nothing on a marketing board the
 demo cannot do today.
 
-**What the pick decides.** When the owner chooses a direction this record moves to **Accepted**,
-names the chosen direction, and gains the decisions the pick implies — the type pairing, the palette
+**What the pick decides.** When the owner chooses a direction (and answers Harbor) this record moves
+to **Accepted**, names the chosen direction, and gains the decisions the pick implies — the type pairing, the palette
 and token changes, the elevation and radius rules, the illustration rule (or its absence), the coral
 budget, and which Clearwater decisions survive. The unchosen directions stay on the canvas as the
 dated argument. Implementation then proceeds as slices in the canvas README's slice table, tokens
