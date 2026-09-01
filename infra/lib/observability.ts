@@ -18,7 +18,7 @@
  * This registry currently declares 17 metrics (11 log signals + 5 web vitals
  * + the mutation-duration metric) and 11 alarms (8 + the 3 alarmed vitals), so it sits 7 metrics and 1 alarm
  * over the free allowance at about $2.20/month once every metric receives
- * data (7 × $0.30 + $0.10). A counted signal without an
+ * data (7 x $0.30 + $0.10). A counted signal without an
  * alarm costs $0.30/month; an alarmed one costs $0.40/month. Those are the real
  * numbers to weigh, not zero and not the free-tier cliff it looks like from the
  * alarm count alone.
