@@ -18,6 +18,7 @@ import {
   setBookingPickupDetails,
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
+import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import { sendNotification } from "@/db/notifications";
 import { addInternalNote, deleteInternalNote, recordTripActivity } from "@/db/operations";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
@@ -86,6 +87,7 @@ import {
 } from "@/lib/recurrence";
 import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { deleteStoredImage, storeArrivalImage } from "@/lib/storage";
 import {
   maxEnteredTemperature,
   minEnteredTemperature,
@@ -105,6 +107,13 @@ const detailsSchema = z.object({
   // renders — see meetingPointLabel's schema comment.
   meetingPointLabel: z.string().trim().max(120),
   meetingPointAddress: z.string().trim().max(200),
+  // Public, practical arrival guidance. Optional here so an older cached form
+  // can still save the rest of the trip without clearing newly authored copy.
+  arrivalLandmark: z.string().trim().max(300).optional(),
+  arrivalParkingNote: z.string().trim().max(300).optional(),
+  arrivalTransitNote: z.string().trim().max(300).optional(),
+  arrivalLookFor: z.string().trim().max(300).optional(),
+  arrivalFirstInteraction: z.string().trim().max(300).optional(),
   date: z.string(),
   startTime: z.string(),
   endTime: z.string(),
@@ -374,6 +383,11 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     description,
     meetingPointLabel,
     meetingPointAddress,
+    arrivalLandmark,
+    arrivalParkingNote,
+    arrivalTransitNote,
+    arrivalLookFor,
+    arrivalFirstInteraction,
     date,
     startTime,
     endTime,
@@ -453,11 +467,40 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   }
   const dives = tripDiveDraftsFromForm(formData, plannedDives);
 
+  let uploadedArrivalPhotoUrl: string | undefined;
+  const arrivalPhoto = formData.get("arrivalPhoto");
+  if (arrivalPhoto instanceof File && arrivalPhoto.size > 0) {
+    const stored = await storeArrivalImage({
+      filename: arrivalPhoto.name,
+      contentType: arrivalPhoto.type,
+      bytes: await arrivalPhoto.arrayBuffer(),
+    });
+    if (stored.status !== "stored") {
+      redirect(noticeUrl(back, "arrival-photo-failed", { form: "details" }));
+    }
+    uploadedArrivalPhotoUrl = stored.url;
+  }
+  const removeArrivalPhoto = formData.get("removeArrivalPhoto") === "on";
+  const previousArrivalPhotoUrl = tripNow?.arrivalPhotoUrl ?? null;
+  const nextArrivalPhotoUrl = uploadedArrivalPhotoUrl ?? (removeArrivalPhoto ? null : undefined);
+  const discardUploadedArrivalPhoto = async () => {
+    if (uploadedArrivalPhotoUrl) await deleteStoredImage(uploadedArrivalPhotoUrl);
+  };
+
   const outcome = await updateTrip(dbi, s.user.shopId, tripId, {
     title,
     description: description || undefined,
     meetingPointLabel: meetingPointLabel || null,
     meetingPointAddress: meetingPointAddress || null,
+    ...(arrivalLandmark === undefined ? {} : { arrivalLandmark: arrivalLandmark || null }),
+    ...(arrivalParkingNote === undefined ? {} : { arrivalParkingNote: arrivalParkingNote || null }),
+    ...(arrivalTransitNote === undefined ? {} : { arrivalTransitNote: arrivalTransitNote || null }),
+    ...(arrivalLookFor === undefined ? {} : { arrivalLookFor: arrivalLookFor || null }),
+    ...(arrivalFirstInteraction === undefined
+      ? {}
+      : { arrivalFirstInteraction: arrivalFirstInteraction || null }),
+    ...(nextArrivalPhotoUrl === undefined ? {} : { arrivalPhotoUrl: nextArrivalPhotoUrl }),
+    changeActorPersonId: s.user.personId,
     startsAt: details.patch.startsAt,
     // The whole departure, first day's departure to last day's return.
     endsAt: details.patch.endsAt,
@@ -477,6 +520,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     dives,
   });
   if (!outcome.ok) {
+    await discardUploadedArrivalPhoto();
     // Two of the three refusals carry a number into the banner ("4 divers are
     // already booked"), which is why this is a ladder over a plain table lookup
     // — but the code itself comes from one.
@@ -495,6 +539,17 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
       );
     }
     redirect(noticeUrl(back, "invalid", { form: "details" }));
+  }
+  if (
+    nextArrivalPhotoUrl !== undefined &&
+    previousArrivalPhotoUrl &&
+    previousArrivalPhotoUrl !== nextArrivalPhotoUrl
+  ) {
+    await queueAndAttemptMediaDeletion(dbi, {
+      shopId: s.user.shopId,
+      kind: "arrival_photo",
+      url: previousArrivalPhotoUrl,
+    });
   }
   revalidateAndRedirect(back, noticeUrl(back, "saved"));
 }
@@ -537,6 +592,7 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
     visibilityMeters:
       visibility === undefined ? undefined : depthToMeters(visibility, shop.depthUnit),
     conditionsHold: parsed.data.conditionsHold === "on",
+    changeActorPersonId: s.user.personId,
   });
   if (saved && holdStarted) {
     const contacts = await listTripDiverContacts(db, s.user.shopId, tripId);
@@ -579,7 +635,9 @@ export async function clearConditionsAction(shopSlug: string, tripId: string) {
   // Crew-entered conditions (see saveConditionsAction) — operating work, open to
   // all staff.
   const s = (await requireShopSurface(shopSlug)).session;
-  const { trip: saved } = await updateTripConditions(await getDb(), s.user.shopId, tripId, {});
+  const { trip: saved } = await updateTripConditions(await getDb(), s.user.shopId, tripId, {
+    changeActorPersonId: s.user.personId,
+  });
   revalidateAndRedirect(
     back,
     noticeUrl(back, saved ? "conditions-cleared" : "invalid", { form: "conditions" }),

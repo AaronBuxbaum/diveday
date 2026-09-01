@@ -356,6 +356,7 @@
       "mediaKind": {
         "course_photo": "Course photo",
         "recap_photo": "Recap photo",
+        "arrival_photo": "Arrival photo",
         "certification_card": "Certification evidence",
         "waiver_document": "Waiver document",
         "dive_site_photo": "Dive-site photo"

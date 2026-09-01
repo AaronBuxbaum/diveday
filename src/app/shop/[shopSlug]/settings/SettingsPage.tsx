@@ -334,6 +334,7 @@ const DOCK_DAY_FIELD_KEYS: Record<
 const MEDIA_KIND_KEYS: Record<string, StaffMessageKey> = {
   course_photo: "settings.main.dataJobs.mediaKind.course_photo",
   recap_photo: "settings.main.dataJobs.mediaKind.recap_photo",
+  arrival_photo: "settings.main.dataJobs.mediaKind.arrival_photo",
   certification_card: "settings.main.dataJobs.mediaKind.certification_card",
   waiver_document: "settings.main.dataJobs.mediaKind.waiver_document",
   dive_site_photo: "settings.main.dataJobs.mediaKind.dive_site_photo",
