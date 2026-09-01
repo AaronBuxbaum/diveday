@@ -70,6 +70,7 @@ import {
   sendRecapAction,
   setLeftoverDecisionAction,
   toggleRecapAutoSendPauseAction,
+  updateHelpRequestAction,
   uploadCrewRecapPhotoAction,
 } from "./actions";
 import { inviteWaitlistAction } from "./trips/[id]/actions";
@@ -847,6 +848,7 @@ async function TodayBody({
           crewedTripIds={lens === "boat" ? crewedTripIds : undefined}
           withheldCount={withheldCount}
           inviteAction={inviteWaitlistAction.bind(null, shopSlug)}
+          helpRequestAction={updateHelpRequestAction}
           showPaymentsRow={showPaymentsRow}
           firstBooking={firstBooking}
           evening={evening}

@@ -28,6 +28,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   nitrox_gate: "shared.today.actionKind.nitroxGate",
   high_wind_alert: "shared.today.actionKind.highWindAlert",
   dive_prep: "shared.today.actionKind.divePrep",
+  help_request: "shared.today.actionKind.helpRequest",
   payment: "shared.today.actionKind.payment",
   email_delivery: "shared.today.actionKind.emailDelivery",
   waitlist_seat: "shared.today.actionKind.waitlistSeat",
@@ -400,6 +401,7 @@ const STUCK_OPERATION_KIND_KEYS: Record<string, StaffMessageKey> = {
 const MEDIA_DELETION_KIND_KEYS: Record<string, StaffMessageKey> = {
   course_photo: "shared.today.opsAlert.mediaKind.coursePhoto",
   recap_photo: "shared.today.opsAlert.mediaKind.recapPhoto",
+  arrival_photo: "shared.today.opsAlert.mediaKind.arrivalPhoto",
   // Queued by diver erasure (ADR 20260802-diver-data-erasure) — see the same
   // note on Reports' `MEDIA_KIND_KEYS`: a missing entry renders the raw enum.
   certification_card: "shared.today.opsAlert.mediaKind.certificationCard",
@@ -522,6 +524,41 @@ export function openDataSettingsActionText(t: StaffTranslator): string {
 
 export function openPrepListActionText(t: StaffTranslator): string {
   return t("shared.today.actionLabel.openPrepList");
+}
+
+/** The small day-of hand-off row, kept as codes here so staff copy stays localized. */
+export function helpRequestDetailText(
+  t: StaffTranslator,
+  input: {
+    personName: string;
+    kind: "carry_gear" | "first_timer" | "find_group";
+    status: "requested" | "acknowledged";
+  },
+): string {
+  const help = t(
+    input.kind === "carry_gear"
+      ? "shared.today.helpRequest.kind.carryGear"
+      : input.kind === "first_timer"
+        ? "shared.today.helpRequest.kind.firstTimer"
+        : "shared.today.helpRequest.kind.findGroup",
+  );
+  return t(
+    input.status === "acknowledged"
+      ? "shared.today.helpRequest.detailAcknowledged"
+      : "shared.today.helpRequest.detailRequested",
+    { name: input.personName, help },
+  );
+}
+
+export function helpRequestActionText(
+  t: StaffTranslator,
+  status: "requested" | "acknowledged",
+): string {
+  return t(
+    status === "acknowledged"
+      ? "shared.today.helpRequest.markHandled"
+      : "shared.today.helpRequest.acknowledge",
+  );
 }
 
 export function openTripActionText(t: StaffTranslator): string {

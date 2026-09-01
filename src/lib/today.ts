@@ -67,6 +67,7 @@ export type TodayActionKind =
   | "readiness_unavailable"
   | "requirements"
   | "dive_prep"
+  | "help_request"
   | "nitrox_gate"
   | "high_wind_alert"
   | "instructor_missing"
@@ -139,6 +140,7 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   roll_call_departure_open: 14,
   roll_call_not_started: 15,
   dive_prep: 16,
+  help_request: 17,
   payment: 17,
   email_delivery: 18,
   waitlist_seat: 19,
@@ -195,6 +197,7 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   roll_call_departure_open: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   roll_call_not_started: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   dive_prep: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
+  help_request: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   nitrox_gate: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   high_wind_alert: ["owner", "manager", "instructor", "divemaster", "captain"],
   uncrewed_departure: ["owner", "manager", "instructor", "divemaster", "captain"],
@@ -279,6 +282,7 @@ export const ACTION_KIND_META = {
   nitrox_gate: { tone: "warning" },
   high_wind_alert: { tone: "warning" },
   dive_prep: { tone: "neutral" },
+  help_request: { tone: "neutral" },
   payment: { tone: "neutral" },
   email_delivery: { tone: "neutral" },
   waitlist_seat: { tone: "neutral" },
@@ -441,6 +445,8 @@ export type TodayAction = {
    * booking to act on, so `collapseDiverActions` never sets this.
    */
   payment?: { bookingId: string; orderId?: string; hostedInvoiceUrl?: string | null };
+  /** A one-choice day-of request and its visible staff hand-off state. */
+  helpRequest?: { requestId: string; status: "requested" | "acknowledged" };
   /** The departure this hangs off; drives urgency and ordering. */
   dueAt: Date | null;
 };

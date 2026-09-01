@@ -8,6 +8,7 @@ import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import type { RentalPricing } from "@/lib/rentals";
 import type { SupportNeeds } from "@/lib/support-needs";
 import type { AppDb } from "./client";
+import { getHelpRequestForBooking, type HelpRequest } from "./help-requests";
 import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingPayment } from "./payments";
 import { type BookingReadinessDetail, getBookingReadinessDetail } from "./readiness";
@@ -103,6 +104,8 @@ export type ReadyPageData = {
    * than an outstanding one.
    */
   supportNeeds: SupportNeeds | null;
+  /** The one active, non-medical day-of request this booking has made. */
+  helpRequest: HelpRequest | null;
   /** True when the shop can actually take a card for this trip right now. */
   canPay: boolean;
   /**
@@ -189,15 +192,23 @@ export async function getReadyPageData(
   const trip = await getTripWithBooked(db, row.shopId, row.tripId);
   if (!trip) return null;
 
-  const [rentalFit, supportNeeds, payment, stripeAccount, nitroxVerified, nitroxOnFile] =
-    await Promise.all([
-      getRentalFit(db, row.shopId, row.personId),
-      getSupportNeeds(db, row.shopId, row.personId),
-      getBookingPayment(db, row.shopId, bookingId),
-      getShopStripeAccount(db, row.shopId),
-      verifiedNitroxPersonIds(db, row.shopId),
-      nitroxCardOnFilePersonIds(db, row.shopId),
-    ]);
+  const [
+    rentalFit,
+    supportNeeds,
+    helpRequest,
+    payment,
+    stripeAccount,
+    nitroxVerified,
+    nitroxOnFile,
+  ] = await Promise.all([
+    getRentalFit(db, row.shopId, row.personId),
+    getSupportNeeds(db, row.shopId, row.personId),
+    getHelpRequestForBooking(db, row.shopId, bookingId, now),
+    getBookingPayment(db, row.shopId, bookingId),
+    getShopStripeAccount(db, row.shopId),
+    verifiedNitroxPersonIds(db, row.shopId),
+    nitroxCardOnFilePersonIds(db, row.shopId),
+  ]);
   // `partly_refunded` settles too, or this page would invite a diver who has
   // already paid — and been handed part of it back — to pay the full price a
   // second time. The capability URL is shared by design, so anyone holding it
@@ -261,6 +272,7 @@ export async function getReadyPageData(
     nitroxCardOnFile: nitroxOnFile.has(row.personId),
     rentalFit: toDiverRentalFit(rentalFit),
     supportNeeds,
+    helpRequest,
     hotelPickupLocation: row.hotelPickupLocation,
     pickupTime: row.pickupTime,
     canPay,
