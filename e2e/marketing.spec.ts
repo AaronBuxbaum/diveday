@@ -894,9 +894,10 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   await expect(page.getByText("Lightframe", { exact: true })).toBeVisible();
   await expect(page.getByText(/third parties report \$5,000 a year/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Or have us build the website." })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Email us at switch@dive\.day/ })).toHaveAttribute(
-    "href",
-    "mailto:switch@dive.day",
+  // The concierge section further down carries the same words with a
+  // ?subject=, so the offer's door is picked by its bare href.
+  await expect(page.locator('a[href="mailto:switch@dive.day"]')).toHaveText(
+    /Email us at switch@dive\.day/,
   );
   // It still renders the shared three-part promise and the honesty table.
   await expect(
