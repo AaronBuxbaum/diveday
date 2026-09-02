@@ -1,3 +1,4 @@
+import { deriveBrandTheme } from "@/lib/brand";
 import { expect, signedInAsOwner, test } from "./fixtures";
 
 /**
@@ -47,7 +48,8 @@ test.describe("the widget views", () => {
     const primary = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--primary").trim(),
     );
-    expect(primary).toBe("#13795a");
+    // The seeded shop's own green (src/db/seed.ts), derived the same way.
+    expect(primary).toBe(deriveBrandTheme("#158462").primary);
   });
 });
 

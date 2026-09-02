@@ -112,7 +112,7 @@
       "brandColor": "Color de marca",
       "brandColorPicker": "Elegir un color de marca",
       "brandColorHint": "Botones y enlaces de tus páginas públicas. Déjalo vacío para mantener el turquesa de DiveDay.",
-      "brandColorDarkened": "Tu color era demasiado claro para texto blanco, así que los botones usan {hex}.",
+      "brandColorDarkened": "Tu color era demasiado claro para leerse como texto, así que tu página pública usa {hex}.",
       "displayFont": "Tipografía de títulos",
       "displayFontDefault": "La de DiveDay",
       "heroPhoto": "Foto de portada",
