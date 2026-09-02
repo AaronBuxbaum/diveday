@@ -434,24 +434,17 @@ export const RATE_LIMITS = {
    */
   selfRegisterEmailByRecipient: perHour(3),
   /**
-   * The shop contact-address confirmation link, per **recipient address**
-   * (issue #1288).
-   *
-   * The same shape and the same reason as `selfRegisterEmailByRecipient`. The
-   * settings save that mints it is behind an owner/manager gate, which sounds
-   * like enough until you notice that anyone can stand up a shop through
-   * self-serve onboarding, set `shops.name` to 120 characters of their own text,
-   * type a victim's address into the contact box, and script the save. Every
-   * iteration sends mail carrying that text from DiveDay's own verified SES
-   * identity — and the cost lands on the *shared* sending reputation, so a
-   * stranger's harassment campaign degrades deliverability for every tenant.
-   *
-   * Keyed on the address rather than the shop, because the address is the thing
-   * being aimed at. An empty bucket drops the *send*, never the save: the shop
-   * keeps its new contact address, unconfirmed, which is exactly the state it
-   * was already in, and saving again after the hour sends a fresh link.
+   * Contact-email confirmation links (issue #1288), per **shop** and per
+   * **recipient address**. The settings form takes any address and the resend
+   * control mints a fresh link each tap, and a demo shop's owner login is one
+   * click away for anyone -- so without these, "Contact email" is a form that
+   * sends branded DiveDay mail to an address of the attacker's choosing as
+   * fast as they can tap. Three an hour is generous for the honest case (one
+   * save, one resend when the first went to spam) and useless as a relay.
+   * An empty bucket drops the *send*; the address is still saved.
    */
-  contactEmailConfirmationByRecipient: perHour(3),
+  contactConfirmationByShop: perHour(3),
+  contactConfirmationByRecipient: perHour(3),
   /** Public last-minute-list joins, per IP. */
   lastMinuteListJoin: perHour(10),
   /** Starting a post-trip tip checkout, per recap token. */

@@ -88,6 +88,7 @@ import {
   dischargeProcessorErasureAction,
   disconnectAction,
   refreshAction,
+  resendContactConfirmationAction,
   retryMediaDeletionAction,
   retryProcessorErasureAction,
   saveConservationCommitmentsAction,
@@ -147,6 +148,10 @@ function noticeMessages(
       text: t("settings.main.notice.rentalPricesInvalid"),
     },
     "contact-saved": { tone: "success", text: t("settings.main.notice.contactSaved") },
+    "contact-confirmation-sent": {
+      tone: "success",
+      text: t("settings.main.notice.contactConfirmationSent"),
+    },
     "contact-invalid": { tone: "danger", text: t("settings.main.notice.contactInvalid") },
     "profile-saved": { tone: "success", text: t("settings.main.notice.profileSaved") },
     "profile-invalid": { tone: "danger", text: t("settings.main.notice.profileInvalid") },
@@ -531,21 +536,17 @@ export default async function SettingsPage({
   const timezoneValue =
     zoneId in CURATED_TIMEZONE_KEYS ? t(CURATED_TIMEZONE_KEYS[zoneId as CuratedTimeZone]) : zoneId;
   const contactText = [shop.contactEmail, shop.contactPhone].filter(Boolean).join(" · ") || notSet;
-  /**
-   * The address, and whether anyone has proved the shop reads it (issue #1288).
-   * A badge rather than a caption, the way the Stripe row says the same kind of
-   * thing: an unconfirmed address still publishes and still takes bookings —
-   * what it does not do is receive diver replies, and the state is the whole of
-   * that sentence.
-   */
-  const contactValue =
-    shop.contactEmail && !shop.contactEmailConfirmedAt ? (
-      <>
-        {contactText} <Badge tone="warning">{t("settings.main.contact.unconfirmedBadge")}</Badge>
-      </>
-    ) : (
-      contactText
-    );
+  // An address the shop has not yet confirmed is the one exceptional state on
+  // this row: until the link sent there is opened, diver replies are not
+  // routed to it (issue #1288). Confirmed is the quiet default and says nothing.
+  const contactUnconfirmed = Boolean(shop.contactEmail && !shop.contactEmailConfirmedAt);
+  const contactValue = contactUnconfirmed ? (
+    <>
+      {contactText} <Badge tone="warning">{t("settings.main.contact.awaitingConfirmation")}</Badge>
+    </>
+  ) : (
+    contactText
+  );
   // A shop's colour is checked at render, never on save: the summary says
   // when it had to be darkened so the owner learns here, not on the storefront.
   const brandTheme = shop.brandColor ? deriveBrandTheme(shop.brandColor) : null;
@@ -778,6 +779,16 @@ export default async function SettingsPage({
                   </SubmitButton>
                 </FieldActions>
               </FieldGrid>
+              {contactUnconfirmed ? (
+                <form action={resendContactConfirmationAction} className="mt-3">
+                  <SubmitButton
+                    pendingLabel={t("settings.main.contact.resending")}
+                    className={buttonClass({ variant: "ghost" })}
+                  >
+                    {t("settings.main.contact.resend")}
+                  </SubmitButton>
+                </form>
+              ) : null}
             </SettingsRow>
 
             <SettingsRow

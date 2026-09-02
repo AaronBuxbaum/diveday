@@ -399,6 +399,16 @@
     "confirmedTitle": "You're unsubscribed",
     "confirmedText": "You won't get wait-list or recap emails from {shopName} anymore. You'll still get emails about your own bookings, waivers, and trip updates."
   },
+  "contactConfirm": {
+    "title": "Confirm this address for {shopName}?",
+    "description": "Divers who reply to {shopName}'s emails will reach {email}.",
+    "confirming": "Confirming…",
+    "submit": "Confirm this address",
+    "confirmedTitle": "Address confirmed",
+    "confirmedText": "Replies from {shopName}'s divers now come here.",
+    "unavailableTitle": "This confirmation link isn’t available",
+    "unavailableText": "It may have expired, been replaced by a newer one, or the address in settings has changed since. Save the address again in settings to get a fresh link."
+  },
   "course": {
     "hidden": "Hidden — divers cannot see this page.",
     "backToEditing": "Back to editing",
@@ -1885,16 +1895,6 @@
         "createFailed": "Something went wrong creating your shop.",
         "signinFailed": "Your shop was created, but signing you in failed. Try signing in below."
       }
-    },
-    "confirmContact": {
-      "title": "Is this where divers should write?",
-      "description": "Confirm {email} and DiveDay will send diver replies here.",
-      "submit": "Yes, this is the right address",
-      "confirming": "Confirming…",
-      "confirmedTitle": "Confirmed",
-      "confirmedText": "Diver replies will arrive here from now on.",
-      "unavailableTitle": "This link is no longer valid",
-      "unavailableText": "It may have expired, already been used, or the address may have changed since it was sent. Saving the contact address again sends a fresh one."
     }
   },
   "switching": {
@@ -3338,6 +3338,12 @@
       "confirm": "Confirm this is your email address",
       "expiry": "This link expires {expiresAt}. If you didn't create a DiveDay account, you can ignore this."
     },
+    "contactEmailConfirmation": {
+      "subject": "Confirm the reply address for {shopName}",
+      "body": "Once confirmed, a diver who replies to a booking, waiver or reminder email from {shopName} reaches this inbox.",
+      "confirm": "Confirm this address",
+      "expiry": "This link expires {expiresAt}. If nobody at {shopName} asked for this, you can ignore it."
+    },
     "staffInvite": {
       "subject": "{inviterName} invited you to {shopName} on DiveDay",
       "body": "{inviterName} added you to {shopName} on DiveDay as {roles}.",
@@ -3399,12 +3405,6 @@
       "exampleShopName": "Blue Mantis Divers",
       "exampleMessage": "Reef Runner departs Saturday at 8:00 AM. Dock call 30 minutes early.",
       "testMessage": "This is a test message from DiveDay. Your WhatsApp connection is working."
-    },
-    "confirmShopContact": {
-      "subject": "Confirm the reply address for {shopName}",
-      "intro": "{shopName} listed this address as where divers should write. Confirm it and DiveDay will send diver replies here.",
-      "confirm": "Yes, this is the right address",
-      "expiry": "The link works until {expiresAt}. Until it is used, replies go nowhere new — nothing else changes."
     }
   },
   "brand": {

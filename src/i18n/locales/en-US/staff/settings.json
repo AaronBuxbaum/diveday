@@ -18,6 +18,7 @@
       "rentalPricesSaved": "Rental prices saved.",
       "rentalPricesInvalid": "Enter each price as a dollar amount (or leave it blank), between $0 and $100,000.",
       "contactSaved": "Contact details saved.",
+      "contactConfirmationSent": "Contact details saved. Open the confirmation email we sent to that address so divers' replies reach it.",
       "contactInvalid": "Use a complete email address, or empty the box to take it off your public pages.",
       "profileSaved": "Shop profile and branding saved.",
       "profileInvalid": "Check your tagline, description, and logo file.",
@@ -93,7 +94,9 @@
       "phoneHint": "(optional)",
       "submit": "Save contact details",
       "submitting": "Saving…",
-      "unconfirmedBadge": "Unconfirmed"
+      "awaitingConfirmation": "Awaiting confirmation",
+      "resend": "Resend confirmation email",
+      "resending": "Sending…"
     },
     "profile": {
       "heading": "Shop profile & branding",

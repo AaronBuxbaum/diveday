@@ -66,7 +66,7 @@ export type RetainedTable =
   | "notification_delivery_attempts"
   | "activity_events"
   | "account_tokens"
-  | "shop_contact_email_tokens"
+  | "shop_contact_email_confirmation_tokens"
   | "booking_payment_events"
   | "push_subscriptions";
 
@@ -135,15 +135,13 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    */
   account_tokens: 90,
   /**
-   * 90 days, on the same rule and for the same reason as `account_tokens`
-   * above, which this table is modelled on: hashed bearer credentials, kept
-   * long enough to answer "was this link ever issued, and did anyone use it?"
-   * during an incident review, and no longer. Measured from `expires_at`, so a
-   * live link is never pruned however old the row is. Each row also holds the
-   * shop's front-desk address, which is one more reason not to keep them for
-   * ever (issue #1288).
+   * The same 90 days past `expires_at` as `account_tokens`, for the same shape
+   * of row: a hashed one-time link (issue #1288) that is dead the moment it is
+   * spent, superseded, or expired, and that carries the shop's front-desk
+   * address -- a business address, but still one with no reason to sit in a
+   * table forever.
    */
-  shop_contact_email_tokens: 90,
+  shop_contact_email_confirmation_tokens: 90,
   /**
    * 2555 days (7 years). The local money ledger DATA-M3 exists to provide;
    * matched to the ordinary financial-records horizon rather than to anything

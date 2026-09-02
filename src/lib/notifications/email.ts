@@ -965,7 +965,7 @@ export function verifyAccountEmail(input: VerifyAccountEmailInput): Notification
   };
 }
 
-type ConfirmShopContactEmailInput = {
+export type ContactEmailConfirmationEmailInput = {
   locale: DiverLocale;
   shopName: string;
   confirmUrl: string;
@@ -974,27 +974,29 @@ type ConfirmShopContactEmailInput = {
 };
 
 /**
- * "Is this where divers should write back?" — the one-time link a shop opens to
- * prove it controls the address it typed as its contact email (issue #1288).
- *
- * Addressed to the shop, not to a person: this lands in a front desk that may
- * be a shared inbox nobody in particular reads, so there is no first name to
- * greet. It also says what the link is *for* rather than merely asking for a
- * click — the reader may not be the manager who typed the address, and "confirm
- * your email" from an app they have not signed into is exactly the shape of a
- * message people are right to distrust.
+ * To the shop's own front desk: one line saying what confirming does (replies
+ * from divers land here), one button, the expiry. No greeting by name -- the
+ * recipient is a mailbox the whole team reads, not a person (issue #1288).
  */
-export function confirmShopContactEmail(input: ConfirmShopContactEmailInput): NotificationEmail {
+export function contactEmailConfirmationEmail(
+  input: ContactEmailConfirmationEmailInput,
+): NotificationEmail {
   const t = diverTranslator(input.locale);
   const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
-  const intro = t("notifications.confirmShopContact.intro", { shopName: input.shopName });
-  const confirm = t("notifications.confirmShopContact.confirm");
-  const expiry = t("notifications.confirmShopContact.expiry", { expiresAt });
+  const body = t("notifications.contactEmailConfirmation.body", { shopName: input.shopName });
+  const bodyHtml = t("notifications.contactEmailConfirmation.body", {
+    shopName: escapeHtml(input.shopName),
+  });
+  const confirm = t("notifications.contactEmailConfirmation.confirm");
+  const expiry = t("notifications.contactEmailConfirmation.expiry", {
+    expiresAt,
+    shopName: input.shopName,
+  });
 
   return {
-    subject: t("notifications.confirmShopContact.subject", { shopName: input.shopName }),
-    text: `${intro}\n\n${confirm}:\n${input.confirmUrl}\n\n${expiry}\n`,
-    html: `<p>${t("notifications.confirmShopContact.intro", { shopName: escapeHtml(input.shopName) })}</p>${emailButton(input.confirmUrl, confirm)}<p>${t("notifications.confirmShopContact.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
+    subject: t("notifications.contactEmailConfirmation.subject", { shopName: input.shopName }),
+    text: `${body}\n\n${confirm}:\n${input.confirmUrl}\n\n${expiry}\n`,
+    html: `<p>${bodyHtml}</p>${emailButton(input.confirmUrl, confirm)}<p>${t("notifications.contactEmailConfirmation.expiry", { expiresAt: escapeHtml(expiresAt), shopName: escapeHtml(input.shopName) })}</p>`,
   };
 }
 

@@ -364,33 +364,29 @@ export async function setShopRentalPricing(
  * Sets the front-desk address published on the shop's public pages. Empty
  * strings clear the field rather than publishing a blank contact, so a shop can
  * take itself back off the public page by emptying the box.
+ *
+ * A changed address starts unconfirmed: `contactEmailConfirmedAt` vouches for
+ * one specific address, so it is cleared in the same write whenever the
+ * address differs from what was on file (case-insensitively -- the same
+ * comparison the confirm consumes against). Saving the same address again
+ * keeps its confirmation; a confirm-then-edit would otherwise carry the old
+ * proof onto a new inbox (issue #1288).
  */
 export async function setShopContact(
   db: AppDb,
   shopId: string,
   contact: { contactEmail: string; contactPhone: string },
 ) {
-  // Lower-cased once, here, so the address stored on the row, the address the
-  // confirmation link is sent to, and the address the claim compares against are
-  // one value. They diverged when only the `to:` was lower-cased, and for an MTA
-  // that honours local-part case, `Front-Desk@…` (the Reply-To divers would get)
-  // and `front-desk@…` (the mailbox that vouched) are two destinations
-  // (`security-reviewer`, issue #1288).
-  const contactEmail = contact.contactEmail.trim().toLowerCase() || null;
+  const contactEmail = contact.contactEmail.trim() || null;
   const [shop] = await db
     .update(shops)
     .set({
       contactEmail,
       contactPhone: contact.contactPhone.trim() || null,
-      // **A changed address is unconfirmed again** (issue #1288). The proof is
-      // about one address, not about the field: leaving the stamp in place
-      // would let a manager confirm an inbox they control and then point
-      // `Reply-To` at somebody else's. `sql` rather than a read-then-write so
-      // the comparison happens inside the same statement as the write — two
-      // concurrent saves cannot land in an order where the stamp survives the
-      // address it belongs to. An unchanged address keeps its stamp, so saving
-      // the phone number alone does not cost the shop its confirmation.
-      contactEmailConfirmedAt: sql`case when ${shops.contactEmail} is not distinct from ${contactEmail} then ${shops.contactEmailConfirmedAt} else null end`,
+      contactEmailConfirmedAt:
+        contactEmail === null
+          ? null
+          : sql`case when lower(${shops.contactEmail}) = lower(${contactEmail}) then ${shops.contactEmailConfirmedAt} else null end`,
     })
     .where(eq(shops.id, shopId))
     .returning();

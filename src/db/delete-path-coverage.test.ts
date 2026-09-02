@@ -116,6 +116,8 @@ const RESET_KEEPS: Record<string, string> = {
   notification_rate_limit_state: "provider coordination state, not shop records",
   stripe_webhook_events: "provider delivery ledger, pruned by retention, not by a reset",
   shop_whatsapp_accounts: "shop settings, outside the resettable schedule",
+  shop_contact_email_confirmation_tokens:
+    "the front-desk address's own proof of ownership (issue #1288) — settings, not schedule",
   boats: "shop settings, outside the resettable schedule",
   dive_packages: "the shop's own price list of packages — settings, not schedule",
   pre_departure_checklist_items: "the shop's own checklist lines — settings, not schedule",

@@ -176,7 +176,8 @@ Beyond the body, three things a receiving mailbox and a reviewer both read
 
 | | Where it comes from | When it is absent |
 | --- | --- | --- |
-| `Reply-To: <the shop's front desk>` | `shops.contact_email`, **once `shops.contact_email_confirmed_at` is set** — see below | The shop has none on file, or has not confirmed the one it typed; a reply then goes to `noreply@ses.dive.day` and nobody |
+| `Reply-To: <the shop's front desk>` | `shops.contact_email`, once the shop has opened the confirmation link sent there (`shops.contact_email_confirmed_at`, the `/confirm-contact/[token]` page; issue #1288). Any change to the address starts it unconfirmed again, and the settings row says "Awaiting confirmation" until it is | The shop has none on file, or has not confirmed it; a reply then goes to `noreply@ses.dive.day` and nobody |
+| `Auto-Submitted: auto-generated` (RFC 3834) on every message | Always | Never — a diver's out-of-office or ticketing auto-responder stays quiet instead of answering a booking confirmation |
 | A closing line `Shop name · street, town, region postcode, country` on every **commercial** message (the kinds carrying an unsubscribe link: wait-list invite, last-minute deal, checkout recovery, recap) | `shops.address_*` | The shop has no street on file; nothing is guessed and no blank line is rendered |
 | `List-Unsubscribe` + `List-Unsubscribe-Post` (RFC 8058 one-click) on those same kinds | The notification's own `unsubscribeUrl` | Never absent on a commercial kind — `kinds.ts` makes the URL required there |
 | SES message tags `diveday_shop` and `diveday_kind` | The notification | Never — every send is tagged, and every event SES publishes echoes them back |
@@ -185,15 +186,11 @@ Both shop-sourced values are resolved once per send in `src/db/notifications.ts`
 never by the composer, so a new kind gets them for free. Transactional mail (a confirmation, a waiver
 link, a reminder) carries the `Reply-To` and nothing else.
 
-**`Reply-To` waits for proof** (issue #1288). Saving the contact address sends a one-time link to it
-(`/confirm-contact/<token>`, `shop_contact_email_tokens`); until somebody opens that link, the
-address publishes on the shop's pages exactly as it always has but no diver mail carries a
-`Reply-To`. *Displaying* an address and *routing a diver's reply* to it are different acts, and a
-diver answering a waiver or readiness email writes back medical and contact details — a typo, or a
-manager who fills in a third party's address, would send every one of those to the wrong inbox.
-Changing the address clears the stamp and sends a fresh link; saving anything else on that form
-does not. An unconfirmed shop never fails a send — it sends as it did before the header existed.
-The postal footer is unaffected: an address is not a destination.
+Bounce and complaint feedback reaches the app **only** through the SNS event destination below: the
+identity's email feedback forwarding is off (`feedbackForwarding: false` in the stack), so SES does
+not also mail each bounce to `noreply@ses.dive.day`, a mailbox nobody reads. The configuration set
+publishes its own reputation metrics beside the account-level ones the two alarms read, so when the
+account rate moves the graph says whether it was DiveDay's mail.
 
 ## Production access: the second request
 
@@ -290,7 +287,9 @@ Sample: booking confirmation
 Subject: You're on the boat - Two-Tank Reef
 Hi Nora, you're booked on Two-Tank Reef with Blue Mantis. Sat, Aug 1, 9:00 AM - 1:00 PM EDT.
 [button: Track what's left to do] Bring: certification card, mask, fins. See you at the dock.
-(Reply-To is the dive shop's own front-desk address; the message is branded as the shop.)
+(The message is branded as the dive shop. Reply-To is the shop's own front-desk address, and
+only once the shop has confirmed it by opening a link we send to that address; every message
+carries Auto-Submitted: auto-generated.)
 
 How we get addresses
 Every address is typed by the diver themselves at booking or on an opt-in form, or by shop staff
@@ -306,14 +305,16 @@ with real numbers before we need more.
 Sending identity and authentication
 We send from the verified domain identity ses.dive.day (Easy DKIM, all three CNAMEs resolving),
 with a custom MAIL FROM domain mail.ses.dive.day (MX and SPF published, status SUCCESS) so the
-envelope aligns with our From domain under DMARC. dive.day publishes DMARC with a reporting address.
-Automated mail is deliberately on a subdomain so it never shares reputation with our human
-correspondence. Every message has both text/plain and text/html parts.
+envelope aligns with our From domain under DMARC. dive.day publishes DMARC with a reporting address,
+and abuse@dive.day and postmaster@dive.day are monitored mailboxes. Automated mail is deliberately
+on a subdomain so it never shares reputation with our human correspondence. Every message has both
+text/plain and text/html parts and an Auto-Submitted: auto-generated header.
 
 Bounce and complaint handling (tested)
 Our SES configuration set publishes BOUNCE, COMPLAINT, DELIVERY, DELIVERY_DELAY, REJECT and
 RENDERING_FAILURE events to an SNS topic subscribed to our HTTPS endpoint, which verifies the SNS
-signature and topic ARN before acting. Each outcome is recorded against the message that produced
+signature and topic ARN before acting; email feedback forwarding on the identity is off, so the
+event stream is the one record. Each outcome is recorded against the message that produced
 it and shown to the shop as an email issue on their dashboard. The configuration set enables
 account-level suppression for BOUNCE and COMPLAINT, so a hard-bounced or complained-about address
 is never sent to again. A complaint additionally opts that address out of every courtesy message in
@@ -331,9 +332,10 @@ unsubscribe because they are the service the person bought; nobody receives them
 
 Previous request
 Case [PREVIOUS CASE ID], refused on [DATE] without a stated reason. Since then we have added the
-shop's Reply-To address and postal footer to our messages, made a complaint opt the recipient out
-in our own records, added the reputation alarms above, and tested the bounce and complaint path
-against the simulator from production. We are happy to answer any question about the above or
+shop's Reply-To address (confirmed by a link sent to it before we use it) and postal footer to our
+messages, marked every message Auto-Submitted, made a complaint opt the recipient out in our own
+records, added the reputation alarms above, and tested the bounce and complaint path against the
+simulator from production. We are happy to answer any question about the above or
 provide a full sample of any message type.
 ```
 
@@ -350,6 +352,7 @@ The follow-up mail, when it comes, is one of these. Answer on the case, not in a
 | "Please provide a sample of the email you will send" | Paste the booking-confirmation sample and, if asked for HTML, the `messageFor` output of `pnpm test src/lib/notifications/render.test.ts` — or send a real one to yourself from the deployed app and forward it |
 | "Do you have a website / privacy policy?" | `https://dive.day`, `https://dive.day/privacy`, `https://dive.day/terms` |
 | "Is this mail marketing?" | "No. Every message is triggered by an action the recipient or their dive shop took, addressed to that one person about that one event. The three courtesy kinds are opt-in and carry one-click unsubscribe" |
+| "Who can replies reach?" / "How do you know the Reply-To address is the sender's?" | "Reply-To is the dive shop's own front-desk address, and we set it only after the shop has opened a one-time link we sent to that address (`shops.contact_email_confirmed_at`). A changed address starts unconfirmed again. Until then messages carry no Reply-To at all" |
 
 Record the outcome — case id, date, verdict — in this section when it comes, so the next person
 does not start from the same blank page.
@@ -366,16 +369,6 @@ no flag, nothing to remember. One thing is still yours:
 **Set `SES_SNS_TOPIC_ARN`** to the `SesEventNotificationsTopicArn` output's value and redeploy the
 app. Verified messages whose own `TopicArn` doesn't match are rejected even when correctly signed,
 so a differently-sourced SNS message can't be replayed here.
-
-A correctly signed message from the *right* topic is also refused once it is **more than an hour
-old**, or dated more than five minutes in the future (`MAX_AGE_MS` / `MAX_FUTURE_MS` in
-`src/lib/notifications/sns.ts`; the same check covers `/api/webhooks/sms`, which shares the
-verifier). SNS signs the publish timestamp along with everything else, so without reading it a
-captured message stays valid forever — harmless while a replay could only re-apply an idempotent
-delivery status, and not harmless now that a `Complaint` writes to a person's row, since a replay
-months later re-opts-out a diver who has since opted back in. Both windows are wall-clock against this host: a host whose clock has drifted by more
-than five minutes will refuse live traffic, and the symptom is a run of 400s from an endpoint whose
-signatures all verify.
 
 Until that is set the route answers 503, which means it cannot confirm SNS's handshake — so on a
 fresh environment the subscription the stack just created will expire in ~3 days. Check it landed:
@@ -448,7 +441,12 @@ Setup, once:
    authentication better.
 4. Create `support@dive.day` and `onboarding@dive.day` the same way as `legal@` — groups, not raw
    forwards — so either can pick up a second reader later without a DNS/mail-provider change.
-5. Send a test message with an attachment to each and confirm it arrives intact.
+5. Create `abuse@dive.day` and `postmaster@dive.day` as groups routing to the same reader. RFC 2142
+   names both as the addresses a receiving provider writes to about a sender, mailbox-provider
+   feedback loops and blocklist operators use `abuse@`, and a domain that bounces them reads as one
+   with nobody accountable behind it — a sender-reputation input, and one a production-access
+   reviewer can check in seconds.
+6. Send a test message with an attachment to each and confirm it arrives intact.
 
 Mail forwarded to an external address fails SPF alignment at the far end, because the forwarding hop
 rewrites the envelope sender. ARC signing mitigates it. If the lawyer's provider is strict about

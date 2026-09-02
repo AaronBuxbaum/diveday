@@ -57,6 +57,7 @@ describe("the shop's sender profile", () => {
       .update(shops)
       .set({
         contactEmail: "desk@bluemantis.dive",
+        contactEmailConfirmedAt: new Date("2026-09-01T12:00:00.000Z"),
         addressStreet: "1 Harbor Rd",
         addressLocality: "Key Largo",
         addressRegion: "FL",
@@ -126,7 +127,10 @@ describe("the shop's sender profile", () => {
     await sendNotification(db, notification, failing);
     await db
       .update(shops)
-      .set({ contactEmail: "desk@bluemantis.dive" })
+      .set({
+        contactEmail: "desk@bluemantis.dive",
+        contactEmailConfirmedAt: new Date("2026-09-01T12:00:00.000Z"),
+      })
       .where(eq(shops.id, shop.id));
     await drainNotificationRetries(db, {
       provider: capturingProvider(seen),

@@ -66,7 +66,6 @@ import {
   reviewModerationEvents,
   rollCallCrewEvents,
   rollCallEvents,
-  shopContactEmailTokens,
   shopPromoCodes,
   shopPromoRedemptions,
   shopStripeAccounts,
@@ -304,13 +303,10 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // A front-desk address, not a person's — this is printed on the public
       // course pages, where it backs the "Get in touch" composer.
       contactEmail: "hello@demo.invalid",
-      // Confirmed, for the same reason `unitsConfirmedAt` above is: a demo shop
-      // permanently badged "Unconfirmed" is a worse demo, and a shop that has
-      // been running for years has answered this. A shop that genuinely has not
-      // is the *minted* demo below, which leaves it null — so the state still
-      // has an honest fixture rather than being pre-answered out of existence
-      // (issue #835's rule, applied to issue #1288's column).
-      contactEmailConfirmedAt: nowDate(),
+      // The demo shop's front desk is confirmed: it is the state a real shop
+      // reaches after opening the link (issue #1288), and the one the settings
+      // capture should show.
+      contactEmailConfirmedAt: new Date("2026-07-01T12:00:00.000Z"),
       contactPhone: "+1 305 555 0142",
       // The numbers a divemaster needs with a diver on the deck and no signal.
       // Seeded because the offline manifest renders them, so an unseeded shop
@@ -540,6 +536,7 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string) {
           // proved it reads it, and this is the fixture that can honestly show
           // that state (issue #1288).
           contactEmail: identity.emailFor("hello"),
+          contactEmailConfirmedAt: new Date("2026-07-01T12:00:00.000Z"),
           contactPhone: "+1 305 555 0142",
           // The canonical demo's own address, and for the canonical demo's own
           // reason: a real street exercises the address end to end (structured
@@ -1123,11 +1120,6 @@ export async function resetDemoSchedule(
   await db
     .delete(personCourtesyEmailUnsubscribeTokens)
     .where(eq(personCourtesyEmailUnsubscribeTokens.shopId, shopId));
-  // Outstanding contact-address confirmation links (issue #1288). Nothing seeds
-  // one, so this only ever clears what a test minted by saving the settings
-  // form — a live link left standing would let the next spec confirm an address
-  // it never typed.
-  await db.delete(shopContactEmailTokens).where(eq(shopContactEmailTokens.shopId, shopId));
   // The blow-out cascade's two tables, innermost first: the per-diver rows
   // reference both `bookings` and `trip_blowouts`, and the cascade row
   // references `trips`. Missing from this ordering when the cascade shipped,

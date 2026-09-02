@@ -1,9 +1,10 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "9d5d5958-ee4a-4d73-8e32-14b51e4547bb",
+  "id": "20dbdf60-000b-407b-82cc-ea253f961a5b",
   "prevIds": [
-    "6a31264d-29c0-47c7-b603-42502a1b7047"
+    "10554c7e-2304-4e4d-8cb5-19fe1331300c",
+    "600c4caa-9482-4832-98ae-e4a6e35f1209"
   ],
   "ddl": [
     {
@@ -1176,7 +1177,7 @@
     },
     {
       "isRlsEnabled": false,
-      "name": "shop_contact_email_tokens",
+      "name": "shop_contact_email_confirmation_tokens",
       "entityType": "tables",
       "schema": "public"
     },
@@ -3246,19 +3247,6 @@
       "generated": null,
       "identity": null,
       "name": "claimed_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "bookings"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "referral_source",
       "entityType": "columns",
       "schema": "public",
       "table": "bookings"
@@ -11659,7 +11647,7 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
-      "table": "shop_contact_email_tokens"
+      "table": "shop_contact_email_confirmation_tokens"
     },
     {
       "type": "uuid",
@@ -11672,7 +11660,7 @@
       "name": "shop_id",
       "entityType": "columns",
       "schema": "public",
-      "table": "shop_contact_email_tokens"
+      "table": "shop_contact_email_confirmation_tokens"
     },
     {
       "type": "text",
@@ -11685,7 +11673,7 @@
       "name": "email",
       "entityType": "columns",
       "schema": "public",
-      "table": "shop_contact_email_tokens"
+      "table": "shop_contact_email_confirmation_tokens"
     },
     {
       "type": "text",
@@ -11698,7 +11686,7 @@
       "name": "token_hash",
       "entityType": "columns",
       "schema": "public",
-      "table": "shop_contact_email_tokens"
+      "table": "shop_contact_email_confirmation_tokens"
     },
     {
       "type": "timestamp with time zone",
@@ -11711,7 +11699,7 @@
       "name": "expires_at",
       "entityType": "columns",
       "schema": "public",
-      "table": "shop_contact_email_tokens"
+      "table": "shop_contact_email_confirmation_tokens"
     },
     {
       "type": "timestamp with time zone",
@@ -11724,7 +11712,7 @@
       "name": "used_at",
       "entityType": "columns",
       "schema": "public",
-      "table": "shop_contact_email_tokens"
+      "table": "shop_contact_email_confirmation_tokens"
     },
     {
       "type": "timestamp with time zone",
@@ -11737,7 +11725,7 @@
       "name": "superseded_at",
       "entityType": "columns",
       "schema": "public",
-      "table": "shop_contact_email_tokens"
+      "table": "shop_contact_email_confirmation_tokens"
     },
     {
       "type": "timestamp with time zone",
@@ -11750,7 +11738,7 @@
       "name": "created_at",
       "entityType": "columns",
       "schema": "public",
-      "table": "shop_contact_email_tokens"
+      "table": "shop_contact_email_confirmation_tokens"
     },
     {
       "type": "uuid",
@@ -17797,34 +17785,6 @@
       "nameExplicit": true,
       "columns": [
         {
-          "value": "shop_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "referral_source",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "bookings_shop_referral_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "bookings"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
           "value": "booking_id",
           "isExpression": false,
           "asc": true,
@@ -21267,10 +21227,10 @@
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "shop_contact_email_tokens_shop_idx",
+      "name": "shop_contact_email_confirmation_tokens_shop_idx",
       "entityType": "indexes",
       "schema": "public",
-      "table": "shop_contact_email_tokens"
+      "table": "shop_contact_email_confirmation_tokens"
     },
     {
       "nameExplicit": true,
@@ -26092,10 +26052,10 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
-      "name": "shop_contact_email_tokens_shop_id_shops_id_fkey",
+      "name": "shop_contact_email_confirmation_tokens_shop_id_shops_id_fkey",
       "entityType": "fks",
       "schema": "public",
-      "table": "shop_contact_email_tokens"
+      "table": "shop_contact_email_confirmation_tokens"
     },
     {
       "nameExplicit": false,
@@ -28310,9 +28270,9 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "shop_contact_email_tokens_pkey",
+      "name": "shop_contact_email_confirmation_tokens_pkey",
       "schema": "public",
-      "table": "shop_contact_email_tokens",
+      "table": "shop_contact_email_confirmation_tokens",
       "entityType": "pks"
     },
     {
@@ -28729,9 +28689,9 @@
         "token_hash"
       ],
       "nullsNotDistinct": false,
-      "name": "shop_contact_email_tokens_token_hash_key",
+      "name": "shop_contact_email_confirmation_tokens_token_hash_key",
       "schema": "public",
-      "table": "shop_contact_email_tokens",
+      "table": "shop_contact_email_confirmation_tokens",
       "entityType": "uniques"
     },
     {

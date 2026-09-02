@@ -17,7 +17,7 @@ import {
   notificationDeliveries,
   notificationDeliveryAttempts,
   pushSubscriptions,
-  shopContactEmailTokens,
+  shopContactEmailConfirmationTokens,
   stripeWebhookEvents,
 } from "./schema";
 
@@ -225,16 +225,27 @@ export async function pruneExpiredRecords(
       (ids) => db.delete(accountTokens).where(inArray(accountTokens.id, ids)),
     ),
   );
+
+  // Same shape and same clock as account_tokens: measured from each link's
+  // own `expires_at`, so a live confirmation link is never eligible.
   outcomes.push(
     await pruneBatch(
-      "shop_contact_email_tokens",
+      "shop_contact_email_confirmation_tokens",
       () =>
         db
-          .select({ id: shopContactEmailTokens.id })
-          .from(shopContactEmailTokens)
-          .where(lt(shopContactEmailTokens.expiresAt, cutoff("shop_contact_email_tokens")))
+          .select({ id: shopContactEmailConfirmationTokens.id })
+          .from(shopContactEmailConfirmationTokens)
+          .where(
+            lt(
+              shopContactEmailConfirmationTokens.expiresAt,
+              cutoff("shop_contact_email_confirmation_tokens"),
+            ),
+          )
           .limit(PRUNE_BATCH_LIMIT),
-      (ids) => db.delete(shopContactEmailTokens).where(inArray(shopContactEmailTokens.id, ids)),
+      (ids) =>
+        db
+          .delete(shopContactEmailConfirmationTokens)
+          .where(inArray(shopContactEmailConfirmationTokens.id, ids)),
     ),
   );
 

@@ -1,191 +1,172 @@
 import { and, eq, exists, gt, isNotNull, isNull, sql } from "drizzle-orm";
-import { createAccountToken, hashAccountToken } from "@/lib/account-tokens";
+import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
-import { SHOP_CONTACT_EMAIL_TTL_MS } from "@/lib/shop-contact-email";
+import { CONTACT_EMAIL_CONFIRMATION_TTL_MS } from "@/lib/contact-email-confirmation";
 import type { AppDb, DbExecutor } from "./client";
-import { shopContactEmailTokens, shops } from "./schema";
-
-export type IssuedShopContactEmailToken = { token: string; tokenId: string; expiresAt: Date };
+import { shopContactEmailConfirmationTokens, shops } from "./schema";
 
 /**
- * Mints a fresh confirmation link for one shop's contact address, superseding
- * any earlier outstanding one — a manager who saves the field twice should not
- * leave two live links, and the second email is the one they are looking at.
- *
- * Locks the shop row first, for the reason `issueAccountToken` locks the
- * account row: under READ COMMITTED two concurrent saves could each read zero
- * outstanding tokens and each insert, leaving two live at once. PGlite is
- * single-connection so no test can exhibit the race; the lock is for production
- * Postgres.
+ * Proving a shop controls its front-desk address (issue #1288). The token is
+ * minted for one address, sent only to that address, and consuming it sets
+ * `shops.contact_email_confirmed_at` only while the shop still names that
+ * address -- so a manager cannot mint on an inbox they control and then bless
+ * a different one by editing the field in between. `setShopContact` clears the
+ * confirmation on any change of address for the same reason, from the other
+ * side.
  */
-export async function issueShopContactEmailToken(
+
+export type IssuedContactEmailConfirmation = { token: string; tokenId: string; expiresAt: Date };
+
+/** Mints a fresh link for the shop's current address, superseding any outstanding one. */
+export async function issueShopContactEmailConfirmation(
   db: AppDb,
   input: { shopId: string; email: string; now?: Date },
-): Promise<IssuedShopContactEmailToken> {
+): Promise<IssuedContactEmailConfirmation> {
   const now = input.now ?? nowDate();
+  const email = input.email.trim().toLowerCase();
   return db.transaction(async (tx) => {
+    // Lock the shop row so two saves in flight cannot both leave a live token
+    // (same shape as issueAccountToken).
     await tx.select({ id: shops.id }).from(shops).where(eq(shops.id, input.shopId)).for("update");
     await tx
-      .update(shopContactEmailTokens)
+      .update(shopContactEmailConfirmationTokens)
       .set({ supersededAt: now })
       .where(
         and(
-          eq(shopContactEmailTokens.shopId, input.shopId),
-          isNull(shopContactEmailTokens.usedAt),
-          isNull(shopContactEmailTokens.supersededAt),
+          eq(shopContactEmailConfirmationTokens.shopId, input.shopId),
+          isNull(shopContactEmailConfirmationTokens.usedAt),
+          isNull(shopContactEmailConfirmationTokens.supersededAt),
         ),
       );
-
-    const token = createAccountToken();
-    const expiresAt = new Date(now.getTime() + SHOP_CONTACT_EMAIL_TTL_MS);
+    const token = createBearerToken();
+    const expiresAt = new Date(now.getTime() + CONTACT_EMAIL_CONFIRMATION_TTL_MS);
     const [row] = await tx
-      .insert(shopContactEmailTokens)
-      .values({
-        shopId: input.shopId,
-        email: input.email,
-        tokenHash: hashAccountToken(token),
-        expiresAt,
-      })
-      .returning({ id: shopContactEmailTokens.id });
-    if (!row) throw new Error("Failed to issue shop contact email token");
+      .insert(shopContactEmailConfirmationTokens)
+      .values({ shopId: input.shopId, email, tokenHash: hashBearerToken(token), expiresAt })
+      .returning({ id: shopContactEmailConfirmationTokens.id });
+    if (!row) throw new Error("Failed to issue contact email confirmation token");
     return { token, tokenId: row.id, expiresAt };
   });
 }
 
+/** The live-token conditions every read and the consume share. */
+function liveToken(token: string, now: Date) {
+  return and(
+    eq(shopContactEmailConfirmationTokens.tokenHash, hashBearerToken(token)),
+    isNull(shopContactEmailConfirmationTokens.usedAt),
+    isNull(shopContactEmailConfirmationTokens.supersededAt),
+    gt(shopContactEmailConfirmationTokens.expiresAt, now),
+  );
+}
+
+/** The shop still names the address this token was minted for. */
+function shopStillNamesAddress() {
+  return exists(
+    sql`(select 1 from ${shops} where ${shops.id} = ${shopContactEmailConfirmationTokens.shopId} and lower(${shops.contactEmail}) = ${shopContactEmailConfirmationTokens.email})`,
+  );
+}
+
 /**
- * Read-only validity check, for deciding whether to render a confirm button or
- * an "this link has expired" notice. Never marks anything used — the
- * authoritative one-time gate is {@link confirmShopContactEmail}, and a caller
- * must never treat this alone as authorizing the write.
+ * Read-only: what the confirm page renders for a link that would still work.
+ * `null` for an unknown, spent, expired or superseded token, and for one whose
+ * address the shop has since changed. Never marks anything; `consume` below is
+ * the one gate a mutation may rely on.
  */
-export async function checkShopContactEmailToken(
+export async function checkShopContactEmailConfirmation(
   db: DbExecutor,
   input: { token: string; now?: Date },
-): Promise<{ shopId: string; email: string } | null> {
+): Promise<{ shopId: string; shopName: string; email: string } | null> {
   const now = input.now ?? nowDate();
   const [row] = await db
-    .select({ shopId: shopContactEmailTokens.shopId, email: shopContactEmailTokens.email })
-    .from(shopContactEmailTokens)
+    .select({
+      shopId: shopContactEmailConfirmationTokens.shopId,
+      shopName: shops.name,
+      email: shopContactEmailConfirmationTokens.email,
+    })
+    .from(shopContactEmailConfirmationTokens)
+    .innerJoin(shops, eq(shops.id, shopContactEmailConfirmationTokens.shopId))
+    .where(and(liveToken(input.token, now), shopStillNamesAddress()))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Whether this exact token was consumed -- the only thing the page may render a
+ * success state from after the redirect, never a caller-controlled query flag
+ * (the same rule `/verify/[token]` follows).
+ */
+export async function wasShopContactEmailConfirmed(
+  db: DbExecutor,
+  input: { token: string },
+): Promise<{ shopName: string; email: string } | null> {
+  const [row] = await db
+    .select({ shopName: shops.name, email: shopContactEmailConfirmationTokens.email })
+    .from(shopContactEmailConfirmationTokens)
+    .innerJoin(shops, eq(shops.id, shopContactEmailConfirmationTokens.shopId))
     .where(
       and(
-        eq(shopContactEmailTokens.tokenHash, hashAccountToken(input.token)),
-        isNull(shopContactEmailTokens.usedAt),
-        isNull(shopContactEmailTokens.supersededAt),
-        gt(shopContactEmailTokens.expiresAt, now),
+        eq(shopContactEmailConfirmationTokens.tokenHash, hashBearerToken(input.token)),
+        isNotNull(shopContactEmailConfirmationTokens.usedAt),
       ),
     )
     .limit(1);
   return row ?? null;
 }
 
-/**
- * Whether this exact token was genuinely consumed — never whether it merely
- * exists. The one thing the page may render a success state from after its
- * redirect, rather than trusting a caller-controlled `?confirmed=1`: a garbage
- * token with a forged parameter must still read as failed (the same security
- * review finding `wasAccountTokenConsumed` exists for).
- */
-export async function wasShopContactEmailTokenConsumed(
-  db: DbExecutor,
-  token: string,
-): Promise<boolean> {
-  const [row] = await db
-    .select({ id: shopContactEmailTokens.id })
-    .from(shopContactEmailTokens)
-    .where(
-      and(
-        eq(shopContactEmailTokens.tokenHash, hashAccountToken(token)),
-        isNotNull(shopContactEmailTokens.usedAt),
-      ),
-    )
-    .limit(1);
-  return Boolean(row);
-}
+/** Thrown inside the consume transaction to roll the token claim back. */
+const ADDRESS_CHANGED_UNDER_CLAIM = Symbol("diveday:contact-email-address-changed");
 
 /**
- * Claims the token and stamps the shop confirmed, in one transaction.
+ * Atomically claims the token and stamps the shop confirmed, in one
+ * transaction: the `WHERE` re-checks every condition -- including that the
+ * shop still names the token's address -- at the moment of the update, so two
+ * submits of the same link cannot both succeed and a token minted for an old
+ * address can never bless a new one.
  *
- * Two conditions, both re-checked at the moment of the write rather than when
- * the link was rendered:
- *
- * 1. **The token is still live.** The `WHERE` on the claim carries every
- *    validity condition, so two concurrent submits of the same link can never
- *    both succeed.
- * 2. **The shop's contact email is still the address this link was sent to.**
- *    Without it, a manager could ask for a link at an address they control,
- *    change the field to somebody else's, and open the first link to mark the
- *    second confirmed — which is the whole thing this feature exists to
- *    prevent. A mismatch consumes nothing and returns null: the link is not
- *    burned, it simply does not apply to what the field says now.
+ * Two things close the window between the claim and the stamp (security
+ * review finding on #1296): the shop row is locked first, so a concurrent
+ * `setShopContact` serialises behind this transaction rather than slipping a
+ * new address in between the two statements; and the stamp itself is
+ * conditional on the address, so if it ever matched nothing the claim rolls
+ * back with it. PGlite is single-connection, so tests cannot exhibit the
+ * race -- the lock is for production Postgres.
  */
-export async function confirmShopContactEmail(
+export async function consumeShopContactEmailConfirmation(
   db: AppDb,
   input: { token: string; now?: Date },
-): Promise<{ shopId: string; email: string } | null> {
+): Promise<{ shopId: string } | null> {
   const now = input.now ?? nowDate();
-  return db.transaction(async (tx) => {
-    // **The shop row first, and locked** — the same order, and for the same
-    // reason, as `issueShopContactEmailToken`. It serialises this confirm
-    // against a concurrent `setShopContact` on the same shop, so the address
-    // cannot move between the claim's check and the stamp below; taking the two
-    // locks in the opposite order to the issuer is also how a save racing a
-    // confirm deadlocks. The shop is read off the token rather than passed in,
-    // because a bearer link is all the caller has.
-    const [target] = await tx
-      .select({ shopId: shopContactEmailTokens.shopId })
-      .from(shopContactEmailTokens)
-      .where(eq(shopContactEmailTokens.tokenHash, hashAccountToken(input.token)))
-      .limit(1);
-    if (!target) return null;
-    await tx.select({ id: shops.id }).from(shops).where(eq(shops.id, target.shopId)).for("update");
+  try {
+    return await db.transaction(async (tx) => {
+      const [live] = await tx
+        .select({ shopId: shopContactEmailConfirmationTokens.shopId })
+        .from(shopContactEmailConfirmationTokens)
+        .where(liveToken(input.token, now))
+        .limit(1);
+      if (!live) return null;
+      await tx.select({ id: shops.id }).from(shops).where(eq(shops.id, live.shopId)).for("update");
 
-    const [claimed] = await tx
-      .update(shopContactEmailTokens)
-      .set({ usedAt: now })
-      .where(
-        and(
-          eq(shopContactEmailTokens.tokenHash, hashAccountToken(input.token)),
-          isNull(shopContactEmailTokens.usedAt),
-          isNull(shopContactEmailTokens.supersededAt),
-          gt(shopContactEmailTokens.expiresAt, now),
-          // Condition 2, in the claim's own `WHERE` rather than as a check
-          // after it: a mismatch must leave the token unspent, and the same
-          // `exists`-inside-the-update shape `consumeAccountToken` uses for
-          // "the account is not disabled" gets that without a rollback.
-          exists(
-            tx
-              .select({ one: sql`1` })
-              .from(shops)
-              .where(
-                and(
-                  eq(shops.id, shopContactEmailTokens.shopId),
-                  eq(shops.contactEmail, shopContactEmailTokens.email),
-                ),
-              ),
-          ),
-        ),
-      )
-      .returning({
-        shopId: shopContactEmailTokens.shopId,
-        email: shopContactEmailTokens.email,
-      });
-    if (!claimed) return null;
-
-    // **The address predicate again, on the write itself.** The `exists` above
-    // evaluated against an unlocked row, so under READ COMMITTED a
-    // `setShopContact` committing between the two statements would have its
-    // *new* address stamped confirmed — a manager could hold a link for an
-    // inbox they control, fire the confirm and a save of somebody else's
-    // address a millisecond apart, and win the race often enough to try again
-    // (a lost race consumes nothing). Repeating the predicate here closes the
-    // window: the second statement re-reads the latest committed row and
-    // matches zero rows unless it is still the address this link proved
-    // (`security-reviewer`, issue #1288).
-    const [stamped] = await tx
-      .update(shops)
-      .set({ contactEmailConfirmedAt: now })
-      .where(and(eq(shops.id, claimed.shopId), eq(shops.contactEmail, claimed.email)))
-      .returning({ id: shops.id });
-    return stamped ? claimed : null;
-  });
+      const [claimed] = await tx
+        .update(shopContactEmailConfirmationTokens)
+        .set({ usedAt: now })
+        .where(and(liveToken(input.token, now), shopStillNamesAddress()))
+        .returning({
+          shopId: shopContactEmailConfirmationTokens.shopId,
+          email: shopContactEmailConfirmationTokens.email,
+        });
+      if (!claimed) return null;
+      const [stamped] = await tx
+        .update(shops)
+        .set({ contactEmailConfirmedAt: now })
+        .where(
+          and(eq(shops.id, claimed.shopId), sql`lower(${shops.contactEmail}) = ${claimed.email}`),
+        )
+        .returning({ id: shops.id });
+      if (!stamped) throw ADDRESS_CHANGED_UNDER_CLAIM;
+      return { shopId: claimed.shopId };
+    });
+  } catch (error) {
+    if (error === ADDRESS_CHANGED_UNDER_CLAIM) return null;
+    throw error;
+  }
 }

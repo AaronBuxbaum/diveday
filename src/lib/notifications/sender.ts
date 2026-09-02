@@ -9,10 +9,7 @@ import { type NotificationSender, notificationSenderSchema } from "./kinds";
  */
 export type ShopSenderSource = {
   contactEmail: string | null;
-  /**
-   * When somebody proved the shop controls that address. Null gates `replyTo`
-   * off — see the note on the `replyTo` line below.
-   */
+  /** Null until the shop opened the confirmation link sent to `contactEmail` (issue #1288). */
   contactEmailConfirmedAt: Date | null;
   addressStreet: string | null;
   addressLocality: string | null;
@@ -60,15 +57,12 @@ export function deliverableShopContactEmail(shop: {
  * every send for that shop -- booking confirmations included -- for the sake
  * of a header or a footer line (security review finding on this change).
  *
- * **`replyTo` additionally waits for `contact_email_confirmed_at`** (issue
- * #1288). The address is a manager's claim until somebody opens the link sent
- * to it, and *routing* a diver's reply somewhere is a different act from
- * *displaying* the address on a public page, which this app has always done. A
- * diver answering a waiver or a readiness email writes back medical and contact
- * details; a typo, or a manager who fills in somebody else's address, would
- * send every one of those to a third party. An unconfirmed shop sends exactly
- * as it did before the header existed — no `Reply-To`, never a failed send.
- * The postal footer is unaffected: an address is not a destination.
+ * `Reply-To` only from a **confirmed** address: the shop has to have opened the
+ * link sent to it (`shops.contact_email_confirmed_at`, issue #1288). Until
+ * then a manager's typo, or an address they do not control, would have every
+ * diver's reply -- often carrying the medical or contact detail a waiver or
+ * readiness email asked for -- routed to a stranger. An unconfirmed address is
+ * simply absent here, exactly as if none were on file.
  */
 export function shopSenderOf(shop: ShopSenderSource): NotificationSender | undefined {
   const replyTo = deliverableShopContactEmail(shop);

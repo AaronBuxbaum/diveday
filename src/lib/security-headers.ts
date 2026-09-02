@@ -91,10 +91,9 @@ export const TOKEN_ROUTE_PREFIXES = [
   // and any third-party script on the destination page reads the referrer by
   // default. Found by a security review of the advertising-tag rule.
   "claim",
-  // The shop contact-address confirmation link (issue #1288). Added with the
-  // route, by a security review that checked this list before the route
-  // shipped — which is the whole point of the two lists being asserted against
-  // the filesystem.
+  // The shop contact-email confirmation link (issue #1288): possession proves
+  // the shop controls the address that becomes Reply-To, so the token must not
+  // leave in a referrer either.
   "confirm-contact",
 ];
 

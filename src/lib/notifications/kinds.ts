@@ -405,19 +405,15 @@ const emailVerificationSchema = z.object({
 });
 
 /**
- * The link that proves a shop controls the address it typed as its contact
- * email (issue #1288). Shop-scoped rather than account-scoped: it confirms a
- * `shops` row, and it goes to that address rather than to whoever saved the
- * field — a manager cannot confirm an inbox by receiving the mail somewhere
- * else.
- *
- * No `ownerName`: the recipient is a front desk, which may be a shared inbox
- * nobody in particular reads. The shop's own name is the greeting.
+ * The link that proves a shop controls the front-desk address it typed into
+ * settings, before that address becomes Reply-To on diver mail (issue #1288).
+ * Goes to the shop, in the shop's own language, branded as the shop -- it is
+ * the shop's own address being vouched for.
  */
-const shopContactEmailConfirmationSchema = z.object({
-  kind: z.literal("shop_contact_email_confirmation"),
-  tokenId: z.uuid(),
+const contactEmailConfirmationSchema = z.object({
+  kind: z.literal("contact_email_confirmation"),
   shopId: z.uuid(),
+  tokenId: z.uuid(),
   to: emailAddressSchema,
   locale: localeSchema,
   shopName: z.string().trim().min(1).max(120),
@@ -609,7 +605,7 @@ export const notificationSchema = z
     tripBlowoutSchema,
     welcomeSchema,
     emailVerificationSchema,
-    shopContactEmailConfirmationSchema,
+    contactEmailConfirmationSchema,
     passwordResetRequestSchema,
     passwordChangedSchema,
     staffInviteSchema,
@@ -678,13 +674,11 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // secret itself.
     case "email_verification":
       return `email-verification/${notification.tokenId}`;
+    // One send per minted link; a resend mints a fresh token and is its own send.
+    case "contact_email_confirmation":
+      return `contact-email-confirmation/${notification.tokenId}`;
     case "password_reset_request":
       return `password-reset-request/${notification.tokenId}`;
-    // Same shape and the same reason: the token row's id, never the bearer
-    // secret. A fresh save mints a fresh token, so a changed address is always
-    // a fresh send rather than a dedup against the last one.
-    case "shop_contact_email_confirmation":
-      return `shop-contact-email-confirmation/${notification.tokenId}`;
     case "staff_invite":
       return `staff-invite/${notification.tokenId}`;
     // Keyed by the change's own timestamp so a second reset's confirmation

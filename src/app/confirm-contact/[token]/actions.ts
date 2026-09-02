@@ -2,32 +2,32 @@
 
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
-import { confirmShopContactEmail } from "@/db/shop-contact-email";
+import { consumeShopContactEmailConfirmation } from "@/db/shop-contact-email";
+import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
-import { shopContactEmailLinkPath } from "@/lib/shop-contact-email";
 
 /**
- * The one mutating step: `confirmShopContactEmail` claims the token and stamps
- * the shop in a single transaction, and its claim re-checks that the shop's
- * contact email is *still* the address this link was sent to — so a link
- * requested for one inbox can never confirm a different one that was typed in
- * afterwards.
- *
- * A claim failure (expired, used, superseded, or the address moved) bounces
- * back to the same page, which re-derives an accurate notice from
- * `checkShopContactEmailToken`. No separate error flag: two ways of saying
- * "this link does not work" is one more than the reader needs.
+ * The one mutating step: claims the token and stamps the shop confirmed in
+ * one transaction (`consumeShopContactEmailConfirmation`), which also
+ * re-checks that the shop still names the token's address. Every outcome
+ * redirects back to the same page, which re-derives its state from the
+ * database -- a spent token reads as confirmed, a stale one as unavailable --
+ * so nothing here can be forged into a false success.
  */
 export async function confirmContactEmail(token: string) {
   const ip = await clientIp();
   if (
-    !(await checkRateLimit(rateLimitKey("confirm-contact", ip), RATE_LIMITS.accountTokenAction))
-      .allowed
+    !(
+      await checkRateLimit(
+        rateLimitKey("confirm-contact-token", ip),
+        RATE_LIMITS.accountTokenAction,
+      )
+    ).allowed
   ) {
-    redirect(shopContactEmailLinkPath(token));
+    redirect(confirmContactLinkPath(token));
   }
-  const claimed = await confirmShopContactEmail(await getDb(), { token });
-  if (!claimed) redirect(shopContactEmailLinkPath(token));
-  redirect(`${shopContactEmailLinkPath(token)}?confirmed=1`);
+  const db = await getDb();
+  await consumeShopContactEmailConfirmation(db, { token });
+  redirect(confirmContactLinkPath(token));
 }
