@@ -104,7 +104,7 @@ embroidery, and vendor conversations.
 | Deep-sea ink | `#0C2A35` | `#E9F3F4` | Primary reading color: grounded dark ink in light mode, soft light ink in dark mode. | Use the contrasting value for the wordmark and longer copy. |
 | Lagoon | `#0E7490` | `#22D3EE` | Action color and primary brand signal. | Main imprint color on sand or ocean; use the darker light-mode value on light goods. |
 | Lagoon hover/depth | `#0A4D61` | `#67E8F9` | Darker or brighter lagoon variant for contrast and depth. | Use sparingly for a two-tone mark or secondary imprint. |
-| Coral | `#FF6F61` | `#FF8A7E` | Rare warm accent; the smallest bubble and earned moments of joy. Its wash `#FFEEE9` is the bed an earned moment sits on; its deep `#A83A2C` is ink on that wash. |
+| Coral | `#FF6F61` | `#FF8A7E` | Rare warm accent; the smallest bubble and earned moments of joy. Its wash (`#FFEEE9` by day, `#3F1D19` at night) is the bed an earned moment sits on; its deep (`#A83A2C` / `#FFB3AA`) is ink on that wash. |
 | Shallows | `#7FD0D6` | `#1F6F78` | Decorative water behind a count that is already spelled out. Never a status. | One small accent only: bubble, stitch, dot, or detail. Never make the whole item coral by default. |
 
 ### Supporting colors
@@ -113,7 +113,7 @@ embroidery, and vendor conversations.
 | --- | --- | --- |
 | Shell `#FFFDF8` / tideline `#F3ECDD` | Quiet hierarchy between panels, pages, and recessed areas; a resting panel sits on the warm bed `0 2px 10px rgba(88, 66, 30, 0.06)` at a 28px radius. | Optional background neutrals for paper, packaging, and layout; do not turn them into extra brand colors. |
 | Rope `#E6DCC8` / rope-strong `#8A8065` | Structure and control affordances. | Use for physical rules or labels only when needed; the brand is not a framed-box system. |
-| Success / warning / danger | Operational feedback. | Keep these out of general merch and promotional art. They signal state, not identity. |
+| Success / warning / danger | Operational feedback. Each has a drawn wash in both schemes — by day `#E6F0E8` / `#F8EEE2` / `#F8E8E6`, at night `#0F3324` / `#3A2A0E` / `#3D1717` (the lagoon's are `#E6F3F5` / `#0B3540`) — a hue, never a mix, so a warning stays amber on a dark shell (ADR 20260901-diveday-reimagined, 13j). | Keep these out of general merch and promotional art. They signal state, not identity. |
 
 Color rules:
 

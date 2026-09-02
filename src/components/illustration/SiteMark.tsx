@@ -21,7 +21,24 @@ export const SITE_MARK_SIZES = {
   sm: { tile: "h-[30px] w-11 rounded-lg", svg: "h-[22px] w-[33px]" },
   /** The home spine's rail: a 60×42 tile, the canvas's own size. */
   md: { tile: "h-[42px] w-[60px] rounded-xl", svg: "h-8 w-12" },
+  /** The recap postcard's face: an 84×58 tile (slice 13i). */
+  lg: { tile: "h-[58px] w-[84px] rounded-2xl", svg: "h-11 w-[66px]" },
 } as const;
+
+/**
+ * What the tile sits on. The lagoon wash is the tile's own ground everywhere a
+ * mark sits on the page; on a surface that *is* the wash — the postcard's
+ * band — the tile takes the shell instead, so the drawing keeps an edge. A
+ * prop rather than a `className` override, because two `bg-*` utilities on
+ * one element resolve by Tailwind's emit order, not by the caller's intent
+ * (the `buttonClass` lesson in AGENTS.md).
+ */
+export const SITE_MARK_GROUNDS = {
+  tint: "bg-primary-tint",
+  surface: "bg-surface",
+} as const;
+
+export type SiteMarkGround = keyof typeof SITE_MARK_GROUNDS;
 
 export type SiteMarkSize = keyof typeof SITE_MARK_SIZES;
 
@@ -81,10 +98,12 @@ function Drawing({ mark }: { mark: SiteMarkCode }) {
 export function SiteMark({
   mark,
   size = "md",
+  ground = "tint",
   className = "",
 }: {
   mark: SiteMarkCode;
   size?: SiteMarkSize;
+  ground?: SiteMarkGround;
   className?: string;
 }) {
   const sizes = SITE_MARK_SIZES[size];
@@ -92,7 +111,7 @@ export function SiteMark({
     <span
       aria-hidden="true"
       data-site-mark={mark}
-      className={`inline-flex shrink-0 items-center justify-center bg-primary-tint text-primary-hover ${sizes.tile} ${className}`.trim()}
+      className={`inline-flex shrink-0 items-center justify-center ${SITE_MARK_GROUNDS[ground]} text-primary-hover ${sizes.tile} ${className}`.trim()}
     >
       <svg
         aria-hidden="true"

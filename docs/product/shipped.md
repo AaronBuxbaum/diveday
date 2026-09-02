@@ -7,6 +7,24 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## Reef for the shop, Harbor for the diver (delivered 2026-09-01 to 2026-09-02)
+
+The whole-product direction the owner picked on 2026-09-01 (H-64), argued in ADR
+[20260901-diveday-reimagined](../architecture/decisions/20260901-diveday-reimagined.md) and drawn on
+[its canvas](../design/canvases/20260901-diveday-reimagined/README.md), landed as ten slices. The
+staff app wears **Reef** — sand, shell and tideline, the lagoon-to-coral range, the 28px panel on a
+warm bed, Geist kept (13a, #1225–#1228) — and its three earned moments: each departure's site drawn
+in the illustration hand on the home spine and the week board (13f, #1272), the water closing over a
+station's finished work (13g, #1273), and roll call's head count as the figure whose water fills
+(13h, #1274). Every diver-facing surface wears **Harbor**: the shop's own colour and display face,
+derived and contrast-checked in `src/lib/brand.ts` from the Settings *Brand* group (13b), the
+storefront's hero, badge wall, quotes, boats and credit line (13c), the eight-widget embed catalogue
+and its generator (13d), and the recap as the shop's postcard with the site drawn on it (13i,
+#1278). The offer says so on `/pricing`, `/product` and the FareHarbor guide, with the website built
+to order at H-65's price (13e, #1264). The night palette was drawn last (13j): open ocean stays the
+ground and the five washes became hues of their own instead of grey mixes, held by
+`src/lib/night-palette.test.ts`. Each slice's component names the ADR and a test pins its rule.
+
 ## The product page's "whole list" is the whole list (delivered 2026-09-01)
 
 `/product`'s reference index (`productCapabilityIndex`, `marketing.capabilities.*`) grew from 49
