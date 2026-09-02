@@ -144,9 +144,12 @@ function rowKey(action: TodayAction): string {
 /**
  * A horizon's panel: the tideline, the panel radius, no bed (a sunken panel
  * sits *in* the sand rather than on it), and the same inset padding on the
- * summary row and the week row so the two doors align.
+ * summary row and the week row so the two doors align. From `sm` up only —
+ * on a phone the two horizons keep the row grammar they always had, one under
+ * the other, because a panel's own padding was what pushed "Tomorrow · Wed,
+ * Jul 22" onto two lines at 390px.
  */
-const HORIZON_PANEL_CLASS = "rounded-panel bg-surface-sunken px-4 py-1 sm:px-5";
+const HORIZON_PANEL_CLASS = "sm:rounded-panel sm:bg-surface-sunken sm:px-5 sm:py-1";
 
 /** The status family's shape for each kind tone, and the ink it takes. */
 const ROW_GLYPH = { danger: "danger", warning: "warning", neutral: "pending" } as const;
@@ -778,13 +781,17 @@ export function DaySpine({
           and the week still points at the board, because a week is a board
           question. */}
       {spine.tomorrow.stations.length > 0 || spine.week.jobs > 0 ? (
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid sm:grid-cols-2 sm:gap-5">
           {spine.tomorrow.stations.length > 0 ? (
             <LedgerGroup
               as="h2"
               folded
               summaryVariant="row"
-              className={`${HORIZON_PANEL_CLASS} open:sm:col-span-2 [&>summary]:border-0 [&>summary]:rounded-panel [&>summary]:hover:bg-surface-sunken`}
+              className={`${HORIZON_PANEL_CLASS} open:sm:col-span-2 sm:[&>summary]:border-0 sm:[&>summary]:rounded-panel [&>summary]:hover:bg-surface-sunken ${
+                spine.week.jobs > 0
+                  ? "max-sm:[&>summary]:border-t-0"
+                  : "max-sm:[&>summary]:border-b"
+              }`}
               label={t("shopHome.spine.tomorrow", {
                 date: tomorrowDate ? formatShortDate(tomorrowDate, locale, timeZone) : "",
               })}
@@ -812,7 +819,7 @@ export function DaySpine({
                 // The hairline goes transparent rather than to width zero:
                 // `border-t`'s width beats a `border-0` on emit order, and a
                 // colour beats a colour by name.
-                className="rounded-panel border-transparent last:border-transparent hover:bg-surface-sunken"
+                className="-mx-2 px-2 hover:bg-surface-sunken sm:mx-0 sm:rounded-panel sm:border-transparent sm:px-0 sm:last:border-transparent"
                 href={`/shop/${shopSlug}/schedule/board`}
                 linkLabel={t("shopHome.spine.openBoard")}
                 trailing={

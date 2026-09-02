@@ -136,7 +136,10 @@ export function DayStation({
         />
       </div>
       <div className="pb-10">
-        <div className="flex items-start justify-between gap-4 sm:gap-6">
+        {/* Below `sm` the dial takes its own line under the title: beside it,
+            a 64px glass plus its words left a boat's name three words wide
+            on a 390px phone. */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           <div className="min-w-0">
             <h3 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-lg font-semibold tracking-tight">
               <Link

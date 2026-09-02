@@ -623,7 +623,7 @@ describe("the two horizon rows", () => {
     // Two tideline panels side by side (the board's "Later, collapsed"): the
     // same sunken fill, the same panel radius, the same row height, no bed.
     const fold = container.querySelector("details");
-    expect(fold).toHaveClass("rounded-panel", "bg-surface-sunken", "open:sm:col-span-2");
+    expect(fold).toHaveClass("sm:rounded-panel", "sm:bg-surface-sunken", "open:sm:col-span-2");
     expect(fold?.parentElement).toHaveClass("sm:grid-cols-2");
     const summary = container.querySelector("details summary");
     expect(summary).toHaveClass("min-h-14");
@@ -632,8 +632,8 @@ describe("the two horizon rows", () => {
     expect(summary?.lastElementChild?.tagName).toBe("svg");
 
     const week = screen.getByText("This week").closest("li");
-    expect(week).toHaveClass("min-h-14", "rounded-panel");
-    expect(week?.parentElement).toHaveClass("rounded-panel", "bg-surface-sunken");
+    expect(week).toHaveClass("min-h-14", "sm:rounded-panel");
+    expect(week?.parentElement).toHaveClass("sm:rounded-panel", "sm:bg-surface-sunken");
     expect(fold?.className).not.toContain("shadow-bed");
     expect(screen.getByText("This week")).toHaveClass("text-base", "font-semibold");
   });
