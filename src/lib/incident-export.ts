@@ -122,6 +122,11 @@ export type IncidentWaiverStatus = {
    */
   medicalClearedAt: string | null;
   medicalClearedByName: string | null;
+  /** The day printed on the physician's evaluation, which is not the day it was recorded. */
+  medicalClearanceEvaluatedOn: string | null;
+  medicalClearancePhysicianName: string | null;
+  /** Whether the evaluation itself is stored, which a claims reader will ask. */
+  medicalClearanceDocumentOnFile: boolean;
 };
 
 export type IncidentRollCallResult = {
@@ -488,6 +493,9 @@ function waiverStatus(
       recordedByName: null,
       medicalClearedAt: null,
       medicalClearedByName: null,
+      medicalClearanceEvaluatedOn: null,
+      medicalClearancePhysicianName: null,
+      medicalClearanceDocumentOnFile: false,
     };
   }
   return {
@@ -500,6 +508,15 @@ function waiverStatus(
       record.signatureMethod === "in_person_attested" ? (recordedByName ?? null) : null,
     medicalClearedAt: iso(record.medicalClearedAt),
     medicalClearedByName: record.medicalClearedAt ? (medicalClearedByName ?? null) : null,
+    medicalClearanceEvaluatedOn: record.medicalClearedAt
+      ? (record.medicalClearanceEvaluatedOn ?? null)
+      : null,
+    medicalClearancePhysicianName: record.medicalClearedAt
+      ? (record.medicalClearancePhysicianName ?? null)
+      : null,
+    medicalClearanceDocumentOnFile: Boolean(
+      record.medicalClearedAt && record.medicalClearanceDocumentUrl,
+    ),
   };
 }
 

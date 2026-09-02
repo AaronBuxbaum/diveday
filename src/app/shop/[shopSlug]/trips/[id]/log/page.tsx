@@ -665,19 +665,34 @@ function WaiverLine({
         })}
         {method}
         {/* A referral a physician cleared is the only thing in this document
-            that lifts a hard readiness block, so it is stated on its own,
-            dated, and attributed — never folded into "signed" (issue #1252). */}
-        {waiver.medicalClearedAt ? (
+            that lifts a hard readiness block, so it is stated on its own.
+            **As the shop's act, not as a clinical determination**: `{date}` is
+            when a staff member recorded it and `{name}` is that staff member,
+            so a sentence reading "a physician cleared this diver on {date}"
+            would claim, to an insurer, more than these records hold. The
+            physician's own date is stated separately, because it is the one a
+            claims reader asks for (issue #1252, `dive-domain-expert` review). */}
+        {waiver.medicalClearedAt && waiver.medicalClearanceEvaluatedOn ? (
           <>
             {" "}
             {waiver.medicalClearedByName
               ? t("incidentExport.medicalClearanceRecordedBy", {
                   date: dateTime(waiver.medicalClearedAt),
                   name: waiver.medicalClearedByName,
+                  evaluatedOn: waiver.medicalClearanceEvaluatedOn,
                 })
               : t("incidentExport.medicalClearanceRecorded", {
                   date: dateTime(waiver.medicalClearedAt),
+                  evaluatedOn: waiver.medicalClearanceEvaluatedOn,
                 })}
+            {waiver.medicalClearancePhysicianName
+              ? ` ${t("incidentExport.medicalClearancePhysician", {
+                  name: waiver.medicalClearancePhysicianName,
+                })}`
+              : ""}
+            {waiver.medicalClearanceDocumentOnFile
+              ? ` ${t("incidentExport.medicalClearanceOnFile")}`
+              : ""}
           </>
         ) : null}
       </>

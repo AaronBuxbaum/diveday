@@ -41,6 +41,8 @@ const record = {
   medicalClearedAt: null,
   medicalClearedByPersonId: null,
   medicalClearanceDocumentUrl: null,
+  medicalClearanceEvaluatedOn: null,
+  medicalClearancePhysicianName: null,
   completedAt: new Date("2026-07-29T01:00:00.000Z"),
   integrityHash: null,
   integrityVersion: null,

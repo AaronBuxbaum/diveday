@@ -184,6 +184,11 @@ describe("buildIncidentExport", () => {
       templateVersion: 3,
       signatureMethod: null,
       recordedByName: null,
+      medicalClearedAt: null,
+      medicalClearedByName: null,
+      medicalClearanceEvaluatedOn: null,
+      medicalClearancePhysicianName: null,
+      medicalClearanceDocumentOnFile: false,
     });
 
     expect(doc.crew).toHaveLength(1);
@@ -252,6 +257,11 @@ describe("buildIncidentExport", () => {
       templateVersion: null,
       signatureMethod: null,
       recordedByName: null,
+      medicalClearedAt: null,
+      medicalClearedByName: null,
+      medicalClearanceEvaluatedOn: null,
+      medicalClearancePhysicianName: null,
+      medicalClearanceDocumentOnFile: false,
     });
   });
 
@@ -940,5 +950,73 @@ describe("buildIncidentExport surface intervals", () => {
         dive(2, "2026-08-04T15:10:00.000Z", "2026-08-04T15:45:00.000Z"),
       ]),
     ).toEqual([null, null]);
+  });
+});
+
+/**
+ * The clearance as the log states it (issue #1252).
+ *
+ * The document goes to an insurer, so what it may claim is the point: DiveDay
+ * records the *shop's act* and the physician's own evaluation date, and never
+ * asserts a clinical determination on a date that is really a data-entry stamp.
+ */
+describe("physician clearance on the departure log", () => {
+  it("carries the evaluation date, the physician, and whether the form is on file", () => {
+    const doc = buildIncidentExport(
+      baseInput({
+        diverEvidence: [
+          {
+            bookingId: "b1",
+            certifications: [],
+            specialtyCertifications: [],
+            nitroxCertifications: [],
+            waiver: completedWaiver({
+              status: "medical_review",
+              medicalReviewRequired: true,
+              medicalClearedAt: new Date("2026-08-03T09:00:00.000Z"),
+              medicalClearedByPersonId: "staff-1",
+              medicalClearanceEvaluatedOn: "2026-08-02",
+              medicalClearancePhysicianName: "Dr. Imani Reyes",
+              medicalClearanceDocumentUrl: "https://media.example.com/medical-clearances/a.pdf",
+            }),
+            waiverMedicalClearedByName: "Dana Reyes",
+          },
+        ],
+      }),
+    );
+    expect(doc.roster[0]?.waiver).toMatchObject({
+      state: "complete",
+      medicalClearedAt: "2026-08-03T09:00:00.000Z",
+      medicalClearedByName: "Dana Reyes",
+      medicalClearanceEvaluatedOn: "2026-08-02",
+      medicalClearancePhysicianName: "Dr. Imani Reyes",
+      medicalClearanceDocumentOnFile: true,
+    });
+  });
+
+  it("states nothing at all about a clearance nobody recorded", () => {
+    const doc = buildIncidentExport(
+      baseInput({
+        diverEvidence: [
+          {
+            bookingId: "b1",
+            certifications: [],
+            specialtyCertifications: [],
+            nitroxCertifications: [],
+            waiver: completedWaiver({ status: "medical_review", medicalReviewRequired: true }),
+            waiverMedicalClearedByName: "Dana Reyes",
+          },
+        ],
+      }),
+    );
+    // Not "cleared by nobody" — absent. And the name is dropped with it: a
+    // staff member who did not clear anybody is not named on this document.
+    expect(doc.roster[0]?.waiver).toMatchObject({
+      state: "medical_review",
+      medicalClearedAt: null,
+      medicalClearedByName: null,
+      medicalClearanceEvaluatedOn: null,
+      medicalClearanceDocumentOnFile: false,
+    });
   });
 });

@@ -21,6 +21,7 @@ import {
   restoreDiver,
   updateDiver,
 } from "@/db/divers";
+import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import {
   createNitroxCertification,
   deleteNitroxCertification,
@@ -48,7 +49,7 @@ import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
 import { certificationAgency, certificationLevel, people } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
 import { getSupportNeeds, saveSupportNeeds } from "@/db/support-needs";
-import { recordInPersonWaiver, recordMedicalClearance } from "@/db/waivers";
+import { hasLiveMedicalHold, recordInPersonWaiver, recordMedicalClearance } from "@/db/waivers";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { canOverrideGearRequest, isStaff } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
@@ -1168,16 +1169,27 @@ export async function markWaiverInPersonAction(
  *
  * Same subject rule as the paper release, and for the same reason: the diver is
  * this route's path segment, never a form field, and `recordMedicalClearance`
- * resolves their own live hold rather than trusting a posted record id. The
- * only thing the form carries is the optional document.
+ * resolves their own live hold rather than trusting a posted record id.
  *
- * The upload is stored before the write and *not* cleaned up on refusal, unlike
- * a trip's arrival photo: the two refusals reachable here are "you are not this
- * shop's live staff" and "nothing of theirs is in review", and in neither case
- * has anything been written that could point at the file. It is an orphan in
- * the medical-clearance namespace, which the pending-media sweep already owns —
- * and deleting a physician's evaluation on a race we cannot fully see is the
- * worse of the two mistakes.
+ * **Deliberately open to every live staff role**, exactly like the paper
+ * attestation beside it. The reason is the dock: a diver hands the doctor's
+ * letter to whoever is at the rail, and a captain who cannot record it has to
+ * find an owner before anybody boards. What makes that safe is that the act is
+ * *attributed* — `medical_cleared_by_person_id` names whoever pressed it — and
+ * that it can only ever lift a hold the questionnaire itself created. If this
+ * ever needs narrowing, the gate belongs beside `canErasePersonalData` in
+ * `src/lib/authz.ts` and applies to the paper attestation too; splitting them
+ * would leave the weaker door open.
+ *
+ * **The hold is resolved before the evaluation is stored.** Uploading first and
+ * refusing second left the most sensitive file the product holds in the bucket
+ * with no row pointing at it — invisible to the media-deletion ledger and to
+ * `anonymizeDiver`, which walks rows (security review H2). The bad path was not
+ * the abusive one but the ordinary one: a staffer opens the wrong diver's
+ * record, uploads a real evaluation, and is told there is nothing to clear.
+ * A stored file that the write then refuses anyway (a race, or a refusal the
+ * pre-check cannot make) is queued for deletion rather than abandoned, so the
+ * ledger owns it either way.
  */
 export async function recordMedicalClearanceAction(
   shopSlug: string,
@@ -1192,6 +1204,14 @@ export async function recordMedicalClearanceAction(
   );
   personId = context.personId;
   const { base, db, staff } = context;
+
+  if (!(await hasLiveMedicalHold(db, staff.user.shopId, personId))) {
+    revalidateAndRedirect(base, backTo(base, "medical-clearance-no-hold", "waiver"));
+    return;
+  }
+
+  const evaluatedOn = String(formData.get("evaluatedOn") ?? "").trim();
+  const physicianName = String(formData.get("physicianName") ?? "").trim();
 
   const upload = formData.get("medicalClearanceDocument");
   let documentUrl: string | null = null;
@@ -1212,22 +1232,43 @@ export async function recordMedicalClearanceAction(
     shopId: staff.user.shopId,
     personId,
     recordedByPersonId: staff.user.personId,
+    evaluatedOn,
+    physicianName,
     documentUrl,
   });
+  if (!outcome.ok && documentUrl) {
+    await queueAndAttemptMediaDeletion(db, {
+      shopId: staff.user.shopId,
+      kind: "waiver_document",
+      url: documentUrl,
+    });
+  }
   revalidateAndRedirect(
     base,
     await successUrl(
       context,
-      outcome.ok
-        ? "medical-clearance-recorded"
-        : outcome.reason === "no_medical_hold"
-          ? "medical-clearance-no-hold"
-          : "waiver-error",
+      outcome.ok ? "medical-clearance-recorded" : MEDICAL_CLEARANCE_NOTICES[outcome.reason],
       "waiver",
       outcome.ok,
     ),
   );
 }
+
+/**
+ * One refusal code to one notice, so a new refusal in the domain layer is a
+ * compile error here rather than a silent fall-through to "something failed".
+ */
+const MEDICAL_CLEARANCE_NOTICES: Record<
+  Extract<Awaited<ReturnType<typeof recordMedicalClearance>>, { ok: false }>["reason"],
+  string
+> = {
+  no_medical_hold: "medical-clearance-no-hold",
+  evaluation_date_required: "medical-clearance-date-required",
+  evaluation_predates_disclosure: "medical-clearance-date-too-early",
+  evaluation_in_future: "medical-clearance-date-in-future",
+  evidence_required: "medical-clearance-evidence-required",
+  staff_not_found: "waiver-error",
+};
 
 /**
  * Merge the route's diver with one of its explicitly surfaced candidates.

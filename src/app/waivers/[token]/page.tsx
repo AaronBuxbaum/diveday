@@ -47,6 +47,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { emailFreshWaiverLinkAction } from "./actions";
 import { MedicalQuestionnaireFields } from "./MedicalQuestionnaireFields";
 import { QuestionnaireProgress } from "./QuestionnaireProgress";
@@ -311,7 +312,10 @@ export default async function WaiverPage({
   }
 
   if (state.state === "completed") {
-    const needsReview = state.record.status === "medical_review";
+    // A diver revisiting their own still-live link after a physician cleared
+    // them was told a doctor still had to confirm — one surface saying "held"
+    // while every staff surface said cleared (issue #1252, security review N1).
+    const needsReview = isUnresolvedMedicalHold(state.record);
     const bookingId = state.record.bookingId;
     const booking = bookingId
       ? await db

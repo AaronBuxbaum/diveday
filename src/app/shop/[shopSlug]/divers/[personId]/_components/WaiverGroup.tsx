@@ -10,6 +10,7 @@ import { InsetGroup } from "@/components/ui/ledger";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type WaiverRowState, waiverRowStateText } from "@/i18n/waiver-labels";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { smsRecipient } from "@/lib/notifications/sms";
 import { markWaiverInPersonAction, recordMedicalClearanceAction } from "../actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
@@ -189,6 +190,10 @@ export function WaiverGroup({
             <MedicalClearanceControl
               action={recordMedicalClearanceAction.bind(null, shopSlug, personId)}
               copy={medicalClearanceCopy(t)}
+              // The shop's own today, so the date box cannot offer tomorrow: a
+              // Key Largo evening is already tomorrow in UTC, and the reader's
+              // browser zone is nobody's business here.
+              today={calendarDateInTimezone(nowDate(), timezone)}
               className=""
               defaultOpen={Boolean(status) && status?.tone !== "success"}
             />

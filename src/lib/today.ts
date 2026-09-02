@@ -482,7 +482,13 @@ export const BLOCKER_ACTIONS: Record<
   waiver_not_sent: { kind: "waiver", target: "trip" },
   waiver_pending: { kind: "waiver", target: "trip" },
   waiver_expired: { kind: "waiver", target: "trip" },
-  medical_review: { kind: "medical_review", target: "trip" },
+  // **The diver, not the departure**, since #1252 gave the hold a door: the
+  // physician clearance that ends it is recorded on the diver's own record, and
+  // it is a fact about the person rather than about Saturday's boat. It pointed
+  // at the trip roster, where `medical_review` has no action at all — so the
+  // one blocker in the app that needed a human to walk somewhere sent them to
+  // the surface that could do the least about it.
+  medical_review: { kind: "medical_review", target: "diver" },
   certification_missing: { kind: "certification", target: "diver" },
   certification_pending: { kind: "certification", target: "diver" },
   certification_self_declared: { kind: "certification", target: "diver" },

@@ -22,10 +22,13 @@
   },
   "medicalClearance": {
     "recordClearance": "Registrar la autorización médica",
-    "documentLabel": "Evaluación médica (opcional)",
-    "documentHint": "Una imagen o un PDF de la evaluación firmada. La autorización queda registrada igualmente.",
+    "evaluatedOnLabel": "Fecha de la evaluación médica",
+    "physicianNameLabel": "Médico",
+    "evidenceHint": "Su nombre, o adjunta la evaluación abajo. Una de las dos.",
+    "documentLabel": "Formulario de evaluación médica",
+    "documentHint": "Una imagen o un PDF del formulario firmado.",
     "recording": "Registrando…",
-    "confirm": "Un médico autorizó a este buceador"
+    "confirm": "Un médico autorizó a este buceador a bucear"
   },
   "waiverSend": {
     "sending": "Enviando…",

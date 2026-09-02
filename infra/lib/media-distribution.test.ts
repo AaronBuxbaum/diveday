@@ -8,14 +8,16 @@ import { InfraStack } from "./infra-stack";
  *
  * One flat bucket holds public marketing media (`courses/`, `recap/`,
  * `dive-sites/`, `shop-logos/`) *and* imported waiver scans and payment receipts
- * (`import-waivers/`, `import-receipts/`) -- medical and financial records read
- * only server-side by the export bundler. Keys are namespaced by content type,
+ * (`import-waivers/`, `import-receipts/`) and physicians' evaluations recorded
+ * against a medical referral (`medical-clearances/`, issue #1252) -- medical and
+ * financial records read only server-side. Keys are namespaced by content type,
  * never by shop, so the only thing making one unguessable is a random suffix.
  *
  * That is why the fix is a distribution with an allowlist of behaviours rather
  * than a public bucket: what these assertions protect is not "the CDN exists"
  * but "the CDN cannot serve the scans". A future prefix added to
- * `PUBLIC_MEDIA_PREFIXES` that happens to match `import-*` fails here.
+ * `PUBLIC_MEDIA_PREFIXES` that happens to match one of the private namespaces
+ * fails here.
  */
 function template() {
   const app = new cdk.App();
@@ -48,10 +50,13 @@ describe("media distribution", () => {
     expect(patterns).toEqual(["courses/*", "dive-sites/*", "recap/*", "shop-logos/*"]);
   });
 
-  it("has no behaviour that could reach an imported scan or receipt", () => {
+  it("has no behaviour that could reach an imported scan, a receipt, or a physician's evaluation", () => {
     const patterns = (mediaDistribution().CacheBehaviors ?? []).map((b) => b.PathPattern);
     for (const pattern of patterns) {
       expect(pattern.startsWith("import-")).toBe(false);
+      // The newest private namespace, and the most sensitive: a physician's
+      // evaluation of one named diver (issue #1252).
+      expect(pattern.startsWith("medical-clearances")).toBe(false);
       // A catch-all in the allowlist would publish the whole bucket.
       expect(pattern).not.toBe("*");
     }
@@ -59,7 +64,8 @@ describe("media distribution", () => {
 
   /**
    * The default behaviour is the one an unmatched path lands on, so it must not
-   * be the bucket. If it were, `import-waivers/x.pdf` would be served by the
+   * be the bucket. If it were, `import-waivers/x.pdf` or a physician's evaluation
+   * under `medical-clearances/` would be served by the
    * distribution the bucket policy trusts.
    */
   it("does not point its default behaviour at the media bucket", () => {

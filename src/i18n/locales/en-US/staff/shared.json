@@ -22,10 +22,13 @@
   },
   "medicalClearance": {
     "recordClearance": "Record physician clearance",
-    "documentLabel": "Physician evaluation (optional)",
-    "documentHint": "An image or PDF of the signed evaluation. The clearance is recorded either way.",
+    "evaluatedOnLabel": "Date of the physician's evaluation",
+    "physicianNameLabel": "Physician",
+    "evidenceHint": "Their name, or attach the evaluation below. One or the other.",
+    "documentLabel": "Physician's evaluation form",
+    "documentHint": "An image or PDF of the signed form.",
     "recording": "Recording…",
-    "confirm": "A physician cleared this diver"
+    "confirm": "A physician cleared this diver to dive"
   },
   "waiverSend": {
     "sending": "Sending…",

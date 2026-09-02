@@ -120,7 +120,32 @@ export function isCompletedWaiverCurrent(
   }
   const signedAt = record.signedAt ?? record.completedAt;
   if (!signedAt) return false;
+  // A cleared referral ages on **two** clocks and stands only while both run.
+  // The signature's is the ordinary one; the physician's evaluation has its own,
+  // because a shop that records a two-year-old letter today has not established
+  // anything for the next twelve months (issue #1252, `dive-domain-expert`
+  // review). Whichever expires first ends the release.
+  const evaluatedAt = clearanceEvaluatedAt(record);
+  if (evaluatedAt !== null && evaluatedAt + WAIVER_SIGNATURE_VALIDITY_MS <= now.getTime()) {
+    return false;
+  }
   return signedAt.getTime() + WAIVER_SIGNATURE_VALIDITY_MS > now.getTime();
+}
+
+/**
+ * When the physician evaluated the diver, as an instant, or null on a record
+ * nobody cleared.
+ *
+ * A calendar date has no clock in it, so it is read at UTC midnight — the same
+ * convention `src/lib/calendar-date.ts` uses everywhere a day has to become a
+ * point on a timeline. Half a day either way is immaterial against a 365-day
+ * window, and picking the shop's zone here would make a release expire at a
+ * different instant for the same paper depending on where it was filed.
+ */
+export function clearanceEvaluatedAt(record: WaiverRecord): number | null {
+  if (!record.medicalClearedAt || !record.medicalClearanceEvaluatedOn) return null;
+  const parsed = Date.parse(`${record.medicalClearanceEvaluatedOn}T00:00:00.000Z`);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 /**
@@ -268,9 +293,11 @@ export type MedicalWaiverMark = {
    * "imported" — trusted from the prior shop's own acceptance, never reviewed
    * here (ADR 20260724-import-waiver-acceptance). "cleared" — the questionnaire
    * referred this diver and a physician's evaluation was recorded against that
-   * record (issue #1252); its date is the clearance, not the signature, because
-   * that is the day the fitness question was actually answered. All four are a
-   * real review dated on the same 365-day clock; the source only changes wording.
+   * record (issue #1252); its date is **the evaluation**, because that is the
+   * day the fitness question was actually answered and the day its own clock
+   * starts. The first three run one 365-day clock from the signature; a cleared
+   * record runs two and stands while both do (`isCompletedWaiverCurrent`), so
+   * the date shown is the one that expires first in practice.
    */
   source: "digital" | "paper" | "imported" | "cleared";
 };
@@ -291,7 +318,18 @@ export function medicalWaiverMark(record: WaiverRecord | null): MedicalWaiverMar
   // A referral a physician cleared is the strongest medical evidence a shop
   // ever holds, and staff reading the record need to see that it is not an
   // ordinary self-declaration — so it is its own source rather than "digital".
-  if (record.medicalClearedAt) return { at: record.medicalClearedAt, source: "cleared" };
+  //
+  // Dated by the **evaluation**, never by the moment a staffer typed it in: the
+  // mark exists for spotting a statement drifting toward a year stale, and a
+  // data-entry stamp would show the crew a date ten months fresher than the
+  // clock the release actually ages on.
+  if (record.medicalClearedAt) {
+    const evaluatedAt = clearanceEvaluatedAt(record);
+    return {
+      at: evaluatedAt === null ? record.medicalClearedAt : new Date(evaluatedAt),
+      source: "cleared",
+    };
+  }
   if (record.signatureMethod === "imported") return { at, source: "imported" };
   if (record.medicalAnswers) return { at, source: "digital" };
   if (record.signatureMethod === "in_person_attested") return { at, source: "paper" };

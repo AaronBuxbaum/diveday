@@ -831,18 +831,32 @@ export function RosterSection({
             ) : (
               <p className="mt-1">{t("trips.roster.medicalFollowUpDescription")}</p>
             )}
-            {currentWaiver ? (
+            <div className="flex flex-wrap items-center gap-x-4">
+              {currentWaiver ? (
+                <Link
+                  // The whole waiver surface is one page now (ADR
+                  // 20260827-people-not-lists): `?record=` pins the row first
+                  // inside its own day group, and the fragment is what opens it
+                  // and scrolls past the release editor.
+                  href={`/shop/${shopSlug}/waivers?record=${currentWaiver.id}#waiver-record-${currentWaiver.id}`}
+                  className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline"
+                >
+                  {t("trips.roster.viewSignedRecord")}
+                </Link>
+              ) : null}
+              {/* The way out, which this panel did not have. A diver hands the
+                  doctor's letter to whoever is at the rail, and until #1252
+                  every dock surface pointed them at a page where the hold
+                  could be read and not resolved. The act itself lives on the
+                  diver's record, because a clearance is a fact about the
+                  person rather than about Saturday's boat. */}
               <Link
-                // The whole waiver surface is one page now (ADR
-                // 20260827-people-not-lists): `?record=` pins the row first
-                // inside its own day group, and the fragment is what opens it
-                // and scrolls past the release editor.
-                href={`/shop/${shopSlug}/waivers?record=${currentWaiver.id}#waiver-record-${currentWaiver.id}`}
+                href={`/shop/${shopSlug}/divers/${person.id}#waiver`}
                 className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline"
               >
-                {t("trips.roster.viewSignedRecord")}
+                {t("trips.roster.recordPhysicianClearance")}
               </Link>
-            ) : null}
+            </div>
           </div>
         ) : null}
 

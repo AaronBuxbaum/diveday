@@ -12,6 +12,9 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
  */
 export type MedicalClearanceCopy = {
   recordClearance: string;
+  evaluatedOnLabel: string;
+  physicianNameLabel: string;
+  evidenceHint: string;
   documentLabel: string;
   documentHint: string;
   recording: string;
@@ -22,6 +25,9 @@ export type MedicalClearanceCopy = {
 export function medicalClearanceCopy(t: StaffTranslator): MedicalClearanceCopy {
   return {
     recordClearance: t("shared.medicalClearance.recordClearance"),
+    evaluatedOnLabel: t("shared.medicalClearance.evaluatedOnLabel"),
+    physicianNameLabel: t("shared.medicalClearance.physicianNameLabel"),
+    evidenceHint: t("shared.medicalClearance.evidenceHint"),
     documentLabel: t("shared.medicalClearance.documentLabel"),
     documentHint: t("shared.medicalClearance.documentHint"),
     recording: t("shared.medicalClearance.recording"),

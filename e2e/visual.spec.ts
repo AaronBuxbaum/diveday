@@ -2960,6 +2960,32 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The form that ends a medical hold** (issue #1252).
+       *
+       * The one readiness blocker a shop cannot clear from the boat, and until
+       * this landed there was no form to photograph at all — the Waiver group
+       * rendered nothing for a hold. It asks for the physician's evaluation
+       * date and either their name or the form itself, so what is on screen is
+       * three fields a staffer fills while somebody stands at the desk holding
+       * a letter. The demo's Morgan Vale carries the synthetic hold.
+       */
+      test(`the physician-clearance form renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/divers?q=Morgan");
+        await page.getByRole("link", { name: "Morgan Vale" }).click();
+        await page.getByRole("heading", { level: 1, name: "Morgan Vale" }).waitFor();
+        await page.getByRole("button", { name: "Record physician clearance" }).click();
+        // The submit is what the disclosure reveals, so waiting on it is
+        // waiting on the panel being open rather than on a duration.
+        await page
+          .getByRole("button", { name: "A physician cleared this diver to dive" })
+          .waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "diver-medical-clearance-form", scheme);
+      });
+
+      /**
        * The explicit duplicate-resolution surface: create a second record for
        * a seeded diver, then photograph the owner/manager's survivor choice.
        * This keeps the warning, match reasons, radio controls, and one primary

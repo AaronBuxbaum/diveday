@@ -15,6 +15,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
+import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { flaggedMedicalPrompts, validateMedicalAnswers } from "@/lib/medical";
 import { operationalWindow } from "@/lib/operational-window";
@@ -26,6 +27,7 @@ import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import {
   DEFAULT_WAIVER_TITLE,
   isCompletedWaiverCurrent,
+  isUnresolvedMedicalHold,
   needsMedicalReview,
   WAIVER_LINK_TTL_MS,
   WAIVER_SIGNATURE_VALIDITY_MS,
@@ -647,7 +649,7 @@ export async function issueWaiverRequest(
       ? current.some((record) => record.status !== "pending")
       : current.some(
           (record) =>
-            record.status === "medical_review" ||
+            isUnresolvedMedicalHold(record) ||
             isCompletedWaiverCurrent(record, template.materialGeneration, now),
         );
     if (alreadyStanding) {
@@ -1558,7 +1560,7 @@ async function standingWaiverRecord(
     );
   return held.find(
     (record) =>
-      record.status === "medical_review" ||
+      isUnresolvedMedicalHold(record) ||
       isCompletedWaiverCurrent(record, input.templateGeneration, input.now),
   );
 }
@@ -1712,7 +1714,63 @@ export async function recordInPersonWaiver(
  */
 export type MedicalClearanceOutcome =
   | { ok: true; recordId: string; alreadyCleared: boolean }
-  | { ok: false; reason: "staff_not_found" | "no_medical_hold" };
+  | {
+      ok: false;
+      reason:
+        | "staff_not_found"
+        | "no_medical_hold"
+        /** No evaluation date, or one that is not a calendar date. */
+        | "evaluation_date_required"
+        /**
+         * The letter predates the answers it is supposed to clear. A physician
+         * evaluation written in March cannot clear a stent placed in June, and
+         * a shop handed a stale letter should be told so rather than have it
+         * recorded as a fresh clearance (`dive-domain-expert` review, #1252).
+         */
+        | "evaluation_predates_disclosure"
+        /** An evaluation dated after today is a typo, not a clearance. */
+        | "evaluation_in_future"
+        /**
+         * Neither the evaluation nor the physician's name. Without one of them
+         * the row records only that a member of the shop's own staff pressed a
+         * button, which is the hearsay the paper-waiver attestation's checkbox
+         * exists to avoid.
+         */
+        | "evidence_required";
+    };
+
+/**
+ * Whether this diver has a medical hold nobody has cleared, at this shop.
+ *
+ * A cheap read the surface runs **before** it stores a physician's evaluation.
+ * Without it, uploading first and refusing second left the most sensitive file
+ * the product holds sitting in the bucket with no row pointing at it — reachable
+ * by neither the media-deletion ledger nor `anonymizeDiver`, which walks rows
+ * (security review H2). The honest-mistake path was the bad one: a staffer opens
+ * the wrong diver's record, uploads a real evaluation, and is told there is
+ * nothing to clear.
+ */
+export async function hasLiveMedicalHold(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: waiverRecords.id })
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        eq(waiverRecords.personId, personId),
+        eq(waiverRecords.status, "medical_review"),
+        isNull(waiverRecords.supersededAt),
+        isNull(waiverRecords.anonymizedAt),
+        isNull(waiverRecords.medicalClearedAt),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
+}
 
 /**
  * **A staff member records that a physician cleared this diver to dive.**
@@ -1751,12 +1809,27 @@ export async function recordMedicalClearance(
     shopId: string;
     personId: string;
     recordedByPersonId: string;
+    /** The day the physician evaluated the diver, as printed on the form. */
+    evaluatedOn: string;
+    /** The clinician who signed it. Required unless the evaluation itself is attached. */
+    physicianName?: string | null;
     /** The physician's evaluation, already re-stored through `storeMedicalClearanceDocument`. */
     documentUrl?: string | null;
     now?: Date;
   },
 ): Promise<MedicalClearanceOutcome> {
   const now = input.now ?? nowDate();
+  const physicianName = input.physicianName?.trim() || null;
+  const documentUrl = input.documentUrl ?? null;
+  if (!isValidCalendarDate(input.evaluatedOn)) {
+    return { ok: false, reason: "evaluation_date_required" };
+  }
+  if (!documentUrl && !physicianName) return { ok: false, reason: "evidence_required" };
+  // The shop's own day, not the host's: on a UTC box a Key Largo evening is
+  // already tomorrow, and a form dated today would read as the future.
+  if (input.evaluatedOn > calendarDateInTimezone(now, "UTC")) {
+    return { ok: false, reason: "evaluation_in_future" };
+  }
   return db.transaction(async (tx): Promise<MedicalClearanceOutcome> => {
     const clearedBy = await activeStaffAttestorId(tx, input.shopId, input.recordedByPersonId);
     if (!clearedBy) return { ok: false, reason: "staff_not_found" };
@@ -1783,12 +1856,21 @@ export async function recordMedicalClearance(
         : { ok: false, reason: "no_medical_hold" };
     }
 
+    // The evaluation must post-date the answers it clears. Compared as calendar
+    // dates in UTC, matching how the column is read back everywhere else.
+    const disclosedOn = open.signedAt ?? open.completedAt ?? open.createdAt;
+    if (input.evaluatedOn < calendarDateInTimezone(disclosedOn, "UTC")) {
+      return { ok: false, reason: "evaluation_predates_disclosure" };
+    }
+
     const [cleared] = await tx
       .update(waiverRecords)
       .set({
         medicalClearedAt: now,
         medicalClearedByPersonId: clearedBy,
-        medicalClearanceDocumentUrl: input.documentUrl ?? null,
+        medicalClearanceEvaluatedOn: input.evaluatedOn,
+        medicalClearancePhysicianName: physicianName,
+        medicalClearanceDocumentUrl: documentUrl,
       })
       .where(and(eq(waiverRecords.id, open.id), isNull(waiverRecords.medicalClearedAt)))
       .returning({ id: waiverRecords.id });

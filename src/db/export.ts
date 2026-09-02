@@ -2101,6 +2101,17 @@ export async function loadShopExportBundleInput(
             "completed_at",
             "medical_review_required",
             "medical_answers",
+            // The physician clearance that ends a medical hold (issue #1252).
+            // Its *document* is deliberately not here — see EXCLUDED_COLUMNS in
+            // src/db/export.test.ts — but the fact and its accountable staff
+            // member are the shop's own evidence, and a restore that lost them
+            // would re-block every cleared diver with no record of who cleared
+            // them or when the physician evaluated them.
+            "medical_cleared_at",
+            "medical_cleared_by_person_id",
+            "medical_cleared_by_name",
+            "medical_clearance_evaluated_on",
+            "medical_clearance_physician_name",
             "integrity_hash",
             "integrity_version",
             "superseded_at",
@@ -2136,6 +2147,11 @@ export async function loadShopExportBundleInput(
             row.completedAt,
             row.medicalReviewRequired,
             row.medicalAnswers ? JSON.stringify(row.medicalAnswers) : null,
+            row.medicalClearedAt,
+            row.medicalClearedByPersonId,
+            row.medicalClearedByPersonId ? personName.get(row.medicalClearedByPersonId) : null,
+            row.medicalClearanceEvaluatedOn,
+            row.medicalClearancePhysicianName,
             row.integrityHash,
             row.integrityVersion,
             row.supersededAt,
@@ -3932,6 +3948,14 @@ export async function loadDiverExportBundleInput(
             "signed_at",
             "completed_at",
             "medical_review_required",
+            // The clearance is the diver's own fact — a physician evaluated
+            // them and the shop recorded it — so it belongs in their bundle
+            // even though the answers behind it do not. The staff member who
+            // recorded it is named for the same reason `recorded_by_name` is.
+            "medical_cleared_at",
+            "medical_cleared_by_name",
+            "medical_clearance_evaluated_on",
+            "medical_clearance_physician_name",
             "superseded_at",
             "expires_at",
             "created_at",
@@ -3951,6 +3975,10 @@ export async function loadDiverExportBundleInput(
             row.signedAt,
             row.completedAt,
             row.medicalReviewRequired,
+            row.medicalClearedAt,
+            row.medicalClearedByPersonId ? personName.get(row.medicalClearedByPersonId) : null,
+            row.medicalClearanceEvaluatedOn,
+            row.medicalClearancePhysicianName,
             row.supersededAt,
             row.expiresAt,
             row.createdAt,

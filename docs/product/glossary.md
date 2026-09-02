@@ -237,7 +237,8 @@ new domain concept, define it here in the same PR.
 - **Aboard blocker kind** — what a blocker is asking of the crew once the diver is *already on the
   boat*, which is not the same question as which requirement family it belongs to. Four kinds,
   worst first: **medical** (a review hold — a doctor must confirm in writing, so nobody aboard can
-  clear it), **unknown** (nothing on file that clears them: an unsigned, unsent or expired waiver
+  clear it from the boat; the shop records the **physician clearance** on the diver's own record when
+  the letter arrives), **unknown** (nothing on file that clears them: an unsigned, unsent or expired waiver
   is *no medical declaration at all*, and so are an unconfirmed identity, a failed readiness
   lookup, or a trip with no requirements configured), **certification** (a card missing,
   unverified, self-declared or too shallow, a specialty absent, or a diver under the course's
@@ -958,7 +959,8 @@ new domain concept, define it here in the same PR.
   statement**. DiveDay keeps one versioned release per shop: a *changed* release saves a new immutable
   version and new links snapshot the current one. The exact template version is snapshotted into each
   issued record; a signed record is immutable and a replacement link creates a new record. Some
-  answers on the medical form require a physician sign-off — that's a blocking state, not a checkbox.
+  answers on the medical form require a physician sign-off — that's a blocking state, not a checkbox,
+  and the only thing that ends it is a **physician clearance** recorded against that record.
 
   **Publishing a version invalidates every standing signature at the shop, at once.** A signature is
   held against the version it was signed on, so a new version leaves every booked diver on every
@@ -987,8 +989,25 @@ new domain concept, define it here in the same PR.
 - **Sign once** — a diver signs the release once, not every trip. A **completed** signature is held
   against the diver (not just the booking it was signed on) and satisfies the waiver gate on any of
   their bookings while it stays **current**: signed against the shop's current release version and
-  within a year of signing. A medical-review record never carries; a stale or old-version signature
-  falls back to "send a fresh link." See [20260721-waiver-sign-once](../architecture/decisions/20260721-waiver-sign-once.md).
+  within a year of signing. A medical-review record carries only once a **physician clearance** is
+  recorded against it — until then it never does — and a stale or old-version signature falls back to
+  "send a fresh link." See [20260721-waiver-sign-once](../architecture/decisions/20260721-waiver-sign-once.md).
+- **Physician clearance** — the shop recording that a physician evaluated a diver the medical
+  questionnaire had **referred**, and cleared them to dive. It is the only thing that ends a
+  `medical_review` hold, and it is a separate act from the paper attestation, whose staff-facing
+  words are the opposite ("no answer needs physician sign-off"). DiveDay records the shop's act; it
+  never grants the clearance
+  ([20260805-rstc-medical-questionnaire](../architecture/decisions/20260805-rstc-medical-questionnaire.md)).
+
+  Three properties worth knowing. It is recorded against **one waiver record** — the one carrying
+  the answers that were referred — so a later disclosure signs a new record, parks again, and needs
+  its own clearance; "cleared for this diver forever" is not a state that exists. It carries the
+  **physician's evaluation date**, which is not the day a staffer typed it in: the release then
+  stands only while *both* clocks run, a year from the signature and a year from the evaluation,
+  and an evaluation predating the answers it would clear is refused. And it records **evidence** —
+  the evaluation itself, or the clinician's name — because without one the row says only that a
+  member of the shop's own staff pressed a button. Any live staff member may record one, and the
+  row names who did. Issue #1252.
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
   paper — a copy on the boat or on shore — that the app never saw signed. It creates the same
   immutable completed record, marked as staff-attested and stamped with the staff member who recorded

@@ -178,6 +178,28 @@ const NOTICE_KEYS: Record<
     tone: "danger",
     key: "divers.notices.medicalClearanceDocumentFailed",
   },
+  // The three that say the evaluation itself is wrong. Each names the box to
+  // correct rather than the act that failed, and the form comes back open.
+  "medical-clearance-date-required": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.medicalClearanceDateRequired",
+  },
+  "medical-clearance-date-too-early": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.medicalClearanceDateTooEarly",
+  },
+  "medical-clearance-date-in-future": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.medicalClearanceDateInFuture",
+  },
+  "medical-clearance-evidence-required": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.medicalClearanceEvidenceRequired",
+  },
 
   // Rental fit.
   "profile-saved": { form: "fit", tone: "success", key: "divers.notices.profileSaved" },

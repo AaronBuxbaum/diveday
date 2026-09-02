@@ -35,6 +35,7 @@ import {
   getEmergencyContactForBooking,
   getSignedWaiverRecordForShop,
   getWaiverForToken,
+  hasLiveMedicalHold,
   issueWaiverRequest,
   listSignedWaiversByPerson,
   listWaiverIntegrityAudit,
@@ -1796,6 +1797,9 @@ describe("saving the waiver template", () => {
  * refuses, it refuses closed.
  */
 describe("physician medical clearance", () => {
+  /** After the referral was signed (`now`), and not in the future. */
+  const EVALUATED_ON = "2026-07-18";
+
   async function heldContext() {
     const context = await waiverContext();
     const { db, shop, booking, person } = context;
@@ -1812,9 +1816,7 @@ describe("physician medical clearance", () => {
   }
 
   async function staffPerson(db: Awaited<ReturnType<typeof waiverContext>>["db"], shopId: string) {
-    const staff = (await listStaff(db, shopId)).find((row) =>
-      row.roles.some((role) => STAFF_ROLES.includes(role)),
-    );
+    const [staff] = await listStaff(db, shopId);
     if (!staff) throw new Error("demo staff missing");
     return staff.person;
   }
@@ -1829,6 +1831,8 @@ describe("physician medical clearance", () => {
       shopId: shop.id,
       personId: booking.personId,
       recordedByPersonId: staff.id,
+      evaluatedOn: EVALUATED_ON,
+      physicianName: "Dr. Imani Reyes",
       now: clearedAt,
     });
     expect(outcome).toMatchObject({ ok: true, alreadyCleared: false });
@@ -1860,6 +1864,8 @@ describe("physician medical clearance", () => {
       shopId: shop.id,
       personId: booking.personId,
       recordedByPersonId: staff.id,
+      evaluatedOn: EVALUATED_ON,
+      physicianName: "Dr. Imani Reyes",
       now,
     });
     const [record] = await db
@@ -1877,6 +1883,7 @@ describe("physician medical clearance", () => {
       shopId: shop.id,
       personId: booking.personId,
       recordedByPersonId: staff.id,
+      evaluatedOn: EVALUATED_ON,
       documentUrl: "https://media.example.com/medical-clearances/abc.pdf",
       now,
     });
@@ -1898,12 +1905,16 @@ describe("physician medical clearance", () => {
       shopId: shop.id,
       personId: booking.personId,
       recordedByPersonId: staff.id,
+      evaluatedOn: EVALUATED_ON,
+      physicianName: "Dr. Imani Reyes",
       now: first,
     });
     const second = await recordMedicalClearance(db, {
       shopId: shop.id,
       personId: booking.personId,
       recordedByPersonId: staff.id,
+      evaluatedOn: EVALUATED_ON,
+      physicianName: "Dr. Imani Reyes",
       now: new Date(now.getTime() + 120_000),
     });
     expect(second).toMatchObject({ ok: true, alreadyCleared: true });
@@ -1931,6 +1942,8 @@ describe("physician medical clearance", () => {
       shopId: shop.id,
       personId: booking.personId,
       recordedByPersonId: staff.id,
+      evaluatedOn: EVALUATED_ON,
+      physicianName: "Dr. Imani Reyes",
       now,
     });
     expect(outcome).toEqual({ ok: false, reason: "no_medical_hold" });
@@ -1946,6 +1959,8 @@ describe("physician medical clearance", () => {
       shopId: shop.id,
       personId: booking.personId,
       recordedByPersonId: outsider.id,
+      evaluatedOn: EVALUATED_ON,
+      physicianName: "Dr. Imani Reyes",
       now,
     });
     expect(outcome).toEqual({ ok: false, reason: "staff_not_found" });
@@ -1964,10 +1979,123 @@ describe("physician medical clearance", () => {
       shopId: otherShop.id,
       personId: booking.personId,
       recordedByPersonId: staff.id,
+      evaluatedOn: EVALUATED_ON,
+      physicianName: "Dr. Imani Reyes",
       now,
     });
     // Not even far enough to look at the record: the actor is not that shop's staff.
     expect(outcome).toEqual({ ok: false, reason: "staff_not_found" });
+  });
+
+  it("refuses a clearance with nothing behind it — a button press is not evidence", async () => {
+    const { db, shop, booking, staff } = await heldContext();
+    expect(
+      await recordMedicalClearance(db, {
+        shopId: shop.id,
+        personId: booking.personId,
+        recordedByPersonId: staff.id,
+        evaluatedOn: EVALUATED_ON,
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "evidence_required" });
+    expect(
+      await recordMedicalClearance(db, {
+        shopId: shop.id,
+        personId: booking.personId,
+        recordedByPersonId: staff.id,
+        evaluatedOn: "",
+        physicianName: "Dr. Imani Reyes",
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "evaluation_date_required" });
+  });
+
+  it("refuses an evaluation that predates the answers it would clear", async () => {
+    // A letter written in March cannot clear a stent placed in June. The
+    // referral here was signed on 2026-07-18.
+    const { db, shop, booking, staff } = await heldContext();
+    const outcome = await recordMedicalClearance(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      evaluatedOn: "2026-03-01",
+      physicianName: "Dr. Imani Reyes",
+      now,
+    });
+    expect(outcome).toEqual({ ok: false, reason: "evaluation_predates_disclosure" });
+
+    const after = await getBookingReadiness(db, shop.id, booking.id);
+    expect(after?.blockers).toContainEqual(expect.objectContaining({ code: "medical_review" }));
+  });
+
+  it("refuses an evaluation dated after today — that is a typo, not a clearance", async () => {
+    const { db, shop, booking, staff } = await heldContext();
+    expect(
+      await recordMedicalClearance(db, {
+        shopId: shop.id,
+        personId: booking.personId,
+        recordedByPersonId: staff.id,
+        evaluatedOn: "2027-01-01",
+        physicianName: "Dr. Imani Reyes",
+        now,
+      }),
+    ).toEqual({ ok: false, reason: "evaluation_in_future" });
+  });
+
+  it("never clears a diver in another shop, even for that shop's own live staff", async () => {
+    // The sibling test below stops at `staff_not_found`, which is honest but
+    // proves nothing about the query's own shop condition. This one gets a real
+    // live staff member of shop B past that gate and still finds nothing.
+    const { db, shop, booking } = await heldContext();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other", slug: `other-${randomUUID()}`, timezone: "America/New_York" })
+      .returning();
+    const [otherStaff] = await db
+      .insert(people)
+      .values({
+        shopId: otherShop.id,
+        fullName: "Other Owner",
+        email: `other-owner-${randomUUID()}@x.test`,
+      })
+      .returning();
+    await db.insert(personRoles).values({ personId: otherStaff.id, role: "owner" });
+    await db.insert(userAccounts).values({
+      personId: otherStaff.id,
+      email: `other-owner-${randomUUID()}@x.test`,
+      hashedPassword: "x",
+      status: "active",
+    });
+
+    const outcome = await recordMedicalClearance(db, {
+      shopId: otherShop.id,
+      personId: booking.personId,
+      recordedByPersonId: otherStaff.id,
+      evaluatedOn: EVALUATED_ON,
+      physicianName: "Dr. Imani Reyes",
+      now,
+    });
+    expect(outcome).toEqual({ ok: false, reason: "no_medical_hold" });
+
+    const after = await getBookingReadiness(db, shop.id, booking.id);
+    expect(after?.blockers).toContainEqual(expect.objectContaining({ code: "medical_review" }));
+  });
+
+  it("answers the cheap pre-read the surface runs before it stores an evaluation", async () => {
+    // The upload happens only when this says yes, so that a staffer who opens
+    // the wrong diver's record never puts a real physician's evaluation into
+    // the bucket with no row pointing at it (security review H2).
+    const { db, shop, booking, staff } = await heldContext();
+    expect(await hasLiveMedicalHold(db, shop.id, booking.personId)).toBe(true);
+    await recordMedicalClearance(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      evaluatedOn: EVALUATED_ON,
+      physicianName: "Dr. Imani Reyes",
+      now,
+    });
+    expect(await hasLiveMedicalHold(db, shop.id, booking.personId)).toBe(false);
   });
 
   it("destroys the physician's evaluation when the diver is erased, and keeps the fact", async () => {
@@ -1976,6 +2104,7 @@ describe("physician medical clearance", () => {
       shopId: shop.id,
       personId: booking.personId,
       recordedByPersonId: staff.id,
+      evaluatedOn: EVALUATED_ON,
       documentUrl: "https://media.example.com/medical-clearances/abc.pdf",
       now,
     });
@@ -1983,7 +2112,6 @@ describe("physician medical clearance", () => {
       shopId: shop.id,
       personId: booking.personId,
       actorPersonId: staff.id,
-      now,
     });
     const [record] = await db
       .select()

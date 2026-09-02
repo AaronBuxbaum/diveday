@@ -87,14 +87,15 @@ const MEDIA_UPLOADER_USER_NAME = "diveday-media-uploader";
  *
  * Mirrors the four public `keyPrefix` values in `src/lib/storage/index.ts`
  * (`storeCourseImage`, `storeRecapImage`, `storeDiveSiteImage`,
- * `storeShopLogo`). The two it deliberately omits -- `import-waivers` and
- * `import-receipts` -- sit in the same bucket and hold imported medical and
- * financial records; they are read server-side by the export bundler and must
- * have no route out of the edge (issue #1013).
+ * `storeShopLogo`). The three it deliberately omits -- `import-waivers`,
+ * `import-receipts` and `medical-clearances` -- sit in the same bucket and hold
+ * imported medical and financial records, and physicians' evaluations of named
+ * divers (issue #1252). They are read server-side only and must have no route
+ * out of the edge (issue #1013).
  *
- * Adding a prefix here publishes it. `infra/test/infra-stack.test.ts` asserts
- * the import ones are absent, so growing this list past what the app actually
- * uploads publicly is a failing test rather than a quiet deploy.
+ * Adding a prefix here publishes it. `infra/lib/media-distribution.test.ts`
+ * asserts all three private ones are absent, so growing this list past what the
+ * app actually uploads publicly is a failing test rather than a quiet deploy.
  */
 const PUBLIC_MEDIA_PREFIXES = ["courses", "recap", "dive-sites", "shop-logos"] as const;
 const LOG_SHIPPER_USER_NAME = "diveday-cloudwatch-shipper";

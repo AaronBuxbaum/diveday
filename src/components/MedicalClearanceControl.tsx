@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { MedicalClearanceCopy } from "@/components/medical-clearance-copy";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { Field } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { WaiverActionIcon } from "@/components/WaiverActionIcon";
 
 /**
@@ -21,12 +21,18 @@ import { WaiverActionIcon } from "@/components/WaiverActionIcon";
  * `<details>`, and `defaultOpen` so a refusal comes back with the form still
  * standing instead of collapsed over its own error.
  *
- * **No attestation checkbox.** The paper control has one because a staffer is
- * asserting something about a form the app never saw; here the assertion *is*
- * the act, and the button says it. A second box to tick would be ceremony over
- * a decision already made — and the accountable staff member is recorded either
- * way. The document is optional because a shop that files the paper in a
- * cabinet still needs the fact on the record.
+ * **No attestation checkbox, but real evidence.** The paper control has a
+ * checkbox because a staffer is asserting something about a form the app never
+ * saw. Here the assertion *is* the act — so instead of a box to tick, the form
+ * asks for what a claims adjuster will ask for: the day the physician evaluated
+ * the diver, and either their evaluation or their name. A `dive-domain-expert`
+ * review put it plainly: without one of those, the record says only that one of
+ * the shop's own staff pressed a button, which is the hearsay the checkbox next
+ * door exists to avoid.
+ *
+ * **The evaluation date is the physician's, not the shop's.** It is what the
+ * release ages on alongside the signature, and it is what refuses a "fit to
+ * dive" letter written before the disclosure it is supposed to answer.
  */
 export function MedicalClearanceControl({
   action,
@@ -34,10 +40,18 @@ export function MedicalClearanceControl({
   className = "mt-2",
   variant = "secondary",
   defaultOpen = false,
+  today,
 }: {
   // i18n-exempt: type annotation, not copy.
   action: (formData: FormData) => void | Promise<void>;
   copy: MedicalClearanceCopy;
+  /**
+   * The shop's own today, as an ISO calendar date, so the date box cannot
+   * offer tomorrow. Passed in rather than read here: a Client Component reading
+   * `new Date()` would use the *reader's* zone, and a Key Largo evening is
+   * already tomorrow in UTC.
+   */
+  today: string;
   className?: string;
   variant?: "link" | "secondary" | "ghost";
   /** Open on mount — for a refusal landing back on the form that produced it. */
@@ -73,15 +87,41 @@ export function MedicalClearanceControl({
       encType="multipart/form-data"
       className={`${className} w-full max-w-md rounded-xl border border-border bg-surface-sunken p-4`}
     >
-      <Field label={copy.documentLabel} hint={copy.documentHint} htmlFor="medicalClearanceDocument">
-        <input
-          id="medicalClearanceDocument"
-          type="file"
-          name="medicalClearanceDocument"
-          accept="image/*,application/pdf"
-          className="text-sm"
-        />
-      </Field>
+      <FieldGrid columns={1}>
+        <Field label={copy.evaluatedOnLabel} htmlFor="evaluatedOn">
+          <input
+            id="evaluatedOn"
+            type="date"
+            name="evaluatedOn"
+            required
+            max={today}
+            className={controlClass}
+          />
+        </Field>
+        <Field label={copy.physicianNameLabel} hint={copy.evidenceHint} htmlFor="physicianName">
+          <input
+            id="physicianName"
+            type="text"
+            name="physicianName"
+            maxLength={120}
+            autoComplete="off"
+            className={controlClass}
+          />
+        </Field>
+        <Field
+          label={copy.documentLabel}
+          hint={copy.documentHint}
+          htmlFor="medicalClearanceDocument"
+        >
+          <input
+            id="medicalClearanceDocument"
+            type="file"
+            name="medicalClearanceDocument"
+            accept="image/*,application/pdf"
+            className="text-sm"
+          />
+        </Field>
+      </FieldGrid>
       <div className="mt-4 flex flex-wrap gap-2">
         <SubmitButton
           pendingLabel={copy.recording}
