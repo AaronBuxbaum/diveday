@@ -69,6 +69,9 @@ export async function buildAfterStateProps(input: {
     when: formatShortDate(trip.startsAt, locale, shop.timezone),
     diverName: data.diverName,
     sites: data.sites,
+    // Read once in `getRecapPageData`, beside the plan it is compared against,
+    // so both routes rendering this surface get the same answer.
+    diveRecord: data.diveRecord,
     shoutout: data.shoutout,
     photos: data.photos,
     maxPhotos: MAX_RECAP_PHOTOS_PER_BOOKING,

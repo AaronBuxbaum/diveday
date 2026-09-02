@@ -5,6 +5,7 @@ import type { BrandDisplayFontCode } from "@/lib/brand";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
+import { compareDiveRecord, type DiveRecordComparison } from "@/lib/dive-record";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import {
   type Notification,
@@ -28,6 +29,7 @@ import { loadActiveStaffRoles } from "./authz";
 import { getBoatForHistory } from "./boats";
 import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
+import { listExecutedDives } from "./executed-dives";
 import {
   notificationProviderForDb,
   recordNotificationDelivery,
@@ -127,6 +129,15 @@ export type RecapPageData = {
   };
   diverName: string;
   sites: RecapSite[];
+  /**
+   * Where the day went against where it meant to go, or **null** when it went
+   * to plan — which is the ordinary answer and renders nothing at all.
+   *
+   * `sites` above is the published plan and stays that way; this is the only
+   * thing on the page that has read `executed_dives`. See
+   * `src/lib/dive-record.ts` for what counts as a difference (issue #1191).
+   */
+  diveRecord: DiveRecordComparison | null;
   /** The booking this recap belongs to — the scope an uploaded photo attaches to. */
   bookingId: string;
   /** A short crew-authored note for this trip, or null when the crew wrote none. */
@@ -236,51 +247,64 @@ export async function getRecapPageData(
   // shape of a blow-out, not an inconsistency to tolerate.
   if (trip.status !== "scheduled") return null;
 
-  const [dives, boat, crewMap, nativeBookings, priorVisitRows, photos, stripeAccount, latestTip] =
-    await Promise.all([
-      listTripDives(db, row.shopId, row.tripId),
-      trip.boatId ? getBoatForHistory(db, row.shopId, trip.boatId) : Promise.resolve(null),
-      tripCrewByTrip(db, row.shopId, [row.tripId]),
-      db
-        .select({
-          id: bookings.id,
-          startsAt: trips.startsAt,
-        })
-        .from(bookings)
-        .innerJoin(trips, eq(trips.id, bookings.tripId))
-        .where(
-          and(
-            eq(bookings.shopId, row.shopId),
-            eq(bookings.personId, row.personId),
-            ne(bookings.status, "cancelled"),
-            ne(bookings.status, "no_show"),
-            // **A blown-out departure is not a dive day.** A cancellation
-            // leaves its bookings active by design, so without this the count
-            // includes days nobody dived — and the imported half of the same
-            // merge already refuses exactly that (`priorVisitStanding(...) !==
-            // "did_not_happen"`, below). `visitMilestone` is exact equality on
-            // {1, 10, 25, 50, 100}, so one phantom day does not blur a
-            // milestone, it skips it permanently: a first-timer whose first
-            // trip blew out and who rebooked would reach their real first dive
-            // counted as their second, and never see the "First dive day"
-            // stamp at all.
-            eq(trips.status, "scheduled"),
-            liveTrip(),
-            lte(trips.startsAt, trip.startsAt),
-          ),
+  const [
+    dives,
+    livedDives,
+    boat,
+    crewMap,
+    nativeBookings,
+    priorVisitRows,
+    photos,
+    stripeAccount,
+    latestTip,
+  ] = await Promise.all([
+    listTripDives(db, row.shopId, row.tripId),
+    // The only read of `executed_dives` on this page. `listExecutedDives`
+    // already drops soft-deleted rows and non-live trips, which is what keeps
+    // a deleted dive off a diver's keepsake.
+    listExecutedDives(db, row.shopId, row.tripId),
+    trip.boatId ? getBoatForHistory(db, row.shopId, trip.boatId) : Promise.resolve(null),
+    tripCrewByTrip(db, row.shopId, [row.tripId]),
+    db
+      .select({
+        id: bookings.id,
+        startsAt: trips.startsAt,
+      })
+      .from(bookings)
+      .innerJoin(trips, eq(trips.id, bookings.tripId))
+      .where(
+        and(
+          eq(bookings.shopId, row.shopId),
+          eq(bookings.personId, row.personId),
+          ne(bookings.status, "cancelled"),
+          ne(bookings.status, "no_show"),
+          // **A blown-out departure is not a dive day.** A cancellation
+          // leaves its bookings active by design, so without this the count
+          // includes days nobody dived — and the imported half of the same
+          // merge already refuses exactly that (`priorVisitStanding(...) !==
+          // "did_not_happen"`, below). `visitMilestone` is exact equality on
+          // {1, 10, 25, 50, 100}, so one phantom day does not blur a
+          // milestone, it skips it permanently: a first-timer whose first
+          // trip blew out and who rebooked would reach their real first dive
+          // counted as their second, and never see the "First dive day"
+          // stamp at all.
+          eq(trips.status, "scheduled"),
+          liveTrip(),
+          lte(trips.startsAt, trip.startsAt),
         ),
-      db
-        .select({
-          id: priorVisits.id,
-          visitedOn: priorVisits.visitedOn,
-          statusLabel: priorVisits.statusLabel,
-        })
-        .from(priorVisits)
-        .where(and(eq(priorVisits.shopId, row.shopId), eq(priorVisits.personId, row.personId))),
-      listRecapPhotosForBooking(db, bookingId, row.tripId),
-      getShopStripeAccount(db, row.shopId),
-      getLatestTipForBooking(db, row.shopId, bookingId),
-    ]);
+      ),
+    db
+      .select({
+        id: priorVisits.id,
+        visitedOn: priorVisits.visitedOn,
+        statusLabel: priorVisits.statusLabel,
+      })
+      .from(priorVisits)
+      .where(and(eq(priorVisits.shopId, row.shopId), eq(priorVisits.personId, row.personId))),
+    listRecapPhotosForBooking(db, bookingId, row.tripId),
+    getShopStripeAccount(db, row.shopId),
+    getLatestTipForBooking(db, row.shopId, bookingId),
+  ]);
 
   const sites: RecapSite[] = [];
   const seen = new Set<string>();
@@ -297,6 +321,22 @@ export async function getRecapPageData(
       depthRange: diveSite.depthRange,
     });
   }
+
+  // Sites only: this card prints no depth, time or condition of a dive
+  // *performed* — those are the diver's to write and a divemaster's to
+  // countersign (see `DiveRecord`'s comment). That is also why
+  // `executed_dives.not_recorded` needs no handling here; nothing reaches past
+  // the site name.
+  const diveRecord = compareDiveRecord(
+    dives.map(({ dive, diveSite }) => ({
+      diveNumber: dive.diveNumber,
+      siteName: diveSite?.name ?? null,
+    })),
+    livedDives.map(({ executed, actualSite }) => ({
+      diveNumber: executed.diveNumber,
+      siteName: actualSite?.name ?? null,
+    })),
+  );
 
   const tripLocalDay = calendarDateInTimezone(trip.startsAt, row.timezone);
   const effectivePriorVisits = priorVisitRows.filter(
@@ -349,6 +389,7 @@ export async function getRecapPageData(
     },
     diverName: row.diverName,
     sites,
+    diveRecord,
     bookingId,
     shoutout: trip.recapShoutout,
     photos,

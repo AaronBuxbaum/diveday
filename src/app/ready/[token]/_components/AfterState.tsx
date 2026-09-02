@@ -18,6 +18,7 @@ import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
 import type { BrandDisplayFontCode } from "@/lib/brand";
 import type { DepthUnit } from "@/lib/depth-units";
+import type { DiveRecordComparison } from "@/lib/dive-record";
 import { formatOrdinal } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";
 import { currencySymbol, minorToMajor, type ShopCurrency } from "@/lib/money";
@@ -111,6 +112,12 @@ export type AfterStateProps = {
   when: string;
   diverName: string;
   sites: RecapSite[];
+  /**
+   * Where the day went against where it meant to go, or null when it went to
+   * plan — which is the ordinary answer and renders nothing extra at all
+   * (issue #1191).
+   */
+  diveRecord: DiveRecordComparison | null;
   shoutout: string | null;
   photos: RecapPhotoView[];
   /** How many photos one booking may hold — `MAX_RECAP_PHOTOS_PER_BOOKING`. */
@@ -179,6 +186,7 @@ const TIP_NOTICES: Record<string, { tone: "success" | "danger"; key: DiverMessag
 export const AFTER_STATE_TEST_IDS = {
   record: "dive-record",
   sites: "dive-record-sites",
+  plannedSites: "dive-record-planned-sites",
   conditions: "dive-record-conditions",
   stamp: "dive-record-stamp",
   visitLine: "dive-record-visit-line",
@@ -195,6 +203,7 @@ export function AfterState({
   when,
   diverName,
   sites,
+  diveRecord,
   shoutout,
   photos,
   maxPhotos,
@@ -283,6 +292,7 @@ export function AfterState({
         when={when}
         diverName={diverName}
         sites={sites}
+        diveRecord={diveRecord}
         visitCount={visitCount}
         siteMark={siteMark}
       />
@@ -542,14 +552,27 @@ function DiveRecord({
   when,
   diverName,
   sites,
+  diveRecord,
   visitCount,
   siteMark,
 }: Pick<
   AfterStateProps,
-  "t" | "locale" | "shop" | "when" | "diverName" | "sites" | "visitCount" | "siteMark"
+  | "t"
+  | "locale"
+  | "shop"
+  | "when"
+  | "diverName"
+  | "sites"
+  | "diveRecord"
+  | "visitCount"
+  | "siteMark"
 > & {
   trip: AfterStateProps["trip"];
 }) {
+  // The plan, unless a record disagrees with it — see the Sites fact below.
+  const recordedSiteNames = diveRecord
+    ? diveRecord.actualSiteNames
+    : sites.map((site) => site.name);
   const conditions = [
     trip.waterTemperatureC !== null
       ? {
@@ -620,16 +643,36 @@ function DiveRecord({
           {trip.crew.length > 0 ? (
             <Fact label={t("recap.crewLabel")}>{trip.crew.join(", ")}</Fact>
           ) : null}
-          {sites.length > 0 ? (
+          {recordedSiteNames.length > 0 ? (
             // Names only. The site's own maximum depth used to sit beside each
             // one under a "Max depth" label, on a card built to be printed and
             // pasted into a logbook — see this component's doc comment for why
             // that number is not this diver's.
+            //
+            // Which names these are depends on `diveRecord`: normally the day's
+            // published plan, and where a divemaster wrote down a different site
+            // the record instead, with the plan kept below (issue #1191). The
+            // label is honest either way — on a day that went to plan the two
+            // lists are the same list.
             <Fact label={t("recap.sitesLabel")} testId={AFTER_STATE_TEST_IDS.sites}>
               <ul className="flex flex-col gap-1">
-                {sites.map((site) => (
-                  <li key={site.name} className="font-medium">
-                    {site.name}
+                {recordedSiteNames.map((name) => (
+                  <li key={name} className="font-medium">
+                    {name}
+                  </li>
+                ))}
+              </ul>
+            </Fact>
+          ) : null}
+          {/* Only when the day went somewhere else. A "went as planned" line on
+            every other recap would restate the list directly above it, and the
+            copy rule deletes that sentence rather than shortening it. */}
+          {diveRecord ? (
+            <Fact label={t("recap.plannedSitesLabel")} testId={AFTER_STATE_TEST_IDS.plannedSites}>
+              <ul className="flex flex-col gap-1">
+                {diveRecord.plannedSiteNames.map((name) => (
+                  <li key={name} className="text-muted">
+                    {name}
                   </li>
                 ))}
               </ul>
