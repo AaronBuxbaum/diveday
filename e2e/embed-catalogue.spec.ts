@@ -43,7 +43,7 @@ test.describe("the widget views", () => {
     const primary = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--primary").trim(),
     );
-    expect(primary).toBe("#158462");
+    expect(primary).toBe("#13795a");
   });
 });
 
