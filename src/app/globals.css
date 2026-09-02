@@ -740,8 +740,10 @@ textarea {
  * The Clearwater program sanctions four names for *new* motion — `settle-in`,
  * `figure-settle` (not yet written; it arrives with the slice that needs it),
  * `rise-in` and `fade-out` — and a fifth needs the same argument a new coral
- * moment does. That is a rule about what may be added, not a census of this
- * file: the other keyframes here predate the program and are untouched by it.
+ * moment does. Reef's three moments (ADR 20260901-diveday-reimagined) supply
+ * it: `swell-across` below is the first of them. That is a rule about what may
+ * be added, not a census of this file: the other keyframes here predate the
+ * program and are untouched by it.
  * Nothing enforces the rule mechanically — `check-exit-curves.mjs` checks exit
  * *curves*, never a count — so it lives in review, not in a script.
  *
@@ -763,6 +765,40 @@ textarea {
 
 .settle-in {
   animation: settle-in 200ms var(--ease-spring) both;
+}
+
+/*
+ * The water closes over finished work — `StationSettles` (ADR
+ * 20260901-diveday-reimagined, slice 13g). A drawn swell crosses the space a
+ * station's rows held and is gone; the warm sentence rises behind it on
+ * `rise-in`. The crossing is a clip, not a translate, so the line is *drawn*
+ * left to right the way the hand draws it, and it ends at opacity 0 because
+ * the swell is the transition and never a resting thing — the reduced-motion
+ * kill-switch runs it to that end state in 0.01ms, so that reader sees the
+ * sentence and no water. 320ms here plus the sentence's 200ms delay keeps the
+ * whole moment inside the 400ms the moments table allows.
+ *
+ * The name carries no `out`/`dismiss` word on purpose: `check-exit-curves.mjs`
+ * would file it as an exit and ask for the departure curve, and this is an
+ * arrival — the sentence's, drawn as water — on the arrival curve.
+ */
+@keyframes swell-across {
+  from {
+    clip-path: inset(0 100% 0 0);
+    opacity: 1;
+  }
+  70% {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    opacity: 0;
+  }
+}
+
+.swell-across {
+  animation: swell-across 320ms var(--ease-out-soft) both;
 }
 
 /* Marketing sections reveal once, only after the browser has confirmed they

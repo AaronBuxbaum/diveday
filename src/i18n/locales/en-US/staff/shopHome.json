@@ -125,6 +125,7 @@
     "full": "Full",
     "ofCapacity": "of {capacity}",
     "until": "until {time}",
+    "stationClear": "Nothing left before {time}.",
     "crewing": "You’re crewing",
     "aboardNamed": "{name} is aboard — {reason}",
     "aboardCount": "{count, plural, one {# diver is aboard — {reason}} other {# divers are aboard — {reason}}}",
