@@ -145,6 +145,13 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // way on reload (below), so only the one question that flips to "Yes"
   // needs to be touched again.
   const noRadios = page.getByRole("radio", { name: "No" });
+  // The questionnaire streams in after the shell (`instant = true`, ADR
+  // 20260804-instant-navigation), and `count()` reads the DOM as it is —
+  // the one locator call that never waits. Taken straight after `goto` it
+  // returned 0 on CI (run 33582348021: no `check` call after the navigation
+  // in the trace), the loop ran zero times and the rail read "0 of 3 done".
+  // Waiting for the first radio is waiting for the thing under test.
+  await noRadios.first().waitFor();
   const questionCount = await noRadios.count();
   for (let i = 0; i < questionCount; i++) {
     await noRadios.nth(i).check();
@@ -266,6 +273,8 @@ test("the medical questionnaire refuses to complete with an unanswered question,
   await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
   // Answer every question except the last one.
   const noRadios = page.getByRole("radio", { name: "No" });
+  // Same wait as the first test above: the questionnaire streams in after `goto` resolves.
+  await noRadios.first().waitFor();
   const questionCount = await noRadios.count();
   for (let i = 0; i < questionCount - 1; i++) {
     await noRadios.nth(i).check();
@@ -435,6 +444,8 @@ test("saving a draft preserves partial conditional questionnaire answers", async
   // `formNoValidate` and intentionally accepts partial answers, while the
   // complete action still fails closed until the remaining question is set.
   const noRadios = page.getByRole("radio", { name: "No" });
+  // Same wait as the first test above: the questionnaire streams in after `goto` resolves.
+  await noRadios.first().waitFor();
   const questionCount = await noRadios.count();
   for (let i = 0; i < questionCount - 1; i++) {
     await noRadios.nth(i).check();
@@ -477,6 +488,8 @@ test("the step rail paces the waiver and reaches 3 of 3 only once it is signed",
   await expect(rail.getByRole("link")).toHaveCount(0);
 
   const noRadios = page.getByRole("radio", { name: "No" });
+  // Same wait as the first test above: the questionnaire streams in after `goto` resolves.
+  await noRadios.first().waitFor();
   const questionCount = await noRadios.count();
   // Release settles on the first medical answer, and only then: the release has
   // no "I have read this" control of its own — presenting the full text is what
@@ -527,6 +540,8 @@ test("a Box a diver's own yes opens keeps the rail's Medical step open", async (
   await page.goto(waiverHref ?? "/");
   const rail = page.getByTestId("waiver-step-rail");
   const noRadios = page.getByRole("radio", { name: "No" });
+  // Same wait as the first test above: the questionnaire streams in after `goto` resolves.
+  await noRadios.first().waitFor();
   const pageOneCount = await noRadios.count();
   for (let i = 0; i < pageOneCount; i++) {
     await noRadios.nth(i).check();
