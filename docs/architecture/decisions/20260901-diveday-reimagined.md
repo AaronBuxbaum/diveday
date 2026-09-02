@@ -54,7 +54,7 @@ What lands, and where each rule comes from:
 | Coral budget | three sanctioned appearances per surface, and a harder ban: never a status, never a fill behind reading text, never on a manifest, roll call, cert, waiver or payment surface | Clearwater's one earned moment |
 | Illustration | a line-drawn reef and its creatures, one hand, used as a departure's site mark and in the three moments; **no drawing may appear on a manifest, roll call, cert check, waiver or payment surface** | none existed |
 | The three moments | the water closing over a departure's finished work; the count that fills as divers come back; the diver's day drawn as a postcard on the recap | Clearwater's earned-moment ration |
-| Dark scheme | Reef drew none. The current night palette stays until one is drawn; only the tokens whose *shape* changed (the washes, the radii, the bed) apply in both schemes | — |
+| Dark scheme | Reef drew none. The current night palette stays until one is drawn; only the tokens whose *shape* changed (the washes, the radii, the bed) apply in both schemes. **Drawn 2026-09-02 (13j):** open ocean stays the ground and the brand's night values stand; the five washes became drawn hues instead of 10% mixes — a mix over the dark shell goes grey exactly as it did on the warm one — each measured against its signal and both inks, and held by `src/lib/night-palette.test.ts` | — |
 
 The safety floor is untouched: 44px targets, 16px critical text, AA contrast, never colour alone, and
 principle 9 in full.
