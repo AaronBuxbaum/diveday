@@ -19,6 +19,7 @@ import {
   shopSenderOf,
 } from "@/lib/notifications";
 import { ACTIONABLE_PROVIDER_STATUSES, type ProviderEmailStatus } from "@/lib/notifications/events";
+import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import {
@@ -89,6 +90,47 @@ function retryDueAt(delivery: Extract<NotificationDelivery, { status: "failed" }
 }
 
 /**
+ * The key the queue's payload is sealed under, or `null` when none is set.
+ *
+ * `SECRET_ENCRYPTION_KEY` is `derived` in `config/env-registry.mjs` — every
+ * real deployment gets one from `APP_SECRET_SEED`, and the unit and e2e
+ * harnesses set fixed ones. So "no key" means an unconfigured local machine,
+ * where nothing is reaching a provider to fail in the first place. It is
+ * logged rather than thrown for the reason every other reader of this key
+ * degrades: a mis-set key must not take the reminder cron down with it.
+ */
+function queueSealingKey(where: "queue" | "drain"): SecretKey | null {
+  const result = secretKeyFromEnvironment();
+  if (result.status === "ok") return result.key;
+  console.error("Notification retry queue cannot seal or open its payload", {
+    where,
+    key: "SECRET_ENCRYPTION_KEY",
+    reason: result.status === "unset" ? "unset" : result.reason,
+  });
+  return null;
+}
+
+/**
+ * Read a sealed payload back, or `null` when it cannot be opened.
+ *
+ * Three ways that happens, and none of them may be treated as "this row has
+ * nothing in it": no key, the wrong key, and a tampered value — AES-GCM
+ * authenticates, so a modified ciphertext fails to open rather than decrypting
+ * to something that then gets sent. The caller parks the row loudly instead
+ * (`sealed_payload_unreadable`), because throwing the notification away on a
+ * key rotation is exactly the silent loss this whole queue exists to prevent.
+ */
+export function openQueuedPayload(sealed: string, key: SecretKey): Notification | null {
+  const plaintext = openSecret(sealed, key);
+  if (plaintext === null) return null;
+  try {
+    return JSON.parse(plaintext) as Notification;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Persist a retryable failure for the next daily pass.
  *
  * `notification_send_queue.shop_id` is a non-null FK, so this queue is
@@ -108,12 +150,23 @@ async function queueRetry(
   delivery: Extract<NotificationDelivery, { status: "failed" }>,
 ) {
   if (!("shopId" in input)) return;
+  // Sealed before it reaches the column, never after (issue #1297). With no
+  // key there is nowhere safe to put a payload carrying a capability URL, and
+  // storing one in plaintext to preserve a retry would trade a working
+  // credential at rest for a message that was going to be re-sendable by hand
+  // anyway. `queueSealingKey` has already said so in the log.
+  const key = queueSealingKey("queue");
+  if (!key) return;
   await db
     .insert(notificationSendQueue)
     .values({
       shopId: input.shopId,
       idempotencyKey: notificationIdempotencyKey(input),
-      payload: input,
+      payloadSealed: sealSecret(JSON.stringify(input), key),
+      // Kept beside the sealed blob, not inside it: legal erasure sweeps on
+      // these and cannot read through the seal (issue #1297).
+      recipientEmail: "to" in input ? input.to : null,
+      bookingId: "bookingId" in input ? (input.bookingId ?? null) : null,
       status: "queued",
       nextAttemptAt: retryDueAt(delivery),
       httpStatus: delivery.httpStatus ?? null,
@@ -282,6 +335,22 @@ export async function drainNotificationRetries(
   options: { now?: Date; limit?: number; provider?: NotificationProvider } = {},
 ): Promise<NotificationRetrySummary> {
   const now = options.now ?? nowDate();
+  // A worker that died between claiming a row and writing its outcome left it
+  // `processing` with a lock that has since lapsed, and nothing anywhere put it
+  // back: the candidate query below only ever looked for `queued`. That is two
+  // losses at once — a notification nobody will ever send again, and, since
+  // #1297 sealed it, a payload that never reaches the `payload_sealed = null`
+  // every terminal path writes. Hand it back to the queue before selecting, so
+  // the ordinary claim below picks it up and its attempt count still bounds it.
+  await db
+    .update(notificationSendQueue)
+    .set({ status: "queued", lockedUntil: null, updatedAt: nowDate() })
+    .where(
+      and(
+        eq(notificationSendQueue.status, "processing"),
+        lt(notificationSendQueue.lockedUntil, now),
+      ),
+    );
   const candidates = await db
     .select()
     .from(notificationSendQueue)
@@ -303,6 +372,9 @@ export async function drainNotificationRetries(
   if (candidates.length === 0) return summary;
   const provider = notificationProviderForDb(options.provider);
   const senders = new Map<string, NotificationSender | undefined>();
+  // Resolved once for the whole pass — every row's payload is sealed under the
+  // same key, and a drain with no key must say so once, not once per row.
+  const key: SecretKey | null = queueSealingKey("drain");
 
   for (const candidate of candidates) {
     const lockedUntil = new Date(now.getTime() + 10 * 60 * 1_000);
@@ -324,7 +396,7 @@ export async function drainNotificationRetries(
       .returning();
     if (!claimed) continue;
 
-    if (!candidate.payload) {
+    if (!candidate.payloadSealed) {
       await db
         .update(notificationSendQueue)
         .set({
@@ -339,7 +411,30 @@ export async function drainNotificationRetries(
       continue;
     }
 
-    const notification = reviveQueuedNotification(candidate.payload);
+    // A row that will not open is parked under its own code, never folded into
+    // `missing_payload`: the two say different things to whoever reads the
+    // parked-failure surface. "Missing" is a row past its terminal write;
+    // "unreadable" is a key that is unset, rotated, or a value that failed its
+    // authentication tag — an operational fault with a message still in it,
+    // and the payload is deliberately left in place so a restored key can
+    // still drain it.
+    const opened = key ? openQueuedPayload(candidate.payloadSealed, key) : null;
+    if (!opened) {
+      await db
+        .update(notificationSendQueue)
+        .set({
+          status: "failed",
+          lockedUntil: null,
+          errorCode: "sealed_payload_unreadable",
+          lastError: null,
+          updatedAt: nowDate(),
+        })
+        .where(eq(notificationSendQueue.id, claimed.id));
+      summary.failed += 1;
+      continue;
+    }
+
+    const notification = reviveQueuedNotification(opened);
     let delivery: NotificationDelivery;
     try {
       delivery = await notify(await withShopSender(db, notification, senders), provider);
@@ -384,7 +479,7 @@ export async function drainNotificationRetries(
         .update(notificationSendQueue)
         .set({
           status: "sent",
-          payload: null,
+          payloadSealed: null,
           lockedUntil: null,
           providerMessageId: delivery.providerMessageId,
           updatedAt: nowDate(),
@@ -414,7 +509,7 @@ export async function drainNotificationRetries(
         .update(notificationSendQueue)
         .set({
           status: "failed",
-          payload: null,
+          payloadSealed: null,
           lockedUntil: null,
           httpStatus: delivery.status === "failed" ? (delivery.httpStatus ?? null) : null,
           errorCode: delivery.status === "failed" ? (delivery.errorCode ?? null) : null,

@@ -191,7 +191,7 @@ describe("notification delivery status", () => {
     await expect(
       db.select().from(notificationSendQueue).where(eq(notificationSendQueue.shopId, shop.id)),
     ).resolves.toMatchObject([
-      { status: "sent", providerMessageId: "retry-success", payload: null },
+      { status: "sent", providerMessageId: "retry-success", payloadSealed: null },
     ]);
   });
 
@@ -229,7 +229,9 @@ describe("notification delivery status", () => {
     await expect(drainNotificationRetries(db, { provider })).resolves.toMatchObject({ failed: 1 });
     await expect(
       db.select().from(notificationSendQueue).where(eq(notificationSendQueue.shopId, shop.id)),
-    ).resolves.toMatchObject([{ status: "failed", payload: null, errorCode: "permanent_failure" }]);
+    ).resolves.toMatchObject([
+      { status: "failed", payloadSealed: null, errorCode: "permanent_failure" },
+    ]);
   });
 
   it("shows a failed booking email on the shop dashboard query", async () => {
@@ -328,6 +330,187 @@ describe("notification delivery status", () => {
     const issues = await listNotificationDeliveryIssues(db, shop.id);
     const issue = issues.find((i) => i.booking.id === booking.bookingId);
     expect(issue?.attempts).toBe(2);
+  });
+});
+
+/**
+ * **No raw bearer token may sit in `notification_send_queue`** (issue #1297).
+ *
+ * The promise is `src/lib/bearer-tokens.ts`'s: a database reader — a backup, a
+ * support query, a leaked dump — must not come away holding usable
+ * credentials. Everywhere else in this schema the token exists only as a
+ * SHA-256 digest, and the queue's own idempotency key already refuses it
+ * (`notificationIdempotencyKey` keys by `tokenId`, pinned in
+ * `src/lib/notifications/index.test.ts`) — and then the row stored the whole
+ * notification, URL and all, in the column next to it.
+ *
+ * The assertion below is deliberately **not** per kind. A per-kind test goes
+ * stale the moment somebody adds a kind, and the ones that would have been
+ * written for it (the four the issue named) would have missed the six others
+ * that carry a capability URL. It reads every column of the stored row and
+ * refuses the token's appearance anywhere in any of them, which is the shape
+ * that catches a field lifted out of the blob later — exactly what
+ * `recipient_email` and `booking_id` are.
+ */
+describe("what the retry queue is allowed to hold", () => {
+  const TOKEN = "b3f1c0de-secret-bearer-token-nobody-may-read";
+
+  function linkBearing(shopId: string, kind: string): Notification {
+    const account = {
+      userAccountId: "00000000-0000-4000-8000-00000000a001",
+      tokenId: "00000000-0000-4000-8000-00000000a002",
+      shopId,
+      to: "front-desk@example.invalid",
+      locale: "en-US" as const,
+      expiresAt: new Date("2026-09-05T12:00:00.000Z"),
+      timezone: "America/New_York",
+    };
+    const url = `https://diveday.test/verify/${TOKEN}`;
+    switch (kind) {
+      case "email_verification":
+        return { ...account, kind: "email_verification", ownerName: "Ola Roe", verifyUrl: url };
+      case "password_reset_request":
+        return { ...account, kind: "password_reset_request", ownerName: "Ola Roe", resetUrl: url };
+      default:
+        return {
+          ...account,
+          kind: "staff_invite",
+          inviteeName: "Ola Roe",
+          shopName: "Blue Mantis",
+          inviterName: "Ida Vance",
+          roleLabels: ["Divemaster"],
+          inviteUrl: url,
+        };
+    }
+  }
+
+  const failsRetryably: NotificationProvider = {
+    async send() {
+      return { status: "failed", retryable: true, errorCode: "temporary_failure" };
+    },
+  };
+
+  it.each(["email_verification", "password_reset_request", "staff_invite"])(
+    "stores no part of the token anywhere on the row (%s)",
+    async (kind) => {
+      const { db, shop } = await seededShopContext();
+      await sendNotification(db, linkBearing(shop.id, kind), failsRetryably);
+
+      const [row] = await db
+        .select()
+        .from(notificationSendQueue)
+        .where(eq(notificationSendQueue.shopId, shop.id));
+      expect(row).toBeDefined();
+      // Every column, not only the sealed one: the point is that nothing
+      // beside it grew a copy either.
+      expect(JSON.stringify(row)).not.toContain(TOKEN);
+      expect(row?.payloadSealed).toMatch(/^v1\./);
+      // The two handles erasure needs are still there, in the clear, because
+      // they are what a sweep matches on — and neither is a credential.
+      expect(row?.recipientEmail).toBe("front-desk@example.invalid");
+    },
+  );
+
+  it("still delivers the working link a sealed retry was queued with", async () => {
+    const { db, shop } = await seededShopContext();
+    await sendNotification(db, linkBearing(shop.id, "email_verification"), failsRetryably);
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0) })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+
+    const sent: Notification[] = [];
+    await expect(
+      drainNotificationRetries(db, {
+        provider: {
+          async send(notification) {
+            sent.push(notification);
+            return { status: "sent", providerMessageId: "sealed-retry" };
+          },
+        },
+      }),
+    ).resolves.toMatchObject({ sent: 1 });
+    // Sealing is not redaction: what comes back out is the same message, token
+    // and all, or the retry would deliver a link that opens nothing.
+    expect(sent[0]).toMatchObject({ kind: "email_verification", verifyUrl: expect.any(String) });
+    expect(JSON.stringify(sent[0])).toContain(TOKEN);
+  });
+
+  it("parks a payload it cannot open instead of losing it quietly", async () => {
+    const { db, shop } = await seededShopContext();
+    await sendNotification(db, linkBearing(shop.id, "staff_invite"), failsRetryably);
+    // What a rotated key, or a tampered value, looks like from here: AES-GCM
+    // authenticates, so this fails to open rather than decrypting to garbage.
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0), payloadSealed: "v1.not.a.real.seal" })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+
+    await expect(drainNotificationRetries(db, { provider: failsRetryably })).resolves.toMatchObject(
+      {
+        failed: 1,
+      },
+    );
+    const [row] = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    // Its own code, never `missing_payload` — the two say different things to
+    // whoever reads the parked-failure surface — and the value is left in
+    // place, so a restored key can still drain it.
+    expect(row?.errorCode).toBe("sealed_payload_unreadable");
+    expect(row?.payloadSealed).toBe("v1.not.a.real.seal");
+  });
+
+  it("hands back a row a dead worker left claimed", async () => {
+    const { db, shop } = await seededShopContext();
+    await sendNotification(db, linkBearing(shop.id, "email_verification"), failsRetryably);
+    // The state a worker that died between claiming a row and writing its
+    // outcome leaves behind. Nothing used to move it back: the candidate query
+    // only ever looked for `queued`, so the row — and its payload — sat there
+    // for good.
+    await db
+      .update(notificationSendQueue)
+      .set({
+        status: "processing",
+        lockedUntil: new Date(nowMs() - 60_000),
+        nextAttemptAt: new Date(0),
+      })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+
+    await expect(
+      drainNotificationRetries(db, {
+        provider: {
+          async send() {
+            return { status: "sent", providerMessageId: "reclaimed" };
+          },
+        },
+      }),
+    ).resolves.toMatchObject({ scanned: 1, sent: 1 });
+    const [row] = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    expect(row).toMatchObject({ status: "sent", payloadSealed: null });
+  });
+
+  it("leaves a lock that has not yet lapsed alone", async () => {
+    const { db, shop } = await seededShopContext();
+    await sendNotification(db, linkBearing(shop.id, "email_verification"), failsRetryably);
+    // A live worker still holds this one. Reclaiming it here would send the
+    // same notification twice.
+    await db
+      .update(notificationSendQueue)
+      .set({
+        status: "processing",
+        lockedUntil: new Date(nowMs() + 5 * 60_000),
+        nextAttemptAt: new Date(0),
+      })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+
+    await expect(drainNotificationRetries(db, { provider: failsRetryably })).resolves.toMatchObject(
+      { scanned: 0 },
+    );
   });
 });
 

@@ -24,7 +24,6 @@ import type { CourseFaq, CourseGalleryPhoto, CourseScheduleDay } from "@/lib/cou
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import type { DiveSiteTemplateUndo } from "@/lib/dive-site-template-sync";
 import type { EmergencyReference } from "@/lib/emergency-reference";
-import type { Notification } from "@/lib/notifications";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 import type { SpokenLanguageTag } from "@/lib/spoken-languages";
 
@@ -3250,8 +3249,44 @@ export const notificationSendQueue = pgTable(
       .notNull()
       .references(() => shops.id),
     idempotencyKey: text("idempotency_key").notNull().unique(),
-    /** Cleared after a terminal send; queued/processing rows always carry it. */
-    payload: jsonb("payload").$type<Notification>(),
+    /**
+     * The queued notification, **sealed** (`src/lib/secret-box.ts`), never
+     * plaintext — the same promise `waiver_records.token_sealed` and
+     * `shop_whatsapp_accounts.access_token_sealed` make, and for the same
+     * reason. Half the notification kinds carry a capability URL in a field
+     * (`verifyUrl`, `resetUrl`, `inviteUrl`, `confirmUrl`, `completionUrl`,
+     * `readinessUrl`, `recapUrl`, `unsubscribeUrl`), and that URL contains the
+     * **raw** bearer token. Everywhere else in this database those tokens exist
+     * only as a SHA-256 digest, so an unsealed payload here would be the one
+     * place a backup, a replica or a support query hands its reader working
+     * credentials — for a mailbox, a password reset, a staff invite or a
+     * signed waiver (issue #1297).
+     *
+     * Null after a terminal outcome, sent or failed; a queued or processing row
+     * always carries it.
+     */
+    payloadSealed: text("payload_sealed"),
+    /**
+     * The two handles legal erasure needs, lifted out of the payload because
+     * it is now sealed and no `->>` can reach inside it (issue #1297).
+     *
+     * `anonymizeShopPerson` (src/db/anonymize.ts) has to drop a person's queued
+     * mail — a rendered message carrying their name and address — and the only
+     * matches it ever had were `payload ->> 'to'` and `payload ->> 'bookingId'`.
+     * As real columns those matches are also *stronger* than the JSON probe
+     * they replace: indexable, typed, and no longer silently missing a row
+     * whose payload shape drifted. Both nullable, because a kind may carry
+     * neither.
+     *
+     * Neither is a new disclosure. The address was already at rest in this
+     * table, inside the blob; what changes is that a reader of the column
+     * learns nothing they could not already read, while the bearer token they
+     * *could* read is gone. `booking_id` deliberately carries no foreign key:
+     * it is a match handle for a sweep, not a relationship, and a real
+     * reference would make an erasure's delete order depend on this queue.
+     */
+    recipientEmail: text("recipient_email"),
+    bookingId: uuid("booking_id"),
     status: notificationQueueStatus("status").notNull().default("queued"),
     attempts: integer("attempts").notNull().default(0),
     nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).notNull(),
