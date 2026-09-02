@@ -130,9 +130,17 @@ const bracedStringPattern = /[>\s]\{\s*(?:"([^"]{2,})"|'([^']{2,})')\s*\}/g;
  * repo's docs — switch the whole check off for a file. An escape hatch that can
  * be triggered by prose is not an escape hatch, it is a hole, so both forms
  * must appear as `// …` or `{/* … *\/}`.
+ *
+ * The reason must begin with a **letter**, not merely a non-space character
+ * (2026-09-02, issue #1258). Under `\s*\S` the `//` form correctly refused a
+ * bare `// i18n-exempt:` — but in the JSX form the comment's own closing `*\/`
+ * supplied the non-space, so `{/* i18n-exempt: *\/}` switched the line off with
+ * no reason at all. Every one of the repo's 16 distinct exemption reasons
+ * already starts with a letter, so this narrows the hatch and excuses nothing
+ * that was written down.
  */
-const EXEMPT_LINE = /(?:\/\/|\{\s*\/\*)[^\n]*\bi18n-exempt:\s*\S/;
-export const EXEMPT_FILE = /(?:\/\/|\{\s*\/\*)[^\n]*\bi18n-exempt-file:\s*\S/;
+const EXEMPT_LINE = /(?:\/\/|\{\s*\/\*)[^\n]*\bi18n-exempt:\s*[A-Za-z]/;
+export const EXEMPT_FILE = /(?:\/\/|\{\s*\/\*)[^\n]*\bi18n-exempt-file:\s*[A-Za-z]/;
 
 /** Strips comments so their prose never reads as copy — but keeps line count. */
 function stripComments(source) {
@@ -157,12 +165,25 @@ export function looksLikeCopy(raw) {
   // `=` as the window's first character, so `photos.length >= maxPhotos ? (`
   // arrives here as `= maxPhotos ? (` — an expression, and one the ternary rule
   // below misses because its `:` is past the next `<`.
-  if (value.startsWith("=")) return false;
+  //
+  // Anchored to that shape rather than to the leading `=` (2026-09-02, issue
+  // #1258). `value.startsWith("=")` excused *every* string beginning with an
+  // equals sign, which is a sentence as readily as an expression: the tail has
+  // to be an operand followed by the `?` the comparison was feeding.
+  if (/^=\s*[\w.$[\]]+\s*\?/.test(value)) return false;
   // A type union. `void | Promise` is what `=> void | Promise<void>` leaves
   // behind, and it reached the report five times from one file of server-action
-  // props. A single pipe is already excluded when doubled; a sentence a diver
-  // reads does not carry a bare one either.
-  if (/\s\|\s/.test(value)) return false;
+  // props.
+  //
+  // Anchored to a union of *type-ish tokens* rather than to any spaced pipe
+  // (2026-09-02, issue #1258). `/\s\|\s/` excused every sentence carrying one,
+  // and a pipe is ordinary prose punctuation — `Book a trip | Blue Mantis
+  // Divers` is a page title, `Certified | Nitrox | Rescue` is a badge row, and
+  // both went silently untranslated. A union's first token is a lowercase
+  // primitive (`void`, `string`) and every token is a bare identifier, which is
+  // what separates it from a title: a title's segments carry spaces, and a
+  // badge row's first segment is capitalised.
+  if (/^[a-z][\w$]*(?:\s*\|\s*[A-Za-z_$][\w$]*)+$/.test(value)) return false;
   if (value.includes(";")) return false;
   // A ternary: `cond ? a : b`.
   if (/\s\?\s/.test(value) && /\s:\s/.test(value)) return false;

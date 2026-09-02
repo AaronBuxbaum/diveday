@@ -76,7 +76,7 @@ describe("a scoped translator, whose call sites write a relative key", () => {
   it("declines the whole namespace when a scoped file assembles its keys", () => {
     // No head to narrow by, so the honest answer is "some key under `trip`",
     // not a guess at which.
-    expect(prefixes('const t = useTranslations("trip");\nt(`${step}`)')).toContain("trip.");
+    expect(prefixes(`const t = useTranslations("trip");\nt(\`\${step}\`)`)).toContain("trip.");
   });
 
   it("does not prefix a call in a file that scopes nothing", () => {
@@ -110,7 +110,7 @@ describe("a key assembled at runtime is declined, never reported", () => {
    * shape, from `PackingSection.tsx`.
    */
   it("collects a head from a template that is nowhere near a translator call", () => {
-    expect(prefixes("return `trip.timeline.${step}` as DiverMessageKey;")).toContain(
+    expect(prefixes(`return \`trip.timeline.\${step}\` as DiverMessageKey;`)).toContain(
       "trip.timeline.",
     );
   });

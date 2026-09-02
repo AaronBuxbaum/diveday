@@ -11,10 +11,15 @@ import { EXEMPT_FILE, findCopy, looksLikeCopy } from "./check-copy.mjs";
  *
  * So every rule is pinned in both directions: the syntax it must excuse, and
  * whether a real sentence survives it. Three of those answers came back wrong,
- * and are recorded here as measurements rather than quietly fixed — issue #1130
- * asked for the heuristic under test *as it stands*, on the grounds that a rule
- * change with a test beside it is a different and easier commit. Each is marked
- * MEASURED, NOT DESIRED below and filed as its own issue (#1258).
+ * and were recorded here as measurements rather than quietly fixed — issue
+ * #1130 asked for the heuristic under test *as it stands*, on the grounds that
+ * a rule change with a test beside it is a different and easier commit.
+ *
+ * That commit is #1258, and it landed on 2026-09-02: all three rules are now
+ * anchored to the construct each was added for, and the three expectations that
+ * read MEASURED, NOT DESIRED have flipped. Nothing is pinned against its
+ * intent any more — if a rule here excuses a sentence, that is a bug rather
+ * than a note.
  */
 
 const texts = (source, isTsx = true) => findCopy(source, { isTsx }).map((hit) => hit.text);
@@ -105,18 +110,29 @@ describe("looksLikeCopy — the two 2026-08-28 exclusions, both directions", () 
     expect(looksLikeCopy("= maxPhotos ? (")).toBe(false);
   });
 
-  // MEASURED, NOT DESIRED. Both rules are wider than the false positives they
-  // were added for, and each swallows real copy. Pinned here as it stands, per
-  // issue #1130's instruction to get the heuristic under test before changing
-  // it; the hole is filed as #1258. If a later change narrows either
-  // rule, these two expectations flip to `true` and that is the change working.
-  it("also excuses a sentence carrying a spaced pipe — the union rule is too wide", () => {
-    expect(looksLikeCopy("Book a trip | Blue Mantis Divers")).toBe(false);
-    expect(looksLikeCopy("Certified | Nitrox | Rescue")).toBe(false);
+  // Narrowed 2026-09-02 (issue #1258). These two were MEASURED, NOT DESIRED
+  // until then: `/\s\|\s/` excused any spaced pipe, so a page title and a badge
+  // row went untranslated with a green run. A union's first token is a
+  // lowercase primitive and every token is a bare identifier — a title's
+  // segments carry spaces, a badge row's first segment is capitalised.
+  it("reports a sentence carrying a spaced pipe, while still excusing a type union", () => {
+    expect(looksLikeCopy("Book a trip | Blue Mantis Divers")).toBe(true);
+    expect(looksLikeCopy("Certified | Nitrox | Rescue")).toBe(true);
+    // The construct the rule was added for still passes (pinned above too), and
+    // so does the longer union the narrowing had to keep room for.
+    expect(looksLikeCopy("string | number | null")).toBe(false);
   });
 
-  it("also excuses a sentence starting with an equals sign — the comparison rule is too wide", () => {
-    expect(looksLikeCopy("= a sentence a person actually reads")).toBe(false);
+  // Narrowed the same day, same issue. This was MEASURED, NOT DESIRED:
+  // `value.startsWith("=")` excused *every* string beginning with an equals
+  // sign. The tail now has to be an operand followed by the `?` the straddled
+  // comparison was feeding, which is what a comparison tail always is and a
+  // sentence never is.
+  it("reports a sentence starting with an equals sign, while still excusing a comparison tail", () => {
+    expect(looksLikeCopy("= a sentence a person actually reads")).toBe(true);
+    expect(looksLikeCopy("= maxPhotos ? (")).toBe(false);
+    // The window can open on a property access as readily as a bare name.
+    expect(looksLikeCopy("= trip.maxDivers ? (")).toBe(false);
   });
 });
 
@@ -173,14 +189,24 @@ describe("findCopy — exemptions", () => {
     expect(texts("{/* i18n-exempt: brand name */}\n<p>Ready to dive?</p>")).toEqual([]);
   });
 
-  // MEASURED, NOT DESIRED. `\s*\S` is meant to demand a reason, and in the
-  // `//` form it does. In the JSX-comment form the comment's own closing `*/`
-  // supplies the non-space character, so a reasonless exemption is honoured.
-  // Filed with the two rules above as #1258, rather than fixed here.
-  it("honours a reasonless JSX exemption, because `*/` satisfies the reason check", () => {
-    expect(texts("{/* i18n-exempt: */}\n<p>Ready to dive?</p>")).toEqual([]);
-    // The `//` form behaves as intended.
+  // Narrowed 2026-09-02 (issue #1258). This was MEASURED, NOT DESIRED: the
+  // reason check was `\s*\S`, and in the JSX form the comment's own closing
+  // `*/` supplied the non-space character, so a reasonless exemption switched
+  // the line off. It now demands a letter, which is what every one of the
+  // repo's written reasons already starts with.
+  it("refuses a reasonless exemption in either comment form", () => {
+    expect(texts("{/* i18n-exempt: */}\n<p>Ready to dive?</p>")).toEqual(["Ready to dive?"]);
     expect(texts("// i18n-exempt:\n<p>Ready to dive?</p>")).toEqual(["Ready to dive?"]);
+    // A reason still exempts, in both forms.
+    expect(texts("{/* i18n-exempt: brand name */}\n<p>Ready to dive?</p>")).toEqual([]);
+    expect(texts("// i18n-exempt: brand name\n<p>Ready to dive?</p>")).toEqual([]);
+  });
+
+  it("refuses a reasonless whole-file exemption too", () => {
+    // `EXEMPT_FILE` carried the identical hole and is narrowed with it: a
+    // file-wide switch is the more dangerous of the two to leave unexplained.
+    expect(EXEMPT_FILE.test("{/* i18n-exempt-file: */}")).toBe(false);
+    expect(EXEMPT_FILE.test("{/* i18n-exempt-file: template copy */}")).toBe(true);
   });
 
   it("refuses an exemption that is not in a comment", () => {
