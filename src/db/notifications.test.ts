@@ -708,6 +708,88 @@ describe("provider-reported delivery events", () => {
     expect(issues[0]?.delivery.providerStatus).toBe("bounced");
   });
 
+  // Production, 2026-09-02: a complaint recorded against the mailbox simulator
+  // read `delivered` on the row minutes later, so it never reached the shop's
+  // email-issue list. SES publishes *both* events for the same message — a
+  // complaint is by definition delivered first — and the delivery notification
+  // carried the later timestamp, so the chronological guard alone let it win.
+  it("keeps a complaint when the delivery event for the same message arrives after it", async () => {
+    const { db, shop, providerMessageId } = await sentConfirmation();
+    await expect(
+      applyProviderEmailEvent(db, {
+        providerMessageId,
+        status: "complained",
+        detail: "abuse",
+        occurredAt: new Date("2026-07-24T18:00:00.000Z"),
+      }),
+    ).resolves.toBe("applied");
+
+    await expect(
+      applyProviderEmailEvent(db, {
+        providerMessageId,
+        status: "delivered",
+        detail: null,
+        occurredAt: new Date("2026-07-24T18:00:01.000Z"),
+      }),
+    ).resolves.toBe("stale");
+
+    const issues = await listNotificationDeliveryIssues(db, shop.id);
+    expect(issues[0]?.delivery).toMatchObject({
+      providerStatus: "complained",
+      providerDetail: "abuse",
+    });
+  });
+
+  // The same rule for the other verdict a shop must chase, and for the softer
+  // status that most plausibly follows one: a suppression is the *consequence*
+  // of the bounce, never a correction of it.
+  it("keeps a bounce when a later suppressed event follows it", async () => {
+    const { db, shop, providerMessageId } = await sentConfirmation();
+    await applyProviderEmailEvent(db, {
+      providerMessageId,
+      status: "bounced",
+      detail: "mailbox unavailable",
+      occurredAt: new Date("2026-07-24T18:00:00.000Z"),
+    });
+
+    await expect(
+      applyProviderEmailEvent(db, {
+        providerMessageId,
+        status: "suppressed",
+        detail: null,
+        occurredAt: new Date("2026-07-24T19:00:00.000Z"),
+      }),
+    ).resolves.toBe("stale");
+
+    const issues = await listNotificationDeliveryIssues(db, shop.id);
+    expect(issues[0]?.delivery.providerStatus).toBe("bounced");
+  });
+
+  // The narrowing must not reach two verdicts that are both actionable: those
+  // still resolve by timestamp, so a bounce followed by a complaint on the same
+  // message records the complaint.
+  it("still lets one actionable verdict follow another in timestamp order", async () => {
+    const { db, shop, providerMessageId } = await sentConfirmation();
+    await applyProviderEmailEvent(db, {
+      providerMessageId,
+      status: "bounced",
+      detail: "mailbox unavailable",
+      occurredAt: new Date("2026-07-24T18:00:00.000Z"),
+    });
+
+    await expect(
+      applyProviderEmailEvent(db, {
+        providerMessageId,
+        status: "complained",
+        detail: "abuse",
+        occurredAt: new Date("2026-07-24T19:00:00.000Z"),
+      }),
+    ).resolves.toBe("applied");
+
+    const issues = await listNotificationDeliveryIssues(db, shop.id);
+    expect(issues[0]?.delivery.providerStatus).toBe("complained");
+  });
+
   it("drops a late-arriving delivered-then-bounced event as stale, keeping the newer status", async () => {
     const { db, shop, providerMessageId } = await sentConfirmation();
     await applyProviderEmailEvent(db, {
