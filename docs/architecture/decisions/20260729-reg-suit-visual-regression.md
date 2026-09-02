@@ -131,3 +131,18 @@ comparing nothing under a reassuring `Changed: 0`. `pnpm visual` does the same l
 also get a concurrency group per commit, since `cancel-in-progress: false` never protected a
 *queued* run.
 
+
+### Amended 2026-09-02: the pruner is the authoritative bound on the bucket
+
+Two independent bounds grew on `diveday-vrt` and one was quietly overriding the other. The nightly
+pruner Lambda keeps the ten most recent `main` baselines *by count* plus everything under seven days
+old, written that way so a quiet month never leaves an open branch comparing against a prefix that
+was deleted overnight. The bucket's own S3 lifecycle rule expired every object at 30 days regardless
+— so after 30 quiet days the preserved baselines were gone and the next pull request reported every
+surface as new under `Changed: 0`, the exact failure the pruner and the ancestor fallback above exist
+to prevent. The rule was bounding nothing the pruner did not already bound.
+
+**The pruner is authoritative.** The lifecycle rule now expires at 180 days, which is a backstop for
+the case the pruner itself stops running and can only ever fire after it has had a hundred nightly
+chances to act. A future change may lower the pruner's own window; it may not lower this rule to meet
+it.

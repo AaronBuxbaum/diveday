@@ -60,14 +60,19 @@ describe("visual regression bucket pruner", () => {
     });
   });
 
-  it("carries a 30-day expiration lifecycle rule as a safety backstop", () => {
+  // The pruner keeps ten main baselines by COUNT plus a seven-day floor; the
+  // lifecycle rule counts only days. At 30 the rule deleted the very snapshots
+  // the pruner preserved, and a run with no baseline reports `Changed: 0`,
+  // which reads exactly like nothing broke. The rule may only ever be a floor
+  // beneath the pruner, so this pins it well past anything the pruner keeps.
+  it("expires objects far beyond the pruner's own retention, never inside it", () => {
     template().hasResourceProperties("AWS::S3::Bucket", {
       LifecycleConfiguration: {
         Rules: Match.arrayWith([
           Match.objectLike({
             Id: "expire-old-visual-snapshots",
             Status: "Enabled",
-            ExpirationInDays: 30,
+            ExpirationInDays: 180,
           }),
         ]),
       },

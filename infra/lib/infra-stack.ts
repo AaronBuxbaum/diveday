@@ -262,10 +262,21 @@ export class InfraStack extends cdk.Stack {
       websiteIndexDocument: "index.html",
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       lifecycleRules: [
+        // The nightly pruner (section 15) is what bounds this bucket, and it is
+        // the only bound that understands what a baseline is: it keeps the ten
+        // most recent `main` snapshots by *count* plus everything under seven
+        // days old, precisely so a quiet month never leaves an open branch with
+        // nothing to compare against. An S3 expiry counts only days, so at 30
+        // it deleted the very snapshots the pruner had preserved -- and a run
+        // with no baseline reports `Changed: 0`, which reads exactly like
+        // nothing broke. 180 days keeps a backstop for the case the pruner
+        // itself stops running, while giving it a hundred nightly chances to
+        // act first. The pruner is authoritative; this rule may only ever be a
+        // floor beneath it.
         {
           id: "expire-old-visual-snapshots",
           enabled: true,
-          expiration: cdk.Duration.days(30),
+          expiration: cdk.Duration.days(180),
         },
         {
           id: "abort-incomplete-multipart-uploads",
