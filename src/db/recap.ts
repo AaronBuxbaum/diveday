@@ -1,6 +1,7 @@
 import { and, desc, eq, gt, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { diverTranslator } from "@/i18n/messages";
 import { isStaff } from "@/lib/authz";
+import type { BrandDisplayFontCode } from "@/lib/brand";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
@@ -103,9 +104,18 @@ export type RecapPageData = {
      */
     depthUnit: DepthUnit;
     temperatureUnit: TemperatureUnit;
+    /**
+     * The shop's brand, so the thread's after-state wears it the way the
+     * storefront does — the recap is the shop's postcard (ADR
+     * 20260901-diveday-reimagined, slice 13i). Null means DiveDay's own tokens.
+     */
+    brandColor: string | null;
+    brandDisplayFont: BrandDisplayFontCode | null;
   };
   trip: {
     title: string;
+    /** The course this departure taught, when it was a session of one. */
+    courseTitle: string | null;
     startsAt: Date;
     endsAt: Date;
     plannedDives: number;
@@ -203,6 +213,8 @@ export async function getRecapPageData(
       currency: shops.currency,
       depthUnit: shops.depthUnit,
       temperatureUnit: shops.temperatureUnit,
+      brandColor: shops.brandColor,
+      brandDisplayFont: shops.brandDisplayFont,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -320,9 +332,12 @@ export async function getRecapPageData(
       reviewUrl: row.reviewUrl,
       depthUnit: row.depthUnit,
       temperatureUnit: row.temperatureUnit,
+      brandColor: row.brandColor,
+      brandDisplayFont: row.brandDisplayFont,
     },
     trip: {
       title: trip.title,
+      courseTitle: trip.course?.title ?? null,
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
       plannedDives: trip.plannedDives,

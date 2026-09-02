@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
+import { DIVEDAY_BRAND_COLOR } from "@/lib/brand";
 import { AFTER_STATE_TEST_IDS, AfterState, type AfterStateProps } from "./AfterState";
 
 /**
@@ -45,7 +46,10 @@ function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps {
       depthUnit: "meters",
       temperatureUnit: "celsius",
       reviewUrl: null,
+      brandColor: null,
+      brandDisplayFont: null,
     },
+    siteMark: "reef",
     trip: {
       title: "Two-Tank — French Reef",
       waterTemperatureC: 27,
@@ -206,6 +210,8 @@ describe("one primary at rest", () => {
             depthUnit: "meters",
             temperatureUnit: "celsius",
             reviewUrl: "https://g.page/r/blue-mantis/review",
+            brandColor: null,
+            brandDisplayFont: null,
           },
           ownReview: { rating: 5, comment: "Vis was unreal." },
           params: { review: "published" },
@@ -227,6 +233,8 @@ describe("one primary at rest", () => {
             depthUnit: "meters",
             temperatureUnit: "celsius",
             reviewUrl: "https://g.page/r/blue-mantis/review",
+            brandColor: null,
+            brandDisplayFont: null,
           },
           ownReview: { rating: 5, comment: "Vis was unreal." },
         })}
@@ -320,5 +328,44 @@ describe("the doors stay quiet", () => {
       />,
     );
     expect(screen.getByText("recap.tipCrew")).toBeInTheDocument();
+  });
+});
+
+describe("the postcard (ADR 20260901-diveday-reimagined, slice 13i)", () => {
+  it("wears the shop's brand when the shop has one, and DiveDay's own when not", () => {
+    const { container, unmount } = render(
+      <AfterState
+        {...props({
+          shop: {
+            ...props().shop,
+            brandColor: DIVEDAY_BRAND_COLOR,
+            brandDisplayFont: "bricolage_grotesque",
+          },
+        })}
+      />,
+    );
+    const style = container.querySelector("[data-brand-style]");
+    expect(style?.textContent).toContain("--primary:");
+    expect(style?.textContent).toContain("--brand-display:");
+    unmount();
+    const plain = render(<AfterState {...props()} />);
+    expect(plain.container.querySelector("[data-brand-style]")).toBeNull();
+  });
+
+  it("draws the day's site on the record's face, decorative and off the printed page", () => {
+    const { container } = render(<AfterState {...props({ siteMark: "wreck" })} />);
+    const face = screen.getByTestId(AFTER_STATE_TEST_IDS.face);
+    const mark = face.querySelector("[data-site-mark]");
+    expect(mark?.getAttribute("data-site-mark")).toBe("wreck");
+    expect(mark?.getAttribute("aria-hidden")).toBe("true");
+    expect(mark?.className).toContain("print:hidden");
+    // One drawing on the page, and it sits on the shell so it keeps an edge
+    // against the band that is the wash.
+    expect(container.querySelectorAll("[data-site-mark]")).toHaveLength(1);
+    expect(mark?.className).toContain("bg-surface");
+    // The heading is still the heading — the face restyles it, never adds a
+    // second one, and the day's facts below it still render once.
+    expect(screen.getByRole("heading", { level: 2, name: "recap.logbookHeading" })).toBeTruthy();
+    expect(screen.getAllByTestId(AFTER_STATE_TEST_IDS.sites)).toHaveLength(1);
   });
 });

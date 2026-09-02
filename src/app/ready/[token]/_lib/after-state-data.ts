@@ -7,6 +7,7 @@ import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
 import { nowDate } from "@/lib/clock";
 import { formatRelativeDay, formatShortDate } from "@/lib/format";
+import { siteMarkFor } from "@/lib/site-mark";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 
 /**
@@ -54,8 +55,17 @@ export async function buildAfterStateProps(input: {
       // publishing feet may still read Celsius (src/lib/temperature-units.ts).
       temperatureUnit: temperatureUnitFor(shop),
       reviewUrl: shop.reviewUrl,
+      brandColor: shop.brandColor,
+      brandDisplayFont: shop.brandDisplayFont,
     },
     trip,
+    // The postcard's drawing: the first site the day dived, read the way the
+    // home spine reads a departure's (`siteMarkFor`), or the sea fan for a
+    // course session whatever the site.
+    siteMark: siteMarkFor({
+      siteName: data.sites[0]?.name ?? null,
+      isCourse: trip.courseTitle !== null,
+    }),
     when: formatShortDate(trip.startsAt, locale, shop.timezone),
     diverName: data.diverName,
     sites: data.sites,

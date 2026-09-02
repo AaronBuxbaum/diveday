@@ -4,7 +4,7 @@ import path from "node:path";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { SITE_MARKS } from "@/lib/site-mark";
-import { SITE_MARK_MIN_PX, SITE_MARK_SIZES, SiteMark } from "./SiteMark";
+import { SITE_MARK_GROUNDS, SITE_MARK_MIN_PX, SITE_MARK_SIZES, SiteMark } from "./SiteMark";
 
 afterEach(cleanup);
 
@@ -66,5 +66,21 @@ describe("SiteMark", () => {
         /manifest|roll-call|rollcall|cert|waiver|order|payment|checkout|refund/i,
       );
     }
+  });
+});
+
+describe("the ground", () => {
+  it("sits on the lagoon wash by default, and on the shell where the page is the wash", () => {
+    // A prop, never a `className` override: two `bg-*` utilities on one
+    // element resolve by Tailwind's emit order, not the caller's intent.
+    const { container, unmount } = render(<SiteMark mark="reef" />);
+    expect(container.querySelector("[data-site-mark]")?.className).toContain(
+      SITE_MARK_GROUNDS.tint,
+    );
+    unmount();
+    const shell = render(<SiteMark mark="reef" ground="surface" />);
+    const tile = shell.container.querySelector("[data-site-mark]");
+    expect(tile?.className).toContain(SITE_MARK_GROUNDS.surface);
+    expect(tile?.className).not.toContain(SITE_MARK_GROUNDS.tint);
   });
 });

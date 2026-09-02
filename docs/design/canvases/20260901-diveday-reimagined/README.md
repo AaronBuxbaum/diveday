@@ -113,7 +113,7 @@ door order on Tide's and Reef's switching boards (the demo leads).
 | 13f — the drawn site mark | shipped | `src/components/illustration/SiteMark.tsx` | `src/components/illustration/SiteMark.test.tsx` |
 | 13g — the water closes over finished work | shipped | `src/app/shop/[shopSlug]/_components/today/StationSettles.tsx` | `src/app/shop/[shopSlug]/_components/today/StationSettles.test.tsx` |
 | 13h — the count that fills | shipped | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/HeadCount.tsx` | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/HeadCount.test.tsx` |
-| 13i — the diver's day, drawn | open | — | — |
+| 13i — the diver's day, drawn | shipped | `src/app/ready/[token]/_components/AfterState.tsx` | `src/app/ready/[token]/_components/AfterState.test.tsx` |
 | 13j — the night palette | open | — | — |
 
 ## Working on it
