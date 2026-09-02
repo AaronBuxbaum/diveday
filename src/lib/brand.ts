@@ -179,7 +179,13 @@ const WHITE = "#ffffff";
 /** DiveDay's ink, the darker of the two candidate texts on a brand fill. */
 export const BRAND_INK = "#0c2a35";
 /** Reef's shell — the surface a tint is mixed over when the caller names none. */
-export const BRAND_DEFAULT_SURFACE = "#fffdf8";
+/**
+ * The ground the storefront paints on (`--background`), not the shell a card
+ * paints on: the brand colour is *text* on the ground — a link, a current nav
+ * chip, a price — and the ground is the darker of the two, so it is the one
+ * the contrast check has to clear.
+ */
+export const BRAND_DEFAULT_SURFACE = "#fbf7ef";
 
 export type BrandTheme = {
   /** The button fill and link colour, darkened if the shop's colour failed contrast. */
@@ -194,15 +200,28 @@ export type BrandTheme = {
   adjusted: boolean;
 };
 
+/** The tint's share of the fill over the surface — see `deriveBrandTheme`. */
+const TINT_MIX = 0.08;
+
 /**
- * The derivation rule (ADR 20260901-diveday-reimagined, decision 2):
+ * The derivation rule (ADR 20260901-diveday-reimagined, decision 2): the
+ * colour is checked against the shop's ground *and* against white.
  *
- * 1. If white reads on the colour (4.5:1), it is the fill and white is the ink.
- * 2. Else if ink reads on it — a pale brand — it is the fill and ink is the ink.
- * 3. Else the colour is darkened in 8% steps until white reads on it, and the
- *    theme says so. The storefront says nothing; a shop learns in Settings.
+ * 1. The colour is text before it is a fill — a link, the current nav chip on
+ *    its own tint, a price — so it is darkened in 8% steps until it reads
+ *    (4.5:1) on the surface and on its 8% tint over that surface. Until
+ *    2026-09-02 only the fill half ran, and axe failed every storefront link
+ *    on the demo shop's `#158462` at 4.36:1.
+ * 2. Then, as a fill: if white reads on it, white is the ink; else if ink
+ *    reads on it — a pale brand on a dark surface — ink is; else it is
+ *    darkened until white reads. (On a light surface, a colour that passed
+ *    step 1 already takes white: the ground is within a few percent of white.)
+ * 3. `adjusted` says whether either step moved it. The storefront says
+ *    nothing; a shop learns in Settings.
  *
- * Hover is the fill darkened 12%; the tint is 10% of the fill over the surface.
+ * Hover is the fill darkened 12%; the tint is 8% of the fill over the surface
+ * (10% until 2026-09-02: at 10%, DiveDay's own lagoon read on its tint at
+ * 4.38:1 and would have been nudged darker by its own rule).
  */
 export function deriveBrandTheme(
   color: string,
@@ -210,6 +229,14 @@ export function deriveBrandTheme(
 ): BrandTheme {
   let primary = color.toLowerCase();
   let adjusted = false;
+  const readsAsText = (fill: string) =>
+    contrastRatio(fill, surface) >= AA_TEXT_CONTRAST &&
+    contrastRatio(fill, mixHex(surface, fill, TINT_MIX)) >= AA_TEXT_CONTRAST;
+  // Twelve steps of 8% reach near-black from any hue, so this always ends.
+  for (let step = 0; step < 12 && !readsAsText(primary); step++) {
+    primary = mixHex(primary, "#000000", 0.08);
+    adjusted = true;
+  }
   let primaryForeground = WHITE;
   if (contrastRatio(primary, WHITE) < AA_TEXT_CONTRAST) {
     if (contrastRatio(primary, BRAND_INK) >= AA_TEXT_CONTRAST) {
@@ -225,7 +252,7 @@ export function deriveBrandTheme(
   return {
     primary,
     primaryHover: mixHex(primary, "#000000", 0.12),
-    primaryTint: mixHex(surface, primary, 0.1),
+    primaryTint: mixHex(surface, primary, TINT_MIX),
     primaryForeground,
     adjusted,
   };

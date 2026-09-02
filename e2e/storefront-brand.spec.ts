@@ -25,7 +25,7 @@ test.describe("the storefront wears the shop's brand", () => {
       .getByRole("link", { name: /Book this boat/ })
       .first()
       .evaluate((el) => getComputedStyle(el).backgroundColor);
-    expect(fill).toBe("rgb(21, 132, 98)");
+    expect(fill).toBe("rgb(19, 121, 90)");
   });
 
   test("the embed inherits the colour and carries no wall", async ({ page }) => {
@@ -35,6 +35,6 @@ test.describe("the storefront wears the shop's brand", () => {
     const primary = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--primary").trim(),
     );
-    expect(primary).toBe("#158462");
+    expect(primary).toBe("#13795a");
   });
 });

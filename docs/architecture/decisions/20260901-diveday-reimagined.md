@@ -75,8 +75,8 @@ overlay with a default, never a requirement.
   DiveDay has no right to show). `logo_url` and `tagline` already exist.
 - **The derivation rule** (`src/lib/brand.ts`, pure): the brand colour is checked for 4.5:1 against
   the shop's ground and against white; if it fails as a button fill it is darkened until it passes
-  and the storefront says nothing about it; hover is the colour darkened 12%; the tint is a 10% mix
-  over the surface; ink-on-brand is white or ink by contrast. The result is emitted as the public
+  and the storefront says nothing about it; hover is the colour darkened 12%; the tint is an 8% mix
+  over the surface (10% until 2026-09-02, when the text-on-tint check joined the rule); ink-on-brand is white or ink by contrast. The result is emitted as the public
   layout's `--primary`, `--primary-hover`, `--primary-tint`, `--primary-foreground` — so every
   existing primitive re-skins with no per-component work.
 - **The display face** labels headings only — the shop's name, a section title, the trip's title.
