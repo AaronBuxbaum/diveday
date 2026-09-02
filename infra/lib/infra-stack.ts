@@ -744,8 +744,19 @@ export class InfraStack extends cdk.Stack {
     // Explicit, because a Lambda that creates its own log group creates it with
     // no retention and it grows forever. Every other group in the account is
     // bounded; these were the three that were not.
+    //
+    // Not `/aws/lambda/diveday-sms-receipt-forwarder`. That is the name Lambda
+    // gives the group it creates on a function's first invocation, and this
+    // function had already run before the stack declared a group for it -- so
+    // the first deploy carrying this resource failed change-set validation
+    // with "already exists" (2026-09-02). A name Lambda would never pick
+    // cannot collide with one it already made, and `logGroup` on the function
+    // below points its logging config here regardless of the name. The
+    // auto-created group is orphaned rather than adopted: delete it once
+    // (docs/engineering/sms-delivery-receipts-runbook.md), and nothing
+    // writes to it again.
     const smsReceiptForwarderLogs = new logs.LogGroup(this, "SmsReceiptForwarderLogs", {
-      logGroupName: "/aws/lambda/diveday-sms-receipt-forwarder",
+      logGroupName: "/diveday/lambda/sms-receipt-forwarder",
       retention: logs.RetentionDays.ONE_MONTH,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });

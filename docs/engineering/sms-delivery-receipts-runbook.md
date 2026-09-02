@@ -88,3 +88,17 @@ Work the pipeline backwards — each hop has its own failure mode:
 Both log groups keep two weeks. These records contain diver phone numbers and the only part DiveDay
 needs is copied onto the delivery row within seconds, so the raw receipts are a liability rather than
 an asset after that.
+
+The forwarder's own logs go to `/diveday/lambda/sms-receipt-forwarder` (one month), declared by the
+stack and named on the function's logging config. **Not** `/aws/lambda/diveday-sms-receipt-forwarder`:
+that is the group Lambda creates by itself on a function's first run, and the function had already run
+before the stack declared a group for it, so a stack naming exactly that group failed change-set
+validation with "already exists" (2026-09-02). The auto-created group is orphaned rather than adopted.
+It has no retention and nothing writes to it any more, so delete it once:
+
+```bash
+aws logs delete-log-group --log-group-name /aws/lambda/diveday-sms-receipt-forwarder
+```
+
+`infra/lib/sms-receipt-forwarder.test.ts` pins the declared name so a tidy-minded rename cannot bring
+the collision back.
