@@ -1,3 +1,4 @@
+import { deriveBrandTheme } from "@/lib/brand";
 import { expect, signedInAsOwner, test } from "./fixtures";
 
 /**
@@ -31,7 +32,10 @@ test.describe("the widget views", () => {
     const primary = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--primary").trim(),
     );
-    expect(primary).toBe("#b45309");
+    // The host's colour, as `BrandStyle` derives every brand: darkened until it
+    // reads as text on sand (`deriveBrandTheme`), never the raw hex — an amber
+    // that reads white-on-fill still sat under 4.5:1 as a link.
+    expect(primary).toBe(deriveBrandTheme("#b45309").primary);
     const font = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--font-sans").trim(),
     );
@@ -43,7 +47,8 @@ test.describe("the widget views", () => {
     const primary = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--primary").trim(),
     );
-    expect(primary).toBe("#158462");
+    // The seeded shop's own green (src/db/seed.ts), derived the same way.
+    expect(primary).toBe(deriveBrandTheme("#158462").primary);
   });
 });
 

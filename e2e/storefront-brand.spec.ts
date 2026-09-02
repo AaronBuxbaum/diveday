@@ -1,4 +1,11 @@
+import { deriveBrandTheme } from "@/lib/brand";
 import { expect, test } from "./fixtures";
+
+/** `#rrggbb` as `getComputedStyle` spells it. */
+function cssRgb(hex: string): string {
+  const [r, g, b] = [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
+  return `rgb(${r}, ${g}, ${b})`;
+}
 
 /**
  * Harbor (ADR 20260901-diveday-reimagined, decision 2): the storefront and the
@@ -25,7 +32,9 @@ test.describe("the storefront wears the shop's brand", () => {
       .getByRole("link", { name: /Book this boat/ })
       .first()
       .evaluate((el) => getComputedStyle(el).backgroundColor);
-    expect(fill).toBe("rgb(21, 132, 98)");
+    // The seeded green as `BrandStyle` derives it (`deriveBrandTheme`), as the
+    // browser reports a computed background: `rgb(r, g, b)`.
+    expect(fill).toBe(cssRgb(deriveBrandTheme("#158462").primary));
   });
 
   test("the embed inherits the colour and carries no wall", async ({ page }) => {
@@ -35,6 +44,8 @@ test.describe("the storefront wears the shop's brand", () => {
     const primary = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--primary").trim(),
     );
-    expect(primary).toBe("#158462");
+    // The seeded green as `BrandStyle` derives it — darkened until it reads as
+    // text on sand (`deriveBrandTheme`) — never the raw hex from src/db/seed.ts.
+    expect(primary).toBe(deriveBrandTheme("#158462").primary);
   });
 });
