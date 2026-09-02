@@ -168,8 +168,7 @@ below `xl` (1280px), on tablets and phones.
 ### The public schedule — `/s/[shopSlug]`
 
 **Shipped 2026-08-28** (slice 6i) — same ADR and canvas. Conversion surface; gets the
-`conversion-reviewer` pass. **Redrawn as Harbor (ADR 20260901-diveday-reimagined, slice 13c — designed,
-not yet built):** the same composition in the shop's own brand — its colour, display face, hero
+`conversion-reviewer` pass. **Redrawn as Harbor (ADR 20260901-diveday-reimagined, slice 13c, shipped 2026-09-01):** the same composition in the shop's own brand — its colour, display face, hero
 photograph, badge wall, quotes and boats — with DiveDay as a credit line. `/s/[shopSlug]/reviews` restyled with it, and the two public course
 routes took the display-scale h1 only.
 

@@ -105,7 +105,8 @@
    * retunes its tints with it, and so boat-mode and glare-mode get theirs free.
    */
   /* Reef's washes: a drawn tint per signal rather than a 10% mix, so each
-     sits on the warm shell without going grey. Dark mode keeps the mix. */
+     sits on the warm shell without going grey. The night palette draws its
+     own (13j, in the dark block below). */
   /* 4.72:1 under --primary as text (a current nav chip is `bg-primary-tint
      text-primary`); #dceef0 measured 4.47 — axe, 2026-09-02. */
   --primary-tint: #e6f3f5;
@@ -167,12 +168,27 @@
     --danger: #f87171;
     --info: #818cf8;
     --accent-deep: #ffb3aa;
-    --accent-tint: color-mix(in srgb, var(--accent) 14%, var(--surface));
     --shallows: #1f6f78;
-    --primary-tint: color-mix(in srgb, var(--primary) 10%, var(--surface));
-    --success-tint: color-mix(in srgb, var(--success) 10%, var(--surface));
-    --warning-tint: color-mix(in srgb, var(--warning) 10%, var(--surface));
-    --danger-tint: color-mix(in srgb, var(--danger) 10%, var(--surface));
+    /*
+     * The night palette, drawn (ADR 20260901-diveday-reimagined, slice 13j).
+     * Reef drew no dark scheme, so open ocean stays the ground and the
+     * brand's night values stand (docs/design/brand.md); what it had to draw
+     * was the washes. A 10% mix of a signal over the shell goes grey at
+     * depth exactly as it did on the warm shell by day — the danger wash
+     * mixed to `#252a34`, a blue-grey with no red in it, and the warning wash
+     * to `#25322c`, a green. Each is now its own deep hue, chosen so the
+     * signal reads as itself on it and its ink clears AA on it: primary 7.27,
+     * success 7.93 (its `-strong` 7.01), warning 8.29 (`-strong` 7.33), danger
+     * 5.69, coral's deep on its wash 8.76; the reading ink on every wash
+     * 11.6–13.9 and the muted ink 5.3–6.3 (measured 2026-09-02).
+     * `src/lib/night-palette.test.ts` reads this block back and holds every
+     * pair, and that a wash is a hue and never a mix.
+     */
+    --accent-tint: #3f1d19;
+    --primary-tint: #0b3540;
+    --success-tint: #0f3324;
+    --warning-tint: #3a2a0e;
+    --danger-tint: #3d1717;
     --shadow-bed: 0 2px 10px rgba(0, 0, 0, 0.35);
   }
 }

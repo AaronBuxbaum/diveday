@@ -1,6 +1,6 @@
 # DiveDay, reimagined — three directions, and a second page
 
-- **Status:** Live (its ADR is Accepted — H-64, 2026-09-01; slices 13a–13j open)
+- **Status:** Shipped (its ADR is Accepted — H-64, 2026-09-01; slices 13a–13j landed 2026-09-01 to 2026-09-02)
 - **Date:** 2026-09-01
 - **ADR:** [20260901-diveday-reimagined](../../../architecture/decisions/20260901-diveday-reimagined.md)
 - **Published:** https://claude.ai/code/artifact/b4b4c1a1-987d-4d98-b754-5beea4814108
@@ -114,7 +114,7 @@ door order on Tide's and Reef's switching boards (the demo leads).
 | 13g — the water closes over finished work | shipped | `src/app/shop/[shopSlug]/_components/today/StationSettles.tsx` | `src/app/shop/[shopSlug]/_components/today/StationSettles.test.tsx` |
 | 13h — the count that fills | shipped | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/HeadCount.tsx` | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/HeadCount.test.tsx` |
 | 13i — the diver's day, drawn | shipped | `src/app/ready/[token]/_components/AfterState.tsx` | `src/app/ready/[token]/_components/AfterState.test.tsx` |
-| 13j — the night palette | open | — | — |
+| 13j — the night palette | shipped | `src/app/globals.css` | `src/lib/night-palette.test.ts` |
 
 ## Working on it
 
