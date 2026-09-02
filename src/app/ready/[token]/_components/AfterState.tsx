@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
+import { BrandStyle } from "@/components/BrandStyle";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ImageFileInput } from "@/components/ImageFileInput";
+import { SiteMark } from "@/components/illustration/SiteMark";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { StarRatingInput } from "@/components/StarRatingInput";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -14,12 +16,14 @@ import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import type { RecapPageData, RecapPhotoView, RecapSite } from "@/db/recap";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
+import type { BrandDisplayFontCode } from "@/lib/brand";
 import type { DepthUnit } from "@/lib/depth-units";
 import { formatOrdinal } from "@/lib/format";
 import { cachedFormatter } from "@/lib/intl-cache";
 import { currencySymbol, minorToMajor, type ShopCurrency } from "@/lib/money";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { MAX_REVIEW_COMMENT_LENGTH, REVIEW_RATINGS } from "@/lib/reviews";
+import type { SiteMarkCode } from "@/lib/site-mark";
 import { noticeFromParam } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import type { TemperatureUnit } from "@/lib/temperature-units";
@@ -84,7 +88,15 @@ export type AfterStateProps = {
     temperatureUnit: TemperatureUnit;
     /** Where "take it to Google" goes, or null when the shop has set none. */
     reviewUrl: string | null;
+    /**
+     * The shop's brand, worn by this surface the way the storefront wears it
+     * (ADR 20260901-diveday-reimagined, slice 13i). Null renders DiveDay's own.
+     */
+    brandColor: string | null;
+    brandDisplayFont: BrandDisplayFontCode | null;
   };
+  /** The day's site, drawn in the illustration hand on the record's face. */
+  siteMark: SiteMarkCode;
   /**
    * `plannedDives` is deliberately not here. It is what a shop typed on the
    * trip row, not a count of dives this diver made, and the one place it was
@@ -172,6 +184,7 @@ export const AFTER_STATE_TEST_IDS = {
   visitLine: "dive-record-visit-line",
   printNotes: "dive-record-print-notes",
   printSignature: "dive-record-print-signature",
+  face: "dive-record-face",
 } as const;
 
 export function AfterState({
@@ -194,6 +207,7 @@ export function AfterState({
   params,
   nextDeparture,
   actions,
+  siteMark,
 }: AfterStateProps) {
   const firstName = diverName.trim().split(/\s+/)[0] || t("recap.namelessFallback");
   const greeting = t("thread.afterGreeting", { name: firstName });
@@ -230,6 +244,13 @@ export function AfterState({
     // so the keepsake prints alone. The measure is the shell's own exported
     // constant, so the thread's one column still cannot drift.
     <main className={THREAD_MEASURE_CLASS}>
+      {/* The shop's brand, as tokens — the same `BrandStyle` the storefront
+          mounts, so the day a diver keeps is in the colour and face of the
+          shop that gave it to them (slice 13i). Ink, ground and every signal
+          colour stay DiveDay's; only the action tokens and the display face
+          move, which is what keeps the review's primary and the tip's form on
+          brand while a refusal never is. */}
+      <BrandStyle brandColor={shop.brandColor} brandDisplayFont={shop.brandDisplayFont} />
       {celebrate ? (
         <EarnedMoment as="h1" eyebrow={shop.name} title={greeting} className="print:hidden">
           <p className="text-base">
@@ -255,6 +276,7 @@ export function AfterState({
         diverName={diverName}
         sites={sites}
         visitCount={visitCount}
+        siteMark={siteMark}
       />
 
       {/* The crew's own words carry themselves — a quote, not a boxed panel.
@@ -493,6 +515,16 @@ export function AfterState({
  * what that block was always for. DiveDay records nothing about dives
  * *performed*; the nearest thing it holds is who boarded
  * (`roll_call_events`), and boarding is not a dive either.
+ *
+ * **The postcard** — Reef's third moment (ADR 20260901-diveday-reimagined,
+ * slice 13i). The record's face is a band of the lagoon wash carrying the
+ * day's site drawn in the illustration hand, with the heading in the shop's
+ * own display face; the page above it already wears the shop's colour. The
+ * drawing is decoration beside facts that say everything (`aria-hidden`), and
+ * it does not print: what leaves the printer is still the logbook page, and a
+ * brain coral on a sheet a divemaster signs is the one place the hand may not
+ * go. Nothing about what the record *claims* changes — the sentence above
+ * this one still governs every line.
  */
 function DiveRecord({
   t,
@@ -503,9 +535,10 @@ function DiveRecord({
   diverName,
   sites,
   visitCount,
+  siteMark,
 }: Pick<
   AfterStateProps,
-  "t" | "locale" | "shop" | "when" | "diverName" | "sites" | "visitCount"
+  "t" | "locale" | "shop" | "when" | "diverName" | "sites" | "visitCount" | "siteMark"
 > & {
   trip: AfterStateProps["trip"];
 }) {
@@ -534,12 +567,25 @@ function DiveRecord({
       aria-labelledby="dive-record-heading"
       // Flat at rest, like every other panel (Clearwater decision 1). In print
       // it drops its chrome entirely and takes the page.
-      className="mt-8 rounded-panel border border-border bg-surface shadow-bed p-5 sm:p-6 print:mt-0 print:rounded-none print:border-0 print:p-0"
+      className="mt-8 overflow-hidden rounded-panel border border-border bg-surface shadow-bed print:mt-0 print:rounded-none print:border-0"
     >
-      <div className="flex items-start justify-between gap-4">
-        <h2 id="dive-record-heading" className="text-lg font-semibold tracking-tight">
-          {t("recap.logbookHeading")}
-        </h2>
+      {/* The postcard's face: the site, drawn, and the heading in the shop's
+          face on the lagoon wash. The band is the wash, so the tile takes the
+          shell to keep its edge. In print the band drops its wash and its
+          drawing and the heading stands alone at the top of the sheet. */}
+      <div
+        data-testid={AFTER_STATE_TEST_IDS.face}
+        className="flex items-center justify-between gap-4 bg-primary-tint px-5 py-4 sm:px-6 print:bg-transparent print:px-0 print:py-0"
+      >
+        <div className="flex min-w-0 items-center gap-4">
+          <SiteMark mark={siteMark} size="lg" ground="surface" className="print:hidden" />
+          <h2
+            id="dive-record-heading"
+            className="font-brand-display text-xl font-semibold tracking-tight text-pretty"
+          >
+            {t("recap.logbookHeading")}
+          </h2>
+        </div>
         {stampText ? (
           <MilestoneStamp label={stampText} />
         ) : (
@@ -558,67 +604,69 @@ function DiveRecord({
         )}
       </div>
 
-      <dl className="mt-5 divide-y divide-border border-t border-border">
-        <Fact label={t("recap.diverLabel")}>{diverName}</Fact>
-        <Fact label={t("recap.dateLabel")}>{when}</Fact>
-        {trip.boatName ? <Fact label={t("recap.vesselLabel")}>{trip.boatName}</Fact> : null}
-        {trip.crew.length > 0 ? (
-          <Fact label={t("recap.crewLabel")}>{trip.crew.join(", ")}</Fact>
-        ) : null}
-        {sites.length > 0 ? (
-          // Names only. The site's own maximum depth used to sit beside each
-          // one under a "Max depth" label, on a card built to be printed and
-          // pasted into a logbook — see this component's doc comment for why
-          // that number is not this diver's.
-          <Fact label={t("recap.sitesLabel")} testId={AFTER_STATE_TEST_IDS.sites}>
-            <ul className="flex flex-col gap-1">
-              {sites.map((site) => (
-                <li key={site.name} className="font-medium">
-                  {site.name}
-                </li>
-              ))}
-            </ul>
-          </Fact>
-        ) : null}
-        {conditions.length > 0 ? (
-          <Fact label={t("recap.conditionsOnTheDay")} testId={AFTER_STATE_TEST_IDS.conditions}>
-            <span className="tabular-nums">
-              {conditions.map((fact) => `${fact.label}: ${fact.value}`).join(" · ")}
-            </span>
-          </Fact>
-        ) : null}
-      </dl>
+      <div className="p-5 pt-0 sm:p-6 sm:pt-0 print:p-0">
+        <dl className="mt-5 divide-y divide-border border-t border-border">
+          <Fact label={t("recap.diverLabel")}>{diverName}</Fact>
+          <Fact label={t("recap.dateLabel")}>{when}</Fact>
+          {trip.boatName ? <Fact label={t("recap.vesselLabel")}>{trip.boatName}</Fact> : null}
+          {trip.crew.length > 0 ? (
+            <Fact label={t("recap.crewLabel")}>{trip.crew.join(", ")}</Fact>
+          ) : null}
+          {sites.length > 0 ? (
+            // Names only. The site's own maximum depth used to sit beside each
+            // one under a "Max depth" label, on a card built to be printed and
+            // pasted into a logbook — see this component's doc comment for why
+            // that number is not this diver's.
+            <Fact label={t("recap.sitesLabel")} testId={AFTER_STATE_TEST_IDS.sites}>
+              <ul className="flex flex-col gap-1">
+                {sites.map((site) => (
+                  <li key={site.name} className="font-medium">
+                    {site.name}
+                  </li>
+                ))}
+              </ul>
+            </Fact>
+          ) : null}
+          {conditions.length > 0 ? (
+            <Fact label={t("recap.conditionsOnTheDay")} testId={AFTER_STATE_TEST_IDS.conditions}>
+              <span className="tabular-nums">
+                {conditions.map((fact) => `${fact.label}: ${fact.value}`).join(" · ")}
+              </span>
+            </Fact>
+          ) : null}
+        </dl>
 
-      {/* ——— Print only: what a paper logbook page has and a screen does not.
+        {/* ——— Print only: what a paper logbook page has and a screen does not.
           Four ruled lines to write the dive up on, and a rule for whoever
           signs it off. */}
-      <div
-        data-testid={AFTER_STATE_TEST_IDS.printNotes}
-        className="mt-6 hidden print:block"
-        aria-hidden="true"
-      >
-        <p className="text-xs font-medium text-muted">{t("recap.printNotes")}</p>
-        <div className="mt-2 flex flex-col gap-5">
-          {[0, 1, 2, 3].map((line) => (
-            <span key={line} className="block border-b border-border" />
-          ))}
+        <div
+          data-testid={AFTER_STATE_TEST_IDS.printNotes}
+          className="mt-6 hidden print:block"
+          aria-hidden="true"
+        >
+          <p className="text-xs font-medium text-muted">{t("recap.printNotes")}</p>
+          <div className="mt-2 flex flex-col gap-5">
+            {[0, 1, 2, 3].map((line) => (
+              <span key={line} className="block border-b border-border" />
+            ))}
+          </div>
         </div>
-      </div>
-      <div
-        data-testid={AFTER_STATE_TEST_IDS.printSignature}
-        className="mt-8 hidden print:block"
-        aria-hidden="true"
-      >
-        <span className="block border-b border-border" />
-        <p className="mt-2 text-xs font-medium text-muted">{t("recap.printSignature")}</p>
-      </div>
+        <div
+          data-testid={AFTER_STATE_TEST_IDS.printSignature}
+          className="mt-8 hidden print:block"
+          aria-hidden="true"
+        >
+          <span className="block border-b border-border" />
+          <p className="mt-2 text-xs font-medium text-muted">{t("recap.printSignature")}</p>
+        </div>
 
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-        {/* Whose record it is, which is all this card may claim of itself. */}
-        <p className="text-xs text-muted">{t("recap.recordedBy", { shopName: shop.name })}</p>
-        <span className="print:hidden">
-          <PrintRecordButton label={t("recap.printRecord")} />
-        </span>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+          {/* Whose record it is, which is all this card may claim of itself. */}
+          <p className="text-xs text-muted">{t("recap.recordedBy", { shopName: shop.name })}</p>
+          <span className="print:hidden">
+            <PrintRecordButton label={t("recap.printRecord")} />
+          </span>
+        </div>
       </div>
     </section>
   );
