@@ -99,7 +99,7 @@ export function ShopPageHeader({
                 <img
                   src={brand.logoUrl}
                   alt=""
-                  className="size-14 shrink-0 rounded-2xl border border-border bg-surface object-cover"
+                  className="size-14 shrink-0 rounded-xl border border-border bg-surface object-cover"
                 />
               ) : null}
               <div className="min-w-0">

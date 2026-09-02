@@ -63,7 +63,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`w-full max-w-md rounded-2xl border border-border bg-surface p-5 shadow-2xl outline-none sm:p-6 ${closing ? "animate-scale-out" : "animate-scale-in"} ${className}`}
+        className={`w-full max-w-md rounded-panel border border-border bg-surface p-5 shadow-2xl outline-none sm:p-6 ${closing ? "animate-scale-out" : "animate-scale-in"} ${className}`}
       >
         <h2 id={titleId} className="text-lg font-semibold">
           {title}

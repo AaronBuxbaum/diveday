@@ -152,7 +152,7 @@ export function BookingPartyFields({
             role="radiogroup"
             aria-labelledby="party-size-label"
             data-hydrated={hydrated ? "true" : "false"}
-            className="mt-2 flex w-fit max-w-full flex-wrap gap-1 rounded-2xl border border-border bg-surface-sunken p-1"
+            className="mt-2 flex w-fit max-w-full flex-wrap gap-1 rounded-panel border border-border bg-surface-sunken p-1"
           >
             {counts.map((count) => (
               <label

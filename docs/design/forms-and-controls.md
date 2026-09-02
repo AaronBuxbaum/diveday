@@ -13,7 +13,8 @@ routes one tap apart rendered the same panel at two different corner radii, and 
 cards sat at two elevations on one page.
 
 One spelling now, and it is the one `ShopStat` and the `<Table>` shell already shared —
-`rounded-2xl border border-border bg-surface` — so **a card, a stat tile and a table shell read as
+`rounded-panel border border-border bg-surface shadow-bed` (Reef's 28px panel on the warm bed, ADR
+20260901-diveday-reimagined 13a) — so **a card, a stat tile and a table shell read as
 the same object**. That spelling lost its shadow on 2026-08-28 (ADR
 20260827-clearwater-surface-language, decision 1: **elevation is earned**) — a panel at rest is a
 fill and a hairline, and a shadow says the thing *floats above the page*, which is true of a menu,

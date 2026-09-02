@@ -85,7 +85,7 @@ the implementation. Do not send a screenshot of the website as the artwork.
 > **Direction change, 2026-09-01 (H-64, ADR 20260901-diveday-reimagined).** The staff app moves to
 > Reef's warmer palette — sand `#fbf7ef`, shell `#fffdf8`, tideline `#f3ecdd`, rope `#e6dcc8`, the
 > lagoon opened to a deep `#0a4d61` and a decorative shallows `#7fd0d6`, washes for coral and each
-> signal — landing with slice 13a; the values below describe the tree until it does. Diver-facing
+> signal — landed with slice 13a; the values below are the tree. Diver-facing
 > surfaces wear the **shop's** brand (Harbor), with these tokens as the default for a shop that has
 > set none.
 
@@ -99,19 +99,20 @@ embroidery, and vendor conversations.
 
 | Color | Light value | Dark value | Role | Merch guidance |
 | --- | --- | --- | --- | --- |
-| Sunlit sand | `#FAF9F6` | — | Light background; warm, open, tactile. | Best garment or paper ground for a light application. |
+| Sand | `#FBF7EF` | — | Light background; warm, open, tactile (Reef, 13a). | Best garment or paper ground for a light application. |
 | Open ocean | — | `#071720` | Dark background; deep, quiet, dependable. | Best dark garment, hat, tote, or sticker ground. |
 | Deep-sea ink | `#0C2A35` | `#E9F3F4` | Primary reading color: grounded dark ink in light mode, soft light ink in dark mode. | Use the contrasting value for the wordmark and longer copy. |
 | Lagoon | `#0E7490` | `#22D3EE` | Action color and primary brand signal. | Main imprint color on sand or ocean; use the darker light-mode value on light goods. |
-| Lagoon hover/depth | `#155E75` | `#67E8F9` | Darker or brighter lagoon variant for contrast and depth. | Use sparingly for a two-tone mark or secondary imprint. |
-| Coral | `#FF6F61` | `#FF8A7E` | Rare warm accent; the smallest bubble and earned moments of joy. | One small accent only: bubble, stitch, dot, or detail. Never make the whole item coral by default. |
+| Lagoon hover/depth | `#0A4D61` | `#67E8F9` | Darker or brighter lagoon variant for contrast and depth. | Use sparingly for a two-tone mark or secondary imprint. |
+| Coral | `#FF6F61` | `#FF8A7E` | Rare warm accent; the smallest bubble and earned moments of joy. Its wash `#FFEEE9` is the bed an earned moment sits on; its deep `#A83A2C` is ink on that wash. |
+| Shallows | `#7FD0D6` | `#1F6F78` | Decorative water behind a count that is already spelled out. Never a status. | One small accent only: bubble, stitch, dot, or detail. Never make the whole item coral by default. |
 
 ### Supporting colors
 
 | Token family | Current purpose | Brand use |
 | --- | --- | --- |
-| Surface / sunken surface | Quiet hierarchy between cards, pages, and recessed areas. | Optional background neutrals for paper, packaging, and layout; do not turn them into extra brand colors. |
-| Border / strong border | Structure and control affordances. | Use for physical rules or labels only when needed; the brand is not a framed-box system. |
+| Shell `#FFFDF8` / tideline `#F3ECDD` | Quiet hierarchy between panels, pages, and recessed areas; a resting panel sits on the warm bed `0 2px 10px rgba(88, 66, 30, 0.06)` at a 28px radius. | Optional background neutrals for paper, packaging, and layout; do not turn them into extra brand colors. |
+| Rope `#E6DCC8` / rope-strong `#8A8065` | Structure and control affordances. | Use for physical rules or labels only when needed; the brand is not a framed-box system. |
 | Success / warning / danger | Operational feedback. | Keep these out of general merch and promotional art. They signal state, not identity. |
 
 Color rules:

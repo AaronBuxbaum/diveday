@@ -85,7 +85,9 @@ export function ClosingBlock({
           // A coral box listing an unreconciled head count would be the panel
           // contradicting its own contents, so that branch stays flat.
           className={`mt-3 p-5 sm:p-6 ${
-            outstanding ? "rounded-2xl border border-border bg-surface" : EARNED_MOMENT_SURFACE
+            outstanding
+              ? "rounded-panel border border-border bg-surface shadow-bed"
+              : EARNED_MOMENT_SURFACE
           }`}
         >
           <p className="font-semibold">

@@ -177,7 +177,7 @@ function HomeBodySkeleton() {
             <div className="mt-2 h-4 w-2/3 max-w-sm rounded bg-surface-sunken" />
           </div>
           <div className="lg:col-span-6">
-            <div className="h-80 rounded-2xl border border-border bg-surface" />
+            <div className="h-80 rounded-panel border border-border bg-surface shadow-bed" />
           </div>
         </div>
       </section>

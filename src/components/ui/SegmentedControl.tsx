@@ -120,7 +120,7 @@ export function SegmentedControl({
   // had. Content width comes from `w-fit`, not from being inline.
   const track = `flex ${
     fill ? "" : "w-fit max-w-full"
-  } flex-wrap gap-1 rounded-2xl border border-border bg-surface-sunken p-1 print:hidden ${className}`.trim();
+  } flex-wrap gap-1 rounded-inset border border-border bg-surface-sunken p-1 print:hidden ${className}`.trim();
   return (
     <nav aria-label={ariaLabel} className={track}>
       {items.map((item) => {

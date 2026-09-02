@@ -70,7 +70,7 @@ export function TripDiveFields({
       // state of an unmounted subtree, and these are a staff member's typed
       // dive plans.
       hidden={disabled}
-      className="rounded-2xl border border-border bg-surface-sunken/45 p-4 sm:p-5"
+      className="rounded-panel border border-border bg-surface-sunken/45 p-4 sm:p-5"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
