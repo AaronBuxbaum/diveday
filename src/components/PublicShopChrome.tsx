@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChromeBar } from "@/components/chrome/ChromeBar";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { LanguagePicker, type LanguagePickerCopy } from "@/components/LanguagePicker";
+import { LogoMark } from "@/components/Logo";
 import { PublicShopNav, type PublicShopNavItem } from "@/components/PublicShopNav";
 import type { DiverTranslator } from "@/i18n/messages";
 import {
@@ -183,6 +184,12 @@ export function PublicShopFooter({
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-6 text-sm text-muted sm:flex-row sm:items-start sm:justify-between sm:px-6">
         <div>
           <p>{t("shopChrome.footerLine", { shop: shop.name })}</p>
+          {/* The credit line — the only DiveDay-coloured pixels on a shop's
+              storefront (Harbor, ADR 20260901-diveday-reimagined). */}
+          <Link href="/" className="mt-1 inline-flex items-center gap-1.5 hover:text-foreground">
+            <LogoMark className="size-4" />
+            <span>{t("shopChrome.credit")}</span>
+          </Link>
           {spokenLanguagesLine ? (
             <p>{t("shopChrome.spokenLanguages", { languages: spokenLanguagesLine })}</p>
           ) : null}

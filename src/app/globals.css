@@ -286,6 +286,11 @@
   --shadow-bed: var(--shadow-bed);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* The shop's chosen headline face on its own storefront (Harbor, ADR
+     20260901-diveday-reimagined). `BrandStyle` sets `--brand-display`; with
+     none set the utility resolves to Geist, so a heading wearing it is never
+     wrong, only sometimes the shop's. Headings only — never a fact. */
+  --font-brand-display: var(--brand-display, var(--font-geist-sans));
 }
 
 body {
