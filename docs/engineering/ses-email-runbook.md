@@ -215,8 +215,13 @@ aws sesv2 get-email-identity --email-identity ses.dive.day \
 aws sns list-subscriptions-by-topic --topic-arn <SesEventNotificationsTopicArn> \
   --query 'Subscriptions[].SubscriptionArn'
 # want: a real ARN, not PendingConfirmation
+aws sesv2 get-configuration-set --configuration-set-name diveday-transactional-email \
+  --query 'SuppressionOptions.SuppressedReasons'
+# want: BOUNCE and COMPLAINT -- this is where the stack sets them (infra-stack.ts S8)
 aws sesv2 get-account --query '{production:ProductionAccessEnabled,suppression:SuppressionAttributes}'
-# want: suppression BOUNCE and COMPLAINT (the configuration set sets these on every send)
+# want: production false until the case below is granted. SuppressionAttributes is the
+# *account default*, which the configuration set overrides and this stack never sets --
+# so read it for information, never as proof that DiveDay's mail is suppressing.
 dig +short TXT _dmarc.dive.day
 # want: v=DMARC1; p=none (at least); the rua= address must exist
 ```
@@ -226,6 +231,29 @@ Then send to the mailbox simulator from the deployed app — book a seat with
 bounce shows on the shop's dashboard as an email issue and the complaint opted that address out
 (`people.courtesy_email_opt_out_at` set, the `ses_webhook.complaint_opt_out` log line). That is the
 "we have tested our bounce and complaint handling" sentence made true.
+
+**Three AWS-side dials cannot confirm this test, and looking at them will tell you it failed when it
+did not.** The simulator is excluded from all of them by design — otherwise a single bounce test
+would poison the account it is meant to protect:
+
+| Where you might look | What you will see | Why |
+| --- | --- | --- |
+| `Reputation.BounceRate` / `Reputation.ComplaintRate`, and the two alarms on them | Nothing, ever | "Emails that you send to the mailbox simulator don't impact your email deliverability or reputation metrics" ([mailbox simulator considerations](https://docs.aws.amazon.com/ses/latest/dg/send-an-email-from-console.html#send-email-simulator-considerations)). The sandbox publishes no rate at all either, so this stays blank twice over |
+| `aws sesv2 list-suppressed-destinations` | Neither address | "The mailbox simulator email address isn't placed on the Amazon SES suppression list, which would normally happen when a hard bounce occurs" (same page, the `bounce@` row). AWS states this for `bounce@`; `complaint@` is undocumented either way, so do not read its absence as a fault |
+| Virtual Deliverability Manager | Nothing | Excluded with the reputation metrics, in the same sentence |
+
+The evidence is app-side and nowhere else: the `ses_webhook.delivery_applied` line with a `bounced`
+or `complained` status, the `notification_deliveries` row it wrote, and — for the complaint —
+`ses_webhook.complaint_opt_out`. Those lines are in CloudWatch Logs under `/diveday/app`
+— **Logs Insights**, `filter event like /ses_webhook/`, and note they are `info` level, so the
+saved *DiveDay/Errors* query will not show them — and unconditionally on stdout in Vercel's own log view, which is the faster look and the one that
+still works when log shipping is misconfigured. If they are absent in *both*, the problem is the
+SNS→webhook leg rather than anything on this page: check `SES_SNS_TOPIC_ARN` is set in the running
+deployment (`/api/webhooks/ses` answers 503 without it, before it reads the event) and that the
+subscription is not `PendingConfirmation`. If they are on stdout but not in CloudWatch, it is the
+shipper, not SES — see
+[**When something doesn't arrive**](cloudwatch-observability-runbook.md#when-something-doesnt-arrive),
+whose first row is the four `CLOUDWATCH_*` variables, a partial set of which is treated as unset.
 
 ### Where to file it
 
@@ -346,7 +374,7 @@ The follow-up mail, when it comes, is one of these. Answer on the case, not in a
 | They ask | Say |
 | --- | --- |
 | "Describe in detail how you obtain the email addresses you send to" | The *How we get addresses* paragraph, verbatim, plus: "an address reaches our system only through the diver's own booking or opt-in form, or their dive shop's staff typing it onto their record; we hold no list that was not built this way" |
-| "How do you handle bounces and complaints?" / "Do you have a process in place?" | The *Bounce and complaint handling* paragraph, plus the two commands: `aws sesv2 get-account --query SuppressionAttributes` shows `BOUNCE, COMPLAINT`; `aws sns list-subscriptions-by-topic` shows the confirmed endpoint |
+| "How do you handle bounces and complaints?" / "Do you have a process in place?" | The *Bounce and complaint handling* paragraph, plus the two commands: `aws sesv2 get-configuration-set --configuration-set-name diveday-transactional-email --query SuppressionOptions.SuppressedReasons` shows `BOUNCE, COMPLAINT` (the configuration set is where this stack sets them — `get-account` reports the account default, which it overrides); `aws sns list-subscriptions-by-topic` shows the confirmed endpoint |
 | "How do recipients opt out?" | The *Opting out* paragraph. If they push on the transactional set: "those messages exist only for a seat the recipient booked and are the confirmation, waiver and reminder for that seat; cancelling the booking ends them" |
 | "What is your expected sending volume and rate?" | The *Volume* paragraph with today's real numbers. Ask for less than you think you need; a quota is raised on evidence, in a later case that is routinely approved |
 | "Please provide a sample of the email you will send" | Paste the booking-confirmation sample and, if asked for HTML, the `messageFor` output of `pnpm test src/lib/notifications/render.test.ts` — or send a real one to yourself from the deployed app and forward it |
