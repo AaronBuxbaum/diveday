@@ -885,6 +885,20 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   await expect(
     page.getByRole("heading", { name: "Or leave the per-booking fee behind." }),
   ).toBeVisible();
+  // The website ledger (slice 13e): what the shop pasted from FareHarbor
+  // beside the DiveDay twin, the hosted-site figure rendered from its one
+  // source with its attribution, and the built-to-order offer as a mail door.
+  await expect(
+    page.getByRole("heading", { name: "Leaving FareHarbor doesn't mean rebuilding your site." }),
+  ).toBeVisible();
+  await expect(page.getByText("Lightframe", { exact: true })).toBeVisible();
+  await expect(page.getByText(/third parties report \$5,000 a year/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Or have us build the website." })).toBeVisible();
+  // The concierge section further down carries the same words with a
+  // ?subject=, so the offer's door is picked by its bare href.
+  await expect(page.locator('a[href="mailto:switch@dive.day"]')).toHaveText(
+    /Email us at switch@dive\.day/,
+  );
   // It still renders the shared three-part promise and the honesty table.
   await expect(
     page.getByRole("heading", { name: "Get your data out of FareHarbor" }),
@@ -903,6 +917,8 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   await expect(
     page.getByRole("heading", { name: "Or leave the monthly fee and the per-booking cut behind." }),
   ).toBeVisible();
+  // No website ledger: Rezdy's footprint is a marketplace, not the shop's site.
+  await expect(page.getByRole("heading", { name: /rebuilding your site/ })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Get your data out of Rezdy" })).toBeVisible();
 
   // An unlisted incumbent has no page — no coming-soon shells. Content-level,

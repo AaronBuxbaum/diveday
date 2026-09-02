@@ -104,12 +104,18 @@ export const earlyAccessPrice = {
   // price buys — `faq.whyFounding` says that whole. The numbering is
   // deliberately not resequenced: `item6` keeps naming the string it has
   // always named.
+  // `item7` is the one service line among product lines: the storefront in the
+  // shop's brand and the embeds are shipped, and the website built to order is
+  // the second authorized service offer (H-64/H-65, docs/product/marketing.md)
+  // — a person's commitment, priced inside the subscription until the owner
+  // says otherwise, never a turnaround time or a page count.
   includedKeys: [
     "marketing.price.item1",
     "marketing.price.item2",
     "marketing.price.item3",
     "marketing.price.item4",
     "marketing.price.item6",
+    "marketing.price.item7",
   ],
 } as const satisfies {
   price: string;
@@ -196,7 +202,9 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
     title: "marketing.capabilities.booking.title",
     items: [
       "marketing.capabilities.booking.item1",
-      "marketing.capabilities.booking.item2",
+      // `item2` ("an embeddable booking widget") retired 2026-09-02: the
+      // website group below inventories the whole catalogue, and one thing is
+      // never listed twice (docs/product/marketing.md). Not resequenced.
       "marketing.capabilities.booking.item3",
       "marketing.capabilities.booking.item4",
       "marketing.capabilities.booking.item5",
@@ -211,6 +219,21 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.booking.item14",
       "marketing.capabilities.booking.item15",
       "marketing.capabilities.booking.item16",
+    ],
+  },
+  {
+    // Harbor's storefront and the embed catalogue (ADR
+    // 20260901-diveday-reimagined, decision 2) — every line a shop can walk
+    // in the demo's Settings → Website embed and on /s/blue-mantis. The
+    // built-to-order website is deliberately *not* here: nothing in this
+    // index may be a promise about a person, only about the product.
+    title: "marketing.capabilities.website.title",
+    items: [
+      "marketing.capabilities.website.item1",
+      "marketing.capabilities.website.item2",
+      "marketing.capabilities.website.item3",
+      "marketing.capabilities.website.item4",
+      "marketing.capabilities.website.item5",
     ],
   },
   {

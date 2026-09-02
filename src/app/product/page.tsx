@@ -234,6 +234,11 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
                 <li>{t("marketing.product.bookingPoint1")}</li>
                 <li>{t("marketing.product.bookingPoint2")}</li>
                 <li>{t("marketing.product.bookingPoint3")}</li>
+                {/* The fourth point is Harbor's storefront and the embeds, and
+                    the one place on this page the built-to-order website is
+                    offered (H-64) — beside the shipped claim it extends, not
+                    in the reference index, which promises only the demo. */}
+                <li>{t("marketing.product.bookingPoint4")}</li>
               </ul>
             </div>
             <MarketingMockup

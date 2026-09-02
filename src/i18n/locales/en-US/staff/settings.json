@@ -112,7 +112,7 @@
       "brandColor": "Brand colour",
       "brandColorPicker": "Pick a brand colour",
       "brandColorHint": "Buttons and links on your public pages. Leave it blank to keep DiveDay's teal.",
-      "brandColorDarkened": "Your colour was too pale for white text, so buttons use {hex}.",
+      "brandColorDarkened": "Your colour was too light to read as text, so your storefront uses {hex}.",
       "displayFont": "Headline face",
       "displayFontDefault": "DiveDay's own",
       "heroPhoto": "Cover photo",
