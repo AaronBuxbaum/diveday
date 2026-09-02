@@ -538,8 +538,18 @@ export async function getTripManifests(
   // When/how each diver's medical currency was last established, for spotting a
   // stale medical. Digital and staff-attested paper reviews both resolve here;
   // a pending/in-review record resolves to null.
+  // The mark carries `overriddenReferralAt` (issue #1282), which one record
+  // alone cannot answer — so the flag `getTripReadiness` already derived from
+  // the diver's whole signed history is put back onto it here rather than
+  // derived a second time from a single row.
   const medicalByBooking = new Map(
-    readinessRows.map((row) => [row.booking.id, medicalWaiverMark(row.waiver)] as const),
+    readinessRows.map((row) => {
+      const mark = medicalWaiverMark(row.waiver);
+      return [
+        row.booking.id,
+        mark ? { ...mark, overriddenReferralAt: row.overriddenReferralAt } : null,
+      ] as const;
+    }),
   );
   // Buddy teams, reduced to the members who are actually aboard. A member
   // whose seat was since cancelled stays listed (and dissolvable) on the teams

@@ -98,7 +98,16 @@ export function MedicalClearanceControl({
             className={controlClass}
           />
         </Field>
-        <Field label={copy.physicianNameLabel} hint={copy.evidenceHint} htmlFor="physicianName">
+        {/* `description`, not `hint`: `hint` renders inside the caption `<label>`,
+            so a whole sentence there becomes part of the control's accessible
+            *name* and a screen reader reads it out every time the field is
+            announced. `description` is the `aria-describedby` slot `Field`
+            exists to wire (its own docblock). */}
+        <Field
+          label={copy.physicianNameLabel}
+          description={copy.evidenceHint}
+          htmlFor="physicianName"
+        >
           <input
             id="physicianName"
             type="text"
@@ -110,7 +119,7 @@ export function MedicalClearanceControl({
         </Field>
         <Field
           label={copy.documentLabel}
-          hint={copy.documentHint}
+          description={copy.documentHint}
           htmlFor="medicalClearanceDocument"
         >
           <input

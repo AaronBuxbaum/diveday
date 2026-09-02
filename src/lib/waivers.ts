@@ -251,7 +251,7 @@ export function shopWaiverStatus(input: {
       state: "current",
       signedAt: new Date(signatureTime(clean)),
       expiresAt: new Date(signatureTime(clean) + WAIVER_SIGNATURE_VALIDITY_MS),
-      medical: medicalWaiverMark(clean),
+      medical: medicalWaiverMark(clean, input.personSignedWaivers),
     };
   }
 
@@ -300,7 +300,51 @@ export type MedicalWaiverMark = {
    * the date shown is the one that expires first in practice.
    */
   source: "digital" | "paper" | "imported" | "cleared";
+  /**
+   * **A referral this signature stands over, that nobody ever resolved**
+   * (issue #1282) — the date of it, or null in the ordinary case.
+   *
+   * The sign-once rules are deliberately symmetric: a disclosure made *at or
+   * after* the last clean signature invalidates it (fail-closed, and correct),
+   * and a clean signature made *after* a disclosure ends the hold. The second
+   * half is the hole. A diver referred to a physician who is simply sent a
+   * fresh link and answers "no" to everything is boarded, with no doctor
+   * anywhere in it and no trace on the surfaces a crew reads.
+   *
+   * This does not change that — whether a mis-tapped questionnaire should
+   * strand a diver until a letter arrives is a call for a person to make, not
+   * an agent. It makes it **visible**: the crew and the diver's record both say
+   * that the release standing today replaced a referral rather than answering
+   * it, and staff decide. Derived on every read, never stored, so it cannot
+   * drift from the records it describes.
+   */
+  overriddenReferralAt: Date | null;
 };
+
+/**
+ * The most recent unresolved referral a standing clean signature sits on top of.
+ *
+ * Exported because two surfaces need the same answer from different starting
+ * points — the diver record via {@link shopWaiverStatus}, the boat manifest via
+ * the readiness row — and a second derivation of a safety fact is a second
+ * chance to derive it differently.
+ *
+ * Strictly older, and never the standing record itself: a hold at or after the
+ * signature already wins outright in both resolvers above, so it is a *block*
+ * rather than something the crew is being warned about.
+ */
+export function overriddenReferralAt(
+  standing: WaiverRecord | null,
+  personSignedWaivers: readonly WaiverRecord[],
+): Date | null {
+  if (!standing || !isCleanCompletion(standing)) return null;
+  const standingTime = signatureTime(standing);
+  const referral = personSignedWaivers
+    .filter(isUnresolvedMedicalHold)
+    .filter((record) => record.id !== standing.id && signatureTime(record) < standingTime)
+    .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
+  return referral ? new Date(signatureTime(referral)) : null;
+}
 
 /**
  * When and how a diver's medical currency was last established, for spotting a
@@ -311,10 +355,20 @@ export type MedicalWaiverMark = {
  * missing medical next to a dated one. Only a clean completion counts; a
  * pending or in-review record has no settled medical to show.
  */
-export function medicalWaiverMark(record: WaiverRecord | null): MedicalWaiverMark | null {
+export function medicalWaiverMark(
+  record: WaiverRecord | null,
+  /**
+   * The diver's other signed evidence at this shop, so the mark can say whether
+   * this signature replaced an unresolved referral rather than answering one
+   * (issue #1282). Defaults to nothing, which reads as "no referral behind it" —
+   * the honest answer for a caller holding one record and no history.
+   */
+  personSignedWaivers: readonly WaiverRecord[] = [],
+): MedicalWaiverMark | null {
   if (record === null || !isCleanCompletion(record)) return null;
   const at = record.signedAt ?? record.completedAt;
   if (!at) return null;
+  const overridden = overriddenReferralAt(record, personSignedWaivers);
   // A referral a physician cleared is the strongest medical evidence a shop
   // ever holds, and staff reading the record need to see that it is not an
   // ordinary self-declaration — so it is its own source rather than "digital".
@@ -328,10 +382,15 @@ export function medicalWaiverMark(record: WaiverRecord | null): MedicalWaiverMar
     return {
       at: evaluatedAt === null ? record.medicalClearedAt : new Date(evaluatedAt),
       source: "cleared",
+      overriddenReferralAt: overridden,
     };
   }
-  if (record.signatureMethod === "imported") return { at, source: "imported" };
-  if (record.medicalAnswers) return { at, source: "digital" };
-  if (record.signatureMethod === "in_person_attested") return { at, source: "paper" };
+  if (record.signatureMethod === "imported") {
+    return { at, source: "imported", overriddenReferralAt: overridden };
+  }
+  if (record.medicalAnswers) return { at, source: "digital", overriddenReferralAt: overridden };
+  if (record.signatureMethod === "in_person_attested") {
+    return { at, source: "paper", overriddenReferralAt: overridden };
+  }
   return null;
 }

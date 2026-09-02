@@ -6,7 +6,11 @@ import { STAFF_ROLES } from "@/lib/authz";
 import { emptyMedicalAnswers, findQuestionnaireVersion, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { operationalWindow } from "@/lib/operational-window";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
-import { DEFAULT_WAIVER_TITLE, WAIVER_SIGNATURE_VALIDITY_MS } from "@/lib/waivers";
+import {
+  DEFAULT_WAIVER_TITLE,
+  shopWaiverStatus,
+  WAIVER_SIGNATURE_VALIDITY_MS,
+} from "@/lib/waivers";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { getBookingReadiness } from "./readiness";
@@ -1856,6 +1860,47 @@ describe("physician medical clearance", () => {
     expect(after?.blockers ?? []).not.toContainEqual(
       expect.objectContaining({ code: "medical_review" }),
     );
+  });
+
+  it("marks a hold the diver re-signed their way past, with no physician in it", async () => {
+    // The hole #1282 is about, through the product's own doors: a referred
+    // diver is sent a fresh link, answers "no" to everything, and their standing
+    // with the shop reads *current* — no doctor anywhere in it.
+    //
+    // The booking that carries the referral stays blocked (`effectiveWaiverForBooking`
+    // returns a booking's own unresolved hold outright), so the exposure is the
+    // diver's **next** seat and the shop-wide standing staff read on the record.
+    // That is what this pins, and what now carries the mark.
+    const { db, shop, person } = await heldContext();
+
+    const later = new Date(now.getTime() + 3_600_000);
+    const again = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      personId: person.id,
+      now: later,
+    });
+    if (!again.ok) throw new Error("expected a fresh person-scoped link");
+    await completeWaiver(db, again.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: emptyMedicalAnswers(RSTC_QUESTIONNAIRE),
+      now: later,
+    });
+
+    const signed = (await listSignedWaiversByPerson(db, shop.id, [person.id])).get(person.id) ?? [];
+    const template = await getCurrentWaiverTemplate(db, shop.id);
+    const status = shopWaiverStatus({
+      personSignedWaivers: signed,
+      currentTemplateVersion: template?.materialGeneration ?? null,
+      now: later,
+    });
+    // Cleared — the reproduction, deliberately unchanged. Refusing it would
+    // strand a diver who mis-tapped question 3 until a doctor writes a letter,
+    // which is its own failure mode and a call for a person to make.
+    expect(status.state).toBe("current");
+    // And the standing says what it stood over, so the diver's record and the
+    // boat's manifest can both say so.
+    expect(status).toMatchObject({ medical: { overriddenReferralAt: expect.any(Date) } });
   });
 
   it("leaves the signed evidence verifiable — a clearance is not a tamper", async () => {

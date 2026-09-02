@@ -101,6 +101,15 @@ export function WaiverGroup({
   // Before this the group offered nothing at all here, because the only lift in
   // the app asserted the opposite of what had happened.
   const heldForMedical = diver.waiver.state === "medical_review";
+  // **The release standing today replaced a referral instead of answering it**
+  // (issue #1282). Sign-once is symmetric — a disclosure at or after the last
+  // clean signature invalidates it, and a clean signature after a disclosure
+  // ends the hold — and the second half lets a diver who was referred to a
+  // physician simply be sent a fresh link and answer "no" to everything.
+  // Whether that should be refused is a call for a person; saying it out loud
+  // is not, and the record is where the staffer who can act is standing.
+  const overriddenReferralAt =
+    diver.waiver.state === "current" ? (diver.waiver.medical?.overriddenReferralAt ?? null) : null;
   return (
     <DiverFileGroupDisclosure
       id="waiver"
@@ -122,6 +131,16 @@ export function WaiverGroup({
           state={state}
           detail={waiverDetail(diver, t, locale, timezone)}
         />
+        {overriddenReferralAt ? (
+          <p className="px-5 pb-3 text-sm font-medium text-warning-strong sm:px-6">
+            {t("divers.waiver.referralUnresolved", {
+              date: formatCalendarDate(
+                calendarDateInTimezone(overriddenReferralAt, timezone),
+                locale,
+              ),
+            })}
+          </p>
+        ) : null}
         {/* The four routes are the state row's actions, laid out as their own
             row beneath it rather than in the row's right-hand column. The
             column is the width of its buttons, and the panel that drops out of

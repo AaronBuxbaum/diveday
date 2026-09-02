@@ -117,7 +117,11 @@ test.describe("a diver whose release already stands", () => {
     const questionCount = await noRadios.count();
     for (let i = 0; i < questionCount; i++) await noRadios.nth(i).check();
     await page.getByRole("button", { name: "Sign waiver" }).click();
-    await expect(page).toHaveURL(/\/ready\//);
+    // Back on the same URL, not `/ready/`: the release this door issues is
+    // **person-scoped**, and a readiness thread belongs to a booking. This
+    // diver has no seat yet — that is the whole point of registering before one
+    // exists — so the outcome screen is where signing ends.
+    await expect(page.getByRole("heading", { name: /paperwork done/ })).toBeVisible();
 
     // Now the branch: this submission mints nothing and sends nothing.
     await page.goto(REGISTER);

@@ -927,9 +927,15 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
   const confirm = page.getByRole("button", { name: "A physician cleared this diver to dive" });
   await expect(confirm).toBeVisible();
 
+  // **The shop's own today, not the wall clock's.** The date box carries
+  // `max={today}` and the fleet's clock is frozen at Tue 21 July 2026, so a
+  // later date is refused by the browser's own constraint validation and the
+  // form never submits at all — which reads exactly like a missing refusal.
+  const EVALUATED_ON = "2026-07-21";
+
   // Neither the physician's name nor their evaluation: the record would say
   // only that a staff member pressed a button, and the domain refuses it.
-  await page.getByLabel("Date of the physician's evaluation").fill("2026-09-01");
+  await page.getByLabel("Date of the physician's evaluation").fill(EVALUATED_ON);
   await confirm.click();
   await expect(page.getByText("Name the physician, or attach their evaluation.")).toBeVisible();
 
@@ -939,10 +945,17 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
   await page.getByRole("button", { name: "A physician cleared this diver to dive" }).click();
   await expect(page.getByText("That evaluation predates the answers it would clear")).toBeVisible();
 
-  await page.getByLabel("Date of the physician's evaluation").fill("2026-09-01");
+  await page.getByLabel("Date of the physician's evaluation").fill(EVALUATED_ON);
   await page.getByLabel("Physician", { exact: true }).fill("Dr. Imani Reyes");
   await page.getByRole("button", { name: "A physician cleared this diver to dive" }).click();
-  await expect(page.getByText("This diver is no longer held for medical review")).toBeVisible();
+  // The clearance was the last thing waiting on this diver, so the record's own
+  // masthead moment fires rather than the waiver group's notice (`successUrl`
+  // routes a now-clear record to `diver-clear`). Either way the fact to assert
+  // is the standing itself: held becomes signed.
+  await expect(page.getByRole("status")).toContainText("nothing is waiting on Morgan Vale");
+  const waiverGroup = page.getByRole("region", { name: "Waiver" });
+  await expect(waiverGroup.getByText("Signed", { exact: true })).toBeVisible();
+  await expect(waiverGroup.getByText("Medical review", { exact: true })).toHaveCount(0);
 
   // And the block is gone where it actually mattered — on the boat's roster.
   await page.goto("/shop/blue-mantis/schedule/board");

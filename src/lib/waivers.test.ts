@@ -7,6 +7,7 @@ import {
   isCompletedWaiverCurrent,
   medicalWaiverMark,
   needsMedicalReview,
+  overriddenReferralAt,
   shopWaiverStatus,
   WAIVER_SIGNATURE_VALIDITY_MS,
   waiverState,
@@ -131,6 +132,7 @@ describe("medical waiver mark", () => {
     expect(medicalWaiverMark(completedWaiver({ medicalAnswers: answers, signedAt }))).toEqual({
       at: signedAt,
       source: "digital",
+      overriddenReferralAt: null,
     });
   });
 
@@ -144,7 +146,7 @@ describe("medical waiver mark", () => {
           signedAt,
         }),
       ),
-    ).toEqual({ at: signedAt, source: "paper" });
+    ).toEqual({ at: signedAt, source: "paper", overriddenReferralAt: null });
   });
 
   it("marks an imported acceptance distinctly, even though it carries no questionnaire", () => {
@@ -153,7 +155,7 @@ describe("medical waiver mark", () => {
       medicalWaiverMark(
         completedWaiver({ medicalAnswers: null, signatureMethod: "imported", signedAt }),
       ),
-    ).toEqual({ at: signedAt, source: "imported" });
+    ).toEqual({ at: signedAt, source: "imported", overriddenReferralAt: null });
   });
 
   it("surfaces nothing for an in-review, unrecognised, or absent record", () => {
@@ -173,7 +175,7 @@ describe("medical waiver mark", () => {
     const completedAt = new Date(SIGN_NOW.getTime() - 5_000);
     expect(
       medicalWaiverMark(completedWaiver({ medicalAnswers: answers, signedAt: null, completedAt })),
-    ).toEqual({ at: completedAt, source: "digital" });
+    ).toEqual({ at: completedAt, source: "digital", overriddenReferralAt: null });
   });
 });
 
@@ -472,7 +474,11 @@ describe("physician clearance", () => {
 
   it("marks the medical as physician-cleared, dated by the clearance", () => {
     const clearedAt = new Date(SIGN_NOW.getTime() - 30_000);
-    expect(medicalWaiverMark(cleared())).toEqual({ at: clearedAt, source: "cleared" });
+    expect(medicalWaiverMark(cleared())).toEqual({
+      at: clearedAt,
+      source: "cleared",
+      overriddenReferralAt: null,
+    });
     // The date is the clearance, not the signature: that is the day the
     // fitness question was actually answered.
     expect(medicalWaiverMark(cleared())?.at).not.toEqual(completedWaiver().signedAt);
@@ -492,5 +498,125 @@ describe("physician clearance", () => {
       now: SIGN_NOW,
     });
     expect(effective).toBeNull();
+  });
+});
+
+/**
+ * **A referral nobody ever answered, with a clean signature standing over it**
+ * (issue #1282).
+ *
+ * The hole is the symmetric half of a rule that is right in one direction: a
+ * disclosure made *at or after* the last clean signature invalidates it, and a
+ * clean signature made *after* a disclosure ends the hold. So a diver referred
+ * to a physician can simply be sent a fresh link, answer "no" to everything,
+ * and board — with no doctor anywhere in it.
+ *
+ * These pin the reproduction (it still clears, deliberately: whether to refuse
+ * it is a human call) and the mark that now makes it visible.
+ */
+describe("a referral a later clean signature stood over", () => {
+  const referral = () =>
+    completedWaiver({
+      id: "referral",
+      status: "medical_review",
+      signedAt: new Date(SIGN_NOW.getTime() - 600_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 600_000),
+    });
+  /** A referral a physician answered — the legitimate exit (issue #1252). */
+  const cleared = (overrides: Partial<WaiverRecord> = {}) =>
+    completedWaiver({
+      status: "medical_review",
+      medicalClearedAt: new Date(SIGN_NOW.getTime() - 30_000),
+      medicalClearedByPersonId: "staff-1",
+      ...overrides,
+    });
+  const reSigned = () =>
+    completedWaiver({
+      id: "re-signed",
+      medicalAnswers: { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} },
+      signedAt: new Date(SIGN_NOW.getTime() - 60_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 60_000),
+    });
+
+  it("still clears the diver — the reproduction, unchanged on purpose", () => {
+    // Refusing this would strand a diver who mis-tapped question 3 until a
+    // doctor writes a letter, which is its own failure mode and Aaron's call
+    // (H-01/H-03). What changes is that nobody has to notice it by accident.
+    expect(
+      shopWaiverStatus({
+        personSignedWaivers: [referral(), reSigned()],
+        currentTemplateVersion: 1,
+        now: SIGN_NOW,
+      }).state,
+    ).toBe("current");
+    expect(
+      effectiveWaiverForBooking({
+        bookingWaiver: null,
+        personSignedWaivers: [referral(), reSigned()],
+        currentTemplateVersion: 1,
+        now: SIGN_NOW,
+      })?.id,
+    ).toBe("re-signed");
+  });
+
+  it("names the referral the standing signature replaced", () => {
+    const at = overriddenReferralAt(reSigned(), [referral(), reSigned()]);
+    expect(at).toEqual(referral().signedAt);
+    const status = shopWaiverStatus({
+      personSignedWaivers: [referral(), reSigned()],
+      currentTemplateVersion: 1,
+      now: SIGN_NOW,
+    });
+    expect(status).toMatchObject({
+      state: "current",
+      medical: { source: "digital", overriddenReferralAt: referral().signedAt },
+    });
+  });
+
+  it("says nothing when the referral is the one that was cleared", () => {
+    // `cleared()` is a referral a physician answered. It is the same record, so
+    // there is no *other* hold behind it and nothing to warn about.
+    expect(overriddenReferralAt(cleared(), [cleared()])).toBeNull();
+    expect(medicalWaiverMark(cleared(), [cleared()])?.overriddenReferralAt).toBeNull();
+  });
+
+  it("says nothing for a diver who was never referred", () => {
+    expect(overriddenReferralAt(reSigned(), [reSigned()])).toBeNull();
+    expect(
+      shopWaiverStatus({
+        personSignedWaivers: [reSigned()],
+        currentTemplateVersion: 1,
+        now: SIGN_NOW,
+      }),
+    ).toMatchObject({ medical: { overriddenReferralAt: null } });
+  });
+
+  it("says nothing about a hold that is winning anyway", () => {
+    // A referral at or *after* the last clean signature blocks outright — that
+    // is the fail-closed half, and a block is not something to warn about.
+    const laterReferral = completedWaiver({
+      id: "later-referral",
+      status: "medical_review",
+      signedAt: new Date(SIGN_NOW.getTime() - 10_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 10_000),
+    });
+    expect(overriddenReferralAt(reSigned(), [reSigned(), laterReferral])).toBeNull();
+    expect(
+      shopWaiverStatus({
+        personSignedWaivers: [reSigned(), laterReferral],
+        currentTemplateVersion: 1,
+        now: SIGN_NOW,
+      }).state,
+    ).toBe("medical_review");
+  });
+
+  it("ignores a referral somebody has since cleared", () => {
+    // Cleared is resolved. Only an *unresolved* hold is worth a crew's attention.
+    const resolvedReferral = cleared({
+      id: "resolved-referral",
+      signedAt: new Date(SIGN_NOW.getTime() - 600_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 600_000),
+    });
+    expect(overriddenReferralAt(reSigned(), [resolvedReferral, reSigned()])).toBeNull();
   });
 });

@@ -193,6 +193,16 @@ function DiverFacts({
           <span className="mt-0.5 block text-muted">
             {formatShortDate(diver.medicalWaiver.at, locale, timezone)}
           </span>
+          {/* The signature standing here replaced a referral instead of
+              answering it — nobody's fault, and not a block, but a crew member
+              at the rail is the person best placed to ask (issue #1282). */}
+          {diver.medicalWaiver.overriddenReferralAt ? (
+            <span className="mt-0.5 block font-medium text-warning-strong">
+              {t("manifest.medicalReferralUnresolved", {
+                date: formatShortDate(diver.medicalWaiver.overriddenReferralAt, locale, timezone),
+              })}
+            </span>
+          ) : null}
         </p>
       ) : null}
     </div>

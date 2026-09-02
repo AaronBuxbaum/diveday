@@ -429,6 +429,7 @@
     "editSizes": "Edit"
   },
   "waiver": {
+    "referralUnresolved": "Re-signed after a referral — no physician clearance on file ({date}). Record one, or ask.",
     "sendOptions": "Send options"
   }
 }
