@@ -4,6 +4,7 @@ import {
   brandDisplayFontStylesheet,
   brandThemeProperties,
   deriveBrandTheme,
+  deriveDarkBrandTheme,
 } from "@/lib/brand";
 
 /**
@@ -19,6 +20,17 @@ import {
  * stay DiveDay's, which is what keeps a status, a manifest or a waiver from
  * ever wearing the shop's colour. `BrandStyle.test.tsx` pins that the emitted
  * block names no token but those.
+ *
+ * **Two blocks, one colour.** A `:root` block for the light scheme and a second
+ * inside `@media (prefers-color-scheme: dark)`, from `deriveDarkBrandTheme` —
+ * because this `<style>` renders after globals.css and a media query adds no
+ * specificity, so a single `:root` block wins in *both* schemes and a branded
+ * storefront wore its light-mode colour at depth, at ~3:1 (issue #1265). The
+ * media query is the whole mechanism: `data-theme` appears nowhere in
+ * globals.css, and the dark palette lives only behind that query. The three
+ * skins that redeclare `--primary` on a *class* — boat mode, glare mode, print
+ * — still win over both blocks on specificity, which is right: each is a
+ * deliberate override of the shop's colour for a reader who asked for it.
  *
  * A shop with no brand set renders nothing, and the storefront wears DiveDay's
  * own tokens — the brand is an overlay with a default, never a requirement.
@@ -56,6 +68,16 @@ export function BrandStyle({
   } else if (brandDisplayFont) {
     declarations.push(`--brand-display:${brandDisplayFontFamily(brandDisplayFont)}`);
   }
+  // The dark scheme's own derivation of the same colour. Only the colour
+  // tokens repeat — the display face is a face in both schemes.
+  const darkDeclarations = brandColor
+    ? Object.entries(brandThemeProperties(deriveDarkBrandTheme(brandColor))).map(
+        ([name, value]) => `${name}:${value}`,
+      )
+    : [];
+  const css = darkDeclarations.length
+    ? `:root{${declarations.join(";")}}@media(prefers-color-scheme:dark){:root{${darkDeclarations.join(";")}}}`
+    : `:root{${declarations.join(";")}}`;
   return (
     <>
       {brandDisplayFont ? (
@@ -66,7 +88,7 @@ export function BrandStyle({
           precedence="brand-font"
         />
       ) : null}
-      <style data-brand-style="">{`:root{${declarations.join(";")}}`}</style>
+      <style data-brand-style="">{css}</style>
     </>
   );
 }

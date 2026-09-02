@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
+import { deriveDarkBrandTheme } from "../src/lib/brand";
 import { signRecapToken } from "../src/lib/recap-links";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
@@ -203,11 +204,49 @@ signedInAsOwner();
  * multi-day schedule the other uncertified-friendly course sessions render.
  */
 const BOOKING_TRIP = "Discover Scuba — Pool & Reef";
+/** blue-mantis's own colour (`src/db/seed.ts`) — mantis green, not DiveDay's teal. */
+const SEEDED_BRAND_COLOR = "#158462";
 
 test.describe("automated accessibility scans (specialist optimization audit §3)", () => {
   test("the public schedule has no automated a11y violations", async ({ page }) => {
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("list", { name: "Upcoming trips" })).toBeVisible();
+    await expectNoA11yViolations(page);
+  });
+
+  /**
+   * The same page at depth, and the only scan in this file that emulates a
+   * scheme (issue #1265).
+   *
+   * Every other scan here runs in the default light scheme, which is why a
+   * branded storefront could render sub-AA in dark mode for as long as it did:
+   * `BrandStyle` emitted one `:root` block that won in *both* schemes, so
+   * blue-mantis's `#158462` arrived at depth as its light-mode derivation
+   * `#13795a` — 3.39:1 on the dark ground, 3.05:1 on the dark shell — while
+   * this file stayed green. `deriveDarkBrandTheme` is the fix; this is what
+   * would have caught it, and what stops it coming back.
+   *
+   * The storefront is the right surface to spend the one scheme-swapped scan
+   * on because it is the only place `--primary` is the *shop's* colour rather
+   * than DiveDay's: every staff route wears the palette globals.css ships,
+   * which the light scans already cover.
+   */
+  test("the public schedule reads at depth, wearing the shop's own colour", async ({ page }) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("list", { name: "Upcoming trips" })).toBeVisible();
+    // The scan below would pass just as well over a storefront wearing
+    // DiveDay's own dark tokens — which is exactly what a shop with no brand
+    // colour gets, and what a dev database seeded before Harbor shows. So
+    // prove the shop's own colour is what is being scanned, against the value
+    // the derivation actually produces rather than merely "not the light one".
+    await expect(page.locator("style[data-brand-style]")).toHaveCount(1);
+    const primary = await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue("--primary").trim(),
+    );
+    expect(primary, "the dark block did not win over globals.css's dark palette").toBe(
+      deriveDarkBrandTheme(SEEDED_BRAND_COLOR).primary,
+    );
     await expectNoA11yViolations(page);
   });
 

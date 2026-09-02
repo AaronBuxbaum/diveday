@@ -10,10 +10,12 @@
  *
  * Two rules the ADR states that this file enforces rather than remembers:
  *
- * - **A brand colour never fails contrast.** `deriveBrandTheme` checks the
- *   colour as a button fill against white and against ink; a colour that works
- *   with neither is darkened until white text reads on it, and the theme says
- *   so (`adjusted`) rather than the storefront saying anything.
+ * - **A brand colour never fails contrast, in either scheme.** The colour is
+ *   checked as text on the ground it paints on and as a fill under its ink;
+ *   one that fails is moved until it reads, and the theme says so (`adjusted`)
+ *   rather than the storefront saying anything. One colour, two derivations —
+ *   `deriveBrandTheme` for the light scheme and `deriveDarkBrandTheme` for the
+ *   dark, which move in opposite directions from the same input.
  * - **Codes, never words.** A display face and a badge are codes so they arrive
  *   in every language and so DiveDay never draws a logo it has no right to
  *   show. The words live in the message bundles; this file owns the lists.
@@ -178,7 +180,6 @@ export const AA_TEXT_CONTRAST = 4.5;
 const WHITE = "#ffffff";
 /** DiveDay's ink, the darker of the two candidate texts on a brand fill. */
 export const BRAND_INK = "#0c2a35";
-/** Reef's shell — the surface a tint is mixed over when the caller names none. */
 /**
  * The ground the storefront paints on (`--background`), not the shell a card
  * paints on: the brand colour is *text* on the ground — a link, a current nav
@@ -187,21 +188,33 @@ export const BRAND_INK = "#0c2a35";
  */
 export const BRAND_DEFAULT_SURFACE = "#fbf7ef";
 
+/**
+ * One scheme's worth of tokens. The same shop colour yields two of these —
+ * {@link deriveBrandTheme} for the light scheme and
+ * {@link deriveDarkBrandTheme} for the dark — so every field below reads
+ * "moved toward the scheme's far end" rather than "darkened": at depth the
+ * moves all run the other way.
+ */
 export type BrandTheme = {
-  /** The button fill and link colour, darkened if the shop's colour failed contrast. */
+  /** The button fill and link colour, moved if the shop's colour failed contrast. */
   primary: string;
-  /** The fill darkened 12% — hover and pressed. */
+  /** The fill moved 12% further — hover and pressed. */
   primaryHover: string;
-  /** 10% of the fill over the surface — the wash behind a selected row. */
+  /** 8% of the fill over the surface — the wash behind a selected row. */
   primaryTint: string;
-  /** The text on the fill: white where it reads, ink where the colour is pale. */
+  /** The text on the fill: white on a dark fill, ink on a light one. */
   primaryForeground: string;
-  /** True when the stored colour had to be darkened to read as a fill. */
+  /** True when the stored colour had to be moved to read. */
   adjusted: boolean;
 };
 
 /** The tint's share of the fill over the surface — see `deriveBrandTheme`. */
 const TINT_MIX = 0.08;
+
+const BLACK = "#000000";
+/** One 8% step, and the twelve of them that reach either end from any hue. */
+const STEP = 0.08;
+const MAX_STEPS = 12;
 
 /**
  * The derivation rule (ADR 20260901-diveday-reimagined, decision 2): the
@@ -227,32 +240,115 @@ export function deriveBrandTheme(
   color: string,
   { surface = BRAND_DEFAULT_SURFACE }: { surface?: string } = {},
 ): BrandTheme {
+  return derive(color, {
+    grounds: [surface],
+    tintOver: surface,
+    toward: BLACK,
+    // On a light ground a colour that passed step 1 already takes white; ink is
+    // the fallback for the pale-brand-on-a-dark-surface caller.
+    inks: [WHITE, BRAND_INK],
+  });
+}
+
+/**
+ * The dark scheme's ground (`--background`) and shell (`--surface`), from
+ * globals.css's `@media (prefers-color-scheme: dark)` block. Pinned against
+ * that file by `brand.test.ts`, because a palette that moved without these
+ * moving would leave the derivation checking a ground nothing paints.
+ */
+export const BRAND_DARK_GROUND = "#071720";
+export const BRAND_DARK_SURFACE = "#0d222d";
+
+/**
+ * The same colour, derived for the dark scheme (issue #1265).
+ *
+ * `BrandStyle` emits one `:root` block that wins in **both** schemes, so
+ * before this existed a branded storefront wore its light-mode colour at
+ * depth: the seeded green derives to `#13795a`, which reads **3.39:1** on the
+ * dark ground and **3.05:1** on the dark shell. DiveDay's own lagoon `#0e7490`
+ * measures 3.40 / 3.05 there too — which is exactly why the dark palette
+ * carries its own `--primary: #22d3ee` at 10:1. Every branded shop was losing
+ * that and getting sub-AA links, pills and focus rings across the storefront,
+ * and the a11y spec, which scanned light only, stayed green over it.
+ *
+ * **One colour, two derivations** (ADR 20260901-diveday-reimagined, decision 2,
+ * amended 2026-09-02) — not a second picker. The rule is
+ * {@link deriveBrandTheme}'s with every polarity flipped: lighten toward white
+ * rather than darken toward black, and prefer ink on the fill rather than
+ * white, because a fill light enough to read at depth is too light for white
+ * text.
+ *
+ * Both dark surfaces are checked, not just the ground. In the light scheme the
+ * ground is the *darker* of the two and so the binding one; at depth that
+ * inverts — the shell `#0d222d` is lighter than the ground `#071720`, so a
+ * light fill reads worse on it, and it is the shell that decides. Checking
+ * both keeps the rule true whichever way a future palette moves it.
+ */
+export function deriveDarkBrandTheme(
+  color: string,
+  {
+    ground = BRAND_DARK_GROUND,
+    surface = BRAND_DARK_SURFACE,
+  }: { ground?: string; surface?: string } = {},
+): BrandTheme {
+  return derive(color, {
+    grounds: [ground, surface],
+    // The tint is a wash behind a row, and a row sits on the shell — matching
+    // the dark palette's own `color-mix(in srgb, var(--primary) …, var(--surface))`.
+    tintOver: surface,
+    toward: WHITE,
+    inks: [BRAND_INK, WHITE],
+  });
+}
+
+/**
+ * The shared derivation. `toward` is the direction a failing colour is pushed
+ * — black for the light scheme, white for the dark — and `inks` is the ink
+ * preference in order, the first that reads on the fill winning.
+ */
+function derive(
+  color: string,
+  {
+    grounds,
+    tintOver,
+    toward,
+    inks,
+  }: { grounds: string[]; tintOver: string; toward: string; inks: [string, string] },
+): BrandTheme {
   let primary = color.toLowerCase();
   let adjusted = false;
   const readsAsText = (fill: string) =>
-    contrastRatio(fill, surface) >= AA_TEXT_CONTRAST &&
-    contrastRatio(fill, mixHex(surface, fill, TINT_MIX)) >= AA_TEXT_CONTRAST;
-  // Twelve steps of 8% reach near-black from any hue, so this always ends.
-  for (let step = 0; step < 12 && !readsAsText(primary); step++) {
-    primary = mixHex(primary, "#000000", 0.08);
+    grounds.every(
+      (ground) =>
+        contrastRatio(fill, ground) >= AA_TEXT_CONTRAST &&
+        contrastRatio(fill, mixHex(ground, fill, TINT_MIX)) >= AA_TEXT_CONTRAST,
+    );
+  // Twelve steps of 8% reach either end from any hue, so this always ends.
+  for (let step = 0; step < MAX_STEPS && !readsAsText(primary); step++) {
+    primary = mixHex(primary, toward, STEP);
     adjusted = true;
   }
-  let primaryForeground = WHITE;
-  if (contrastRatio(primary, WHITE) < AA_TEXT_CONTRAST) {
-    if (contrastRatio(primary, BRAND_INK) >= AA_TEXT_CONTRAST) {
-      primaryForeground = BRAND_INK;
+  const [preferred, fallback] = inks;
+  let primaryForeground = preferred;
+  if (contrastRatio(primary, preferred) < AA_TEXT_CONTRAST) {
+    if (contrastRatio(primary, fallback) >= AA_TEXT_CONTRAST) {
+      primaryForeground = fallback;
     } else {
-      // Twelve steps of 8% reach near-black from any hue, so this always ends.
-      for (let step = 0; step < 12 && contrastRatio(primary, WHITE) < AA_TEXT_CONTRAST; step++) {
-        primary = mixHex(primary, "#000000", 0.08);
+      // Twelve steps of 8% reach either end from any hue, so this always ends.
+      for (
+        let step = 0;
+        step < MAX_STEPS && contrastRatio(primary, preferred) < AA_TEXT_CONTRAST;
+        step++
+      ) {
+        primary = mixHex(primary, toward, STEP);
       }
       adjusted = true;
     }
   }
   return {
     primary,
-    primaryHover: mixHex(primary, "#000000", 0.12),
-    primaryTint: mixHex(surface, primary, TINT_MIX),
+    primaryHover: mixHex(primary, toward, 0.12),
+    primaryTint: mixHex(tintOver, primary, TINT_MIX),
     primaryForeground,
     adjusted,
   };
