@@ -1,66 +1,31 @@
 {
   "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `a11y` names the specs that run an axe scan on it, `exempt` states why a route warrants less than both. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose \u2014 see scripts/check-route-coverage.mjs.",
   "/": {
-    "e2e": [
-      "demo.spec.ts",
-      "manifest.spec.ts",
-      "marketing.spec.ts",
-      "seo.spec.ts"
-    ],
-    "visual": [
-      "landing"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["demo.spec.ts", "manifest.spec.ts", "marketing.spec.ts", "seo.spec.ts"],
+    "visual": ["landing"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/about": {
-    "e2e": [
-      "seo.spec.ts"
-    ],
-    "visual": [
-      "about"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["seo.spec.ts"],
+    "visual": ["about"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/claim/[token]": {
-    "e2e": [
-      "a11y.spec.ts",
-      "seat-claim.spec.ts"
-    ],
-    "visual": [
-      "seat-claim"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["a11y.spec.ts", "seat-claim.spec.ts"],
+    "visual": ["seat-claim"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/forgot-password": {
-    "e2e": [
-      "account-lifecycle.spec.ts"
-    ],
-    "visual": [
-      "forgot-password"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["account-lifecycle.spec.ts"],
+    "visual": ["forgot-password"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/invite/[token]": {
-    "e2e": [
-      "staff-invite.spec.ts"
-    ],
-    "visual": [
-      "staff-invite"
-    ]
+    "e2e": ["staff-invite.spec.ts"],
+    "visual": ["staff-invite"]
   },
   "/offline-manifest": {
-    "e2e": [
-      "a11y.spec.ts",
-      "manifest.spec.ts"
-    ],
+    "e2e": ["a11y.spec.ts", "manifest.spec.ts"],
     "visual": [
       "offline-manifest-discarded",
       "offline-manifest-empty",
@@ -69,9 +34,7 @@
       "offline-manifest-removed-other-shop",
       "offline-manifest-roll-call"
     ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "a11y": ["a11y.spec.ts"]
   },
   "/onboard": {
     "e2e": [
@@ -83,46 +46,23 @@
       "onboard.spec.ts",
       "tenant-isolation.spec.ts"
     ],
-    "visual": [
-      "marketing-nav-signed-in",
-      "onboard"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "visual": ["marketing-nav-signed-in", "onboard"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/pricing": {
-    "e2e": [
-      "marketing.spec.ts"
-    ],
-    "visual": [
-      "pricing"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["marketing.spec.ts"],
+    "visual": ["pricing"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/privacy": {
-    "e2e": [
-      "marketing.spec.ts"
-    ],
-    "visual": [
-      "privacy"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["marketing.spec.ts"],
+    "visual": ["privacy"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/product": {
-    "e2e": [
-      "seo.spec.ts"
-    ],
-    "visual": [
-      "product"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["seo.spec.ts"],
+    "visual": ["product"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/ready/[token]": {
     "e2e": [
@@ -152,30 +92,16 @@
       "readiness",
       "thread-prep-current-step"
     ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "a11y": ["a11y.spec.ts"]
   },
   "/recap/[token]": {
-    "e2e": [
-      "a11y.spec.ts",
-      "recap.spec.ts",
-      "reviews.spec.ts"
-    ],
-    "visual": [
-      "recap"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["a11y.spec.ts", "recap.spec.ts", "reviews.spec.ts"],
+    "visual": ["recap"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/reset-password/[token]": {
-    "e2e": [
-      "account-lifecycle.spec.ts"
-    ],
-    "visual": [
-      "reset-password-invalid"
-    ]
+    "e2e": ["account-lifecycle.spec.ts"],
+    "visual": ["reset-password-invalid"]
   },
   "/s/[shopSlug]": {
     "e2e": [
@@ -203,47 +129,22 @@
       "trip-admission.spec.ts",
       "trips.spec.ts"
     ],
-    "visual": [
-      "schedule",
-      "schedule-above-level",
-      "schedule-embed"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "visual": ["schedule", "schedule-above-level", "schedule-embed"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/s/[shopSlug]/courses": {
-    "e2e": [
-      "courses.spec.ts"
-    ],
-    "visual": [
-      "public-courses"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["courses.spec.ts"],
+    "visual": ["public-courses"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/s/[shopSlug]/courses/[slug]": {
-    "e2e": [
-      "a11y.spec.ts",
-      "courses.spec.ts",
-      "date-requests.spec.ts",
-      "gear-fit-and-age.spec.ts"
-    ],
-    "visual": [
-      "course-page"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["a11y.spec.ts", "courses.spec.ts", "date-requests.spec.ts", "gear-fit-and-age.spec.ts"],
+    "visual": ["course-page"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/s/[shopSlug]/reviews": {
-    "e2e": [
-      "reviews.spec.ts"
-    ],
-    "visual": [
-      "public-reviews"
-    ]
+    "e2e": ["reviews.spec.ts"],
+    "visual": ["public-reviews"]
   },
   "/s/[shopSlug]/trips/[id]": {
     "e2e": [
@@ -271,9 +172,7 @@
       "site-briefing",
       "site-briefing-requirements"
     ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]": {
     "e2e": [
@@ -301,117 +200,53 @@
       "today-first-bookable",
       "today-orientation-line"
     ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/bookings/new": {
-    "e2e": [
-      "add-diver.spec.ts"
-    ],
-    "visual": [
-      "booking-new"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["add-diver.spec.ts"],
+    "visual": ["booking-new"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/bookings/new/[tripId]": {
-    "e2e": [
-      "add-diver.spec.ts",
-      "trip-admission.spec.ts"
-    ],
-    "visual": [
-      "booking-new-diver"
-    ]
+    "e2e": ["add-diver.spec.ts", "trip-admission.spec.ts"],
+    "visual": ["booking-new-diver"]
   },
   "/shop/[shopSlug]/check-in": {
-    "e2e": [
-      "check-in.spec.ts",
-      "tenant-isolation.spec.ts",
-      "trip-admission.spec.ts"
-    ],
-    "visual": [
-      "check-in",
-      "check-in-checked"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["check-in.spec.ts", "tenant-isolation.spec.ts", "trip-admission.spec.ts"],
+    "visual": ["check-in", "check-in-checked"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/check-in/walk-in": {
-    "e2e": [
-      "check-in.spec.ts",
-      "trip-admission.spec.ts"
-    ],
-    "visual": [
-      "check-in-walk-in",
-      "check-in-walk-in-notice"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["check-in.spec.ts", "trip-admission.spec.ts"],
+    "visual": ["check-in-walk-in", "check-in-walk-in-notice"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/check-in/walk-in/[tripId]": {
-    "e2e": [
-      "check-in.spec.ts",
-      "trip-admission.spec.ts"
-    ],
-    "visual": [
-      "check-in-walk-in-diver"
-    ]
+    "e2e": ["check-in.spec.ts", "trip-admission.spec.ts"],
+    "visual": ["check-in-walk-in-diver"]
   },
   "/shop/[shopSlug]/courses": {
-    "e2e": [
-      "courses.spec.ts"
-    ],
-    "visual": [
-      "courses-list",
-      "courses-list-page-two"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["courses.spec.ts"],
+    "visual": ["courses-list", "courses-list-page-two"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/courses/[slug]/edit": {
-    "e2e": [
-      "courses.spec.ts",
-      "search.spec.ts"
-    ],
-    "visual": [
-      "course-edit"
-    ]
+    "e2e": ["courses.spec.ts", "search.spec.ts"],
+    "visual": ["course-edit"]
   },
   "/shop/[shopSlug]/dive-sites": {
-    "e2e": [
-      "depth-and-age-surfaces.spec.ts",
-      "dive-sites.spec.ts"
-    ],
-    "visual": [
-      "dive-sites-library"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["depth-and-age-surfaces.spec.ts", "dive-sites.spec.ts"],
+    "visual": ["dive-sites-library"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/dive-sites/[id]": {
-    "e2e": [
-      "dive-sites.spec.ts"
-    ],
-    "visual": [
-      "dive-site-edit"
-    ]
+    "e2e": ["dive-sites.spec.ts"],
+    "visual": ["dive-site-edit"]
   },
   "/shop/[shopSlug]/dive-sites/new": {
-    "e2e": [
-      "dive-sites.spec.ts"
-    ],
-    "visual": [
-      "dive-site-new"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["dive-sites.spec.ts"],
+    "visual": ["dive-site-new"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/divers": {
     "e2e": [
@@ -426,13 +261,8 @@
       "search.spec.ts",
       "tenant-isolation.spec.ts"
     ],
-    "visual": [
-      "divers",
-      "divers-removed"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "visual": ["divers", "divers-removed"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/divers/[personId]": {
     "e2e": [
@@ -456,139 +286,57 @@
     ]
   },
   "/shop/[shopSlug]/divers/new": {
-    "e2e": [
-      "add-diver.spec.ts",
-      "check-in.spec.ts",
-      "divers.spec.ts",
-      "gear-fit-and-age.spec.ts"
-    ],
-    "visual": [
-      "divers-new"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["add-diver.spec.ts", "check-in.spec.ts", "divers.spec.ts", "gear-fit-and-age.spec.ts"],
+    "visual": ["divers-new"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/gear": {
-    "e2e": [
-      "gear.spec.ts"
-    ],
-    "visual": [
-      "gear-register",
-      "gear-register-deleted",
-      "gear-register-trouble"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["gear.spec.ts"],
+    "visual": ["gear-register", "gear-register-deleted", "gear-register-trouble"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/gear/[id]": {
-    "e2e": [
-      "gear.spec.ts"
-    ],
-    "visual": [
-      "gear-unit",
-      "gear-unit-deleted"
-    ]
+    "e2e": ["gear.spec.ts"],
+    "visual": ["gear-unit", "gear-unit-deleted"]
   },
   "/shop/[shopSlug]/orders": {
-    "e2e": [
-      "orders-demo.spec.ts",
-      "scroll-preservation.spec.ts",
-      "tenant-isolation.spec.ts"
-    ],
-    "visual": [
-      "orders",
-      "orders-unconfirmed-and-owed"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["orders-demo.spec.ts", "scroll-preservation.spec.ts", "tenant-isolation.spec.ts"],
+    "visual": ["orders", "orders-unconfirmed-and-owed"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/orders/[id]": {
-    "e2e": [
-      "orders-demo.spec.ts"
-    ],
-    "visual": [
-      "order-detail",
-      "order-detail-partly-refunded"
-    ]
+    "e2e": ["orders-demo.spec.ts"],
+    "visual": ["order-detail", "order-detail-partly-refunded"]
   },
   "/shop/[shopSlug]/orders/new": {
-    "e2e": [
-      "invoicing.spec.ts",
-      "orders-demo.spec.ts",
-      "tax.spec.ts"
-    ],
-    "visual": [
-      "orders-new"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["invoicing.spec.ts", "orders-demo.spec.ts", "tax.spec.ts"],
+    "visual": ["orders-new"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/promos": {
-    "e2e": [
-      "promo-codes.spec.ts",
-      "settings-findability.spec.ts"
-    ],
-    "visual": [
-      "staff-promos"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["promo-codes.spec.ts", "settings-findability.spec.ts"],
+    "visual": ["staff-promos"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/reports": {
-    "e2e": [
-      "currency.spec.ts",
-      "reports.spec.ts"
-    ],
-    "visual": [
-      "reports"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["currency.spec.ts", "reports.spec.ts"],
+    "visual": ["reports"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/requests": {
-    "e2e": [
-      "date-requests.spec.ts",
-      "role-permissions.spec.ts",
-      "staff-nav.spec.ts"
-    ],
-    "visual": [
-      "staff-date-requests"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["date-requests.spec.ts", "role-permissions.spec.ts", "staff-nav.spec.ts"],
+    "visual": ["staff-date-requests"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/reviews": {
-    "e2e": [
-      "reviews.spec.ts",
-      "tenant-isolation.spec.ts"
-    ],
-    "visual": [
-      "staff-reviews",
-      "staff-reviews-rating-withheld"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["reviews.spec.ts", "tenant-isolation.spec.ts"],
+    "visual": ["staff-reviews", "staff-reviews-rating-withheld"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/schedule/blowout/[tripId]": {
-    "e2e": [
-      "a11y.spec.ts",
-      "blowout.spec.ts"
-    ],
-    "visual": [
-      "blowout-cascade",
-      "blowout-confirm"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["a11y.spec.ts", "blowout.spec.ts"],
+    "visual": ["blowout-cascade", "blowout-confirm"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/schedule/board": {
     "e2e": [
@@ -625,9 +373,7 @@
       "schedule-builder-add-full",
       "schedule-builder-empty"
     ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/settings": {
     "e2e": [
@@ -649,134 +395,63 @@
       "settings-tax",
       "settings-trial"
     ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/settings/calendar": {
-    "e2e": [
-      "calendar-sync.spec.ts"
-    ],
-    "visual": [
-      "settings-calendar"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["calendar-sync.spec.ts"],
+    "visual": ["settings-calendar"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/settings/embed": {
-    "e2e": [
-      "schedule-embed.spec.ts"
-    ],
-    "visual": [
-      "settings-embed"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["schedule-embed.spec.ts"],
+    "visual": ["settings-embed"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/settings/export": {
-    "e2e": [
-      "a11y.spec.ts",
-      "backup.spec.ts",
-      "export.spec.ts",
-      "tenant-isolation.spec.ts"
-    ],
-    "visual": [
-      "settings-export"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["a11y.spec.ts", "backup.spec.ts", "export.spec.ts", "tenant-isolation.spec.ts"],
+    "visual": ["settings-export"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/settings/gear-import": {
-    "e2e": [
-      "gear.spec.ts"
-    ],
-    "visual": [
-      "settings-gear-import"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["gear.spec.ts"],
+    "visual": ["settings-gear-import"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/settings/import": {
-    "e2e": [
-      "import.spec.ts"
-    ],
-    "visual": [
-      "settings-import"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["import.spec.ts"],
+    "visual": ["settings-import"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/settings/integrations": {
-    "e2e": [
-      "integrations.spec.ts"
-    ],
-    "visual": [
-      "settings-integrations"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["integrations.spec.ts"],
+    "visual": ["settings-integrations"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/settings/safety-checklist": {
-    "e2e": [
-      "manifest.spec.ts"
-    ],
-    "visual": [
-      "settings-safety-checklist"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["manifest.spec.ts"],
+    "visual": ["settings-safety-checklist"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/settings/security": {
-    "e2e": [
-      "security-settings.spec.ts"
-    ],
+    "e2e": ["security-settings.spec.ts"],
     "visual": [],
-    "a11y": [
-      "a11y.spec.ts"
-    ],
+    "a11y": ["a11y.spec.ts"],
     "exempt": "Browser coverage is real (e2e/security-settings.spec.ts enrols in two-factor against the frozen clock, reads the recovery codes and revokes a session). No capture, because the Active sessions card cannot hold a baseline still: account_sessions.updated_at is stamped by better-auth's own clock, which DIVEDAY_CLOCK does not reach, so \"last seen\" is the wall clock; the row beside it prints the Chromium user-agent string, version and all; and the row count depends on how often the run signed in. Masking those is the one fix AGENTS.md refuses. Closing this means stamping those timestamps through src/lib/clock.ts at the better-auth boundary, which is an auth change wanting its own review (issue #1020)."
   },
   "/shop/[shopSlug]/settings/team": {
-    "e2e": [
-      "settings-findability.spec.ts",
-      "staff-invite.spec.ts"
-    ],
-    "visual": [
-      "settings-team",
-      "team-role-disclosure"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["settings-findability.spec.ts", "staff-invite.spec.ts"],
+    "visual": ["settings-team", "team-role-disclosure"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/settings/whatsapp": {
-    "e2e": [
-      "whatsapp-settings.spec.ts"
-    ],
-    "visual": [
-      "settings-whatsapp"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["whatsapp-settings.spec.ts"],
+    "visual": ["settings-whatsapp"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/staffing": {
-    "e2e": [
-      "staffing.spec.ts"
-    ],
-    "visual": [
-      "staffing"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["staffing.spec.ts"],
+    "visual": ["staffing"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/trips/[id]": {
     "e2e": [
@@ -808,9 +483,7 @@
       "trip-repeating-cadence",
       "trip-repeating-panel"
     ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/trips/[id]/guests": {
     "e2e": [
@@ -841,22 +514,12 @@
       "trip-guests-refusal-level",
       "trip-guests-waitlist"
     ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/trips/[id]/log": {
-    "e2e": [
-      "a11y.spec.ts",
-      "departure-log.spec.ts"
-    ],
-    "visual": [
-      "departure-log",
-      "departure-log-every-checkpoint"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["a11y.spec.ts", "departure-log.spec.ts"],
+    "visual": ["departure-log", "departure-log-every-checkpoint"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/trips/[id]/manifest": {
     "e2e": [
@@ -876,9 +539,7 @@
       "manifest-not-back-aboard",
       "manifest-person-panel"
     ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/trips/[id]/prep": {
     "e2e": [
@@ -888,133 +549,57 @@
       "nitrox.spec.ts",
       "support-needs.spec.ts"
     ],
-    "visual": [
-      "prep",
-      "prep-assignments",
-      "prep-by-diver",
-      "prep-no-nitrox"
-    ]
+    "visual": ["prep", "prep-assignments", "prep-by-diver", "prep-no-nitrox"]
   },
   "/shop/[shopSlug]/trips/[id]/prep/ticket/[bookingId]": {
-    "e2e": [
-      "gear.spec.ts"
-    ],
-    "visual": [
-      "rental-ticket"
-    ]
+    "e2e": ["gear.spec.ts"],
+    "visual": ["rental-ticket"]
   },
   "/shop/[shopSlug]/trips/[id]/print": {
-    "e2e": [
-      "trips.spec.ts"
-    ],
-    "visual": [
-      "trip-packet"
-    ]
+    "e2e": ["trips.spec.ts"],
+    "visual": ["trip-packet"]
   },
   "/shop/[shopSlug]/waivers": {
-    "e2e": [
-      "role-permissions.spec.ts",
-      "tenant-isolation.spec.ts",
-      "waivers.spec.ts"
-    ],
-    "visual": [
-      "staff-waivers",
-      "staff-waivers-record",
-      "waiver-materiality-choice"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["role-permissions.spec.ts", "tenant-isolation.spec.ts", "waivers.spec.ts"],
+    "visual": ["staff-waivers", "staff-waivers-record", "waiver-materiality-choice"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/sign-in": {
-    "e2e": [
-      "account-lifecycle.spec.ts",
-      "auth.spec.ts",
-      "export.spec.ts"
-    ],
-    "visual": [
-      "sign-in"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["account-lifecycle.spec.ts", "auth.spec.ts", "export.spec.ts"],
+    "visual": ["sign-in"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/switching": {
-    "e2e": [
-      "marketing.spec.ts",
-      "seo.spec.ts"
-    ],
-    "visual": [
-      "switching-hub"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["marketing.spec.ts", "seo.spec.ts"],
+    "visual": ["switching-hub"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/switching/[competitor]": {
-    "e2e": [
-      "import.spec.ts",
-      "marketing.spec.ts"
-    ],
-    "visual": [
-      "switching-eve",
-      "switching-fareharbor",
-      "switching-rezdy"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["import.spec.ts", "marketing.spec.ts"],
+    "visual": ["switching-eve", "switching-fareharbor", "switching-rezdy"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/switching/spreadsheet": {
-    "e2e": [
-      "marketing.spec.ts"
-    ],
-    "visual": [
-      "switching-spreadsheet"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["marketing.spec.ts"],
+    "visual": ["switching-spreadsheet"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/terms": {
-    "e2e": [
-      "marketing.spec.ts"
-    ],
-    "visual": [
-      "terms"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["marketing.spec.ts"],
+    "visual": ["terms"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/unsubscribe/[token]": {
-    "e2e": [
-      "courtesy-email-unsubscribe.spec.ts",
-      "last-minute-fill.spec.ts"
-    ],
-    "visual": [
-      "unsubscribe-invalid"
-    ]
+    "e2e": ["courtesy-email-unsubscribe.spec.ts", "last-minute-fill.spec.ts"],
+    "visual": ["unsubscribe-invalid"]
   },
   "/verify/[token]": {
-    "e2e": [
-      "account-lifecycle.spec.ts"
-    ],
-    "visual": [
-      "verify-invalid"
-    ]
+    "e2e": ["account-lifecycle.spec.ts"],
+    "visual": ["verify-invalid"]
   },
   "/waivers/[token]": {
-    "e2e": [
-      "a11y.spec.ts",
-      "waivers.spec.ts"
-    ],
-    "visual": [
-      "expired-link-unknown",
-      "waiver-active"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["a11y.spec.ts", "waivers.spec.ts"],
+    "visual": ["expired-link-unknown", "waiver-active"],
+    "a11y": ["a11y.spec.ts"]
   }
 }
