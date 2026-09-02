@@ -54,6 +54,7 @@ function departure(overrides: Partial<SpineDeparture> = {}): SpineDeparture {
     startsAt: hoursFromNow(2),
     endsAt: hoursFromNow(5),
     siteName: "Molasses Reef",
+    courseTitle: null,
     boatName: "Mantis II",
     priceCents: 9500,
     capacity: 12,

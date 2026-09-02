@@ -1476,6 +1476,7 @@ describe("ScheduleBuilder week board", () => {
 
   function weekEntry(overrides: Partial<WeekEntry> & { tripId: string; dateIso: string }) {
     return {
+      mark: "reef" as const,
       startTime: "07:00",
       title: "Two-Tank Reef",
       time: "7:00 AM",

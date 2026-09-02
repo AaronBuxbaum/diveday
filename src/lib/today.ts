@@ -808,6 +808,8 @@ export type SpineDeparture = {
   startsAt: Date;
   endsAt: Date;
   siteName: string | null;
+  /** The course this session teaches, or null for a fun dive — the site mark reads it. */
+  courseTitle: string | null;
   boatName: string | null;
   priceCents: number | null;
   capacity: number;

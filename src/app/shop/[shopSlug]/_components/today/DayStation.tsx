@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { SiteMark } from "@/components/illustration/SiteMark";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatTime } from "@/lib/format";
 import type { AboardBlockerKind } from "@/lib/readiness";
+import { siteMarkFor } from "@/lib/site-mark";
 import type { DayStation as DayStationData } from "@/lib/today";
 
 /**
@@ -94,7 +96,7 @@ export function DayStation({
     station.crewReason !== "crew_none_assigned";
 
   return (
-    <li className="grid grid-cols-1 gap-y-2 sm:grid-cols-[96px_40px_1fr] sm:gap-y-0">
+    <li className="grid grid-cols-1 gap-y-2 sm:grid-cols-[96px_84px_1fr] sm:gap-y-0">
       <div className="sm:pt-1 sm:text-end">
         {/* A real `<time>`: the spine's whole claim is that these read in clock
             order, and a machine-readable instant is what lets anything but a
@@ -111,11 +113,17 @@ export function DayStation({
           })}
         </p>
       </div>
-      {/* The rail. Decorative: the order already says which boat is next and
-          the time beside it is the fact. */}
+      {/* The rail, and on it the departure's drawn site mark — Reef's hand,
+          first use (ADR 20260901-diveday-reimagined, slice 13f). Decorative:
+          the order already says which boat is next and the time beside it is
+          the fact; the drawing says what kind of water without a word. */}
       <div aria-hidden="true" className="relative hidden sm:block">
         <span className="absolute top-3.5 bottom-0 start-1/2 w-px -translate-x-1/2 bg-border" />
-        <span className="absolute top-1.5 start-1/2 size-3 -translate-x-1/2 rounded-full border-2 border-primary bg-surface" />
+        <SiteMark
+          mark={siteMarkFor({ siteName: station.siteName, isCourse: station.courseTitle !== null })}
+          size="md"
+          className="absolute top-0 start-1/2 -translate-x-1/2"
+        />
       </div>
       <div className="pb-10">
         <div className="flex items-start justify-between gap-4 sm:gap-6">
