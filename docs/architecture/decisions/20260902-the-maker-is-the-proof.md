@@ -45,16 +45,18 @@ argues each in pictures:
 
 Proposed, in five parts. Parts 1 and 3 are the owner's to confirm and are recorded as H-66.
 
-1. **`/about` gets a "Who builds it" band, with a name, directly under the hero.** It replaces the
-   nameless founder band. The origin story stays as its first paragraph; the background is told in
-   the first person as what it means for a shop, not as a list of employers; it is signed "Aaron
-   Buxbaum · Founder"; and beside it a three-row ledger pairs each confirmed fact with one line on
-   what DiveDay took from it. **The three facts are confirmed. Everything in the first person is a draft** — the three
-   paragraphs and the three ledger lines — that the owner confirms, rewords, or strikes; biography
-   is true-only, and a session may not put words in his mouth or infer the meaning of a career. One
-   line is flagged for him in particular: "these days I work on self-driving cars" is true and tells
-   a burned owner that DiveDay is not his day job. The hero above it is the honest answer to that,
-   and whether the sentence stays is his. The word "spec" leaves `founderP3` in the same change; it has been on the
+1. **`/about` gets a "Who builds it" band, with the name in it, directly under the hero.** It
+   replaces the nameless founder band. The origin story stays as its first paragraph and names Aaron
+   Buxbaum in the third person; the background is told as what it means for a shop, not as a list of
+   employers, and **listed without a tense** — "Aaron's background is Google Maps, a biotech company
+   he helped build through to going public, and self-driving cars" — so nothing says what anyone does
+   "these days" and nothing reads as a side project; and beside it a three-row ledger pairs each
+   confirmed fact with one line on what DiveDay took from it. **No signature and no "I" anywhere on
+   the site** (owner, 2026-09-02): DiveDay is not one person and is not built by one person, so the
+   band says "we" where it speaks at all, which the claims policy already allows for what the team
+   shares. The three facts are confirmed; the three paragraphs and the three ledger lines are drafts
+   the owner confirms, rewords, or strikes, since biography is true-only and a session may not infer
+   the meaning of a career. The word "spec" leaves `founderP3` in the same change; it has been on the
    page in breach of the marketing checklist since the band was written.
 2. **`/` gets one echo, and no new door in the hero.** A band between the records diptych and the
    close, in the moment-row shape the page already has: marker, a heading in the buyer's world,
@@ -63,15 +65,16 @@ Proposed, in five parts. Parts 1 and 3 are the owner's to confirm and are record
    visitor can check in the demo** (screens open fast on a phone; every roll call and correction
    is kept; readiness that cannot be verified is said so). Nothing in this band waits on H-66. The
    hero's pinned budget (one primary, one secondary) is untouched.
-3. **The support sentence names the role, not a person: "the person who built it".** Recommended
-   over today's "a real person" (any rival can paste it) and over "support staff" (not true today,
-   so roadmap marketing; and the sentence every rival already has). It lands in five places —
-   `/pricing`'s included list and closing question, `/about`'s "How it's run" band and "Who answers
-   you" row, and the homepage's contact half — always as *reads*, never *answers*, and **never with
-   a response time, a day, or an hour budget.** It reverses the 2026-08-05 retirement in H-12 and binds one person for the
-   founding cohort, which is consistent with H-26's lifestyle-scale posture and the 25-shop cap. It
-   is retired again the day someone else answers the inbox, without editing a biography, because
-   it names the role.
+3. **The support sentence names the builders, plural, and nobody by name: "read by the people who
+   build DiveDay".** Recommended over today's "a real person" (any rival can paste it) and over
+   "support staff" (not true today, so roadmap marketing; and the sentence every rival already has).
+   It lands in five places — `/pricing`'s included list and closing question, `/about`'s "How it's
+   run" band and "Who answers you" row, and the homepage's contact half — always as *read*, never
+   *answered*, and **never with a response time, a day, or an hour budget.** It does not reverse the
+   2026-08-05 retirement in H-12: no individual is named and no personal answer is promised, so it
+   sharpens the line the policy already allows (the inbox reaches the same team) rather than
+   restoring the one it retired. It still takes the owner's nod, because it is a promise about who
+   reads, and it is retired the day the inbox is handed to someone who does not build the product.
 4. **"Ex-Google" is used in prose once, on `/about`, as "worked on Google Maps"** — the product a
    shop's guests already use to find the dock, not a company name. Elsewhere it is a ledger label
    beside its product fact (the `/about` ledger, the `/` ledger) and a clause in `/about`'s search
@@ -83,7 +86,8 @@ Proposed, in five parts. Parts 1 and 3 are the owner's to confirm and are record
 5. **A voice pass, held to a written list.** Seven tells the code phase sweeps across every page,
    with one rewritten example per page on the canvas: the "X — not Y" tail; the balanced pair; the
    triplet for rhythm; the closing aphorism; "It's not X. It's Y."; an adjective where a specific
-   would do; and no "I" on a page signed by one person. One dash per paragraph at most. The existing
+   would do; and no "I" anywhere — DiveDay is not one person, and a page that says "I" tells the
+   reader it is; "we" only for what the whole team shares. One dash per paragraph at most. The existing
    rule — read it aloud as a briefing — catches jargon and misses polish; the second ear is *would
    you text this to a friend who runs a shop?* Every proposed sentence on the canvas was rewritten
    through the list before it was drawn.
@@ -107,13 +111,20 @@ rewritten.
 - **A photograph of the founder.** Nothing to draw from; a placeholder would read as a stock grin
   ([brand.md](../../design/brand.md) rules those out). Revisit if the owner supplies one.
 - **A logo wall for the three employers.** Fabricated-proof failure wearing an affiliation; refused.
+- **A first-person founder letter, signed.** Drafted first and declined by the owner on 2026-09-02:
+  "I" tells the reader one person builds DiveDay, and that is not true. The name stays in the prose.
+- **A present-tense day job.** "These days I work on self-driving cars" was true and read as a side
+  project. The background is listed without a tense instead.
+- **"The person who built it" as the support subject.** Singular, so it says one builder; replaced
+  by "the people who build DiveDay", which is also what keeps it inside the current policy.
 
 ## Consequences
 
-- A named individual is on the site again, and one sentence on five pages binds him for the
-  founding cohort. The season-does-not-depend-on-him proof (the shop's own Stripe account, the ZIP,
-  roll call with no signal) is what makes that safe to say, which is why the band sits under that
-  hero on `/about` and beside the price and the doors on `/`, never in a hero.
+- A named individual is on the site again, in the third person, and one sentence on five pages
+  promises that the people who build DiveDay read the support inbox. The season-does-not-depend-on-
+  anyone proof (the shop's own Stripe account, the ZIP, roll call with no signal) is what makes both
+  safe to say, which is why the band sits under that hero on `/about` and beside the price and the
+  doors on `/`, never in a hero.
 - The `e2e/marketing.spec.ts` assertions that pin `/about`'s headings and the homepage's control
   count move deliberately, and the apologetics test gains nothing to catch — no proposed sentence
   says small, new vendor, on faith, or borrow credibility.
@@ -121,7 +132,7 @@ rewritten.
   claims policy retires founder-direct support in one bullet and, further down the same section,
   still lists it among the binding founding-cohort commitments from H-12. Part 3 is judged against
   the retirement, and 15e rewrites both passages to say one thing.
-- Escape hatch: the day a second person answers `support@dive.day`, part 3 reverts to "a real
-  person" by editing five strings; the day the owner wants the biography off again, part 1 reverts
+- Escape hatch: the day the inbox is handed to someone who does not build the product, part 3
+  reverts to "a real person" by editing five strings; the day the owner wants the biography off again, part 1 reverts
   by deleting one band and its keys in both locales. Neither touches the schema, a route, or a test
   of behaviour.

@@ -336,12 +336,12 @@ checklist, `e2e/marketing.spec.ts` assertions moved deliberately, both locales i
 screenshots looked at, a `conversion-reviewer` pass — and the canvas's copy ledger is the change
 list.
 
-- **15a** — `/about` gains a signed "Who builds it" band directly under the hero, with the
-  three-row ledger; "spec" leaves `founderP3`. Waits on H-66 (a).
+- **15a** — `/about` gains a "Who builds it" band directly under the hero, third person, no
+  signature, with the three-row ledger; "spec" leaves `founderP3`. Waits on H-66 (a).
 - **15b** — `/` gains one echo band between the records diptych and the close, in the
   moment-row shape, with a link to `/about` as its only new control.
-- **15c** — the support sentence becomes "the person who built it" in its five places, never
-  with a response time. Waits on H-66 (b).
+- **15c** — the support sentence becomes "read by the people who build DiveDay" in its five
+  places, never with a response time. Waits on H-66 (b).
 - **15d** — the voice pass across every marketing page, held to the seven tells on the ledger.
 - **15e** — `marketing.md` records the "ex-Google" rules, the voice list, and the biography's
   return under 15a's shape; H-12's row is amended by H-66's outcome, never rewritten.
