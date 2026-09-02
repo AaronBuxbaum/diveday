@@ -1,0 +1,78 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "The loop — read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 2200
+    },
+    {
+      "file": "SupportOptions.dc.html",
+      "title": "Support, three ways (H-66)",
+      "x": 1300,
+      "y": 0,
+      "w": 1180,
+      "h": 1420
+    },
+    {
+      "file": "AboutBuilder.dc.html",
+      "title": "/about — the maker band, desktop",
+      "x": 0,
+      "y": 2360,
+      "w": 1280,
+      "h": 1800
+    },
+    {
+      "file": "AboutBuilderPhone.dc.html",
+      "title": "/about — the maker band, phone",
+      "x": 1400,
+      "y": 2360,
+      "w": 390,
+      "h": 2580
+    },
+    {
+      "file": "HomeProof.dc.html",
+      "title": "/ — the tail, with the echo",
+      "x": 1910,
+      "y": 2360,
+      "w": 1280,
+      "h": 1340
+    },
+    {
+      "file": "CopyLedger.dc.html",
+      "title": "The copy ledger",
+      "x": 0,
+      "y": 5100,
+      "w": 1180,
+      "h": 4460
+    }
+  ],
+  "annotations": [
+    {
+      "id": "note-glosses",
+      "x": 0,
+      "y": 4220,
+      "w": 420,
+      "text": "The band names Aaron in the third person and says “we” for the team; no signature, no “I”. The facts (Google Maps; a biotech company through to going public; self-driving cars) were confirmed 2026-07-25 and are listed without a tense, so nothing here says what anyone does “these days”. The three paragraphs and the three lines under the facts are drafts: confirm, reword or strike each one — biography is true-only."
+    },
+    {
+      "id": "note-support",
+      "x": 2560,
+      "y": 0,
+      "w": 320,
+      "text": "Option B names no individual and promises no response time, so it sits inside the current policy rather than reversing the 2026-08-05 retirement in H-12; it still takes the owner's nod. Nothing on the code side moves until the H-66 row is Chosen. Option A leaves every support line as it is today; the rest of the canvas stands either way."
+    },
+    {
+      "id": "note-home",
+      "x": 1910,
+      "y": 3760,
+      "w": 380,
+      "text": "The ledger's labels are the confirmed facts; its values are shipped product facts a visitor can check in the demo, so nothing in this band waits on H-66. The one new control is the link, at link weight. The hero's budget (one primary, one secondary) is untouched."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

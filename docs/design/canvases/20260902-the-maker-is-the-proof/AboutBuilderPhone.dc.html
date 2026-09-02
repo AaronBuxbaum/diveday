@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    body { margin: 0; font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; color: #0c2a35; -webkit-font-smoothing: antialiased; background: #fbf7ef; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    .nav-link { font-size: 14px; font-weight: 500; color: #54676d; padding: 8px; }
+    .eyebrow { font-size: 14px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #0e7490; margin: 0; }
+    .h2 { font-size: 30px; font-weight: 600; letter-spacing: -0.035em; line-height: 1.15; margin: 0; text-wrap: balance; }
+    .p { font-size: 16px; line-height: 28px; color: #54676d; margin: 0; }
+    .label { font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #0e7490; margin: 0; }
+    .value { font-size: 15px; line-height: 24px; color: #0c2a35; margin: 0; }
+  </style>
+</helmet>
+<div style="width: 390px; min-height: 2580px; background: #fbf7ef; box-sizing: border-box; overflow: hidden;">
+
+  <!-- Header, phone layout as shipped: brand + CTA row, links row -->
+  <header style="border-bottom: 1px solid #e6dcc8;">
+    <nav style="padding: 16px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px;">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600;">
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><circle cx="7" cy="17" r="5" fill="#0c2a35"></circle><circle cx="15.5" cy="9" r="3.4" fill="#0c2a35" opacity="0.75"></circle><circle cx="19.5" cy="4.5" r="2" fill="#ff6f61"></circle></svg>
+        <span>DiveDay<span style="color: #0e7490;">.</span></span>
+      </div>
+      <div style="margin-left: auto; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: 10px; border: 1px solid #e6dcc8; background: #fffdf8; font-size: 16px; font-weight: 600;">Try the live demo</div>
+      <div style="flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px; margin: 0 -8px;">
+        <span class="nav-link">Product</span><span class="nav-link">Pricing</span><span class="nav-link">Switch</span><span class="nav-link" style="color: #0c2a35;">About</span><span class="nav-link">Sign in</span>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Hero, as shipped; the phone mockup stacks beneath the copy on this width and is omitted here -->
+  <section style="border-bottom: 1px solid #e6dcc8; padding: 64px 24px;">
+    <p class="eyebrow">Who we are</p>
+    <h1 style="margin: 20px 0 0; font-size: 36px; font-weight: 600; letter-spacing: -0.045em; line-height: 1.1; text-wrap: balance;">Your season doesn't hang on us.</h1>
+    <p class="p" style="margin-top: 24px; font-size: 18px; line-height: 30px;">Payments run through your own Stripe account, your records download as one ZIP any day, and roll call works on a phone with no signal. Divers build DiveDay, and everything below is something you can go and try in the next few minutes.</p>
+  </section>
+
+  <!-- NEW · Who builds it, stacked -->
+  <section style="padding: 80px 24px; display: flex; flex-direction: column;">
+    <p class="eyebrow">Who builds it</p>
+    <h2 class="h2" style="margin-top: 16px;">Started by an engineer who worked on Google Maps.</h2>
+    <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 16px;">
+      <p class="p">DiveDay started when a dive shop owner walked Aaron Buxbaum through a normal day at his shop. There was a whiteboard, a clipboard, a spreadsheet somebody updated by hand, and a few apps that didn't know about each other. He was paying for the software, and then paying again in hours he would rather have spent with his divers.</p>
+      <p class="p">Aaron's background is Google Maps, a biotech company he helped build through to going public, and self-driving cars. All of it is software a lot of people depend on, and all of it has to get things right. DiveDay is held to that bar. The whiteboard made sense too. Paper doesn't crash, and it doesn't need five taps with wet hands.</p>
+      <p class="p">We're building the thing we'd want if we ran the shop. It has to open fast on a phone in the sun and still make sense to a new hire. The four rules below are how we check that, and you can check them too.</p>
+    </div>
+
+    <div style="margin-top: 40px; border-radius: 28px; border: 1px solid #e6dcc8; background: #fffdf8; box-shadow: 0 2px 10px rgba(88, 66, 30, 0.06); overflow: hidden;">
+      <div style="padding: 20px 24px; display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid #e6dcc8;">
+        <p class="label">Google Maps</p>
+        <p class="value">The app your guests use to find your dock, and the bar DiveDay is held to for how fast a screen comes up on a phone outside.</p>
+      </div>
+      <div style="padding: 20px 24px; display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid #e6dcc8;">
+        <p class="label">A biotech company, built through to going public</p>
+        <p class="value">Records that get audited. The habit DiveDay took from it is never overwriting anything: every roll call and every correction is kept.</p>
+      </div>
+      <div style="padding: 20px 24px; display: flex; flex-direction: column; gap: 6px;">
+        <p class="label">Self-driving cars</p>
+        <p class="value">Software that stops when it isn't sure. DiveDay's readiness check works the same way: if it can't verify something, it says so instead of letting the diver through.</p>
+      </div>
+    </div>
+  </section>
+
+  <section style="border-top: 1px solid #e6dcc8; background: #fffdf8; padding: 64px 24px 0;">
+    <p class="eyebrow">What we hold it to</p>
+    <h2 class="h2" style="margin-top: 16px;">Four rules, and you can check every one.</h2>
+  </section>
+
+</div>
+</x-dc>
+</body>
+</html>
