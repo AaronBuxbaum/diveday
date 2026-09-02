@@ -65,6 +65,7 @@ import {
   rollCallEvents,
   shopBackupDeliveries,
   shopBackupDestinations,
+  shopContactEmailTokens,
   shopIntegrations,
   shopPromoCodes,
   shopPromoRedemptions,
@@ -288,6 +289,11 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
    * `delete-path-coverage.test.ts`, which exists precisely so the next one is
    * found by a failing check rather than by a stranded shop.
    */
+  // References `shops` with no cascade, so a demo whose settings were ever
+  // saved with a contact address would strand the shop on the final
+  // `delete(shops)` — the same 23503 the sweep above was written after (issue
+  // #1288).
+  await db.delete(shopContactEmailTokens).where(eq(shopContactEmailTokens.shopId, shopId));
   await db.delete(internalNotes).where(eq(internalNotes.shopId, shopId));
   await db.delete(activityEvents).where(eq(activityEvents.shopId, shopId));
   await db.delete(staffShifts).where(eq(staffShifts.shopId, shopId));

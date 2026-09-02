@@ -404,6 +404,28 @@ const emailVerificationSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
 });
 
+/**
+ * The link that proves a shop controls the address it typed as its contact
+ * email (issue #1288). Shop-scoped rather than account-scoped: it confirms a
+ * `shops` row, and it goes to that address rather than to whoever saved the
+ * field — a manager cannot confirm an inbox by receiving the mail somewhere
+ * else.
+ *
+ * No `ownerName`: the recipient is a front desk, which may be a shared inbox
+ * nobody in particular reads. The shop's own name is the greeting.
+ */
+const shopContactEmailConfirmationSchema = z.object({
+  kind: z.literal("shop_contact_email_confirmation"),
+  tokenId: z.uuid(),
+  shopId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  shopName: z.string().trim().min(1).max(120),
+  confirmUrl: z.url().max(2_000),
+  expiresAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
 const passwordResetRequestSchema = z.object({
   kind: z.literal("password_reset_request"),
   userAccountId: z.uuid(),
@@ -587,6 +609,7 @@ export const notificationSchema = z
     tripBlowoutSchema,
     welcomeSchema,
     emailVerificationSchema,
+    shopContactEmailConfirmationSchema,
     passwordResetRequestSchema,
     passwordChangedSchema,
     staffInviteSchema,
@@ -657,6 +680,11 @@ export function notificationIdempotencyKey(notification: Notification): string {
       return `email-verification/${notification.tokenId}`;
     case "password_reset_request":
       return `password-reset-request/${notification.tokenId}`;
+    // Same shape and the same reason: the token row's id, never the bearer
+    // secret. A fresh save mints a fresh token, so a changed address is always
+    // a fresh send rather than a dedup against the last one.
+    case "shop_contact_email_confirmation":
+      return `shop-contact-email-confirmation/${notification.tokenId}`;
     case "staff_invite":
       return `staff-invite/${notification.tokenId}`;
     // Keyed by the change's own timestamp so a second reset's confirmation

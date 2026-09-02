@@ -66,6 +66,7 @@ export type RetainedTable =
   | "notification_delivery_attempts"
   | "activity_events"
   | "account_tokens"
+  | "shop_contact_email_tokens"
   | "booking_payment_events"
   | "push_subscriptions";
 
@@ -133,6 +134,16 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * live token is never pruned regardless of age.
    */
   account_tokens: 90,
+  /**
+   * 90 days, on the same rule and for the same reason as `account_tokens`
+   * above, which this table is modelled on: hashed bearer credentials, kept
+   * long enough to answer "was this link ever issued, and did anyone use it?"
+   * during an incident review, and no longer. Measured from `expires_at`, so a
+   * live link is never pruned however old the row is. Each row also holds the
+   * shop's front-desk address, which is one more reason not to keep them for
+   * ever (issue #1288).
+   */
+  shop_contact_email_tokens: 90,
   /**
    * 2555 days (7 years). The local money ledger DATA-M3 exists to provide;
    * matched to the ordinary financial-records horizon rather than to anything

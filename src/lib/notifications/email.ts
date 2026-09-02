@@ -965,6 +965,39 @@ export function verifyAccountEmail(input: VerifyAccountEmailInput): Notification
   };
 }
 
+type ConfirmShopContactEmailInput = {
+  locale: DiverLocale;
+  shopName: string;
+  confirmUrl: string;
+  expiresAt: Date;
+  timezone: string;
+};
+
+/**
+ * "Is this where divers should write back?" — the one-time link a shop opens to
+ * prove it controls the address it typed as its contact email (issue #1288).
+ *
+ * Addressed to the shop, not to a person: this lands in a front desk that may
+ * be a shared inbox nobody in particular reads, so there is no first name to
+ * greet. It also says what the link is *for* rather than merely asking for a
+ * click — the reader may not be the manager who typed the address, and "confirm
+ * your email" from an app they have not signed into is exactly the shape of a
+ * message people are right to distrust.
+ */
+export function confirmShopContactEmail(input: ConfirmShopContactEmailInput): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
+  const intro = t("notifications.confirmShopContact.intro", { shopName: input.shopName });
+  const confirm = t("notifications.confirmShopContact.confirm");
+  const expiry = t("notifications.confirmShopContact.expiry", { expiresAt });
+
+  return {
+    subject: t("notifications.confirmShopContact.subject", { shopName: input.shopName }),
+    text: `${intro}\n\n${confirm}:\n${input.confirmUrl}\n\n${expiry}\n`,
+    html: `<p>${t("notifications.confirmShopContact.intro", { shopName: escapeHtml(input.shopName) })}</p>${emailButton(input.confirmUrl, confirm)}<p>${t("notifications.confirmShopContact.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
+  };
+}
+
 type StaffInviteEmailInput = {
   locale: DiverLocale;
   inviteeName: string;

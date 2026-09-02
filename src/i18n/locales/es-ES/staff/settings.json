@@ -92,7 +92,8 @@
       "phoneLabel": "Teléfono de contacto",
       "phoneHint": "(opcional)",
       "submit": "Guardar datos de contacto",
-      "submitting": "Guardando…"
+      "submitting": "Guardando…",
+      "unconfirmedBadge": "Sin confirmar"
     },
     "profile": {
       "heading": "Perfil y marca del centro",

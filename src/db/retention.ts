@@ -17,6 +17,7 @@ import {
   notificationDeliveries,
   notificationDeliveryAttempts,
   pushSubscriptions,
+  shopContactEmailTokens,
   stripeWebhookEvents,
 } from "./schema";
 
@@ -222,6 +223,18 @@ export async function pruneExpiredRecords(
           .where(lt(accountTokens.expiresAt, cutoff("account_tokens")))
           .limit(PRUNE_BATCH_LIMIT),
       (ids) => db.delete(accountTokens).where(inArray(accountTokens.id, ids)),
+    ),
+  );
+  outcomes.push(
+    await pruneBatch(
+      "shop_contact_email_tokens",
+      () =>
+        db
+          .select({ id: shopContactEmailTokens.id })
+          .from(shopContactEmailTokens)
+          .where(lt(shopContactEmailTokens.expiresAt, cutoff("shop_contact_email_tokens")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(shopContactEmailTokens).where(inArray(shopContactEmailTokens.id, ids)),
     ),
   );
 

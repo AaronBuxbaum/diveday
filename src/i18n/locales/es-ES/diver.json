@@ -1885,6 +1885,16 @@
         "createFailed": "Algo salió mal al crear tu centro.",
         "signinFailed": "Tu centro se creó, pero no pudimos iniciar tu sesión. Prueba a iniciar sesión más abajo."
       }
+    },
+    "confirmContact": {
+      "title": "¿Es aquí donde deben escribir los buceadores?",
+      "description": "Confirma {email} y DiveDay enviará aquí las respuestas de los buceadores.",
+      "submit": "Sí, esta es la dirección correcta",
+      "confirming": "Confirmando…",
+      "confirmedTitle": "Confirmada",
+      "confirmedText": "A partir de ahora las respuestas de los buceadores llegarán aquí.",
+      "unavailableTitle": "Este enlace ya no es válido",
+      "unavailableText": "Puede haber caducado, ya haberse usado, o la dirección puede haber cambiado desde que se envió. Al guardar de nuevo la dirección de contacto se envía uno nuevo."
     }
   },
   "switching": {
@@ -3389,6 +3399,12 @@
       "exampleShopName": "Blue Mantis Divers",
       "exampleMessage": "Reef Runner zarpa el sábado a las 8:00. Presentaos en el muelle 30 minutos antes.",
       "testMessage": "Este es un mensaje de prueba de DiveDay. Tu conexión de WhatsApp funciona."
+    },
+    "confirmShopContact": {
+      "subject": "Confirma la dirección de respuesta de {shopName}",
+      "intro": "{shopName} indicó esta dirección como el lugar donde los buceadores deben escribir. Confírmala y DiveDay enviará aquí las respuestas de los buceadores.",
+      "confirm": "Sí, esta es la dirección correcta",
+      "expiry": "El enlace funciona hasta el {expiresAt}. Hasta que se use, las respuestas no cambian de destino: no pasa nada más."
     }
   },
   "brand": {

@@ -600,6 +600,10 @@
     "e2e": ["courtesy-email-unsubscribe.spec.ts", "last-minute-fill.spec.ts"],
     "visual": ["unsubscribe-invalid"]
   },
+  "/confirm-contact/[token]": {
+    "e2e": ["contact-email-confirmation.spec.ts"],
+    "visual": ["confirm-contact-invalid"]
+  },
   "/verify/[token]": {
     "e2e": ["account-lifecycle.spec.ts"],
     "visual": ["verify-invalid"]

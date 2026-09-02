@@ -176,7 +176,7 @@ Beyond the body, three things a receiving mailbox and a reviewer both read
 
 | | Where it comes from | When it is absent |
 | --- | --- | --- |
-| `Reply-To: <the shop's front desk>` | `shops.contact_email`, the address on the shop's settings form | The shop has none on file; a reply then goes to `noreply@ses.dive.day` and nobody |
+| `Reply-To: <the shop's front desk>` | `shops.contact_email`, **once `shops.contact_email_confirmed_at` is set** — see below | The shop has none on file, or has not confirmed the one it typed; a reply then goes to `noreply@ses.dive.day` and nobody |
 | A closing line `Shop name · street, town, region postcode, country` on every **commercial** message (the kinds carrying an unsubscribe link: wait-list invite, last-minute deal, checkout recovery, recap) | `shops.address_*` | The shop has no street on file; nothing is guessed and no blank line is rendered |
 | `List-Unsubscribe` + `List-Unsubscribe-Post` (RFC 8058 one-click) on those same kinds | The notification's own `unsubscribeUrl` | Never absent on a commercial kind — `kinds.ts` makes the URL required there |
 | SES message tags `diveday_shop` and `diveday_kind` | The notification | Never — every send is tagged, and every event SES publishes echoes them back |
@@ -184,6 +184,16 @@ Beyond the body, three things a receiving mailbox and a reviewer both read
 Both shop-sourced values are resolved once per send in `src/db/notifications.ts` (`shopSenderFor`),
 never by the composer, so a new kind gets them for free. Transactional mail (a confirmation, a waiver
 link, a reminder) carries the `Reply-To` and nothing else.
+
+**`Reply-To` waits for proof** (issue #1288). Saving the contact address sends a one-time link to it
+(`/confirm-contact/<token>`, `shop_contact_email_tokens`); until somebody opens that link, the
+address publishes on the shop's pages exactly as it always has but no diver mail carries a
+`Reply-To`. *Displaying* an address and *routing a diver's reply* to it are different acts, and a
+diver answering a waiver or readiness email writes back medical and contact details — a typo, or a
+manager who fills in a third party's address, would send every one of those to the wrong inbox.
+Changing the address clears the stamp and sends a fresh link; saving anything else on that form
+does not. An unconfirmed shop never fails a send — it sends as it did before the header existed.
+The postal footer is unaffected: an address is not a destination.
 
 ## Production access: the second request
 

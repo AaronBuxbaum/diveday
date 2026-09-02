@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
 import {
   canPersonErasePersonalData,
@@ -13,8 +14,10 @@ import { getDb } from "@/db/client";
 import { createDivePackage, deleteDivePackage } from "@/db/dive-packages";
 import { shopSearchAnchor } from "@/db/dive-sites";
 import { queueAndAttemptMediaDeletion, retryMediaDeletion } from "@/db/media-deletions";
+import { sendNotification } from "@/db/notifications";
 import { maxLineItemUnitAmountCents } from "@/db/orders";
 import { dischargeProcessorErasure, retryProcessorErasure } from "@/db/processor-erasure";
+import { issueShopContactEmailToken } from "@/db/shop-contact-email";
 import {
   getShopById,
   markShopUnitsConfirmed,
@@ -61,6 +64,7 @@ import {
 import { DOCK_DAY_FIELDS, parseDockDayRhythm } from "@/lib/diver-planning";
 import { MAX_EMERGENCY_LINES, normalizeEmergencyReference } from "@/lib/emergency-reference";
 import { isValidTimeZone } from "@/lib/format";
+import { log } from "@/lib/log";
 import {
   isShopCurrency,
   majorToMinor,
@@ -69,6 +73,7 @@ import {
   toShopCurrency,
 } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -81,6 +86,7 @@ import {
 } from "@/lib/rentals";
 import { parseSendWindow } from "@/lib/send-window";
 import { requireStaffSession } from "@/lib/session";
+import { shopContactEmailLinkPath } from "@/lib/shop-contact-email";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { storeShopHeroImage, storeShopLogoImage } from "@/lib/storage";
 import { timeZoneAnchor } from "@/lib/timezones";
@@ -570,7 +576,62 @@ export async function saveContactAction(formData: FormData) {
   await settingsBlock(session);
   const parsed = contactSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(settings, "contact-invalid", { saved: "contact" }));
-  await setShopContact(await getDb(), session.user.shopId, parsed.data);
+  const db = await getDb();
+  const saved = await setShopContact(db, session.user.shopId, parsed.data);
+
+  // A changed address needs proving before diver replies are routed to it
+  // (issue #1288); `setShopContact` has already cleared the stamp. Send the
+  // link here rather than making the manager ask for it — the address was just
+  // typed, and a shop that never receives the mail has learned the useful thing
+  // about it.
+  //
+  // `after()` and swallowed: a mail failure must not cost the manager the save
+  // they made. The worst case is a shop whose `Reply-To` stays off, which is
+  // exactly the state a shop that has not confirmed is already in — and saving
+  // the field again sends a fresh link.
+  const origin = publicAppUrl();
+  if (saved?.contactEmail && !saved.contactEmailConfirmedAt && origin) {
+    const contactEmail = saved.contactEmail;
+    after(async () => {
+      try {
+        // Per recipient, not per shop or per IP: the address is the thing being
+        // aimed at, and an unrated version of this action is a way to make
+        // DiveDay's shared SES identity send attacker-worded mail to a
+        // stranger's inbox on repeat. An empty bucket drops the send, never the
+        // save — the shop keeps its address, unconfirmed, which is the state it
+        // was already in (`security-reviewer`, issue #1288).
+        const allowed = await checkRateLimit(
+          rateLimitKey("contact-email-confirmation", contactEmail.toLowerCase()),
+          RATE_LIMITS.contactEmailConfirmationByRecipient,
+        );
+        if (!allowed.allowed) return;
+        const issued = await issueShopContactEmailToken(db, {
+          shopId: session.user.shopId,
+          email: contactEmail,
+        });
+        await sendNotification(db, {
+          kind: "shop_contact_email_confirmation",
+          tokenId: issued.tokenId,
+          shopId: session.user.shopId,
+          to: contactEmail,
+          locale: recipientLocale(null, saved.defaultLocale),
+          shopName: saved.name,
+          confirmUrl: new URL(shopContactEmailLinkPath(issued.token), `${origin}/`).toString(),
+          expiresAt: issued.expiresAt,
+          timezone: saved.timezone,
+        });
+      } catch (error) {
+        // Through the app's own logger, and the message only: an SES error
+        // routinely carries the destination address, and the shop's contact
+        // address has no business in a log line (the shape `queueRetry` in
+        // src/db/notifications.ts already uses).
+        log("settings.contact_confirmation_failed", "warn", {
+          shopId: session.user.shopId,
+          error: error instanceof Error ? error.message : "unknown",
+        });
+      }
+    });
+  }
   revalidateAndRedirect(settings, noticeUrl(settings, "contact-saved", { saved: "contact" }));
 }
 

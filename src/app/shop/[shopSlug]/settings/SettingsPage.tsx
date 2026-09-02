@@ -530,7 +530,22 @@ export default async function SettingsPage({
   const zoneId = shop.timezone || DEFAULT_TIMEZONE;
   const timezoneValue =
     zoneId in CURATED_TIMEZONE_KEYS ? t(CURATED_TIMEZONE_KEYS[zoneId as CuratedTimeZone]) : zoneId;
-  const contactValue = [shop.contactEmail, shop.contactPhone].filter(Boolean).join(" · ") || notSet;
+  const contactText = [shop.contactEmail, shop.contactPhone].filter(Boolean).join(" · ") || notSet;
+  /**
+   * The address, and whether anyone has proved the shop reads it (issue #1288).
+   * A badge rather than a caption, the way the Stripe row says the same kind of
+   * thing: an unconfirmed address still publishes and still takes bookings —
+   * what it does not do is receive diver replies, and the state is the whole of
+   * that sentence.
+   */
+  const contactValue =
+    shop.contactEmail && !shop.contactEmailConfirmedAt ? (
+      <>
+        {contactText} <Badge tone="warning">{t("settings.main.contact.unconfirmedBadge")}</Badge>
+      </>
+    ) : (
+      contactText
+    );
   // A shop's colour is checked at render, never on save: the summary says
   // when it had to be darkened so the owner learns here, not on the storefront.
   const brandTheme = shop.brandColor ? deriveBrandTheme(shop.brandColor) : null;

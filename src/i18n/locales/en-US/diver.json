@@ -1885,6 +1885,16 @@
         "createFailed": "Something went wrong creating your shop.",
         "signinFailed": "Your shop was created, but signing you in failed. Try signing in below."
       }
+    },
+    "confirmContact": {
+      "title": "Is this where divers should write?",
+      "description": "Confirm {email} and DiveDay will send diver replies here.",
+      "submit": "Yes, this is the right address",
+      "confirming": "Confirming…",
+      "confirmedTitle": "Confirmed",
+      "confirmedText": "Diver replies will arrive here from now on.",
+      "unavailableTitle": "This link is no longer valid",
+      "unavailableText": "It may have expired, already been used, or the address may have changed since it was sent. Saving the contact address again sends a fresh one."
     }
   },
   "switching": {
@@ -3389,6 +3399,12 @@
       "exampleShopName": "Blue Mantis Divers",
       "exampleMessage": "Reef Runner departs Saturday at 8:00 AM. Dock call 30 minutes early.",
       "testMessage": "This is a test message from DiveDay. Your WhatsApp connection is working."
+    },
+    "confirmShopContact": {
+      "subject": "Confirm the reply address for {shopName}",
+      "intro": "{shopName} listed this address as where divers should write. Confirm it and DiveDay will send diver replies here.",
+      "confirm": "Yes, this is the right address",
+      "expiry": "The link works until {expiresAt}. Until it is used, replies go nowhere new — nothing else changes."
     }
   },
   "brand": {

@@ -166,6 +166,22 @@ export const shops = pgTable(
      * have a member of staff's address guessed on its behalf.
      */
     contactEmail: text("contact_email"),
+    /**
+     * When somebody proved the shop controls `contact_email`, by opening the
+     * one-time link sent to it. Null is the ordinary starting state and every
+     * state after a change: a manager typing a new address is a claim, not a
+     * proof.
+     *
+     * **It gates `Reply-To`, and nothing else** (`shopSenderOf`,
+     * src/lib/notifications/sender.ts). The address has always been *displayed*
+     * on the shop's public pages, and that does not change here; what needs
+     * proof is *routing* a diver's reply to it. A diver answering a waiver or a
+     * readiness email writes back medical and contact details, and a typo — or a
+     * manager who sets somebody else's address — would send every one of those
+     * to a third party. Unconfirmed, the mail goes out exactly as it did before
+     * the header existed: no `Reply-To`, never a failed send (issue #1288).
+     */
+    contactEmailConfirmedAt: timestamp("contact_email_confirmed_at", { withTimezone: true }),
     contactPhone: text("contact_phone"),
     /**
      * Where a post-trip review request sends a diver — a Google Business,
@@ -4458,6 +4474,37 @@ export const accountTokens = pgTable(
  * from `person_roles` via `loadActiveStaffRoles` (src/db/authz.ts), which
  * never trusts this snapshot.
  */
+/**
+ * A one-time link proving a shop controls the address it typed as its contact
+ * email (issue #1288). Hashed and expiring, the same shape as `account_tokens`
+ * — and a separate table for the reason that one is account-scoped: this token
+ * is about a *shop's* row, so hanging it off a user account would make "which
+ * shop did this confirm?" a join through whoever happened to be signed in.
+ *
+ * `email` is the address as it stood when the link was sent, and confirming
+ * checks it still is. Otherwise a manager could request a link for an address
+ * they control, change the field to somebody else's, and open the first link to
+ * mark the second address confirmed.
+ */
+export const shopContactEmailTokens = pgTable(
+  "shop_contact_email_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    /** The address this link confirms — checked against the shop row on use. */
+    email: text("email").notNull(),
+    /** SHA-256 hash only — the raw bearer token is in the email and nowhere else. */
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    supersededAt: timestamp("superseded_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("shop_contact_email_tokens_shop_idx").on(table.shopId)],
+);
+
 export const accountSessions = pgTable(
   "account_sessions",
   {

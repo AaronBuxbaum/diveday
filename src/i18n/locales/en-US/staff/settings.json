@@ -92,7 +92,8 @@
       "phoneLabel": "Contact phone",
       "phoneHint": "(optional)",
       "submit": "Save contact details",
-      "submitting": "Saving…"
+      "submitting": "Saving…",
+      "unconfirmedBadge": "Unconfirmed"
     },
     "profile": {
       "heading": "Shop profile & branding",

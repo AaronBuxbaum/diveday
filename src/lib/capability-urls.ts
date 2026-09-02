@@ -54,6 +54,13 @@ export const CAPABILITY_ROUTE_PREFIXES = [
   // `expires_at` or a `revoked_at`, so an exposed token works forever, which
   // is a longer life than anything else here.
   "unsubscribe",
+  // The shop's contact-address confirmation link (issue #1288):
+  // `/confirm-contact/[token]`. Narrow — it only marks one shop's front-desk
+  // address confirmed — but that is precisely the act the token exists to make
+  // *provably* the mailbox owner's, so a leaked copy in telemetry hands anybody
+  // reading it the ability to vouch for an address they never received mail at,
+  // which is the whole feature undone.
+  "confirm-contact",
 ] as const;
 
 /**
