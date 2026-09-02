@@ -153,6 +153,31 @@ describe("the field guide", () => {
     expect(screen.getByText("recap.fieldGuideTitle(1)")).toBeTruthy();
   });
 
+  it("renders no drawer when every species a site names has left the catalog", () => {
+    const { container } = render(
+      <AfterState {...props({ fieldGuide: [guide("French Reef", ["gone", "also-gone"])] })} />,
+    );
+    expect(container.querySelector("[data-recap-door='field-guide']")).toBeNull();
+  });
+
+  it("drops a site whose whole guide has left the catalog, keeping the rest", () => {
+    const { container } = render(
+      <AfterState
+        {...props({
+          fieldGuide: [guide("French Reef", ["gone"]), guide("Molasses Reef", ["arrow-crab"])],
+        })}
+      />,
+    );
+    const drawer = within(
+      container.querySelector("[data-recap-door='field-guide']") as HTMLElement,
+    );
+    expect(drawer.getByText("Molasses Reef")).toBeTruthy();
+    expect(drawer.queryByText("French Reef")).toBeNull();
+    // One site left, so the heading's count must say so rather than counting
+    // the group that rendered nothing.
+    expect(screen.getByText("recap.fieldGuideTitle(1)")).toBeTruthy();
+  });
+
   it("renders no drawer at all when no site the day dived names a species", () => {
     const { container } = render(<AfterState {...props({ fieldGuide: [] })} />);
     expect(container.querySelector("[data-recap-door='field-guide']")).toBeNull();

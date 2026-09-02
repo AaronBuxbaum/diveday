@@ -232,6 +232,14 @@ export function AfterState({
   actions,
   siteMark,
 }: AfterStateProps) {
+  // Resolved before anything decides what to render, because
+  // `fieldGuideCards` drops a slug the catalog no longer carries: a site whose
+  // whole guide has aged out arrives with rows and resolves to no cards, and
+  // counting rows instead of cards would open a drawer onto a site heading with
+  // nothing under it — the empty drawer this feature exists not to render.
+  const fieldGuideGroups = fieldGuide
+    .map((site) => ({ siteName: site.siteName, cards: fieldGuideCards(site.rows, t) }))
+    .filter((group) => group.cards.length > 0);
   const firstName = diverName.trim().split(/\s+/)[0] || t("recap.namelessFallback");
   const greeting = t("thread.afterGreeting", { name: firstName });
   // `noticeFromParam`, never a bare `REVIEW_NOTICES[params.review]` — all
@@ -474,21 +482,21 @@ export function AfterState({
             page's one primary, and this is a keepsake's footnote. Absent
             entirely when no site the day dived names a species — an empty
             drawer is a heading apologising for having nothing behind it. */}
-        {fieldGuide.length > 0 ? (
+        {fieldGuideGroups.length > 0 ? (
           <Door
             id="field-guide"
-            summary={t("recap.fieldGuideTitle", { count: fieldGuide.length })}
+            summary={t("recap.fieldGuideTitle", { count: fieldGuideGroups.length })}
             open={false}
           >
             <ul className="flex flex-col gap-6">
-              {fieldGuide.map((site) => (
+              {fieldGuideGroups.map((site) => (
                 <li key={site.siteName}>
                   {/* The site's own name above its faces is what keeps this a
                       statement about a place. Without it the list floats free
                       and reads as the day's tally. */}
                   <p className="text-sm font-semibold">{site.siteName}</p>
                   <ul className="mt-3 grid gap-x-6 gap-y-5 sm:grid-cols-2">
-                    {fieldGuideCards(site.rows, t).map((card) => (
+                    {site.cards.map((card) => (
                       <li key={card.id} className="flex min-w-0 gap-3">
                         <StoredPhoto
                           src={card.imageUrl}
