@@ -104,8 +104,12 @@ someone asks; nothing is built ahead of a request). It is an **authorized servic
 marketing claims policy, not a product feature: phrased as a human commitment, never a turnaround
 time, never a page-count. It appears on `/pricing`, `/product` and the FareHarbor guide, priced as
 part of the subscription until the owner says otherwise (H-65 asks). FareHarbor's equivalent is a
-$10,000-a-year line item, and that comparison may be stated as the number they publish, never as
-the shop's own cost.
+separately-sold hosted website, and that comparison is stated the way the claims policy allows: as
+the figure third parties report, cited, never as the shop's own cost. *Corrected 2026-09-02, when
+slice 13e went to write it down*: FareHarbor publishes no price for it. The research round's
+"$10,000 a year" was a third party's top line — Bókun reports the Web Core package at $5,000 a year
+(or $499 a month) with SEO add-ons of $2,200 or $5,000 a year on top — so the guide carries
+`$5,000` as the one source, attributed to third parties, with the SEO add-on named as extra.
 
 ### 4. What does not change
 

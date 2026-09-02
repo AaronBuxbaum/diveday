@@ -1928,6 +1928,9 @@
     },
     "competitor": {
       "keepOrLeaveEyebrow": "Consérvalo, o déjalo",
+      "websiteEyebrow": "Tu sitio web",
+      "websiteTheirs": "En {competitor}",
+      "websiteOurs": "En DiveDay",
       "forExportPrefix": "Para una exportación de {competitor}:",
       "runTheDay": "Lleva el día de buceo que {competitor} no puede.",
       "readyToMove": "¿Listo para dejar {competitor}?",
@@ -2281,7 +2284,8 @@
       "item2": "Cada rol del personal, de recepción a capitán, en un solo lugar",
       "item3": "Las funciones nuevas según salen, todo dentro del acceso anticipado",
       "item4": "Un centro de práctica precargado con salidas realistas para entrenar",
-      "item6": "Soporte por correo — escribe y te responde una persona real"
+      "item6": "Soporte por correo — escribe y te responde una persona real",
+      "item7": "Un escaparate con tu marca y piezas para pegar en tu propia web — o una web que construimos contigo cuando la pidas"
     },
     "export": {
       "claim": "Ajustes → Exportación de datos descarga un ZIP con CSV simples y documentados —buceadores, reservas, registros de exenciones, historial de pagos— encabezados por un archivo de contactos con la forma que espera el asistente de importación de otro sistema. Cada foto guardada (evidencia de certificación, fotos de sitios, recapitulaciones) viene como archivo real, no como enlace.",
@@ -2291,7 +2295,6 @@
       "booking": {
         "title": "Reservas y las páginas públicas",
         "item1": "Un horario público con páginas por salida y aforo que no se sobrevende",
-        "item2": "Un calendario de reservas integrable y un botón “Reserva una inmersión” para tu propia web",
         "item3": "Reserva en grupo de hasta veinte, con un enlace de reclamo por cada plaza que el organizador nombró",
         "item4": "Reserva regalo: alguien paga por otra persona que aún no tiene cuenta",
         "item5": "Equipo de alquiler y solicitud de nitrox elegidos al reservar, pagados junto con la plaza",
@@ -2306,6 +2309,14 @@
         "item14": "Datos estructurados y títulos reales en las páginas de horario, salidas y cursos",
         "item15": "Cada página para buceadores en el idioma del visitante, con cambio en el encabezado",
         "item16": "Aparecer o no en los resultados de búsqueda es un interruptor del propio centro"
+      },
+      "website": {
+        "title": "Tu sitio web",
+        "item1": "Un escaparate con tu propia marca: tu color, tu tipografía, tu foto de portada, tus distintivos, el año en que abriste",
+        "item2": "Seis cosas para pegar en la web que ya tienes: un botón de reservar, un lightbox, el calendario, una cuadrícula de salidas, una sola salida, tus cursos",
+        "item3": "Cada una toma el color y la tipografía de tu web, para que reservar nunca parezca la página de otro",
+        "item4": "Un código QR para el mostrador y un enlace de referido para el hotel que te manda buceadores",
+        "item5": "Un mismo código para WordPress, Squarespace y Wix, con la línea que cada uno necesita"
       },
       "divers": {
         "title": "Buceadores, exenciones y certificaciones",
@@ -2675,6 +2686,51 @@
           "replaceHeading": "O deja atrás la comisión por reserva.",
           "replaceBody": "Si FareHarbor es en realidad solo tu botón de reservas — no te apoyas en su red de distribución — no necesitas seguir pagando por cada reserva para conservarlo. DiveDay toma la reserva por sí mismo: un horario público que cualquiera reserva sin cuenta, pago a través de tu propia cuenta de Stripe, exenciones nativas. Trae a tus buceadores una vez, apunta tu enlace de reservas aquí, y la comisión por reserva se acaba."
         },
+        "website": {
+          "heading": "Dejar FareHarbor no significa rehacer tu web.",
+          "intro": "Cada botón, marco y enlace que pegaste de ahí tiene su gemelo aquí — con tus colores y tu tipografía, y el buceador nunca sale de tu marca.",
+          "rows": {
+            "row1": {
+              "theirs": "Botón “Book Now”",
+              "ours": "Un enlace con tu marca, con o sin nuestro script"
+            },
+            "row2": {
+              "theirs": "Lightframe",
+              "ours": "Lightbox — la reserva se abre sobre tu página"
+            },
+            "row3": {
+              "theirs": "Calendario",
+              "ours": "Todo el horario, en tu color"
+            },
+            "row4": {
+              "theirs": "Cuadrícula de ítems",
+              "ours": "Cuadrícula de salidas — cada salida próxima como una tarjeta"
+            },
+            "row5": {
+              "theirs": "Flows",
+              "ours": "Una sola salida, o tu catálogo de cursos, por su cuenta"
+            },
+            "row6": {
+              "theirs": "Códigos QR",
+              "ours": "Dibujado en tus ajustes, para el mostrador y el folleto"
+            },
+            "row7": {
+              "theirs": "Enlaces de afiliado",
+              "ours": "Un enlace de referido — el hotel que envió al buceador queda en la reserva"
+            },
+            "row8": {
+              "theirs": "Plugin de WordPress",
+              "ours": "El mismo código, con la línea que necesitan WordPress, Squarespace o Wix"
+            },
+            "row9": {
+              "theirs": "Sites — la web alojada de FareHarbor",
+              "ours": "Tu escaparate, incluido — ya es una web por sí misma"
+            }
+          },
+          "sitesNote": "FareHarbor vende Sites por separado y no publica el precio; terceros lo sitúan en {sitesPrice} al año, antes de su complemento de SEO.",
+          "offerHeading": "O deja que construyamos la web nosotros.",
+          "offerBody": "Pídelo, y una persona de DiveDay la construye contigo — tus fotos, tus palabras, la reserva ya dentro. Va en el precio."
+        },
         "exportHeading": "Saca tus datos de FareHarbor",
         "exportIntro": "FareHarbor funciona en un navegador, y tus datos salen de los informes del Dashboard — no hay un único botón de “exportarlo todo”. El objetivo es tu gente en un CSV. Las etiquetas de los menús cambian con el tiempo, así que toma estos pasos como la forma del camino, no como botones palabra por palabra.",
         "exportSteps": {
@@ -2843,6 +2899,7 @@
       "bookingPoint1": "Reserva para todo el grupo de una vez, o como regalo para otra persona.",
       "bookingPoint2": "Códigos de descuento para todo el centro, o una oferta de última hora en un barco con plazas libres.",
       "bookingPoint3": "Los buceadores comparten sus tallas y necesidades de equipo antes de llegar al mostrador.",
+      "bookingPoint4": "Con tu propia marca — o en una web que construimos contigo cuando la pidas.",
       "bookingMockupLabel": "El calendario público de DiveDay desde el que reserva un buceador.",
       "readinessEyebrow": "Antes de salir",
       "readinessTitle": "Una sola respuesta de preparación, compartida donde importa.",

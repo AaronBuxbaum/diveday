@@ -12,7 +12,7 @@ const t = diverTranslator("en-US");
  * for a key the bundle doesn't hold, which would otherwise let a typo'd key
  * pass every length assertion below.
  */
-function en(key: DiverMessageKey, values?: { competitor: string }): string {
+function en(key: DiverMessageKey, values?: Record<string, string>): string {
   const resolved = t(key, values);
   expect(resolved, `bundle is missing ${key}`).not.toBe(key);
   return resolved;
@@ -276,10 +276,21 @@ describe("migration guides", () => {
             en(guide.coexist.replace.body),
           ]
         : [];
+      const website = guide.website
+        ? [
+            en(guide.website.heading),
+            en(guide.website.intro),
+            ...guide.website.ledger.flatMap((row) => [en(row.theirs), en(row.ours)]),
+            en(guide.website.sitesNote, { sitesPrice: guide.website.sitesPrice }),
+            en(guide.website.offer.heading),
+            en(guide.website.offer.body),
+          ]
+        : [];
       const prose = [
         en(guide.heroLede),
         ...guide.context.map((p) => en(p)),
         ...coexist,
+        ...website,
         en(guide.exportIntro),
         ...guide.exportSteps.flatMap((s) => [en(s.title), en(s.detail)]),
         ...guide.exportNotes.map((n) => en(n)),
@@ -311,8 +322,85 @@ describe("migration guides", () => {
         ...guide.exportNotes.map((n) => en(n)),
         guide.importerNote ? en(guide.importerNote) : "",
         ...guide.sources.map((s) => s.label),
+        ...(guide.website
+          ? [
+              en(guide.website.heading),
+              en(guide.website.intro),
+              ...guide.website.ledger.flatMap((row) => [en(row.theirs), en(row.ours)]),
+              en(guide.website.sitesNote, { sitesPrice: guide.website.sitesPrice }),
+              en(guide.website.offer.heading),
+              en(guide.website.offer.body),
+            ]
+          : []),
       ].join(" ");
       expect(copy).not.toMatch(INTERNAL_VOCABULARY);
+    }
+  });
+});
+
+/**
+ * The website ledger (ADR 20260901-diveday-reimagined, decisions 2 and 3):
+ * FareHarbor's real footprint is on the shop's own site, so its guide maps
+ * every pasted thing to the DiveDay embed that replaces it, states the
+ * hosted-website figure the way the claims policy allows, and carries the
+ * built-to-order website as a person's offer.
+ */
+describe("the website ledger", () => {
+  const guide = getMigrationGuide("fareharbor");
+  if (!guide?.website) throw new Error("the FareHarbor guide carries the website ledger");
+  const website = guide.website;
+
+  it("is FareHarbor's alone — the leave-it guides and Rezdy have no site footprint to map", () => {
+    for (const other of MIGRATION_GUIDES) {
+      if (other.slug === "fareharbor") continue;
+      expect(other.website, other.slug).toBeUndefined();
+    }
+  });
+
+  it("maps every embed a shop pastes, with a twin on both sides in both locales", () => {
+    expect(website.ledger.length).toBeGreaterThanOrEqual(8);
+    for (const locale of DIVER_LOCALES) {
+      const t = diverTranslator(locale);
+      for (const row of website.ledger) {
+        expect(t(row.theirs).trim().length, row.theirs).toBeGreaterThan(0);
+        expect(t(row.ours).trim().length, row.ours).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  /**
+   * Claims policy (docs/product/marketing.md): a competitor's figure is stated
+   * as what its own pages or a named third party report, never as what a shop
+   * pays, and no message bundle carries a currency figure — the number has one
+   * source, the guide, where the citation sits beside it.
+   */
+  it("states the hosted-website figure once, as third parties report it, cited", () => {
+    expect(website.sitesPrice).toMatch(/^\$\d[\d,]*$/);
+    for (const locale of DIVER_LOCALES) {
+      const t = diverTranslator(locale);
+      const raw = diverTranslator(locale)(website.sitesNote, { sitesPrice: "{sitesPrice}" });
+      expect(raw).toContain("{sitesPrice}");
+      expect(raw).not.toMatch(/\p{Sc}\s?\d/u);
+      const rendered = t(website.sitesNote, { sitesPrice: website.sitesPrice });
+      expect(rendered).toContain(website.sitesPrice);
+      expect(rendered).toMatch(locale === "en-US" ? /third parties/i : /terceros/i);
+    }
+    expect(guide.sources.some((s) => s.url === "https://www.bokun.io/fareharbor-websites")).toBe(
+      true,
+    );
+  });
+
+  /**
+   * H-64/H-65: the website is built to order by a person — never a turnaround
+   * time, a page count, or "free website" as a feature.
+   */
+  it("offers the built-to-order website as a person's commitment, not a feature", () => {
+    for (const locale of DIVER_LOCALES) {
+      const t = diverTranslator(locale);
+      const body = t(website.offer.body);
+      expect(body).not.toMatch(/\d+\s*(days?|weeks?|pages?|días?|semanas?|páginas?)/i);
+      expect(body).not.toMatch(/free website|web gratis|sitio gratis/i);
+      expect(body).toMatch(locale === "en-US" ? /a person at DiveDay/ : /una persona de DiveDay/);
     }
   });
 });
