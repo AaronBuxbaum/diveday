@@ -1396,13 +1396,12 @@ export function OfflineManifestView() {
           ))}
         </nav>
 
-        <section
-          className={
-            rollCallComplete
-              ? "rise-in mt-4 grid grid-cols-3 gap-3 rounded-2xl border border-accent/50 bg-accent/10 p-3"
-              : "mt-4 grid grid-cols-3 gap-3"
-          }
-        >
+        {/* One look, complete or not: no coral on a roll call (ADR
+            20260901-diveday-reimagined's coral table), offline exactly as on
+            the live panel — a crew that loses signal between two dives must not
+            see two different completions for one fact. The heading below says
+            it in words. */}
+        <section className="mt-4 grid grid-cols-3 gap-3">
           {[
             [t("shared.offlineManifest.single.statsDivers"), manifest.summary.totalDivers],
             [t("shared.offlineManifest.single.statsBoarded"), boarded],

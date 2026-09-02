@@ -149,7 +149,7 @@ table is the record of which have landed.
 | 13e | The offer: `/pricing`, `/product` and the FareHarbor guide say Harbor, the embeds and the built-to-order website; the switching page's mapping ledger | 13d |
 | 13f | Reef's site mark: each departure's marker on the home and the board is a drawn site mark, the illustration set's first use | 13a |
 | 13g | The water closes over finished work: a station's rows settle into one warm sentence when its last blocker clears | 13a, 13f |
-| 13h | The count that fills: roll call's head count raises the water as divers are counted back; "All home" is the word, the fill is decoration | 13a |
+| 13h | The count that fills: roll call's head count raises the water as divers are counted aboard; the word is the panel's own "Roll call complete" (never "All home" — a close-out word, false at checkpoint 1 of 3 and meaningless at the dock), the fill is decoration | 13a |
 | 13i | The diver's day, drawn: the recap becomes a postcard in the shop's brand with the site in the illustration hand | 13c, 13f |
 | 13j | The night palette for Reef, drawn and applied | 13a |
 
