@@ -31,7 +31,7 @@ export function PersonBuddyList({
   const crewById = new Map(crew.map((member) => [member.id, member]));
 
   return (
-    <ul className="divide-y divide-border rounded-xl border border-border/70 bg-surface-sunken/50 px-3">
+    <ul className="divide-y divide-border rounded-inset border border-border/70 bg-surface-sunken/50 px-3">
       {teammates.map((teammate) => {
         const person =
           teammate.kind === "diver"

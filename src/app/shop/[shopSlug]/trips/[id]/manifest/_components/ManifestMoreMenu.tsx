@@ -118,7 +118,7 @@ export function ManifestMoreMenu({
         type="button"
         aria-expanded={open}
         aria-controls={panelId}
-        className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
+        className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
         onClick={() => setOpen((current) => !current)}
       >
         {label}

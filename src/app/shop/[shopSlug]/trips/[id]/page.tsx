@@ -477,7 +477,7 @@ export default async function ManageTripPage({
       <TripNoticeBanner notice={rootPageNotice} locale={locale} />
 
       {cancelled && (canConfigure || blowoutCalled || lifecycleStatus) ? (
-        <section className="mt-6 rounded-2xl border border-danger/40 bg-danger/10 p-5">
+        <section className="mt-6 rounded-panel border border-danger/40 bg-danger/10 p-5">
           <FormStatus tone={lifecycleStatus?.tone} className="mb-3">
             {lifecycleStatus?.text}
           </FormStatus>

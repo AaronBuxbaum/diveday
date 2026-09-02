@@ -522,7 +522,7 @@ export function CommandPalette({
         onClick={() => setOpen(true)}
         aria-keyshortcuts="Meta+K Control+K"
         aria-label={copy.search}
-        className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-border px-3 text-sm font-medium text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
+        className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
       >
         <svg
           aria-hidden="true"

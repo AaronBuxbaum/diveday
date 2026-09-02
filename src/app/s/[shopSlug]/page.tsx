@@ -19,6 +19,7 @@ import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
 import {
   countShopTrips,
+  nextSessionStartByCourse,
   pagedUpcomingTripsWithCounts,
   tripDiveSiteSummaries,
   upcomingScheduleRange,
@@ -138,6 +139,8 @@ export default async function SchedulePage({
      * keyset query. See src/lib/schedule-pagination.ts. */
     back?: string;
     embed?: string;
+    /** `host` when the loader drew the credit on the host page — see `public/embed.js`. */
+    credit?: string;
     hasSpace?: string;
     tripType?: string;
     canDive?: string;
@@ -146,7 +149,8 @@ export default async function SchedulePage({
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { month, after, back, embed, hasSpace, tripType, canDive, hideAbove } = await searchParams;
+  const { month, after, back, embed, hasSpace, tripType, canDive, hideAbove, credit } =
+    await searchParams;
   const hasSpaceFilter = hasSpace === "1";
   const tripTypeFilter = tripType === "fun_dive" || tripType === "course" ? tripType : undefined;
   // **A stated preference, never a gate** (issue #696). It marks the list and
@@ -162,6 +166,7 @@ export default async function SchedulePage({
   // website (docs ADR 20260726-schedule-embed) — never for staff, who always
   // arrive signed in and never via a third-party iframe.
   const isEmbed = embed === "1";
+  const hostCarriesCredit = credit === "host";
   /**
    * **How many departures the widget shows before it hands over.**
    *
@@ -487,10 +492,22 @@ export default async function SchedulePage({
   // is the rest. `{depth18}` markers resolve into the shop's own unit before
   // anything reads a field, the same one-shot pass the catalog makes.
   const depthFormat = courseDepthFormat(t, shop.depthUnit);
+  const shelfNextStarts = isEmbed
+    ? new Map<string, Date>()
+    : await nextSessionStartByCourse(
+        db,
+        shop.id,
+        activeCourses.slice(0, 3).map((course) => course.id),
+      );
   const shelfCourses = activeCourses.slice(0, 3).map((stored) => {
     const course = resolveCourseContentDepths(stored, depthFormat);
     const total = courseTotalCents(course);
+    const nextStart = shelfNextStarts.get(course.id) ?? null;
     return {
+      duration: course.durationText,
+      nextStart: nextStart
+        ? t("courses.shelf.nextStart", { date: formatShortDate(nextStart, locale, shop.timezone) })
+        : null,
       id: course.id,
       title: course.title,
       summary: course.summary,
@@ -528,13 +545,14 @@ export default async function SchedulePage({
             <img
               src={shop.logoUrl}
               alt=""
-              className="size-16 shrink-0 rounded-xl border border-border bg-surface object-cover"
+              className="size-16 shrink-0 rounded-inset border border-border bg-surface object-cover"
             />
           ) : null}
           <div className="min-w-0 flex-1">
             <ShopfrontHero
               name={shop.name}
               tagline={shop.tagline}
+              description={shop.description}
               aggregate={reviewAggregate}
               commitments={parseConservationCommitments(shop.conservationCommitments)}
               heroImage={
@@ -814,12 +832,20 @@ export default async function SchedulePage({
             {boats.map((boat) => (
               <li
                 key={boat.id}
-                className="flex min-h-14 items-center justify-between gap-3 rounded-panel border border-border bg-surface px-4 py-3 shadow-bed"
+                className="flex min-h-14 flex-col justify-center gap-1 rounded-panel border border-border bg-surface px-5 py-4 shadow-bed"
               >
-                <span className="font-medium">{boat.name}</span>
-                <span className="text-sm text-muted tabular-nums">
-                  {t("schedule.boatSeats", { count: boat.capacity })}
-                </span>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-brand-display text-lg font-semibold tracking-tight">
+                    {boat.name}
+                  </span>
+                  <span className="shrink-0 text-sm text-muted tabular-nums">
+                    {t("schedule.boatSeats", { count: boat.capacity })}
+                  </span>
+                </div>
+                {/* The shop's own sentence, or nothing: never DiveDay filler. */}
+                {boat.description ? (
+                  <p className="text-sm text-muted text-pretty">{boat.description}</p>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -949,7 +975,7 @@ export default async function SchedulePage({
           {zoneNote ? <p className="text-xs text-muted">{zoneNote}</p> : null}
         </div>
       ) : null}
-      {isEmbed ? (
+      {isEmbed && hostCarriesCredit ? null : isEmbed ? (
         <p className="mt-4 text-center text-xs text-muted">
           <Link
             href={`/?${new URLSearchParams({

@@ -68,7 +68,7 @@
     "navAriaLabel": "Páginas del centro",
     "languageAriaLabel": "Cambiar de idioma",
     "languageHeading": "Idioma",
-    "footerLine": "{shop} · Con la tecnología de DiveDay",
+    "footerLine": "{shop}",
     "spokenLanguages": "Hablamos {languages}",
     "languageFallback": "DiveDay todavía no está en {requested}. Esta página está en {shown}, el idioma en el que trabaja {shop}.",
     "conservationCommitmentsHeading": "Compromisos de conservación declarados por el centro",
@@ -355,7 +355,9 @@
       "noteTooLong": "Deja esta nota en menos de 300 caracteres.",
       "promoInvalid": "Ese código no está activo."
     },
-    "emailsOnTheWay": "Te llegarán dos correos: la confirmación de tu reserva y el enlace para firmar tu exención."
+    "emailsOnTheWay": "Te llegarán dos correos: la confirmación de tu reserva y el enlace para firmar tu exención.",
+    "embedPayNext": "Tu plaza está reservada. El pago se abre en la página segura de DiveDay, fuera de esta ventana.",
+    "continueToPayment": "Continuar al pago"
   },
   "bookingGear": {
     "heading": "Equipo de alquiler",
@@ -469,7 +471,8 @@
       "groupStart": "Empieza aquí"
     },
     "shelf": {
-      "allCourses": "Todos los cursos"
+      "allCourses": "Todos los cursos",
+      "nextStart": "Próximo {date}"
     }
   },
   "reviews": {
@@ -2716,7 +2719,7 @@
             },
             "row7": {
               "theirs": "Enlaces de afiliado",
-              "ours": "Un enlace de referido — el hotel que envió al buceador queda en la reserva"
+              "ours": "Un enlace de referido — cada visita que envía llega marcada con el nombre del hotel"
             },
             "row8": {
               "theirs": "Plugin de WordPress",

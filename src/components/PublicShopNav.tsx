@@ -54,7 +54,7 @@ export function activeNavIndex(pathname: string, items: readonly PublicShopNavIt
 // 358 points — and the name, which appears nowhere else above the fold on a
 // shopfront page, is the one that must not lose.
 const linkClass =
-  "inline-flex min-h-11 items-center rounded-xl px-1.5 text-base font-medium transition-colors sm:px-3";
+  "inline-flex min-h-11 items-center rounded-lg px-1.5 text-base font-medium transition-colors sm:px-3";
 
 /**
  * The spine of a shop's public pages — the schedule, and the course catalog

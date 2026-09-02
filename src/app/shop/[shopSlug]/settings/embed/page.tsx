@@ -7,6 +7,7 @@ import { localeEndonym } from "@/i18n/language-labels";
 import { requestLocale } from "@/i18n/request";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { brandDisplayFontFamily, DIVEDAY_BRAND_COLOR, isBrandDisplayFontCode } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
 import { EMBED_KINDS, type EmbedKind, PLATFORMS, type Platform } from "@/lib/embed-snippets";
 import { formatDayParts, formatTime } from "@/lib/format";
@@ -85,6 +86,7 @@ export default async function EmbedSettingsPage({
   ) as Record<Platform, string>;
   const copy: EmbedGeneratorCopy = {
     what: t("settings.embed.what"),
+    showRequired: t("settings.embed.showRequired"),
     kinds,
     kindHints,
     shows: t("settings.embed.shows"),
@@ -124,12 +126,30 @@ export default async function EmbedSettingsPage({
         shopSlug={shop.slug}
         trips={tripChoices}
         locales={DIVER_LOCALES}
+        previewHost={{
+          brand: shop.brandColor ?? DIVEDAY_BRAND_COLOR,
+          font: isBrandDisplayFontCode(shop.brandDisplayFont)
+            ? brandDisplayFontFamily(shop.brandDisplayFont)
+            : null,
+        }}
         copy={copy}
       />
       <p className="mt-6 text-sm text-muted">
         {t.rich("settings.embed.footer", {
           link: (chunks) => (
             <a href={scheduleUrl} target="_blank" rel="noopener" className="text-primary underline">
+              {chunks}
+            </a>
+          ),
+        })}
+      </p>
+      {/* The board's "Coming from FareHarbor" line: each widget FareHarbor
+          sells has its equivalent here, and the guide is where the mapping
+          is written out. */}
+      <p className="mt-2 text-sm text-muted">
+        {t.rich("settings.embed.fromFareharbor", {
+          link: (chunks) => (
+            <a href="/switching/fareharbor" className="text-primary underline">
               {chunks}
             </a>
           ),

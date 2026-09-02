@@ -122,7 +122,7 @@ export function TripLookFor({ briefings, locale }: { briefings: DiveBriefing[]; 
             <StoredPhoto
               src={card.imageUrl}
               alt=""
-              className="size-12 shrink-0 rounded-2xl"
+              className="size-12 shrink-0 rounded-inset"
               sizes="48px"
             />
             <div className="min-w-0">
@@ -182,7 +182,7 @@ export function TripMoments({ briefings, locale }: { briefings: DiveBriefing[]; 
               <StoredPhoto
                 src={moment.imageUrl}
                 alt=""
-                className="aspect-[3/2] w-full rounded-2xl"
+                className="aspect-[3/2] w-full rounded-inset"
                 sizes="(min-width: 640px) 17rem, 100vw"
               />
               <figcaption className="mt-2 text-sm text-muted">{moment.caption}</figcaption>

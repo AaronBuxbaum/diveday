@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { buttonClass } from "@/components/ui/button";
+import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { CLOSEOUT_STATUS_KEYS, closeoutDepartureDetailText } from "@/i18n/closeout-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -77,7 +77,7 @@ export function ClosingStation({
   const checkpoint = close.diveNumber >= 1 ? `after_dive_${close.diveNumber}` : "departure";
 
   return (
-    <li className="grid grid-cols-1 gap-y-2 sm:grid-cols-[96px_84px_1fr] sm:gap-y-0">
+    <li className="grid grid-cols-1 gap-y-2 sm:grid-cols-[96px_112px_1fr] sm:gap-y-0">
       <div className="sm:pt-1 sm:text-end">
         {/* The same machine-readable instant the morning station renders: the
             spine's whole claim is that these read in clock order, and a
@@ -100,7 +100,14 @@ export function ClosingStation({
       </div>
       <div className="pb-10">
         <h3 className="text-lg font-semibold tracking-tight">
-          <Link href={`/shop/${shopSlug}/trips/${close.tripId}`} className="hover:underline">
+          {/* A real tap target, like the live station's title: an inline link
+              in an 18px heading is a 23px hit area, which the dock test
+              (principle 2) and axe's target-size rule both refuse — and on a
+              phone the settled boat's name can sit a hair above the dock. */}
+          <Link
+            href={`/shop/${shopSlug}/trips/${close.tripId}`}
+            className={`${tapTargetLinkClass} -mx-2 rounded-lg px-2 transition-colors hover:bg-surface-sunken hover:no-underline`}
+          >
             {close.title}
           </Link>
         </h3>

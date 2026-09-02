@@ -225,7 +225,7 @@ export function SeriesSection({
           {/* Nested inside the series card, so it wears the sunken inset —
               surface never stacks on surface (see SectionCard's "what is not
               a section card"). */}
-          <form action={cadenceAction} className="mt-2 rounded-xl bg-surface-sunken p-4 sm:p-5">
+          <form action={cadenceAction} className="mt-2 rounded-inset bg-surface-sunken p-4 sm:p-5">
             <p className="max-w-prose text-sm text-muted">
               {t("tripSeries.panel.editCadenceDescription")}
             </p>

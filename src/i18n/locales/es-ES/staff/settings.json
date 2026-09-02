@@ -121,7 +121,7 @@
       "removeHero": "Quitar la foto de portada",
       "establishedYear": "Abierto desde (año)",
       "badges": "Insignias",
-      "badgesHint": "Se muestran en tus páginas públicas como declaración propia, en este orden.",
+      "badgesHint": "Se muestran en tus páginas públicas como declaración propia.",
       "badgesSet": "{count, plural, one {# insignia} other {# insignias}}",
       "badgeLabels": {
         "padi_5_star": "Centro de buceo PADI 5 estrellas",
@@ -133,7 +133,10 @@
         "green_fins": "Miembro de Green Fins",
         "dan_partner": "Socio empresarial de DAN",
         "readers_choice": "Premio Readers' Choice"
-      }
+      },
+      "brandColorLightenedAtNight": "De noche tu página pública lo aclara a {hex} para que siga leyéndose sobre el fondo oscuro.",
+      "brandPreview": "Cómo se ve",
+      "brandPreviewNight": "De noche"
     },
     "address": {
       "heading": "Dirección del centro",
@@ -888,7 +891,7 @@
     "language": "Idioma",
     "languageAuto": "Seguir el navegador del visitante",
     "preview": "Vista previa",
-    "previewNote": "Se muestra con el aspecto de DiveDay; en tu web toma el color y la tipografía de tu página.",
+    "previewNote": "En tu web toma el color y la tipografía de tu página; esta vista previa usa los de tu página pública.",
     "platform": "Dónde va",
     "snippet": "Ponlo en tu web",
     "partnerName": "Colaborador",
@@ -903,7 +906,7 @@
       },
       "lightbox": {
         "name": "Ventana",
-        "hint": "La reserva se abre sobre tu página"
+        "hint": "La reserva se abre sobre tu página; el pago, en la de DiveDay"
       },
       "calendar": {
         "name": "Calendario",
@@ -958,6 +961,8 @@
       "failed": "No se pudo copiar: selecciona el código de arriba."
     },
     "code": "Código de inserción",
-    "partnerLinkField": "Enlace de referido"
+    "partnerLinkField": "Enlace de referido",
+    "showRequired": "Elige la salida de esta tarjeta.",
+    "fromFareharbor": "¿Vienes de FareHarbor? <link>Cada una de sus inserciones tiene aquí su equivalente</link>."
   }
 }

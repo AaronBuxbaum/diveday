@@ -242,10 +242,16 @@ export default async function ShopLayout({
           root under the trip main is the deliberate full-viewport exception;
           globals.css clears the variable there. From `lg` up it collapses to
           zero and everything sits where it always did. */}
+      {/* `water-band`: Reef's page top — the lagoon wash settling into sand
+          over the first 168px, behind every staff page's header (ADR
+          20260901-diveday-reimagined, decision 1; the system sheet's "water
+          band wash → sand · page tops only"). A wash, not a drawing, so it
+          may sit behind a manifest; the swell that rides it on the home is
+          the drawing, and that one stays on the home. */}
       <div
         id="shop-main-content"
         tabIndex={-1}
-        className="min-h-0 flex-1 outline-none pb-(--dock-clearance)"
+        className="water-band min-h-0 flex-1 outline-none pb-(--dock-clearance)"
       >
         {children}
       </div>

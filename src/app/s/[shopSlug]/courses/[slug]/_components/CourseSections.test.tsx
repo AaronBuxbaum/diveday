@@ -55,7 +55,7 @@ describe("the public h1 joins the display scale", () => {
 
     const heading = screen.getByRole("heading", { level: 1 });
     expect(heading).toHaveTextContent("Open Water Diver");
-    expect(heading.className).toContain("text-4xl");
+    expect(heading.className).toContain("text-[2.5rem]");
     expect(heading.className).not.toContain("text-2xl");
   });
 });

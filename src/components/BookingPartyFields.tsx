@@ -157,7 +157,7 @@ export function BookingPartyFields({
             {counts.map((count) => (
               <label
                 key={count}
-                className={`inline-flex min-h-11 grow cursor-pointer items-center justify-center rounded-xl px-2.5 text-sm font-semibold whitespace-nowrap transition-colors ${
+                className={`inline-flex min-h-11 grow cursor-pointer items-center justify-center rounded-lg px-2.5 text-sm font-semibold whitespace-nowrap transition-colors ${
                   size === count
                     ? "bg-surface text-primary shadow-sm"
                     : "text-muted hover:bg-surface hover:text-foreground"

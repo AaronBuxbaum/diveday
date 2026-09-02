@@ -345,8 +345,18 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   if (!shop) throw new Error("seed: failed to insert demo shop");
 
   await db.insert(boats).values([
-    { shopId: shop.id, name: "Mantis I", capacity: 12 },
-    { shopId: shop.id, name: "Mantis II", capacity: 20 },
+    {
+      shopId: shop.id,
+      name: "Mantis I",
+      capacity: 12,
+      description: "The small boat — twelve divers, a shaded deck, ten minutes to the reef.",
+    },
+    {
+      shopId: shop.id,
+      name: "Mantis II",
+      capacity: 20,
+      description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
+    },
   ]);
 
   await db.insert(waiverTemplates).values({
@@ -569,8 +579,18 @@ export async function createDemoShop(
   const { shop, identity } = await insertDemoShop(db, opts.slug);
 
   await db.insert(boats).values([
-    { shopId: shop.id, name: "Mantis I", capacity: 12 },
-    { shopId: shop.id, name: "Mantis II", capacity: 20 },
+    {
+      shopId: shop.id,
+      name: "Mantis I",
+      capacity: 12,
+      description: "The small boat — twelve divers, a shaded deck, ten minutes to the reef.",
+    },
+    {
+      shopId: shop.id,
+      name: "Mantis II",
+      capacity: 20,
+      description: "The big boat: camera table, warm freshwater showers and a ladder on each side.",
+    },
   ]);
 
   await db.insert(waiverTemplates).values({

@@ -53,6 +53,7 @@ export {
   countShopTrips,
   listTripIdsInOfflineManifestWindow,
   listUpcomingSessionsForCourse,
+  nextSessionStartByCourse,
   offsetUpcomingTripsWithCounts,
   pagedUpcomingTripsWithCounts,
   SCHEDULE_PAGE_SIZE,

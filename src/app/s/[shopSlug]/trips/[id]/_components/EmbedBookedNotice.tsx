@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EarnedMoment } from "@/components/EarnedMoment";
+import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { publicSchedulePath } from "@/lib/public-routes";
@@ -34,6 +35,7 @@ export function EmbedBookedNotice({
   readinessLink,
   emailsOnTheWay,
   payCancelled,
+  paymentUrl = null,
 }: {
   shop: Shop;
   shopSlug: string;
@@ -61,6 +63,15 @@ export function EmbedBookedNotice({
    * `bookingConfirmationAndWaiverEmailsSent`.
    */
   emailsOnTheWay: boolean;
+  /**
+   * The hosted Stripe page for this booking, when paying was part of booking
+   * and the diver is inside the embed — where that page cannot be framed, so
+   * the frame says so and opens it at the top level (ADR
+   * 20260901-diveday-reimagined, decision 2: the lightbox's payment "still
+   * opens the real page, stated"). Null when nothing is owed, or after the
+   * diver came back from Stripe.
+   */
+  paymentUrl?: string | null;
 }) {
   const t = diverTranslator(locale);
   return (
@@ -89,6 +100,18 @@ export function EmbedBookedNotice({
 
       {payCancelled ? (
         <p className="mt-3 text-sm text-muted">{t("booking.paymentStillOpen")}</p>
+      ) : null}
+
+      {/* Paying is the one thing this frame cannot do itself. Said in words,
+          and the door is the page's primary — above the readiness link, which
+          is where the balance lives if the diver leaves this for later. */}
+      {paymentUrl ? (
+        <div className="mt-4">
+          <p className="text-sm text-muted">{t("booking.embedPayNext")}</p>
+          <a href={paymentUrl} target="_top" className={`${buttonClass()} mt-3`}>
+            {t("booking.continueToPayment")}
+          </a>
+        </div>
       ) : null}
 
       {/* The two ways onward, in the order they matter: out to everything this

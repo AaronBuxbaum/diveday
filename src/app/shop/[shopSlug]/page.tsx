@@ -593,6 +593,10 @@ async function TodayBody({
         // thing on this page that could confirm you had arrived, and it named
         // a *when* rather than a *where* (issue #824).
         eyebrow={`${t(STAFF_DESTINATION_LABEL_KEYS.today)} · ${formatShortDate(now, locale, shop.timezone)}`}
+        // The greeting is the one staff title that is a display moment rather
+        // than a name (the board draws it at 44/700); the first-run and
+        // quiet-day headings are names and take the title rung.
+        display={!showFirstRunChecklist && !quietDay}
         title={
           showFirstRunChecklist
             ? t("shopHome.firstRun.pageTitle")

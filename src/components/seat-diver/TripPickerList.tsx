@@ -33,7 +33,7 @@ export function TripPickerList({
         <li key={option.id}>
           <Link
             href={option.href}
-            className="flex min-h-11 items-baseline justify-between gap-3 rounded-xl border border-border bg-surface-sunken px-4 py-3 text-sm font-medium hover:border-primary/40"
+            className="flex min-h-11 items-baseline justify-between gap-3 rounded-lg border border-border bg-surface-sunken px-4 py-3 text-sm font-medium hover:border-primary/40"
           >
             <span className="min-w-0 flex-1">{option.label}</span>
             <span className="shrink-0 tabular-nums text-muted">{option.meta}</span>

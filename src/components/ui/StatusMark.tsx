@@ -6,7 +6,14 @@
  * in monochrome, so a status never depends on its colour alone (ADR
  * 20260827-the-departure-is-two-working-surfaces, decision 5).
  */
-export type StatusMarkVariant = "success" | "warning" | "danger" | "checked" | "unchecked";
+export type StatusMarkVariant =
+  | "success"
+  | "warning"
+  | "danger"
+  | "checked"
+  | "unchecked"
+  /** A hollow ring: a job not done yet, on a row whose kind is quiet. */
+  | "pending";
 
 const sizeClass = {
   sm: "size-4",
@@ -43,6 +50,23 @@ export function StatusMark({
           <rect x="3.5" y="3.5" width="17" height="17" rx="3" />
         )}
         <path d="m7.5 12.1 3 3 6-6.3" />
+      </svg>
+    );
+  }
+
+  if (variant === "pending") {
+    return (
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={classes}
+      >
+        <circle cx="12" cy="12" r="8.75" />
       </svg>
     );
   }

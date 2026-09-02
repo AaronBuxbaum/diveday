@@ -46,11 +46,11 @@ export function PartyClaimPanel({
     >
       <ul className="flex flex-col gap-3">
         {/* A row inside the panel, deliberately not a card of its own: giving
-            it the card's chrome would put a `rounded-2xl bg-surface` panel
-            inside a `rounded-2xl bg-surface` panel at the same radius, which
+            it the card's chrome would put a `rounded-panel bg-surface` panel
+            inside a `rounded-panel bg-surface` panel at the same radius, which
             reads as a rendering bug rather than as structure. */}
         {seats.map((seat) => (
-          <li key={seat.bookingId} className="rounded-xl border border-border bg-surface/70 p-4">
+          <li key={seat.bookingId} className="rounded-inset border border-border bg-surface/70 p-4">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="font-semibold">{seat.seatName}</span>
               {seat.claimed ? (

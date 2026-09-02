@@ -1,4 +1,5 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * The staff subtree's page frame (design principle 1) — the shop home's own
@@ -24,7 +25,7 @@ export default function ShopSurfaceLoading() {
         <ShopPageHeaderSkeleton titleWidth="w-56" descriptionWidth="w-72 max-w-full" />
         <div className="mt-8 flex flex-col gap-3">
           {[0, 1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-20 rounded-xl border border-border bg-surface" />
+            <div key={i} className={sectionCardClass({ padding: "none", className: "h-20" })} />
           ))}
         </div>
       </div>

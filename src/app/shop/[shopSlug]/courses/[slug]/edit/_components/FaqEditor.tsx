@@ -91,7 +91,10 @@ export function FaqEditor({
     <div className="flex flex-col gap-4">
       {rows.length === 0 ? <p className="text-sm text-muted">{copy.empty}</p> : null}
       {rows.map((row, index) => (
-        <div key={row.key} className="rounded-xl border border-border bg-surface-sunken p-3 sm:p-4">
+        <div
+          key={row.key}
+          className="rounded-inset border border-border bg-surface-sunken p-3 sm:p-4"
+        >
           <FieldGrid columns={1} className="gap-y-3">
             <Field label={fill(copy.questionLabel, { number: index + 1 })}>
               <input

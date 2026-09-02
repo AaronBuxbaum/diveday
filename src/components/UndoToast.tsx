@@ -96,7 +96,7 @@ export function UndoToast({
         onMouseLeave={resume}
         onFocusCapture={pause}
         onBlurCapture={resume}
-        className={`flex items-center gap-4 rounded-xl border border-border bg-surface px-4 py-3 shadow-2xl ${
+        className={`flex items-center gap-4 rounded-inset border border-border bg-surface px-4 py-3 shadow-2xl ${
           dismissing ? "toast-dismiss" : "rise-in"
         }`}
       >

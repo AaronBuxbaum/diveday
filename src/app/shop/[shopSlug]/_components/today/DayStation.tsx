@@ -6,7 +6,7 @@ import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatTime } from "@/lib/format";
 import type { AboardBlockerKind } from "@/lib/readiness";
-import { siteMarkFor } from "@/lib/site-mark";
+import { siteMarkFor, siteMarkGroundFor } from "@/lib/site-mark";
 import type { DayStation as DayStationData } from "@/lib/today";
 import { StationSettles } from "./StationSettles";
 
@@ -53,6 +53,7 @@ export function DayStation({
   currency,
   crewed = false,
   canOpenLog = false,
+  next = false,
   t,
   children,
 }: {
@@ -69,6 +70,12 @@ export function DayStation({
    * don't explain).
    */
   canOpenLog?: boolean;
+  /**
+   * The next boat out — the one station whose site mark carries the surface's
+   * one coral detail (the system sheet's budget: "one drawn creature's single
+   * warm detail"). Every other mark on the spine is drawn in the line alone.
+   */
+  next?: boolean;
   t: StaffTranslator;
   /** This station's work rows, already composed by the spine. */
   children?: React.ReactNode;
@@ -97,7 +104,7 @@ export function DayStation({
     station.crewReason !== "crew_none_assigned";
 
   return (
-    <li className="grid grid-cols-1 gap-y-2 sm:grid-cols-[96px_84px_1fr] sm:gap-y-0">
+    <li className="grid grid-cols-1 gap-y-2 sm:grid-cols-[96px_112px_1fr] sm:gap-y-0">
       <div className="sm:pt-1 sm:text-end">
         {/* A real `<time>`: the spine's whole claim is that these read in clock
             order, and a machine-readable instant is what lets anything but a
@@ -123,11 +130,16 @@ export function DayStation({
         <SiteMark
           mark={siteMarkFor({ siteName: station.siteName, isCourse: station.courseTitle !== null })}
           size="md"
+          ground={siteMarkGroundFor(station.startsAt, timeZone)}
+          coral={next}
           className="absolute top-0 start-1/2 -translate-x-1/2"
         />
       </div>
       <div className="pb-10">
-        <div className="flex items-start justify-between gap-4 sm:gap-6">
+        {/* Below `sm` the dial takes its own line under the title: beside it,
+            a 64px glass plus its words left a boat's name three words wide
+            on a 390px phone. */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           <div className="min-w-0">
             <h3 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-lg font-semibold tracking-tight">
               <Link
@@ -144,30 +156,37 @@ export function DayStation({
             </h3>
             {meta.length > 0 ? <p className="mt-1 text-sm text-muted">{meta.join(" · ")}</p> : null}
           </div>
-          {/* The head count leads as a figure, not as another line of small
-              muted text (decision 3). */}
-          <div className="shrink-0 text-end">
-            <p className="text-xl leading-none font-bold tabular-nums">
-              {station.booked}
-              <span className="ms-1 text-sm font-semibold text-muted">
-                {t("shopHome.spine.ofCapacity", { capacity: station.capacity })}
+          {/* The head count leads as a figure (decision 3), drawn as the
+              board draws it: a dial whose water stands at booked-of-capacity
+              in `shallows` — the token Reef minted for a fill that carries no
+              fact — with the figure over the water and the words beside it.
+              The roll call's dial (`HeadCount`) is the same anatomy on the
+              one surface that counts heads; this one counts seats, which is
+              why the words stay outside the glass at reading size and the
+              water is never a state. */}
+          <div className="flex shrink-0 items-center gap-3">
+            <div className="relative size-16 shrink-0 overflow-hidden rounded-full border border-border bg-surface-sunken">
+              <div
+                aria-hidden="true"
+                data-station-water
+                className="absolute inset-0 origin-bottom bg-shallows"
+                style={{ transform: `scaleY(${filled / 100})` }}
+              />
+              <span className="absolute inset-0 flex items-center justify-center text-2xl leading-none font-bold tabular-nums">
+                {station.booked}
               </span>
-            </p>
-            <p className="mt-1 text-xs text-muted">
-              {open === 0
-                ? t("shopHome.spine.full")
-                : t("shopHome.spine.spotsOpen", { count: open })}
-            </p>
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-muted tabular-nums">
+                {t("shopHome.spine.ofCapacity", { capacity: station.capacity })}
+              </p>
+              <p className="mt-0.5 text-xs text-muted">
+                {open === 0
+                  ? t("shopHome.spine.full")
+                  : t("shopHome.spine.spotsOpen", { count: open })}
+              </p>
+            </div>
           </div>
-        </div>
-        {/* A quiet meter, drawn as opacity on the fill rather than as a new
-            token (the ADR ships no new tokens). The counts above are the
-            statement; this is only their shape. */}
-        <div aria-hidden="true" className="mt-3 h-1 overflow-hidden rounded-full bg-surface-sunken">
-          <div
-            className="h-full rounded-full bg-muted opacity-30"
-            style={{ width: `${filled}%` }}
-          />
         </div>
 
         {station.blockedAboardGroups.map((group) => (

@@ -41,6 +41,10 @@ export function CoursesShelf({
     href: string;
     /** Already-formatted money, or null for a course with no price set. */
     price: string | null;
+    /** `courses.durationText`, the shop's own words ("4 days"), or nothing. */
+    duration: string | null;
+    /** The next scheduled session, already formatted, or nothing when none is on the board. */
+    nextStart: string | null;
   }[];
   allCoursesHref: string;
   /**
@@ -54,7 +58,7 @@ export function CoursesShelf({
   return (
     <section aria-labelledby="courses-shelf" className={className || undefined}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id="courses-shelf" className="text-lg font-semibold tracking-tight">
+        <h2 id="courses-shelf" className="font-brand-display text-lg font-semibold tracking-tight">
           {t("courses.index.title")}
         </h2>
         <Link
@@ -82,6 +86,14 @@ export function CoursesShelf({
                 <h3 className="text-base font-semibold group-hover:text-primary">{course.title}</h3>
                 {course.summary ? (
                   <p className="line-clamp-2 text-sm text-muted">{course.summary}</p>
+                ) : null}
+                {/* The two facts the board draws under a card — how long, and
+                    when next — each only when the shop has it; a card says
+                    nothing it does not know. */}
+                {course.duration || course.nextStart ? (
+                  <p className="mt-1 text-sm text-muted tabular-nums">
+                    {[course.duration, course.nextStart].filter(Boolean).join(" · ")}
+                  </p>
                 ) : null}
                 {course.price ? (
                   <p className="mt-auto pt-2 text-base font-semibold tabular-nums">

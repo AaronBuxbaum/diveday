@@ -190,8 +190,11 @@ is one table, here, and nowhere else:
 | The gear register | everything is back on the wall | [20260827-the-shops-shelves](20260827-the-shops-shelves.md), slice 9d |
 | Reports | every waiver in (counted signatures > 0) | the shops-shelves SPEC, 9f |
 | The manifest | everyone's back aboard · dock complete | [20260827-the-departure-is-two-working-surfaces](20260827-the-departure-is-two-working-surfaces.md) |
+| The home spine and the recap | the drawn hand's single warm detail — on the *next* boat's site mark only (the week board's marks carry none), and on the postcard's mark; a detail beside a moment, never a moment | [20260901-diveday-reimagined](20260901-diveday-reimagined.md), decision 1 |
 
-Five rules ride the table. A surface renders **at most one** coral element at a time. Every
+Five rules ride the table. A surface renders **at most one** *earned* coral element at a time —
+Reef's budget (2026-09-01) adds the drawn hand's one detail and the mark's smallest bubble
+beside it, so a surface may carry three appearances but still only one moment. Every
 moment is **earned and transient** — condition-derived, never stored, never decorative, and each
 disappears when its condition passes. A new coral moment **takes a row in this table in the
 same change** — a pull request that adds accent ink without amending this record is a finding

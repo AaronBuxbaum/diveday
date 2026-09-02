@@ -79,7 +79,7 @@ export function PublicShopHeader({
            `text-overflow` has nothing to act on inside a flex container. */
         <Link
           href={publicSchedulePath(shop.slug)}
-          className="flex min-h-11 min-w-0 items-center text-base font-semibold tracking-tight sm:text-lg"
+          className="font-brand-display flex min-h-11 min-w-0 items-center text-base font-semibold tracking-tight sm:text-lg"
         >
           <span className="truncate">{shop.name}</span>
         </Link>

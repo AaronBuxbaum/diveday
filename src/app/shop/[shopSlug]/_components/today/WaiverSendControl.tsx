@@ -174,7 +174,7 @@ export function ResultNotice({ state, copy }: { state: WaiverSendState; copy: Wa
   return (
     <div
       role="status"
-      className="mt-3 rounded-xl border border-border bg-surface-sunken px-3 py-2.5 text-sm"
+      className="mt-3 rounded-inset border border-border bg-surface-sunken px-3 py-2.5 text-sm"
     >
       {state.emptySelection ? (
         <p className="flex items-start gap-1.5 text-danger">

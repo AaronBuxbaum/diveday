@@ -144,7 +144,7 @@ export function CalendarFeedPanel({
       ) : null}
 
       {issued ? (
-        <div className="rounded-xl border border-primary/25 bg-primary/5 p-4">
+        <div className="rounded-inset border border-primary/25 bg-primary/5 p-4">
           <h3 className="text-sm font-semibold text-foreground">{copy.newLinkHeading}</h3>
           <p className="mt-1 text-sm text-foreground">{copy.shownOnce}</p>
           <div className="mt-3 grid gap-2">

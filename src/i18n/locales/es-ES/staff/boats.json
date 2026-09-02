@@ -54,5 +54,6 @@
   "requestPlanBoatRecommendationOther": "Embarcación sugerida: {boatName} ({capacity} plazas)",
   "requestPlanBoatExceeded": "El grupo supera la capacidad de tu embarcación más grande",
   "requestPlanCrewSuggestionOne": "Lleva {divemasters} divemaster — tu objetivo de {ratio}:1.",
-  "requestPlanCrewSuggestionOther": "Lleva {divemasters} divemasters — tu objetivo de {ratio}:1."
+  "requestPlanCrewSuggestionOther": "Lleva {divemasters} divemasters — tu objetivo de {ratio}:1.",
+  "descriptionLabel": "Una línea sobre la embarcación, para tu página pública (opcional)"
 }

@@ -296,7 +296,7 @@ export function CrewSection({
             // A sunken inset, not a card in a card — the roster is carved into
             // the Crew card the way ShopStat's `inset` variant is (see
             // SectionCard's "what is not a section card").
-            <ul className="divide-y divide-border rounded-xl bg-surface-sunken">
+            <ul className="divide-y divide-border rounded-inset bg-surface-sunken">
               {localCrew.map((entry) => (
                 <li
                   key={entry.id}

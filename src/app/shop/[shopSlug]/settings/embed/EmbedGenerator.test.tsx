@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
+
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DIVEDAY_BRAND_COLOR } from "@/lib/brand";
 import { EMBED_KINDS, PLATFORMS } from "@/lib/embed-snippets";
 import { EmbedGenerator, type EmbedGeneratorCopy } from "./EmbedGenerator";
 
@@ -9,6 +11,7 @@ vi.mock("qrcode", () => ({ toDataURL: vi.fn(async () => "data:image/png;base64,Q
 
 const copy: EmbedGeneratorCopy = {
   what: "What to embed",
+  showRequired: "Pick the departure this card is for.",
   kinds: Object.fromEntries(
     EMBED_KINDS.map((k) => [k, `kind ${k}`]),
   ) as EmbedGeneratorCopy["kinds"],
@@ -55,6 +58,7 @@ function renderGenerator() {
       shopSlug="blue-mantis"
       trips={[{ id: "t1", label: "Thu 27 Aug · 7:00 AM — Two-Tank Reef" }]}
       locales={["en-US", "es-ES"]}
+      previewHost={{ brand: DIVEDAY_BRAND_COLOR, font: null }}
       copy={copy}
     />,
   );

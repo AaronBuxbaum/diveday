@@ -115,8 +115,14 @@
   --danger-tint: #f8e8e6;
 
   /* Shape — Reef's ladder: control 10 · inset 18 · panel 28 · pill 999
-     (ADR 20260901-diveday-reimagined, 13a). `--radius` is the control. */
-  --radius: 0.75rem;
+     (ADR 20260901-diveday-reimagined, 13a). `--radius` is the control rung,
+     which every `rounded-lg` reads; `rounded-inset` is the sunken block a
+     card carves out of itself, `rounded-panel` the card. Nothing on a staff
+     surface is squarer than the control or sits between the rungs — Tailwind's
+     own `rounded-xl`/`rounded-2xl` (12/16) are not on the ladder and
+     `card.test.tsx` refuses them. The control read 12 (`0.75rem`) from
+     Clearwater until 2026-09-02, which both ADRs had already recorded as 10. */
+  --radius: 0.625rem;
   --radius-inset: 1.125rem;
   --radius-panel: 1.75rem;
   /* The warm bed a resting panel sits on. Reef's one reversal of Clearwater
@@ -815,6 +821,26 @@ textarea {
 
 .swell-across {
   animation: swell-across 320ms var(--ease-out-soft) both;
+}
+
+/*
+ * The water band — Reef's page top (ADR 20260901-diveday-reimagined, decision
+ * 1). The lagoon wash settles into the sand over the first 168px of every
+ * staff page, behind the header; below that the ground is the ground. Drawn
+ * from the tokens, so the night palette and the boat/glare skins each get
+ * their own water, and a shop's brand never reaches it (this is a staff
+ * surface). A wash carries no fact and is not a drawing, which is why it may
+ * sit behind a manifest where the swell may not.
+ */
+.water-band {
+  background-image: linear-gradient(
+    180deg,
+    var(--primary-tint) 0%,
+    color-mix(in srgb, var(--primary-tint) 40%, var(--background)) 55%,
+    var(--background) 100%
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 168px;
 }
 
 /* Marketing sections reveal once, only after the browser has confirmed they

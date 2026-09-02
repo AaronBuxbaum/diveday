@@ -10,6 +10,7 @@ import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { buttonClass } from "@/components/ui/button";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { getBookingForTrip } from "@/db/bookings";
+import { getLatestCheckoutForBooking } from "@/db/checkouts";
 import { getDb } from "@/db/client";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { bookingConfirmationAndWaiverEmailsSent } from "@/db/notifications";
@@ -460,7 +461,7 @@ export default async function TripDetailPage({
         {trip.conditionsHold ? (
           <div
             role="status"
-            className="mt-5 rounded-2xl border border-warning/40 bg-warning/10 p-5"
+            className="mt-5 rounded-panel border border-warning/40 bg-warning/10 p-5"
           >
             <h2 className="font-semibold">{t("trip.conditionsHoldHeading")}</h2>
             <p className="mt-1 text-sm text-muted">{t("trip.conditionsHoldBody")}</p>
@@ -477,7 +478,7 @@ export default async function TripDetailPage({
           // Sunken fill, no border: a stated fact about the departure, not a
           // warning — it wears the same quiet material as the supporting
           // reading, one step below the amber conditions banner above.
-          <p className="mt-5 rounded-xl bg-surface-sunken p-4 text-sm text-muted">
+          <p className="mt-5 rounded-inset bg-surface-sunken p-4 text-sm text-muted">
             {t("trip.minimumSeatsNotice", {
               minimum: minimumSeats.minimum,
               deadline: formatDateTimeTz(minimumSeats.decidesAt, locale, shop.timezone),
@@ -541,7 +542,7 @@ export default async function TripDetailPage({
           confirmed.booking.conditionsBriefedAt,
         ) ? (
           <section
-            className="mt-6 rounded-2xl border border-warning/40 bg-warning/10 p-5"
+            className="mt-6 rounded-panel border border-warning/40 bg-warning/10 p-5"
             role="status"
           >
             <h2 className="font-semibold">{t("trip.conditionsChangedHeading")}</h2>
@@ -572,6 +573,12 @@ export default async function TripDetailPage({
             readinessLink={readinessLink}
             emailsOnTheWay={emailsOnTheWay}
             payCancelled={pay === "cancelled"}
+            paymentUrl={
+              pay === "due"
+                ? ((await getLatestCheckoutForBooking(db, shop.id, confirmed.booking.id))
+                    ?.checkoutUrl ?? null)
+                : null
+            }
           />
         ) : waitlistConfirmation ? (
           <WaitlistConfirmation

@@ -196,7 +196,7 @@ async function GuideBody({
 
             <p className="mt-8 max-w-2xl leading-7 text-muted">{t(guide.coexist.bridgeNote)}</p>
 
-            <div className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-6">
+            <div className="mt-8 rounded-panel border border-primary/30 bg-primary/5 p-6">
               <h3 className="text-lg font-semibold tracking-tight">
                 {t(guide.coexist.replace.heading)}
               </h3>
@@ -270,7 +270,7 @@ async function GuideBody({
               {t(guide.website.sitesNote, { sitesPrice: guide.website.sitesPrice })}
             </p>
 
-            <div className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-6">
+            <div className="mt-8 rounded-panel border border-primary/30 bg-primary/5 p-6">
               <h3 className="text-lg font-semibold tracking-tight">
                 {t(guide.website.offer.heading)}
               </h3>

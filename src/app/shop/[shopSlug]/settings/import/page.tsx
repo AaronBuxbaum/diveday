@@ -378,7 +378,7 @@ export default async function ImportContactsPage({
             {IMPORT_HONESTY_TABLE.map((row) => (
               <li
                 key={row.id}
-                className="grid gap-1 rounded-xl bg-surface-sunken px-4 py-3 sm:grid-cols-[10rem_7rem_1fr] sm:items-baseline sm:gap-3"
+                className="grid gap-1 rounded-inset bg-surface-sunken px-4 py-3 sm:grid-cols-[10rem_7rem_1fr] sm:items-baseline sm:gap-3"
               >
                 <span className="font-medium text-foreground">
                   {t(SCOPE_ROW_KEYS[row.id].what)}

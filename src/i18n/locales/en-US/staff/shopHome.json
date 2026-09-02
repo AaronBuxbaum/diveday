@@ -147,7 +147,8 @@
     "firstBookingWaived": "payment waived",
     "firstBookingPaymentDue": "payment due",
     "firstBookingWaiverSigned": "waiver signed",
-    "firstBookingWaiverNeeded": "waiver needed"
+    "firstBookingWaiverNeeded": "waiver needed",
+    "firstThing": "First thing · {kind}"
   },
   "quietAddDeparture": "Add a departure",
   "quietNextDepartureLabel": "Next departure"

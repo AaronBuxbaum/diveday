@@ -1,3 +1,5 @@
+import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
+
 /**
  * The coral-accented moment a surface earns when the user finishes something —
  * booking confirmed, waiver signed, everyone aboard, you're all set
@@ -41,7 +43,7 @@
  * buy nothing the constant does not. What matters is that the *vocabulary*
  * lives here, so a fourth surface cannot invent a fourth coral.
  */
-export const EARNED_MOMENT_SURFACE = "rise-in rounded-2xl border border-accent/40 bg-accent/10";
+export const EARNED_MOMENT_SURFACE = "rise-in rounded-panel border border-accent/40 bg-accent/10";
 
 /**
  * One earned line inside a working surface. `role="status"` because these all
@@ -85,11 +87,14 @@ export function EarnedMoment({
   children,
   className = "",
   as: Heading = "h2",
+  titleClassName = "",
 }: {
   eyebrow?: string;
   title: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
+  /** `font-brand-display` on the recap, where the greeting is in the shop's face. */
+  titleClassName?: string;
   /**
    * Heading level for `title`. Defaults to h2, correct when the page has its
    * own h1 elsewhere (as `/ready` and `/recap` do) — pass "h1" when this
@@ -100,12 +105,12 @@ export function EarnedMoment({
 }) {
   return (
     <section
-      className={`relative overflow-hidden rise-in rounded-2xl border border-accent/40 bg-accent/10 p-6 sm:p-7 ${className}`.trim()}
+      className={`relative overflow-hidden rise-in rounded-panel border border-accent/40 bg-accent/10 p-6 sm:p-7 ${className}`.trim()}
     >
-      {eyebrow ? (
-        <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">{eyebrow}</p>
-      ) : null}
-      <Heading className="mt-1 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+      {eyebrow ? <p className={EYEBROW_CLASS}>{eyebrow}</p> : null}
+      <Heading
+        className={`mt-1 text-2xl font-semibold tracking-tight text-balance sm:text-3xl ${titleClassName}`.trim()}
+      >
         {title}
       </Heading>
       {children ? <div className="mt-3 text-muted">{children}</div> : null}

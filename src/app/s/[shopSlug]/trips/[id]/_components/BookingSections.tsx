@@ -61,7 +61,7 @@ export function WaitlistConfirmation({
     // (design/principles.md #3) — a seat isn't held yet, so this sits on the
     // same sunken material as the full-boat state it came from: a place in
     // line, not a seat on the boat. Only a real confirmed booking gets coral.
-    <section className="rise-in mt-10 rounded-2xl bg-surface-sunken p-6">
+    <section className="rise-in mt-10 rounded-panel bg-surface-sunken p-6">
       <h2 className="text-lg font-semibold text-balance">
         {t("booking.waitlistConfirmedHeading", { name: firstName })}
       </h2>
@@ -196,7 +196,7 @@ export function TripFullSection({
     // when the open form moved onto the shared card, the four states that
     // replace it were briefly a size louder — "This trip is full" shouting
     // over "Grab a spot".
-    <section id="book" className="mt-10 scroll-mt-4 rounded-2xl bg-surface-sunken p-5 sm:p-6">
+    <section id="book" className="mt-10 scroll-mt-4 rounded-panel bg-surface-sunken p-5 sm:p-6">
       <h2 className="text-lg font-semibold">{t("fullHeading")}</h2>
       <p className="mt-1 text-muted">
         <Link
