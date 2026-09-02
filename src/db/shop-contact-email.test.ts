@@ -112,6 +112,43 @@ describe("confirming a shop's contact email", () => {
     expect(rows.filter((row) => row.superseded !== null)).toHaveLength(1);
   });
 
+  // The shop stamped is the token's own, never a caller's: a link minted for
+  // one shop cannot touch another's row, and each shop's mint supersedes only
+  // its own outstanding link.
+  it("confirms the shop it was minted for and no other", async () => {
+    const { db, shop } = await shopWithAddress("desk@bluemantis.dive");
+    const [other] = await db
+      .insert(shops)
+      .values({
+        name: "Other Reef",
+        slug: "other-reef",
+        timezone: "America/New_York",
+        contactEmail: "desk@bluemantis.dive",
+      })
+      .returning({ id: shops.id });
+    if (!other) throw new Error("second shop insert failed");
+    const forOther = await issueShopContactEmailConfirmation(db, {
+      shopId: other.id,
+      email: "desk@bluemantis.dive",
+      now: at,
+    });
+    const forShop = await issueShopContactEmailConfirmation(db, {
+      shopId: shop.id,
+      email: "desk@bluemantis.dive",
+      now: at,
+    });
+
+    expect(
+      await consumeShopContactEmailConfirmation(db, { token: forShop.token, now: at }),
+    ).toEqual({ shopId: shop.id });
+    expect((await confirmedAt(db, shop.id))?.at).toEqual(at);
+    expect((await confirmedAt(db, other.id))?.at).toBeNull();
+    // The other shop's own link is untouched by the first shop's mint and consume.
+    expect(
+      await checkShopContactEmailConfirmation(db, { token: forOther.token, now: at }),
+    ).not.toBeNull();
+  });
+
   it("is unknown for a token that was never minted", async () => {
     const { db } = await seededShopContext();
     expect(

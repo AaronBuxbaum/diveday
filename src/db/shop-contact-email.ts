@@ -113,29 +113,60 @@ export async function wasShopContactEmailConfirmed(
   return row ?? null;
 }
 
+/** Thrown inside the consume transaction to roll the token claim back. */
+const ADDRESS_CHANGED_UNDER_CLAIM = Symbol("diveday:contact-email-address-changed");
+
 /**
  * Atomically claims the token and stamps the shop confirmed, in one
  * transaction: the `WHERE` re-checks every condition -- including that the
  * shop still names the token's address -- at the moment of the update, so two
  * submits of the same link cannot both succeed and a token minted for an old
  * address can never bless a new one.
+ *
+ * Two things close the window between the claim and the stamp (security
+ * review finding on #1296): the shop row is locked first, so a concurrent
+ * `setShopContact` serialises behind this transaction rather than slipping a
+ * new address in between the two statements; and the stamp itself is
+ * conditional on the address, so if it ever matched nothing the claim rolls
+ * back with it. PGlite is single-connection, so tests cannot exhibit the
+ * race -- the lock is for production Postgres.
  */
 export async function consumeShopContactEmailConfirmation(
   db: AppDb,
   input: { token: string; now?: Date },
 ): Promise<{ shopId: string } | null> {
   const now = input.now ?? nowDate();
-  return db.transaction(async (tx) => {
-    const [claimed] = await tx
-      .update(shopContactEmailConfirmationTokens)
-      .set({ usedAt: now })
-      .where(and(liveToken(input.token, now), shopStillNamesAddress()))
-      .returning({ shopId: shopContactEmailConfirmationTokens.shopId });
-    if (!claimed) return null;
-    await tx
-      .update(shops)
-      .set({ contactEmailConfirmedAt: now })
-      .where(eq(shops.id, claimed.shopId));
-    return { shopId: claimed.shopId };
-  });
+  try {
+    return await db.transaction(async (tx) => {
+      const [live] = await tx
+        .select({ shopId: shopContactEmailConfirmationTokens.shopId })
+        .from(shopContactEmailConfirmationTokens)
+        .where(liveToken(input.token, now))
+        .limit(1);
+      if (!live) return null;
+      await tx.select({ id: shops.id }).from(shops).where(eq(shops.id, live.shopId)).for("update");
+
+      const [claimed] = await tx
+        .update(shopContactEmailConfirmationTokens)
+        .set({ usedAt: now })
+        .where(and(liveToken(input.token, now), shopStillNamesAddress()))
+        .returning({
+          shopId: shopContactEmailConfirmationTokens.shopId,
+          email: shopContactEmailConfirmationTokens.email,
+        });
+      if (!claimed) return null;
+      const [stamped] = await tx
+        .update(shops)
+        .set({ contactEmailConfirmedAt: now })
+        .where(
+          and(eq(shops.id, claimed.shopId), sql`lower(${shops.contactEmail}) = ${claimed.email}`),
+        )
+        .returning({ id: shops.id });
+      if (!stamped) throw ADDRESS_CHANGED_UNDER_CLAIM;
+      return { shopId: claimed.shopId };
+    });
+  } catch (error) {
+    if (error === ADDRESS_CHANGED_UNDER_CLAIM) return null;
+    throw error;
+  }
 }

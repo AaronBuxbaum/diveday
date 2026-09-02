@@ -433,6 +433,18 @@ export const RATE_LIMITS = {
    * release itself.
    */
   selfRegisterEmailByRecipient: perHour(3),
+  /**
+   * Contact-email confirmation links (issue #1288), per **shop** and per
+   * **recipient address**. The settings form takes any address and the resend
+   * control mints a fresh link each tap, and a demo shop's owner login is one
+   * click away for anyone -- so without these, "Contact email" is a form that
+   * sends branded DiveDay mail to an address of the attacker's choosing as
+   * fast as they can tap. Three an hour is generous for the honest case (one
+   * save, one resend when the first went to spam) and useless as a relay.
+   * An empty bucket drops the *send*; the address is still saved.
+   */
+  contactConfirmationByShop: perHour(3),
+  contactConfirmationByRecipient: perHour(3),
   /** Public last-minute-list joins, per IP. */
   lastMinuteListJoin: perHour(10),
   /** Starting a post-trip tip checkout, per recap token. */

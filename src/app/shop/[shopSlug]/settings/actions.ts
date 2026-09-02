@@ -585,6 +585,22 @@ async function sendContactEmailConfirmation(shop: {
 }): Promise<boolean> {
   const origin = publicAppUrl();
   if (!origin) return false;
+  // Per shop and per recipient (security review finding on #1296): the form
+  // takes any address and a demo owner login is one click away, so without
+  // these a resend loop is a branded-mail relay to a victim's inbox. A refused
+  // send leaves the address saved and unconfirmed; the resend control is
+  // still there once the bucket refills.
+  const [byShop, byRecipient] = await Promise.all([
+    checkRateLimit(
+      rateLimitKey("contact-confirmation", "shop", shop.id),
+      RATE_LIMITS.contactConfirmationByShop,
+    ),
+    checkRateLimit(
+      rateLimitKey("contact-confirmation", "recipient", shop.contactEmail.toLowerCase()),
+      RATE_LIMITS.contactConfirmationByRecipient,
+    ),
+  ]);
+  if (!byShop.allowed || !byRecipient.allowed) return false;
   const db = await getDb();
   const issued = await issueShopContactEmailConfirmation(db, {
     shopId: shop.id,
@@ -612,12 +628,18 @@ export async function saveContactAction(formData: FormData) {
   await settingsBlock(session);
   const parsed = contactSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(settings, "contact-invalid", { saved: "contact" }));
-  const shop = await setShopContact(await getDb(), session.user.shopId, parsed.data);
-  // A new or changed address is unconfirmed (setShopContact cleared the proof),
-  // and the link is what confirms it. An unchanged, already-confirmed one
-  // needs nothing.
+  const db = await getDb();
+  const before = await getShopById(db, session.user.shopId);
+  const shop = await setShopContact(db, session.user.shopId, parsed.data);
+  // Only an address that actually changed gets a link from a save: it is
+  // unconfirmed by construction (setShopContact cleared the proof), and the
+  // link is what confirms it. Saving an unchanged, still-unconfirmed address
+  // -- a phone edit, say -- sends nothing; the resend control is the one door
+  // for that, and it is rate-limited.
+  const changed =
+    (shop?.contactEmail?.toLowerCase() ?? null) !== (before?.contactEmail?.toLowerCase() ?? null);
   const sent =
-    shop?.contactEmail && !shop.contactEmailConfirmedAt
+    changed && shop?.contactEmail && !shop.contactEmailConfirmedAt
       ? await sendContactEmailConfirmation({ ...shop, contactEmail: shop.contactEmail })
       : false;
   revalidateAndRedirect(

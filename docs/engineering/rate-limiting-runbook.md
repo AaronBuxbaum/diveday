@@ -40,6 +40,7 @@ cannot see it.
 | Self-registration (the counter QR) | `src/app/s/[shopSlug]/register/actions.ts` | IP | `RATE_LIMITS.selfRegisterByIp` (10/hour) |
 | Self-registration (the counter QR) | `src/app/s/[shopSlug]/register/actions.ts` | shop | `RATE_LIMITS.selfRegisterByShop` (120/hour) |
 | Self-registration's waiver mail | `src/app/s/[shopSlug]/register/actions.ts` | recipient address | `RATE_LIMITS.selfRegisterEmailByRecipient` (3/hour) — drops the send, never the registration |
+| Contact-email confirmation link (a save that changes the address, or the resend control; issue #1288) | `src/app/shop/[shopSlug]/settings/actions.ts` | shop, **and** the recipient address | `RATE_LIMITS.contactConfirmationByShop` (3/hour) + `RATE_LIMITS.contactConfirmationByRecipient` (3/hour) — drops the send, never the save; the settings form takes any address and a demo owner login is one click away, so this is what keeps it from being a branded-mail relay |
 | Readiness actions | `src/app/ready/[token]/actions.ts` `contextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Self-cancelling a booking from the readiness link | same file | IP | `RATE_LIMITS.bookingSelfCancel` (5/hour) |
 | Waiver draft/complete | `src/app/waivers/[token]/page.tsx` | IP | `RATE_LIMITS.capabilityAction` (60/hour) |
