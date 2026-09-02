@@ -10,8 +10,14 @@ import {
   reportOnlyPolicy,
 } from "@/lib/content-security-policy";
 import {
+  EMBED_BRAND_HEADER,
+  EMBED_FONT_HEADER,
+  EMBED_LOCALE_HEADER,
   EMBED_REQUEST_HEADER,
   isEmbeddableShopRoute,
+  isEmbedWidgetRoute,
+  parseEmbedBrandParam,
+  parseEmbedFontParam,
   REQUEST_PATH_HEADER,
 } from "@/lib/embed-routes";
 
@@ -193,10 +199,23 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // framable by whoever crafted that URL. `getAll()` and requiring
   // exactly one value keeps this in lockstep with how the page reads it.
   const embedParams = req.nextUrl.searchParams.getAll("embed");
+  // A widget view is an embed by path; the schedule and trip pages are embeds
+  // only with exactly one `?embed=1` (see the note above).
   const isEmbedRequest =
-    isEmbeddableShopRoute(req.nextUrl.pathname) &&
-    embedParams.length === 1 &&
-    embedParams[0] === "1";
+    isEmbedWidgetRoute(req.nextUrl.pathname) ||
+    (isEmbeddableShopRoute(req.nextUrl.pathname) &&
+      embedParams.length === 1 &&
+      embedParams[0] === "1");
+  // What the host page told the loader about itself (Harbor's "inherit the
+  // host page"), validated here and forwarded as headers. Only on an embed
+  // request: a visitor on the storefront itself cannot recolour it by URL.
+  const embedBrand = isEmbedRequest
+    ? parseEmbedBrandParam(req.nextUrl.searchParams.get("brand"))
+    : null;
+  const embedFont = isEmbedRequest
+    ? parseEmbedFontParam(req.nextUrl.searchParams.get("font"))
+    : null;
+  const embedLocale = isEmbedRequest ? (req.nextUrl.searchParams.get("lang") ?? "") : "";
 
   // getSessionCookie/getCookieCache are pure reads — unlike next-auth's edge
   // middleware, nothing here ever issues a Set-Cookie, so there is no longer
@@ -219,6 +238,9 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // client, and src/proxy.test.ts pins that.
   overrideRequestHeaders(req, res, {
     [EMBED_REQUEST_HEADER]: isEmbedRequest ? "1" : "",
+    [EMBED_BRAND_HEADER]: embedBrand ?? "",
+    [EMBED_FONT_HEADER]: embedFont ?? "",
+    [EMBED_LOCALE_HEADER]: embedLocale,
     [REQUEST_PATH_HEADER]: req.nextUrl.pathname,
   });
   // Deny framing everywhere by default (clickjacking on staff/sign-in surfaces);

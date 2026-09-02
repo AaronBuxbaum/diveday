@@ -1016,5 +1016,16 @@
     "a11y": [
       "a11y.spec.ts"
     ]
+  },
+  "/s/[shopSlug]/embed/[widget]": {
+    "e2e": [
+      "embed-catalogue.spec.ts"
+    ],
+    "visual": [
+      "embed-grid",
+      "embed-departure",
+      "embed-courses"
+    ],
+    "a11y": []
   }
 }

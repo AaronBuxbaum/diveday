@@ -30,11 +30,19 @@ import {
 export function BrandStyle({
   brandColor,
   brandDisplayFont,
+  hostFont = null,
 }: {
   brandColor: string | null;
   brandDisplayFont: BrandDisplayFontCode | null;
+  /**
+   * The host page's own `font-family`, for an embed that inherits its page
+   * (validated by `parseEmbedFontParam`): it becomes the body face *and* the
+   * heading face, so the widget reads as part of the site it sits in. Never
+   * set on the storefront itself.
+   */
+  hostFont?: string | null;
 }) {
-  if (!brandColor && !brandDisplayFont) return null;
+  if (!brandColor && !brandDisplayFont && !hostFont) return null;
   const declarations: string[] = [];
   if (brandColor) {
     for (const [name, value] of Object.entries(
@@ -43,7 +51,9 @@ export function BrandStyle({
       declarations.push(`${name}:${value}`);
     }
   }
-  if (brandDisplayFont) {
+  if (hostFont) {
+    declarations.push(`--font-sans:${hostFont}`, `--brand-display:${hostFont}`);
+  } else if (brandDisplayFont) {
     declarations.push(`--brand-display:${brandDisplayFontFamily(brandDisplayFont)}`);
   }
   return (

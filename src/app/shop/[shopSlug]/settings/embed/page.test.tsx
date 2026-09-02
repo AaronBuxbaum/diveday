@@ -26,7 +26,7 @@ const authModule = (await import("@/lib/auth")) as unknown as {
 };
 const auth = authModule.auth;
 const EmbedSettingsPage = (await import("./page")).default;
-const { SnippetField } = await import("./SnippetField");
+const { EmbedGenerator } = await import("./EmbedGenerator");
 
 async function seededContext() {
   const db: AppDb = await seededTestDb();
@@ -73,41 +73,29 @@ function findElements<P>(
   return found;
 }
 
-describe("EmbedSettingsPage attribution", () => {
-  it("appends a crawlable Powered-by-DiveDay backlink after the iframe, carrying UTM params", async () => {
+describe("EmbedSettingsPage", () => {
+  it("hands the generator the origin, the shop, its departures and every word", async () => {
     const { db, shop, personId } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));
     const previousAppHost = process.env.APP_HOST;
-    // Loopback http is only rejected in production (checkPublicHost) — a
-    // vitest worker's NODE_ENV isn't "production", so this resolves.
     process.env.APP_HOST = "http://localhost:3000";
     try {
-      // The page takes its slug from the route and `requireShopSurface`
-      // refuses one that disagrees with the session, so this passes the
-      // seeded shop's own.
       const element = await EmbedSettingsPage({ params: Promise.resolve({ shopSlug: shop.slug }) });
-      const snippetFields = findElements<{ label: string; snippet: string }>(element, SnippetField);
-      const iframeField = snippetFields.find((field) => field.props.snippet.includes("<iframe"));
-      expect(iframeField).toBeDefined();
-      const snippet = iframeField?.props.snippet ?? "";
-
-      // The anchor must come after the iframe's own closing tag — in the
-      // shop's page HTML, not inside the framed document — or a crawler
-      // won't attribute the backlink to the shop's page.
-      const iframeEnd = snippet.indexOf("</iframe>");
-      const anchorStart = snippet.indexOf("<a href=");
-      expect(iframeEnd).toBeGreaterThan(-1);
-      expect(anchorStart).toBeGreaterThan(iframeEnd);
-
-      // The iframe's own src must carry no UTM params — those belong to the
-      // outer backlink only.
-      const iframeTag = snippet.slice(0, iframeEnd);
-      expect(iframeTag).not.toContain("utm_source");
-
-      expect(snippet).toContain("utm_source=embed");
-      expect(snippet).toContain("utm_medium=widget");
-      expect(snippet).toContain(`utm_campaign=${shop.slug}`);
+      const [generator] = findElements<{
+        origin: string;
+        shopSlug: string;
+        trips: { id: string; label: string }[];
+        copy: { kinds: Record<string, string>; code: string };
+      }>(element, EmbedGenerator);
+      expect(generator).toBeDefined();
+      expect(generator?.props.origin).toBe("http://localhost:3000");
+      expect(generator?.props.shopSlug).toBe(shop.slug);
+      // The seeded shop has departures to pin a widget to.
+      expect(generator?.props.trips.length).toBeGreaterThan(0);
+      // Eight kinds, each with a name (ADR 20260901-diveday-reimagined, 13d).
+      expect(Object.keys(generator?.props.copy.kinds ?? {})).toHaveLength(8);
+      expect(generator?.props.copy.code).toBe("Embed code");
     } finally {
       process.env.APP_HOST = previousAppHost;
     }

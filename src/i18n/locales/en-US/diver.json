@@ -3280,5 +3280,9 @@
       "dan_partner": "DAN Business Partner",
       "readers_choice": "Readers' Choice Award"
     }
+  },
+  "embed": {
+    "book": "Book",
+    "enrol": "Enrol"
   }
 }
