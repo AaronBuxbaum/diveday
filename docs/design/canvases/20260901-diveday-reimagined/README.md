@@ -106,7 +106,7 @@ door order on Tide's and Reef's switching boards (the demo leads).
 | 1 — the pick: Reef for the staff app, Geist kept; the ADR Accepted | shipped | `docs/architecture/decisions/20260901-diveday-reimagined.md` | H-64 in `docs/product/human-decisions.md` |
 | 2 — the second pick: the diver-facing surfaces go Harbor; the embed catalogue approved | shipped | `docs/architecture/decisions/20260901-diveday-reimagined.md` | H-64 in `docs/product/human-decisions.md` |
 | 13a — Reef's tokens for the staff app | shipped | `src/components/ui/card.tsx` | `src/components/ui/card.test.tsx` |
-| 13b — the shop's brand: schema, `brand.ts`, the Settings Brand group | open | — | — |
+| 13b — the shop's brand: schema, `brand.ts`, the Settings Brand group | shipped | `src/lib/brand.ts` | `src/lib/brand.test.ts` |
 | 13c — Harbor's storefront | open | — | — |
 | 13d — the embed catalogue and the generator | open | — | — |
 | 13e — the offer on the marketing pages | open | — | — |
