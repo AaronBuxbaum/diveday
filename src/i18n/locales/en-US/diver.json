@@ -72,7 +72,8 @@
     "spokenLanguages": "We speak {languages}",
     "languageFallback": "DiveDay isn’t in {requested} yet. This page is in {shown}, the language {shop} works in.",
     "conservationCommitmentsHeading": "Shop-stated conservation commitments",
-    "conservationCommitmentsDisclaimer": "These are the shop's claims; DiveDay does not verify or endorse them."
+    "conservationCommitmentsDisclaimer": "These are the shop's claims; DiveDay does not verify or endorse them.",
+    "credit": "Bookings by DiveDay"
   },
   "schedule": {
     "eyebrow": "Trips",
@@ -118,7 +119,9 @@
       "bookThisBoat": "Book this boat"
     },
     "poweredByDiveDay": "Powered by DiveDay",
-    "moreWaysHeading": "Other ways we can help"
+    "moreWaysHeading": "Other ways we can help",
+    "boatsHeading": "The boats",
+    "boatSeats": "{count, plural, one {# diver} other {# divers}}"
   },
   "trip": {
     "courseSession": "Course session",

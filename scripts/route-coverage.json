@@ -124,6 +124,7 @@
       "schedule-filters.spec.ts",
       "schedule-trip.spec.ts",
       "seo.spec.ts",
+      "storefront-brand.spec.ts",
       "tenant-isolation.spec.ts",
       "trip-admission.spec.ts",
       "trips.spec.ts"
