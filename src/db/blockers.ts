@@ -23,6 +23,29 @@ import { pagedUpcomingTripsWithCounts } from "./trips";
  * home reads today's shop-day and tomorrow's — runs the pipeline once and
  * hands the same evidence to each call: the pass costs about ten queries, so
  * recomputing it per read doubles the page's whole database bill.
+ *
+ * **Do not reach for React's `cache()` here. It was tried and measured, and it
+ * cannot work** (issue #1121). The duplicate worth removing crosses a boundary
+ * a prop cannot: the staff shell's blocked-diver badge runs this in
+ * `layout.tsx`, and the shop home and the roster each run it again in the
+ * `page.tsx` underneath, so each of those two routes pays for the pass twice
+ * — about 37ms and ten round trips a time on the seeded fixture.
+ *
+ * `cache()` is request-scoped, and **the layout and the page are not in the
+ * same scope.** Measured against `pnpm dev` on 2026-09-02 by logging every
+ * entry: over four loads of `/shop/blue-mantis` the badge and the page ran the
+ * pipeline four times each, and a `cache()`d clock reading placed above both
+ * was itself invoked eight times, once per caller, at eight different instants
+ * — so the second call never even reached the same memo table as the first.
+ * The shell is `instant = false` (its cross-tenant `notFound()` must run before
+ * `{children}`) while every page beneath it is `instant = true`, so under Cache
+ * Components the two are rendered in separate passes. That is ADR
+ * 20260804-instant-navigation working as designed, not a bug to route around.
+ *
+ * Two things that would work, and neither is a one-line cache: hoisting the
+ * badge's own read into the same pass as the page's, or a cache keyed outside
+ * React's request scope — which is a second, staler answer to "who is blocked",
+ * the thing this file exists to prevent.
  */
 export async function inHorizonReadiness(db: AppDb, shopId: string, now: Date) {
   const { to: horizon } = operationalWindow(now);
