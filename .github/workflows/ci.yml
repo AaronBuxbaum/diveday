@@ -270,19 +270,35 @@ jobs:
       # same treatment.
       - run: pnpm build:sw
       - uses: ./.github/actions/playwright-shell
+      # `--shard` is deliberately absent. Playwright's own sharding cuts the
+      # sorted test list into four equal-*count* contiguous groups, and the
+      # tests are nothing like equal cost: a spec minting a private shop pays
+      # the mint and a sign-in per test. Because the groups are contiguous, the
+      # expensive specs cluster into one shard and the run waits for it — on
+      # the green main run of 2026-08-31 the four took 4:09, 4:58, 4:38 and
+      # 7:39 with 124 or 125 tests each.
+      #
+      # `scripts/e2e-shard.mjs` deals the spec files by estimated cost instead,
+      # heaviest onto the emptiest bin, and prints this shard's list. It reads
+      # the tree and never runs it, so all four jobs compute the identical deal
+      # from their own checkouts — the property that matters, since a deal two
+      # jobs disagreed about would run a spec twice or, worse, not at all.
+      # `scripts/e2e-shard.test.mjs` pins that every spec lands in exactly one
+      # bin.
+      #
+      # The script does its own recursive walk, matching
+      # playwright.config.ts's discovery under testDir (./e2e) — the reason the
+      # `globstar` loop this replaces existed, since a flat e2e/*.spec.ts glob
+      # silently skips a spec in a subdirectory while it still runs locally.
+      #
+      # `--explain` writes the whole deal, all four bins with their weights, to
+      # the job log on stderr — which is where to look first when one shard is
+      # slow again.
       - name: Run non-visual Playwright tests
         run: |
-          # Recursive, like playwright.config.ts's own discovery under testDir
-          # (./e2e): a flat e2e/*.spec.ts glob would silently skip any spec in a
-          # subdirectory here while it still ran locally.
-          shopt -s globstar nullglob
-          spec_files=()
-          for spec in e2e/**/*.spec.ts; do
-            if [ "$spec" != "e2e/visual.spec.ts" ]; then
-              spec_files+=("$spec")
-            fi
-          done
-          pnpm exec playwright test "${spec_files[@]}" --shard=${{ matrix.shard }}/4
+          mapfile -t spec_files < <(node scripts/e2e-shard.mjs --shard=${{ matrix.shard }}/4 --explain)
+          echo "shard ${{ matrix.shard }}/4: ${#spec_files[@]} specs"
+          pnpm exec playwright test "${spec_files[@]}"
         # e2e/servers.ts's default (cpus/2, 2 workers on this runner's 4
         # cores) was pinned to E2E_WORKERS=1 with double the shards
         # (20260731-ci-parallelization-resources-build-concurrency.md)
