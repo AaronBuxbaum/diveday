@@ -179,10 +179,12 @@ async function fetchSigningCertificate(url: string, fetchImpl: Fetch): Promise<s
  * message captured off the wire stays valid forever unless something reads
  * that timestamp. It mattered little while a replay could only re-apply an
  * idempotent delivery status; it stops being harmless the moment an event
- * writes anything a person can later undo — a `Complaint` that opts an address
- * out of courtesy mail replayed months later re-opts-out a diver who has since
- * opted back in. Checked here, once, so every SNS-fed webhook inherits it
- * rather than each route remembering to (issue #1289).
+ * writes anything a person can later undo — which a `Complaint` now does: it
+ * opts the named address out of courtesy mail and off the last-minute list
+ * (ADR 20260902-sender-standards-for-ses), so a captured one replayed months
+ * later re-opts-out a diver who has since opted back in. Checked here, once, so
+ * every SNS-fed webhook inherits it rather than each route remembering to
+ * (issue #1289).
  *
  * The window is deliberately generous against SNS's own retry behaviour —
  * it retries a failing endpoint with backoff for far longer than an hour, and

@@ -362,8 +362,8 @@ old**, or dated more than five minutes in the future (`MAX_AGE_MS` / `MAX_FUTURE
 `src/lib/notifications/sns.ts`; the same check covers `/api/webhooks/sms`, which shares the
 verifier). SNS signs the publish timestamp along with everything else, so without reading it a
 captured message stays valid forever — harmless while a replay could only re-apply an idempotent
-delivery status, and not harmless the moment an event writes something a person can undo, such as a
-`Complaint` that opts an address out of courtesy mail. Both windows are wall-clock against this host: a host whose clock has drifted by more
+delivery status, and not harmless now that a `Complaint` writes to a person's row, since a replay
+months later re-opts-out a diver who has since opted back in. Both windows are wall-clock against this host: a host whose clock has drifted by more
 than five minutes will refuse live traffic, and the symptom is a run of 400s from an endpoint whose
 signatures all verify.
 
