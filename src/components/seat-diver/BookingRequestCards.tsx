@@ -75,7 +75,7 @@ export function RelevantBookingRequests({
         {items.map((item) => (
           <li
             key={item.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface-sunken px-4 py-3"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-inset border border-border bg-surface-sunken px-4 py-3"
           >
             <div className="min-w-0">
               <p className="font-medium">

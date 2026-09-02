@@ -28,7 +28,7 @@ export function SwitchingConcierge({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
   return (
     <section className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
-      <div className="rounded-2xl border border-primary/30 bg-primary/5 p-8 sm:p-10">
+      <div className="rounded-panel border border-primary/30 bg-primary/5 p-8 sm:p-10">
         <p className="text-sm font-semibold tracking-widest text-primary uppercase">
           {t("switching.concierge.eyebrow")}
         </p>

@@ -59,7 +59,7 @@ export function EditorRail({
               <a
                 href={`#${section.id}`}
                 aria-current={active ? "true" : undefined}
-                className={`flex min-h-11 items-center rounded-xl px-3 py-2 text-sm font-medium transition-colors hover:bg-surface-sunken hover:text-foreground lg:w-full ${
+                className={`flex min-h-11 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-surface-sunken hover:text-foreground lg:w-full ${
                   active ? "text-muted lg:bg-primary-tint lg:text-primary" : "text-muted"
                 }`}
               >

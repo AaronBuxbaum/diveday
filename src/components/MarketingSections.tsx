@@ -130,7 +130,7 @@ export function FeatureGroupsGrid({ locale }: { locale: DiverLocale }) {
       {productFeatureGroups.map((group, index) => (
         <li
           key={group.eyebrow}
-          className="relative rounded-2xl border border-border bg-background p-5 sm:p-6"
+          className="relative rounded-panel border border-border bg-background p-5 sm:p-6"
         >
           {/* The rule that turns four cards into one track. Only at `xl`, where
               the four genuinely sit on one row — at `sm` the 2×2 would have it

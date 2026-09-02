@@ -39,7 +39,7 @@ export function EmergencyReferenceCard({
   return (
     <section
       aria-labelledby={headingId}
-      className={`rounded-2xl border border-danger/40 bg-danger/5 p-4 sm:p-5 ${className}`}
+      className={`rounded-panel border border-danger/40 bg-danger/5 p-4 sm:p-5 ${className}`}
     >
       <h2 id={headingId} className="text-base font-semibold text-danger-strong">
         {copy.heading}

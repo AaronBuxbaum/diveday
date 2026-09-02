@@ -121,7 +121,7 @@ export function DayByDayEditor({
           <div
             // biome-ignore lint/suspicious/noArrayIndexKey: rows have no stable id and are only ever appended/removed by position, never reordered.
             key={dayIndex}
-            className="rounded-xl border border-border p-4"
+            className="rounded-inset border border-border p-4"
           >
             <div className="flex items-center justify-between gap-2">
               <h4 className="font-medium">{fill(copy.dayLabel, { number: dayNumber })}</h4>

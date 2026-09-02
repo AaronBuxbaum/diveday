@@ -384,7 +384,7 @@ export function ImportPhase({
     >
       <StepList steps={steps} />
       {importerNote && (
-        <p className="mt-8 max-w-2xl rounded-2xl border border-primary/30 bg-primary/5 p-5 text-sm leading-6 text-muted">
+        <p className="mt-8 max-w-2xl rounded-panel border border-primary/30 bg-primary/5 p-5 text-sm leading-6 text-muted">
           {importerNote}
         </p>
       )}

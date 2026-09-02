@@ -144,7 +144,7 @@ describe("SectionCard", () => {
   it("renders the title as a real heading, at the level the caller names", () => {
     render(<SectionCard title="Backups">body</SectionCard>);
     expect(screen.getByRole("heading", { level: 2, name: "Backups" })).toHaveClass(
-      "text-lg",
+      "text-2xl",
       "font-semibold",
     );
     cleanup();

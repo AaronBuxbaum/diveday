@@ -183,7 +183,7 @@ export function DetailsSection({
               />
             </Field>
           </FieldGrid>
-          <fieldset className="rounded-xl bg-surface-sunken p-4 sm:p-5">
+          <fieldset className="rounded-inset bg-surface-sunken p-4 sm:p-5">
             <legend className="px-1 text-sm font-medium">
               {t("trips.details.arrivalGuidanceLegend")}
             </legend>
@@ -465,7 +465,7 @@ export function DetailsSection({
           {/* A sunken inset, not a second card: this group sits *inside* the
               Details card, and surface never stacks on surface (see
               SectionCard's "what is not a section card"). */}
-          <fieldset className="rounded-xl bg-surface-sunken p-4 sm:p-5">
+          <fieldset className="rounded-inset bg-surface-sunken p-4 sm:p-5">
             <legend className="px-1 text-sm font-medium">
               {t("trips.details.payAtBookingLegend")}
             </legend>

@@ -476,8 +476,9 @@ sand (light) / open ocean at depth (dark); **lagoon** (`--primary`) is the actio
 **coral** (`--accent`) is rationed for earned moments — its every sanctioned appearance is the
 **coral budget**,
 [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
-decision 11 (one table, at most one coral element per surface, a new moment takes a row in the
-same change); feedback colors (`--success`,
+decision 11 (one table, at most one earned coral moment per surface — Reef adds the drawn hand's
+single warm detail beside it, [20260901-diveday-reimagined](../architecture/decisions/20260901-diveday-reimagined.md) —
+and a new moment takes a row in the same change); feedback colors (`--success`,
 `--warning`, `--danger`) never carry meaning alone.
 
 **Where the palette actually stands.** AA is the bar, and the light palette does not clear it

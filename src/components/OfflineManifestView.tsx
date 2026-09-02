@@ -931,7 +931,7 @@ export function OfflineManifestView() {
         ) : (
           <div className="mt-6 rounded-3xl border border-border bg-surface-sunken p-8 text-center sm:p-10">
             <div
-              className="mx-auto grid size-12 place-items-center rounded-2xl bg-surface text-2xl"
+              className="mx-auto grid size-12 place-items-center rounded-inset bg-surface text-2xl"
               aria-hidden="true"
             >
               <DiveDayIcon name="empty" className="size-7 text-primary" />
@@ -982,7 +982,7 @@ export function OfflineManifestView() {
         />
         <div className="mt-6 rounded-3xl border border-border bg-surface-sunken p-8 text-center sm:p-10">
           <div
-            className="mx-auto grid size-12 place-items-center rounded-2xl bg-surface text-2xl"
+            className="mx-auto grid size-12 place-items-center rounded-inset bg-surface text-2xl"
             aria-hidden="true"
           >
             <DiveDayIcon name="empty" className="size-7 text-primary" />
@@ -1450,10 +1450,10 @@ export function OfflineManifestView() {
           <div
             className={
               crewMissing
-                ? "mt-3 rounded-xl border border-danger bg-danger/10 p-3 ring-1 ring-inset ring-danger/40"
+                ? "mt-3 rounded-inset border border-danger bg-danger/10 p-3 ring-1 ring-inset ring-danger/40"
                 : completeness.crewAccountedFor
-                  ? "mt-3 rounded-xl border border-success/40 bg-success/10 p-3"
-                  : "mt-3 rounded-xl border border-border-strong bg-surface-sunken p-3"
+                  ? "mt-3 rounded-inset border border-success/40 bg-success/10 p-3"
+                  : "mt-3 rounded-inset border border-border-strong bg-surface-sunken p-3"
             }
           >
             <p className={`text-sm font-bold${crewMissing ? " text-danger" : ""}`}>
@@ -1510,7 +1510,7 @@ export function OfflineManifestView() {
                       // now by import rather than by copy — see
                       // `OFFLINE_CREW_ROW_TONE` for why the shape differs and
                       // the hues do not.
-                      className={`rounded-xl px-3 py-2 text-sm ${
+                      className={`rounded-lg px-3 py-2 text-sm ${
                         crewTone ? OFFLINE_CREW_ROW_TONE[crewTone] : OFFLINE_CREW_ROW_TONE.awaiting
                       }`}
                     >
@@ -1863,7 +1863,7 @@ export function OfflineManifestView() {
                             {t("manifest.diverFactsSummary")}
                           </span>
                         </summary>
-                        <div className="mb-1 grid gap-2 rounded-xl border border-border/70 bg-surface-sunken/50 p-3 text-base">
+                        <div className="mb-1 grid gap-2 rounded-inset border border-border/70 bg-surface-sunken/50 p-3 text-base">
                           <p>
                             <span className="font-bold">
                               {t("shared.offlineManifest.single.emergencyContact")}
@@ -2208,7 +2208,7 @@ export function OfflineManifestView() {
           aria-labelledby="offline-phone-heading"
         >
           <details id="offline-phone-settings" className="group/offline-phone">
-            <summary className="group/summary flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-surface-sunken/70 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
+            <summary className="group/summary flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-surface-sunken/70 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
               <DisclosureCaret className="group-open/offline-phone:rotate-90" />
               <h2
                 id="offline-phone-heading"
@@ -2229,7 +2229,7 @@ export function OfflineManifestView() {
                 className="h-full w-full justify-start"
               />
               <AmbientContrastControl
-                className="h-full w-full rounded-xl border border-border bg-surface-sunken p-3"
+                className="h-full w-full rounded-inset border border-border bg-surface-sunken p-3"
                 copy={{
                   modeLabel: t("shared.boatMode.modeLabel"),
                   labelAuto: t("shared.boatMode.labelAuto"),

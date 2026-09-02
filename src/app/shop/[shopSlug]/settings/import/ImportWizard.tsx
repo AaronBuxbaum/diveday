@@ -356,7 +356,7 @@ export function ImportWizard({
           <Table
             flush
             minWidth="36rem"
-            shellClassName="mt-2 rounded-xl border border-border sm:mt-4"
+            shellClassName="mt-2 rounded-inset border border-border sm:mt-4"
           >
             <THead>
               <Th numeric>{copy.table.rowNumber}</Th>

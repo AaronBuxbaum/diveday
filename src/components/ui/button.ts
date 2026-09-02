@@ -137,8 +137,17 @@ const variants = {
  */
 const sizes = {
   sm: { x: "px-3", rest: "py-2 text-sm font-medium" },
-  md: { x: "px-4", rest: "py-2.5 text-sm font-medium" },
-  lg: { x: "px-5", rest: "py-2.5 text-sm font-medium" },
+  /**
+   * The default staff button, drawn as Reef ships it: 48px tall with a 16px
+   * label (ADR 20260901-diveday-reimagined's system sheet, "Buttons — 48px
+   * tall, 16px label"). The base's `min-h-11` stays the floor every *other*
+   * size clears; this one stands 4px above it so the label can be body-size
+   * without crowding the box, and so the desk's one primary reads at the same
+   * size as the dock's `boat` target minus the extra height. `sm` is the dense
+   * variant a table row or a chip row reaches for, unchanged at 44/14.
+   */
+  md: { x: "px-4", rest: "min-h-12 py-2.5 text-base font-medium" },
+  lg: { x: "px-5", rest: "min-h-12 py-2.5 text-base font-medium" },
   /** Marketing calls to action: reads at 16px and carries more weight. */
   cta: { x: "px-5", rest: "py-3 text-base font-semibold" },
   /**

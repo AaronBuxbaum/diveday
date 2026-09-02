@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import type { DiverTranslator } from "@/i18n/messages";
@@ -57,9 +58,7 @@ export function NextBoatCard({
       className="flex flex-col gap-4"
     >
       <div className="min-w-0">
-        <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">
-          {t("schedule.nextDeparture.eyebrow")}
-        </p>
+        <p className={EYEBROW_CLASS}>{t("schedule.nextDeparture.eyebrow")}</p>
         {/* The departure time is the figure a returning diver came to check,
             with the day reading as its caption (decision 3: numbers that lead
             render as figures). */}

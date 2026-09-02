@@ -59,7 +59,7 @@ describe("HeadCount", () => {
     // No coral and no illustration on a manifest or a roll call — both ADR
     // tables. The water is a fill, not a creature.
     const { container } = render(<HeadCount aboard={8} out={8} t={t} />);
-    expect(water().className).toContain("bg-primary-tint");
+    expect(water().className).toContain("bg-shallows");
     expect(container.innerHTML).not.toMatch(/accent/);
     expect(container.querySelector("svg")).toBeNull();
   });

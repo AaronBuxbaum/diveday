@@ -24,7 +24,8 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
  * brim by construction.
  *
  * Two rules from the ADR's tables, held here rather than remembered: the water
- * is the lagoon wash and never coral (no coral on a manifest or a roll call —
+ * is `shallows` — the token Reef minted for exactly this, "water fills that
+ * carry no fact" — and never coral (no coral on a manifest or a roll call —
  * the canvas's coral bubble at the brim was drawn for a surface that allows
  * one, and this is not it), and there is no drawing in it (no illustration on
  * a roll call either — a water level is a fill, not a creature).
@@ -66,7 +67,7 @@ export function HeadCount({
         <div
           aria-hidden="true"
           data-head-count-water
-          className="absolute inset-0 origin-bottom bg-primary-tint transition-transform duration-300 ease-out-soft"
+          className="absolute inset-0 origin-bottom bg-shallows transition-transform duration-300 ease-out-soft"
           style={{ transform: `scaleY(${fraction})` }}
         />
         {/* The figure sits over the water, not in it: the number is the fact

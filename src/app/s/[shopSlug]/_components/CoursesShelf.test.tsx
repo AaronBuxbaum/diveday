@@ -18,6 +18,8 @@ function course(n: number, overrides: Record<string, unknown> = {}) {
     heroImageAlt: `Course ${n}`,
     href: `/s/blue-mantis/courses/course-${n}`,
     price: "$195.00",
+    duration: null as string | null,
+    nextStart: null as string | null,
     ...overrides,
   };
 }
@@ -92,5 +94,26 @@ describe("a card says only what the shop wrote", () => {
     expect(item.textContent).toContain("Course 1");
     expect(item.textContent).not.toContain("$");
     expect(item.textContent).not.toMatch(/teaches/);
+  });
+});
+
+describe("the two facts under a card", () => {
+  it("says how long and when next, only when the shop has each", () => {
+    render(
+      <CoursesShelf
+        courses={[
+          course(1, { duration: "4 days", nextStart: "Next Sep 7" }),
+          course(2, { duration: "2 days" }),
+          course(3),
+        ]}
+        allCoursesHref="/s/blue-mantis/courses"
+        t={t}
+      />,
+    );
+    expect(screen.getByText("4 days · Next Sep 7")).toBeInTheDocument();
+    expect(screen.getByText("2 days")).toBeInTheDocument();
+    // A card with neither says nothing in their place.
+    const third = screen.getAllByRole("listitem")[2];
+    expect(third?.textContent).not.toMatch(/·/);
   });
 });

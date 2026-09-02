@@ -39,7 +39,7 @@ export function RoleOrientationCard({
   return (
     <section
       aria-labelledby="role-orientation-heading"
-      className="mb-10 rounded-2xl border border-primary/25 bg-primary/5 p-5 sm:p-6"
+      className="mb-10 rounded-panel border border-primary/25 bg-primary/5 p-5 sm:p-6"
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">

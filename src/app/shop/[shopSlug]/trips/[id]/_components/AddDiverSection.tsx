@@ -74,7 +74,7 @@ export function AddDiverSection({
       </FormStatus>
 
       {confirmMatches && confirmMatches.length > 0 ? (
-        <div className="border border-warning/25 bg-warning/10 rounded-xl p-4 mt-4 text-left">
+        <div className="border border-warning/25 bg-warning/10 rounded-inset p-4 mt-4 text-left">
           <div className="flex flex-col gap-2">
             <h3 className="font-semibold text-sm">{t("divers.page.confirmMatchesTitle")}</h3>
             <ul className="list-disc pl-5 space-y-1 text-sm text-muted">

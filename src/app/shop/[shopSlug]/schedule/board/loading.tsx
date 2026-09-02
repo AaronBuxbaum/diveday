@@ -33,7 +33,7 @@ export default function ScheduleBoardLoading() {
                   {[0, 1].map((entry) => (
                     <div
                       key={entry}
-                      className="h-20 rounded-xl border border-border bg-surface-sunken"
+                      className="h-20 rounded-inset border border-border bg-surface-sunken"
                     />
                   ))}
                 </div>

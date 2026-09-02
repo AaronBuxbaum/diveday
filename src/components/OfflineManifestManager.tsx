@@ -464,7 +464,7 @@ export function OfflineManifestManager({
         >
           <div
             role="alert"
-            className="pointer-events-auto max-w-2xl rounded-xl border border-danger/30 bg-danger-tint px-4 py-3 text-base font-semibold text-danger shadow-lg backdrop-blur"
+            className="pointer-events-auto max-w-2xl rounded-inset border border-danger/30 bg-danger-tint px-4 py-3 text-base font-semibold text-danger shadow-lg backdrop-blur"
           >
             {rejectedNotice}
           </div>
@@ -497,7 +497,7 @@ export function OfflineManifestManager({
         aria-labelledby="offline-heading"
       >
         <details className="group/phone">
-          <summary className="group/summary flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-2xl px-4 py-3 select-none transition-colors hover:bg-surface-sunken/70 focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
+          <summary className="group/summary flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-lg px-4 py-3 select-none transition-colors hover:bg-surface-sunken/70 focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
             <DisclosureCaret className="group-open/phone:rotate-90" />
             {/* A deliberate eyebrow rather than a section heading, which is a
                 scale `SectionCard`'s own `title` does not render. */}

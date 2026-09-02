@@ -5,7 +5,31 @@ import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { toneMark } from "@/components/ui/tone";
 
-export const EYEBROW_CLASS = "text-xs font-semibold tracking-[0.18em] text-primary uppercase";
+/**
+ * The eyebrow — "where you are", one line above the title. Reef's rung: 11px,
+ * bold, `+0.16em`, lagoon (ADR 20260901-diveday-reimagined's system sheet).
+ * `leading-4` pins the line box to 16px so `ShopPageHeaderSkeleton`'s `h-4`
+ * bar stands in for it exactly.
+ */
+export const EYEBROW_CLASS =
+  "text-[11px] leading-4 font-bold tracking-[0.16em] text-primary uppercase";
+
+/**
+ * The page's own name, Reef's title rung: 40px bold, tightened, in Geist —
+ * the display face was declined, so the display moment is made with the one
+ * face's own size and weight (ADR 20260901-diveday-reimagined, decision 1).
+ * `leading-[1.1]` gives a 44px line box, which the skeleton's `h-11` matches.
+ */
+export const PAGE_TITLE_CLASS =
+  "text-[2.5rem] leading-[1.1] font-bold tracking-[-0.02em] text-balance";
+
+/**
+ * One step up from the title, for the one page whose title is a greeting
+ * rather than a name: the shop home's "Good morning" (the board draws it at
+ * 44/700). Same 44px line box as the title, so the two share a skeleton.
+ */
+export const DISPLAY_TITLE_CLASS =
+  "text-[2.75rem] leading-none font-bold tracking-[-0.028em] text-balance";
 
 /**
  * The eyebrow-as-breadcrumb, for a header that is not `ShopPageHeader`.
@@ -56,6 +80,8 @@ export function ShopPageHeader({
   meta,
   actions,
   brand,
+  display = false,
+  titleFace = "app",
   /** "end" bottom-aligns actions with the title block, right for a static
    * button/print row. Use "start" when actions can grow much taller than the
    * title — an expandable form — so opening it doesn't drag the title down. */
@@ -82,6 +108,16 @@ export function ShopPageHeader({
     description?: string | null;
   };
   align?: "start" | "end";
+  /** The greeting rung (`DISPLAY_TITLE_CLASS`) instead of the title rung — the shop home only. */
+  display?: boolean;
+  /**
+   * `brand` sets the title in the shop's own display face — the trip's title
+   * and the course's title on the diver-facing pages (Harbor, ADR
+   * 20260901-diveday-reimagined, decision 2: "the display face labels headings
+   * only"). The staff surfaces that share this header never pass it; with no
+   * `BrandStyle` above, the utility resolves to Geist anyway.
+   */
+  titleFace?: "app" | "brand";
 }) {
   const hasBrand = Boolean(brand?.logoUrl || brand?.tagline || brand?.description);
   return (
@@ -99,7 +135,7 @@ export function ShopPageHeader({
                 <img
                   src={brand.logoUrl}
                   alt=""
-                  className="size-14 shrink-0 rounded-xl border border-border bg-surface object-cover"
+                  className="size-14 shrink-0 rounded-inset border border-border bg-surface object-cover"
                 />
               ) : null}
               <div className="min-w-0">
@@ -129,7 +165,7 @@ export function ShopPageHeader({
               names ("Two-Tank Reef — Molasses & French"), and an even two
               lines reads better than a full line plus one orphaned word. */}
           <h1
-            className={`text-4xl font-semibold tracking-tight text-balance${eyebrow ? " mt-2" : ""}`}
+            className={`${titleFace === "brand" ? "font-brand-display " : ""}${display ? DISPLAY_TITLE_CLASS : PAGE_TITLE_CLASS}${eyebrow ? " mt-2" : ""}`}
           >
             {title}
           </h1>
@@ -156,8 +192,9 @@ export function ShopPageHeader({
  * day.
  *
  * The numbers are read off the header above and must move with it:
- *   - `h-4`  — the eyebrow's `text-xs` line box (0.75rem text, 1rem leading)
- *   - `h-10` — the `<h1>`'s `text-4xl` line box (2.25rem text, 2.5rem leading)
+ *   - `h-4`  — the eyebrow's line box (`EYEBROW_CLASS` pins `leading-4`)
+ *   - `h-11` — the `<h1>`'s line box: 40px at `leading-[1.1]`, or the home's
+ *     44px at `leading-none` — both 44px, by design, so one bar serves both
  *   - `h-6`  — the description `<p>`'s unsized line box (1rem × 1.5)
  *   - `mt-2` after the eyebrow and before the description, `mt-3` before meta,
  *     and `mb-8` on the wrapper — all straight off `<header className="mb-8">`.
@@ -185,7 +222,7 @@ export function ShopPageHeaderSkeleton({
   return (
     <div className="mb-8">
       {eyebrow ? <div className="h-4 w-24 rounded bg-surface-sunken" /> : null}
-      <div className={`h-10 ${titleWidth} rounded bg-surface-sunken${eyebrow ? " mt-2" : ""}`} />
+      <div className={`h-11 ${titleWidth} rounded bg-surface-sunken${eyebrow ? " mt-2" : ""}`} />
       {description ? (
         <div className={`mt-2 h-6 ${descriptionWidth} rounded bg-surface-sunken`} />
       ) : null}
@@ -279,7 +316,7 @@ export function ShopStat({
       // card's spelling: a stat tile and a section card are the same object
       // (docs/design/forms-and-controls.md), so neither can drift from the
       // other. `inset` is the sunken, chrome-less variant and has none of it.
-      className={inset ? "rounded-xl bg-surface-sunken px-4 py-3" : sectionCardClass()}
+      className={inset ? "rounded-inset bg-surface-sunken px-4 py-3" : sectionCardClass()}
     >
       <Label
         className={inset ? "text-xs font-medium text-muted" : "text-sm font-medium text-muted"}
@@ -386,7 +423,7 @@ export function ShopNotice({
   return (
     <div
       role={role}
-      className={`rounded-xl border px-4 py-3 text-sm font-medium ${toneClass} ${className}`}
+      className={`rounded-inset border px-4 py-3 text-sm font-medium ${toneClass} ${className}`}
     >
       {mark ? <StatusMark variant={mark} className="me-1" /> : null}
       {children}

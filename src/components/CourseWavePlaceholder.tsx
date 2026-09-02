@@ -1,12 +1,15 @@
+import { Swell } from "@/components/illustration/Swell";
+
 /**
  * **The face a course card wears when the shop has not given it a photo.**
  *
  * The storefront's courses shelf (ADR 20260827-clearwater-surface-language,
  * decision 8) shows three cards, and `courses.heroImageUrl` is optional — most
  * shops fill one or two and leave the rest. The alternatives were a grey box, a
- * stock photograph of somebody else's reef, or this: one drawn swell in the
- * shop's own primary tint, so a card with no picture still reads as a card
- * rather than as a gap where a picture failed to load.
+ * stock photograph of somebody else's reef, or this: the swell, drawn in the
+ * hand every other drawing in the product uses (`illustration/Swell.tsx`) over
+ * two soft bands of the shop's own primary tint, so a card with no picture
+ * still reads as a card rather than as a gap where a picture failed to load.
  *
  * Two rules it keeps. **Drawn, never emoji** — the ADR's accessibility carry-over
  * for anything new. And **the primary tint only**: coral is rationed by
@@ -21,7 +24,7 @@ export function CourseWavePlaceholder({ className = "" }: { className?: string }
   return (
     <div
       aria-hidden="true"
-      className={`flex items-end overflow-hidden bg-primary-tint ${className}`.trim()}
+      className={`relative flex items-end overflow-hidden bg-primary-tint ${className}`.trim()}
     >
       <svg
         viewBox="0 0 240 96"
@@ -39,15 +42,8 @@ export function CourseWavePlaceholder({ className = "" }: { className?: string }
           fill="currentColor"
           opacity="0.26"
         />
-        <path
-          d="M0 60c26-16 48-16 72 0s46 16 72 0 46-16 72 0"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          opacity="0.5"
-        />
       </svg>
+      <Swell className="absolute inset-x-0 top-[52%] h-[26%] w-full text-primary opacity-60" />
     </div>
   );
 }

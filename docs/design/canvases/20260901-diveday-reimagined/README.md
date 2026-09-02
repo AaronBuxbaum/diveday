@@ -97,9 +97,15 @@ The boards are arguments, not the funnel. Two things the pick corrects rather th
 
 The pick was made 2026-09-01 (H-64): Reef for the staff app with Geist kept, Harbor for every
 diver-facing surface, the embed catalogue as drawn. The ADR's slice table is the sequence; this table
-is the record of what has landed. **Two things on the boards are not what ships**: Fraunces (the
-owner kept Geist as the only face, so every display moment is Geist at weight and size), and the
-door order on Tide's and Reef's switching boards (the demo leads).
+is the record of what has landed. **Five things on the boards are not what ships**: Fraunces (the
+owner kept Geist as the only face, so every display moment is Geist at weight and size); the
+door order on Tide's and Reef's switching boards (the demo leads); the embed generator's third
+look (DiveDay dark — the app has no forced-scheme mechanism, so a widget follows the visitor's
+scheme) and its "one course" / "a named set" choices (filed, not half-drawn); the badge wall's
+shop-set order (the wall renders in the catalogue's order); and the home's greeting mark (the
+bubble trail beside "Good morning" — the ADR sanctions the hand as a departure's mark and in the
+three moments, and the greeting is neither). One thing ships that no board drew: the wreck, the
+hand's seventh drawing, because Key Largo dives one every week.
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
@@ -115,6 +121,7 @@ door order on Tide's and Reef's switching boards (the demo leads).
 | 13h — the count that fills | shipped | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/HeadCount.tsx` | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/HeadCount.test.tsx` |
 | 13i — the diver's day, drawn | shipped | `src/app/ready/[token]/_components/AfterState.tsx` | `src/app/ready/[token]/_components/AfterState.test.tsx` |
 | 13j — the night palette | shipped | `src/app/globals.css` | `src/lib/night-palette.test.ts` |
+| the detail pass (2026-09-02) — the sheet's rungs (radius 10/18/28, rows 52, buttons 48/16, the type ladder, the water band), the rest of the hand (turtle, parrotfish, the swell as one component, the night tile, the coral cap), the home's four missing parts (glyph, dial, horizons, "First thing"), Harbor's headings, about line, boats' sentences and brand preview, and the embed catalogue's promises (payment handoff, button contrast, one credit) | shipped | `src/components/illustration/illustration.test.ts` | `src/components/ui/card.test.tsx`, `src/lib/embed-loader.test.ts` |
 
 ## Working on it
 

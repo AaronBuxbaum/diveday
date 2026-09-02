@@ -579,6 +579,13 @@ export async function bookSpot(
   });
   if (checkoutUrl) {
     revalidatePath(base);
+    // Inside the embed the frame stays put: Stripe's hosted page refuses to be
+    // framed, so a redirect there from a shop's iframe is a blank box at the
+    // exact moment the diver reached for their card. The session exists —
+    // the confirmation renders it as a `target="_top"` door out to the real
+    // page (ADR 20260901-diveday-reimagined, decision 2: "payment still opens
+    // the real page, stated").
+    if (embed) redirect(`${landing}&pay=due`);
     redirect(checkoutUrl);
   }
   revalidateAndRedirect(base, landing);

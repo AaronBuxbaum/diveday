@@ -55,6 +55,13 @@ describe("the embed grammar", () => {
     ).toBe("https://diveday.example/s/blue-mantis/embed/grid");
   });
 
+  it("tells the frame when the host page carries the credit, and only then", () => {
+    expect(
+      embedFrameUrl(ORIGIN, "blue-mantis", "courses", DEFAULT_EMBED_OPTIONS, { credit: true }),
+    ).toBe("https://diveday.example/s/blue-mantis/embed/courses?credit=host");
+    expect(embedFrameUrl(ORIGIN, "blue-mantis", "courses")).not.toContain("credit");
+  });
+
   it("sends a button to the storefront, or to the one departure chosen", () => {
     expect(embedTargetUrl(ORIGIN, "blue-mantis")).toBe("https://diveday.example/s/blue-mantis");
     expect(embedTargetUrl(ORIGIN, "blue-mantis", { look: "site", lang: "auto", show: "t1" })).toBe(

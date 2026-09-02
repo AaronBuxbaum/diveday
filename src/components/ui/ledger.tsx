@@ -55,6 +55,8 @@ const GROUP_LABEL_INK = {
   primary: "text-primary",
   success: "text-success",
   warning: "text-warning-strong",
+  /** The one label set in danger ink: the home's "First thing" panel, naming the row that blocks a boat. */
+  danger: "text-danger",
 } as const;
 
 /** Which ink a group label is set in. `muted` unless the group has a state to carry. */
@@ -352,7 +354,11 @@ export function LedgerRow({
   children: ReactNode;
   /** The one fix (a link or ghost button), a fact, or a chevron. */
   trailing?: ReactNode;
-  /** `lg` (min-h-14) for the counter's queue and the horizon rows. */
+  /**
+   * `md` is 52px, Reef's floor for a row ("rows never tighter than 52 tall" —
+   * the system sheet's spacing rung between 32 and 84); `lg` (56px) for the
+   * counter's queue and the horizon rows. It read 48 until 2026-09-02.
+   */
   size?: "md" | "lg";
   /** Below `sm`, drop the sentence to its own full-width line. See above. */
   stacked?: boolean;
@@ -367,7 +373,7 @@ export function LedgerRow({
   return (
     <Tag
       className={`relative flex items-center gap-3 border-t border-border last:border-b ${
-        size === "lg" ? "min-h-14" : "min-h-12"
+        size === "lg" ? "min-h-14" : "min-h-13"
       } ${stacked ? "max-sm:flex-wrap max-sm:py-2" : ""} ${href ? "transition-colors hover:bg-surface-sunken/60 has-[a:focus-visible]:bg-surface-sunken/60" : ""} ${className}`
         .replace(/\s+/g, " ")
         .trim()}

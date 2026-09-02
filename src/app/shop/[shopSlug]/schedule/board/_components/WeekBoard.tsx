@@ -166,7 +166,7 @@ export function AllUnpricedNotice({
 }) {
   return (
     <p
-      className={`mt-4 rounded-xl border border-warning/40 bg-surface p-4 text-sm font-medium text-warning ${className}`.trim()}
+      className={`mt-4 rounded-inset border border-warning/40 bg-surface p-4 text-sm font-medium text-warning ${className}`.trim()}
     >
       {children}
     </p>
@@ -367,7 +367,7 @@ export function WeekBoard({
           <div key={span.tripId} className="grid grid-cols-7">
             <div
               style={{ gridColumn: `${span.startColumn} / span ${span.columnSpan}` }}
-              className="mx-2 mb-1.5 flex items-center gap-3 rounded-xl border border-primary/25 bg-primary-tint px-3 py-2"
+              className="mx-2 mb-1.5 flex items-center gap-3 rounded-inset border border-primary/25 bg-primary-tint px-3 py-2"
             >
               {/* `flex-1` from a zero basis, so the title is the part that
                   gives way. Its own words are the ones repeated on the days
@@ -444,11 +444,14 @@ export function WeekBoard({
                         (design/principles.md #10). A returned boat is set
                         down in muted ink and the word "Sailed" in its meta —
                         it needs no fill of its own to say so twice. */}
-                    <div className="rounded-xl px-2 py-2 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface">
+                    <div className="rounded-lg px-2 py-2 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface">
                       {/* The drawn site mark leads the cell (ADR
                           20260901-diveday-reimagined, slice 13f): the same
                           hand as the home spine's rail, at the board's size. */}
-                      <SiteMark mark={entry.mark} size="sm" className="mb-1.5" />
+                      {/* No coral on a board of twenty marks: the budget is one
+                          creature's detail per surface, and this surface has no
+                          one boat to give it to (`SiteMark`'s `coral`). */}
+                      <SiteMark mark={entry.mark} size="sm" coral={false} className="mb-1.5" />
                       <div className="flex items-start justify-between gap-1">
                         {/* Time leads the entry, so it is set on the ramp's
                             row-title step rather than under it — it was the

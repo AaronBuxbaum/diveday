@@ -586,7 +586,7 @@ export default async function CheckInPage({
                 <h3 className="text-lg font-semibold">{t("checkIn.otherDiversHeading")}</h3>
                 <p className="text-sm text-muted">{t("checkIn.otherDiversDescription")}</p>
               </div>
-              <ul className="divide-y divide-border rounded-xl border border-border bg-surface">
+              <ul className="divide-y divide-border rounded-inset border border-border bg-surface">
                 {otherMatchingDivers.map((diver) => (
                   <li
                     key={diver.id}
@@ -633,7 +633,7 @@ export default async function CheckInPage({
           ) : null}
 
           {query ? (
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border/80 bg-surface-sunken/40 p-4">
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-inset border border-border/80 bg-surface-sunken/40 p-4">
               <div className="min-w-0">
                 <p className="text-sm font-medium">{t("checkIn.addWalkInAction", { query })}</p>
               </div>

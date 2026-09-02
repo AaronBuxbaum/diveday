@@ -34,7 +34,9 @@ export default function ReadyLoading() {
                 <div className="size-5 shrink-0 rounded-full bg-surface-sunken" />
                 <div className="h-5 w-40 max-w-full rounded bg-surface-sunken" />
               </div>
-              {i === 2 ? <div className="mt-4 h-40 w-full rounded-xl bg-surface-sunken" /> : null}
+              {i === 2 ? (
+                <div className="mt-4 h-40 w-full rounded-inset bg-surface-sunken" />
+              ) : null}
             </div>
           ))}
         </div>

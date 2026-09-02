@@ -49,7 +49,7 @@ export function ShopReviews({
   return (
     <section aria-labelledby="shop-reviews" className={className || undefined}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id="shop-reviews" className="text-lg font-semibold tracking-tight">
+        <h2 id="shop-reviews" className="font-brand-display text-lg font-semibold tracking-tight">
           {t("reviews.sectionTitle")}
         </h2>
         <Link

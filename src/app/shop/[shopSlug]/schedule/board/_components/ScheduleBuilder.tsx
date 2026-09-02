@@ -452,7 +452,7 @@ function AddPanel({
       as="form"
       action={onAdd}
       columns={1}
-      className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
+      className="mt-3 rounded-inset border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
     >
       {requestPlan ? (
         /* Pinned under the chrome bar, not at a hand-picked 16px: `top-4` put
@@ -1086,7 +1086,7 @@ function RemovePanel({
   return (
     <form
       action={action}
-      className="mt-3 rounded-xl border border-danger/30 bg-danger/5 p-4 animate-scale-in"
+      className="mt-3 rounded-inset border border-danger/30 bg-danger/5 p-4 animate-scale-in"
     >
       <input type="hidden" name="tripId" value={trip.id} />
       <p className="text-sm" role="alert">
@@ -1129,7 +1129,7 @@ function MovePanel({
       as="form"
       action={action}
       columns={2}
-      className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
+      className="mt-3 rounded-inset border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
     >
       <input type="hidden" name="tripId" value={trip.id} />
       <Field
@@ -1190,7 +1190,7 @@ function CopyPanel({
       as="form"
       action={action}
       columns={2}
-      className="mt-3 rounded-xl border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
+      className="mt-3 rounded-inset border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
     >
       <input type="hidden" name="tripId" value={trip.id} />
       <Field label={copy.copyTo} description={copy.copyDescription}>
@@ -1543,7 +1543,7 @@ export function ScheduleBuilder({
           still read the board, so it says whose job this is rather than
           silently omitting every add control. */}
       {canConfigure ? null : (
-        <p className="mb-3 rounded-xl border border-border bg-surface-sunken/50 p-4 text-sm text-muted">
+        <p className="mb-3 rounded-inset border border-border bg-surface-sunken/50 p-4 text-sm text-muted">
           {copy.viewOnlyNotice}
         </p>
       )}
@@ -1624,7 +1624,7 @@ export function ScheduleBuilder({
             {canConfigure && weekAction ? (
               <>
                 {weekAction.kind === "menu" ? (
-                  <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface-sunken/50 p-3">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 rounded-inset border border-border bg-surface-sunken/50 p-3">
                     <p className="text-sm font-medium">{weekAction.entry.ref}</p>
                     <div className="ms-auto flex items-center gap-1">
                       <button
@@ -1789,7 +1789,7 @@ export function ScheduleBuilder({
                     // tint says "this row is a thing" without a box saying it
                     // permanently (design/principles.md #10). The open panels
                     // below keep their own bordered boxes — a form is a form.
-                    className="group/trip -mx-3 rounded-xl px-3 py-4 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface sm:-mx-4 sm:px-4"
+                    className="group/trip -mx-3 rounded-lg px-3 py-4 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface sm:-mx-4 sm:px-4"
                   >
                     {/* Two columns, not six loose flex children. The time, the
                         title block, the badges and the buttons all used to sit

@@ -54,5 +54,6 @@
   "requestPlanBoatRecommendationOther": "Suggested boat: {boatName} ({capacity} seats)",
   "requestPlanBoatExceeded": "Group exceeds largest boat capacity",
   "requestPlanCrewSuggestionOne": "Bring {divemasters} divemaster — your {ratio}:1 target.",
-  "requestPlanCrewSuggestionOther": "Bring {divemasters} divemasters — your {ratio}:1 target."
+  "requestPlanCrewSuggestionOther": "Bring {divemasters} divemasters — your {ratio}:1 target.",
+  "descriptionLabel": "One line about the boat, for your public page (optional)"
 }

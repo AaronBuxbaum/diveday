@@ -75,7 +75,9 @@ import { type ReactNode, useId } from "react";
  *
  * ## Headings: what size, and where one goes
  *
- * `title` renders the staff type scale (`text-lg`, or `text-base` for a card
+ * `title` renders the staff type scale (`text-2xl` — Reef's section rung,
+ * drawn 26/600 on the system sheet and set in Geist at the ramp's nearest
+ * step — or `text-base` for a card
  * inside a group that already owns the `h2`). The **marketing pages keep their
  * own scale at the call site** and pass no `title` — their headings sit under a
  * 36px display type where `text-base` would turn a page's one checkable proof
@@ -96,7 +98,7 @@ import { type ReactNode, useId } from "react";
  * - **Yes**: the body is plural — sibling cards, a grid of object cards, a
  *   `padding="none"` shell of divided rows, anything that swaps to an
  *   `EmptyState`. The heading stands above as a bare
- *   `<h2 className="text-lg font-semibold">`, the *same* scale a card's own
+ *   `<h2 className="text-2xl font-semibold tracking-tight">`, the *same* scale a card's own
  *   `h2` gets, because a section speaks at one volume whether its heading sits
  *   inside one card or above five. Each card under it steps down with
  *   `titleAs="h3"`, or carries the object's own name.
@@ -154,7 +156,7 @@ type SectionCardElement = "section" | "div" | "article" | "aside" | "ul" | "li" 
  * `font-medium`, bare `font-semibold` — is gone.
  */
 const TITLE_CLASS = {
-  h2: "text-lg font-semibold",
+  h2: "text-2xl font-semibold tracking-tight",
   h3: "text-base font-semibold",
 } as const;
 

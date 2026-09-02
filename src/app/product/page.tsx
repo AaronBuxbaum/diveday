@@ -357,7 +357,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               <p className="mt-5 text-lg leading-8 text-muted">
                 {t("marketing.product.dockDescription")}
               </p>
-              <p className="mt-5 rounded-xl border border-border bg-surface-sunken p-4 text-sm leading-6 text-muted">
+              <p className="mt-5 rounded-inset border border-border bg-surface-sunken p-4 text-sm leading-6 text-muted">
                 {t("marketing.product.dockNote")}
               </p>
             </div>

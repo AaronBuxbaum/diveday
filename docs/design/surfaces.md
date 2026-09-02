@@ -33,6 +33,13 @@ So an entry here is the index; the constraint lives beside the code it constrain
 
 ### The shop home — `/shop/[shopSlug]`
 
+**Reef, 2026-09-02** ([ADR 20260901-diveday-reimagined](../architecture/decisions/20260901-diveday-reimagined.md)):
+the greeting is the one display moment on a staff surface (44/700, `ShopPageHeader`'s `display`);
+the page top is the water band; every work row leads with its glyph; the head count is a dial in
+`shallows`; the next boat's site mark carries the surface's one coral detail; the "First thing"
+panel lifts the next boat's first blocking door above the spine; the morning's all-clear line
+carries the green turtle; the two horizons are two tideline panels side by side.
+
 - **One idea:** the work. What needs this shop today, in the order the day happens
   (ADR 20260720-today-work-queue; recomposed by
   [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
@@ -57,6 +64,9 @@ Enforced beside the code: `DaySpine.tsx` and `DayStation.tsx` defer to the ADR b
 `RoleOrientationCard.test.tsx` fails if the orientation box out-ranks the work.
 
 ### The trip page — `/shop/[shopSlug]/trips/[id]`
+
+**Reef, 2026-09-02:** the water band sits behind this header too — a wash, not a drawing. The
+manifest beneath it keeps neither drawing nor coral (`illustration.test.ts`).
 
 **Built 2026-08-29** — ADR
 [20260827-the-departure-is-two-working-surfaces](../architecture/decisions/20260827-the-departure-is-two-working-surfaces.md)
@@ -84,6 +94,10 @@ the roster's actions or deep links.
 
 ### The boat manifest — `/shop/[shopSlug]/trips/[id]/manifest`
 
+**Reef, 2026-09-02:** no drawing and no coral, mechanically — `src/components/illustration/illustration.test.ts`
+walks `src/app` and `src/components` (the offline manifest lives in the second) for both. The
+roll call's glass fills with `shallows`, the token minted for a fill that carries no fact.
+
 **Built** — same ADR and canvas, slice 5a, delivered 2026-08-27
 ([shipped.md](../product/shipped.md#the-boat-manifest-becomes-an-instrument-delivered-2026-08-27)).
 The design's whole argument is that this surface is worked *on a boat*, one-handed and wet, so its
@@ -108,6 +122,9 @@ either.
 
 ### The schedule board — `/shop/[shopSlug]/schedule/board`
 
+**Reef, 2026-09-02:** every departure's site mark, drawn in the line alone — the board has no one
+boat to give the coral detail to, so none carries it.
+
 **Shipped 2026-08-28 (desktop only)** — slice 6e of ADR
 [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
 drawn in [its canvas](canvases/20260827-clearwater-surface-language/README.md). The stream stays
@@ -124,6 +141,9 @@ below `xl` (1280px), on tablets and phones.
   stream because a seven-column grid has no honest 390px form.
 
 ### Settings — `/shop/[shopSlug]/settings`
+
+**Harbor, 2026-09-02:** the brand fields end in a preview of the brand as it reads by day and at
+night (`BrandPreview`), and the contrast note reports whichever scheme moved the colour.
 
 **Shipped 2026-08-28** (slice 6g) — same ADR and canvas. The phone keeps grouped lists.
 
@@ -166,6 +186,11 @@ below `xl` (1280px), on tablets and phones.
   ashore.
 
 ### The public schedule — `/s/[shopSlug]`
+
+**Harbor, 2026-09-02:** every heading the diver meets is in the shop's face — the name in the bar,
+the four sections, each boat's name — and the fact beneath each stays in Geist. The hero carries
+the shop's about line (`shops.description`); the boats block carries the shop's own sentence per
+hull; the courses shelf says how long and when next; the footer names DiveDay once.
 
 **Shipped 2026-08-28** (slice 6i) — same ADR and canvas. Conversion surface; gets the
 `conversion-reviewer` pass. **Redrawn as Harbor (ADR 20260901-diveday-reimagined, slice 13c, shipped 2026-09-01):** the same composition in the shop's own brand — its colour, display face, hero

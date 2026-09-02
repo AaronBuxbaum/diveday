@@ -185,7 +185,7 @@ export function DemoBanner({
                 return (
                   <div
                     key={role.id}
-                    className={`flex flex-col justify-between rounded-xl border bg-surface p-4 transition-all ${
+                    className={`flex flex-col justify-between rounded-inset border bg-surface p-4 transition-all ${
                       isActive
                         ? "border-primary shadow-sm ring-1 ring-primary/25"
                         : "border-border hover:border-primary/30 hover:shadow-xs"

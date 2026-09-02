@@ -118,7 +118,7 @@ export function LanguagePicker({
       </button>
       {mounted ? (
         <div
-          className={`absolute top-full right-0 z-10 mt-1 min-w-40 rounded-xl border border-border bg-surface p-2 shadow-lg ${closing ? "animate-scale-out" : "animate-scale-in"}`}
+          className={`absolute top-full right-0 z-10 mt-1 min-w-40 rounded-inset border border-border bg-surface p-2 shadow-lg ${closing ? "animate-scale-out" : "animate-scale-in"}`}
         >
           <GroupLabel className="px-2">{copy.heading}</GroupLabel>
           <div className="mt-1">

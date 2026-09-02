@@ -252,7 +252,13 @@ export function AfterState({
           brand while a refusal never is. */}
       <BrandStyle brandColor={shop.brandColor} brandDisplayFont={shop.brandDisplayFont} />
       {celebrate ? (
-        <EarnedMoment as="h1" eyebrow={shop.name} title={greeting} className="print:hidden">
+        <EarnedMoment
+          as="h1"
+          eyebrow={shop.name}
+          title={greeting}
+          titleClassName="font-brand-display"
+          className="print:hidden"
+        >
           <p className="text-base">
             {trip.title} · {when}
           </p>
@@ -260,7 +266,9 @@ export function AfterState({
       ) : (
         <header className="print:hidden">
           <p className={EYEBROW_CLASS}>{shop.name}</p>
-          <h1 className={`mt-2 ${SHELL_TITLE_CLASS} text-balance`}>{greeting}</h1>
+          <h1 className={`font-brand-display mt-2 ${SHELL_TITLE_CLASS} text-balance`}>
+            {greeting}
+          </h1>
           <p className="mt-1 text-base text-muted">
             {trip.title} · {when}
           </p>
@@ -365,7 +373,7 @@ export function AfterState({
           {photos.length ? (
             <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {photos.map((image) => (
-                <li key={image.id} className="overflow-hidden rounded-xl border border-border">
+                <li key={image.id} className="overflow-hidden rounded-inset border border-border">
                   <div className="relative aspect-square w-full">
                     {/* Diver photos always come from the blob store
                         (storeRecapImage), so the remotePatterns entry in

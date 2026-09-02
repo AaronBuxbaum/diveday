@@ -34,7 +34,7 @@ export default function NewDiveSiteLoading() {
           <div className="hidden lg:block">
             <div className="flex flex-col gap-0.5">
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((entry) => (
-                <div key={entry} className="h-11 rounded-xl bg-surface-sunken" />
+                <div key={entry} className="h-11 rounded-inset bg-surface-sunken" />
               ))}
             </div>
           </div>
