@@ -1,5 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { nowMs } from "@/lib/clock";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
 import { seededShopContext } from "@/test/db";
@@ -468,12 +468,13 @@ describe("what the retry queue is allowed to hold", () => {
     // The state a worker that died between claiming a row and writing its
     // outcome leaves behind. Nothing used to move it back: the candidate query
     // only ever looked for `queued`, so the row — and its payload — sat there
-    // for good.
+    // for good. Twenty minutes past its lock, which is well beyond the grace
+    // period a marginally-late worker gets.
     await db
       .update(notificationSendQueue)
       .set({
         status: "processing",
-        lockedUntil: new Date(nowMs() - 60_000),
+        lockedUntil: new Date(nowMs() - 20 * 60_000),
         nextAttemptAt: new Date(0),
       })
       .where(eq(notificationSendQueue.shopId, shop.id));
@@ -504,6 +505,93 @@ describe("what the retry queue is allowed to hold", () => {
       .set({
         status: "processing",
         lockedUntil: new Date(nowMs() + 5 * 60_000),
+        nextAttemptAt: new Date(0),
+      })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+
+    await expect(drainNotificationRetries(db, { provider: failsRetryably })).resolves.toMatchObject(
+      { scanned: 0 },
+    );
+  });
+
+  it("touches nothing at all when there is no key to open anything with", async () => {
+    const { db, shop } = await seededShopContext();
+    await sendNotification(db, linkBearing(shop.id, "password_reset_request"), failsRetryably);
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0) })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+
+    // The whole reason the pass bails before claiming anything. Every terminal
+    // write in the drain is genuinely terminal — nothing moves a `failed` row
+    // back to `queued` — so a pass that ran with a rotated or unset key would
+    // claim every due row, fail to open it, and park the lot `failed` for good:
+    // every pending waiver link, password reset and staff invite destroyed by
+    // one tick of a misconfigured deploy.
+    vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
+    try {
+      await expect(drainNotificationRetries(db, { provider: failsRetryably })).resolves.toEqual({
+        scanned: 0,
+        sent: 0,
+        queued: 0,
+        failed: 0,
+      });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+
+    const [row] = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    // Untouched: still queued, no attempt burned, payload intact. Restoring the
+    // key is a recovery rather than an autopsy.
+    expect(row).toMatchObject({ status: "queued", attempts: 0 });
+    expect(row?.payloadSealed).toMatch(/^v1\./);
+  });
+
+  it("keeps no personal data on a row that has reached a terminal state", async () => {
+    const { db, shop } = await seededShopContext();
+    await sendNotification(db, linkBearing(shop.id, "email_verification"), failsRetryably);
+    await db
+      .update(notificationSendQueue)
+      .set({ nextAttemptAt: new Date(0) })
+      .where(eq(notificationSendQueue.shopId, shop.id));
+
+    await drainNotificationRetries(db, {
+      provider: {
+        async send() {
+          return { status: "sent", providerMessageId: "done" };
+        },
+      },
+    });
+
+    const [row] = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    // The handles go with the payload. Nothing prunes this table, so a `sent`
+    // row that kept its recipient would keep it forever — and before the
+    // handles existed a terminal row held nothing at all. That property is
+    // restored here rather than quietly traded away.
+    expect(row).toMatchObject({
+      status: "sent",
+      payloadSealed: null,
+      recipientEmail: null,
+      bookingId: null,
+    });
+  });
+
+  it("does not race a worker whose lock lapsed a moment ago", async () => {
+    const { db, shop } = await seededShopContext();
+    await sendNotification(db, linkBearing(shop.id, "email_verification"), failsRetryably);
+    // One minute past its lock: far more likely mid-send than dead, and the
+    // cost of guessing wrong is the diver receiving the same message twice.
+    await db
+      .update(notificationSendQueue)
+      .set({
+        status: "processing",
+        lockedUntil: new Date(nowMs() - 60_000),
         nextAttemptAt: new Date(0),
       })
       .where(eq(notificationSendQueue.shopId, shop.id));

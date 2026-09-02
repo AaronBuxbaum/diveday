@@ -1,11 +1,12 @@
 import { and, asc, count, desc, eq, gte, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
-import { nowDate } from "@/lib/clock";
+import { nowDate, nowMs } from "@/lib/clock";
 import {
   DAILY_TICK_INTERVAL_MS,
   dailyPassesWithin,
   nextDailyTickAtOrAfter,
 } from "@/lib/cron-schedule";
+import { log } from "@/lib/log";
 import {
   type Notification,
   type NotificationDelivery,
@@ -35,6 +36,16 @@ import {
 } from "./schema";
 
 const RETRY_QUEUE_LIMIT = 100;
+
+/** How long a claimed row is held before another pass may take it back. */
+const LOCK_MS = 10 * 60 * 1_000;
+
+/**
+ * Slack on top of the lock before a `processing` row is handed back. A worker
+ * whose lock lapsed one second ago is far more likely to be mid-send than dead,
+ * and the cost of guessing wrong is a diver receiving the same message twice.
+ */
+const LOCK_GRACE_MS = 5 * 60 * 1_000;
 
 /**
  * How long a transient send failure keeps being retried before it is parked
@@ -102,9 +113,13 @@ function retryDueAt(delivery: Extract<NotificationDelivery, { status: "failed" }
 function queueSealingKey(where: "queue" | "drain"): SecretKey | null {
   const result = secretKeyFromEnvironment();
   if (result.status === "ok") return result.key;
-  console.error("Notification retry queue cannot seal or open its payload", {
+  // Through `log()`, not `console.error`: only lines written this way are
+  // buffered to CloudWatch, and only a `$.event` code can be counted by a
+  // metric filter and alarmed on (`infra/lib/observability.ts`). This is the
+  // one signal that says a deployment is dropping every retryable
+  // notification, so stdout alone is not where it belongs.
+  log("notification.queue_seal_unavailable", "error", {
     where,
-    key: "SECRET_ENCRYPTION_KEY",
     reason: result.status === "unset" ? "unset" : result.reason,
   });
   return null;
@@ -120,7 +135,7 @@ function queueSealingKey(where: "queue" | "drain"): SecretKey | null {
  * (`sealed_payload_unreadable`), because throwing the notification away on a
  * key rotation is exactly the silent loss this whole queue exists to prevent.
  */
-export function openQueuedPayload(sealed: string, key: SecretKey): Notification | null {
+function openQueuedPayload(sealed: string, key: SecretKey): Notification | null {
   const plaintext = openSecret(sealed, key);
   if (plaintext === null) return null;
   try {
@@ -335,6 +350,21 @@ export async function drainNotificationRetries(
   options: { now?: Date; limit?: number; provider?: NotificationProvider } = {},
 ): Promise<NotificationRetrySummary> {
   const now = options.now ?? nowDate();
+  // Resolved before anything is claimed, and a `null` ends the pass having
+  // touched nothing.
+  //
+  // This is not a nicety. Every terminal write below is genuinely terminal —
+  // nothing anywhere moves a `failed` row back to `queued` — so a pass that ran
+  // with an unset or rotated key would claim every due row, fail to open it,
+  // and park the lot `failed` for good: every pending waiver link, password
+  // reset, staff invite and booking confirmation destroyed by one tick of a
+  // misconfigured deploy. Returning here is what makes a restored key a
+  // recovery rather than an autopsy, and it costs nothing — a pass with no key
+  // could not have sent anything anyway.
+  const key = queueSealingKey("drain");
+  const summary: NotificationRetrySummary = { scanned: 0, sent: 0, queued: 0, failed: 0 };
+  if (!key) return summary;
+
   // A worker that died between claiming a row and writing its outcome left it
   // `processing` with a lock that has since lapsed, and nothing anywhere put it
   // back: the candidate query below only ever looked for `queued`. That is two
@@ -348,7 +378,7 @@ export async function drainNotificationRetries(
     .where(
       and(
         eq(notificationSendQueue.status, "processing"),
-        lt(notificationSendQueue.lockedUntil, now),
+        lt(notificationSendQueue.lockedUntil, new Date(now.getTime() - LOCK_GRACE_MS)),
       ),
     );
   const candidates = await db
@@ -363,21 +393,19 @@ export async function drainNotificationRetries(
     )
     .orderBy(asc(notificationSendQueue.nextAttemptAt))
     .limit(options.limit ?? RETRY_QUEUE_LIMIT);
-  const summary: NotificationRetrySummary = {
-    scanned: candidates.length,
-    sent: 0,
-    queued: 0,
-    failed: 0,
-  };
+  summary.scanned = candidates.length;
   if (candidates.length === 0) return summary;
   const provider = notificationProviderForDb(options.provider);
   const senders = new Map<string, NotificationSender | undefined>();
-  // Resolved once for the whole pass — every row's payload is sealed under the
-  // same key, and a drain with no key must say so once, not once per row.
-  const key: SecretKey | null = queueSealingKey("drain");
 
   for (const candidate of candidates) {
-    const lockedUntil = new Date(now.getTime() + 10 * 60 * 1_000);
+    // From the wall clock, never from `now` — that is the *pass's* start, and a
+    // pass drains up to a hundred rows one network send at a time. Nine minutes
+    // in, a row claimed against the pass start would carry a lock with sixty
+    // seconds left on it, and the last rows of a slow pass would be claimed
+    // already expired — handing a live worker's row to the reclaim above and
+    // sending the same message twice.
+    const lockedUntil = new Date(nowMs() + LOCK_MS);
     const [claimed] = await db
       .update(notificationSendQueue)
       .set({
@@ -411,14 +439,14 @@ export async function drainNotificationRetries(
       continue;
     }
 
-    // A row that will not open is parked under its own code, never folded into
-    // `missing_payload`: the two say different things to whoever reads the
-    // parked-failure surface. "Missing" is a row past its terminal write;
-    // "unreadable" is a key that is unset, rotated, or a value that failed its
-    // authentication tag — an operational fault with a message still in it,
-    // and the payload is deliberately left in place so a restored key can
-    // still drain it.
-    const opened = key ? openQueuedPayload(candidate.payloadSealed, key) : null;
+    // Reaching here means the key is present and this particular row still will
+    // not open: the wrong key, or a value that failed its authentication tag.
+    // Neither is recoverable by waiting, so the row is terminal — and it is
+    // parked under its own code rather than folded into `missing_payload`
+    // because the two describe different faults, and a `failed` row's
+    // `error_code` is the only place either is written down. (The recoverable
+    // case, no key at all, never gets this far: the pass returned above.)
+    const opened = openQueuedPayload(candidate.payloadSealed, key);
     if (!opened) {
       await db
         .update(notificationSendQueue)
@@ -480,6 +508,8 @@ export async function drainNotificationRetries(
         .set({
           status: "sent",
           payloadSealed: null,
+          recipientEmail: null,
+          bookingId: null,
           lockedUntil: null,
           providerMessageId: delivery.providerMessageId,
           updatedAt: nowDate(),
@@ -510,6 +540,8 @@ export async function drainNotificationRetries(
         .set({
           status: "failed",
           payloadSealed: null,
+          recipientEmail: null,
+          bookingId: null,
           lockedUntil: null,
           httpStatus: delivery.status === "failed" ? (delivery.httpStatus ?? null) : null,
           errorCode: delivery.status === "failed" ? (delivery.errorCode ?? null) : null,

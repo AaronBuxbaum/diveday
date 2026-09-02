@@ -1133,8 +1133,9 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // `notification_send_queue.payload_sealed` is a rendered outbound message
   // carrying the recipient's name and address, with no person_id to sweep on.
   // It is a work queue, not evidence (that lives in notification_deliveries),
-  // so the rows go — including already-sent ones, whose payload is the same
-  // blob.
+  // so the rows go. Only *live* ones are reachable, and only live ones hold
+  // anything: a row past its terminal write has had its payload, recipient and
+  // booking cleared by the drain, so there is nothing left in it to erase.
   //
   // The two matches read `recipient_email` and `booking_id`, which are columns
   // rather than `payload ->> …` probes because the payload is sealed and
