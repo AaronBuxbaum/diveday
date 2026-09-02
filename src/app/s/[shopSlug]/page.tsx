@@ -523,7 +523,7 @@ export default async function SchedulePage({
             <img
               src={shop.logoUrl}
               alt=""
-              className="size-16 shrink-0 rounded-panel border border-border bg-surface shadow-bed object-cover"
+              className="size-16 shrink-0 rounded-xl border border-border bg-surface object-cover"
             />
           ) : null}
           <div className="min-w-0 flex-1">
