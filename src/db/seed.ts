@@ -122,6 +122,7 @@ import { seedMoreTrips } from "./seed-more-trips";
 import { seedNitrox } from "./seed-nitrox";
 import { seedOpenInvoice } from "./seed-open-invoice";
 import { seedOrders } from "./seed-orders";
+import { seedPartnerReferrals } from "./seed-partner-referrals";
 import { seedPreDepartureChecklist } from "./seed-pre-departure-checklist";
 import { seedPromos } from "./seed-promos";
 import { seedRecentRecaps } from "./seed-recent-recaps";
@@ -902,6 +903,9 @@ export async function seedDemoSchedule(
   // count or roster membership moves (ADR
   // 20260821-currency-is-what-catches-people).
   await seedDiveRecency(db, shopId);
+  // Which partner's link sent a seat — beside the recency answers, and written
+  // the same way: a column on bookings that already exist (issue #1285).
+  await seedPartnerReferrals(db, shopId);
 
   // Adds-only and late, like the four above: the desk's trail **per diver**,
   // so the Activity section on a diver's record opens on a real history rather

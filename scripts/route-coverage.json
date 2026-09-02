@@ -115,6 +115,7 @@
       "last-minute-fill.spec.ts",
       "next-departure.spec.ts",
       "nitrox.spec.ts",
+      "partner-referral.spec.ts",
       "readiness.spec.ts",
       "refunds.spec.ts",
       "rentals.spec.ts",
@@ -160,6 +161,7 @@
       "first-ten-minutes.spec.ts",
       "next-departure.spec.ts",
       "nitrox.spec.ts",
+      "partner-referral.spec.ts",
       "promo-codes.spec.ts",
       "readiness.spec.ts",
       "refunds.spec.ts",
@@ -324,7 +326,7 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/reports": {
-    "e2e": ["currency.spec.ts", "reports.spec.ts"],
+    "e2e": ["currency.spec.ts", "partner-referral.spec.ts", "reports.spec.ts"],
     "visual": ["reports"],
     "a11y": ["a11y.spec.ts"]
   },

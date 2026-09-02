@@ -46,6 +46,7 @@ import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { DepartureLedger, type DepartureRow } from "./_components/DepartureLedger";
 import { type MonthFigure, MonthFigures } from "./_components/MonthFigures";
+import { PartnerLedger } from "./_components/PartnerLedger";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -602,6 +603,16 @@ export default async function ReportsPage({
               </ShopNotice>
             </section>
           ) : null}
+
+          {/* Only ever rows, never a heading over a blank: a shop that has
+              handed out no partner links renders nothing here at all. */}
+          <PartnerLedger
+            className="mt-10"
+            label={t("reports.partners")}
+            labelId="reports-partners"
+            rows={report.partnerReferrals}
+            seatsWord={(seats) => t("reports.partnerSeats", { count: seats })}
+          />
 
           {report.tripCount > 0 ? (
             <DepartureLedger

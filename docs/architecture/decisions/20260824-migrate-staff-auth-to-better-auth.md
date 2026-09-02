@@ -59,8 +59,11 @@ Postgres/PGlite this app already runs. No new infrastructure.
 - **`src/lib/session-cookies.ts` is deleted, not renamed.** Its job was stripping a stale
   session-refresh `Set-Cookie` next-auth's edge middleware could reissue on every pass-through
   request (including stale prefetches after sign-out). `getSessionCookie`/`getCookieCache` are
-  pure reads — nothing at the edge issues a `Set-Cookie` any more, so that bug class is
-  structurally eliminated rather than patched.
+  pure reads — nothing at the edge issues a *session* `Set-Cookie` any more, so that bug class is
+  structurally eliminated rather than patched. (Amended 2026-09-02: the edge does issue exactly one
+  cookie, the partner referral of issue #1285. It is not a credential, is not derived from the
+  session, is path-scoped to `/s/` so it never travels with a staff request, and is minted only on a
+  document navigation — none of which is what the deleted module guarded against.)
 - **Everything downstream of `auth()` is unchanged.** `src/lib/auth.ts` keeps exporting an
   `auth()` async function of the same shape; `src/lib/session.ts`'s `requireStaffSession()` and
   the H-14 live-role gates in `src/db/authz.ts` (which already re-read roles from the database

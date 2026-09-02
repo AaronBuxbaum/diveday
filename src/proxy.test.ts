@@ -188,3 +188,95 @@ describe("proxy retired-query redirects", () => {
     }
   });
 });
+
+describe("the partner referral cookie (issue #1285)", () => {
+  /**
+   * A real top-level navigation. `SameSite` does not stop a cross-site
+   * `Set-Cookie` — it governs what is *sent*, not what is stored — so an
+   * `<img src="…?utm_source=partner&utm_campaign=rival">` on any page would
+   * otherwise plant an attribution on every visitor it has. `Sec-Fetch-*` is
+   * browser-set and unforgeable by page script, so a document navigation is
+   * the one shape that mints.
+   */
+  const NAVIGATION = { "sec-fetch-dest": "document", "sec-fetch-mode": "navigate" };
+
+  function setCookie(res: Response): string | null {
+    return res.headers.get("set-cookie");
+  }
+
+  it("remembers the partner a storefront visit arrived through, bound to that shop", async () => {
+    const res = await run(
+      request("/s/blue-mantis?utm_source=partner&utm_medium=referral&utm_campaign=coral-sands", {
+        ...NAVIGATION,
+      }),
+    );
+    const cookie = setCookie(res);
+    // The shop is *in the value*: one cookie covers the whole /s/ namespace, so
+    // the booking action has to be able to tell whose link minted it.
+    expect(cookie).toContain("diveday_ref=blue-mantis%3Acoral-sands");
+    // HttpOnly so the page cannot steer what the booking action reads; scoped
+    // to /s/ so it is never sent up with a staff request.
+    expect(cookie).toContain("HttpOnly");
+    expect(cookie).toContain("Path=/s/");
+    // Never cached: the value is a pure function of the URL, but only a cache
+    // that keys on the query string can be trusted to keep it that way.
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+  });
+
+  it("writes nothing at all for an ordinary storefront visit", async () => {
+    expect(setCookie(await run(request("/s/blue-mantis", { ...NAVIGATION })))).toBeNull();
+    expect(
+      setCookie(
+        await run(
+          request("/s/blue-mantis?utm_source=newsletter&utm_campaign=spring", { ...NAVIGATION }),
+        ),
+      ),
+    ).toBeNull();
+  });
+
+  it("refuses to mint on anything but a document navigation", async () => {
+    const link = "/s/blue-mantis?utm_source=partner&utm_campaign=rival-hotel";
+    // What an <img> on a hostile page produces. X-Frame-Options refuses an
+    // iframe only *after* the response and its headers were processed, so the
+    // refusal has to happen here.
+    expect(
+      setCookie(
+        await run(request(link, { "sec-fetch-dest": "image", "sec-fetch-mode": "no-cors" })),
+      ),
+    ).toBeNull();
+    expect(
+      setCookie(
+        await run(request(link, { "sec-fetch-dest": "iframe", "sec-fetch-mode": "navigate" })),
+      ),
+    ).toBeNull();
+    expect(
+      setCookie(await run(request(link, { "sec-fetch-dest": "empty", "sec-fetch-mode": "cors" }))),
+    ).toBeNull();
+    // No headers at all — an old browser or a non-browser client. Mints nothing
+    // rather than falling back to trusting it.
+    expect(setCookie(await run(request(link)))).toBeNull();
+  });
+
+  it("never writes one outside the diver-facing namespace", async () => {
+    expect(
+      setCookie(
+        await run(
+          request("/shop/blue-mantis?utm_source=partner&utm_campaign=x", { ...NAVIGATION }),
+        ),
+      ),
+    ).toBeNull();
+    expect(
+      setCookie(await run(request("/?utm_source=partner&utm_campaign=x", { ...NAVIGATION }))),
+    ).toBeNull();
+  });
+
+  it("stores the slug, never what the URL happened to say", async () => {
+    const res = await run(
+      request(
+        "/s/blue-mantis?utm_source=partner&utm_campaign=%3Cscript%3Ealert(1)%3C%2Fscript%3E",
+        { ...NAVIGATION },
+      ),
+    );
+    expect(setCookie(res)).toContain("diveday_ref=blue-mantis%3Ascript-alert-1-script");
+  });
+});

@@ -789,9 +789,22 @@ export async function listOrdersForPerson(db: DbExecutor, shopId: string, person
 
 export async function getOrder(db: DbExecutor, shopId: string, orderId: string) {
   const [row] = await db
-    .select({ order: orders, person: people })
+    .select({
+      order: orders,
+      person: people,
+      // Which partner's link brought the diver who owns the booking this order
+      // is for (issue #1285). A left join because most orders have no booking
+      // at all — an invoice a shop raised by hand has none — and most bookings
+      // carry no referral. `orders.booking_id` is a foreign key, so this can
+      // only ever match a row of the same shop.
+      referralSource: bookings.referralSource,
+    })
     .from(orders)
     .innerJoin(people, eq(people.id, orders.personId))
+    // Shop-scoped as well as id-matched, for the same reason the `createdBy`
+    // lookup below is: `orders.booking_id` is a foreign key, not a claim, and
+    // this query is never the place to widen a tenant boundary.
+    .leftJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
     .where(and(eq(orders.id, orderId), eq(orders.shopId, shopId)))
     .limit(1);
   if (!row) return null;

@@ -7,6 +7,7 @@ import { countInWaterCrew, groupCrewAssignments } from "@/lib/crew-roles";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
+import { partnerReferralSlug } from "@/lib/referrals";
 import {
   decideTripAdmission,
   type SelfDeclaration,
@@ -122,6 +123,17 @@ export type BookingRequest = {
    *   act on it, which is exactly the conversation the gate is for.
    */
   admissionGate?: "enforce" | "advise";
+  /**
+   * The partner slug whose link brought this diver, when one did
+   * (`partnerReferralSlug`, src/lib/referrals.ts). Only the public booking form
+   * ever supplies it: a staff counter booking is not a referral, and a
+   * reschedule or a seat claim is a seat that already exists.
+   *
+   * Normalised again here rather than trusted, because it arrives from a
+   * cookie. A value that does not slug is stored as null — the booking still
+   * completes, credited to nobody. Nothing about the booking depends on it.
+   */
+  referralSource?: string | null;
 } & BookingPerson;
 
 /**
@@ -795,6 +807,17 @@ async function createBookingRecord(
         // returns (`createBookingParty`).
         partyLeadBookingId: null,
         claimedAt: null,
+        // Same reasoning as the two lines above: a reactivated row is a *new*
+        // booking, so it carries this booking's referral — including null,
+        // which un-credits a partner who did not send this visit rather than
+        // letting a cancelled seat's old attribution ride along.
+        //
+        // The cost, stated: a caller that reactivates a cancelled *public*
+        // booking without passing a referral — a staff reschedule, a seat claim
+        // — silently drops a genuine partner's credit through an act nobody
+        // thinks of as touching attribution. Accepted over the alternative,
+        // which is a stale credit surviving a cancellation nobody can see.
+        referralSource: partnerReferralSlug(req.referralSource),
       })
       .where(eq(bookings.id, existing.id));
     await settlePackageCoverage(tx, {
@@ -823,6 +846,7 @@ async function createBookingRecord(
       conditionsBriefedAt: trip.conditionsUpdatedAt,
       groupPreference: req.groupPreference?.trim() || null,
       identityUnconfirmedAt: identityUnconfirmed ? nowDate() : null,
+      referralSource: partnerReferralSlug(req.referralSource),
     })
     .returning();
   if (!created) throw new Error("createBooking: booking insert returned no row");

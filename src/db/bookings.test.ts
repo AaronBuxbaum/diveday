@@ -416,6 +416,96 @@ describe("createBooking (in-memory PGlite)", () => {
   });
 });
 
+describe("createBooking referral attribution (issue #1285)", () => {
+  async function referralOf(db: AppDb, bookingId: string) {
+    const [row] = await db
+      .select({ referralSource: bookings.referralSource })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId));
+    return row?.referralSource ?? null;
+  }
+
+  it("records the partner whose link sent the diver", async () => {
+    const { db, shop, open } = await seededContext();
+    const outcome = await createBooking(db, {
+      actor: "public",
+      shopId: shop.id,
+      tripId: open.id,
+      ...visitor,
+      referralSource: "coral-sands",
+    });
+    if (!outcome.ok) throw new Error("booking refused");
+    expect(await referralOf(db, outcome.bookingId)).toBe("coral-sands");
+  });
+
+  it("records nothing for the ordinary booking nobody referred", async () => {
+    const { db, shop, open } = await seededContext();
+    const outcome = await bookVisitor(db, shop.id, open.id);
+    if (!outcome.ok) throw new Error("booking refused");
+    expect(await referralOf(db, outcome.bookingId)).toBeNull();
+  });
+
+  /**
+   * The value arrives from a cookie, so it is normalised on the way in rather
+   * than trusted. A hostile one must reach the column as a slug or not at all —
+   * this is a third party's identity stored against a person's booking.
+   */
+  it("normalises a hostile cookie value rather than storing it", async () => {
+    const { db, shop, open } = await seededContext();
+    const outcome = await createBooking(db, {
+      actor: "public",
+      shopId: shop.id,
+      tripId: open.id,
+      ...visitor,
+      referralSource: "<script>alert(1)</script>",
+    });
+    if (!outcome.ok) throw new Error("booking refused");
+    expect(await referralOf(db, outcome.bookingId)).toBe("script-alert-1-script");
+  });
+
+  it("books normally when the cookie holds nothing that slugs", async () => {
+    const { db, shop, open } = await seededContext();
+    const outcome = await createBooking(db, {
+      actor: "public",
+      shopId: shop.id,
+      tripId: open.id,
+      ...visitor,
+      referralSource: "   !!!   ",
+    });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(await referralOf(db, outcome.bookingId)).toBeNull();
+  });
+
+  /**
+   * A reactivated row is a *new* booking — the same reasoning that clears its
+   * party membership and its claim. A partner who did not send this visit must
+   * not inherit credit for it from the seat's earlier life.
+   */
+  it("re-attributes a reactivated seat to this booking, not the cancelled one", async () => {
+    const { db, shop, open } = await seededContext();
+    const first = await createBooking(db, {
+      actor: "public",
+      shopId: shop.id,
+      tripId: open.id,
+      ...visitor,
+      referralSource: "coral-sands",
+    });
+    if (!first.ok) throw new Error("booking refused");
+    await cancelBooking(db, shop.id, first.bookingId);
+
+    const again = await createBooking(db, {
+      actor: "public",
+      shopId: shop.id,
+      tripId: open.id,
+      ...visitor,
+    });
+    if (!again.ok) throw new Error("re-booking refused");
+    expect(again.bookingId).toBe(first.bookingId);
+    expect(await referralOf(db, again.bookingId)).toBeNull();
+  });
+});
+
 describe("createBooking by identity (returning diver, no re-entry)", () => {
   async function seedDiver(db: AppDb, shopId: string) {
     const diver = await createDiver(db, {

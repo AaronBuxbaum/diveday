@@ -1,5 +1,6 @@
 import { EMBED_WIDGETS, type EmbedWidget } from "./embed-routes";
 import { publicSchedulePath, publicTripPath } from "./public-routes";
+import { partnerReferralSlug } from "./referrals";
 
 /**
  * The embed catalogue's grammar (Harbor — ADR 20260901-diveday-reimagined,
@@ -97,18 +98,24 @@ export function embedTargetUrl(
   return new URL(path, origin).toString();
 }
 
-/** A hotel's or a resort's referral link — the storefront, attributed. */
+/**
+ * A hotel's or a resort's referral link — the storefront, attributed.
+ *
+ * The slug comes from `partnerReferralSlug` rather than a normalisation of its
+ * own, because the same function runs again on the way *in* (src/proxy.ts, then
+ * the booking action): a link this builder writes has to produce a value the
+ * reader will accept unchanged, or a booking is credited to a slightly
+ * different partner than the one whose link it came from. A partner name that
+ * slugs to nothing yields a plain storefront link — attributed to nobody rather
+ * than to the empty string.
+ */
 export function partnerLinkUrl(origin: string, shopSlug: string, partner: string): string {
   const url = new URL(publicSchedulePath(shopSlug), origin);
+  const slug = partnerReferralSlug(partner);
+  if (!slug) return url.toString();
   url.searchParams.set("utm_source", "partner");
   url.searchParams.set("utm_medium", "referral");
-  url.searchParams.set(
-    "utm_campaign",
-    partner
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-"),
-  );
+  url.searchParams.set("utm_campaign", slug);
   return url.toString();
 }
 

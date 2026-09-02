@@ -21,6 +21,14 @@ import {
   parseEmbedFontParam,
   REQUEST_PATH_HEADER,
 } from "@/lib/embed-routes";
+import { shopSlugFromPublicPath } from "@/lib/public-routes";
+import {
+  encodeReferralCookie,
+  partnerFromSearchParams,
+  REFERRAL_COOKIE,
+  REFERRAL_COOKIE_MAX_AGE,
+  REFERRAL_COOKIE_PATH,
+} from "@/lib/referrals";
 
 const STAFF_PREFIX = "/shop";
 
@@ -189,6 +197,71 @@ function overrideRequestHeaders(
 /** `/shop/<slug>/settings/whatsapp`, the one route that loads Meta's SDK. */
 const WHATSAPP_SETTINGS_PATH = /^\/shop\/[^/]+\/settings\/whatsapp(\/|$)/;
 
+/**
+ * Remember which partner sent this visitor, for the booking they may make on a
+ * different page a few clicks later.
+ *
+ * Written here rather than on the storefront page because a Server Component
+ * cannot set a cookie, and a client-side `document.cookie` would put a value
+ * the database reads inside the diver's own reach. The edge sees the partner
+ * link itself, which is the only place the fact exists.
+ *
+ * Three properties, each from a way this was found to be wrong (security review
+ * of issue #1285):
+ *
+ * **Only on a real top-level navigation.** `SameSite` governs whether a stored
+ * cookie is *attached to outgoing requests*; it places no restriction at all on
+ * a `Set-Cookie` in the response to a cross-site subresource request, so
+ * `<img src="https://dive.day/s/x?utm_source=partner&utm_campaign=rival">` on
+ * any page silently plants an attribution on every visitor that page has, and
+ * `X-Frame-Options` refuses an iframe only after the response and its headers
+ * were processed. If a shop pays commission off this ledger, that is unearned
+ * money at the scale of the attacker's ad impressions. `Sec-Fetch-Dest`/`-Mode`
+ * are browser-set and unforgeable by page script; a request that does not say
+ * it is a document navigation mints nothing.
+ *
+ * **The shop is in the value.** One cookie covers the whole `/s/` namespace,
+ * so it travels to every shop's storefront; `encodeReferralCookie` binds it to
+ * the shop whose link minted it and the booking action refuses anything else.
+ *
+ * **The response is not cacheable.** The value is a pure function of this
+ * request's URL, which makes a replay harmless *only* while every shared cache
+ * in front of the app keys on the query string — and stripping `utm_*` from a
+ * cache key is a common hit-rate optimisation. `private, no-store` on the one
+ * response that carries the cookie removes the assumption rather than
+ * documenting it.
+ *
+ * `HttpOnly` so the booking action's reading of it cannot be steered from the
+ * page, and scoped to `/s/` so it is never sent up with a staff request.
+ * `Secure` except under the e2e fleet, which deliberately runs over loopback
+ * HTTP and would otherwise drop it — the same env-based answer `authGateResponse`
+ * gives the same question, rather than a second one derived from the URL.
+ */
+function rememberPartnerReferral(req: NextRequest, res: Response): void {
+  // `.cookies` is a NextResponse affordance; a `Response` from elsewhere has
+  // no way to set one.
+  if (!(res instanceof NextResponse)) return;
+  // Only on the storefront a partner link actually points at, and only for a
+  // slug that is shaped like one: `shopSlugFromPublicPath` holds it to
+  // `SHOP_SLUG` rather than taking whatever the URL's second segment says.
+  const shopSlug = shopSlugFromPublicPath(req.nextUrl.pathname);
+  if (!shopSlug) return;
+  // A document navigation, never a subresource — see above. An absent header is
+  // an old browser or a non-browser client, and mints nothing either way.
+  if (req.headers.get("sec-fetch-dest") !== "document") return;
+  if (req.headers.get("sec-fetch-mode") !== "navigate") return;
+  const partner = partnerFromSearchParams(req.nextUrl.searchParams);
+  if (!partner) return;
+  res.cookies.set(REFERRAL_COOKIE, encodeReferralCookie(shopSlug, partner), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.DIVEDAY_E2E !== "1",
+    path: REFERRAL_COOKIE_PATH,
+    maxAge: REFERRAL_COOKIE_MAX_AGE,
+  });
+  res.headers.set("Cache-Control", "private, no-store");
+}
+
 export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response | undefined> {
   // The route pattern alone (isEmbeddableShopRoute) isn't a request — a plain
   // visit to /s/x with no ?embed=1 must stay denied. Only an
@@ -228,12 +301,14 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
     : null;
   const embedLocale = isEmbedRequest ? (req.nextUrl.searchParams.get("lang") ?? "") : "";
 
-  // getSessionCookie/getCookieCache are pure reads — unlike next-auth's edge
-  // middleware, nothing here ever issues a Set-Cookie, so there is no longer
-  // a stale-prefetch session-resurrection class of bug to guard against at
-  // this layer (the property src/lib/session-cookies.ts used to protect;
-  // removed alongside next-auth for exactly this reason).
+  // getSessionCookie/getCookieCache are pure reads. **Nothing here ever writes
+  // a session cookie** — unlike next-auth's edge middleware, which is why the
+  // stale-prefetch session-resurrection class of bug src/lib/session-cookies.ts
+  // used to guard against no longer exists at this layer. The one Set-Cookie
+  // this function issues is the partner referral below, which is not a
+  // credential and carries nothing about who the reader is.
   const res = (await authGateResponse(req)) ?? NextResponse.next();
+  rememberPartnerReferral(req, res);
   // Forward embed-mode and the request's own pathname to the server-component
   // tree — a layout can't read searchParams or the URL itself (only page.tsx
   // can), so these headers are the one way it learns "this render is going
