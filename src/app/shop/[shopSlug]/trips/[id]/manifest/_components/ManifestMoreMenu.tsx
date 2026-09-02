@@ -82,7 +82,7 @@ export function ManifestMoreMenu({
           <div
             ref={panelRef}
             id={panelId}
-            className="absolute end-0 top-full z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-border bg-surface p-3 shadow-xl"
+            className="absolute end-0 top-full z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-panel border border-border bg-surface p-3 shadow-xl"
           >
             <div className="mb-2 flex items-center justify-between gap-3 px-1">
               <p className={groupLabelClass()}>{label}</p>

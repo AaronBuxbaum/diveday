@@ -785,7 +785,7 @@ export default async function SettingsPage({
                         <img
                           src={shop.logoUrl}
                           alt=""
-                          className="size-16 rounded-2xl border border-border bg-surface object-cover"
+                          className="size-16 rounded-panel border border-border bg-surface shadow-bed object-cover"
                         />
                         <label className="flex items-center gap-2 text-sm text-muted hover:text-foreground cursor-pointer">
                           <input type="checkbox" name="removeLogo" value="true" />
