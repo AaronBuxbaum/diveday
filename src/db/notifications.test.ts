@@ -1,5 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowMs } from "@/lib/clock";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
@@ -37,6 +38,106 @@ async function seededBooking() {
   if (!booking.ok) throw new Error(`booking failed: ${booking.reason}`);
   return { db, shop, trip, booking };
 }
+
+// ADR 20260902-sender-standards-for-ses: the shop's Reply-To and postal line
+// ride every shop-scoped send, resolved here rather than by each composer.
+describe("the shop's sender profile", () => {
+  function capturingProvider(seen: Notification[]): NotificationProvider {
+    return {
+      async send(notification) {
+        seen.push(notification);
+        return { status: "sent", providerMessageId: `sent-${seen.length}` };
+      },
+    };
+  }
+
+  it("attaches the shop's front-desk address and street to a send", async () => {
+    const { db, shop, trip, booking } = await seededBooking();
+    await db
+      .update(shops)
+      .set({
+        contactEmail: "desk@bluemantis.dive",
+        addressStreet: "1 Harbor Rd",
+        addressLocality: "Key Largo",
+        addressRegion: "FL",
+        addressPostalCode: "33037",
+        addressCountry: "US",
+      })
+      .where(eq(shops.id, shop.id));
+    const seen: Notification[] = [];
+
+    await sendNotification(
+      db,
+      {
+        kind: "booking_confirmation",
+        bookingId: booking.bookingId,
+        shopId: shop.id,
+        to: "nora@dive.day",
+        locale: "en-US",
+        diverName: "Nora Quinn",
+        shopName: shop.name,
+        tripTitle: trip.title,
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        timezone: shop.timezone,
+      },
+      capturingProvider(seen),
+    );
+
+    expect(seen[0]?.sender).toEqual({
+      replyTo: "desk@bluemantis.dive",
+      postalAddress: "1 Harbor Rd, Key Largo, FL 33037, US",
+    });
+  });
+
+  it("sends exactly as before for a shop with neither on file, and on a drained retry", async () => {
+    const { db, shop, trip, booking } = await seededBooking();
+    await db
+      .update(shops)
+      .set({
+        contactEmail: null,
+        addressStreet: null,
+        addressLocality: null,
+        addressRegion: null,
+        addressPostalCode: null,
+        addressCountry: null,
+      })
+      .where(eq(shops.id, shop.id));
+    const notification: Notification = {
+      kind: "booking_confirmation",
+      bookingId: booking.bookingId,
+      shopId: shop.id,
+      to: "nora@dive.day",
+      locale: "en-US",
+      diverName: "Nora Quinn",
+      shopName: shop.name,
+      tripTitle: trip.title,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      timezone: shop.timezone,
+    };
+    const seen: Notification[] = [];
+    const failing: NotificationProvider = {
+      async send() {
+        return { status: "failed", retryable: true, httpStatus: 503 };
+      },
+    };
+
+    await sendNotification(db, notification, failing);
+    await db
+      .update(shops)
+      .set({ contactEmail: "desk@bluemantis.dive" })
+      .where(eq(shops.id, shop.id));
+    await drainNotificationRetries(db, {
+      provider: capturingProvider(seen),
+      now: new Date(nowMs() + 60 * 60 * 1_000),
+    });
+
+    // The queued payload carried no sender, so the drain resolved one fresh.
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.sender).toEqual({ replyTo: "desk@bluemantis.dive" });
+  });
+});
 
 describe("notification delivery status", () => {
   it("queues a retryable provider failure and drains it later", async () => {

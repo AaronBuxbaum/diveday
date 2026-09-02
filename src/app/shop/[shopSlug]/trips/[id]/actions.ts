@@ -74,7 +74,7 @@ import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { isValidLastMinuteDiscountPercent } from "@/lib/last-minute-list";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { notify, publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
@@ -603,7 +603,7 @@ export async function saveConditionsAction(shopSlug: string, tripId: string, for
         contacts.flatMap((contact) =>
           contact.email
             ? [
-                notify({
+                sendNotification(db, {
                   kind: "trip_conditions_hold",
                   tripId,
                   shopId: shop.id,

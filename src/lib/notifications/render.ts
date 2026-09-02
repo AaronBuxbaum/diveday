@@ -1,3 +1,4 @@
+import { escapeHtml } from "@/lib/html";
 import {
   bookingConfirmationEmail,
   checkoutRecoveryEmail,
@@ -35,13 +36,42 @@ import type { Notification } from "./kinds";
  */
 
 export function messageFor(notification: Notification): NotificationEmail {
-  const message = rawMessageFor(notification);
+  const message = withPostalFooter(rawMessageFor(notification), notification);
   // Not every kind carries both fields (the internal new-account alert has no
   // locale; password-changed has no shop to brand as) — the wrapper's own
   // document chrome (doctype, viewport, container) applies uniformly either way.
   const shopName = "shopName" in notification ? notification.shopName : "DiveDay";
   const locale = "locale" in notification ? notification.locale : "en";
   return { ...message, html: wrapEmailHtml(message.html, { shopName, locale }) };
+}
+
+/**
+ * The sender's postal address under every commercial message — the kinds
+ * that carry an `unsubscribeUrl` are exactly the ones CAN-SPAM (16 CFR
+ * 316.2) calls commercial, and the same statute wants the sender's physical
+ * address in them (ADR 20260902-sender-standards-for-ses). The shop is that
+ * sender: the mail greets as the shop and sells the shop's seats. A
+ * transactional message (a confirmation, a waiver link) is left alone, and so
+ * is a shop with no street on file — `sender.postalAddress` is absent then,
+ * never a blank line.
+ *
+ * Name and address only, no sentence: the two are the shop's own words
+ * passed through, so there is no copy here for a bundle to carry.
+ */
+function withPostalFooter(
+  message: NotificationEmail,
+  notification: Notification,
+): NotificationEmail {
+  const postalAddress = notification.sender?.postalAddress;
+  if (!postalAddress || !("unsubscribeUrl" in notification) || !("shopName" in notification)) {
+    return message;
+  }
+  const line = `${notification.shopName} · ${postalAddress}`;
+  return {
+    ...message,
+    text: `${message.text.replace(/\n*$/, "")}\n\n${line}\n`,
+    html: `${message.html}<p style="margin-top: 24px; font-size: 12px; line-height: 1.5; opacity: 0.7;">${escapeHtml(line)}</p>`,
+  };
 }
 
 function rawMessageFor(notification: Notification): NotificationEmail {

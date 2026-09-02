@@ -395,6 +395,30 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
     ]);
   });
 
+  it("sets Reply-To from the sender profile and tags every send with its kind and shop", async () => {
+    const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    await notify({ ...booking, sender: { replyTo: "desk@bluemantis.dive" } }, provider);
+
+    const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
+    expect(command.input.ReplyToAddresses).toEqual(["desk@bluemantis.dive"]);
+    expect(command.input.EmailTags).toEqual([
+      { Name: "diveday_kind", Value: "booking_confirmation" },
+      { Name: "diveday_shop", Value: booking.shopId },
+    ]);
+  });
+
+  it("sends with no Reply-To when the shop has no front-desk address on file", async () => {
+    const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    await notify(booking, provider);
+
+    const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
+    expect(command.input.ReplyToAddresses).toBeUndefined();
+  });
+
   it("omits the List-Unsubscribe headers for a notification with no unsubscribe link", async () => {
     const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };
     const provider = sesNotificationProvider(sesConfig, { client });

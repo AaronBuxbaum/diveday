@@ -16,9 +16,10 @@
  * dashboard, $0.50/GB ingested and $0.12/GB scanned.
  *
  * This registry currently declares 17 metrics (11 log signals + 5 web vitals
- * + the mutation-duration metric) and 11 alarms (8 + the 3 alarmed vitals), so it sits 7 metrics and 1 alarm
- * over the free allowance at about $2.20/month once every metric receives
- * data (7 x $0.30 + $0.10). A counted signal without an
+ * + the mutation-duration metric) and 13 alarms (8 + the 3 alarmed vitals + the
+ * 2 SES reputation rates, which alarm on metrics AWS publishes for free), so it
+ * sits 7 metrics and 3 alarms over the free allowance at about $2.40/month once
+ * every metric receives data (7 x $0.30 + 3 x $0.10). A counted signal without an
  * alarm costs $0.30/month; an alarmed one costs $0.40/month. Those are the real
  * numbers to weigh, not zero and not the free-tier cliff it looks like from the
  * alarm count alone.
@@ -382,6 +383,60 @@ export function webVitalFilterPatternFor(signal: WebVitalSignal): string {
 /** `WebVitalLcp` -> `diveday-web-vital-lcp`, same reasoning as `alarmNameFor`. */
 export function webVitalAlarmNameFor(signal: WebVitalSignal): string {
   return `diveday-${signal.metricName.replace(/(?<!^)([A-Z])/g, "-$1").toLowerCase()}`;
+}
+
+/**
+ * SES's own verdict on the account, alarmed before AWS acts on it.
+ *
+ * SES publishes two account-level rates to CloudWatch under `AWS/SES` with no
+ * dimensions -- `Reputation.BounceRate` and `Reputation.ComplaintRate` -- the
+ * exact numbers its enforcement reads. At a 5% bounce rate or a 0.1% complaint
+ * rate the account goes under review; at 10% and 0.5% sending is paused, and
+ * every booking confirmation stops with it. These alarm at the review line:
+ * one datapoint at or above it means "somebody at AWS is about to read this
+ * account", and the response is the same thing they will ask for. Thresholds
+ * are fractions, not percentages, because that is the unit SES publishes.
+ *
+ * Alarms only, no metric filter and no custom metric: the metric already
+ * exists and AWS pays for it. Missing data is not breaching -- an account that
+ * sent nothing this hour has no rate, and the sandbox publishes nothing at all.
+ * They live here beside the log signals so `observability.test.ts` counts them
+ * and the runbook's cost arithmetic sees them.
+ */
+export interface SesReputationSignal {
+  /** CDK construct id fragment. PascalCase, stable. */
+  readonly constructId: string;
+  /** The `AWS/SES` metric, verbatim. */
+  readonly metricName: "Reputation.BounceRate" | "Reputation.ComplaintRate";
+  readonly title: string;
+  /** A fraction of sent mail, as SES publishes it. */
+  readonly threshold: number;
+  /** The first thing to do when it fires. Rendered into the alarm description. */
+  readonly response: string;
+}
+
+export const SES_REPUTATION_SIGNALS: readonly SesReputationSignal[] = [
+  {
+    constructId: "SesBounceRate",
+    metricName: "Reputation.BounceRate",
+    title: "SES bounce rate at AWS's review line",
+    threshold: 0.05,
+    response:
+      "Open the shop dashboards' email issues and the SES suppression list: a run of hard bounces is a bad import or a seeded address, not a provider fault. Fix the records before the next send; never delete suppressions to retry.",
+  },
+  {
+    constructId: "SesComplaintRate",
+    metricName: "Reputation.ComplaintRate",
+    title: "SES complaint rate at AWS's review line",
+    threshold: 0.001,
+    response:
+      "Read which kind the complained-about sends were (the diveday_kind message tag on the SES event). The app has already opted each complainant out of courtesy mail; if the kind was transactional, the recipient did not expect the booking, which is a shop conversation.",
+  },
+];
+
+/** The alarm's console name: `DiveDay / SES bounce rate at AWS's review line`. */
+export function sesReputationAlarmNameFor(signal: SesReputationSignal): string {
+  return `DiveDay / ${signal.title}`;
 }
 
 /**

@@ -3,11 +3,18 @@ import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import {
   issuePersonCourtesyEmailUnsubscribeToken,
+  optOutAddressAfterComplaint,
   optOutPersonFromCourtesyEmailByToken,
   resolveCourtesyEmailUnsubscribeToken,
 } from "./courtesy-email";
+import { joinLastMinuteList } from "./last-minute-list";
 import { findOrCreatePerson } from "./people";
-import { people, personCourtesyEmailUnsubscribeTokens, shops } from "./schema";
+import {
+  lastMinuteListEntries,
+  people,
+  personCourtesyEmailUnsubscribeTokens,
+  shops,
+} from "./schema";
 
 async function seededPerson() {
   const { db, shop } = await seededShopContext();
@@ -104,5 +111,74 @@ describe("self-serve courtesy-email unsubscribe token", () => {
       .where(eq(personCourtesyEmailUnsubscribeTokens.personId, person.id));
 
     expect(await resolveCourtesyEmailUnsubscribeToken(db, token)).toBeNull();
+  });
+});
+
+// ADR 20260902-sender-standards-for-ses: a spam complaint is an unsubscribe.
+describe("a complaint opts the address out", () => {
+  it("stops courtesy mail and every live last-minute entry for that address, in that shop only", async () => {
+    const { db, shop, person } = await seededPerson();
+    await joinLastMinuteList(db, {
+      shopId: shop.id,
+      fullName: "Nora Quinn",
+      email: "nora-courtesy@example.com",
+    });
+    const { person: neighbour } = await findOrCreatePerson(db, {
+      shopId: shop.id,
+      fullName: "Sam Reyes",
+      email: "sam@example.com",
+    });
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Reef", slug: "other-reef", timezone: "America/New_York" })
+      .returning({ id: shops.id });
+    if (!otherShop) throw new Error("second shop insert failed");
+    const { person: sameAddressElsewhere } = await findOrCreatePerson(db, {
+      shopId: otherShop.id,
+      fullName: "Nora Quinn",
+      email: "nora-courtesy@example.com",
+    });
+    const at = new Date("2026-09-02T12:00:00.000Z");
+
+    const outcome = await optOutAddressAfterComplaint(db, {
+      shopId: shop.id,
+      email: "NORA-Courtesy@example.com",
+      now: at,
+    });
+
+    expect(outcome).toEqual({ people: 1, listEntries: 1 });
+    const [row] = await db.select().from(people).where(eq(people.id, person.id));
+    expect(row?.courtesyEmailOptOutAt).toEqual(at);
+    const [entry] = await db
+      .select()
+      .from(lastMinuteListEntries)
+      .where(eq(lastMinuteListEntries.personId, person.id));
+    expect(entry?.unsubscribedAt).toEqual(at);
+    const [other] = await db.select().from(people).where(eq(people.id, neighbour.id));
+    expect(other?.courtesyEmailOptOutAt).toBeNull();
+    const [elsewhere] = await db
+      .select()
+      .from(people)
+      .where(eq(people.id, sameAddressElsewhere.id));
+    expect(elsewhere?.courtesyEmailOptOutAt).toBeNull();
+  });
+
+  it("is idempotent, and does nothing for an address the shop does not know", async () => {
+    const { db, shop } = await seededPerson();
+    expect(
+      await optOutAddressAfterComplaint(db, {
+        shopId: shop.id,
+        email: "nora-courtesy@example.com",
+      }),
+    ).toEqual({ people: 1, listEntries: 0 });
+    expect(
+      await optOutAddressAfterComplaint(db, {
+        shopId: shop.id,
+        email: "nora-courtesy@example.com",
+      }),
+    ).toEqual({ people: 0, listEntries: 0 });
+    expect(
+      await optOutAddressAfterComplaint(db, { shopId: shop.id, email: "stranger@example.com" }),
+    ).toEqual({ people: 0, listEntries: 0 });
   });
 });

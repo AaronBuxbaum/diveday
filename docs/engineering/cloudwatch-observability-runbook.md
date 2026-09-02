@@ -60,7 +60,9 @@ sent to the alert address. Until then every alarm transitions correctly and noti
 
 Eleven signals. Eight are alarmed; three are counters only, declared once in
 `infra/lib/observability.ts` and still available as dashboard series. Every other event code the app emits stays queryable — see
-the saved queries below — it just does not have a metric.
+the saved queries below — it just does not have a metric. Two more alarms watch numbers AWS
+publishes rather than lines the app writes: SES's account bounce and complaint rates, at the bottom
+of the table.
 
 | Alarm | Fires at | What it means | First move |
 | --- | --- | --- | --- |
@@ -73,6 +75,8 @@ the saved queries below — it just does not have a metric.
 | `diveday-manifest-streams-refused` | 1 in 1 h | Manifest streams turned away at the subscriber ceiling; a captain's roll-call screen is stale rather than live. | [realtime-manifest-events-runbook.md](realtime-manifest-events-runbook.md) — check the ceiling against boats out. |
 | `diveday-offline-retraction-superseded` | Counter only | A device tried to retract a statement another device or the live manifest already replaced. | Read shop and trip counts, then compare the affected boat's devices and live manifest. |
 | `diveday-offline-retraction-unnamed` | Counter only; target zero | A legacy device sent a bare retraction without a compare-and-set target. | Read the daily count; do not impose a deadline from this metric. |
+| `DiveDay / SES bounce rate at AWS's review line` | 5% of sent mail in 1 h (`AWS/SES` `Reputation.BounceRate`) | The line at which AWS puts the account under review; 10% pauses sending and every confirmation with it. | A run of hard bounces is a bad import or a seeded address — fix the records on the shop dashboards' email issues; never delete suppressions to retry ([ses-email-runbook.md](ses-email-runbook.md)). |
+| `DiveDay / SES complaint rate at AWS's review line` | 0.1% of sent mail in 1 h (`AWS/SES` `Reputation.ComplaintRate`) | Recipients are marking DiveDay mail as spam; 0.5% pauses sending. | The `diveday_kind` tag on the SES event says which kind. The app has already opted each complainant out of courtesy mail; a complaint on a transactional kind means the diver did not expect the booking, which is a shop conversation. |
 
 Alarms treat missing data as **not breaching**. A quiet app is a healthy app, and paging on a slow
 Tuesday is how an alert channel gets muted.
@@ -178,13 +182,13 @@ does not depend on the account's age or plan. What that covers, and what this st
 | Always free, per month | Used | Billed |
 | --- | --- | --- |
 | 10 custom metrics | 15 (10 signals + 5 web vitals) | 5 × $0.30 = **$1.50** |
-| 10 standard-resolution alarms | 11 (8 alarmed signals + 3 alarmed vitals) | 1 × $0.10 = **$0.10** |
+| 10 standard-resolution alarms | 13 (8 alarmed signals + 3 alarmed vitals + 2 SES reputation rates) | 3 × $0.10 = **$0.30** |
 | 3 dashboards | 1 | **$0.00** (a 4th would be $3.00) |
 | 5 GB log ingestion + archive + Insights scan | well under | $0.50/GB ingested, $0.12/GB scanned beyond |
 | 1 Contributor Insights rule | 0 | — |
 | 1,800 minutes of Live Tail | 0 | — |
 
-So the fixed monthly cost of everything in this runbook is about **$1.60**. A counter-only signal
+So the fixed monthly cost of everything in this runbook is about **$1.80**. A counter-only signal
 added to the registry costs **$0.30**; an alarmed signal costs **$0.40** — $0.30 for the metric plus
 $0.10 for the alarm.
 

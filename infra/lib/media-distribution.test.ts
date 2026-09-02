@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import * as cdk from "aws-cdk-lib";
 import { Template } from "aws-cdk-lib/assertions";
 import { describe, expect, it } from "vitest";
@@ -19,8 +21,14 @@ import { InfraStack } from "./infra-stack";
  * `PUBLIC_MEDIA_PREFIXES` that happens to match one of the private namespaces
  * fails here.
  */
-function template() {
-  const app = new cdk.App();
+/**
+ * Built as a verified account sees it. The distribution is behind the
+ * `cloudfrontVerified` context value (cdk.json), off until AWS lifts the
+ * CreateDistribution gate; every assertion about what the CDN may serve is
+ * about the shape it has once it exists.
+ */
+function template(context: Record<string, unknown> = { cloudfrontVerified: true }) {
+  const app = new cdk.App({ context });
   return Template.fromStack(
     new InfraStack(app, "DiveDay", { env: { account: "123456789012", region: "us-east-1" } }),
   );
@@ -140,5 +148,53 @@ describe("media distribution", () => {
       if (statement.Effect !== "Allow") continue;
       expect(JSON.stringify(statement.Principal ?? "")).not.toContain('"AWS":"*"');
     }
+  });
+
+  /**
+   * Until the account is verified the stack must deploy without the
+   * distribution at all -- and without opening the bucket to compensate.
+   * The read path is simply absent: the same 403 the deployed stack answers
+   * today, documented against MEDIA_PUBLIC_URL_BASE in config/env-registry.mjs.
+   */
+  describe("before the account is verified", () => {
+    it("leaves the distribution out, and is the committed default", () => {
+      const off = template({ cloudfrontVerified: false });
+      expect(Object.keys(off.findResources("AWS::CloudFront::Distribution"))).toEqual([]);
+      expect(Object.keys(off.findResources("AWS::CloudFront::OriginAccessControl"))).toEqual([]);
+      expect(Object.keys(off.findOutputs("MediaDistributionDomain"))).toEqual([]);
+
+      const committed = JSON.parse(readFileSync(path.join(process.cwd(), "cdk.json"), "utf8"));
+      expect(committed.context.cloudfrontVerified).toBe(false);
+    });
+
+    it("still grants nobody a read of the bucket, anonymous or otherwise", () => {
+      const off = template({ cloudfrontVerified: false });
+      const bucketLogicalId = Object.keys(off.findResources("AWS::S3::Bucket")).find((id) =>
+        id.startsWith("MediaStorageBucket"),
+      );
+      expect(bucketLogicalId).toBeDefined();
+      const policies = Object.values(off.findResources("AWS::S3::BucketPolicy")).filter(
+        (resource) =>
+          JSON.stringify((resource.Properties as { Bucket: unknown }).Bucket).includes(
+            String(bucketLogicalId),
+          ),
+      );
+      for (const policy of policies) {
+        const statements = (
+          policy.Properties as { PolicyDocument: { Statement: Array<Record<string, unknown>> } }
+        ).PolicyDocument.Statement;
+        // With no distribution there is no reader to grant: the only statements
+        // left are the SSL-enforcing denies.
+        expect(statements.filter((statement) => statement.Effect === "Allow")).toEqual([]);
+      }
+    });
+
+    it("points the app at the bucket endpoint, the documented 403, rather than at nothing", () => {
+      const off = template({ cloudfrontVerified: false });
+      const secret = JSON.stringify(off.findResources("AWS::SecretsManager::Secret"));
+      expect(secret).toContain("MEDIA_PUBLIC_URL_BASE=https://");
+      expect(secret).toContain(".s3.");
+      expect(secret).not.toContain("MediaDistribution");
+    });
   });
 });
