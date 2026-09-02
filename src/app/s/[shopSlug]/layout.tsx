@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { switchDemoRoleAction } from "@/app/actions/demo";
 import { setLocaleAction } from "@/app/actions/set-locale";
+import { BrandStyle } from "@/components/BrandStyle";
 import { DemoBanner } from "@/components/DemoBanner";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { LanguageFallbackNotice } from "@/components/LanguageFallbackNotice";
@@ -63,6 +64,12 @@ export default function PublicShopLayout({
   const fallbackT = diverTranslator(DEFAULT_DIVER_LOCALE);
   return (
     <>
+      {/* The shop's brand as tokens, streamed like the chrome so no request read
+          sits above {children} (ADR 20260804-instant-navigation). A `<style>`
+          applies wherever it lands, so it needs no wrapper around the page. */}
+      <Suspense fallback={null}>
+        <PublicShopBrand params={params} />
+      </Suspense>
       {/* The fallback holds the header's height as well as its skip link. The
           skip link follows the root layout's pattern — the default-locale label
           is in the static shell so a keyboard user always has a target, and the
@@ -315,4 +322,11 @@ function PublicShopChromePlaceholder({ label }: { label: DiverTranslator }) {
       <div className="h-(--chrome-h) border-b border-border bg-background" aria-hidden />
     </>
   );
+}
+
+async function PublicShopBrand({ params }: { params: Promise<{ shopSlug: string }> }) {
+  const { shopSlug } = await params;
+  const shop = await getShopBySlug(await getDb(), shopSlug);
+  if (!shop) return null;
+  return <BrandStyle brandColor={shop.brandColor} brandDisplayFont={shop.brandDisplayFont} />;
 }

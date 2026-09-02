@@ -72,7 +72,8 @@
     "spokenLanguages": "Hablamos {languages}",
     "languageFallback": "DiveDay todavía no está en {requested}. Esta página está en {shown}, el idioma en el que trabaja {shop}.",
     "conservationCommitmentsHeading": "Compromisos de conservación declarados por el centro",
-    "conservationCommitmentsDisclaimer": "Estas son declaraciones del centro; DiveDay no las verifica ni las respalda."
+    "conservationCommitmentsDisclaimer": "Estas son declaraciones del centro; DiveDay no las verifica ni las respalda.",
+    "credit": "Reservas con DiveDay"
   },
   "schedule": {
     "eyebrow": "Salidas",
@@ -118,7 +119,9 @@
       "bookThisBoat": "Reservar esta salida"
     },
     "poweredByDiveDay": "Con la tecnología de DiveDay",
-    "moreWaysHeading": "Otras formas de ayudarte"
+    "moreWaysHeading": "Otras formas de ayudarte",
+    "boatsHeading": "Las embarcaciones",
+    "boatSeats": "{count, plural, one {# buceador} other {# buceadores}}"
   },
   "trip": {
     "courseSession": "Sesión de curso",

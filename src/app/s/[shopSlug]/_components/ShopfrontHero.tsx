@@ -1,11 +1,13 @@
 import { StarRating } from "@/components/StarRating";
 import type { DiverTranslator } from "@/i18n/messages";
+import type { BrandBadgeCode } from "@/lib/brand";
 import {
   type ConservationCommitmentCode,
   conservationCommitmentLabel,
 } from "@/lib/conservation-commitments";
 import { cachedFormatter } from "@/lib/intl-cache";
 import type { ReviewAggregate } from "@/lib/reviews";
+import { BadgeWall } from "./BadgeWall";
 
 /**
  * **The shopfront's identity band** — ADR
@@ -39,10 +41,18 @@ export function ShopfrontHero({
   tagline,
   aggregate,
   commitments,
+  heroImage = null,
+  badges = [],
+  establishedYear = null,
   locale,
   t,
 }: {
   name: string;
+  /** The shop's cover photograph (Harbor); the name and tagline sit on it. */
+  heroImage?: { url: string; alt: string } | null;
+  /** The badge wall, in the shop's order (Harbor). */
+  badges?: readonly BrandBadgeCode[];
+  establishedYear?: number | null;
   /** `shops.tagline` — the shop's own line, or nothing at all. */
   tagline: string | null;
   /** Rendered only at `count > 0`; a shop with no reviews says nothing about reviews. */
@@ -56,8 +66,34 @@ export function ShopfrontHero({
   const average = aggregate && aggregate.count > 0 ? aggregate.average : null;
   return (
     <div className="min-w-0">
-      <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">{name}</h1>
-      {tagline ? <p className="mt-3 max-w-2xl text-lg text-pretty">{tagline}</p> : null}
+      {/* Headings wear the shop's display face (Harbor — ADR
+          20260901-diveday-reimagined, decision 2); every fact beneath stays in
+          Geist and ink, so the face can never label a rating, a count or a claim. */}
+      {heroImage ? (
+        <div className="relative mb-6 overflow-hidden rounded-panel border border-border bg-surface-sunken shadow-bed">
+          {/* biome-ignore lint/performance/noImgElement: the shop's own uploaded photo */}
+          <img
+            src={heroImage.url}
+            alt={heroImage.alt}
+            className="aspect-[16/7] w-full object-cover"
+          />
+          {/* Paper on a scrim of ink, whatever the photograph: legibility does
+              not depend on the shop choosing a dark picture. */}
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-device-frame/85 via-device-frame/45 to-transparent px-5 pt-16 pb-5 text-surface sm:px-8 sm:pb-7">
+            <h1 className="font-brand-display text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+              {name}
+            </h1>
+            {tagline ? <p className="mt-2 max-w-2xl text-lg text-pretty">{tagline}</p> : null}
+          </div>
+        </div>
+      ) : (
+        <>
+          <h1 className="font-brand-display text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+            {name}
+          </h1>
+          {tagline ? <p className="mt-3 max-w-2xl text-lg text-pretty">{tagline}</p> : null}
+        </>
+      )}
       {average === null || !aggregate ? null : (
         <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
           <StarRating
@@ -81,6 +117,7 @@ export function ShopfrontHero({
           </span>
         </p>
       )}
+      <BadgeWall badges={badges} establishedYear={establishedYear} t={t} className="mt-4" />
       {commitments.length > 0 ? (
         <p className="mt-3 flex max-w-2xl items-start gap-2 text-sm text-muted">
           <ReefGlyph />
