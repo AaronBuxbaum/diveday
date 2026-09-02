@@ -381,6 +381,15 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   same change, and there is no "translate it later": a key missing from one locale fails
   `pnpm check:locale`. Waiver/medical wording stays English pending H-01/H-03. See the
   **i18n-copy** skill.
+- **Text a human will copy is written unwrapped.** A support case, an outreach email, an incident
+  note — anything a reader selects and pastes into a mailbox, a form, or a chat box — gets one line
+  per paragraph and one per bullet, however long, in a document and in a chat reply alike. Markdown
+  prose here wraps at 100 columns; a paste block is not prose, and its wraps survive the copy as
+  hard breaks that ragged every paragraph in the destination and mark the message as machine-made.
+  The worked examples are the SES case text in
+  [docs/engineering/ses-email-runbook.md](docs/engineering/ses-email-runbook.md), the incident comms
+  templates in [docs/engineering/incident-response-runbook.md](docs/engineering/incident-response-runbook.md),
+  and [docs/product/pilot-kit/cold-email-template.md](docs/product/pilot-kit/cold-email-template.md).
 - **Read time through the clock.** `src/lib`, `src/db`, and `src/features` never call `new Date()` / `Date.now()`
   directly — use `nowDate()` / `nowMs()` from `src/lib/clock.ts` (default a `now` parameter to it).
   This is what lets the e2e fleet freeze one instant so the clock-anchored seed and every render

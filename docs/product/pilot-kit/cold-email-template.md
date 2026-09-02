@@ -68,20 +68,13 @@ sales-tool shape there is, and it is spotted before the email is opened.
 
 > [FIRST NAME],
 >
-> I write software and I dive, and for a while now I've been building something for running dive
-> days, booking through the head count on the boat. I've never run a shop. That's why this is a
-> question rather than a pitch.
+> I write software and I dive, and for a while now I've been building something for running dive days, booking through the head count on the boat. I've never run a shop. That's why this is a question rather than a pitch.
 >
-> Most of what I know came from one owner walking me through an ordinary Saturday. Whiteboard,
-> clipboard, a spreadsheet someone updates by hand. He said the worst hour was the one before the
-> boat left. I've been building off that single conversation longer than I should have.
+> Most of what I know came from one owner walking me through an ordinary Saturday. Whiteboard, clipboard, a spreadsheet someone updates by hand. He said the worst hour was the one before the boat left. I've been building off that single conversation longer than I should have.
 >
-> The part I can't work out from a desk is the water. The count between dives, three miles out,
-> where the bars run out. Divers get counted there with the radio off, but it has never been on a
-> real boat, and I'm not willing to say it holds until someone has had it in the sun with wet hands.
+> The part I can't work out from a desk is the water. The count between dives, three miles out, where the bars run out. Divers get counted there with the radio off, but it has never been on a real boat, and I'm not willing to say it holds until someone has had it in the sun with wet hands.
 >
-> So: is [RESEARCHED DETAIL] anything like that morning, or is that hour already sorted and I'm
-> describing a problem you don't have? Either answer is useful to me.
+> So: is [RESEARCHED DETAIL] anything like that morning, or is that hour already sorted and I'm describing a problem you don't have? Either answer is useful to me.
 >
 > If the boat side is someone else's call there, I'd be glad to be pointed their way.
 >
@@ -95,8 +88,7 @@ Slots: `[FIRST NAME]`, `[RESEARCHED DETAIL]`, `[CELL]`. Nothing else is variable
 instead — written out because the alternative is splicing a fragment at 11pm on the eleventh email
 of the week, which is where template-smell gets in:
 
-> So: does that hour exist at your place, or do your trip mornings run themselves and I'm
-> describing a problem you don't have? Either answer is useful to me.
+> So: does that hour exist at your place, or do your trip mornings run themselves and I'm describing a problem you don't have? Either answer is useful to me.
 
 ### Before you hit send
 
@@ -188,9 +180,7 @@ at all from the many readers who simply forgot.
 
 > One follow-up, then I'll stop.
 >
-> Still the same question: is the hour before the boat leaves a problem where you are, or is it
-> already sorted? Either answer is useful to me. If it's a no, or just not this season, say the
-> word and I'll leave it there.
+> Still the same question: is the hour before the boat leaves a problem where you are, or is it already sorted? Either answer is useful to me. If it's a no, or just not this season, say the word and I'll leave it there.
 >
 > Aaron
 
@@ -201,10 +191,7 @@ entire goal is that they pass it on.
 
 > **Subject:** `for whoever runs the boat schedule`
 >
-> I'm writing about the hour before a boat leaves. Waivers, cert cards, knowing who's actually
-> aboard. I write software, I've never run a shop, and I'm trying to learn from people who have,
-> which is why I'm writing to shops one at a time instead of advertising. If that's someone's job
-> there, would you pass this along? If it isn't, no reply needed.
+> I'm writing about the hour before a boat leaves. Waivers, cert cards, knowing who's actually aboard. I write software, I've never run a shop, and I'm trying to learn from people who have, which is why I'm writing to shops one at a time instead of advertising. If that's someone's job there, would you pass this along? If it isn't, no reply needed.
 >
 > Aaron Buxbaum
 > [CELL]

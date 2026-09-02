@@ -164,11 +164,9 @@ from a real person, not a no-reply. Three short messages beat one long one writt
 
 > Subject: DiveDay incident — [what's affected], [status]
 >
-> We're aware of a problem affecting [bookings / the schedule / waiver signing] that started around
-> [time, with timezone]. [What still works: e.g. "The boat manifest and roll call are unaffected."]
+> We're aware of a problem affecting [bookings / the schedule / waiver signing] that started around [time, with timezone]. [What still works: e.g. "The boat manifest and roll call are unaffected."]
 >
-> If you have a departure today, [the specific workaround — print the manifest from the offline
-> viewer / take the booking by phone and enter it later].
+> If you have a departure today, [the specific workaround — print the manifest from the offline viewer / take the booking by phone and enter it later].
 >
 > We're working on it now and will update by [a specific time, not "shortly"].
 >
@@ -188,9 +186,7 @@ from a real person, not a no-reply. Three short messages beat one long one writt
 >
 > [What was affected] was restored at [time]. The cause was [one plain sentence, no jargon, no blame].
 >
-> [What, if anything, they need to do — e.g. "Two bookings made between 09:10 and 09:40 were not
-> recorded and we've re-entered them; please check trip X."] [If nothing: "No action is needed on
-> your side."]
+> [What, if anything, they need to do — e.g. "Two bookings made between 09:10 and 09:40 were not recorded and we've re-entered them; please check trip X."] [If nothing: "No action is needed on your side."]
 >
 > [What we changed so it doesn't recur.]
 >
