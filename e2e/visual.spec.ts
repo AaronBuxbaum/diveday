@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { Browser, Page } from "@playwright/test";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
+import { monthLabel } from "../src/lib/calendar";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
 import {
   OFFLINE_MANIFEST_AGING_MS,
@@ -12,6 +13,7 @@ import {
   bookASeatAndOpenThread,
   choosePartySize,
   daysFromNow,
+  e2eNow,
   manifestRow,
   offlineCopySaved,
   openManifestPerson,
@@ -2592,6 +2594,15 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("navigation", { name: "Choose a departure" })
           .getByRole("link", { name: /Dawn Two-Tank — Molasses Reef/ })
           .click();
+        // The focus header, not the tally (issue #1159's sweep). `/check-in`
+        // with no `?trip=` already focuses a departure of its own
+        // (`selectFocusedDeparture`), so `Checked in — <n>` renders before the
+        // click too and `\d+` matches whatever the other departure's count
+        // was. The `<h2>` naming the departure is the one thing only the
+        // clicked one renders.
+        await expect(
+          page.getByRole("heading", { level: 2, name: /Dawn Two-Tank — Molasses Reef/ }),
+        ).toBeVisible();
         await page.getByRole("heading", { name: /^Checked in — \d+$/ }).waitFor();
         await capture(page, "check-in-checked", scheme);
       });
@@ -2881,7 +2892,12 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByLabel("Returns").fill("11:00");
         await page.getByLabel("How often").selectOption("1");
         await page.getByRole("button", { name: "Put it on the board" }).click();
-        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        // No wait on the "Board" heading here (issue #1159's sweep): `?add=full`
+        // discloses the add panel *on* the board, so that `<h1>` is already
+        // rendered and the wait asserts nothing about the submit. The line
+        // below is the real gate — it waits for the trip this test just
+        // created to appear on the board — so the vacuous one is gone rather
+        // than replaced.
         await openTripFromBoard(page, title);
         await openTripAbout(page);
         await page.getByRole("heading", { name: "Repeating trip" }).waitFor();
@@ -4228,12 +4244,37 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await page.goto("/shop/blue-mantis/reports");
         await page.getByRole("link", { name: "Previous month" }).click();
-        // The current month renders a "Trips this month" region too, so waiting
-        // on the region alone is satisfied before the click has landed — which
-        // is how one baseline of this capture came to show July "so far" over
-        // June's final figures. The arrow's destination carries `?month=`; the
-        // landing page does not.
-        await expect(page).toHaveURL(/[?&]month=/);
+        // **Wait for what only the destination renders** (issue #1159).
+        //
+        // The first version waited on the "Trips this month" region, which the
+        // current month renders too — so it was satisfied before the click had
+        // landed, and one baseline of this capture came to show July "so far"
+        // over June's final figures. A `toHaveURL(/[?&]month=/)` was added
+        // next, and narrows the window without closing it: "Previous month" is
+        // a `next/link`, and a client navigation updates the URL when it
+        // *starts*, before React has committed the new DOM. Both waits can be
+        // green over the old page.
+        //
+        // The month heading is the one thing that cannot: it is
+        // `monthLabel(current, locale)` (reports/page.tsx), so it names the
+        // month being shown and no other page renders it. Derived from the
+        // frozen instant rather than typed as "June 2026", per this test's own
+        // note above — a hard-coded key rots the day the clock moves, and the
+        // whole point of walking through the arrow is that it does not.
+        const frozen = e2eNow();
+        // UTC arithmetic, so a frozen January rolls back to the previous
+        // December rather than to month zero.
+        const sailedStart = new Date(
+          Date.UTC(frozen.getUTCFullYear(), frozen.getUTCMonth() - 1, 1),
+        );
+        const sailed = {
+          year: sailedStart.getUTCFullYear(),
+          month: sailedStart.getUTCMonth() + 1,
+        };
+        await expect(
+          page.getByRole("heading", { level: 2, name: monthLabel(sailed), exact: true }),
+          "the capture never left the current month",
+        ).toBeVisible();
         await page.getByRole("region", { name: "Trips this month" }).waitFor();
         await capture(page, "reports-figures", scheme);
       });
