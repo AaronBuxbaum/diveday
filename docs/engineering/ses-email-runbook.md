@@ -287,84 +287,41 @@ for the rows, and every paragraph is one of them.
 Subject: SES production access for dive.day (transactional; previous case [PREVIOUS CASE ID])
 
 Who we are
-DiveDay (https://dive.day) is booking and operations software for scuba dive shops: trip
-scheduling, seat booking, liability waivers, certification checks, boat manifests. It is built and
-operated by Aaron Buxbaum (aaron@dive.day), a US sole proprietor. The product is pre-launch with
-[N] pilot dive shops onboarding in [MONTH YEAR]. Our privacy policy (https://dive.day/privacy)
-names AWS as the processor for email and how long delivery records are kept; our terms are
-https://dive.day/terms.
+DiveDay (https://dive.day) is booking and operations software for scuba dive shops: trip scheduling, seat booking, liability waivers, certification checks, boat manifests. It is built and operated by Aaron Buxbaum (aaron@dive.day), a US sole proprietor. The product is pre-launch with [N] pilot dive shops onboarding in [MONTH YEAR]. Our privacy policy (https://dive.day/privacy) names AWS as the processor for email and how long delivery records are kept; our terms are https://dive.day/terms.
 
 What we send, and what triggers it
-Transactional mail only, one message per recipient per event, each triggered by an action the
-recipient or their dive shop took in the product:
-- Booking confirmation, when a diver books a seat on a trip (or a shop books it for them at the
-  counter).
+Transactional mail only, one message per recipient per event, each triggered by an action the recipient or their dive shop took in the product:
+- Booking confirmation, when a diver books a seat on a trip (or a shop books it for them at the counter).
 - Waiver link, when a shop sends a diver their liability waiver to sign.
 - Trip reminders 7 days and 24 hours before departure, only for a booked seat.
-- Trip changes: a departure put on hold for conditions, cancelled for weather, or cancelled for
-  not meeting its minimum - only to the divers booked on it.
+- Trip changes: a departure put on hold for conditions, cancelled for weather, or cancelled for not meeting its minimum - only to the divers booked on it.
 - Account mail to shop staff: email verification, password reset, staff invitation, welcome.
-- Three courtesy messages a diver asked for: a wait-list seat opening (they joined the wait list
-  for that trip), a last-minute deal (they joined the shop's last-minute list on a form), and a
-  post-trip recap. These carry a one-click unsubscribe (RFC 8058 List-Unsubscribe and
-  List-Unsubscribe-Post headers plus an in-body link) and the shop's postal address.
-We do not send newsletters, cold outreach, or anything to a purchased or rented list, and the
-product has no feature that could.
+- Three courtesy messages a diver asked for: a wait-list seat opening (they joined the wait list for that trip), a last-minute deal (they joined the shop's last-minute list on a form), and a post-trip recap. These carry a one-click unsubscribe (RFC 8058 List-Unsubscribe and List-Unsubscribe-Post headers plus an in-body link) and the shop's postal address.
+We do not send newsletters, cold outreach, or anything to a purchased or rented list, and the product has no feature that could.
 
 Sample: booking confirmation
 Subject: You're on the boat - Two-Tank Reef
 Hi Nora, you're booked on Two-Tank Reef with Blue Mantis. Sat, Aug 1, 9:00 AM - 1:00 PM EDT.
 [button: Track what's left to do] Bring: certification card, mask, fins. See you at the dock.
-(The message is branded as the dive shop. Reply-To is the shop's own front-desk address, and
-only once the shop has confirmed it by opening a link we send to that address; every message
-carries Auto-Submitted: auto-generated.)
+(The message is branded as the dive shop. Reply-To is the shop's own front-desk address, and only once the shop has confirmed it by opening a link we send to that address; every message carries Auto-Submitted: auto-generated.)
 
 How we get addresses
-Every address is typed by the diver themselves at booking or on an opt-in form, or by shop staff
-onto that diver's record at the counter. A record a shop imports from a spreadsheet receives no
-mail until that diver books a trip or is sent a waiver. There is no bulk send; every message is
-addressed to one person about one event.
+Every address is typed by the diver themselves at booking or on an opt-in form, or by shop staff onto that diver's record at the counter. A record a shop imports from a spreadsheet receives no mail until that diver books a trip or is sent a waiver. There is no bulk send; every message is addressed to one person about one event.
 
 Volume
-Launch: [N] shops, roughly 20-60 messages a day, peaks of about 200 on a busy weekend morning, well
-under 1 message per second. We are requesting a 1,000/day quota and 5/second; we will ask again
-with real numbers before we need more.
+Launch: [N] shops, roughly 20-60 messages a day, peaks of about 200 on a busy weekend morning, well under 1 message per second. We are requesting a 1,000/day quota and 5/second; we will ask again with real numbers before we need more.
 
 Sending identity and authentication
-We send from the verified domain identity ses.dive.day (Easy DKIM, all three CNAMEs resolving),
-with a custom MAIL FROM domain mail.ses.dive.day (MX and SPF published, status SUCCESS) so the
-envelope aligns with our From domain under DMARC. dive.day publishes DMARC with a reporting address,
-and abuse@dive.day and postmaster@dive.day are monitored mailboxes. Automated mail is deliberately
-on a subdomain so it never shares reputation with our human correspondence. Every message has both
-text/plain and text/html parts and an Auto-Submitted: auto-generated header.
+We send from the verified domain identity ses.dive.day (Easy DKIM, all three CNAMEs resolving), with a custom MAIL FROM domain mail.ses.dive.day (MX and SPF published, status SUCCESS) so the envelope aligns with our From domain under DMARC. dive.day publishes DMARC with a reporting address, and abuse@dive.day and postmaster@dive.day are monitored mailboxes. Automated mail is deliberately on a subdomain so it never shares reputation with our human correspondence. Every message has both text/plain and text/html parts and an Auto-Submitted: auto-generated header.
 
 Bounce and complaint handling (tested)
-Our SES configuration set publishes BOUNCE, COMPLAINT, DELIVERY, DELIVERY_DELAY, REJECT and
-RENDERING_FAILURE events to an SNS topic subscribed to our HTTPS endpoint, which verifies the SNS
-signature and topic ARN before acting; email feedback forwarding on the identity is off, so the
-event stream is the one record. Each outcome is recorded against the message that produced
-it and shown to the shop as an email issue on their dashboard. The configuration set enables
-account-level suppression for BOUNCE and COMPLAINT, so a hard-bounced or complained-about address
-is never sent to again. A complaint additionally opts that address out of every courtesy message in
-our own records, and off any list it joined, so the opt-out survives a later change of address.
-We have exercised this end to end against the SES mailbox simulator (bounce@ and complaint@) from
-the deployed application. We have CloudWatch alarms on the account's Reputation.BounceRate and
-Reputation.ComplaintRate at AWS's review thresholds (5% and 0.1%), notifying our operations
-mailbox. We do not enable open or click tracking.
+Our SES configuration set publishes BOUNCE, COMPLAINT, DELIVERY, DELIVERY_DELAY, REJECT and RENDERING_FAILURE events to an SNS topic subscribed to our HTTPS endpoint, which verifies the SNS signature and topic ARN before acting; email feedback forwarding on the identity is off, so the event stream is the one record. Each outcome is recorded against the message that produced it and shown to the shop as an email issue on their dashboard. The configuration set enables account-level suppression for BOUNCE and COMPLAINT, so a hard-bounced or complained-about address is never sent to again. A complaint additionally opts that address out of every courtesy message in our own records, and off any list it joined, so the opt-out survives a later change of address. We have exercised this end to end against the SES mailbox simulator (bounce@ and complaint@) from the deployed application. We have CloudWatch alarms on the account's Reputation.BounceRate and Reputation.ComplaintRate at AWS's review thresholds (5% and 0.1%), notifying our operations mailbox. We do not enable open or click tracking.
 
 Opting out
-Courtesy messages carry List-Unsubscribe and List-Unsubscribe-Post one-click headers and an in-body
-link; the link never expires, and one click opts the person out permanently. Transactional messages
-about a booking that exists (confirmation, waiver, reminders, cancellations) do not carry an
-unsubscribe because they are the service the person bought; nobody receives them without a booking.
+Courtesy messages carry List-Unsubscribe and List-Unsubscribe-Post one-click headers and an in-body link; the link never expires, and one click opts the person out permanently. Transactional messages about a booking that exists (confirmation, waiver, reminders, cancellations) do not carry an unsubscribe because they are the service the person bought; nobody receives them without a booking.
 
 Previous request
-Case [PREVIOUS CASE ID], refused on [DATE] without a stated reason. Since then we have added the
-shop's Reply-To address (confirmed by a link sent to it before we use it) and postal footer to our
-messages, marked every message Auto-Submitted, made a complaint opt the recipient out in our own
-records, added the reputation alarms above, and tested the bounce and complaint path against the
-simulator from production. We are happy to answer any question about the above or
-provide a full sample of any message type.
+Case [PREVIOUS CASE ID], refused on [DATE] without a stated reason. Since then we have added the shop's Reply-To address (confirmed by a link sent to it before we use it) and postal footer to our messages, marked every message Auto-Submitted, made a complaint opt the recipient out in our own records, added the reputation alarms above, and tested the bounce and complaint path against the simulator from production. We are happy to answer any question about the above or provide a full sample of any message type.
 ```
 
 ### The reviewer's follow-up, answered
