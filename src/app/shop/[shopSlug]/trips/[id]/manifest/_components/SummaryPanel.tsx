@@ -280,12 +280,17 @@ export function SummaryPanel({
               that hold their columns as they tick, rather than jumping a pixel
               left every time a 1 becomes a 2. Drawn as the figure whose water
               rises with the count (slice 13h); the bar that used to sit under
-              it was the same fraction said twice. */}
-          <HeadCount
-            recorded={summary.totalDivers - summary.awaiting}
-            total={summary.totalDivers}
-            t={t}
-          />
+              it was the same fraction said twice.
+
+              **The water counts divers aboard over who went out.** Not
+              "recorded": a diver marked not back aboard has a result too, and
+              a glass that filled on results stood at the brim with a diver in
+              the water (dive-domain review 20260902). After a dive the glass
+              is everyone who left the dock — `totalDivers − ashore` — so a
+              diver who never boarded does not hold the figure short all day;
+              at the dock it is everyone on the manifest. `ashore` is 0 at
+              departure by construction, so one expression serves both. */}
+          <HeadCount aboard={summary.boarded} out={summary.totalDivers - ashore} t={t} />
         </div>
         {/* The counts the six tiles used to carry, folded in under the bar they
             explain. A definition list, not a grid of cards: label/number pairs

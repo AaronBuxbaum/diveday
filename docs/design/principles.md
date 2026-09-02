@@ -63,9 +63,12 @@ roll-call tap changes that count.
 ## 3. Calm surfaces, earned moments of joy
 
 The everyday UI is quiet: generous whitespace, few borders, muted ink for secondary text. Joy is
-concentrated where the user finishes something — booking confirmed, waiver signed, roll call
-complete — as a small, fast, coral-accented moment (≤ 400 ms). Delight loses meaning if it's
-everywhere; `--accent` is rationed on purpose.
+concentrated where the user finishes something — booking confirmed, waiver signed — as a small,
+fast, coral-accented moment (≤ 400 ms). Delight loses meaning if it's everywhere; `--accent` is
+rationed on purpose. Roll call complete used to be on that list and is not: coral appears on no
+manifest, roll call, cert, waiver or payment surface (ADR 20260901-diveday-reimagined's coral
+table), and the roll call's moment is the head-count figure whose water reaches the brim, with the
+heading saying so in words.
 
 **The shop home's good news is not a row kind, and that is settled.** Today's queue has twenty-two
 action kinds and every one is a problem — its tone map resolves only to danger, warning or neutral,

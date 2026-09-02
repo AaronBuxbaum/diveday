@@ -151,8 +151,50 @@ describe("the closed checkpoint (ADR 20260901-diveday-reimagined, slice 13h)", (
     });
     expect(screen.getByRole("heading", { name: "Roll call complete" })).toBeTruthy();
     expect(screen.getByRole("progressbar").getAttribute("aria-valuetext")).toBe(
-      "3 of 3 divers recorded",
+      "3 of 3 divers aboard",
     );
     expect(container.innerHTML).not.toMatch(/accent/);
+  });
+
+  it("holds the water under the brim while a diver is not back aboard", () => {
+    // Eight out, seven back, one recorded missing: every diver has a result,
+    // so a glass that filled on "recorded" stood full at the exact moment the
+    // page holds its loudest fact (dive-domain review 20260902). The water
+    // counts aboard, and the words say what it counts.
+    renderPanel({
+      summary: summary({
+        totalDivers: 8,
+        boarded: 7,
+        notBoarded: 1,
+        notBackAboard: 1,
+        awaiting: 0,
+      }),
+    });
+    const figure = screen.getByRole("progressbar");
+    expect(figure.getAttribute("aria-valuenow")).toBe("7");
+    expect(figure.getAttribute("aria-valuemax")).toBe("8");
+    expect(figure.getAttribute("aria-valuetext")).toBe("7 of 8 divers aboard");
+    const water = document.querySelector<HTMLElement>("[data-head-count-water]");
+    expect(water?.style.transform).toBe("scaleY(0.875)");
+  });
+
+  it("measures an after-dive count against who went out, not who bought a seat", () => {
+    // One diver never left the dock (ashore, carried forward); the other seven
+    // are all back. The glass is full — the roll call has nobody to wait for.
+    renderPanel({
+      completeness: completeness({ reason: null, complete: true, diversAccountedFor: true }),
+      summary: summary({
+        totalDivers: 8,
+        boarded: 7,
+        notBoarded: 1,
+        notBackAboard: 0,
+        awaiting: 0,
+      }),
+      notBackAboardDivers: [],
+    });
+    const figure = screen.getByRole("progressbar");
+    expect(figure.getAttribute("aria-valuetext")).toBe("7 of 7 divers aboard");
+    const water = document.querySelector<HTMLElement>("[data-head-count-water]");
+    expect(water?.style.transform).toBe("scaleY(1)");
   });
 });

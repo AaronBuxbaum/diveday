@@ -57,8 +57,8 @@ export function ProgressBar({
   trackClassName?: string;
   /**
    * Whatever the surface needs the track itself to say — `aria-hidden` on the
-   * decorative one, `role="progressbar"` with its values on the manifest's.
-   * The meaning is the caller's; the pixels are this component's.
+   * decorative boarding bar, or a `role="progressbar"` with its values. The
+   * meaning is the caller's; the pixels are this component's.
    */
 } & React.HTMLAttributes<HTMLDivElement>) {
   // Rounded to four places, which is a tenth of a pixel on a 1000px track and
