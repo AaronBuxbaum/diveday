@@ -83,5 +83,9 @@ export {
   recipientLocale,
 } from "./kinds";
 export type { NotificationDelivery, NotificationProvider } from "./provider";
-export { type ShopSenderSource, shopSenderOf } from "./sender";
+export {
+  deliverableShopContactEmail,
+  type ShopSenderSource,
+  shopSenderOf,
+} from "./sender";
 export { type SesEmailClient, type SesProviderOptions, sesNotificationProvider } from "./ses";

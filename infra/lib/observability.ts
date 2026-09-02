@@ -108,6 +108,12 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       "notification.ses_send_failed",
       "notification.sns_sms_send_failed",
       "notification.whatsapp_send_failed",
+      // Not a provider refusing a message -- a deployment that cannot seal one.
+      // With no usable SECRET_ENCRYPTION_KEY the retry queue stores nothing and
+      // drains nothing, so every retryable send is dropped and the drain returns
+      // having touched no row (issue #1297). Same consequence as the three above
+      // and the same page: a waiver link that will never leave.
+      "notification.queue_seal_unavailable",
     ],
     // One, not the five this used to ask for. Every outbound email failed for
     // an unknown stretch before issue #517 and this alarm stayed silent the

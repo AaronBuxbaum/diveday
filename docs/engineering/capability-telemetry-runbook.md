@@ -34,7 +34,8 @@ may still contain raw tokens. To check:
 1. Open the project in the Vercel dashboard → **Analytics** → **Pages**, and
    separately **Speed Insights** → **Pages**.
 2. Filter/search for `waivers/`, `ready/`, `recap/`, `verify/`,
-   `reset-password/`, `invite/`, `claim/`, and `calendar/` path prefixes, **and
+   `reset-password/`, `invite/`, `claim/`, `confirm-contact/`, and `calendar/`
+   path prefixes, **and
    separately** for `/s/*/trips/` paths carrying a `?booking=` query parameter —
    the redaction covers both shapes, but they don't share one filter.
    (`/calendar/[token]` is fetched by calendar clients rather than browsers, so
@@ -42,7 +43,8 @@ may still contain raw tokens. To check:
    opens their own feed URL in a browser once puts it there.)
 3. Any row showing a path *longer* than `/waivers/[token]`, `/ready/[token]`,
    `/recap/[token]`, `/verify/[token]`, `/reset-password/[token]`,
-   `/invite/[token]`, `/claim/[token]`, or `/calendar/[token]` (i.e. an actual
+   `/invite/[token]`, `/claim/[token]`, `/confirm-contact/[token]`, or
+   `/calendar/[token]` (i.e. an actual
    token string), or a
    `/s/*/trips/*` row whose `booking` parameter isn't the literal string
    `[token]`, is a historical leak.
@@ -67,6 +69,7 @@ may still contain raw tokens. To check:
 | Verify-email link (`/verify/[token]`) | Hashed, expiring, one-time row in `account_tokens` (`purpose = 'email_verification'`; see `src/db/account-tokens.ts`, [ADR 20260725-account-lifecycle-emails](../architecture/decisions/20260725-account-lifecycle-emails.md)) | Low stakes if exposed (it only confirms an address). Reissuing (a fresh onboarding send) supersedes the old token; it also simply expires after 3 days. |
 | Password-reset link (`/reset-password/[token]`) | Hashed, expiring, one-time row in `account_tokens` (`purpose = 'password_reset'`; same table/module) | Yes — issuing a new reset request for the same account supersedes any outstanding one, and a used or expired (1 hour) token stops verifying immediately either way. |
 | Staff-invite link (`/invite/[token]`) | Hashed, expiring, one-time row in `account_tokens` (`purpose = 'invite'`; same table/module, [ADR 20260726-staff-invite-accounts](../architecture/decisions/20260726-staff-invite-accounts.md)) | Yes — and treat it as high stakes: an unconsumed invite token creates a *staff* account, so an exposed one is an account-takeover-equivalent path, not a low-stakes confirmation like email verification. Reissuing the invite supersedes the outstanding token; it also expires after 7 days (`INVITE_TTL_MS`, `src/lib/account-tokens.ts`). |
+| Shop contact-address confirmation (`/confirm-contact/[token]`) | Hashed, expiring (3 days), one-time row in `shop_contact_email_confirmation_tokens` (`src/db/shop-contact-email.ts`, issue #1288) | Yes — saving the contact address again supersedes any outstanding token, and a used or expired one stops verifying either way. Narrow, but not nothing: the capability is "vouch for this address", so an exposed one lets its holder confirm a mailbox they never received mail at, which is the whole thing the link exists to make provable. Two guards behind it if one leaks: the claim re-checks that the shop's contact address is *still* the one the link was sent to, so a token cannot be spent on an address typed afterwards, and the confirming write repeats that predicate under a `FOR UPDATE` on the shop row so a concurrent save cannot slip a different address between the check and the stamp. |
 | Staff calendar feed (`/calendar/[token]`) | Hashed, **non-expiring**, revocable row in `calendar_feeds` (`src/features/calendar-sync/feed-store.ts`, [ADR 20260730-calendar-feed-subscriptions](../architecture/decisions/20260730-calendar-feed-subscriptions.md)) | Yes — call `revokeCalendarFeeds` (sets `revoked_at`), or rotate from the staff UI at `shop/[shopSlug]/settings/calendar`, which revokes the old row and issues a new one in the same step. `verifyCalendarFeed` re-derives access on **every** poll — an unknown token, a revoked row, and a person who has since lost their staff role all return the same 404, and `revokeFeedsForFormerStaff` closes outstanding feeds when a role is removed. This is the longest-lived credential of the set by design: no expiry, because a feed that died after 60 days would silently stop updating a captain's calendar. Rotation is the mitigation, so rotate rather than wait it out. |
 | Email-unsubscribe link (`/unsubscribe/[token]`) | Hashed, **non-expiring, non-revocable** row — two of them, `last_minute_list_unsubscribe_tokens` and `person_courtesy_email_unsubscribe_tokens` (`src/db/last-minute-list.ts`, `src/db/courtesy-email.ts`); neither table has an `expires_at` or a `revoked_at` column | No. Lowest stakes of the set — the capability is "stop sending this address these emails", and the page reveals only the shop's name — but it is also the only one with no expiry *and* no revocation, so an exposed one works forever. It is additionally the one shape `redactCapabilityUrl` does not cover; see [the gap the redaction itself still has](#the-gap-the-redaction-itself-still-has). |
 

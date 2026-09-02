@@ -1,12 +1,12 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 39 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 41 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
 shape being refused.
 
-Only the 18 guards whose reasoning is not obvious from their own failure message are
+Only the 20 guards whose reasoning is not obvious from their own failure message are
 written up here. The rest say everything they need to say when they go red.
 
 This is the long-form half of one row in [AGENTS.md](../../AGENTS.md)'s command table, and it lives
@@ -16,9 +16,13 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, logical-property, clock, transaction-concurrency, timezone, Intl-cache, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, destructive-migration, migration-graph, e2e-hygiene, follow-ups, agent-layer (skills/index/task-context), Open-Graph-site, infra-ASCII and stack-CI-skip safeguards.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, logical-property, clock, transaction-concurrency, timezone, Intl-cache, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, destructive-migration, migration-graph, e2e-hygiene, follow-ups, agent-layer (skills/index/task-context), Open-Graph-site, infra-ASCII, stack-CI-skip and CI-change-detection safeguards.
 
 ## The guards worth reading about
+
+### CI-change-detection
+
+The CI-change-detection one (`scripts/check-ci-change-detection.mjs`) reads the `filter` step of `.github/workflows/ci.yml`'s `changes` job and pins *how it asks* what a pull request touched: the base resolves by **ref**, never `github.event.pull_request.base.sha`; a push to main keeps its own range off `github.event.before`; and every `git diff --name-only` range is three-dot. It is a guard rather than a comment because the failure is silent in the direction that costs money. `base.sha` is the base *as recorded when the pull request was opened* and never advances, while `actions/checkout` hands the job `refs/pull/N/merge` — which already contains everything main merged since. So `base.sha` is an ancestor of HEAD, `merge-base(base.sha, HEAD)` is `base.sha` itself, the three-dot form degenerates, and main's own new files are reported as the branch's. Nothing goes red: change detection fails **open**, so the whole gate simply runs. On #1291 — two lines under `docs/design/canvases/` — that meant the build, four Playwright shards, four visual shards, reg-suit and real-postgres, plus 196 changed and 8 new surfaces charged to a pull request that cannot move a pixel, every one of which AGENTS.md requires a reviewer to account for (issue #1295). Two traps the guard also holds: collapsing both events into one range makes `origin/main...github.sha` empty on a push, so main publishes no visual baseline and every branch cut from that commit resolves none (issue #1277); and a two-dot range reports every file main added since the fork as a *deletion*, which `--name-only` lists identically. The third trap is not checkable and is written at the call site instead — the step's checkout already ran `fetch-depth: 0`, so a `--depth=1` fetch of the base ref would graft a shallow boundary on and make `merge-base` compute against truncated history. This guard does **not** cover the second, independent cause of charged visual diffs on a *code* pull request whose base has moved: the capture shards shoot the merge commit while `scripts/reg-suit-keys.mjs` keys the baseline to the fork point. Correct detection only stops a docs-only branch reaching the compare at all.
 
 ### infra-ASCII
 

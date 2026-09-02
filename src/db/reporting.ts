@@ -3,6 +3,7 @@ import {
   asc,
   count,
   countDistinct,
+  desc,
   eq,
   exists,
   gt,
@@ -104,6 +105,13 @@ const COLLECTED_PAYMENT_STATUSES = ["paid", "deposit_paid", "partly_refunded"] a
  * waiver-completed count in a single grouped select double-counts across the
  * join fan-out, and revenue lives on different tables entirely.
  */
+/**
+ * How many partners the month's report will name. See the cap's own note inside
+ * `getMonthlyReport`: the rows are anonymous-writable, so the list is bounded
+ * at the query rather than at the component.
+ */
+const MAX_REPORTED_PARTNERS = 10;
+
 export async function getMonthlyReport(
   db: DbExecutor,
   shopId: string,
@@ -446,6 +454,48 @@ export async function getMonthlyReport(
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(and(inWindow, eq(tips.shopId, shopId), eq(tips.status, "paid")));
 
+  // **Which partners sent divers this month.** One row per partner slug, the
+  // seats they account for, biggest first.
+  //
+  // Counted on the same basis as `seatsBooked` — active bookings on this
+  // month's live trips — so a shop reading "34 seats" above and "Coral Sands
+  // 6" here is reading two slices of one number rather than two numbers that
+  // happen to sit on one page. The referral is on the seat, so a party of
+  // four booked through a hotel's link counts four.
+  //
+  // The unattributed majority is deliberately absent: this list answers "who
+  // sends us divers", and a row for the divers nobody sent is the difference
+  // between two figures already on the page.
+  //
+  // **Capped, because every distinct value here was chosen by an anonymous
+  // visitor.** The slug is bounded and character-restricted, so nothing hostile
+  // can be *rendered*; what is not bounded is how many distinct ones a stream of
+  // public bookings can mint, and an uncapped `group by` behind an uncapped list
+  // is how a staff page grows a thousand rows of somebody else's text (security
+  // review of issue #1285, finding 3). Ten is far above any real shop's partner
+  // list and far below anything worth abusing. The honest long-term answer is to
+  // credit only slugs the shop's own generator wrote, which needs a stored
+  // partner list this product does not have yet (issue #1294).
+  const referralRows = await db
+    .select({
+      partner: bookings.referralSource,
+      seats: count(bookings.id),
+    })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        inWindow,
+        liveTrip(),
+        eq(bookings.shopId, shopId),
+        isNotNull(bookings.referralSource),
+        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+      ),
+    )
+    .groupBy(bookings.referralSource)
+    .orderBy(desc(count(bookings.id)), bookings.referralSource)
+    .limit(MAX_REPORTED_PARTNERS);
+
   const waiverByTrip = new Map(waiverRows.map((row) => [row.tripId, Number(row.waiverComplete)]));
 
   const reportTrips: ReportTrip[] = tripRows.map((row) => ({
@@ -489,6 +539,9 @@ export async function getMonthlyReport(
     importedFinancialRecordCount: Number(importedFinancialTotals?.count ?? 0),
     tipsCents: Number(tipTotals?.total ?? 0),
     tipCount: Number(tipTotals?.tipCount ?? 0),
+    partnerReferrals: referralRows.flatMap((row) =>
+      row.partner ? [{ partner: row.partner, seats: Number(row.seats) }] : [],
+    ),
   };
 }
 

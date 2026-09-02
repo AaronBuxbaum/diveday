@@ -679,6 +679,79 @@ describe("getMonthlyReport", () => {
   });
 });
 
+describe("getMonthlyReport partner referrals (issue #1285)", () => {
+  async function referredBooking(
+    db: AppDb,
+    shopId: string,
+    tripId: string,
+    name: string,
+    partner: string | null,
+    status: BookingStatus = "booked",
+  ) {
+    const personId = await makePerson(db, shopId, name);
+    const [row] = await db
+      .insert(bookings)
+      .values({ shopId, tripId, personId, status, referralSource: partner })
+      .returning();
+    if (!row) throw new Error("failed to insert booking");
+    return row.id;
+  }
+
+  it("counts seats per partner, biggest first, and leaves the unattributed out", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
+    await referredBooking(db, shop.id, trip, "Referred One", "coral-sands");
+    await referredBooking(db, shop.id, trip, "Referred Two", "coral-sands");
+    await referredBooking(db, shop.id, trip, "Referred Three", "harbour-house");
+    await referredBooking(db, shop.id, trip, "Walked In", null);
+
+    const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+    expect(report.partnerReferrals).toEqual([
+      { partner: "coral-sands", seats: 2 },
+      { partner: "harbour-house", seats: 1 },
+    ]);
+    // A slice of the seats figure, never a second number beside it.
+    expect(summarizeMonth(report).seatsBooked).toBe(4);
+  });
+
+  it("is empty for the shop that has handed out no partner links", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
+    await referredBooking(db, shop.id, trip, "Walked In", null);
+
+    const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+    expect(report.partnerReferrals).toEqual([]);
+  });
+
+  /**
+   * Every distinct value here was chosen by an anonymous visitor: the booking
+   * form is public, and one POST mints one slug. The slug itself is bounded and
+   * character-restricted, so nothing hostile can be rendered — what is not
+   * bounded is *how many*, and an uncapped `group by` behind an uncapped list is
+   * how a staff page grows a thousand rows of somebody else's text.
+   */
+  it("caps how many partners a month can name", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 40, "Reef");
+    for (let index = 0; index < 14; index++) {
+      await referredBooking(db, shop.id, trip, `Filler ${index}`, `partner-${index}`);
+    }
+
+    const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+    expect(report.partnerReferrals).toHaveLength(10);
+  });
+
+  it("excludes a cancelled seat, on the same basis as every other figure", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
+    await referredBooking(db, shop.id, trip, "Still Coming", "coral-sands");
+    await referredBooking(db, shop.id, trip, "Called Off", "coral-sands", "cancelled");
+
+    const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+    expect(report.partnerReferrals).toEqual([{ partner: "coral-sands", seats: 1 }]);
+  });
+});
+
 describe("pagedMonthlyReportTrips", () => {
   it("pages by number and never repeats or skips a trip", async () => {
     const { db, shop } = await seededShopContext();

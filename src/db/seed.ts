@@ -122,6 +122,7 @@ import { seedMoreTrips } from "./seed-more-trips";
 import { seedNitrox } from "./seed-nitrox";
 import { seedOpenInvoice } from "./seed-open-invoice";
 import { seedOrders } from "./seed-orders";
+import { seedPartnerReferrals } from "./seed-partner-referrals";
 import { seedPreDepartureChecklist } from "./seed-pre-departure-checklist";
 import { seedPromos } from "./seed-promos";
 import { seedRecentRecaps } from "./seed-recent-recaps";
@@ -530,6 +531,10 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string) {
           // that can honestly show that state unable to (issue #835). The
           // visual capture of the queue's units row takes a minted shop for
           // exactly this reason.
+          // Left unconfirmed, like the units above and for the same reason: a
+          // shop that has just typed its front-desk address genuinely has not
+          // proved it reads it, and this is the fixture that can honestly show
+          // that state (issue #1288).
           contactEmail: identity.emailFor("hello"),
           contactEmailConfirmedAt: new Date("2026-07-01T12:00:00.000Z"),
           contactPhone: "+1 305 555 0142",
@@ -907,6 +912,9 @@ export async function seedDemoSchedule(
   // count or roster membership moves (ADR
   // 20260821-currency-is-what-catches-people).
   await seedDiveRecency(db, shopId);
+  // Which partner's link sent a seat — beside the recency answers, and written
+  // the same way: a column on bookings that already exist (issue #1285).
+  await seedPartnerReferrals(db, shopId);
 
   // Adds-only and late, like the four above: the desk's trail **per diver**,
   // so the Activity section on a diver's record opens on a real history rather

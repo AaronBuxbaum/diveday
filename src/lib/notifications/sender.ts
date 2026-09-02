@@ -21,6 +21,30 @@ export type ShopSenderSource = {
 const replyToSchema = z.email().max(200);
 
 /**
+ * The shop's contact address **when DiveDay may actually send to it** — null
+ * until somebody opened the one-time link sent there (issue #1288).
+ *
+ * One function, so that every consumer that puts diver information *into* that
+ * mailbox asks the same question. `shopSenderOf` below is one caller; the other
+ * is the date-request/course-inquiry send (`src/app/actions/inquiry.ts`), which
+ * is the stronger case of the two: a `Reply-To` only leaks if a diver hits
+ * reply, while that mail pushes a diver's name, address, phone, experience and
+ * free text to whatever string is in the box, unprompted, from a public page.
+ *
+ * **Not for display.** `shops.contact_email` is published on the shop's own
+ * pages and always has been; confirming changes nothing about that. What waits
+ * for proof is *delivery*.
+ */
+export function deliverableShopContactEmail(shop: {
+  contactEmail: string | null;
+  contactEmailConfirmedAt: Date | null;
+}): string | null {
+  if (!shop.contactEmailConfirmedAt) return null;
+  const parsed = replyToSchema.safeParse(shop.contactEmail?.trim());
+  return parsed.success ? parsed.data : null;
+}
+
+/**
  * `Reply-To` and the postal footer, from what the shop has on file.
  *
  * `undefined` when there is nothing: a shop with no front-desk address and no
@@ -41,9 +65,7 @@ const replyToSchema = z.email().max(200);
  * simply absent here, exactly as if none were on file.
  */
 export function shopSenderOf(shop: ShopSenderSource): NotificationSender | undefined {
-  const replyTo = replyToSchema.safeParse(
-    shop.contactEmailConfirmedAt ? shop.contactEmail?.trim() : undefined,
-  );
+  const replyTo = deliverableShopContactEmail(shop);
   const postalAddress = notificationSenderSchema.shape.postalAddress.safeParse(
     shopAddressLines({
       street: shop.addressStreet,
@@ -54,7 +76,7 @@ export function shopSenderOf(shop: ShopSenderSource): NotificationSender | undef
     }).join(", ") || undefined,
   );
   const sender: NotificationSender = {
-    ...(replyTo.success && { replyTo: replyTo.data }),
+    ...(replyTo && { replyTo }),
     ...(postalAddress.success && postalAddress.data && { postalAddress: postalAddress.data }),
   };
   return Object.keys(sender).length > 0 ? sender : undefined;

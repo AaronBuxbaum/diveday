@@ -1130,24 +1130,32 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   }
 
   // --- the un-normalized PII blob -----------------------------------------
-  // `notification_send_queue.payload` is a rendered outbound message carrying
-  // the recipient's name and address, with no person_id to sweep on. It is a
-  // work queue, not evidence (that lives in notification_deliveries), so the
-  // rows go — including already-sent ones, whose payload is the same blob.
+  // `notification_send_queue.payload_sealed` is a rendered outbound message
+  // carrying the recipient's name and address, with no person_id to sweep on.
+  // It is a work queue, not evidence (that lives in notification_deliveries),
+  // so the rows go. Only *live* ones are reachable, and only live ones hold
+  // anything: a row past its terminal write has had its payload, recipient and
+  // booking cleared by the drain, so there is nothing left in it to erase.
+  //
+  // The two matches read `recipient_email` and `booking_id`, which are columns
+  // rather than `payload ->> …` probes because the payload is sealed and
+  // nothing can read through it (issue #1297). That made the sweep stronger,
+  // not weaker: the same two handles, now typed and indexable, and no longer
+  // silently missing a row whose blob spelled a field differently.
   //
   // The address match is fuzzy in one direction that is worth seeing:
   // `people_shop_email_unique` is partial on *live* rows, so a soft-deleted
   // duplicate person can legitimately hold the same address as a live one, and
   // erasing the deleted record drops the live person's queued mail. There is
-  // no tighter predicate — the payload carries no `person_id` — so the match
-  // stays and the count is logged.
+  // still no tighter predicate — this queue carries no `person_id` — so the
+  // match stays and the count is logged.
   if (ctx.email) {
     const dropped = await tx
       .delete(notificationSendQueue)
       .where(
         and(
           eq(notificationSendQueue.shopId, shopId),
-          sql`lower(${notificationSendQueue.payload} ->> 'to') = ${ctx.email.toLowerCase()}`,
+          sql`lower(${notificationSendQueue.recipientEmail}) = ${ctx.email.toLowerCase()}`,
         ),
       )
       .returning({ id: notificationSendQueue.id });
@@ -1159,7 +1167,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       .where(
         and(
           eq(notificationSendQueue.shopId, shopId),
-          inArray(sql`${notificationSendQueue.payload} ->> 'bookingId'`, bookingIds),
+          inArray(notificationSendQueue.bookingId, bookingIds),
         ),
       );
   }

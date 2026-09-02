@@ -57,6 +57,15 @@ export type MonthlyReportInput = {
   tipsCents: number;
   /** How many tips that total is made of — the tip card's detail line. */
   tipCount: number;
+  /**
+   * Which partners' links sent divers on this month's departures, biggest
+   * first — the slug the shop's own embed generator wrote, and the seats it
+   * accounts for (issue #1285).
+   *
+   * Empty for the ordinary shop, which has handed out no partner links; the
+   * surface renders nothing at all in that case rather than an empty state.
+   */
+  partnerReferrals: { partner: string; seats: number }[];
 };
 
 export type MonthlyReport = {
@@ -92,6 +101,8 @@ export type MonthlyReport = {
   waiverOutstanding: number;
   /** waiverComplete / seatsBooked in [0, 1], or null when there were no bookings. */
   waiverCompletion: number | null;
+  /** Partners whose links sent divers this month, biggest first; empty for most shops. */
+  partnerReferrals: { partner: string; seats: number }[];
 };
 
 /** Bookings on active statuses. Mirrors the roster's "who is on this boat" set. */
@@ -124,6 +135,7 @@ export function summarizeMonth(input: MonthlyReportInput): MonthlyReport {
     waiverComplete,
     waiverOutstanding: Math.max(0, seatsBooked - waiverComplete),
     waiverCompletion: seatsBooked > 0 ? waiverComplete / seatsBooked : null,
+    partnerReferrals: input.partnerReferrals,
   };
 }
 

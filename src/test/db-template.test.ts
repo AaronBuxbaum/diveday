@@ -78,11 +78,13 @@ describe("templateBytes", () => {
     expect(await templateBytes("lean")).toBeNull();
   });
 
-  it("keeps the two variants apart", async () => {
+  it("keeps the three variants apart", async () => {
     await writeFile(path.join(cacheDir, "test-db-template-history.tar"), Buffer.from("history"));
+    await writeFile(path.join(cacheDir, "test-db-template-empty.tar"), Buffer.from("empty"));
     const templateBytes = await freshTemplateBytes();
     expect(await templateBytes("lean")).toBeNull();
     expect(Buffer.from((await templateBytes("history")) as Uint8Array).toString()).toBe("history");
+    expect(Buffer.from((await templateBytes("empty")) as Uint8Array).toString()).toBe("empty");
   });
 });
 

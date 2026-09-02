@@ -146,6 +146,19 @@ describe("the prompt", () => {
     expect(problemsFor(vague).join()).toMatch(/names no repo path/);
   });
 
+  /**
+   * The allowlist was `src|scripts|docs|e2e|infra|drizzle`, so a follow-up about
+   * CI — whose only honest path is under `.github/` — was told it "names no repo
+   * path" and failed the whole repository's `check:repo`. Issue #1295 is exactly
+   * that ticket, and it was written correctly.
+   */
+  it("accepts the two directories a CI or asset follow-up has to name", () => {
+    for (const path of [".github/workflows/ci.yml", "public/embed.js"]) {
+      const rewritten = valid.body.replace(/src\/lib and the surrounding tests/, path);
+      expect(problemsFor(rewritten).join(), path).not.toMatch(/names no repo path/);
+    }
+  });
+
   it("requires the prompt to say it closes the issue", () => {
     const orphan = valid.body.replace(/\s*Close this issue\s*when the work lands\./, "");
     expect(problemsFor(orphan).join()).toMatch(/must tell the session to close this issue/);

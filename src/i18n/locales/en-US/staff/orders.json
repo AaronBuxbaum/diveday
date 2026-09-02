@@ -97,7 +97,8 @@
       "notAuthorized": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
       "demoDisabled": "This is a demo order — it can't be changed.",
       "fallback": "Something changed on this order — the details below are current."
-    }
+    },
+    "sentBy": "Sent by {partner}"
   },
   "index": {
     "eyebrow": "Front desk",

@@ -5,7 +5,7 @@ import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { sortStationRows } from "@/lib/today";
-import { dbNowPlus, seededShopContext } from "@/test/db";
+import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking, createBookingParty } from "./bookings";
 import { createGearItem, recordGearService, reserveGearUnit, returnGearReservation } from "./gear";
@@ -49,9 +49,28 @@ import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
 
+/**
+ * One database for the file, one transaction per test (ADR-less; see
+ * `fileScopedShopContext` in src/test/db.ts, issue #1244).
+ *
+ * This file was 72 tests each hydrating its own snapshot at ~0.7s, and on
+ * 2026-09-02 its first test tripped Vitest's 20s ceiling on CI — a timeout
+ * inside `seededShopContext()`, not an assertion, on a shard whose workers were
+ * contending. That is the same "flake with a runway" #1271 described for
+ * `seed.test.ts`: nothing is wrong with the test, it simply pays a per-test
+ * cost big enough that a loaded runner can push it over.
+ *
+ * The file qualifies on every count the helper's own docstring requires: it
+ * reads the seeded fixture and writes rows it reads straight back, it owns no
+ * money path and no concurrency race, and its single `db.transaction` (the
+ * roll-call backdating below) is a plain multi-row insert, so becoming a
+ * savepoint changes nothing about what it proves.
+ */
+const ctx = fileScopedShopContext();
+
 describe("today's work queue (in-memory PGlite)", () => {
   it("puts the seeded departure that sails today on the board with live readiness counts", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
 
@@ -69,7 +88,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("collapses a boat's identical blockers so one busy trip cannot bury the rest", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     // Today's reef trip is mostly ready these days (only one straggler left);
     // the wreck charter five days out is the boat still carrying a pile of
@@ -99,7 +118,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("drops a diver out of the queue once their evidence clears", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -133,7 +152,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("counts a boarded diver on today's board", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -171,7 +190,7 @@ describe("today's work queue (in-memory PGlite)", () => {
    * cards in dollars having never been asked (issue #835).
    */
   it("keeps asking which currency a shop works in until somebody answers", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await db.update(shopsTable).set({ unitsConfirmedAt: null }).where(eq(shopsTable.id, shop.id));
 
     const asking = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
@@ -224,7 +243,7 @@ describe("today's work queue (in-memory PGlite)", () => {
    * flapped.
    */
   it("lists a departure's crew by name, the same way every time", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -250,7 +269,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("does not call a departure accounted for while its crew is uncounted", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -326,7 +345,7 @@ describe("today's work queue (in-memory PGlite)", () => {
    * gate stands in front of someone already on the boat (issue #698).
    */
   it("splits the blocked count into those aboard and those still ashore", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -390,7 +409,7 @@ describe("today's work queue (in-memory PGlite)", () => {
    * own docstring said "a boat that has sailed without them".
    */
   it("keeps a not-boarded diver's blocker on the card until the boat has gone", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -435,7 +454,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("drops a cancelled booking from the boarded count, not just the booked count", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -484,7 +503,7 @@ describe("today's work queue (in-memory PGlite)", () => {
    * the widening fixes, so the "cleared" half now has to supply every size.
    */
   it("flags divers whose rental sizes are missing, and clears it once every size is on file", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -538,7 +557,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("turns an email-delivery failure into a one-tap resend, not just a link", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -573,7 +592,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("makes a freed seat one-tap invitable, targeting the front of the wait list", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     // The seeded reef boat sails today at 9/12 — three open seats to fill.
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
@@ -627,7 +646,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("nudges an under-capacity trip departing soon that has never had a last-minute deal sent", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -653,7 +672,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     // nobody reachable there is nothing to send, the trip's Guests tab hides
     // the panel outright, and the row's own `#last-minute-deal` anchor would
     // land on nothing.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -677,7 +696,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("stops nudging once a last-minute deal has actually been sent for that trip", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -708,7 +727,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("raises a nitrox request whose card stopped being verified", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -743,7 +762,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("nudges staff about missing emergency contacts on a near boat, and clears once filled", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -786,7 +805,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("never looks past its one-week horizon", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     const horizon = nowMs() + 7 * 24 * 60 * 60 * 1000;
@@ -797,7 +816,7 @@ describe("today's work queue (in-memory PGlite)", () => {
   });
 
   it("points every action at a route inside this shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
 
@@ -820,7 +839,7 @@ describe("today's work queue (in-memory PGlite)", () => {
  */
 describe("Today and the staffing view count crew the same way (DOM-M3)", () => {
   async function courseSessionToday() {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [course] = await db
       .select()
       .from(courses)
@@ -908,7 +927,7 @@ describe("Today and the staffing view count crew the same way (DOM-M3)", () => {
  * (agency ratios, course-only) stays exactly where it was.
  */
 describe("uncrewed and below-target departures (issue #732)", () => {
-  async function reefTrip(db: Awaited<ReturnType<typeof seededShopContext>>["db"], shopId: string) {
+  async function reefTrip(db: ReturnType<typeof fileScopedShopContext>["db"], shopId: string) {
     const trips = await upcomingTripsWithCounts(db, shopId);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
     if (!reef) throw new Error("demo reef trip missing");
@@ -916,7 +935,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
   }
 
   it("raises uncrewed_departure for a fun dive with divers booked and zero in-water crew", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // The seed's own first charter (src/db/seed-trips.ts) rosters its captain
     // and divemaster as tripRole "crew"/"captain" — neither counts toward the
     // in-water ratio (src/lib/crew-roles.ts) — so this trip is genuinely
@@ -937,7 +956,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
   });
 
   it("raises the quieter crew_below_target once some crew is rostered, not uncrewed_departure", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const reef = await reefTrip(db, shop.id);
     const staff = await listStaff(db, shop.id);
     const divemaster = staff.find(
@@ -959,7 +978,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
   });
 
   it("clears both rows once the departure meets its own target", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const reef = await reefTrip(db, shop.id);
     // The demo's own default divers-per-divemaster is 6, and this trip books
     // 9 — two divemasters clears ceil(9/6).
@@ -987,7 +1006,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
   });
 
   it("never raises either row for an empty boat", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await createTrip(db, {
       shopId: shop.id,
       title: "Empty afternoon dive",
@@ -1015,7 +1034,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
    * comments elsewhere design against.
    */
   it("does not double-fire uncrewed_departure for a course session already flagged instructor_missing", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [course] = await db
       .select()
       .from(courses)
@@ -1082,7 +1101,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
    * learn to skip this row" rather than as a refusal.
    */
   it("raises neither row for a departure the shop marked self-guided", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const reef = await reefTrip(db, shop.id);
     // The same trip the first test in this block proves *does* raise the row,
     // so the only thing that changed is the mark.
@@ -1105,7 +1124,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
    * no shop may switch one off by ticking a box on the departure.
    */
   it("still flags a course session's missing instructor when the departure is self-guided", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [course] = await db
       .select()
       .from(courses)
@@ -1156,7 +1175,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
 
 describe("role lens raw material", () => {
   it("marks the trips a captain crews and the sessions an instructor teaches", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const staff = await listStaff(db, shop.id);
     const captain = staff.find((entry) => entry.roles.includes("captain"))?.person;
     const instructor = staff.find((entry) => entry.roles.includes("instructor"))?.person;
@@ -1205,7 +1224,7 @@ describe("role lens raw material", () => {
 
   describe("ops alerts (task 157)", () => {
     it("surfaces a stuck payment operation as an urgency: now row, only when the caller opts in", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const intent = await startPaymentOperation(db, { shopId: shop.id, kind: "invoice" });
       // No wall-clock trickery needed on the write side: reading the queue from
       // ten minutes in the *database's* future is what makes the just-started
@@ -1254,7 +1273,7 @@ describe("role lens raw material", () => {
     });
 
     it("surfaces a failed photo-deletion retry as an urgency: now row, only when the caller opts in", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const attempt = await queueMediaDeletion(db, {
         shopId: shop.id,
         kind: "recap_photo",
@@ -1294,7 +1313,7 @@ describe("role lens raw material", () => {
       // The panel on the Orders index owns this queue; Today mirrors it, the
       // same arrangement the two rows above use
       // (ADR 20260813-shop-cancellation-refunds-itself).
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
       const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
       if (!reef) throw new Error("demo reef trip missing");
@@ -1357,7 +1376,7 @@ describe("role lens raw material", () => {
     });
 
     it("is tenant-safe: another shop's queue never surfaces this shop's ops alerts", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const intent = await startPaymentOperation(db, { shopId: shop.id, kind: "invoice" });
       const future = await dbNowPlus(db, 10 * 60 * 1000);
 
@@ -1405,7 +1424,7 @@ describe("unclosed roll call (DOM-H3)", () => {
    * `endedHoursAgo` may be negative, which puts the boat still out on the water.
    */
   async function returnedTrip(
-    db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+    db: ReturnType<typeof fileScopedShopContext>["db"],
     shopId: string,
     options: { endedHoursAgo: number; divers: number; plannedDives?: number; title?: string },
   ) {
@@ -1459,7 +1478,7 @@ describe("unclosed roll call (DOM-H3)", () => {
    * all.
    */
   async function boardAtDeparture(
-    db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+    db: ReturnType<typeof fileScopedShopContext>["db"],
     input: { shopId: string; tripId: string; staffId: string; bookingIds: readonly string[] },
     occurredAt = new Date(nowMs() - 5 * HOUR),
   ) {
@@ -1498,7 +1517,7 @@ describe("unclosed roll call (DOM-H3)", () => {
      * of the window with no residue at all.
      */
     it("raises the loudest row in the app when a diver is marked not back aboard", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
         endedHoursAgo: 2,
         divers: 3,
@@ -1535,7 +1554,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("does not let a later closed checkpoint bury it", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
         endedHoursAgo: 2,
         divers: 2,
@@ -1574,7 +1593,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("keeps saying so at a lower urgency once the trip is too old to settle on the dock", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       // Five days back: past the 48h dock-work window. This used to age to
       // nothing at all — the row left Today and the board with nothing anywhere
       // saying a count had never closed. A missing-diver signal that
@@ -1634,7 +1653,7 @@ describe("unclosed roll call (DOM-H3)", () => {
      * them, so if either reader loses it, one of these two assertions fails.
      */
     it("agrees with the manifest when two events tie on both timestamps", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
         endedHoursAgo: -1,
         divers: 1,
@@ -1710,7 +1729,7 @@ describe("unclosed roll call (DOM-H3)", () => {
   describe("a crew member who did not come back", () => {
     /** Roster `count` staff onto the trip and board them all at the dock. */
     async function crewAboard(
-      db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+      db: ReturnType<typeof fileScopedShopContext>["db"],
       input: { shopId: string; tripId: string; count: number },
       occurredAt = new Date(nowMs() - 5 * HOUR),
     ) {
@@ -1735,7 +1754,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     }
 
     it("raises a crew row of its own when a named crew member is marked not back aboard", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
         endedHoursAgo: 2,
         divers: 2,
@@ -1811,7 +1830,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("keeps saying so as residue, on the same schedule a diver's row ages by", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
         endedHoursAgo: 24 * 5,
         divers: 2,
@@ -1848,7 +1867,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("raises an unfinished crew count, and stays silent for a shop that never taps one", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
         endedHoursAgo: 2,
         divers: 2,
@@ -1906,7 +1925,7 @@ describe("unclosed roll call (DOM-H3)", () => {
 
   describe("an after-dive count nobody finished", () => {
     it("alarms when a diver who boarded has no result at the checkpoint", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
         endedHoursAgo: 2,
         divers: 3,
@@ -1939,7 +1958,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("goes quiet once every diver who boarded is back aboard", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
         endedHoursAgo: 2,
         divers: 3,
@@ -1963,7 +1982,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("re-alarms when a diver is cleared back to awaiting", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
         endedHoursAgo: 2,
         divers: 2,
@@ -2003,7 +2022,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("alarms on the second dive of a two-dive trip whose first dive is complete", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
         endedHoursAgo: 3,
         divers: 2,
@@ -2031,7 +2050,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("does not count a diver who never left the dock", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
         endedHoursAgo: 2,
         divers: 2,
@@ -2071,7 +2090,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("drops a cancelled booking from the count instead of alarming forever", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
         endedHoursAgo: 2,
         divers: 2,
@@ -2100,7 +2119,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("keeps chasing a boat that came back yesterday", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       // 30 hours back is a different calendar day in every timezone, so this can
       // never be reached by the shop's own "today" filter — the exact case the
       // forward window drops on the floor.
@@ -2123,7 +2142,7 @@ describe("unclosed roll call (DOM-H3)", () => {
 
   describe("a boat that is still out", () => {
     it("says nothing about a checkpoint that has not happened yet", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       // Ends two hours from now, with nothing recorded after departure: the
       // dive-one count is not unfinished, it has not been taken. Alarming here
       // would be guessing at a schedule the app does not hold.
@@ -2138,7 +2157,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("alarms immediately on a count that was started and abandoned", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       // The case that used to cost three hours of silence: on a four-hour
       // two-tank, dive one's count runs about ninety minutes in. The DM counts
       // two of three and gets pulled away. The boat is still on the mooring and
@@ -2168,7 +2187,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("raises a missing diver while the boat is still on the site", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
         endedHoursAgo: -2,
         divers: 2,
@@ -2207,7 +2226,7 @@ describe("unclosed roll call (DOM-H3)", () => {
      * trips, and within a fortnight the red row is wallpaper.
      */
     it("does not treat a walk-away as somebody left in the water", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
         endedHoursAgo: 2,
         divers: 4,
@@ -2249,7 +2268,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("sorts below every after-dive row, so it can never lead the queue", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
         endedHoursAgo: 2,
         divers: 3,
@@ -2274,7 +2293,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("calls a trip with no roll call at all what it is, at a lower severity", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       // Not a lost diver: a shop that isn't using the feature. Reading it as
       // fine would be a false all-clear, so it is still said — just not in the
       // words of a person who may be in the water.
@@ -2291,7 +2310,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("stops chasing the dock count once the trip is older than the lookback", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       // Paperwork ages out; the after-dive signal above does not. Carrying a
       // month of missing dock counts would bury the rows that matter.
       const { trip } = await returnedTrip(db, shop.id, { endedHoursAgo: 24 * 5, divers: 3 });
@@ -2309,7 +2328,7 @@ describe("unclosed roll call (DOM-H3)", () => {
      * dropped the boat that had just tied up with an open count.
      */
     it("never drops the boat that just tied up behind older, closed ones", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       // Twenty-four earlier boats, all closed, then the one that matters.
       for (let index = 0; index < 24; index++) {
         const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
@@ -2351,7 +2370,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("is tenant-safe: another shop's queue never sees this boat", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
         endedHoursAgo: 2,
         divers: 3,
@@ -2370,7 +2389,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("points the row inside this shop and leads the whole queue", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
         endedHoursAgo: 2,
         divers: 3,
@@ -2387,7 +2406,7 @@ describe("unclosed roll call (DOM-H3)", () => {
 
   describe("gear register rows (ADR 20260815-minimal-gear-register)", () => {
     async function anySeededBooking(
-      db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+      db: ReturnType<typeof fileScopedShopContext>["db"],
       shopId: string,
     ) {
       const [booking] = await db
@@ -2400,13 +2419,13 @@ describe("unclosed roll call (DOM-H3)", () => {
     }
 
     it("the seeded fleet alone puts nothing on the queue — its clocks and windows are all ahead", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
       expect(work.actions.filter((action) => action.kind.startsWith("gear_"))).toEqual([]);
     });
 
     it("chases a unit that never came home, and lets a return clear the row", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const today = calendarDateInTimezone(nowDate(), shop.timezone);
       const item = await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #90" });
       if (!item.ok) throw new Error("item refused");
@@ -2443,7 +2462,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("lists a unit due back today, dated to the end of the shop's own day", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const today = calendarDateInTimezone(nowDate(), shop.timezone);
       const item = await createGearItem(db, { shopId: shop.id, kind: "wetsuit", label: "5mm #90" });
       if (!item.ok) throw new Error("item refused");
@@ -2469,7 +2488,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("surfaces this week's bench clocks — an expired one as today's work, a distant one not at all", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const today = calendarDateInTimezone(nowDate(), shop.timezone);
       const lapsed = await createGearItem(db, { shopId: shop.id, kind: "tank", label: "AL80-90" });
       const nextWeek = await createGearItem(db, {
@@ -2520,7 +2539,7 @@ describe("unclosed roll call (DOM-H3)", () => {
     });
 
     it("is tenant-safe: another shop's queue never sees this fleet", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const today = calendarDateInTimezone(nowDate(), shop.timezone);
       const item = await createGearItem(db, {
         shopId: shop.id,
@@ -2554,7 +2573,7 @@ describe("reviews waiting on moderation (one row, and where it lands)", () => {
    * (`submitTripReview`), so this is the queue row's own premise.
    */
   async function shopWithReviewsWaiting(names: readonly string[]) {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const reviewIds: string[] = [];
     if (names.length === 0) return { db, shop, reviewIds };
     const trips = await upcomingTripsWithCounts(db, shop.id);

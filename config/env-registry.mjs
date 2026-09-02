@@ -329,8 +329,12 @@ export const ENV_GROUPS = [
         from: "derived",
         targets: LOCAL_AND_VERCEL,
         absent:
-          "the WhatsApp settings page says so and refuses to store anything, and a waiver link is " +
-          "minted fresh on every send instead of the diver being handed the one they already have",
+          "the WhatsApp settings page says so and refuses to store anything, a waiver link is " +
+          "minted fresh on every send instead of the diver being handed the one they already have, " +
+          "and the notification retry queue stores nothing and drains nothing -- a send the provider " +
+          "refuses transiently is dropped rather than retried (notification.queue_seal_unavailable). " +
+          "Rotating it has the same effect on rows already queued under the old key: they are parked " +
+          "as sealed_payload_unreadable and are not re-sent.",
       },
     ],
   },

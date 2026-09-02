@@ -12,6 +12,7 @@ import { requestLocale } from "@/i18n/request";
 import { toDiverLocale } from "@/i18n/settings";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { COURSE_INQUIRY_EXPERIENCE, type InquiryFormState } from "@/lib/course-inquiry";
+import { deliverableShopContactEmail } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 
@@ -139,7 +140,14 @@ export async function submitInquiryAction(
   // Best-effort: a stalled or failed send must never risk timing out the
   // response the diver is waiting on for their submitted state (the same
   // deferral onboardAction uses for its own founder/welcome sends).
-  const contactEmail = shop.contactEmail;
+  // **Only to a mailbox the shop has proved it reads** (issue #1288). This send
+  // carries the diver's name, address, phone, experience and free text, so an
+  // unverified address here is worse than the `Reply-To` that ticket was about:
+  // a reply-to only leaks when a diver hits reply, this pushes the record
+  // unprompted from a public page, on every submission. Nothing is lost by
+  // waiting — the request is already in `course_inquiries` and staff read it at
+  // `/shop/<slug>/requests`; what waits is the nudge.
+  const contactEmail = deliverableShopContactEmail(shop);
   if (contactEmail) {
     after(async () => {
       await sendNotification(await getDb(), {

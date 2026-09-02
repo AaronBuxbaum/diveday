@@ -792,8 +792,22 @@ jobs:
           MIDDLE: ${{ github.event.pull_request.stack != null && github.event.pull_request.stack.base.ref != github.event.pull_request.base.ref && github.event.pull_request.stack.position != github.event.pull_request.stack.size }}
       - id: filter
         env:
-          # `base.sha` on a pull_request, `before` on a push to main.
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          # On a pull_request, the base **branch** and the PR head — never
+          # `base.sha`. That field is the base as recorded when the PR was
+          # opened and never advances, while `actions/checkout` gives this job
+          # `refs/pull/N/merge`, which already contains everything main merged
+          # since. `base.sha` is therefore an ancestor of HEAD, the three-dot
+          # merge base degenerates to `base.sha` itself, and every file main
+          # added afterwards is listed as this branch's — which is how a
+          # docs-only push to #1291 answered `code=true` and `db=true` and
+          # spent the build, four Playwright shards, four visual shards,
+          # reg-suit and real-postgres (issue #1295). Resolving the base by
+          # *ref* asks the live branch instead, so the answer stops depending
+          # on when the pull request was opened.
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          # A push to main compares against the commit that was there before.
+          BEFORE_SHA: ${{ github.event.before }}
         run: |
           set -euo pipefail
           # Fail *open*, always. Every path out of this script that cannot answer
@@ -803,17 +817,39 @@ jobs:
           # moved with nobody looking. A force-push and a branch's first push
           # both leave `before` as all-zeros, and neither is a reason to stop
           # checking.
-          if ! git rev-parse --verify -q "${BASE_SHA}^{commit}" > /dev/null 2>&1; then
+          if [ -n "${BASE_REF}" ]; then
+            # `|| true`: a fetch that cannot reach the remote must not fail the
+            # job under `set -e`. The `rev-parse` below is the single place that
+            # decides, and it answers "run everything" — the fail-open contract
+            # above, not an error. No `--depth`: the checkout already ran
+            # `fetch-depth: 0`, and grafting a shallow boundary onto the base
+            # ref would make `merge-base` compute against truncated history.
+            git fetch --no-tags origin "${BASE_REF}" > /dev/null 2>&1 || true
+            base="origin/${BASE_REF}"
+            head="${HEAD_SHA}"
+          else
+            base="${BEFORE_SHA}"
+            head="HEAD"
+          fi
+          # Deliberately still two ranges rather than one: on a push to main
+          # `origin/main...${{ github.sha }}` is empty, so nothing would run,
+          # main would publish no visual baseline, and every branch cut from
+          # that commit would resolve none (issue #1277).
+          if ! git rev-parse --verify -q "${base}^{commit}" > /dev/null 2>&1 \
+            || ! git rev-parse --verify -q "${head}^{commit}" > /dev/null 2>&1; then
             echo "db=true" >> "$GITHUB_OUTPUT"
             echo "code=true" >> "$GITHUB_OUTPUT"
-            echo "Base commit '${BASE_SHA}' is unresolvable — running everything." >> "$GITHUB_STEP_SUMMARY"
+            echo "Diff range '${base}...${head}' is unresolvable — running everything." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          # Three-dot: what this branch changed, not what main did underneath it.
+          # Three-dot, from the merge base: what this branch changed, not what
+          # main did underneath it. Two dots would report every file main added
+          # since the fork as a *deletion*, which `--name-only` lists just the
+          # same — the false positive in a new costume.
           # `src/db` covers both the schema and the `*.postgres.test.ts` suites;
           # the last two are the harness itself, so a change to how the proof is
           # run is also a reason to re-run it.
-          db_paths=$(git diff --name-only "${BASE_SHA}...HEAD" -- \
+          db_paths=$(git diff --name-only "${base}...${head}" -- \
             src/db drizzle src/test/postgres.ts scripts/previous-release-migrations.mjs \
             .github/workflows/ci.yml)
           if [ -n "${db_paths}" ]; then
@@ -834,7 +870,7 @@ jobs:
           # or build script opens a `docs/` path; the unit tests that do still
           # run). The list is an allowlist of what to ignore, so a new kind of
           # file is code until someone says otherwise.
-          code_paths=$(git diff --name-only "${BASE_SHA}...HEAD" -- . \
+          code_paths=$(git diff --name-only "${base}...${head}" -- . \
             ':(exclude)docs/**' ':(exclude)**/*.md' ':(exclude).claude/**' ':(exclude)LICENSE')
           if [ -n "${code_paths}" ]; then
             echo "code=true" >> "$GITHUB_OUTPUT"

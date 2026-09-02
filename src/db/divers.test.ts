@@ -1024,26 +1024,22 @@ describe("diver erasure", () => {
       {
         shopId: shop.id,
         idempotencyKey: "erasure-elena-by-address",
-        payload: {
-          kind: "trip_recap",
-          bookingId: "00000000-0000-4000-8000-0000000000aa",
-          shopId: shop.id,
-          to: "Elena@example.com",
-          locale: "en-US",
-          diverName: "Erasure Elena",
-        } as never,
+        // The payload is sealed and unreadable to a sweep, so the erasure
+        // matches on the handles beside it (issue #1297). Cased differently on
+        // purpose: the match lowercases both sides.
+        recipientEmail: "Elena@example.com",
+        bookingId: "00000000-0000-4000-8000-0000000000aa",
+        payloadSealed: "v1.sealed-trip-recap",
         nextAttemptAt: erasureNow,
       },
       {
         shopId: shop.id,
         idempotencyKey: "erasure-elena-by-booking",
-        payload: {
-          kind: "waiver_request",
-          bookingId,
-          shopId: shop.id,
-          to: "someone-else@example.com",
-          diverName: "Erasure Elena",
-        } as never,
+        // Addressed to somebody else entirely — this row goes because the
+        // booking is hers, which is the second handle.
+        recipientEmail: "someone-else@example.com",
+        bookingId,
+        payloadSealed: "v1.sealed-waiver-request",
         nextAttemptAt: erasureNow,
       },
     ]);

@@ -24,7 +24,6 @@ import type { CourseFaq, CourseGalleryPhoto, CourseScheduleDay } from "@/lib/cou
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import type { DiveSiteTemplateUndo } from "@/lib/dive-site-template-sync";
 import type { EmergencyReference } from "@/lib/emergency-reference";
-import type { Notification } from "@/lib/notifications";
 import { DEFAULT_SHOP_RENTAL_ITEMS, type RentalPricing } from "@/lib/rentals";
 import type { SpokenLanguageTag } from "@/lib/spoken-languages";
 
@@ -2189,6 +2188,27 @@ export const bookings = pgTable(
      * board: claiming is an upgrade, never a requirement (same ADR).
      */
     claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    /**
+     * The partner whose link sent this diver — the slug the embed generator
+     * wrote into `utm_campaign` (`partnerLinkUrl`, src/lib/embed-snippets.ts),
+     * carried from the storefront visit to this booking by the short-lived
+     * `diveday_ref` cookie and normalised again on the way in
+     * (`partnerReferralSlug`, src/lib/referrals.ts). Null is the ordinary case:
+     * most divers arrive without a partner link, and nothing about a booking
+     * depends on this.
+     *
+     * **A slug, never a name.** It is a third party's identity stored against a
+     * person's booking, so it is bounded, character-restricted, and never
+     * rendered as anything but the shop's own label for a link it generated.
+     * The shop typed the partner's name into its own embed generator; DiveDay
+     * neither verifies it nor shows it to the diver.
+     *
+     * On the booking rather than the person for the same reason
+     * `lastDivedBand` is: it is a fact about one visit. "Which hotel sends us
+     * divers" is a query over bookings, not a value that silently goes stale on
+     * a person who came back on their own the second time (issue #1285).
+     */
+    referralSource: text("referral_source"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -2198,6 +2218,13 @@ export const bookings = pgTable(
     index("bookings_shop_person_idx").on(table.shopId, table.personId),
     /** Backs the organizer's "who has claimed" panel — member seats by their lead. */
     index("bookings_party_lead_idx").on(table.partyLeadBookingId),
+    /**
+     * Backs the per-partner count on Reports — one shop's referred seats,
+     * grouped by partner. Two columns, not three: the report's month window is
+     * on `trips.starts_at`, never on `bookings.created_at`, so a third column
+     * here would buy the query that names it nothing.
+     */
+    index("bookings_shop_referral_idx").on(table.shopId, table.referralSource),
   ],
 );
 
@@ -3222,8 +3249,59 @@ export const notificationSendQueue = pgTable(
       .notNull()
       .references(() => shops.id),
     idempotencyKey: text("idempotency_key").notNull().unique(),
-    /** Cleared after a terminal send; queued/processing rows always carry it. */
-    payload: jsonb("payload").$type<Notification>(),
+    /**
+     * The queued notification, **sealed** (`src/lib/secret-box.ts`), never
+     * plaintext — the same promise `waiver_records.token_sealed` and
+     * `shop_whatsapp_accounts.access_token_sealed` make, and for the same
+     * reason. Half the notification kinds carry a capability URL in a field
+     * (`verifyUrl`, `resetUrl`, `inviteUrl`, `confirmUrl`, `completionUrl`,
+     * `readinessUrl`, `recapUrl`, `unsubscribeUrl`), and that URL contains the
+     * **raw** bearer token. Everywhere else in this database those tokens exist
+     * only as a SHA-256 digest, so an unsealed payload here would be the one
+     * place a backup, a replica or a support query hands its reader working
+     * credentials — for a mailbox, a password reset, a staff invite or a
+     * signed waiver (issue #1297).
+     *
+     * Null after a terminal outcome, sent or failed; a queued or processing row
+     * always carries it.
+     */
+    payloadSealed: text("payload_sealed"),
+    /**
+     * The two handles legal erasure needs, lifted out of the payload because
+     * it is now sealed and no `->>` can reach inside it (issue #1297).
+     *
+     * `scrub` (src/db/anonymize.ts, reached from `anonymizeDiver`) has to drop
+     * a person's queued mail — a rendered message carrying their name and
+     * address — and the only matches it ever had were `payload ->> 'to'` and
+     * `payload ->> 'bookingId'`. As real columns those matches are typed, and
+     * can no longer silently miss a row whose payload shape drifted. Both
+     * nullable, because a kind may carry neither. Neither is indexed: the
+     * address match is `lower(recipient_email)`, which a plain btree would not
+     * serve anyway, and an erasure is rare enough that a sequential scan of one
+     * shop's queue is the right cost.
+     *
+     * Neither is a new disclosure, and both are **cleared on every terminal
+     * write**, beside `payload_sealed` — so a row that has sent or failed holds
+     * no personal data at all, exactly as it did when the payload was the only
+     * place an address lived. Nothing prunes this table (it is not in
+     * `RETENTION_DAYS`), which is precisely why the terminal write has to do
+     * it: a `sent` row that kept its recipient would keep it forever.
+     *
+     * `booking_id` deliberately carries no foreign key: it is a match handle
+     * for a sweep, not a relationship, and a real reference would make an
+     * erasure's delete order depend on this queue.
+     *
+     * **They are the handles the sweep has, not every handle it could want.**
+     * A kind whose *subject* is not its recipient is out of their reach —
+     * `course_inquiry` mails the shop's own front desk and carries the diver's
+     * name, address and message inside the sealed blob, and `new_account_alert`
+     * is the same shape. Those rows are unreachable by any `->>` probe now, so
+     * a live one survives an erasure until it drains (issue #1298). Bounded by
+     * the three-day retry window and by the terminal clear above, not by the
+     * sweep.
+     */
+    recipientEmail: text("recipient_email"),
+    bookingId: uuid("booking_id"),
     status: notificationQueueStatus("status").notNull().default("queued"),
     attempts: integer("attempts").notNull().default(0),
     nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).notNull(),

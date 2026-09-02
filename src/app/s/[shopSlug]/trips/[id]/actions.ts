@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { issueBookingCapability } from "@/db/booking-capabilities";
@@ -44,6 +45,7 @@ import {
 import { publicTripPath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { type CertRequirementSource, combineCertRequirements } from "@/lib/readiness";
+import { partnerFromReferralCookie, REFERRAL_COOKIE } from "@/lib/referrals";
 import {
   hasAnyRentalPricing,
   nitroxAvailableOn,
@@ -269,6 +271,28 @@ export async function bookSpot(
     return { error: t(ERROR_MESSAGE_KEYS.rate_limited) };
   }
 
+  // Which partner's link brought this diver here, set at the edge on the
+  // storefront visit (`rememberPartnerReferral`, src/proxy.ts) and normalised
+  // again inside `createBookingParty`. Read here rather than from the form: a
+  // hidden field would be a value the page could set, and this one is a fact
+  // about how the visitor arrived.
+  //
+  // **Matched against this shop, not merely read.** One cookie covers the whole
+  // `/s/` namespace, so a guest who opened shop A's partner link and then books
+  // at shop B arrives here carrying A's referral. Crediting it would hand shop B
+  // a partner it has no relationship with — and hand it, by name, a commercial
+  // fact about a competitor. `partnerFromReferralCookie` refuses anything not
+  // minted on this shop's own storefront, and the refusal books exactly as an
+  // unreferred visit does (security review of issue #1285, finding 1).
+  //
+  // **Every seat of a party carries it**, the organizer's included. One person
+  // booking four seats through a hotel's link is four divers that hotel sent,
+  // which is the number a shop counting its partners means.
+  const referralSource = partnerFromReferralCookie(
+    (await cookies()).get(REFERRAL_COOKIE)?.value,
+    shopSlug,
+  );
+
   const outcome = await createBookingParty(
     dbi,
     validParty.map((entry, index) => ({
@@ -288,6 +312,7 @@ export async function bookSpot(
       // Only the lead booker's phone is collected, so the crew can reach the party.
       phone: index === 0 && phone ? phone : undefined,
       groupPreference: groupPreference || undefined,
+      referralSource,
     })),
   );
   if (!outcome.ok) {

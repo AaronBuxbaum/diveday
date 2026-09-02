@@ -1,5 +1,6 @@
 import { createVerify } from "node:crypto";
 import { z } from "zod";
+import { HOUR_MS, MINUTE_MS, nowMs } from "@/lib/clock";
 
 /**
  * Verification for inbound Amazon SNS HTTP(S) notifications (ADR
@@ -16,7 +17,9 @@ import { z } from "zod";
  * own `TopicArn` must match the one this app actually provisioned
  * (`SES_SNS_TOPIC_ARN`), so a validly-signed message from an unrelated SNS
  * topic elsewhere in the same AWS partition can't be replayed against this
- * endpoint.
+ * endpoint. Third, the signed `Timestamp` has to be recent — see `MAX_AGE_MS`
+ * — so a message captured off this app's own topic can't be replayed back at
+ * it later either.
  */
 
 type Fetch = typeof fetch;
@@ -65,7 +68,7 @@ const snsMessageSchema = z.object({
   MessageId: z.string().min(1),
   TopicArn: z.string().min(1),
   Message: z.string(),
-  Timestamp: z.string().min(1),
+  Timestamp: z.string().refine((value) => !Number.isNaN(Date.parse(value))),
   SignatureVersion: z.string().min(1),
   Signature: z.string().min(1),
   SigningCertURL: z.string().min(1),
@@ -81,6 +84,7 @@ export type SnsVerification =
   | { status: "not_configured" }
   | { status: "invalid_signature" }
   | { status: "invalid_topic" }
+  | { status: "stale" }
   | { status: "malformed" };
 
 /**
@@ -166,6 +170,43 @@ async function fetchSigningCertificate(url: string, fetchImpl: Fetch): Promise<s
 }
 
 /**
+ * How old a signed SNS message may be before this endpoint stops believing it,
+ * and how far into the future a clock skew may put it.
+ *
+ * The signature and the topic pin already say the message is genuine and
+ * came from a topic this app provisioned; neither says it is *current*. Every
+ * field SNS signs — `Timestamp` included — is fixed at publish time, so a
+ * message captured off the wire stays valid forever unless something reads
+ * that timestamp. It mattered little while a replay could only re-apply an
+ * idempotent delivery status; it stops being harmless the moment an event
+ * writes anything a person can later undo — which a `Complaint` now does: it
+ * opts the named address out of courtesy mail and off the last-minute list
+ * (ADR 20260902-sender-standards-for-ses), so a captured one replayed months
+ * later re-opts-out a diver who has since opted back in. Checked here, once, so
+ * every SNS-fed webhook inherits it rather than each route remembering to
+ * (issue #1289).
+ *
+ * The window is deliberately generous against SNS's own retry behaviour —
+ * it retries a failing endpoint with backoff for far longer than an hour, and
+ * a message refused here is one this app has decided not to act on rather than
+ * one it will get another chance at. An hour is long enough that an outage
+ * and its recovery both fall inside it, and short enough that a captured
+ * message is worthless by the time it could be used.
+ *
+ * `MAX_FUTURE_MS` exists only for clock skew between AWS and this host, so it
+ * is small: a timestamp meaningfully in the future is not a slow message.
+ */
+const MAX_AGE_MS = HOUR_MS;
+const MAX_FUTURE_MS = 5 * MINUTE_MS;
+
+function isFresh(timestamp: string, now: number): boolean {
+  const published = Date.parse(timestamp);
+  if (Number.isNaN(published)) return false;
+  const age = now - published;
+  return age <= MAX_AGE_MS && age >= -MAX_FUTURE_MS;
+}
+
+/**
  * `expectedTopicArn` unset behaves exactly like an unset webhook secret
  * elsewhere in this app: the endpoint is unavailable (503) rather than
  * accepting messages it cannot actually scope to a topic.
@@ -188,6 +229,10 @@ export async function verifySnsMessage(
   const message = parsed.data;
 
   if (message.TopicArn !== expectedTopicArn) return { status: "invalid_topic" };
+
+  // Before the certificate fetch, not after: a stale message is refused
+  // without this module making an outbound request on its behalf.
+  if (!isFresh(message.Timestamp, nowMs())) return { status: "stale" };
 
   const certificate = await fetchSigningCertificate(message.SigningCertURL, fetchImpl);
   if (!certificate) return { status: "invalid_signature" };
