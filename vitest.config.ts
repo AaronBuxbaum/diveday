@@ -36,6 +36,15 @@ export default defineConfig({
     // PGlite-backed integration tests hydrate an embedded Postgres per test;
     // generous ceiling so slow CI runners don't flake.
     testTimeout: 20_000,
+    // The same ceiling for hooks, because `fileScopedShopContext` moved the
+    // hydration *out* of the test body and into `beforeAll` (src/test/db.ts).
+    // Vitest's hook default is 10s, so without this the identical work — one
+    // template hydration — silently got half the budget it had while it lived
+    // inside a test. This is not widening a timeout to paper over a flake: the
+    // work did not grow, it moved, and the budget follows it. It gets *rarer*
+    // at the same time, since a file now hydrates once instead of once per
+    // test.
+    hookTimeout: 20_000,
     // Back to Vitest 4's own default after a worker_threads-specific PGlite
     // failure finally surfaced — the exact condition the "threads" note here
     // named as the one reason to revisit.
