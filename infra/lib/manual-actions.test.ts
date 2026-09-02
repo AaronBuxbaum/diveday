@@ -146,21 +146,26 @@ describe("the synthesized stack", () => {
     expect(parameter.MinValue).toBe(1);
   });
 
-  it("denies the read-only MCP identities and the GitHub Actions CI roles every secret but the one the deploy role needs", () => {
+  it("denies the GitHub Actions CI roles every secret but the one the deploy role needs", () => {
     const { template } = synthesize();
     const denials = policyStatements(template).filter(
       (statement) =>
         statement.includes('"Deny"') && statement.includes("secretsmanager:GetSecretValue"),
     );
-    // One per read-only MCP user (ReadOnlyAccess is AWS's to change), one for
-    // GitHubActionsCdkDiffRole (unscoped -- it can never read any secret), and
-    // one for GitHubActionsCdkDeployRole -- scoped by NotResource to every
-    // secret except the credentials document, rather than Resource "*", since
-    // that one role is deliberately allowed to read exactly that one secret
-    // (ADR 20260811-ci-deploy-full-wizard). The deploy role's actual resource
-    // writes run under the bootstrap deploy-role's own permissions, not this
-    // one's, so these Denies are what bound the CI caller directly.
-    expect(denials).toHaveLength(4);
+    // One for GitHubActionsCdkDiffRole (unscoped -- it can never read any
+    // secret), and one for GitHubActionsCdkDeployRole -- scoped by NotResource
+    // to every secret except the credentials document, rather than
+    // Resource "*", since that one role is deliberately allowed to read exactly
+    // that one secret (ADR 20260811-ci-deploy-full-wizard). The deploy role's
+    // actual resource writes run under the bootstrap deploy-role's own
+    // permissions, not this one's, so these Denies are what bound the CI caller
+    // directly.
+    //
+    // Was four until 2026-09-02 (issue #1243): the two read-only MCP users
+    // carried one each, and both users are gone -- no consumer was ever wired
+    // up, so they were two live access keys and two rotation-list entries for
+    // nothing.
+    expect(denials).toHaveLength(2);
     const deployRoleDeny = denials.find((statement) => statement.includes("NotResource"));
     expect(deployRoleDeny, "the deploy role's deny must be scoped via NotResource").toBeDefined();
     expect(deployRoleDeny).toContain("CredentialsEnvDocument");

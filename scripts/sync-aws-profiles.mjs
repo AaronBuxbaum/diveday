@@ -58,7 +58,6 @@ const managedProfiles = new Map(
       "diveday-places-lookup",
       credentials(values.PLACES_AWS_ACCESS_KEY_ID, values.PLACES_AWS_SECRET_ACCESS_KEY),
     ],
-    ["diveday-mcp-readonly-local", commentedProfiles.get("diveday-mcp-readonly-local")],
     ["diveday-backup-uploader", commentedProfiles.get("diveday-backup-uploader")],
   ].filter(([, profile]) => profile?.aws_access_key_id && profile?.aws_secret_access_key),
 );

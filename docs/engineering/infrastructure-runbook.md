@@ -26,9 +26,6 @@ We use AWS CDK to model, deploy, and update our cloud resources. Currently, the 
   role that a plain `cdk bootstrap` leaves at `AdministratorAccess`. See
   [who can read it](#who-can-read-it). The stack comments at
   [infra/lib/infra-stack.ts](../../infra/lib/infra-stack.ts) §5 carry the full reasoning.
-- Read-only IAM users for an AWS MCP server (local dev and Claude Code's cloud environment), each
-  carrying an explicit `Deny` on `secretsmanager:GetSecretValue` so "read-only" cannot be escalated
-  into credential retrieval by whatever AWS adds to the managed `ReadOnlyAccess` policy next.
 - Cost guardrails: an `AWS::Budgets::Budget` and AWS Cost Anomaly Detection — see [§6](#6-cost-guardrails) below.
 - SES/SNS infra for the app's sole email provider — see [§7](#7-ses-email-provider-infra) below. The code path is live; the AWS-side production access and DKIM/MAIL FROM DNS records are still manual steps.
 - A versioned, private, retained S3 bucket as the destination for scheduled database export bundles — see [§8](#8-backup-bucket) below.
@@ -68,7 +65,7 @@ once, answer yes to the profile prompt after `pnpm infra:deploy`.
 Even when an older raw deploy key can complete the CDK deploy, the post-deploy environment sync repeats
 that administrator-profile check before it reads `diveday/env`.
 It writes the generated identities as named `~/.aws/credentials` profiles — including
-`diveday-deployer`, `reg-suit-bot`, service identities, and the local MCP reader — while preserving
+`diveday-deployer`, `reg-suit-bot`, and the service identities — while preserving
 unrelated profiles. It also writes the `diveday-admin` profile's `us-east-1` region to
 `~/.aws/config`; the administrator *credential* still predates the stack and must be configured by
 you. Before the generated deployer profile exists, the infrastructure commands select
@@ -219,7 +216,7 @@ GitHub visual-test secrets, and SES DNS. [manual-actions.md](manual-actions.md) 
 the five account approvals that no CLI can complete.
 
 **No output carries key material.** `cloudformation:DescribeStacks` resolves outputs to plaintext,
-and both the `cdk-deployer` user and the two read-only MCP users hold that permission — so an output
+and the `cdk-deployer` user holds that permission — so an output
 is the one surface where a secret is genuinely exposed rather than merely referenced. Every access
 key goes to [§10](#10-the-credentials-secret) instead; `infra/lib/manual-actions.test.ts` fails the
 build if one ever appears in an output again.
@@ -540,7 +537,7 @@ So:
 > readable by every project member and reachable from any compromised dependency in the server
 > bundle. It is the one key that yields all the others.
 
-The credentials that do not belong in a dotenv file — `cdk-deployer`, the two read-only MCP users,
+The credentials that do not belong in a dotenv file — `cdk-deployer`,
 and the backup uploader — ride at the bottom in a commented section, each under the destination it
 belongs to, so pasting the whole document into `.env.local` stays safe.
 
@@ -650,10 +647,6 @@ is theoretical on this single-operator account.
 **Exactly one additional principal is granted read** — `GitHubActionsCdkDeployRole`, scoped to this
 secret's own ARN and nothing else (ADR 20260811-ci-deploy-full-wizard) — and it is worth being exact
 about what that buys, because the comfortable version of this sentence is wrong.
-
-**The read-only MCP users are genuinely bounded.** They carry an explicit `Deny` on
-`secretsmanager:GetSecretValue` for every secret, and a Deny beats any Allow — so the guarantee holds
-regardless of what AWS adds to the managed `ReadOnlyAccess` policy next.
 
 **`cdk-deployer` is not bounded, and it would be dishonest to say otherwise.** It can assume
 `cdk-<qualifier>-deploy-role`; that role passes a CloudFormation execution role; and a plain
