@@ -250,6 +250,14 @@ server and one `127.0.0.1` "IP" across dozens of unrelated spec files —
 without the bypass, replayed test traffic would trip the limiter and fail
 tests that have no actual bug.
 
+`pnpm dev` sets it too (`package.json`), for the same reason one step earlier:
+`node scripts/screenshot.mjs` signs in through the real form against that
+server, and the `signInByEmail` budget of 8 per 15 minutes was refusing the
+second look of an afternoon — a refusal the script then waited out in
+silence. The script now signs in once per run and reports a refusal by name;
+the dev switch is what stops it happening at all. To watch the limiter itself
+locally, start the server with `DIVEDAY_RATE_LIMIT_DISABLED=0 pnpm dev`.
+
 ## Provisioning the distributed store
 
 Create an Upstash Redis database (directly, or through Vercel's Upstash

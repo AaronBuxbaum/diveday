@@ -420,7 +420,7 @@ test.describe("undoing a removal after the trip is cancelled", () => {
 async function overflowingControls(page: import("@playwright/test").Page) {
   return page.evaluate(() =>
     [...document.querySelectorAll("nav")]
-      .filter((nav) => nav.className.includes("rounded-2xl") && nav.className.includes("gap-1"))
+      .filter((nav) => nav.className.includes("rounded-inset") && nav.className.includes("gap-1"))
       .map((nav) => ({
         label: nav.getAttribute("aria-label"),
         overflow: nav.scrollWidth - nav.clientWidth,
@@ -438,7 +438,7 @@ async function assertNoSidewaysScroll(page: import("@playwright/test").Page, tri
     // The segmented track itself, not the first `nav` on the page — that one
     // is the shop header's, which is hidden at this width. Waiting for the
     // thing under test is what makes this deterministic rather than timed.
-    await page.locator('nav[class*="rounded-2xl"]').first().waitFor();
+    await page.locator('nav[class*="rounded-inset"]').first().waitFor();
     expect(await overflowingControls(page), `${suffix || "/overview"}`).toEqual([]);
   }
 }

@@ -14,7 +14,7 @@ import { MIN_MAIN_TEXT, SKELETON_SELECTOR } from "./screenshot-guards.mjs";
  * `/.shots*.mjs` gitignore entry exists because two reached the index in one
  * session). This is that script, kept, so the next session doesn't write one.
  *
- *   node scripts/screenshot.mjs /s/blue-mantis /shop/blue-mantis/today
+ *   node scripts/screenshot.mjs /s/blue-mantis /shop/blue-mantis
  *
  * - Targets a running `pnpm dev` server (default http://localhost:3000;
  *   override with --base). It does not start one.
@@ -251,7 +251,56 @@ async function waitPastTheSkeleton(page, target) {
   });
 }
 
+/** How long the one sign-in gets before a stalled form is called a hang. */
+const SIGN_IN_TIMEOUT_MS = 20_000;
+
+/** A sign-in the server turned down — reported in one line, never a stack trace. */
+class SignInRefused extends Error {}
+
+/**
+ * One real sign-in per run, replayed into every context as storage state.
+ *
+ * It used to submit the form once per (scheme × viewport) context — four
+ * sign-ins for a default run — against a `pnpm dev` that kept the real
+ * limiter on (`RATE_LIMITS.signInByEmail`: 8 attempts per email per 15
+ * minutes). The second look of an afternoon was refused, the refusal
+ * redirected to `/sign-in?error=1`, and a `waitForURL(/\/shop/)` sat on that
+ * page until Playwright's navigation timeout — once per context, naming
+ * nothing. Sessions read the silence as "sign-in got rate-limited, let me
+ * wait it out", and did. `pnpm dev` now disables the limiter (package.json)
+ * and this signs in once regardless; waiting for the `?error=` landing as
+ * well as `/shop` is what turns a refusal into a sentence.
+ */
+async function signInOnce() {
+  const login = DEV_STAFF_LOGINS[role];
+  const context = await browser.newContext();
+  try {
+    const page = await context.newPage();
+    await page.goto(`${base}/sign-in`);
+    await page.getByLabel("Email").fill(login.email);
+    await page.getByLabel("Password").fill(login.password);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.waitForURL(
+      (url) => url.pathname.startsWith("/shop") || url.searchParams.has("error"),
+      { timeout: SIGN_IN_TIMEOUT_MS },
+    );
+    if (new URL(page.url()).searchParams.has("error")) {
+      throw new SignInRefused(
+        `Sign-in as ${login.email} was refused. The page says the same thing for a wrong password and ` +
+          "for a rate limit, so check both: these credentials must match src/db/dev-credentials.ts, and a " +
+          "server started without DIVEDAY_RATE_LIMIT_DISABLED=1 (`pnpm dev` sets it; a bare `next dev` " +
+          "does not) allows 8 sign-ins per email per 15 minutes — restart it with the flag rather than " +
+          "waiting the window out.",
+      );
+    }
+    return await context.storageState();
+  } finally {
+    await context.close();
+  }
+}
+
 try {
+  const storageState = needsStaffSession ? await signInOnce() : undefined;
   for (const colorScheme of schemes) {
     for (const { width, height } of viewports) {
       const context = await browser.newContext({
@@ -262,17 +311,9 @@ try {
         // scrolls, so without this the shots carry section-sized voids. The
         // component's own reduced-motion branch renders everything visible.
         reducedMotion: "reduce",
+        storageState,
       });
       const page = await context.newPage();
-
-      if (needsStaffSession) {
-        const login = DEV_STAFF_LOGINS[role];
-        await page.goto(`${base}/sign-in`);
-        await page.getByLabel("Email").fill(login.email);
-        await page.getByLabel("Password").fill(login.password);
-        await page.getByRole("button", { name: "Sign in" }).click();
-        await page.waitForURL(/\/shop/);
-      }
 
       for (const target of paths) {
         await page.goto(`${base}${target}`, { waitUntil: "load" });
@@ -304,10 +345,16 @@ try {
       await context.close();
     }
   }
+} catch (error) {
+  if (!(error instanceof SignInRefused)) throw error;
+  console.error(error.message);
+  process.exitCode = 1;
 } finally {
   await browser.close();
 }
 
-console.log(
-  written.map((file) => `${replaced.has(file) ? "replaced" : "wrote"} ${file}`).join("\n"),
-);
+if (written.length > 0) {
+  console.log(
+    written.map((file) => `${replaced.has(file) ? "replaced" : "wrote"} ${file}`).join("\n"),
+  );
+}
