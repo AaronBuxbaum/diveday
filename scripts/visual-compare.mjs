@@ -21,6 +21,8 @@ import { fileURLToPath } from "node:url";
 
 import { gitReader, resolveRegSuitKeys } from "./reg-suit-keys.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
+import { DEFAULT_BUCKET } from "./visual-report-lib.mjs";
+import { nearestPublishedAncestor } from "./wait-for-baseline.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -32,8 +34,29 @@ function keysFromEnvironment(env) {
   return { actualKey: env.REG_ACTUAL_KEY, expectedKey: env.REG_EXPECTED_KEY ?? "" };
 }
 
-const resolved =
-  keysFromEnvironment(process.env) ?? resolveRegSuitKeys({ git: gitReader(repoRoot) });
+const fromEnvironment = keysFromEnvironment(process.env);
+const resolved = fromEnvironment ?? resolveRegSuitKeys({ git: gitReader(repoRoot) });
+
+// A workstation run resolves its own keys, so it settles its own baseline too:
+// the fork point from main may be a docs-only commit or a cancelled main run,
+// neither of which published a snapshot (scripts/wait-for-baseline.mjs). CI
+// did this in its own step and handed the answer in through the environment.
+if (!fromEnvironment && resolved.expectedKey) {
+  const bucket = process.env.REG_SUIT_S3_BUCKET_NAME || DEFAULT_BUCKET;
+  const nearest = await nearestPublishedAncestor({
+    bucket,
+    key: resolved.expectedKey,
+    git: gitReader(repoRoot),
+  }).catch(() => null);
+  if (nearest && nearest.skipped > 0) {
+    console.log(
+      `visual:compare: ${resolved.expectedKey} published no snapshot; comparing against ` +
+        `${nearest.key}, ${nearest.skipped} commit(s) before it. Surfaces main moved between the ` +
+        "two will read as this branch's.",
+    );
+    resolved.expectedKey = nearest.key;
+  }
+}
 
 if (!resolved.actualKey) {
   console.error(
