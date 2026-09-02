@@ -23,8 +23,8 @@ normative**; the ADR carries the decisions, and two of them are the owner's.
 | `HomeProof.dc.html` | `/` at 1280, the tail: the records band's hub link, the new echo band in the moment-row shape, and the shipped close with the contact half's added clause |
 | `CopyLedger.dc.html` | Every sentence the loop moves — current beside proposed, with the reason and the message key — plus the voice pass: seven tells and one rewritten example from each page |
 
-`canvas.json` lays them out in three rows and pins three notes: the ledger glosses are drafts, Option
-B reverses H-12's retirement, and the homepage's one new control is a link.
+`canvas.json` lays them out in three rows and pins three notes: the band's sentences are drafts, Option
+B sits inside the current policy and still takes the owner's nod, and the homepage's one new control is a link.
 
 ## The slices
 
