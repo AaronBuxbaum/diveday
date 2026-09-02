@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   BRAND_BADGE_CODES,
-  BRAND_DEFAULT_GROUND,
+  BRAND_DEFAULT_SURFACE,
   BRAND_DISPLAY_FONT_CODES,
+  BRAND_INK,
   brandDisplayFontFamily,
   brandDisplayFontStylesheet,
   brandThemeProperties,
@@ -60,30 +61,43 @@ describe("display faces", () => {
  * that exercises it.
  */
 describe("deriveBrandTheme", () => {
-  it("keeps a colour that already reads as text on sand, with white as its ink", () => {
+  it("keeps a colour white reads on, with white as its ink", () => {
     const theme = deriveBrandTheme("#0E7490");
     expect(theme.primary).toBe("#0e7490");
     expect(theme.primaryForeground).toBe("#ffffff");
     expect(theme.adjusted).toBe(false);
   });
 
-  it("darkens a colour white reads on but sand does not, and says so", () => {
-    // The seeded demo green: 5.4:1 under white text, 4.36:1 as a link on
-    // sand and 4.03:1 as the selected pill's words over its own tint — the
-    // pair the 2026-09-02 a11y run failed 22 surfaces on. One 8% step.
-    const theme = deriveBrandTheme("#158462");
-    expect(theme.adjusted).toBe(true);
-    expect(theme.primary).toBe("#13795a");
-    expect(contrastRatio(theme.primary, BRAND_DEFAULT_GROUND)).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio(theme.primary, theme.primaryTint)).toBeGreaterThanOrEqual(4.5);
-  });
-
-  it("darkens a pale colour rather than keeping it: a pale colour cannot be a link", () => {
+  /**
+   * A pale brand cannot be a link on a cream page, so on the storefront it is
+   * darkened until it reads as text; ink-on-pale survives only for a dark
+   * surface, where the colour reads as text without moving.
+   */
+  it("darkens a pale colour until it reads as text on the ground, and says so", () => {
     const theme = deriveBrandTheme("#f7e26b");
     expect(theme.adjusted).toBe(true);
-    expect(theme.primary).not.toBe("#f7e26b");
+    expect(contrastRatio(theme.primary, BRAND_DEFAULT_SURFACE)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(theme.primary, theme.primaryForeground)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("keeps a pale colour on a dark surface and puts ink on it", () => {
+    const theme = deriveBrandTheme("#f7e26b", { surface: "#0c2a35" });
+    expect(theme.primary).toBe("#f7e26b");
+    expect(theme.primaryForeground).toBe(BRAND_INK);
+    expect(theme.adjusted).toBe(false);
+  });
+
+  /**
+   * The failure axe found on 2026-09-02: the demo shop's green read on a white
+   * button (5.28:1) but not as a link on the sand ground (4.36:1), and every
+   * storefront link failed. The rule now checks the colour as text first.
+   */
+  it("darkens a colour that reads on white but not as text on the ground", () => {
+    const theme = deriveBrandTheme("#158462");
+    expect(theme.adjusted).toBe(true);
+    expect(contrastRatio(theme.primary, BRAND_DEFAULT_SURFACE)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(theme.primary, theme.primaryTint)).toBeGreaterThanOrEqual(4.5);
     expect(theme.primaryForeground).toBe("#ffffff");
-    expect(contrastRatio(theme.primary, BRAND_DEFAULT_GROUND)).toBeGreaterThanOrEqual(4.5);
   });
 
   it("darkens a colour neither text reads on until white does, and says so", () => {
@@ -94,7 +108,7 @@ describe("deriveBrandTheme", () => {
     expect(contrastRatio(theme.primary, "#ffffff")).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("always reads as text on the ground and its tint, and as a fill under its ink, whatever the colour", () => {
+  it("always ends with a fill its ink reads on, whatever the colour", () => {
     for (const color of [
       "#ffffff",
       "#000000",
@@ -103,12 +117,10 @@ describe("deriveBrandTheme", () => {
       "#0000ff",
       "#808080",
       "#ffff00",
-      "#158462",
     ]) {
       const theme = deriveBrandTheme(color);
-      expect(contrastRatio(theme.primary, BRAND_DEFAULT_GROUND)).toBeGreaterThanOrEqual(4.5);
-      expect(contrastRatio(theme.primary, theme.primaryTint)).toBeGreaterThanOrEqual(4.5);
       expect(contrastRatio(theme.primary, theme.primaryForeground)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(theme.primary, BRAND_DEFAULT_SURFACE)).toBeGreaterThanOrEqual(4.5);
     }
   });
 

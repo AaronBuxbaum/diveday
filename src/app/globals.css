@@ -19,7 +19,9 @@
 
   /* Ink */
   --foreground: #0c2a35; /* deep-sea ink */
-  --muted: #576b72; /* 4.76:1 on the tideline — #5b6f77 read 4.48 once the sunken surface warmed (2026-09-02) */
+  /* 5.05:1 on --surface-sunken, the tightest pair muted ink sits on (a notice
+     bar, a segmented track); #5b6f77 measured 4.48 there — axe, 2026-09-02. */
+  --muted: #54676d;
 
   /*
    * Device bezel for the marketing phone mockups. Deliberately NOT
@@ -104,7 +106,9 @@
    */
   /* Reef's washes: a drawn tint per signal rather than a 10% mix, so each
      sits on the warm shell without going grey. Dark mode keeps the mix. */
-  --primary-tint: #e0f0f2; /* lagoon reads 4.57:1 on it as a selected pill's words — #dceef0 was 4.47 (2026-09-02) */
+  /* 4.72:1 under --primary as text (a current nav chip is `bg-primary-tint
+     text-primary`); #dceef0 measured 4.47 — axe, 2026-09-02. */
+  --primary-tint: #e6f3f5;
   --success-tint: #e6f0e8;
   --warning-tint: #f8eee2;
   --danger-tint: #f8e8e6;
