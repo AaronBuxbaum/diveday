@@ -2636,6 +2636,17 @@ for (const scheme of ["light", "dark"] as const) {
       test(`counter check-in renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/check-in");
         await page.getByRole("heading", { name: "Counter check-in", level: 1 }).waitFor();
+        // The h1 is server-rendered, so it is on screen before hydration — and
+        // `CheckInSearch` focuses its input from a mount effect, which paints a
+        // focus ring the baseline carries. Waiting on the heading alone
+        // therefore raced the ring in or out of the frame, which is what it did
+        // on 2026-09-02. `data-hydrated` is set in that same effect, one line
+        // after the `focus()` call, so it is the signal the page itself renders
+        // for exactly this.
+        await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
         await capture(page, "check-in", scheme);
       });
 
@@ -2666,6 +2677,12 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link", { name: /Dawn Two-Tank — Molasses Reef/ })
           .click();
         await page.getByRole("heading", { name: /^Checked in — \d+$/ }).waitFor();
+        // Same frame, same search box, same race — this one simply has not lost
+        // it yet.
+        await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
         await capture(page, "check-in-checked", scheme);
       });
 
