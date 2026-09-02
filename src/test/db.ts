@@ -31,14 +31,31 @@ function closeWhenTestFinishes(client: PGlite): void {
  * Migrated but *unseeded* in-memory PGlite database, closed when the owning
  * test finishes.
  *
+ * Hydrated from the `empty` snapshot for the same reason the seeded helpers
+ * hydrate from theirs: replaying the migrations per test costs ~3.5s against a
+ * hydration's fraction of a second. That was invisible while it looked like a
+ * seeding cost — `src/db/seed.test.ts`'s atomic-rollback test measured 5.4s, of
+ * which the migration replay was 3.5s and the two seeds the test is actually
+ * about were 1.0s each (issue #1271).
+ *
  * Prefer this over importing `createTestDb` from `@/db/client` directly: that
  * factory has no lifecycle hook, so a test using it pins its ~250MB embedded
  * Postgres for the rest of the worker's life. See {@link closeWhenTestFinishes}.
  */
 export async function unseededTestDb(): Promise<AppDb> {
-  const db = await createTestDb();
-  closeWhenTestFinishes(db.$client as PGlite);
-  return db;
+  const bytes = await templateBytes("empty");
+  if (!bytes) {
+    warnAboutFullPrice("empty");
+    const db = await createTestDb();
+    closeWhenTestFinishes(db.$client as PGlite);
+    return db;
+  }
+  const client = new PGlite({
+    loadDataDir: templateBlob("empty", bytes),
+    extensions: { pg_trgm, btree_gist },
+  });
+  closeWhenTestFinishes(client);
+  return drizzle({ client });
 }
 
 // The snapshot is tens of megabytes and hydration wraps it in a Blob every
@@ -63,8 +80,9 @@ function templateBlob(variant: TemplateVariant, bytes: Uint8Array<ArrayBuffer>):
 /**
  * Say it, once per worker per variant.
  *
- * This fallback costs `initdb + migrate + seed` — about **8.5 seconds per
- * test** against a hydration's ~0.7s (db-template.ts) — and until now it said
+ * This fallback costs `initdb + migrate` and, for the seeded variants, the demo
+ * seed on top — about **8.5 seconds per test** seeded and **3.5 seconds**
+ * empty, against a hydration's ~0.7s (db-template.ts) — and until now it said
  * nothing at all. A file that quietly takes that path does not fail; it runs
  * twelve times slower, and the first thing anyone sees is a test tripping
  * Vitest's 20-second ceiling with no clue why, on a run that was fine
@@ -83,9 +101,13 @@ function warnAboutFullPrice(variant: TemplateVariant): void {
   globalForWarning.divedayTestDbWarned ??= new Set();
   if (globalForWarning.divedayTestDbWarned.has(variant)) return;
   globalForWarning.divedayTestDbWarned.add(variant);
+  const cost =
+    variant === "empty"
+      ? "migrating each test from scratch (~3.5s"
+      : "seeding each test from scratch (~8.5s";
   console.warn(
-    `seededTestDb: no usable "${variant}" template snapshot — seeding each test from scratch ` +
-      "(~8.5s per test instead of ~0.7s). Expect timeouts. Either Vitest's global setup did not " +
+    `test database: no usable "${variant}" template snapshot — ${cost} ` +
+      "per test instead of ~0.7s). Expect timeouts. Either Vitest's global setup did not " +
       "run (a foreign config or a direct runner), or the snapshot under " +
       "node_modules/.cache/diveday is missing, empty, or being rewritten by a parallel run. " +
       "See src/test/db-template.ts.",

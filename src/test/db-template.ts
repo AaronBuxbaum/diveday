@@ -19,16 +19,23 @@ import { seedDemo } from "@/db/seed";
  */
 
 /**
- * The two demo-seed shapes tests ask for. `lean` is the small controlled
- * dataset unit tests are calibrated to; `history` adds seed.ts's
+ * The three database shapes tests ask for. `lean` is the small controlled
+ * demo dataset unit tests are calibrated to; `history` adds seed.ts's
  * trailing-quarter back-fill, which the reporting-shaped assertions in
  * src/db/orders.test.ts, export.test.ts and search.test.ts read numbers out of.
- * Both get a snapshot — a variant without one costs its callers the full
- * initdb + migrate + seed (~8.5s) on every single test.
+ * `empty` is migrated and nothing else — what {@link unseededTestDb} hands a
+ * test that seeds for itself, or whose subject *is* seeding.
+ *
+ * Every shape gets a snapshot: a variant without one costs its callers the
+ * full build on every single test. That is ~8.5s for the seeded pair and
+ * ~3.5s for `empty` — and the second number is why `empty` is here at all.
+ * It was the only shape still paying `initdb + migrate` per test, which made
+ * `src/db/seed.test.ts`'s atomic-rollback test 5.4s of which 3.5s was the
+ * migration replay rather than the seed it is about (issue #1271).
  */
-export type TemplateVariant = "lean" | "history";
+export type TemplateVariant = "lean" | "history" | "empty";
 
-const VARIANTS: readonly TemplateVariant[] = ["lean", "history"];
+const VARIANTS: readonly TemplateVariant[] = ["lean", "history", "empty"];
 
 // Worktrees can share a host-level node_modules volume. Allow a runner to
 // isolate its snapshot so another checkout cannot replace it mid-run.
@@ -37,11 +44,14 @@ const CACHE_DIR =
   path.join(process.cwd(), "node_modules", ".cache", "diveday");
 const META_FILE = path.join(CACHE_DIR, "test-db-template.json");
 
+const TEMPLATE_FILENAME: Record<TemplateVariant, string> = {
+  lean: "test-db-template.tar",
+  history: "test-db-template-history.tar",
+  empty: "test-db-template-empty.tar",
+};
+
 function templateFile(variant: TemplateVariant): string {
-  return path.join(
-    CACHE_DIR,
-    variant === "history" ? "test-db-template-history.tar" : "test-db-template.tar",
-  );
+  return path.join(CACHE_DIR, TEMPLATE_FILENAME[variant]);
 }
 
 /**
@@ -77,11 +87,16 @@ async function inputsFingerprint(): Promise<string> {
   return hash.digest("hex");
 }
 
-/** Migrate + seed one variant in a throwaway PGlite and return its data-directory dump. */
+/** Migrate (and, for the seeded variants, seed) one variant and dump its data directory. */
 async function buildSnapshot(variant: TemplateVariant): Promise<Buffer> {
   const client = new PGlite({ extensions: { pg_trgm, btree_gist } });
   const db = drizzle({ client });
   await migrate(db, { migrationsFolder: "drizzle" });
+  if (variant === "empty") {
+    const emptyDump = await client.dumpDataDir("none");
+    await client.close();
+    return Buffer.from(await emptyDump.arrayBuffer());
+  }
   // The `lean` fixture has no trailing-quarter back-fill. That history is for
   // the demo experience, the e2e/visual-regression fleet, and the handful of
   // reporting-shaped unit tests that ask for `{ history: true }`; everything
@@ -93,7 +108,7 @@ async function buildSnapshot(variant: TemplateVariant): Promise<Buffer> {
   return Buffer.from(await dump.arrayBuffer());
 }
 
-/** Build (or reuse) the migrated + demo-seeded snapshots. Runs once per Vitest invocation. */
+/** Build (or reuse) the migrated (and, for two of three, demo-seeded) snapshots. Once per run. */
 export async function ensureTestDbTemplate(): Promise<void> {
   const fingerprint = await inputsFingerprint();
   const meta = await readFile(META_FILE, "utf8")
