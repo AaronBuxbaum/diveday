@@ -680,7 +680,7 @@ test("a diver's inquiry is recorded server-side and the shop's details stay reac
 /**
  * The storefront's courses shelf and the display-scale h1 both land with slice
  * 6i of ADR 20260827-clearwater-surface-language, decision 8: courses follow
- * the week as a shelf, and the public h1 resolves the `text-2xl`/`text-4xl`
+ * the week as a shelf, and the public h1 resolves the `text-2xl`/`text-[2.5rem]`
  * disagreement upward.
  */
 test.describe("courses on the shopfront", () => {
@@ -706,10 +706,10 @@ test.describe("courses on the shopfront", () => {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await page.goto("/s/blue-mantis/courses");
-    await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toHaveClass(/text-4xl/);
+    await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toHaveClass(/text-\[2\.5rem\]/);
 
     await page.goto("/s/blue-mantis/courses/open-water-diver");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveClass(/text-4xl/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveClass(/text-\[2\.5rem\]/);
   });
 });
 
