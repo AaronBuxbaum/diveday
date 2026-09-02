@@ -12,6 +12,8 @@ import {
   embedFrameUrl,
   embedSnippet,
   embedTargetUrl,
+  PLATFORMS,
+  type Platform,
   partnerLinkUrl,
 } from "@/lib/embed-snippets";
 import { SnippetField } from "./SnippetField";
@@ -48,9 +50,6 @@ export type EmbedGeneratorCopy = {
   copied: string;
   copyFailed: string;
 };
-
-export const PLATFORMS = ["html", "wordpress", "squarespace", "wix"] as const;
-export type Platform = (typeof PLATFORMS)[number];
 
 const FRAMED = new Set<EmbedKind>(["calendar", "grid", "departure", "courses"]);
 

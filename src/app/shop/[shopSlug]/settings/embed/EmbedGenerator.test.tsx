@@ -2,8 +2,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { EMBED_KINDS } from "@/lib/embed-snippets";
-import { EmbedGenerator, type EmbedGeneratorCopy, PLATFORMS } from "./EmbedGenerator";
+import { EMBED_KINDS, PLATFORMS } from "@/lib/embed-snippets";
+import { EmbedGenerator, type EmbedGeneratorCopy } from "./EmbedGenerator";
 
 vi.mock("qrcode", () => ({ toDataURL: vi.fn(async () => "data:image/png;base64,QUJD") }));
 
@@ -104,4 +104,17 @@ describe("EmbedGenerator", () => {
       "https://diveday.example/s/blue-mantis?utm_source=partner&utm_medium=referral&utm_campaign=the-reef-hotel",
     );
   });
+});
+
+/**
+ * The settings page (a Server Component) reads the platform list, so it must
+ * come from a plain module. A value exported from this `"use client"` file
+ * reaches the server as a client reference — `PLATFORMS.map` was a
+ * production-only crash on 2026-09-02 while every unit test stayed green.
+ */
+it("exports only components from the client module", async () => {
+  const exported = await import("./EmbedGenerator");
+  for (const [name, value] of Object.entries(exported)) {
+    expect(typeof value, name).toBe("function");
+  }
 });

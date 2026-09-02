@@ -31,6 +31,17 @@ export const EMBED_KINDS = [
 ] as const;
 export type EmbedKind = (typeof EMBED_KINDS)[number];
 
+/**
+ * The host platforms the generator writes instructions for. One list, one
+ * code: WordPress, Squarespace and Wix get their own *words*, never their own
+ * markup (ADR 20260901-diveday-reimagined, decision 2). It lives here rather
+ * than beside the generator because a server page reads it too, and a plain
+ * array exported from a `"use client"` module reaches the server as a client
+ * reference rather than an array — `.map` on it is a production-only crash.
+ */
+export const PLATFORMS = ["html", "wordpress", "squarespace", "wix"] as const;
+export type Platform = (typeof PLATFORMS)[number];
+
 export function isEmbedKind(value: unknown): value is EmbedKind {
   return typeof value === "string" && (EMBED_KINDS as readonly string[]).includes(value);
 }

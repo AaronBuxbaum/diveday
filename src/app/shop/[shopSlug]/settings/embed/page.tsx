@@ -8,18 +8,13 @@ import { requestLocale } from "@/i18n/request";
 import { DIVER_LOCALES } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { EMBED_KINDS, type EmbedKind } from "@/lib/embed-snippets";
+import { EMBED_KINDS, type EmbedKind, PLATFORMS, type Platform } from "@/lib/embed-snippets";
 import { formatDayParts, formatTime } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { requireShopSurface } from "@/lib/session";
-import {
-  EmbedGenerator,
-  type EmbedGeneratorCopy,
-  PLATFORMS,
-  type Platform,
-} from "./EmbedGenerator";
+import { EmbedGenerator, type EmbedGeneratorCopy } from "./EmbedGenerator";
 
 export const instant = true;
 
