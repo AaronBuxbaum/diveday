@@ -302,6 +302,10 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // A front-desk address, not a person's — this is printed on the public
       // course pages, where it backs the "Get in touch" composer.
       contactEmail: "hello@demo.invalid",
+      // The demo shop's front desk is confirmed: it is the state a real shop
+      // reaches after opening the link (issue #1288), and the one the settings
+      // capture should show.
+      contactEmailConfirmedAt: new Date("2026-07-01T12:00:00.000Z"),
       contactPhone: "+1 305 555 0142",
       // The numbers a divemaster needs with a diver on the deck and no signal.
       // Seeded because the offline manifest renders them, so an unseeded shop
@@ -527,6 +531,7 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string) {
           // visual capture of the queue's units row takes a minted shop for
           // exactly this reason.
           contactEmail: identity.emailFor("hello"),
+          contactEmailConfirmedAt: new Date("2026-07-01T12:00:00.000Z"),
           contactPhone: "+1 305 555 0142",
           // The canonical demo's own address, and for the canonical demo's own
           // reason: a real street exercises the address end to end (structured

@@ -965,6 +965,41 @@ export function verifyAccountEmail(input: VerifyAccountEmailInput): Notification
   };
 }
 
+export type ContactEmailConfirmationEmailInput = {
+  locale: DiverLocale;
+  shopName: string;
+  confirmUrl: string;
+  expiresAt: Date;
+  timezone: string;
+};
+
+/**
+ * To the shop's own front desk: one line saying what confirming does (replies
+ * from divers land here), one button, the expiry. No greeting by name -- the
+ * recipient is a mailbox the whole team reads, not a person (issue #1288).
+ */
+export function contactEmailConfirmationEmail(
+  input: ContactEmailConfirmationEmailInput,
+): NotificationEmail {
+  const t = diverTranslator(input.locale);
+  const expiresAt = formatDateTimeTz(input.expiresAt, input.locale, input.timezone);
+  const body = t("notifications.contactEmailConfirmation.body", { shopName: input.shopName });
+  const bodyHtml = t("notifications.contactEmailConfirmation.body", {
+    shopName: escapeHtml(input.shopName),
+  });
+  const confirm = t("notifications.contactEmailConfirmation.confirm");
+  const expiry = t("notifications.contactEmailConfirmation.expiry", {
+    expiresAt,
+    shopName: input.shopName,
+  });
+
+  return {
+    subject: t("notifications.contactEmailConfirmation.subject", { shopName: input.shopName }),
+    text: `${body}\n\n${confirm}:\n${input.confirmUrl}\n\n${expiry}\n`,
+    html: `<p>${bodyHtml}</p>${emailButton(input.confirmUrl, confirm)}<p>${t("notifications.contactEmailConfirmation.expiry", { expiresAt: escapeHtml(expiresAt), shopName: escapeHtml(input.shopName) })}</p>`,
+  };
+}
+
 type StaffInviteEmailInput = {
   locale: DiverLocale;
   inviteeName: string;

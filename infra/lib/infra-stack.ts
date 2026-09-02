@@ -575,6 +575,11 @@ export class InfraStack extends cdk.Stack {
       // safeguard that protects the account's reputation across every
       // notification path.
       suppressionReasons: ses.SuppressionReasons.BOUNCES_AND_COMPLAINTS,
+      // Per-configuration-set bounce and complaint rates in CloudWatch beside
+      // the account-level ones S13 alarms on: when the account rate moves,
+      // this is what says whether it was DiveDay's mail or something else the
+      // account sends.
+      reputationMetrics: true,
       vdmOptions: { optimizedSharedDelivery: true },
     });
 
@@ -604,6 +609,13 @@ export class InfraStack extends cdk.Stack {
       // a diver getting their booking confirmation. Falling back to the
       // amazonses.com envelope is exactly the behaviour we have today.
       mailFromBehaviorOnMxFailure: ses.MailFromBehaviorOnMxFailure.USE_DEFAULT_VALUE,
+      // Bounce and complaint notifications arrive through the configuration
+      // set's SNS destination above and land on the notification row and the
+      // shop's dashboard. SES's default is to *also* forward each one as an
+      // email to the sender address, which is noreply@ses.dive.day: a mailbox
+      // nobody reads, on a subdomain that receives no mail. Off, so the one
+      // record of a bounce is the one the app keeps.
+      feedbackForwarding: false,
     });
 
     const sesSenderUser = new iam.User(this, "SesSenderUser", {

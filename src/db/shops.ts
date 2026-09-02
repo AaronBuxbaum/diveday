@@ -364,17 +364,29 @@ export async function setShopRentalPricing(
  * Sets the front-desk address published on the shop's public pages. Empty
  * strings clear the field rather than publishing a blank contact, so a shop can
  * take itself back off the public page by emptying the box.
+ *
+ * A changed address starts unconfirmed: `contactEmailConfirmedAt` vouches for
+ * one specific address, so it is cleared in the same write whenever the
+ * address differs from what was on file (case-insensitively -- the same
+ * comparison the confirm consumes against). Saving the same address again
+ * keeps its confirmation; a confirm-then-edit would otherwise carry the old
+ * proof onto a new inbox (issue #1288).
  */
 export async function setShopContact(
   db: AppDb,
   shopId: string,
   contact: { contactEmail: string; contactPhone: string },
 ) {
+  const contactEmail = contact.contactEmail.trim() || null;
   const [shop] = await db
     .update(shops)
     .set({
-      contactEmail: contact.contactEmail.trim() || null,
+      contactEmail,
       contactPhone: contact.contactPhone.trim() || null,
+      contactEmailConfirmedAt:
+        contactEmail === null
+          ? null
+          : sql`case when lower(${shops.contactEmail}) = lower(${contactEmail}) then ${shops.contactEmailConfirmedAt} else null end`,
     })
     .where(eq(shops.id, shopId))
     .returning();

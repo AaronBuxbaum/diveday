@@ -13,8 +13,10 @@ import { getDb } from "@/db/client";
 import { createDivePackage, deleteDivePackage } from "@/db/dive-packages";
 import { shopSearchAnchor } from "@/db/dive-sites";
 import { queueAndAttemptMediaDeletion, retryMediaDeletion } from "@/db/media-deletions";
+import { sendNotification } from "@/db/notifications";
 import { maxLineItemUnitAmountCents } from "@/db/orders";
 import { dischargeProcessorErasure, retryProcessorErasure } from "@/db/processor-erasure";
+import { issueShopContactEmailConfirmation } from "@/db/shop-contact-email";
 import {
   getShopById,
   markShopUnitsConfirmed,
@@ -44,6 +46,7 @@ import {
   getShopStripeAccount,
   refreshShopStripeAccountStatus,
 } from "@/db/stripe-accounts";
+import { toDiverLocale } from "@/i18n/settings";
 import {
   type AddressLookupResult,
   addressLookupConfigFromEnvironment,
@@ -52,6 +55,7 @@ import {
 } from "@/lib/address-lookup";
 import { isBrandDisplayFontCode, parseBrandBadges, parseBrandColor } from "@/lib/brand";
 import { parseConservationCommitments } from "@/lib/conservation-commitments";
+import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
 import { validateDivePackage } from "@/lib/dive-packages";
 import {
   DEFAULT_DIVERS_PER_DIVEMASTER,
@@ -69,6 +73,7 @@ import {
   toShopCurrency,
 } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { publicAppUrl } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { connectProviderFromEnvironment } from "@/lib/payments/connect";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -564,14 +569,81 @@ export async function saveRentalPricingAction(formData: FormData) {
  * box is a real answer — it takes the "Get in touch" composer off the shop's
  * course pages rather than publishing a blank contact.
  */
+/**
+ * Sends the shop its confirmation link (issue #1288). Minting supersedes any
+ * outstanding link; the email goes to the front-desk address and nowhere else,
+ * so opening it is the proof. Degrades like every send: with SES unconfigured
+ * the notification resolves `not_configured` and the row simply stays
+ * unconfirmed, which costs the shop nothing but Reply-To.
+ */
+async function sendContactEmailConfirmation(shop: {
+  id: string;
+  name: string;
+  contactEmail: string;
+  defaultLocale: string;
+  timezone: string;
+}): Promise<boolean> {
+  const origin = publicAppUrl();
+  if (!origin) return false;
+  const db = await getDb();
+  const issued = await issueShopContactEmailConfirmation(db, {
+    shopId: shop.id,
+    email: shop.contactEmail,
+  });
+  const delivery = await sendNotification(db, {
+    kind: "contact_email_confirmation",
+    shopId: shop.id,
+    tokenId: issued.tokenId,
+    to: shop.contactEmail,
+    locale: toDiverLocale(shop.defaultLocale),
+    shopName: shop.name,
+    confirmUrl: new URL(confirmContactLinkPath(issued.token), `${origin}/`).toString(),
+    expiresAt: issued.expiresAt,
+    timezone: shop.timezone,
+  });
+  // Only a send that left says "open the email we sent"; an unconfigured
+  // provider saves the details and says just that.
+  return delivery.status === "sent";
+}
+
 export async function saveContactAction(formData: FormData) {
   const session = await requireStaffSession();
   const settings = shopPath(session.user.shopSlug, "settings");
   await settingsBlock(session);
   const parsed = contactSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(noticeUrl(settings, "contact-invalid", { saved: "contact" }));
-  await setShopContact(await getDb(), session.user.shopId, parsed.data);
-  revalidateAndRedirect(settings, noticeUrl(settings, "contact-saved", { saved: "contact" }));
+  const shop = await setShopContact(await getDb(), session.user.shopId, parsed.data);
+  // A new or changed address is unconfirmed (setShopContact cleared the proof),
+  // and the link is what confirms it. An unchanged, already-confirmed one
+  // needs nothing.
+  const sent =
+    shop?.contactEmail && !shop.contactEmailConfirmedAt
+      ? await sendContactEmailConfirmation({ ...shop, contactEmail: shop.contactEmail })
+      : false;
+  revalidateAndRedirect(
+    settings,
+    noticeUrl(settings, sent ? "contact-confirmation-sent" : "contact-saved", {
+      saved: "contact",
+    }),
+  );
+}
+
+/** The "Resend" tap on an unconfirmed address: a fresh link, the old one superseded. */
+export async function resendContactConfirmationAction() {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+  const shop = await getShopById(await getDb(), session.user.shopId);
+  const sent =
+    shop?.contactEmail && !shop.contactEmailConfirmedAt
+      ? await sendContactEmailConfirmation({ ...shop, contactEmail: shop.contactEmail })
+      : false;
+  revalidateAndRedirect(
+    settings,
+    noticeUrl(settings, sent ? "contact-confirmation-sent" : "contact-saved", {
+      saved: "contact",
+    }),
+  );
 }
 
 /**

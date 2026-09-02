@@ -33,6 +33,11 @@ export const CAPABILITY_ROUTE_PREFIXES = [
   "reset-password",
   // Staff-invite acceptance token (20260726-staff-invite-accounts).
   "invite",
+  // Shop contact-email confirmation (issue #1288): /confirm-contact/[token]
+  // proves control of the front-desk address that becomes Reply-To on diver
+  // mail, so a leaked copy is a working proof for somebody else's inbox
+  // until it is used or expires.
+  "confirm-contact",
   // Party seat-claim token (20260804-seat-claim-links): /claim/[token] lets
   // one party member take over one seat, so a leaked copy is a working
   // identity-takeover link for that seat until it is used or revoked.

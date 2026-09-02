@@ -594,6 +594,10 @@
     "visual": ["terms"],
     "a11y": ["a11y.spec.ts"]
   },
+  "/confirm-contact/[token]": {
+    "e2e": ["contact-email-confirmation.spec.ts"],
+    "visual": ["confirm-contact-invalid"]
+  },
   "/unsubscribe/[token]": {
     "e2e": ["courtesy-email-unsubscribe.spec.ts", "last-minute-fill.spec.ts"],
     "visual": ["unsubscribe-invalid"]

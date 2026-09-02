@@ -404,6 +404,24 @@ const emailVerificationSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
 });
 
+/**
+ * The link that proves a shop controls the front-desk address it typed into
+ * settings, before that address becomes Reply-To on diver mail (issue #1288).
+ * Goes to the shop, in the shop's own language, branded as the shop -- it is
+ * the shop's own address being vouched for.
+ */
+const contactEmailConfirmationSchema = z.object({
+  kind: z.literal("contact_email_confirmation"),
+  shopId: z.uuid(),
+  tokenId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  shopName: z.string().trim().min(1).max(120),
+  confirmUrl: z.url().max(2_000),
+  expiresAt: z.date(),
+  timezone: z.string().trim().min(1).max(100),
+});
+
 const passwordResetRequestSchema = z.object({
   kind: z.literal("password_reset_request"),
   userAccountId: z.uuid(),
@@ -587,6 +605,7 @@ export const notificationSchema = z
     tripBlowoutSchema,
     welcomeSchema,
     emailVerificationSchema,
+    contactEmailConfirmationSchema,
     passwordResetRequestSchema,
     passwordChangedSchema,
     staffInviteSchema,
@@ -655,6 +674,9 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // secret itself.
     case "email_verification":
       return `email-verification/${notification.tokenId}`;
+    // One send per minted link; a resend mints a fresh token and is its own send.
+    case "contact_email_confirmation":
+      return `contact-email-confirmation/${notification.tokenId}`;
     case "password_reset_request":
       return `password-reset-request/${notification.tokenId}`;
     case "staff_invite":
