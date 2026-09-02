@@ -1513,6 +1513,37 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * The embed catalogue's three framed widgets (ADR
+       * 20260901-diveday-reimagined, slice 13d): what a shop's own website
+       * shows once the loader has mounted them. Photographed at their own
+       * routes, which are embeds by path — no chrome, the credit line, and
+       * the demo shop's brand through the same `BrandStyle` the storefront
+       * reads. The departure card takes the next public departure off the
+       * grid rather than a literal id, so the capture survives a re-seed.
+       */
+      test(`the embed grid renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis/embed/grid");
+        await page.getByRole("link", { name: "Book" }).first().waitFor();
+        await capture(page, "embed-grid", scheme);
+      });
+
+      test(`the embed departure card renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis/embed/grid");
+        const href = await page.getByRole("link", { name: "Book" }).first().getAttribute("href");
+        const tripId = /\/trips\/([^/#?]+)/.exec(href ?? "")?.[1];
+        expect(tripId).toBeTruthy();
+        await page.goto(`/s/blue-mantis/embed/departure?show=${tripId}`);
+        await page.getByRole("link", { name: "Book" }).waitFor();
+        await capture(page, "embed-departure", scheme);
+      });
+
+      test(`the embed course list renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/s/blue-mantis/embed/courses");
+        await page.getByRole("link", { name: "Enrol" }).first().waitFor();
+        await capture(page, "embed-courses", scheme);
+      });
+
+      /**
        * **The one place a booking does not end on `/ready`** (ADR
        * 20260820-one-page-after-booking). Inside the iframe the frame stays put
        * — `/ready/**` is outside the framing allowlist, so redirecting there

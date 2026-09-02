@@ -64,3 +64,15 @@ describe("BrandStyle", () => {
     withFace.unmount();
   });
 });
+
+describe("BrandStyle, inheriting a host page", () => {
+  it("makes the host's face the body and heading face, and skips the Google link", () => {
+    const { container } = render(
+      <BrandStyle brandColor={null} brandDisplayFont="lora" hostFont="Manrope, sans-serif" />,
+    );
+    const css = container.querySelector("style[data-brand-style]")?.textContent ?? "";
+    expect(css).toContain("--font-sans:Manrope, sans-serif");
+    expect(css).toContain("--brand-display:Manrope, sans-serif");
+    expect(css).not.toContain("Lora");
+  });
+});

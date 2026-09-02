@@ -27,7 +27,13 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
-import { EMBED_REQUEST_HEADER } from "@/lib/embed-routes";
+import {
+  EMBED_BRAND_HEADER,
+  EMBED_FONT_HEADER,
+  EMBED_REQUEST_HEADER,
+  parseEmbedBrandParam,
+  parseEmbedFontParam,
+} from "@/lib/embed-routes";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { publicCoursesPath, publicSchedulePath } from "@/lib/public-routes";
 import { isLiveShopStaff } from "@/lib/session";
@@ -328,5 +334,17 @@ async function PublicShopBrand({ params }: { params: Promise<{ shopSlug: string 
   const { shopSlug } = await params;
   const shop = await getShopBySlug(await getDb(), shopSlug);
   if (!shop) return null;
-  return <BrandStyle brandColor={shop.brandColor} brandDisplayFont={shop.brandDisplayFont} />;
+  // An embed that inherits its host page arrives with the host's colour and
+  // face, validated and forwarded by the proxy; the host wins over the shop's
+  // own setting, because the widget is sitting *on* that page.
+  const requestHeaders = await headers();
+  const hostColor = parseEmbedBrandParam(requestHeaders.get(EMBED_BRAND_HEADER));
+  const hostFont = parseEmbedFontParam(requestHeaders.get(EMBED_FONT_HEADER));
+  return (
+    <BrandStyle
+      brandColor={hostColor ?? shop.brandColor}
+      brandDisplayFont={hostFont ? null : shop.brandDisplayFont}
+      hostFont={hostFont}
+    />
+  );
 }
