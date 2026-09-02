@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { type ComponentProps, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { MovePreflight } from "@/lib/move-preflight";
 import {
   type BuilderCopy,
   type BuilderDay,
@@ -46,6 +47,17 @@ const COPY: BuilderCopy = {
   courseLabel: "Course · {title}",
   dayCountLabelOne: "{count} day",
   dayCountLabelOther: "{count} days",
+  impactTitle: "If you move it",
+  impactToldOne: "{count} diver has already been told this date — moving it sends nothing.",
+  impactToldOther: "{count} divers have already been told this date — moving it sends nothing.",
+  impactGearOne: "{count} reserved unit travels with it.",
+  impactGearOther: "{count} reserved units travel with it.",
+  impactPaidOne: "{count} seat is already paid.",
+  impactPaidOther: "{count} seats are already paid.",
+  impactWindowOne: "Cancellations close {count} hour before it departs.",
+  impactWindowOther: "Cancellations close {count} hours before it departs.",
+  impactBlockedSailed: "The crew has already counted heads against this departure.",
+  impactBlockedNotScheduled: "A cancelled trip can’t be moved.",
   crewLabel: "Crew:",
   crewNobodyYet: "nobody yet",
   crewMostlyAll: "Crew: {names} unless a departure says otherwise.",
@@ -205,9 +217,20 @@ const loadOptions = vi.fn(async () => ({
   diveSites: [{ id: "site-1", title: "Molasses Reef" }],
 }));
 
+/**
+ * The move panel's impact preview (issue #1203). Quiet by default — most tests
+ * here are about other panels entirely, and a departure with no consequences
+ * renders no block, which is the shape the component must stay correct in.
+ */
+const loadMovePreflight = vi.fn(
+  async (_tripId: string): Promise<MovePreflight | null> => ({ blocked: null, sections: [] }),
+);
+
 afterEach(() => {
   cleanup();
   loadOptions.mockClear();
+  loadMovePreflight.mockClear();
+  loadMovePreflight.mockImplementation(async () => ({ blocked: null, sections: [] }));
   routerReplace.mockClear();
   useSearchParams.mockReturnValue(new URLSearchParams());
   setMockPathname("/shop/blue-mantis/schedule/board");
@@ -235,6 +258,7 @@ describe("ScheduleBuilder crew line", () => {
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
@@ -324,6 +348,7 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
@@ -354,6 +379,7 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
@@ -391,6 +417,7 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
@@ -425,6 +452,7 @@ describe("ScheduleBuilder unpriced-trip flag (task 150)", () => {
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
@@ -456,6 +484,7 @@ describe("ScheduleBuilder wind line (issue #722)", () => {
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
@@ -497,6 +526,7 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
@@ -584,6 +614,7 @@ describe("ScheduleBuilder row status slot — one grammar (issue 758)", () => {
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
@@ -627,6 +658,7 @@ describe("ScheduleBuilder row status slot — one grammar (issue 758)", () => {
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
@@ -668,6 +700,7 @@ describe("ScheduleBuilder row status slot — one grammar (issue 758)", () => {
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
@@ -701,6 +734,7 @@ describe("ScheduleBuilder row status slot — one grammar (issue 758)", () => {
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
@@ -735,6 +769,7 @@ describe("ScheduleBuilder open-panel reset on revisit", () => {
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
@@ -760,6 +795,7 @@ describe("ScheduleBuilder open-panel reset on revisit", () => {
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
@@ -795,6 +831,7 @@ describe("ScheduleBuilder top add panel opened by link (?add=)", () => {
     copy: COPY,
     more: MORE,
     initialCourse: null,
+    loadMovePreflight,
   } as const;
 
   it("opens when the openAdd prop changes after mount, so the header link works twice", async () => {
@@ -856,6 +893,7 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
@@ -890,6 +928,7 @@ describe("ScheduleBuilder panel focus management (accessibility audit §3)", () 
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
@@ -930,6 +969,7 @@ describe("ScheduleBuilder row actions disclosure (design principles #8)", () => 
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
@@ -1025,6 +1065,7 @@ describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={{ ...actions, ...actionOverrides }}
         defaultDateIso="2026-08-01"
@@ -1122,6 +1163,7 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
@@ -1380,6 +1422,7 @@ describe("ScheduleBuilder request plan: copy composed on the client", () => {
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-01"
@@ -1551,6 +1594,7 @@ describe("ScheduleBuilder week board", () => {
         shopSlug="blue-mantis"
         days={days}
         loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
         price={PRICE}
         actions={actions}
         defaultDateIso="2026-08-27"
@@ -1961,5 +2005,192 @@ describe("ScheduleBuilder week board", () => {
     // lists; without this, none of them says which day it belongs to.
     const list = within(grid()).getByRole("list", { name: "Day 27" });
     expect(within(list).getByRole("link", { name: "Two-Tank Reef" })).toBeInTheDocument();
+  });
+});
+
+/**
+ * **The move panel's impact preview** (issue #1203, D43).
+ *
+ * The whole feature is a read: the panel says what moving this departure will
+ * cost — who has already been told the date, the crew rostered onto it, the kit
+ * that travels, the money already taken — before the form is filled in. What is
+ * asserted here is mostly the *absence* cases, because they are what keeps a
+ * form calm: nothing while it loads, nothing for a departure with no
+ * consequences, and nothing at all when the read fails.
+ */
+describe("ScheduleBuilder move impact preview (issue #1203)", () => {
+  const days: BuilderDay[] = [
+    {
+      dateIso: "2026-08-01",
+      label: "Sat, Aug 1",
+      parts: { weekday: "Sat", day: "1", month: "Aug" },
+      trips: [baseTrip()],
+    },
+  ];
+
+  function renderBoard() {
+    return render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={days}
+        loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
+        price={PRICE}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
+      />,
+    );
+  }
+
+  async function openMovePanel() {
+    await userEvent.click(
+      screen.getByRole("button", { name: /^Move, copy, or remove Two-Tank Reef/ }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^Move Two-Tank Reef/ }));
+  }
+
+  /**
+   * The board carries a page of departures and every panel on it is closed, so
+   * the counts are asked for on the path that opens one — never shipped with
+   * the render. Same contract as the add panel's option lists.
+   */
+  it("asks for nothing until a move panel is opened", async () => {
+    renderBoard();
+    expect(loadMovePreflight).not.toHaveBeenCalled();
+
+    await openMovePanel();
+    expect(loadMovePreflight).toHaveBeenCalledWith("trip-1");
+  });
+
+  it("says what the move will cost, once it knows", async () => {
+    loadMovePreflight.mockImplementation(async () => ({
+      blocked: null,
+      sections: [
+        { kind: "told", reminded: 4 },
+        { kind: "gear", count: 1 },
+        { kind: "money", paid: 5, cancellationWindowHours: 48 },
+      ],
+    }));
+    renderBoard();
+    await openMovePanel();
+
+    expect(
+      await screen.findByText(
+        "4 divers have already been told this date — moving it sends nothing.",
+      ),
+    ).toBeInTheDocument();
+    // Singular and plural both resolved server-side, picked here by count.
+    expect(screen.getByText("1 reserved unit travels with it.")).toBeInTheDocument();
+    expect(screen.getByText("5 seats are already paid.")).toBeInTheDocument();
+    expect(screen.getByText("Cancellations close 48 hours before it departs.")).toBeInTheDocument();
+    expect(screen.getByText(COPY.impactTitle)).toBeInTheDocument();
+  });
+
+  /**
+   * The restraint case. A departure nobody has been told about, with no crew,
+   * no kit and no money composes to no sections — and the panel must then look
+   * exactly as it did before this feature existed, heading included.
+   */
+  it("renders no block at all for a departure with no consequences", async () => {
+    renderBoard();
+    await openMovePanel();
+
+    await waitFor(() => expect(loadMovePreflight).toHaveBeenCalled());
+    expect(screen.queryByText(COPY.impactTitle)).toBeNull();
+    expect(screen.getByLabelText(COPY.newDate)).toBeInTheDocument();
+  });
+
+  /**
+   * A preview is a courtesy, never a gate: if the read fails the panel is the
+   * two fields and the button it has always been, with no error furniture.
+   */
+  it("leaves the form untouched when the read fails", async () => {
+    loadMovePreflight.mockImplementation(async () => {
+      throw new Error("nope");
+    });
+    renderBoard();
+    await openMovePanel();
+
+    await waitFor(() => expect(loadMovePreflight).toHaveBeenCalled());
+    expect(screen.queryByText(COPY.impactTitle)).toBeNull();
+    expect(screen.getByLabelText(COPY.newDate)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: COPY.moveIt })).toBeInTheDocument();
+  });
+
+  /**
+   * Said up front, in the words the post-move notice would have used. The form
+   * is deliberately still submittable — `moveTrip` is the one that decides, and
+   * a panel that disabled its own button would be the preview becoming a gate.
+   */
+  it("warns before the form is filled in when the departure cannot move", async () => {
+    loadMovePreflight.mockImplementation(async () => ({
+      blocked: "already_sailed",
+      sections: [{ kind: "told", reminded: 6 }],
+    }));
+    renderBoard();
+    await openMovePanel();
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(COPY.impactBlockedSailed);
+    expect(screen.getByRole("button", { name: COPY.moveIt })).toBeEnabled();
+    // The facts survive the refusal — they are why it is worth reading.
+    expect(
+      screen.getByText("6 divers have already been told this date — moving it sends nothing."),
+    ).toBeInTheDocument();
+  });
+
+  it("names the cancelled refusal instead, when that is the one that applies", async () => {
+    loadMovePreflight.mockImplementation(async () => ({
+      blocked: "not_scheduled",
+      sections: [],
+    }));
+    renderBoard();
+    await openMovePanel();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(COPY.impactBlockedNotScheduled);
+  });
+
+  /**
+   * Two departures, two previews. The panel is keyed by the row it opened from,
+   * so a second Move must ask about *its* departure rather than reuse the first
+   * answer — the bug a single module-level cache would introduce.
+   */
+  it("asks again for a different departure", async () => {
+    const twoDays: BuilderDay[] = [
+      {
+        ...days[0],
+        trips: [baseTrip(), baseTrip({ id: "trip-2", title: "Night Dive" })],
+      },
+    ];
+    render(
+      <ScheduleBuilder
+        shopSlug="blue-mantis"
+        days={twoDays}
+        loadOptions={loadOptions}
+        loadMovePreflight={loadMovePreflight}
+        price={PRICE}
+        actions={actions}
+        defaultDateIso="2026-08-01"
+        canConfigure={true}
+        copy={COPY}
+        more={MORE}
+        initialCourse={null}
+        openAdd="closed"
+      />,
+    );
+
+    await openMovePanel();
+    await waitFor(() => expect(loadMovePreflight).toHaveBeenCalledWith("trip-1"));
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /^Move, copy, or remove Night Dive/ }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^Move Night Dive/ }));
+    await waitFor(() => expect(loadMovePreflight).toHaveBeenCalledWith("trip-2"));
   });
 });

@@ -24,6 +24,64 @@ async function chooseRowAction(page: Page, verb: string, title: string) {
 }
 
 test.describe("schedule builder", () => {
+  /**
+   * **The move panel says what moving a departure will cost, and changes
+   * nothing by saying it** (issue #1203, D43).
+   *
+   * The boundary is the feature: the panel reads, and the move that follows is
+   * not conditioned on what it read. `src/db/move-preflight.test.ts` proves that
+   * at the row level — the departure, its seats, its gear reservations and its
+   * whole delivery log are byte-identical across a preflight. What this covers
+   * is the flow a staff member actually runs: open Move, read the consequences,
+   * think better of it, and leave the board exactly as they found it.
+   *
+   * Counts are matched loosely on purpose. Which seeded divers hold a
+   * confirmation and how much kit is packed are the demo seed's business and
+   * move when it does; that this departure reports both, and that the
+   * arithmetic is right, is unit-tested. An e2e pinning "4" would fail on a
+   * seed change that broke nothing.
+   */
+  test("the move panel says what a move will cost, and does not move anything", async ({
+    page,
+  }) => {
+    const title = "Wreck Trip — Spiegel Grove";
+    await page.goto(BOARD);
+    await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+
+    const row = rowActions(page, title).first();
+    await expect(row).toBeVisible();
+    await chooseRowAction(page, "Move", title);
+
+    // The seeded confirmations named this departure's date, and its kit is
+    // reserved against these dates — so both lines are earned rather than
+    // decoration.
+    await expect(page.getByText("If you move it")).toBeVisible();
+    await expect(page.getByText(/divers? (?:has|have) already been told this date/)).toBeVisible();
+    await expect(page.getByText(/reserved units? travels? with it/)).toBeVisible();
+
+    // The seed boards one diver on this wreck trip (`src/db/seed-front-desk.ts`),
+    // which is the evidence `moveTrip` refuses on — so the panel says up front
+    // what the redirect would have said afterwards, in the notice bar's own
+    // words. The button stays live regardless: `moveTrip` is what decides, and
+    // a preview that disabled it would be the gate this feature is defined as
+    // not being.
+    // Scoped to the block itself: Next's route announcer is also `role="alert"`
+    // and matches page-wide.
+    await expect(page.locator("[data-move-impact] [role='alert']")).toContainText(
+      "already counted heads",
+    );
+    await expect(page.getByRole("button", { name: "Move it" })).toBeEnabled();
+
+    // Nothing was sent and nothing moved: no notice, and the departure is still
+    // the row it was, on the same day, ready to be moved by someone who means
+    // it. `?builder=moved` is the only thing that puts a status on this page.
+    await expect(page.getByRole("status")).toHaveCount(0);
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByLabel("New date")).toHaveCount(0);
+    await expect(rowActions(page, title).first()).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`${BOARD}$`));
+  });
+
   test("staff add, move, copy, and remove a departure without leaving the board", async ({
     page,
   }) => {

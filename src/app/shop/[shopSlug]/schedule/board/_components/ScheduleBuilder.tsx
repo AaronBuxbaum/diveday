@@ -21,6 +21,7 @@ import {
   MIN_DECISION_HOURS,
   MINIMUM_SEATS_DECISION_HOURS_DEFAULT,
 } from "@/lib/minimum-seats";
+import type { MovePreflight, MovePreflightSection } from "@/lib/move-preflight";
 import type { BuilderWeek, WeekDeparture } from "./WeekBoard";
 import { AllUnpricedNotice, WeekBoard } from "./WeekBoard";
 
@@ -205,6 +206,19 @@ export type BuilderCopy = {
   newDepartureTime: string;
   moving: string;
   moveIt: string;
+  /* ---- the move panel's impact preview (issue #1203, D43) ---- */
+  impactTitle: string;
+  impactToldOne: string;
+  impactToldOther: string;
+  impactGearOne: string;
+  impactGearOther: string;
+  impactPaidOne: string;
+  impactPaidOther: string;
+  impactWindowOne: string;
+  impactWindowOther: string;
+  /** The two refusals `moveTrip` gives, in the notice bar's own words. */
+  impactBlockedSailed: string;
+  impactBlockedNotScheduled: string;
   copyTo: string;
   copyDescription: string;
   departureTime: string;
@@ -1112,17 +1126,131 @@ function RemovePanel({
   );
 }
 
+/**
+ * **What moving this departure will cost**, above the two fields that would do
+ * it (issue #1203, D43).
+ *
+ * Fetched when the panel mounts rather than shipped with the board: a page of
+ * departures times seven counts, for panels that are all closed, is a query
+ * bill nobody asked for — the same reasoning the add panel's selects already
+ * follow (`loadOptions`).
+ *
+ * **Nothing at all while it loads, and nothing at all when there is nothing to
+ * say.** No skeleton and no spinner: the block is one to four short lines, and
+ * a placeholder for them would be more furniture than the thing it stands in
+ * for. It sits above the fields because a consequence a reader meets *after*
+ * the button they are reaching for has not been read; the date input takes
+ * focus on mount, so the shift lands before there is any pointer target to
+ * miss.
+ *
+ * Read-only end to end — see `src/lib/move-preflight.ts`.
+ */
+function MoveImpact({
+  tripId,
+  copy,
+  loadPreflight,
+}: {
+  tripId: string;
+  copy: BuilderCopy;
+  loadPreflight: (tripId: string) => Promise<MovePreflight | null>;
+}) {
+  const [preflight, setPreflight] = useState<MovePreflight | null>(null);
+  useEffect(() => {
+    let live = true;
+    loadPreflight(tripId).then(
+      (result) => {
+        if (live) setPreflight(result);
+      },
+      // A failed read leaves the panel exactly as it was before this existed —
+      // two fields and a button. A preview is a courtesy, never a gate.
+      () => undefined,
+    );
+    return () => {
+      live = false;
+    };
+  }, [tripId, loadPreflight]);
+
+  if (!preflight) return null;
+  const lines = preflight.sections.flatMap((section) => impactLines(section, copy));
+  if (lines.length === 0 && !preflight.blocked) return null;
+
+  return (
+    <div className="sm:col-span-2 space-y-3" data-move-impact={tripId}>
+      {preflight.blocked ? (
+        <p className="text-sm font-medium text-warning" role="alert">
+          {preflight.blocked === "already_sailed"
+            ? copy.impactBlockedSailed
+            : copy.impactBlockedNotScheduled}
+        </p>
+      ) : null}
+      {lines.length > 0 ? (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+            {copy.impactTitle}
+          </p>
+          <ul className="mt-2 space-y-1 text-sm text-muted">
+            {lines.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * One section's sentences. The money section is the only one that can produce
+ * two — the amount already taken, and the window that governs giving it back —
+ * and the window is dropped entirely when the departure sets none.
+ */
+function impactLines(section: MovePreflightSection, copy: BuilderCopy): string[] {
+  switch (section.kind) {
+    case "told":
+      return [
+        fill(
+          pluralForm(section.reminded, { one: copy.impactToldOne, other: copy.impactToldOther }),
+          {
+            count: section.reminded,
+          },
+        ),
+      ];
+    case "gear":
+      return [
+        fill(pluralForm(section.count, { one: copy.impactGearOne, other: copy.impactGearOther }), {
+          count: section.count,
+        }),
+      ];
+    case "money": {
+      const paid = fill(
+        pluralForm(section.paid, { one: copy.impactPaidOne, other: copy.impactPaidOther }),
+        { count: section.paid },
+      );
+      const hours = section.cancellationWindowHours;
+      if (hours === null) return [paid];
+      return [
+        paid,
+        fill(pluralForm(hours, { one: copy.impactWindowOne, other: copy.impactWindowOther }), {
+          count: hours,
+        }),
+      ];
+    }
+  }
+}
+
 /** Slide a departure to another day or time; a multi-day course moves as a block. */
 function MovePanel({
   trip,
   copy,
   action,
+  loadPreflight,
   onCancel,
 }: {
   trip: PanelTrip;
   copy: BuilderCopy;
   // i18n-exempt: type annotation, not copy — the scanner misreads the union as a string.
   action: (formData: FormData) => void | Promise<void>;
+  loadPreflight: (tripId: string) => Promise<MovePreflight | null>;
   onCancel: () => void;
 }) {
   return (
@@ -1133,6 +1261,7 @@ function MovePanel({
       className="mt-3 rounded-inset border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
     >
       <input type="hidden" name="tripId" value={trip.id} />
+      <MoveImpact tripId={trip.id} copy={copy} loadPreflight={loadPreflight} />
       <Field
         label={copy.newDate}
         description={
@@ -1292,6 +1421,7 @@ function isUsualCrew(crew: readonly string[], usual: readonly string[] | null): 
 export function ScheduleBuilder({
   shopSlug,
   days,
+  loadMovePreflight,
   loadOptions,
   price,
   actions,
@@ -1309,6 +1439,8 @@ export function ScheduleBuilder({
   days: BuilderDay[];
   /** Fetches the add panel's course and dive-site options, first time it opens. */
   loadOptions: () => Promise<BuilderOptions>;
+  /** The move panel's impact preview, fetched per departure when one opens. */
+  loadMovePreflight: (tripId: string) => Promise<MovePreflight | null>;
   price: BuilderPriceInput;
   actions: BuilderActions;
   /** The soonest day on the board, for the "Add a departure" button in the header. */
@@ -1661,6 +1793,7 @@ export function ScheduleBuilder({
                     trip={panelTripOf(weekAction.entry)}
                     copy={copy}
                     action={actions.move}
+                    loadPreflight={loadMovePreflight}
                     onCancel={() => closePanel(`w:menu:${weekAction.entry.tripId}`)}
                   />
                 ) : null}
@@ -2098,6 +2231,7 @@ export function ScheduleBuilder({
                         trip={trip}
                         copy={copy}
                         action={actions.move}
+                        loadPreflight={loadMovePreflight}
                         onCancel={() => closePanel(`menu:${trip.id}`)}
                       />
                     ) : null}

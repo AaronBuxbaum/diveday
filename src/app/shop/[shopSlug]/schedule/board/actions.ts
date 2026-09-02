@@ -7,6 +7,7 @@ import { listBoats } from "@/db/boats";
 import { type AppDb, getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { listDiveSites } from "@/db/dive-sites";
+import { getMovePreflight } from "@/db/move-preflight";
 import { canPersonViewShopReports } from "@/db/reporting";
 import { getShopById } from "@/db/shops";
 import { createTripRequestInvitations } from "@/db/trip-invitations";
@@ -21,6 +22,7 @@ import {
 import { trackEvent } from "@/lib/analytics";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
+import type { MovePreflight } from "@/lib/move-preflight";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import {
   isValidWeekdaySet,
@@ -411,6 +413,32 @@ async function landAfterAdd(
   const query = new URLSearchParams({ builder: "added", created: title });
   if (createdCount > 1) query.set("series", String(createdCount));
   revalidateAndRedirect(back, `${back}?${query.toString()}`);
+}
+
+/**
+ * **What moving this departure will cost**, fetched when a staff member opens
+ * the Move panel (issue #1203, D43). Same shape as `loadBuilderOptionsAction`
+ * above and for the same reason: a board page carries a page of departures, and
+ * seven counts per row for panels that are all closed is a query bill nobody
+ * asked for. One departure, on the path that opens it.
+ *
+ * **Reads only** — the boundary this feature is defined by. It calls no
+ * mutation, writes nothing, and the move that follows is not conditioned on
+ * anything it returned; `moveDepartureAction` below is unchanged by it, which
+ * is what keeps the gear preview from becoming a pre-check the exclusion
+ * constraint would then have to disagree with.
+ *
+ * Scoped by the session's own shop, never the slug, and null for anyone who
+ * cannot define trips — the same gate as the panel itself.
+ */
+export async function loadMovePreflightAction(tripId: string): Promise<MovePreflight | null> {
+  const parsed = z.uuid().safeParse(tripId);
+  if (!parsed.success) return null;
+  const session = await requireStaffSession();
+  const db = await getDb();
+  const shopId = session.user.shopId;
+  if (!(await canPersonConfigureTrips(db, shopId, session.user.personId))) return null;
+  return getMovePreflight(db, shopId, parsed.data);
 }
 
 const moveSchema = z.object({

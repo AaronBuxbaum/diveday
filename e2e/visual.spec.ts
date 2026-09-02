@@ -2938,6 +2938,48 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-builder", scheme);
       });
 
+      /**
+       * **The move panel with its impact preview** (issue #1203, D43).
+       *
+       * The one seeded departure that has consequences worth stating: the
+       * Spiegel Grove wreck trip carries the demo's only booking confirmations
+       * and its reserved gear, so this photographs the block populated rather
+       * than the empty case every other row shows. That every other row shows
+       * nothing is the point of the feature and is covered by unit tests; a
+       * capture of an absent block would be a capture of the board.
+       *
+       * Gated on the block's own heading, which only renders once the panel's
+       * read has landed — the preview is fetched when the panel opens, so the
+       * `Board` heading and the pager are both true before it exists.
+       *
+       * **Opened at the phone width on purpose.** The board has two
+       * compositions — the vertical day stream below `xl`, the week grid at and
+       * above it — and they key their panels separately (`move:` against
+       * `w:move:`), so whichever one is open closes when `capture()` resizes
+       * through the other. `MovePanel` is module scope and shared by both, so
+       * one composition covers the component either way; the narrow column is
+       * the half worth photographing, because a block of prose stacked above a
+       * two-field form is where crowding would show. The 1280 sibling is
+       * therefore the plain week grid.
+       */
+      test(`the move panel says what a move will cost (${scheme})`, async ({ page }) => {
+        const title = "Wreck Trip — Spiegel Grove";
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+        await boardListSettled(page);
+        await page
+          .getByRole("button", { name: new RegExp(`^Move, copy, or remove ${title},`) })
+          .first()
+          .click();
+        await page
+          .getByRole("button", { name: new RegExp(`^Move ${title},`) })
+          .first()
+          .click();
+        await page.getByText("If you move it").waitFor();
+        await capture(page, "schedule-builder-move-impact", scheme);
+      });
+
       // The add-a-departure form as a shop meets it all week: the quick path,
       // which the board only ever shows as a button — every field a departure
       // is born with, price included, with the rare half collapsed behind
