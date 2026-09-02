@@ -108,7 +108,32 @@
       "logoSet": "Logotipo subido",
       "descriptionSet": "Descripción configurada",
       "submitting": "Guardando…",
-      "submit": "Guardar perfil"
+      "submit": "Guardar perfil",
+      "brandColor": "Color de marca",
+      "brandColorPicker": "Elegir un color de marca",
+      "brandColorHint": "Botones y enlaces de tus páginas públicas. Déjalo vacío para mantener el turquesa de DiveDay.",
+      "brandColorDarkened": "Tu color era demasiado claro para texto blanco, así que los botones usan {hex}.",
+      "displayFont": "Tipografía de títulos",
+      "displayFontDefault": "La de DiveDay",
+      "heroPhoto": "Foto de portada",
+      "heroHint": "PNG, JPG o WebP. Apaisada, de 1600 px de ancho o más.",
+      "heroAlt": "Describe la foto de portada",
+      "removeHero": "Quitar la foto de portada",
+      "establishedYear": "Abierto desde (año)",
+      "badges": "Insignias",
+      "badgesHint": "Se muestran en tus páginas públicas como declaración propia, en este orden.",
+      "badgesSet": "{count, plural, one {# insignia} other {# insignias}}",
+      "badgeLabels": {
+        "padi_5_star": "Centro de buceo PADI 5 estrellas",
+        "padi_idc": "Centro de desarrollo de instructores PADI",
+        "ssi_diamond": "Centro de buceo SSI Diamond",
+        "naui_pro": "Centro NAUI Pro",
+        "tripadvisor": "Recomendado en Tripadvisor",
+        "blue_star": "Operador Blue Star",
+        "green_fins": "Miembro de Green Fins",
+        "dan_partner": "Socio empresarial de DAN",
+        "readers_choice": "Premio Readers' Choice"
+      }
     },
     "address": {
       "heading": "Dirección del centro",
@@ -359,7 +384,9 @@
         "arrival_photo": "Foto de llegada",
         "certification_card": "Evidencia de certificación",
         "waiver_document": "Documento de exención",
-        "dive_site_photo": "Foto del sitio de buceo"
+        "dive_site_photo": "Foto del sitio de buceo",
+        "shop_logo": "Logotipo del centro",
+        "shop_hero": "Foto de portada del centro"
       },
       "mediaDeletions": {
         "sectionLabel": "Fotos que no terminaron de eliminarse",

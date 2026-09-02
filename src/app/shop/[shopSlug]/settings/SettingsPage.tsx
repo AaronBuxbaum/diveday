@@ -40,6 +40,13 @@ import {
   canManageWaiverTemplates,
   canViewShopReports,
 } from "@/lib/authz";
+import {
+  BRAND_BADGE_CODES,
+  BRAND_DISPLAY_FONT_CODES,
+  BRAND_DISPLAY_FONTS,
+  DIVEDAY_BRAND_COLOR,
+  deriveBrandTheme,
+} from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
 import { configuredValue } from "@/lib/configured";
 import { CONSERVATION_COMMITMENT_CODES } from "@/lib/conservation-commitments";
@@ -67,6 +74,7 @@ import {
   DEFAULT_TIMEZONE,
 } from "@/lib/timezones";
 import { isTrialExpired, trialDaysRemaining, trialEndsAt } from "@/lib/trial";
+import { BrandColorField } from "./_components/BrandColorField";
 import { SettingsDoorRow, SettingsRow } from "./_components/SettingsRows";
 import { AddressSearch } from "./AddressSearch";
 import {
@@ -338,6 +346,8 @@ const MEDIA_KIND_KEYS: Record<string, StaffMessageKey> = {
   certification_card: "settings.main.dataJobs.mediaKind.certification_card",
   waiver_document: "settings.main.dataJobs.mediaKind.waiver_document",
   dive_site_photo: "settings.main.dataJobs.mediaKind.dive_site_photo",
+  shop_logo: "settings.main.dataJobs.mediaKind.shop_logo",
+  shop_hero: "settings.main.dataJobs.mediaKind.shop_hero",
 };
 
 /**
@@ -517,11 +527,17 @@ export default async function SettingsPage({
   const timezoneValue =
     zoneId in CURATED_TIMEZONE_KEYS ? t(CURATED_TIMEZONE_KEYS[zoneId as CuratedTimeZone]) : zoneId;
   const contactValue = [shop.contactEmail, shop.contactPhone].filter(Boolean).join(" · ") || notSet;
+  // A shop's colour is checked at render, never on save: the summary says
+  // when it had to be darkened so the owner learns here, not on the storefront.
+  const brandTheme = shop.brandColor ? deriveBrandTheme(shop.brandColor) : null;
   const profileValue =
     [
       shop.tagline,
       shop.description ? t("settings.main.profile.descriptionSet") : null,
       shop.logoUrl ? t("settings.main.profile.logoSet") : null,
+      shop.brandBadges.length > 0
+        ? t("settings.main.profile.badgesSet", { count: shop.brandBadges.length })
+        : null,
     ]
       .filter(Boolean)
       .join(" · ") || notSet;
@@ -799,6 +815,106 @@ export default async function SettingsPage({
                       accept="image/png,image/jpeg,image/webp"
                       className="text-sm file:me-3 file:rounded-xl file:border file:border-border file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:cursor-pointer hover:file:bg-surface-hover"
                     />
+                  </div>
+                </Field>
+                <FieldGrid columns={2}>
+                  <Field
+                    label={t("settings.main.profile.brandColor")}
+                    hint={
+                      brandTheme?.adjusted
+                        ? t("settings.main.profile.brandColorDarkened", {
+                            hex: brandTheme.primary,
+                          })
+                        : t("settings.main.profile.brandColorHint")
+                    }
+                  >
+                    <BrandColorField
+                      initial={shop.brandColor}
+                      pickerLabel={t("settings.main.profile.brandColorPicker")}
+                      placeholder={DIVEDAY_BRAND_COLOR}
+                    />
+                  </Field>
+                  <Field label={t("settings.main.profile.displayFont")}>
+                    <select
+                      name="brandDisplayFont"
+                      defaultValue={shop.brandDisplayFont ?? ""}
+                      className={controlClass}
+                    >
+                      <option value="">{t("settings.main.profile.displayFontDefault")}</option>
+                      {BRAND_DISPLAY_FONT_CODES.map((code) => (
+                        <option key={code} value={code}>
+                          {BRAND_DISPLAY_FONTS[code].family}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </FieldGrid>
+                <Field
+                  label={t("settings.main.profile.heroPhoto")}
+                  hint={t("settings.main.profile.heroHint")}
+                >
+                  <div className="flex flex-col gap-3">
+                    {shop.brandHeroImageUrl ? (
+                      <div className="flex items-center gap-4">
+                        {/* biome-ignore lint/performance/noImgElement: dynamic user-uploaded photo */}
+                        <img
+                          src={shop.brandHeroImageUrl}
+                          alt={shop.brandHeroImageAlt ?? ""}
+                          className="h-16 w-28 rounded-xl border border-border bg-surface object-cover"
+                        />
+                        <label className="flex items-center gap-2 text-sm text-muted hover:text-foreground cursor-pointer">
+                          <input type="checkbox" name="removeHero" value="true" />
+                          <span>{t("settings.main.profile.removeHero")}</span>
+                        </label>
+                      </div>
+                    ) : null}
+                    <input
+                      name="brandHeroFile"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="text-sm file:me-3 file:rounded-xl file:border file:border-border file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:cursor-pointer hover:file:bg-surface-hover"
+                    />
+                  </div>
+                </Field>
+                <FieldGrid columns={2}>
+                  <Field label={t("settings.main.profile.heroAlt")}>
+                    <input
+                      name="brandHeroImageAlt"
+                      type="text"
+                      maxLength={200}
+                      defaultValue={shop.brandHeroImageAlt ?? ""}
+                      className={controlClass}
+                    />
+                  </Field>
+                  <Field label={t("settings.main.profile.establishedYear")}>
+                    <input
+                      name="establishedYear"
+                      type="number"
+                      inputMode="numeric"
+                      min={1900}
+                      max={2100}
+                      defaultValue={shop.establishedYear ?? ""}
+                      className={controlClass}
+                    />
+                  </Field>
+                </FieldGrid>
+                <Field
+                  label={t("settings.main.profile.badges")}
+                  hint={t("settings.main.profile.badgesHint")}
+                >
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                    {BRAND_BADGE_CODES.map((code) => (
+                      <label key={code} className="flex min-h-11 items-center gap-3 text-sm">
+                        <input
+                          name="badge"
+                          type="checkbox"
+                          value={code}
+                          defaultChecked={shop.brandBadges.includes(code)}
+                          className="size-4 accent-primary"
+                        />
+                        {t(`settings.main.profile.badgeLabels.${code}`)}
+                      </label>
+                    ))}
                   </div>
                 </Field>
                 <FieldActions>

@@ -21,6 +21,7 @@ import {
 } from "@/test/jsx-inspect";
 import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
+import { BrandColorField } from "./_components/BrandColorField";
 import { SETTINGS_RAIL_ROWS, type SectionId, settingsSectionFragment } from "./settings-groups";
 
 // Same mocking shape as ./embed/page.test.tsx: the page is invoked directly,
@@ -213,6 +214,22 @@ describe("the units card", () => {
     const names = inputNamesIn(element);
     expect(names).toContain("tagline");
     expect(names).toContain("logoFile");
+  });
+
+  /**
+   * Harbor's brand (ADR 20260901-diveday-reimagined, decision 2) is edited on
+   * the same row as the logo and tagline: one place a shop says who it is.
+   */
+  it("renders the brand fields — colour, face, cover photo, year and badges — on the profile row", async () => {
+    const element = await renderSettings("owner");
+    const names = inputNamesIn(element);
+    for (const name of ["brandHeroFile", "brandHeroImageAlt", "establishedYear", "badge"]) {
+      expect(names).toContain(name);
+    }
+    expect(selectNamesIn(element)).toContain("brandDisplayFont");
+    // The colour is a Client Component (picker + hex field), so it appears in
+    // the server tree as an element rather than as an `<input name>`.
+    expect(findElements(element, BrandColorField)).toHaveLength(1);
   });
 });
 
