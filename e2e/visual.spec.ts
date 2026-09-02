@@ -1927,6 +1927,34 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The field guide, open** (issue #1192, D32).
+       *
+       * The drawer is shut on arrival, so the `recap` capture above already
+       * photographs it — as one hairline row and nothing else. What needs a
+       * baseline is what is behind it: the faces each site is known for, under
+       * that site's own name, which is what keeps the guide a statement about a
+       * *place* rather than a report of what this dive saw.
+       *
+       * Molasses and French both carry a seeded guide (`seed-dive-sites.ts`),
+       * so no test route is needed — this is the demo shop's ordinary state.
+       */
+      test(`the recap's field guide renders true to the design (${scheme})`, async ({ page }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+        await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
+        await page.locator("[data-recap-door='field-guide'] summary").click();
+        // A species name is what proves the drawer opened *and* that the
+        // catalog copy resolved — an open door with no faces in it would
+        // photograph as a heading over nothing.
+        await page
+          .locator("[data-recap-door='field-guide']")
+          .getByText("Stoplight parrotfish", { exact: true })
+          .first()
+          .waitFor();
+        await capture(page, "recap-field-guide", scheme);
+      });
+
+      /**
        * Active (unsigned) waiver — the safety-critical form itself, before any
        * signature or medical answer is entered.
        *

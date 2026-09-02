@@ -560,6 +560,7 @@
     "crewLabel": "Crew",
     "sitesLabel": "Sites",
     "plannedSitesLabel": "Planned",
+    "fieldGuideTitle": "{count, plural, one {Life to look for at this site} other {Life to look for at these sites}}",
     "visitMilestone": "Your {ordinal} dive day with {shopName}",
     "recordedBy": "Recorded by {shopName}",
     "milestoneStampFirst": "First dive day",

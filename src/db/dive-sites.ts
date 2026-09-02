@@ -645,6 +645,34 @@ export async function listPublishedDiveSiteMoments(db: AppDb, shopId: string, si
  * two round trips per dive — six on a three-tank day, on the page a diver hits
  * straight from a marketing link. Two queries cover any number of dives.
  */
+/**
+ * Each site's stored field guide, for several sites at once.
+ *
+ * Split out of {@link listDiveSiteBriefingExtras} when the after-state needed
+ * the guides without the moments (issue #1192): that helper answers the public
+ * briefing, which wants both, and a caller that wants one should not pay for
+ * the other on a page a diver opens from a text message.
+ *
+ * Rows come back in their saved order, grouped by site. A site with no guide is
+ * simply absent from the map rather than present and empty — "this site has
+ * nothing to show" and "this site was never asked about" are the same answer to
+ * every caller, and both render nothing.
+ */
+export async function listSiteFieldGuides(db: AppDb, shopId: string, siteIds: string[]) {
+  const unique = [...new Set(siteIds)];
+  const bySite = new Map<string, (typeof diveSiteCreatures.$inferSelect)[]>();
+  if (unique.length === 0) return bySite;
+  const rows = await db
+    .select()
+    .from(diveSiteCreatures)
+    .where(and(eq(diveSiteCreatures.shopId, shopId), inArray(diveSiteCreatures.diveSiteId, unique)))
+    .orderBy(asc(diveSiteCreatures.position), asc(diveSiteCreatures.id));
+  for (const row of rows) {
+    bySite.set(row.diveSiteId, [...(bySite.get(row.diveSiteId) ?? []), row]);
+  }
+  return bySite;
+}
+
 export async function listDiveSiteBriefingExtras(
   db: AppDb,
   shopId: string,
@@ -656,14 +684,8 @@ export async function listDiveSiteBriefingExtras(
   const unique = [...new Set(siteIds)];
   if (unique.length === 0) return { creatures: new Map(), moments: new Map() };
 
-  const [creatureRows, momentRows] = await Promise.all([
-    db
-      .select()
-      .from(diveSiteCreatures)
-      .where(
-        and(eq(diveSiteCreatures.shopId, shopId), inArray(diveSiteCreatures.diveSiteId, unique)),
-      )
-      .orderBy(asc(diveSiteCreatures.position), asc(diveSiteCreatures.id)),
+  const [creatures, momentRows] = await Promise.all([
+    listSiteFieldGuides(db, shopId, unique),
     db
       .select()
       .from(diveSiteMoments)
@@ -677,10 +699,6 @@ export async function listDiveSiteBriefingExtras(
       .orderBy(asc(diveSiteMoments.createdAt)),
   ]);
 
-  const creatures = new Map<string, typeof creatureRows>();
-  for (const row of creatureRows) {
-    creatures.set(row.diveSiteId, [...(creatures.get(row.diveSiteId) ?? []), row]);
-  }
   const moments = new Map<string, typeof momentRows>();
   for (const row of momentRows) {
     moments.set(row.diveSiteId, [...(moments.get(row.diveSiteId) ?? []), row]);

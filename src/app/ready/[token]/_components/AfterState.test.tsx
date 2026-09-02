@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import { DIVEDAY_BRAND_COLOR } from "@/lib/brand";
@@ -85,10 +85,94 @@ function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps {
     ownReview: null,
     params: {},
     nextDeparture: null,
+    // Both of these are required, and both were silently absent until the
+    // cast below came off: spreading a `Partial` past `as AfterStateProps`
+    // let a missing prop compile, so the component was under test with
+    // `undefined` where the routes always pass a value.
+    diveRecord: null,
+    fieldGuide: [],
     actions: { submitReview: noop, uploadPhoto: noop, startTip: noop },
     ...overrides,
-  } as AfterStateProps;
+  };
 }
+
+/**
+ * **The field guide says what a place may hold, never what this dive held**
+ * (issue #1192, D32).
+ *
+ * Nothing DiveDay stores records a sighting, so the drawer is future-tense and
+ * site-scoped by construction — and the framing is the whole safety property.
+ * Marking what was actually seen is D30 (#1190) and is unbuilt; there is no
+ * placeholder for it, because a placeholder for a marking that does not exist
+ * is what later reads as a claim.
+ */
+describe("the field guide", () => {
+  const guide = (siteName: string, slugs: string[]) => ({
+    siteName,
+    rows: slugs.map((slug) => ({ id: `${siteName}-${slug}`, catalogSlug: slug })),
+  });
+
+  it("names each site above its own faces, so the list is about a place", () => {
+    const { container } = render(
+      <AfterState
+        {...props({
+          fieldGuide: [
+            guide("French Reef", ["arrow-crab"]),
+            guide("Molasses Reef", ["atlantic-spadefish", "azure-vase-sponge"]),
+          ],
+        })}
+      />,
+    );
+    // Scoped to the drawer: "French Reef" is also the day's site on the record
+    // above, and finding it there would prove nothing about this list.
+    const drawer = within(
+      container.querySelector("[data-recap-door='field-guide']") as HTMLElement,
+    );
+    expect(drawer.getByText("French Reef")).toBeTruthy();
+    expect(drawer.getByText("Molasses Reef")).toBeTruthy();
+    // Keys, per this file's convention — the words are the bundle's problem.
+    expect(drawer.getByText("marineLife.species.arrow-crab.name")).toBeTruthy();
+    expect(drawer.getByText("marineLife.species.atlantic-spadefish.name")).toBeTruthy();
+    expect(drawer.getByText("marineLife.species.azure-vase-sponge.name")).toBeTruthy();
+  });
+
+  /**
+   * The summary is what most readers see, because the drawer is shut on
+   * arrival — so the framing has to survive in the heading alone, and the count
+   * is what keeps "this site"/"these sites" honest.
+   */
+  it("is shut on arrival and scoped to the sites in its own heading", () => {
+    const { container } = render(
+      <AfterState {...props({ fieldGuide: [guide("French Reef", ["arrow-crab"])] })} />,
+    );
+    const drawer = container.querySelector("[data-recap-door='field-guide'] details");
+    expect(drawer).toBeTruthy();
+    expect((drawer as HTMLDetailsElement).open).toBe(false);
+    // One site, so the plural argument must say so. The words are the bundle's;
+    // what this pins is that the count reaches it.
+    expect(screen.getByText("recap.fieldGuideTitle(1)")).toBeTruthy();
+  });
+
+  it("renders no drawer at all when no site the day dived names a species", () => {
+    const { container } = render(<AfterState {...props({ fieldGuide: [] })} />);
+    expect(container.querySelector("[data-recap-door='field-guide']")).toBeNull();
+  });
+
+  /**
+   * A row naming a species the catalog has since dropped is skipped rather
+   * than rendered as a blank card — `fieldGuideCards`' own rule, asserted here
+   * because this surface is where a shop's reader would meet the gap.
+   */
+  it("drops a species the catalog no longer carries", () => {
+    render(
+      <AfterState
+        {...props({ fieldGuide: [guide("French Reef", ["arrow-crab", "not-a-real-species"])] })}
+      />,
+    );
+    expect(screen.getByText("marineLife.species.arrow-crab.name")).toBeTruthy();
+    expect(screen.queryByText(/not-a-real-species/)).toBeNull();
+  });
+});
 
 /**
  * Every element carrying the primary fill — the page's loudest control.
