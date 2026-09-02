@@ -1,8 +1,8 @@
 # Capability telemetry runbook
 
 `/waivers/[token]`, `/ready/[token]`, `/recap/[token]`, `/verify/[token]`,
-`/reset-password/[token]`, `/invite/[token]`, `/claim/[token]`, and
-`/calendar/[token]` carry a
+`/reset-password/[token]`, `/invite/[token]`, `/claim/[token]`,
+`/confirm-contact/[token]`, and `/calendar/[token]` carry a
 bearer capability in the path itself — anyone holding the URL has the access it
 grants. A ninth capability, the
 schedule-confirmation `confirm` purpose (`purpose = 'confirm'` in

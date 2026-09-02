@@ -2,6 +2,7 @@ import { escapeHtml } from "@/lib/html";
 import {
   bookingConfirmationEmail,
   checkoutRecoveryEmail,
+  contactEmailConfirmationEmail,
   courseInquiryEmail,
   demoStartedAlertEmail,
   lastMinuteDealEmail,
@@ -92,6 +93,9 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "readiness_link") return readinessLinkEmail(notification);
   if (notification.kind === "welcome") return welcomeEmail(notification);
   if (notification.kind === "email_verification") return verifyAccountEmail(notification);
+  if (notification.kind === "contact_email_confirmation") {
+    return contactEmailConfirmationEmail(notification);
+  }
   if (notification.kind === "password_reset_request") return passwordResetEmail(notification);
   if (notification.kind === "staff_invite") return staffInviteEmail(notification);
   if (notification.kind === "checkout_recovery") return checkoutRecoveryEmail(notification);

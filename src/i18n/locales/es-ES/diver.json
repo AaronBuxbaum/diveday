@@ -399,6 +399,16 @@
     "confirmedTitle": "Te has dado de baja",
     "confirmedText": "Ya no recibirás correos de lista de espera ni de resúmenes de {shopName}. Seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje."
   },
+  "contactConfirm": {
+    "title": "¿Confirmar esta dirección para {shopName}?",
+    "description": "Los buceadores que respondan a los correos de {shopName} llegarán a {email}.",
+    "confirming": "Confirmando…",
+    "submit": "Confirmar esta dirección",
+    "confirmedTitle": "Dirección confirmada",
+    "confirmedText": "Las respuestas de los buceadores de {shopName} ahora llegan aquí.",
+    "unavailableTitle": "Este enlace de confirmación no está disponible",
+    "unavailableText": "Puede haber caducado, haber sido sustituido por uno más reciente, o la dirección en ajustes cambió desde entonces. Guarda la dirección de nuevo en ajustes para recibir un enlace nuevo."
+  },
   "course": {
     "hidden": "Oculto — los buceadores no ven esta página.",
     "backToEditing": "Volver a la edición",
@@ -3327,6 +3337,12 @@
       "subject": "Confirma tu correo para DiveDay",
       "confirm": "Confirma que esta es tu dirección de correo",
       "expiry": "Este enlace caduca el {expiresAt}. Si no creaste una cuenta de DiveDay, puedes ignorar esto."
+    },
+    "contactEmailConfirmation": {
+      "subject": "Confirma la dirección de respuesta de {shopName}",
+      "body": "Una vez confirmada, un buceador que responda a un correo de reserva, exención o recordatorio de {shopName} llegará a esta bandeja.",
+      "confirm": "Confirmar esta dirección",
+      "expiry": "Este enlace caduca el {expiresAt}. Si nadie de {shopName} lo pidió, puedes ignorarlo."
     },
     "staffInvite": {
       "subject": "{inviterName} te ha invitado a {shopName} en DiveDay",

@@ -9,6 +9,8 @@ import { type NotificationSender, notificationSenderSchema } from "./kinds";
  */
 export type ShopSenderSource = {
   contactEmail: string | null;
+  /** Null until the shop opened the confirmation link sent to `contactEmail` (issue #1288). */
+  contactEmailConfirmedAt: Date | null;
   addressStreet: string | null;
   addressLocality: string | null;
   addressRegion: string | null;
@@ -30,9 +32,18 @@ const replyToSchema = z.email().max(200);
  * than the schema's 300. Either would otherwise throw inside `notify()` on
  * every send for that shop -- booking confirmations included -- for the sake
  * of a header or a footer line (security review finding on this change).
+ *
+ * `Reply-To` only from a **confirmed** address: the shop has to have opened the
+ * link sent to it (`shops.contact_email_confirmed_at`, issue #1288). Until
+ * then a manager's typo, or an address they do not control, would have every
+ * diver's reply -- often carrying the medical or contact detail a waiver or
+ * readiness email asked for -- routed to a stranger. An unconfirmed address is
+ * simply absent here, exactly as if none were on file.
  */
 export function shopSenderOf(shop: ShopSenderSource): NotificationSender | undefined {
-  const replyTo = replyToSchema.safeParse(shop.contactEmail?.trim());
+  const replyTo = replyToSchema.safeParse(
+    shop.contactEmailConfirmedAt ? shop.contactEmail?.trim() : undefined,
+  );
   const postalAddress = notificationSenderSchema.shape.postalAddress.safeParse(
     shopAddressLines({
       street: shop.addressStreet,

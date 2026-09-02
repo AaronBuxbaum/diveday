@@ -399,6 +399,16 @@
     "confirmedTitle": "You're unsubscribed",
     "confirmedText": "You won't get wait-list or recap emails from {shopName} anymore. You'll still get emails about your own bookings, waivers, and trip updates."
   },
+  "contactConfirm": {
+    "title": "Confirm this address for {shopName}?",
+    "description": "Divers who reply to {shopName}'s emails will reach {email}.",
+    "confirming": "Confirming…",
+    "submit": "Confirm this address",
+    "confirmedTitle": "Address confirmed",
+    "confirmedText": "Replies from {shopName}'s divers now come here.",
+    "unavailableTitle": "This confirmation link isn’t available",
+    "unavailableText": "It may have expired, been replaced by a newer one, or the address in settings has changed since. Save the address again in settings to get a fresh link."
+  },
   "course": {
     "hidden": "Hidden — divers cannot see this page.",
     "backToEditing": "Back to editing",
@@ -3327,6 +3337,12 @@
       "subject": "Confirm your email for DiveDay",
       "confirm": "Confirm this is your email address",
       "expiry": "This link expires {expiresAt}. If you didn't create a DiveDay account, you can ignore this."
+    },
+    "contactEmailConfirmation": {
+      "subject": "Confirm the reply address for {shopName}",
+      "body": "Once confirmed, a diver who replies to a booking, waiver or reminder email from {shopName} reaches this inbox.",
+      "confirm": "Confirm this address",
+      "expiry": "This link expires {expiresAt}. If nobody at {shopName} asked for this, you can ignore it."
     },
     "staffInvite": {
       "subject": "{inviterName} invited you to {shopName} on DiveDay",

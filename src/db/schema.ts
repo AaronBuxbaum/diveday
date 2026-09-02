@@ -166,6 +166,17 @@ export const shops = pgTable(
      * have a member of staff's address guessed on its behalf.
      */
     contactEmail: text("contact_email"),
+    /**
+     * When the shop proved it controls `contactEmail`, by opening the link a
+     * confirmation email sent there (ADR 20260902-sender-standards-for-ses,
+     * amended). Null until then, and cleared by any change to the address:
+     * the address is the thing being vouched for, so a new one starts
+     * unconfirmed. Only a confirmed address becomes `Reply-To` on diver mail
+     * -- an unconfirmed one is still published on the public pages exactly as
+     * before, which is a diver choosing to write to it, not DiveDay routing
+     * a diver's reply there (issue #1288).
+     */
+    contactEmailConfirmedAt: timestamp("contact_email_confirmed_at", { withTimezone: true }),
     contactPhone: text("contact_phone"),
     /**
      * Where a post-trip review request sends a diver — a Google Business,
@@ -2537,6 +2548,35 @@ export const personCourtesyEmailUnsubscribeTokens = pgTable(
     index("person_courtesy_email_unsubscribe_tokens_token_hash_idx").on(table.tokenHash),
     index("person_courtesy_email_unsubscribe_tokens_person_idx").on(table.personId),
   ],
+);
+
+/**
+ * A one-time bearer link that proves a shop controls the front-desk address it
+ * typed into settings (issue #1288). Minted on every save that changes
+ * `shops.contact_email` and on a "resend" tap; the link goes to that address
+ * and nowhere else, so opening it is the proof. Same lifecycle as
+ * `accountTokens` rather than the never-expiring unsubscribe tokens: a fresh
+ * mint supersedes the outstanding one, consuming is one-time, and it expires --
+ * an unconfirmed address costs the shop nothing but Reply-To, so a stale link
+ * has nobody to lock out. `email` is the address the token vouches for, so a
+ * confirm is a no-op if the shop has since typed a different one.
+ */
+export const shopContactEmailConfirmationTokens = pgTable(
+  "shop_contact_email_confirmation_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    /** Lower-cased; compared against `shops.contact_email` the same way at consume time. */
+    email: text("email").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    supersededAt: timestamp("superseded_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("shop_contact_email_confirmation_tokens_shop_idx").on(table.shopId)],
 );
 
 export const tripLastMinutePromoStatus = pgEnum("trip_last_minute_promo_status", [

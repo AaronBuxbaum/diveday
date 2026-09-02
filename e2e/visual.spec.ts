@@ -1459,6 +1459,16 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "unsubscribe-invalid", scheme);
       });
 
+      test(`the invalid contact-confirmation notice renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/confirm-contact/not-a-real-token");
+        // Streams behind a loading.tsx — wait for the page's h1 (see the
+        // onboard capture above).
+        await page.locator("h1").first().waitFor();
+        await capture(page, "confirm-contact-invalid", scheme);
+      });
+
       // Wait for a real departure card, not the loading skeleton: this capture
       // used to `goto` and shoot immediately, so it raced the schedule's
       // suspense fallback and whichever side of that race each run landed on

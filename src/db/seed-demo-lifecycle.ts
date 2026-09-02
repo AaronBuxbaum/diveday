@@ -65,6 +65,7 @@ import {
   rollCallEvents,
   shopBackupDeliveries,
   shopBackupDestinations,
+  shopContactEmailConfirmationTokens,
   shopIntegrations,
   shopPromoCodes,
   shopPromoRedemptions,
@@ -274,6 +275,13 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db
     .delete(processorErasureObligations)
     .where(eq(processorErasureObligations.shopId, shopId));
+  // The contact-email confirmation links (issue #1288) reference `shops` with
+  // no cascade; a demo whose owner saved a front-desk address holds one, and
+  // it stranded the private e2e shop's teardown on the final `delete(shops)`
+  // the first time the flow was exercised -- the exact 23503 below describes.
+  await db
+    .delete(shopContactEmailConfirmationTokens)
+    .where(eq(shopContactEmailConfirmationTokens.shopId, shopId));
   /*
    * Seven shop-scoped tables that reference `shops` (and most of them `people`)
    * with no `ON DELETE CASCADE`, so a minted demo carrying any of them made the

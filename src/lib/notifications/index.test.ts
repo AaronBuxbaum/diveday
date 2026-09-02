@@ -387,6 +387,7 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
 
     const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
     expect(command.input.Content?.Simple?.Headers).toEqual([
+      { Name: "Auto-Submitted", Value: "auto-generated" },
       {
         Name: "List-Unsubscribe",
         Value: "<https://diveday.example/unsubscribe/tok_abc123/one-click>",
@@ -419,14 +420,16 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
     expect(command.input.ReplyToAddresses).toBeUndefined();
   });
 
-  it("omits the List-Unsubscribe headers for a notification with no unsubscribe link", async () => {
+  it("marks every send auto-generated, and omits the List-Unsubscribe headers when there is no unsubscribe link", async () => {
     const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };
     const provider = sesNotificationProvider(sesConfig, { client });
 
     await notify(booking, provider);
 
     const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
-    expect(command.input.Content?.Simple?.Headers).toBeUndefined();
+    expect(command.input.Content?.Simple?.Headers).toEqual([
+      { Name: "Auto-Submitted", Value: "auto-generated" },
+    ]);
   });
 
   it("never calls SES for a reserved test recipient", async () => {

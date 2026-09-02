@@ -73,3 +73,32 @@ webhook, so `optOutAddressAfterComplaint` is scoped by the shop the tag names an
 records. `observability.ts`'s cost arithmetic gains two alarms ($0.20/month). Supersedes nothing;
 extends [20260814-checkout-recovery-is-commercial](20260814-checkout-recovery-is-commercial.md)'s
 rule that a commercial send carries a way out with the rule that it also carries a sender.
+
+## Amended 2026-09-02: a Reply-To address has to be proven, not typed
+
+The security review of the first change rated it low but right: `Reply-To` was set from
+`shops.contact_email`, a **format** check on whatever a manager typed, and nothing proved the shop
+controlled that mailbox. A typo, or an address a manager does not control, would have routed every
+diver's reply -- often carrying the medical or contact detail a waiver or readiness email asked for
+-- to a stranger (issue #1288).
+
+- `shops.contact_email_confirmed_at` is set only by opening a link sent to that address
+  (`/confirm-contact/[token]`, a one-time bearer token minted per save that changes the address and
+  per "resend", three-day expiry, hashed at rest, superseded by the next mint). The token vouches
+  for one address: consuming it is a no-op if the shop has since typed a different one, and any
+  change to the address clears the confirmation in the same write. Same lifecycle as the account
+  tokens; the unsubscribe tokens' never-expire rule does not apply, since an unconfirmed address
+  costs the shop nothing but `Reply-To`.
+- `shopSenderOf` emits `replyTo` only from a confirmed address. An unconfirmed one is absent
+  exactly as if none were on file; the postal footer is untouched, having no confirmation story.
+- The settings row wears an "Awaiting confirmation" badge and a resend control until then, and
+  nothing once confirmed -- confirmed is the quiet default.
+- Not done, deliberately: matching the address's domain against the owner's account domain (front
+  desks routinely live on another domain), and confirming `contact_phone` or the WhatsApp sender,
+  each of which is its own question.
+
+Two more sender standards landed with it: every send carries `Auto-Submitted: auto-generated`
+(RFC 3834), so a diver's out-of-office never answers a booking confirmation; and the SES identity no
+longer forwards bounce and complaint feedback as email to `noreply@ses.dive.day` -- the SNS event
+destination is the one record -- while the configuration set publishes its own reputation metrics
+beside the account-level ones the alarms read.

@@ -135,6 +135,7 @@ export async function shopSenderFor(
   const [shop] = await db
     .select({
       contactEmail: shops.contactEmail,
+      contactEmailConfirmedAt: shops.contactEmailConfirmedAt,
       addressStreet: shops.addressStreet,
       addressLocality: shops.addressLocality,
       addressRegion: shops.addressRegion,

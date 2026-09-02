@@ -18,6 +18,7 @@
       "rentalPricesSaved": "Precios de alquiler guardados.",
       "rentalPricesInvalid": "Introduce cada precio como una cantidad en dólares (o deja el campo vacío), entre $0 y $100.000.",
       "contactSaved": "Datos de contacto guardados.",
+      "contactConfirmationSent": "Datos de contacto guardados. Abre el correo de confirmación que enviamos a esa dirección para que lleguen allí las respuestas de los buceadores.",
       "contactInvalid": "Usa una dirección de correo completa, o vacía el campo para quitarla de tus páginas públicas.",
       "profileSaved": "Perfil y marca del centro guardados.",
       "profileInvalid": "Comprueba el lema, la descripción y el archivo del logotipo.",
@@ -92,7 +93,10 @@
       "phoneLabel": "Teléfono de contacto",
       "phoneHint": "(opcional)",
       "submit": "Guardar datos de contacto",
-      "submitting": "Guardando…"
+      "submitting": "Guardando…",
+      "awaitingConfirmation": "Pendiente de confirmación",
+      "resend": "Reenviar correo de confirmación",
+      "resending": "Enviando…"
     },
     "profile": {
       "heading": "Perfil y marca del centro",
