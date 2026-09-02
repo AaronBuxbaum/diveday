@@ -13,6 +13,8 @@ import {
   mutationDurationFilterPattern,
   queryConstructIdFor,
   SAVED_LOG_QUERIES,
+  SES_REPUTATION_SIGNALS,
+  sesReputationAlarmNameFor,
   WEB_VITAL_SIGNALS,
   webVitalAlarmNameFor,
   webVitalFilterPatternFor,
@@ -220,7 +222,8 @@ describe("the synthesized observability stack", () => {
     expect(filters).toHaveLength(LOG_SIGNALS.length + WEB_VITAL_SIGNALS.length + 1);
     expect(alarms).toHaveLength(
       LOG_SIGNALS.filter((signal) => signal.alarm !== false).length +
-        WEB_VITAL_SIGNALS.filter((signal) => signal.alarm).length,
+        WEB_VITAL_SIGNALS.filter((signal) => signal.alarm).length +
+        SES_REPUTATION_SIGNALS.length,
     );
 
     for (const signal of LOG_SIGNALS) {
@@ -262,6 +265,52 @@ describe("the synthesized observability stack", () => {
     );
     expect(JSON.stringify(mutationFilter)).toContain('"Key":"Action"');
     expect(JSON.stringify(mutationFilter)).toContain('"Value":"$.action"');
+  });
+
+  it("alarms on SES's own bounce and complaint rates at AWS's review line", () => {
+    const template = synthesize();
+    const alarms = Object.values(
+      template.findResources("AWS::CloudWatch::Alarm") as Record<
+        string,
+        {
+          Properties?: {
+            AlarmName?: string;
+            Namespace?: string;
+            MetricName?: string;
+            Statistic?: string;
+            Threshold?: number;
+            Period?: number;
+            TreatMissingData?: string;
+            AlarmActions?: unknown[];
+            AlarmDescription?: string;
+            Dimensions?: unknown[];
+          };
+        }
+      >,
+    );
+    expect(SES_REPUTATION_SIGNALS.map((signal) => signal.metricName)).toEqual([
+      "Reputation.BounceRate",
+      "Reputation.ComplaintRate",
+    ]);
+    for (const signal of SES_REPUTATION_SIGNALS) {
+      const alarm = alarms.find(
+        (candidate) => candidate.Properties?.AlarmName === sesReputationAlarmNameFor(signal),
+      );
+      // AWS's own metric, account-wide: no dimensions, no filter of ours.
+      expect(alarm?.Properties?.Namespace).toBe("AWS/SES");
+      expect(alarm?.Properties?.MetricName).toBe(signal.metricName);
+      expect(alarm?.Properties?.Dimensions).toBeUndefined();
+      expect(alarm?.Properties?.Statistic).toBe("Average");
+      expect(alarm?.Properties?.Period).toBe(3600);
+      expect(alarm?.Properties?.Threshold).toBe(signal.threshold);
+      // The review thresholds AWS publishes, as fractions: 5% bounces, 0.1% complaints.
+      expect(signal.threshold).toBeLessThanOrEqual(
+        signal.metricName === "Reputation.BounceRate" ? 0.05 : 0.001,
+      );
+      expect(alarm?.Properties?.TreatMissingData).toBe("notBreaching");
+      expect(alarm?.Properties?.AlarmActions).toHaveLength(1);
+      expect(alarm?.Properties?.AlarmDescription).toContain(signal.response);
+    }
   });
 
   it("extracts each Core Web Vital as a value, scored at p75", () => {

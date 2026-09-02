@@ -88,4 +88,46 @@ describe("messageFor", () => {
     const notification: Notification = { kind: "booking_confirmation", ...trip };
     expect(messageFor(notification)).toEqual(messageFor({ ...notification }));
   });
+
+  // ADR 20260902-sender-standards-for-ses: a commercial message names the
+  // sender's postal address; a transactional one, and a shop with no street on
+  // file, get nothing appended.
+  describe("the postal footer", () => {
+    const invite = {
+      kind: "waitlist_invite" as const,
+      waitlistEntryId: "3f2504e0-4f89-41d3-9a0c-0305e82c3304",
+      ...trip,
+      bookingUrl: "https://dive.day/s/blue-mantis/trips/trip-1",
+      invitedAt: new Date("2026-07-30T12:00:00.000Z"),
+      unsubscribeUrl: "https://dive.day/unsubscribe/tok",
+    };
+    const sender = { postalAddress: "1 Harbor Rd, Key Largo, FL 33037, US" };
+
+    it("closes a commercial message with the shop's name and address, in both bodies", () => {
+      const email = messageFor({ ...invite, sender });
+      expect(email.text.endsWith("\n\nBlue Mantis · 1 Harbor Rd, Key Largo, FL 33037, US\n")).toBe(
+        true,
+      );
+      expect(email.html).toContain("Blue Mantis · 1 Harbor Rd, Key Largo, FL 33037, US</p>");
+    });
+
+    it("escapes the shop's own words on the way into the HTML", () => {
+      const email = messageFor({ ...invite, shopName: "Reef & Wreck", sender });
+      expect(email.html).toContain("Reef &amp; Wreck · 1 Harbor Rd");
+    });
+
+    it("appends nothing when the shop has no address on file", () => {
+      const withNone = messageFor(invite);
+      const withReplyOnly = messageFor({ ...invite, sender: { replyTo: "desk@bluemantis.dive" } });
+      expect(withNone.text).toBe(withReplyOnly.text);
+      expect(withNone.html).toBe(withReplyOnly.html);
+      expect(withNone.html).not.toContain("font-size: 12px");
+    });
+
+    it("leaves a transactional message alone even when the address is known", () => {
+      const email = messageFor({ kind: "booking_confirmation", ...trip, sender });
+      expect(email.text).not.toContain("1 Harbor Rd");
+      expect(email.html).not.toContain("1 Harbor Rd");
+    });
+  });
 });

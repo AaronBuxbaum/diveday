@@ -1,4 +1,5 @@
 import { getDb } from "@/db/client";
+import { optOutAddressAfterComplaint } from "@/db/courtesy-email";
 import { applyProviderEmailEvent } from "@/db/notifications";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
@@ -50,7 +51,8 @@ export async function POST(request: Request) {
   const event = parseSesEmailEvent(message.Message, nowDate());
   if (event.kind === "ignored") return new Response(null, { status: 200 });
 
-  const result = await applyProviderEmailEvent(await getDb(), {
+  const db = await getDb();
+  const result = await applyProviderEmailEvent(db, {
     providerMessageId: event.providerMessageId,
     status: event.status,
     detail: event.detail,
@@ -61,5 +63,22 @@ export async function POST(request: Request) {
     status: event.status,
     result,
   });
+
+  // A complaint is an unsubscribe, whichever message it came in on — filed by
+  // address within the shop the message tag names, so it lands even when the
+  // message id was never tracked (the courtesy kinds record none). The line
+  // carries counts and ids, never the address (PII-in-logs rule).
+  if (event.status === "complained" && event.shopId && event.recipient) {
+    const optedOut = await optOutAddressAfterComplaint(db, {
+      shopId: event.shopId,
+      email: event.recipient,
+      now: event.occurredAt,
+    });
+    log("ses_webhook.complaint_opt_out", "info", {
+      providerMessageId: event.providerMessageId,
+      shopId: event.shopId,
+      ...optedOut,
+    });
+  }
   return new Response(null, { status: 200 });
 }

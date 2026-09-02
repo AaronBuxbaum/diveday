@@ -5,6 +5,7 @@ import type { Notification } from "./kinds";
 import type { NotificationProvider } from "./provider";
 import { reservedTestRecipientDelivery } from "./provider";
 import { messageFor } from "./render";
+import { SES_KIND_TAG, SES_SHOP_TAG } from "./ses-tags";
 
 /**
  * The AWS SES adapter — DiveDay's sole email provider (ADR
@@ -148,6 +149,14 @@ function oneClickUnsubscribeUrl(unsubscribeUrl: string): string | undefined {
   }
 }
 
+/** See `ses-tags.ts` for why every send is tagged with its shop and kind. */
+function emailTagsOf(notification: Notification): { Name: string; Value: string }[] {
+  return [
+    { Name: SES_KIND_TAG, Value: notification.kind },
+    ...("shopId" in notification ? [{ Name: SES_SHOP_TAG, Value: notification.shopId }] : []),
+  ];
+}
+
 export function sesNotificationProvider(
   config: SesConfig,
   options: SesProviderOptions = {},
@@ -170,6 +179,14 @@ export function sesNotificationProvider(
           new SendEmailCommand({
             FromEmailAddress: config.from,
             Destination: { ToAddresses: [notification.to] },
+            // A reply to a booking confirmation is a diver writing to the
+            // shop, and `noreply@ses.dive.day` is a dead letter box. The
+            // shop's own front-desk address, when it has one on file (ADR
+            // 20260902-sender-standards-for-ses).
+            ...(notification.sender?.replyTo && {
+              ReplyToAddresses: [notification.sender.replyTo],
+            }),
+            EmailTags: emailTagsOf(notification),
             Content: {
               Simple: {
                 Subject: { Data: message.subject, Charset: "UTF-8" },

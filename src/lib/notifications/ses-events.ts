@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ProviderEmailStatus } from "./events";
+import { SES_SHOP_TAG } from "./ses-tags";
 
 /**
  * Turns a verified SES event (the JSON carried inside an SNS `Notification`
@@ -22,24 +23,32 @@ const PROVIDER_STATUS_BY_SES_EVENT_TYPE = {
   RenderingFailure: "failed",
 } as const satisfies Record<string, ProviderEmailStatus>;
 
+const recipientSchema = z.object({ emailAddress: z.string().optional() });
+
 const sesEventDataSchema = z.object({
   eventType: z.string().min(1),
   mail: z.object({
     messageId: z.string().min(1),
     timestamp: z.string().min(1).optional(),
+    destination: z.array(z.string()).optional(),
+    /** The `EmailTags` the adapter set on the send, echoed back as `name -> [values]`. */
+    tags: z.record(z.string(), z.array(z.string())).optional(),
   }),
   bounce: z
     .object({
       timestamp: z.string().optional(),
       bounceType: z.string().optional(),
       bounceSubType: z.string().optional(),
-      bouncedRecipients: z.array(z.object({ diagnosticCode: z.string().optional() })).optional(),
+      bouncedRecipients: z
+        .array(recipientSchema.extend({ diagnosticCode: z.string().optional() }))
+        .optional(),
     })
     .optional(),
   complaint: z
     .object({
       timestamp: z.string().optional(),
       complaintFeedbackType: z.string().optional(),
+      complainedRecipients: z.array(recipientSchema).optional(),
     })
     .optional(),
   delivery: z.object({ timestamp: z.string().optional() }).optional(),
@@ -58,8 +67,36 @@ export type SesEmailEvent =
       /** The provider's explanation for a bounce, complaint, reject, or rendering failure, when it gave one. */
       detail: string | null;
       occurredAt: Date;
+      /**
+       * The address the verdict is about — the recipient SES names on a
+       * bounce or complaint, else the message's first destination. Lower-cased
+       * and trimmed; `null` when the event names nobody.
+       */
+      recipient: string | null;
+      /**
+       * The tenant the send belonged to, read off the `diveday_shop` message
+       * tag the adapter sets (`SES_SHOP_TAG`). `null` for mail sent before the
+       * tag existed or by anything other than the app.
+       */
+      shopId: string | null;
     }
   | { kind: "ignored" };
+
+const shopIdSchema = z.uuid();
+
+function recipientOf(data: z.infer<typeof sesEventDataSchema>): string | null {
+  const named =
+    data.complaint?.complainedRecipients?.[0]?.emailAddress ??
+    data.bounce?.bouncedRecipients?.[0]?.emailAddress ??
+    data.mail.destination?.[0];
+  const address = named?.trim().toLowerCase();
+  return address ? address : null;
+}
+
+function shopIdOf(data: z.infer<typeof sesEventDataSchema>): string | null {
+  const parsed = shopIdSchema.safeParse(data.mail.tags?.[SES_SHOP_TAG]?.[0]);
+  return parsed.success ? parsed.data : null;
+}
 
 function timestampFrom(candidates: readonly (string | undefined)[], fallback: Date): Date {
   for (const candidate of candidates) {
@@ -107,6 +144,8 @@ export function parseSesEmailEvent(rawMessage: string, now: Date): SesEmailEvent
     providerMessageId: data.data.mail.messageId,
     status,
     detail: sesEventDetail(data.data),
+    recipient: recipientOf(data.data),
+    shopId: shopIdOf(data.data),
     occurredAt: timestampFrom(
       [
         data.data.bounce?.timestamp,

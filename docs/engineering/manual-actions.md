@@ -34,10 +34,10 @@ this file is the checklist, not the argument.
     when     once per account, before the first deploy, on any account that has never held a CloudFront distribution
     why      CloudFront holds accounts with no distribution history behind an anti-abuse verification gate that only a human-reviewed AWS Support case lifts. There is no API, and it is not an IAM condition -- the deployer can hold cloudfront:* and CreateDistribution still answers 403 AccessDenied, so nothing in this stack or its roles can be edited to get past it.
     run      AWS Support -> Create case -> Account and billing, service CloudFront, quoting the CreateDistribution error and its Request ID verbatim.
-    produces MediaDistribution (infra-stack.ts S11b) can be created. Until then every deploy of this stack fails at that resource and rolls back.
-    verify   aws cloudfront list-distributions --query DistributionList.Quantity
-    if not   Clear the rolled-back stack before retrying: a first-ever deploy lands in ROLLBACK_COMPLETE, which CloudFormation cannot update, so aws cloudformation delete-stack --stack-name DiveDay first. A later deploy lands in UPDATE_ROLLBACK_COMPLETE and is retryable as-is.
-    note     File it early -- an account-and-billing case carries no support-plan charge, so Basic Support can raise it, but the review takes hours to days and nothing else in the checklist shortens that wait. Unlike the SES sandbox and the SNS spend cap, skipping this is loud rather than silent: it takes the whole deploy down instead of quietly disabling one feature. There is also nothing to fall back to, which is why the stack does not offer a flag to skip the distribution -- MEDIA_PUBLIC_URL_BASE is derived from its domain, and the media bucket blocks all public access with no second read path, so a deploy without it serves 403 for every course photo, recap photo, dive-site image and shop logo (issue #1013).
+    produces MediaDistribution (infra-stack.ts S11b) can be created. Until then the stack ships without it: cdk.json carries cloudfrontVerified: false, and every course photo, recap photo, dive-site image and shop logo answers 403 (issue #1013) -- the state the account is in either way.
+    verify   aws cloudfront list-distributions --query DistributionList.Quantity  (AccessDenied means not yet; a number means verified)
+    if not   If a deploy was attempted with cloudfrontVerified: true before verification, clear the rolled-back stack before retrying: a first-ever deploy lands in ROLLBACK_COMPLETE, which CloudFormation cannot update, so aws cloudformation delete-stack --stack-name DiveDay first. A later deploy lands in UPDATE_ROLLBACK_COMPLETE and is retryable as-is.
+    note     File it early -- an account-and-billing case carries no support-plan charge, so Basic Support can raise it, but the review takes hours to days and nothing else in the checklist shortens that wait. Once verified, flip cloudfrontVerified to true in cdk.json in a pull request and deploy; that is the whole re-enable, and the committed value is what keeps a workflow deploy and a laptop deploy in the same state. The flag exists because CloudFront's refusal is loud rather than silent: with the distribution in the template, an unverified account fails the entire deploy at that one resource and rolls back every other change with it. There is still no second read path -- the media bucket blocks all public access and the flag never opens it.
 
 [4] Enable Cost Explorer
     when     once per account
@@ -104,11 +104,14 @@ this file is the checklist, not the argument.
 
 ```text
 [10] Request SES production access
-    when     once, before sending to anyone who has not verified their address
-    why      A human-reviewed AWS Support case. There is no API.
-    run      SES console -> Account dashboard -> Request production access.
+    when     once per region, before sending to anyone who has not verified their address
+    why      A human-reviewed AWS Support case. There is no API, and the sandbox is per region.
+    run      Read docs/engineering/ses-email-runbook.md, 'Production access: the second request', and paste its case text.
+             SES console -> Account dashboard -> Request production access (Transactional, https://dive.day), then answer the reviewer's follow-up in the same case.
     produces Sending to arbitrary recipients. Until then SES is in the sandbox: pre-verified addresses and the mailbox simulator only.
     verify   aws sesv2 get-account --query ProductionAccessEnabled
+    if not   A denial with no reason is the norm, not the end: reply on the same case with the runbook's follow-up answers, and if it is closed, open a new case that names the closed case id. A second region is its own sandbox and its own request.
+    note     Everything the reviewer asks for is already in the stack: DKIM and a custom MAIL FROM on the identity, bounce and complaint events to /api/webhooks/ses, account-level suppression on the configuration set, one-click unsubscribe headers, Reply-To and a postal footer from the shop record, and the two reputation alarms in S13. The case text lists them; do not paraphrase it shorter.
 
 [11] Leave the SMS sandbox, raise the spend limit, register an origination identity
     when     once, before sending SMS to a diver
