@@ -51,7 +51,7 @@ describe("partition", () => {
     const items = weighted([100, ...Array(30).fill(1)]);
     const loads = [1, 2, 3, 4].map((index) =>
       partition(items, index, 4).reduce(
-        (sum, item) => sum + items.find((i) => i.item === item)!.weight,
+        (sum, item) => sum + items.find((i) => i.item === item)?.weight,
         0,
       ),
     );

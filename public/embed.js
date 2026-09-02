@@ -16,7 +16,7 @@
   const script = document.currentScript;
   let origin = "";
   try {
-    origin = new URL(script && script.src ? script.src : location.href).origin;
+    origin = new URL(script?.src ? script.src : location.href).origin;
   } catch (_e) {
     return;
   }
@@ -29,8 +29,7 @@
     const color = probe ? getComputedStyle(probe).color : "";
     const m = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(color);
     if (!m) return null;
-    const hex =
-      "#" + [m[1], m[2], m[3]].map((n) => ("0" + Number(n).toString(16)).slice(-2)).join("");
+    const hex = `#${[m[1], m[2], m[3]].map((n) => `0${Number(n).toString(16)}`.slice(-2)).join("")}`;
     return hex;
   }
   function hostFont(el) {
@@ -40,10 +39,7 @@
   }
   function frameUrl(el, kind) {
     const slug = el.getAttribute("data-shop") || "";
-    const url = new URL(
-      kind === "calendar" ? "/s/" + slug : "/s/" + slug + "/embed/" + kind,
-      origin,
-    );
+    const url = new URL(kind === "calendar" ? `/s/${slug}` : `/s/${slug}/embed/${kind}`, origin);
     if (kind === "calendar") url.searchParams.set("embed", "1");
     const show = el.getAttribute("data-show");
     if (show && kind === "departure") url.searchParams.set("show", show);
@@ -171,7 +167,7 @@
     for (let i = 0; i < frames.length; i++) {
       if (frames[i].contentWindow === event.source) {
         frames[i].style.height =
-          Math.max(120, Math.min(4000, Number(event.data.height) || 0)) + "px";
+          `${Math.max(120, Math.min(4000, Number(event.data.height) || 0))}px`;
       }
     }
   });

@@ -598,27 +598,13 @@
     "visual": ["verify-invalid"]
   },
   "/waivers/[token]": {
-    "e2e": [
-      "a11y.spec.ts",
-      "waivers.spec.ts"
-    ],
-    "visual": [
-      "expired-link-unknown",
-      "waiver-active"
-    ],
-    "a11y": [
-      "a11y.spec.ts"
-    ]
+    "e2e": ["a11y.spec.ts", "waivers.spec.ts"],
+    "visual": ["expired-link-unknown", "waiver-active"],
+    "a11y": ["a11y.spec.ts"]
   },
   "/s/[shopSlug]/embed/[widget]": {
-    "e2e": [
-      "embed-catalogue.spec.ts"
-    ],
-    "visual": [
-      "embed-grid",
-      "embed-departure",
-      "embed-courses"
-    ],
+    "e2e": ["embed-catalogue.spec.ts"],
+    "visual": ["embed-grid", "embed-departure", "embed-courses"],
     "a11y": []
   }
 }
