@@ -957,13 +957,6 @@
       "copied": "Copied",
       "failed": "Couldn’t copy — select the code above instead."
     },
-    "calendarEmbed": {
-      "heading": "Calendar embed",
-      "description": "Your next four departures with a link through to the rest, sized so it never scrolls inside your page. Best for a dedicated \"Book now\" page on your site.",
-      "attributionNote": "Includes a small \"Powered by DiveDay\" credit link under the calendar, on your own page — not inside the widget.",
-      "fieldLabel": "Embed code",
-      "attributionLinkText": "Powered by DiveDay"
-    },
     "code": "Embed code",
     "partnerLinkField": "Referral link"
   }
