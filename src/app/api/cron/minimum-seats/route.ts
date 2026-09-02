@@ -1,11 +1,11 @@
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
-import { recordNotificationDelivery, sendNotification } from "@/db/notifications";
+import { recordNotificationDelivery, shopSenderFor } from "@/db/notifications";
 import { refundBookingsForShopCancelledTrip, shopCancellationPaymentStory } from "@/db/refunds";
 import { cancelDeparturesBelowMinimum, listMinimumNotMetRecipients } from "@/db/trips";
 import { log } from "@/lib/log";
-import { publicAppUrl } from "@/lib/notifications";
+import { notify, publicAppUrl } from "@/lib/notifications";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import { flushLogs } from "@/lib/observability";
 import { publicSchedulePath } from "@/lib/public-routes";
@@ -108,11 +108,16 @@ export async function GET(request: Request) {
           unreachable += 1;
           continue;
         }
-        const delivery = await sendNotification(db, {
+        // `notify` directly: this route runs sub-daily and must stay off the
+        // durable retry queue (src/lib/cron-schedule.test.ts), so the shop's
+        // Reply-To and postal line are resolved by hand here rather than by
+        // the queue path that normally adds them.
+        const delivery = await notify({
           kind: "trip_minimum_not_met",
           tripId: departure.tripId,
           bookingId: recipient.bookingId,
           shopId: departure.shopId,
+          sender: await shopSenderFor(db, departure.shopId),
           to: recipient.email,
           locale: recipientLocale(recipient.personLocale, departure.shopDefaultLocale),
           diverName: recipient.fullName,
