@@ -849,6 +849,92 @@ async function waitForEntranceAnimations(page: Page) {
   );
 }
 
+/**
+ * **Every capture is shot with CSS transitions switched off, not waited out.**
+ *
+ * `screenshotOrGiveUp` already passes Playwright's `animations: "disabled"`,
+ * and that is not enough: it drives `document.getAnimations()`, which in this
+ * Chromium does **not** list a transition running on `::details-content`. So
+ * the one transition this app runs seventy times over — the disclosure body's
+ * `opacity`/`translate`/`content-visibility` fade in `globals.css` — is
+ * invisible to the only mechanism that was supposed to settle it, and the
+ * shutter lands wherever it lands.
+ *
+ * That is issues #1245 and #1276, which are one bug seen at two widths.
+ * `capture()` resizes the page itself, from the 1280 base viewport down to
+ * 390, and that crosses the `@media (min-width: 40rem)` rule holding a diver
+ * record's nine file-group bodies `content-visibility: visible`. Nine bodies
+ * therefore begin transitioning on the capture's own resize:
+ *
+ * - **At 390px, height.** `content-visibility` is a *discrete* property, so
+ *   `allow-discrete` holds it `visible` for the whole 200ms and flips at the
+ *   end. For those 200ms the bodies are laid out — contributing their height —
+ *   while `opacity` has already reached 0. Laid out and invisible is blank
+ *   sand: the measured 608px of empty page appended below a pixel-identical
+ *   document (#1245).
+ * - **At 1280px, colour.** Above `40rem` the bodies are laid out either way, so
+ *   no height moves; all that is left is the cards caught mid-fade, one 8-bit
+ *   step off full opacity on every channel across four whole card bodies
+ *   (#1276, measured row by row).
+ *
+ * It only ever showed on CI because a transition advances on real frames:
+ * idle, `paintWholeDocument`'s scroll-through outlasts the 200ms and the flip
+ * lands before the shutter, which is why six local runs came back
+ * byte-identical. Starved, `paintWholeDocument`'s settles return via their
+ * *timeouts* while the transition stays frozen mid-flight — so the harness
+ * stops waiting for the very reason the thing it is waiting on stopped moving.
+ *
+ * Hence: no wait at all. A transition that cannot run cannot be caught running,
+ * on any runner, at any load, with no duration to guess wrong and nothing for a
+ * timeout to satisfy. Setting `transition-property` to none also *cancels* one
+ * already in flight, snapping the property to its target value, so this settles
+ * the disclosures a test opened before `capture()` was called as well as the
+ * ones the resize disturbs.
+ *
+ * `::details-content` is named explicitly because `*, *::before, *::after`
+ * does not reach it — it is not one of the two pseudo-elements the universal
+ * selector matches, the same gap `globals.css` documents at its reduced-motion
+ * kill-switch.
+ *
+ * Deliberately *not* `reducedMotion: "reduce"` on the context, which would
+ * reach the same CSS through the app's own kill-switch: that also flips every
+ * `matchMedia("(prefers-reduced-motion: reduce)")` branch in the tree —
+ * `MarketingReveal`, `MissingDiversGrid`'s ring, `useExitAnimation`,
+ * `ProductChapterNav` — and the suite would quietly stop photographing the app
+ * a standard-motion reader sees. Deliberately not `animation: none` either:
+ * `.marketing-reveal-pending` holds `opacity: 0` in its base style and relies
+ * on its animation's fill to become visible, so cancelling animations would
+ * photograph a blank hero. Transitions only, which is what the measurements
+ * name.
+ */
+const CAPTURE_TRANSITIONS_OFF = `
+  *,
+  *::before,
+  *::after,
+  *::backdrop,
+  details::details-content,
+  details[open]::details-content {
+    transition: none !important;
+  }
+`;
+
+/**
+ * Runs `shoot` with {@link CAPTURE_TRANSITIONS_OFF} installed, and takes it
+ * back out afterwards. Scoped rather than global because the tests keep running
+ * after a capture: `useExitAnimation` and friends wait on a real `transitionend`
+ * to unmount, and a transition that never runs never fires one.
+ */
+async function withTransitionsOff<T>(page: Page, shoot: () => Promise<T>): Promise<T> {
+  const style = await page.addStyleTag({ content: CAPTURE_TRANSITIONS_OFF });
+  try {
+    return await shoot();
+  } finally {
+    // The page may already be navigating or closed if `shoot` threw; losing the
+    // cleanup then is harmless, and must not mask the original failure.
+    await style.evaluate((node) => node.parentNode?.removeChild(node)).catch(() => undefined);
+  }
+}
+
 async function capture(page: Page, name: string, scheme: "light" | "dark") {
   const baseViewport = page.viewportSize();
   // Park the pointer somewhere inert, or the capture photographs whatever the
@@ -893,15 +979,19 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
   // below either way, but a capture that fails mid-loop leaves the page at a
   // width a trace viewer can make sense of.
   const viewports = TABLET_SURFACES.has(name) ? [...VIEWPORTS, TABLET_VIEWPORT] : VIEWPORTS;
-  for (const viewport of viewports) {
-    await page.setViewportSize(viewport);
-    await paintWholeDocument(page);
-    await screenshotOrGiveUp(page, `e2e/screenshots/${name}-${scheme}-vw-${viewport.width}.png`);
-  }
-  // capture() runs mid-flow (navigation and clicks continue after it), so
-  // restore the base viewport the test was using before resizing for each
-  // capture above — matching what the old Argos `viewports` option did.
-  if (baseViewport) await page.setViewportSize(baseViewport);
+  await withTransitionsOff(page, async () => {
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
+      await paintWholeDocument(page);
+      await screenshotOrGiveUp(page, `e2e/screenshots/${name}-${scheme}-vw-${viewport.width}.png`);
+    }
+    // capture() runs mid-flow (navigation and clicks continue after it), so
+    // restore the base viewport the test was using before resizing for each
+    // capture above — matching what the old Argos `viewports` option did.
+    // Inside the switch-off, so the last resize does not leave a transition
+    // running into whatever the test does next.
+    if (baseViewport) await page.setViewportSize(baseViewport);
+  });
 }
 
 /**
@@ -952,29 +1042,37 @@ async function captureStickyFoot(page: Page, name: string, scheme: "light" | "da
   // Both viewports, like `capture()` — the phone is where a bar pinned to the
   // bottom edge earns its place, so photographing only the desktop would leave
   // the case that motivated it unbaselined.
-  for (const viewport of VIEWPORTS) {
-    await page.setViewportSize(viewport);
-    await paintWholeDocument(page);
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    // The scroll is a layout change like any other; let it commit before the shot.
-    await page.evaluate(
-      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
-    );
-    await page.screenshot({
-      path: `e2e/screenshots/${name}-${scheme}-vw-${viewport.width}.png`,
-      animations: "disabled",
-    });
-  }
-  if (baseViewport) await page.setViewportSize(baseViewport);
+  await withTransitionsOff(page, async () => {
+    for (const viewport of VIEWPORTS) {
+      await page.setViewportSize(viewport);
+      await paintWholeDocument(page);
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      // The scroll is a layout change like any other; let it commit before the shot.
+      await page.evaluate(
+        () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+      );
+      await page.screenshot({
+        path: `e2e/screenshots/${name}-${scheme}-vw-${viewport.width}.png`,
+        animations: "disabled",
+      });
+    }
+    if (baseViewport) await page.setViewportSize(baseViewport);
+  });
 }
 
 async function capturePrint(page: Page, name: string) {
-  await page.emulateMedia({ media: "print" });
-  await page.addStyleTag({ content: "@page { size: 8.5in 200in; }" });
-  // After the media switch, so the bands rasterized are the print layout's.
-  await paintWholeDocument(page);
-  await screenshotOrGiveUp(page, `e2e/screenshots/${name}-print.png`);
-  await page.emulateMedia({ media: "screen" });
+  // Switching media repaints the whole document in print tokens, which is a
+  // property change like any other and so can start transitions of its own —
+  // the same class of race as the resize in `capture()`. Both `emulateMedia`
+  // calls sit inside the switch-off for that reason.
+  await withTransitionsOff(page, async () => {
+    await page.emulateMedia({ media: "print" });
+    await page.addStyleTag({ content: "@page { size: 8.5in 200in; }" });
+    // After the media switch, so the bands rasterized are the print layout's.
+    await paintWholeDocument(page);
+    await screenshotOrGiveUp(page, `e2e/screenshots/${name}-print.png`);
+    await page.emulateMedia({ media: "screen" });
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -5033,6 +5131,95 @@ test.describe("capture harness", () => {
     // so the probe has to be able to say so. A wedged renderer is the *other*
     // sentence, and telling them apart is the whole point of asking.
     expect(reported).toContain("the page is alive");
+  });
+
+  /**
+   * **The guard for issues #1245 and #1276** — the 608px flap at 390 and the
+   * mid-fade colour step at 1280, which the measurements on both tickets
+   * resolved to one `::details-content` transition.
+   *
+   * Two things are asserted, because two different mistakes each reintroduce
+   * the bug and only one of them is visible in a diff:
+   *
+   * 1. **`getAnimations()` cannot see this transition.** That is why
+   *    `screenshotOrGiveUp`'s `animations: "disabled"` — which drives exactly
+   *    that list — was in place throughout and never helped. Pinned here so a
+   *    future reader deleting `withTransitionsOff` in favour of "Playwright
+   *    already disables animations" is told why that is false before they find
+   *    out from a flaky baseline.
+   * 2. **The switch-off actually reaches the pseudo-element**, and holds the
+   *    document at one height across the resize. `*, *::before, *::after` does
+   *    not match `::details-content`, so the explicit selector is load-bearing
+   *    and silently droppable.
+   *
+   * Priya's record rather than a built one: `seed-diver-trail.ts` gives her the
+   * file groups whose bodies are what the `40rem` rule lays out, and a seeded
+   * diver costs no form-filling. The frame samples need no timeout — 25 frames
+   * outlast a 200ms transition on any renderer that is drawing at all, and a
+   * renderer that is not drawing produces no samples and fails on the count.
+   */
+  test.describe("the disclosure transition, which no screenshot may catch running", () => {
+    signedInAsOwner();
+    test.use({ viewport: { width: 1280, height: 800 } });
+
+    const heightsAcrossResize = (page: Page) =>
+      page.evaluate(
+        () =>
+          new Promise<number[]>((resolve) => {
+            const heights: number[] = [];
+            const tick = () => {
+              heights.push(document.documentElement.scrollHeight);
+              if (heights.length < 25) requestAnimationFrame(tick);
+              else resolve(heights);
+            };
+            requestAnimationFrame(tick);
+          }),
+      );
+
+    test("is invisible to getAnimations(), so only the switch-off settles it", async ({ page }) => {
+      await openDiverProfile(page, "Priya", "Priya Sharma");
+      await page.getByRole("region", { name: "The story" }).waitFor();
+
+      // Crossing 40rem downward is what starts it — the same resize `capture()`
+      // performs on its first viewport.
+      await page.setViewportSize({ width: 390, height: 844 });
+      const running = await page.evaluate(() =>
+        document.getAnimations().map((animation) => animation.constructor.name),
+      );
+      expect(
+        running.filter((name) => name === "CSSTransition"),
+        "if Chromium has started listing ::details-content transitions, Playwright's " +
+          'animations: "disabled" may now settle this on its own — re-measure before ' +
+          "trusting it, and keep the switch-off until it does",
+      ).toEqual([]);
+    });
+
+    test("holds the document at one height when the switch-off is installed", async ({ page }) => {
+      await openDiverProfile(page, "Priya", "Priya Sharma");
+      await page.getByRole("region", { name: "The story" }).waitFor();
+
+      const settled = await withTransitionsOff(page, async () => {
+        // Read the pseudo-element directly: the universal selector does not
+        // reach it, so this is the assertion that the explicit entry in
+        // CAPTURE_TRANSITIONS_OFF is doing the work.
+        const duration = await page.evaluate(() => {
+          const disclosure = document.querySelector("details");
+          return disclosure
+            ? getComputedStyle(disclosure, "::details-content").transitionDuration
+            : "no disclosure on the page — this guard needs one";
+        });
+        expect(duration.split(", ")).not.toContain("0.2s");
+
+        await page.setViewportSize({ width: 390, height: 844 });
+        return heightsAcrossResize(page);
+      });
+
+      expect(settled).toHaveLength(25);
+      // One height for the whole window. Measured without the switch-off on the
+      // same record, this reports two heights ~677px apart, held for the first
+      // thirteen frames — the flap #1245 measured as 608px before the page grew.
+      expect(new Set(settled).size).toBe(1);
+    });
   });
 
   test("a pass that fails still throws, rather than degrading silently", async ({ page }) => {
