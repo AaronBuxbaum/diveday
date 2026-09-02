@@ -114,7 +114,11 @@ test.describe("the generator", () => {
     await tile(/^QR code/).click();
     await expect(page.getByAltText("QR code to your booking page")).toBeVisible();
     await tile(/^Partner link/).click();
-    await page.getByLabel("Partner").fill("The Reef Hotel");
-    await expect(page.getByLabel("Referral link")).toHaveValue(/utm_campaign=the-reef-hotel/);
+    // By role: "Partner" also labels the tile's radio and the section, and
+    // "Referral link" the section and its Copy button.
+    await page.getByRole("textbox", { name: "Partner", exact: true }).fill("The Reef Hotel");
+    await expect(page.getByRole("textbox", { name: /^Referral link/ })).toHaveValue(
+      /utm_campaign=the-reef-hotel/,
+    );
   });
 });

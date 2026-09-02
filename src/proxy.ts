@@ -201,8 +201,13 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // exactly one value keeps this in lockstep with how the page reads it.
   // An embed path naming no widget is a 404 here, not in the page: the
   // static shell would already have answered 200 (see isUnknownEmbedWidgetRoute).
+  // With a body: Chromium treats a bodiless error status as a failed
+  // navigation (ERR_HTTP_RESPONSE_CODE_FAILURE) rather than a 404 page.
   if (isUnknownEmbedWidgetRoute(req.nextUrl.pathname)) {
-    return new NextResponse(null, { status: 404 });
+    return new NextResponse("Not found", {
+      status: 404,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    });
   }
   const embedParams = req.nextUrl.searchParams.getAll("embed");
   // A widget view is an embed by path; the schedule and trip pages are embeds
