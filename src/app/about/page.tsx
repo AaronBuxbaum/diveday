@@ -346,7 +346,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
             {plainTruths.map((truth) => (
               <article
                 key={truth.title}
-                className="rounded-2xl border border-border bg-background p-5 sm:p-6"
+                className="rounded-panel border border-border bg-background p-5 sm:p-6"
               >
                 <h3 className={SUB_TITLE_CLASS}>{truth.title}</h3>
                 <p className="mt-3 leading-7 text-muted">{truth.body}</p>
@@ -387,7 +387,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
                 surface of the two columns. `SectionCard padding="none"` is
                 otherwise exactly its shape, and it converts the day the
                 component grows an answer for a card that is not `bg-surface`. */}
-            <dl className="divide-y divide-border rounded-2xl border border-border bg-background">
+            <dl className="divide-y divide-border rounded-panel border border-border bg-background">
               <div className="p-6">
                 <dt className={groupLabelClass("primary")}>
                   {t("marketing.about.whereLiveLabel")}

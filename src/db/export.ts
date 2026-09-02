@@ -881,8 +881,14 @@ export async function loadShopExportBundleInput(
         },
         {
           file: "boats.csv",
-          header: ["id", "name", "capacity", "created_at"],
-          rows: boatRows.map((row) => [row.id, row.name, row.capacity, row.createdAt]),
+          header: ["id", "name", "capacity", "description", "created_at"],
+          rows: boatRows.map((row) => [
+            row.id,
+            row.name,
+            row.capacity,
+            row.description,
+            row.createdAt,
+          ]),
           note: EXPORT_FILE_NOTES["boats.csv"],
         },
         {

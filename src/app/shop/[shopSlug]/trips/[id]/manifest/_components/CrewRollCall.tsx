@@ -132,7 +132,7 @@ export function CrewRollCall({
         // "Crew" heading with blank space under it on exactly the departures
         // whose crew half is open (dive-domain review 20260804). Only the
         // button is screen-only — a link is not an action on paper.
-        <div className="mt-3 rounded-2xl border border-warning/50 bg-warning/10 p-4">
+        <div className="mt-3 rounded-panel border border-warning/50 bg-warning/10 p-4">
           <p className="max-w-prose text-sm">{t("manifest.noCrew")}</p>
           <Link
             href={`/shop/${shopSlug}/trips/${tripId}#crew`}

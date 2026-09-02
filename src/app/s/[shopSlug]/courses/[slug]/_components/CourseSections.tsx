@@ -103,6 +103,7 @@ export function CourseHero({
             agency: course.agency.toUpperCase(),
           })}
           title={course.title}
+          titleFace="brand"
           description={course.summary ?? undefined}
         />
         <div className="mt-4 flex flex-wrap items-center gap-4">
@@ -332,7 +333,7 @@ export function CourseGallery({
               alt,
               t("course.photoAltFallback", { course: title, n: index + 2 }),
             )}
-            className="h-40 w-full rounded-2xl border border-border sm:h-48"
+            className="h-40 w-full rounded-inset border border-border sm:h-48"
             sizes="(min-width: 640px) 33vw, 50vw"
           />
         ))}

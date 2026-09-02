@@ -44,8 +44,32 @@
  * (a trip name), not to the ones that don't, and each shell decides.
  */
 
-/** The `<h1>` of a staff page. `ShopPageHeader` owns it; nothing else should need it. */
-export const PAGE_TITLE_CLASS = "text-4xl font-semibold tracking-tight";
+/**
+ * **The page's own name, Reef's title rung**: 40px bold, tightened, in Geist —
+ * the display face was declined, so the display moment is made with the one
+ * face's own size and weight (ADR 20260901-diveday-reimagined, decision 1).
+ * `leading-[1.1]` gives a 44px line box, which `ShopPageHeaderSkeleton`'s
+ * `h-11` matches.
+ *
+ * Landed in `ShopPageHeader.tsx` with #1286 and moved here on the merge: this
+ * module exists so a rung has one name in one place (#1229), and the header
+ * that owns the rung is not that place — `ShopfrontHero` reaches for it too.
+ * `EYEBROW_CLASS` stays over there on purpose; an eyebrow is not a title.
+ */
+export const PAGE_TITLE_CLASS =
+  "text-[2.5rem] leading-[1.1] font-bold tracking-[-0.02em] text-balance";
+
+/**
+ * One step up from the title, for the one page whose title is a greeting rather
+ * than a name: the shop home's "Good morning" (the board draws it at 44/700).
+ * Same 44px line box as the title, so the two share a skeleton.
+ *
+ * #1286 called this `DISPLAY_TITLE_CLASS`, which collided with the marketing
+ * hero below — two different rungs under one name, which is the drift this
+ * module exists to end. Renamed to what its own docblock already called it.
+ */
+export const GREETING_TITLE_CLASS =
+  "text-[2.75rem] leading-none font-bold tracking-[-0.028em] text-balance";
 
 /**
  * **The `<h1>` spelling for every page a person arrives at from a link.**
@@ -64,7 +88,11 @@ export const PAGE_TITLE_CLASS = "text-4xl font-semibold tracking-tight";
  */
 export const SHELL_TITLE_CLASS = "text-3xl font-bold tracking-tight";
 
-/** A hero that wraps: the marketing `<h1>`s and the shopfront's own name. */
+/**
+ * A hero that wraps: the marketing `<h1>`s, stepped up at `sm:` by each page.
+ * Distinct from `GREETING_TITLE_CLASS` above, which is the staff home's
+ * greeting — #1286 gave both the same name for a few hours.
+ */
 export const DISPLAY_TITLE_CLASS = "text-4xl font-semibold tracking-[-0.045em] text-balance";
 
 /** The section heading of a long reading page — a marketing `<h2>`, a legal title. */
@@ -94,3 +122,17 @@ export const FIGURE_CLASS = "text-2xl font-semibold tabular-nums";
 
 /** A figure that leads its own row rather than its own block: money due, a day's head count. */
 export const FIGURE_INLINE_CLASS = "text-lg font-semibold tabular-nums";
+
+/**
+ * **The number inside a dial** — the roll call's head count and the day
+ * spine's seat count, the two places Reef draws a figure over standing water
+ * (#1286). Bold rather than semibold, because the glass and the fill are
+ * competing with it, and `leading-none` because it is centred in a circle
+ * rather than sitting on a line.
+ *
+ * Its own rung rather than `FIGURE_CLASS` with a weight bolted on: Tailwind
+ * emits `font-bold` and `font-semibold` in source order, not attribute order,
+ * so an override at the call site is a coin flip (the same trap `buttonClass`
+ * carries a warning about in AGENTS.md).
+ */
+export const FIGURE_DIAL_CLASS = "text-2xl leading-none font-bold tabular-nums";

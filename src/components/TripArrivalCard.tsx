@@ -108,7 +108,7 @@ export function TripArrivalCard({
         <StoredPhoto
           src={facts.photoUrl}
           alt={t("trip.arrivalImageAlt", { place: facts.label })}
-          className="mb-5 aspect-[16/9] rounded-xl"
+          className="mb-5 aspect-[16/9] rounded-inset"
           sizes="(max-width: 640px) calc(100vw - 56px), 576px"
         />
       ) : null}

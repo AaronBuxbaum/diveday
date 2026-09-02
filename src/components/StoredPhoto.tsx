@@ -22,16 +22,19 @@ export function StoredPhoto({
   alt,
   className,
   sizes,
+  priority = false,
 }: {
   src: string;
   alt: string;
   className: string;
   /** Rendered widths, so the optimizer serves a phone a phone-sized photo. */
   sizes: string;
+  /** The page's largest image above the fold — the storefront's cover — is fetched eagerly. */
+  priority?: boolean;
 }) {
   return (
     <div className={`relative overflow-hidden ${className}`}>
-      <Image src={src} alt={alt} fill sizes={sizes} className="object-cover" />
+      <Image src={src} alt={alt} fill sizes={sizes} priority={priority} className="object-cover" />
     </div>
   );
 }

@@ -158,10 +158,10 @@ function Row({ row }: { row: WeekLedgerRow }) {
   const quiet = row.capacityTone === "full" || row.aboveLevel !== null;
   return (
     <li>
-      <div className="group relative -mx-3 flex flex-col gap-2 rounded-xl px-3 py-4 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface sm:mx-0 sm:flex-row sm:items-start sm:gap-4 sm:px-4 sm:py-5">
+      <div className="group relative -mx-3 flex flex-col gap-2 rounded-lg px-3 py-4 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface sm:mx-0 sm:flex-row sm:items-start sm:gap-4 sm:px-4 sm:py-5">
         <Link
           href={row.href}
-          className="absolute inset-0 z-0 rounded-xl"
+          className="absolute inset-0 z-0 rounded-inset"
           aria-label={row.linkLabel}
         />
         {/* The date lives on the day rule above, so the row carries only its

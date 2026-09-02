@@ -691,6 +691,40 @@ export async function listUpcomingSessionsForCourse(
   return rows.map(({ trip, booked }) => ({ ...trip, booked }));
 }
 
+/**
+ * The next scheduled session per course, for the storefront's courses shelf
+ * (Harbor — ADR 20260901-diveday-reimagined: the board draws "Starts Sep 7"
+ * under a card). One query for the three cards rather than
+ * {@link listUpcomingSessionsForCourse} three times, and the same scope —
+ * live, scheduled, public, within the hour's late-arrival buffer — so the
+ * shelf never promises a date the course page then lacks.
+ */
+export async function nextSessionStartByCourse(
+  db: AppDb,
+  shopId: string,
+  courseIds: readonly string[],
+  now: Date = nowDate(),
+): Promise<Map<string, Date>> {
+  if (courseIds.length === 0) return new Map();
+  const rows = await db
+    .select({ courseId: trips.courseId, startsAt: sql<Date>`min(${trips.startsAt})` })
+    .from(trips)
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        inArray(trips.courseId, [...courseIds]),
+        eq(trips.status, "scheduled"),
+        eq(trips.isPrivate, false),
+        gte(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
+      ),
+    )
+    .groupBy(trips.courseId);
+  return new Map(
+    rows.flatMap((row) => (row.courseId ? [[row.courseId, new Date(row.startsAt)] as const] : [])),
+  );
+}
+
 /** One single-day departure as the week board draws it. */
 export type WeekBoardEntry = {
   tripId: string;

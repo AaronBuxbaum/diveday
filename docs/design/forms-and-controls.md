@@ -657,6 +657,25 @@ because every entry is on this screen. Two controls that look identical and mean
 is the exact drift both components exist to end, so never dress a jump row as a track, or a tab bar
 as a row of links.
 
+## Reef's rungs, as they ship (2026-09-02)
+
+The system sheet of [ADR 20260901-diveday-reimagined](../architecture/decisions/20260901-diveday-reimagined.md)
+drew the parts at sizes the first slices did not all land. They are these now, and each is pinned:
+
+- **Radius**: control 10 (`rounded-lg`, `--radius`) · inset 18 (`rounded-inset`, the sunken block
+  a card carves out of itself — a fieldset on the tideline, a nested list, a photo tile, a toast) ·
+  panel 28 (`rounded-panel`, the card and every tone-carrying panel that is a card's sibling) · pill
+  999. Tailwind's own `rounded-xl` and `rounded-2xl` are not rungs and `card.test.tsx` refuses them.
+- **Buttons**: `md` is **48px tall with a 16px label**, the sheet's default; `sm` stays 44/14 for a
+  table row or a chip row; `boat` stays the 56px dock target. The base's `min-h-11` is still the
+  floor every size clears.
+- **Rows**: a `LedgerRow` is never tighter than **52px** (`md`); `lg` is 56.
+- **The ⌘K cap** belongs to the command palette's trigger in the header, not to `SearchField`: a
+  real `<input>` does not advertise a global shortcut it does not own. The sheet drew them as one
+  field; the split is deliberate.
+- **`Field`'s `hint` vs `description`**: the sheet's "On the back of the card, under the name" is
+  the *below* slot, which is `description`; `hint` rides inline inside the label.
+
 ## Searching a list: `SearchField`
 
 A staff list that can be searched renders **one search box and nothing around it** —

@@ -185,7 +185,7 @@ export function RentalFitForm({
         data-testid="gear-status-indicator"
         role="status"
         aria-live="polite"
-        className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
+        className={`flex items-center gap-4 p-4 rounded-inset border transition-all ${
           isConfirmed ? "border-success/30 bg-success/5" : "border-border bg-surface-sunken/40"
         }`}
       >

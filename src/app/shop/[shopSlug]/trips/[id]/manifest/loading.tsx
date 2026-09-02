@@ -28,7 +28,7 @@ export default function ManifestLoading() {
       {/* The count panel: the fraction, the bar, and the row of counts. */}
       <div className={sectionCardClass({ padding: "md", className: "mt-4 h-36" })} />
       {/* The checkpoint switch, then the boat check's one line. */}
-      <div className="mt-7 h-12 w-full rounded-xl bg-surface-sunken" />
+      <div className="mt-7 h-12 w-full rounded-inset bg-surface-sunken" />
       <div className={sectionCardClass({ padding: "none", className: "mt-5 h-14" })} />
       {/* The roll call is one ruled list card, so its skeleton is the same
           single card — not a stack of floating bars that redraws into a

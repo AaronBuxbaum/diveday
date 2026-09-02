@@ -283,7 +283,7 @@ export function BackupsSection({
               {/* `flush` inside this card — no card-on-card shadow or second
                 bg-surface; a thin border stays as the boundary of the grid,
                 the same nested-table treatment as the import preview. */}
-              <Table flush shellClassName="rounded-xl border border-border">
+              <Table flush shellClassName="rounded-inset border border-border">
                 {/* Below `sm` the rows are self-describing stacks rather than a
                   grid, so a lone "When" heading over them would be noise. */}
                 <THead className="hidden sm:table-header-group">

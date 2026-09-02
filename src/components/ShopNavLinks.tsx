@@ -24,7 +24,7 @@ import {
 // the strip only renders from `lg` up, but a crowded row is still possible
 // with long translations.
 const linkClass =
-  "inline-flex min-h-11 items-center rounded-xl px-2 py-2 text-sm font-medium whitespace-nowrap transition-colors hover:bg-surface-sunken hover:text-foreground sm:px-3";
+  "inline-flex min-h-11 items-center rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap transition-colors hover:bg-surface-sunken hover:text-foreground sm:px-3";
 
 /** Owner/manager surfaces (H-14) carry a gate; everyone else always sees the link. */
 export type ShopNavGates = StaffDestinationGates;

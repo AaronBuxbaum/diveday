@@ -146,10 +146,7 @@ export default async function DiveSitesPage({
         // it has not written yet is already looking.
         actions={
           librarySize === 0 ? undefined : (
-            <Link
-              href={`/shop/${shopSlug}/dive-sites/new`}
-              className={buttonClass({ className: "rounded-xl" })}
-            >
+            <Link href={`/shop/${shopSlug}/dive-sites/new`} className={buttonClass()}>
               <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
             </Link>
           )
@@ -215,14 +212,11 @@ export default async function DiveSitesPage({
                 <Link
                   href={catalogHref}
                   scroll={false}
-                  className={buttonClass({ variant: "secondary", className: "rounded-xl" })}
+                  className={buttonClass({ variant: "secondary" })}
                 >
                   {t("diveSites.list.browseTemplates")}
                 </Link>
-                <Link
-                  href={`/shop/${shopSlug}/dive-sites/new`}
-                  className={buttonClass({ className: "rounded-xl" })}
-                >
+                <Link href={`/shop/${shopSlug}/dive-sites/new`} className={buttonClass()}>
                   <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
                 </Link>
               </div>
@@ -497,7 +491,7 @@ function TemplatePreview({
               <input type="hidden" name="templateId" value={template.template.id} />
               <SubmitButton
                 pendingLabel={t("diveSites.catalog.importing")}
-                className={buttonClass({ className: "rounded-xl" })}
+                className={buttonClass()}
               >
                 {t("diveSites.catalog.importToLibrary")}
               </SubmitButton>
@@ -555,7 +549,7 @@ function TemplatePreview({
       ) : null}
 
       {briefing.fitNote ? (
-        <section className="mt-6 rounded-2xl bg-primary-tint p-5">
+        <section className="mt-6 rounded-panel bg-primary-tint p-5">
           <h2 className={`${SECTION_TITLE_CLASS} text-primary`}>
             {t("diveSites.catalog.preview_fit")}
           </h2>

@@ -94,7 +94,7 @@ export function FrontDeskReadinessFallback({ locale }: { locale: DiverLocale }) 
         <p className={groupLabelClass("primary")}>{t("fallback.readiness")}</p>
         <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.answerBeforeDock")}</h3>
         <p className="mt-1 text-sm text-muted">{t("fallback.noDiverClears")}</p>
-        <div className="mt-4 divide-y divide-border rounded-xl border border-border bg-surface">
+        <div className="mt-4 divide-y divide-border rounded-inset border border-border bg-surface">
           {/* i18n-exempt: sample diver names used only in marketing mockups */}
           {rows.map(({ name, status, tone }) => (
             <div key={name} className="flex items-center justify-between gap-3 px-4 py-3">
@@ -164,7 +164,7 @@ export function ImportPreviewFallback({ locale }: { locale: DiverLocale }) {
             </div>
           ))}
         </dl>
-        <div className="mt-4 overflow-hidden rounded-xl border border-border bg-surface">
+        <div className="mt-4 overflow-hidden rounded-inset border border-border bg-surface">
           {rows.map((row) => (
             <div
               key={row.row}
@@ -251,7 +251,7 @@ export function ExportBundleFallback({ locale }: { locale: DiverLocale }) {
             {t("fallback.export.download")}
           </button>
         </div>
-        <div className="mt-4 overflow-hidden rounded-xl border border-border bg-surface">
+        <div className="mt-4 overflow-hidden rounded-inset border border-border bg-surface">
           <div className="border-b border-border px-4 py-3">
             <p className="text-sm font-semibold">{t("fallback.export.bundleHeading")}</p>
             <p className="mt-0.5 text-xs text-muted">{t("fallback.export.fileCount")}</p>
@@ -296,7 +296,7 @@ export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
         <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.findNextDive")}</h3>
         <div className="mt-4 space-y-3">
           {trips.map((trip) => (
-            <div key={trip.title} className="rounded-xl border border-border bg-surface p-4">
+            <div key={trip.title} className="rounded-inset border border-border bg-surface p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h4 className="font-semibold">{trip.title}</h4>
@@ -349,7 +349,7 @@ export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
         <p className="mt-1 text-sm text-muted">{t("fallback.recap.tripLine")}</p>
 
         {/* The dive record: the one place the day's facts render. */}
-        <div className="mt-4 rounded-xl border border-border bg-surface p-3">
+        <div className="mt-4 rounded-inset border border-border bg-surface p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="text-sm font-semibold">{t("fallback.recap.recordHeading")}</h4>
             <span className="rounded-md bg-primary-tint px-2 py-0.5 text-[10px] font-semibold text-primary">
@@ -386,7 +386,7 @@ export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
         </figure>
 
         {/* The one ask. */}
-        <div className="mt-4 rounded-xl border border-border bg-surface p-3">
+        <div className="mt-4 rounded-inset border border-border bg-surface p-3">
           <h4 className="text-sm font-semibold">{t("fallback.recap.reviewAsk")}</h4>
           <div className="mt-2 flex gap-1" aria-hidden="true">
             {[0, 1, 2, 3, 4].map((star) => (

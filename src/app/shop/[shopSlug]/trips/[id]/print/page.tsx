@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
 import { getTripOverview } from "@/db/trips-overview";
@@ -89,7 +90,7 @@ export default async function TripPrintPage({
     <div className="trip-print-bundle">
       <AutoPrint readySelector="[data-trip-guests-ready]" />
       <header className="mb-10 border-b border-border pb-6 print:mb-6">
-        <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">DiveDay</p>
+        <p className={EYEBROW_CLASS}>DiveDay</p>
         <h1 className={`mt-2 ${SHELL_TITLE_CLASS}`}>{t("shared.printPacket.title")}</h1>
       </header>
 

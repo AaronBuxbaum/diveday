@@ -13,7 +13,7 @@ export default function TripSurfaceLoading() {
         <div className="h-4 w-24 rounded bg-surface-sunken" />
         <div className="mt-2 h-10 w-80 max-w-full rounded bg-surface-sunken" />
         <div className="mt-3 h-6 w-72 max-w-full rounded bg-surface-sunken" />
-        <div className="mt-6 h-11 w-full rounded-xl bg-surface-sunken" />
+        <div className="mt-6 h-11 w-full rounded-inset bg-surface-sunken" />
       </div>
 
       <div className={sectionCardClass({ padding: "none", className: "h-16" })} />

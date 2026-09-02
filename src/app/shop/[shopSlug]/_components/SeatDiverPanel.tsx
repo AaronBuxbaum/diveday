@@ -97,7 +97,7 @@ export function SeatDiverPanel({
   return (
     <div className="mt-6 space-y-6">
       {confirmMatches && confirmMatches.length > 0 ? (
-        <div className="border border-warning/25 bg-warning/10 rounded-xl p-4 text-left">
+        <div className="border border-warning/25 bg-warning/10 rounded-inset p-4 text-left">
           <div className="flex flex-col gap-2">
             <h3 className="font-semibold text-sm">
               {copy.confirmMatchesTitle || "Did you mean one of these existing potential matches?"}

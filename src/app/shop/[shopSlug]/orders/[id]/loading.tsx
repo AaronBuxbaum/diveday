@@ -16,7 +16,7 @@ export default function OrderLoading() {
         <div className={sectionCardClass({ padding: "lg", className: "mt-8" })}>
           <div className="flex flex-col gap-3">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="h-12 rounded-xl bg-surface-sunken" />
+              <div key={i} className="h-12 rounded-inset bg-surface-sunken" />
             ))}
           </div>
         </div>

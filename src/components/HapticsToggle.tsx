@@ -48,7 +48,7 @@ export function HapticsToggle({
 
   return (
     <label
-      className={`group inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-3 rounded-xl border border-border bg-surface-sunken p-3 text-sm font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground print:hidden ${className}`.trim()}
+      className={`group inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-3 rounded-lg border border-border bg-surface-sunken p-3 text-sm font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground print:hidden ${className}`.trim()}
     >
       <input
         type="checkbox"

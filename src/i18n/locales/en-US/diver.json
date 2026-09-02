@@ -58,7 +58,7 @@
     "navAriaLabel": "Shop pages",
     "languageAriaLabel": "Change language",
     "languageHeading": "Language",
-    "footerLine": "{shop} · Powered by DiveDay",
+    "footerLine": "{shop}",
     "spokenLanguages": "We speak {languages}",
     "languageFallback": "DiveDay isn’t in {requested} yet. This page is in {shown}, the language {shop} works in.",
     "conservationCommitmentsHeading": "Shop-stated conservation commitments",
@@ -345,7 +345,9 @@
       "noteTooLong": "Keep this note under 300 characters.",
       "promoInvalid": "That code isn't active."
     },
-    "emailsOnTheWay": "Two emails are on their way: your booking confirmation, and the link to sign your waiver."
+    "emailsOnTheWay": "Two emails are on their way: your booking confirmation, and the link to sign your waiver.",
+    "embedPayNext": "Your seat’s held. Paying opens on DiveDay’s secure page, outside this window.",
+    "continueToPayment": "Continue to payment"
   },
   "bookingGear": {
     "heading": "Rental gear",
@@ -459,7 +461,8 @@
       "groupStart": "Start here"
     },
     "shelf": {
-      "allCourses": "All courses"
+      "allCourses": "All courses",
+      "nextStart": "Next {date}"
     }
   },
   "reviews": {
@@ -2732,7 +2735,7 @@
             },
             "row7": {
               "theirs": "Affiliate links",
-              "ours": "A referral link — the hotel that sent the diver is on the booking"
+              "ours": "A referral link — every visit it sends arrives tagged with the hotel’s name"
             },
             "row8": {
               "theirs": "WordPress plugin",

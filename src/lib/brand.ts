@@ -258,6 +258,8 @@ export function deriveBrandTheme(
  */
 export const BRAND_DARK_GROUND = "#071720";
 export const BRAND_DARK_SURFACE = "#0d222d";
+/** The night palette's reading ink (`--foreground` at depth), for a preview of the brand at night. */
+export const BRAND_DARK_INK = "#e9f3f4";
 
 /**
  * The same colour, derived for the dark scheme (issue #1265).

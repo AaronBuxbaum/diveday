@@ -302,7 +302,7 @@ export default async function TripPrepPage({
               // Warning tone, canonical geometry: this and its two neighbours
               // below are the same card as everything else on the page, and
               // only the border and fill say which of them is a problem.
-              className="mt-6 rounded-2xl border border-warning/40 bg-warning/10 p-4 sm:p-5"
+              className="mt-6 rounded-panel border border-warning/40 bg-warning/10 p-4 sm:p-5"
             >
               <h2 id="nitrox-blocked-heading" className={SECTION_TITLE_CLASS}>
                 {t("trips.prep.nitroxBlockedHeading")}
@@ -390,7 +390,7 @@ export default async function TripPrepPage({
           {checklist.diversNeedingStaffFit.length > 0 ? (
             <section
               aria-labelledby="staff-fit-heading"
-              className="mt-6 rounded-2xl border border-warning/40 bg-warning/5 p-4 sm:p-5"
+              className="mt-6 rounded-panel border border-warning/40 bg-warning/5 p-4 sm:p-5"
             >
               <h2 id="staff-fit-heading" className={SECTION_TITLE_CLASS}>
                 {t("trips.prep.staffFitHeading")}

@@ -121,7 +121,7 @@
       "removeHero": "Remove the cover photo",
       "establishedYear": "Open since (year)",
       "badges": "Badges",
-      "badgesHint": "Shown on your public pages as your own statement, in this order.",
+      "badgesHint": "Shown on your public pages as your own statement.",
       "badgesSet": "{count, plural, one {# badge} other {# badges}}",
       "badgeLabels": {
         "padi_5_star": "PADI 5 Star Dive Center",
@@ -133,7 +133,10 @@
         "green_fins": "Green Fins Member",
         "dan_partner": "DAN Business Partner",
         "readers_choice": "Readers' Choice Award"
-      }
+      },
+      "brandColorLightenedAtNight": "At night your storefront lightens it to {hex} so it still reads on the dark ground.",
+      "brandPreview": "How it reads",
+      "brandPreviewNight": "At night"
     },
     "address": {
       "heading": "Shop address",
@@ -892,7 +895,7 @@
     "language": "Language",
     "languageAuto": "Follow the visitor’s browser",
     "preview": "Preview",
-    "previewNote": "Shown in DiveDay’s own look; on your site it takes your page’s colour and font.",
+    "previewNote": "On your site it reads your page’s colour and font; this preview uses your storefront’s.",
     "platform": "Where it goes",
     "snippet": "Put it on your site",
     "partnerName": "Partner",
@@ -907,7 +910,7 @@
       },
       "lightbox": {
         "name": "Lightbox",
-        "hint": "Booking opens over your page"
+        "hint": "Booking opens over your page; paying opens DiveDay’s"
       },
       "calendar": {
         "name": "Calendar",
@@ -962,6 +965,8 @@
       "failed": "Couldn’t copy — select the code above instead."
     },
     "code": "Embed code",
-    "partnerLinkField": "Referral link"
+    "partnerLinkField": "Referral link",
+    "showRequired": "Pick the departure this card is for.",
+    "fromFareharbor": "Coming from FareHarbor? <link>Each of its embeds has its match here</link>."
   }
 }

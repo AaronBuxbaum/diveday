@@ -198,7 +198,7 @@ export default async function DataOutSettingsPage({
               {(families ?? []).map((family) => (
                 <li
                   key={family.file}
-                  className="flex items-baseline justify-between gap-3 rounded-xl bg-surface-sunken px-4 py-3"
+                  className="flex items-baseline justify-between gap-3 rounded-inset bg-surface-sunken px-4 py-3"
                 >
                   <div className="min-w-0">
                     <p className="font-mono text-sm break-all text-foreground">{family.file}</p>

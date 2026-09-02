@@ -147,7 +147,8 @@
     "firstBookingWaived": "pago exento",
     "firstBookingPaymentDue": "pago pendiente",
     "firstBookingWaiverSigned": "exención firmada",
-    "firstBookingWaiverNeeded": "falta la exención"
+    "firstBookingWaiverNeeded": "falta la exención",
+    "firstThing": "Lo primero · {kind}"
   },
   "quietAddDeparture": "Añadir una salida",
   "quietNextDepartureLabel": "Próxima salida"

@@ -35,7 +35,7 @@ export default function GlobalError({
   return (
     <html lang="en" className="h-full antialiased">
       <body className="flex min-h-full flex-col items-center justify-center gap-6 bg-background px-6 text-center text-foreground">
-        <span className="grid size-12 place-items-center rounded-xl bg-primary text-primary-foreground">
+        <span className="grid size-12 place-items-center rounded-inset bg-primary text-primary-foreground">
           <LogoMark className="size-6" />
         </span>
         <div className="max-w-md space-y-2">

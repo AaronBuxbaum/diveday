@@ -1,5 +1,5 @@
 import { type ReactNode, useId } from "react";
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
  * The card — the bordered panel a staff page is mostly made of, and the last
@@ -76,7 +76,9 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
  *
  * ## Headings: what size, and where one goes
  *
- * `title` renders the staff type scale (`text-lg`, or `text-base` for a card
+ * `title` renders the staff type scale (`text-2xl` — Reef's section rung,
+ * drawn 26/600 on the system sheet and set in Geist at the ramp's nearest
+ * step — or `text-base` for a card
  * inside a group that already owns the `h2`). The **marketing pages keep their
  * own scale at the call site** and pass no `title` — their headings sit under a
  * 36px display type where `text-base` would turn a page's one checkable proof
@@ -97,7 +99,7 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
  * - **Yes**: the body is plural — sibling cards, a grid of object cards, a
  *   `padding="none"` shell of divided rows, anything that swaps to an
  *   `EmptyState`. The heading stands above as a bare
- *   `<h2 className={SECTION_TITLE_CLASS}>`, the *same* scale a card's own
+ *   `<h2 className={LEAD_TITLE_CLASS}>` — Reef's section rung — the *same* scale a card's own
  *   `h2` gets, because a section speaks at one volume whether its heading sits
  *   inside one card or above five. Each card under it steps down with
  *   `titleAs="h3"`, or carries the object's own name.
@@ -155,7 +157,10 @@ type SectionCardElement = "section" | "div" | "article" | "aside" | "ul" | "li" 
  * `font-medium`, bare `font-semibold` — is gone.
  */
 const TITLE_CLASS = {
-  h2: SECTION_TITLE_CLASS,
+  // Reef moved this rung up from `text-lg` to `text-2xl` (#1286); it is
+  // `LEAD_TITLE_CLASS` exactly, so it stays a named level rather than a
+  // literal that would drift away from the ramp again (#1229).
+  h2: LEAD_TITLE_CLASS,
   h3: "text-base font-semibold",
 } as const;
 

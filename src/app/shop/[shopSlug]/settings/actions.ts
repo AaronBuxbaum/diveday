@@ -1055,6 +1055,14 @@ function parseDiversPerDivemaster(raw: FormDataEntryValue | null): number | "inv
   return ratio;
 }
 
+/** The storefront's one line about a hull: trimmed, bounded, and null when empty. */
+function boatDescription(formData: FormData): string | null {
+  const text = String(formData.get("description") ?? "")
+    .trim()
+    .slice(0, 200);
+  return text.length > 0 ? text : null;
+}
+
 /** Creates a new boat for the shop. */
 export async function createBoatAction(formData: FormData) {
   const session = await requireStaffSession();
@@ -1063,13 +1071,14 @@ export async function createBoatAction(formData: FormData) {
 
   const name = String(formData.get("name") ?? "").trim();
   const capacity = Number(formData.get("capacity") ?? 0);
+  const description = boatDescription(formData);
 
   if (!name || Number.isNaN(capacity) || capacity <= 0) {
     redirect(noticeUrl(settings, "boat-invalid", { saved: "boats" }));
   }
 
   const db = await getDb();
-  await createBoat(db, session.user.shopId, name, capacity);
+  await createBoat(db, session.user.shopId, name, capacity, description);
 
   revalidateAndRedirect(settings, noticeUrl(settings, "boat-created", { saved: "boats" }));
 }
@@ -1084,13 +1093,14 @@ export async function updateBoatAction(formData: FormData) {
   const boatId = typeof rawBoatId === "string" ? uuidParam(rawBoatId) : null;
   const name = String(formData.get("name") ?? "").trim();
   const capacity = Number(formData.get("capacity") ?? 0);
+  const description = boatDescription(formData);
 
   if (!boatId || !name || Number.isNaN(capacity) || capacity <= 0) {
     redirect(noticeUrl(settings, "boat-invalid", { saved: "boats" }));
   }
 
   const db = await getDb();
-  await updateBoat(db, session.user.shopId, boatId, name, capacity);
+  await updateBoat(db, session.user.shopId, boatId, name, capacity, description);
 
   revalidateAndRedirect(settings, noticeUrl(settings, "boat-updated", { saved: "boats" }));
 }

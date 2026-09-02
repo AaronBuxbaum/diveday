@@ -46,6 +46,7 @@ import {
   BRAND_DISPLAY_FONTS,
   DIVEDAY_BRAND_COLOR,
   deriveBrandTheme,
+  deriveDarkBrandTheme,
 } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
 import { configuredValue } from "@/lib/configured";
@@ -76,6 +77,7 @@ import {
 } from "@/lib/timezones";
 import { isTrialExpired, trialDaysRemaining, trialEndsAt } from "@/lib/trial";
 import { BrandColorField } from "./_components/BrandColorField";
+import { BrandPreview } from "./_components/BrandPreview";
 import { SettingsDoorRow, SettingsRow } from "./_components/SettingsRows";
 import { AddressSearch } from "./AddressSearch";
 import {
@@ -532,6 +534,7 @@ export default async function SettingsPage({
   // A shop's colour is checked at render, never on save: the summary says
   // when it had to be darkened so the owner learns here, not on the storefront.
   const brandTheme = shop.brandColor ? deriveBrandTheme(shop.brandColor) : null;
+  const brandNightTheme = shop.brandColor ? deriveDarkBrandTheme(shop.brandColor) : null;
   const profileValue =
     [
       shop.tagline,
@@ -803,7 +806,7 @@ export default async function SettingsPage({
                         <img
                           src={shop.logoUrl}
                           alt=""
-                          className="size-16 rounded-xl border border-border bg-surface object-cover"
+                          className="size-16 rounded-inset border border-border bg-surface object-cover"
                         />
                         <label className="flex items-center gap-2 text-sm text-muted hover:text-foreground cursor-pointer">
                           <input type="checkbox" name="removeLogo" value="true" />
@@ -815,7 +818,7 @@ export default async function SettingsPage({
                       name="logoFile"
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
-                      className="text-sm file:me-3 file:rounded-xl file:border file:border-border file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:cursor-pointer hover:file:bg-surface-hover"
+                      className="text-sm file:me-3 file:rounded-lg file:border file:border-border file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:cursor-pointer hover:file:bg-surface-hover"
                     />
                   </div>
                 </Field>
@@ -827,7 +830,11 @@ export default async function SettingsPage({
                         ? t("settings.main.profile.brandColorDarkened", {
                             hex: brandTheme.primary,
                           })
-                        : t("settings.main.profile.brandColorHint")
+                        : brandNightTheme?.adjusted
+                          ? t("settings.main.profile.brandColorLightenedAtNight", {
+                              hex: brandNightTheme.primary,
+                            })
+                          : t("settings.main.profile.brandColorHint")
                     }
                   >
                     <BrandColorField
@@ -851,6 +858,13 @@ export default async function SettingsPage({
                     </select>
                   </Field>
                 </FieldGrid>
+                <BrandPreview
+                  shopName={shop.name}
+                  brandColor={shop.brandColor}
+                  brandDisplayFont={shop.brandDisplayFont}
+                  label={t("settings.main.profile.brandPreview")}
+                  nightLabel={t("settings.main.profile.brandPreviewNight")}
+                />
                 <Field
                   label={t("settings.main.profile.heroPhoto")}
                   hint={t("settings.main.profile.heroHint")}
@@ -862,7 +876,7 @@ export default async function SettingsPage({
                         <img
                           src={shop.brandHeroImageUrl}
                           alt={shop.brandHeroImageAlt ?? ""}
-                          className="h-16 w-28 rounded-xl border border-border bg-surface object-cover"
+                          className="h-16 w-28 rounded-inset border border-border bg-surface object-cover"
                         />
                         <label className="flex items-center gap-2 text-sm text-muted hover:text-foreground cursor-pointer">
                           <input type="checkbox" name="removeHero" value="true" />
@@ -874,7 +888,7 @@ export default async function SettingsPage({
                       name="brandHeroFile"
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
-                      className="text-sm file:me-3 file:rounded-xl file:border file:border-border file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:cursor-pointer hover:file:bg-surface-hover"
+                      className="text-sm file:me-3 file:rounded-lg file:border file:border-border file:bg-surface file:px-3 file:py-1.5 file:text-sm file:font-medium file:cursor-pointer hover:file:bg-surface-hover"
                     />
                   </div>
                 </Field>
@@ -883,6 +897,7 @@ export default async function SettingsPage({
                     <input
                       name="brandHeroImageAlt"
                       type="text"
+                      required={Boolean(shop.brandHeroImageUrl)}
                       maxLength={200}
                       defaultValue={shop.brandHeroImageAlt ?? ""}
                       className={controlClass}
@@ -1582,7 +1597,7 @@ export default async function SettingsPage({
                         >
                           <form
                             action={updateBoatAction}
-                            className="flex flex-1 flex-col sm:flex-row items-start sm:items-center gap-3 w-full"
+                            className="flex flex-1 flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-3 w-full"
                           >
                             <input type="hidden" name="boatId" value={boat.id} />
                             <div className="flex-1 w-full">
@@ -1604,6 +1619,17 @@ export default async function SettingsPage({
                                 defaultValue={boat.capacity}
                                 placeholder={t("boats.capacityLabel")}
                                 className={`${controlClass} tabular-nums`}
+                              />
+                            </div>
+                            <div className="w-full sm:basis-full">
+                              <input
+                                name="description"
+                                type="text"
+                                maxLength={200}
+                                defaultValue={boat.description ?? ""}
+                                placeholder={t("boats.descriptionLabel")}
+                                aria-label={t("boats.descriptionLabel")}
+                                className={controlClass}
                               />
                             </div>
                             <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -1658,7 +1684,7 @@ export default async function SettingsPage({
                     <h4 className="text-sm font-medium mb-3">{t("boats.createTitle")}</h4>
                     <form
                       action={createBoatAction}
-                      className="flex flex-col sm:flex-row items-start sm:items-center gap-3"
+                      className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-3"
                     >
                       <div className="flex-1 w-full">
                         <input
@@ -1677,6 +1703,16 @@ export default async function SettingsPage({
                           min={1}
                           placeholder={t("boats.capacityLabel")}
                           className={`${controlClass} tabular-nums`}
+                        />
+                      </div>
+                      <div className="w-full sm:basis-full">
+                        <input
+                          name="description"
+                          type="text"
+                          maxLength={200}
+                          placeholder={t("boats.descriptionLabel")}
+                          aria-label={t("boats.descriptionLabel")}
+                          className={controlClass}
                         />
                       </div>
                       <SubmitButton
@@ -1852,7 +1888,7 @@ export default async function SettingsPage({
                       {shopPackages.map((pkg) => (
                         <li
                           key={pkg.id}
-                          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3"
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-inset border border-border bg-surface p-3"
                         >
                           <span className="min-w-0">
                             <span className="font-medium">{pkg.name}</span>{" "}

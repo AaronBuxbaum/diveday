@@ -199,13 +199,42 @@ describe("a station owns its departure's facts", () => {
     expect(screen.queryByText(/spots? open/)).toBeNull();
   });
 
-  it("draws the capacity meter as opacity on the fill, never as a new token", () => {
+  it("draws the head count as a dial whose water is the shallows, standing at booked-of-capacity", () => {
     const { container } = renderSpine();
-    // The ADR ships no new tokens, so the quiet fill is `bg-muted` turned down
-    // rather than a colour the palette does not have.
-    const fill = container.querySelector(".bg-muted");
-    expect(fill).not.toBeNull();
-    expect(fill?.className).toContain("opacity-30");
+    // Reef's one decorative fill token, and never a state: the figure over
+    // the water and the words beside it carry the fact (ADR
+    // 20260901-diveday-reimagined, decision 1 — "water fills that carry no
+    // fact").
+    const water = container.querySelector("[data-station-water]");
+    expect(water).not.toBeNull();
+    expect(water?.className).toContain("bg-shallows");
+    expect(water?.getAttribute("aria-hidden")).toBe("true");
+    expect((water as HTMLElement).style.transform).toBe("scaleY(0.83)");
+    expect(container.querySelector(".bg-muted.opacity-30")).toBeNull();
+  });
+
+  it("gives the next boat's site mark the surface's one coral detail, and the rest none", () => {
+    const { container } = renderSpine({
+      departures: [
+        departure({ tripId: "sailed", title: "Dawn Patrol", startsAt: hoursFromNow(-3) }),
+        departure({ tripId: "next", title: "Two-Tank Reef", startsAt: hoursFromNow(2) }),
+        departure({ tripId: "later", title: "Wreck Trip", startsAt: hoursFromNow(6) }),
+      ],
+    });
+    // A boat that left more than the hour's buffer ago is not "next"; the
+    // one after it is, and only it wears the warm detail.
+    const marks = [...container.querySelectorAll("[data-site-mark]")];
+    expect(marks).toHaveLength(3);
+    const coral = marks.map((mark) => mark.querySelectorAll('[fill="var(--accent)"]').length);
+    expect(coral).toEqual([0, 1, 0]);
+  });
+
+  it("swaps the site mark's wash and ink for a boat that leaves after dark", () => {
+    // 23:30 UTC is 7:30 PM in Key Largo — the fiction's night dive.
+    const { container } = renderSpine({
+      departures: [departure({ startsAt: new Date("2026-08-27T23:30:00Z") })],
+    });
+    expect(container.querySelector("[data-site-mark]")?.className).toContain("bg-primary-hover");
   });
 
   it("badges the reader's own boat without moving it up the clock", () => {
@@ -591,14 +620,21 @@ describe("the two horizon rows", () => {
       tomorrow: [departure({ tripId: "t2", title: "Night Dive", startsAt: hoursFromNow(26) })],
     });
 
+    // Two tideline panels side by side (the board's "Later, collapsed"): the
+    // same sunken fill, the same panel radius, the same row height, no bed.
+    const fold = container.querySelector("details");
+    expect(fold).toHaveClass("sm:rounded-panel", "sm:bg-surface-sunken", "open:sm:col-span-2");
+    expect(fold?.parentElement).toHaveClass("sm:grid-cols-2");
     const summary = container.querySelector("details summary");
-    expect(summary).toHaveClass("min-h-14", "-mx-2", "px-2");
+    expect(summary).toHaveClass("min-h-14");
     expect(summary?.querySelector("h2")).toHaveClass("text-base", "font-semibold");
     // The caret is at the row's trailing edge, like the week link's chevron.
     expect(summary?.lastElementChild?.tagName).toBe("svg");
 
     const week = screen.getByText("This week").closest("li");
-    expect(week).toHaveClass("min-h-14", "-mx-2", "px-2");
+    expect(week).toHaveClass("min-h-14", "sm:rounded-panel");
+    expect(week?.parentElement).toHaveClass("sm:rounded-panel", "sm:bg-surface-sunken");
+    expect(fold?.className).not.toContain("shadow-bed");
     expect(screen.getByText("This week")).toHaveClass("text-base", "font-semibold");
   });
 
@@ -667,11 +703,17 @@ describe("roll-call rows (DOM-H3)", () => {
 
     expect(screen.getByText("Roll call").className).toContain("text-danger");
     // Never an in-place control: closing a head count happens on the manifest,
-    // one tap away, not from a button on the spine.
-    expect(screen.getByRole("link", { name: "Open roll call" })).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/trips/t1/manifest?checkpoint=after_dive_2",
-    );
+    // one tap away, not from a button on the spine. The door appears twice —
+    // once as the row, once lifted into the "First thing" panel above it —
+    // and both point at the same checkpoint.
+    const doors = screen.getAllByRole("link", { name: "Open roll call" });
+    expect(doors).toHaveLength(2);
+    for (const door of doors) {
+      expect(door).toHaveAttribute(
+        "href",
+        "/shop/blue-mantis/trips/t1/manifest?checkpoint=after_dive_2",
+      );
+    }
     expect(container.querySelector("form")).toBeNull();
   });
 
@@ -1070,5 +1112,110 @@ describe("the evening reading", () => {
     // The live station won the trip it shares with the closing list — one
     // departure is one station, never two.
     expect(screen.getAllByText("Night Dive")).toHaveLength(1);
+  });
+});
+
+/**
+ * The row's glyph — the first of the anatomy's four parts (glyph, one word of
+ * kind, one sentence, one fix). Reef's board draws it; it was the one part the
+ * spine's rows did not carry until 2026-09-02.
+ */
+describe("the row glyph", () => {
+  it("leads every row with the status family's shape for its tone, never a drawing", () => {
+    const { container } = renderSpine({
+      actions: [
+        action({ id: "danger", kind: "medical_review", departure: boat("t1") }),
+        action({ id: "warning", kind: "waiver", departure: boat("t1") }),
+        action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
+      ],
+    });
+    const rows = [...container.querySelectorAll("ol li ul li")];
+    expect(rows).toHaveLength(3);
+    const inks = rows.map((row) => row.querySelector("span > svg")?.getAttribute("class") ?? "");
+    expect(inks[0]).toContain("text-danger");
+    expect(inks[1]).toContain("text-warning-strong");
+    expect(inks[2]).toContain("text-muted");
+    // From the shipped status family: a drawing is never a status glyph.
+    for (const row of rows) expect(row.querySelector("[data-site-mark]")).toBeNull();
+  });
+});
+
+/**
+ * The one obvious next action (H-62), lifted above the spine as the board's
+ * "First thing" panel: the next boat's first danger-toned door, once.
+ */
+describe("the first thing", () => {
+  it("lifts the next boat's first blocking door into one panel with its fix as the primary", () => {
+    renderSpine({
+      actions: [
+        action({
+          id: "medical",
+          kind: "medical_review",
+          subject: "Grace Mensah",
+          detail: "Medical answers need a look before she boards.",
+          actionLabel: "Verify it",
+          href: "/shop/blue-mantis/divers/p1",
+          departure: boat("t1"),
+        }),
+        action({ id: "waiver", kind: "waiver", departure: boat("t1") }),
+      ],
+    });
+    const panel = screen.getByRole("region", { name: /^First thing · / });
+    expect(within(panel).getByText("Grace Mensah")).toBeInTheDocument();
+    expect(
+      within(panel).getByText("Medical answers need a look before she boards."),
+    ).toBeInTheDocument();
+    expect(within(panel).getByRole("link", { name: "Verify it" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/p1",
+    );
+    // The row beneath still stands: the panel repeats it, it does not move it.
+    expect(screen.getAllByRole("link", { name: "Verify it" })).toHaveLength(2);
+  });
+
+  it("renders nothing when the next boat's loudest row is only a warning, or performs its fix inline", () => {
+    renderSpine({
+      actions: [action({ id: "waiver", kind: "waiver", departure: boat("t1") })],
+    });
+    expect(screen.queryByText(/^First thing/)).toBeNull();
+    cleanup();
+    // A danger row that sends its own waiver keeps its control on the row.
+    renderSpine({
+      actions: [
+        action({
+          id: "medical",
+          kind: "medical_review",
+          departure: boat("t1"),
+          waiver: { bookingIds: ["b1"] },
+        }),
+      ],
+    });
+    expect(screen.queryByText(/^First thing/)).toBeNull();
+  });
+
+  it("reads the next boat, not the first on the page", () => {
+    renderSpine({
+      departures: [
+        departure({ tripId: "sailed", title: "Dawn Patrol", startsAt: hoursFromNow(-3) }),
+        departure({ tripId: "t1", startsAt: hoursFromNow(2) }),
+      ],
+      actions: [
+        action({
+          id: "gone",
+          kind: "medical_review",
+          subject: "Left behind",
+          departure: boat("sailed", "Dawn Patrol"),
+        }),
+        action({
+          id: "next",
+          kind: "identity",
+          subject: "Nadia Petrov",
+          departure: boat("t1"),
+        }),
+      ],
+    });
+    const panel = screen.getByRole("region", { name: /^First thing/ });
+    expect(within(panel).getByText("Nadia Petrov")).toBeInTheDocument();
+    expect(within(panel).queryByText("Left behind")).toBeNull();
   });
 });

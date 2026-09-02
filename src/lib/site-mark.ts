@@ -1,12 +1,25 @@
+import { utcToWallTime } from "./zoned";
+
 /**
  * Which drawing marks a departure — Reef's site mark (ADR
- * 20260901-diveday-reimagined, decision 1, slice 13f).
+ * 20260901-diveday-reimagined, decision 1, slice 13f) — and the rest of the
+ * hand's creatures, named in one place so a drawing cannot be invented at a
+ * call site.
  *
- * Reef draws in one hand, and a departure's marker on the home spine and the
- * week board is the first place that hand appears in the product. Four of the
- * set's six drawings stand for a departure: the brain coral for a reef, the
- * wreck for a wreck, the sea fan for a course session (taught, whatever the
- * site), and the bubble trail for open water or a site nobody has named yet.
+ * The system sheet draws six: the green turtle (the all-clear), the
+ * parrotfish (the reef trip), the sea fan (courses), the brain coral (the dive
+ * site), the bubble trail (the mark) and the swell (the divider and the band —
+ * `Swell.tsx`, since it is a line rather than a tile). Four of them stand for
+ * a departure on the home spine and the week board — the parrotfish for a
+ * reef, the sea fan for a course session (taught, whatever the site), the
+ * bubble trail for open water or a site nobody has named yet — plus a
+ * **seventh the canvas did not draw**: the wreck. Key Largo's boats run the
+ * Spiegel Grove and the Duane every week, and a wreck marked with a reef fish
+ * is a mark saying the wrong thing; it is drawn in the same hand and
+ * recorded in the ADR as the set's one addition. The brain coral marks a
+ * *site* rather than a trip (a dive site with no photograph of its own), and
+ * the turtle is not a site mark at all: it is the morning's all-clear, the one
+ * drawing a staff surface's earned moment may carry.
  *
  * A site carries no "kind" column — its briefing is the shop's own words
  * (ADR 20260813-dive-site-briefings-are-the-shops-own-words) — so the mark
@@ -16,6 +29,10 @@
  */
 export const SITE_MARKS = ["reef", "wreck", "course", "open"] as const;
 export type SiteMarkCode = (typeof SITE_MARKS)[number];
+
+/** Every drawing in the hand that renders as a tile; the swell is the sixth. */
+export const REEF_DRAWINGS = [...SITE_MARKS, "site", "turtle"] as const;
+export type ReefDrawingCode = (typeof REEF_DRAWINGS)[number];
 
 const WRECK = /wreck|\b(ship|hull|barge|tug|freighter|tanker|schooner|cutter|uscgc?)\b/i;
 const REEF =
@@ -28,4 +45,19 @@ export function siteMarkFor(facts: { siteName: string | null; isCourse?: boolean
   if (WRECK.test(name)) return "wreck";
   if (REEF.test(name)) return "reef";
   return "open";
+}
+
+/**
+ * The tile's ground for a departure at this hour: the lagoon wash by day, and
+ * the deep — the wash and the ink swapped — for a boat that leaves after dark,
+ * so the night dive reads as night at a glance (the home board flips its
+ * 7:30 PM station). Six in the evening to five in the morning, wall time in
+ * the shop's zone: a rule about *when the boat leaves*, never a sunset table,
+ * because a 6 PM departure in December is a night dive by the time it is in
+ * the water and a 6 PM one in June is not, and the tile is decoration either
+ * way — the time beside it is the fact.
+ */
+export function siteMarkGroundFor(startsAt: Date, timeZone: string): "tint" | "deep" {
+  const { hour } = utcToWallTime(startsAt, timeZone);
+  return hour >= 18 || hour < 5 ? "deep" : "tint";
 }

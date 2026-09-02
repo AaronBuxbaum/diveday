@@ -45,19 +45,36 @@ What lands, and where each rule comes from:
 | Rule | Value | Supersedes |
 | --- | --- | --- |
 | Ground | sand `#fbf7ef`, shell (surface) `#fffdf8`, tideline (sunken) `#f3ecdd`, rope (border) `#e6dcc8`, rope-strong `#8a8065` | Clearwater's `#faf9f6` / `#ffffff` / `#f1efe9` / `#e3e0d7` / `#8a8577` |
-| Ink | ink `#0c2a35`, muted `#5b6f77` | unchanged |
-| Lagoon | primary `#0e7490`, hover (lagoon-deep) `#0a4d61`, wash (tint) `#dceef0`, and a new decorative **shallows** `#7fd0d6` for water fills that carry no fact | hover `#155e75`; tint was a 10% mix |
+| Ink | ink `#0c2a35`, muted `#5b6f77` — **measured to `#54676d`** on 2026-09-02, because the drawn value read 4.48:1 on the tideline (a notice bar, a segmented track) | unchanged |
+| Lagoon | primary `#0e7490`, hover (lagoon-deep) `#0a4d61`, wash (tint) `#dceef0` — **measured to `#e6f3f5`** the same day, since the primary read 4.47:1 as text on the drawn wash — and a new decorative **shallows** `#7fd0d6` for water fills that carry no fact: the roll call's glass and the home's seat dial | hover `#155e75`; tint was a 10% mix |
 | Coral | `#ff6f61`, deep `#a83a2c` as ink on a coral wash `#ffeee9` | unchanged values; the wash is new |
 | Signals | success / warning / danger keep their values; each gains a wash (`#e6f0e8`, `#f8eee2`, `#f8e8e6`) as its tint | tints were 10% mixes |
-| Radii | control 10 · inset 18 · panel 28 · pill 999 | panel 16 (`rounded-2xl`), control 10 |
+| Radii | control 10 · inset 18 · panel 28 · pill 999. The control rung actually read **12** (`--radius: 0.75rem`) from Clearwater until 2026-09-02, when 13a's follow-through set it to 10 and moved every `rounded-xl` (12) and `rounded-2xl` (16) in the tree onto a rung — the sunken block a card carves out of itself to `rounded-inset`, the tone-carrying panel to `rounded-panel`; `card.test.tsx` refuses both off-ladder classes | panel 16 (`rounded-2xl`), control 12 (recorded as 10) |
 | Elevation | a resting panel sits on the **warm bed**, `0 2px 10px rgba(88, 66, 30, 0.06)`; menus, sheets and toasts keep their own lift | Clearwater decision 1 ("a panel at rest is flat"), deliberately, and only for the panel — the header tiles, logos and markers retired in #1228 stay flat |
-| Coral budget | three sanctioned appearances per surface, and a harder ban: never a status, never a fill behind reading text, never on a manifest, roll call, cert, waiver or payment surface | Clearwater's one earned moment |
-| Illustration | a line-drawn reef and its creatures, one hand, used as a departure's site mark and in the three moments; **no drawing may appear on a manifest, roll call, cert check, waiver or payment surface** | none existed |
+| Coral budget | three sanctioned appearances per surface, **named**: the earned moment (Clearwater's table, one at a time), one drawn creature's single warm detail, and the mark's smallest bubble. So a spine of three boats gives its detail to the *next* boat out and draws the rest in the line; the week board, with no one boat to give it to, draws none (`SiteMark`'s `coral` prop, 2026-09-02). And a harder ban: never a status, never a fill behind reading text, never on a manifest, roll call, cert, waiver or payment surface — `src/components/illustration/illustration.test.ts` walks `src/app` **and** `src/components` for the token | Clearwater's one earned moment |
+| Illustration | a line-drawn reef and its creatures, one hand, used as a departure's site mark and in the three moments; **no drawing may appear on a manifest, roll call, cert check, waiver or payment surface**. The hand as it ships (2026-09-02): the parrotfish (a reef departure), the sea fan (a course session), the bubble trail (open water), the brain coral (a *site* with no photograph of its own), the green turtle (the morning's all-clear line — the one drawing a staff surface's earned moment may carry) and the swell (`Swell.tsx`, one component under the station that settles and the course card with no photo); plus **one drawing the canvas did not draw, the wreck** — Key Largo's boats dive the Spiegel Grove weekly and a wreck marked with a reef fish says the wrong thing. A boat that leaves after dark takes the tile with wash and ink swapped (`siteMarkGroundFor`) | none existed |
 | The three moments | the water closing over a departure's finished work; the count that fills as divers come back; the diver's day drawn as a postcard on the recap | Clearwater's earned-moment ration |
 | Dark scheme | Reef drew none. The current night palette stays until one is drawn; only the tokens whose *shape* changed (the washes, the radii, the bed) apply in both schemes. **Drawn 2026-09-02 (13j):** open ocean stays the ground and the brand's night values stand; the five washes became drawn hues instead of 10% mixes — a mix over the dark shell goes grey exactly as it did on the warm one — each measured against its signal and both inks, and held by `src/lib/night-palette.test.ts` | — |
 
 The safety floor is untouched: 44px targets, 16px critical text, AA contrast, never colour alone, and
 principle 9 in full.
+
+**Amended 2026-09-02 — the detail pass.** The slices landed the tokens and the moments; the
+system sheet's rungs that sit *between* them had not, and the second review closed them, each now
+pinned: rows are **52px** (`LedgerRow` `md`, was 48); the default button is **48px with a 16px
+label** (`buttonClass` `md`, was 44/14 — `sm` stays the dense 44/14 for a table or a chip row);
+the type ladder is Reef's in Geist — page title **40/700**, the home's greeting **44/700**
+(`ShopPageHeader`'s `display`), section heading **24/600** (`SectionCard`'s `h2`, was 18),
+eyebrow **11/700/+0.16em** (`EYEBROW_CLASS`, one constant every eyebrow reads); and the sheet's
+**water band** — the lagoon wash settling into sand over the first 168px of every staff page — is
+the `water-band` class on the shop layout's content wrapper. A wash carries no fact and is not a
+drawing, which is why it may sit behind a manifest; the swell that rides it on the board is the
+drawing, and only the home draws that. On the home itself the board's four missing parts landed
+together: every work row leads with its **glyph** from the shipped status family (a drawing is
+never a status), the head count is a **dial** whose water is `shallows`, the two horizons are two
+tideline panels side by side, and the board's **"First thing" panel** — H-62's one obvious next
+action made literal — lifts the next boat's first blocking door above the spine, a repeat of the
+row beneath by design.
 
 ### 2. The diver-facing surfaces wear Harbor — the shop's brand, with whatever it has set
 
@@ -69,10 +86,14 @@ overlay with a default, never a requirement.
 
 - **What the shop owns** (`shops` gains these, edited in Settings under a new *Brand* group):
   `brand_color` (one hex), `brand_display_font` (one of six curated Google faces, or none),
-  `brand_hero_image_url` + alt, `established_year`, and an ordered list of badges chosen from a
-  fixed code list (`shop_badges`: PADI 5★, PADI IDC, SSI, NAUI, TripAdvisor, Blue Star, Green Fins,
-  DAN partner, Readers' Choice — codes, so they arrive in every language and no logo is drawn that
-  DiveDay has no right to show). `logo_url` and `tagline` already exist.
+  `brand_hero_image_url` + alt, `established_year`, and a list of badges chosen from a fixed code
+  list (`brand_badges`, a jsonb column rather than the `shop_badges` table first written here:
+  PADI 5★, PADI IDC, SSI, NAUI, TripAdvisor, Blue Star, Green Fins, DAN partner, Readers' Choice —
+  codes, so they arrive in every language and no logo is drawn that DiveDay has no right to show).
+  *Corrected 2026-09-02*: the wall renders in the catalogue's own order, not a shop-set one — the
+  form is nine checkboxes and its copy no longer promises an order it cannot take. `logo_url` and
+  `tagline` already exist, and `boats.description` joined them the same day: the storefront's boats
+  block is a name, a capacity and the shop's own sentence, or the first two alone.
 - **The derivation rule** (`src/lib/brand.ts`, pure): the brand colour is checked for 4.5:1 against
   the shop's ground and against white; if it fails as a button fill it is darkened until it passes
   and the storefront says nothing about it; hover is the colour darkened 12%; the tint is an 8% mix
@@ -96,7 +117,15 @@ overlay with a default, never a requirement.
   `--primary` — boat mode, glare mode, print — still out-specify both blocks, which is right; each
   is a deliberate override for a reader who asked for it.
 - **The display face** labels headings only — the shop's name, a section title, the trip's title.
-  Every fact (a time, a price, a seat count, a state, a control) stays in Geist and in ink.
+  Every fact (a time, a price, a seat count, a state, a control) stays in Geist and in ink. *As of
+  2026-09-02 that is every heading the diver meets*: the name in the header bar, the four storefront
+  sections, each boat's name, the trip's and the course's title (`ShopPageHeader`'s `titleFace`)
+  and the recap's greeting — the first cut had left three in Geist between two in the face. The same
+  pass gave the storefront its **about** line (`shops.description`, authored in Settings and until
+  then read only by the page's metadata), the courses shelf its two board facts (duration and the
+  next start), one credit line in the footer instead of two, and Settings a **preview** of the
+  brand as it reads by day and at night (`BrandPreview`), with the night adjustment reported beside
+  the day's.
 - **Where the brand may never go**: the waiver text, the payment step, any status, the manifest,
   roll call, cert check — those keep DiveDay's tokens whatever the shop chose.
 - **The embeds**: one loader, `/embed.js`, and one `data-diveday` element per widget. The catalogue:
@@ -111,6 +140,20 @@ overlay with a default, never a requirement.
   WordPress, Squarespace and Wix get their own instructions, not their own code. This amends
   [20260726-schedule-embed](20260726-schedule-embed.md), which rejected a script loader when the
   only embed was one iframe; a catalogue of eight is what a loader is for.
+  *Narrowed 2026-09-02, when the second review read the catalogue against this paragraph.* **Two
+  looks ship, not three**: inherit the host page, or DiveDay light. The app has no forced-scheme
+  mechanism — the night palette is a `prefers-color-scheme` block and `data-theme` appears nowhere
+  in `globals.css` — so a "DiveDay dark" widget would mean a second copy of the night tokens for one
+  frame; a widget follows the visitor's scheme like every other page. **"One course" and "a named
+  set" are not built**: the courses widget lists the catalogue, and a curated set is filed as a
+  follow-up rather than half-drawn. What the same pass *did* close: the lightbox's payment step
+  really does open the real page and says so (`?pay=due` lands the frame on a "Continue to payment"
+  door at the top level; Stripe's page refuses framing, and a redirect inside the frame was a blank
+  box), the button widget darkens a pale host colour in the loader itself (the one widget not
+  framed, so the server's rule never ran for it), the generator refuses a departure card with no
+  departure chosen, previews the look that was chosen, and can point a QR code at one boat; the
+  widget views are `noindex`; and a framed widget carries **one** credit line — the loader draws
+  the crawlable one on the host page and tells the frame (`credit=host`) to draw none.
 
 ### 3. The offer gains a hosted website, built to order
 

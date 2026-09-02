@@ -1,6 +1,8 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buttonClass } from "@/components/ui/button";
+import { listBoats } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { getShopBySlug } from "@/db/shops";
@@ -9,7 +11,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { requestTranslator } from "@/i18n/request";
 import { nowDate } from "@/lib/clock";
 import { isEmbedWidget } from "@/lib/embed-routes";
-import { formatDayParts, formatMoneyScanned, formatTime } from "@/lib/format";
+import { formatDayParts, formatMoneyScanned, formatTimeRange } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicCoursePath, publicSchedulePath, publicTripPath } from "@/lib/public-routes";
@@ -19,6 +21,12 @@ import { EmbedHeightReporter } from "./_components/EmbedHeightReporter";
 // The widget is only ever framed, so it paints inside its own shell like every
 // route (ADR 20260804-instant-navigation).
 export const instant = true;
+
+/**
+ * Three thin views of the shop's own content, each a fragment of a page a
+ * search engine already has: never indexed as pages of their own.
+ */
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 /**
  * **The embed catalogue's framed widgets** (Harbor — ADR
@@ -37,7 +45,7 @@ export default async function EmbedWidgetPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string; widget: string }>;
-  searchParams: Promise<{ show?: string | string[] }>;
+  searchParams: Promise<{ show?: string | string[]; credit?: string | string[] }>;
 }) {
   const { shopSlug, widget } = await params;
   if (!isEmbedWidget(widget)) notFound();
@@ -46,17 +54,23 @@ export default async function EmbedWidgetPage({
   if (!shop) notFound();
   const { t, locale } = await requestTranslator(shop.defaultLocale);
   const currency = toShopCurrency(shop.currency);
-  const { show } = await searchParams;
+  const { show, credit } = await searchParams;
   const showId = typeof show === "string" ? show : null;
+  // The loader draws the crawlable credit on the host page and says so; a
+  // frame hand-written without it keeps its own. One line per widget.
+  const hostCarriesCredit = credit === "host";
+  const boatName = new Map((await listBoats(db, shop.id)).map((boat) => [boat.id, boat.name]));
   const now = nowDate();
   const origin = publicAppUrl() ?? "";
   const tz = shop.timezone;
 
   const money = (cents: number | null) =>
     cents === null ? null : formatMoneyScanned(cents, currency, locale);
-  const when = (date: Date) => {
-    const parts = formatDayParts(date, locale, tz);
-    return `${parts.weekday} ${parts.day} ${parts.month} · ${formatTime(date, locale, tz)}`;
+  // The day and the time *range* — a diver reading a card on a blog post
+  // wants to know when they are back, not only when they leave.
+  const when = (startsAt: Date, endsAt: Date) => {
+    const parts = formatDayParts(startsAt, locale, tz);
+    return `${parts.weekday} ${parts.day} ${parts.month} · ${formatTimeRange(startsAt, endsAt, locale, tz)}`;
   };
   const seats = (trip: { capacity: number; booked: number }) => {
     const label = capacityLabel(trip);
@@ -73,8 +87,12 @@ export default async function EmbedWidgetPage({
     body = (
       <DepartureCard
         title={trip.title}
-        when={when(trip.startsAt)}
-        site={trip.diveSite?.name ?? null}
+        when={when(trip.startsAt, trip.endsAt)}
+        site={
+          [trip.diveSite?.name, trip.boatId ? boatName.get(trip.boatId) : null]
+            .filter(Boolean)
+            .join(" · ") || null
+        }
         price={money(trip.priceCents)}
         seats={seats(trip)}
         href={`${origin}${publicTripPath(shopSlug, trip.id)}#book`}
@@ -94,6 +112,11 @@ export default async function EmbedWidgetPage({
               <p className="font-brand-display font-semibold">{course.title}</p>
               {course.summary ? (
                 <p className="line-clamp-1 text-sm text-muted">{course.summary}</p>
+              ) : null}
+              {/* How long, in the shop's own words — the course index says it,
+                  and a list that dropped it was thinner than the page it stands for. */}
+              {course.durationText ? (
+                <p className="text-xs text-muted">{course.durationText}</p>
               ) : null}
             </div>
             <div className="flex shrink-0 items-center gap-3">
@@ -123,8 +146,12 @@ export default async function EmbedWidgetPage({
           <DepartureCard
             key={trip.id}
             title={trip.title}
-            when={when(trip.startsAt)}
-            site={trip.diveSite?.name ?? null}
+            when={when(trip.startsAt, trip.endsAt)}
+            site={
+              [trip.diveSite?.name, trip.boatId ? boatName.get(trip.boatId) : null]
+                .filter(Boolean)
+                .join(" · ") || null
+            }
             price={money(trip.priceCents)}
             seats={seats(trip)}
             href={`${origin}${publicTripPath(shopSlug, trip.id)}#book`}
@@ -159,15 +186,17 @@ export default async function EmbedWidgetPage({
   return (
     <main className="w-full p-3">
       {body}
-      <p className="mt-3 text-center text-xs text-muted">
-        <Link
-          href={`${origin}${publicSchedulePath(shopSlug)}`}
-          target="_top"
-          className="hover:underline"
-        >
-          {t("schedule.poweredByDiveDay")}
-        </Link>
-      </p>
+      {hostCarriesCredit ? null : (
+        <p className="mt-3 text-center text-xs text-muted">
+          <Link
+            href={`${origin}${publicSchedulePath(shopSlug)}`}
+            target="_top"
+            className="hover:underline"
+          >
+            {t("schedule.poweredByDiveDay")}
+          </Link>
+        </p>
+      )}
       <EmbedHeightReporter />
     </main>
   );

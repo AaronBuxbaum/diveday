@@ -195,8 +195,10 @@ async function GuideBody({
 
             <p className="mt-8 max-w-2xl leading-7 text-muted">{t(guide.coexist.bridgeNote)}</p>
 
-            <div className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-6">
-              <h3 className={SECTION_TITLE_CLASS}>{t(guide.coexist.replace.heading)}</h3>
+            <div className="mt-8 rounded-panel border border-primary/30 bg-primary/5 p-6">
+              <h3 className={`${SECTION_TITLE_CLASS} tracking-tight`}>
+                {t(guide.coexist.replace.heading)}
+              </h3>
               <p className="mt-2 leading-7 text-muted">{t(guide.coexist.replace.body)}</p>
               {/* The one forward link to /pricing on a switching guide, and it
                   belongs here rather than in the closing band. This page has
@@ -265,8 +267,10 @@ async function GuideBody({
               {t(guide.website.sitesNote, { sitesPrice: guide.website.sitesPrice })}
             </p>
 
-            <div className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-6">
-              <h3 className={SECTION_TITLE_CLASS}>{t(guide.website.offer.heading)}</h3>
+            <div className="mt-8 rounded-panel border border-primary/30 bg-primary/5 p-6">
+              <h3 className={`${SECTION_TITLE_CLASS} tracking-tight`}>
+                {t(guide.website.offer.heading)}
+              </h3>
               <p className="mt-2 leading-7 text-muted">{t(guide.website.offer.body)}</p>
               {/* The concierge's own door, reused word for word: one address
                   for the switch and the website, said the same way twice. */}

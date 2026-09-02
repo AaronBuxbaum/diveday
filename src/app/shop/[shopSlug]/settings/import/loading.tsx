@@ -11,7 +11,7 @@ export default function Loading() {
           <div className="h-5 w-44 rounded bg-surface-sunken" />
           <div className="mt-4 space-y-2">
             {["a", "b", "c", "d", "e", "f"].map((slot) => (
-              <div key={slot} className="h-12 rounded-xl bg-surface-sunken" />
+              <div key={slot} className="h-12 rounded-inset bg-surface-sunken" />
             ))}
           </div>
         </div>

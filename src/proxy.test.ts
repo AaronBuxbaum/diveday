@@ -88,6 +88,31 @@ describe("proxy embed handling", () => {
     expect(res.headers.get("X-Frame-Options")).toBe("DENY");
   });
 
+  it("treats a widget view as an embed by path alone, with no ?embed=1 to forget", async () => {
+    const res = await run(request("/s/blue-mantis/embed/grid"));
+    expect(res.headers.get(`x-middleware-request-${EMBED_REQUEST_HEADER}`)).toBe("1");
+    expect(res.headers.get("X-Frame-Options")).toBeNull();
+    expect(res.headers.get("Content-Security-Policy") ?? "").not.toContain("frame-ancestors");
+  });
+
+  it("forwards only a well-formed host colour and face, and drops anything else", async () => {
+    const good = await run(
+      request("/s/blue-mantis/embed/courses?brand=%23B45309&font=Georgia%2C%20serif"),
+    );
+    expect(good.headers.get("x-middleware-request-x-diveday-embed-brand")).toBe("#b45309");
+    expect(good.headers.get("x-middleware-request-x-diveday-embed-font")).toBe("Georgia, serif");
+    const hostile = await run(
+      request(
+        "/s/blue-mantis/embed/courses?brand=javascript%3Aalert(1)&font=%3C%2Fstyle%3E%3Cscript%3E",
+      ),
+    );
+    expect(hostile.headers.get("x-middleware-request-x-diveday-embed-brand")).toBe("");
+    expect(hostile.headers.get("x-middleware-request-x-diveday-embed-font")).toBe("");
+    // And never on the storefront itself, which is not an embed request.
+    const storefront = await run(request("/s/blue-mantis?brand=%23b45309"));
+    expect(storefront.headers.get("x-middleware-request-x-diveday-embed-brand")).toBe("");
+  });
+
   it("does not grant embed on a non-embeddable route, ?embed=1 or not", async () => {
     const res = await run(request("/shop/blue-mantis/divers?embed=1"));
     expect(res.headers.get(`x-middleware-request-${EMBED_REQUEST_HEADER}`)).toBe("");

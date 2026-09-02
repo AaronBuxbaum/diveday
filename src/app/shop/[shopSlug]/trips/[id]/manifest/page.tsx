@@ -804,7 +804,7 @@ export default async function TripManifestPage({
           {/* Push is an optional device capability. The empty guard keeps a
             browser without notification support from leaving a blank inset
             behind while the device settings below keep their place. */}
-          <div className="rounded-xl bg-surface-sunken/70 p-4 empty:hidden">
+          <div className="rounded-inset bg-surface-sunken/70 p-4 empty:hidden">
             <PushOptIn
               publicKey={webPushPublicKey()}
               subscribeAction={subscribePushAction.bind(null, tripId)}
@@ -843,7 +843,7 @@ export default async function TripManifestPage({
               className="h-full w-full justify-start"
             />
             <AmbientContrastControl
-              className="h-full w-full rounded-xl border border-border bg-surface-sunken p-3"
+              className="h-full w-full rounded-inset border border-border bg-surface-sunken p-3"
               copy={{
                 modeLabel: t("shared.boatMode.modeLabel"),
                 labelAuto: t("shared.boatMode.labelAuto"),

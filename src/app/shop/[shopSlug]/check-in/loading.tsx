@@ -19,7 +19,7 @@ export default function CheckInLoading() {
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton descriptionWidth="w-80 max-w-full" />
         {/* The departure chips: one sunken track. */}
-        <div className="mt-6 h-13 w-full max-w-md rounded-2xl bg-surface-sunken" />
+        <div className="mt-6 h-13 w-full max-w-md rounded-inset bg-surface-sunken" />
         <div className="mt-6">
           <div className="h-6 w-64 max-w-full rounded bg-surface-sunken" />
           <div className="mt-1.5 h-4 w-48 rounded bg-surface-sunken" />

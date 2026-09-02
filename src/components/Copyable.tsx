@@ -115,7 +115,7 @@ export function Copyable({
   if (layout === "inline") return <span className={className}>{button}</span>;
 
   return (
-    <div className={`rounded-xl bg-surface-sunken p-3 ${className ?? ""}`}>
+    <div className={`rounded-inset bg-surface-sunken p-3 ${className ?? ""}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         {label ? <p className="text-sm font-medium text-foreground">{label}</p> : null}
         {button}

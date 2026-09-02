@@ -169,7 +169,7 @@ export default async function PublicCoursesPage({
                   <li key={course.id}>
                     <Link
                       href={publicCoursePath(shopSlug, course.slug)}
-                      className="group -mx-3 flex gap-4 rounded-2xl px-3 py-5 transition-colors hover:bg-surface-sunken"
+                      className="group -mx-3 flex gap-4 rounded-lg px-3 py-5 transition-colors hover:bg-surface-sunken"
                     >
                       {/* The course's own face, decorative (`alt=""` — the
                           title beside it names the course). A course with no
@@ -180,11 +180,11 @@ export default async function PublicCoursesPage({
                         <StoredPhoto
                           src={course.heroImageUrl}
                           alt=""
-                          className="size-16 shrink-0 rounded-xl"
+                          className="size-16 shrink-0 rounded-inset"
                           sizes="64px"
                         />
                       ) : (
-                        <CourseWavePlaceholder className="size-16 shrink-0 rounded-xl" />
+                        <CourseWavePlaceholder className="size-16 shrink-0 rounded-inset" />
                       )}
                       <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
                         <div className="min-w-0">

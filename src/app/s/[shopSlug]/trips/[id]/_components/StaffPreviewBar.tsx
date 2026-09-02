@@ -26,7 +26,7 @@ export function StaffPreviewBar({
   return (
     <div
       role="status"
-      className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface-sunken px-4 py-3"
+      className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-inset border border-border bg-surface-sunken px-4 py-3"
     >
       <p className="text-sm font-medium">
         <span aria-hidden="true">👁 </span>

@@ -297,7 +297,7 @@ export function RowLink({
     <Link
       href={href}
       onClick={onClick}
-      className={`${tapTargetLinkClass} after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary ${className}`.trim()}
+      className={`${tapTargetLinkClass} after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-[-2px] focus-visible:after:outline-primary ${className}`.trim()}
     >
       {children}
     </Link>

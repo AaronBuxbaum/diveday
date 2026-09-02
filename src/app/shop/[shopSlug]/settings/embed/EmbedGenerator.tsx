@@ -20,6 +20,7 @@ import { SnippetField } from "./SnippetField";
 
 export type EmbedGeneratorCopy = {
   what: string;
+  showRequired: string;
   kinds: Record<EmbedKind, string>;
   kindHints: Record<EmbedKind, string>;
   shows: string;
@@ -69,12 +70,20 @@ export function EmbedGenerator({
   shopSlug,
   trips,
   locales,
+  previewHost,
   copy,
 }: {
   origin: string;
   shopSlug: string;
   trips: readonly { id: string; label: string }[];
   locales: readonly string[];
+  /**
+   * What the preview frame is told about "the host page" when the look is the
+   * site's: the shop's own storefront colour and face, since the generator has
+   * no host page to read. Until 2026-09-02 the preview was pinned to DiveDay's
+   * look whatever was chosen, so the default look was the one never shown.
+   */
+  previewHost: { brand: string | null; font: string | null };
   copy: EmbedGeneratorCopy;
 }) {
   const [kind, setKind] = useState<EmbedKind>("calendar");
@@ -87,10 +96,16 @@ export function EmbedGenerator({
   const ids = { kind: useId(), look: useId(), platform: useId() };
 
   const options = { look, lang, show: show || null };
-  const needsShow = kind === "departure" || kind === "lightbox" || kind === "button";
+  // The QR code can point at one boat too — the counter's code for tonight's
+  // night dive — so it takes the same choice as a button.
+  const needsShow =
+    kind === "departure" || kind === "lightbox" || kind === "button" || kind === "qr";
+  // A departure card with no departure chosen renders a not-found body, so the
+  // snippet waits for the choice rather than being pasted broken.
+  const showMissing = kind === "departure" && !show;
   const target = embedTargetUrl(origin, shopSlug, options);
   const snippet =
-    kind === "qr" || kind === "partner"
+    kind === "qr" || kind === "partner" || showMissing
       ? null
       : embedSnippet(origin, shopSlug, kind, options, { button: copy.buttonText });
   const partnerUrl = partnerLinkUrl(origin, shopSlug, partner || "partner");
@@ -145,13 +160,17 @@ export function EmbedGenerator({
             </fieldset>
 
             {needsShow ? (
-              <Field label={copy.shows}>
+              <Field label={copy.shows} error={showMissing ? copy.showRequired : undefined}>
                 <select
                   value={show}
                   onChange={(event) => setShow(event.target.value)}
                   className={controlClass}
+                  required={kind === "departure"}
+                  aria-invalid={showMissing || undefined}
                 >
-                  <option value="">{copy.showEverything}</option>
+                  <option value="">
+                    {kind === "departure" ? copy.showDeparture : copy.showEverything}
+                  </option>
                   {trips.map((trip) => (
                     <option key={trip.id} value={trip.id}>
                       {trip.label}
@@ -219,15 +238,18 @@ export function EmbedGenerator({
           <div>
             <p className="mb-2 text-sm font-medium">{copy.preview}</p>
             <div className="rounded-panel border border-border bg-surface-sunken p-3">
-              {FRAMED.has(kind) ? (
+              {FRAMED.has(kind) && showMissing ? (
+                <p className="py-8 text-center text-sm text-muted">{copy.showRequired}</p>
+              ) : FRAMED.has(kind) ? (
                 <iframe
-                  key={`${kind}-${show}-${lang}`}
+                  key={`${kind}-${show}-${lang}-${look}`}
                   title={copy.preview}
                   src={embedFrameUrl(
                     origin,
                     shopSlug,
                     kind as "calendar" | "grid" | "departure" | "courses",
-                    { ...DEFAULT_EMBED_OPTIONS, lang, show: show || null, look: "light" },
+                    { ...DEFAULT_EMBED_OPTIONS, lang, show: show || null, look },
+                    look === "site" ? previewHost : {},
                   )}
                   className="h-[480px] w-full rounded-lg border-0 bg-surface"
                 />
@@ -300,7 +322,7 @@ export function EmbedGenerator({
           <SnippetField
             label={copy.code}
             rows={3}
-            snippet={snippet ?? ""}
+            snippet={snippet ?? copy.showRequired}
             copyLabel={copy.copy}
             copiedLabel={copy.copied}
             failedLabel={copy.copyFailed}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Swell } from "@/components/illustration/Swell";
 
 /**
  * The water closes over finished work — Reef's first moment (ADR
@@ -87,29 +88,11 @@ export function StationSettles({
   return (
     <div className="mt-4">
       {swelling ? (
-        <svg
-          aria-hidden="true"
-          data-station-swell
-          viewBox="0 0 260 26"
-          preserveAspectRatio="none"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.7}
-          strokeLinecap="round"
-          strokeLinejoin="round"
+        <Swell
+          data-station-swell="true"
           onAnimationEnd={() => setSwelling(false)}
           className="swell-across h-[26px] w-full text-primary-hover"
-        >
-          <path
-            vectorEffect="non-scaling-stroke"
-            d="M0 14c26-11 52-11 78 0s52 11 78 0 52-11 78 0 22 6 26 4"
-          />
-          <path
-            vectorEffect="non-scaling-stroke"
-            d="M0 22c26-11 52-11 78 0s52 11 78 0 52-11 78 0 22 6 26 4"
-            opacity={0.4}
-          />
-        </svg>
+        />
       ) : null}
       <p
         role="status"

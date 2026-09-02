@@ -65,7 +65,7 @@ export function MergeDiver({
           {options.map((option, index) => (
             <label
               key={option.id}
-              className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-surface p-3 has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary/20"
+              className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface p-3 has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary/20"
             >
               <input
                 type="radio"

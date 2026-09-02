@@ -64,7 +64,7 @@ export function embedFrameUrl(
   shopSlug: string,
   kind: Extract<EmbedKind, "calendar" | EmbedWidget>,
   options: EmbedOptions = DEFAULT_EMBED_OPTIONS,
-  host: { brand?: string | null; font?: string | null } = {},
+  host: { brand?: string | null; font?: string | null; credit?: boolean } = {},
 ): string {
   const url = new URL(
     kind === "calendar"
@@ -79,6 +79,11 @@ export function embedFrameUrl(
     if (host.brand) url.searchParams.set("brand", host.brand);
     if (host.font) url.searchParams.set("font", host.font);
   }
+  // The loader always sets this: it draws the crawlable credit on the host
+  // page, and the frame — told so — draws none, so a widget carries one credit
+  // line rather than two. The generator's preview, which has no host page,
+  // leaves it off and the frame keeps its own.
+  if (host.credit) url.searchParams.set("credit", "host");
   return url.toString();
 }
 

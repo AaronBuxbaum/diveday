@@ -1402,6 +1402,13 @@ export const boats = pgTable(
       .references(() => shops.id),
     name: text("name").notNull(),
     capacity: integer("capacity").notNull(),
+    /**
+     * One line the shop says about the boat on its storefront (Harbor — ADR
+     * 20260901-diveday-reimagined, decision 2: the boats section is a name, a
+     * capacity and the shop's own sentence). Optional; a hull with none is
+     * listed by name and seats alone, never with DiveDay filler.
+     */
+    description: text("description"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /**
      * Deleting a hull stamps this and leaves the row (ADR

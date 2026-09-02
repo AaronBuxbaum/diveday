@@ -36,7 +36,7 @@ export function FirstBookableCard({
   return (
     <section
       aria-labelledby="first-bookable-heading"
-      className="mb-6 rounded-2xl border border-success/30 bg-success/5 p-5 sm:p-6"
+      className="mb-6 rounded-panel border border-success/30 bg-success/5 p-5 sm:p-6"
     >
       <h2 id="first-bookable-heading" className={SECTION_TITLE_CLASS}>
         {copy.heading}

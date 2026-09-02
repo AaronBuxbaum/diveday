@@ -121,7 +121,7 @@ export function TripDiveFields({
             <fieldset
               key={number}
               disabled={disabled}
-              className="rounded-xl border border-border bg-surface p-4"
+              className="rounded-inset border border-border bg-surface p-4"
             >
               <legend className="px-1 text-sm font-semibold text-primary">
                 {fill(copy.diveLegend, { number })}

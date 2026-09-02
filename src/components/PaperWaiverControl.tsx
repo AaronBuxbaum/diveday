@@ -95,7 +95,7 @@ export function PaperWaiverControl({
   return (
     <form
       action={action}
-      className={`${className} w-full max-w-md rounded-xl border border-border bg-surface-sunken p-4`}
+      className={`${className} w-full max-w-md rounded-inset border border-border bg-surface-sunken p-4`}
     >
       {bookingId ? <input type="hidden" name="bookingId" value={bookingId} /> : null}
       <label className="flex items-start gap-2.5 text-sm">

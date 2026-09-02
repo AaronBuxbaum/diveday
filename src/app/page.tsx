@@ -153,7 +153,7 @@ function HomeBodySkeleton() {
           {/* The captain's phone, and the card that overlaps its lower edge. */}
           <div className="mx-auto w-full max-w-sm lg:max-w-md">
             <div className="h-[30rem] rounded-[2.5rem] border border-border bg-surface" />
-            <div className="mx-auto -mt-5 w-[88%] rounded-xl border border-border bg-surface px-4 py-3">
+            <div className="mx-auto -mt-5 w-[88%] rounded-inset border border-border bg-surface px-4 py-3">
               <div className="h-3 w-24 rounded bg-surface-sunken" />
               <div className="mt-2 h-4 w-40 max-w-full rounded bg-surface-sunken" />
             </div>
@@ -341,7 +341,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
           <MarketingHeroMotion>
             <div className="mx-auto w-full max-w-sm lg:max-w-md">
               <CaptainPhoneFrame label={t("marketing.home.phoneFrameLabel")} locale={locale} />
-              <div className="relative z-10 mx-auto -mt-5 w-[88%] rounded-xl border border-border bg-surface px-4 py-3 shadow-lg">
+              <div className="relative z-10 mx-auto -mt-5 w-[88%] rounded-inset border border-border bg-surface px-4 py-3 shadow-lg">
                 <p className={groupLabelClass("primary")}>{t("marketing.home.dockEyebrow")}</p>
                 <p className="mt-1 text-sm font-medium">{t("marketing.home.dockDetail")}</p>
               </div>

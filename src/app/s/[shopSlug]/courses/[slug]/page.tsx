@@ -176,7 +176,7 @@ export default async function CoursePage({
       {course.isActive ? null : (
         <p
           role="status"
-          className="mb-6 rounded-xl border border-warning/25 bg-warning/10 px-4 py-3 text-sm font-medium"
+          className="mb-6 rounded-inset border border-warning/25 bg-warning/10 px-4 py-3 text-sm font-medium"
         >
           {t("course.hidden")}{" "}
           <Link

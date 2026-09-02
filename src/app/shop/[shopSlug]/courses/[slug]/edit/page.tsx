@@ -192,7 +192,7 @@ export default async function EditCoursePage({
 
       {noticeText ? <ShopNotice>{noticeText}</ShopNotice> : null}
       {templateUpdate ? (
-        <section className="mt-6 rounded-2xl border border-primary/30 bg-primary/5 p-4 sm:p-5">
+        <section className="mt-6 rounded-panel border border-primary/30 bg-primary/5 p-4 sm:p-5">
           <h2 className="text-base font-semibold">{t("courses.edit.templateUpdates.title")}</h2>
           <p className="mt-1 text-sm text-muted">
             {templateUpdate.baselineUnavailable

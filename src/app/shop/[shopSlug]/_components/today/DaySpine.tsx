@@ -6,14 +6,17 @@ import {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
+import { SiteMark } from "@/components/illustration/SiteMark";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { LedgerGroup, LedgerRow } from "@/components/ui/ledger";
+import { GroupLabel, LedgerGroup, LedgerRow } from "@/components/ui/ledger";
+import { StatusMark } from "@/components/ui/StatusMark";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DayCloseoutRecord } from "@/db/closeout";
 import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS, seasonalBriefingText } from "@/i18n/today-labels";
-import type { EveningClose } from "@/lib/closeout";
+import { DEPARTURE_BUFFER_MS, type EveningClose } from "@/lib/closeout";
 import { formatMoneyScanned, formatShortDate, formatTime } from "@/lib/format";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import {
@@ -139,6 +142,24 @@ function rowKey(action: TodayAction): string {
   return action.id;
 }
 
+/**
+ * A horizon's panel: the tideline, the panel radius, no bed (a sunken panel
+ * sits *in* the sand rather than on it), and the same inset padding on the
+ * summary row and the week row so the two doors align. From `sm` up only —
+ * on a phone the two horizons keep the row grammar they always had, one under
+ * the other, because a panel's own padding was what pushed "Tomorrow · Wed,
+ * Jul 22" onto two lines at 390px.
+ */
+const HORIZON_PANEL_CLASS = "sm:rounded-panel sm:bg-surface-sunken sm:px-5 sm:py-1";
+
+/** The status family's shape for each kind tone, and the ink it takes. */
+const ROW_GLYPH = { danger: "danger", warning: "warning", neutral: "pending" } as const;
+const ROW_GLYPH_INK = {
+  danger: "text-danger",
+  warning: "text-warning-strong",
+  neutral: "text-muted",
+} as const;
+
 function StationRow({ action, controls }: { action: TodayAction; controls: RowControls }) {
   const { t } = controls;
   const performs = Boolean(
@@ -220,6 +241,7 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
   // inline is deliberately not a door: the tap is the control beside it.
   const door = performs || !action.href ? {} : { href: action.href, linkLabel: action.actionLabel };
 
+  const tone = ACTION_KIND_META[action.kind].tone;
   return (
     <LedgerRow
       // Stacked below `sm`: the kind and the fix share the first line and the
@@ -227,9 +249,15 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
       // reading and the only one where a full sentence has room to be read.
       stacked
       className="-mx-2 px-2"
+      // The row's glyph — the first of the anatomy's four parts (glyph, one
+      // word of kind, one sentence, one fix), drawn from the shipped status
+      // family and never from the illustration hand: a status glyph is a
+      // status, and the ADR keeps drawings out of that job. The kind word
+      // beside it carries the meaning; the glyph is what a scan reads first.
+      leading={<StatusMark variant={ROW_GLYPH[tone]} size="md" className={ROW_GLYPH_INK[tone]} />}
       kind={{
         word: t(ACTION_KIND_KEYS[action.kind]),
-        tone: ACTION_KIND_META[action.kind].tone,
+        tone,
       }}
       trailing={control}
       {...door}
@@ -470,6 +498,26 @@ export function DaySpine({
   const boatsClearLine =
     !closedPanel && !allHomeLine && !firstBookingMark && todaysBoatsAreClear(spine);
   const closing = evening?.close.closing === true;
+  // The next boat out, carrying the standing one-hour late-arrival buffer:
+  // its site mark is the one on the spine that wears the coral detail.
+  const nextTripId =
+    entries
+      .flatMap((entry) => (entry.kind === "live" ? [entry.station] : []))
+      .find((station) => station.startsAt.getTime() + DEPARTURE_BUFFER_MS > now.getTime())
+      ?.tripId ?? null;
+  const nextStation = entries
+    .flatMap((entry) => (entry.kind === "live" ? [entry.station] : []))
+    .find((station) => station.tripId === nextTripId);
+  const firstThing = nextStation?.rows.find(
+    (row): row is TodayAction & { href: string } =>
+      ACTION_KIND_META[row.kind].tone === "danger" &&
+      typeof row.href === "string" &&
+      !row.waiver &&
+      !row.resend &&
+      !row.invite &&
+      !row.payment?.orderId &&
+      !row.helpRequest,
+  );
   const closingLeftoverIds = new Set(
     closing && evening ? evening.leftovers.map((leftover) => leftover.id) : [],
   );
@@ -501,8 +549,14 @@ export function DaySpine({
           })}
         </EarnedMomentLine>
       ) : boatsClearLine ? (
-        <EarnedMomentLine className="-mt-4">
-          {t("shared.today.todayQueue.boatsClear")}
+        // The morning's all-clear carries the green turtle — the one drawing
+        // an earned moment on a staff surface may hold (ADR
+        // 20260901-diveday-reimagined, decision 1: "one earned moment on a
+        // staff surface, once a day"). Drawn in the line, without its own coral
+        // detail: the panel it sits in is the surface's coral.
+        <EarnedMomentLine className="-mt-4 flex items-center gap-3">
+          <SiteMark mark="turtle" size="sm" ground="surface" coral={false} />
+          <span>{t("shared.today.todayQueue.boatsClear")}</span>
         </EarnedMomentLine>
       ) : null}
 
@@ -570,6 +624,41 @@ export function DaySpine({
 
       {sessions}
 
+      {/* **The one obvious next action** (H-62, made literal — the board's
+          "First thing" panel). The next boat out has its rows in severity
+          order already; when the first of them is danger-toned and is a door,
+          it is lifted above the spine as one panel: the glyph, the kind as
+          its label, the person, the sentence, the fix as the page's one
+          primary. It is a *repeat* of the row beneath, on purpose — the spine
+          is the record and this is the answer to "what first?", and a reader
+          who scrolls past it loses nothing. Rows that perform their fix
+          inline (a waiver send) stay where their control is. */}
+      {firstThing ? (
+        <section
+          aria-labelledby="first-thing-label"
+          className="flex flex-col gap-4 rounded-panel border border-danger/30 bg-surface p-5 shadow-bed sm:flex-row sm:items-center sm:gap-5 sm:px-6"
+        >
+          <span
+            aria-hidden="true"
+            className="grid size-12 shrink-0 place-items-center rounded-full bg-danger-tint text-danger"
+          >
+            <StatusMark variant="danger" size="lg" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <GroupLabel as="p" id="first-thing-label" tone="danger">
+              {t("shopHome.spine.firstThing", { kind: t(ACTION_KIND_KEYS[firstThing.kind]) })}
+            </GroupLabel>
+            <p className={`mt-1 ${SECTION_TITLE_CLASS} tracking-tight`}>
+              {firstThing.aboutDeparture ? firstThing.detail : firstThing.subject}
+            </p>
+            {firstThing.aboutDeparture ? null : <p className="text-muted">{firstThing.detail}</p>}
+          </div>
+          <Link href={firstThing.href} className={buttonClass({ className: "shrink-0" })}>
+            {firstThing.actionLabel}
+          </Link>
+        </section>
+      ) : null}
+
       {entries.length > 0 ? (
         <ol>
           {entries.map((entry) =>
@@ -587,6 +676,7 @@ export function DaySpine({
                 // amendment). `evening` is absent only when the page has no day
                 // to close over, which is also when there is no station here.
                 canOpenLog={evening?.canOpenLog ?? false}
+                next={entry.station.tripId === nextTripId}
                 t={t}
               >
                 <StationRows rows={entry.station.rows} controls={controls} />
@@ -684,14 +774,25 @@ export function DaySpine({
           app's one disclosure spelling (`LedgerGroup`'s `folded`); the week is
           a plain row pointing at the board, because a week is a board
           question. Neither links to a queue view — there is no longer one. */}
+      {/* Drawn as two tideline panels side by side from `sm` up (the board's
+          "Later, collapsed" row): sunken, no bed, at the panel radius, so the
+          two horizons read as one pair of doors rather than two more rows of
+          today's work. Tomorrow still expands in place — a `<details>` on the
+          `open:` variant takes both columns so its stations get the width —
+          and the week still points at the board, because a week is a board
+          question. */}
       {spine.tomorrow.stations.length > 0 || spine.week.jobs > 0 ? (
-        <div className="flex flex-col">
+        <div className="grid sm:grid-cols-2 sm:gap-5">
           {spine.tomorrow.stations.length > 0 ? (
             <LedgerGroup
               as="h2"
               folded
               summaryVariant="row"
-              className={spine.week.jobs > 0 ? "[&>summary]:border-t-0" : "[&>summary]:border-b"}
+              className={`${HORIZON_PANEL_CLASS} open:sm:col-span-2 sm:[&>summary]:border-0 sm:[&>summary]:rounded-panel [&>summary]:hover:bg-surface-sunken ${
+                spine.week.jobs > 0
+                  ? "max-sm:[&>summary]:border-t-0"
+                  : "max-sm:[&>summary]:border-b"
+              }`}
               label={t("shopHome.spine.tomorrow", {
                 date: tomorrowDate ? formatShortDate(tomorrowDate, locale, timeZone) : "",
               })}
@@ -713,10 +814,13 @@ export function DaySpine({
             </LedgerGroup>
           ) : null}
           {spine.week.jobs > 0 ? (
-            <ul>
+            <ul className={HORIZON_PANEL_CLASS}>
               <LedgerRow
                 size="lg"
-                className="-mx-2 px-2"
+                // The hairline goes transparent rather than to width zero:
+                // `border-t`'s width beats a `border-0` on emit order, and a
+                // colour beats a colour by name.
+                className="-mx-2 px-2 hover:bg-surface-sunken sm:mx-0 sm:rounded-panel sm:border-transparent sm:px-0 sm:last:border-transparent"
                 href={`/shop/${shopSlug}/schedule/board`}
                 linkLabel={t("shopHome.spine.openBoard")}
                 trailing={

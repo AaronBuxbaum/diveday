@@ -259,7 +259,7 @@ describe("LedgerRow", () => {
     // where it sits in a list to draw the group's bottom edge.
     const { container } = render(<LedgerRow as="div">Grace Mensah</LedgerRow>);
     const row = container.firstElementChild;
-    expect(row).toHaveClass("border-t", "border-border", "last:border-b", "min-h-12");
+    expect(row).toHaveClass("border-t", "border-border", "last:border-b", "min-h-13");
     expect(row?.className).not.toMatch(/rounded|shadow|bg-surface\b/);
   });
 
@@ -270,7 +270,7 @@ describe("LedgerRow", () => {
       </LedgerRow>,
     );
     expect(container.firstElementChild).toHaveClass("min-h-14");
-    expect(container.firstElementChild).not.toHaveClass("min-h-12");
+    expect(container.firstElementChild).not.toHaveClass("min-h-13");
   });
 
   it("names a kind as a word with tone in the ink, never as a pill", () => {
