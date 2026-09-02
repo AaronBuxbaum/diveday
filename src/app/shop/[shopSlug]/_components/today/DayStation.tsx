@@ -104,7 +104,7 @@ export function DayStation({
     station.crewReason !== "crew_none_assigned";
 
   return (
-    <li className="grid grid-cols-1 gap-y-2 sm:grid-cols-[96px_84px_1fr] sm:gap-y-0">
+    <li className="grid grid-cols-1 gap-y-2 sm:grid-cols-[96px_112px_1fr] sm:gap-y-0">
       <div className="sm:pt-1 sm:text-end">
         {/* A real `<time>`: the spine's whole claim is that these read in clock
             order, and a machine-readable instant is what lets anything but a

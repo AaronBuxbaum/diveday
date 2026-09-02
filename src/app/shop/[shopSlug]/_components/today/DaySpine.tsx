@@ -809,7 +809,10 @@ export function DaySpine({
             <ul className={HORIZON_PANEL_CLASS}>
               <LedgerRow
                 size="lg"
-                className="rounded-panel border-0 last:border-0 hover:bg-surface-sunken"
+                // The hairline goes transparent rather than to width zero:
+                // `border-t`'s width beats a `border-0` on emit order, and a
+                // colour beats a colour by name.
+                className="rounded-panel border-transparent last:border-transparent hover:bg-surface-sunken"
                 href={`/shop/${shopSlug}/schedule/board`}
                 linkLabel={t("shopHome.spine.openBoard")}
                 trailing={
