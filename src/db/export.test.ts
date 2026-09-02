@@ -246,6 +246,7 @@ const EXCLUDED_TABLES = [
   "calendar_feeds", // bearer credentials for a staff calendar subscription, never exported
   "last_minute_list_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "person_courtesy_email_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
+  "shop_contact_email_confirmation_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   // The shop's own Meta access token (sealed) plus the provider linkage around
   // it. Never exported, for both reasons already on this list: it is a live
   // credential like user_accounts, and a phone number id is provider linkage
@@ -289,6 +290,11 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // timezone (issue #712). A shop restoring from a backup *should* be asked
     // again, so carrying this over would be the wrong answer, not a loss.
     "units_confirmed_at",
+    // Proof that the shop controls its contact address, which is what lets it
+    // become the Reply-To on mail DiveDay sends (issue #1288). The proof is
+    // DiveDay's own, not a fact the shop entered: a restored shop is asked to
+    // confirm again, and a CSV cannot vouch for an address on its behalf.
+    "contact_email_confirmed_at",
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
   dive_packages: ["shop_id"],
