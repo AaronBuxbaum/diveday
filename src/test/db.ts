@@ -61,6 +61,38 @@ function templateBlob(variant: TemplateVariant, bytes: Uint8Array<ArrayBuffer>):
 }
 
 /**
+ * Say it, once per worker per variant.
+ *
+ * This fallback costs `initdb + migrate + seed` — about **8.5 seconds per
+ * test** against a hydration's ~0.7s (db-template.ts) — and until now it said
+ * nothing at all. A file that quietly takes that path does not fail; it runs
+ * twelve times slower, and the first thing anyone sees is a test tripping
+ * Vitest's 20-second ceiling with no clue why, on a run that was fine
+ * yesterday. Both known causes (a foreign config that skips global setup, and a
+ * snapshot a parallel invocation is rewriting) are one line of explanation
+ * away, and neither is guessable from a timeout.
+ *
+ * Once per worker per variant, not per test: a warning printed ~900 times is
+ * scrolled past like the silence it replaced.
+ */
+const globalForWarning = globalThis as typeof globalThis & {
+  divedayTestDbWarned?: Set<TemplateVariant>;
+};
+
+function warnAboutFullPrice(variant: TemplateVariant): void {
+  globalForWarning.divedayTestDbWarned ??= new Set();
+  if (globalForWarning.divedayTestDbWarned.has(variant)) return;
+  globalForWarning.divedayTestDbWarned.add(variant);
+  console.warn(
+    `seededTestDb: no usable "${variant}" template snapshot — seeding each test from scratch ` +
+      "(~8.5s per test instead of ~0.7s). Expect timeouts. Either Vitest's global setup did not " +
+      "run (a foreign config or a direct runner), or the snapshot under " +
+      "node_modules/.cache/diveday is missing, empty, or being rewritten by a parallel run. " +
+      "See src/test/db-template.ts.",
+  );
+}
+
+/**
  * Fresh in-memory PGlite database seeded with the demo dataset. Each call
  * hydrates its own isolated database from the snapshot built by the Vitest
  * global setup (see db-template.ts) — do not cache or share a single instance
@@ -72,8 +104,10 @@ export async function seededTestDb(options: { history?: boolean } = {}): Promise
   const variant: TemplateVariant = options.history ? "history" : "lean";
   const bytes = await templateBytes(variant);
   if (!bytes) {
-    // Global setup didn't run (foreign config / direct runner): pay full price,
-    // building the same dataset the missing snapshot would have held.
+    // Global setup didn't run (foreign config / direct runner), or the snapshot
+    // was unreadable: pay full price, building the same dataset the missing
+    // snapshot would have held.
+    warnAboutFullPrice(variant);
     const db = await createTestDb();
     await seedDemo(db, { history: variant === "history" });
     closeWhenTestFinishes(db.$client as PGlite);
