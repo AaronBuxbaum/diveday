@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * The auth gate on the seven `seed-*` test routes, one table for all of them
+ * The auth gate on the eight `seed-*` test routes, one table for all of them
  * (`reset` has its own colocated route.test.ts, which also covers its success
  * path). Every case here is a *refusal*: the shared guard
  * (`src/lib/e2e-test-routes.ts`) must close these routes before they touch the
@@ -29,6 +29,7 @@ const seedCourtesyEmail = await import("./seed-courtesy-email-unsubscribe-token/
 const seedTroubleStates = await import("./seed-trouble-states/route");
 const seedPrivateShop = await import("./seed-private-shop/route");
 const seedEvening = await import("./seed-evening/route");
+const seedChangedDiveSite = await import("./seed-changed-dive-site/route");
 
 const secret = "e2e-test-secret";
 
@@ -90,6 +91,19 @@ const routes: SeedRoute[] = [
     // proves the guard let it through. This one rewrites the departure times
     // of a whole shop day, so a route that answered on a misconfigured
     // deployment would be moving a real shop's boats.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
+    slug: "seed-changed-dive-site",
+    POST: seedChangedDiveSite.POST,
+    // Same shape as the three above: no body, so reaching the database is what
+    // proves the guard let it through. This one writes an `executed_dives` row
+    // — a record of a dive that was performed — so a route that answered on a
+    // misconfigured deployment would be putting a fabricated dive into a real
+    // shop's log, which is the table `buildIncidentExport` reads for an
+    // investigator.
     expectPastTheGuard: async () => {
       expect(getDb).toHaveBeenCalled();
     },

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import type { Browser, Page } from "@playwright/test";
+import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/AfterState";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
 import {
@@ -1890,6 +1891,39 @@ for (const scheme of ["light", "dark"] as const) {
         // it is what proves the whole run of doors is in the frame.
         await page.getByText("Tip your crew", { exact: true }).waitFor();
         await capture(page, "recap", scheme);
+      });
+
+      /**
+       * **The day that went somewhere else** (issue #1191, D31).
+       *
+       * The recap above is the ordinary shape: a plan, and no record
+       * disagreeing with it. This is the other branch — a divemaster wrote
+       * dive one down at a different site, so the record card names where the
+       * boat went and keeps the plan beneath it under "Planned".
+       *
+       * Seeded through a test route rather than into blue-mantis, for the
+       * reason AGENTS.md gives for the trouble states: a demo shop whose every
+       * recap says the boat went elsewhere is a worse demo, and the branch
+       * worth a baseline is the rare one. Mutating is safe — each worker owns
+       * its database and resets before every test.
+       */
+      test(`a recap whose record left the plan renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const seeded = await request.post("/api/test/seed-changed-dive-site");
+        expect(seeded.ok(), await seeded.text()).toBe(true);
+        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+        await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
+        // The "Planned" row is the whole subject: waiting on it is what proves
+        // the comparison fired rather than photographing the calm variant
+        // twice.
+        await page
+          .getByTestId(AFTER_STATE_TEST_IDS.plannedSites)
+          .filter({ visible: true })
+          .waitFor();
+        await capture(page, "recap-record-left-plan", scheme);
       });
 
       /**
