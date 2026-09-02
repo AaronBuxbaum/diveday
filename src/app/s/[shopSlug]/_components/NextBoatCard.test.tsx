@@ -79,12 +79,15 @@ describe("what the card says", () => {
 });
 
 describe("elevation is earned", () => {
-  it("is flat and rounded-2xl — the rounded-3xl tinted hero it replaced is gone", () => {
+  it("sits on the panel's bed at the panel radius — the rounded-3xl tinted hero it replaced is gone", () => {
     const { container } = render(card());
     const panel = container.firstElementChild as HTMLElement;
 
-    expect(panel.className).toContain("rounded-2xl");
+    // The same object as every other panel (ADR 20260901-diveday-reimagined,
+    // 13a): Reef's radius and the warm bed, never an ad-hoc lift of its own.
+    expect(panel.className).toContain("rounded-panel");
+    expect(panel.className).toContain("shadow-bed");
     expect(panel.className).not.toContain("rounded-3xl");
-    expect(panel.className).not.toContain("shadow");
+    expect(panel.className).not.toMatch(/\bshadow-(sm|md|lg|xl|2xl)\b/);
   });
 });

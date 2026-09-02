@@ -206,6 +206,9 @@ function serialize(directives: (readonly [string, readonly string[]] | [string])
  * thing the ADR's "worse than no CSP" warning is about, and it must produce a
  * `security.csp_violation` line the same way.
  */
+const GOOGLE_FONTS_STYLESHEET_HOST = "https://fonts.googleapis.com";
+const GOOGLE_FONTS_FILE_HOST = "https://fonts.gstatic.com";
+
 export function enforcedPolicy(options: CspOptions): string {
   return serialize([
     ["object-src", ["'none'"]],
@@ -241,11 +244,14 @@ export function reportOnlyPolicy(options: CspOptions): string {
     // Next inlines the critical CSS it extracts, and the app sets CSS custom
     // properties through `style=` in several places (the schedule board's
     // stagger delays, the route editor's overlay geometry).
-    ["style-src", ["'self'", "'unsafe-inline'"]],
+    // A shop's chosen headline face loads from Google Fonts on its own
+    // storefront (Harbor, ADR 20260901-diveday-reimagined): the stylesheet host
+    // here, the font-file host under font-src, and nothing else of theirs.
+    ["style-src", ["'self'", "'unsafe-inline'", GOOGLE_FONTS_STYLESHEET_HOST]],
     // `data:` for the inlined placeholders `next/image` emits, `blob:` for the
     // offline manifest's own cached photos.
     ["img-src", ["'self'", "data:", "blob:", ...MEDIA_IMAGE_HOSTS]],
-    ["font-src", ["'self'"]],
+    ["font-src", ["'self'", GOOGLE_FONTS_FILE_HOST]],
     [
       "connect-src",
       [

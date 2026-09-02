@@ -342,7 +342,7 @@ export function ShopNavLinks({
            * saying how, so which half held Reports and which held Promo codes was
            * a memory test.
            */}
-          <div className="absolute right-0 z-20 mt-2 flex w-[min(15rem,calc(100vw-2rem))] flex-col rounded-2xl border border-border bg-surface p-2 shadow-xl">
+          <div className="absolute right-0 z-20 mt-2 flex w-[min(15rem,calc(100vw-2rem))] flex-col rounded-panel border border-border bg-surface p-2 shadow-xl">
             <MoreGroups
               daily={daily}
               setup={setup}

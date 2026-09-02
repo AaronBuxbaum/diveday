@@ -72,7 +72,7 @@ export function DiveSiteMap({ site, t }: { site: DiveSiteRouteMap; t: DiverTrans
   const markerStroke = 1.1 / zoom;
 
   return (
-    <figure className="overflow-hidden rounded-2xl border border-border bg-surface-sunken">
+    <figure className="overflow-hidden rounded-panel border border-border bg-surface-sunken">
       <div className="relative h-[calc(16rem+4rem)] overflow-hidden sm:h-[calc(20rem+4rem)]">
         <div
           className="absolute inset-0 origin-top-left"

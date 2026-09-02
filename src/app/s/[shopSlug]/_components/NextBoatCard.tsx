@@ -22,7 +22,7 @@ import type { DiverTranslator } from "@/i18n/messages";
  *   the page's *subject* instead, so the answer is to keep the week honest
  *   rather than to withhold the shopfront's lead.
  *
- * Flat at rest, `rounded-2xl` from `SectionCard` — the `rounded-3xl`
+ * On the panel's bed, `rounded-panel` from `SectionCard` — the `rounded-3xl`
  * `border-primary/25 bg-primary/5 shadow-sm` panel this replaces was one of the
  * two one-off radii decision 1 retired.
  */

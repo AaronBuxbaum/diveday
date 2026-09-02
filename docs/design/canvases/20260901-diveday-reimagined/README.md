@@ -1,6 +1,6 @@
 # DiveDay, reimagined — three directions, and a second page
 
-- **Status:** Live (its ADR is Proposed — the pick is pending)
+- **Status:** Live (its ADR is Accepted — H-64, 2026-09-01; slices 13a–13j open)
 - **Date:** 2026-09-01
 - **ADR:** [20260901-diveday-reimagined](../../../architecture/decisions/20260901-diveday-reimagined.md)
 - **Published:** https://claude.ai/code/artifact/b4b4c1a1-987d-4d98-b754-5beea4814108
@@ -95,13 +95,26 @@ The boards are arguments, not the funnel. Two things the pick corrects rather th
 
 ## Slices
 
-The pick comes first; the implementation slices are written into this table when the ADR moves to
-Accepted, tokens first so every surface moves together.
+The pick was made 2026-09-01 (H-64): Reef for the staff app with Geist kept, Harbor for every
+diver-facing surface, the embed catalogue as drawn. The ADR's slice table is the sequence; this table
+is the record of what has landed. **Two things on the boards are not what ships**: Fraunces (the
+owner kept Geist as the only face, so every display moment is Geist at weight and size), and the
+door order on Tide's and Reef's switching boards (the demo leads).
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
-| 1 — the pick: one direction chosen, the ADR Accepted with its decisions | open | — | — |
-| 2 — the second pick: whether the diver-facing surfaces go Harbor, and which embeds ship first | open | — | — |
+| 1 — the pick: Reef for the staff app, Geist kept; the ADR Accepted | shipped | `docs/architecture/decisions/20260901-diveday-reimagined.md` | H-64 in `docs/product/human-decisions.md` |
+| 2 — the second pick: the diver-facing surfaces go Harbor; the embed catalogue approved | shipped | `docs/architecture/decisions/20260901-diveday-reimagined.md` | H-64 in `docs/product/human-decisions.md` |
+| 13a — Reef's tokens for the staff app | shipped | `src/components/ui/card.tsx` | `src/components/ui/card.test.tsx` |
+| 13b — the shop's brand: schema, `brand.ts`, the Settings Brand group | shipped | `src/lib/brand.ts` | `src/lib/brand.test.ts` |
+| 13c — Harbor's storefront | shipped | `src/components/BrandStyle.tsx` | `src/components/BrandStyle.test.tsx` |
+| 13d — the embed catalogue and the generator | shipped | `src/lib/embed-snippets.ts` | `src/lib/embed-snippets.test.ts` |
+| 13e — the offer on the marketing pages | open | — | — |
+| 13f — the drawn site mark | open | — | — |
+| 13g — the water closes over finished work | open | — | — |
+| 13h — the count that fills | open | — | — |
+| 13i — the diver's day, drawn | open | — | — |
+| 13j — the night palette | open | — | — |
 
 ## Working on it
 

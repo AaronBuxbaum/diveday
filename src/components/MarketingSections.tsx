@@ -44,7 +44,7 @@ export function MarketingMockup({
     <div
       role="img"
       aria-label={label}
-      className={`overflow-hidden rounded-2xl border border-border bg-surface text-left ${className}`}
+      className={`overflow-hidden rounded-panel border border-border bg-surface shadow-bed text-left ${className}`}
     >
       {children}
     </div>

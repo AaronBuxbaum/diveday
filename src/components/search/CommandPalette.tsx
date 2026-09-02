@@ -567,7 +567,7 @@ export function CommandPalette({
                 aria-modal="true"
                 aria-label={copy.dialogAriaLabel}
                 tabIndex={-1}
-                className={`w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl outline-none ${closing ? "animate-scale-out" : "animate-scale-in"}`}
+                className={`w-full max-w-xl overflow-hidden rounded-panel border border-border bg-surface shadow-2xl outline-none ${closing ? "animate-scale-out" : "animate-scale-in"}`}
               >
                 {/* Counts, not the full result list — a screen reader user
                     typing a query hears how many matches landed in each

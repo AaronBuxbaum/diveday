@@ -1,4 +1,5 @@
 import { and, eq, exists, gt, isNull, or, sql } from "drizzle-orm";
+import type { BrandBadgeCode, BrandDisplayFontCode } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
 import type { ConservationCommitmentCode } from "@/lib/conservation-commitments";
 import type { DepthUnit } from "@/lib/depth-units";
@@ -482,6 +483,13 @@ export async function setShopProfile(
     tagline?: string | null;
     description?: string | null;
     logoUrl?: string | null;
+    /** Harbor's brand fields (ADR 20260901-diveday-reimagined, decision 2). */
+    brandColor?: string | null;
+    brandDisplayFont?: BrandDisplayFontCode | null;
+    brandHeroImageUrl?: string | null;
+    brandHeroImageAlt?: string | null;
+    establishedYear?: number | null;
+    brandBadges?: BrandBadgeCode[];
   },
 ) {
   const clean = (value: string | null | undefined) => value?.trim() || null;
@@ -491,6 +499,20 @@ export async function setShopProfile(
       ...(profile.tagline !== undefined ? { tagline: clean(profile.tagline) } : {}),
       ...(profile.description !== undefined ? { description: clean(profile.description) } : {}),
       ...(profile.logoUrl !== undefined ? { logoUrl: clean(profile.logoUrl) } : {}),
+      ...(profile.brandColor !== undefined ? { brandColor: clean(profile.brandColor) } : {}),
+      ...(profile.brandDisplayFont !== undefined
+        ? { brandDisplayFont: profile.brandDisplayFont }
+        : {}),
+      ...(profile.brandHeroImageUrl !== undefined
+        ? { brandHeroImageUrl: clean(profile.brandHeroImageUrl) }
+        : {}),
+      ...(profile.brandHeroImageAlt !== undefined
+        ? { brandHeroImageAlt: clean(profile.brandHeroImageAlt) }
+        : {}),
+      ...(profile.establishedYear !== undefined
+        ? { establishedYear: profile.establishedYear }
+        : {}),
+      ...(profile.brandBadges !== undefined ? { brandBadges: profile.brandBadges } : {}),
     })
     .where(eq(shops.id, shopId))
     .returning();

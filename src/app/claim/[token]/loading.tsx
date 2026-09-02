@@ -11,8 +11,8 @@ export default function ClaimLoading() {
       <div className="animate-pulse">
         <div className="h-4 w-32 rounded bg-surface-sunken" />
         <div className="mt-2 h-9 w-72 max-w-full rounded bg-surface-sunken" />
-        <div className="mt-6 h-28 rounded-2xl border border-border bg-surface" />
-        <div className="mt-6 h-64 rounded-2xl border border-border bg-surface" />
+        <div className="mt-6 h-28 rounded-panel border border-border bg-surface shadow-bed" />
+        <div className="mt-6 h-64 rounded-panel border border-border bg-surface shadow-bed" />
       </div>
     </main>
   );

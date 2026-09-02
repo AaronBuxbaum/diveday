@@ -1,4 +1,5 @@
 import { cookies, headers } from "next/headers";
+import { EMBED_LOCALE_HEADER } from "@/lib/embed-routes";
 import { type LanguageFallback, languageEndonym, languageNameIn } from "./language-labels";
 import { LOCALE_COOKIE } from "./locale-cookie";
 import { diverTranslator } from "./messages";
@@ -48,7 +49,14 @@ async function chosenLocale(): Promise<DiverLocale | null> {
 export async function requestLocale(shopDefaultLocale?: string | null): Promise<DiverLocale> {
   const chosen = await chosenLocale();
   if (chosen) return chosen;
-  const header = (await headers()).get("accept-language");
+  const requestHeaders = await headers();
+  // An embed the shop fixed to one language (Harbor's generator, "Language")
+  // is that language: the widget sits on a page already in it, and the
+  // visitor's cookie cannot reach a third-party frame anyway. Only a locale
+  // DiveDay speaks; anything else falls through to the usual order.
+  const fixed = requestHeaders.get(EMBED_LOCALE_HEADER);
+  if (isDiverLocale(fixed)) return fixed;
+  const header = requestHeaders.get("accept-language");
   return negotiateLocale(header, shopDefaultLocale);
 }
 

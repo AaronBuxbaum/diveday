@@ -41,6 +41,23 @@ export const medicalJurisdiction = pgEnum("medical_jurisdiction", ["rstc", "uk"]
 export const depthUnit = pgEnum("depth_unit", ["meters", "feet"]);
 
 /**
+ * The six display faces a shop may choose for its storefront's headings
+ * (ADR 20260901-diveday-reimagined, decision 2 — Harbor). A closed list rather
+ * than free text because the storefront has to be able to *load* the face, and
+ * because a face is a claim about the shop's brand that has to arrive intact in
+ * every language. The words for each live in `src/lib/brand.ts`, which owns the
+ * Google family and fallback stack per code; null means the shop wears Geist.
+ */
+export const brandDisplayFont = pgEnum("brand_display_font", [
+  "bricolage_grotesque",
+  "outfit",
+  "sora",
+  "playfair_display",
+  "archivo_black",
+  "lora",
+]);
+
+/**
  * How a shop reads water temperature. Storage stays Celsius either way
  * (src/lib/temperature-units.ts).
  */
@@ -284,12 +301,47 @@ export const shops = pgTable(
     tagline: text("tagline"),
     description: text("description"),
     logoUrl: text("logo_url"),
+    /**
+     * Harbor (ADR 20260901-diveday-reimagined, decision 2): the shop's own
+     * brand, worn by every diver-facing surface and every embed. Each is
+     * optional, and a shop that has set none sees the storefront in DiveDay's
+     * own tokens — the brand is an overlay with a default, never a requirement.
+     * `brand_color` is one `#rrggbb`; `src/lib/brand.ts` derives hover, tint
+     * and ink-on-brand from it and checks contrast, so nothing else is stored.
+     */
+    brandColor: text("brand_color"),
+    brandDisplayFont: brandDisplayFont("brand_display_font"),
+    brandHeroImageUrl: text("brand_hero_image_url"),
+    /** Real alt text, staff-authored, for the hero photograph. */
+    brandHeroImageAlt: text("brand_hero_image_alt"),
+    /** The year the shop opened, for "Since 1998" on the badge wall. */
+    establishedYear: integer("established_year"),
+    /**
+     * The badge wall: coded affiliations the shop chooses to show, in the
+     * order it chose them — `BRAND_BADGE_CODES` in `src/lib/brand.ts`. Codes,
+     * never words or logos: a code arrives in every language, and DiveDay
+     * draws a text badge rather than a mark it has no right to show. The same
+     * shape as `conservation_commitments`, and like it these are shop claims.
+     */
+    brandBadges: jsonb("brand_badges").$type<string[]>().notNull().default([]),
     latitude: doublePrecision("latitude"),
     longitude: doublePrecision("longitude"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     check("shops_dock_call_minutes_nonnegative", sql`${table.dockCallMinutes} >= 0`),
+    // A year a shop could plausibly have opened in. Bounded at both ends like
+    // every other numeric setting, so no caller can persist a figure the
+    // storefront would print as nonsense.
+    check(
+      "shops_established_year_plausible",
+      sql`${table.establishedYear} IS NULL OR (${table.establishedYear} >= 1900 AND ${table.establishedYear} <= 2100)`,
+    ),
+    // `#rrggbb`, lowercase, or nothing — the one shape `src/lib/brand.ts` parses.
+    check(
+      "shops_brand_color_hex",
+      sql`${table.brandColor} IS NULL OR ${table.brandColor} ~ '^#[0-9a-f]{6}$'`,
+    ),
     check("shops_gear_setup_minutes_nonnegative", sql`${table.gearSetupMinutes} >= 0`),
     check("shops_briefing_minutes_nonnegative", sql`${table.briefingMinutes} >= 0`),
     check("shops_boat_ride_minutes_nonnegative", sql`${table.boatRideMinutes} >= 0`),
@@ -6640,6 +6692,7 @@ export const mediaDeletionKind = pgEnum("media_deletion_kind", [
   "dive_site_photo",
   "shop_logo",
   "arrival_photo",
+  "shop_hero",
 ]);
 
 export const mediaDeletionStatus = pgEnum("media_deletion_status", [

@@ -50,6 +50,7 @@ import {
   isLookupWorthy,
   toFilterCountry,
 } from "@/lib/address-lookup";
+import { isBrandDisplayFontCode, parseBrandBadges, parseBrandColor } from "@/lib/brand";
 import { parseConservationCommitments } from "@/lib/conservation-commitments";
 import { validateDivePackage } from "@/lib/dive-packages";
 import {
@@ -81,7 +82,7 @@ import {
 import { parseSendWindow } from "@/lib/send-window";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
-import { storeShopLogoImage } from "@/lib/storage";
+import { storeShopHeroImage, storeShopLogoImage } from "@/lib/storage";
 import { timeZoneAnchor } from "@/lib/timezones";
 import { uuidParam } from "@/lib/uuid";
 
@@ -610,10 +611,22 @@ export async function saveAddressAction(formData: FormData): Promise<{ ok: true 
 const profileSchema = z.object({
   tagline: z.string().trim().max(120),
   description: z.string().trim().max(1000),
+  brandHeroImageAlt: z.string().trim().max(200),
+  // Blank is "not set"; a year outside the schema's check is refused here so
+  // the form gets a notice rather than the database a 23514.
+  establishedYear: z
+    .string()
+    .trim()
+    .transform((value) => (value === "" ? null : Number(value)))
+    .pipe(z.number().int().min(1900).max(2100).nullable()),
 });
 
 /**
- * Shop profile & branding — tagline, about/description, and brand logo.
+ * Shop profile & branding — tagline, about/description, the logo, and the
+ * brand the storefront wears (Harbor, ADR 20260901-diveday-reimagined,
+ * decision 2): colour, display face, hero photograph, badges, opening year.
+ * The colour is stored as typed and checked at render; only its shape is
+ * refused here.
  */
 export async function saveProfileAction(formData: FormData) {
   const session = await requireStaffSession();
@@ -623,8 +636,15 @@ export async function saveProfileAction(formData: FormData) {
   const parsed = profileSchema.safeParse({
     tagline: String(formData.get("tagline") ?? "").trim(),
     description: String(formData.get("description") ?? "").trim(),
+    brandHeroImageAlt: String(formData.get("brandHeroImageAlt") ?? "").trim(),
+    establishedYear: String(formData.get("establishedYear") ?? ""),
   });
   if (!parsed.success) redirect(noticeUrl(settings, "profile-invalid", { saved: "profile" }));
+  const brandColor = parseBrandColor(formData.get("brandColor"));
+  if (!brandColor.valid) redirect(noticeUrl(settings, "profile-invalid", { saved: "profile" }));
+  const fontInput = String(formData.get("brandDisplayFont") ?? "");
+  const brandDisplayFont = isBrandDisplayFontCode(fontInput) ? fontInput : null;
+  const brandBadges = parseBrandBadges(formData.getAll("badge"));
 
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
@@ -650,10 +670,34 @@ export async function saveProfileAction(formData: FormData) {
     }
   }
 
+  const heroFile = formData.get("brandHeroFile");
+  const removeHero = formData.get("removeHero") === "true";
+  let brandHeroImageUrl: string | null | undefined;
+  if (removeHero) {
+    brandHeroImageUrl = null;
+  } else if (heroFile instanceof File && heroFile.size > 0) {
+    const stored = await storeShopHeroImage({
+      filename: heroFile.name,
+      contentType: heroFile.type,
+      bytes: await heroFile.arrayBuffer(),
+    });
+    if (stored.status === "stored") {
+      brandHeroImageUrl = stored.url;
+    } else {
+      redirect(noticeUrl(settings, "profile-invalid", { saved: "profile" }));
+    }
+  }
+
   await setShopProfile(db, session.user.shopId, {
     tagline: parsed.data.tagline,
     description: parsed.data.description,
     ...(logoUrl !== undefined ? { logoUrl } : {}),
+    brandColor: brandColor.value,
+    brandDisplayFont,
+    brandHeroImageAlt: parsed.data.brandHeroImageAlt,
+    establishedYear: parsed.data.establishedYear,
+    brandBadges,
+    ...(brandHeroImageUrl !== undefined ? { brandHeroImageUrl } : {}),
   });
 
   if (logoUrl !== undefined && shop.logoUrl && shop.logoUrl !== logoUrl) {
@@ -661,6 +705,17 @@ export async function saveProfileAction(formData: FormData) {
       shopId: session.user.shopId,
       kind: "shop_logo",
       url: shop.logoUrl,
+    });
+  }
+  if (
+    brandHeroImageUrl !== undefined &&
+    shop.brandHeroImageUrl &&
+    shop.brandHeroImageUrl !== brandHeroImageUrl
+  ) {
+    await queueAndAttemptMediaDeletion(db, {
+      shopId: session.user.shopId,
+      kind: "shop_hero",
+      url: shop.brandHeroImageUrl,
     });
   }
 

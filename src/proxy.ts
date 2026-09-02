@@ -10,8 +10,15 @@ import {
   reportOnlyPolicy,
 } from "@/lib/content-security-policy";
 import {
+  EMBED_BRAND_HEADER,
+  EMBED_FONT_HEADER,
+  EMBED_LOCALE_HEADER,
   EMBED_REQUEST_HEADER,
   isEmbeddableShopRoute,
+  isEmbedWidgetRoute,
+  isUnknownEmbedWidgetRoute,
+  parseEmbedBrandParam,
+  parseEmbedFontParam,
   REQUEST_PATH_HEADER,
 } from "@/lib/embed-routes";
 
@@ -192,11 +199,34 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // (`!== "1"`, so the page renders its full non-embed chrome) — a page
   // framable by whoever crafted that URL. `getAll()` and requiring
   // exactly one value keeps this in lockstep with how the page reads it.
+  // An embed path naming no widget is a 404 here, not in the page: the
+  // static shell would already have answered 200 (see isUnknownEmbedWidgetRoute).
+  // With a body: Chromium treats a bodiless error status as a failed
+  // navigation (ERR_HTTP_RESPONSE_CODE_FAILURE) rather than a 404 page.
+  if (isUnknownEmbedWidgetRoute(req.nextUrl.pathname)) {
+    return new NextResponse("Not found", {
+      status: 404,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    });
+  }
   const embedParams = req.nextUrl.searchParams.getAll("embed");
+  // A widget view is an embed by path; the schedule and trip pages are embeds
+  // only with exactly one `?embed=1` (see the note above).
   const isEmbedRequest =
-    isEmbeddableShopRoute(req.nextUrl.pathname) &&
-    embedParams.length === 1 &&
-    embedParams[0] === "1";
+    isEmbedWidgetRoute(req.nextUrl.pathname) ||
+    (isEmbeddableShopRoute(req.nextUrl.pathname) &&
+      embedParams.length === 1 &&
+      embedParams[0] === "1");
+  // What the host page told the loader about itself (Harbor's "inherit the
+  // host page"), validated here and forwarded as headers. Only on an embed
+  // request: a visitor on the storefront itself cannot recolour it by URL.
+  const embedBrand = isEmbedRequest
+    ? parseEmbedBrandParam(req.nextUrl.searchParams.get("brand"))
+    : null;
+  const embedFont = isEmbedRequest
+    ? parseEmbedFontParam(req.nextUrl.searchParams.get("font"))
+    : null;
+  const embedLocale = isEmbedRequest ? (req.nextUrl.searchParams.get("lang") ?? "") : "";
 
   // getSessionCookie/getCookieCache are pure reads — unlike next-auth's edge
   // middleware, nothing here ever issues a Set-Cookie, so there is no longer
@@ -219,6 +249,9 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // client, and src/proxy.test.ts pins that.
   overrideRequestHeaders(req, res, {
     [EMBED_REQUEST_HEADER]: isEmbedRequest ? "1" : "",
+    [EMBED_BRAND_HEADER]: embedBrand ?? "",
+    [EMBED_FONT_HEADER]: embedFont ?? "",
+    [EMBED_LOCALE_HEADER]: embedLocale,
     [REQUEST_PATH_HEADER]: req.nextUrl.pathname,
   });
   // Deny framing everywhere by default (clickjacking on staff/sign-in surfaces);

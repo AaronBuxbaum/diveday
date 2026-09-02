@@ -46,8 +46,10 @@ describe("the figures are unboxed", () => {
     // separated *by*, and a card has no monopoly on them.
     const boxed = sectionCardClass()
       .split(/\s+/)
-      .filter((token) => token === "rounded-2xl" || token === "bg-surface");
-    expect(boxed).toHaveLength(2);
+      .filter(
+        (token) => token === "rounded-panel" || token === "bg-surface" || token === "shadow-bed",
+      );
+    expect(boxed).toHaveLength(3);
     for (const token of boxed) {
       expect(markup).not.toContain(token);
     }

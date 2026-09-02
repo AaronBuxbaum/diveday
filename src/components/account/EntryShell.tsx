@@ -108,7 +108,7 @@ export function entryMainClass(width: "sm" | "lg") {
 
 /** The form panel: borderless on a phone, a bordered surface from `sm` up. */
 export const entryPanelClass =
-  "mt-8 sm:rounded-2xl sm:border sm:border-border sm:bg-surface sm:p-8";
+  "mt-8 sm:rounded-panel sm:border sm:border-border sm:bg-surface shadow-bed sm:p-8";
 
 /**
  * **The closed set of marks a terminal door may wear** (ADR

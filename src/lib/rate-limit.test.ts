@@ -268,6 +268,21 @@ describe("rate-limiting runbook", () => {
 });
 
 describe("checkRateLimit — e2e disable switch", () => {
+  it("is set by `pnpm dev`, so a screenshot run against the dev server is never throttled", () => {
+    // The e2e fleet has always set it (playwright.config.ts). The dev server
+    // did not, and `node scripts/screenshot.mjs` signs in through the real
+    // form against that server: with 8 sign-ins per email per 15 minutes
+    // (`signInByEmail`), the second look of an afternoon was refused and the
+    // session waited the window out. The `${VAR-1}` default keeps
+    // `DIVEDAY_RATE_LIMIT_DISABLED=0 pnpm dev` as the way to watch the
+    // limiter itself, and `rateLimitDisabled()` still refuses the switch
+    // under a real DATABASE_URL, so this cannot reach a deployment.
+    const { scripts } = JSON.parse(readFileSync(path.join(process.cwd(), "package.json"), "utf8"));
+    expect(scripts.dev).toMatch(
+      /DIVEDAY_RATE_LIMIT_DISABLED=\$\{DIVEDAY_RATE_LIMIT_DISABLED-1\} next dev/,
+    );
+  });
+
   it("allows unlimited requests when DIVEDAY_RATE_LIMIT_DISABLED=1 and no real database is configured", async () => {
     vi.stubEnv("DIVEDAY_RATE_LIMIT_DISABLED", "1");
     vi.stubEnv("DATABASE_URL", "");

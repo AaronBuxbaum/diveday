@@ -513,7 +513,7 @@ export default async function TripPrepPage({
               </div>
               <p className="mt-1 text-sm text-muted">{t("trips.prep.hotelPickupsDescription")}</p>
               <div className="mt-3 sm:hidden">
-                <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
+                <ul className="divide-y divide-border overflow-hidden rounded-panel border border-border bg-surface shadow-bed">
                   {hotelPickups.map((pickup) => (
                     <li key={pickup.bookingId} className="px-4 py-3">
                       <p className="font-medium tabular-nums">

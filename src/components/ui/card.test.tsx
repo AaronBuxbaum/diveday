@@ -20,7 +20,9 @@ const SRC_DIR = join(HERE, "..", "..");
  */
 describe("sectionCardClass", () => {
   it("is one radius, and the ShopStat/Table spelling", () => {
-    expect(sectionCardClass()).toBe("rounded-2xl border border-border bg-surface p-4 sm:p-5");
+    expect(sectionCardClass()).toBe(
+      "rounded-panel border border-border bg-surface shadow-bed p-4 sm:p-5",
+    );
   });
 
   it("drops the padding for a shell", () => {
@@ -37,11 +39,12 @@ describe("sectionCardClass", () => {
    * is somebody reaching for a *quieter* shadow rather than reaching for the
    * same one again.
    */
-  it("emits no shadow token, at any padding or with any className", () => {
+  it("emits the bed and never shadow-sm, at any padding or with any className", () => {
     for (const padding of ["none", "md", "lg"] as const) {
-      expect(sectionCardClass({ padding }), padding).not.toMatch(/\bshadow(-|$)/);
+      expect(sectionCardClass({ padding }), padding).toMatch(/\bshadow-bed\b/);
+      expect(sectionCardClass({ padding }), padding).not.toMatch(/\bshadow-sm\b/);
     }
-    expect(sectionCardClass({ className: "scroll-mt-24" })).not.toMatch(/\bshadow(-|$)/);
+    expect(sectionCardClass({ className: "scroll-mt-24" })).toMatch(/\bshadow-bed\b/);
   });
 
   /**
@@ -61,33 +64,21 @@ describe("sectionCardClass", () => {
 });
 
 /**
- * The primitive going flat is only half of decision 1. The other half is the
- * tree: a page whose `SectionCard`s are flat and whose hand-rolled panels are
- * not re-creates the ADR's opening complaint — identically-shaped panels at two
- * elevations on one page — in the opposite direction. This is the tree half,
- * asserted mechanically rather than remembered.
+ * The primitive moving is only half of slice 13a. The other half is the tree:
+ * a page whose `SectionCard`s sit at 28px on the bed and whose hand-rolled
+ * panels still wear the retired 16px shell re-creates the opening complaint
+ * of ADR 20260827-clearwater-surface-language — identically-shaped panels at
+ * two radii on one page. This is the tree half, asserted mechanically rather
+ * than remembered (ADR 20260901-diveday-reimagined, 13a).
  *
- * Scoped to the card's own radius on purpose. `shadow-sm` is legitimate on
- * things that are not resting panels — a button, a switch thumb, a segmented
- * control's selected tile, the sticky chrome bar — and no grep can tell those
- * from a panel. What it *can* tell is that a rectangle wearing `rounded-2xl`
- * is wearing the card's shape, and decision 1 says that shape is flat.
- *
- * The two `rounded-3xl` one-offs the SPEC leaves to slice 6i (the public
- * next-departure hero, `CourseSessions`) are deliberately out of this net —
- * they carry a radius the language does not have yet, and 6i re-shapes them.
+ * Two nets. The first says the retired shell is gone: no class string pairs
+ * `rounded-2xl` with the panel's `border-border bg-surface`. The second keeps
+ * Clearwater's rule for what the bed replaced: nothing wearing the panel's
+ * radius wears `shadow-sm`, because the panel's elevation is `shadow-bed` and
+ * nothing else — `shadow-sm` stays legitimate on a button, a thumb, a
+ * segmented tile, the sticky chrome bar, none of which wear the panel radius.
  */
-describe("nothing wearing the card's shape wears a resting shadow", () => {
-  /**
-   * `src/components/MarketingSections.tsx` — the marketing, legal and error
-   * surfaces sit outside every recomposition in ADR
-   * 20260827-clearwater-surface-language and are carried by decision 1's
-   * *shared-primitive* mechanics only (its scope note says so in as many
-   * words). This panel is hand-rolled on a `bg-surface` band, so no primitive
-   * reaches it, and re-styling the marketing pages is not this slice's to do.
-   */
-  const ALLOWED = new Set(["components/MarketingSections.tsx"]);
-
+describe("every panel shell wears the panel radius and the bed", () => {
   function files(dir: string): string[] {
     return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
       const full = join(dir, entry.name);
@@ -96,19 +87,34 @@ describe("nothing wearing the card's shape wears a resting shadow", () => {
     });
   }
 
-  it("finds no rounded-2xl class string carrying shadow-sm", () => {
-    const offenders = files(SRC_DIR)
+  function offenders(test: (text: string) => boolean): string[] {
+    return files(SRC_DIR)
       .filter((file) => {
         // Quoted and templated strings only, so a doc comment discussing the
         // retired token is not an offender. A class list lives in one such
         // string; a block comment never puts both tokens inside one of them.
         const strings = readFileSync(file, "utf8").match(/"[^"]*"|`[^`]*`/g) ?? [];
-        return strings.some((text) => /\brounded-2xl\b/.test(text) && /\bshadow-sm\b/.test(text));
+        return strings.some(test);
       })
-      .map((file) => relative(SRC_DIR, file).split(/[\\/]/).join("/"))
-      .filter((file) => !ALLOWED.has(file));
+      .map((file) => relative(SRC_DIR, file).split(/[\\/]/).join("/"));
+  }
+
+  it("finds no panel still wearing the retired rounded-2xl shell", () => {
     // Listed, not counted — a failure should name the file to open.
-    expect(offenders).toEqual([]);
+    expect(
+      offenders(
+        (text) =>
+          /\brounded-2xl\b/.test(text) &&
+          /\bborder-border\b/.test(text) &&
+          /\bbg-surface\b/.test(text),
+      ),
+    ).toEqual([]);
+  });
+
+  it("finds no rounded-panel class string carrying shadow-sm", () => {
+    expect(
+      offenders((text) => /\brounded-panel\b/.test(text) && /\bshadow-sm\b/.test(text)),
+    ).toEqual([]);
   });
 });
 
@@ -120,11 +126,18 @@ describe("SectionCard", () => {
       </SectionCard>,
     );
     const card = container.querySelector("section");
-    expect(card).toHaveClass("rounded-2xl", "border", "border-border", "bg-surface");
-    expect(card?.className).not.toMatch(/\bshadow(-|$)/);
+    expect(card).toHaveClass(
+      "rounded-panel",
+      "border",
+      "border-border",
+      "bg-surface",
+      "shadow-bed",
+    );
+    // The bed is the panel's only elevation: never the ad-hoc `shadow-sm`.
+    expect(card?.className).not.toMatch(/\bshadow-sm\b/);
     // The drift this component exists to end: no call site can reintroduce a
     // second radius through the escape hatch.
-    expect(card?.className).not.toMatch(/rounded-(lg|xl|3xl)\b/);
+    expect(card?.className).not.toMatch(/rounded-(lg|xl|2xl|3xl)\b/);
     expect(card).toHaveClass("scroll-mt-24");
   });
 

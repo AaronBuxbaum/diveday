@@ -185,7 +185,7 @@ export function DateRequestForm({
     ) : null;
 
   const body = state.success ? (
-    <div className="rise-in mt-6 rounded-2xl border border-border bg-surface-sunken p-6">
+    <div className="rise-in mt-6 rounded-panel border border-border bg-surface-sunken p-6">
       <p className="font-semibold">{copy.sentHeading}</p>
       <p className="mt-2 text-sm text-muted">{copy.sentBody}</p>
       {contactLine}
