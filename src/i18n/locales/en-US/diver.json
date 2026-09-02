@@ -1928,6 +1928,9 @@
     },
     "competitor": {
       "keepOrLeaveEyebrow": "Keep it, or leave it",
+      "websiteEyebrow": "Your website",
+      "websiteTheirs": "In {competitor}",
+      "websiteOurs": "In DiveDay",
       "forExportPrefix": "For a {competitor} export:",
       "runTheDay": "Run the dive day {competitor} can't.",
       "readyToMove": "Ready to make the move off {competitor}?",
@@ -2281,7 +2284,8 @@
       "item2": "Every staff role, from front desk to captain, in one place",
       "item3": "New features as they ship, all through early access",
       "item4": "A practice shop preloaded with realistic trips to train on",
-      "item6": "Email support — write in, hear back from a real person"
+      "item6": "Email support — write in, hear back from a real person",
+      "item7": "A storefront in your brand and embeds for your own site — or a website we build with you, when you ask"
     },
     "export": {
       "claim": "Settings → Data export downloads one ZIP of plain, documented CSVs — divers, bookings, waiver records, payment history — led by a contacts file shaped for another system's import wizard. Every stored photo (certification evidence, dive-site pictures, trip recaps) comes as a real file, not a link.",
@@ -2291,7 +2295,6 @@
       "booking": {
         "title": "Booking and the public pages",
         "item1": "A public schedule, per-departure pages, and capacity that can't be oversold",
-        "item2": "An embeddable booking calendar and a \"Book a dive\" button for your own website",
         "item3": "Party booking for up to twenty, with a claim link for every seat the organizer named",
         "item4": "Gift booking — a giver pays for someone who has no account yet",
         "item5": "Rental gear and a nitrox request picked at booking, paid with the seat",
@@ -2306,6 +2309,14 @@
         "item14": "Structured data and real titles on the schedule, trip, and course pages",
         "item15": "Every diver-facing page in the visitor's own language, switchable in the header",
         "item16": "Whether the shop appears in search results is the shop's own switch"
+      },
+      "website": {
+        "title": "Your website",
+        "item1": "A storefront in your own brand: your colour, your typeface, your cover photo, your badges, the year you opened",
+        "item2": "Six things to paste on the site you have: a Book Now button, a lightbox, the calendar, a trip grid, one departure, your courses",
+        "item3": "Every one takes your site's colour and typeface, so the booking never looks like someone else's page",
+        "item4": "A QR code for the counter and a referral link for the hotel that sends you divers",
+        "item5": "One embed code for WordPress, Squarespace and Wix, with the line each one needs"
       },
       "divers": {
         "title": "Divers, waivers, and certifications",
@@ -2675,6 +2686,51 @@
           "replaceHeading": "Or leave the per-booking fee behind.",
           "replaceBody": "If FareHarbor is really just your booking button — you're not leaning on its distribution network — you don't need to keep paying on every booking to keep it. DiveDay takes the booking itself: a public schedule anyone can book without an account, checkout through your own Stripe account, native waivers. Bring your divers across once, point your booking link here, and the per-booking fee stops."
         },
+        "website": {
+          "heading": "Leaving FareHarbor doesn't mean rebuilding your site.",
+          "intro": "Every button, frame and link you pasted from it has a twin here — in your colours and your typeface, and the diver never leaves your brand.",
+          "rows": {
+            "row1": {
+              "theirs": "Book Now button",
+              "ours": "A link in your brand, with or without our script"
+            },
+            "row2": {
+              "theirs": "Lightframe",
+              "ours": "Lightbox — the booking opens in a sheet over your page"
+            },
+            "row3": {
+              "theirs": "Calendar",
+              "ours": "The whole schedule, in your colour"
+            },
+            "row4": {
+              "theirs": "Item grid",
+              "ours": "Trip grid — every upcoming departure as a card"
+            },
+            "row5": {
+              "theirs": "Flows",
+              "ours": "One departure, or your course catalog, on its own"
+            },
+            "row6": {
+              "theirs": "QR codes",
+              "ours": "Drawn in your settings, for the counter and the flyer"
+            },
+            "row7": {
+              "theirs": "Affiliate links",
+              "ours": "A referral link — the hotel that sent the diver is on the booking"
+            },
+            "row8": {
+              "theirs": "WordPress plugin",
+              "ours": "The same embed code, with the line WordPress, Squarespace or Wix needs"
+            },
+            "row9": {
+              "theirs": "Sites — FareHarbor's hosted website",
+              "ours": "Your storefront, included — already a website of its own"
+            }
+          },
+          "sitesNote": "FareHarbor sells Sites separately and doesn't publish the price; third parties report {sitesPrice} a year, before its SEO add-on.",
+          "offerHeading": "Or have us build the website.",
+          "offerBody": "Ask, and a person at DiveDay builds it with you — your photos, your words, the booking already in it. It's in the price."
+        },
         "exportHeading": "Get your data out of FareHarbor",
         "exportIntro": "FareHarbor runs in a browser, and your data comes out of the Dashboard's reports — there's no single \"export everything\" button. The goal is your people as a CSV. Menu labels shift over time, so treat these as the shape of the path, not word-for-word buttons.",
         "exportSteps": {
@@ -2843,6 +2899,7 @@
       "bookingPoint1": "Book for the whole party in one go, or as a gift for someone else.",
       "bookingPoint2": "Discount codes shop-wide, or a last-minute deal on one under-booked boat.",
       "bookingPoint3": "Divers share their sizes and gear needs before they ever reach the counter.",
+      "bookingPoint4": "In your own brand — or on a website we build with you, when you ask.",
       "bookingMockupLabel": "The public DiveDay schedule a diver books from.",
       "readinessEyebrow": "Before departure",
       "readinessTitle": "One readiness answer, shared everywhere it matters.",

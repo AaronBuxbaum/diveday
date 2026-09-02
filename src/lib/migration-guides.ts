@@ -95,6 +95,41 @@ export type CutoverSection = {
   steps: { title: DiverMessageKey; detail: DiverMessageKey }[];
 };
 
+/**
+ * The website ledger, for an incumbent whose real footprint is on the shop's
+ * own site: every button, frame and link the shop pasted from it, beside the
+ * DiveDay embed that replaces it (ADR 20260901-diveday-reimagined, decisions
+ * 2 and 3). Today only FareHarbor carries one.
+ *
+ * Two claims-policy guardrails live in the shape. `sitesPrice` is the
+ * incumbent's hosted-website figure as a currency string — the one source for
+ * it, interpolated into `sitesNote` as `{sitesPrice}` so no message bundle
+ * carries a currency figure (marketing.test pins that), and it is stated as
+ * what third parties report, never as what a shop pays. `offer` is the
+ * built-to-order website, an authorized service claim like the concierge: a
+ * person's commitment with `{email}` to write to, never a turnaround time or a
+ * page count.
+ */
+export type WebsiteFraming = {
+  heading: DiverMessageKey;
+  intro: DiverMessageKey;
+  /**
+   * One row per thing the shop pasted from the incumbent: their name for it,
+   * our twin. In `theirs`, a proprietary name (Lightframe, Flows, Sites) stays
+   * as the incumbent spells it in every locale and a generic noun (calendar,
+   * QR codes) translates — deliberate, not a half-done pass. In `ours`, the
+   * noun repeats only where it is a *rename* (Lightframe → Lightbox); where the
+   * left cell already says it, the right cell carries only the difference.
+   */
+  ledger: { theirs: DiverMessageKey; ours: DiverMessageKey }[];
+  /** The hosted-website comparison; interpolates `{sitesPrice}`. */
+  sitesNote: DiverMessageKey;
+  /** The incumbent's hosted-website figure, cited in `sources` — a currency string, nowhere else. */
+  sitesPrice: string;
+  /** The built-to-order website; `body` interpolates `{email}`. */
+  offer: { heading: DiverMessageKey; body: DiverMessageKey };
+};
+
 export type MigrationGuide = {
   /** URL segment: /switching/<slug>. */
   slug: string;
@@ -121,6 +156,14 @@ export type MigrationGuide = {
    * Rendered as a section above the export steps; absent for the leave-it guides.
    */
   coexist?: CoexistFraming;
+
+  /**
+   * Optional website ledger — what the shop pasted from the incumbent and the
+   * DiveDay embed for each, plus the hosted-website comparison and the
+   * built-to-order offer. Rendered under the coexist section; today FareHarbor
+   * only, whose storefront product is what a dive shop's site is built on.
+   */
+  website?: WebsiteFraming;
 
   // The export click-path: how to get the data out of the incumbent's system.
   exportHeading: DiverMessageKey;
@@ -528,6 +571,24 @@ const fareharbor: MigrationGuide = {
     },
   },
 
+  website: {
+    heading: "marketing.guides.fareharbor.website.heading",
+    intro: "marketing.guides.fareharbor.website.intro",
+    ledger: (["row1", "row2", "row3", "row4", "row5", "row6", "row7", "row8", "row9"] as const).map(
+      (row) => ({
+        theirs: `marketing.guides.fareharbor.website.rows.${row}.theirs` as const,
+        ours: `marketing.guides.fareharbor.website.rows.${row}.ours` as const,
+      }),
+    ),
+    sitesNote: "marketing.guides.fareharbor.website.sitesNote",
+    // i18n-exempt: currency figure — FareHarbor's hosted-website rate as third parties report it (the Bókun source below), never restated in a bundle
+    sitesPrice: "$5,000",
+    offer: {
+      heading: "marketing.guides.fareharbor.website.offerHeading",
+      body: "marketing.guides.fareharbor.website.offerBody",
+    },
+  },
+
   exportHeading: "marketing.guides.fareharbor.exportHeading",
   exportIntro: "marketing.guides.fareharbor.exportIntro",
   exportSteps: [
@@ -585,6 +646,11 @@ const fareharbor: MigrationGuide = {
       // i18n-exempt: cited source title — the document's own name is not translated
       label: "FareHarbor's per-booking fee model, explained (TrekkSoft, third-party)",
       url: "https://www.trekksoft.com/en/blog/fareharbor-pricing-guide-what-to-know-before-you-buy",
+    },
+    {
+      // i18n-exempt: cited source title — the document's own name is not translated
+      label: "FareHarbor Websites: what to know and how to get started (Bókun, third-party)",
+      url: "https://www.bokun.io/fareharbor-websites",
     },
   ],
 };
