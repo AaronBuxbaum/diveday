@@ -46,10 +46,9 @@ argues each in pictures:
 Proposed, in five parts. Parts 1 and 3 are the owner's to confirm and are recorded as H-66.
 
 1. **`/about` gets a "Who's here" band directly under the hero: three short paragraphs in team
-   voice.** Who is here, with the background as one passing clause ("a few people who dive and
-   have built software for a living for a long time, at Google among other places"); what happens
-   when a shop emails ("one of us reads it. There's no ticket queue in the way."); and what is being
-   built, ending on the demo as the way to judge it. It replaces the nameless founder band. **No
+   voice.** Who is here, with the background in one plain sentence ("DiveDay is made by a few divers. One
+   of us used to write software at Google."); the product in one sentence, with the demo as the way
+   to judge it; and the email ("Email support@dive.day and one of us reads it."). It replaces the nameless founder band. **No
    ledger of facts, no signature, no "I", and no name** unless the owner wants his in the first
    sentence: the signed first-person story and the three-fact ledger were both drawn first and
    declined by the owner on 2026-09-02, one because "I" says one person builds DiveDay and the
@@ -74,8 +73,9 @@ Proposed, in five parts. Parts 1 and 3 are the owner's to confirm and are record
    reaches the same team) rather than restoring the one it retired. It still takes the owner's
    nod, because it is a promise about who reads, and it is retired the day the inbox is handed to
    someone who does not make the product.
-4. **The background appears once, in passing, as "at Google among other places"** — a clause
-   inside a sentence about the team, on `/about`, and nowhere else. Google Maps is not named, the
+4. **The background appears once, as one plain sentence: "One of us used to write software at
+   Google."** On `/about`, and nowhere else. "Among other places" was drafted and cut: withholding
+   is the coy form of showing off, and the flat sentence is the subtle one. Google Maps is not named, the
    biotech company and self-driving cars are not listed, nothing on `/` repeats it, and it is
    never a heading, an eyebrow, or a logo. A humblebrag works once; a list of employers is a
    résumé, and the 2026-08-05 removal was right about that.

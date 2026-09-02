@@ -50,7 +50,7 @@ both wait on the H-66 row; 15b, 15d and 15e do not.
 The founder facts confirmed on 2026-07-25 are a software engineer who worked on Google Maps, helped
 build a biotech company that went public, and works on self-driving cars, plus the origin: a
 conversation with a dive shop owner about what his systems were costing him. **The boards use one
-clause of that and no more** — "at Google among other places" — because the owner declined both a
+sentence of that and no more** — "One of us used to write software at Google." — because the owner declined both a
 signed story and a three-fact ledger as protesting too much. No name, no home location, no
 certification year, no second person named, no signature, no "I". The three sentences of the band
 are drafts for the owner to keep, reword or strike. The shop on every mockup is the demo fiction,
