@@ -41,6 +41,8 @@ const EXPECTED_FILES = [
   "trip_requirements.csv",
   "trip_assignments.csv",
   "staff_shifts.csv",
+  "crew_availability_blocks.csv",
+  "crew_assignment_requests.csv",
   "staff_credentials.csv",
   "bookings.csv",
   "trip_help_requests.csv",
@@ -109,6 +111,8 @@ const EXPORTED_TABLES = [
   "trip_requirements",
   "trip_assignments",
   "staff_shifts",
+  "crew_availability_blocks",
+  "crew_assignment_requests",
   "staff_credentials",
   "bookings",
   "trip_help_requests",
@@ -344,6 +348,10 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // The member row's surrogate id says nothing beyond (pair_id, booking_id),
   // which are both exported.
   buddy_pair_members: ["shop_id", "id"],
+  // The crew's own two tables (issue #1235). Every row is scoped to the bundle
+  // being exported, so the id repeated on each line buys a reader nothing.
+  crew_availability_blocks: ["shop_id"],
+  crew_assignment_requests: ["shop_id"],
   waiver_templates: ["shop_id"],
   waiver_materiality_decisions: ["shop_id"],
   waiver_records: [

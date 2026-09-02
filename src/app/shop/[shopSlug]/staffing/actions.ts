@@ -4,6 +4,12 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { getDb } from "@/db/client";
+import {
+  decideCrewAssignmentRequest,
+  deleteCrewAvailabilityBlock,
+  requestCrewAssignment,
+  saveCrewAvailabilityBlock,
+} from "@/db/crew-requests";
 import { getShopById } from "@/db/shops";
 import {
   createStaffCredential,
@@ -11,6 +17,7 @@ import {
   reviewStaffCredential,
 } from "@/db/staff-credentials";
 import { createStaffShift, deleteStaffShift } from "@/db/staffing";
+import { changeTripCrew } from "@/db/trips-crew";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -170,5 +177,133 @@ export async function deleteStaffCredentialAction(week: string, formData: FormDa
   revalidateAndRedirect(
     path,
     noticeUrl(path, deleted ? "credential-deleted" : "credential-invalid", at),
+  );
+}
+
+/**
+ * **The crew's own two acts, and the owner's answer** (issue #1235, ADR
+ * 20260902-crew-requests-and-blackouts).
+ *
+ * These are the only writes on this page that are *not* behind
+ * `requireStaffingManager`: the whole point of the slice is that a crew member
+ * writes their own rows. What replaces the manager gate is the domain layer's
+ * own check, which reads the actor's live roles from the database and refuses
+ * anything that is not their own row — a session claim is not evidence, and a
+ * person removed from the shop this morning must not be able to book
+ * themselves onto Saturday's boat this afternoon.
+ */
+const awaySchema = z.object({
+  personId: z.string().uuid(),
+  startsOn: z.string().refine(isValidCalendarDate),
+  endsOn: z.string().refine(isValidCalendarDate),
+  note: z.string().trim().max(120),
+});
+
+export async function saveAwayAction(week: string, formData: FormData) {
+  const at = weekExtra(week);
+  const session = await requireStaffSession();
+  const path = shopPath(session.user.shopSlug, "staffing");
+  const parsed = awaySchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) redirect(noticeUrl(path, "invalid", at));
+  const db = await getDb();
+  const outcome = await saveCrewAvailabilityBlock(db, {
+    shopId: session.user.shopId,
+    personId: parsed.data.personId,
+    actorPersonId: session.user.personId,
+    canManageRoster: await canPersonManageStaffAccounts(
+      db,
+      session.user.shopId,
+      session.user.personId,
+    ),
+    startsOn: parsed.data.startsOn,
+    endsOn: parsed.data.endsOn,
+    note: parsed.data.note,
+  });
+  revalidateAndRedirect(path, noticeUrl(path, outcome.ok ? "away-saved" : outcome.reason, at));
+}
+
+export async function deleteAwayAction(week: string, formData: FormData) {
+  const at = weekExtra(week);
+  const session = await requireStaffSession();
+  const path = shopPath(session.user.shopSlug, "staffing");
+  const blockId = String(formData.get("blockId") ?? "");
+  if (!z.string().uuid().safeParse(blockId).success) redirect(noticeUrl(path, "invalid", at));
+  const db = await getDb();
+  const outcome = await deleteCrewAvailabilityBlock(db, {
+    shopId: session.user.shopId,
+    blockId,
+    actorPersonId: session.user.personId,
+    canManageRoster: await canPersonManageStaffAccounts(
+      db,
+      session.user.shopId,
+      session.user.personId,
+    ),
+  });
+  revalidateAndRedirect(path, noticeUrl(path, outcome.ok ? "away-deleted" : outcome.reason, at));
+}
+
+/**
+ * A crew member asks to work one departure. **Always for themselves** — the
+ * person is the session's own, never a form field, so there is nothing here for
+ * a client to name somebody else with.
+ */
+export async function requestCrewAction(week: string, formData: FormData) {
+  const at = weekExtra(week);
+  const session = await requireStaffSession();
+  const path = shopPath(session.user.shopSlug, "staffing");
+  const tripId = String(formData.get("tripId") ?? "");
+  if (!z.string().uuid().safeParse(tripId).success) redirect(noticeUrl(path, "invalid", at));
+  const outcome = await requestCrewAssignment(await getDb(), {
+    shopId: session.user.shopId,
+    tripId,
+    personId: session.user.personId,
+    actorPersonId: session.user.personId,
+  });
+  revalidateAndRedirect(path, noticeUrl(path, outcome.ok ? "request-sent" : outcome.reason, at));
+}
+
+/**
+ * The owner answers. An approval stamps the decision and then runs the
+ * **ordinary** assignment mutation, so the agency training ratio, the course
+ * rules and the roll-call guard all still apply — a request is a request, never
+ * a second way onto a boat (the ADR's decision 3).
+ *
+ * An approval whose assignment is then refused is reported as such rather than
+ * as a success: the decision is recorded either way, and a shop that thinks it
+ * has crewed a departure it has not is the failure worth being loud about.
+ */
+export async function decideCrewRequestAction(week: string, formData: FormData) {
+  const at = weekExtra(week);
+  const session = await requireStaffingManager(at);
+  const path = shopPath(session.user.shopSlug, "staffing");
+  const requestId = String(formData.get("requestId") ?? "");
+  const decision = String(formData.get("decision") ?? "");
+  if (!z.string().uuid().safeParse(requestId).success) redirect(noticeUrl(path, "invalid", at));
+  if (decision !== "approved" && decision !== "declined") {
+    redirect(noticeUrl(path, "invalid", at));
+  }
+  const db = await getDb();
+  const outcome = await decideCrewAssignmentRequest(db, {
+    shopId: session.user.shopId,
+    requestId,
+    decision,
+    decidedByPersonId: session.user.personId,
+    canManageRoster: true,
+  });
+  if (!outcome.ok) {
+    revalidateAndRedirect(path, noticeUrl(path, outcome.reason, at));
+    return;
+  }
+  if (decision === "declined") {
+    revalidateAndRedirect(path, noticeUrl(path, "request-declined", at));
+    return;
+  }
+  const assigned = await changeTripCrew(db, session.user.shopId, outcome.tripId, {
+    operation: "assign",
+    personId: outcome.personId,
+  });
+  revalidateAndRedirect(
+    path,
+    noticeUrl(path, assigned ? "request-approved" : "request-approved-not-assigned", at),
   );
 }

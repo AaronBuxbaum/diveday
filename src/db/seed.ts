@@ -1,6 +1,7 @@
 import { hash } from "bcryptjs";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
+import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { generateDemoShopIdentity, pinnedDemoShopIdentity } from "@/lib/demo-identity";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
@@ -25,6 +26,7 @@ import {
   closeoutLeftoverDecisions,
   courseInquiries,
   courses,
+  crewAvailabilityBlocks,
   dayCloseouts,
   divePackageEntitlements,
   diveSiteCreatures,
@@ -217,6 +219,32 @@ async function seedStaffShifts(db: DbExecutor, shopId: string, personIds: string
   );
 }
 
+/**
+ * One crew member's days away, so the staffing week has a blackout to draw and
+ * the "informs, never gates" rule has something to demonstrate (issue #1235,
+ * ADR 20260902-crew-requests-and-blackouts).
+ *
+ * Deliberately **one person, next week, with a note** — not a shop where
+ * everybody is on holiday. It is the ordinary case: somebody said they were
+ * away, the week shows it quietly, and nobody has been taken off a boat.
+ * Stable like the shifts beside it, so a schedule reset leaves it alone.
+ */
+async function seedCrewAway(db: DbExecutor, shopId: string, personIds: string[]): Promise<void> {
+  const [personId] = personIds;
+  if (!personId) return;
+  // Three days out, so it lands inside the week the page opens on: a demo
+  // where the one blackout is always in a week nobody looks at shows nothing.
+  const from = shiftCalendarDate(calendarDateInTimezone(demoTodayDepartureStart(), "UTC"), 3);
+  await db.insert(crewAvailabilityBlocks).values({
+    shopId,
+    personId,
+    startsOn: from,
+    endsOn: shiftCalendarDate(from, 1),
+    note: "Family trip",
+    createdByPersonId: personId,
+  });
+}
+
 export async function seedIfEmpty(db: DbExecutor): Promise<void> {
   const existing = await db.select({ id: shops.id }).from(shops).limit(1);
   if (existing.length > 0) return;
@@ -401,6 +429,11 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   await db.insert(userAccounts).values(accounts);
 
   await seedStaffShifts(
+    db,
+    shop.id,
+    staff.map((person) => person.id),
+  );
+  await seedCrewAway(
     db,
     shop.id,
     staff.map((person) => person.id),
@@ -618,6 +651,11 @@ export async function createDemoShop(
   // working — and an e2e spec could not take a shop of its own to write a
   // shift into (ADR 20260815-per-test-private-shops).
   await seedStaffShifts(
+    db,
+    shop.id,
+    staff.map((person) => person.id),
+  );
+  await seedCrewAway(
     db,
     shop.id,
     staff.map((person) => person.id),

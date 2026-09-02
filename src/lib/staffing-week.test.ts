@@ -337,3 +337,199 @@ describe("staffWeek", () => {
     ).toEqual(["morning", "afternoon"]);
   });
 });
+
+/**
+ * The crew's own half of the week (issue #1235, ADR
+ * 20260902-crew-requests-and-blackouts). The assembly's job is to place two new
+ * facts and to answer one question — may this reader ask for that departure —
+ * with the same rule the write uses.
+ */
+describe("blackouts and requests", () => {
+  const KEIKO = person();
+  const GAP: WeekGap = {
+    tripId: "trip-gap",
+    title: "Spiegel Grove",
+    gap: "uncrewed_departure",
+    // 1:00 PM Thursday, Key Largo.
+    meetings: [
+      {
+        startsAt: new Date("2026-08-27T17:00:00.000Z"),
+        endsAt: new Date("2026-08-27T21:00:00.000Z"),
+      },
+    ],
+  };
+  const AWAY = {
+    id: "block-1",
+    personId: "person-1",
+    startsOn: "2026-08-27",
+    endsOn: "2026-08-28",
+    note: "Family",
+  };
+  const BEFORE = new Date("2026-08-20T00:00:00.000Z");
+
+  it("draws a person's own days away in their own row, and nobody else's", () => {
+    const week = staffWeek({
+      people: [KEIKO, { ...KEIKO, personId: "person-2", name: "Sal Moretti", shifts: [] }],
+      gaps: [],
+      weekStart: MONDAY,
+      timeZone: TZ,
+      today: THURSDAY,
+      blocks: [AWAY],
+      now: BEFORE,
+    });
+    const keiko = week.people.find((person) => person.personId === "person-1");
+    const sal = week.people.find((person) => person.personId === "person-2");
+    expect(keiko?.days.filter((day) => day.away.length > 0).map((day) => day.date)).toEqual([
+      "2026-08-27",
+      "2026-08-28",
+    ]);
+    expect(sal?.days.every((day) => day.away.length === 0)).toBe(true);
+  });
+
+  it("warns on a departure the person crews across days they said they were away", () => {
+    const crewing = {
+      ...KEIKO,
+      crewingTrips: [
+        {
+          tripId: "trip-1",
+          title: "Spiegel Grove",
+          meetings: [
+            {
+              startsAt: new Date("2026-08-28T17:00:00.000Z"),
+              endsAt: new Date("2026-08-28T21:00:00.000Z"),
+            },
+          ],
+        },
+      ],
+    };
+    const week = staffWeek({
+      people: [crewing],
+      gaps: [],
+      weekStart: MONDAY,
+      timeZone: TZ,
+      today: THURSDAY,
+      blocks: [AWAY],
+      now: BEFORE,
+    });
+    const friday = week.people[0]?.days.find((day) => day.date === "2026-08-28");
+    expect(friday?.crewing[0]?.awayBlocks.map((block) => block.id)).toEqual(["block-1"]);
+  });
+
+  it("leaves a departure they crew outside the range unwarned", () => {
+    const crewing = {
+      ...KEIKO,
+      crewingTrips: [
+        {
+          tripId: "trip-1",
+          title: "Molasses Reef",
+          meetings: [
+            {
+              startsAt: new Date("2026-08-25T12:00:00.000Z"),
+              endsAt: new Date("2026-08-25T17:00:00.000Z"),
+            },
+          ],
+        },
+      ],
+    };
+    const week = staffWeek({
+      people: [crewing],
+      gaps: [],
+      weekStart: MONDAY,
+      timeZone: TZ,
+      today: THURSDAY,
+      blocks: [AWAY],
+      now: BEFORE,
+    });
+    const tuesday = week.people[0]?.days.find((day) => day.date === "2026-08-25");
+    expect(tuesday?.crewing[0]?.awayBlocks).toEqual([]);
+  });
+
+  it("offers the ask only when the write would take it", () => {
+    const ask = (extra: Parameters<typeof staffWeek>[0]) =>
+      staffWeek(extra).gapDays.flatMap((day) => day.gaps)[0]?.viewerMayRequest;
+    const base = {
+      people: [KEIKO],
+      gaps: [GAP],
+      weekStart: MONDAY,
+      timeZone: TZ,
+      today: THURSDAY,
+      now: BEFORE,
+    } as const;
+
+    expect(ask({ ...base, viewer: { personId: "person-1", isCrew: true } })).toBe(true);
+    // Nobody reading: the affordance is not offered to a page that has no
+    // viewer to speak of (every caller written before this slice).
+    expect(ask({ ...base })).toBe(false);
+    // The blackout the write refuses on — GAP meets on the 27th.
+    expect(
+      ask({
+        ...base,
+        viewer: { personId: "person-1", isCrew: true },
+        blocks: [{ ...AWAY, startsOn: "2026-08-27", endsOn: "2026-08-27" }],
+      }),
+    ).toBe(false);
+    // And an ask already on file.
+    expect(
+      ask({
+        ...base,
+        viewer: { personId: "person-1", isCrew: true },
+        requests: [
+          {
+            id: "r1",
+            tripId: GAP.tripId,
+            personId: "person-1",
+            personName: "Keiko Tanaka",
+            state: "pending",
+            requestedAt: BEFORE,
+          },
+        ],
+      }),
+    ).toBe(false);
+  });
+
+  it("hangs a request on the departure it is for, and on no other", () => {
+    const week = staffWeek({
+      people: [KEIKO],
+      gaps: [GAP],
+      weekStart: MONDAY,
+      timeZone: TZ,
+      today: THURSDAY,
+      now: BEFORE,
+      requests: [
+        {
+          id: "r1",
+          tripId: GAP.tripId,
+          personId: "person-2",
+          personName: "Sal Moretti",
+          state: "pending",
+          requestedAt: BEFORE,
+        },
+        {
+          id: "r2",
+          tripId: "some-other-trip",
+          personId: "person-2",
+          personName: "Sal Moretti",
+          state: "pending",
+          requestedAt: BEFORE,
+        },
+      ],
+    });
+    const gap = week.gapDays.flatMap((day) => day.gaps)[0];
+    expect(gap?.requests.map((request) => request.id)).toEqual(["r1"]);
+  });
+
+  it("counts a week with nothing but somebody's days away as having entries", () => {
+    // The empty line is the page saying "nothing at all"; a recorded holiday is
+    // something, and the week must not claim otherwise.
+    const week = staffWeek({
+      people: [{ ...KEIKO, shifts: [] }],
+      gaps: [],
+      weekStart: MONDAY,
+      timeZone: TZ,
+      today: THURSDAY,
+      blocks: [AWAY],
+      now: BEFORE,
+    });
+    expect(week.hasEntries).toBe(true);
+  });
+});

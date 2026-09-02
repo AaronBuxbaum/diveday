@@ -233,4 +233,55 @@ test.describe("staffing, as the daily crew", () => {
     await expect(page.getByRole("button", { name: "Remove" })).toHaveCount(0);
     await expect(page.getByText("Add a credential")).toHaveCount(0);
   });
+
+  /**
+   * **The crew's own half of the week** (issue #1235, ADR
+   * 20260902-crew-requests-and-blackouts). The captain above gets no shift
+   * controls and never will — these two are the writes they *do* get, and the
+   * point of the slice is that they are the only ones on the page not behind
+   * `canPersonManageStaffAccounts`.
+   */
+  test("a captain tells the shop they're away, and asks for a departure", async ({
+    page,
+    privateShop,
+  }) => {
+    // A shop of its own: this writes rows the demo's other specs read.
+    await page.goto(`/shop/${privateShop.slug}/staffing`);
+    await page.getByRole("heading", { level: 1, name: "Staffing" }).waitFor();
+
+    await page.getByText("Tell the shop you're away").click();
+    const away = page.locator("#add-away");
+    await away.getByLabel("From").fill(daysFromNow(2));
+    await away.getByLabel("To").fill(daysFromNow(3));
+    await away.getByLabel("Note").fill("Family trip");
+    await away.getByRole("button", { name: "Save", exact: true }).click();
+
+    // The week draws it, quietly, in their own row — and the door lists it
+    // back with the one act that removes it.
+    await expect(page.getByText("Family trip").first()).toBeVisible();
+    await expect(page.getByText("Saved. The shop can see those days")).toBeVisible();
+  });
+});
+
+test.describe("a crew member asks to work a short-handed departure", () => {
+  signedInAs("captain");
+
+  test("the ask lands on the departure, and the owner is the one who answers", async ({
+    page,
+    privateShop,
+  }) => {
+    await page.goto(`/shop/${privateShop.slug}/staffing`);
+    await page.getByRole("heading", { level: 1, name: "Staffing" }).waitFor();
+    const ask = page.getByRole("button", { name: "Ask for this one" }).first();
+    // A private shop's own week may be fully crewed; the ask only exists where
+    // a departure is short, which is the state this asserts against.
+    if ((await ask.count()) === 0) test.skip(true, "this shop's week has no crew gap");
+    await ask.click();
+    await expect(page.getByText("Sent. The shop will see it on the week.")).toBeVisible();
+    // Their own name, on the departure they asked for, waiting on somebody.
+    await expect(page.getByText(/asked$/).first()).toBeVisible();
+    // And no way to answer their own ask — that is the owner's, and the domain
+    // layer refuses it besides.
+    await expect(page.getByRole("button", { name: "Approve" })).toHaveCount(0);
+  });
 });

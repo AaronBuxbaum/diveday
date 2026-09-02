@@ -1,28 +1,4 @@
 {
-  "eyebrow": "Operations",
-  "title": "Staffing",
-  "week": {
-    "ariaLabel": "Who's working",
-    "previous": "Previous week",
-    "next": "Next week",
-    "thisWeek": "This week",
-    "today": "Today",
-    "person": "Person",
-    "needsCrew": "Needs crew",
-    "assign": "Assign",
-    "assignAria": "Assign crew to {trip}",
-    "crewing": "Crewing",
-    "shiftAria": "Shift for {person} on {day}",
-    "empty": "Nothing scheduled this week."
-  },
-  "working": {
-    "remove": "Remove",
-    "removing": "Removing…",
-    "rosterEmptyHeading": "No crew on the books yet",
-    "rosterEmptyManagerBody": "Invite the instructors and divemasters who run your boats, then give them shifts here.",
-    "rosterEmptyBody": "An owner or manager adds crew from Team settings — ask one of them to get you started.",
-    "rosterEmptyAction": "Invite your crew"
-  },
   "addShift": {
     "heading": "Add a shift",
     "person": "Staff member",
@@ -35,6 +11,18 @@
     "notePlaceholder": "Dock, classroom, boat 2",
     "submit": "Add shift",
     "saving": "Saving…"
+  },
+  "away": {
+    "from": "From",
+    "heading": "Tell the shop you're away",
+    "note": "Note",
+    "notePlaceholder": "Anything the shop should know",
+    "person": "Who",
+    "remove": "Remove",
+    "removing": "Removing…",
+    "save": "Save",
+    "saving": "Saving…",
+    "to": "To"
   },
   "credentials": {
     "heading": "Credentials",
@@ -67,16 +55,62 @@
       "other": "Other"
     }
   },
+  "eyebrow": "Operations",
   "notice": {
-    "shiftSaved": "Shift saved.",
-    "shiftDeleted": "Shift removed.",
-    "overlap": "That person already has an overlapping shift.",
-    "staffNotFound": "That staff member is no longer on this shop's team.",
-    "invalid": "Check the shift date and times, then try again.",
-    "notAuthorized": "Only owners and managers can change shifts.",
-    "credentialSaved": "Credential added.",
-    "credentialReviewed": "Credential review updated.",
+    "awayDeleted": "Removed.",
+    "awaySaved": "Saved. The shop can see those days on the week.",
     "credentialDeleted": "Credential removed.",
-    "credentialInvalid": "That credential could not be saved. Check the staff member and dates."
+    "credentialInvalid": "That credential could not be saved. Check the staff member and dates.",
+    "credentialReviewed": "Credential review updated.",
+    "credentialSaved": "Credential added.",
+    "invalid": "Check the shift date and times, then try again.",
+    "invalidRange": "The last day can't come before the first.",
+    "notAllowed": "That isn't yours to change.",
+    "notAuthorized": "Only owners and managers can change shifts.",
+    "overlap": "That person already has an overlapping shift.",
+    "personNotFound": "That person isn't on this shop's roster.",
+    "requestApproved": "Approved, and they're on the crew.",
+    "requestApprovedNotAssigned": "Approved — but the assignment was refused. Crew that departure from its own page to see why.",
+    "requestDeclined": "Declined.",
+    "requestNotFound": "That's already gone.",
+    "requestSent": "Sent. The shop will see it on the week.",
+    "shiftDeleted": "Shift removed.",
+    "shiftSaved": "Shift saved.",
+    "staffNotFound": "That staff member is no longer on this shop's team.",
+    "tripNotFound": "That departure is no longer on the board."
+  },
+  "title": "Staffing",
+  "week": {
+    "approve": "Approve",
+    "ariaLabel": "Who's working",
+    "assign": "Assign",
+    "assignAria": "Assign crew to {trip}",
+    "away": "Away",
+    "awayConflict": "Away {dates}",
+    "crewing": "Crewing",
+    "deciding": "Saving…",
+    "decline": "Decline",
+    "empty": "Nothing scheduled this week.",
+    "needsCrew": "Needs crew",
+    "next": "Next week",
+    "person": "Person",
+    "previous": "Previous week",
+    "request": "Ask for this one",
+    "requestApproved": "Approved",
+    "requestAria": "Ask to work {trip}",
+    "requestDeclined": "Declined",
+    "requested": "{person} asked",
+    "requesting": "Asking…",
+    "shiftAria": "Shift for {person} on {day}",
+    "thisWeek": "This week",
+    "today": "Today"
+  },
+  "working": {
+    "remove": "Remove",
+    "removing": "Removing…",
+    "rosterEmptyHeading": "No crew on the books yet",
+    "rosterEmptyManagerBody": "Invite the instructors and divemasters who run your boats, then give them shifts here.",
+    "rosterEmptyBody": "An owner or manager adds crew from Team settings — ask one of them to get you started.",
+    "rosterEmptyAction": "Invite your crew"
   }
 }
