@@ -932,8 +932,8 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
   test("the marketing, account and diver surfaces have no automated a11y violations", async ({
     page,
   }) => {
-    // 7 scans at ~3.5s each.
-    test.setTimeout(75_000);
+    // 8 scans at ~3.5s each.
+    test.setTimeout(80_000);
     await scanStaticRoutes(page, [
       // The landing page and the two account-lifecycle forms. Each renders a
       // single `<h1>`, so matching any non-empty one is enough and keeps this
@@ -941,6 +941,19 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
       { path: "/", heading: /\S/ },
       { path: "/sign-in", heading: /\S/ },
       { path: "/onboard", heading: /\S/ },
+      // **A door that has closed** (issue #1123). Every route above is one a
+      // person walks *through*, and `EntryDone` is a different composition
+      // entirely — a decorative drawn mark in a circle, an `<h1>`, one muted
+      // paragraph, one quiet link, and no form at all. Slice 10a made it the
+      // app's one warm terminal pattern, so it is now what a person meets on a
+      // dead waiver link, a spent invite, a used reset token, a finished
+      // unsubscribe and a verified email; nothing ran axe over any of them.
+      //
+      // An unparseable token is the cheapest reachable instance: no fixture,
+      // no seeded row, no sign-in. One door, not five — the five are one
+      // composition wearing different words, so the marginal scan buys copy
+      // rather than structure and costs twenty seconds a run.
+      { path: "/verify/not-a-real-token", heading: /isn’t available/ },
     ]);
 
     // The diver-facing shop. Its `<h1>` is served in the static shell while
