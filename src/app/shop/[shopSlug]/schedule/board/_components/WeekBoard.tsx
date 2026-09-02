@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { SiteMark } from "@/components/illustration/SiteMark";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { WeekPager } from "@/components/ui/week-pager";
 import { fill } from "@/i18n/fill";
+import type { SiteMarkCode } from "@/lib/site-mark";
 
 /**
  * What every departure the grid draws — a day cell or a spanning course bar —
@@ -50,6 +52,8 @@ export type WeekDeparture = {
 export type WeekEntry = WeekDeparture & {
   /** Preformatted departure time, e.g. "7:00 AM". */
   time: string;
+  /** Which drawing marks it — read off the site's name (`siteMarkFor`). */
+  mark: SiteMarkCode;
   /** "10 of 12 · $95", or "Sailed · 9 of 12" for a boat already home. */
   meta: string;
 };
@@ -441,6 +445,10 @@ export function WeekBoard({
                         down in muted ink and the word "Sailed" in its meta —
                         it needs no fill of its own to say so twice. */}
                     <div className="rounded-xl px-2 py-2 transition-colors hover:bg-surface has-[a:focus-visible]:bg-surface">
+                      {/* The drawn site mark leads the cell (ADR
+                          20260901-diveday-reimagined, slice 13f): the same
+                          hand as the home spine's rail, at the board's size. */}
+                      <SiteMark mark={entry.mark} size="sm" className="mb-1.5" />
                       <div className="flex items-start justify-between gap-1">
                         {/* Time leads the entry, so it is set on the ramp's
                             row-title step rather than under it — it was the

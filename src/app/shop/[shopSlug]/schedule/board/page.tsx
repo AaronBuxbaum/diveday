@@ -47,6 +47,7 @@ import {
   pushCursor,
 } from "@/lib/schedule-pagination";
 import { requireShopSurface } from "@/lib/session";
+import { siteMarkFor } from "@/lib/site-mark";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { uuidParam } from "@/lib/uuid";
@@ -761,6 +762,7 @@ export default async function ScheduleBoardPage({
         startTime: toTimeInputValue(utcToWallTime(entry.startsAt, tz)),
         title: entry.title,
         time: formatTime(entry.startsAt, locale, tz),
+        mark: siteMarkFor({ siteName: entry.diveSiteName, isCourse: entry.courseId !== null }),
         // **The site leads, because it is what differs.** Every title in a
         // column shares its prefix — "Dawn Two-Tank — …", "Morning Two-Tank —
         // …" — and a 150px column clips exactly the half that distinguishes
