@@ -146,3 +146,43 @@ to prevent. The rule was bounding nothing the pruner did not already bound.
 the case the pruner itself stops running and can only ever fire after it has had a hundred nightly
 chances to act. A future change may lower the pruner's own window; it may not lower this rule to meet
 it.
+
+### Amended 2026-09-02: a run that compared nothing is a red check
+
+**A skipped job reports as a passing check.** `visual-report` used to be skipped outright by its
+`needs: visual` whenever a capture shard failed — which is precisely when a reviewer most needs to
+hear that no pixel was checked — so the checks list agreed with the wrong reading. On PR #1133 that
+happened on three consecutive commits (`689d831`, `283e980`, `debbd39`) before anyone noticed, and
+the cause was mundane: one capture clicked the wrong row, timed out, and took its shard down.
+
+The `needs:` half was fixed by running the job on `!cancelled()`, but running it was never enough. On
+that path the download, the baseline resolve and the compare all skip, the summary step is
+`continue-on-error`, and **the job still ends green** — while the comment it posts says "nothing was
+compared and nothing is known about this commit's pixels. This is not a clean run." That comment was
+correct and it was the only thing standing between a reviewer and a false green.
+
+So the check now says what the comment says. `scripts/visual-pr-comment.mjs` writes one fact —
+`compared` — to `$GITHUB_OUTPUT` before anything that can throw, and a final `visual-report` step
+fails the job when it is not `true`. It is written against the summary's own verdict rather than
+against `needs.visual.result` because a failed shard is only one way to compare nothing: absent
+`REG_SUIT_*` secrets, a wrong bucket, a compare that threw, and a baseline that never resolved all
+produce the same blindness and are now caught by the same step. `BLIND_VERDICTS` in
+`scripts/visual-report-lib.mjs` names the three, and a test pins every verdict on one side or the
+other, so one cannot slip out of the set unnoticed. A **missing** output counts as not compared: it
+means the summary script died before it could fetch the report, and a run that cannot say whether
+pixels moved is exactly the state this refuses.
+
+**Fork pull requests are exempt**, and it is not a loophole. GitHub withholds secrets from fork
+workflows by design, so a fork PR can never publish a snapshot and can never compare one; failing
+every one of them would teach contributors that this check is noise, which is how a real blind run
+gets waved through. The sticky comment still names the miss on a fork, and the maintainer's own
+branch — where the pixels get their real review before merge — carries the secrets and this gate.
+
+The existing "Refuse to miss main's baseline silently" step keeps the floor on a push to `main`,
+where a missed snapshot has the larger consequence of blinding every branch cut from that commit; the
+new step stands down there rather than adding a second, vaguer annotation beside it.
+
+**A visual difference still only ever warns** (ADR 20260802-visual-diff-pr-comment). This is about a
+run that compared nothing at all, which is a different thing: not "the pixels moved", but "we do not
+know". The capture step's narrow `"wedged, not slow"` retry is untouched — widening it would convert
+a deterministic failure into an intermittent pass, which `pnpm check:e2e-hygiene` exists to refuse.

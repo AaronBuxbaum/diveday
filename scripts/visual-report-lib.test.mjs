@@ -2,7 +2,9 @@ import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 
 import {
+  BLIND_VERDICTS,
   COMMENT_MARKER,
+  comparedAnything,
   countsLine,
   fetchFromBucket,
   formatPrComment,
@@ -239,5 +241,67 @@ describe("fetchFromBucket", () => {
     });
     expect(result).toMatchObject({ ok: false, status: 404 });
     expect(result.url).toBe(`https://${BUCKET}.s3.amazonaws.com/k/out.json`);
+  });
+});
+
+/**
+ * `visual-report`'s final step turns this answer into a red check (issue #1137),
+ * so a verdict slipping out of `BLIND_VERDICTS` is a run that compared nothing
+ * going green again — the exact regression the step exists to prevent. Every
+ * verdict `summarizeReport` can produce is pinned on one side or the other.
+ */
+describe("comparedAnything — what the CI gate reads", () => {
+  it("refuses a report that was never published", () => {
+    expect(comparedAnything(summarizeReport(null))).toBe(false);
+  });
+
+  it("refuses a run that captured nothing", () => {
+    expect(comparedAnything(summarizeReport(outJson({})))).toBe(false);
+  });
+
+  it("refuses a run whose baseline never resolved, however reassuring its count", () => {
+    // The documented lie: every screenshot reports as `new`, so `failedItems`
+    // is a comforting zero while nothing was compared at all.
+    const summary = summarizeReport(outJson({ added: items("about", 234), expected: [] }));
+    expect(summary.changedCount).toBe(234);
+    expect(summary.comparedCount).toBe(0);
+    expect(comparedAnything(summary)).toBe(false);
+  });
+
+  it("accepts a clean comparison", () => {
+    expect(comparedAnything(summarizeReport(outJson({ passed: items("about", 3) })))).toBe(true);
+  });
+
+  it("accepts a comparison that found differences — a diff warns, it never blinds", () => {
+    const summary = summarizeReport(
+      outJson({ failed: items("about", 2), passed: items("home", 5) }),
+    );
+    expect(summary.verdict).toBe("changes");
+    expect(comparedAnything(summary)).toBe(true);
+  });
+
+  it("names every blind verdict, so a new one cannot be added silently", () => {
+    expect(BLIND_VERDICTS).toEqual(["no-report", "nothing-captured", "no-baseline"]);
+    for (const verdict of BLIND_VERDICTS) {
+      expect(comparedAnything({ verdict })).toBe(false);
+    }
+  });
+});
+
+describe("the comment agrees with the check", () => {
+  it("says a difference never fails the build when something was compared", () => {
+    const body = comment(outJson({ failed: items("about", 2), passed: items("home", 5) }));
+    expect(body).toContain("A visual difference never fails the build");
+    expect(body).not.toContain("This fails the `visual-report` check");
+  });
+
+  it("says the check fails when nothing was compared", () => {
+    // For years this paragraph read "informational and never fails the build"
+    // on exactly the run where the check was about to go green over nothing.
+    for (const report of [null, outJson({}), outJson({ added: items("a", 3), expected: [] })]) {
+      const body = comment(report);
+      expect(body).toContain("This fails the `visual-report` check");
+      expect(body).not.toContain("A visual difference never fails the build");
+    }
   });
 });

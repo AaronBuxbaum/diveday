@@ -16,7 +16,12 @@
 // Three rules govern this script:
 //   1. It never fails the build. Every path exits 0; the workflow step is
 //      `continue-on-error` on top of that. A visual diff is warned about
-//      loudly, never blocked (ADR 20260802-visual-diff-pr-comment).
+//      loudly, never blocked (ADR 20260802-visual-diff-pr-comment). It does
+//      write one fact to `$GITHUB_OUTPUT` — `compared`, whether a comparison
+//      happened at all — which the workflow's own final step turns into a red
+//      check (issue #1137). That is the workflow failing the build, not this
+//      script: a *diff* still only warns, and a run that compared *nothing* is
+//      a different thing entirely.
 //   2. It never needs `pnpm`. Bare `node` plus builtins only, so it still
 //      reports when install or compare is what broke.
 //   3. It never lies by omission. A truncated list says what it dropped, and a
@@ -27,6 +32,7 @@ import process from "node:process";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 import {
   COMMENT_MARKER,
+  comparedAnything,
   DEFAULT_BUCKET,
   fetchFromBucket,
   formatPrComment,
@@ -98,6 +104,20 @@ async function findStickyComment(repo, pr, token) {
   return null;
 }
 
+/**
+ * One `key=value` line into `$GITHUB_OUTPUT`, or nothing outside CI. Values
+ * here are a fixed verdict string and a boolean, so the multiline delimiter
+ * form is not needed.
+ */
+function writeStepOutput(key, value) {
+  if (!process.env.GITHUB_OUTPUT) return;
+  try {
+    appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
+  } catch (err) {
+    console.warn(`visual-pr-comment: could not write step output ${key} — ${err.message}`);
+  }
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const bucket = args.bucket || process.env.REG_SUIT_S3_BUCKET_NAME || DEFAULT_BUCKET;
@@ -129,6 +149,12 @@ async function main() {
   }
 
   const summary = summarizeReport(report);
+  // Written before anything that can throw — the GitHub API calls below, a
+  // read-only fork token, an S3 blip. The workflow reads a *missing* output as
+  // "not compared" too, which is the honest reading: this script dying before
+  // it got here means nothing is known about the pixels either.
+  writeStepOutput("verdict", summary.verdict);
+  writeStepOutput("compared", String(comparedAnything(summary)));
   // Set by scripts/wait-for-baseline.mjs when it substituted an older baseline
   // for one that was never published; empty on the ordinary path.
   const note = process.env.REG_BASELINE_NOTE || "";

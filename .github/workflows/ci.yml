@@ -608,6 +608,7 @@ jobs:
       # with bare `node`, not `pnpm`, so it still reports when the install or
       # the compare is what broke; the script imports node builtins only.
       - name: Summarize the visual result on the pull request
+        id: summary
         if: ${{ !cancelled() }}
         continue-on-error: true
         run: node scripts/visual-pr-comment.mjs
@@ -666,6 +667,56 @@ jobs:
         run: |
           echo "::error title=No visual baseline published for ${GITHUB_SHA}::The visual captures did not complete, or this run could not name the key to publish them under, so this commit published no S3 snapshot. Every branch cut from it resolves 0 baselines and reports every surface as new — visual regression is blind repo-wide until this is fixed. Re-run this run's failed jobs (Actions → this run → Re-run failed jobs); a green re-run publishes the snapshot and restores comparison. Do not publish a partial capture set to work around it: the missing surfaces would then read as new permanently."
           exit 1
+      # A pull request whose capture shard failed used to read GREEN. `needs:`
+      # skipped this whole job, and **a skipped job reports as a passing check**
+      # — so a run where nothing was compared agreed with the wrong reading, on
+      # three consecutive commits of #1133 before anyone noticed. The `needs:`
+      # half is fixed above (`!cancelled()` runs the job), but running it was
+      # never enough: with the shards red, the download, the baseline resolve
+      # and the compare all skip, the summary step is `continue-on-error`, and
+      # the job still ends green. The comment it posts says "nothing was
+      # compared and nothing is known about this commit's pixels. This is not a
+      # clean run" — correct, and the only thing standing between a reviewer and
+      # a false green. AGENTS.md makes accounting for every changed pixel a hard
+      # rule; the checks list disagreed with it.
+      #
+      # So: the check now says what the comment says. This fails on all three
+      # blind verdicts (`BLIND_VERDICTS` in scripts/visual-report-lib.mjs), which
+      # is why it is written against the summary's own answer rather than
+      # against `needs.visual.result` — a failed shard is only one way to
+      # compare nothing. Absent `REG_SUIT_*` secrets and a wrong bucket produce
+      # the same blindness and are caught by the same step.
+      #
+      # A *missing* output counts as not compared, deliberately. It means the
+      # summary script died before it could fetch the report, and a run that
+      # cannot tell you whether pixels moved is exactly the state this exists to
+      # refuse.
+      #
+      # **Forks are exempt, and this is not a loophole.** GitHub withholds
+      # secrets from fork workflows by design, so a fork PR can never publish a
+      # snapshot and can never compare one; failing every one of them would
+      # teach contributors that this check is noise, which is how a real blind
+      # run gets waved through. The sticky comment still names the miss on a
+      # fork, and the maintainer's own branch — where the pixels get their real
+      # review before merge — carries the secrets and this gate. The idiom
+      # matches infra.yml's fork detection.
+      #
+      # A visual *diff* still only ever warns (ADR 20260802-visual-diff-pr-comment).
+      # This is about a run that compared nothing at all, which is a different
+      # thing: not "the pixels moved", but "we do not know".
+      #
+      # Last, and standing down from the one case the step above already covers.
+      # A missed snapshot on a push to main has a bigger consequence than this
+      # message carries — every branch cut from that commit resolves no baseline
+      # — so that step keeps the floor there and this one would only add a
+      # second, vaguer annotation beside it.
+      - name: Refuse a green check over nothing compared
+        if: ${{ !cancelled() && steps.summary.outcome != 'skipped' && steps.summary.outputs.compared != 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && !(github.event_name == 'push' && github.ref == 'refs/heads/main' && (needs.visual.result != 'success' || steps.keys.outcome != 'success')) }}
+        run: |
+          echo "::error title=Nothing was compared::The visual run published no usable report for this commit (verdict: ${VERDICT:-unknown}), so nothing is known about its pixels — this is not a clean run, and it is not a passing one either. Read the sticky diveday:visual-summary comment and the visual-report job log: the usual causes are a failed capture shard, absent REG_SUIT_* secrets, or a bucket mismatch. Re-run the failed jobs; a green re-run compares and publishes. Do not merge on a Changed: 0 that compared nothing."
+          exit 1
+        env:
+          VERDICT: ${{ steps.summary.outputs.verdict }}
 
   changes:
     name: Detect what changed
