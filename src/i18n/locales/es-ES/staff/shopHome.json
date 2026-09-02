@@ -125,6 +125,7 @@
     "full": "Completa",
     "ofCapacity": "de {capacity}",
     "until": "hasta las {time}",
+    "stationClear": "Nada pendiente antes de las {time}.",
     "crewing": "Formas parte de la tripulación",
     "aboardNamed": "{name} está a bordo — {reason}",
     "aboardCount": "{count, plural, one {# buceador está a bordo — {reason}} other {# buceadores están a bordo — {reason}}}",

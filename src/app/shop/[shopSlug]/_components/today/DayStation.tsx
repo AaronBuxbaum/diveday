@@ -8,6 +8,7 @@ import { formatMoneyCents, formatTime } from "@/lib/format";
 import type { AboardBlockerKind } from "@/lib/readiness";
 import { siteMarkFor } from "@/lib/site-mark";
 import type { DayStation as DayStationData } from "@/lib/today";
+import { StationSettles } from "./StationSettles";
 
 /**
  * One station on the shop home's day spine — a departure, drawn at the time it
@@ -209,7 +210,19 @@ export function DayStation({
           </div>
         ) : null}
 
-        {children}
+        {/* The rows, and the water that closes over them when the last one
+            clears — Reef's first moment (ADR 20260901-diveday-reimagined,
+            slice 13g). The sentence names this boat's own time: it is the
+            station's answer, not the day's, which the summary line above the
+            spine already gives. */}
+        <StationSettles
+          rowCount={station.rows.length}
+          sentence={t("shopHome.spine.stationClear", {
+            time: formatTime(station.startsAt, locale, timeZone),
+          })}
+        >
+          {children}
+        </StationSettles>
       </div>
     </li>
   );
