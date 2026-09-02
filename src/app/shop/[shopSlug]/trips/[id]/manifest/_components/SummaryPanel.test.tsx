@@ -132,3 +132,27 @@ describe("the missing are named, not just counted", () => {
     expect(screen.getByRole("list", { name: "Who is not back aboard" })).toBeTruthy();
   });
 });
+
+describe("the closed checkpoint (ADR 20260901-diveday-reimagined, slice 13h)", () => {
+  it("says it in the heading and the full figure, never in coral", () => {
+    // No coral on a manifest or a roll call: the panel used to turn accent
+    // when the checkpoint closed. The word and the water at the brim are the
+    // whole moment.
+    const { container } = renderPanel({
+      rollCallComplete: true,
+      completeness: completeness({
+        reason: null,
+        complete: true,
+        diversAccountedFor: true,
+        crewAccountedFor: true,
+      }),
+      summary: summary({ notBoarded: 0, notBackAboard: 0, boarded: 3 }),
+      notBackAboardDivers: [],
+    });
+    expect(screen.getByRole("heading", { name: "Roll call complete" })).toBeTruthy();
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuetext")).toBe(
+      "3 of 3 divers recorded",
+    );
+    expect(container.innerHTML).not.toMatch(/accent/);
+  });
+});

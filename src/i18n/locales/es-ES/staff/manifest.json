@@ -18,6 +18,7 @@
   "rollCallComplete": "Pase de lista completo",
   "recordedOfTotal": "{recorded} de {total, plural, one {# buceador registrado} other {# buceadores registrados}}",
   "progressAriaLabel": "Progreso del pase de lista",
+  "ofTotal": "de {total}",
   "allAccountedFor": "Todos contabilizados — buceadores y tripulación. Listo para el siguiente control.",
   "notBackAboardOpen": "{count, plural, one {# buceador no ha regresado a bordo.} other {# buceadores no han regresado a bordo.}} Este control sigue abierto hasta contabilizarlos.",
   "crewNoneAssignedYet": "Todos los buceadores están contabilizados. Todavía no hay nadie en la tripulación de esta salida — añade a quienes navegaron para cerrar este control.",

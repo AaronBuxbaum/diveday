@@ -38,9 +38,11 @@ export interface ProgressSegment {
  *
  * **It renders no ARIA of its own.** What a bar means differs per surface: the
  * boarding bar is decorative beside a caption that carries every fact in words
- * (principle 6), the manifest's is a `role="progressbar"` with real values, and
- * the waiver's is described by a `role="status"` sentence above it. The caller
- * owns that, and this owns the pixels.
+ * (principle 6), and the waiver's is described by a `role="status"` sentence
+ * above it. The caller owns that, and this owns the pixels. (The manifest's
+ * roll-call bar, once the third caller, became the round `HeadCount` figure —
+ * ADR 20260901-diveday-reimagined, slice 13h — which scales its water the same
+ * way for the same reason.)
  */
 export function ProgressBar({
   segments,

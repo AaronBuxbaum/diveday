@@ -1,10 +1,10 @@
 import { groupLabelClass } from "@/components/ui/ledger";
-import { ProgressBar } from "@/components/ui/ProgressBar";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessStatusText } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { RollCallCheckpoint, TripManifest } from "@/lib/manifests";
+import { HeadCount } from "./HeadCount";
 
 /**
  * The sticky progress panel: which checkpoint is live, how much of it is
@@ -249,13 +249,14 @@ export function SummaryPanel({
           69px content-driven staff bar — which the moment the bar became 56px
           left 24px of scrolling roster showing between the two, on the surface
           a crew counts heads on. */}
+      {/* One look, complete or not. The closed checkpoint used to turn the
+          panel coral; ADR 20260901-diveday-reimagined's coral table puts
+          coral on no manifest or roll call, and the moment here is the count
+          that fills (slice 13h) — the water at the brim and the heading's
+          word, never a wash behind the reading text. */}
       <section
         aria-labelledby="roll-call-progress-heading"
-        className={
-          rollCallComplete
-            ? "rise-in sticky top-(--chrome-h) z-10 mt-4 rounded-2xl border border-accent/50 bg-accent/10 p-4 shadow-lg backdrop-blur print:hidden"
-            : "sticky top-(--chrome-h) z-10 mt-4 rounded-2xl border border-primary/30 bg-surface/95 p-4 shadow-lg backdrop-blur print:hidden"
-        }
+        className="sticky top-(--chrome-h) z-10 mt-4 rounded-2xl border border-primary/30 bg-surface/95 p-4 shadow-lg backdrop-blur print:hidden"
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -277,35 +278,13 @@ export function SummaryPanel({
               the one number a crew is holding in their head at the rail, so it
               is the biggest thing on the panel and always tabular — figures
               that hold their columns as they tick, rather than jumping a pixel
-              left every time a 1 becomes a 2. */}
-          <p className="text-2xl font-bold tabular-nums">
-            {t("manifest.recordedOfTotal", {
-              recorded: summary.totalDivers - summary.awaiting,
-              total: summary.totalDivers,
-            })}
-          </p>
-        </div>
-        <div
-          className="mt-3 h-3 overflow-hidden rounded-full bg-surface-sunken"
-          role="progressbar"
-          aria-label={t("manifest.progressAriaLabel")}
-          aria-valuemin={0}
-          aria-valuemax={summary.totalDivers}
-          aria-valuenow={summary.totalDivers - summary.awaiting}
-        >
-          <ProgressBar
-            className="h-full"
-            trackClassName=""
-            segments={[
-              {
-                key: "counted",
-                fraction:
-                  summary.totalDivers === 0
-                    ? 0
-                    : (summary.totalDivers - summary.awaiting) / summary.totalDivers,
-                className: "bg-primary",
-              },
-            ]}
+              left every time a 1 becomes a 2. Drawn as the figure whose water
+              rises with the count (slice 13h); the bar that used to sit under
+              it was the same fraction said twice. */}
+          <HeadCount
+            recorded={summary.totalDivers - summary.awaiting}
+            total={summary.totalDivers}
+            t={t}
           />
         </div>
         {/* The counts the six tiles used to carry, folded in under the bar they
