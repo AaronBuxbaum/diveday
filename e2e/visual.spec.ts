@@ -849,6 +849,82 @@ async function waitForEntranceAnimations(page: Page) {
   );
 }
 
+/**
+ * **Wait for the resize's own layout to land before anything measures it.**
+ *
+ * Root cause of issue #1245, reproduced locally on 2026-09-02 by probing
+ * `document.documentElement.scrollHeight` frame by frame straight after
+ * `setViewportSize`. On the diver record at 390px it reads **1821 for thirteen
+ * frames and then 1213** — a 608px step, which is exactly the flap the issue
+ * measured on CI, and exactly the "608 rows of empty sand appended at the
+ * bottom" it describes.
+ *
+ * What is stepping is `globals.css`'s disclosure rule:
+ *
+ *     details::details-content { transition: ... content-visibility 200ms allow-discrete }
+ *
+ * plus the `@media (min-width: 40rem)` rule that forces a diver-file group's
+ * body `content-visibility: visible`. The base viewport is desktop, so the
+ * first capture viewport resizes *down* across 40rem and nine group bodies
+ * begin transitioning from rendered to content-hidden. `content-visibility` is
+ * discrete: it holds `visible` for the whole 200ms and flips at the end. For
+ * those 200ms the bodies are still laid out - contributing their height - while
+ * `opacity` has already animated to 0. Laid out, and invisible: blank sand,
+ * with nothing above it moved.
+ *
+ * **Why no existing wait catches it.** `waitForEntranceAnimations` cannot:
+ * `document.getAnimations()` lists only `rise-in` across all thirteen frames,
+ * never the `::details-content` transitions, so an animation-based gate reports
+ * the page at rest while it is mid-step. Nor can a "height stable for N frames"
+ * check - the height is *perfectly* stable at 1821 the whole time, because the
+ * property is discrete.
+ *
+ * **Why CI and not here.** `paintWholeDocument`'s `settle()` waits two frames
+ * *or* `frameWaitMs`, whichever comes first, and the scroll loop stops at its
+ * wall-clock deadline. On an idle machine the scroll-through outlasts 200ms and
+ * the flip lands before the shutter. On a starved runner rAF stops arriving -
+ * so the settles return via their timeouts, the loop gives up on its deadline,
+ * and the shot goes ahead. But a transition only advances on real frames, so
+ * the very starvation that makes the harness stop waiting is what leaves the
+ * transition frozen mid-flight. The screenshot then photographs 1821.
+ *
+ * So this gate counts **real frames**, and nothing else. Playwright polls a
+ * `waitForFunction` on `requestAnimationFrame`, so a starved renderer produces
+ * no samples and this waits longer in wall-clock - which is precisely right,
+ * because the transition it is waiting on is starved by the same amount. There
+ * is no duration in it to guess wrong, and unlike a `settle()` it cannot be
+ * satisfied by a timeout.
+ *
+ * `SETTLED_FRAMES` has to outlast the longest transition a resize can start. At
+ * 60Hz twenty frames is ~333ms against the 200ms above, and the margin is
+ * counted in frames rather than milliseconds so it scales with the runner.
+ */
+const SETTLED_FRAMES = 20;
+
+async function waitForResizeToSettle(page: Page) {
+  await page.waitForFunction(
+    (frames) => {
+      const scope = window as unknown as {
+        divedayResizeSettle?: { height: number; seen: number };
+      };
+      const height = document.documentElement.scrollHeight;
+      const seen = scope.divedayResizeSettle;
+      if (!seen || seen.height !== height) {
+        scope.divedayResizeSettle = { height, seen: 0 };
+        return false;
+      }
+      seen.seen += 1;
+      return seen.seen >= frames;
+    },
+    SETTLED_FRAMES,
+    // Generous, and never reached in practice: the wait ends after
+    // SETTLED_FRAMES agreeing frames, which on any live renderer is well under
+    // a second. A document whose height genuinely never settles is a real
+    // defect and should fail here rather than be photographed mid-step.
+    { timeout: 20_000, polling: "raf" },
+  );
+}
+
 async function capture(page: Page, name: string, scheme: "light" | "dark") {
   const baseViewport = page.viewportSize();
   // Park the pointer somewhere inert, or the capture photographs whatever the
@@ -895,7 +971,16 @@ async function capture(page: Page, name: string, scheme: "light" | "dark") {
   const viewports = TABLET_SURFACES.has(name) ? [...VIEWPORTS, TABLET_VIEWPORT] : VIEWPORTS;
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
+    // Before `paintWholeDocument`, not after: the scroll-through rasterizes
+    // whatever height it finds, so a document still mid-resize is painted at
+    // the wrong one (issue #1245).
+    await waitForResizeToSettle(page);
     await paintWholeDocument(page);
+    // `rise-in` was still listed in `document.getAnimations()` at every one of
+    // this capture's four shots on an *idle* machine - the entrance this helper
+    // was written for and then never wired to anything. A starved runner is
+    // where that stops being harmless.
+    await waitForEntranceAnimations(page);
     await screenshotOrGiveUp(page, `e2e/screenshots/${name}-${scheme}-vw-${viewport.width}.png`);
   }
   // capture() runs mid-flow (navigation and clicks continue after it), so
