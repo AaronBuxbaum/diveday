@@ -39,20 +39,89 @@ const DB_FACTORY = /\bcreateTestDb\s*\(/;
 const TEST_DECLARATION =
   /^\s*(?:it|test)(?:\.(?:each|skip|only|todo|skipIf|runIf|concurrent|for)(?:\([^)]*\))?)*\s*\(/gm;
 
+/**
+ * A **file-scoped** context (`fileScopedShopContext`, src/test/db.ts) hydrates
+ * one PGlite for the whole file and gives each test a transaction that is
+ * rolled back. `DB_HELPER_IMPORT` cannot see the difference — both helpers are
+ * exported from `@/test/db` — so before this was split out, such a file was
+ * billed a full hydration per test and the estimate came out roughly 20x its
+ * real cost (issue #1302).
+ *
+ * That is not a harmless over-estimate. `partition` deals heaviest-first onto
+ * the emptiest bin, and with the usual `count = 4` the four heaviest files each
+ * seed a distinct bin — so an over-billed file *seeds a shard*, claims a bin's
+ * budget it never spends, and the packer then fills that bin with real work
+ * believing it balanced. `today.test.ts` seeded bin 4 deterministically, which
+ * is the shard that timed out on `1237cbf` and again on `8c66fa5`.
+ *
+ * A call, not an import: a file may import both helpers and use only one.
+ * Comments are stripped first, because `today.test.ts` names
+ * `seededShopContext()` in the prose explaining why it stopped using it — the
+ * same discipline `TEST_DECLARATION` needs for `// it("not a test")`.
+ */
+const FILE_SCOPED_CALL = /\bfileScopedShopContext\s*\(/;
+/**
+ * Per-test hydration, taken **directly**. A file matching this pays a database
+ * per test whatever else it does, so a file using both helpers — `divers.test.ts`
+ * does, file-scoped at the top and one `seededShopContext()` deep in a test —
+ * falls back to the expensive branch rather than being billed as if the cheap
+ * half were the whole story.
+ */
+const PER_TEST_HYDRATION_CALL =
+  /\b(?:seededShopContext|seededTestDb|unseededTestDb|createTestDb)\s*\(/;
+/** A line whose first non-space character opens or continues a comment. */
+const COMMENT_LINE = /^\s*(?:\/\/|\/\*|\*)/;
+
 /** Per-test cost, in arbitrary units that only have to be right relative to each other. */
 export const PER_TEST_DB_COST = 1200;
+/**
+ * A rolled-back transaction, not a hydration. Measured against
+ * `PER_TEST_DB_COST`'s own reference on two paired runs: `trips-queries` at
+ * 49-113 equivalent units per test and `today` at 286-382, so 300 sits at the
+ * top of the range. Deliberately the top rather than the middle — over-billing
+ * deals a file *earlier*, onto an emptier bin, which is the safe direction;
+ * under-billing deals it last onto a full one, which is the failure this
+ * constant exists to avoid. Reusing `PER_TEST_PLAIN_COST` (60) would do exactly
+ * that, at 2-6x under.
+ */
+export const PER_TEST_FILE_SCOPED_DB_COST = 300;
 export const PER_TEST_PLAIN_COST = 60;
-/** Per-file overhead: process spawn, transform, imports. */
-export const PER_FILE_DB_COST = 1500;
+/**
+ * Per-file overhead: process spawn, transform, imports.
+ *
+ * Raised from 1500 with the file-scoped split, because 1500 under-modelled it
+ * about sixfold — `trips-queries` spends ~11s wall on ~2s of tests, most of it
+ * transform and import. That was harmless while every database file paid the
+ * same understated constant: a uniform error moves no file past another. It
+ * stops being harmless the moment two database branches exist, so this is the
+ * honest figure and **both** branches pay it.
+ *
+ * Raising it only for the file-scoped branch was tried first and is wrong: it
+ * puts the crossover at about eight tests, below which a file-scoped file is
+ * billed *more* than a per-test file of the same size — the packer wrong in a
+ * new place, which is what the split was for.
+ */
+export const PER_FILE_DB_COST = 9000;
+/**
+ * The same overhead, plus the single hydration a file-scoped file pays up front
+ * — which is exactly one test's worth at the per-test rate. Expressed as that
+ * sum rather than as a number, because that is what it is.
+ */
+export const PER_FILE_FILE_SCOPED_DB_COST = PER_FILE_DB_COST + PER_TEST_DB_COST;
 export const PER_FILE_PLAIN_COST = 800;
 
 /** A static cost estimate for one test file's source. */
 export function estimateCost(source: string): number {
   const tests = source.match(TEST_DECLARATION)?.length ?? 0;
   const db = DB_HELPER_IMPORT.test(source) || DB_FACTORY.test(source);
-  return db
-    ? PER_FILE_DB_COST + tests * PER_TEST_DB_COST
-    : PER_FILE_PLAIN_COST + tests * PER_TEST_PLAIN_COST;
+  if (!db) return PER_FILE_PLAIN_COST + tests * PER_TEST_PLAIN_COST;
+  const code = source
+    .split("\n")
+    .filter((line) => !COMMENT_LINE.test(line))
+    .join("\n");
+  return FILE_SCOPED_CALL.test(code) && !PER_TEST_HYDRATION_CALL.test(code)
+    ? PER_FILE_FILE_SCOPED_DB_COST + tests * PER_TEST_FILE_SCOPED_DB_COST
+    : PER_FILE_DB_COST + tests * PER_TEST_DB_COST;
 }
 
 /**
