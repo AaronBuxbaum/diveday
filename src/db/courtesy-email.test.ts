@@ -128,6 +128,16 @@ describe("a complaint opts the address out", () => {
       fullName: "Sam Reyes",
       email: "sam@example.com",
     });
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Reef", slug: "other-reef", timezone: "America/New_York" })
+      .returning({ id: shops.id });
+    if (!otherShop) throw new Error("second shop insert failed");
+    const { person: sameAddressElsewhere } = await findOrCreatePerson(db, {
+      shopId: otherShop.id,
+      fullName: "Nora Quinn",
+      email: "nora-courtesy@example.com",
+    });
     const at = new Date("2026-09-02T12:00:00.000Z");
 
     const outcome = await optOutAddressAfterComplaint(db, {
@@ -146,6 +156,11 @@ describe("a complaint opts the address out", () => {
     expect(entry?.unsubscribedAt).toEqual(at);
     const [other] = await db.select().from(people).where(eq(people.id, neighbour.id));
     expect(other?.courtesyEmailOptOutAt).toBeNull();
+    const [elsewhere] = await db
+      .select()
+      .from(people)
+      .where(eq(people.id, sameAddressElsewhere.id));
+    expect(elsewhere?.courtesyEmailOptOutAt).toBeNull();
   });
 
   it("is idempotent, and does nothing for an address the shop does not know", async () => {

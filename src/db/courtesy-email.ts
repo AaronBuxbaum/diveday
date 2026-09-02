@@ -168,7 +168,13 @@ export async function optOutAddressAfterComplaint(
   const optedOut = await db
     .update(people)
     .set({ courtesyEmailOptOutAt: at })
-    .where(and(inArray(people.id, ids), isNull(people.courtesyEmailOptOutAt)))
+    .where(
+      and(
+        eq(people.shopId, input.shopId),
+        inArray(people.id, ids),
+        isNull(people.courtesyEmailOptOutAt),
+      ),
+    )
     .returning({ id: people.id });
   const unsubscribed = await db
     .update(lastMinuteListEntries)
