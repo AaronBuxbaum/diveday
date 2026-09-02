@@ -874,9 +874,89 @@
   },
   "embed": {
     "eyebrow": "Ajustes",
-    "title": "Widget para tu web",
-    "description": "Pega uno de estos en tu web para que los buceadores exploren y reserven sin salir de ella.",
-    "notConfigured": "Los widgets necesitan una dirección de alojamiento público configurada en esta instancia de DiveDay — contacta a {email} para activarla.",
+    "title": "Inserción en tu web",
+    "description": "Pon tu calendario, una salida o un botón de reserva en tu propia web. Una línea cada uno; aquí eliges qué muestra y cómo se ve.",
+    "notConfigured": "Los enlaces de inserción necesitan una dirección pública configurada para esta instancia de DiveDay; escribe a {email} para activarla.",
+    "what": "Qué insertar",
+    "shows": "Qué muestra",
+    "showEverything": "Todo lo que hay en el tablón",
+    "showDeparture": "Una salida",
+    "look": "Aspecto",
+    "lookSite": "Tu web",
+    "lookLight": "DiveDay",
+    "lookNote": "Toma el color de enlace y la tipografía de tu página. Si el color es demasiado claro para texto blanco, el botón se oscurece solo.",
+    "language": "Idioma",
+    "languageAuto": "Seguir el navegador del visitante",
+    "preview": "Vista previa",
+    "previewNote": "Se muestra con el aspecto de DiveDay; en tu web toma el color y la tipografía de tu página.",
+    "platform": "Dónde va",
+    "snippet": "Ponlo en tu web",
+    "partnerName": "Colaborador",
+    "partnerPlaceholder": "p. ej. Hotel The Reef",
+    "partnerLink": "Enlace de colaborador",
+    "qrAlt": "Código QR a tu página de reservas",
+    "qrDownload": "Descargar PNG",
+    "kinds": {
+      "button": {
+        "name": "Botón",
+        "hint": "Un enlace con tu color"
+      },
+      "lightbox": {
+        "name": "Ventana",
+        "hint": "La reserva se abre sobre tu página"
+      },
+      "calendar": {
+        "name": "Calendario",
+        "hint": "Tus próximas salidas, integradas"
+      },
+      "grid": {
+        "name": "Cuadrícula",
+        "hint": "Salidas y cursos como tarjetas"
+      },
+      "departure": {
+        "name": "Una salida",
+        "hint": "Una tarjeta para una entrada del blog"
+      },
+      "courses": {
+        "name": "Cursos",
+        "hint": "La lista de cursos"
+      },
+      "qr": {
+        "name": "Código QR",
+        "hint": "Para el mostrador y el barco"
+      },
+      "partner": {
+        "name": "Enlace de colaborador",
+        "hint": "Para que un hotel o resort lo comparta"
+      }
+    },
+    "platforms": {
+      "html": {
+        "name": "HTML",
+        "note": "Pégalo donde deba aparecer el widget. La primera línea se carga una vez por página, añadas los widgets que añadas."
+      },
+      "wordpress": {
+        "name": "WordPress",
+        "note": "Añade un bloque HTML personalizado donde deba aparecer el widget y pega el código dentro."
+      },
+      "squarespace": {
+        "name": "Squarespace",
+        "note": "Añade un bloque de código (Insertar → Código) donde deba aparecer el widget y pega el código dentro."
+      },
+      "wix": {
+        "name": "Wix",
+        "note": "Añade un elemento Insertar HTML, pega el código y ajusta el tamaño del elemento al widget."
+      }
+    },
+    "bookButton": {
+      "buttonText": "Reservar una inmersión"
+    },
+    "footer": "Cada inserción apunta a <link>tu calendario público</link>. Los cambios en salidas, nuevas salidas y precios aparecen en cuanto un buceador la carga.",
+    "snippetField": {
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "failed": "No se pudo copiar: selecciona el código de arriba."
+    },
     "calendarEmbed": {
       "heading": "Widget de calendario",
       "description": "Tus próximas cuatro salidas con un enlace al resto, con un tamaño que nunca genera scroll dentro de tu página. Ideal para una página «Reservar» en tu web.",
@@ -884,17 +964,7 @@
       "fieldLabel": "Código del widget",
       "attributionLinkText": "Con la tecnología de DiveDay"
     },
-    "bookButton": {
-      "heading": "Botón \"Reservar inmersión\"",
-      "description": "Un enlace normal con aspecto de botón, sin iframe. Abre tu calendario en una pestaña nueva y es la opción a usar si cobras en línea, ya que una página de pago puede negarse a cargar dentro del marco de otro sitio.",
-      "fieldLabel": "Código del botón",
-      "buttonText": "Reservar inmersión"
-    },
-    "footer": "Ambos fragmentos apuntan a <link>tu calendario público</link>. Los cambios en salidas, las nuevas fechas y los precios aparecen en cuanto un buceador carga el incrustado.",
-    "snippetField": {
-      "copy": "Copiar",
-      "copied": "Copiado",
-      "failed": "No se pudo copiar — selecciona el código de arriba."
-    }
+    "code": "Código de inserción",
+    "partnerLinkField": "Enlace de referido"
   }
 }

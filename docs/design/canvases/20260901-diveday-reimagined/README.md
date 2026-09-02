@@ -108,7 +108,7 @@ door order on Tide's and Reef's switching boards (the demo leads).
 | 13a — Reef's tokens for the staff app | shipped | `src/components/ui/card.tsx` | `src/components/ui/card.test.tsx` |
 | 13b — the shop's brand: schema, `brand.ts`, the Settings Brand group | shipped | `src/lib/brand.ts` | `src/lib/brand.test.ts` |
 | 13c — Harbor's storefront | shipped | `src/components/BrandStyle.tsx` | `src/components/BrandStyle.test.tsx` |
-| 13d — the embed catalogue and the generator | open | — | — |
+| 13d — the embed catalogue and the generator | shipped | `src/lib/embed-snippets.ts` | `src/lib/embed-snippets.test.ts` |
 | 13e — the offer on the marketing pages | open | — | — |
 | 13f — the drawn site mark | open | — | — |
 | 13g — the water closes over finished work | open | — | — |

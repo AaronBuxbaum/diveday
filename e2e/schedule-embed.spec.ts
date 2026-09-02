@@ -154,29 +154,34 @@ test("the non-embed schedule page carries no Powered-by-DiveDay attribution link
 test.describe("settings/embed, as owner", () => {
   signedInAsOwner();
 
-  test("settings/embed generates both snippets against the configured public origin", async ({
+  test("settings/embed generates the snippet against the configured public origin", async ({
     page,
   }) => {
     await page.goto("/shop/blue-mantis/settings/embed");
     await expect(page.getByRole("heading", { name: "Website embed" })).toBeVisible();
     await expect(page.getByText(/configured public hosting address/)).toHaveCount(0);
 
-    // Both snippets target the *public* namespace for this shop, never a
-    // /shop/** staff path (ADR 20260803-public-shop-namespace), and the origin
-    // is the configured one rather than the worker's own loopback base URL —
-    // a snippet a shop pastes into its website has to survive leaving this box.
-    const embedCode = await page.getByLabel("Embed code").inputValue();
-    expect(embedCode).toContain('<iframe src="https://');
-    expect(embedCode).toContain("/s/blue-mantis?embed=1");
+    // The snippet loads DiveDay's script from the *configured* origin rather
+    // than the worker's own loopback base URL — a snippet a shop pastes into
+    // its website has to survive leaving this box — and names the shop by its
+    // public slug, never a /shop/** staff path (ADR
+    // 20260803-public-shop-namespace). The crawlable credit link with the
+    // shop's campaign params is added by the loader on the host page, and
+    // e2e/embed-catalogue.spec.ts asserts it there.
+    const snippet = page.getByLabel("Embed code");
+    const embedCode = await snippet.inputValue();
+    expect(embedCode).toContain('<script async src="https://');
+    expect(embedCode).toContain('data-shop="blue-mantis"');
     expect(embedCode).not.toContain("/shop/blue-mantis");
-    // The crawlable backlink lives outside the iframe, carrying the shop's
-    // campaign params — the same attribution the widget itself renders.
-    expect(embedCode).toContain("utm_source=embed");
-    expect(embedCode).toContain("utm_campaign=blue-mantis");
 
-    // The button snippet is deliberately the plain schedule URL, not the embed
-    // one: it's a link a browser navigates to, never a frame.
-    const buttonCode = await page.getByLabel("Button code").inputValue();
+    // The button kind is deliberately the plain schedule URL, not the embed
+    // one: it's a link a browser navigates to, never a frame. (The tile is
+    // the label; its radio is screen-reader-only.)
+    await page
+      .locator("label")
+      .filter({ hasText: /^Button/ })
+      .click();
+    const buttonCode = await snippet.inputValue();
     expect(buttonCode).toContain("/s/blue-mantis");
     expect(buttonCode).not.toContain("embed=1");
     expect(buttonCode).toContain("Book a dive");
