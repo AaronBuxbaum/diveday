@@ -1,0 +1,15 @@
+{
+  "//": "Message-bundle keys no string literal in src/ can reach, per bundle. Written by `node scripts/check-bundle-reach.mjs --write`. This number may only go down — see scripts/check-bundle-reach.mjs. An entry is a list to triage, not a list to delete on sight: some are a hole in the walk.",
+  "src/i18n/locales/en-US/diver.json": 79,
+  "src/i18n/locales/en-US/staff/bookings.json": 1,
+  "src/i18n/locales/en-US/staff/checkIn.json": 1,
+  "src/i18n/locales/en-US/staff/divers.json": 10,
+  "src/i18n/locales/en-US/staff/diveSites.json": 6,
+  "src/i18n/locales/en-US/staff/integrations.json": 4,
+  "src/i18n/locales/en-US/staff/manifest.json": 6,
+  "src/i18n/locales/en-US/staff/orders.json": 1,
+  "src/i18n/locales/en-US/staff/seatDiver.json": 5,
+  "src/i18n/locales/en-US/staff/settings.json": 4,
+  "src/i18n/locales/en-US/staff/shared.json": 3,
+  "src/i18n/locales/en-US/staff/trips.json": 15
+}

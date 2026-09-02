@@ -55,6 +55,7 @@
     "check:locale": "node scripts/check-locale.mjs",
     "check:timezone": "node scripts/check-timezone.mjs",
     "check:copy": "node scripts/check-copy.mjs",
+    "check:bundle-reach": "node scripts/check-bundle-reach.mjs",
     "check:critical-text": "node scripts/check-critical-text.mjs",
     "check:domain-strings": "node scripts/check-domain-strings.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",

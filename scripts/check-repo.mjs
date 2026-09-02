@@ -62,6 +62,7 @@ const checks = [
   ["locale", "check-locale.mjs"],
   ["timezone", "check-timezone.mjs"],
   ["copy", "check-copy.mjs"],
+  ["bundle-reach", "check-bundle-reach.mjs"],
   ["domain-strings", "check-domain-strings.mjs"],
   ["migrations", "check-migrations.mjs"],
   ["migration-graph", "check-migration-graph.mjs"],

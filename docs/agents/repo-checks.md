@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, logical-property, clock, transaction-concurrency, timezone, Intl-cache, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, destructive-migration, migration-graph, e2e-hygiene, follow-ups, agent-layer (skills/index/task-context), Open-Graph-site, infra-ASCII and stack-CI-skip safeguards.
+environment, architecture/feature-module, design-token, tinted-ink, logical-property, clock, transaction-concurrency, timezone, Intl-cache, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, destructive-migration, migration-graph, e2e-hygiene, follow-ups, agent-layer (skills/index/task-context), Open-Graph-site, infra-ASCII and stack-CI-skip safeguards.
 
 ## The guards worth reading about
 
@@ -55,6 +55,16 @@ The scroll-preservation one (`scripts/check-scroll-preservation.mjs`) enforces t
 ### soft-delete-vocabulary
 
 The soft-delete-vocabulary one (`scripts/check-soft-delete.mjs`) refuses Archive/Unarchive/Deactivate/soft-delete in any message **key or value** under `src/i18n/locales/` — the bundles are the one door user-facing words come through, since `check:copy` already refuses hard-coded copy in a component. 49 strings were in that state until 2026-08-20, each trailed by a sentence explaining which history survived, and the vocabulary drifted back twice on its own because it is what the storage model is called in the code (`archiveCertification`, `waiver_templates.archived_at` — internal names stay out of scope, deliberately: nobody reads them — they were brought into line by hand on 2026-08-20 anyway). Each locale states its own word list and one with none is a **failure**, not a pass: Spanish `archivo` is the ordinary word for a *file*, so only `archivar`/`archivando`/`desarchivar` are refused there (ADR 20260820-every-delete-is-soft).
+
+### bundle-reach
+
+The bundle-reach one (`scripts/check-bundle-reach.mjs`) reports message-bundle keys **nothing can read**. `check:locale` proves every key exists in every locale and `check:copy` proves no sentence is hard-coded at a call site; neither proves a key has a reader, so a bundle grows dead copy silently and every deletion has to be re-derived by grep. Two were found by accident mid-recomposition — `requests.groupCount`, noticed only because the slice deleting its neighbours read past it, and `trip.crewPrediction`, orphaned when `ForecastSection` became `ConditionsLine` and worth a separate issue (#1110) to spot.
+
+**The design question is the false positive**, and it is why this took a while to exist. A grep for `t("…")` alone reports every map-reached key as dead, and this repo reaches keys through `Record<…, StaffMessageKey>` tables on purpose — `READINESS_STATUS_KEYS`, `CARD_STATUS_KEYS`, `BUDDY_ALERT_KEYS` and a dozen more. Telling somebody to delete a live sentence is worse than saying nothing. So the rule is stricter and simpler than a call-site parse: **a key is reached if the tree holds a string literal equal to it**, which covers a `t()` call, a map value, an `as const` array and a helper that passes a key along, all without knowing which is which — because every one writes the whole key out. Nothing is prefix-matched.
+
+The one exception is a key assembled at runtime (`` t(`switching.common.facts.${fact}.label`) ``), which has no literal anywhere. The static head of such a call is collected and every key under it is treated as reached — prefix matching, deliberately, because that prefix is *read out of a dynamic call* rather than guessed, and declining to decide is the only sound answer there.
+
+Ratcheted like `check:copy` (`--write` / `--absorb` / `--report <path>`), because the first run found 135 keys across 12 bundles and a guard that goes red on arrival gets a baseline entry per file and stops meaning anything. **A baseline entry is a list to triage, never a list to delete on sight**: some will be a hole in the walk rather than dead copy, and each of those is a fix to the walk or an exemption with a written reason.
 
 ### shop-word
 
