@@ -1,4 +1,19 @@
-import { and, asc, count, desc, eq, gte, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  lt,
+  lte,
+  ne,
+  notInArray,
+  or,
+  sql,
+} from "drizzle-orm";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate, nowMs } from "@/lib/clock";
 import {
@@ -796,6 +811,27 @@ export async function applyProviderEmailEvent(
     shopId?: string;
   },
 ): Promise<ApplyProviderEmailEventResult> {
+  // A verdict a shop must chase -- `bounced`, `complained`, `failed` -- is
+  // terminal for the send that produced it, and nothing softer may land on top
+  // of it. The chronological guard below cannot hold this on its own: SES
+  // publishes *both* a `Delivery` and a `Complaint` for the same message (a
+  // complaint is by definition delivered first), and the delivery notification
+  // can carry the later timestamp. Strict chronology then writes `delivered`
+  // over `complained`, and because `listNotificationDeliveryIssues` reads
+  // `providerStatus`, the complaint silently stops being an email issue on the
+  // shop's dashboard -- the one place a shop would ever learn of it. Seen in
+  // production on 2026-09-02 against the mailbox simulator, which emits the two
+  // events seconds apart; ordinary mail hides it because a complaint usually
+  // arrives hours after its delivery.
+  //
+  // This *narrows* the update rather than reordering it. Two actionable events
+  // still resolve by timestamp, so the deliberate "an older bounce does not
+  // beat a newer delivered" behaviour keeps its meaning, and a fresh send
+  // resets `providerStatus` to null so a genuine re-send starts clean.
+  const isSofterVerdict = !ACTIONABLE_PROVIDER_STATUSES.some(
+    (actionable) => actionable === input.status,
+  );
+
   // Run first and unconditionally, because it is the only row that answers a
   // question the others cannot: which *channel* this verdict belongs to. A
   // booking-scoped waiver email writes both a `notification_deliveries` row and
@@ -817,6 +853,12 @@ export async function applyProviderEmailEvent(
           isNull(waiverDeliveries.providerStatusAt),
           lte(waiverDeliveries.providerStatusAt, input.occurredAt),
         ),
+        isSofterVerdict
+          ? or(
+              isNull(waiverDeliveries.providerStatus),
+              notInArray(waiverDeliveries.providerStatus, [...ACTIONABLE_PROVIDER_STATUSES]),
+            )
+          : undefined,
       ),
     )
     .returning({ id: waiverDeliveries.id });
@@ -836,6 +878,12 @@ export async function applyProviderEmailEvent(
           isNull(notificationDeliveries.providerStatusAt),
           lte(notificationDeliveries.providerStatusAt, input.occurredAt),
         ),
+        isSofterVerdict
+          ? or(
+              isNull(notificationDeliveries.providerStatus),
+              notInArray(notificationDeliveries.providerStatus, [...ACTIONABLE_PROVIDER_STATUSES]),
+            )
+          : undefined,
       ),
     )
     .returning({ id: notificationDeliveries.id });
@@ -856,6 +904,12 @@ export async function applyProviderEmailEvent(
           isNull(waiverRecords.deliveryProviderStatusAt),
           lte(waiverRecords.deliveryProviderStatusAt, input.occurredAt),
         ),
+        isSofterVerdict
+          ? or(
+              isNull(waiverRecords.deliveryProviderStatus),
+              notInArray(waiverRecords.deliveryProviderStatus, [...ACTIONABLE_PROVIDER_STATUSES]),
+            )
+          : undefined,
       ),
     )
     .returning({ id: waiverRecords.id });
