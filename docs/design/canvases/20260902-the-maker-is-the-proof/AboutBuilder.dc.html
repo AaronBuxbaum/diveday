@@ -1,0 +1,130 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    body { margin: 0; font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; color: #0c2a35; -webkit-font-smoothing: antialiased; background: #fbf7ef; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    .nav-link { font-size: 14px; font-weight: 500; color: #54676d; padding: 8px 12px; border-radius: 10px; }
+    .eyebrow { font-size: 14px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #0e7490; margin: 0; }
+    .h2 { font-size: 36px; font-weight: 600; letter-spacing: -0.035em; line-height: 1.15; margin: 0; text-wrap: balance; }
+    .p { font-size: 16px; line-height: 28px; color: #54676d; margin: 0; }
+    .label { font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #0e7490; margin: 0; }
+    .value { font-size: 15px; line-height: 24px; color: #0c2a35; margin: 0; }
+    .phone-label { font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #0e7490; margin: 0; }
+    .stat { border-radius: 10px; border: 1px solid #e6dcc8; background: #fbf7ef; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; align-items: center; }
+    .stat p { margin: 0; }
+  </style>
+</helmet>
+<div style="width: 1280px; min-height: 1800px; background: #fbf7ef; box-sizing: border-box; overflow: hidden;">
+
+  <!-- Header, as shipped -->
+  <header style="border-bottom: 1px solid #e6dcc8; background: rgba(251, 247, 239, 0.95);">
+    <nav style="width: 1232px; margin: 0 auto; padding: 16px 24px; display: flex; align-items: center; gap: 16px; box-sizing: border-box;">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600;">
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><circle cx="7" cy="17" r="5" fill="#0c2a35"></circle><circle cx="15.5" cy="9" r="3.4" fill="#0c2a35" opacity="0.75"></circle><circle cx="19.5" cy="4.5" r="2" fill="#ff6f61"></circle></svg>
+        <span>DiveDay<span style="color: #0e7490;">.</span></span>
+      </div>
+      <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+        <span class="nav-link">Product</span>
+        <span class="nav-link">Pricing</span>
+        <span class="nav-link">Switch</span>
+        <span class="nav-link" style="color: #0c2a35;">About</span>
+        <span class="nav-link">Sign in</span>
+      </div>
+      <div style="display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: 10px; border: 1px solid #e6dcc8; background: #fffdf8; font-size: 16px; font-weight: 600; color: #0c2a35;">Try the live demo</div>
+    </nav>
+  </header>
+
+  <!-- Hero, as shipped (unchanged by this loop) -->
+  <section style="border-bottom: 1px solid #e6dcc8;">
+    <div style="width: 1232px; margin: 0 auto; padding: 80px 24px; box-sizing: border-box; display: grid; grid-template-columns: 1fr 0.9fr; gap: 48px; align-items: center;">
+      <div style="max-width: 672px; display: flex; flex-direction: column;">
+        <p class="eyebrow">Who we are</p>
+        <h1 style="margin: 20px 0 0; font-size: 60px; font-weight: 600; letter-spacing: -0.045em; line-height: 1.05; text-wrap: balance;">Your season doesn't hang on us.</h1>
+        <p class="p" style="margin-top: 24px; font-size: 18px; line-height: 30px; max-width: 576px;">Payments run through your own Stripe account, your records download as one ZIP any day, and roll call works on a phone with no signal. Divers build DiveDay, and everything below is something you can go and try in the next few minutes.</p>
+      </div>
+      <div style="width: 340px; margin: 0 auto; border-radius: 40px; border: 9px solid #0c2a35; background: #0c2a35; padding: 6px; box-shadow: 0 25px 50px -12px rgba(12, 42, 53, 0.2); box-sizing: border-box;">
+        <div style="margin: 0 auto 6px; height: 6px; width: 80px; border-radius: 999px; background: rgba(84, 103, 109, 0.5);"></div>
+        <div style="border-radius: 30px; background: #fffdf8; overflow: hidden; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <p class="phone-label">Blue Mantis Divers</p>
+            <p style="margin: 0; font-size: 9px; color: #54676d;">Offline copy · up to date</p>
+          </div>
+          <div style="border-radius: 18px; background: #f3ecdd; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+            <p class="phone-label">Boat manifest</p>
+            <p style="margin: 0; font-size: 14px; font-weight: 600;">Two-Tank Reef</p>
+            <p style="margin: 0; font-size: 10px; color: #54676d;">Today · 7:30–11:00 AM</p>
+            <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 4px;">
+              <div class="stat"><p style="font-size: 8px; letter-spacing: .1em; text-transform: uppercase; color: #54676d;">Divers</p><p style="font-size: 16px; font-weight: 600;">9</p></div>
+              <div class="stat"><p style="font-size: 8px; letter-spacing: .1em; text-transform: uppercase; color: #54676d;">Ready</p><p style="font-size: 16px; font-weight: 600;">7</p></div>
+              <div class="stat"><p style="font-size: 8px; letter-spacing: .1em; text-transform: uppercase; color: #54676d;">Boarded</p><p style="font-size: 16px; font-weight: 600;">4</p></div>
+            </div>
+            <p style="margin: 6px 0 0; font-size: 11px; font-weight: 600;">Roll call</p>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; border-radius: 10px; border: 1px solid #e6dcc8; background: #fffdf8; padding: 8px 10px;">
+              <div><p style="margin: 0; font-size: 11px; font-weight: 600;">Priya Sharma</p><p style="margin: 0; font-size: 9px; color: #54676d;">Ready to board</p></div>
+              <div style="border-radius: 8px; background: #0e7490; color: #fff; font-size: 9px; font-weight: 600; padding: 8px 10px;">Mark boarded</div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; border-radius: 10px; border: 1px solid #e6dcc8; background: #fffdf8; padding: 8px 10px;">
+              <div><p style="margin: 0; font-size: 11px; font-weight: 600;">Tom Okafor</p><p style="margin: 0; font-size: 9px; color: #54676d;">Ready to board</p></div>
+              <div style="border-radius: 8px; background: #0e7490; color: #fff; font-size: 9px; font-weight: 600; padding: 8px 10px;">Mark boarded</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NEW · Who builds it — replaces the nameless "From the founder / Why this exists." band, and moves up to sit directly under the hero -->
+  <section>
+    <div style="width: 1232px; margin: 0 auto; padding: 96px 24px; box-sizing: border-box; display: grid; grid-template-columns: 5fr 6fr; gap: 56px; align-items: start;">
+      <div style="display: flex; flex-direction: column;">
+        <p class="eyebrow">Who builds it</p>
+        <h2 class="h2" style="margin-top: 16px;">Written by an engineer who worked on Google Maps.</h2>
+        <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 16px;">
+          <p class="p">DiveDay started with a dive shop owner showing me how he ran a normal day. There was a whiteboard, a clipboard, a spreadsheet somebody updated by hand, and a few apps that didn't know about each other. He was paying for the software, and then paying again in hours he would rather have spent with his divers.</p>
+          <p class="p">Before this I worked on Google Maps, then helped build a biotech company that ended up going public, and these days I work on self-driving cars. So I'm used to software that a lot of people depend on and that has to get things right. What dive shops were using would not have lasted a week at any of those places. I also understood why the whiteboard was still there. Paper doesn't crash, and it doesn't need five taps with wet hands.</p>
+          <p class="p">DiveDay is me trying to build the thing I would want if I ran the shop. It has to open fast on a phone in the sun and still make sense to a new hire. The four rules below are how I check that, and you can check them too.</p>
+        </div>
+        <div style="margin-top: 28px; display: flex; align-items: baseline; gap: 10px;">
+          <p style="margin: 0; font-size: 16px; font-weight: 600;">Aaron Buxbaum</p>
+          <p style="margin: 0; font-size: 14px; color: #54676d;">Founder</p>
+        </div>
+      </div>
+
+      <div style="border-radius: 28px; border: 1px solid #e6dcc8; background: #fffdf8; box-shadow: 0 2px 10px rgba(88, 66, 30, 0.06); overflow: hidden; margin-top: 8px;">
+        <div style="padding: 24px 28px; display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid #e6dcc8;">
+          <p class="label">Google Maps</p>
+          <p class="value">It's the app your guests use to find your dock, and it's the bar I use for how fast a screen should come up on a phone outside.</p>
+        </div>
+        <div style="padding: 24px 28px; display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid #e6dcc8;">
+          <p class="label">A biotech company, built through to going public</p>
+          <p class="value">It's where I picked up the habit of never overwriting a record, which is why DiveDay keeps every roll call and every correction.</p>
+        </div>
+        <div style="padding: 24px 28px; display: flex; flex-direction: column; gap: 6px;">
+          <p class="label">Self-driving cars</p>
+          <p class="value">The rule there is that the software stops when it isn't sure. DiveDay's readiness check works the same way. If it can't verify something, it says so instead of letting the diver through.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- The rules band follows, unchanged — shown only to place the new band in sequence -->
+  <section style="border-top: 1px solid #e6dcc8; border-bottom: 1px solid #e6dcc8; background: #fffdf8;">
+    <div style="width: 1232px; margin: 0 auto; padding: 80px 24px 0; box-sizing: border-box;">
+      <p class="eyebrow">What we hold it to</p>
+      <h2 class="h2" style="margin-top: 16px;">Four rules, and you can check every one.</h2>
+      <p class="p" style="margin-top: 16px;">These aren't promises.</p>
+    </div>
+  </section>
+
+</div>
+</x-dc>
+</body>
+</html>

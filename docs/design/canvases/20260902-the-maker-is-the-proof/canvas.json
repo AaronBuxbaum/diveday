@@ -1,0 +1,78 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "The loop — read me first",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 2140
+    },
+    {
+      "file": "SupportOptions.dc.html",
+      "title": "Support, three ways (H-66)",
+      "x": 1300,
+      "y": 0,
+      "w": 1180,
+      "h": 1340
+    },
+    {
+      "file": "AboutBuilder.dc.html",
+      "title": "/about — the maker band, desktop",
+      "x": 0,
+      "y": 2300,
+      "w": 1280,
+      "h": 1800
+    },
+    {
+      "file": "AboutBuilderPhone.dc.html",
+      "title": "/about — the maker band, phone",
+      "x": 1400,
+      "y": 2300,
+      "w": 390,
+      "h": 2580
+    },
+    {
+      "file": "HomeProof.dc.html",
+      "title": "/ — the tail, with the echo",
+      "x": 1910,
+      "y": 2300,
+      "w": 1280,
+      "h": 1340
+    },
+    {
+      "file": "CopyLedger.dc.html",
+      "title": "The copy ledger",
+      "x": 0,
+      "y": 5040,
+      "w": 1180,
+      "h": 4140
+    }
+  ],
+  "annotations": [
+    {
+      "id": "note-glosses",
+      "x": 0,
+      "y": 4160,
+      "w": 420,
+      "text": "Everything in the first person on this band is a draft in the owner's voice: the three paragraphs and the three lines under the facts. The facts themselves (Google Maps; a biotech company through to going public; self-driving cars) were confirmed 2026-07-25. Confirm, reword or strike each sentence — biography is true-only. One to weigh: “these days I work on self-driving cars” is true, and tells a burned owner this is not his day job."
+    },
+    {
+      "id": "note-support",
+      "x": 2560,
+      "y": 0,
+      "w": 320,
+      "text": "Option B reverses the 2026-08-05 retirement recorded in H-12. Nothing on the code side moves until the H-66 row is Chosen. Option A leaves every support line as it is today; the rest of the canvas stands either way."
+    },
+    {
+      "id": "note-home",
+      "x": 1910,
+      "y": 3700,
+      "w": 380,
+      "text": "The ledger's labels are the confirmed facts; its values are shipped product facts a visitor can check in the demo, so nothing in this band waits on H-66. The one new control is the link, at link weight. The hero's budget (one primary, one secondary) is untouched."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    body { margin: 0; font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; color: #0c2a35; -webkit-font-smoothing: antialiased; background: #fbf7ef; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    .marker { font-size: 14px; font-weight: 600; color: #0e7490; margin: 0; white-space: nowrap; }
+    .rule { height: 1px; flex: 1; background: #e6dcc8; }
+    .h3 { font-size: 30px; font-weight: 600; letter-spacing: -0.025em; line-height: 1.15; margin: 0; text-wrap: balance; }
+    .p { font-size: 16px; line-height: 28px; color: #54676d; margin: 0; }
+    .link { font-size: 16px; font-weight: 500; color: #0e7490; margin: 0; }
+    .fact { display: flex; gap: 16px; align-items: baseline; padding: 14px 0; border-top: 1px solid #e6dcc8; }
+    .fact-k { font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #0e7490; margin: 0; width: 150px; flex-shrink: 0; }
+    .fact-v { font-size: 15px; line-height: 24px; color: #0c2a35; margin: 0; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 1340px; padding: 12px 20px; border-radius: 10px; font-size: 16px; font-weight: 600; }
+  </style>
+</helmet>
+<div style="width: 1280px; min-height: 1200px; background: #fbf7ef; box-sizing: border-box; overflow: hidden;">
+
+  <!-- The tail of the records band, as shipped: the one door to the switching hub -->
+  <section>
+    <div style="width: 1232px; margin: 0 auto; padding: 0 24px 80px; box-sizing: border-box;">
+      <div style="border-top: 1px solid #e6dcc8; padding-top: 24px;">
+        <p class="link">Switching from FareHarbor, EVE, DiveShop360, Smartwaiver, or Rezdy — or something else? Read the guides →</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- NEW · the homepage's one echo of the maker: a moment-row shape (marker, h3, one sentence, one link) with the three facts as a hairline ledger where a mockup would sit -->
+  <section style="border-top: 1px solid #e6dcc8;">
+    <div style="width: 1232px; margin: 0 auto; padding: 80px 24px; box-sizing: border-box; display: grid; grid-template-columns: 5fr 6fr; gap: 56px; align-items: center;">
+      <div style="display: flex; flex-direction: column;">
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <p class="marker">Who builds it</p>
+          <span class="rule"></span>
+        </div>
+        <h3 class="h3" style="margin-top: 12px;">Built by someone who's shipped software a lot of people depend on.</h3>
+        <p class="p" style="margin-top: 12px; max-width: 512px;">The places he worked before are where DiveDay's habits come from.</p>
+        <p class="link" style="margin-top: 12px;">The whole story, and four rules you can check →</p>
+      </div>
+      <div>
+        <div class="fact" style="border-top: 0;">
+          <p class="fact-k">Google Maps</p>
+          <p class="fact-v">Screens built to open fast on a phone in the sun.</p>
+        </div>
+        <div class="fact">
+          <p class="fact-k">Biotech, through to going public</p>
+          <p class="fact-v">Every roll call and every correction is kept, never overwritten.</p>
+        </div>
+        <div class="fact">
+          <p class="fact-k">Self-driving cars</p>
+          <p class="fact-v">If a diver's readiness can't be verified, DiveDay says so.</p>
+        </div>
+        <div style="border-top: 1px solid #e6dcc8;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- The close, as shipped -->
+  <section style="border-top: 1px solid #e6dcc8; background: #fffdf8;">
+    <div style="width: 1232px; margin: 0 auto; padding: 96px 24px; box-sizing: border-box;">
+      <div style="max-width: 768px; margin: 0 auto; text-align: center; display: flex; flex-direction: column; align-items: center;">
+        <h2 style="margin: 0; font-size: 48px; font-weight: 600; letter-spacing: -0.035em; line-height: 1.1; text-wrap: balance;">See how it feels when the whole shop is on the same page.</h2>
+        <p class="p" style="margin-top: 20px; font-size: 18px; line-height: 32px; max-width: 672px;">The shops that join now shape it — what your crew runs into this season is what gets attention next.</p>
+        <div style="margin-top: 32px; display: flex; gap: 12px; justify-content: center;">
+          <div class="btn" style="background: #0e7490; color: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">Try the live demo</div>
+          <div class="btn" style="background: #fffdf8; color: #0c2a35; border: 1px solid #8a8065;">Start a trial</div>
+        </div>
+        <p style="margin: 24px 0 0; font-size: 16px; font-weight: 500;">One flat price — $99 per location / month, locked for two years for founding shops.</p>
+        <p class="link" style="margin-top: 12px;">See what's included →</p>
+      </div>
+
+      <div style="max-width: 768px; margin: 64px auto 0; border-top: 1px solid #e6dcc8; padding-top: 40px; display: flex; align-items: center; justify-content: space-between; gap: 32px;">
+        <div>
+          <h2 style="margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.02em;">Rather ask a question first?</h2>
+          <p class="p" style="margin-top: 8px;">Email us whatever would settle it for you. The person who built DiveDay reads it.</p>
+        </div>
+        <div class="btn" style="background: #fffdf8; color: #0c2a35; border: 1px solid #8a8065; flex-shrink: 0; font-weight: 500;">Email support@dive.day</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</x-dc>
+</body>
+</html>

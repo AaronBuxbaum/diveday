@@ -325,6 +325,27 @@ under parent #1248, unsequenced until an owner ranks them:
   scheduled the conversation.
 - **Merging two person records** (#1240) — the switching complaint nobody answers.
 
+### 15. The maker is the proof (design complete; 15a and 15c wait on H-66)
+
+The 2026-09-02 loop over every marketing page, argued on
+[the canvas](../../design/canvases/20260902-the-maker-is-the-proof/README.md) and decided in ADR
+[20260902-the-maker-is-the-proof](../../architecture/decisions/20260902-the-maker-is-the-proof.md):
+the site has no maker, the pages argue insurance rather than desire, support is described as a
+mailbox, and the copy sounds machine-written. Each slice is one `marketing-page`-skill PR — claims
+checklist, `e2e/marketing.spec.ts` assertions moved deliberately, both locales in one change,
+screenshots looked at, a `conversion-reviewer` pass — and the canvas's copy ledger is the change
+list.
+
+- **15a** — `/about` gains a signed "Who builds it" band directly under the hero, with the
+  three-row ledger; "spec" leaves `founderP3`. Waits on H-66 (a).
+- **15b** — `/` gains one echo band between the records diptych and the close, in the
+  moment-row shape, with a link to `/about` as its only new control.
+- **15c** — the support sentence becomes "the person who built it" in its five places, never
+  with a response time. Waits on H-66 (b).
+- **15d** — the voice pass across every marketing page, held to the seven tells on the ledger.
+- **15e** — `marketing.md` records the "ex-Google" rules, the voice list, and the biography's
+  return under 15a's shape; H-12's row is amended by H-66's outcome, never rewritten.
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)
