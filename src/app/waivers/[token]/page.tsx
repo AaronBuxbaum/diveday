@@ -15,6 +15,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocale } from "@/db/people";
@@ -46,6 +47,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { isUnresolvedMedicalHold } from "@/lib/waivers";
 import { emailFreshWaiverLinkAction } from "./actions";
 import { MedicalQuestionnaireFields } from "./MedicalQuestionnaireFields";
 import { QuestionnaireProgress } from "./QuestionnaireProgress";
@@ -212,7 +214,7 @@ function railDoneLabel(t: DiverTranslator, locale: string, done: number): string
  * these are section headings, and the contact keeps its own.
  */
 function SectionHeading({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-lg font-semibold">{children}</h2>;
+  return <h2 className={SECTION_TITLE_CLASS}>{children}</h2>;
 }
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -310,7 +312,10 @@ export default async function WaiverPage({
   }
 
   if (state.state === "completed") {
-    const needsReview = state.record.status === "medical_review";
+    // A diver revisiting their own still-live link after a physician cleared
+    // them was told a doctor still had to confirm — one surface saying "held"
+    // while every staff surface said cleared (issue #1252, security review N1).
+    const needsReview = isUnresolvedMedicalHold(state.record);
     const bookingId = state.record.bookingId;
     const booking = bookingId
       ? await db

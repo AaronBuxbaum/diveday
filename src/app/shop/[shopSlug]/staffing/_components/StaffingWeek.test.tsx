@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { AvailabilityBlock, CrewAssignmentRequest } from "@/lib/crew-requests";
 import { staffWeek, type WeekGap, type WeekPerson } from "@/lib/staffing-week";
 import { type GapWords, StaffingWeek, type StaffingWeekWords } from "./StaffingWeek";
 
@@ -33,6 +34,17 @@ const WORDS: StaffingWeekWords = {
   removing: "Removing…",
   shiftAria: "Shift for {person} on {day}",
   empty: "Nothing scheduled this week.",
+  away: "Away",
+  awayConflict: "Away {dates}",
+  request: "Ask for this one",
+  requestAria: "Ask to work {trip}",
+  requesting: "Asking…",
+  requested: "{person} asked",
+  approve: "Approve",
+  decline: "Decline",
+  deciding: "Saving…",
+  requestApproved: "Approved",
+  requestDeclined: "Declined",
 };
 
 const GAP_WORDS: GapWords = {
@@ -62,12 +74,31 @@ function renderWeek({
   people = [KEIKO],
   gaps = [],
   canManage = true,
+  canDecide = true,
+  blocks = [],
+  requests = [],
+  viewer,
 }: {
   people?: WeekPerson[];
   gaps?: WeekGap[];
   canManage?: boolean;
+  canDecide?: boolean;
+  blocks?: AvailabilityBlock[];
+  requests?: CrewAssignmentRequest[];
+  viewer?: { personId: string; isCrew: boolean };
 } = {}) {
-  const week = staffWeek({ people, gaps, weekStart: MONDAY, timeZone: TZ, today: THURSDAY });
+  const week = staffWeek({
+    people,
+    gaps,
+    weekStart: MONDAY,
+    timeZone: TZ,
+    today: THURSDAY,
+    blocks,
+    requests,
+    viewer,
+    // Before every meeting in these fixtures, so a departure is never "past".
+    now: new Date("2026-08-20T00:00:00.000Z"),
+  });
   return render(
     <StaffingWeek
       week={week}
@@ -83,7 +114,10 @@ function renderWeek({
       timeZone={TZ}
       shopSlug="blue-mantis"
       canManage={canManage}
+      canDecide={canDecide}
       deleteShiftAction={vi.fn()}
+      requestAction={vi.fn()}
+      decideRequestAction={vi.fn()}
     />,
   );
 }

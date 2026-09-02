@@ -332,6 +332,10 @@
     "calendar": {
       "heading": "Calendar subscriptions"
     },
+    "counterQr": {
+      "heading": "The counter card",
+      "description": "Print this and put it on the desk. A walk-in scans it, fills in their name, certification and sizes, and their release goes out — all before they reach the front of the queue."
+    },
     "integrations": {
       "heading": "Shopify, QuickBooks & Zapier"
     },

@@ -5,6 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { ExecutedDive } from "@/db/schema";
 import { type DepthUnit, depthInUnit, maxEnteredDepth } from "@/lib/depth-units";
 import type { RollCallCheckpoint } from "@/lib/manifests";
@@ -95,7 +96,7 @@ export function ExecutedDiveLog({
   const activeDiveNumber = Number(/^after_dive_(\d+)$/.exec(checkpoint)?.[1] ?? 0);
   return (
     <section className="mt-8" aria-labelledby="executed-dive-heading">
-      <h2 id="executed-dive-heading" className="text-lg font-semibold">
+      <h2 id="executed-dive-heading" className={SECTION_TITLE_CLASS}>
         {labels.heading}
       </h2>
       {/* No standing description. "Record the actual site, times, depth and

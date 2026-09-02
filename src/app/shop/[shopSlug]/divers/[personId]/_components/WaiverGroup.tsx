@@ -1,4 +1,6 @@
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
+import { MedicalClearanceControl } from "@/components/MedicalClearanceControl";
+import { medicalClearanceCopy } from "@/components/medical-clearance-copy";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { paperWaiverCopy } from "@/components/paper-waiver-copy";
 import { WaiverStateRow } from "@/components/person/rows";
@@ -8,8 +10,9 @@ import { InsetGroup } from "@/components/ui/ledger";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { type WaiverRowState, waiverRowStateText } from "@/i18n/waiver-labels";
 import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { smsRecipient } from "@/lib/notifications/sms";
-import { markWaiverInPersonAction } from "../actions";
+import { markWaiverInPersonAction, recordMedicalClearanceAction } from "../actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile } from "./shared";
@@ -93,6 +96,20 @@ export function WaiverGroup({
       ? "failed"
       : diver.waiver.state;
   const needsAction = diver.waiver.state === "none" || diver.waiver.state === "expired";
+  // A hold has exactly one way out, and it is not another link: the diver comes
+  // back with a physician's evaluation and a staffer records it (issue #1252).
+  // Before this the group offered nothing at all here, because the only lift in
+  // the app asserted the opposite of what had happened.
+  const heldForMedical = diver.waiver.state === "medical_review";
+  // **The release standing today replaced a referral instead of answering it**
+  // (issue #1282). Sign-once is symmetric — a disclosure at or after the last
+  // clean signature invalidates it, and a clean signature after a disclosure
+  // ends the hold — and the second half lets a diver who was referred to a
+  // physician simply be sent a fresh link and answer "no" to everything.
+  // Whether that should be refused is a call for a person; saying it out loud
+  // is not, and the record is where the staffer who can act is standing.
+  const overriddenReferralAt =
+    diver.waiver.state === "current" ? (diver.waiver.medical?.overriddenReferralAt ?? null) : null;
   return (
     <DiverFileGroupDisclosure
       id="waiver"
@@ -114,6 +131,16 @@ export function WaiverGroup({
           state={state}
           detail={waiverDetail(diver, t, locale, timezone)}
         />
+        {overriddenReferralAt ? (
+          <p className="px-5 pb-3 text-sm font-medium text-warning-strong sm:px-6">
+            {t("divers.waiver.referralUnresolved", {
+              date: formatCalendarDate(
+                calendarDateInTimezone(overriddenReferralAt, timezone),
+                locale,
+              ),
+            })}
+          </p>
+        ) : null}
         {/* The four routes are the state row's actions, laid out as their own
             row beneath it rather than in the row's right-hand column. The
             column is the width of its buttons, and the panel that drops out of
@@ -176,6 +203,20 @@ export function WaiverGroup({
               </WaiverDeliveryActions>
             </div>
           </details>
+        ) : null}
+        {heldForMedical ? (
+          <div className="px-5 py-3 sm:px-6">
+            <MedicalClearanceControl
+              action={recordMedicalClearanceAction.bind(null, shopSlug, personId)}
+              copy={medicalClearanceCopy(t)}
+              // The shop's own today, so the date box cannot offer tomorrow: a
+              // Key Largo evening is already tomorrow in UTC, and the reader's
+              // browser zone is nobody's business here.
+              today={calendarDateInTimezone(nowDate(), timezone)}
+              className=""
+              defaultOpen={Boolean(status) && status?.tone !== "success"}
+            />
+          </div>
         ) : null}
         {status ? (
           <div className="px-5 py-3 sm:px-6">

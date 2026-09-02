@@ -1,4 +1,11 @@
 import { type CalendarDate, calendarDateInTimezone } from "./calendar-date";
+import {
+  type AvailabilityBlock,
+  blockCoversDay,
+  type CrewAssignmentRequest,
+  crewRequestRefusal,
+  overlappingBlocks,
+} from "./crew-requests";
 import { weekDates } from "./week-board";
 
 /**
@@ -97,11 +104,36 @@ export type WeekGap = {
   meetings: readonly TripMeeting[];
 };
 
-/** A departure placed in one day cell, carrying that day's own hours. */
-export type PlacedTrip = { tripId: string; title: string; startsAt: Date; endsAt: Date };
+/**
+ * A departure placed in one day cell, carrying that day's own hours.
+ *
+ * `awayBlocks` are this person's own blackouts that overlap the run (issue
+ * #1235). It **informs, never gates**: nobody is taken off a boat, and the
+ * owner's assignment is not refused — the week says the crew member told the
+ * shop they were away, and the conversation is the shop's to have. Empty for
+ * almost every chip.
+ */
+export type PlacedTrip = {
+  tripId: string;
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  awayBlocks: readonly AvailabilityBlock[];
+};
 
-/** A placed gap: the departure, the day's hours, and why it is short. */
-export type PlacedGap = PlacedTrip & { gap: StaffGapCode };
+/**
+ * A placed gap: the departure, the day's hours, why it is short, and — since
+ * #1235 — who has asked to work it.
+ *
+ * `viewerMayRequest` is the same rule `crewRequestRefusal` gives the write, so
+ * the affordance is never offered for something the transaction will turn down;
+ * `viewerRefusal` is why, when there is a reason worth saying.
+ */
+export type PlacedGap = PlacedTrip & {
+  gap: StaffGapCode;
+  requests: readonly CrewAssignmentRequest[];
+  viewerMayRequest: boolean;
+};
 
 /** One person's week, before it is placed into days. */
 export type WeekPerson = {
@@ -126,6 +158,8 @@ export type StaffWeekPersonDay = {
   date: CalendarDate;
   shifts: WeekShift[];
   crewing: PlacedTrip[];
+  /** The blackouts this person has covering this day. Quiet, and theirs alone. */
+  away: AvailabilityBlock[];
 };
 
 /**
@@ -217,6 +251,7 @@ function placements(
   trip: { tripId: string; title: string; meetings: readonly TripMeeting[] },
   timeZone: string,
   dates: readonly CalendarDate[],
+  awayBlocks: readonly AvailabilityBlock[] = [],
 ): { date: CalendarDate; placed: PlacedTrip }[] {
   const byDate = new Map<CalendarDate, PlacedTrip>();
   for (const meeting of [...trip.meetings].sort(byStart)) {
@@ -227,6 +262,7 @@ function placements(
         title: trip.title,
         startsAt: meeting.startsAt,
         endsAt: meeting.endsAt,
+        awayBlocks,
       });
     }
   }
@@ -256,7 +292,22 @@ export function staffWeek(input: {
   timeZone: string;
   /** The shop's own calendar date — from `nowDate()` through the shop's zone. */
   today: CalendarDate;
+  /** Every live blackout touching this week, whoever's (issue #1235). */
+  blocks?: readonly AvailabilityBlock[];
+  /** Live requests against this week's departures. */
+  requests?: readonly CrewAssignmentRequest[];
+  /**
+   * Who is reading, and what the page will let them do. Absent on a caller
+   * that has no viewer to speak of — every test written before #1235, and the
+   * assembly's own unit tests.
+   */
+  viewer?: { personId: string; isCrew: boolean };
+  /** The instant `crewRequestRefusal` measures a sailed departure against. */
+  now?: Date;
 }): StaffWeek {
+  const blocks = input.blocks ?? [];
+  const requests = input.requests ?? [];
+  const now = input.now ?? new Date(0);
   const dates = weekDates(input.weekStart);
   const within = new Set(dates);
   const days: StaffWeekDay[] = dates.map((date) => ({
@@ -278,16 +329,25 @@ export function staffWeek(input: {
     // a week that says otherwise is what double-books them onto a boat.
     const crewingByDay = new Map<CalendarDate, PlacedTrip[]>();
     for (const trip of person.crewingTrips) {
-      for (const { date, placed } of placements(trip, input.timeZone, dates)) {
+      // The warning word an overlapping blackout earns, resolved once per
+      // departure rather than per column: it is a fact about the run.
+      const away = overlappingBlocks(blocks, person.personId, trip.meetings, input.timeZone);
+      for (const { date, placed } of placements(trip, input.timeZone, dates, away)) {
         crewingByDay.set(date, [...(crewingByDay.get(date) ?? []), placed]);
       }
     }
+    const ownBlocks = blocks.filter((block) => block.personId === person.personId);
     const personDays = dates.map((date) => ({
       date,
       shifts: (shiftsByDay.get(date) ?? []).sort(byStart),
       crewing: (crewingByDay.get(date) ?? []).sort(byStart),
+      away: ownBlocks.filter((block) => blockCoversDay(block, date)),
     }));
-    if (personDays.some((day) => day.shifts.length > 0 || day.crewing.length > 0)) {
+    if (
+      personDays.some(
+        (day) => day.shifts.length > 0 || day.crewing.length > 0 || day.away.length > 0,
+      )
+    ) {
       hasEntries = true;
     }
     return {
@@ -306,12 +366,34 @@ export function staffWeek(input: {
   // first day is what puts a course that began last Sunday on this week's
   // Monday instead of nowhere.
   const gapsByDay = new Map<CalendarDate, PlacedGap[]>();
+  const crewIdsByTrip = new Map<string, string[]>();
+  for (const person of input.people) {
+    for (const trip of person.crewingTrips) {
+      crewIdsByTrip.set(trip.tripId, [...(crewIdsByTrip.get(trip.tripId) ?? []), person.personId]);
+    }
+  }
   for (const gap of input.gaps) {
     const [first] = placements(gap, input.timeZone, dates);
     if (!first) continue;
+    const tripRequests = requests.filter((request) => request.tripId === gap.tripId);
+    const viewer = input.viewer;
+    // The same rule the write applies, evaluated here so the affordance is
+    // never offered for something the transaction will refuse.
+    const viewerMayRequest = Boolean(
+      viewer?.isCrew &&
+        crewRequestRefusal({
+          personId: viewer.personId,
+          meetings: gap.meetings,
+          crewPersonIds: crewIdsByTrip.get(gap.tripId) ?? [],
+          livePendingOrDecidedPersonIds: tripRequests.map((request) => request.personId),
+          blocks,
+          timeZone: input.timeZone,
+          now,
+        }) === null,
+    );
     gapsByDay.set(first.date, [
       ...(gapsByDay.get(first.date) ?? []),
-      { ...first.placed, gap: gap.gap },
+      { ...first.placed, gap: gap.gap, requests: tripRequests, viewerMayRequest },
     ]);
   }
   const gapDays = dates.map((date) => ({

@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRow, DisclosureRowMessage } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { telHref } from "@/lib/contact-links";
 import {
   COURSE_INQUIRY_EXPERIENCE,
@@ -408,7 +409,7 @@ export function DateRequestForm({
 
   return (
     <section id={sectionId} aria-labelledby={headingId} className="mt-12 scroll-mt-8">
-      <h2 id={headingId} className="text-2xl font-semibold tracking-tight">
+      <h2 id={headingId} className={LEAD_TITLE_CLASS}>
         {copy.heading}
       </h2>
       {body}

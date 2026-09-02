@@ -504,6 +504,11 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   for (const record of waiverRows) {
     await retire("waiver_document", record.importSourceDocumentUrl);
     await retire("waiver_document", record.importSourceMedicalDocumentUrl);
+    // A physician's evaluation is the diver's own medical document, and goes
+    // with the rest of them. The *fact* of the clearance survives — like the
+    // certification sighting below, and for the same reason: it is the shop's
+    // record of an act it performed, not a document about this person.
+    await retire("waiver_document", record.medicalClearanceDocumentUrl);
 
     const [stripped] = await tx
       .update(waiverRecords)
@@ -516,6 +521,7 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         importedFromLabel: null,
         importSourceDocumentUrl: null,
         importSourceMedicalDocumentUrl: null,
+        medicalClearanceDocumentUrl: null,
         // The URL *is* the capability. A live pending link would let its bearer
         // complete a fresh, un-erased record against this same person after the
         // erasure, so the hash is rotated to a value no issued token maps to,

@@ -1,5 +1,10 @@
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { groupLabelClass } from "@/components/ui/ledger";
+import {
+  FIGURE_INLINE_CLASS,
+  SECTION_TITLE_CLASS,
+  SUB_TITLE_CLASS,
+} from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 
@@ -29,7 +34,7 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
       <div className="space-y-4 p-4">
         <div>
           <p className={groupLabelClass("primary")}>{t("fallback.boatManifest")}</p>
-          <h3 className="mt-1 text-lg font-semibold tracking-tight">{t("fallback.tripName")}</h3>
+          <h3 className={`mt-1 ${SECTION_TITLE_CLASS}`}>{t("fallback.tripName")}</h3>
           <p className="text-xs text-muted">{t("fallback.tripTime")}</p>
         </div>
         <div className="grid grid-cols-3 gap-2 text-center">
@@ -40,7 +45,7 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
           ].map(([label, value]) => (
             <div key={label} className="rounded-lg border border-border bg-surface p-2">
               <p className="text-[10px] font-medium text-muted uppercase">{label}</p>
-              <p className="mt-0.5 text-lg font-semibold tabular-nums">{value}</p>
+              <p className={`mt-0.5 ${FIGURE_INLINE_CLASS}`}>{value}</p>
             </div>
           ))}
         </div>
@@ -87,9 +92,7 @@ export function FrontDeskReadinessFallback({ locale }: { locale: DiverLocale }) 
       <AppBar label={t("fallback.tripDetail")} />
       <div className="p-5">
         <p className={groupLabelClass("primary")}>{t("fallback.readiness")}</p>
-        <h3 className="mt-1 text-xl font-semibold tracking-tight">
-          {t("fallback.answerBeforeDock")}
-        </h3>
+        <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.answerBeforeDock")}</h3>
         <p className="mt-1 text-sm text-muted">{t("fallback.noDiverClears")}</p>
         <div className="mt-4 divide-y divide-border rounded-inset border border-border bg-surface">
           {/* i18n-exempt: sample diver names used only in marketing mockups */}
@@ -130,7 +133,7 @@ export function ImportPreviewFallback({ locale }: { locale: DiverLocale }) {
       <AppBar label={t("fallback.import.label")} />
       <div className="p-5">
         <p className={groupLabelClass("primary")}>{t("fallback.import.eyebrow")}</p>
-        <h3 className="mt-1 text-xl font-semibold tracking-tight">{t("fallback.import.title")}</h3>
+        <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.import.title")}</h3>
         <div className="mt-4 flex flex-wrap gap-2">
           {[
             [t("fallback.import.fieldName"), "Name"],
@@ -157,7 +160,7 @@ export function ImportPreviewFallback({ locale }: { locale: DiverLocale }) {
           ].map(([label, value]) => (
             <div key={label} className="rounded-lg bg-surface-sunken px-3 py-2">
               <dt className="text-[10px] text-muted">{label}</dt>
-              <dd className="text-lg font-semibold tabular-nums">{value}</dd>
+              <dd className={FIGURE_INLINE_CLASS}>{value}</dd>
             </div>
           ))}
         </dl>
@@ -238,9 +241,7 @@ export function ExportBundleFallback({ locale }: { locale: DiverLocale }) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className={groupLabelClass("primary")}>{t("fallback.export.eyebrow")}</p>
-            <h3 className="mt-1 text-xl font-semibold tracking-tight">
-              {t("fallback.export.title")}
-            </h3>
+            <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.export.title")}</h3>
           </div>
           <button
             type="button"
@@ -292,7 +293,7 @@ export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
       <AppBar label={t("fallback.schedule")} />
       <div className="p-5">
         <p className={groupLabelClass("primary")}>{t("fallback.upcomingTrips")}</p>
-        <h3 className="mt-1 text-xl font-semibold tracking-tight">{t("fallback.findNextDive")}</h3>
+        <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.findNextDive")}</h3>
         <div className="mt-4 space-y-3">
           {trips.map((trip) => (
             <div key={trip.title} className="rounded-inset border border-border bg-surface p-4">
@@ -344,7 +345,7 @@ export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
     <div className="bg-background">
       <AppBar label={t("fallback.recap.label")} />
       <div className="p-5">
-        <h3 className="text-xl font-semibold tracking-tight">{t("fallback.recap.greeting")}</h3>
+        <h3 className={SUB_TITLE_CLASS}>{t("fallback.recap.greeting")}</h3>
         <p className="mt-1 text-sm text-muted">{t("fallback.recap.tripLine")}</p>
 
         {/* The dive record: the one place the day's facts render. */}
@@ -424,9 +425,7 @@ export function NightBeforeBriefFallback({ locale }: { locale: DiverLocale }) {
       <AppBar label={t("fallback.nightBefore.label")} />
       <div className="p-5">
         <p className={groupLabelClass("primary")}>{t("fallback.nightBefore.eyebrow")}</p>
-        <h3 className="mt-1 text-xl font-semibold tracking-tight">
-          {t("fallback.nightBefore.title")}
-        </h3>
+        <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.nightBefore.title")}</h3>
         <p className="mt-1 text-sm text-muted">{t("fallback.nightBefore.time")}</p>
 
         <div className="mt-4 grid grid-cols-3 gap-2 text-center">
@@ -488,9 +487,7 @@ export function ShopPrepListFallback({ locale }: { locale: DiverLocale }) {
       <AppBar label={t("fallback.shopPrep.label")} />
       <div className="p-5">
         <p className={groupLabelClass("primary")}>{t("fallback.shopPrep.eyebrow")}</p>
-        <h3 className="mt-1 text-xl font-semibold tracking-tight">
-          {t("fallback.shopPrep.title")}
-        </h3>
+        <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.shopPrep.title")}</h3>
         <p className="mt-1 text-sm text-muted">{t("fallback.shopPrep.time")}</p>
 
         <div className="mt-4 grid grid-cols-3 gap-2 text-center">

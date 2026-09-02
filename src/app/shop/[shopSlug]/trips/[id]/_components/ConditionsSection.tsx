@@ -2,6 +2,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { compassText } from "@/i18n/compass-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
   type DepthUnit,
@@ -158,9 +159,7 @@ export function ConditionsSection({
               <span>
                 {t("trips.conditions.automatedSeas", {
                   height: `${waveHeightInUnit(automatedForecast.surface.waveHeightMeters, depthUnit)} ${depthUnitLabel}`,
-                  direction: automatedForecast.surface.waveDirection
-                    ? automatedForecast.surface.waveDirection.toUpperCase()
-                    : "",
+                  direction: compassText(t, automatedForecast.surface.waveDirection),
                 })}
               </span>
             ) : null}
@@ -168,9 +167,7 @@ export function ConditionsSection({
               <span>
                 {t("trips.conditions.automatedWind", {
                   speed: automatedForecast.wind.speedKnots,
-                  direction: automatedForecast.wind.direction
-                    ? automatedForecast.wind.direction.toUpperCase()
-                    : "",
+                  direction: compassText(t, automatedForecast.wind.direction),
                   gusts: automatedForecast.wind.gustsKnots ?? 0,
                   hasGusts:
                     automatedForecast.wind.gustsKnots !== null &&
@@ -184,9 +181,7 @@ export function ConditionsSection({
               <span>
                 {t("trips.conditions.automatedCurrent", {
                   velocity: automatedForecast.current.velocityKnots,
-                  direction: automatedForecast.current.direction
-                    ? automatedForecast.current.direction.toUpperCase()
-                    : "",
+                  direction: compassText(t, automatedForecast.current.direction),
                 })}
               </span>
             ) : null}

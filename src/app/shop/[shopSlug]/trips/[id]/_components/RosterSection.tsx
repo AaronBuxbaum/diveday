@@ -17,6 +17,7 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { GroupLabel } from "@/components/ui/ledger";
 import { StatusMark } from "@/components/ui/StatusMark";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { listBookingNotes } from "@/db/operations";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
@@ -830,18 +831,32 @@ export function RosterSection({
             ) : (
               <p className="mt-1">{t("trips.roster.medicalFollowUpDescription")}</p>
             )}
-            {currentWaiver ? (
+            <div className="flex flex-wrap items-center gap-x-4">
+              {currentWaiver ? (
+                <Link
+                  // The whole waiver surface is one page now (ADR
+                  // 20260827-people-not-lists): `?record=` pins the row first
+                  // inside its own day group, and the fragment is what opens it
+                  // and scrolls past the release editor.
+                  href={`/shop/${shopSlug}/waivers?record=${currentWaiver.id}#waiver-record-${currentWaiver.id}`}
+                  className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline"
+                >
+                  {t("trips.roster.viewSignedRecord")}
+                </Link>
+              ) : null}
+              {/* The way out, which this panel did not have. A diver hands the
+                  doctor's letter to whoever is at the rail, and until #1252
+                  every dock surface pointed them at a page where the hold
+                  could be read and not resolved. The act itself lives on the
+                  diver's record, because a clearance is a fact about the
+                  person rather than about Saturday's boat. */}
               <Link
-                // The whole waiver surface is one page now (ADR
-                // 20260827-people-not-lists): `?record=` pins the row first
-                // inside its own day group, and the fragment is what opens it
-                // and scrolls past the release editor.
-                href={`/shop/${shopSlug}/waivers?record=${currentWaiver.id}#waiver-record-${currentWaiver.id}`}
+                href={`/shop/${shopSlug}/divers/${person.id}#waiver`}
                 className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline"
               >
-                {t("trips.roster.viewSignedRecord")}
+                {t("trips.roster.recordPhysicianClearance")}
               </Link>
-            ) : null}
+            </div>
           </div>
         ) : null}
 
@@ -1216,7 +1231,7 @@ export function RosterSection({
     >
       {showSummaryHeading ? (
         <div>
-          <h2 className="text-lg font-semibold">
+          <h2 className={SECTION_TITLE_CLASS}>
             {t("trips.roster.heading")}{" "}
             <span className="font-normal text-muted tabular-nums">
               {t("trips.roster.bookedOfCapacity", { booked, capacity })}

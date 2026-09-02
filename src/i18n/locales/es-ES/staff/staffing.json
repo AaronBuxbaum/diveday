@@ -1,28 +1,4 @@
 {
-  "eyebrow": "Operaciones",
-  "title": "Personal",
-  "week": {
-    "ariaLabel": "Quién trabaja",
-    "previous": "Semana anterior",
-    "next": "Semana siguiente",
-    "thisWeek": "Esta semana",
-    "today": "Hoy",
-    "person": "Persona",
-    "needsCrew": "Falta tripulación",
-    "assign": "Asignar",
-    "assignAria": "Asignar tripulación a {trip}",
-    "crewing": "Tripulación",
-    "shiftAria": "Turno de {person} el {day}",
-    "empty": "No hay nada programado esta semana."
-  },
-  "working": {
-    "remove": "Quitar",
-    "removing": "Quitando…",
-    "rosterEmptyHeading": "Todavía no hay tripulación registrada",
-    "rosterEmptyManagerBody": "Invita a los instructores y divemasters que llevan tus barcos y luego asígnales turnos aquí.",
-    "rosterEmptyBody": "Un propietario o gerente añade tripulación desde los ajustes de Equipo — pídele a alguno que lo ponga en marcha.",
-    "rosterEmptyAction": "Invitar a tu tripulación"
-  },
   "addShift": {
     "heading": "Añadir un turno",
     "person": "Miembro del personal",
@@ -35,6 +11,18 @@
     "notePlaceholder": "Muelle, aula, barco 2",
     "submit": "Añadir turno",
     "saving": "Guardando…"
+  },
+  "away": {
+    "from": "Desde",
+    "heading": "Avisa al centro de que no estarás",
+    "note": "Nota",
+    "notePlaceholder": "Algo que el centro deba saber",
+    "person": "Quién",
+    "remove": "Quitar",
+    "removing": "Quitando…",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "to": "Hasta"
   },
   "credentials": {
     "heading": "Credenciales",
@@ -67,16 +55,62 @@
       "other": "Otra"
     }
   },
+  "eyebrow": "Operaciones",
   "notice": {
-    "shiftSaved": "Turno guardado.",
-    "shiftDeleted": "Turno eliminado.",
-    "overlap": "Esa persona ya tiene un turno solapado.",
-    "staffNotFound": "Esa persona ya no forma parte del equipo de este centro.",
-    "invalid": "Revisa la fecha y las horas del turno e inténtalo de nuevo.",
-    "notAuthorized": "Solo los propietarios y gerentes pueden cambiar turnos.",
-    "credentialSaved": "Credencial añadida.",
-    "credentialReviewed": "Revisión de credencial actualizada.",
+    "awayDeleted": "Quitado.",
+    "awaySaved": "Guardado. El centro verá esos días en la semana.",
     "credentialDeleted": "Credencial eliminada.",
-    "credentialInvalid": "No se pudo guardar la credencial. Revisa la persona y las fechas."
+    "credentialInvalid": "No se pudo guardar la credencial. Revisa la persona y las fechas.",
+    "credentialReviewed": "Revisión de credencial actualizada.",
+    "credentialSaved": "Credencial añadida.",
+    "invalid": "Revisa la fecha y las horas del turno e inténtalo de nuevo.",
+    "invalidRange": "El último día no puede ser anterior al primero.",
+    "notAllowed": "Eso no es tuyo para cambiarlo.",
+    "notAuthorized": "Solo los propietarios y gerentes pueden cambiar turnos.",
+    "overlap": "Esa persona ya tiene un turno solapado.",
+    "personNotFound": "Esa persona no está en la plantilla de este centro.",
+    "requestApproved": "Aprobado, y ya está en la tripulación.",
+    "requestApprovedNotAssigned": "Aprobado, pero la asignación fue rechazada. Asigna esa salida desde su propia página para ver por qué.",
+    "requestDeclined": "Rechazado.",
+    "requestNotFound": "Eso ya no existe.",
+    "requestSent": "Enviado. El centro lo verá en la semana.",
+    "shiftDeleted": "Turno eliminado.",
+    "shiftSaved": "Turno guardado.",
+    "staffNotFound": "Esa persona ya no forma parte del equipo de este centro.",
+    "tripNotFound": "Esa salida ya no está en el tablero."
+  },
+  "title": "Personal",
+  "week": {
+    "approve": "Aprobar",
+    "ariaLabel": "Quién trabaja",
+    "assign": "Asignar",
+    "assignAria": "Asignar tripulación a {trip}",
+    "away": "Ausente",
+    "awayConflict": "Ausente {dates}",
+    "crewing": "Tripulación",
+    "deciding": "Guardando…",
+    "decline": "Rechazar",
+    "empty": "No hay nada programado esta semana.",
+    "needsCrew": "Falta tripulación",
+    "next": "Semana siguiente",
+    "person": "Persona",
+    "previous": "Semana anterior",
+    "request": "Pedir esta salida",
+    "requestApproved": "Aprobado",
+    "requestAria": "Pedir trabajar en {trip}",
+    "requestDeclined": "Rechazado",
+    "requested": "{person} lo pidió",
+    "requesting": "Pidiendo…",
+    "shiftAria": "Turno de {person} el {day}",
+    "thisWeek": "Esta semana",
+    "today": "Hoy"
+  },
+  "working": {
+    "remove": "Quitar",
+    "removing": "Quitando…",
+    "rosterEmptyHeading": "Todavía no hay tripulación registrada",
+    "rosterEmptyManagerBody": "Invita a los instructores y divemasters que llevan tus barcos y luego asígnales turnos aquí.",
+    "rosterEmptyBody": "Un propietario o gerente añade tripulación desde los ajustes de Equipo — pídele a alguno que lo ponga en marcha.",
+    "rosterEmptyAction": "Invitar a tu tripulación"
   }
 }

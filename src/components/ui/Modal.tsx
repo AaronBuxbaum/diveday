@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useFocusTrap } from "@/components/useFocusTrap";
 
@@ -65,7 +66,7 @@ export function Modal({
         tabIndex={-1}
         className={`w-full max-w-md rounded-panel border border-border bg-surface p-5 shadow-2xl outline-none sm:p-6 ${closing ? "animate-scale-out" : "animate-scale-in"} ${className}`}
       >
-        <h2 id={titleId} className="text-lg font-semibold">
+        <h2 id={titleId} className={SECTION_TITLE_CLASS}>
           {title}
         </h2>
         <div className="mt-4">{children}</div>

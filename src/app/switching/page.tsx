@@ -9,6 +9,11 @@ import { ImportPreviewFallback } from "@/components/MarketingScreenFallbacks";
 import { MarketingMockup } from "@/components/MarketingSections";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SwitchingConcierge } from "@/components/SwitchingConcierge";
+import {
+  BANNER_TITLE_CLASS,
+  DISPLAY_TITLE_CLASS,
+  SUB_TITLE_CLASS,
+} from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
@@ -175,9 +180,7 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
         <p className="text-sm font-semibold tracking-widest text-primary uppercase">
           {t("switching.hub.eyebrow")}
         </p>
-        <h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-5xl">
-          {t("switching.hub.title")}
-        </h1>
+        <h1 className={`mt-4 ${DISPLAY_TITLE_CLASS} sm:text-5xl`}>{t("switching.hub.title")}</h1>
         <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
           {t("switching.hub.description")}
         </p>
@@ -194,9 +197,7 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
                 className="group flex items-start gap-6 border-b border-border py-6 transition-colors hover:bg-surface"
               >
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-xl font-semibold tracking-tight group-hover:text-primary">
-                    {guide.title}
-                  </h2>
+                  <h2 className={`${SUB_TITLE_CLASS} group-hover:text-primary`}>{guide.title}</h2>
                   <p className="mt-1.5 leading-7 text-muted">{guide.summary}</p>
                 </div>
                 <DiveDayIcon
@@ -212,9 +213,7 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
             it — the closing CTA band, moved to where the question is asked. */}
         <div className="flex flex-col gap-6 border-b border-border py-8 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-xl font-semibold tracking-tight">
-              {t("switching.hub.dontSeeSystem")}
-            </h2>
+            <h2 className={SUB_TITLE_CLASS}>{t("switching.hub.dontSeeSystem")}</h2>
             <p className="mt-1.5 max-w-xl leading-7 text-muted">
               {t("switching.hub.dontSeeSystemBody")}
             </p>
@@ -238,7 +237,7 @@ async function SwitchHubBody({ locale }: { locale: DiverLocale }) {
           <p className="text-sm font-semibold tracking-widest text-primary uppercase">
             {t("switching.hub.previewEyebrow")}
           </p>
-          <h2 className="mt-4 max-w-2xl text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+          <h2 className={`mt-4 max-w-2xl ${BANNER_TITLE_CLASS} sm:text-4xl`}>
             {t("switching.hub.previewTitle")}
           </h2>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">

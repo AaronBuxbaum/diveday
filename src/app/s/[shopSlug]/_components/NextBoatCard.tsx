@@ -2,6 +2,7 @@ import Link from "next/link";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
+import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 import type { DiverTranslator } from "@/i18n/messages";
 
 /**
@@ -62,7 +63,7 @@ export function NextBoatCard({
         {/* The departure time is the figure a returning diver came to check,
             with the day reading as its caption (decision 3: numbers that lead
             render as figures). */}
-        <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
+        <p className={`mt-2 ${FIGURE_LARGE_CLASS}`}>
           {time}
           <span className="ms-2 text-lg font-medium text-muted">{when}</span>
         </p>

@@ -224,6 +224,29 @@ export async function storeImportWaiverDocument(
 }
 
 /**
+ * Store a physician's evaluation recorded against a medical referral
+ * (issue #1252). Its own `medical-clearances` key prefix, for the same reason
+ * `import-waivers` has one: this is the most sensitive document the app ever
+ * holds, and it never shares a namespace with a brochure or a recap photo.
+ *
+ * Byte handling is identical to imported waiver evidence — an image takes the
+ * decode-strip-re-encode path, a real PDF (by its magic bytes, never the
+ * caller's content-type claim) is stored as-is, and anything that is neither is
+ * refused. Uploaded by staff from the diver's own record, and destroyed by
+ * `anonymizeDiver` along with every other document about that diver.
+ */
+export async function storeMedicalClearanceDocument(
+  upload: Omit<ImageUpload, "keyPrefix">,
+  provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
+): Promise<StoredImage> {
+  const scoped = { ...upload, keyPrefix: "medical-clearances" };
+  if (looksLikePdf(upload.bytes)) {
+    return storePdfDocument(scoped, MAX_IMAGE_BYTES, provider);
+  }
+  return storeImage(scoped, MAX_IMAGE_BYTES, provider);
+}
+
+/**
  * Store a receipt document supplied by a contact import. This follows the
  * exact same byte validation and re-storage path as imported waiver evidence,
  * but its `import-receipts` namespace keeps financial source documents out of

@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { GroupLabel } from "@/components/ui/ledger";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
 import { activeCourseAgencies, listActiveCourses } from "@/db/courses";
 import { getShopBySlug } from "@/db/shops";
@@ -187,7 +188,7 @@ export default async function PublicCoursesPage({
                       )}
                       <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
                         <div className="min-w-0">
-                          <h3 className="text-lg font-semibold group-hover:text-primary">
+                          <h3 className={`${SECTION_TITLE_CLASS} group-hover:text-primary`}>
                             {course.title}
                           </h3>
                           {course.summary ? (

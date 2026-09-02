@@ -1,0 +1,1 @@
+ALTER TABLE "people" ADD COLUMN "self_registered_at" timestamp with time zone;

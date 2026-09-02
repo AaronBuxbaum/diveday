@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
+import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 
 /**
  * **The week, at one line per departure** — ADR
@@ -111,9 +112,7 @@ function DayRule({ parts, stickyTop }: { parts: WeekLedgerRow["dayParts"]; stick
       aria-hidden="true"
       className={`sticky ${stickyTop} z-20 mt-8 flex items-center gap-3 bg-background pt-2 pb-3 first:mt-0`}
     >
-      <span className="text-3xl leading-none font-semibold tracking-tight tabular-nums">
-        {parts.day}
-      </span>
+      <span className={`${FIGURE_LARGE_CLASS} leading-none`}>{parts.day}</span>
       <span className="flex flex-col justify-center leading-tight">
         <span className="text-base font-bold tracking-[0.18em] uppercase">{parts.weekday}</span>
         <span className="text-base font-medium tracking-[0.18em] text-muted uppercase">

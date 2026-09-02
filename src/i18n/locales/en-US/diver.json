@@ -51,16 +51,6 @@
       "feet": "{value} ft",
       "celsius": "{value}°C",
       "fahrenheit": "{value}°F"
-    },
-    "compass": {
-      "n": "N",
-      "ne": "NE",
-      "e": "E",
-      "se": "SE",
-      "s": "S",
-      "sw": "SW",
-      "w": "W",
-      "nw": "NW"
     }
   },
   "shopChrome": {
@@ -565,6 +555,32 @@
     "milestoneStamp": "{ordinal} dive day",
     "printNotes": "Notes",
     "printSignature": "Divemaster"
+  },
+  "register": {
+    "title": "Get set up with {shop}",
+    "intro": "Fill this in once and it's on file. We'll send your release to sign — bring your certification card on the day.",
+    "nameLabel": "Your name",
+    "emailLabel": "Email",
+    "phoneLabel": "Phone",
+    "contactHint": "One of the two, so we can send you your release.",
+    "certHeading": "Your certification",
+    "certHint": "What you tell us here goes on file as your own word. Bring the card and we'll check it on the day.",
+    "agencyLabel": "Agency",
+    "agencyNone": "Not certified yet",
+    "levelLabel": "Level",
+    "identifierLabel": "Card number",
+    "sizesHeading": "Your sizes",
+    "sizesHint": "Only if you rent from us. It saves a fitting at the counter.",
+    "wetsuitLabel": "Wetsuit",
+    "bootLabel": "Boots",
+    "finLabel": "Fins",
+    "submit": "Send it to the shop",
+    "submitting": "Sending…",
+    "doneTitle": "You're on file",
+    "doneBody": "{shop} has your details. Watch for your release — sign it before your first dive and you're set.",
+    "invalid": "Something in the form didn't come through. Check it over and try again.",
+    "contactRequired": "Leave an email or a phone number so we can reach you.",
+    "unavailable": "That shop isn't taking registrations right now."
   },
   "ready": {
     "metaTitle": "Your trip readiness — DiveDay",

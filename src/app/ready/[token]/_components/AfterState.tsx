@@ -12,7 +12,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, FormStatus } from "@/components/ui/form";
-import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
+import { SHELL_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import type { RecapPageData, RecapPhotoView, RecapSite } from "@/db/recap";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
@@ -589,7 +589,7 @@ function DiveRecord({
           <SiteMark mark={siteMark} size="lg" ground="surface" className="print:hidden" />
           <h2
             id="dive-record-heading"
-            className="font-brand-display text-xl font-semibold tracking-tight text-pretty"
+            className={`font-brand-display ${SUB_TITLE_CLASS} text-pretty`}
           >
             {t("recap.logbookHeading")}
           </h2>

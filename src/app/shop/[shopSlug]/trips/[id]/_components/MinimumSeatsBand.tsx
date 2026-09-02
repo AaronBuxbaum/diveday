@@ -1,3 +1,4 @@
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
 import { type MinimumSeatsPolicy, minimumSeatsState } from "@/lib/minimum-seats";
@@ -49,7 +50,7 @@ export function MinimumSeatsBand({
       >
         {t("trips.minimumSeats.eyebrow")}
       </p>
-      <h2 className="mt-1 text-lg font-semibold">
+      <h2 className={`mt-1 ${SECTION_TITLE_CLASS}`}>
         {t("trips.minimumSeats.heading", { shortfall: state.shortfall, minimum: state.minimum })}
       </h2>
       <p className="mt-1 max-w-prose text-sm text-muted">

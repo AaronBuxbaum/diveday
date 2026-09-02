@@ -12,6 +12,7 @@ import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { StatusMark } from "@/components/ui/StatusMark";
+import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 import { fill, pluralForm } from "@/i18n/fill";
 import { shiftCalendarDate } from "@/lib/calendar-date";
 import {
@@ -1726,9 +1727,7 @@ export function ScheduleBuilder({
               <h3 className="flex items-center gap-3">
                 <span className="sr-only">{day.label}</span>
                 <span aria-hidden="true" className="flex items-center gap-3">
-                  <span className="text-3xl leading-none font-semibold tracking-tight tabular-nums">
-                    {day.parts.day}
-                  </span>
+                  <span className={`${FIGURE_LARGE_CLASS} leading-none`}>{day.parts.day}</span>
                   <span className="flex flex-col justify-center leading-tight">
                     <span className="text-xs font-bold tracking-[0.18em] uppercase">
                       {day.parts.weekday}

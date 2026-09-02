@@ -894,3 +894,76 @@ See https://example.com/policies/liability-release-and-assumption-of-risk-2026-r
 
   expect(layoutWidth).toBe(390);
 });
+
+/**
+ * **The one door out of a medical hold** (issue #1252).
+ *
+ * The demo's Morgan Vale is parked in `medical_review`, which is a hard
+ * readiness block. Until this landed, every dock surface pointed a staffer at a
+ * page where the hold could be read and not resolved, and the only thing that
+ * lifted it was a paper attestation asserting the opposite of what had
+ * happened. This walks the whole path: the roster's own way out, the form's
+ * refusals, and the block actually lifting.
+ */
+test("a physician's clearance ends a medical hold, and the roster leads to it", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
+  await openTripTab(page, "Trip");
+
+  const diver = page
+    .locator("li")
+    .filter({ has: page.getByText("Morgan Vale", { exact: true }) })
+    .filter({ visible: true });
+  await expect(diver.getByText("Medical review", { exact: true })).toBeVisible();
+
+  // The link this panel did not have. It is the assertion, not navigation
+  // convenience: the dock is where the letter is handed over.
+  await diver.getByRole("link", { name: "Record physician clearance" }).click();
+  await expect(page.getByRole("heading", { name: "Morgan Vale", level: 1 })).toBeVisible();
+
+  await page.getByRole("button", { name: "Record physician clearance" }).click();
+  const confirm = page.getByRole("button", { name: "A physician cleared this diver to dive" });
+  await expect(confirm).toBeVisible();
+
+  // **The shop's own today, not the wall clock's.** The date box carries
+  // `max={today}` and the fleet's clock is frozen at Tue 21 July 2026, so a
+  // later date is refused by the browser's own constraint validation and the
+  // form never submits at all — which reads exactly like a missing refusal.
+  const EVALUATED_ON = "2026-07-21";
+
+  // Neither the physician's name nor their evaluation: the record would say
+  // only that a staff member pressed a button, and the domain refuses it.
+  await page.getByLabel("Date of the physician's evaluation").fill(EVALUATED_ON);
+  await confirm.click();
+  await expect(page.getByText("Name the physician, or attach their evaluation.")).toBeVisible();
+
+  // A letter written before the answers it would clear cannot stand for them.
+  await page.getByLabel("Date of the physician's evaluation").fill("2020-01-01");
+  await page.getByLabel("Physician", { exact: true }).fill("Dr. Imani Reyes");
+  await page.getByRole("button", { name: "A physician cleared this diver to dive" }).click();
+  await expect(page.getByText("That evaluation predates the answers it would clear")).toBeVisible();
+
+  await page.getByLabel("Date of the physician's evaluation").fill(EVALUATED_ON);
+  await page.getByLabel("Physician", { exact: true }).fill("Dr. Imani Reyes");
+  await page.getByRole("button", { name: "A physician cleared this diver to dive" }).click();
+  // The clearance was the last thing waiting on this diver, so the record's own
+  // masthead moment fires rather than the waiver group's notice (`successUrl`
+  // routes a now-clear record to `diver-clear`). Either way the fact to assert
+  // is the standing itself: held becomes signed.
+  await expect(page.getByRole("status")).toContainText("nothing is waiting on Morgan Vale");
+  const waiverGroup = page.getByRole("region", { name: "Waiver" });
+  await expect(waiverGroup.getByText("Signed", { exact: true })).toBeVisible();
+  await expect(waiverGroup.getByText("Medical review", { exact: true })).toHaveCount(0);
+
+  // And the block is gone where it actually mattered — on the boat's roster.
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
+  await openTripTab(page, "Trip");
+  const cleared = page
+    .locator("li")
+    .filter({ has: page.getByText("Morgan Vale", { exact: true }) })
+    .filter({ visible: true });
+  await expect(cleared.getByText("Medical review", { exact: true })).toHaveCount(0);
+});

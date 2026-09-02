@@ -6,6 +6,7 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/form";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import {
   canPersonViewShopReports,
   crewCountsByTrip,
@@ -483,7 +484,7 @@ export default async function ReportsPage({
         would silently rewrite.
       */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">
+        <h2 className={SECTION_TITLE_CLASS}>
           {monthLabel(current, locale)}
           {isThisMonth ? (
             <span className="ms-2 text-sm font-normal text-muted">{t("reports.soFar")}</span>

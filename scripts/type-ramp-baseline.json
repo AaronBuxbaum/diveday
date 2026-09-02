@@ -1,0 +1,3 @@
+{
+  "//": "Bare heading spellings still typed at a call site, per file. Written by `node scripts/check-type-ramp.mjs --write`. This number may only go down — see scripts/check-type-ramp.mjs."
+}

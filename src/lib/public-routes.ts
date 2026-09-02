@@ -24,6 +24,16 @@ export function publicReviewsPath(shopSlug: string): string {
   return `${publicSchedulePath(shopSlug)}/reviews`;
 }
 
+/**
+ * The shop's own self-registration door — the page behind the QR a shop prints
+ * for its counter (issue #1236). `noindex`, and deliberately not linked from
+ * the public header: a shop hands this out, it is not somewhere a diver
+ * browses to.
+ */
+export function publicShopRegisterPath(shopSlug: string): string {
+  return `${PUBLIC_SHOP_PREFIX}/${shopSlug}/register`;
+}
+
 /** One departure's public booking page. */
 export function publicTripPath(shopSlug: string, tripId: string): string {
   return `${PUBLIC_SHOP_PREFIX}/${shopSlug}/trips/${tripId}`;

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
+import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { formatMoneyScanned, formatShortDate, formatTimeRangeTz } from "@/lib/format";
@@ -166,7 +167,7 @@ export function TripHeader({
                 button — fine print belongs with the signature. */}
             {perDiverPriceCents !== null ? (
               <p className="mt-4 flex items-baseline gap-2">
-                <span className="text-3xl font-semibold tracking-tight tabular-nums">
+                <span className={FIGURE_LARGE_CLASS}>
                   {formatMoneyScanned(perDiverPriceCents, currency, locale)}
                 </span>
                 <span className="text-sm text-muted">{t("common.perDiver")}</span>

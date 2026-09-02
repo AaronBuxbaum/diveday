@@ -4,6 +4,7 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripLastMinutePromo } from "@/db/schema";
 import type { CertificationSummary } from "@/db/self-declared-cards";
 import type { TripLastMinutePromoRecipientItem } from "@/db/trip-promos";
@@ -107,7 +108,7 @@ export function LastMinuteDealSection({
     // owns its inset. `scroll-mt-24` stays — the send action redirects to this
     // element's own `#last-minute-deal` anchor.
     <section id="last-minute-deal" className="scroll-mt-24">
-      <h2 className="text-lg font-semibold">{t("trips.lastMinute.heading")}</h2>
+      <h2 className={SECTION_TITLE_CLASS}>{t("trips.lastMinute.heading")}</h2>
       <p className="mt-1 text-sm text-muted">{t("trips.lastMinute.description")}</p>
 
       {canSend ? (

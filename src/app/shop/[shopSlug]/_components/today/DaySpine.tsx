@@ -11,6 +11,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { GroupLabel, LedgerGroup, LedgerRow } from "@/components/ui/ledger";
 import { StatusMark } from "@/components/ui/StatusMark";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DayCloseoutRecord } from "@/db/closeout";
 import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
@@ -647,7 +648,7 @@ export function DaySpine({
             <GroupLabel as="p" id="first-thing-label" tone="danger">
               {t("shopHome.spine.firstThing", { kind: t(ACTION_KIND_KEYS[firstThing.kind]) })}
             </GroupLabel>
-            <p className="mt-1 text-lg font-semibold tracking-tight">
+            <p className={`mt-1 ${SECTION_TITLE_CLASS} tracking-tight`}>
               {firstThing.aboutDeparture ? firstThing.detail : firstThing.subject}
             </p>
             {firstThing.aboutDeparture ? null : <p className="text-muted">{firstThing.detail}</p>}

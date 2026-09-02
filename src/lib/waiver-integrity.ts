@@ -55,6 +55,31 @@ export function isWaiverIntegrityVersion(value: number | null): value is WaiverI
 }
 
 /** The signed release fields whose meaning must not drift after completion. */
+/**
+ * **What version 1 seals, and the one thing it deliberately does not.**
+ *
+ * The field set is the diver's own signed evidence: who signed, when, against
+ * which template body, with which answers. A later act *by the shop* on the
+ * same row is outside it, and always has been — `superseded_at` lifts a medical
+ * hold and is not sealed, the delivery columns move for months afterwards.
+ *
+ * The physician clearance (issue #1252) joins that set for the same reason and
+ * is called out here because it is the one with teeth: `medical_cleared_at`
+ * decides whether a diver may board, and `verifyWaiverIntegrity` answers
+ * `valid` over a row where somebody with database write access has set it. So
+ * the seal's honest meaning is "the *signed* half of this release is what was
+ * recorded", and the departure log prints the clearance as the shop's own act
+ * rather than as sealed evidence.
+ *
+ * `anonymized_at` is inside version 2 for the opposite reason: erasure
+ * *destroys* fields this set covers, so without it every erased release would
+ * read as tampered rather than as erased.
+ *
+ * If a future change wants the clearance covered, it is a version 3 over this
+ * set plus the clearance columns, re-sealed inside `recordMedicalClearance`'s
+ * transaction, with the two fields that survive erasure added to
+ * `erasedMetadata` as well (security review M4).
+ */
 function signedMetadata(record: WaiverRecord): IntegrityValue {
   return {
     id: record.id,

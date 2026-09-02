@@ -8,6 +8,7 @@ import { RollCallMark } from "@/components/RollCallMark";
 import { Badge } from "@/components/ui/badge";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
@@ -181,11 +182,27 @@ function DiverFacts({
               ? t("manifest.medicalReviewedPaper")
               : diver.medicalWaiver.source === "imported"
                 ? t("manifest.medicalClearanceImported")
-                : t("manifest.medicalWaiverSigned")}
+                : diver.medicalWaiver.source === "cleared"
+                  ? // The questionnaire referred this diver and a physician
+                    // cleared them. A crew member reading the manifest at the
+                    // rail is entitled to know that, rather than seeing it
+                    // spelled the same as a self-declaration (issue #1252).
+                    t("manifest.medicalClearedByPhysician")
+                  : t("manifest.medicalWaiverSigned")}
           </span>
           <span className="mt-0.5 block text-muted">
             {formatShortDate(diver.medicalWaiver.at, locale, timezone)}
           </span>
+          {/* The signature standing here replaced a referral instead of
+              answering it — nobody's fault, and not a block, but a crew member
+              at the rail is the person best placed to ask (issue #1282). */}
+          {diver.medicalWaiver.overriddenReferralAt ? (
+            <span className="mt-0.5 block font-medium text-warning-strong">
+              {t("manifest.medicalReferralUnresolved", {
+                date: formatShortDate(diver.medicalWaiver.overriddenReferralAt, locale, timezone),
+              })}
+            </span>
+          ) : null}
         </p>
       ) : null}
     </div>
@@ -344,7 +361,7 @@ export function DiverRollCall({
           standing warning at a checkpoint where nothing has been recorded is
           exactly what decision 4 exists to stop. The control names itself,
           inside the panel where it lives. */}
-      <h2 className="text-lg font-semibold">
+      <h2 className={SECTION_TITLE_CLASS}>
         {t("manifest.checkpointRollCallHeading", {
           checkpoint: rollCallCheckpointText(t, checkpoint),
         })}
@@ -580,7 +597,9 @@ export function DiverRollCall({
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="flex flex-wrap items-center gap-2">
-                            <span className="text-lg font-semibold group-hover/summary:underline">
+                            <span
+                              className={`${SECTION_TITLE_CLASS} group-hover/summary:underline`}
+                            >
                               {diver.fullName}
                             </span>
                             {capsule}

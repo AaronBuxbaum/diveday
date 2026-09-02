@@ -16,6 +16,7 @@
 export type RosterRowFact =
   | { kind: "booked"; at: Date }
   | { kind: "lastAboard"; at: Date }
+  | { kind: "selfRegistered"; at: Date }
   | { kind: "imported" }
   | null;
 
@@ -32,10 +33,12 @@ export type RosterRowFact =
 export function rosterRowFact(facts: {
   nextBookingAt: Date | null;
   lastAboardAt: Date | null;
+  selfRegisteredAt?: Date | null;
   importedOnly: boolean;
 }): RosterRowFact {
   if (facts.nextBookingAt) return { kind: "booked", at: facts.nextBookingAt };
   if (facts.lastAboardAt) return { kind: "lastAboard", at: facts.lastAboardAt };
+  if (facts.selfRegisteredAt) return { kind: "selfRegistered", at: facts.selfRegisteredAt };
   if (facts.importedOnly) return { kind: "imported" };
   return null;
 }

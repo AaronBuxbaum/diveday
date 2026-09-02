@@ -1,5 +1,6 @@
 import { groupLabelClass } from "@/components/ui/ledger";
 import { StatusMark } from "@/components/ui/StatusMark";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { readinessStatusText } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -263,7 +264,7 @@ export function SummaryPanel({
             <p className={groupLabelClass("primary")}>{t("manifest.activeCheckpoint")}</p>
             <h2
               id="roll-call-progress-heading"
-              className="mt-1 flex items-center gap-2 text-lg font-bold"
+              className={`mt-1 flex items-center gap-2 ${SECTION_TITLE_CLASS}`}
             >
               {rollCallComplete ? <StatusMark variant="success" size="md" /> : null}
               <span>

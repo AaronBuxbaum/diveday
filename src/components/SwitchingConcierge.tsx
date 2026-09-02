@@ -1,4 +1,5 @@
 import { buttonClass } from "@/components/ui/button";
+import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 
@@ -32,7 +33,7 @@ export function SwitchingConcierge({ locale }: { locale: DiverLocale }) {
         <p className="text-sm font-semibold tracking-widest text-primary uppercase">
           {t("switching.concierge.eyebrow")}
         </p>
-        <h2 className="mt-3 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+        <h2 className={`mt-3 ${LEAD_TITLE_CLASS} text-balance sm:text-3xl`}>
           {t("switching.concierge.title")}
         </h2>
         <p className="mt-4 max-w-2xl text-lg leading-8 text-muted">

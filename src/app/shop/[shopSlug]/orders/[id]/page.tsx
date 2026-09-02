@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, FormStatus } from "@/components/ui/form";
+import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { canPersonRefund } from "@/db/authz";
 import { getDb } from "@/db/client";
 import { getOrder, refreshOrderStatus, refundOrder, voidOrder } from "@/db/orders";
@@ -347,7 +348,7 @@ export default async function OrderDetailPage({
               ? t(STATUS_KEYS[order.order.status])
               : order.order.status}
           </Badge>
-          <span className="text-lg font-semibold tabular-nums">
+          <span className={FIGURE_INLINE_CLASS}>
             {formatMoneyCents(order.order.totalCents, order.order.currency, locale)}
           </span>
         </div>

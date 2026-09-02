@@ -11,7 +11,7 @@
  * either exported here or on the deliberate exclusion list.
  */
 
-import { and, asc, count, eq, getTableColumns, inArray, or } from "drizzle-orm";
+import { and, asc, count, eq, getTableColumns, inArray, isNull, or } from "drizzle-orm";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
 import { canExportShopData, type Role } from "@/lib/authz";
@@ -40,6 +40,8 @@ import {
   closeoutLeftoverDecisions,
   courseInquiries,
   courses,
+  crewAssignmentRequests,
+  crewAvailabilityBlocks,
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
@@ -399,6 +401,24 @@ export async function loadShopExportBundleInput(
         .innerJoin(people, eq(people.id, staffShifts.personId))
         .where(eq(staffShifts.shopId, shopId))
         .orderBy(asc(staffShifts.startsAt), asc(staffShifts.id));
+
+      // The crew's own two tables (issue #1235). Live rows only: a withdrawn
+      // ask and a deleted holiday are not the shop's roster.
+      const crewAwayRows = await tx
+        .select()
+        .from(crewAvailabilityBlocks)
+        .where(
+          and(eq(crewAvailabilityBlocks.shopId, shopId), isNull(crewAvailabilityBlocks.deletedAt)),
+        )
+        .orderBy(asc(crewAvailabilityBlocks.startsOn), asc(crewAvailabilityBlocks.id));
+
+      const crewRequestRows = await tx
+        .select()
+        .from(crewAssignmentRequests)
+        .where(
+          and(eq(crewAssignmentRequests.shopId, shopId), isNull(crewAssignmentRequests.deletedAt)),
+        )
+        .orderBy(asc(crewAssignmentRequests.requestedAt), asc(crewAssignmentRequests.id));
 
       const staffCredentialRows = await tx
         .select()
@@ -1004,6 +1024,12 @@ export async function loadShopExportBundleInput(
             // rather than dumps, resolves the pair down to one cell.
             "no_certification_cleared_at",
             "no_certification_cleared_by_person_id",
+            // **Where this record came from.** Set once, when a diver put
+            // themselves on file at the shop's counter QR rather than being
+            // typed in by staff (issue #1236). It changes how a destination
+            // system should read every other cell on the row — a name and a
+            // level nobody has sighted — so it travels with them.
+            "self_registered_at",
             "deleted_at",
             // Erasure travels with the bundle (ADR 20260802-diver-data-erasure).
             // Every identifying column above is already blank for such a row, so
@@ -1035,6 +1061,7 @@ export async function loadShopExportBundleInput(
             row.noCertificationDeclaredAt,
             row.noCertificationClearedAt,
             row.noCertificationClearedByPersonId,
+            row.selfRegisteredAt,
             row.deletedAt,
             row.anonymizedAt,
             row.anonymizedByPersonId,
@@ -1482,6 +1509,62 @@ export async function loadShopExportBundleInput(
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["staff_shifts.csv"],
+        },
+        {
+          file: "crew_availability_blocks.csv",
+          header: [
+            "id",
+            "person_id",
+            "person_name",
+            "starts_on",
+            "ends_on",
+            "note",
+            "created_by_person_id",
+            "created_by_name",
+            "created_at",
+          ],
+          rows: crewAwayRows.map((row) => [
+            row.id,
+            row.personId,
+            personName.get(row.personId),
+            row.startsOn,
+            row.endsOn,
+            row.note,
+            row.createdByPersonId,
+            personName.get(row.createdByPersonId),
+            row.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["crew_availability_blocks.csv"],
+        },
+        {
+          file: "crew_assignment_requests.csv",
+          header: [
+            "id",
+            "trip_id",
+            "trip_title",
+            "person_id",
+            "person_name",
+            "requested_at",
+            "decision",
+            "decided_at",
+            "decided_by_person_id",
+            "decided_by_name",
+            "created_at",
+          ],
+          rows: crewRequestRows.map((row) => [
+            row.id,
+            row.tripId,
+            tripTitle.get(row.tripId),
+            row.personId,
+            personName.get(row.personId),
+            row.requestedAt,
+            row.decision,
+            row.decidedAt,
+            row.decidedByPersonId,
+            row.decidedByPersonId ? personName.get(row.decidedByPersonId) : null,
+            row.createdAt,
+          ]),
+          note: EXPORT_FILE_NOTES["crew_assignment_requests.csv"],
         },
         {
           file: "staff_credentials.csv",
@@ -2107,6 +2190,17 @@ export async function loadShopExportBundleInput(
             "completed_at",
             "medical_review_required",
             "medical_answers",
+            // The physician clearance that ends a medical hold (issue #1252).
+            // Its *document* is deliberately not here — see EXCLUDED_COLUMNS in
+            // src/db/export.test.ts — but the fact and its accountable staff
+            // member are the shop's own evidence, and a restore that lost them
+            // would re-block every cleared diver with no record of who cleared
+            // them or when the physician evaluated them.
+            "medical_cleared_at",
+            "medical_cleared_by_person_id",
+            "medical_cleared_by_name",
+            "medical_clearance_evaluated_on",
+            "medical_clearance_physician_name",
             "integrity_hash",
             "integrity_version",
             "superseded_at",
@@ -2142,6 +2236,11 @@ export async function loadShopExportBundleInput(
             row.completedAt,
             row.medicalReviewRequired,
             row.medicalAnswers ? JSON.stringify(row.medicalAnswers) : null,
+            row.medicalClearedAt,
+            row.medicalClearedByPersonId,
+            row.medicalClearedByPersonId ? personName.get(row.medicalClearedByPersonId) : null,
+            row.medicalClearanceEvaluatedOn,
+            row.medicalClearancePhysicianName,
             row.integrityHash,
             row.integrityVersion,
             row.supersededAt,
@@ -3938,6 +4037,14 @@ export async function loadDiverExportBundleInput(
             "signed_at",
             "completed_at",
             "medical_review_required",
+            // The clearance is the diver's own fact — a physician evaluated
+            // them and the shop recorded it — so it belongs in their bundle
+            // even though the answers behind it do not. The staff member who
+            // recorded it is named for the same reason `recorded_by_name` is.
+            "medical_cleared_at",
+            "medical_cleared_by_name",
+            "medical_clearance_evaluated_on",
+            "medical_clearance_physician_name",
             "superseded_at",
             "expires_at",
             "created_at",
@@ -3957,6 +4064,10 @@ export async function loadDiverExportBundleInput(
             row.signedAt,
             row.completedAt,
             row.medicalReviewRequired,
+            row.medicalClearedAt,
+            row.medicalClearedByPersonId ? personName.get(row.medicalClearedByPersonId) : null,
+            row.medicalClearanceEvaluatedOn,
+            row.medicalClearancePhysicianName,
             row.supersededAt,
             row.expiresAt,
             row.createdAt,
@@ -4373,6 +4484,22 @@ export async function loadShopExportCounts(
     ),
     "staff_shifts.csv": await countOf(
       db.select({ n: count() }).from(staffShifts).where(eq(staffShifts.shopId, shopId)),
+    ),
+    "crew_availability_blocks.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(crewAvailabilityBlocks)
+        .where(
+          and(eq(crewAvailabilityBlocks.shopId, shopId), isNull(crewAvailabilityBlocks.deletedAt)),
+        ),
+    ),
+    "crew_assignment_requests.csv": await countOf(
+      db
+        .select({ n: count() })
+        .from(crewAssignmentRequests)
+        .where(
+          and(eq(crewAssignmentRequests.shopId, shopId), isNull(crewAssignmentRequests.deletedAt)),
+        ),
     ),
     "staff_credentials.csv": await countOf(
       db.select({ n: count() }).from(staffCredentials).where(eq(staffCredentials.shopId, shopId)),

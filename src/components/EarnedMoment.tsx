@@ -1,4 +1,5 @@
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
+import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
  * The coral-accented moment a surface earns when the user finishes something —
@@ -109,7 +110,7 @@ export function EarnedMoment({
     >
       {eyebrow ? <p className={EYEBROW_CLASS}>{eyebrow}</p> : null}
       <Heading
-        className={`mt-1 text-2xl font-semibold tracking-tight text-balance sm:text-3xl ${titleClassName}`.trim()}
+        className={`mt-1 ${LEAD_TITLE_CLASS} text-balance sm:text-3xl ${titleClassName}`.trim()}
       >
         {title}
       </Heading>

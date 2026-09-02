@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { BANNER_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
  * The shape both legal pages wear: `/privacy` and `/terms`.
@@ -34,7 +35,7 @@ export function LegalDocument({
     <main className="flex-1">
       <div className="mx-auto w-full max-w-3xl px-6 py-16 lg:py-24">
         <p className="text-xs font-semibold tracking-widest text-primary uppercase">{eyebrow}</p>
-        <h1 className="mt-4 text-3xl font-semibold leading-tight sm:text-4xl">{title}</h1>
+        <h1 className={`mt-4 ${BANNER_TITLE_CLASS} leading-tight sm:text-4xl`}>{title}</h1>
         <p className="mt-3 text-sm text-muted">{updated}</p>
         <p className="mt-8 text-base leading-7">{intro}</p>
         <div className="mt-12 flex flex-col gap-12">{children}</div>
@@ -47,7 +48,7 @@ export function LegalDocument({
 export function LegalSection({ heading, children }: { heading: string; children: ReactNode }) {
   return (
     <section>
-      <h2 className="text-xl font-semibold">{heading}</h2>
+      <h2 className={SUB_TITLE_CLASS}>{heading}</h2>
       <div className="mt-4 flex flex-col gap-4 text-base leading-7">{children}</div>
     </section>
   );

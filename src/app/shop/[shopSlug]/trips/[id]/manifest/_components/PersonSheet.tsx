@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/ledger";
+import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useFocusTrap } from "@/components/useFocusTrap";
 
@@ -146,7 +147,7 @@ export function PersonSheet({
         <div aria-hidden="true" className="mx-auto h-1 w-10 rounded-full bg-border-strong" />
         <header className="mt-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 id={titleId} className="text-2xl font-bold tracking-tight">
+            <h2 id={titleId} className={LEAD_TITLE_CLASS}>
               {name}
             </h2>
             <p id={descriptionId} className="mt-1 text-sm text-muted">

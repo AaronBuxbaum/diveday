@@ -3,6 +3,7 @@ import { SiteMark } from "@/components/illustration/SiteMark";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { FIGURE_CLASS, FIGURE_DIAL_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatTime } from "@/lib/format";
 import type { AboardBlockerKind } from "@/lib/readiness";
@@ -111,7 +112,7 @@ export function DayStation({
             human check it. */}
         <time
           dateTime={station.startsAt.toISOString()}
-          className="block text-2xl leading-none font-bold tracking-tight tabular-nums"
+          className={`block ${FIGURE_CLASS} leading-none tracking-tight`}
         >
           {formatTime(station.startsAt, locale, timeZone)}
         </time>
@@ -141,7 +142,7 @@ export function DayStation({
             on a 390px phone. */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           <div className="min-w-0">
-            <h3 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-lg font-semibold tracking-tight">
+            <h3 className={`flex flex-wrap items-center gap-x-2 gap-y-1 ${SECTION_TITLE_CLASS}`}>
               <Link
                 href={`/shop/${shopSlug}/trips/${station.tripId}`}
                 className={`${tapTargetLinkClass} group/station -mx-2 rounded-lg px-2 transition-colors hover:bg-surface-sunken hover:no-underline`}
@@ -172,7 +173,9 @@ export function DayStation({
                 className="absolute inset-0 origin-bottom bg-shallows"
                 style={{ transform: `scaleY(${filled / 100})` }}
               />
-              <span className="absolute inset-0 flex items-center justify-center text-2xl leading-none font-bold tabular-nums">
+              <span
+                className={`absolute inset-0 flex items-center justify-center ${FIGURE_DIAL_CLASS}`}
+              >
                 {station.booked}
               </span>
             </div>

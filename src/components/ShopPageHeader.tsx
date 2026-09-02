@@ -4,6 +4,7 @@ import { tapTargetLinkClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { toneMark } from "@/components/ui/tone";
+import { GREETING_TITLE_CLASS, PAGE_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
  * The eyebrow — "where you are", one line above the title. Reef's rung: 11px,
@@ -13,23 +14,6 @@ import { toneMark } from "@/components/ui/tone";
  */
 export const EYEBROW_CLASS =
   "text-[11px] leading-4 font-bold tracking-[0.16em] text-primary uppercase";
-
-/**
- * The page's own name, Reef's title rung: 40px bold, tightened, in Geist —
- * the display face was declined, so the display moment is made with the one
- * face's own size and weight (ADR 20260901-diveday-reimagined, decision 1).
- * `leading-[1.1]` gives a 44px line box, which the skeleton's `h-11` matches.
- */
-export const PAGE_TITLE_CLASS =
-  "text-[2.5rem] leading-[1.1] font-bold tracking-[-0.02em] text-balance";
-
-/**
- * One step up from the title, for the one page whose title is a greeting
- * rather than a name: the shop home's "Good morning" (the board draws it at
- * 44/700). Same 44px line box as the title, so the two share a skeleton.
- */
-export const DISPLAY_TITLE_CLASS =
-  "text-[2.75rem] leading-none font-bold tracking-[-0.028em] text-balance";
 
 /**
  * The eyebrow-as-breadcrumb, for a header that is not `ShopPageHeader`.
@@ -108,7 +92,7 @@ export function ShopPageHeader({
     description?: string | null;
   };
   align?: "start" | "end";
-  /** The greeting rung (`DISPLAY_TITLE_CLASS`) instead of the title rung — the shop home only. */
+  /** The greeting rung (`GREETING_TITLE_CLASS`) instead of the title rung — the shop home only. */
   display?: boolean;
   /**
    * `brand` sets the title in the shop's own display face — the trip's title
@@ -165,7 +149,7 @@ export function ShopPageHeader({
               names ("Two-Tank Reef — Molasses & French"), and an even two
               lines reads better than a full line plus one orphaned word. */}
           <h1
-            className={`${titleFace === "brand" ? "font-brand-display " : ""}${display ? DISPLAY_TITLE_CLASS : PAGE_TITLE_CLASS}${eyebrow ? " mt-2" : ""}`}
+            className={`${titleFace === "brand" ? "font-brand-display " : ""}${display ? GREETING_TITLE_CLASS : PAGE_TITLE_CLASS}${eyebrow ? " mt-2" : ""}`}
           >
             {title}
           </h1>

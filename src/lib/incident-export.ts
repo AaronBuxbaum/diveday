@@ -109,6 +109,24 @@ export type IncidentWaiverStatus = {
    * log names a staff member only when the shop itself attested a paper record.
    */
   recordedByName: string | null;
+  /**
+   * When a physician's evaluation was recorded against a referral, and who
+   * recorded it (issue #1252).
+   *
+   * The strongest statement this document ever makes about a diver's fitness,
+   * and the only one that involves a clinician — a questionnaire referred them,
+   * somebody qualified said yes, and a named staff member put that on the
+   * record. So the log states it as its own fact rather than letting a cleared
+   * diver read identically to one the form never flagged. Null on every record
+   * that was never held, which is nearly all of them.
+   */
+  medicalClearedAt: string | null;
+  medicalClearedByName: string | null;
+  /** The day printed on the physician's evaluation, which is not the day it was recorded. */
+  medicalClearanceEvaluatedOn: string | null;
+  medicalClearancePhysicianName: string | null;
+  /** Whether the evaluation itself is stored, which a claims reader will ask. */
+  medicalClearanceDocumentOnFile: boolean;
 };
 
 export type IncidentRollCallResult = {
@@ -346,6 +364,8 @@ export type IncidentDiverEvidenceInput = {
   waiver: WaiverRecord | null;
   /** The staff member who attested the governing paper waiver, if any. */
   waiverRecordedByName?: string | null;
+  /** The staff member who recorded a physician's clearance on the governing record, if any. */
+  waiverMedicalClearedByName?: string | null;
 };
 
 export type IncidentExportInput = {
@@ -452,6 +472,7 @@ function waiverStatus(
   record: WaiverRecord | null,
   now: Date,
   recordedByName: string | null | undefined,
+  medicalClearedByName: string | null | undefined,
 ): IncidentWaiverStatus {
   // The same fail-closed derivation readiness uses. A record parked in medical
   // review reads `medical_review` — a status, never the answers behind it.
@@ -470,6 +491,11 @@ function waiverStatus(
       templateVersion: null,
       signatureMethod: null,
       recordedByName: null,
+      medicalClearedAt: null,
+      medicalClearedByName: null,
+      medicalClearanceEvaluatedOn: null,
+      medicalClearancePhysicianName: null,
+      medicalClearanceDocumentOnFile: false,
     };
   }
   return {
@@ -480,6 +506,17 @@ function waiverStatus(
     signatureMethod: record.signatureMethod,
     recordedByName:
       record.signatureMethod === "in_person_attested" ? (recordedByName ?? null) : null,
+    medicalClearedAt: iso(record.medicalClearedAt),
+    medicalClearedByName: record.medicalClearedAt ? (medicalClearedByName ?? null) : null,
+    medicalClearanceEvaluatedOn: record.medicalClearedAt
+      ? (record.medicalClearanceEvaluatedOn ?? null)
+      : null,
+    medicalClearancePhysicianName: record.medicalClearedAt
+      ? (record.medicalClearancePhysicianName ?? null)
+      : null,
+    medicalClearanceDocumentOnFile: Boolean(
+      record.medicalClearedAt && record.medicalClearanceDocumentUrl,
+    ),
   };
 }
 
@@ -576,6 +613,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
         evidence?.waiver ?? null,
         input.generatedAt,
         evidence?.waiverRecordedByName,
+        evidence?.waiverMedicalClearedByName,
       ),
     };
   });

@@ -9,6 +9,7 @@ import { MarketingFooter, MarketingFooterFallback } from "@/components/Marketing
 import { SWITCH_EMAIL, SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { SwitchingImportCta } from "@/components/SwitchingImportCta";
 import { groupLabelClass } from "@/components/ui/ledger";
+import { BANNER_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
@@ -181,9 +182,7 @@ async function GuideBody({
             <p className="text-sm font-semibold tracking-widest text-primary uppercase">
               {t("switching.competitor.keepOrLeaveEyebrow")}
             </p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-              {t(guide.coexist.heading)}
-            </h2>
+            <h2 className={`mt-3 ${BANNER_TITLE_CLASS} sm:text-4xl`}>{t(guide.coexist.heading)}</h2>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{t(guide.coexist.intro)}</p>
 
             {/* Shared messages — two of them interpolate the competitor's name. */}
@@ -197,7 +196,7 @@ async function GuideBody({
             <p className="mt-8 max-w-2xl leading-7 text-muted">{t(guide.coexist.bridgeNote)}</p>
 
             <div className="mt-8 rounded-panel border border-primary/30 bg-primary/5 p-6">
-              <h3 className="text-lg font-semibold tracking-tight">
+              <h3 className={`${SECTION_TITLE_CLASS} tracking-tight`}>
                 {t(guide.coexist.replace.heading)}
               </h3>
               <p className="mt-2 leading-7 text-muted">{t(guide.coexist.replace.body)}</p>
@@ -240,9 +239,7 @@ async function GuideBody({
             <p className="text-sm font-semibold tracking-widest text-primary uppercase">
               {t("switching.competitor.websiteEyebrow")}
             </p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-              {t(guide.website.heading)}
-            </h2>
+            <h2 className={`mt-3 ${BANNER_TITLE_CLASS} sm:text-4xl`}>{t(guide.website.heading)}</h2>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{t(guide.website.intro)}</p>
 
             {/* The two column labels render at every width — on a phone the
@@ -271,7 +268,7 @@ async function GuideBody({
             </p>
 
             <div className="mt-8 rounded-panel border border-primary/30 bg-primary/5 p-6">
-              <h3 className="text-lg font-semibold tracking-tight">
+              <h3 className={`${SECTION_TITLE_CLASS} tracking-tight`}>
                 {t(guide.website.offer.heading)}
               </h3>
               <p className="mt-2 leading-7 text-muted">{t(guide.website.offer.body)}</p>

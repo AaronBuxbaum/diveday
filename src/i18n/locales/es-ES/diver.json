@@ -51,16 +51,6 @@
       "feet": "{value} ft",
       "celsius": "{value} °C",
       "fahrenheit": "{value} °F"
-    },
-    "compass": {
-      "n": "N",
-      "ne": "NE",
-      "e": "E",
-      "se": "SE",
-      "s": "S",
-      "sw": "SO",
-      "w": "O",
-      "nw": "NO"
     }
   },
   "shopChrome": {
@@ -565,6 +555,32 @@
     "milestoneStamp": "{ordinal} día",
     "printNotes": "Notas",
     "printSignature": "Divemaster"
+  },
+  "register": {
+    "title": "Regístrate con {shop}",
+    "intro": "Rellena esto una vez y queda archivado. Te enviaremos el descargo para que lo firmes; trae tu tarjeta de certificación el día de la inmersión.",
+    "nameLabel": "Tu nombre",
+    "emailLabel": "Correo electrónico",
+    "phoneLabel": "Teléfono",
+    "contactHint": "Uno de los dos, para poder enviarte el descargo.",
+    "certHeading": "Tu certificación",
+    "certHint": "Lo que indiques aquí queda archivado como tu propia declaración. Trae la tarjeta y la comprobamos el día de la inmersión.",
+    "agencyLabel": "Agencia",
+    "agencyNone": "Aún sin certificar",
+    "levelLabel": "Nivel",
+    "identifierLabel": "Número de tarjeta",
+    "sizesHeading": "Tus tallas",
+    "sizesHint": "Solo si alquilas con nosotros. Te ahorra la prueba en el mostrador.",
+    "wetsuitLabel": "Traje",
+    "bootLabel": "Botas",
+    "finLabel": "Aletas",
+    "submit": "Enviar al centro",
+    "submitting": "Enviando…",
+    "doneTitle": "Ya estás archivado",
+    "doneBody": "{shop} tiene tus datos. Atento al descargo: fírmalo antes de tu primera inmersión y listo.",
+    "invalid": "Algo del formulario no llegó bien. Revísalo e inténtalo de nuevo.",
+    "contactRequired": "Deja un correo o un teléfono para poder contactarte.",
+    "unavailable": "Ese centro no acepta registros en este momento."
   },
   "ready": {
     "metaTitle": "Tu preparación para la salida — DiveDay",

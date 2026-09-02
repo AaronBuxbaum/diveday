@@ -17,6 +17,12 @@ import { CaptainPhoneFrame, MarketingMockup } from "@/components/MarketingSectio
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { groupLabelClass } from "@/components/ui/ledger";
+import {
+  BANNER_TITLE_CLASS,
+  DISPLAY_TITLE_CLASS,
+  LEAD_TITLE_CLASS,
+  SUB_TITLE_CLASS,
+} from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -188,7 +194,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
           <p className="text-sm font-semibold tracking-widest text-primary uppercase">
             {t("marketing.product.eyebrow")}
           </p>
-          <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-6xl">
+          <h1 className={`mt-5 ${DISPLAY_TITLE_CLASS} sm:text-6xl`}>
             {t("marketing.product.heroTitle")}
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted">
@@ -224,7 +230,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
           <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
             <div>
               <ChapterMarker mark={chapter.booking} />
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+              <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.product.bookingTitle")}
               </h2>
               <p className="mt-5 text-lg leading-8 text-muted">
@@ -262,7 +268,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             </MarketingMockup>
             <div className="order-1 lg:order-2">
               <ChapterMarker mark={chapter.readiness} />
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+              <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.product.readinessTitle")}
               </h2>
               <p className="mt-5 text-lg leading-8 text-muted">
@@ -292,7 +298,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
           <div className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
             <div>
               <ChapterMarker mark={chapter["night-before"]} />
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+              <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.product.prepTitle")}
               </h2>
             </div>
@@ -300,7 +306,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               <div className="space-y-6">
                 <div>
                   <p className={groupLabelClass()}>{t("marketing.product.prepShopLabel")}</p>
-                  <h3 className="mt-2 text-xl font-semibold tracking-tight">
+                  <h3 className={`mt-2 ${SUB_TITLE_CLASS}`}>
                     {t("marketing.product.prepShopTitle")}
                   </h3>
                   <p className="mt-2 leading-7 text-muted">{t("marketing.product.prepShopBody")}</p>
@@ -315,7 +321,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               <div className="space-y-6">
                 <div>
                   <p className={groupLabelClass()}>{t("marketing.product.prepDiverLabel")}</p>
-                  <h3 className="mt-2 text-xl font-semibold tracking-tight">
+                  <h3 className={`mt-2 ${SUB_TITLE_CLASS}`}>
                     {t("marketing.product.nightBeforeTitle")}
                   </h3>
                   <p className="mt-2 leading-7 text-muted">
@@ -351,7 +357,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             </div>
             <div className="order-1 lg:order-2">
               <ChapterMarker mark={chapter.dock} />
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+              <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.product.dockTitle")}
               </h2>
               <p className="mt-5 text-lg leading-8 text-muted">
@@ -374,9 +380,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             padding="lg"
             className="mt-14 flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-between sm:text-left"
           >
-            <h3 className="text-xl font-semibold tracking-tight">
-              {t("marketing.common.midCtaTitle")}
-            </h3>
+            <h3 className={SUB_TITLE_CLASS}>{t("marketing.common.midCtaTitle")}</h3>
             <FunnelCtas locale={locale} source="product-mid" size="md" />
           </SectionCard>
         </section>
@@ -387,7 +391,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
           <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
             <div>
               <ChapterMarker mark={chapter.recap} />
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+              <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.product.recapTitle")}
               </h2>
               <p className="mt-5 text-lg leading-8 text-muted">
@@ -413,7 +417,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             <p className="text-sm font-semibold tracking-widest text-primary uppercase">
               {t("marketing.product.paymentEyebrow")}
             </p>
-            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+            <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.product.paymentTitle")}
             </h2>
             <p className="mt-5 text-lg leading-8 text-muted">
@@ -485,7 +489,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             <p className="text-sm font-semibold tracking-widest text-primary uppercase">
               {t("marketing.product.boxEyebrow")}
             </p>
-            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+            <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.product.boxTitle")}
             </h2>
             {/* Counted off the registry rather than written down, so the
@@ -545,7 +549,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
           <p className="text-sm font-semibold tracking-widest text-primary uppercase">
             {t("marketing.product.noEyebrow")}
           </p>
-          <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+          <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
             {t("marketing.product.noTitle")}
           </h2>
           <p className="mt-4 text-lg leading-8 text-muted">
@@ -578,9 +582,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             section whose left edge missed the column. */}
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-6 py-14 sm:flex-row sm:items-center">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">
-              {t("marketing.product.closingTitle")}
-            </h2>
+            <h2 className={LEAD_TITLE_CLASS}>{t("marketing.product.closingTitle")}</h2>
             <p className="mt-2 text-muted">{t("marketing.product.closingDescription")}</p>
             {/* Tagged, like the homepage's two doors onto the same surface:
                 the question that put a direct spreadsheet door on `/` is which

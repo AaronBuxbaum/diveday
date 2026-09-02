@@ -538,6 +538,26 @@ export const people = pgTable(
     /** Keeps history intact while removing a person from active shop workspaces. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /**
+     * **The diver filled this record in themselves**, at the shop's own QR or
+     * printed card, before any booking existed (issue #1236).
+     *
+     * A date rather than a flag, because "when" is what a staffer standing at
+     * the counter actually wants: a person who registered this morning is the
+     * one in front of them, and one who registered in March is a returning
+     * diver whose details may have moved on.
+     *
+     * Set **only when the row is created**. A returning diver re-submitting the
+     * form is matched by email and keeps the stamp they already had — and a
+     * person the shop typed in itself never gets one, so the mark means
+     * precisely "this came from the diver" and not "this was recent".
+     *
+     * It is also load-bearing for what a shop trusts: nothing here is reviewed
+     * evidence. The certification is `self_declared_at`, the fit is a
+     * preference, and the medical answers arrive through the ordinary waiver
+     * flow with the ordinary hard block.
+     */
+    selfRegisteredAt: timestamp("self_registered_at", { withTimezone: true }),
+    /**
      * Set when this person's identifying and medical data was destructively
      * erased across the shop's tables (ADR 20260802-diver-data-erasure).
      *
@@ -4168,6 +4188,121 @@ export const staffShifts = pgTable(
 );
 
 /**
+ * **A range of days a crew member has said they are away.**
+ *
+ * The staffing week shipped as the owner's shift roster (ADR
+ * 20260806-staffing-is-the-shift-roster): it shows who is working and which
+ * departure has nobody, and every write on it is the owner's. Nobody on the
+ * crew could say "I am away that week" or "I want that one" — which is
+ * DiveCrewPro's entire product, at $49/month, and the recurring complaint in
+ * the 2026-09-01 owner-sentiment sweep (issue #1235). This is the first half:
+ * the crew member's own statement about their availability.
+ *
+ * **Calendar dates, not instants.** "I am away the week of the 14th" has no
+ * clock in it — it is the shop's own days, inclusive at both ends, and storing
+ * a timestamp would make the range shift under a reader in another zone.
+ * `src/lib/calendar-date.ts` is how it meets the week's columns.
+ *
+ * **It informs; it never gates.** A blackout refuses a *request* the crew
+ * member themselves makes, and adds a warning word to an assignment that
+ * overlaps it — it does not remove anyone from a boat. The owner assigns crew,
+ * and a shorthanded Saturday with somebody's holiday on it is a conversation,
+ * not a validation error the roster silently loses a name to.
+ */
+export const crewAvailabilityBlocks = pgTable(
+  "crew_availability_blocks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    /** The crew member who is away. They own this row; see `src/db/crew-requests.ts`. */
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    startsOn: date("starts_on", { mode: "string" }).notNull(),
+    /** Inclusive: a single day is `starts_on = ends_on`. */
+    endsOn: date("ends_on", { mode: "string" }).notNull(),
+    note: text("note"),
+    /** Who wrote it — the crew member themselves, or an owner recording it for them. */
+    createdByPersonId: uuid("created_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("crew_availability_blocks_shop_person_idx")
+      .on(table.shopId, table.personId, table.startsOn)
+      .where(sql`deleted_at is null`),
+    index("crew_availability_blocks_shop_range_idx")
+      .on(table.shopId, table.startsOn, table.endsOn)
+      .where(sql`deleted_at is null`),
+    check("crew_availability_blocks_ends_on_or_after", sql`${table.endsOn} >= ${table.startsOn}`),
+  ],
+);
+
+/**
+ * What the owner did about a request. Null on the row means it is still
+ * waiting, which is the state the week draws.
+ */
+export const crewRequestDecision = pgEnum("crew_request_decision", ["approved", "declined"]);
+
+/**
+ * **A crew member asking to work one departure.**
+ *
+ * The other half of #1235. It is a *request*, never an assignment: approving
+ * one runs the ordinary `changeTripCrew` mutation, so the agency training
+ * ratio, the course rules and the roll-call guard all apply exactly as they do
+ * when the owner assigns somebody directly. Nothing here is a second path onto
+ * a boat.
+ *
+ * A decided row is kept rather than deleted — "I asked and was turned down" is
+ * the fact the crew member came back to check, and a shop that declines the
+ * same person three Saturdays running should be able to see that it did.
+ * Deleting is withdrawing, and is soft like every other delete.
+ */
+export const crewAssignmentRequests = pgTable(
+  "crew_assignment_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id),
+    /** The crew member asking. They own this row. */
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id),
+    requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
+    decision: crewRequestDecision("decision"),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    /** The owner or manager who answered. */
+    decidedByPersonId: uuid("decided_by_person_id").references(() => people.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    // One live ask per person per departure. A second tap is the same ask, not
+    // a second one, and a partial unique index is what makes that true under a
+    // race rather than under a pre-check.
+    uniqueIndex("crew_assignment_requests_live_idx")
+      .on(table.tripId, table.personId)
+      .where(sql`deleted_at is null`),
+    index("crew_assignment_requests_shop_trip_idx").on(table.shopId, table.tripId),
+    index("crew_assignment_requests_shop_person_idx").on(table.shopId, table.personId),
+    // A decision is a moment and an author, or it has not happened.
+    check(
+      "crew_assignment_requests_decided_together",
+      sql`(${table.decision} is null) = (${table.decidedAt} is null)
+        and (${table.decision} is null) = (${table.decidedByPersonId} is null)`,
+    ),
+  ],
+);
+
+/**
  * `invited`: a staff invite created this row (`inviteStaffMember`,
  * src/db/staff-accounts.ts) but the invitee hasn't accepted yet — an unusable
  * random password hash, no sign-in, excluded from `verifyCredentials` and
@@ -4584,6 +4719,81 @@ export const waiverRecords = pgTable(
     signedAt: timestamp("signed_at", { withTimezone: true }),
     medicalAnswers: jsonb("medical_answers").$type<MedicalAnswers>(),
     medicalReviewRequired: boolean("medical_review_required").notNull().default(false),
+    /**
+     * **A physician cleared this diver to dive, and a staff member recorded it.**
+     *
+     * The questionnaire refers a diver for physician evaluation and the record
+     * parks in `medical_review`, which fails closed (`src/lib/readiness.ts`).
+     * What happens next in a real shop is that the diver comes back holding a
+     * signed physician evaluation — and until this existed there was nowhere to
+     * put that. The only path that lifted the block was a paper attestation
+     * whose staff-facing words are "no answer needs physician sign-off", the
+     * opposite of what the diver is standing there with, so a staffer either
+     * attested to something untrue or left a cleared diver blocked (issue
+     * #1252).
+     *
+     * Deliberately **not** a widening of that attestation, and deliberately not
+     * implicit in a tap on "Mark ready": clearing a referral is a different act
+     * with a different evidence trail, and conflating the two would make the
+     * record unable to say which one happened.
+     *
+     * It clears *this record* and nothing else, which is what binds it to one
+     * questionnaire version: the answers that were referred are on this row
+     * (`medical_answers`), so a later disclosure signs a new record and parks
+     * again with this clearance untouched. Fails closed on absence — null is
+     * every record that has not been cleared, including every record that never
+     * needed to be.
+     *
+     * Outside the integrity seal, like `superseded_at` and the delivery
+     * columns: `signedMetadata` seals the diver's signed evidence, and a
+     * clearance is a later act by the shop rather than part of what the diver
+     * agreed to. `anonymized_at` is inside the v2 seal only because erasure
+     * *destroys* sealed fields and would otherwise read as tampering.
+     */
+    medicalClearedAt: timestamp("medical_cleared_at", { withTimezone: true }),
+    /** The staff member who recorded the clearance — the accountable person, as `recorded_by_person_id` is for a paper signature. */
+    medicalClearedByPersonId: uuid("medical_cleared_by_person_id").references(() => people.id),
+    /**
+     * The physician's evaluation, re-stored through DiveDay's own image
+     * pipeline like an imported waiver document. Optional: a shop that keeps
+     * the paper in a folder still records the fact.
+     *
+     * Destroyed by `anonymizeDiver` — it is the diver's own medical document,
+     * the same class of thing as `import_source_medical_document_url`. The
+     * *fact* of the clearance survives the erasure, as the certification
+     * sighting does.
+     */
+    medicalClearanceDocumentUrl: text("medical_clearance_document_url"),
+    /**
+     * **The day the physician actually evaluated the diver**, which is not the
+     * day a staffer typed it in.
+     *
+     * `medical_cleared_at` is a data-entry timestamp, and a `dive-domain-expert`
+     * review was blunt about what happens if that is all a shop holds: a diver
+     * walks up with a "fit to dive" letter from 2023 and DiveDay records a
+     * clearance dated today, saying nothing about the letter's age. Worse, a
+     * letter written in March cannot clear a stent placed in June — so a
+     * clearance is refused unless it post-dates the disclosure it answers
+     * (`recordMedicalClearance`).
+     *
+     * A calendar date, not an instant: what is printed on the form is a day,
+     * and it has no clock in it. It is also half the currency window — a
+     * cleared release stands until the *earlier* of a year from the signature
+     * and a year from the evaluation (`isCompletedWaiverCurrent`), which is the
+     * twelve months agency standards and operators actually work to.
+     */
+    medicalClearanceEvaluatedOn: date("medical_clearance_evaluated_on", { mode: "string" }),
+    /**
+     * The clinician who signed the evaluation, when the shop keeps the paper
+     * rather than uploading it.
+     *
+     * One of this and the document is required. Without either, the record says
+     * only that one of the shop's own staff pressed a button — which is the
+     * hearsay the paper-waiver attestation's checkbox exists to avoid, and this
+     * act deliberately has no checkbox because attaching the evidence is the
+     * better version of the same assurance.
+     */
+    medicalClearancePhysicianName: text("medical_clearance_physician_name"),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     /** HMAC over the immutable signed metadata; null means legacy/unverified. */
     integrityHash: text("integrity_hash"),
@@ -4619,6 +4829,39 @@ export const waiverRecords = pgTable(
     index("waiver_records_shop_status_idx").on(table.shopId, table.status),
     // The per-person carry-forward lookup: a diver's completed releases at a shop.
     index("waiver_records_shop_person_status_idx").on(table.shopId, table.personId, table.status),
+    // A clearance without an accountable staff member is not a record of
+    // anything, and a document with no clearance is a file nobody claimed.
+    check(
+      "waiver_records_medical_clearance_attributed",
+      sql`(${table.medicalClearedAt} is null) = (${table.medicalClearedByPersonId} is null)
+        and (${table.medicalClearanceDocumentUrl} is null or ${table.medicalClearedAt} is not null)`,
+    ),
+    // Nothing to clear unless the questionnaire referred this diver. Written
+    // against `medical_review_required` rather than `status`, because that
+    // column is the fact about the answers and does not move when the record's
+    // lifecycle does.
+    check(
+      "waiver_records_medical_clearance_needs_referral",
+      sql`${table.medicalClearedAt} is null or ${table.medicalReviewRequired}`,
+    ),
+    // A clearance says when the physician evaluated the diver, and points at
+    // either their evaluation or their name. Neither is optional, because
+    // without them the row records only that a staff member pressed a button.
+    //
+    // **Except after an erasure**, which destroys both: `anonymizeDiver` nulls
+    // the document URL, and a clearance evidenced only by a document would then
+    // fail this check and take the whole erasure transaction with it. The
+    // erased row is *meant* to be a skeleton — the certification sighting
+    // survives its agency number the same way — so the rule is about a live
+    // record, and the exemption is stated rather than discovered by a failing
+    // erasure in production.
+    check(
+      "waiver_records_medical_clearance_evidenced",
+      sql`${table.medicalClearedAt} is null or ${table.anonymizedAt} is not null or (
+        ${table.medicalClearanceEvaluatedOn} is not null
+        and (${table.medicalClearanceDocumentUrl} is not null
+          or ${table.medicalClearancePhysicianName} is not null))`,
+    ),
   ],
 );
 

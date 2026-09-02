@@ -19,6 +19,7 @@ import {
   upcomingScheduleRange,
   weekBoard,
 } from "@/db/trips";
+import { compassText } from "@/i18n/compass-labels";
 import { CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
@@ -640,7 +641,7 @@ export default async function ScheduleBoardPage({
       trip.id,
       st("trips.conditions.automatedWind", {
         speed: forecast.wind.speedKnots,
-        direction: forecast.wind.direction ? forecast.wind.direction.toUpperCase() : "",
+        direction: compassText(st, forecast.wind.direction),
         gusts: forecast.wind.gustsKnots ?? 0,
         hasGusts:
           forecast.wind.gustsKnots !== null && forecast.wind.gustsKnots > forecast.wind.speedKnots

@@ -13,6 +13,7 @@ import { sectionCardClass } from "@/components/ui/card";
 import { SearchField } from "@/components/ui/form";
 import { groupLabelClass, LedgerRow } from "@/components/ui/ledger";
 import { QueryForm } from "@/components/ui/QueryForm";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
 import {
   countGlobalDiveSiteTemplates,
@@ -288,7 +289,7 @@ async function CatalogView({
           {t("diveSites.backToLibrary")}
         </Link>
         <div className="mt-8 flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-12 text-center bg-card">
-          <h2 className="text-lg font-semibold text-foreground">
+          <h2 className={`${SECTION_TITLE_CLASS} text-foreground`}>
             {t("diveSites.catalog.locationRequiredTitle")}
           </h2>
           <p className="mt-2 text-sm text-muted max-w-md">
@@ -549,7 +550,7 @@ function TemplatePreview({
 
       {briefing.fitNote ? (
         <section className="mt-6 rounded-panel bg-primary-tint p-5">
-          <h2 className="text-lg font-semibold text-primary">
+          <h2 className={`${SECTION_TITLE_CLASS} text-primary`}>
             {t("diveSites.catalog.preview_fit")}
           </h2>
           <p className="mt-1 text-sm text-muted">{briefing.fitNote}</p>

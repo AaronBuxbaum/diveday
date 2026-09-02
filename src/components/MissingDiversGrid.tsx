@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { firstNameOf } from "@/lib/person-name";
 
 type MissingDiver = {
@@ -91,7 +92,7 @@ export function MissingDiversGrid({
   return (
     <section id="missing-divers-grid" className="mt-9 print:hidden">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">{copy.heading}</h2>
+        <h2 className={SECTION_TITLE_CLASS}>{copy.heading}</h2>
         <Badge tone={tone === "urgent" ? "danger" : "neutral"}>{copy.statusLabel}</Badge>
       </div>
       <p className="mt-1 text-sm text-muted">{copy.tapHint}</p>

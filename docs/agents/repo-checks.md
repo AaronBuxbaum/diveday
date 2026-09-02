@@ -1,12 +1,12 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 38 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 39 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
 shape being refused.
 
-Only the 17 guards whose reasoning is not obvious from their own failure message are
+Only the 18 guards whose reasoning is not obvious from their own failure message are
 written up here. The rest say everything they need to say when they go red.
 
 This is the long-form half of one row in [AGENTS.md](../../AGENTS.md)'s command table, and it lives
@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, logical-property, clock, transaction-concurrency, timezone, Intl-cache, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, destructive-migration, migration-graph, e2e-hygiene, follow-ups, agent-layer (skills/index/task-context), Open-Graph-site, infra-ASCII and stack-CI-skip safeguards.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, logical-property, clock, transaction-concurrency, timezone, Intl-cache, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, destructive-migration, migration-graph, e2e-hygiene, follow-ups, agent-layer (skills/index/task-context), Open-Graph-site, infra-ASCII and stack-CI-skip safeguards.
 
 ## The guards worth reading about
 
@@ -73,6 +73,40 @@ The shop-word one (`scripts/check-shop-word.mjs`) refuses `tienda` in any `es-ES
 ### tinted-ink
 
 The tinted-ink one (`scripts/check-tinted-ink.mjs`) refuses a `bg-<hue>/10` fill on an element whose own text is `text-<hue>`. That fill is **translucent**, so the colour the text is read against is the hue composited over whatever happens to be behind the element — and every ratio in `docs/design/forms-and-controls.md` was computed against `--surface`. Turning axe's `color-contrast` rule back on found 24 failing nodes on 2026-08-23 and every one was this: a status pill on `--background` rather than a card (4.21:1 where the table says 4.86), a `bg-primary/10` badge nested inside the green of a boarded row on `/check-in` (**4.09:1**, the worst in the app), and in dark mode a danger count badge inside the current nav tab's own primary tint. The fix is the opaque `--<hue>-tint` token, which resolves against `--surface` once and is the table's number wherever the element is mounted — or `Badge`, which does it for you. The check exists because the axe scan reaches about thirty routes and the pill that started this was on none of them; it matches the same element only and the `/10` fill only, since a parent's tint under a child's ink is invisible to a grep and the `/15` roll-call states render under `.boat-mode`, a different palette with its own measurements. A line that genuinely means the translucent form says `diveday:allow-tinted-ink: <why>`.
+
+### type-ramp
+
+The type-ramp one (`scripts/check-type-ramp.mjs`) refuses a **bare heading spelling** — a
+`text-lg`/`xl`/`2xl`/`3xl`/`4xl` beside a `font-semibold`/`font-bold` — anywhere under `src/app` or
+`src/components`. Headings take a named level from `src/components/ui/typography.ts` instead.
+
+ADR 20260827-clearwater-surface-language decision 3 closed the ramp to seven levels. A grep on
+2026-09-01 found **fourteen spellings** still typed at the call site: `text-lg font-semibold` 62
+times, `text-3xl font-semibold` 27, and twelve more down to a single use. Two constants existed
+(`SHELL_TITLE_CLASS`, `SectionCard`'s private `TITLE_CLASS`) and everything else picked its own
+size, which is how `text-xl` and `text-2xl` section headings drifted in beside the `text-lg` the ADR
+names.
+
+Reading the fourteen is what shaped the guard. They were not fourteen drifting levels of one ramp —
+they were **two ramps**, and the ADR excludes one of them from itself ("the marketing, legal and
+error surfaces are also outside every recomposition here"). That second ramp was already uniform:
+the marketing section heading was byte-identical at twenty-odd call sites. Unnamed, not broken. So
+`typography.ts` names both, and this guard covers both, because a guard that stopped at the app's
+half would leave the larger and more repetitive half of the drift surface unwatched.
+
+Two details worth knowing when it goes red. It matches **either order** with up to forty characters
+between the two classes, so `text-3xl tracking-tight font-semibold` cannot slip past a fixed-order
+grep — that alone found six figures the issue's own grep had missed, including three the ADR
+explicitly calls figures. And a `sm:`/`dark:`/`group-hover:` prefix is *not* a bare spelling: a call
+site pairs a ramp constant with its own breakpoint step (`` `${BANNER_TITLE_CLASS} sm:text-4xl` ``),
+which is where that decision belongs.
+
+Ratcheted per file in `scripts/type-ramp-baseline.json` exactly like `check:copy` — `--write` banks
+a fall and refuses a rise, `--absorb` records growth arriving from a merge, `--report` prints the
+per-file table. It lands at zero, so it behaves as a full gate today; the ratchet is there for the
+branch cut before the sweep, whose spellings are pre-existing debt rather than new drift. A heading
+that genuinely is not on the ramp — a rendered email, an `ImageResponse` card Tailwind never reaches
+— says `diveday:allow-type-ramp: <why>` on the line or the line above.
 
 ### logical-property
 

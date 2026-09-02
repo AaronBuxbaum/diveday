@@ -403,6 +403,36 @@ export const RATE_LIMITS = {
   waitlistJoin: perHour(10),
   /** Course inquiry submissions from the public course page, per IP. */
   courseInquiry: perHour(10),
+  /**
+   * Self-registration from the shop's own QR, per IP. The public write with
+   * the widest blast radius on this surface: it creates a person row.
+   */
+  selfRegisterByIp: perHour(10),
+  /**
+   * Self-registration, **per shop**.
+   *
+   * The bucket that has to exist separately: a global cap would let one shop's
+   * QR — printed on a card in a busy lobby, or sprayed by one visitor — starve
+   * every other shop's counter. Sized for a real dive-shop morning, where a
+   * boat's worth of walk-ins registering back to back is the case this exists
+   * to serve rather than the case it should throttle.
+   */
+  selfRegisterByShop: perHour(120),
+  /**
+   * Self-registration, per **recipient address**.
+   *
+   * The bucket `waiverLinkResendByBooking` and `declarationByPerson` already
+   * exist for: neither of the two above is keyed on the person being *written
+   * to*, so 10 submissions an hour aimed at one victim's inbox is 10 waiver
+   * emails an hour carrying the shop's name — and, worse for the tenant, an
+   * attacker can make a shop's SES identity send branded mail to addresses that
+   * have no relationship with it at all.
+   *
+   * Following `declarationByPerson`'s shape: an empty bucket drops the *send*,
+   * never the registration. The diver still goes on file; the shop can send the
+   * release itself.
+   */
+  selfRegisterEmailByRecipient: perHour(3),
   /** Public last-minute-list joins, per IP. */
   lastMinuteListJoin: perHour(10),
   /** Starting a post-trip tip checkout, per recap token. */

@@ -20,6 +20,16 @@
     "recording": "Recording…",
     "recordPaperSignature": "Record paper signature"
   },
+  "medicalClearance": {
+    "recordClearance": "Record physician clearance",
+    "evaluatedOnLabel": "Date of the physician's evaluation",
+    "physicianNameLabel": "Physician",
+    "evidenceHint": "Their name, or attach the evaluation below. One or the other.",
+    "documentLabel": "Physician's evaluation form",
+    "documentHint": "An image or PDF of the signed form.",
+    "recording": "Recording…",
+    "confirm": "A physician cleared this diver to dive"
+  },
   "waiverSend": {
     "sending": "Sending…",
     "copied": "Copied",
@@ -55,6 +65,16 @@
   "capacity": {
     "full": "Full",
     "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}"
+  },
+  "compass": {
+    "n": "N",
+    "ne": "NE",
+    "e": "E",
+    "se": "SE",
+    "s": "S",
+    "sw": "SW",
+    "w": "W",
+    "nw": "NW"
   },
   "depth": {
     "meters": "m",

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { SettledCheck } from "@/components/ui/SettledCheck";
+import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 import type { ThreadStepId, ThreadStepState } from "@/lib/thread-steps";
 
 /**
@@ -59,7 +60,7 @@ export function ThreadStatus({
       data-testid={THREAD_STATUS_TEST_ID}
       className="mt-8 flex flex-wrap items-baseline gap-x-3 gap-y-1"
     >
-      <span className="text-3xl font-semibold tracking-tight tabular-nums">{done}</span>
+      <span className={FIGURE_LARGE_CLASS}>{done}</span>
       <span className="text-base font-medium text-muted">{doneSuffix}</span>
       {settled ? (
         // Plain success ink, deliberately not an `EarnedMoment`: the thread

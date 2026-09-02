@@ -14,7 +14,7 @@ import {
   unavailableReadiness,
   unreviewedCardState,
 } from "@/lib/readiness";
-import { effectiveWaiverForBooking } from "@/lib/waivers";
+import { effectiveWaiverForBooking, overriddenReferralAt } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
 import { type AppDb, type DbExecutor, isUniqueConstraintViolation, queryAll } from "./client";
 import { paymentsByBooking } from "./payments";
@@ -1584,6 +1584,14 @@ export async function listTripsReadiness(
       ...row,
       bookingWaiver: row.waiver,
       waiver: effectiveWaiver,
+      // Carried on the row because the manifest needs it and only this function
+      // holds both halves — the governing record and the diver's whole signed
+      // history. Deriving it a second time downstream from one of the two would
+      // be a second answer to a safety question (issue #1282).
+      overriddenReferralAt: overriddenReferralAt(
+        effectiveWaiver,
+        signedWaiversByPerson.get(row.person.id) ?? [],
+      ),
       requirement,
       siteRequirement,
       certifications: certificationsByPerson.get(row.person.id) ?? [],

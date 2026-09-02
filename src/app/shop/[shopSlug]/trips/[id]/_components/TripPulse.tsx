@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BoardingSeats } from "@/components/BoardingBar";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { SUB_TITLE_CLASS } from "@/components/ui/typography";
 
 export type TripPulseFact = {
   /** The whole sentence — "1 diver can’t board yet" — never a bare count. */
@@ -59,7 +60,7 @@ export function TripPulse({
   return (
     <section className="mt-8">
       <p
-        className={`text-xl font-semibold tracking-tight tabular-nums ${
+        className={`${SUB_TITLE_CLASS} tabular-nums ${
           captionTone === "success" ? "text-success-strong" : ""
         }`}
       >

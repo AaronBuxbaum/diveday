@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { PrintButton } from "@/components/PrintButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
+import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { listTripGearAssignments } from "@/db/gear";
 import { listTripPrepDivers } from "@/db/rental-fit";
 import { getTripWithBooked } from "@/db/trips";
@@ -87,7 +88,7 @@ export default async function RentalTicketPage({
           <p className="text-xs font-bold tracking-[0.16em] text-primary uppercase">
             {t("gear.ticket.eyebrow")}
           </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">{diver.fullName}</h1>
+          <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{diver.fullName}</h1>
           <p className="mt-1 text-muted">
             {trip.title} · {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
             {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
@@ -102,7 +103,7 @@ export default async function RentalTicketPage({
       </header>
 
       <section aria-labelledby="ticket-units-heading" className="mt-8">
-        <h2 id="ticket-units-heading" className="text-lg font-semibold">
+        <h2 id="ticket-units-heading" className={SECTION_TITLE_CLASS}>
           {t("gear.ticket.unitsHeading")}
         </h2>
         <ul

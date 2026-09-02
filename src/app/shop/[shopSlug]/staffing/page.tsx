@@ -9,6 +9,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { canPersonManageStaffAccounts } from "@/db/authz";
+import { listCrewAssignmentRequests, listCrewAvailabilityBlocks } from "@/db/crew-requests";
 import type { staffCredentials } from "@/db/schema";
 import { listStaffCredentials } from "@/db/staff-credentials";
 import { getStaffingView } from "@/db/staffing";
@@ -32,9 +33,13 @@ import {
 import { type GapWords, StaffingWeek } from "./_components/StaffingWeek";
 import {
   createShiftAction,
+  decideCrewRequestAction,
+  deleteAwayAction,
   deleteShiftAction,
   deleteStaffCredentialAction,
+  requestCrewAction,
   reviewStaffCredentialAction,
+  saveAwayAction,
   saveStaffCredentialAction,
 } from "./actions";
 
@@ -66,6 +71,26 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
   "credential-reviewed": { tone: "success", key: "staffing.notice.credentialReviewed" },
   "credential-deleted": { tone: "success", key: "staffing.notice.credentialDeleted" },
   "credential-invalid": { tone: "danger", key: "staffing.notice.credentialInvalid" },
+
+  // The crew's own acts and the owner's answer (issue #1235). The refusal
+  // codes are the domain layer's own, in its casing — `noticeUrl` normalises
+  // them to the kebab spelling this map holds.
+  "away-saved": { tone: "success", key: "staffing.notice.awaySaved" },
+  "away-deleted": { tone: "success", key: "staffing.notice.awayDeleted" },
+  "request-sent": { tone: "success", key: "staffing.notice.requestSent" },
+  "request-approved": { tone: "success", key: "staffing.notice.requestApproved" },
+  // Loud on purpose: a shop that believes it has crewed a departure it has not
+  // is the failure worth interrupting for.
+  "request-approved-not-assigned": {
+    tone: "warning",
+    key: "staffing.notice.requestApprovedNotAssigned",
+  },
+  "request-declined": { tone: "success", key: "staffing.notice.requestDeclined" },
+  "not-allowed": { tone: "danger", key: "staffing.notice.notAllowed" },
+  "person-not-found": { tone: "danger", key: "staffing.notice.personNotFound" },
+  "trip-not-found": { tone: "danger", key: "staffing.notice.tripNotFound" },
+  "request-not-found": { tone: "danger", key: "staffing.notice.requestNotFound" },
+  "invalid-range": { tone: "danger", key: "staffing.notice.invalidRange" },
 };
 
 /**
@@ -143,7 +168,8 @@ export default async function StaffingPage({
   // today, which is both an unstable visual baseline and an e2e fixture that
   // drifts out from under itself. In production `nowDate()` is the native
   // call, unchanged.
-  const today = calendarDateInTimezone(nowDate(), shop.timezone);
+  const now = nowDate();
+  const today = calendarDateInTimezone(now, shop.timezone);
   // The same `?week=` grammar the schedule board pages by, over the same dates
   // (`src/lib/week-board.ts`; ADR 20260827-clearwater-surface-language,
   // decision 5). Total by construction: a malformed or missing value lands on
@@ -166,7 +192,7 @@ export default async function StaffingPage({
   const fromWall = parseWallTime(weekStart, "00:00");
   const toWall = parseWallTime(shiftCalendarDate(weekStart, 7), "00:00");
   if (!fromWall || !toWall) redirect(shopPath(shopSlug, "staffing"));
-  const [view, staff, credentials] = await Promise.all([
+  const [view, staff, credentials, blocks] = await Promise.all([
     getStaffingView(
       db,
       shop.id,
@@ -178,7 +204,17 @@ export default async function StaffingPage({
     ),
     listStaff(db, shop.id),
     listStaffCredentials(db, shop.id),
+    // The whole week's blackouts, whoever's: a person's own draw as quiet
+    // chips in their row, and everybody's are needed to warn on an assignment.
+    listCrewAvailabilityBlocks(db, shop.id, { from: weekStart, to: weekEnd }),
   ]);
+  // Requests hang off the gaps, so they are asked for after the view knows
+  // which departures are short — one query, over the ids that can carry one.
+  const crewRequests = await listCrewAssignmentRequests(
+    db,
+    shop.id,
+    view.gapTrips.map((trip) => trip.tripId),
+  );
   const canManage = await canPersonManageStaffAccounts(db, shop.id, session.user.personId);
   const notice = noticeFromParam(query.notice, notices);
   const onShiftForm =
@@ -187,6 +223,14 @@ export default async function StaffingPage({
   const pageNotice = onShiftForm ? undefined : notice;
 
   const week = staffWeek({
+    blocks,
+    requests: crewRequests,
+    // Who is reading. `isCrew` is deliberately every staff role: a captain
+    // asking to run Saturday's boat is the ordinary case, and narrowing it to
+    // instructors would rebuild the "only the owner writes here" shape this
+    // slice exists to open (ADR 20260902-crew-requests-and-blackouts).
+    viewer: { personId: session.user.personId, isCrew: true },
+    now,
     people: view.staff.map((member) => ({
       personId: member.person.id,
       name: member.person.fullName,
@@ -219,6 +263,7 @@ export default async function StaffingPage({
     crew_below_target: t("shared.today.actionKind.crewBelowTarget"),
   };
 
+  const myBlocks = blocks.filter((block) => block.personId === session.user.personId);
   const staffingPath = shopPath(shopSlug, "staffing");
   // **Every act carries the week it was performed in.** The page grew a week
   // dimension and the actions did not, so building next week's roster — the
@@ -229,6 +274,13 @@ export default async function StaffingPage({
   // to choose, and one binding cannot drift from another.
   const createShift = createShiftAction.bind(null, weekStart);
   const deleteShift = deleteShiftAction.bind(null, weekStart);
+  // The crew's own two acts, and the owner's answer (issue #1235). Bound to
+  // the week for the same reason every other act here is: a save that threw
+  // the reader back to this week made building next week's roster impossible.
+  const requestCrew = requestCrewAction.bind(null, weekStart);
+  const decideRequest = decideCrewRequestAction.bind(null, weekStart);
+  const saveAway = saveAwayAction.bind(null, weekStart);
+  const deleteAway = deleteAwayAction.bind(null, weekStart);
   const saveCredential = saveStaffCredentialAction.bind(null, weekStart);
   const reviewCredential = reviewStaffCredentialAction.bind(null, weekStart);
   const deleteCredential = deleteStaffCredentialAction.bind(null, weekStart);
@@ -326,7 +378,10 @@ export default async function StaffingPage({
             timeZone={shop.timezone}
             shopSlug={shopSlug}
             canManage={canManage}
+            canDecide={canManage}
             deleteShiftAction={deleteShift}
+            requestAction={requestCrew}
+            decideRequestAction={decideRequest}
             links={{
               rangeLabel: formatCalendarDateRange(weekStart, weekEnd, locale),
               previousHref: `${staffingPath}?${WEEK_PARAM}=${shiftWeek(weekStart, -1)}`,
@@ -354,6 +409,17 @@ export default async function StaffingPage({
               removing: t("staffing.working.removing"),
               shiftAria: t.raw("staffing.week.shiftAria"),
               empty: t("staffing.week.empty"),
+              away: t("staffing.week.away"),
+              awayConflict: t.raw("staffing.week.awayConflict"),
+              request: t("staffing.week.request"),
+              requestAria: t.raw("staffing.week.requestAria"),
+              requesting: t("staffing.week.requesting"),
+              requested: t.raw("staffing.week.requested"),
+              approve: t("staffing.week.approve"),
+              decline: t("staffing.week.decline"),
+              deciding: t("staffing.week.deciding"),
+              requestApproved: t("staffing.week.requestApproved"),
+              requestDeclined: t("staffing.week.requestDeclined"),
             }}
           />
 
@@ -419,6 +485,92 @@ export default async function StaffingPage({
               </FieldGrid>
             </AddDoor>
           ) : null}
+
+          {/* **The crew member's own door** (issue #1235, ADR
+              20260902-crew-requests-and-blackouts). Every other write on this
+              page is behind `canManage`; this one is not, and that is the whole
+              point of the slice. A manager's `<select>` lets them record a
+              range for somebody who phoned on a Sunday; everyone else writes
+              their own row and the domain layer refuses anything else. */}
+          <AddDoor id="add-away" label={t("staffing.away.heading")}>
+            <FieldGrid as="form" action={saveAway} columns={2}>
+              {canManage ? (
+                <Field label={t("staffing.away.person")}>
+                  <select
+                    name="personId"
+                    required
+                    defaultValue={session.user.personId}
+                    className={controlClass}
+                  >
+                    {staff.map((member) => (
+                      <option key={member.person.id} value={member.person.id}>
+                        {member.person.fullName}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              ) : (
+                // Never a form field for a crew member: the person is the
+                // session's own, and the domain layer checks it again anyway.
+                <input type="hidden" name="personId" value={session.user.personId} />
+              )}
+              <Field label={t("staffing.away.from")}>
+                <input
+                  name="startsOn"
+                  type="date"
+                  required
+                  defaultValue={defaultShiftDate}
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={t("staffing.away.to")}>
+                <input
+                  name="endsOn"
+                  type="date"
+                  required
+                  defaultValue={defaultShiftDate}
+                  className={controlClass}
+                />
+              </Field>
+              <Field label={t("staffing.away.note")}>
+                <input
+                  name="note"
+                  maxLength={120}
+                  className={controlClass}
+                  placeholder={t("staffing.away.notePlaceholder")}
+                />
+              </Field>
+              <FieldActions>
+                <SubmitButton pendingLabel={t("staffing.away.saving")} className={buttonClass()}>
+                  {t("staffing.away.save")}
+                </SubmitButton>
+              </FieldActions>
+            </FieldGrid>
+            {/* Their own rows for the week on screen, each with its one act.
+                Somebody else's are visible on the grid above as quiet chips
+                and are not removable here — the row belongs to its person. */}
+            {myBlocks.length > 0 ? (
+              <ul className="mt-4 flex flex-col gap-2">
+                {myBlocks.map((block) => (
+                  <li key={block.id} className="flex items-center justify-between gap-3 text-sm">
+                    <span>
+                      {formatCalendarDateRange(block.startsOn, block.endsOn, locale)}
+                      {block.note ? ` · ${block.note}` : ""}
+                    </span>
+                    <form action={deleteAway}>
+                      <input type="hidden" name="blockId" value={block.id} />
+                      <SubmitButton
+                        pendingLabel={t("staffing.away.removing")}
+                        className={buttonClass({ variant: "ghost", size: "sm" })}
+                      >
+                        {t("staffing.away.remove")}
+                      </SubmitButton>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </AddDoor>
 
           {/* Owner/manager work, as it was before this slice — the
               recomposition moved the furniture, not who may see it. The group

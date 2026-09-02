@@ -20,6 +20,16 @@
     "recording": "Registrando…",
     "recordPaperSignature": "Registrar firma en papel"
   },
+  "medicalClearance": {
+    "recordClearance": "Registrar la autorización médica",
+    "evaluatedOnLabel": "Fecha de la evaluación médica",
+    "physicianNameLabel": "Médico",
+    "evidenceHint": "Su nombre, o adjunta la evaluación abajo. Una de las dos.",
+    "documentLabel": "Formulario de evaluación médica",
+    "documentHint": "Una imagen o un PDF del formulario firmado.",
+    "recording": "Registrando…",
+    "confirm": "Un médico autorizó a este buceador a bucear"
+  },
   "waiverSend": {
     "sending": "Enviando…",
     "copied": "Copiado",
@@ -55,6 +65,16 @@
   "capacity": {
     "full": "Completo",
     "spotsLeft": "{count, plural, one {queda # plaza} other {quedan # plazas}}"
+  },
+  "compass": {
+    "n": "N",
+    "ne": "NE",
+    "e": "E",
+    "se": "SE",
+    "s": "S",
+    "sw": "SO",
+    "w": "O",
+    "nw": "NO"
   },
   "depth": {
     "meters": "m",

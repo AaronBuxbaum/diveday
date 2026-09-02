@@ -41,6 +41,8 @@ const EXPECTED_FILES = [
   "trip_requirements.csv",
   "trip_assignments.csv",
   "staff_shifts.csv",
+  "crew_availability_blocks.csv",
+  "crew_assignment_requests.csv",
   "staff_credentials.csv",
   "bookings.csv",
   "trip_help_requests.csv",
@@ -109,6 +111,8 @@ const EXPORTED_TABLES = [
   "trip_requirements",
   "trip_assignments",
   "staff_shifts",
+  "crew_availability_blocks",
+  "crew_assignment_requests",
   "staff_credentials",
   "bookings",
   "trip_help_requests",
@@ -344,6 +348,10 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   // The member row's surrogate id says nothing beyond (pair_id, booking_id),
   // which are both exported.
   buddy_pair_members: ["shop_id", "id"],
+  // The crew's own two tables (issue #1235). Every row is scoped to the bundle
+  // being exported, so the id repeated on each line buys a reader nothing.
+  crew_availability_blocks: ["shop_id"],
+  crew_assignment_requests: ["shop_id"],
   waiver_templates: ["shop_id"],
   waiver_materiality_decisions: ["shop_id"],
   waiver_records: [
@@ -367,6 +375,17 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "delivery_provider_status",
     "delivery_provider_status_at",
     "delivery_error",
+    // The physician's evaluation itself (issue #1252). The *fact* of the
+    // clearance, its evaluation date, the physician's name and the accountable
+    // staff member are all exported; the document is not, for the same reason
+    // `token_sealed` is not — a bundle leaves DiveDay's custody entirely, and
+    // this is the most sensitive file the product holds. It is also currently
+    // write-only: nothing in the app reads it back, so a URL in a CSV would
+    // point at an object the recipient cannot fetch either (the media bucket
+    // blocks all public access and the uploader credential holds no GetObject).
+    // A read path is tracked separately; when one lands, this decision is the
+    // one to revisit.
+    "medical_clearance_document_url",
   ],
   // `created_at` is when DiveDay wrote the row; `occurred_at` is when the
   // money actually moved, and that is the one a reader replays.

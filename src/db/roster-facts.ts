@@ -3,7 +3,7 @@ import { nowDate } from "@/lib/clock";
 import { type AboardBlockerKind, aboardBlockerKind } from "@/lib/readiness";
 import { inHorizonReadiness } from "./blockers";
 import type { AppDb } from "./client";
-import { bookings, orders, priorVisits, trips } from "./schema";
+import { bookings, orders, people, priorVisits, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
@@ -35,6 +35,11 @@ export type RosterFacts = {
    * who has never been out (ADR 20260725-import-prior-visits).
    */
   importedOnly: boolean;
+  /**
+   * They put themselves on file at the shop's counter QR, and when (issue
+   * #1236). Null for every record the shop typed in or imported itself.
+   */
+  selfRegisteredAt: Date | null;
   /** An invoice raised against this diver is still `open`. */
   openBalance: boolean;
   /** Why they cannot board the departure they are on, worst-first — or null. */
@@ -45,6 +50,7 @@ const EMPTY: RosterFacts = {
   lastAboardAt: null,
   nextBookingAt: null,
   importedOnly: false,
+  selfRegisteredAt: null,
   openBalance: false,
   blocker: null,
 };
@@ -85,7 +91,7 @@ export async function rosterFacts(
   const now = options.now ?? nowDate();
   const ids = [...personIds];
 
-  const [seats, visits, openOrders, evidence] = await Promise.all([
+  const [seats, visits, openOrders, evidence, registrations] = await Promise.all([
     db
       .select({ personId: bookings.personId, startsAt: trips.startsAt })
       .from(bookings)
@@ -117,9 +123,21 @@ export async function rosterFacts(
         and(eq(orders.shopId, shopId), inArray(orders.personId, ids), eq(orders.status, "open")),
       ),
     inHorizonReadiness(db, shopId, now),
+    // The counter QR's own mark (issue #1236). One column off `people`, read
+    // here rather than joined into the roster query, so the fact reaches every
+    // surface that asks for roster facts rather than only the list.
+    db
+      .select({ id: people.id, selfRegisteredAt: people.selfRegisteredAt })
+      .from(people)
+      .where(and(eq(people.shopId, shopId), inArray(people.id, ids))),
   ]);
 
   const importedIds = new Set(visits.map((row) => row.personId));
+  const registeredAt = new Map(
+    registrations
+      .filter((row) => row.selfRegisteredAt !== null)
+      .map((row) => [row.id, row.selfRegisteredAt as Date] as const),
+  );
   const owingIds = new Set(openOrders.map((row) => row.personId));
 
   // Every seat in the horizon that cannot board. A diver is pooled across all
@@ -152,6 +170,9 @@ export async function rosterFacts(
     const entry = facts.get(id);
     if (!entry) continue;
     entry.importedOnly = importedIds.has(id) && !seated.has(id);
+    // Provenance, like `importedOnly`, and suppressed by the same thing: a
+    // diver who has been on a boat has a better fact to say.
+    entry.selfRegisteredAt = seated.has(id) ? null : (registeredAt.get(id) ?? null);
     entry.openBalance = owingIds.has(id);
     entry.blocker = aboardBlockerKind(
       blockedSeats.filter((row) => row.person.id === id).flatMap((row) => row.readiness.blockers),

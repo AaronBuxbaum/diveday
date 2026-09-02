@@ -105,6 +105,11 @@ export async function getIncidentExport(
     if (row.waiver?.signatureMethod === "in_person_attested" && row.waiver.recordedByPersonId) {
       accountableStaffIds.add(row.waiver.recordedByPersonId);
     }
+    // A physician clearance is a third accountable staff act, and the only one
+    // that lifts a hard readiness block (issue #1252) — so the log names who.
+    if (row.waiver?.medicalClearedByPersonId) {
+      accountableStaffIds.add(row.waiver.medicalClearedByPersonId);
+    }
     for (const card of [
       ...row.certifications,
       ...row.specialtyCertifications,
@@ -221,6 +226,9 @@ export async function getIncidentExport(
       waiver: row.waiver,
       waiverRecordedByName: row.waiver?.recordedByPersonId
         ? (accountableStaffNameById.get(row.waiver.recordedByPersonId) ?? null)
+        : null,
+      waiverMedicalClearedByName: row.waiver?.medicalClearedByPersonId
+        ? (accountableStaffNameById.get(row.waiver.medicalClearedByPersonId) ?? null)
         : null,
     })),
     events,

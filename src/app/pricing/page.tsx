@@ -10,6 +10,7 @@ import { ExportBundleFallback } from "@/components/MarketingScreenFallbacks";
 import { MarketingMockup } from "@/components/MarketingSections";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
+import { BANNER_TITLE_CLASS, DISPLAY_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -246,7 +247,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
                 </span>{" "}
                 {t("marketing.pricing.earlyAccessBadge")}
               </p>
-              <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-5xl">
+              <h1 className={`mt-5 ${DISPLAY_TITLE_CLASS} sm:text-5xl`}>
                 {t("marketing.pricing.heroTitle")}
               </h1>
               {/* Cadence below the figure, not baseline-set beside it: paired
@@ -376,7 +377,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
             evidence, and our answer is the one line that gets full ink. */}
         <section className="border-b border-border">
           <div className="mx-auto max-w-3xl px-6 py-16 lg:py-24">
-            <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+            <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.pricing.feeAnchor.title")}
             </h2>
             <p className="mt-5 leading-7 text-muted">{t("marketing.pricing.feeAnchor.body")}</p>
@@ -430,7 +431,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
               <p className="text-sm font-semibold tracking-widest text-primary uppercase">
                 {t("marketing.pricing.dataExit.eyebrow")}
               </p>
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+              <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.pricing.dataExit.title")}
               </h2>
               <p className="mt-5 text-lg leading-8 text-muted">
@@ -455,9 +456,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
             they are also the FAQPage structured data above, and a buyer
             scanning for one word shouldn't have to open ten boxes. */}
         <section className="mx-auto max-w-5xl px-6 py-16 lg:py-24">
-          <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-            {t("marketing.pricing.faqTitle")}
-          </h2>
+          <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>{t("marketing.pricing.faqTitle")}</h2>
           <div className="mt-10 grid gap-x-14 gap-y-10 md:grid-cols-2">
             {faq.map((item) => (
               <article key={item.question}>
@@ -491,7 +490,7 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
             (src/lib/funnel.ts). */}
         <section className="border-t border-border">
           <div className="mx-auto max-w-2xl px-6 py-16 text-center lg:py-20">
-            <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+            <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.pricing.closingTitle")}
             </h2>
             <p className="mt-4 text-lg leading-8 text-balance text-muted">

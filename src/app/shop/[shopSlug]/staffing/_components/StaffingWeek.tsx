@@ -6,6 +6,7 @@ import { GroupLabel, groupLabelClass, LedgerRow } from "@/components/ui/ledger";
 import { WeekPager } from "@/components/ui/week-pager";
 import { fill } from "@/i18n/fill";
 import { calendarDateToUtcMidnight } from "@/lib/calendar-date";
+import type { AvailabilityBlock } from "@/lib/crew-requests";
 import {
   formatDayParts,
   formatShortDate,
@@ -76,6 +77,23 @@ export type StaffingWeekWords = {
   shiftAria: string;
   /** The whole week, nobody scheduled and nothing to crew. */
   empty: string;
+  /** "Away" — what a blackout chip is (issue #1235). */
+  away: string;
+  /** "Away {dates}" — the warning a crewed departure wears when a blackout overlaps it. */
+  awayConflict: string;
+  /** "Ask for this one" — a crew member's own request. */
+  request: string;
+  /** "Ask to work {trip}" — that button out of context. */
+  requestAria: string;
+  requesting: string;
+  /** "{person} asked" — one pending request on a gap. */
+  requested: string;
+  approve: string;
+  decline: string;
+  deciding: string;
+  /** "Approved" / "Declined" — a request that has been answered. */
+  requestApproved: string;
+  requestDeclined: string;
 };
 
 export type StaffingWeekLinks = {
@@ -210,7 +228,44 @@ function CrewChip({
         {formatTimeRange(trip.startsAt, trip.endsAt, locale, timeZone)}
       </span>
       <span className="font-medium">{trip.title}</span>
+      {/* **Informs, never gates** (ADR 20260902-crew-requests-and-blackouts):
+          this person told the shop they were away across days this departure
+          meets on. Nobody is taken off the boat and the assignment stands —
+          the week says so, and the conversation is the shop's to have. */}
+      {trip.awayBlocks.length > 0 ? (
+        <span className="mt-0.5 flex items-start gap-1 font-semibold text-warning-strong">
+          <DiveDayIcon name="warning" className="mt-0.5 size-3 shrink-0" />
+          <span>
+            {fill(words.awayConflict, {
+              dates: trip.awayBlocks
+                .map((block) =>
+                  block.startsOn === block.endsOn
+                    ? formatShortDate(calendarDateToUtcMidnight(block.startsOn), locale, "UTC")
+                    : `${formatShortDate(calendarDateToUtcMidnight(block.startsOn), locale, "UTC")} – ${formatShortDate(calendarDateToUtcMidnight(block.endsOn), locale, "UTC")}`,
+                )
+                .join(", "),
+            })}
+          </span>
+        </span>
+      ) : null}
     </Link>
+  );
+}
+
+/**
+ * A day a crew member has said they are away.
+ *
+ * Quiet by construction: it is not a problem, it is a fact the person supplied,
+ * and drawing it in the warning ink this grid reserves for a boat with nobody
+ * in the water would spend that channel on somebody's holiday. It goes loud in
+ * exactly one place — on a departure they are *also* crewing (`CrewChip`).
+ */
+function AwayChip({ block, words }: { block: AvailabilityBlock; words: StaffingWeekWords }) {
+  return (
+    <span className={`${CHIP_CLASS} border border-dashed border-border text-muted`}>
+      <span className="font-semibold">{words.away}</span>
+      {block.note ? <span className="font-medium">{block.note}</span> : null}
+    </span>
   );
 }
 
@@ -233,6 +288,9 @@ function GapChip({
   timeZone,
   gapWords,
   words,
+  canDecide,
+  requestAction,
+  decideRequestAction,
 }: {
   gap: PlacedGap;
   shopSlug: string;
@@ -240,6 +298,9 @@ function GapChip({
   timeZone: string;
   gapWords: GapWords;
   words: StaffingWeekWords;
+  canDecide: boolean;
+  requestAction: (formData: FormData) => void;
+  decideRequestAction: (formData: FormData) => void;
 }) {
   const loud = GAP_TONE[gap.gap] === "warning";
   const ink = loud ? "text-warning-strong" : "text-muted";
@@ -257,14 +318,74 @@ function GapChip({
         </span>
       </span>
       <span className={ink}>{gapWords[gap.gap]}</span>
-      <Link
-        href={tripHref(shopSlug, gap.tripId)}
-        aria-label={fill(words.assignAria, { trip: gap.title })}
-        className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
-      >
-        {words.assign}
-        <DiveDayIcon name="chevron-right" className="size-3" />
-      </Link>
+      {/* **Who has asked to work it** (issue #1235). The owner's own act sits
+          on the request rather than in a queue elsewhere: the departure, the
+          reason it is short, and the person offering are one thing, and
+          splitting them across two surfaces is what made staffing a page that
+          could not crew. Approving runs the ordinary assignment mutation —
+          this is a request, never a second way onto a boat. */}
+      {gap.requests.map((request) => (
+        <span key={request.id} className="flex flex-col gap-1 border-t border-border/60 pt-1">
+          <span className="font-medium text-muted">
+            {request.state === "pending"
+              ? fill(words.requested, { person: request.personName })
+              : `${request.personName} · ${
+                  request.state === "approved" ? words.requestApproved : words.requestDeclined
+                }`}
+          </span>
+          {canDecide && request.state === "pending" ? (
+            <span className="flex flex-wrap gap-1">
+              <form action={decideRequestAction}>
+                <input type="hidden" name="requestId" value={request.id} />
+                <input type="hidden" name="decision" value="approved" />
+                <SubmitButton
+                  pendingLabel={words.deciding}
+                  className={buttonClass({ variant: "primary", size: "sm" })}
+                >
+                  {words.approve}
+                </SubmitButton>
+              </form>
+              <form action={decideRequestAction}>
+                <input type="hidden" name="requestId" value={request.id} />
+                <input type="hidden" name="decision" value="declined" />
+                <SubmitButton
+                  pendingLabel={words.deciding}
+                  className={buttonClass({ variant: "ghost", size: "sm" })}
+                >
+                  {words.decline}
+                </SubmitButton>
+              </form>
+            </span>
+          ) : null}
+        </span>
+      ))}
+      <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <Link
+          href={tripHref(shopSlug, gap.tripId)}
+          aria-label={fill(words.assignAria, { trip: gap.title })}
+          className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+        >
+          {words.assign}
+          <DiveDayIcon name="chevron-right" className="size-3" />
+        </Link>
+        {/* Offered only when the write would accept it — same rule, evaluated
+            twice, rather than a button that produces a refusal. */}
+        {gap.viewerMayRequest ? (
+          <form action={requestAction}>
+            <input type="hidden" name="tripId" value={gap.tripId} />
+            <SubmitButton
+              pendingLabel={words.requesting}
+              ariaLabel={fill(words.requestAria, { trip: gap.title })}
+              // A peer of Assign beside it, not a button under it: they are two
+              // ways the same short-handed departure gets crewed, and a filled
+              // control would read as the louder of the two.
+              className={buttonClass({ variant: "link", size: "sm", flush: true })}
+            >
+              {words.request}
+            </SubmitButton>
+          </form>
+        ) : null}
+      </span>
     </div>
   );
 }
@@ -280,7 +401,10 @@ export function StaffingWeek({
   timeZone,
   shopSlug,
   canManage,
+  canDecide,
   deleteShiftAction,
+  requestAction,
+  decideRequestAction,
 }: {
   week: StaffWeek;
   gapWords: GapWords;
@@ -290,7 +414,11 @@ export function StaffingWeek({
   timeZone: string;
   shopSlug: string;
   canManage: boolean;
+  /** Whether this reader may answer a crew member's request (issue #1235). */
+  canDecide: boolean;
   deleteShiftAction: (formData: FormData) => void;
+  requestAction: (formData: FormData) => void;
+  decideRequestAction: (formData: FormData) => void;
 }) {
   // A calendar date has no instant in it, so every day label is formatted
   // through a UTC-midnight reference rather than converted from the shop's
@@ -382,6 +510,9 @@ export function StaffingWeek({
                       words={words}
                     />
                   ))}
+                  {cell.away.map((block) => (
+                    <AwayChip key={block.id} block={block} words={words} />
+                  ))}
                 </div>
               );
             })}
@@ -410,6 +541,9 @@ export function StaffingWeek({
                     timeZone={timeZone}
                     gapWords={gapWords}
                     words={words}
+                    canDecide={canDecide}
+                    requestAction={requestAction}
+                    decideRequestAction={decideRequestAction}
                   />
                 ))}
               </div>
@@ -476,7 +610,18 @@ export function StaffingWeek({
                             {formatTimeRange(trip.startsAt, trip.endsAt, locale, timeZone)}
                           </span>{" "}
                           {trip.title}
+                          {trip.awayBlocks.length > 0 ? (
+                            <span className="ms-1 font-semibold text-warning-strong">
+                              · {words.away}
+                            </span>
+                          ) : null}
                         </Link>
+                      ))}
+                      {cell?.away.map((block) => (
+                        <p key={block.id} className="text-sm text-muted">
+                          {words.away}
+                          {block.note ? ` · ${block.note}` : ""}
+                        </p>
                       ))}
                     </div>
                   </LedgerRow>
@@ -509,6 +654,55 @@ export function StaffingWeek({
                     >
                       {gapWords[gap.gap]}
                     </p>
+                    {/* The same acts the grid carries: the phone loses the
+                        columns, never the work (`GRID_CLASS`'s note above). */}
+                    {gap.requests.map((request) => (
+                      <p key={request.id} className="mt-1 text-sm text-muted">
+                        {request.state === "pending"
+                          ? fill(words.requested, { person: request.personName })
+                          : `${request.personName} · ${
+                              request.state === "approved"
+                                ? words.requestApproved
+                                : words.requestDeclined
+                            }`}
+                        {canDecide && request.state === "pending" ? (
+                          <span className="ms-2 inline-flex gap-2">
+                            <form action={decideRequestAction} className="inline">
+                              <input type="hidden" name="requestId" value={request.id} />
+                              <input type="hidden" name="decision" value="approved" />
+                              <SubmitButton
+                                pendingLabel={words.deciding}
+                                className={buttonClass({ variant: "link", size: "sm" })}
+                              >
+                                {words.approve}
+                              </SubmitButton>
+                            </form>
+                            <form action={decideRequestAction} className="inline">
+                              <input type="hidden" name="requestId" value={request.id} />
+                              <input type="hidden" name="decision" value="declined" />
+                              <SubmitButton
+                                pendingLabel={words.deciding}
+                                className={buttonClass({ variant: "link", size: "sm" })}
+                              >
+                                {words.decline}
+                              </SubmitButton>
+                            </form>
+                          </span>
+                        ) : null}
+                      </p>
+                    ))}
+                    {gap.viewerMayRequest ? (
+                      <form action={requestAction} className="mt-1">
+                        <input type="hidden" name="tripId" value={gap.tripId} />
+                        <SubmitButton
+                          pendingLabel={words.requesting}
+                          ariaLabel={fill(words.requestAria, { trip: gap.title })}
+                          className={buttonClass({ variant: "link", size: "sm" })}
+                        >
+                          {words.request}
+                        </SubmitButton>
+                      </form>
+                    ) : null}
                   </LedgerRow>
                 ))}
               </ul>

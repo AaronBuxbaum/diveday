@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 
 export type RoleOrientationCardCopy = {
   heading: string;
@@ -43,7 +44,7 @@ export function RoleOrientationCard({
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h2 id="role-orientation-heading" className="text-lg font-semibold">
+          <h2 id="role-orientation-heading" className={SECTION_TITLE_CLASS}>
             {copy.heading}
           </h2>
           <p className="mt-4 font-medium">{copy.title}</p>

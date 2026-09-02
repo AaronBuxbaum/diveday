@@ -5,7 +5,7 @@
 > centres, API docs, review platforms, ScubaBoard), checked against the shipping gate below.
 > Companion to [competitive-strategy.md](competitive-strategy.md) and
 > [fareharbor-positioning.md](fareharbor-positioning.md). An assessment, not a commitment — a guide
-> ships only when its export path is verified.
+> ships only when its export path is verified. Amended 2026-09-02 with the PADI Adventures row.
 
 ## The shipping gate (don't skip this)
 
@@ -36,6 +36,7 @@ verdict:
 | Service | Model | Dive adoption | Export path | Verdict |
 | --- | --- | --- | --- | --- |
 | **Rezdy** | Monthly sub + ~3%/booking | Real (course/tour bookings) | **Verified** — Sales/Orders report + Data export CSV, operator API ([help](https://support.rezdy.com/hc/en-us/articles/203690794-How-To-Use-the-Sales-Orders-Report), [API](https://developers.rezdy.com/)) | **Shipped 2026-07-24** |
+| **PADI Adventures** | No subscription — 4.9% service charge on the widget, 5% referral commission | **Highest of any row here** — the channel a founding-cohort shop is already on; Klook distribution, Google Things To Do, review display, Courses Locator | **Unverified / closed** — the Extranet shows bookings and commission on screen and nothing on any PADI page describes a download, report or CSV ([FAQ](https://pros-blog.padi.com/top-faqs-about-padi-adventures/), [widget](https://pros-blog.padi.com/introducing-the-new-padi-booking-widget/), [ecosystem](https://pros-blog.padi.com/grow-your-dive-business-through-padis-digital-ecosystem/); searched 2026-09-02) | **Hold — no page.** Reach is not the gate; the export is ([#1238](https://github.com/AaronBuxbaum/diveday/issues/1238)) |
 | **WeTravel** | Free software + per-transaction fee | **Strong — dive product page + named shops** (Blue Planet Scuba, Dolphin Scuba) | **Verified** — Customers list CSV export + APIs ([help](https://help.wetravel.com/en/articles/4591991-what-is-possible-with-the-customers-list)) | **Build next (top A pick)** |
 | **Rezgo** | No sub, 4.9% web / 0.9% agent | **Strong — dedicated dive vertical pages** | **Verified** — any report → Excel/CSV, scheduled exports ([help](https://support.rezgo.com/kb/create-transaction-report/)) | **Build next** |
 | **Bókun** (Tripadvisor/Viator) | Low sub + ~1–1.5% (0% via Viator) | Generic (dive via Viator) | **Verified** — sales-feed spreadsheet + customer export + REST API ([docs](https://docs.bokun.io/docs/bookings/sales-feed/how-to-export-the-sales-feed-to-a-spreadsheet)) | **Build next — OTA-distribution hook** |
@@ -69,7 +70,12 @@ shop get its data out."
 systems shops are actively fleeing — worth recognizing in the importer's column aliases, not worth a
 marketing page.
 
-## Agencies are not switching targets (PADI / SSI)
+## Agencies are not switching targets (PADI / SSI) — but PADI Adventures is a channel
+
+**PADI Adventures is the exception to this heading** and sits in Category A above: it is a booking
+channel a shop coexists with, not a cert rail it leaves. Everything below is about **certification
+records**. Adventures bookings have no documented export either, which is why its row reads
+*Unverified / closed* for a different reason than the rails do.
 
 PADI (Pros site / Student Management Portal / PIC Online) and SSI (MySSI / SSI Digital Platform) are
 **agency rails, not competitors you leave** — a shop doesn't switch off PADI. Both are import-friendly
@@ -92,8 +98,8 @@ Ranked by dive adoption × switching-search intent × export-path confidence × 
 5. **Peek Pro** *(coexist)* — the closest structural twin to FareHarbor; **verify the export help-doc first**, then the page nearly writes itself.
 6. **Checkfront + Bookeo** *(coexist)* — a cheap cluster: Checkfront shares Rezdy's corporate group (and likely its export mechanics), Bookeo adds the "no booking fee" angle. Verify each export doc first.
 
-Everything below the line is either export-unverified (Xola, DiversDesk, DiverDash cert-coverage,
-Diverse/EncomPos), wrong-segment (Ventrata, TicketingHub, Regiondo), or unverifiable/defunct. The
+Everything below the line is either export-unverified (PADI Adventures, Xola, DiversDesk, DiverDash
+cert-coverage, Diverse/EncomPos), wrong-segment (Ventrata, TicketingHub, Regiondo), or unverifiable/defunct. The
 structural takeaway: **Category A yields 4–6 shippable coexist guides; Category B yields ~2 leave-it
 guides plus agency-rail import notes** — so the next wave of switching SEO is mostly booking channels.
 
@@ -105,5 +111,11 @@ guides plus agency-rail import notes** — so the next wave of switching SEO is 
   click-path (the same honesty the shipped guides already apply to version-drifting menus).
 - **Bloowatch / DiverDash / DiversDesk:** confirm the export includes **certification** fields, not
   just contacts/invoices, before promising what comes across.
+- **PADI Adventures:** the binding unknown is narrow — does the Extranet's bookings view carry *any*
+  download at all? Nothing on PADI's own pages says so either way, and the FAQ answers the money
+  questions without touching data. Confirm from an extranet screen or a PADI help-doc, not from a
+  recollection; and if it turns out the only route is asking the Adventures team for a file, that is
+  the *Diverse/EncomPos* shape — a guide may say "request an extract from support" but may never
+  promise self-serve.
 - **Pricing is change-prone:** re-fetch any fee/tier figure at build time and cite the vendor's own
   page, dated — never a third-party pricing recap as the source of a number.
