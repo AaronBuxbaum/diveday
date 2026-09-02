@@ -737,12 +737,28 @@ export async function countOpenTripOrders(
   shopId: string,
   tripId: string,
 ): Promise<number> {
+  return countTripOrders(db, shopId, tripId, "open");
+}
+
+/**
+ * The same count for any one status, built from the same `shopOrderWhere` as
+ * the index it would link to. The schedule builder's move preview asks it for
+ * `paid`, to say what money is already standing against a departure whose date
+ * is about to change (issue #1203) — deliberately not `open`, since an unpaid
+ * invoice is unaffected by a move.
+ */
+export async function countTripOrders(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+  status: OrderStatus,
+): Promise<number> {
   const [counted] = await db
     .select({ total: count() })
     .from(orders)
     .innerJoin(people, eq(people.id, orders.personId))
     .leftJoin(bookings, eq(bookings.id, orders.bookingId))
-    .where(shopOrderWhere(shopId, { status: "open", tripId }));
+    .where(shopOrderWhere(shopId, { status, tripId }));
   return counted?.total ?? 0;
 }
 

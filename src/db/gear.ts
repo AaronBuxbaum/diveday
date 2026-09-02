@@ -878,6 +878,38 @@ export async function rewindowTripGearReservations(
   return { moved, released };
 }
 
+/**
+ * How many open reservations ride on one departure — the exact set
+ * {@link rewindowTripGearReservations} above will try to carry onto new dates,
+ * asked with the identical predicate and deliberately kept beside it so the two
+ * cannot drift apart unnoticed.
+ *
+ * A *count*, never an availability check. The schedule builder's move preview
+ * uses it to say how much kit travels and that collisions are released; whether
+ * a particular unit is free on the new dates is decided by the
+ * `gear_reservations_no_overlap` exclusion constraint at commit time, and a
+ * read taken while a panel sits open can be stale by then (issue #1203).
+ */
+export async function countOpenTripGearReservations(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<number> {
+  const [counted] = await db
+    .select({ total: count() })
+    .from(gearReservations)
+    .innerJoin(bookings, eq(bookings.id, gearReservations.bookingId))
+    .where(
+      and(
+        eq(gearReservations.shopId, shopId),
+        eq(bookings.tripId, tripId),
+        isNull(gearReservations.checkedOutAt),
+        isNull(gearReservations.returnedAt),
+      ),
+    );
+  return counted?.total ?? 0;
+}
+
 async function reservationStamps(
   db: AppDb,
   input: { shopId: string; reservationId: string },

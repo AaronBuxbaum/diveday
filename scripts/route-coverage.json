@@ -378,7 +378,8 @@
       "schedule-builder",
       "schedule-builder-add",
       "schedule-builder-add-full",
-      "schedule-builder-empty"
+      "schedule-builder-empty",
+      "schedule-builder-move-impact"
     ],
     "a11y": ["a11y.spec.ts"]
   },

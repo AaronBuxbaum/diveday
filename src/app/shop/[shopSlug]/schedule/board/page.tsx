@@ -76,6 +76,7 @@ import {
   addDepartureAction,
   duplicateDepartureAction,
   loadBuilderOptionsAction,
+  loadMovePreflightAction,
   moveDepartureAction,
   removeDepartureAction,
 } from "./actions";
@@ -392,6 +393,20 @@ export default async function ScheduleBoardPage({
     newDepartureTime: st("schedule.builder.newDepartureTime"),
     moving: st("schedule.builder.moving"),
     moveIt: st("schedule.builder.moveIt"),
+    impactTitle: st("schedule.builder.impactTitle"),
+    impactToldOne: st.raw("schedule.builder.impactToldOne"),
+    impactToldOther: st.raw("schedule.builder.impactToldOther"),
+    impactGearOne: st.raw("schedule.builder.impactGearOne"),
+    impactGearOther: st.raw("schedule.builder.impactGearOther"),
+    impactPaidOne: st.raw("schedule.builder.impactPaidOne"),
+    impactPaidOther: st.raw("schedule.builder.impactPaidOther"),
+    impactWindowOne: st.raw("schedule.builder.impactWindowOne"),
+    impactWindowOther: st.raw("schedule.builder.impactWindowOther"),
+    // The panel says up front exactly what the post-move notice would have said
+    // afterwards — the same two keys `BUILDER_NOTICE_KEYS` maps, so a refusal
+    // cannot be worded two ways depending on when you learn about it.
+    impactBlockedSailed: st("schedule.notices.alreadySailed"),
+    impactBlockedNotScheduled: st("schedule.notices.notScheduled"),
     copyTo: st("schedule.builder.copyTo"),
     copyDescription: st("schedule.builder.copyDescription"),
     departureTime: st("schedule.builder.departureTime"),
@@ -1017,6 +1032,7 @@ export default async function ScheduleBoardPage({
         shopSlug={shopSlug}
         days={builderDays}
         loadOptions={loadBuilderOptionsAction}
+        loadMovePreflight={loadMovePreflightAction}
         price={priceInput}
         // Only a real `YYYY-MM-DD` from `?date=` is honoured; anything else
         // falls back to the soonest day already on the board.

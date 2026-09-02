@@ -80,8 +80,13 @@ export type MoveTripOutcome =
  * only head count was of its crew — walked past the guard, and `deleteTrip`
  * then deleted it straight into a foreign-key violation instead of refusing
  * cleanly (review 20260803, D3).
+ *
+ * Exported so the schedule builder's move preview asks the *same* question the
+ * guard does (`src/db/move-preflight.ts`, issue #1203). A preview with its own
+ * copy of this rule would drift, and the drift would show up as a panel
+ * promising a move the mutation then refuses.
  */
-async function countRollCallEvidence(
+export async function countRollCallEvidence(
   tx: DbExecutor,
   shopId: string,
   tripId: string,

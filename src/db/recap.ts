@@ -29,6 +29,7 @@ import { loadActiveStaffRoles } from "./authz";
 import { getBoatForHistory } from "./boats";
 import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
+import { listSiteFieldGuides } from "./dive-sites";
 import { listExecutedDives } from "./executed-dives";
 import {
   notificationProviderForDb,
@@ -138,6 +139,15 @@ export type RecapPageData = {
    * `src/lib/dive-record.ts` for what counts as a difference (issue #1191).
    */
   diveRecord: DiveRecordComparison | null;
+  /**
+   * Per site the day dived, the species that site's field guide names — in the
+   * shop's saved order, and only for sites that have one.
+   *
+   * Slugs, not words: `fieldGuideCards` turns them into copy in the reader's
+   * own language at render (ADR 20260813-marine-life-is-diveday-copy). These
+   * are what a site *may* hold, never what this dive did (issue #1192).
+   */
+  fieldGuide: { siteName: string; rows: { id: string; catalogSlug: string | null }[] }[];
   /** The booking this recap belongs to — the scope an uploaded photo attaches to. */
   bookingId: string;
   /** A short crew-authored note for this trip, or null when the crew wrote none. */
@@ -327,6 +337,27 @@ export async function getRecapPageData(
   // countersign (see `DiveRecord`'s comment). That is also why
   // `executed_dives.not_recorded` needs no handling here; nothing reaches past
   // the site name.
+  // One query for the whole day. Grouped per site rather than pooled, because
+  // the drawer names the site above each set of faces — which is what keeps the
+  // guide a statement about a *place* rather than about this dive (#1192).
+  const guides = await listSiteFieldGuides(
+    db,
+    row.shopId,
+    dives.flatMap(({ diveSite }) => (diveSite ? [diveSite.id] : [])),
+  );
+  const namedSites = new Set<string>();
+  const fieldGuide: RecapPageData["fieldGuide"] = [];
+  for (const { diveSite } of dives) {
+    if (!diveSite || namedSites.has(diveSite.id)) continue;
+    namedSites.add(diveSite.id);
+    const rows = guides.get(diveSite.id);
+    if (!rows?.length) continue;
+    fieldGuide.push({
+      siteName: diveSite.name,
+      rows: rows.map((creature) => ({ id: creature.id, catalogSlug: creature.catalogSlug })),
+    });
+  }
+
   const diveRecord = compareDiveRecord(
     dives.map(({ dive, diveSite }) => ({
       diveNumber: dive.diveNumber,
@@ -390,6 +421,7 @@ export async function getRecapPageData(
     diverName: row.diverName,
     sites,
     diveRecord,
+    fieldGuide,
     bookingId,
     shoutout: trip.recapShoutout,
     photos,

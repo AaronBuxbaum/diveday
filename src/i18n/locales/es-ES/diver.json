@@ -560,6 +560,7 @@
     "crewLabel": "Tripulación",
     "sitesLabel": "Puntos",
     "plannedSitesLabel": "Previsto",
+    "fieldGuideTitle": "{count, plural, one {Vida que buscar en este punto} other {Vida que buscar en estos puntos}}",
     "visitMilestone": "Tu {ordinal} día de buceo con {shopName}",
     "recordedBy": "Registrado por {shopName}",
     "milestoneStampFirst": "Primer día",

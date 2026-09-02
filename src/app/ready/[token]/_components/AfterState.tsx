@@ -6,6 +6,7 @@ import { ImageFileInput } from "@/components/ImageFileInput";
 import { SiteMark } from "@/components/illustration/SiteMark";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { StarRatingInput } from "@/components/StarRatingInput";
+import { StoredPhoto } from "@/components/StoredPhoto";
 import { SubmitButton } from "@/components/SubmitButton";
 import { THREAD_MEASURE_CLASS } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, FormStatus } from "@/components/ui/form";
 import { SHELL_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import type { RecapPageData, RecapPhotoView, RecapSite } from "@/db/recap";
+import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
 import type { BrandDisplayFontCode } from "@/lib/brand";
@@ -118,6 +120,17 @@ export type AfterStateProps = {
    * (issue #1191).
    */
   diveRecord: DiveRecordComparison | null;
+  /**
+   * Per site the day dived, the species that site's field guide names.
+   *
+   * **What the place may hold, never what this dive did.** Nothing in
+   * `executed_dives` or anywhere else records a sighting, so the drawer this
+   * feeds is future-tense and scoped to the site by construction (issue #1192).
+   * Marking what was actually seen is D30 (#1190) and is unbuilt; there is
+   * deliberately no placeholder for it here, because a placeholder for a
+   * marking that does not exist is what later reads as a claim.
+   */
+  fieldGuide: { siteName: string; rows: { id: string; catalogSlug: string | null }[] }[];
   shoutout: string | null;
   photos: RecapPhotoView[];
   /** How many photos one booking may hold — `MAX_RECAP_PHOTOS_PER_BOOKING`. */
@@ -204,6 +217,7 @@ export function AfterState({
   diverName,
   sites,
   diveRecord,
+  fieldGuide,
   shoutout,
   photos,
   maxPhotos,
@@ -218,6 +232,14 @@ export function AfterState({
   actions,
   siteMark,
 }: AfterStateProps) {
+  // Resolved before anything decides what to render, because
+  // `fieldGuideCards` drops a slug the catalog no longer carries: a site whose
+  // whole guide has aged out arrives with rows and resolves to no cards, and
+  // counting rows instead of cards would open a drawer onto a site heading with
+  // nothing under it — the empty drawer this feature exists not to render.
+  const fieldGuideGroups = fieldGuide
+    .map((site) => ({ siteName: site.siteName, cards: fieldGuideCards(site.rows, t) }))
+    .filter((group) => group.cards.length > 0);
   const firstName = diverName.trim().split(/\s+/)[0] || t("recap.namelessFallback");
   const greeting = t("thread.afterGreeting", { name: firstName });
   // `noticeFromParam`, never a bare `REVIEW_NOTICES[params.review]` — all
@@ -454,6 +476,50 @@ export function AfterState({
           notice={tipNotice}
           action={actions.startTip}
         />
+
+        {/* ——— What these places are known to hold, for a next dive.
+            Closed on arrival and never promoted: the review ask above is the
+            page's one primary, and this is a keepsake's footnote. Absent
+            entirely when no site the day dived names a species — an empty
+            drawer is a heading apologising for having nothing behind it. */}
+        {fieldGuideGroups.length > 0 ? (
+          <Door
+            id="field-guide"
+            summary={t("recap.fieldGuideTitle", { count: fieldGuideGroups.length })}
+            open={false}
+          >
+            <ul className="flex flex-col gap-6">
+              {fieldGuideGroups.map((site) => (
+                <li key={site.siteName}>
+                  {/* The site's own name above its faces is what keeps this a
+                      statement about a place. Without it the list floats free
+                      and reads as the day's tally. */}
+                  <p className="text-sm font-semibold">{site.siteName}</p>
+                  <ul className="mt-3 grid gap-x-6 gap-y-5 sm:grid-cols-2">
+                    {site.cards.map((card) => (
+                      <li key={card.id} className="flex min-w-0 gap-3">
+                        <StoredPhoto
+                          src={card.imageUrl}
+                          alt=""
+                          className="size-12 shrink-0 rounded-inset"
+                          sizes="48px"
+                        />
+                        <div className="min-w-0">
+                          <p className="font-medium">{card.name}</p>
+                          {card.description ? (
+                            <p className="mt-1 text-sm leading-relaxed text-muted">
+                              {card.description}
+                            </p>
+                          ) : null}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          </Door>
+        ) : null}
 
         {/* The one review ask left: a strong rating just landed, so offer to
             carry it further instead of stacking a second, separately-worded
