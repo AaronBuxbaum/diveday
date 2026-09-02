@@ -16,6 +16,7 @@ import {
   EMBED_REQUEST_HEADER,
   isEmbeddableShopRoute,
   isEmbedWidgetRoute,
+  isUnknownEmbedWidgetRoute,
   parseEmbedBrandParam,
   parseEmbedFontParam,
   REQUEST_PATH_HEADER,
@@ -198,6 +199,11 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // (`!== "1"`, so the page renders its full non-embed chrome) — a page
   // framable by whoever crafted that URL. `getAll()` and requiring
   // exactly one value keeps this in lockstep with how the page reads it.
+  // An embed path naming no widget is a 404 here, not in the page: the
+  // static shell would already have answered 200 (see isUnknownEmbedWidgetRoute).
+  if (isUnknownEmbedWidgetRoute(req.nextUrl.pathname)) {
+    return new NextResponse(null, { status: 404 });
+  }
   const embedParams = req.nextUrl.searchParams.getAll("embed");
   // A widget view is an embed by path; the schedule and trip pages are embeds
   // only with exactly one `?embed=1` (see the note above).

@@ -103,13 +103,17 @@ test.describe("the generator", () => {
     await page.locator('[data-hydrated="true"], main').first().waitFor();
     const snippet = page.getByLabel("Embed code");
     await expect(snippet).toHaveValue(/data-diveday="calendar"/);
-    await page.getByRole("radio", { name: /^Grid/ }).click();
+    // The radios are screen-reader-only inside their tile labels, so the tile
+    // (the label) is what a pointer hits — clicking the input itself waits
+    // forever on a 1px clipped box.
+    const tile = (text: RegExp) => page.locator("label").filter({ hasText: text });
+    await tile(/^Grid/).click();
     await expect(snippet).toHaveValue(/data-diveday="grid"/);
-    await page.getByRole("radio", { name: "DiveDay" }).click();
+    await tile(/^DiveDay$/).click();
     await expect(snippet).toHaveValue(/data-look="light"/);
-    await page.getByRole("radio", { name: /^QR code/ }).click();
+    await tile(/^QR code/).click();
     await expect(page.getByAltText("QR code to your booking page")).toBeVisible();
-    await page.getByRole("radio", { name: /^Partner link/ }).click();
+    await tile(/^Partner link/).click();
     await page.getByLabel("Partner").fill("The Reef Hotel");
     await expect(page.getByLabel("Referral link")).toHaveValue(/utm_campaign=the-reef-hotel/);
   });

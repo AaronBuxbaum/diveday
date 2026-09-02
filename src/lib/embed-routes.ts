@@ -29,6 +29,20 @@ export function isEmbedWidget(value: unknown): value is EmbedWidget {
   return typeof value === "string" && (EMBED_WIDGETS as readonly string[]).includes(value);
 }
 
+const EMBED_WIDGET_SHAPE = /^\/s\/[a-z0-9-]+\/embed\/([^/]+)\/?$/;
+
+/**
+ * `/s/<slug>/embed/<something>` where the something is not a widget. The page
+ * would answer with `notFound()`, but under partial prerendering the static
+ * shell has already gone out with a 200 by the time the page body runs, so a
+ * crawler or a host page with a typo would get a 200 not-found. The proxy
+ * answers these with a plain 404 before any shell is sent.
+ */
+export function isUnknownEmbedWidgetRoute(pathname: string): boolean {
+  const match = EMBED_WIDGET_SHAPE.exec(pathname);
+  return match !== null && !isEmbedWidget(match[1]);
+}
+
 export function isEmbeddableShopRoute(pathname: string): boolean {
   return (
     EMBEDDABLE_SCHEDULE.test(pathname) ||
