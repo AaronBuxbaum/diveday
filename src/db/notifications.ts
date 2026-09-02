@@ -10,11 +10,13 @@ import {
   type Notification,
   type NotificationDelivery,
   type NotificationProvider,
+  type NotificationSender,
   notificationIdempotencyKey,
   notificationProviderFromEnvironment,
   notify,
   publicAppUrl,
   recipientLocale,
+  shopSenderOf,
 } from "@/lib/notifications";
 import { ACTIONABLE_PROVIDER_STATUSES, type ProviderEmailStatus } from "@/lib/notifications/events";
 import { issueBookingCapability } from "./booking-capabilities";
@@ -121,6 +123,49 @@ async function queueRetry(
     .onConflictDoNothing({ target: notificationSendQueue.idempotencyKey });
 }
 
+/**
+ * The shop's `Reply-To` and postal footer (ADR
+ * 20260902-sender-standards-for-ses), read off the shop row. `undefined` for
+ * a shop with neither on file, and for a shop id that matches no row.
+ */
+export async function shopSenderFor(
+  db: AppDb,
+  shopId: string,
+): Promise<NotificationSender | undefined> {
+  const [shop] = await db
+    .select({
+      contactEmail: shops.contactEmail,
+      addressStreet: shops.addressStreet,
+      addressLocality: shops.addressLocality,
+      addressRegion: shops.addressRegion,
+      addressPostalCode: shops.addressPostalCode,
+      addressCountry: shops.addressCountry,
+    })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  return shop ? shopSenderOf(shop) : undefined;
+}
+
+/**
+ * Attach the shop's sender profile to a notification that names a shop and
+ * does not already carry one. Resolved here, at the one place every
+ * shop-scoped send passes through, rather than by each of the twenty
+ * composers — a composer that forgot would silently ship a dead-letter
+ * sender. A `cache` lets a fan-out (a deal blast, a retry drain) read each
+ * shop once.
+ */
+async function withShopSender(
+  db: AppDb,
+  input: Notification,
+  cache: Map<string, NotificationSender | undefined> = new Map(),
+): Promise<Notification> {
+  if (!("shopId" in input) || input.sender) return input;
+  if (!cache.has(input.shopId)) cache.set(input.shopId, await shopSenderFor(db, input.shopId));
+  const sender = cache.get(input.shopId);
+  return sender ? { ...input, sender } : input;
+}
+
 /** Send immediately and retain retryable failures for the next worker pass. */
 export async function sendNotification(
   db: AppDb,
@@ -129,7 +174,7 @@ export async function sendNotification(
 ): Promise<NotificationDelivery> {
   let delivery: NotificationDelivery;
   try {
-    delivery = await notify(input, notificationProviderForDb(provider));
+    delivery = await notify(await withShopSender(db, input), notificationProviderForDb(provider));
   } catch (error) {
     delivery = {
       status: "failed",
@@ -164,15 +209,18 @@ export async function sendNotificationBatch(
 ): Promise<NotificationDelivery[]> {
   const resolved = notificationProviderForDb(provider);
   const deliveries: NotificationDelivery[] = [];
+  const senders = new Map<string, NotificationSender | undefined>();
   for (let offset = 0; offset < inputs.length; offset += 100) {
     const batch = inputs.slice(offset, offset + 100);
     let results: NotificationDelivery[];
     try {
+      const addressed: Notification[] = [];
+      for (const input of batch) addressed.push(await withShopSender(db, input, senders));
       if (resolved.sendBatch) {
-        results = await resolved.sendBatch(batch);
+        results = await resolved.sendBatch(addressed);
       } else {
         results = [];
-        for (const input of batch) results.push(await notify(input, resolved));
+        for (const input of addressed) results.push(await notify(input, resolved));
       }
     } catch {
       results = batch.map(() => ({ status: "failed" as const, retryable: true }));
@@ -253,6 +301,7 @@ export async function drainNotificationRetries(
   };
   if (candidates.length === 0) return summary;
   const provider = notificationProviderForDb(options.provider);
+  const senders = new Map<string, NotificationSender | undefined>();
 
   for (const candidate of candidates) {
     const lockedUntil = new Date(now.getTime() + 10 * 60 * 1_000);
@@ -292,7 +341,7 @@ export async function drainNotificationRetries(
     const notification = reviveQueuedNotification(candidate.payload);
     let delivery: NotificationDelivery;
     try {
-      delivery = await notify(notification, provider);
+      delivery = await notify(await withShopSender(db, notification, senders), provider);
     } catch (error) {
       delivery = {
         status: "failed",

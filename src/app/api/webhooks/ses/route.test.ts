@@ -5,6 +5,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/db/notifications", () => ({ applyProviderEmailEvent: vi.fn() }));
+vi.mock("@/db/courtesy-email", () => ({ optOutAddressAfterComplaint: vi.fn() }));
 vi.mock("@/lib/notifications/sns", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/notifications/sns")>();
   return { ...actual, verifySnsMessage: vi.fn(), confirmSnsSubscription: vi.fn() };
@@ -12,6 +13,7 @@ vi.mock("@/lib/notifications/sns", async (importOriginal) => {
 
 const { getDb } = await import("@/db/client");
 const { applyProviderEmailEvent } = await import("@/db/notifications");
+const { optOutAddressAfterComplaint } = await import("@/db/courtesy-email");
 const { verifySnsMessage, confirmSnsSubscription } = await import("@/lib/notifications/sns");
 const { POST } = await import("./route");
 
@@ -25,6 +27,9 @@ beforeEach(() => {
   vi.stubEnv("SES_SNS_TOPIC_ARN", "arn:aws:sns:us-east-1:123456789012:diveday-ses-email-events");
   vi.mocked(getDb).mockResolvedValue(FAKE_DB as never);
   vi.mocked(applyProviderEmailEvent).mockReset().mockResolvedValue("applied");
+  vi.mocked(optOutAddressAfterComplaint)
+    .mockReset()
+    .mockResolvedValue({ people: 1, listEntries: 0 });
   vi.mocked(verifySnsMessage).mockReset();
   vi.mocked(confirmSnsSubscription).mockReset();
 });
@@ -129,6 +134,75 @@ describe("ses webhook route — delivery events", () => {
       detail: "Permanent",
       occurredAt: new Date("2026-08-02T18:00:00.000Z"),
     });
+  });
+
+  it("opts a complainant out of the shop's courtesy mail, by the address and shop the event names", async () => {
+    vi.mocked(verifySnsMessage).mockResolvedValue(
+      verifiedNotification(
+        JSON.stringify({
+          eventType: "Complaint",
+          mail: {
+            messageId: "ses_2",
+            tags: { diveday_shop: ["3f2504e0-4f89-41d3-9a0c-0305e82c3302"] },
+          },
+          complaint: {
+            timestamp: "2026-08-02T18:00:00.000Z",
+            complaintFeedbackType: "abuse",
+            complainedRecipients: [{ emailAddress: "nora@example.dive" }],
+          },
+        }),
+      ),
+    );
+
+    const response = await POST(webhookRequest("{}"));
+    expect(response.status).toBe(200);
+    expect(applyProviderEmailEvent).toHaveBeenCalledWith(
+      FAKE_DB,
+      expect.objectContaining({ providerMessageId: "ses_2", status: "complained" }),
+    );
+    expect(optOutAddressAfterComplaint).toHaveBeenCalledWith(FAKE_DB, {
+      shopId: "3f2504e0-4f89-41d3-9a0c-0305e82c3302",
+      email: "nora@example.dive",
+      now: new Date("2026-08-02T18:00:00.000Z"),
+    });
+  });
+
+  it("files a bounce, but never opts anyone out for one", async () => {
+    vi.mocked(verifySnsMessage).mockResolvedValue(
+      verifiedNotification(
+        JSON.stringify({
+          eventType: "Bounce",
+          mail: {
+            messageId: "ses_3",
+            tags: { diveday_shop: ["3f2504e0-4f89-41d3-9a0c-0305e82c3302"] },
+          },
+          bounce: {
+            bounceType: "Permanent",
+            bouncedRecipients: [{ emailAddress: "x@example.dive" }],
+          },
+        }),
+      ),
+    );
+
+    await POST(webhookRequest("{}"));
+    expect(applyProviderEmailEvent).toHaveBeenCalledTimes(1);
+    expect(optOutAddressAfterComplaint).not.toHaveBeenCalled();
+  });
+
+  it("leaves a complaint on untagged mail to the suppression list alone", async () => {
+    vi.mocked(verifySnsMessage).mockResolvedValue(
+      verifiedNotification(
+        JSON.stringify({
+          eventType: "Complaint",
+          mail: { messageId: "ses_4" },
+          complaint: { complainedRecipients: [{ emailAddress: "nora@example.dive" }] },
+        }),
+      ),
+    );
+
+    const response = await POST(webhookRequest("{}"));
+    expect(response.status).toBe(200);
+    expect(optOutAddressAfterComplaint).not.toHaveBeenCalled();
   });
 
   it("answers 200 for a verified event type it doesn't handle (Open)", async () => {

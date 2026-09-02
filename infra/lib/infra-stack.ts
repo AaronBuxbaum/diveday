@@ -38,6 +38,8 @@ import {
   mutationDurationFilterPattern,
   queryConstructIdFor,
   SAVED_LOG_QUERIES,
+  SES_REPUTATION_SIGNALS,
+  sesReputationAlarmNameFor,
   WEB_VITAL_SIGNALS,
   webVitalAlarmNameFor,
   webVitalFilterPatternFor,
@@ -1353,6 +1355,29 @@ exports.handler = async (event) => {
       return metric;
     });
 
+    // SES's own bounce and complaint rates, alarmed at the line where AWS
+    // starts a review (S8 sends; infra/lib/observability.ts says why the
+    // thresholds are what they are). AWS publishes the metric; this only
+    // watches it, so there is no filter and no custom metric to pay for.
+    for (const signal of SES_REPUTATION_SIGNALS) {
+      new cloudwatch.Alarm(this, `${signal.constructId}Alarm`, {
+        alarmName: sesReputationAlarmNameFor(signal),
+        alarmDescription: `${signal.title}. ${signal.response}`,
+        metric: new cloudwatch.Metric({
+          namespace: "AWS/SES",
+          metricName: signal.metricName,
+          statistic: "Average",
+          period: cdk.Duration.hours(1),
+        }),
+        threshold: signal.threshold,
+        evaluationPeriods: 1,
+        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+        // No mail this hour means no rate, not a clean bill; and the sandbox
+        // publishes nothing at all.
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      }).addAlarmAction(alarmAction);
+    }
+
     // Core Web Vitals, read out of the `web_vital.reported` line the browser
     // beacon writes (ADR 20260806-cloudwatch-rum-and-vitals). Same machinery as
     // the counts above with one difference that matters: `metricValue` names a
@@ -2169,12 +2194,18 @@ exports.handler = async (event) => {
         id: "ses-production-access",
         title: "Request SES production access",
         category: "AWS account",
-        when: "once, before sending to anyone who has not verified their address",
-        why: "A human-reviewed AWS Support case. There is no API.",
-        run: ["SES console -> Account dashboard -> Request production access."],
+        when: "once per region, before sending to anyone who has not verified their address",
+        why: "A human-reviewed AWS Support case. There is no API, and the sandbox is per region.",
+        run: [
+          "Read docs/engineering/ses-email-runbook.md, 'Production access: the second request', and paste its case text.",
+          "SES console -> Account dashboard -> Request production access (Transactional, https://dive.day), then answer the reviewer's follow-up in the same case.",
+        ],
         produces:
           "Sending to arbitrary recipients. Until then SES is in the sandbox: pre-verified addresses and the mailbox simulator only.",
         verify: ["aws sesv2 get-account --query ProductionAccessEnabled"],
+        onFailure:
+          "A denial with no reason is the norm, not the end: reply on the same case with the runbook's follow-up answers, and if it is closed, open a new case that names the closed case id. A second region is its own sandbox and its own request.",
+        note: "Everything the reviewer asks for is already in the stack: DKIM and a custom MAIL FROM on the identity, bounce and complaint events to /api/webhooks/ses, account-level suppression on the configuration set, one-click unsubscribe headers, Reply-To and a postal footer from the shop record, and the two reputation alarms in S13. The case text lists them; do not paraphrase it shorter.",
       },
       {
         id: "sns-sms-account-limits",

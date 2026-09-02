@@ -78,7 +78,10 @@ made — DiveDay records the issue without spending a send. The demo seed intent
    reputation, and this keeps a bulk-mail problem from affecting the address people actually write to
    you at.
 2. **Request SES production access** (an AWS Support case — CDK cannot do this). SES starts in
-   sandbox mode, which can only send to pre-verified recipient addresses.
+   sandbox mode, which can only send to pre-verified recipient addresses. The first request was
+   refused; the second is written out below in
+   [Production access: the second request](#production-access-the-second-request) — paste that text,
+   do not improvise a shorter one.
 3. **Collect the sender credentials.** The deploy already minted them and writes all three target
    dotenv files; take the `SES_AWS_*` lines from `.env.local`:
    ```bash
@@ -166,6 +169,181 @@ resolve, or `FAILED`, is a DNS problem — check that exactly one MX record exis
 that its region matches `SES_AWS_REGION`. It is *not* the subdomain-shape rule above; that one is
 rejected at deploy and never reaches this state.
 
+### What every message carries
+
+Beyond the body, three things a receiving mailbox and a reviewer both read
+(ADR [20260902-sender-standards-for-ses](../architecture/decisions/20260902-sender-standards-for-ses.md)):
+
+| | Where it comes from | When it is absent |
+| --- | --- | --- |
+| `Reply-To: <the shop's front desk>` | `shops.contact_email`, the address on the shop's settings form | The shop has none on file; a reply then goes to `noreply@ses.dive.day` and nobody |
+| A closing line `Shop name · street, town, region postcode, country` on every **commercial** message (the kinds carrying an unsubscribe link: wait-list invite, last-minute deal, checkout recovery, recap) | `shops.address_*` | The shop has no street on file; nothing is guessed and no blank line is rendered |
+| `List-Unsubscribe` + `List-Unsubscribe-Post` (RFC 8058 one-click) on those same kinds | The notification's own `unsubscribeUrl` | Never absent on a commercial kind — `kinds.ts` makes the URL required there |
+| SES message tags `diveday_shop` and `diveday_kind` | The notification | Never — every send is tagged, and every event SES publishes echoes them back |
+
+Both shop-sourced values are resolved once per send in `src/db/notifications.ts` (`shopSenderFor`),
+never by the composer, so a new kind gets them for free. Transactional mail (a confirmation, a waiver
+link, a reminder) carries the `Reply-To` and nothing else.
+
+## Production access: the second request
+
+The first request was refused with AWS's standard wording — no reason given, "this decision is
+final". Read that for what it is: the verdict on one case, by one reviewer, against whatever that
+case said. It is not a mark on the account (`aws sesv2 get-account` reports `ProductionAccessEnabled:
+false` and nothing else), and the sandbox is **per region**, so it is not even a verdict on the
+account in every region. Second requests are reviewed like first ones. What decides them is whether
+the reviewer can tick every row of their checklist from the text in front of them — a one-paragraph
+"we send booking confirmations" is the shape that gets refused, and the case below is the shape that
+does not.
+
+### Before you file
+
+Every one of these is something the reviewer may check, and every one is done by a deploy of this
+repository plus the DNS steps above. Confirm, do not assume:
+
+```bash
+aws sesv2 get-email-identity --email-identity ses.dive.day \
+  --query '{dkim:DkimAttributes.Status,mailFrom:MailFromAttributes.MailFromDomainStatus,verified:VerifiedForSendingStatus}'
+# want: dkim SUCCESS, mailFrom SUCCESS, verified true
+aws sns list-subscriptions-by-topic --topic-arn <SesEventNotificationsTopicArn> \
+  --query 'Subscriptions[].SubscriptionArn'
+# want: a real ARN, not PendingConfirmation
+aws sesv2 get-account --query '{production:ProductionAccessEnabled,suppression:SuppressionAttributes}'
+# want: suppression BOUNCE and COMPLAINT (the configuration set sets these on every send)
+dig +short TXT _dmarc.dive.day
+# want: v=DMARC1; p=none (at least); the rua= address must exist
+```
+
+Then send to the mailbox simulator from the deployed app — book a seat with
+`bounce@simulator.amazonses.com`, then one with `complaint@simulator.amazonses.com` — and confirm the
+bounce shows on the shop's dashboard as an email issue and the complaint opted that address out
+(`people.courtesy_email_opt_out_at` set, the `ses_webhook.complaint_opt_out` log line). That is the
+"we have tested our bounce and complaint handling" sentence made true.
+
+### Where to file it
+
+In order. Stop at the first that works.
+
+1. **The same case, or a new one naming it.** In the Support Center, reply on the closed case if it
+   still accepts replies; otherwise open a new case — *Account and billing* → *Service* SES →
+   *Category* Sending limits (or the **Request production access** button on the SES console's
+   *Get set up* page, which opens the same kind of case). Choose **Transactional**, website
+   `https://dive.day`, contacts `aaron@dive.day`. Put the whole text below in the case body, with
+   the previous case id filled in. The console form has no free-text field any more; the case it
+   opens does, and the reviewer's follow-up ("please describe your use case in more detail") is
+   where the text goes if the form gave you nowhere.
+2. **Answer the follow-up inside 48 hours.** The reviewer's questions are the standard set in the
+   table after the case text. A case that goes quiet is closed as refused.
+3. **A second region.** The sandbox is per region, and a refusal in one carries no automatic weight
+   in another. The stack sends from `this.region`, so this is a real move: deploy the stack in the
+   new region, re-add the DKIM and MAIL FROM records it prints, redeploy the app with the new
+   `SES_AWS_REGION`, then request production access there with the same text. Worth it only if the
+   first region refuses a second time.
+4. **A support plan.** Developer Support ($29/month, cancel after) gives a named human on the case
+   who can tell you which row failed; Business Support adds chat. Neither changes the reviewer, but
+   both change "no reason given". Take this before a third attempt, not after.
+
+### The case text
+
+Fill the three bracketed values. Send it whole — the length is the point; the reviewer is looking
+for the rows, and every paragraph is one of them.
+
+```text
+Subject: SES production access for dive.day (transactional; previous case [PREVIOUS CASE ID])
+
+Who we are
+DiveDay (https://dive.day) is booking and operations software for scuba dive shops: trip
+scheduling, seat booking, liability waivers, certification checks, boat manifests. It is built and
+operated by Aaron Buxbaum (aaron@dive.day), a US sole proprietor. The product is pre-launch with
+[N] pilot dive shops onboarding in [MONTH YEAR]. Our privacy policy (https://dive.day/privacy)
+names AWS as the processor for email and how long delivery records are kept; our terms are
+https://dive.day/terms.
+
+What we send, and what triggers it
+Transactional mail only, one message per recipient per event, each triggered by an action the
+recipient or their dive shop took in the product:
+- Booking confirmation, when a diver books a seat on a trip (or a shop books it for them at the
+  counter).
+- Waiver link, when a shop sends a diver their liability waiver to sign.
+- Trip reminders 7 days and 24 hours before departure, only for a booked seat.
+- Trip changes: a departure put on hold for conditions, cancelled for weather, or cancelled for
+  not meeting its minimum - only to the divers booked on it.
+- Account mail to shop staff: email verification, password reset, staff invitation, welcome.
+- Three courtesy messages a diver asked for: a wait-list seat opening (they joined the wait list
+  for that trip), a last-minute deal (they joined the shop's last-minute list on a form), and a
+  post-trip recap. These carry a one-click unsubscribe (RFC 8058 List-Unsubscribe and
+  List-Unsubscribe-Post headers plus an in-body link) and the shop's postal address.
+We do not send newsletters, cold outreach, or anything to a purchased or rented list, and the
+product has no feature that could.
+
+Sample: booking confirmation
+Subject: You're on the boat - Two-Tank Reef
+Hi Nora, you're booked on Two-Tank Reef with Blue Mantis. Sat, Aug 1, 9:00 AM - 1:00 PM EDT.
+[button: Track what's left to do] Bring: certification card, mask, fins. See you at the dock.
+(Reply-To is the dive shop's own front-desk address; the message is branded as the shop.)
+
+How we get addresses
+Every address is typed by the diver themselves at booking or on an opt-in form, or by shop staff
+onto that diver's record at the counter. A record a shop imports from a spreadsheet receives no
+mail until that diver books a trip or is sent a waiver. There is no bulk send; every message is
+addressed to one person about one event.
+
+Volume
+Launch: [N] shops, roughly 20-60 messages a day, peaks of about 200 on a busy weekend morning, well
+under 1 message per second. We are requesting a 1,000/day quota and 5/second; we will ask again
+with real numbers before we need more.
+
+Sending identity and authentication
+We send from the verified domain identity ses.dive.day (Easy DKIM, all three CNAMEs resolving),
+with a custom MAIL FROM domain mail.ses.dive.day (MX and SPF published, status SUCCESS) so the
+envelope aligns with our From domain under DMARC. dive.day publishes DMARC with a reporting address.
+Automated mail is deliberately on a subdomain so it never shares reputation with our human
+correspondence. Every message has both text/plain and text/html parts.
+
+Bounce and complaint handling (tested)
+Our SES configuration set publishes BOUNCE, COMPLAINT, DELIVERY, DELIVERY_DELAY, REJECT and
+RENDERING_FAILURE events to an SNS topic subscribed to our HTTPS endpoint, which verifies the SNS
+signature and topic ARN before acting. Each outcome is recorded against the message that produced
+it and shown to the shop as an email issue on their dashboard. The configuration set enables
+account-level suppression for BOUNCE and COMPLAINT, so a hard-bounced or complained-about address
+is never sent to again. A complaint additionally opts that address out of every courtesy message in
+our own records, and off any list it joined, so the opt-out survives a later change of address.
+We have exercised this end to end against the SES mailbox simulator (bounce@ and complaint@) from
+the deployed application. We have CloudWatch alarms on the account's Reputation.BounceRate and
+Reputation.ComplaintRate at AWS's review thresholds (5% and 0.1%), notifying our operations
+mailbox. We do not enable open or click tracking.
+
+Opting out
+Courtesy messages carry List-Unsubscribe and List-Unsubscribe-Post one-click headers and an in-body
+link; the link never expires, and one click opts the person out permanently. Transactional messages
+about a booking that exists (confirmation, waiver, reminders, cancellations) do not carry an
+unsubscribe because they are the service the person bought; nobody receives them without a booking.
+
+Previous request
+Case [PREVIOUS CASE ID], refused on [DATE] without a stated reason. Since then we have added the
+shop's Reply-To address and postal footer to our messages, made a complaint opt the recipient out
+in our own records, added the reputation alarms above, and tested the bounce and complaint path
+against the simulator from production. We are happy to answer any question about the above or
+provide a full sample of any message type.
+```
+
+### The reviewer's follow-up, answered
+
+The follow-up mail, when it comes, is one of these. Answer on the case, not in a new one.
+
+| They ask | Say |
+| --- | --- |
+| "Describe in detail how you obtain the email addresses you send to" | The *How we get addresses* paragraph, verbatim, plus: "an address reaches our system only through the diver's own booking or opt-in form, or their dive shop's staff typing it onto their record; we hold no list that was not built this way" |
+| "How do you handle bounces and complaints?" / "Do you have a process in place?" | The *Bounce and complaint handling* paragraph, plus the two commands: `aws sesv2 get-account --query SuppressionAttributes` shows `BOUNCE, COMPLAINT`; `aws sns list-subscriptions-by-topic` shows the confirmed endpoint |
+| "How do recipients opt out?" | The *Opting out* paragraph. If they push on the transactional set: "those messages exist only for a seat the recipient booked and are the confirmation, waiver and reminder for that seat; cancelling the booking ends them" |
+| "What is your expected sending volume and rate?" | The *Volume* paragraph with today's real numbers. Ask for less than you think you need; a quota is raised on evidence, in a later case that is routinely approved |
+| "Please provide a sample of the email you will send" | Paste the booking-confirmation sample and, if asked for HTML, the `messageFor` output of `pnpm test src/lib/notifications/render.test.ts` — or send a real one to yourself from the deployed app and forward it |
+| "Do you have a website / privacy policy?" | `https://dive.day`, `https://dive.day/privacy`, `https://dive.day/terms` |
+| "Is this mail marketing?" | "No. Every message is triggered by an action the recipient or their dive shop took, addressed to that one person about that one event. The three courtesy kinds are opt-in and carry one-click unsubscribe" |
+
+Record the outcome — case id, date, verdict — in this section when it comes, so the next person
+does not start from the same blank page.
+
 ## The delivery webhook
 
 `POST {APP_HOST}/api/webhooks/ses` records what SES says happened to mail already sent, delivered as
@@ -200,6 +378,16 @@ Outcomes land on the notification's existing row, matched by SES's own message i
 complaint, or failure raises it on the shop's dashboard as an email issue — visible even though the
 original send succeeded. A re-send clears the old outcome. Events about mail we never tracked are
 answered 200 and ignored.
+
+**A complaint is an unsubscribe.** Every send is tagged with its shop and kind (`diveday_shop`,
+`diveday_kind`; `src/lib/notifications/ses-tags.ts`), and SES echoes the tags on every event. On a
+`Complaint`, the route opts the complained-about address out of courtesy mail for that shop
+(`people.courtesy_email_opt_out_at`) and off every live last-minute-list entry it has there
+(`optOutAddressAfterComplaint`, `src/db/courtesy-email.ts`), logging `ses_webhook.complaint_opt_out`
+with counts and never the address. It is keyed by address and shop, not message id, because the
+courtesy kinds record no id and a complaint on one of them is the whole point. A bounce opts nobody
+out — that is a wrong address for a staffer to fix, and the suppression list below already refuses
+the next send.
 
 The configuration set also adds a hard-bounced or complained-about address to SES's account-level
 suppression list. That is the send-time safeguard: it prevents every later notification path from

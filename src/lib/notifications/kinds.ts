@@ -550,30 +550,54 @@ const passwordChangedSchema = z.object({
   changedAt: z.date(),
 });
 
-export const notificationSchema = z.discriminatedUnion("kind", [
-  bookingConfirmationSchema,
-  waiverRequestSchema,
-  readinessLinkSchema,
-  waitlistInviteSchema,
-  tripInvitationSchema,
-  tripReminder7dSchema,
-  tripReminder24hSchema,
-  tripRecapSchema,
-  tripConditionsHoldSchema,
-  tripMinimumNotMetSchema,
-  tripBlowoutSchema,
-  welcomeSchema,
-  emailVerificationSchema,
-  passwordResetRequestSchema,
-  passwordChangedSchema,
-  staffInviteSchema,
-  checkoutRecoverySchema,
-  lastMinuteDealSchema,
-  newAccountAlertSchema,
-  demoStartedAlertSchema,
-  usageCeilingAlertSchema,
-  courseInquirySchema,
-]);
+/**
+ * Who a reply reaches and where the sender can be written to — the two
+ * facts a receiving mailbox expects of a legitimate sender and that no kind
+ * above carries on its own (ADR 20260902-sender-standards-for-ses).
+ *
+ * Both optional, and resolved from the shop row at send time by
+ * `src/db/notifications.ts` rather than threaded through every composer:
+ * every DiveDay email leaves as `noreply@ses.dive.day` but greets as the
+ * shop, so a diver who hits reply should reach the shop's front desk
+ * (`shops.contact_email`), and a commercial send — one carrying an
+ * `unsubscribeUrl` — has to name the sender's postal address (CAN-SPAM
+ * 16 CFR 316.2). A shop with neither on file sends without them; nothing
+ * here guesses a street or an inbox on a shop's behalf.
+ */
+export const notificationSenderSchema = z.object({
+  replyTo: emailAddressSchema.optional(),
+  /** One line, already in postal order (`shopAddressLines(...).join(", ")`). */
+  postalAddress: z.string().trim().min(1).max(300).optional(),
+});
+
+export type NotificationSender = z.infer<typeof notificationSenderSchema>;
+
+export const notificationSchema = z
+  .discriminatedUnion("kind", [
+    bookingConfirmationSchema,
+    waiverRequestSchema,
+    readinessLinkSchema,
+    waitlistInviteSchema,
+    tripInvitationSchema,
+    tripReminder7dSchema,
+    tripReminder24hSchema,
+    tripRecapSchema,
+    tripConditionsHoldSchema,
+    tripMinimumNotMetSchema,
+    tripBlowoutSchema,
+    welcomeSchema,
+    emailVerificationSchema,
+    passwordResetRequestSchema,
+    passwordChangedSchema,
+    staffInviteSchema,
+    checkoutRecoverySchema,
+    lastMinuteDealSchema,
+    newAccountAlertSchema,
+    demoStartedAlertSchema,
+    usageCeilingAlertSchema,
+    courseInquirySchema,
+  ])
+  .and(z.object({ sender: notificationSenderSchema.optional() }));
 
 export type Notification = z.infer<typeof notificationSchema>;
 

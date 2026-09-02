@@ -1,8 +1,13 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { createBearerToken, hashBearerToken } from "@/lib/bearer-tokens";
 import { nowDate } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
-import { people, personCourtesyEmailUnsubscribeTokens, shops } from "./schema";
+import {
+  lastMinuteListEntries,
+  people,
+  personCourtesyEmailUnsubscribeTokens,
+  shops,
+} from "./schema";
 
 /**
  * Mints a fresh, non-expiring bearer link opting one person out of courtesy
@@ -122,4 +127,59 @@ export async function optOutPersonFromCourtesyEmailByToken(
     .set({ courtesyEmailOptOutAt: input.now ?? nowDate() })
     .where(eq(people.id, context.personId));
   return context;
+}
+
+/**
+ * A spam complaint is an unsubscribe, made the loud way.
+ *
+ * SES's account-level suppression already refuses the next send to a
+ * complained-about address (`infra-stack.ts` S8), which protects the sending
+ * reputation. This is the app's own half of the promise a sender makes
+ * (ADR 20260902-sender-standards-for-ses): the record the shop reads stops
+ * offering that person courtesy mail — `people.courtesyEmailOptOutAt`, and
+ * every live last-minute-list entry of theirs — so a staffer never sees a
+ * "send" that the provider is silently swallowing, and a later change of
+ * address on the record does not quietly resume mail somebody reported.
+ *
+ * Keyed by address within one shop, because a complaint names an address and
+ * a message tag names a shop (`SES_SHOP_TAG`) and nothing else; every person
+ * in the shop at that address is opted out. Idempotent, and blind to deleted
+ * records. Transactional mail (a confirmation, a waiver link) is untouched by
+ * design — the same rule `courtesyEmailOptOutAt` has always had.
+ */
+export async function optOutAddressAfterComplaint(
+  db: AppDb,
+  input: { shopId: string; email: string; now?: Date },
+): Promise<{ people: number; listEntries: number }> {
+  const at = input.now ?? nowDate();
+  const matching = await db
+    .select({ id: people.id })
+    .from(people)
+    .where(
+      and(
+        eq(people.shopId, input.shopId),
+        sql`lower(${people.email}) = lower(${input.email})`,
+        isNull(people.deletedAt),
+      ),
+    );
+  if (matching.length === 0) return { people: 0, listEntries: 0 };
+  const ids = matching.map((row) => row.id);
+
+  const optedOut = await db
+    .update(people)
+    .set({ courtesyEmailOptOutAt: at })
+    .where(and(inArray(people.id, ids), isNull(people.courtesyEmailOptOutAt)))
+    .returning({ id: people.id });
+  const unsubscribed = await db
+    .update(lastMinuteListEntries)
+    .set({ unsubscribedAt: at })
+    .where(
+      and(
+        eq(lastMinuteListEntries.shopId, input.shopId),
+        inArray(lastMinuteListEntries.personId, ids),
+        isNull(lastMinuteListEntries.unsubscribedAt),
+      ),
+    )
+    .returning({ id: lastMinuteListEntries.id });
+  return { people: optedOut.length, listEntries: unsubscribed.length };
 }

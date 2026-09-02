@@ -1,11 +1,11 @@
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
-import { recordNotificationDelivery } from "@/db/notifications";
+import { recordNotificationDelivery, sendNotification } from "@/db/notifications";
 import { refundBookingsForShopCancelledTrip, shopCancellationPaymentStory } from "@/db/refunds";
 import { cancelDeparturesBelowMinimum, listMinimumNotMetRecipients } from "@/db/trips";
 import { log } from "@/lib/log";
-import { notify, publicAppUrl } from "@/lib/notifications";
+import { publicAppUrl } from "@/lib/notifications";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import { flushLogs } from "@/lib/observability";
 import { publicSchedulePath } from "@/lib/public-routes";
@@ -108,7 +108,7 @@ export async function GET(request: Request) {
           unreachable += 1;
           continue;
         }
-        const delivery = await notify({
+        const delivery = await sendNotification(db, {
           kind: "trip_minimum_not_met",
           tripId: departure.tripId,
           bookingId: recipient.bookingId,

@@ -23,6 +23,8 @@ describe("parseSesEmailEvent", () => {
       providerMessageId: "ses-msg-1",
       status: "bounced",
       detail: "smtp; 550 5.1.1 mailbox unavailable",
+      recipient: null,
+      shopId: null,
       occurredAt: new Date("2026-08-02T17:05:00.000Z"),
     });
   });
@@ -53,6 +55,8 @@ describe("parseSesEmailEvent", () => {
       providerMessageId: "ses-msg-3",
       status: "complained",
       detail: "abuse",
+      recipient: null,
+      shopId: null,
       occurredAt: new Date("2026-08-02T17:10:00.000Z"),
     });
   });
@@ -71,6 +75,8 @@ describe("parseSesEmailEvent", () => {
       providerMessageId: "ses-msg-4",
       status: "delivered",
       detail: null,
+      recipient: null,
+      shopId: null,
       occurredAt: new Date("2026-08-02T17:15:00.000Z"),
     });
   });
@@ -158,5 +164,64 @@ describe("parseSesEmailEvent", () => {
       now,
     );
     expect(event).toMatchObject({ occurredAt: now });
+  });
+
+  // The adapter tags every send with its shop (`SES_SHOP_TAG`); the parser
+  // reads it back beside the recipient so a complaint can be filed against a
+  // person the message id never pointed at.
+  it("names the complained-about recipient and the shop the message tag carries", () => {
+    const event = parseSesEmailEvent(
+      JSON.stringify({
+        eventType: "Complaint",
+        mail: {
+          messageId: "ses-msg-10",
+          destination: ["Nora@Example.dive"],
+          tags: {
+            diveday_shop: ["3f2504e0-4f89-41d3-9a0c-0305e82c3302"],
+            diveday_kind: ["last_minute_deal"],
+          },
+        },
+        complaint: { complainedRecipients: [{ emailAddress: " Nora@Example.dive " }] },
+      }),
+      now,
+    );
+    expect(event).toMatchObject({
+      status: "complained",
+      recipient: "nora@example.dive",
+      shopId: "3f2504e0-4f89-41d3-9a0c-0305e82c3302",
+    });
+  });
+
+  it("names the bounced recipient, and falls back to the message's destination", () => {
+    expect(
+      parseSesEmailEvent(
+        JSON.stringify({
+          eventType: "Bounce",
+          mail: { messageId: "ses-msg-11", destination: ["other@example.dive"] },
+          bounce: { bouncedRecipients: [{ emailAddress: "bounced@example.dive" }] },
+        }),
+        now,
+      ),
+    ).toMatchObject({ recipient: "bounced@example.dive" });
+    expect(
+      parseSesEmailEvent(
+        JSON.stringify({
+          eventType: "Delivery",
+          mail: { messageId: "ses-msg-12", destination: ["only@example.dive"] },
+        }),
+        now,
+      ),
+    ).toMatchObject({ recipient: "only@example.dive" });
+  });
+
+  it("reads a shop tag that is not a uuid as no shop at all", () => {
+    const event = parseSesEmailEvent(
+      JSON.stringify({
+        eventType: "Complaint",
+        mail: { messageId: "ses-msg-13", tags: { diveday_shop: ["not-a-shop"] } },
+      }),
+      now,
+    );
+    expect(event).toMatchObject({ status: "complained", shopId: null, recipient: null });
   });
 });

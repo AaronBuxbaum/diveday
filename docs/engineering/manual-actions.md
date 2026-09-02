@@ -104,11 +104,14 @@ this file is the checklist, not the argument.
 
 ```text
 [10] Request SES production access
-    when     once, before sending to anyone who has not verified their address
-    why      A human-reviewed AWS Support case. There is no API.
-    run      SES console -> Account dashboard -> Request production access.
+    when     once per region, before sending to anyone who has not verified their address
+    why      A human-reviewed AWS Support case. There is no API, and the sandbox is per region.
+    run      Read docs/engineering/ses-email-runbook.md, 'Production access: the second request', and paste its case text.
+             SES console -> Account dashboard -> Request production access (Transactional, https://dive.day), then answer the reviewer's follow-up in the same case.
     produces Sending to arbitrary recipients. Until then SES is in the sandbox: pre-verified addresses and the mailbox simulator only.
     verify   aws sesv2 get-account --query ProductionAccessEnabled
+    if not   A denial with no reason is the norm, not the end: reply on the same case with the runbook's follow-up answers, and if it is closed, open a new case that names the closed case id. A second region is its own sandbox and its own request.
+    note     Everything the reviewer asks for is already in the stack: DKIM and a custom MAIL FROM on the identity, bounce and complaint events to /api/webhooks/ses, account-level suppression on the configuration set, one-click unsubscribe headers, Reply-To and a postal footer from the shop record, and the two reputation alarms in S13. The case text lists them; do not paraphrase it shorter.
 
 [11] Leave the SMS sandbox, raise the spend limit, register an origination identity
     when     once, before sending SMS to a diver

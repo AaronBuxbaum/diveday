@@ -77,9 +77,11 @@ export {
 } from "./app-url";
 export {
   type Notification,
+  type NotificationSender,
   notificationIdempotencyKey,
   notificationSchema,
   recipientLocale,
 } from "./kinds";
 export type { NotificationDelivery, NotificationProvider } from "./provider";
+export { type ShopSenderSource, shopSenderOf } from "./sender";
 export { type SesEmailClient, type SesProviderOptions, sesNotificationProvider } from "./ses";
