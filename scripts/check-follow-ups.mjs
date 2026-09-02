@@ -76,7 +76,17 @@ const REQUIRED_SECTIONS = [
 // it catches "TBD" and a one-line shrug without demanding an essay.
 const MIN_SECTION_WORDS = 15;
 const MIN_PROMPT_WORDS = 40;
-const REPO_PATH = /(?:src|scripts|docs|e2e|infra|drizzle)\/[\w./[\]@-]+/;
+// Every top-level directory a follow-up legitimately names. `.github` and
+// `public` were missing, and the gap was not theoretical: issue #1295 is a CI
+// ticket whose prompt says "Read .github/workflows/ci.yml" in its first line,
+// and this guard failed the whole repository's `check:repo` telling it to "say
+// which files to read and change". A guard that refuses the one path a CI
+// follow-up can possibly name is refusing the correct answer.
+//
+// Still a *directory* allowlist rather than "anything with a slash": the rule
+// is that a cold reader gets an anchored place to start, and a bare
+// `package.json` does not tell them which of the repo's concerns they are in.
+const REPO_PATH = /(?:src|scripts|docs|e2e|infra|drizzle|public|\.github)\/[\w./[\]@-]+/;
 const PLACEHOLDERS = ["short-slug", "YYYY-MM-DD", "TODO", "TBD", "src/lib/example.ts"];
 // Either word order: "close this issue" and "this issue is closed" both count.
 //
