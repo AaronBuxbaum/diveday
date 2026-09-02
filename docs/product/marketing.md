@@ -286,7 +286,16 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   summary card — four groups, each an eyebrow, a heading and *one paragraph* (`summary`) — rendered
   by `FeatureGroupsGrid` on `/`; the full inventory is `productCapabilityIndex`, rendered flat on
   `/product` as a spec sheet: group name on a left rail, terse lines in two columns, hairline
-  rules, no boxes.
+  rules, no boxes. **The inventory is the whole of [shipped.md](shipped.md), consolidated — never a
+  curated subset.** Until 2026-09-01 it held 49 chosen lines, one per idea per area, and under a
+  heading that says "the whole list" a chosen list is a false one: a buyer with an incumbent's
+  feature page open beside it counted reminders, buddy teams, the blow-out cascade, close-out,
+  backups, calendar feeds, QuickBooks/Shopify/Zapier and two-factor as missing, and every one had
+  shipped. It now carries every shipped workflow once (94 lines in eight groups, "Reaching divers"
+  added for the messages that had been scattered as half-lines), and the page counts the lines off
+  the registry so the lede never drifts from the list. The bar for a line is unchanged — walkable in
+  the demo, shipped-only, in the buyer's words; the bar for leaving one out is that no shop would
+  ever look for it. When a slice ships, add its line here in the same change as its shipped.md entry.
 
   There were three densities until 2026-08-13. `/product` used to render *all* of
   `productFeatureGroups` (30 bullets) about a thousand pixels above a `<details>` holding 46 better

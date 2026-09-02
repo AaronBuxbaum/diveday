@@ -129,7 +129,10 @@ async function main() {
   }
 
   const summary = summarizeReport(report);
-  const body = formatPrComment({ commit, bucket, summary });
+  // Set by scripts/wait-for-baseline.mjs when it substituted an older baseline
+  // for one that was never published; empty on the ordinary path.
+  const note = process.env.REG_BASELINE_NOTE || "";
+  const body = formatPrComment({ commit, bucket, summary, note });
 
   // The job summary is the one destination that works for every event,
   // including a push to main, where there is no PR to comment on.

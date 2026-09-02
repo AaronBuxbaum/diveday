@@ -286,8 +286,8 @@ sentence, because there is no advisory lock spanning the two processes and their
 can interleave.
 
 The repo's CI concurrency group in `.github/workflows/ci.yml` does not help here: it dedupes CI runs
-per ref (and only cancels in-progress ones for pull requests), not Vercel builds, and CI is not what
-applies migrations.
+(per ref for a pull request, which it cancels; per commit for a push to `main`, which it never
+does), not Vercel builds, and CI is not what applies migrations.
 
 The posture, until something enforces it:
 

@@ -177,6 +177,19 @@ export interface CapabilityAreaKeys {
  * be demonstrated, it comes out. Deliberately plain: this is the section people
  * scan with a competitor's page open beside it, and it earns nothing by being
  * written like the bands above it.
+ *
+ * **It is the full inventory, not a highlight reel.** Until 2026-09-01 this
+ * held 49 lines in seven groups — one chosen line per area, which read as
+ * precise and left a buyer with the incumbent's feature page open counting
+ * what was missing: no reminders, no night-before brief, no buddy teams, no
+ * blow-out cascade, no close-out, no backups, no calendar feeds, no
+ * QuickBooks/Shopify/Zapier, no two-factor. All of it had shipped. The band's
+ * own heading promises "the whole list", so the list is now the whole of
+ * docs/product/shipped.md consolidated: every shipped workflow, once, under
+ * the group it belongs to. The bar for a line is unchanged (walkable in the
+ * demo, in the buyer's words); the bar for *leaving one out* is that it is
+ * not a thing a shop would ever look for. The page counts these off the
+ * registry, so the sentence introducing the list never drifts from it.
  */
 export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
   {
@@ -190,6 +203,14 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.booking.item6",
       "marketing.capabilities.booking.item7",
       "marketing.capabilities.booking.item8",
+      "marketing.capabilities.booking.item9",
+      "marketing.capabilities.booking.item10",
+      "marketing.capabilities.booking.item11",
+      "marketing.capabilities.booking.item12",
+      "marketing.capabilities.booking.item13",
+      "marketing.capabilities.booking.item14",
+      "marketing.capabilities.booking.item15",
+      "marketing.capabilities.booking.item16",
     ],
   },
   {
@@ -203,6 +224,11 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.divers.item6",
       "marketing.capabilities.divers.item7",
       "marketing.capabilities.divers.item8",
+      "marketing.capabilities.divers.item9",
+      "marketing.capabilities.divers.item10",
+      "marketing.capabilities.divers.item11",
+      "marketing.capabilities.divers.item12",
+      "marketing.capabilities.divers.item13",
     ],
   },
   {
@@ -216,6 +242,14 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.diveDay.item6",
       "marketing.capabilities.diveDay.item7",
       "marketing.capabilities.diveDay.item8",
+      "marketing.capabilities.diveDay.item9",
+      "marketing.capabilities.diveDay.item10",
+      "marketing.capabilities.diveDay.item11",
+      "marketing.capabilities.diveDay.item12",
+      "marketing.capabilities.diveDay.item13",
+      "marketing.capabilities.diveDay.item14",
+      "marketing.capabilities.diveDay.item15",
+      "marketing.capabilities.diveDay.item16",
     ],
   },
   {
@@ -231,6 +265,8 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.gear.item3",
       "marketing.capabilities.gear.item4",
       "marketing.capabilities.gear.item5",
+      "marketing.capabilities.gear.item6",
+      "marketing.capabilities.gear.item7",
     ],
   },
   {
@@ -242,6 +278,11 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.money.item4",
       "marketing.capabilities.money.item5",
       "marketing.capabilities.money.item6",
+      "marketing.capabilities.money.item7",
+      "marketing.capabilities.money.item8",
+      "marketing.capabilities.money.item9",
+      "marketing.capabilities.money.item10",
+      "marketing.capabilities.money.item11",
     ],
   },
   {
@@ -255,6 +296,28 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.shop.item6",
       "marketing.capabilities.shop.item7",
       "marketing.capabilities.shop.item8",
+      "marketing.capabilities.shop.item9",
+      "marketing.capabilities.shop.item10",
+      "marketing.capabilities.shop.item11",
+      "marketing.capabilities.shop.item12",
+      "marketing.capabilities.shop.item13",
+    ],
+  },
+  {
+    // Added in the 2026-09-01 consolidation. Messages used to be scattered
+    // across the other groups as half-lines ("readable email delivery history")
+    // or missing outright (reminders, the night-before brief, WhatsApp, the
+    // recap). A buyer comparing against an incumbent's "communications" tab
+    // needs them in one place.
+    title: "marketing.capabilities.reach.title",
+    items: [
+      "marketing.capabilities.reach.item1",
+      "marketing.capabilities.reach.item2",
+      "marketing.capabilities.reach.item3",
+      "marketing.capabilities.reach.item4",
+      "marketing.capabilities.reach.item5",
+      "marketing.capabilities.reach.item6",
+      "marketing.capabilities.reach.item7",
     ],
   },
   {
@@ -266,6 +329,11 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.records.item4",
       "marketing.capabilities.records.item5",
       "marketing.capabilities.records.item6",
+      "marketing.capabilities.records.item7",
+      "marketing.capabilities.records.item8",
+      "marketing.capabilities.records.item9",
+      "marketing.capabilities.records.item10",
+      "marketing.capabilities.records.item11",
     ],
   },
 ] as const;

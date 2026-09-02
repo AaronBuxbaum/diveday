@@ -235,7 +235,7 @@ function itemSection(title, items, limit) {
  * "account for every pixel" is human review, not a red build
  * (ADR 20260802-visual-diff-pr-comment).
  */
-export function formatPrComment({ commit, bucket, summary, limit = ITEM_LIST_LIMIT }) {
+export function formatPrComment({ commit, bucket, summary, note = "", limit = ITEM_LIST_LIMIT }) {
   const short = commit.slice(0, 7);
   const lines = [
     COMMENT_MARKER,
@@ -256,6 +256,11 @@ export function formatPrComment({ commit, bucket, summary, limit = ITEM_LIST_LIM
   }
 
   for (const warning of summary.warnings) lines.push(`> [!WARNING]`, `> ${warning}`, "");
+
+  // The baseline was not the commit the graph named. Said here, beside the
+  // counts it qualifies, so a reviewer reading "3 changed" knows some of those
+  // three may be main's own movement between the two commits.
+  if (note) lines.push("> [!NOTE]", `> ${note}`, "");
 
   lines.push(...itemSection("Changed", summary.changed, limit));
   lines.push(...itemSection("Deleted (in the baseline, not captured)", summary.deleted, limit));

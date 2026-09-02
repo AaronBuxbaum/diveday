@@ -103,6 +103,11 @@ test.describe("the dive arrival arc", () => {
     await page.getByRole("button", { name: "Acknowledge" }).click();
     await expect(page.getByText(/Arrival Diver is waiting for help/)).toBeVisible();
     await page.getByRole("button", { name: "Mark handled" }).click();
+    // Wait for the write to *land* before navigating away: the action ends in
+    // `revalidateAndRedirect(home, home)`, and Today lists only open requests,
+    // so the row leaving is the destination's own proof. Without it the `goto`
+    // below can preempt the in-flight action and the thread reads "acknowledged".
+    await expect(page.getByText(/Arrival Diver is waiting for help/)).not.toBeVisible();
 
     await page.goto(readyPath);
     // The response lives in the day-of step's body, and at most one step is
