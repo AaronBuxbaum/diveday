@@ -39,6 +39,13 @@ vi.mock("@/i18n/request", () => ({
   requestFirstHandLocale: vi.fn(async () => "en-US" as const),
 }));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
+// `bookSpot` reads the partner-referral cookie (issue #1285), and there is no
+// request scope here for `cookies()` to find. An empty jar rather than a
+// planted value: these tests are about what the *declaration* fields do, and a
+// booking nobody referred is the ordinary case they were written against.
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(async () => ({ get: () => undefined })),
+}));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
   return { ...actual, checkRateLimit: vi.fn(async () => ({ allowed: true, retryAfterMs: 0 })) };

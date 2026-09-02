@@ -235,6 +235,11 @@ const EXCLUDED_TABLES = [
   "user_accounts", // credentials are never exported
   "booking_capabilities", // bearer credentials, never exported — same reasoning as user_accounts
   "account_tokens", // bearer credentials (email verify / password reset), never exported
+  // The link proving a shop reads its own contact address (issue #1288). Hashed
+  // bearer credentials, same reasoning as account_tokens — and there would be
+  // nothing to do with them on the other side: a one-time link is spent where
+  // it was issued, not carried to another system.
+  "shop_contact_email_tokens",
   "account_sessions", // a live sign-in session — more sensitive than a bearer token, never exported
   "account_security", // TOTP seeds and recovery-code hashes are credentials
   "account_step_ups", // short-lived second-factor grants are credentials
@@ -289,6 +294,15 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // timezone (issue #712). A shop restoring from a backup *should* be asked
     // again, so carrying this over would be the wrong answer, not a loss.
     "units_confirmed_at",
+    // Proof that somebody opened the link sent to `contact_email`, which is
+    // what lets diver mail carry it as `Reply-To` (issue #1288). Excluded for
+    // a harder reason than `units_confirmed_at` above: a CSV cannot vouch for
+    // a mailbox, so accepting an imported stamp would let anyone who can edit
+    // a spreadsheet mark any address confirmed — the exact thing the whole
+    // confirmation flow exists to prevent. Null on import means the shop is
+    // asked to prove the address again, which costs it a `Reply-To` header
+    // until it does and loses nothing else.
+    "contact_email_confirmed_at",
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
   dive_packages: ["shop_id"],
