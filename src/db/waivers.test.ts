@@ -40,6 +40,7 @@ import {
   listWaiverIntegrityAudit,
   listWaiverTemplateHistory,
   recordInPersonWaiver,
+  recordMedicalClearance,
   saveBookingEmergencyContact,
   saveWaiverTemplate,
   standingWaiverExposure,
@@ -1781,5 +1782,218 @@ describe("saving the waiver template", () => {
     const early = await standingWaiverExposure(db, shop.id, beforeTheSeason);
     expect(early.divers).toBeGreaterThan(0);
     expect(early.boardingSoon).toBe(0);
+  });
+});
+
+/**
+ * **The one door out of a medical hold** (issue #1252).
+ *
+ * A referral parks the release in `medical_review` and readiness refuses to
+ * board the diver. Before this the only lift was `recordInPersonWaiver`, whose
+ * attestation asserts that *no answer needs physician sign-off* — untrue of
+ * exactly the diver holding a signed evaluation. These pin that the new act
+ * ends the block, that it never manufactures one, and that everything it
+ * refuses, it refuses closed.
+ */
+describe("physician medical clearance", () => {
+  async function heldContext() {
+    const context = await waiverContext();
+    const { db, shop, booking, person } = context;
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: medicalReferralAnswers,
+      now,
+    });
+    const staff = await staffPerson(db, shop.id);
+    return { ...context, staff };
+  }
+
+  async function staffPerson(db: Awaited<ReturnType<typeof waiverContext>>["db"], shopId: string) {
+    const staff = (await listStaff(db, shopId)).find((row) =>
+      row.roles.some((role) => STAFF_ROLES.includes(role)),
+    );
+    if (!staff) throw new Error("demo staff missing");
+    return staff.person;
+  }
+
+  it("ends the medical block and records who cleared it, and when", async () => {
+    const { db, shop, booking, staff } = await heldContext();
+    const before = await getBookingReadiness(db, shop.id, booking.id);
+    expect(before?.blockers).toContainEqual(expect.objectContaining({ code: "medical_review" }));
+
+    const clearedAt = new Date(now.getTime() + 60_000);
+    const outcome = await recordMedicalClearance(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      now: clearedAt,
+    });
+    expect(outcome).toMatchObject({ ok: true, alreadyCleared: false });
+
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "medical_review")),
+      );
+    expect(record).toMatchObject({
+      // The status deliberately does not move: the row still says this diver
+      // was referred, and the signed evidence keeps its seal.
+      status: "medical_review",
+      medicalClearedAt: clearedAt,
+      medicalClearedByPersonId: staff.id,
+      medicalClearanceDocumentUrl: null,
+    });
+
+    const after = await getBookingReadiness(db, shop.id, booking.id);
+    expect(after?.blockers ?? []).not.toContainEqual(
+      expect.objectContaining({ code: "medical_review" }),
+    );
+  });
+
+  it("leaves the signed evidence verifiable — a clearance is not a tamper", async () => {
+    const { db, shop, booking, staff } = await heldContext();
+    await recordMedicalClearance(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      now,
+    });
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "medical_review")),
+      );
+    expect(verifyWaiverIntegrity(record)).toBe("valid");
+  });
+
+  it("stores the physician's evaluation when one is handed over", async () => {
+    const { db, shop, booking, staff } = await heldContext();
+    await recordMedicalClearance(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      documentUrl: "https://media.example.com/medical-clearances/abc.pdf",
+      now,
+    });
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "medical_review")),
+      );
+    expect(record.medicalClearanceDocumentUrl).toBe(
+      "https://media.example.com/medical-clearances/abc.pdf",
+    );
+  });
+
+  it("is idempotent — a second recording never rewrites who cleared it or when", async () => {
+    const { db, shop, booking, staff } = await heldContext();
+    const first = new Date(now.getTime() + 60_000);
+    await recordMedicalClearance(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      now: first,
+    });
+    const second = await recordMedicalClearance(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      now: new Date(now.getTime() + 120_000),
+    });
+    expect(second).toMatchObject({ ok: true, alreadyCleared: true });
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "medical_review")),
+      );
+    expect(record.medicalClearedAt).toEqual(first);
+  });
+
+  it("refuses when nothing of this diver's is in review — never a silent success", async () => {
+    const { db, shop, booking, person } = await waiverContext();
+    const staff = await staffPerson(db, shop.id);
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error("expected a waiver link");
+    await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      now,
+    });
+    const outcome = await recordMedicalClearance(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      now,
+    });
+    expect(outcome).toEqual({ ok: false, reason: "no_medical_hold" });
+  });
+
+  it("refuses a recorder who is not this shop's live staff, failing closed", async () => {
+    const { db, shop, booking } = await heldContext();
+    const [outsider] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Not Staff", email: `outsider-${randomUUID()}@x.test` })
+      .returning();
+    const outcome = await recordMedicalClearance(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: outsider.id,
+      now,
+    });
+    expect(outcome).toEqual({ ok: false, reason: "staff_not_found" });
+
+    const after = await getBookingReadiness(db, shop.id, booking.id);
+    expect(after?.blockers).toContainEqual(expect.objectContaining({ code: "medical_review" }));
+  });
+
+  it("never reaches another shop's held record", async () => {
+    const { db, booking, staff } = await heldContext();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other", slug: `other-${randomUUID()}`, timezone: "America/New_York" })
+      .returning();
+    const outcome = await recordMedicalClearance(db, {
+      shopId: otherShop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      now,
+    });
+    // Not even far enough to look at the record: the actor is not that shop's staff.
+    expect(outcome).toEqual({ ok: false, reason: "staff_not_found" });
+  });
+
+  it("destroys the physician's evaluation when the diver is erased, and keeps the fact", async () => {
+    const { db, shop, booking, staff } = await heldContext();
+    await recordMedicalClearance(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      documentUrl: "https://media.example.com/medical-clearances/abc.pdf",
+      now,
+    });
+    await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      actorPersonId: staff.id,
+      now,
+    });
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "medical_review")),
+      );
+    expect(record.medicalClearanceDocumentUrl).toBeNull();
+    // The shop's own act survives, as the certification sighting does.
+    expect(record.medicalClearedAt).not.toBeNull();
+    expect(record.medicalClearedByPersonId).toBe(staff.id);
   });
 });

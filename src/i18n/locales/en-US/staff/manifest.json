@@ -82,6 +82,7 @@
   "hotelPickupLabel": "Hotel pickup",
   "medicalReviewedPaper": "Medical reviewed (paper)",
   "medicalClearanceImported": "Medical clearance imported — not reviewed here",
+  "medicalClearedByPhysician": "Physician cleared",
   "medicalWaiverSigned": "Medical waiver signed",
   "resolveBlockersLink": "Resolve blockers on Guests →",
   "addNoteSummary": "Add a note",

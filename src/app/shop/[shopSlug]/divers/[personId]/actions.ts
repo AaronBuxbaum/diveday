@@ -48,7 +48,7 @@ import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
 import { certificationAgency, certificationLevel, people } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
 import { getSupportNeeds, saveSupportNeeds } from "@/db/support-needs";
-import { recordInPersonWaiver } from "@/db/waivers";
+import { recordInPersonWaiver, recordMedicalClearance } from "@/db/waivers";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { canOverrideGearRequest, isStaff } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
@@ -57,6 +57,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+import { storeMedicalClearanceDocument } from "@/lib/storage";
 import { uuidParam } from "@/lib/uuid";
 import { diverRecordIsClear } from "./_lib/status-load";
 
@@ -1149,6 +1150,78 @@ export async function markWaiverInPersonAction(
         ? "waiver-paper-recorded"
         : outcome.reason === "medical_attestation_required"
           ? "waiver-medical-attestation"
+          : "waiver-error",
+      "waiver",
+      outcome.ok,
+    ),
+  );
+}
+
+/**
+ * **A physician cleared this diver, recorded from their own record.**
+ *
+ * The end of the one readiness blocker that had no door. A referral parks the
+ * release in `medical_review` and readiness refuses to board the diver; the
+ * diver comes back holding a signed evaluation; before this the only lift was
+ * `markWaiverInPersonAction` above, whose checkbox asserts that *no answer
+ * needs physician sign-off* — untrue of exactly this diver (issue #1252).
+ *
+ * Same subject rule as the paper release, and for the same reason: the diver is
+ * this route's path segment, never a form field, and `recordMedicalClearance`
+ * resolves their own live hold rather than trusting a posted record id. The
+ * only thing the form carries is the optional document.
+ *
+ * The upload is stored before the write and *not* cleaned up on refusal, unlike
+ * a trip's arrival photo: the two refusals reachable here are "you are not this
+ * shop's live staff" and "nothing of theirs is in review", and in neither case
+ * has anything been written that could point at the file. It is an orphan in
+ * the medical-clearance namespace, which the pending-media sweep already owns —
+ * and deleting a physician's evaluation on a race we cannot fully see is the
+ * worse of the two mistakes.
+ */
+export async function recordMedicalClearanceAction(
+  shopSlug: string,
+  personId: string,
+  formData: FormData,
+) {
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-waiver",
+    "waiver",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
+
+  const upload = formData.get("medicalClearanceDocument");
+  let documentUrl: string | null = null;
+  if (upload instanceof File && upload.size > 0) {
+    const stored = await storeMedicalClearanceDocument({
+      filename: upload.name,
+      contentType: upload.type,
+      bytes: await upload.arrayBuffer(),
+    });
+    if (stored.status !== "stored") {
+      revalidateAndRedirect(base, backTo(base, "medical-clearance-document-failed", "waiver"));
+      return;
+    }
+    documentUrl = stored.url;
+  }
+
+  const outcome = await recordMedicalClearance(db, {
+    shopId: staff.user.shopId,
+    personId,
+    recordedByPersonId: staff.user.personId,
+    documentUrl,
+  });
+  revalidateAndRedirect(
+    base,
+    await successUrl(
+      context,
+      outcome.ok
+        ? "medical-clearance-recorded"
+        : outcome.reason === "no_medical_hold"
+          ? "medical-clearance-no-hold"
           : "waiver-error",
       "waiver",
       outcome.ok,

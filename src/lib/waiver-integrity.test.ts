@@ -38,6 +38,9 @@ const record = {
   signedAt: new Date("2026-07-29T01:00:00.000Z"),
   medicalAnswers: { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} },
   medicalReviewRequired: false,
+  medicalClearedAt: null,
+  medicalClearedByPersonId: null,
+  medicalClearanceDocumentUrl: null,
   completedAt: new Date("2026-07-29T01:00:00.000Z"),
   integrityHash: null,
   integrityVersion: null,
@@ -59,6 +62,7 @@ const erased = {
   importedFromLabel: null,
   importSourceDocumentUrl: null,
   importSourceMedicalDocumentUrl: null,
+  medicalClearanceDocumentUrl: null,
   anonymizedAt: new Date("2026-08-02T12:00:00.000Z"),
   anonymizedByPersonId: "00000000-0000-4000-8000-000000000009",
 };

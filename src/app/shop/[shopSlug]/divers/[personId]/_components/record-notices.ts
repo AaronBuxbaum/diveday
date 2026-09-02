@@ -160,6 +160,25 @@ const NOTICE_KEYS: Record<
   },
   "waiver-error": { form: "waiver", tone: "danger", key: "divers.notices.waiverError" },
 
+  // The physician clearance that ends a medical hold (issue #1252).
+  "medical-clearance-recorded": {
+    form: "waiver",
+    tone: "success",
+    key: "divers.notices.medicalClearanceRecorded",
+  },
+  // Not a failure — the answer to the question the staffer asked. Nothing of
+  // this diver's is parked in review here, so there is nothing to clear.
+  "medical-clearance-no-hold": {
+    form: "waiver",
+    tone: "warning",
+    key: "divers.notices.medicalClearanceNoHold",
+  },
+  "medical-clearance-document-failed": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.medicalClearanceDocumentFailed",
+  },
+
   // Rental fit.
   "profile-saved": { form: "fit", tone: "success", key: "divers.notices.profileSaved" },
   "fit-flagged": { form: "fit", tone: "success", key: "divers.notices.fitFlagged" },

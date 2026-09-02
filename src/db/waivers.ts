@@ -1703,6 +1703,103 @@ export async function recordInPersonWaiver(
 }
 
 /**
+ * What happened when a shop tried to record a physician's clearance.
+ *
+ * `no_medical_hold` is the interesting refusal: this diver has nothing parked
+ * in review here, so there is nothing to clear. It is not an error state to
+ * apologise for — it is the answer to a question the staffer asked — and the
+ * surface words it as such.
+ */
+export type MedicalClearanceOutcome =
+  | { ok: true; recordId: string; alreadyCleared: boolean }
+  | { ok: false; reason: "staff_not_found" | "no_medical_hold" };
+
+/**
+ * **A staff member records that a physician cleared this diver to dive.**
+ *
+ * The questionnaire refers a diver, the release parks in `medical_review`, and
+ * readiness refuses to board them (`src/lib/readiness.ts`). Then the diver comes
+ * back holding a signed physician evaluation — and until this existed the only
+ * lift was `recordInPersonWaiver`'s attestation, whose staff-facing words are
+ * "no answer needs physician sign-off": the opposite of what the diver is
+ * standing there with. A staffer either attested to something untrue or left a
+ * cleared diver blocked (issue #1252).
+ *
+ * So this is its own act, and deliberately not a widening of that one. It never
+ * writes a release, never touches the signed evidence or its integrity seal,
+ * and cannot be reached by a tap on "Mark ready" — it stamps three columns on
+ * the record that was referred, one of which is the accountable staff member.
+ *
+ * **The subject is the person, and the record is resolved here rather than
+ * posted.** A client that could name the waiver record it is clearing could
+ * name a different diver's; the caller passes the diver whose page they are on
+ * (itself a path segment the surface already gates), and this finds their most
+ * recent unresolved hold at *this shop*. Nothing else is clearable.
+ *
+ * **Fails closed on every unknown.** No live hold and no clearance already on
+ * file is a refusal, never a silent success; an erased record is not clearable
+ * (there is no longer a questionnaire to have been evaluated); and the actor
+ * must be this shop's live staff, the same rule paper attestation applies.
+ *
+ * Idempotent: a diver whose hold is already cleared comes back `alreadyCleared`
+ * rather than being stamped twice, so a double submit cannot rewrite who
+ * recorded it or when.
+ */
+export async function recordMedicalClearance(
+  db: AppDb,
+  input: {
+    shopId: string;
+    personId: string;
+    recordedByPersonId: string;
+    /** The physician's evaluation, already re-stored through `storeMedicalClearanceDocument`. */
+    documentUrl?: string | null;
+    now?: Date;
+  },
+): Promise<MedicalClearanceOutcome> {
+  const now = input.now ?? nowDate();
+  return db.transaction(async (tx): Promise<MedicalClearanceOutcome> => {
+    const clearedBy = await activeStaffAttestorId(tx, input.shopId, input.recordedByPersonId);
+    if (!clearedBy) return { ok: false, reason: "staff_not_found" };
+
+    const held = await tx
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(
+          eq(waiverRecords.shopId, input.shopId),
+          eq(waiverRecords.personId, input.personId),
+          eq(waiverRecords.status, "medical_review"),
+          isNull(waiverRecords.supersededAt),
+          isNull(waiverRecords.anonymizedAt),
+        ),
+      )
+      .orderBy(desc(waiverRecords.completedAt));
+
+    const already = held.find((record) => record.medicalClearedAt !== null);
+    const open = held.find((record) => record.medicalClearedAt === null);
+    if (!open) {
+      return already
+        ? { ok: true, recordId: already.id, alreadyCleared: true }
+        : { ok: false, reason: "no_medical_hold" };
+    }
+
+    const [cleared] = await tx
+      .update(waiverRecords)
+      .set({
+        medicalClearedAt: now,
+        medicalClearedByPersonId: clearedBy,
+        medicalClearanceDocumentUrl: input.documentUrl ?? null,
+      })
+      .where(and(eq(waiverRecords.id, open.id), isNull(waiverRecords.medicalClearedAt)))
+      .returning({ id: waiverRecords.id });
+    // Lost the race with a concurrent clearance: somebody else recorded it in
+    // the same breath, which is the idempotent answer, not a failure.
+    if (!cleared) return { ok: true, recordId: open.id, alreadyCleared: true };
+    return { ok: true, recordId: cleared.id, alreadyCleared: false };
+  });
+}
+
+/**
  * Staff roster view: only the current record joins each active booking. The
  * single-trip form of `listTripsWaiverStatuses` below — one query, one rule,
  * so the two can never disagree about which record is current.

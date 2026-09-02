@@ -664,6 +664,22 @@ function WaiverLine({
           version: waiver.templateVersion ?? 0,
         })}
         {method}
+        {/* A referral a physician cleared is the only thing in this document
+            that lifts a hard readiness block, so it is stated on its own,
+            dated, and attributed — never folded into "signed" (issue #1252). */}
+        {waiver.medicalClearedAt ? (
+          <>
+            {" "}
+            {waiver.medicalClearedByName
+              ? t("incidentExport.medicalClearanceRecordedBy", {
+                  date: dateTime(waiver.medicalClearedAt),
+                  name: waiver.medicalClearedByName,
+                })
+              : t("incidentExport.medicalClearanceRecorded", {
+                  date: dateTime(waiver.medicalClearedAt),
+                })}
+          </>
+        ) : null}
       </>
     );
   }

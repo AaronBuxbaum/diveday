@@ -70,12 +70,43 @@ function signatureTime(record: WaiverRecord): number {
  * `signedAt` is the diver's real acceptance date at the prior shop, so the
  * validity window still ages it out exactly like any other signature.
  */
+/**
+ * A medical hold nobody has resolved — the thing that fails closed.
+ *
+ * The questionnaire refers a diver, the record parks in `medical_review`, and
+ * readiness refuses to board them. A physician evaluation recorded against that
+ * record (`medicalClearedAt`, issue #1252) is what ends the hold; absence of one
+ * is every other case, including the overwhelmingly common one of a record that
+ * never needed clearing. Fails closed by construction: only an explicit
+ * clearance narrows this, never the lack of a field.
+ */
+export function isUnresolvedMedicalHold(record: WaiverRecord): boolean {
+  return record.status === "medical_review" && !record.supersededAt && !record.medicalClearedAt;
+}
+
+/**
+ * A release the diver actually completed, with nothing outstanding on it.
+ *
+ * Two shapes qualify and they are the same evidence: a questionnaire that
+ * flagged nothing (`completed`), and one that flagged something a physician has
+ * since cleared. A cleared record is a signed release like any other — it
+ * carries `signedName`, `signedAt`, `completedAt` and the answers themselves;
+ * `medical_review` is where it was *parked*, not a different kind of signature.
+ * Its `status` deliberately does not move on clearance, so the row still says
+ * that this diver was once referred, and so the integrity seal over the signed
+ * evidence stays valid.
+ */
+export function isCleanCompletion(record: WaiverRecord): boolean {
+  if (record.status === "completed") return true;
+  return record.status === "medical_review" && Boolean(record.medicalClearedAt);
+}
+
 export function isCompletedWaiverCurrent(
   record: WaiverRecord,
   currentTemplateGeneration: number | null,
   now: Date = nowDate(),
 ): boolean {
-  if (record.status !== "completed") return false;
+  if (!isCleanCompletion(record)) return false;
   if (record.supersededAt) return false;
   if (
     record.signatureMethod !== "imported" &&
@@ -116,7 +147,7 @@ export function effectiveWaiverForBooking(input: {
 }): WaiverRecord | null {
   const now = input.now ?? nowDate();
   const own = input.bookingWaiver;
-  if (own?.status === "medical_review") return own;
+  if (own && isUnresolvedMedicalHold(own)) return own;
 
   const clean = [
     ...(own && isCompletedWaiverCurrent(own, input.currentTemplateVersion, now) ? [own] : []),
@@ -127,14 +158,14 @@ export function effectiveWaiverForBooking(input: {
 
   const cleanTime = clean ? signatureTime(clean) : Number.NEGATIVE_INFINITY;
   const hold = input.personSignedWaivers
-    .filter((record) => record.status === "medical_review" && !record.supersededAt)
+    .filter(isUnresolvedMedicalHold)
     .filter((record) => signatureTime(record) >= cleanTime)
     .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
   if (hold) return hold;
 
   if (clean) return clean;
 
-  return own && own.status !== "completed" ? own : null;
+  return own && !isCleanCompletion(own) ? own : null;
 }
 
 /**
@@ -185,7 +216,7 @@ export function shopWaiverStatus(input: {
 
   const cleanTime = clean ? signatureTime(clean) : Number.NEGATIVE_INFINITY;
   const hold = input.personSignedWaivers
-    .filter((record) => record.status === "medical_review" && !record.supersededAt)
+    .filter(isUnresolvedMedicalHold)
     .filter((record) => signatureTime(record) >= cleanTime)
     .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
   if (hold) return { state: "medical_review", at: new Date(signatureTime(hold)) };
@@ -202,7 +233,7 @@ export function shopWaiverStatus(input: {
   // Nothing current, but they have signed here before: "sign again", not
   // "never signed". The two send staff down very different conversations.
   const lapsed = input.personSignedWaivers
-    .filter((record) => record.status === "completed")
+    .filter(isCleanCompletion)
     .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
   if (lapsed) return { state: "expired", signedAt: new Date(signatureTime(lapsed)) };
 
@@ -220,7 +251,12 @@ export type WaiverState =
 export function waiverState(record: WaiverRecord | null, now: Date = nowDate()): WaiverState {
   if (!record) return "not_sent";
   if (record.status === "completed") return "complete";
-  if (record.status === "medical_review") return "medical_review";
+  // A cleared referral is a complete release: the diver signed, the answers
+  // were reviewed by a physician, and a staff member recorded it. The record
+  // keeps saying `medical_review` because that is what happened to it.
+  if (record.status === "medical_review") {
+    return record.medicalClearedAt ? "complete" : "medical_review";
+  }
   return record.expiresAt <= now ? "expired" : "awaiting_signature";
 }
 
@@ -230,10 +266,13 @@ export type MedicalWaiverMark = {
    * "digital" — the diver answered the medical questionnaire themselves.
    * "paper" — staff attested a reviewed paper medical (in person).
    * "imported" — trusted from the prior shop's own acceptance, never reviewed
-   * here (ADR 20260724-import-waiver-acceptance). All three are a real review
-   * dated on the same 365-day clock; the source only changes wording.
+   * here (ADR 20260724-import-waiver-acceptance). "cleared" — the questionnaire
+   * referred this diver and a physician's evaluation was recorded against that
+   * record (issue #1252); its date is the clearance, not the signature, because
+   * that is the day the fitness question was actually answered. All four are a
+   * real review dated on the same 365-day clock; the source only changes wording.
    */
-  source: "digital" | "paper" | "imported";
+  source: "digital" | "paper" | "imported" | "cleared";
 };
 
 /**
@@ -246,9 +285,13 @@ export type MedicalWaiverMark = {
  * pending or in-review record has no settled medical to show.
  */
 export function medicalWaiverMark(record: WaiverRecord | null): MedicalWaiverMark | null {
-  if (record === null || record.status !== "completed") return null;
+  if (record === null || !isCleanCompletion(record)) return null;
   const at = record.signedAt ?? record.completedAt;
   if (!at) return null;
+  // A referral a physician cleared is the strongest medical evidence a shop
+  // ever holds, and staff reading the record need to see that it is not an
+  // ordinary self-declaration — so it is its own source rather than "digital".
+  if (record.medicalClearedAt) return { at: record.medicalClearedAt, source: "cleared" };
   if (record.signatureMethod === "imported") return { at, source: "imported" };
   if (record.medicalAnswers) return { at, source: "digital" };
   if (record.signatureMethod === "in_person_attested") return { at, source: "paper" };

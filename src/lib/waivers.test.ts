@@ -386,3 +386,111 @@ describe("shop-level waiver standing", () => {
     expect(status([hold]).state).toBe("none");
   });
 });
+
+/**
+ * **A physician clearance ends a medical hold** (issue #1252).
+ *
+ * The questionnaire refers a diver, the release parks in `medical_review`, and
+ * readiness refuses to board them. A clearance recorded against *that record*
+ * is the only thing that ends it — and it must end it everywhere the hold was
+ * read, or the app disagrees with itself about whether a diver may board.
+ */
+describe("physician clearance", () => {
+  const cleared = (overrides: Partial<WaiverRecord> = {}) =>
+    completedWaiver({
+      status: "medical_review",
+      medicalClearedAt: new Date(SIGN_NOW.getTime() - 30_000),
+      medicalClearedByPersonId: "staff-1",
+      ...overrides,
+    });
+
+  it("makes a cleared referral stand as a current signature", () => {
+    expect(isCompletedWaiverCurrent(cleared(), 1, SIGN_NOW)).toBe(true);
+    // ...and an uncleared one still never does.
+    expect(
+      isCompletedWaiverCurrent(completedWaiver({ status: "medical_review" }), 1, SIGN_NOW),
+    ).toBe(false);
+  });
+
+  it("still ages a cleared record out on the same 365-day clock", () => {
+    const stale = cleared({
+      signedAt: new Date(SIGN_NOW.getTime() - WAIVER_SIGNATURE_VALIDITY_MS - 1),
+      completedAt: new Date(SIGN_NOW.getTime() - WAIVER_SIGNATURE_VALIDITY_MS - 1),
+    });
+    expect(isCompletedWaiverCurrent(stale, 1, SIGN_NOW)).toBe(false);
+  });
+
+  it("still refuses a cleared record signed against superseded terms", () => {
+    expect(isCompletedWaiverCurrent(cleared(), 2, SIGN_NOW)).toBe(false);
+  });
+
+  it("reads the record as complete rather than held", () => {
+    expect(waiverState(cleared(), SIGN_NOW)).toBe("complete");
+    expect(waiverState(completedWaiver({ status: "medical_review" }), SIGN_NOW)).toBe(
+      "medical_review",
+    );
+  });
+
+  it("stops the booking's own hold from blocking once it is cleared", () => {
+    const own = cleared({ bookingId: "booking-1" });
+    const effective = effectiveWaiverForBooking({
+      bookingWaiver: own,
+      personSignedWaivers: [own],
+      currentTemplateVersion: 1,
+      now: SIGN_NOW,
+    });
+    expect(waiverState(effective, SIGN_NOW)).toBe("complete");
+  });
+
+  it("stops a carried hold from failing a clean signature closed", () => {
+    // The rule this exercises is the sharp one: an unresolved disclosure made
+    // *after* a clean signature invalidates it. A cleared one must not.
+    const clean = completedWaiver({ id: "clean", bookingId: "booking-2" });
+    const laterCleared = cleared({
+      id: "held",
+      bookingId: "booking-3",
+      signedAt: new Date(SIGN_NOW.getTime() - 10_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 10_000),
+    });
+    const effective = effectiveWaiverForBooking({
+      bookingWaiver: null,
+      personSignedWaivers: [clean, laterCleared],
+      currentTemplateVersion: 1,
+      now: SIGN_NOW,
+    });
+    expect(waiverState(effective, SIGN_NOW)).toBe("complete");
+  });
+
+  it("leaves the shop standing current rather than in review", () => {
+    const status = shopWaiverStatus({
+      personSignedWaivers: [cleared()],
+      currentTemplateVersion: 1,
+      now: SIGN_NOW,
+    });
+    expect(status.state).toBe("current");
+  });
+
+  it("marks the medical as physician-cleared, dated by the clearance", () => {
+    const clearedAt = new Date(SIGN_NOW.getTime() - 30_000);
+    expect(medicalWaiverMark(cleared())).toEqual({ at: clearedAt, source: "cleared" });
+    // The date is the clearance, not the signature: that is the day the
+    // fitness question was actually answered.
+    expect(medicalWaiverMark(cleared())?.at).not.toEqual(completedWaiver().signedAt);
+  });
+
+  it("still shows no medical mark for a hold nobody has cleared", () => {
+    expect(medicalWaiverMark(completedWaiver({ status: "medical_review" }))).toBeNull();
+  });
+
+  it("never lets a superseded record be rescued by a clearance", () => {
+    const dead = cleared({ supersededAt: SIGN_NOW });
+    expect(isCompletedWaiverCurrent(dead, 1, SIGN_NOW)).toBe(false);
+    const effective = effectiveWaiverForBooking({
+      bookingWaiver: null,
+      personSignedWaivers: [dead],
+      currentTemplateVersion: 1,
+      now: SIGN_NOW,
+    });
+    expect(effective).toBeNull();
+  });
+});

@@ -942,3 +942,57 @@ describe("unreviewedCardState", () => {
     });
   });
 });
+
+/**
+ * The boarding gate's half of the physician-clearance change (issue #1252).
+ * `src/lib/waivers.test.ts` pins the resolution rules; this pins the only thing
+ * that matters at the rail — whether the diver may board.
+ */
+describe("physician clearance and the medical block", () => {
+  const heldNow = new Date("2026-07-24T12:00:00.000Z");
+
+  it("still blocks a referral nobody has cleared", () => {
+    const result = calculateReadiness({
+      requirement,
+      waiver: { ...signedWaiver, status: "medical_review" } as WaiverRecord,
+      certifications: [certification()],
+      now: heldNow,
+    });
+    expect(result.blockers).toContainEqual({ code: "medical_review" });
+  });
+
+  it("clears the block once a physician clearance is recorded", () => {
+    const result = calculateReadiness({
+      requirement,
+      waiver: {
+        ...signedWaiver,
+        status: "medical_review",
+        medicalClearedAt: new Date("2026-07-24T09:00:00.000Z"),
+        medicalClearedByPersonId: "staff-1",
+      } as WaiverRecord,
+      certifications: [certification()],
+      now: heldNow,
+    });
+    expect(result.blockers).not.toContainEqual({ code: "medical_review" });
+  });
+
+  it("fails closed on a half-written clearance — a date with nobody behind it is not a clearance", () => {
+    // The database refuses this pair outright
+    // (`waiver_records_medical_clearance_attributed`); the domain must not
+    // depend on that being the only thing standing between a diver and the
+    // boat, so the *absence of a date* is what the gate reads and a stray
+    // person id alone lifts nothing.
+    const result = calculateReadiness({
+      requirement,
+      waiver: {
+        ...signedWaiver,
+        status: "medical_review",
+        medicalClearedAt: null,
+        medicalClearedByPersonId: "staff-1",
+      } as WaiverRecord,
+      certifications: [certification()],
+      now: heldNow,
+    });
+    expect(result.blockers).toContainEqual({ code: "medical_review" });
+  });
+});

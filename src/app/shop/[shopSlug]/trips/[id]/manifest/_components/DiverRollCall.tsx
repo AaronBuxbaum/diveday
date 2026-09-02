@@ -182,7 +182,13 @@ function DiverFacts({
               ? t("manifest.medicalReviewedPaper")
               : diver.medicalWaiver.source === "imported"
                 ? t("manifest.medicalClearanceImported")
-                : t("manifest.medicalWaiverSigned")}
+                : diver.medicalWaiver.source === "cleared"
+                  ? // The questionnaire referred this diver and a physician
+                    // cleared them. A crew member reading the manifest at the
+                    // rail is entitled to know that, rather than seeing it
+                    // spelled the same as a self-declaration (issue #1252).
+                    t("manifest.medicalClearedByPhysician")
+                  : t("manifest.medicalWaiverSigned")}
           </span>
           <span className="mt-0.5 block text-muted">
             {formatShortDate(diver.medicalWaiver.at, locale, timezone)}

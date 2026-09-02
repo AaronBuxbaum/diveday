@@ -20,6 +20,13 @@
     "recording": "Registrando…",
     "recordPaperSignature": "Registrar firma en papel"
   },
+  "medicalClearance": {
+    "recordClearance": "Registrar la autorización médica",
+    "documentLabel": "Evaluación médica (opcional)",
+    "documentHint": "Una imagen o un PDF de la evaluación firmada. La autorización queda registrada igualmente.",
+    "recording": "Registrando…",
+    "confirm": "Un médico autorizó a este buceador"
+  },
   "waiverSend": {
     "sending": "Enviando…",
     "copied": "Copiado",

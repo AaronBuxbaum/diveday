@@ -82,6 +82,7 @@
   "hotelPickupLabel": "Recogida en el hotel",
   "medicalReviewedPaper": "Revisión médica (en papel)",
   "medicalClearanceImported": "Autorización médica importada — no revisada aquí",
+  "medicalClearedByPhysician": "Autorizado por un médico",
   "medicalWaiverSigned": "Exención médica firmada",
   "resolveBlockersLink": "Resolver bloqueos en Buceadores →",
   "addNoteSummary": "Añadir una nota",

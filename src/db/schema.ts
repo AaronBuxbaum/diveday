@@ -4577,6 +4577,51 @@ export const waiverRecords = pgTable(
     signedAt: timestamp("signed_at", { withTimezone: true }),
     medicalAnswers: jsonb("medical_answers").$type<MedicalAnswers>(),
     medicalReviewRequired: boolean("medical_review_required").notNull().default(false),
+    /**
+     * **A physician cleared this diver to dive, and a staff member recorded it.**
+     *
+     * The questionnaire refers a diver for physician evaluation and the record
+     * parks in `medical_review`, which fails closed (`src/lib/readiness.ts`).
+     * What happens next in a real shop is that the diver comes back holding a
+     * signed physician evaluation — and until this existed there was nowhere to
+     * put that. The only path that lifted the block was a paper attestation
+     * whose staff-facing words are "no answer needs physician sign-off", the
+     * opposite of what the diver is standing there with, so a staffer either
+     * attested to something untrue or left a cleared diver blocked (issue
+     * #1252).
+     *
+     * Deliberately **not** a widening of that attestation, and deliberately not
+     * implicit in a tap on "Mark ready": clearing a referral is a different act
+     * with a different evidence trail, and conflating the two would make the
+     * record unable to say which one happened.
+     *
+     * It clears *this record* and nothing else, which is what binds it to one
+     * questionnaire version: the answers that were referred are on this row
+     * (`medical_answers`), so a later disclosure signs a new record and parks
+     * again with this clearance untouched. Fails closed on absence — null is
+     * every record that has not been cleared, including every record that never
+     * needed to be.
+     *
+     * Outside the integrity seal, like `superseded_at` and the delivery
+     * columns: `signedMetadata` seals the diver's signed evidence, and a
+     * clearance is a later act by the shop rather than part of what the diver
+     * agreed to. `anonymized_at` is inside the v2 seal only because erasure
+     * *destroys* sealed fields and would otherwise read as tampering.
+     */
+    medicalClearedAt: timestamp("medical_cleared_at", { withTimezone: true }),
+    /** The staff member who recorded the clearance — the accountable person, as `recorded_by_person_id` is for a paper signature. */
+    medicalClearedByPersonId: uuid("medical_cleared_by_person_id").references(() => people.id),
+    /**
+     * The physician's evaluation, re-stored through DiveDay's own image
+     * pipeline like an imported waiver document. Optional: a shop that keeps
+     * the paper in a folder still records the fact.
+     *
+     * Destroyed by `anonymizeDiver` — it is the diver's own medical document,
+     * the same class of thing as `import_source_medical_document_url`. The
+     * *fact* of the clearance survives the erasure, as the certification
+     * sighting does.
+     */
+    medicalClearanceDocumentUrl: text("medical_clearance_document_url"),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     /** HMAC over the immutable signed metadata; null means legacy/unverified. */
     integrityHash: text("integrity_hash"),
@@ -4612,6 +4657,21 @@ export const waiverRecords = pgTable(
     index("waiver_records_shop_status_idx").on(table.shopId, table.status),
     // The per-person carry-forward lookup: a diver's completed releases at a shop.
     index("waiver_records_shop_person_status_idx").on(table.shopId, table.personId, table.status),
+    // A clearance without an accountable staff member is not a record of
+    // anything, and a document with no clearance is a file nobody claimed.
+    check(
+      "waiver_records_medical_clearance_attributed",
+      sql`(${table.medicalClearedAt} is null) = (${table.medicalClearedByPersonId} is null)
+        and (${table.medicalClearanceDocumentUrl} is null or ${table.medicalClearedAt} is not null)`,
+    ),
+    // Nothing to clear unless the questionnaire referred this diver. Written
+    // against `medical_review_required` rather than `status`, because that
+    // column is the fact about the answers and does not move when the record's
+    // lifecycle does.
+    check(
+      "waiver_records_medical_clearance_needs_referral",
+      sql`${table.medicalClearedAt} is null or ${table.medicalReviewRequired}`,
+    ),
   ],
 );
 
