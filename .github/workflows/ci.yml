@@ -28,19 +28,24 @@ on:
     - cron: "0 7 * * *"
 
 concurrency:
-  # Unchanged for `pull_request` and `push`, which still share one lane per ref.
-  # The nightly gets a lane of its own so it can never queue behind — or hold up
-  # — a merge to main, since `cancel-in-progress` is false for both of them and
-  # they would otherwise serialize against each other on `ci-refs/heads/main`.
-  group: ci-${{ github.event_name == 'schedule' && 'nightly' || github.ref }}
-  # Superseded PR pushes are pure waste and get cancelled. Pushes to main are
-  # not: `visual-report` is what publishes that commit's screenshot snapshot to
-  # S3, and reg-suit resolves a baseline by asking S3 for the *parent commit's*
-  # snapshot (ADR 20260729-reg-suit-visual-regression). Cancelling an in-flight
-  # main run because a second merge landed leaves that commit with no published
-  # snapshot, so the next merge's baseline lookup silently degrades to "no
-  # baseline" and reports every screenshot as new — the exact quiet failure the
-  # visual pipeline is built to avoid.
+  # One lane per ref for `pull_request`, so a superseded push cancels the run it
+  # replaced. The nightly gets a lane of its own so it can never queue behind —
+  # or hold up — a merge to main.
+  #
+  # A push to `main` gets a lane **per commit**, not per ref. `visual-report` is
+  # what publishes that commit's screenshot snapshot to S3, and reg-suit
+  # resolves a baseline by asking S3 for the *parent commit's* snapshot (ADR
+  # 20260729-reg-suit-visual-regression), so a main run must never be cancelled.
+  # `cancel-in-progress: false` was believed to guarantee that and does not:
+  # GitHub keeps the run in progress *and the newest queued one*, and cancels
+  # every other queued run in the group. Five merges in ninety seconds on
+  # 2026-09-01 (#1218–#1222, a stack landing bottom-up) left five main commits
+  # cancelled after ten seconds each; the next run keyed its baseline to a
+  # commit with no snapshot and reported 696 surfaces new, 0 compared — visual
+  # regression blind repo-wide, on a green run. A per-commit group has nothing
+  # to cancel against. The cost is that several main runs may overlap, which is
+  # what those merges were asking for anyway.
+  group: ci-${{ github.event_name == 'schedule' && 'nightly' || github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -165,6 +170,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
+      # The migrated + demo-seeded PGlite snapshots every db-backed test
+      # hydrates from (src/test/db-template.ts). Vitest's global setup builds
+      # them when its own fingerprint of `drizzle/` + `src/db/` + the frozen
+      # clock has no match on disk — initdb, 186 migrations and the seed, twice
+      # — which on a fresh runner is every shard, every run. The key here names
+      # the same inputs (a superset: it also hashes the tests under `src/db`, so
+      # a test-only change misses and rebuilds, which is harmless), and the
+      # snapshot carries its own fingerprint, so a stale restore is rebuilt
+      # rather than trusted.
+      - uses: actions/cache@v6
+        with:
+          path: node_modules/.cache/diveday
+          key: ${{ runner.os }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
       # Not `pnpm test -- ...`: pnpm/npm insert a literal `--` before forwarded
       # args when the target script is itself a bare command (`vitest run`),
       # so the underlying CLI sees `vitest run -- --reporter=dot --shard=…`
@@ -174,7 +192,10 @@ jobs:
 
   build:
     name: Build
-    if: github.event_name != 'schedule' # nightly runs `real-postgres` only
+    needs: changes
+    # Nightly runs `real-postgres` only. A change that touches no code skips the
+    # build, and with it every job that needs the build (`jobs:` above).
+    if: github.event_name != 'schedule' && needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -182,36 +203,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      # No restore-keys fallback: a prefix match would happily hand this branch
-      # another branch's `.next/cache` whenever the exact key misses (e.g. main
-      # has since diverged), and Turbopack's persistent cache does not always
-      # invalidate a compiled query string when a Drizzle table's column list
-      # changes underneath it — confirmed live on this PR, where the shared
-      # build silently generated a `gear_cents` insert that doesn't exist in
-      # this branch's schema.ts, because the fallback restored a cache entry
-      # built from a since-merged sibling PR that added that column. A clean
-      # build on a cache miss costs a few seconds; a schema-stale compiled
-      # bundle produces confusing, hard-to-diagnose failures far from their
-      # actual cause.
-      - uses: actions/cache@v6
-        with:
-          path: .next/cache
-          # No restore-keys fallback, deliberately: the key hashes the exact
-          # source tree, so a miss means the source changed since any prior
-          # cache. A prefix-only restore-keys fallback would seed Turbopack's
-          # incremental cache from a *different* source tree on every such
-          # miss — which is effectively every commit, since `src/**` rarely
-          # goes untouched between pushes — trusting Turbopack's incremental
-          # reconciliation to correctly patch an arbitrary stale starting
-          # point back to correctness. It doesn't always: this bit a PR that
-          # made unusually large, repeated next.config.ts changes within one
-          # branch (enabling then reverting cacheComponents) with a build that
-          # compiled and passed typecheck/lint but produced a broken
-          # authorize() path only reproducible against the CI-built artifact,
-          # never a from-scratch local build. A cold Turbopack compile here
-          # measures ~20-30s regardless, so the fallback wasn't buying
-          # meaningful speed for the correctness risk it carries.
-          key: ${{ runner.os }}-nextjs-e2e-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**', 'next.config.ts') }}
+      # No `.next/cache` cache step here, deliberately. There used to be one,
+      # keyed on `hashFiles('src/**')` with no restore-keys fallback, because a
+      # prefix match had once handed a branch a sibling branch's Turbopack
+      # cache and produced a compiled query against a column that did not
+      # exist in this branch's schema. An exact key over the whole source tree
+      # misses on essentially every push — `src/**` is what a push changes —
+      # so the step restored nothing and then spent five seconds uploading a
+      # fresh cache entry on every build, into the repository's 10 GB cache
+      # quota, evicting the pnpm store and browser caches that every other job
+      # does hit. A cold Turbopack compile measures ~70s either way (2026-08-31
+      # and 2026-09-01 main runs, both misses). Nothing to restore, nothing to
+      # save.
       # This is the only `next build` CI runs. Its output serves perf:budget below,
       # the sharded `playwright` job, and the `visual` job — all three used to pay
       # for their own separate `next build`, which cost several redundant minutes
@@ -417,7 +420,7 @@ jobs:
 
   visual-report:
     name: reg-suit visual regression
-    needs: visual
+    needs: [visual, changes]
     # `needs:` alone skips this job outright whenever any visual shard fails,
     # which is precisely when a reviewer most needs to hear that no pixel was
     # checked — and it silently defeats the `!cancelled()` on the summary step
@@ -432,7 +435,12 @@ jobs:
     # announce on every night's job summary that nothing was compared. Which
     # would be true, and pure noise, and would teach readers to ignore the one
     # sentence that matters when it is real.
-    if: ${{ !cancelled() && github.event_name != 'schedule' }}
+    #
+    # The `changes` clause is the same guard for a change that touches no code:
+    # `build` skipped, so `visual` skipped, so there is nothing to compare and
+    # no snapshot to publish — and the next code commit's baseline resolves
+    # past this one (`scripts/wait-for-baseline.mjs`).
+    if: ${{ !cancelled() && github.event_name != 'schedule' && needs.changes.outputs.code == 'true' }}
     runs-on: ubuntu-latest
     # Ten minutes for the compare itself, plus the twenty a stacked layer may
     # spend waiting for the layer below to publish the baseline it is keyed to
@@ -540,15 +548,27 @@ jobs:
       # only. So it is a poll, and three things keep it from becoming the
       # nine-hour wait loop AGENTS.md was written around: it has its own
       # deadline (20 minutes, inside this job's 35), it exits 0 on every path
-      # including that deadline, and it runs *only* for a stacked layer — the
-      # `stacked` output is false whenever the base is the default branch, and
-      # an ordinary pull request would otherwise block on a run that never
-      # exists. A layer that gives up falls through to the compare and to the
-      # summary below, which says "NOTHING WAS COMPARED" in those words.
-      - name: Wait for the layer below to publish this layer's baseline
-        if: ${{ needs.visual.result == 'success' && steps.keys.outputs.stacked == 'true' }}
+      # including that deadline, and only a stacked layer waits — `REG_STACKED`
+      # is false whenever the base is the default branch, and an ordinary pull
+      # request would otherwise block on a run that never exists.
+      #
+      # The second half of the same step runs for every event: when the
+      # expected key has no snapshot in S3 — a commit that touched no code and
+      # so published nothing, a main run that was cancelled or lost a capture
+      # shard, a layer below that gave up above — it walks that commit's
+      # first-parent ancestors and rewrites `REG_EXPECTED_KEY` to the nearest
+      # one that did publish, saying so in a warning and in the sticky comment.
+      # Comparing against a slightly older baseline reports main's own movement
+      # between the two commits as this run's; comparing against nothing
+      # reports every surface as new with `Changed: 0`, which reads as good
+      # news. Only when no ancestor within reach has a snapshot does it fall
+      # through to the compare and to the summary below, which says "NOTHING WAS
+      # COMPARED" in those words.
+      - name: Resolve a baseline that actually exists
+        if: ${{ needs.visual.result == 'success' && steps.keys.outcome == 'success' }}
         run: node scripts/wait-for-baseline.mjs
         env:
+          REG_STACKED: ${{ steps.keys.outputs.stacked }}
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
       # `steps.keys.outcome` as well as the shards: an `if:` expression replaces
       # the implicit `success()`, so without naming it this step would run after
@@ -600,6 +620,10 @@ jobs:
           # is missing (every fork PR), so it can still look for a report and
           # explain the miss rather than crash.
           REG_SUIT_S3_BUCKET_NAME: ${{ secrets.REG_SUIT_S3_BUCKET_NAME }}
+          # Written by the resolve step above when it substituted an older
+          # baseline; empty otherwise. Carried into the comment so the reviewer
+          # reading a diff knows how far back it reaches.
+          REG_BASELINE_NOTE: ${{ env.REG_BASELINE_NOTE }}
       # A snapshot missed on **main** is everyone's problem, and until now it was
       # nobody's alarm. The publish steps above are correctly gated on every
       # shard succeeding — a partial set would become the next commit's baseline
@@ -643,39 +667,62 @@ jobs:
           echo "::error title=No visual baseline published for ${GITHUB_SHA}::The visual captures did not complete, or this run could not name the key to publish them under, so this commit published no S3 snapshot. Every branch cut from it resolves 0 baselines and reports every surface as new — visual regression is blind repo-wide until this is fixed. Re-run this run's failed jobs (Actions → this run → Re-run failed jobs); a green re-run publishes the snapshot and restores comparison. Do not publish a partial capture set to work around it: the missing surfaces would then read as new permanently."
           exit 1
 
-  db-surface-changes:
-    name: Detect database-surface changes
-    # Cheap gate in front of `real-postgres`: a checkout and a `git diff`, so the
-    # ~90% of pull requests that touch no schema surface never pay for a service
-    # container. Written as a job rather than a workflow-level `paths:` filter
-    # because that filter applies to the *whole workflow* — putting one on the
-    # `pull_request` trigger would stop lint, typecheck, and every test shard
-    # from running on any PR that happens not to touch `src/db/`.
+  changes:
+    name: Detect what changed
+    # Cheap gate in front of the expensive half of the workflow: a checkout and
+    # two `git diff`s, ten seconds on a runner, answering two questions.
     #
-    # Also written as a `git diff` rather than a third-party filter action: the
-    # comparison is four lines of shell, and this repo would rather read those
-    # than take a new supply-chain dependency into every CI run to save them.
+    # `db` — did this change touch a database surface? The ~90% of pull requests
+    # that touch no schema never pay for `real-postgres`'s service container.
     #
-    # A stack's middle layer skips it, and `real-postgres` below follows on its
-    # own: a skipped dependency leaves `outputs.changed` empty, which is not
-    # `'true'` (`jobs:` above).
-    if: >-
-      github.event_name != 'schedule'
-      && (github.event.pull_request.stack == null
-      || github.event.pull_request.stack.base.ref == github.event.pull_request.base.ref
-      || github.event.pull_request.stack.position == github.event.pull_request.stack.size)
+    # `code` — did this change touch anything a browser could see? 23 of the 60
+    # main commits before 2026-09-01 changed only `docs/`, a Markdown file, or
+    # `.claude/`, and every one of them ran the build, four Playwright shards,
+    # four visual shards and a reg-suit compare — nineteen jobs, seventy-odd
+    # runner minutes, ten minutes of wall-clock — to photograph 696 surfaces
+    # that could not have moved. Worse than the waste is the queue: this
+    # workflow's nineteen jobs sit one under the account's twenty-concurrent-job
+    # cap, so a docs-only run starting ahead of a code run held the code run's
+    # jobs back for as long as it took to capture nothing. The safeguards, lint,
+    # typecheck and the unit shards still run on every change: `check:repo`
+    # reads the docs, and twenty unit files read a document they hold the code
+    # to (`docs/engineering/manual-actions.md` is *generated* by an infra test).
+    #
+    # Written as a job rather than a workflow-level `paths:` filter because that
+    # filter applies to the *whole workflow* — putting one on the `pull_request`
+    # trigger would stop lint, typecheck, and every test shard from running on
+    # any PR that happens not to touch `src/db/`. And as a `git diff` rather
+    # than a third-party filter action: the comparison is a few lines of shell,
+    # and this repo would rather read those than take a new supply-chain
+    # dependency into every CI run to save them.
+    #
+    # This job runs on every layer of a stack, deliberately, and carries no
+    # stack condition: `build` needs its `code` output and `build` must run on
+    # every layer (`jobs:` above), and a skipped dependency would skip `build`
+    # by propagation. `real-postgres` reads `middle_layer` instead, which is the
+    # same question the stack condition asks, answered here once.
+    if: github.event_name != 'schedule' # nightly runs `real-postgres` only
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read
     outputs:
-      changed: ${{ steps.filter.outputs.changed }}
+      code: ${{ steps.filter.outputs.code }}
+      db: ${{ steps.filter.outputs.db }}
+      middle_layer: ${{ steps.layer.outputs.middle_layer }}
     steps:
       - uses: actions/checkout@v7
         with:
           # The diff below reaches back to the base commit, which a depth-1
           # checkout does not contain.
           fetch-depth: 0
+      # The negation of the stack condition every skipping job carries, so the
+      # two cannot drift apart in meaning: a layer is in the middle exactly
+      # when it is stacked, not the bottom, and not the top.
+      - id: layer
+        run: echo "middle_layer=${MIDDLE}" >> "$GITHUB_OUTPUT"
+        env:
+          MIDDLE: ${{ github.event.pull_request.stack != null && github.event.pull_request.stack.base.ref != github.event.pull_request.base.ref && github.event.pull_request.stack.position != github.event.pull_request.stack.size }}
       - id: filter
         env:
           # `base.sha` on a pull_request, `before` on a push to main.
@@ -683,44 +730,62 @@ jobs:
         run: |
           set -euo pipefail
           # Fail *open*, always. Every path out of this script that cannot answer
-          # the question confidently answers "changed", because the cost of a
-          # false positive is two minutes of runner time and the cost of a false
-          # negative is an unrehearsed migration reaching production — which is
-          # the entire problem this job exists to solve. A force-push and a
-          # branch's first push both leave `before` as all-zeros, and neither is
-          # a reason to stop checking.
+          # a question confidently answers "changed", because the cost of a
+          # false positive is some runner time and the cost of a false negative
+          # is an unrehearsed migration reaching production, or a surface that
+          # moved with nobody looking. A force-push and a branch's first push
+          # both leave `before` as all-zeros, and neither is a reason to stop
+          # checking.
           if ! git rev-parse --verify -q "${BASE_SHA}^{commit}" > /dev/null 2>&1; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "Base commit '${BASE_SHA}' is unresolvable — running real-postgres anyway." >> "$GITHUB_STEP_SUMMARY"
+            echo "db=true" >> "$GITHUB_OUTPUT"
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "Base commit '${BASE_SHA}' is unresolvable — running everything." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
           # Three-dot: what this branch changed, not what main did underneath it.
           # `src/db` covers both the schema and the `*.postgres.test.ts` suites;
           # the last two are the harness itself, so a change to how the proof is
           # run is also a reason to re-run it.
-          changed_paths=$(git diff --name-only "${BASE_SHA}...HEAD" -- \
+          db_paths=$(git diff --name-only "${BASE_SHA}...HEAD" -- \
             src/db drizzle src/test/postgres.ts scripts/previous-release-migrations.mjs \
             .github/workflows/ci.yml)
-          if [ -n "${changed_paths}" ]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
+          if [ -n "${db_paths}" ]; then
+            echo "db=true" >> "$GITHUB_OUTPUT"
             {
               echo "Database surface touched — running real-postgres:"
               echo '```'
-              echo "${changed_paths}"
+              echo "${db_paths}"
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "db=false" >> "$GITHUB_OUTPUT"
             echo "No database-surface changes — real-postgres skipped (it still runs nightly)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # Everything *except* the paths nothing built, rendered or served
+          # reads: `docs/`, any Markdown file anywhere, and the Claude
+          # playbooks (checked 2026-09-01: no `src/`, `public/`, `next.config`
+          # or build script opens a `docs/` path; the unit tests that do still
+          # run). The list is an allowlist of what to ignore, so a new kind of
+          # file is code until someone says otherwise.
+          code_paths=$(git diff --name-only "${BASE_SHA}...HEAD" -- . \
+            ':(exclude)docs/**' ':(exclude)**/*.md' ':(exclude).claude/**' ':(exclude)LICENSE')
+          if [ -n "${code_paths}" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+            echo "Only docs, Markdown or \`.claude/\` changed — the build, the Playwright and visual shards and the reg-suit compare are skipped. The safeguards, lint, typecheck and the unit shards still ran. The next code commit's visual baseline resolves past this one (scripts/wait-for-baseline.mjs)." >> "$GITHUB_STEP_SUMMARY"
           fi
 
   real-postgres:
     name: Real Postgres (migrations + concurrency)
-    needs: db-surface-changes
+    needs: changes
     # Two independent reasons to run, and the `always()` is what lets the second
     # one work: `needs:` on a skipped job would otherwise skip this one too, and
-    # `db-surface-changes` is deliberately skipped on the nightly.
-    if: ${{ always() && (needs.db-surface-changes.outputs.changed == 'true' || github.event_name == 'schedule') }}
+    # `changes` is deliberately skipped on the nightly. A stack's middle layer
+    # skips this job like every other expensive one (`jobs:` above), and since
+    # `changes` runs on every layer, that decision is read from its output
+    # rather than from a skipped dependency.
+    if: ${{ always() && (github.event_name == 'schedule' || (needs.changes.outputs.db == 'true' && needs.changes.outputs.middle_layer != 'true')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

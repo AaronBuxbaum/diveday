@@ -558,7 +558,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
         {/* Safe-to-leave, said where the objection actually peaks. It is one
             third of the positioning spine and the named counter to "you're new
             and unproven" (docs/product/marketing.md), and until now `/product`
-            only implied it — one line inside a 44-entry reference list. The
+            only implied it — one line inside a reference list of ninety-odd. The
             terms come from the shared `fullShopExport` claim rather than a
             second wording of it, so this page and the pricing FAQ can never
             drift apart. */}

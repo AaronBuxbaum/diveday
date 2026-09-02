@@ -59,17 +59,20 @@ export const SKIPS_A_MIDDLE_LAYER = [
   "typecheck",
   "unit-tests",
   "playwright",
-  "db-surface-changes",
 ];
 
 /** Jobs that run on every layer, and the reason each one has to. */
 export const RUNS_ON_EVERY_LAYER = new Map([
+  [
+    "changes",
+    "`build` needs its `code` output and `build` runs on every layer; a skipped dependency would skip `build` by propagation. It answers the stack question itself, as `middle_layer`",
+  ],
   ["build", "`visual` needs it, and the visual path runs on every layer"],
   ["visual", "the layer above is keyed to this layer's published snapshot"],
   ["visual-report", "publishes the snapshot the layer above waits for"],
   [
     "real-postgres",
-    "follows `db-surface-changes`: a skipped dependency leaves `outputs.changed` empty, which is not `'true'`",
+    "reads `needs.changes.outputs.middle_layer` — the same question the condition asks, answered once in `changes` — because its dependency runs on every layer and cannot skip it by propagation",
   ],
 ]);
 

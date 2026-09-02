@@ -328,6 +328,27 @@ its doc comment, and a test pins the rule (never a pixel snapshot).
 - **13f–13i** — Reef's moments: the drawn site mark, the water closing over finished work, the count that fills, the diver's day as a postcard.
 - **13j** — the night palette, drawn and applied.
 
+### 14. Gaps against the field (each needs an owner's nod)
+
+The 2026-09-01 whole-field comparison
+([competitive-landscape-20260901.md](../assessments/competitive-landscape-20260901.md)) found
+DiveDay complete on every table-stakes row of a 32-product feature table and ahead on the rare
+ones; the seven rows it lacks that are not deliberate non-goals are filed as `needs-triage` issues
+under parent #1248, unsequenced until an owner ranks them:
+
+- **Prepaid air-fill cards** as package-style entitlements (#1234) — the feature owners keep
+  paying the retail incumbents for; a commercial count, not the fill log H-11 declines.
+- **Instructor self-service** — pros request the classes they can teach, keep blackout dates,
+  the owner approves in one tap (#1235). DiveCrewPro's whole product.
+- **A QR self-registration door before a booking exists** (#1236) — ScubaHub's 0% → 90–95%
+  pre-arrival onboarding number.
+- **Hotel and agent rate cards** (#1237) — an owner question first: 11 of 32 products have it,
+  all resort-market.
+- **PADI Adventures as a coexist channel guide** (#1238) — gated on a verified export path.
+- **The agency rail as a partnership question** (#1239) — H-10 dropped the API; nobody has
+  scheduled the conversation.
+- **Merging two person records** (#1240) — the switching complaint nobody answers.
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)

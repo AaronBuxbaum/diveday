@@ -88,9 +88,11 @@ hydrating is a few hundred milliseconds. Two rules keep this sound:
 - Don't call `createTestDb()` + `seedDemo()` directly in tests — that's the slow path the helper
   exists to avoid. (`createTestDb()` alone is fine for the rare test that wants an *unseeded* db.)
 
-The snapshot is keyed on a content hash of `drizzle/` and `src/db/` and expires after 10 minutes,
-because the demo seed is clock-anchored (one trip always sails *today*); staleness cannot outlive
-the shortest seeded future departure.
+The snapshot is keyed on a content hash of `drizzle/`, `src/db/` and the frozen test clock, and
+never expires: the demo seed is clock-anchored (one trip always sails *today*), but it reads time
+only through the frozen `DIVEDAY_CLOCK`, so rebuilding it tomorrow produces the same bytes. CI
+restores `node_modules/.cache/diveday/` from `actions/cache` under the same inputs, so a unit shard
+only rebuilds the two snapshots (initdb, every migration, the seed — twice) when one of them moved.
 
 Vitest defaults to the `node` environment. A test that exercises browser APIs (DOM rendering,
 IndexedDB, `navigator`) opts in with a `// @vitest-environment jsdom` docblock on line 1.

@@ -9,7 +9,10 @@
 > platforms. An assessment, not a commitment; items that survive review move to
 > [roadmap.md](../features/roadmap.md). For the operator's view of the two most dangerous named rivals —
 > verified company profiles, head-to-head axes, and the data-portability wedge — see
-> [competitive-strategy.md](competitive-strategy.md) (2026-07-22).
+> [competitive-strategy.md](competitive-strategy.md) (2026-07-22). **The market table below is
+> superseded** by [competitive-landscape-20260901.md](competitive-landscape-20260901.md), which
+> re-verifies both incumbents, adds the 2026 newcomers and a 32-product feature-frequency table,
+> and files the remaining gaps as issues; the reasoning here still stands.
 
 ## The market in one table
 
