@@ -12,6 +12,7 @@ import { CompactDisclosureRow } from "@/components/ui/disclosure";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { listShopStaff, type StaffMember } from "@/db/staff-accounts";
 import { languageNameIn } from "@/i18n/language-labels";
@@ -608,7 +609,7 @@ export default async function TeamSettingsPage({
           {/* Not a card — a heading over a list of them. It wears the same
               heading spelling `SectionCard` uses so the two sections on this
               page read at one level. */}
-          <h2 className="text-lg font-semibold">{t("settings.team.current.heading")}</h2>
+          <h2 className={SECTION_TITLE_CLASS}>{t("settings.team.current.heading")}</h2>
           <p className="mt-1 max-w-2xl text-sm text-muted">
             {t("settings.team.current.description")}
           </p>

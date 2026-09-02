@@ -1,4 +1,5 @@
 import { StarRating } from "@/components/StarRating";
+import { PAGE_TITLE_CLASS } from "@/components/ui/typography";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { BrandBadgeCode } from "@/lib/brand";
 import {
@@ -80,7 +81,7 @@ export function ShopfrontHero({
           {/* Paper on a scrim of ink, whatever the photograph: legibility does
               not depend on the shop choosing a dark picture. */}
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-device-frame/85 via-device-frame/45 to-transparent px-5 pt-16 pb-5 text-surface sm:px-8 sm:pb-7">
-            <h1 className="font-brand-display text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+            <h1 className={`font-brand-display ${PAGE_TITLE_CLASS} text-balance sm:text-5xl`}>
               {name}
             </h1>
             {tagline ? <p className="mt-2 max-w-2xl text-lg text-pretty">{tagline}</p> : null}
@@ -88,7 +89,7 @@ export function ShopfrontHero({
         </div>
       ) : (
         <>
-          <h1 className="font-brand-display text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+          <h1 className={`font-brand-display ${PAGE_TITLE_CLASS} text-balance sm:text-5xl`}>
             {name}
           </h1>
           {tagline ? <p className="mt-3 max-w-2xl text-lg text-pretty">{tagline}</p> : null}

@@ -10,7 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, FormStatus } from "@/components/ui/form";
-import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
+import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import type { RecapPageData, RecapPhotoView, RecapSite } from "@/db/recap";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
@@ -537,7 +537,7 @@ function DiveRecord({
       className="mt-8 rounded-panel border border-border bg-surface shadow-bed p-5 sm:p-6 print:mt-0 print:rounded-none print:border-0 print:p-0"
     >
       <div className="flex items-start justify-between gap-4">
-        <h2 id="dive-record-heading" className="text-lg font-semibold tracking-tight">
+        <h2 id="dive-record-heading" className={SECTION_TITLE_CLASS}>
           {t("recap.logbookHeading")}
         </h2>
         {stampText ? (

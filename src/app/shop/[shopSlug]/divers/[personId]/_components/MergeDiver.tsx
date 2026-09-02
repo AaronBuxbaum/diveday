@@ -1,6 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DiverMergeCandidate } from "@/db/diver-merge";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { mergeDiverAction } from "../actions";
@@ -48,7 +49,7 @@ export function MergeDiver({
        and a tint under a box that only appears when something is wrong is the
        same fact twice. */
     <section id="merge" aria-labelledby="merge-heading" className={sectionCardClass()}>
-      <h2 id="merge-heading" className="text-lg font-semibold">
+      <h2 id="merge-heading" className={SECTION_TITLE_CLASS}>
         {t("divers.merge.heading")}
       </h2>
       <p className="mt-1 max-w-2xl text-sm text-muted">{t("divers.merge.description")}</p>

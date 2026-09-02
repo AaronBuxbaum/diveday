@@ -1,3 +1,4 @@
+import { FIGURE_CLASS } from "@/components/ui/typography";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 
 /**
@@ -71,7 +72,9 @@ export function HeadCount({
         />
         {/* The figure sits over the water, not in it: the number is the fact
             and the water is its shape (principle 9). */}
-        <span className="absolute inset-0 flex items-center justify-center text-2xl leading-none font-bold tabular-nums">
+        <span
+          className={`absolute inset-0 flex items-center justify-center ${FIGURE_CLASS} leading-none`}
+        >
           {aboard}
         </span>
       </div>

@@ -36,6 +36,7 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { SettledCheck } from "@/components/ui/SettledCheck";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import {
   resolveRevokedBookingCapability,
   staleBookingCapabilityForToken,
@@ -767,7 +768,7 @@ function ShopCard({
         />
       ) : null}
       <div className="p-5 sm:p-6">
-        <h2 className="text-lg font-semibold">{t("ready.shopHeading")}</h2>
+        <h2 className={SECTION_TITLE_CLASS}>{t("ready.shopHeading")}</h2>
         <p className="mt-2 text-base font-medium">{name}</p>
         {lines.length > 0 ? (
           <address className="mt-1 text-base text-muted not-italic">
@@ -1869,7 +1870,7 @@ export default async function DiverReadinessPage({
                 moments are booked, paperwork done, and welcome home, and
                 "your boat is today" is none of them. */}
             {diveDay ? (
-              <p className="mt-2 text-lg font-semibold">{t("thread.diveDayLine")}</p>
+              <p className={`mt-2 ${SECTION_TITLE_CLASS}`}>{t("thread.diveDayLine")}</p>
             ) : null}
             {/* The one number that matters on the morning of the trip — a
                 shade stronger than the meta line above it, never shouting.

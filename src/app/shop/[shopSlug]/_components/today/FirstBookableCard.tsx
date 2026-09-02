@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Copyable } from "@/components/Copyable";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 
 export type FirstBookableCardCopy = {
   heading: string;
@@ -37,7 +38,7 @@ export function FirstBookableCard({
       aria-labelledby="first-bookable-heading"
       className="mb-6 rounded-2xl border border-success/30 bg-success/5 p-5 sm:p-6"
     >
-      <h2 id="first-bookable-heading" className="text-lg font-semibold">
+      <h2 id="first-bookable-heading" className={SECTION_TITLE_CLASS}>
         {copy.heading}
       </h2>
       <p className="mt-1 text-sm text-muted">{copy.body}</p>

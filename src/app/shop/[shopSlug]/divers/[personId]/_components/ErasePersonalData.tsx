@@ -2,6 +2,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field } from "@/components/ui/form";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { erasePersonAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
@@ -43,7 +44,7 @@ export function ErasePersonalData({
   const t = staffTranslator(locale);
   return (
     <section className="mt-8 border-t border-danger/30 pt-8" aria-labelledby="erase-heading">
-      <h2 id="erase-heading" className="scroll-mt-24 text-lg font-semibold text-danger">
+      <h2 id="erase-heading" className={`scroll-mt-24 ${SECTION_TITLE_CLASS} text-danger`}>
         {t("divers.erase.heading")}
       </h2>
       <p className="mt-1 max-w-2xl text-sm text-muted">{t("divers.erase.description")}</p>

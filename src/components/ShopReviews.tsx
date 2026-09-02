@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { StarRating } from "@/components/StarRating";
 import { LedgerRow } from "@/components/ui/ledger";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { PublicReview } from "@/db/reviews";
 import type { DiverTranslator } from "@/i18n/messages";
 import { formatShortDate } from "@/lib/format";
@@ -49,7 +50,7 @@ export function ShopReviews({
   return (
     <section aria-labelledby="shop-reviews" className={className || undefined}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id="shop-reviews" className="text-lg font-semibold tracking-tight">
+        <h2 id="shop-reviews" className={SECTION_TITLE_CLASS}>
           {t("reviews.sectionTitle")}
         </h2>
         <Link

@@ -2,7 +2,7 @@
   "note": "Words of agent context every session loads before reading any code. A ratchet: a count may never rise, and a fall is banked with `node scripts/check-context-budget.mjs --write`. See the module comment in scripts/check-context-budget.mjs.",
   "budgets": {
     "CLAUDE.md": 49,
-    "AGENTS.md": 11148,
+    "AGENTS.md": 11188,
     ".claude/skills/*/SKILL.md (description lines)": 723,
     ".claude/agents/*.md (description lines)": 130
   },
@@ -17,6 +17,12 @@
       "why": "the dive-site briefing row now names both halves — which form writes each column and which beat reads it — after slice 7c deleted the reader and left eight authored columns reaching no diver",
       "files": {
         "AGENTS.md": "11143 -> 11166"
+      }
+    },
+    {
+      "why": "a new check:repo guard needs a row in the command table (check:type-ramp, #1229)",
+      "files": {
+        "AGENTS.md": "11148 -> 11188"
       }
     }
   ]

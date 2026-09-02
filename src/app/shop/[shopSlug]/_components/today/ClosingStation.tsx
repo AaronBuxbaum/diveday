@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import { SettledCheck } from "@/components/ui/SettledCheck";
+import { FIGURE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { CLOSEOUT_STATUS_KEYS, closeoutDepartureDetailText } from "@/i18n/closeout-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { openRollCallActionText } from "@/i18n/today-labels";
@@ -85,7 +86,7 @@ export function ClosingStation({
             a gap where a boat used to be. */}
         <time
           dateTime={close.startsAt.toISOString()}
-          className="block text-2xl leading-none font-bold tracking-tight tabular-nums"
+          className={`block ${FIGURE_CLASS} leading-none tracking-tight`}
         >
           {formatTime(close.startsAt, locale, timeZone)}
         </time>
@@ -99,7 +100,7 @@ export function ClosingStation({
         <span className="absolute top-1.5 start-1/2 size-3 -translate-x-1/2 rounded-full border-2 border-border bg-surface" />
       </div>
       <div className="pb-10">
-        <h3 className="text-lg font-semibold tracking-tight">
+        <h3 className={SECTION_TITLE_CLASS}>
           <Link href={`/shop/${shopSlug}/trips/${close.tripId}`} className="hover:underline">
             {close.title}
           </Link>

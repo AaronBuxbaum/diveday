@@ -1,6 +1,7 @@
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { SectionCard } from "@/components/ui/card";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripSitePeek } from "@/db/trips";
 import { diveSiteDifficultyLabel } from "@/i18n/dive-site-labels";
 import type { DiverTranslator } from "@/i18n/messages";
@@ -26,7 +27,7 @@ export function DiveSitesPeek({
   if (sites.length === 0) return null;
   return (
     <section className="mt-8">
-      <h2 className="text-lg font-semibold tracking-tight">{heading}</h2>
+      <h2 className={SECTION_TITLE_CLASS}>{heading}</h2>
       {subheading ? <p className="mt-1 text-sm text-muted">{subheading}</p> : null}
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {sites.map((site) => (

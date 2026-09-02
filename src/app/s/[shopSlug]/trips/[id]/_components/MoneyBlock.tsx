@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 
@@ -141,7 +142,7 @@ export function MoneyBlock({
         <dt className="text-sm font-medium">
           {dueNow === "checkout" ? t("money.dueNow") : t("money.dueAtShop")}
         </dt>
-        <dd className="text-lg font-semibold tabular-nums">{money(dueNowCents)}</dd>
+        <dd className={FIGURE_INLINE_CLASS}>{money(dueNowCents)}</dd>
       </div>
       {deposit !== null && balanceCents > 0 && balanceDueAt ? (
         <div className="text-sm text-muted tabular-nums">

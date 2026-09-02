@@ -9,6 +9,11 @@ import { CaptainPhoneFrame } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { groupLabelClass } from "@/components/ui/ledger";
+import {
+  BANNER_TITLE_CLASS,
+  DISPLAY_TITLE_CLASS,
+  SUB_TITLE_CLASS,
+} from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
@@ -144,7 +149,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
             <p className="text-sm font-semibold tracking-widest text-primary uppercase">
               {t("marketing.about.eyebrow")}
             </p>
-            <h1 className="mt-5 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-5xl lg:text-6xl">
+            <h1 className={`mt-5 ${DISPLAY_TITLE_CLASS} sm:text-5xl lg:text-6xl`}>
               {t("marketing.about.heroTitle")}
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-muted sm:text-xl">
@@ -167,7 +172,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
           <p className="text-sm font-semibold tracking-widest text-primary uppercase">
             {t("marketing.about.rulesEyebrow")}
           </p>
-          <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+          <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
             {t("marketing.about.rulesTitle")}
           </h2>
           <p className="mt-4 text-lg leading-8 text-muted">
@@ -185,7 +190,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
         <div className="mt-12 grid gap-5 sm:grid-cols-2">
           {operatingRules.map((rule) => (
             <SectionCard as="article" key={rule.title} padding="lg">
-              <h3 className="text-xl font-semibold tracking-tight">{rule.title}</h3>
+              <h3 className={SUB_TITLE_CLASS}>{rule.title}</h3>
               <p className="mt-3 leading-7 text-muted">{rule.body}</p>
               <p className="mt-3 text-sm leading-6 text-muted">
                 <span className="font-semibold text-primary">
@@ -231,7 +236,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
               <p className="text-sm font-semibold tracking-widest text-primary uppercase">
                 {t("marketing.about.founderEyebrow")}
               </p>
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+              <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.about.founderTitle")}
               </h2>
             </div>
@@ -249,7 +254,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
           <p className="text-sm font-semibold tracking-widest text-primary uppercase">
             {t("marketing.about.runEyebrow")}
           </p>
-          <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+          <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
             {t("marketing.about.runTitle")}
           </h2>
           <p className="mt-5 text-lg leading-8 text-muted">{t("marketing.about.runP1")}</p>
@@ -313,7 +318,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
             <p className="text-sm font-semibold tracking-widest text-primary uppercase">
               {t("marketing.about.plainlyEyebrow")}
             </p>
-            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+            <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.about.plainlyTitle")}
             </h2>
             <p className="mt-4 text-lg leading-8 text-muted">
@@ -343,7 +348,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
                 key={truth.title}
                 className="rounded-2xl border border-border bg-background p-5 sm:p-6"
               >
-                <h3 className="text-xl font-semibold tracking-tight">{truth.title}</h3>
+                <h3 className={SUB_TITLE_CLASS}>{truth.title}</h3>
                 <p className="mt-3 leading-7 text-muted">{truth.body}</p>
               </article>
             ))}
@@ -358,7 +363,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
               <p className="text-sm font-semibold tracking-widest text-primary uppercase">
                 {t("marketing.about.leaveEyebrow")}
               </p>
-              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+              <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
                 {t("marketing.about.leaveTitle")}
               </h2>
               <p className="mt-5 text-lg leading-8 text-muted">{t("marketing.about.leaveP1")}</p>
@@ -409,7 +414,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
       </section>
 
       <section className="mx-auto w-full max-w-7xl px-6 py-20 text-center lg:py-28">
-        <h2 className="mx-auto max-w-3xl text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+        <h2 className={`mx-auto max-w-3xl ${BANNER_TITLE_CLASS} sm:text-4xl`}>
           {t("marketing.about.closingTitle")}
         </h2>
         <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">

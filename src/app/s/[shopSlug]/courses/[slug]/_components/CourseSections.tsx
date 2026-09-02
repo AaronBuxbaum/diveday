@@ -5,6 +5,12 @@ import { StoredPhoto } from "@/components/StoredPhoto";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { groupLabelClass } from "@/components/ui/ledger";
+import {
+  FIGURE_CLASS,
+  LEAD_TITLE_CLASS,
+  SECTION_TITLE_CLASS,
+  SUB_TITLE_CLASS,
+} from "@/components/ui/typography";
 import type { Course } from "@/db/schema";
 import type { DiverTranslator } from "@/i18n/messages";
 import {
@@ -101,7 +107,7 @@ export function CourseHero({
         />
         <div className="mt-4 flex flex-wrap items-center gap-4">
           {totalCents === null ? null : (
-            <p className="text-2xl font-semibold tabular-nums">
+            <p className={FIGURE_CLASS}>
               {money.format(minorToMajor(totalCents, currency))}
               <span className="ml-2 text-sm font-normal text-muted">{t("common.perDiver")}</span>
             </p>
@@ -182,7 +188,7 @@ export function CourseOverview({ overview, t }: { overview: string | null; t: Di
   if (!overview?.trim()) return null;
   return (
     <section id="about" aria-labelledby="about-heading" className="mt-12 max-w-2xl scroll-mt-8">
-      <h2 id="about-heading" className="text-2xl font-semibold tracking-tight">
+      <h2 id="about-heading" className={LEAD_TITLE_CLASS}>
         {t("course.aboutHeading")}
       </h2>
       {overview
@@ -217,7 +223,7 @@ export function CourseSchedule({
   if (days.length === 0) return null;
   return (
     <section id="how-it-runs" className="mt-14 scroll-mt-8">
-      <h2 className="text-2xl font-semibold tracking-tight">{t("course.howItRunsHeading")}</h2>
+      <h2 className={LEAD_TITLE_CLASS}>{t("course.howItRunsHeading")}</h2>
       {/* The rail lives on a wrapper div, not inside the <ol> — an ol may
           contain only li children, and a decorative span in there is invalid
           HTML even when browsers tolerate it. Dots are hollow (surface-filled)
@@ -235,7 +241,7 @@ export function CourseSchedule({
                   className="absolute top-1.5 left-0 size-[11px] rounded-full border-2 border-primary bg-surface"
                 />
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <h3 className="text-lg font-semibold">{day.title}</h3>
+                  <h3 className={SECTION_TITLE_CLASS}>{day.title}</h3>
                   {time ? <p className="text-sm tabular-nums text-muted">{time}</p> : null}
                 </div>
                 {day.items.length > 0 ? (
@@ -266,7 +272,7 @@ export function CourseIncludes({
   if (includes.length === 0 && excludes.length === 0) return null;
   return (
     <section id="included" className="mt-14 scroll-mt-8">
-      <h2 className="text-2xl font-semibold tracking-tight">{t("course.feeCovers")}</h2>
+      <h2 className={LEAD_TITLE_CLASS}>{t("course.feeCovers")}</h2>
       {/* Two quiet columns, no boxes — the ✓ and – glyphs carry the split, and
           the muted ink on the right keeps "not included" from competing with
           what the diver is actually buying. */}
@@ -412,7 +418,7 @@ export function CourseSessions({
   return (
     <section id="dates" className="mt-14 scroll-mt-8">
       <div className="rounded-3xl border border-primary/15 bg-primary/5 p-6 sm:p-8">
-        <h2 className="text-2xl font-semibold tracking-tight">{t("course.datesHeading")}</h2>
+        <h2 className={LEAD_TITLE_CLASS}>{t("course.datesHeading")}</h2>
         {!next ? (
           <p className="mt-4 max-w-2xl text-muted">
             {t("course.noDatesLead")}{" "}
@@ -445,7 +451,7 @@ export function CourseSessions({
                     <p className={groupLabelClass("primary")}>
                       {nextIsSoonest ? t("course.nextDate") : t("course.nextOpenDate")}
                     </p>
-                    <p className="mt-1 text-xl font-semibold">{facts.dates}</p>
+                    <p className={`mt-1 ${SUB_TITLE_CLASS}`}>{facts.dates}</p>
                     <p className="mt-1 text-sm text-muted">
                       {facts.time} · {facts.capacity}
                     </p>
@@ -515,7 +521,7 @@ export function CourseFaqs({ faqs, t }: { faqs: CourseFaq[]; t: DiverTranslator 
   if (faqs.length === 0) return null;
   return (
     <section id="faqs" className="mt-14 max-w-3xl scroll-mt-8">
-      <h2 className="text-2xl font-semibold tracking-tight">{t("course.faqsHeading")}</h2>
+      <h2 className={LEAD_TITLE_CLASS}>{t("course.faqsHeading")}</h2>
       {/* Quiet disclosures on hairlines — a question list is a list, not a
           stack of cards; the borders that survive are the ones that separate. */}
       <div className="mt-4 divide-y divide-border border-y border-border">

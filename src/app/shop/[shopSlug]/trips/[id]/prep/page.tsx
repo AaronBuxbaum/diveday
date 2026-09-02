@@ -11,6 +11,7 @@ import { SectionCard, sectionCardClass } from "@/components/ui/card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
+import { FIGURE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { getTripPrep } from "@/db/trips-prep";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { diveRecencyText } from "@/i18n/readiness-labels";
@@ -253,7 +254,7 @@ export default async function TripPrepPage({
       ) : (
         <>
           <section aria-labelledby="tanks-heading">
-            <h2 id="tanks-heading" className="text-lg font-semibold">
+            <h2 id="tanks-heading" className={SECTION_TITLE_CLASS}>
               {t("trips.prep.tanksHeading")}
             </h2>
             {/* **Three tiles on a screen; one line on paper.** The tiles are
@@ -303,7 +304,7 @@ export default async function TripPrepPage({
               // only the border and fill say which of them is a problem.
               className="mt-6 rounded-2xl border border-warning/40 bg-warning/10 p-4 sm:p-5"
             >
-              <h2 id="nitrox-blocked-heading" className="text-lg font-semibold">
+              <h2 id="nitrox-blocked-heading" className={SECTION_TITLE_CLASS}>
                 {t("trips.prep.nitroxBlockedHeading")}
               </h2>
               <p className="mt-1 text-sm">{t("trips.prep.nitroxBlockedDescription")}</p>
@@ -391,7 +392,7 @@ export default async function TripPrepPage({
               aria-labelledby="staff-fit-heading"
               className="mt-6 rounded-2xl border border-warning/40 bg-warning/5 p-4 sm:p-5"
             >
-              <h2 id="staff-fit-heading" className="text-lg font-semibold">
+              <h2 id="staff-fit-heading" className={SECTION_TITLE_CLASS}>
                 {t("trips.prep.staffFitHeading")}
               </h2>
               <p className="mt-1 text-sm text-muted">{t("trips.prep.staffFitDescription")}</p>
@@ -504,7 +505,7 @@ export default async function TripPrepPage({
           {hotelPickups.length > 0 ? (
             <section aria-labelledby="hotel-pickups-heading" className="mt-8">
               <div className="flex items-center justify-between gap-2">
-                <h2 id="hotel-pickups-heading" className="text-lg font-semibold">
+                <h2 id="hotel-pickups-heading" className={SECTION_TITLE_CLASS}>
                   {t("trips.prep.hotelPickupsHeading")}
                 </h2>
                 <span className="text-sm text-muted">
@@ -555,7 +556,7 @@ export default async function TripPrepPage({
 
           <section aria-labelledby="kit-heading" className="mt-8">
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-              <h2 id="kit-heading" className="text-lg font-semibold">
+              <h2 id="kit-heading" className={SECTION_TITLE_CLASS}>
                 {t("trips.prep.rentalKitHeading")}
               </h2>
               {/* A state toggle, not two buttons: one list, two ways of
@@ -637,7 +638,7 @@ export default async function TripPrepPage({
                     >
                       <div className="flex items-start justify-between gap-3">
                         <p className="font-semibold">{rentalItemLabel(t, line.kind)}</p>
-                        <p className="shrink-0 text-2xl font-semibold tabular-nums">
+                        <p className={`shrink-0 ${FIGURE_CLASS}`}>
                           <span className="sr-only">{t("trips.prep.qtyColumn")} </span>
                           {line.count}
                         </p>
@@ -705,7 +706,7 @@ export default async function TripPrepPage({
                           </p>
                           {diveRecencyLine(line.lastDivedBand)}
                         </div>
-                        <p className="shrink-0 text-2xl font-semibold tabular-nums">
+                        <p className={`shrink-0 ${FIGURE_CLASS}`}>
                           <span className="sr-only">{t("trips.prep.qtyColumn")} </span>
                           {line.items.length}
                         </p>
@@ -768,7 +769,7 @@ export default async function TripPrepPage({
               // it drops out of the packet entirely until a unit is on it.
               className={`mt-8${assignmentRows.some((row) => row.assigned.length > 0) ? "" : " print:hidden"}`}
             >
-              <h2 id="assignments-heading" className="text-lg font-semibold">
+              <h2 id="assignments-heading" className={SECTION_TITLE_CLASS}>
                 {t("gear.prep.heading")}
               </h2>
               <p className="mt-1 text-sm text-muted print:hidden">{t("gear.prep.description")}</p>

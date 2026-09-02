@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { groupLabelClass } from "@/components/ui/ledger";
+import { FIGURE_LARGE_CLASS } from "@/components/ui/typography";
 
 /**
  * **The month's five figures, unboxed** — ADR 20260827-the-shops-shelves,
@@ -118,9 +119,7 @@ export function MonthFigures({
                   carrying it for everything inside — the lines beneath are a
                   different size, and inheriting one to override it three times
                   is how a ramp drifts. */}
-              <span className="block text-3xl font-semibold tracking-tight tabular-nums">
-                {figure.value}
-              </span>
+              <span className={`block ${FIGURE_LARGE_CLASS}`}>{figure.value}</span>
               {figure.earned ? (
                 <EarnedMomentLine animate={false} className="mt-2">
                   {figure.earned}

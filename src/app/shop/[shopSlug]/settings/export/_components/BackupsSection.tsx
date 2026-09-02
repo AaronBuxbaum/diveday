@@ -6,6 +6,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { Table, TBody, Td, THead, Th } from "@/components/ui/table";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { ShopBackupDelivery } from "@/db/schema";
 import type { getShopBackupDestination, listBackupDeliveries } from "@/features/backup-export";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
@@ -88,7 +89,7 @@ export function BackupsSection({
     // No `mt-*`: the page stacks its two halves in `space-y-10`, and a card
     // carries no outer margin (docs/design/forms-and-controls.md).
     <section id="backups" className="scroll-mt-8">
-      <h2 className="text-lg font-semibold">{t("backup.title")}</h2>
+      <h2 className={SECTION_TITLE_CLASS}>{t("backup.title")}</h2>
       <p className="mt-1 max-w-2xl text-sm text-muted">{t("backup.description")}</p>
 
       {/* The cards under this group are a stack within one section, not a run

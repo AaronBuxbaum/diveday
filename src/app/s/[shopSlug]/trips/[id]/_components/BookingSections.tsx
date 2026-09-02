@@ -10,6 +10,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
+import { LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import type { PassThroughFee } from "@/lib/pass-through-fee";
@@ -62,7 +63,7 @@ export function WaitlistConfirmation({
     // same sunken material as the full-boat state it came from: a place in
     // line, not a seat on the boat. Only a real confirmed booking gets coral.
     <section className="rise-in mt-10 rounded-2xl bg-surface-sunken p-6">
-      <h2 className="text-lg font-semibold text-balance">
+      <h2 className={`${SECTION_TITLE_CLASS} text-balance`}>
         {t("booking.waitlistConfirmedHeading", { name: firstName })}
       </h2>
       <p className="mt-2 text-muted">{t("booking.waitlistConfirmedBody")}</p>
@@ -84,7 +85,7 @@ export function TripSailedNotice({ shopSlug, embed }: { shopSlug: string; embed?
     // with no action gets no frame (design/principles.md #10, remove until it
     // breaks). The one link is the whole surface.
     <section className="mt-12">
-      <h2 className="text-lg font-semibold text-muted">{t("sailedHeading")}</h2>
+      <h2 className={`${SECTION_TITLE_CLASS} text-muted`}>{t("sailedHeading")}</h2>
       <p className="mt-1 text-muted">
         <Link
           href={`${publicSchedulePath(shopSlug)}${embed ? "?embed=1" : ""}`}
@@ -119,9 +120,7 @@ export function CancelledTripNotice({
     // in the masthead's own type rather than from inside a small gray box —
     // and like the sailed state, a departure with nothing to do gets no frame.
     <section className="mt-10">
-      <h2 className="text-2xl font-semibold tracking-tight text-balance">
-        {t("cancelledHeading")}
-      </h2>
+      <h2 className={`${LEAD_TITLE_CLASS} text-balance`}>{t("cancelledHeading")}</h2>
       <p className="mt-2 text-muted">
         <Link
           href={`${publicSchedulePath(shopSlug)}${embed ? "?embed=1" : ""}`}
@@ -146,7 +145,7 @@ export function ConditionsHoldSection() {
     // back up at it. Two amber cards saying adjacent things was the page
     // warning the diver twice about one fact (design/principles.md #9).
     <section className="mt-10">
-      <h2 className="text-lg font-semibold">{t("holdHeading")}</h2>
+      <h2 className={SECTION_TITLE_CLASS}>{t("holdHeading")}</h2>
       <p className="mt-1 text-muted">{t("holdBody")}</p>
     </section>
   );
@@ -197,7 +196,7 @@ export function TripFullSection({
     // replace it were briefly a size louder — "This trip is full" shouting
     // over "Grab a spot".
     <section id="book" className="mt-10 scroll-mt-4 rounded-2xl bg-surface-sunken p-5 sm:p-6">
-      <h2 className="text-lg font-semibold">{t("fullHeading")}</h2>
+      <h2 className={SECTION_TITLE_CLASS}>{t("fullHeading")}</h2>
       <p className="mt-1 text-muted">
         <Link
           href={`${publicSchedulePath(shopSlug)}${tripRef.embed ? "?embed=1" : ""}`}

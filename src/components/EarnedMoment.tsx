@@ -1,3 +1,4 @@
+import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 /**
  * The coral-accented moment a surface earns when the user finishes something —
  * booking confirmed, waiver signed, everyone aboard, you're all set
@@ -105,9 +106,7 @@ export function EarnedMoment({
       {eyebrow ? (
         <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">{eyebrow}</p>
       ) : null}
-      <Heading className="mt-1 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
-        {title}
-      </Heading>
+      <Heading className={`mt-1 ${LEAD_TITLE_CLASS} text-balance sm:text-3xl`}>{title}</Heading>
       {children ? <div className="mt-3 text-muted">{children}</div> : null}
       {/* Waiver Signature Coral Bubbles */}
       <div className="bubble-container" aria-hidden="true">

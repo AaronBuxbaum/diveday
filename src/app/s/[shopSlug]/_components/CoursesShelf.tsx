@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CourseWavePlaceholder } from "@/components/CourseWavePlaceholder";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { SectionCard } from "@/components/ui/card";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DiverTranslator } from "@/i18n/messages";
 
 /**
@@ -54,7 +55,7 @@ export function CoursesShelf({
   return (
     <section aria-labelledby="courses-shelf" className={className || undefined}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id="courses-shelf" className="text-lg font-semibold tracking-tight">
+        <h2 id="courses-shelf" className={SECTION_TITLE_CLASS}>
           {t("courses.index.title")}
         </h2>
         <Link

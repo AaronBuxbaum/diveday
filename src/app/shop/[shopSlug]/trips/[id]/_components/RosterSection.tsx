@@ -17,6 +17,7 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { GroupLabel } from "@/components/ui/ledger";
 import { StatusMark } from "@/components/ui/StatusMark";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { listBookingNotes } from "@/db/operations";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
@@ -1216,7 +1217,7 @@ export function RosterSection({
     >
       {showSummaryHeading ? (
         <div>
-          <h2 className="text-lg font-semibold">
+          <h2 className={SECTION_TITLE_CLASS}>
             {t("trips.roster.heading")}{" "}
             <span className="font-normal text-muted tabular-nums">
               {t("trips.roster.bookedOfCapacity", { booked, capacity })}

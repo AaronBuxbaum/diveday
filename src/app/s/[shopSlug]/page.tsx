@@ -11,6 +11,7 @@ import { ShopReviews } from "@/components/ShopReviews";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRowList } from "@/components/ui/disclosure";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { listBoats } from "@/db/boats";
 import { type AppDb, getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
@@ -572,9 +573,7 @@ export default async function SchedulePage({
       <div className={isEmbed ? undefined : "mt-10"}>
         {isEmbed ? null : (
           <div className="mb-4">
-            <h2 className="font-brand-display text-lg font-semibold tracking-tight">
-              {t("schedule.title")}
-            </h2>
+            <h2 className={`font-brand-display ${SECTION_TITLE_CLASS}`}>{t("schedule.title")}</h2>
             {/* Whose morning is "7:30 AM"? A diver comparing boats from another
                 timezone reads these times against their own clock unless
                 something says otherwise (review finding I18N-L2) — so it is
@@ -804,10 +803,7 @@ export default async function SchedulePage({
           its hulls). Only when the shop has any: an empty fleet is not a section. */}
       {isEmbed || boats.length === 0 ? null : (
         <section aria-labelledby="boats-heading" className="mt-12">
-          <h2
-            id="boats-heading"
-            className="font-brand-display text-lg font-semibold tracking-tight"
-          >
+          <h2 id="boats-heading" className={`font-brand-display ${SECTION_TITLE_CLASS}`}>
             {t("schedule.boatsHeading")}
           </h2>
           <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -869,10 +865,7 @@ export default async function SchedulePage({
           namespaces those components need and no more. */}
       {!isEmbed ? (
         <section aria-labelledby="more-ways-heading" className="mt-12">
-          <h2
-            id="more-ways-heading"
-            className="font-brand-display text-lg font-semibold tracking-tight"
-          >
+          <h2 id="more-ways-heading" className={`font-brand-display ${SECTION_TITLE_CLASS}`}>
             {t("schedule.moreWaysHeading")}
           </h2>
           <DiverIntlProvider

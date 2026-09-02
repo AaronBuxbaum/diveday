@@ -4,6 +4,13 @@ import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { ScrollToHash } from "@/components/ScrollToHash";
 import { SectionCard } from "@/components/ui/card";
 import { groupLabelClass } from "@/components/ui/ledger";
+import {
+  BANNER_TITLE_CLASS,
+  DISPLAY_TITLE_CLASS,
+  LEAD_TITLE_CLASS,
+  SECTION_TITLE_CLASS,
+  SUB_TITLE_CLASS,
+} from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import type { FunnelSource } from "@/lib/funnel";
@@ -67,9 +74,7 @@ export function GuideHero({
         <p className="mt-6 text-sm font-semibold tracking-widest text-primary uppercase">
           {eyebrow}
         </p>
-        <h1 className="mt-4 text-4xl font-semibold tracking-[-0.045em] text-balance sm:text-5xl">
-          {title}
-        </h1>
+        <h1 className={`mt-4 ${DISPLAY_TITLE_CLASS} sm:text-5xl`}>{title}</h1>
         <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">{lede}</p>
 
         {/* The buyer's first door out of the page. Deliberately NOT the
@@ -172,9 +177,7 @@ export function MovePath({ locale, children }: { locale: DiverLocale; children: 
   return (
     <section className="border-y border-border bg-surface">
       <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
-        <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
-          {t("switching.common.moveTitle")}
-        </h2>
+        <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>{t("switching.common.moveTitle")}</h2>
         <p className="mt-4 max-w-2xl text-lg leading-8 text-muted">
           {t("switching.common.moveIntro")}
         </p>
@@ -239,7 +242,7 @@ export function MovePhase({
         aria-hidden
         className="absolute top-11 bottom-2 left-[1.125rem] w-px bg-border group-last:hidden"
       />
-      <h3 className="pt-1 text-2xl font-semibold tracking-tight text-balance">{title}</h3>
+      <h3 className={`pt-1 ${LEAD_TITLE_CLASS} text-balance`}>{title}</h3>
       {intro && <p className="mt-3 max-w-2xl leading-7 text-muted">{intro}</p>}
       {children}
     </li>
@@ -331,9 +334,7 @@ export function ScopePhase({ locale, number }: { locale: DiverLocale; number: nu
       {/* The return trip, stated where the reader is weighing the one-way
           risk. The claim itself is never re-authored here. */}
       <div className="mt-10 max-w-2xl">
-        <h4 className="text-lg font-semibold tracking-tight">
-          {t("switching.common.bothWaysTitle")}
-        </h4>
+        <h4 className={SECTION_TITLE_CLASS}>{t("switching.common.bothWaysTitle")}</h4>
         <p className="mt-2 text-sm leading-6 text-muted">
           {t("switching.common.bothWaysBody", { claim: t(fullShopExport.claimKey) })}
         </p>
@@ -417,9 +418,7 @@ export function MidCta({ locale, source }: { locale: DiverLocale; source: Funnel
         className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
       >
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">
-            {t("switching.common.midCtaTitle")}
-          </h2>
+          <h2 className={SUB_TITLE_CLASS}>{t("switching.common.midCtaTitle")}</h2>
           <p className="mt-2 max-w-xl leading-7 text-muted">{t("switching.common.midCtaBody")}</p>
         </div>
         <div className="lg:shrink-0">
@@ -455,7 +454,7 @@ export function ClosingCta({
     // and "Start a trial" both broke across two lines mid-phrase.
     <section className="mx-auto flex max-w-4xl flex-col items-start justify-between gap-6 px-6 py-16 sm:flex-row sm:items-center lg:py-20">
       <div className="max-w-md">
-        <h2 className="text-2xl font-semibold tracking-tight text-balance">{title}</h2>
+        <h2 className={`${LEAD_TITLE_CLASS} text-balance`}>{title}</h2>
         <p className="mt-2 max-w-xl text-muted">{body}</p>
       </div>
       <div className="flex flex-col items-stretch gap-3 sm:shrink-0 sm:items-end">

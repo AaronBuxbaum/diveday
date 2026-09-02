@@ -7,6 +7,7 @@ import { RollCallMark } from "@/components/RollCallMark";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { rollCallLabelText } from "@/i18n/manifest-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -120,7 +121,7 @@ export function CrewRollCall({
   const crewAssigned = crew.length;
   return (
     <section className="mt-9">
-      <h2 className="text-lg font-semibold">{t("manifest.crewHeading")}</h2>
+      <h2 className={SECTION_TITLE_CLASS}>{t("manifest.crewHeading")}</h2>
       {crewAssigned === 0 ? (
         // An empty crew list holds the checkpoint open (`crew_none_assigned`),
         // so the one thing to say here is how to close it. This replaces the
@@ -252,7 +253,9 @@ export function CrewRollCall({
                       trigger={
                         <span className="min-w-0 flex-1">
                           <span className="flex flex-wrap items-center gap-2">
-                            <span className="text-lg font-semibold group-hover/summary:underline">
+                            <span
+                              className={`${SECTION_TITLE_CLASS} group-hover/summary:underline`}
+                            >
                               {member.fullName}
                             </span>
                             <span className="text-sm text-muted">{member.roles.join(", ")}</span>

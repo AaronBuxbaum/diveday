@@ -16,6 +16,7 @@ import {
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { groupLabelClass } from "@/components/ui/ledger";
+import { BANNER_TITLE_CLASS, LEAD_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -361,7 +362,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                 exactly what the captain sees at the dock"), so the lede was
                 deleted and the sentence promoted into the heading
                 (docs/product/marketing-review-20260827.md). */}
-            <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+            <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.home.momentsTitle")}
             </h2>
           </div>
@@ -371,7 +372,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
               <div key={moment.id} className="grid items-center gap-8 lg:grid-cols-11 lg:gap-14">
                 <div className={`lg:col-span-5 ${index % 2 === 1 ? "lg:order-last" : ""}`}>
                   <SectionMarker>{moment.when}</SectionMarker>
-                  <h3 className="mt-3 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+                  <h3 className={`mt-3 ${LEAD_TITLE_CLASS} text-balance sm:text-3xl`}>
                     {moment.title}
                   </h3>
                   <p className="mt-3 max-w-lg leading-7 text-muted">{moment.description}</p>
@@ -404,7 +405,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
       <MarketingReveal>
         <section className="border-y border-border bg-surface">
           <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
-            <h2 className="mx-auto max-w-3xl text-center text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+            <h2 className={`mx-auto max-w-3xl text-center ${BANNER_TITLE_CLASS} sm:text-4xl`}>
               {t("marketing.home.productTitle")}
             </h2>
             <div className="mt-12">
@@ -433,7 +434,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
           Arriving reads first (docs/product/marketing.md). */}
       <MarketingReveal>
         <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
-          <h2 className="max-w-3xl text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+          <h2 className={`max-w-3xl ${BANNER_TITLE_CLASS} sm:text-4xl`}>
             {t("marketing.home.exportTitle")}
           </h2>
 
@@ -542,7 +543,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
         <section className="border-t border-border bg-surface">
           <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
             <div className="mx-auto max-w-3xl text-center">
-              <h2 className="text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-5xl">
+              <h2 className={`${BANNER_TITLE_CLASS} sm:text-5xl`}>
                 {t("marketing.home.tryTitle")}
               </h2>
               <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
@@ -566,9 +567,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                   this page, not a footnote under the demo — a buyer who will
                   not self-serve either button needs it in the outline. Level
                   and size are separate decisions; it sits quietly on purpose. */}
-                <h2 className="text-xl font-semibold tracking-tight">
-                  {t("marketing.home.contactTitle")}
-                </h2>
+                <h2 className={SUB_TITLE_CLASS}>{t("marketing.home.contactTitle")}</h2>
                 <p className="mt-2 leading-7 text-muted">{t("marketing.home.contactBody")}</p>
               </div>
               <a

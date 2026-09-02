@@ -4,6 +4,7 @@ import { tapTargetLinkClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { toneMark } from "@/components/ui/tone";
+import { PAGE_TITLE_CLASS } from "@/components/ui/typography";
 
 export const EYEBROW_CLASS = "text-xs font-semibold tracking-[0.18em] text-primary uppercase";
 
@@ -128,11 +129,7 @@ export function ShopPageHeader({
               `text-balance` because the titles that do wrap here are boat
               names ("Two-Tank Reef — Molasses & French"), and an even two
               lines reads better than a full line plus one orphaned word. */}
-          <h1
-            className={`text-4xl font-semibold tracking-tight text-balance${eyebrow ? " mt-2" : ""}`}
-          >
-            {title}
-          </h1>
+          <h1 className={`${PAGE_TITLE_CLASS} text-balance${eyebrow ? " mt-2" : ""}`}>{title}</h1>
           {description ? <p className="mt-2 max-w-2xl text-muted">{description}</p> : null}
           {meta ? <div className="mt-3">{meta}</div> : null}
         </div>

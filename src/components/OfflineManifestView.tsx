@@ -30,6 +30,7 @@ import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass } from "@/components/ui/form";
 import { StatusMark, type StatusMarkVariant } from "@/components/ui/StatusMark";
+import { FIGURE_CLASS, SECTION_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import { matchLocale } from "@/i18n/negotiate";
@@ -891,7 +892,7 @@ export function OfflineManifestView() {
                       className="flex min-h-14 flex-col gap-2 p-4 transition-colors hover:bg-surface-sunken focus-visible:bg-surface-sunken focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary sm:flex-row sm:items-center sm:justify-between sm:p-5"
                     >
                       <div>
-                        <p className="text-lg font-semibold">{tripManifest.trip.title}</p>
+                        <p className={SECTION_TITLE_CLASS}>{tripManifest.trip.title}</p>
                         <p className="mt-0.5 text-sm text-muted">
                           {oneShopName ? null : `${saved.snapshot.shop.name} · `}
                           {dateTime.format(new Date(tripManifest.trip.startsAt))} ·{" "}
@@ -1409,13 +1410,13 @@ export function OfflineManifestView() {
           ].map(([label, value]) => (
             <div key={String(label)} className="rounded-lg border border-border bg-surface p-3">
               <p className="text-xs font-semibold text-muted uppercase">{label}</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+              <p className={`mt-1 ${FIGURE_CLASS}`}>{value}</p>
             </div>
           ))}
         </section>
 
         <section className="mt-8">
-          <h2 className="flex items-center gap-2 text-xl font-semibold">
+          <h2 className={`flex items-center gap-2 ${SUB_TITLE_CLASS}`}>
             {rollCallComplete ? <StatusMark variant="success" size="md" /> : null}
             <span>
               {rollCallComplete
@@ -1799,7 +1800,7 @@ export function OfflineManifestView() {
                         <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-sunken text-sm font-bold tabular-nums">
                           {String(index + 1).padStart(2, "0")}
                         </span>
-                        <h3 className="text-lg font-semibold">{diver.fullName}</h3>
+                        <h3 className={SECTION_TITLE_CLASS}>{diver.fullName}</h3>
                         {/* The shared pill, and the shared tone resolver. The
                           hand-rolled one this replaces paired `text-success`
                           with `bg-success/10`, the combination `Badge`

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SectionCard } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonExportShopData, loadShopExportCounts } from "@/db/export";
 import { PAGE_SIZE } from "@/db/paging";
 import { getShopBackupDestination, listBackupDeliveries } from "@/features/backup-export";
@@ -177,7 +178,7 @@ export default async function DataOutSettingsPage({
         <SectionCard as="details" padding="none" className="group/bundle">
           <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden sm:p-6">
             <div className="min-w-0">
-              <h2 className="text-lg font-semibold">{t("settings.export.bundle.heading")}</h2>
+              <h2 className={SECTION_TITLE_CLASS}>{t("settings.export.bundle.heading")}</h2>
               <p className="mt-1 max-w-2xl text-sm text-muted">
                 {t("settings.export.bundle.fileCount", { count: (families ?? []).length })}
               </p>

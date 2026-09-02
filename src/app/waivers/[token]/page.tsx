@@ -15,6 +15,7 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { controlClass, Field, FieldGrid, FormStatus } from "@/components/ui/form";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocale } from "@/db/people";
@@ -212,7 +213,7 @@ function railDoneLabel(t: DiverTranslator, locale: string, done: number): string
  * these are section headings, and the contact keeps its own.
  */
 function SectionHeading({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-lg font-semibold">{children}</h2>;
+  return <h2 className={SECTION_TITLE_CLASS}>{children}</h2>;
 }
 
 // `instant = true`: this route has a real static shell. Every request-scoped

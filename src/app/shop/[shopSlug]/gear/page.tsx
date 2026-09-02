@@ -13,6 +13,7 @@ import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import { type FilterChip, FilterChips } from "@/components/ui/FilterChips";
 import { controlClass, Field, FieldActions, FieldGrid, FormStatus } from "@/components/ui/form";
 import { LedgerRow } from "@/components/ui/ledger";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import {
   countGearItemsByKind,
   type DeletedGearItemRow,
@@ -363,7 +364,7 @@ export default async function GearRegisterPage({
             className="flex min-h-11 scroll-mt-24 cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden sm:p-6"
           >
             <div className="min-w-0">
-              <h2 className="text-lg font-semibold">{t("gear.addUnit.title")}</h2>
+              <h2 className={SECTION_TITLE_CLASS}>{t("gear.addUnit.title")}</h2>
               <p className="mt-1 text-sm text-muted">{t("gear.addUnit.description")}</p>
             </div>
             <DisclosureCaret className="size-4 shrink-0 text-muted group-open/add-unit:rotate-90" />

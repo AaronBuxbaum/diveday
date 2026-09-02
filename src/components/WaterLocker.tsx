@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useFocusTrap } from "@/components/useFocusTrap";
 import { fill } from "@/i18n/fill";
@@ -188,7 +189,7 @@ export function WaterLocker({ copy }: { copy: WaterLockerCopy }) {
         <span className="text-5xl animate-bounce" role="img" aria-label={copy.rainAlt}>
           🌧️
         </span>
-        <h2 id={headingId} className="mt-6 text-2xl font-bold tracking-tight">
+        <h2 id={headingId} className={`mt-6 ${LEAD_TITLE_CLASS}`}>
           {copy.heading}
         </h2>
         <p id={bodyId} className="mt-3 text-base text-muted">

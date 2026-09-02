@@ -8,6 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { Table, type TableMinWidth, TBody, Td, THead, Th } from "@/components/ui/table";
+import { SECTION_TITLE_CLASS, SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { getIncidentExport } from "@/db/incident-export";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
@@ -140,7 +141,7 @@ export default async function IncidentExportPage({
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className={groupLabelClass("primary")}>{t("incidentExport.title")}</p>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight">{doc.meta.tripTitle}</h1>
+            <h1 className={`mt-1 ${SHELL_TITLE_CLASS}`}>{doc.meta.tripTitle}</h1>
             <p className="mt-1 text-muted">
               {formatShortDate(new Date(doc.meta.tripStartsAt), locale, doc.meta.timezone)} ·{" "}
               {formatTimeRangeTz(
@@ -174,7 +175,7 @@ export default async function IncidentExportPage({
       </header>
 
       <section className="mt-7" aria-labelledby="incident-summary-heading">
-        <h2 id="incident-summary-heading" className="text-lg font-semibold">
+        <h2 id="incident-summary-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.summaryHeading")}
         </h2>
         {/* A <dl>, deliberately: this is the definition-list half of the
@@ -189,7 +190,7 @@ export default async function IncidentExportPage({
       </section>
 
       <section className="mt-8" aria-labelledby="incident-roster-heading">
-        <h2 id="incident-roster-heading" className="text-lg font-semibold">
+        <h2 id="incident-roster-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.rosterHeading")}
         </h2>
         <p className="mt-1 max-w-prose text-sm text-muted">
@@ -269,7 +270,7 @@ export default async function IncidentExportPage({
       </section>
 
       <section className="mt-8" aria-labelledby="incident-crew-heading">
-        <h2 id="incident-crew-heading" className="text-lg font-semibold">
+        <h2 id="incident-crew-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.crewHeading")}
         </h2>
         {doc.crew.length === 0 ? (
@@ -331,7 +332,7 @@ export default async function IncidentExportPage({
           so, rather than the section simply not appearing — the two mean
           different things to an investigator. */}
       <section className="mt-8" aria-labelledby="incident-checklist-heading">
-        <h2 id="incident-checklist-heading" className="text-lg font-semibold">
+        <h2 id="incident-checklist-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.checklistHeading")}
         </h2>
         {doc.preDepartureCheck.length === 0 ? (
@@ -364,7 +365,7 @@ export default async function IncidentExportPage({
       </section>
 
       <section className="mt-8" aria-labelledby="incident-evidence-heading">
-        <h2 id="incident-evidence-heading" className="text-lg font-semibold">
+        <h2 id="incident-evidence-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.evidenceHeading")}
         </h2>
         <p className="mt-1 max-w-prose text-sm text-muted">
@@ -409,7 +410,7 @@ export default async function IncidentExportPage({
       </section>
 
       <section className="mt-8" aria-labelledby="incident-executed-dive-heading">
-        <h2 id="incident-executed-dive-heading" className="text-lg font-semibold">
+        <h2 id="incident-executed-dive-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.executedDiveHeading")}
         </h2>
         <p className="mt-1 max-w-prose text-sm text-muted">
@@ -480,7 +481,7 @@ export default async function IncidentExportPage({
       </section>
 
       <section className="mt-8" aria-labelledby="incident-timeline-heading">
-        <h2 id="incident-timeline-heading" className="text-lg font-semibold">
+        <h2 id="incident-timeline-heading" className={SECTION_TITLE_CLASS}>
           {t("incidentExport.timelineHeading")}
         </h2>
         <p className="mt-1 max-w-prose text-sm text-muted">

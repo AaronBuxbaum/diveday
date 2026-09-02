@@ -10,6 +10,7 @@ import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
+import { FIGURE_HERO_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { CheckInOutcome, CheckInQueueRow, UndoCheckInOutcome } from "@/db/check-in";
 import { listCheckInQueue, listWalkInTrips } from "@/db/check-in";
 import { getDb } from "@/db/client";
@@ -410,7 +411,7 @@ export default async function CheckInPage({
 
       {focus ? (
         <div className="mt-6">
-          <h2 className="text-lg font-semibold">
+          <h2 className={SECTION_TITLE_CLASS}>
             {/* Primary ink, not hover-revealed: on a phone there is no hover,
                 and this is the door to the boat's manifest. */}
             <Link
@@ -434,9 +435,7 @@ export default async function CheckInPage({
               here,
               expected,
               figure: (chunks) => (
-                <span className="text-4xl font-semibold tabular-nums text-foreground">
-                  {chunks}
-                </span>
+                <span className={`${FIGURE_HERO_CLASS} text-foreground`}>{chunks}</span>
               ),
             })}
           />
@@ -470,7 +469,7 @@ export default async function CheckInPage({
         <section aria-label={t("checkIn.queueAriaLabel")} className="mt-8">
           {query ? (
             <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-              <h2 className="text-lg font-semibold">{t("checkIn.searchResultsFor", { query })}</h2>
+              <h2 className={SECTION_TITLE_CLASS}>{t("checkIn.searchResultsFor", { query })}</h2>
               {/* A count is a fact, not an alert (design principle 9) — quiet
                   tabular text, so a pill on this page always means the
                   exceptional state (Blocked, Boarded). */}
@@ -546,7 +545,7 @@ export default async function CheckInPage({
             <div className="flex flex-col gap-8">
               {departures.map((departure) => (
                 <div key={departure.tripId}>
-                  <h3 className="text-lg font-semibold">
+                  <h3 className={SECTION_TITLE_CLASS}>
                     <Link
                       href={`/shop/${shopSlug}/trips/${departure.tripId}/manifest`}
                       className={`${tapTargetLinkClass} text-primary hover:underline`}
@@ -583,7 +582,7 @@ export default async function CheckInPage({
           {otherMatchingDivers.length > 0 ? (
             <div className="mt-8">
               <div className="mb-3">
-                <h3 className="text-lg font-semibold">{t("checkIn.otherDiversHeading")}</h3>
+                <h3 className={SECTION_TITLE_CLASS}>{t("checkIn.otherDiversHeading")}</h3>
                 <p className="text-sm text-muted">{t("checkIn.otherDiversDescription")}</p>
               </div>
               <ul className="divide-y divide-border rounded-xl border border-border bg-surface">

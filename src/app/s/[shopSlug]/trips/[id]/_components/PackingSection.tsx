@@ -1,3 +1,4 @@
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DiverMessageKey } from "@/i18n/messages";
 import { diverTranslator } from "@/i18n/messages";
 import {
@@ -297,7 +298,7 @@ export function PackingSection({
     // Clearwater's closed ramp's section heading (ADR
     // 20260827-clearwater-surface-language, decision 3).
     <section className="mt-10">
-      <h2 className="text-lg font-semibold">{t("trip.packTitle")}</h2>
+      <h2 className={SECTION_TITLE_CLASS}>{t("trip.packTitle")}</h2>
       {exposureSuit ? (
         <p className="mt-2 text-sm text-muted">{t(EXPOSURE_SUIT_KEYS[exposureSuit])}</p>
       ) : null}

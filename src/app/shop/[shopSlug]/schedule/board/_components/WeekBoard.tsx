@@ -5,6 +5,7 @@ import { SiteMark } from "@/components/illustration/SiteMark";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { groupLabelClass } from "@/components/ui/ledger";
+import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { WeekPager } from "@/components/ui/week-pager";
 import { fill } from "@/i18n/fill";
 import type { SiteMarkCode } from "@/lib/site-mark";
@@ -336,7 +337,7 @@ export function WeekBoard({
                   the emphasized day rendered smaller than its neighbours. */}
               <p
                 aria-hidden="true"
-                className={`mt-1 text-lg font-bold tabular-nums ${
+                className={`mt-1 ${FIGURE_INLINE_CLASS} ${
                   day.isToday
                     ? "flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground"
                     : day.isPast

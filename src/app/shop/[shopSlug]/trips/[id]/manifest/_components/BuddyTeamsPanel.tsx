@@ -5,6 +5,7 @@ import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FormStatus } from "@/components/ui/form";
 import { groupLabelClass } from "@/components/ui/ledger";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripBuddyTeam } from "@/db/buddy-pairs";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { BuddyDragGroups } from "./BuddyDragGroups";
@@ -99,7 +100,7 @@ export function BuddyTeamsPanel({
         <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 select-none [&::-webkit-details-marker]:hidden">
           <DisclosureCaret className="text-muted group-open/buddypanel:rotate-90" />
           <span className="flex flex-wrap items-baseline gap-x-2">
-            <h2 id="buddy-teams-heading" className="text-lg font-semibold">
+            <h2 id="buddy-teams-heading" className={SECTION_TITLE_CLASS}>
               {t("manifest.buddyHeading")}
             </h2>
             <span className="text-sm text-muted">

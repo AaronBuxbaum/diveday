@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import { SettledCheck } from "@/components/ui/SettledCheck";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { CheckInQueueRow as QueueRow } from "@/db/check-in";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -204,7 +205,7 @@ export function CounterQueueRow({
             showEmail={showEmail}
             showFirstVisit={showFirstVisit}
             t={t}
-            name={<span className="block truncate text-lg font-semibold">{row.personName}</span>}
+            name={<span className={`block truncate ${SECTION_TITLE_CLASS}`}>{row.personName}</span>}
           />
         </CheckInActionForm>
       </LedgerRow>
@@ -238,7 +239,7 @@ export function CounterQueueRow({
               // no door at all.
               <Link
                 href={`/shop/${shopSlug}/divers/${row.personId}`}
-                className={`${tapTargetLinkClass} truncate text-lg font-semibold text-primary hover:underline`}
+                className={`${tapTargetLinkClass} truncate ${SECTION_TITLE_CLASS} text-primary hover:underline`}
               >
                 {row.personName}
               </Link>

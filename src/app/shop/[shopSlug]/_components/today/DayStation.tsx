@@ -3,6 +3,7 @@ import { SiteMark } from "@/components/illustration/SiteMark";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { FIGURE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatTime } from "@/lib/format";
 import type { AboardBlockerKind } from "@/lib/readiness";
@@ -104,7 +105,7 @@ export function DayStation({
             human check it. */}
         <time
           dateTime={station.startsAt.toISOString()}
-          className="block text-2xl leading-none font-bold tracking-tight tabular-nums"
+          className={`block ${FIGURE_CLASS} leading-none tracking-tight`}
         >
           {formatTime(station.startsAt, locale, timeZone)}
         </time>
@@ -129,7 +130,7 @@ export function DayStation({
       <div className="pb-10">
         <div className="flex items-start justify-between gap-4 sm:gap-6">
           <div className="min-w-0">
-            <h3 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-lg font-semibold tracking-tight">
+            <h3 className={`flex flex-wrap items-center gap-x-2 gap-y-1 ${SECTION_TITLE_CLASS}`}>
               <Link
                 href={`/shop/${shopSlug}/trips/${station.tripId}`}
                 className={`${tapTargetLinkClass} group/station -mx-2 rounded-lg px-2 transition-colors hover:bg-surface-sunken hover:no-underline`}
@@ -147,7 +148,7 @@ export function DayStation({
           {/* The head count leads as a figure, not as another line of small
               muted text (decision 3). */}
           <div className="shrink-0 text-end">
-            <p className="text-xl leading-none font-bold tabular-nums">
+            <p className={`${FIGURE_CLASS} leading-none`}>
               {station.booked}
               <span className="ms-1 text-sm font-semibold text-muted">
                 {t("shopHome.spine.ofCapacity", { capacity: station.capacity })}

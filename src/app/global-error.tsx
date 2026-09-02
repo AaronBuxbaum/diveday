@@ -8,6 +8,7 @@ import { LogoMark } from "@/components/Logo";
 import { buttonClass } from "@/components/ui/button";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import "./globals.css";
+import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
  * Replaces the entire root layout when it crashes (Next convention — it must
@@ -38,7 +39,7 @@ export default function GlobalError({
           <LogoMark className="size-6" />
         </span>
         <div className="max-w-md space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Something went sideways.</h1>
+          <h1 className={LEAD_TITLE_CLASS}>Something went sideways.</h1>
           <p className="text-muted leading-7">
             That one's on us — it's already been reported. Try again, or write in directly if it
             keeps happening; reaching out is always welcome.
