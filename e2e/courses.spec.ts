@@ -706,7 +706,9 @@ test.describe("courses on the shopfront", () => {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await page.goto("/s/blue-mantis/courses");
-    await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toHaveClass(/text-\[2\.5rem\]/);
+    await expect(page.getByRole("heading", { level: 1, name: "Courses" })).toHaveClass(
+      /text-\[2\.5rem\]/,
+    );
 
     await page.goto("/s/blue-mantis/courses/open-water-diver");
     await expect(page.getByRole("heading", { level: 1 })).toHaveClass(/text-\[2\.5rem\]/);
