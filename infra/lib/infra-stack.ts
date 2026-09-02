@@ -1145,55 +1145,41 @@ exports.handler = async (event) => {
     // origin, which is what keeps `import-*` unreachable from the edge even
     // though it lives in the same bucket -- a new prefix is opt-in, not
     // opt-out, which is the direction a mistake should fail in.
-    const mediaOrigin = origins.S3BucketOrigin.withOriginAccessControl(mediaBucket);
-    const publicMediaBehavior: cloudfront.BehaviorOptions = {
-      origin: mediaOrigin,
-      viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-      allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
-      cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
-      responseHeadersPolicy: cloudfront.ResponseHeadersPolicy.CORS_ALLOW_ALL_ORIGINS,
-      compress: true,
-    };
-    const mediaDistribution = new cloudfront.Distribution(this, "MediaDistribution", {
-      comment: "DiveDay media (AWS-8) -- public prefixes only",
-      // An origin that does not exist, on a reserved TLD that can never resolve.
-      // Every request not matching one of the four behaviours below lands here,
-      // so it never reaches the bucket -- `import-waivers/` and
-      // `import-receipts/` have no route out of it at all. The viewer gets a
-      // gateway error rather than a tidy 403, which is the trade for keeping
-      // this a configuration rather than a CloudFront Function to maintain: the
-      // property being bought is that the object is not served, and nobody
-      // legitimate ever lands here.
-      defaultBehavior: {
-        origin: new origins.HttpOrigin("diveday-media-no-public-default.invalid", {
-          customHeaders: { "x-diveday-blocked": "1" },
-        }),
-        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-      },
-      additionalBehaviors: Object.fromEntries(
-        PUBLIC_MEDIA_PREFIXES.map((prefix) => [`${prefix}/*`, publicMediaBehavior]),
-      ),
-      priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
-      httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
-      enableLogging: false,
-    });
-
-    new cdk.CfnOutput(this, "MediaDistributionDomain", {
-      value: mediaDistribution.distributionDomainName,
-      description:
-        "CloudFront domain serving the four public media prefixes (courses, recap, dive-sites, shop-logos). Any other path reaches no origin, so import-* is never served -- see AWS-8 in docs/architecture/aws-migration-dossier.md.",
-    });
+    //
+    // **Off until the account is verified.** CloudFront refuses
+    // CreateDistribution on an account with no distribution history until a
+    // human-reviewed Support case lifts the gate (S17,
+    // `cloudfront-account-verification`), and a stack that carries the
+    // distribution regardless fails every deploy at this one resource and
+    // rolls back -- taking the SES alarms, the log groups and every other
+    // change on main down with it. So the distribution is behind the
+    // `cloudfrontVerified` context value in cdk.json: `false` ships the bucket
+    // and the uploader alone, with MEDIA_PUBLIC_URL_BASE pointing at the
+    // bucket's REST endpoint, which answers 403 to every viewer -- exactly
+    // what the deployed stack does today, and honest about it in
+    // config/env-registry.mjs. Flipping it to `true` in cdk.json, once
+    // `aws cloudfront list-distributions` no longer answers AccessDenied, is
+    // the whole re-enable. A committed value rather than a `--context` flag on
+    // the command line, so the repo says which state the account is in and a
+    // deploy from the workflow and a deploy from a laptop agree.
+    const cloudfrontVerified = String(this.node.tryGetContext("cloudfrontVerified")) === "true";
+    const mediaDistribution = cloudfrontVerified
+      ? this.buildMediaDistribution(mediaBucket)
+      : undefined;
 
     const mediaUploaderKey = mintAccessKey("MediaUploaderUserAccessKey", mediaUploaderUser);
     envValues.MEDIA_BUCKET_NAME = mediaBucket.bucketName;
     envValues.MEDIA_AWS_REGION = this.region;
     envValues.MEDIA_AWS_ACCESS_KEY_ID = mediaUploaderKey.id;
     envValues.MEDIA_AWS_SECRET_ACCESS_KEY = mediaUploaderKey.secret;
-    // The distribution, never the bucket endpoint: the bucket answers 403 to
-    // everyone, and `isManagedStorageUrl` derives its allowlist from this value,
-    // so a CDN domain needs no further change there.
-    envValues.MEDIA_PUBLIC_URL_BASE = `https://${mediaDistribution.distributionDomainName}`;
+    // The distribution, never the bucket endpoint, once there is one: the bucket
+    // answers 403 to everyone, and `isManagedStorageUrl` derives its allowlist
+    // from this value, so a CDN domain needs no further change there. Before
+    // verification the endpoint is the only URL there is, and the 403 is the
+    // documented, pre-existing state (issue #1013).
+    envValues.MEDIA_PUBLIC_URL_BASE = mediaDistribution
+      ? `https://${mediaDistribution.distributionDomainName}`
+      : `https://${mediaBucket.bucketName}.s3.${this.region}.amazonaws.com`;
 
     // 12. Address lookup for the settings address card - see ADR
     // 20260804-aws-location-address-lookup, amended by ADR
@@ -1947,11 +1933,13 @@ exports.handler = async (event) => {
           "AWS Support -> Create case -> Account and billing, service CloudFront, quoting the CreateDistribution error and its Request ID verbatim.",
         ],
         produces:
-          "MediaDistribution (infra-stack.ts S11b) can be created. Until then every deploy of this stack fails at that resource and rolls back.",
-        verify: ["aws cloudfront list-distributions --query DistributionList.Quantity"],
+          "MediaDistribution (infra-stack.ts S11b) can be created. Until then the stack ships without it: cdk.json carries cloudfrontVerified: false, and every course photo, recap photo, dive-site image and shop logo answers 403 (issue #1013) -- the state the account is in either way.",
+        verify: [
+          "aws cloudfront list-distributions --query DistributionList.Quantity  (AccessDenied means not yet; a number means verified)",
+        ],
         onFailure:
-          "Clear the rolled-back stack before retrying: a first-ever deploy lands in ROLLBACK_COMPLETE, which CloudFormation cannot update, so aws cloudformation delete-stack --stack-name DiveDay first. A later deploy lands in UPDATE_ROLLBACK_COMPLETE and is retryable as-is.",
-        note: "File it early -- an account-and-billing case carries no support-plan charge, so Basic Support can raise it, but the review takes hours to days and nothing else in the checklist shortens that wait. Unlike the SES sandbox and the SNS spend cap, skipping this is loud rather than silent: it takes the whole deploy down instead of quietly disabling one feature. There is also nothing to fall back to, which is why the stack does not offer a flag to skip the distribution -- MEDIA_PUBLIC_URL_BASE is derived from its domain, and the media bucket blocks all public access with no second read path, so a deploy without it serves 403 for every course photo, recap photo, dive-site image and shop logo (issue #1013).",
+          "If a deploy was attempted with cloudfrontVerified: true before verification, clear the rolled-back stack before retrying: a first-ever deploy lands in ROLLBACK_COMPLETE, which CloudFormation cannot update, so aws cloudformation delete-stack --stack-name DiveDay first. A later deploy lands in UPDATE_ROLLBACK_COMPLETE and is retryable as-is.",
+        note: "File it early -- an account-and-billing case carries no support-plan charge, so Basic Support can raise it, but the review takes hours to days and nothing else in the checklist shortens that wait. Once verified, flip cloudfrontVerified to true in cdk.json in a pull request and deploy; that is the whole re-enable, and the committed value is what keeps a workflow deploy and a laptop deploy in the same state. The flag exists because CloudFront's refusal is loud rather than silent: with the distribution in the template, an unverified account fails the entire deploy at that one resource and rolls back every other change with it. There is still no second read path -- the media bucket blocks all public access and the flag never opens it.",
       },
       {
         id: "github-actions-cdk-oidc",
@@ -3323,5 +3311,52 @@ exports.handler = async () => {
       description:
         "Daily cleaner for stale visual regression snapshots. Preserves the active main baseline. Invoke by hand to test: aws lambda invoke --function-name diveday-visual-bucket-pruner /dev/stdout",
     });
+  }
+
+  /**
+   * The media read path (S11b), built only on an account CloudFront has
+   * verified -- see the `cloudfrontVerified` note at the call site.
+   */
+  private buildMediaDistribution(mediaBucket: s3.IBucket): cloudfront.Distribution {
+    const mediaOrigin = origins.S3BucketOrigin.withOriginAccessControl(mediaBucket);
+    const publicMediaBehavior: cloudfront.BehaviorOptions = {
+      origin: mediaOrigin,
+      viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+      cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+      responseHeadersPolicy: cloudfront.ResponseHeadersPolicy.CORS_ALLOW_ALL_ORIGINS,
+      compress: true,
+    };
+    const mediaDistribution = new cloudfront.Distribution(this, "MediaDistribution", {
+      comment: "DiveDay media (AWS-8) -- public prefixes only",
+      // An origin that does not exist, on a reserved TLD that can never resolve.
+      // Every request not matching one of the four behaviours below lands here,
+      // so it never reaches the bucket -- `import-waivers/` and
+      // `import-receipts/` have no route out of it at all. The viewer gets a
+      // gateway error rather than a tidy 403, which is the trade for keeping
+      // this a configuration rather than a CloudFront Function to maintain: the
+      // property being bought is that the object is not served, and nobody
+      // legitimate ever lands here.
+      defaultBehavior: {
+        origin: new origins.HttpOrigin("diveday-media-no-public-default.invalid", {
+          customHeaders: { "x-diveday-blocked": "1" },
+        }),
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+      },
+      additionalBehaviors: Object.fromEntries(
+        PUBLIC_MEDIA_PREFIXES.map((prefix) => [`${prefix}/*`, publicMediaBehavior]),
+      ),
+      priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
+      httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
+      enableLogging: false,
+    });
+
+    new cdk.CfnOutput(this, "MediaDistributionDomain", {
+      value: mediaDistribution.distributionDomainName,
+      description:
+        "CloudFront domain serving the four public media prefixes (courses, recap, dive-sites, shop-logos). Any other path reaches no origin, so import-* is never served -- see AWS-8 in docs/architecture/aws-migration-dossier.md.",
+    });
+    return mediaDistribution;
   }
 }
