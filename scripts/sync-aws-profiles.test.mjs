@@ -41,9 +41,9 @@ describe("sync-aws-profiles", () => {
       "# [diveday-deployer]",
       "#   aws_access_key_id = deployer-id",
       "#   aws_secret_access_key = deployer-secret",
-      "# [diveday-mcp-readonly-local]",
-      "#   aws_access_key_id = mcp-id",
-      "#   aws_secret_access_key = mcp-secret",
+      "# [diveday-backup-uploader]",
+      "#   aws_access_key_id = backup-id",
+      "#   aws_secret_access_key = backup-secret",
       "",
     ].join("\n");
 
@@ -58,7 +58,7 @@ describe("sync-aws-profiles", () => {
     expect(credentials).toContain("[diveday-deployer]\naws_access_key_id = deployer-id");
     expect(credentials).toContain("[diveday-ses-sender]\naws_access_key_id = ses-id");
     expect(credentials).toContain("[reg-suit-bot]\naws_access_key_id = reg-id");
-    expect(credentials).toContain("[diveday-mcp-readonly-local]\naws_access_key_id = mcp-id");
+    expect(credentials).toContain("[diveday-backup-uploader]\naws_access_key_id = backup-id");
     expect(credentials).not.toContain("diveday-admin");
     expect(credentials).toContain("[personal]\naws_access_key_id = keep");
     expect(config.match(/^\[default\]$/gm)).toHaveLength(1);

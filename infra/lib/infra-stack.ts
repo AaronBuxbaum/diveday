@@ -78,8 +78,6 @@ const GITHUB_DEPLOY_ENVIRONMENT = "infra-deploy";
 // IAM user names as literals, for the destination headings inside the
 // credentials document. `iam.User.userName` is a token there, not a string, so
 // interpolating it would print `${Token[...]}` where a name belongs.
-const MCP_READONLY_LOCAL_USER_NAME = "diveday-mcp-readonly-local";
-const MCP_READONLY_CLOUD_USER_NAME = "diveday-mcp-readonly-cloud";
 const SES_SENDER_USER_NAME = "diveday-ses-sender";
 const BACKUP_UPLOADER_USER_NAME = "diveday-backup-uploader";
 const MEDIA_UPLOADER_USER_NAME = "diveday-media-uploader";
@@ -262,10 +260,21 @@ export class InfraStack extends cdk.Stack {
       websiteIndexDocument: "index.html",
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       lifecycleRules: [
+        // The nightly pruner (section 15) is what bounds this bucket, and it is
+        // the only bound that understands what a baseline is: it keeps the ten
+        // most recent `main` snapshots by *count* plus everything under seven
+        // days old, precisely so a quiet month never leaves an open branch with
+        // nothing to compare against. An S3 expiry counts only days, so at 30
+        // it deleted the very snapshots the pruner had preserved -- and a run
+        // with no baseline reports `Changed: 0`, which reads exactly like
+        // nothing broke. 180 days keeps a backstop for the case the pruner
+        // itself stops running, while giving it a hundred nightly chances to
+        // act first. The pruner is authoritative; this rule may only ever be a
+        // floor beneath it.
         {
           id: "expire-old-visual-snapshots",
           enabled: true,
-          expiration: cdk.Duration.days(30),
+          expiration: cdk.Duration.days(180),
         },
         {
           id: "abort-incomplete-multipart-uploads",
@@ -386,78 +395,20 @@ export class InfraStack extends cdk.Stack {
       ],
     });
 
-    // 6. Read-only IAM identities for an AWS API MCP server. Local dev and
-    // Claude Code's cloud environment each get their own principal so either can
-    // be rotated or revoked without touching the other. Both hold only the
-    // AWS-managed ReadOnlyAccess policy.
+    // 6. (retired 2026-09-02) `diveday-mcp-readonly-local` and
+    // `diveday-mcp-readonly-cloud` lived here: two IAM users holding
+    // ReadOnlyAccess and a live access key each, provisioned for an AWS API MCP
+    // server that was never wired up. `.mcp.json` lists Sentry, next-devtools,
+    // vercel, playwright and context7, and no `aws` entry, so both were
+    // credentials shipped to a workstation and a cloud sandbox for nothing --
+    // and two more identities on every rotation and verification list, which is
+    // the real cost: a key nobody uses is a key nobody notices leaking.
     //
-    // No consumer is configured today - `.mcp.json` currently lists Sentry,
-    // next-devtools, vercel, playwright, and context7, and no `aws` entry. These
-    // stay because the identities are the slow part to provision and reviewing;
-    // wiring an MCP server to an existing read-only key is a one-line change.
-    //
-    // "Read-only" has to mean it, and ReadOnlyAccess is AWS's policy to change,
-    // not ours: it already grants `cloudformation:DescribeStacks`, which is how
-    // the old `IAMUserSecretKey` output (S4) was readable from here. An explicit
-    // Deny on `secretsmanager:GetSecretValue` is what makes the claim true
-    // independent of what AWS adds to the managed policy next - a Deny always
-    // beats an Allow, so these credentials can never read S16's secret and
-    // escalate into the write-capable identities it carries.
-    const readOnlyAccess = iam.ManagedPolicy.fromAwsManagedPolicyName("ReadOnlyAccess");
-
-    const mcpReadOnlyLocalUser = new iam.User(this, "McpReadOnlyLocalUser", {
-      userName: MCP_READONLY_LOCAL_USER_NAME,
-      managedPolicies: [readOnlyAccess],
-    });
-
-    const mcpReadOnlyCloudUser = new iam.User(this, "McpReadOnlyCloudUser", {
-      userName: MCP_READONLY_CLOUD_USER_NAME,
-      managedPolicies: [readOnlyAccess],
-    });
-
-    for (const readOnlyUser of [mcpReadOnlyLocalUser, mcpReadOnlyCloudUser]) {
-      readOnlyUser.addToPolicy(
-        new iam.PolicyStatement({
-          sid: "NeverReadAnySecretValue",
-          effect: iam.Effect.DENY,
-          actions: ["secretsmanager:GetSecretValue"],
-          // Every secret, not just this stack's: an inspection credential has no
-          // business reading key material anywhere in the account, and scoping
-          // the Deny to one ARN would leave the next secret uncovered.
-          resources: ["*"],
-        }),
-      );
-    }
-
-    const mcpReadOnlyLocalKey = mintAccessKey(
-      "McpReadOnlyLocalUserAccessKey",
-      mcpReadOnlyLocalUser,
-    );
-    const mcpReadOnlyCloudKey = mintAccessKey(
-      "McpReadOnlyCloudUserAccessKey",
-      mcpReadOnlyCloudUser,
-    );
-
-    offDotenvCredentials.push({
-      destination: `${MCP_READONLY_LOCAL_USER_NAME} -> ~/.aws/credentials`,
-      note: "A named AWS CLI profile on your workstation. Reference it with AWS_PROFILE or --profile.",
-      body: [
-        `[${MCP_READONLY_LOCAL_USER_NAME}]`,
-        `aws_access_key_id = ${mcpReadOnlyLocalKey.id}`,
-        `aws_secret_access_key = ${mcpReadOnlyLocalKey.secret}`,
-        "region = us-east-1",
-      ],
-    });
-
-    offDotenvCredentials.push({
-      destination: `${MCP_READONLY_CLOUD_USER_NAME} -> Claude Code cloud environment variables`,
-      note: "claude.ai/code -> the environment for this repo -> Environment variables. Never .env.local; this key is for the cloud sandbox, not your machine.",
-      body: [
-        `AWS_ACCESS_KEY_ID=${mcpReadOnlyCloudKey.id}`,
-        `AWS_SECRET_ACCESS_KEY=${mcpReadOnlyCloudKey.secret}`,
-        "AWS_DEFAULT_REGION=us-east-1",
-      ],
-    });
+    // Standing them back up is a stack edit, not a lost artifact. If an AWS MCP
+    // server ever arrives, mint the identity then, with the Deny on
+    // `secretsmanager:GetSecretValue` this pair carried -- ReadOnlyAccess is
+    // AWS's policy to change, not ours, and it already grants
+    // `cloudformation:DescribeStacks`.
 
     // 7. Cost guardrails - alert-only, never auto-disable anything.
     // See ADR 20260802-aws-cost-guardrails for why these two mechanisms and
@@ -787,11 +738,21 @@ export class InfraStack extends cdk.Stack {
     // CloudWatch wrote. Inline rather than a bundled asset: it is a dozen lines
     // with no dependencies beyond the SDK the runtime already ships, and a
     // build step for that would be more moving parts than the function.
+    // Explicit, because a Lambda that creates its own log group creates it with
+    // no retention and it grows forever. Every other group in the account is
+    // bounded; these were the three that were not.
+    const smsReceiptForwarderLogs = new logs.LogGroup(this, "SmsReceiptForwarderLogs", {
+      logGroupName: "/aws/lambda/diveday-sms-receipt-forwarder",
+      retention: logs.RetentionDays.ONE_MONTH,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
     const smsReceiptForwarder = new lambda.Function(this, "SmsReceiptForwarder", {
       functionName: "diveday-sms-receipt-forwarder",
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: "index.handler",
       timeout: cdk.Duration.seconds(30),
+      logGroup: smsReceiptForwarderLogs,
       environment: { TOPIC_ARN: smsDeliveryReceipts.topicArn },
       code: lambda.Code.fromInline(`
 const { gunzipSync } = require("node:zlib");
@@ -845,6 +806,13 @@ exports.handler = async (event) => {
       this,
       "SnsSmsDeliveryStatusAttributes",
       {
+        // Deploy-time output nobody reads, in a group that would otherwise
+        // never expire. A month is more than enough to diagnose a deploy.
+        logGroup: new logs.LogGroup(this, "SnsSmsDeliveryStatusAttributesLogs", {
+          logGroupName: "/aws/lambda/diveday-sns-sms-delivery-status-attributes",
+          retention: logs.RetentionDays.ONE_MONTH,
+          removalPolicy: cdk.RemovalPolicy.DESTROY,
+        }),
         onCreate: {
           service: "SNS",
           action: "setSMSAttributes",
@@ -1736,6 +1704,14 @@ exports.handler = async (event) => {
     const retireStrayAccessKeys = new cdk.CustomResource(this, "RetireStrayAccessKeys", {
       serviceToken: new cr.Provider(this, "AccessKeyPrunerProvider", {
         onEventHandler: accessKeyPruner,
+        // The framework function's own group. `accessKeyPruner` already has a
+        // bounded one; this is the wrapper around it, and it was the third
+        // group in the account with no expiry.
+        logGroup: new logs.LogGroup(this, "AccessKeyPrunerProviderLogs", {
+          logGroupName: "/aws/lambda/diveday-access-key-pruner-provider",
+          retention: logs.RetentionDays.ONE_MONTH,
+          removalPolicy: cdk.RemovalPolicy.DESTROY,
+        }),
       }).serviceToken,
       properties: {
         // The user list, and only the user list. See the note above on why the
@@ -2136,7 +2112,7 @@ exports.handler = async (event) => {
         why: "The stack revokes them itself (infra-stack.ts S14), but this is the one automation whose failure is invisible until it matters. IAM allows two access keys per user, hard and not adjustable; the keys minted by hand before this stack existed are not CloudFormation's to delete. If any survive, the identity is at the ceiling and the NEXT rotation fails with LimitExceeded -- on the day someone is rotating because something leaked.",
         run: [
           "Read the RetiredAccessKeys stack output: the keys this deploy revoked, or 'none'.",
-          'for u in reg-suit-bot cdk-deployer diveday-mcp-readonly-local diveday-mcp-readonly-cloud diveday-ses-sender diveday-sns-sms-sender diveday-backup-uploader diveday-places-lookup; do echo "== $u"; aws iam list-access-keys --user-name "$u" --query \'AccessKeyMetadata[].AccessKeyId\' --output text; done',
+          'for u in reg-suit-bot cdk-deployer diveday-ses-sender diveday-sns-sms-sender diveday-backup-uploader diveday-media-uploader diveday-places-lookup diveday-cloudwatch-shipper; do echo "== $u"; aws iam list-access-keys --user-name "$u" --query \'AccessKeyMetadata[].AccessKeyId\' --output text; done',
         ],
         verify: ["Every identity lists exactly one access key."],
         onFailure:

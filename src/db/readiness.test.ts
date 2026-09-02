@@ -2,7 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { createBooking, createBookingParty } from "./bookings";
 import {
   createNitroxCertification,
@@ -49,7 +49,7 @@ import {
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
 async function readinessContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
@@ -60,7 +60,7 @@ async function readinessContext() {
 
 /** Ids of the shop's live (unarchived) level cards, read straight off the table. */
 async function activeCertificationIds(
-  db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+  db: ReturnType<typeof fileScopedShopContext>["db"],
   shopId: string,
 ) {
   const rows = await db
@@ -72,7 +72,7 @@ async function activeCertificationIds(
 
 /** Ids of the shop's live (unarchived) specialty cards, read straight off the table. */
 async function activeSpecialtyCertificationIds(
-  db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+  db: ReturnType<typeof fileScopedShopContext>["db"],
   shopId: string,
 ) {
   const rows = await db
@@ -83,6 +83,15 @@ async function activeSpecialtyCertificationIds(
     );
   return rows.map((row) => row.id);
 }
+
+/**
+ * File-scoped database (issue #1244): one PGlite for the whole file, and a
+ * transaction per test that is rolled back afterwards. Readiness is computed
+ * from committed certification, waiver and payment rows the seed already
+ * carries; these tests read them and write requirement rows they read back,
+ * and none opens a transaction or races another statement.
+ */
+const ctx = fileScopedShopContext();
 
 describe("trip readiness (in-memory PGlite)", () => {
   it("shares a fail-closed waiver/certification result for a booking and its trip roster", async () => {
@@ -1003,7 +1012,7 @@ describe("site cert gate across the whole itinerary (DOM-C1)", () => {
  */
 describe("tripRequirementSummaries — the gate every card on a page shows", () => {
   async function scheduleContext() {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const upcoming = await upcomingTripsWithCounts(db, shop.id, new Date(0));
     const find = (prefix: string) => {
       const trip = upcoming.find((entry) => entry.title.startsWith(prefix));
@@ -1069,7 +1078,7 @@ describe("tripRequirementSummaries — the gate every card on a page shows", () 
   });
 
   it("answers with an empty map for no trips, without touching the database", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     expect(await tripRequirementSummaries(db, shop.id, [])).toEqual(new Map());
   });
 });
@@ -1081,7 +1090,7 @@ describe("tripRequirementSummaries — the gate every card on a page shows", () 
  */
 describe("issueShopCertification (issue #717)", () => {
   async function courseSessionWithBooking() {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [course] = await db
       .select()
       .from(courses)
@@ -1186,7 +1195,7 @@ describe("issueShopCertification (issue #717)", () => {
   });
 
   it("refuses a fun dive — this trip carries no course", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const staff = await listStaff(db, shop.id);
     const instructor = staff.find((entry) => entry.roles.includes("instructor"));
     if (!instructor) throw new Error("seeded fixture missing an instructor");
@@ -1303,7 +1312,7 @@ describe("issueShopCertification (issue #717)", () => {
  */
 describe("issueShopSpecialtyCertification / issueShopNitroxCertification (issue #975)", () => {
   async function courseSessionWithBooking(title: string) {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [course] = await db
       .select()
       .from(courses)

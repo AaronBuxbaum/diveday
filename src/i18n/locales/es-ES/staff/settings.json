@@ -957,13 +957,6 @@
       "copied": "Copiado",
       "failed": "No se pudo copiar: selecciona el código de arriba."
     },
-    "calendarEmbed": {
-      "heading": "Widget de calendario",
-      "description": "Tus próximas cuatro salidas con un enlace al resto, con un tamaño que nunca genera scroll dentro de tu página. Ideal para una página «Reservar» en tu web.",
-      "attributionNote": "Incluye un pequeño enlace de crédito \"Con la tecnología de DiveDay\" debajo del calendario, en tu propia página — no dentro del widget.",
-      "fieldLabel": "Código del widget",
-      "attributionLinkText": "Con la tecnología de DiveDay"
-    },
     "code": "Código de inserción",
     "partnerLinkField": "Enlace de referido"
   }

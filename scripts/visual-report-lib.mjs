@@ -148,6 +148,24 @@ export function countsLine(summary) {
  * anything was compared, so "compared and found no differences" can never be
  * mistaken for "never compared anything".
  */
+/**
+ * The three verdicts that mean **nothing was compared**, as opposed to nothing
+ * having moved. Named once, here, because two consumers now act on the same
+ * fact: the sticky comment says it in words, and `visual-report`'s final gate
+ * step turns it into a red check (issue #1137). A skipped job reports as a
+ * *passing* check on a pull request, so for a long time the comment below was
+ * the only thing standing between a reviewer and a false green.
+ *
+ * `clean` and `changes` are the two verdicts where a comparison actually
+ * happened. Everything else is blind.
+ */
+export const BLIND_VERDICTS = ["no-report", "nothing-captured", "no-baseline"];
+
+/** Did this run compare anything at all? `false` is never a clean run. */
+export function comparedAnything(summary) {
+  return !BLIND_VERDICTS.includes(summary.verdict);
+}
+
 export function verdictHeadline(summary) {
   switch (summary.verdict) {
     case "no-report":
@@ -278,10 +296,23 @@ export function formatPrComment({ commit, bucket, summary, note = "", limit = IT
     );
   }
 
+  // The check and this comment must say the same thing. A *diff* is the
+  // reviewer's to account for and never blocks; a run that compared *nothing*
+  // is a red check as of issue #1137, because a skipped or blind job used to
+  // report as passing and this paragraph was the only thing arguing otherwise.
   lines.push(
-    "This comment is informational and never fails the build. Accounting for every changed pixel",
-    "is the reviewer's job (AGENTS.md), and merging an explained change is what makes it the next",
-    "baseline.",
+    ...(comparedAnything(summary)
+      ? [
+          "A visual difference never fails the build. Accounting for every changed pixel is the",
+          "reviewer's job (AGENTS.md), and merging an explained change is what makes it the next",
+          "baseline.",
+        ]
+      : [
+          "**This fails the `visual-report` check.** Nothing was compared, so nothing is known — a",
+          "green check here would say the opposite. Fix the run (usually: re-run the failed capture",
+          "shard) rather than merging on a count that compared nothing. Fork pull requests are",
+          "exempt, since GitHub withholds the publishing secrets from them by design.",
+        ]),
     "",
     `<sub>Commit \`${short}\` · posted by the \`visual-report\` CI job, updated in place on each push. ` +
       "The `reg` commit status and the reg-suit[bot] comment come from reg-suit's own GitHub App and " +

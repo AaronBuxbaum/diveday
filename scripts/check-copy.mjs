@@ -1,6 +1,7 @@
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 
 /**
  * No new hard-coded user-facing copy (docs ADR 20260730-staff-copy-localization).
@@ -69,7 +70,7 @@ import process from "node:process";
 
 const ROOT = process.cwd();
 const BASELINE_PATH = "scripts/copy-baseline.json";
-const guardedRoots = ["src/app", "src/components"];
+export const guardedRoots = ["src/app", "src/components"];
 
 /** Attributes that exist to be read by a person or announced by a screen reader. */
 const copyAttributes = [
@@ -129,9 +130,17 @@ const bracedStringPattern = /[>\s]\{\s*(?:"([^"]{2,})"|'([^']{2,})')\s*\}/g;
  * repo's docs — switch the whole check off for a file. An escape hatch that can
  * be triggered by prose is not an escape hatch, it is a hole, so both forms
  * must appear as `// …` or `{/* … *\/}`.
+ *
+ * The reason must begin with a **letter**, not merely a non-space character
+ * (2026-09-02, issue #1258). Under `\s*\S` the `//` form correctly refused a
+ * bare `// i18n-exempt:` — but in the JSX form the comment's own closing `*\/`
+ * supplied the non-space, so `{/* i18n-exempt: *\/}` switched the line off with
+ * no reason at all. Every one of the repo's 16 distinct exemption reasons
+ * already starts with a letter, so this narrows the hatch and excuses nothing
+ * that was written down.
  */
-const EXEMPT_LINE = /(?:\/\/|\{\s*\/\*)[^\n]*\bi18n-exempt:\s*\S/;
-const EXEMPT_FILE = /(?:\/\/|\{\s*\/\*)[^\n]*\bi18n-exempt-file:\s*\S/;
+const EXEMPT_LINE = /(?:\/\/|\{\s*\/\*)[^\n]*\bi18n-exempt:\s*[A-Za-z]/;
+export const EXEMPT_FILE = /(?:\/\/|\{\s*\/\*)[^\n]*\bi18n-exempt-file:\s*[A-Za-z]/;
 
 /** Strips comments so their prose never reads as copy — but keeps line count. */
 function stripComments(source) {
@@ -144,7 +153,7 @@ function stripComments(source) {
  * Prose, as opposed to an identifier, a slug, or a symbol. Requires a run of at
  * least two letters and rejects values that look like code or markup leftovers.
  */
-function looksLikeCopy(raw) {
+export function looksLikeCopy(raw) {
   const value = raw.trim();
   if (value.length < 2) return false;
   if (!/[A-Za-z]{2}/.test(value)) return false;
@@ -156,12 +165,25 @@ function looksLikeCopy(raw) {
   // `=` as the window's first character, so `photos.length >= maxPhotos ? (`
   // arrives here as `= maxPhotos ? (` — an expression, and one the ternary rule
   // below misses because its `:` is past the next `<`.
-  if (value.startsWith("=")) return false;
+  //
+  // Anchored to that shape rather than to the leading `=` (2026-09-02, issue
+  // #1258). `value.startsWith("=")` excused *every* string beginning with an
+  // equals sign, which is a sentence as readily as an expression: the tail has
+  // to be an operand followed by the `?` the comparison was feeding.
+  if (/^=\s*[\w.$[\]]+\s*\?/.test(value)) return false;
   // A type union. `void | Promise` is what `=> void | Promise<void>` leaves
   // behind, and it reached the report five times from one file of server-action
-  // props. A single pipe is already excluded when doubled; a sentence a diver
-  // reads does not carry a bare one either.
-  if (/\s\|\s/.test(value)) return false;
+  // props.
+  //
+  // Anchored to a union of *type-ish tokens* rather than to any spaced pipe
+  // (2026-09-02, issue #1258). `/\s\|\s/` excused every sentence carrying one,
+  // and a pipe is ordinary prose punctuation — `Book a trip | Blue Mantis
+  // Divers` is a page title, `Certified | Nitrox | Rescue` is a badge row, and
+  // both went silently untranslated. A union's first token is a lowercase
+  // primitive (`void`, `string`) and every token is a bare identifier, which is
+  // what separates it from a title: a title's segments carry spaces, and a
+  // badge row's first segment is capitalised.
+  if (/^[a-z][\w$]*(?:\s*\|\s*[A-Za-z_$][\w$]*)+$/.test(value)) return false;
   if (value.includes(";")) return false;
   // A ternary: `cond ? a : b`.
   if (/\s\?\s/.test(value) && /\s:\s/.test(value)) return false;
@@ -202,7 +224,7 @@ async function walk(relativeDirectory) {
 }
 
 /** Every hard-coded user-facing string in one file, as `{ line, text }`. */
-function findCopy(source, { isTsx }) {
+export function findCopy(source, { isTsx }) {
   const stripped = stripComments(source);
   const rawLines = source.split("\n");
   const lineStarts = [];
@@ -252,145 +274,159 @@ function findCopy(source, { isTsx }) {
   return found;
 }
 
-const counts = new Map();
-const details = new Map();
-for (const root of guardedRoots) {
-  for (const file of await walk(root)) {
-    const source = await readFile(path.join(ROOT, file), "utf8");
-    if (EXEMPT_FILE.test(source)) continue;
-    const found = findCopy(source, { isTsx: file.endsWith(".tsx") });
-    if (found.length > 0) {
-      counts.set(file, found.length);
-      details.set(file, found);
-    }
-  }
-}
-
-// `--report [pathPrefix]` lists what the scanner sees, which is how you work
-// through a file when extracting its copy.
-const reportIndex = process.argv.indexOf("--report");
-if (reportIndex !== -1) {
-  const prefix = process.argv[reportIndex + 1] ?? "";
-  let shown = 0;
-  for (const [file, hits] of [...details.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-    if (!file.startsWith(prefix)) continue;
-    console.log(`\n${file} (${hits.length})`);
-    for (const hit of hits) console.log(`  ${hit.line}\t${hit.text}`);
-    shown += hits.length;
-  }
-  console.log(`\n${shown} hard-coded strings under "${prefix || "src"}"`);
-  process.exit(0);
-}
-
-let baseline = {};
-let baselineExists = true;
-try {
-  baseline = JSON.parse(await readFile(path.join(ROOT, BASELINE_PATH), "utf8"));
-} catch (error) {
-  if (error?.code !== "ENOENT") throw error;
-  baselineExists = false;
-}
-// The file carries a leading note for humans; it is not a path.
-const baselineCounts = Object.fromEntries(
-  Object.entries(baseline).filter(([key]) => !key.startsWith("//")),
-);
-
 /**
- * `--absorb` is `--write` for one specific situation: merging a branch that was
- * authored before this check existed on it. Copy that landed on `main` in
- * parallel is pre-existing debt from the ratchet's point of view, not new debt
- * — but `--write` cannot tell the two apart, and correctly refuses both.
- *
- * So this exists, and it is deliberately loud rather than convenient: it prints
- * every increase it is about to accept, so the growth appears in the run log
- * and the reviewer sees it in the diff. It is not a way to land new copy. If
- * you are reaching for it and you did not just merge, extract the strings.
- *
- * Expect this to stop being needed once every branch carries the check.
+ * Everything below is the runner. It is guarded rather than at module scope so
+ * `looksLikeCopy` and `findCopy` can be imported and tested without walking the
+ * tree, calling `process.exit`, or rewriting the baseline — the same shape
+ * `scripts/check-e2e-hygiene.mjs` uses. That matters more here than it looks:
+ * `scripts/copy-baseline.json` is empty, so this check is a full gate over
+ * `src/app` and `src/components`, and an exclusion one character too broad
+ * stops the repository's main defence against untranslated copy with a green
+ * run and nothing to notice.
  */
-const absorbing = process.argv.includes("--absorb");
-
-if (process.argv.includes("--write") || absorbing) {
-  const grew = [...counts.entries()].filter(
-    ([file, count]) => baselineExists && count > (baselineCounts[file] ?? 0),
-  );
-  const added = [...counts.keys()].filter((file) => baselineExists && !(file in baselineCounts));
-  if (grew.length > 0 || added.length > 0) {
-    if (!absorbing) {
-      console.error(
-        "Refusing to write a baseline that grows. The ratchet only turns one way — extract the copy instead:",
-      );
-      for (const [file, count] of grew) {
-        console.error(`- ${file}: ${baselineCounts[file]} → ${count}`);
+async function main() {
+  const counts = new Map();
+  const details = new Map();
+  for (const root of guardedRoots) {
+    for (const file of await walk(root)) {
+      const source = await readFile(path.join(ROOT, file), "utf8");
+      if (EXEMPT_FILE.test(source)) continue;
+      const found = findCopy(source, { isTsx: file.endsWith(".tsx") });
+      if (found.length > 0) {
+        counts.set(file, found.length);
+        details.set(file, found);
       }
-      for (const file of added) console.error(`- ${file}: new file with ${counts.get(file)}`);
-      console.error(
-        "If this growth arrived in a merge from a branch that predates the check, `--absorb` records it explicitly.",
-      );
-      process.exit(1);
     }
-    console.warn("Absorbing copy that grew — this must be merged-in work, not new copy:");
-    for (const [file, count] of grew) {
-      console.warn(
-        `- ${file}: ${baselineCounts[file]} → ${count} (+${count - baselineCounts[file]})`,
-      );
+  }
+
+  // `--report [pathPrefix]` lists what the scanner sees, which is how you work
+  // through a file when extracting its copy.
+  const reportIndex = process.argv.indexOf("--report");
+  if (reportIndex !== -1) {
+    const prefix = process.argv[reportIndex + 1] ?? "";
+    let shown = 0;
+    for (const [file, hits] of [...details.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+      if (!file.startsWith(prefix)) continue;
+      console.log(`\n${file} (${hits.length})`);
+      for (const hit of hits) console.log(`  ${hit.line}\t${hit.text}`);
+      shown += hits.length;
     }
-    for (const file of added) console.warn(`- ${file}: new file with ${counts.get(file)}`);
+    console.log(`\n${shown} hard-coded strings under "${prefix || "src"}"`);
+    process.exit(0);
   }
-  const next = {
-    "//": "Hard-coded user-facing strings still awaiting extraction, per file. Written by `node scripts/check-copy.mjs --write`. This number may only go down — see scripts/check-copy.mjs.",
-    ...Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b))),
-  };
-  await writeFile(path.join(ROOT, BASELINE_PATH), `${JSON.stringify(next, null, 2)}\n`);
-  const total = [...counts.values()].reduce((sum, n) => sum + n, 0);
-  console.log(`copy: baseline written — ${counts.size} files, ${total} strings still to extract`);
-  process.exit(0);
-}
 
-const violations = [];
-
-for (const [file, count] of counts) {
-  const allowed = baselineCounts[file];
-  if (allowed === undefined) {
-    const sample = details
-      .get(file)
-      .slice(0, 5)
-      .map((hit) => `\n    ${file}:${hit.line}  ${hit.text}`)
-      .join("");
-    violations.push(
-      `${file}: ${count} hard-coded user-facing string${count === 1 ? "" : "s"} in a file with no baseline entry.${sample}`,
-    );
-    continue;
+  let baseline = {};
+  let baselineExists = true;
+  try {
+    baseline = JSON.parse(await readFile(path.join(ROOT, BASELINE_PATH), "utf8"));
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    baselineExists = false;
   }
-  if (count > allowed) {
-    violations.push(
-      `${file}: ${count} hard-coded strings, baseline allows ${allowed}. Extract the new copy instead of raising the number.`,
-    );
-  }
-  if (count < allowed) {
-    violations.push(
-      `${file}: down to ${count} from ${allowed} — lower the baseline in this change (\`node scripts/check-copy.mjs --write\`).`,
-    );
-  }
-}
-
-for (const file of Object.keys(baselineCounts)) {
-  if (!counts.has(file)) {
-    violations.push(
-      `${file}: fully extracted or gone — remove its baseline entry (\`node scripts/check-copy.mjs --write\`).`,
-    );
-  }
-}
-
-if (violations.length > 0) {
-  console.error(`Hard-coded copy violations:\n${violations.map((v) => `- ${v}`).join("\n")}`);
-  console.error(
-    "User-facing copy comes from a message bundle: src/i18n/locales/<locale>/diver.json for divers, staff/<namespace>.json for staff. See the i18n-copy skill.",
+  // The file carries a leading note for humans; it is not a path.
+  const baselineCounts = Object.fromEntries(
+    Object.entries(baseline).filter(([key]) => !key.startsWith("//")),
   );
-  process.exit(1);
+
+  /**
+   * `--absorb` is `--write` for one specific situation: merging a branch that was
+   * authored before this check existed on it. Copy that landed on `main` in
+   * parallel is pre-existing debt from the ratchet's point of view, not new debt
+   * — but `--write` cannot tell the two apart, and correctly refuses both.
+   *
+   * So this exists, and it is deliberately loud rather than convenient: it prints
+   * every increase it is about to accept, so the growth appears in the run log
+   * and the reviewer sees it in the diff. It is not a way to land new copy. If
+   * you are reaching for it and you did not just merge, extract the strings.
+   *
+   * Expect this to stop being needed once every branch carries the check.
+   */
+  const absorbing = process.argv.includes("--absorb");
+
+  if (process.argv.includes("--write") || absorbing) {
+    const grew = [...counts.entries()].filter(
+      ([file, count]) => baselineExists && count > (baselineCounts[file] ?? 0),
+    );
+    const added = [...counts.keys()].filter((file) => baselineExists && !(file in baselineCounts));
+    if (grew.length > 0 || added.length > 0) {
+      if (!absorbing) {
+        console.error(
+          "Refusing to write a baseline that grows. The ratchet only turns one way — extract the copy instead:",
+        );
+        for (const [file, count] of grew) {
+          console.error(`- ${file}: ${baselineCounts[file]} → ${count}`);
+        }
+        for (const file of added) console.error(`- ${file}: new file with ${counts.get(file)}`);
+        console.error(
+          "If this growth arrived in a merge from a branch that predates the check, `--absorb` records it explicitly.",
+        );
+        process.exit(1);
+      }
+      console.warn("Absorbing copy that grew — this must be merged-in work, not new copy:");
+      for (const [file, count] of grew) {
+        console.warn(
+          `- ${file}: ${baselineCounts[file]} → ${count} (+${count - baselineCounts[file]})`,
+        );
+      }
+      for (const file of added) console.warn(`- ${file}: new file with ${counts.get(file)}`);
+    }
+    const next = {
+      "//": "Hard-coded user-facing strings still awaiting extraction, per file. Written by `node scripts/check-copy.mjs --write`. This number may only go down — see scripts/check-copy.mjs.",
+      ...Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b))),
+    };
+    await writeFile(path.join(ROOT, BASELINE_PATH), `${JSON.stringify(next, null, 2)}\n`);
+    const total = [...counts.values()].reduce((sum, n) => sum + n, 0);
+    console.log(`copy: baseline written — ${counts.size} files, ${total} strings still to extract`);
+    process.exit(0);
+  }
+
+  const violations = [];
+
+  for (const [file, count] of counts) {
+    const allowed = baselineCounts[file];
+    if (allowed === undefined) {
+      const sample = details
+        .get(file)
+        .slice(0, 5)
+        .map((hit) => `\n    ${file}:${hit.line}  ${hit.text}`)
+        .join("");
+      violations.push(
+        `${file}: ${count} hard-coded user-facing string${count === 1 ? "" : "s"} in a file with no baseline entry.${sample}`,
+      );
+      continue;
+    }
+    if (count > allowed) {
+      violations.push(
+        `${file}: ${count} hard-coded strings, baseline allows ${allowed}. Extract the new copy instead of raising the number.`,
+      );
+    }
+    if (count < allowed) {
+      violations.push(
+        `${file}: down to ${count} from ${allowed} — lower the baseline in this change (\`node scripts/check-copy.mjs --write\`).`,
+      );
+    }
+  }
+
+  for (const file of Object.keys(baselineCounts)) {
+    if (!counts.has(file)) {
+      violations.push(
+        `${file}: fully extracted or gone — remove its baseline entry (\`node scripts/check-copy.mjs --write\`).`,
+      );
+    }
+  }
+
+  if (violations.length > 0) {
+    console.error(`Hard-coded copy violations:\n${violations.map((v) => `- ${v}`).join("\n")}`);
+    console.error(
+      "User-facing copy comes from a message bundle: src/i18n/locales/<locale>/diver.json for divers, staff/<namespace>.json for staff. See the i18n-copy skill.",
+    );
+    process.exit(1);
+  }
+
+  const remaining = [...counts.values()].reduce((sum, n) => sum + n, 0);
+  console.log(
+    `copy: no new hard-coded copy — ${remaining} string${remaining === 1 ? "" : "s"} across ${counts.size} files still to extract`,
+  );
 }
 
-const remaining = [...counts.values()].reduce((sum, n) => sum + n, 0);
-console.log(
-  `copy: no new hard-coded copy — ${remaining} string${remaining === 1 ? "" : "s"} across ${counts.size} files still to extract`,
-);
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) await main();

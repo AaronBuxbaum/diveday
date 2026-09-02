@@ -270,7 +270,16 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
   // itself is guarded.
   const cspOptions: CspOptions = {
     denyFraming: !isEmbedRequest,
-    rumRegion: process.env.NEXT_PUBLIC_RUM_REGION ?? null,
+    // `?.trim() || null`, not `?? null`: src/lib/storage/blob-host.ts trims the
+    // same variables, and a policy that rejects " us-east-1" while the storage
+    // adapter accepts it writes regional URLs the policy admits nothing for —
+    // #1263's own failure reached through a different door. `||` rather than
+    // `??` so an all-whitespace value collapses to null instead of "".
+    rumRegion: process.env.NEXT_PUBLIC_RUM_REGION?.trim() || null,
+    // Read here rather than wildcarded in the policy: a regional bucket host is
+    // `<bucket>.s3.<region>.amazonaws.com`, and a CSP source may wildcard only
+    // its leftmost label (issue #1263).
+    mediaRegion: process.env.MEDIA_AWS_REGION?.trim() || null,
     // The WhatsApp settings page loads Meta's SDK, and it is the only page in
     // the product that loads a third-party script at all. Granting those hosts
     // here rather than app-wide keeps them off every page a diver ever sees.

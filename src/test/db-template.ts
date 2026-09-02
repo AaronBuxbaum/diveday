@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { btree_gist } from "@electric-sql/pglite/contrib/btree_gist";
@@ -106,7 +106,20 @@ export async function ensureTestDbTemplate(): Promise<void> {
 
   await mkdir(CACHE_DIR, { recursive: true });
   for (const variant of VARIANTS) {
-    await writeFile(templateFile(variant), await buildSnapshot(variant));
+    // Written to a sibling and renamed, never to the live path. `writeFile`
+    // truncates first and then streams ~70MB, so for the whole of that window
+    // the file a *parallel* Vitest invocation is hydrating from is empty and
+    // then partial — and this repo expects parallel invocations by design
+    // (AGENTS.md's "Parallel work"; the `DIVEDAY_TEST_CACHE_DIR` override
+    // exists because worktrees can share one node_modules volume). A reader
+    // that lands in that window gets `Error: PGlite failed to initialize
+    // properly`, which names neither the cause nor the fix. `rename` is atomic
+    // within a filesystem, and the temp file is a sibling so it is the same
+    // one, so a reader sees either the whole old snapshot or the whole new one.
+    const destination = templateFile(variant);
+    const staging = `${destination}.${process.pid}.tmp`;
+    await writeFile(staging, await buildSnapshot(variant));
+    await rename(staging, destination);
   }
   // Written last and listing what it covers, so a fingerprint hit above always
   // means every tar it claims is on disk and current.
@@ -123,6 +136,14 @@ const globalForTemplate = globalThis as typeof globalThis & {
 /**
  * Snapshot bytes for one variant, or null when global setup did not run (e.g. a
  * foreign config) — callers fall back to seeding from scratch.
+ *
+ * **A zero-length read is `null`, not an empty snapshot.** An empty
+ * `Uint8Array` is truthy, so it sailed straight past `seededTestDb`'s
+ * `if (!bytes)` fallback and reached PGlite as an empty tar, which throws
+ * `Error: PGlite failed to initialize properly` — a message that names neither
+ * the cause nor the fix. Nothing legitimately produces an empty snapshot, so
+ * reading one always means the file is mid-write or truncated, and the honest
+ * answer is the same as "no snapshot at all": seed from scratch and say so.
  */
 export function templateBytes(
   variant: TemplateVariant = "lean",
@@ -133,7 +154,7 @@ export function templateBytes(
   if (cached) return cached;
   const bytes = readFile(templateFile(variant)).then(
     // Copy out of the Buffer so the type is a plain ArrayBuffer-backed view.
-    (buffer) => new Uint8Array(buffer),
+    (buffer) => (buffer.length > 0 ? new Uint8Array(buffer) : null),
     () => null,
   );
   cache[variant] = bytes;

@@ -94,6 +94,65 @@ only through the frozen `DIVEDAY_CLOCK`, so rebuilding it tomorrow produces the 
 restores `node_modules/.cache/diveday/` from `actions/cache` under the same inputs, so a unit shard
 only rebuilds the two snapshots (initdb, every migration, the seed — twice) when one of them moved.
 
+### One database per file, when a file can take it
+
+`seededTestDb()` hydrates per **test**. `fileScopedShopContext()` hydrates per **file** and gives
+each test a transaction that is rolled back afterwards — the same isolation, arrived at differently,
+and typed as `AppDb` so query code needs no change:
+
+```ts
+const ctx = fileScopedShopContext();
+
+it("…", async () => {
+  const { db, shop } = ctx;   // `db` is this test's transaction
+});
+```
+
+Measured on 2026-09-02 across the three files converted so far (`trips-queries`, `readiness`,
+`divers` — 132 tests): **109.3s of test time down to 12.8s**, and 48.8s of wall-clock down to 11.2s.
+The 38 database-backed files under `src/db` carried 849 of 988 test-seconds in a measured CI shard,
+so this is most of the unit suite's cost.
+
+**The rollback is the whole mechanism**, so a file whose tests need a *committed* database, or their
+own transaction semantics, stays on `seededShopContext()`. Four cases, the last of which is the
+surprising one:
+
+- **A test that opens its own transaction** gets a savepoint instead of a top-level one — and the
+  outer transaction has already frozen `now()`. `src/db/manifests.test.ts` declines for exactly this:
+  its same-transaction, same-timestamp tie-break tests would still pass and prove less.
+- **`FOR UPDATE` and the concurrency races.** Two statements inside one transaction cannot contend,
+  so the race would pass without proving anything.
+- **Money and replay paths.** Written against a fresh database on purpose.
+- **A test that provokes a database error and keeps querying.** Postgres aborts the *whole*
+  transaction on a failed statement (`current transaction is aborted, commands ignored until end of
+  transaction block`, 25P02), so every line after an expected `.rejects.toThrow()` fails too. In
+  autocommit only the failing statement fails. `src/db/divers.test.ts`'s erasure test takes its own
+  `seededShopContext()` for this one reason while the other 29 tests in the file share the file's.
+
+The rule, short: **read-heavy files that commit nothing.** A file that declines says so in a comment
+where it declines, naming which of the four applies.
+
+### When a db-backed test suddenly takes twelve times as long
+
+`seededTestDb()` falls back to `initdb + migrate + seed` — about **8.5 seconds per test**, against a
+hydration's ~0.7s — whenever there is no usable snapshot. Nothing fails; the run just gets twelve
+times slower, and the first thing anyone sees is a test tripping the 20-second `testTimeout` on a
+suite that was fine yesterday. **It now says so**, once per worker per variant, naming both causes:
+
+- **Global setup did not run** — a foreign Vitest config, or a runner invoked directly. The
+  documented case.
+- **The snapshot is missing, empty, or being rewritten.** This repo expects parallel sessions in one
+  working directory (AGENTS.md's *Parallel work*), and worktrees can share a single `node_modules`
+  volume — which is why `DIVEDAY_TEST_CACHE_DIR` exists. A second Vitest invocation whose fingerprint
+  misses rebuilds both ~70MB snapshots, so a reader can land mid-write.
+
+Two things make that window safe rather than mysterious, both added while investigating #1157.
+`ensureTestDbTemplate` writes to a sibling temp file and `rename`s onto the live path, so a reader
+sees the whole old snapshot or the whole new one and never a prefix of either. And `templateBytes`
+answers `null` for a **zero-length** read: an empty `Uint8Array` is truthy, so it used to sail past
+the `if (!bytes)` fallback and reach PGlite as an empty tar, which throws `Error: PGlite failed to
+initialize properly` — a message naming neither the cause nor the fix.
+
 Vitest defaults to the `node` environment. A test that exercises browser APIs (DOM rendering,
 IndexedDB, `navigator`) opts in with a `// @vitest-environment jsdom` docblock on line 1.
 

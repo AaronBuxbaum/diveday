@@ -79,6 +79,22 @@ overlay with a default, never a requirement.
   over the surface (10% until 2026-09-02, when the text-on-tint check joined the rule); ink-on-brand is white or ink by contrast. The result is emitted as the public
   layout's `--primary`, `--primary-hover`, `--primary-tint`, `--primary-foreground` — so every
   existing primitive re-skins with no per-component work.
+- **Amended 2026-09-02 — one colour, two derivations** (issue #1265). The rule above describes the
+  *light* scheme, and until this date it was the only one that ran: `BrandStyle` emitted a single
+  `:root` block, which — rendering after globals.css, where a media query adds no specificity — won
+  in **both** schemes. So a colour derived to read on sand went to the dark ground unchanged, and by
+  construction it cannot read there: the demo shop's green derives to `#13795a`, measuring 3.39:1 on
+  `--background #071720` and 3.05:1 on `--surface #0d222d`. DiveDay's own lagoon `#0e7490` measures
+  3.40 / 3.05, which is why the dark palette carries its own `--primary: #22d3ee` at 10:1 — every
+  branded shop was giving that up. `deriveDarkBrandTheme` runs the same rule with every polarity
+  flipped: lighten toward white rather than darken toward black, prefer ink on the fill rather than
+  white, and check **both** dark surfaces, because at depth the shell is the lighter of the two and
+  so the binding one. `BrandStyle` emits it as a second block under
+  `@media (prefers-color-scheme: dark)`, which is the whole mechanism available — `data-theme`
+  appears nowhere in globals.css. **Not a per-shop dark picker**: a shop chooses one colour and
+  DiveDay is responsible for it reading in both schemes. The three class-scoped skins that redeclare
+  `--primary` — boat mode, glare mode, print — still out-specify both blocks, which is right; each
+  is a deliberate override for a reader who asked for it.
 - **The display face** labels headings only — the shop's name, a section title, the trip's title.
   Every fact (a time, a price, a seat count, a state, a control) stays in Geist and in ink.
 - **Where the brand may never go**: the waiver text, the payment step, any status, the manifest,

@@ -58,6 +58,17 @@ async function manifestContext() {
   return { db, shop, reef, booking, template, staff: staff.person };
 }
 
+/**
+ * **Deliberately still on per-test hydration** (issue #1244). Two tests here —
+ * "resolves a same-transaction, same-timestamp pair to the later-appended
+ * event", for bookings and for crew — have transaction semantics as their
+ * *subject*: they open their own transaction so a pair of roll-call rows share
+ * one `now()`, then assert the append-order tie-break. Under
+ * `fileScopedShopContext` that inner transaction becomes a savepoint and the
+ * outer one has already frozen `now()`, so *every* row in the test would carry
+ * the same timestamp and the pair would stop being the thing under test. The
+ * assertion would still pass, and prove less.
+ */
 describe("trip manifest and roll call (in-memory PGlite)", () => {
   it("derives every active booking into the manifest, including blocked divers", async () => {
     // The reef trip (manifestContext's fixture) is mostly ready these days —
