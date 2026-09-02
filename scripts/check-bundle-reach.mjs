@@ -74,11 +74,39 @@ const READER_ROOTS = ["src"];
 const KEY_LITERAL = /["'`]([A-Za-z][\w-]*(?:\.[\w-]+)+)["'`]/g;
 
 /**
- * A translator call whose key is assembled at runtime. The captured group is
- * the static head — everything before the first `${` — which is the most this
- * walk can know about which keys the call reaches.
+ * A key assembled at runtime. The captured group is the static head —
+ * everything before the first `${` — which is the most this walk can know
+ * about which keys it reaches.
+ *
+ * **Any** template literal, not only one inside a `t(…)` call: a key is as
+ * often built and passed along as it is interpolated at the call site, and
+ * `PackingSection.tsx`'s `` return `trip.timeline.${step}` as DiverMessageKey ``
+ * is the shape that proved it — nine live keys reported dead. The head must
+ * still contain a dot, which is what keeps a path or a URL out; a head that
+ * happens to look like a key prefix over-reaches, in the direction this guard
+ * errs in everywhere else.
  */
-const DYNAMIC_KEY = /\bt(?:\.(?:raw|rich))?\(\s*`([^`$]*)\$\{/g;
+const DYNAMIC_KEY = /`([^`$]*)\$\{/g;
+
+/**
+ * `useTranslations("booking")` — next-intl scopes the translator to a
+ * namespace, so every call in that file writes a key **relative** to it:
+ * `t("bookAndPay")`, never `t("booking.bookAndPay")`.
+ *
+ * Without this the walk reported all 39 of `booking.*` as dead within an hour
+ * of the guard landing — a report that reads as authority and would have had
+ * somebody delete the live booking page's copy. It is the false positive
+ * `check-bundle-reach.test.mjs` opens by saying is the one that hurts, and it
+ * was in the tree the whole time.
+ */
+const SCOPE = /\buseTranslations\(\s*["'`]([A-Za-z][\w-]*(?:\.[\w-]+)*)["'`]\s*\)/g;
+
+/**
+ * The literal argument of a translator call, of any depth. Only consulted in a
+ * file that scopes: unscoped, a bare `t("owner")` is not a key and
+ * {@link KEY_LITERAL}'s dotted requirement is what keeps it out.
+ */
+const CALL_LITERAL = /\bt(?:\.(?:raw|rich))?\(\s*["'`]([A-Za-z][\w-]*(?:\.[\w-]+)*)["'`]/g;
 
 /** Every leaf as `dotted.path`. */
 function flatten(node, prefix = "") {
@@ -133,6 +161,20 @@ export function findReaches(source) {
   for (const match of source.matchAll(DYNAMIC_KEY)) {
     const head = match[1];
     if (head.includes(".")) dynamicPrefixes.add(head);
+  }
+
+  // A file that scopes its translator reaches every key under that namespace
+  // by a relative name, so read its calls again through each scope it names.
+  const scopes = [...source.matchAll(SCOPE)].map((match) => match[1]);
+  for (const scope of scopes) {
+    for (const match of source.matchAll(CALL_LITERAL)) literals.add(`${scope}.${match[1]}`);
+    for (const match of source.matchAll(DYNAMIC_KEY)) {
+      // An empty head — `t(`${x}`)` under a scope — is the honest "this file
+      // assembles keys under `scope` and none of them can be enumerated". The
+      // walk declines the whole namespace rather than guessing, which is the
+      // direction this guard errs in everywhere else.
+      dynamicPrefixes.add(`${scope}.${match[1]}`);
+    }
   }
   return { literals, dynamicPrefixes };
 }

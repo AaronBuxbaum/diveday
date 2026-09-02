@@ -56,6 +56,35 @@ describe("a key written out in full is reached, however it is written", () => {
   });
 });
 
+describe("a scoped translator, whose call sites write a relative key", () => {
+  /**
+   * `useTranslations("booking")` scopes the translator, so the call site writes
+   * `t("bookAndPay")` and the full key appears nowhere in the file. Within an
+   * hour of this guard landing that reported all 39 of `booking.*` as dead —
+   * the live booking page's copy, offered up for deletion.
+   */
+  it("reads a relative call through the namespace the file scopes to", () => {
+    const source = `
+      const t = useTranslations("booking");
+      const label = t("bookAndPay");
+      const money = t("money.fare");
+    `;
+    expect(literals(source)).toContain("booking.bookAndPay");
+    expect(literals(source)).toContain("booking.money.fare");
+  });
+
+  it("declines the whole namespace when a scoped file assembles its keys", () => {
+    // No head to narrow by, so the honest answer is "some key under `trip`",
+    // not a guess at which.
+    expect(prefixes('const t = useTranslations("trip");\nt(`${step}`)')).toContain("trip.");
+  });
+
+  it("does not prefix a call in a file that scopes nothing", () => {
+    // Unscoped, `t("owner")` is not a key — and must not become `.owner`.
+    expect(literals('const t = useTranslations();\nconst role = t("owner");')).toEqual(new Set());
+  });
+});
+
 describe("a key assembled at runtime is declined, never reported", () => {
   it("collects the static head of an interpolated translator call", () => {
     // src/app/switching/_components/guide.tsx — the key cannot be enumerated,
@@ -73,6 +102,17 @@ describe("a key assembled at runtime is declined, never reported", () => {
 
   it("ignores a template with no dotted head, which reaches no bundle key", () => {
     expect(prefixes(`redirect(\`/waivers/\${token}?sent=rate\`)`)).toEqual(new Set());
+  });
+
+  /**
+   * A key is as often *built* and passed along as it is interpolated inside a
+   * `t(…)` call. Requiring the `t(` reported nine live keys dead — the real
+   * shape, from `PackingSection.tsx`.
+   */
+  it("collects a head from a template that is nowhere near a translator call", () => {
+    expect(prefixes("return `trip.timeline.${step}` as DiverMessageKey;")).toContain(
+      "trip.timeline.",
+    );
   });
 });
 
