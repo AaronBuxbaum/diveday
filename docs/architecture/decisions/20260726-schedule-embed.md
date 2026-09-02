@@ -74,3 +74,22 @@ The two framable routes moved to `/s/<shopSlug>` and `/s/<shopSlug>/trips/<tripI
 policy changed — `isEmbeddableShopRoute` matches the new patterns, the snippet generator emits the
 new URL, and the old ones 308 with `?embed=1` intact, so a snippet a shop pasted before the move
 still frames correctly through the redirect. `e2e/schedule-embed.spec.ts` pins exactly that.
+
+## Amendment, 2026-09-02 — the catalogue and its loader
+
+ADR [20260901-diveday-reimagined](20260901-diveday-reimagined.md) (decision 2, slice 13d) replaces
+the two snippets with an **embed catalogue** — button, lightbox, calendar, grid, one departure,
+courses, QR code, partner link — chosen in Settings → Website embed, and reverses this record's
+rejection of a script loader: with one iframe a loader was scope creep; with eight kinds, host-page
+colour and face inheritance, auto-height frames and a lightbox sheet, one `public/embed.js` is less
+to maintain than eight hand-written snippets. Three things this record decided still hold. The
+framing policy is unchanged and now covers the three widget views under `/s/<slug>/embed/*`, which
+are embed requests **by path** (`isEmbedWidgetRoute`) so there is no `?embed=1` to forget or smuggle.
+Payment still never runs inside someone else's iframe: every card's action leaves the frame
+(`target="_top"`), and the lightbox opens the real page over the host site. And every snippet still
+works with the loader missing — a button is a link, a framed kind an empty `<div>`. The data
+attributes are a contract with every snippet already pasted (`src/lib/embed-snippets.test.ts`); a
+new option is a new attribute, never a renamed one. Two new runtime facts: `qrcode` joins the
+dependencies to draw the QR code in the shop's browser from the same target URL (MIT; nothing is
+stored for it), and `requestLocale` now honours an embed's fixed language, forwarded by the proxy
+as a header, ahead of the visitor's cookie — the cookie cannot reach a third-party frame anyway.

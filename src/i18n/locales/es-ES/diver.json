@@ -3328,5 +3328,9 @@
       "dan_partner": "Socio empresarial de DAN",
       "readers_choice": "Premio Readers' Choice"
     }
+  },
+  "embed": {
+    "book": "Reservar",
+    "enrol": "Inscribirme"
   }
 }

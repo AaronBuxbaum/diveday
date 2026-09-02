@@ -875,8 +875,88 @@
   "embed": {
     "eyebrow": "Settings",
     "title": "Website embed",
-    "description": "Paste one of these into your website so divers can browse and book without leaving it.",
+    "description": "Put your schedule, a departure or a booking button on your own website. One line each; what it shows and how it looks are chosen here.",
     "notConfigured": "Embed links need a configured public hosting address for this DiveDay instance — contact {email} to get it set up.",
+    "what": "What to embed",
+    "shows": "What it shows",
+    "showEverything": "Everything on the board",
+    "showDeparture": "One departure",
+    "look": "Look",
+    "lookSite": "Your site",
+    "lookLight": "DiveDay",
+    "lookNote": "Reads your page’s link colour and font. If the colour is too pale for white text, the button darkens itself.",
+    "language": "Language",
+    "languageAuto": "Follow the visitor’s browser",
+    "preview": "Preview",
+    "previewNote": "Shown in DiveDay’s own look; on your site it takes your page’s colour and font.",
+    "platform": "Where it goes",
+    "snippet": "Put it on your site",
+    "partnerName": "Partner",
+    "partnerPlaceholder": "e.g. The Reef Hotel",
+    "partnerLink": "Partner link",
+    "qrAlt": "QR code to your booking page",
+    "qrDownload": "Download PNG",
+    "kinds": {
+      "button": {
+        "name": "Button",
+        "hint": "A link in your colour"
+      },
+      "lightbox": {
+        "name": "Lightbox",
+        "hint": "Booking opens over your page"
+      },
+      "calendar": {
+        "name": "Calendar",
+        "hint": "Your next departures, inline"
+      },
+      "grid": {
+        "name": "Grid",
+        "hint": "Trips and courses as cards"
+      },
+      "departure": {
+        "name": "One departure",
+        "hint": "A card for a blog post"
+      },
+      "courses": {
+        "name": "Courses",
+        "hint": "The course list"
+      },
+      "qr": {
+        "name": "QR code",
+        "hint": "For the counter and the boat"
+      },
+      "partner": {
+        "name": "Partner link",
+        "hint": "For a hotel or resort to hand out"
+      }
+    },
+    "platforms": {
+      "html": {
+        "name": "HTML",
+        "note": "Paste where the widget should appear. The first line loads once per page, however many widgets you add."
+      },
+      "wordpress": {
+        "name": "WordPress",
+        "note": "Add a Custom HTML block where the widget should appear and paste the code into it."
+      },
+      "squarespace": {
+        "name": "Squarespace",
+        "note": "Add a Code block (Embed → Code) where the widget should appear and paste the code into it."
+      },
+      "wix": {
+        "name": "Wix",
+        "note": "Add an Embed HTML element, paste the code, and size the element to the widget."
+      }
+    },
+    "bookButton": {
+      "buttonText": "Book a dive"
+    },
+    "footer": "Every embed points at <link>your public schedule</link>. Trip edits, new departures and price changes show up the moment a diver loads it.",
+    "snippetField": {
+      "copy": "Copy",
+      "copied": "Copied",
+      "failed": "Couldn’t copy — select the code above instead."
+    },
     "calendarEmbed": {
       "heading": "Calendar embed",
       "description": "Your next four departures with a link through to the rest, sized so it never scrolls inside your page. Best for a dedicated \"Book now\" page on your site.",
@@ -884,17 +964,7 @@
       "fieldLabel": "Embed code",
       "attributionLinkText": "Powered by DiveDay"
     },
-    "bookButton": {
-      "heading": "\"Book a dive\" button",
-      "description": "A plain link styled as a button — no iframe. Opens your schedule in a new tab, and the one to use if you take online payment, since a checkout page may refuse to load in another site's frame.",
-      "fieldLabel": "Button code",
-      "buttonText": "Book a dive"
-    },
-    "footer": "Both snippets point at <link>your public schedule</link>. Trip edits, new departures and price changes show up the moment a diver loads the embed.",
-    "snippetField": {
-      "copy": "Copy",
-      "copied": "Copied",
-      "failed": "Couldn’t copy — select the code above instead."
-    }
+    "code": "Embed code",
+    "partnerLinkField": "Referral link"
   }
 }

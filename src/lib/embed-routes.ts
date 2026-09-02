@@ -10,8 +10,74 @@
 const EMBEDDABLE_SCHEDULE = /^\/s\/[a-z0-9-]+\/?$/;
 const EMBEDDABLE_TRIP_PAGE = /^\/s\/[a-z0-9-]+\/trips\/[^/]+\/?$/;
 
+/**
+ * The widget views of the embed catalogue (Harbor — ADR
+ * 20260901-diveday-reimagined, decision 2): `/s/<slug>/embed/grid`,
+ * `/embed/departure`, `/embed/courses`. Each exists only to be framed, so it
+ * is an embed request by path alone — no `?embed=1` to forget or to smuggle.
+ * The calendar is the schedule page in its `?embed=1` mode, as before.
+ */
+export const EMBED_WIDGETS = ["grid", "departure", "courses"] as const;
+export type EmbedWidget = (typeof EMBED_WIDGETS)[number];
+const EMBEDDABLE_WIDGET = /^\/s\/[a-z0-9-]+\/embed\/(grid|departure|courses)\/?$/;
+
+export function isEmbedWidgetRoute(pathname: string): boolean {
+  return EMBEDDABLE_WIDGET.test(pathname);
+}
+
+export function isEmbedWidget(value: unknown): value is EmbedWidget {
+  return typeof value === "string" && (EMBED_WIDGETS as readonly string[]).includes(value);
+}
+
+const EMBED_WIDGET_SHAPE = /^\/s\/[a-z0-9-]+\/embed\/([^/]+)\/?$/;
+
+/**
+ * `/s/<slug>/embed/<something>` where the something is not a widget. The page
+ * would answer with `notFound()`, but under partial prerendering the static
+ * shell has already gone out with a 200 by the time the page body runs, so a
+ * crawler or a host page with a typo would get a 200 not-found. The proxy
+ * answers these with a plain 404 before any shell is sent.
+ */
+export function isUnknownEmbedWidgetRoute(pathname: string): boolean {
+  const match = EMBED_WIDGET_SHAPE.exec(pathname);
+  return match !== null && !isEmbedWidget(match[1]);
+}
+
 export function isEmbeddableShopRoute(pathname: string): boolean {
-  return EMBEDDABLE_SCHEDULE.test(pathname) || EMBEDDABLE_TRIP_PAGE.test(pathname);
+  return (
+    EMBEDDABLE_SCHEDULE.test(pathname) ||
+    EMBEDDABLE_TRIP_PAGE.test(pathname) ||
+    EMBEDDABLE_WIDGET.test(pathname)
+  );
+}
+
+/**
+ * What the loader on a shop's own site tells the frame about the page it sits
+ * in ("inherit the host page", the look every widget defaults to): the host's
+ * link colour, its body face, and — when the shop fixed one — the language.
+ * Each rides a query parameter the proxy validates and forwards as a header,
+ * so the layout can read it without a `searchParams` prop it does not have.
+ */
+export const EMBED_BRAND_HEADER = "x-diveday-embed-brand";
+export const EMBED_FONT_HEADER = "x-diveday-embed-font";
+export const EMBED_LOCALE_HEADER = "x-diveday-embed-locale";
+
+/** A host colour is `#rrggbb` or nothing — the same shape the brand column keeps. */
+export function parseEmbedBrandParam(value: string | null): string | null {
+  if (!value) return null;
+  const match = /^#?([0-9a-fA-F]{6})$/.exec(value.trim());
+  return match ? `#${match[1].toLowerCase()}` : null;
+}
+
+/**
+ * A host font family is rendered into a `<style>`, so only the characters a
+ * `font-family` list is made of pass: letters, digits, spaces, commas, hyphens
+ * and straight quotes, at most 120 of them. Anything else is not a font.
+ */
+export function parseEmbedFontParam(value: string | null): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  return /^[A-Za-z0-9 ,'"-]{1,120}$/.test(trimmed) ? trimmed : null;
 }
 
 /**
