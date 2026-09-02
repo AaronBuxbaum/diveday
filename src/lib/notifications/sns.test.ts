@@ -1,5 +1,6 @@
 import { createSign, generateKeyPairSync } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
+import { HOUR_MS, MINUTE_MS, nowMs } from "@/lib/clock";
 import {
   confirmSnsSubscription,
   readWebhookPayload,
@@ -38,7 +39,11 @@ function signedNotification(
     MessageId: "11111111-2222-3333-4444-555555555555",
     TopicArn: topicArn,
     Message: overrides.messageBody ?? JSON.stringify({ eventType: "Bounce" }),
-    Timestamp: "2026-08-02T18:00:00.000Z",
+    // Fresh by default: verifySnsMessage refuses a message older than an hour
+    // (MAX_AGE_MS). Anchored to the app clock rather than a literal, because
+    // the unit suite runs frozen (TEST_FROZEN_CLOCK) and a literal would be
+    // stale or future-dated depending on which clock is in force.
+    Timestamp: new Date(nowMs()).toISOString(),
     SignatureVersion: "1",
     SigningCertURL: trustedCertUrl,
     Subject: undefined as string | undefined,
@@ -174,6 +179,47 @@ describe("verifySnsMessage", () => {
     const message = signedNotification();
     const result = await verifySnsMessage(JSON.stringify(message), topicArn, certFetch("", false));
     expect(result).toEqual({ status: "invalid_signature" });
+  });
+
+  it("rejects a message published more than an hour ago", async () => {
+    const message = signedNotification({
+      Timestamp: new Date(nowMs() - HOUR_MS - 1000).toISOString(),
+    });
+    const fetchImpl = certFetch();
+    const result = await verifySnsMessage(JSON.stringify(message), topicArn, fetchImpl);
+    expect(result).toEqual({ status: "stale" });
+    // Refused before the certificate fetch, so a replay costs no outbound request.
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("still verifies a message published just inside the hour", async () => {
+    const message = signedNotification({
+      Timestamp: new Date(nowMs() - 59 * MINUTE_MS).toISOString(),
+    });
+    const result = await verifySnsMessage(JSON.stringify(message), topicArn, certFetch());
+    expect(result.status).toBe("verified");
+  });
+
+  it("rejects a message timestamped well into the future", async () => {
+    const message = signedNotification({
+      Timestamp: new Date(nowMs() + 5 * MINUTE_MS + 1000).toISOString(),
+    });
+    const result = await verifySnsMessage(JSON.stringify(message), topicArn, certFetch());
+    expect(result).toEqual({ status: "stale" });
+  });
+
+  it("tolerates a few minutes of clock skew in the other direction", async () => {
+    const message = signedNotification({
+      Timestamp: new Date(nowMs() + 4 * MINUTE_MS).toISOString(),
+    });
+    const result = await verifySnsMessage(JSON.stringify(message), topicArn, certFetch());
+    expect(result.status).toBe("verified");
+  });
+
+  it("rejects a Timestamp that is not a date at all as malformed", async () => {
+    const message = signedNotification({ Timestamp: "whenever" });
+    const result = await verifySnsMessage(JSON.stringify(message), topicArn, certFetch());
+    expect(result).toEqual({ status: "malformed" });
   });
 
   it("includes Subject in the signed content only when present", async () => {

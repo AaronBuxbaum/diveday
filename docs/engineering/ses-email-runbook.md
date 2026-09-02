@@ -179,6 +179,16 @@ no flag, nothing to remember. One thing is still yours:
 app. Verified messages whose own `TopicArn` doesn't match are rejected even when correctly signed,
 so a differently-sourced SNS message can't be replayed here.
 
+A correctly signed message from the *right* topic is also refused once it is **more than an hour
+old**, or dated more than five minutes in the future (`MAX_AGE_MS` / `MAX_FUTURE_MS` in
+`src/lib/notifications/sns.ts`; the same check covers `/api/webhooks/sms`, which shares the
+verifier). SNS signs the publish timestamp along with everything else, so without reading it a
+captured message stays valid forever — harmless while a replay could only re-apply an idempotent
+delivery status, and not harmless the moment an event writes something a person can undo, such as a
+`Complaint` that opts an address out of courtesy mail. Both windows are wall-clock against this host: a host whose clock has drifted by more
+than five minutes will refuse live traffic, and the symptom is a run of 400s from an endpoint whose
+signatures all verify.
+
 Until that is set the route answers 503, which means it cannot confirm SNS's handshake — so on a
 fresh environment the subscription the stack just created will expire in ~3 days. Check it landed:
 
