@@ -82,7 +82,7 @@ export default async function EmbedSettingsPage({
     utm_campaign: shop.slug,
   });
   const attributionUrl = `${origin}/?${attributionParams.toString()}`;
-  // #5b6f77 is the light-mode `--muted` token value (src/app/globals.css) —
+  // #576b72 is the light-mode `--muted` token value (src/app/globals.css) —
   // same reasoning as the button snippet below: this renders on the shop's
   // own site, outside DiveDay's CSS, so it inlines the real color rather than
   // referencing the custom property. Kept small and unobtrusive on purpose.
@@ -103,7 +103,7 @@ export default async function EmbedSettingsPage({
   // at the bottom, which is white space on the host page, and that is a far
   // smaller sin than a nested scroll on a phone.
   const iframeSnippet = `<iframe src="${embedUrl}" title="${shopNameAttr} — ${escapeHtml(bookButtonText)}" style="width:100%;max-width:720px;height:1250px;border:0;border-radius:12px" loading="lazy"></iframe>
-<a href="${attributionUrl}" target="_blank" rel="noopener" style="display:block;margin-top:6px;font:12px/1.4 system-ui,sans-serif;color:#5b6f77;text-decoration:none">${escapeHtml(attributionLinkText)}</a>`;
+<a href="${attributionUrl}" target="_blank" rel="noopener" style="display:block;margin-top:6px;font:12px/1.4 system-ui,sans-serif;color:#576b72;text-decoration:none">${escapeHtml(attributionLinkText)}</a>`;
   // Deliberately the plain schedule URL, not the embed one: this is a link a
   // browser navigates to directly, never a frame, so it should land on the
   // full page — including for a shop that takes online payment, where a

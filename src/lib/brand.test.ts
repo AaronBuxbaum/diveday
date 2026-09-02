@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   BRAND_BADGE_CODES,
+  BRAND_DEFAULT_GROUND,
   BRAND_DISPLAY_FONT_CODES,
-  BRAND_INK,
   brandDisplayFontFamily,
   brandDisplayFontStylesheet,
   brandThemeProperties,
@@ -60,19 +60,30 @@ describe("display faces", () => {
  * that exercises it.
  */
 describe("deriveBrandTheme", () => {
-  it("keeps a colour white reads on, with white as its ink", () => {
+  it("keeps a colour that already reads as text on sand, with white as its ink", () => {
     const theme = deriveBrandTheme("#0E7490");
     expect(theme.primary).toBe("#0e7490");
     expect(theme.primaryForeground).toBe("#ffffff");
     expect(theme.adjusted).toBe(false);
   });
 
-  it("keeps a pale colour and puts ink on it instead of darkening it away", () => {
+  it("darkens a colour white reads on but sand does not, and says so", () => {
+    // The seeded demo green: 5.4:1 under white text, 4.36:1 as a link on
+    // sand and 4.03:1 as the selected pill's words over its own tint — the
+    // pair the 2026-09-02 a11y run failed 22 surfaces on. One 8% step.
+    const theme = deriveBrandTheme("#158462");
+    expect(theme.adjusted).toBe(true);
+    expect(theme.primary).toBe("#13795a");
+    expect(contrastRatio(theme.primary, BRAND_DEFAULT_GROUND)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(theme.primary, theme.primaryTint)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("darkens a pale colour rather than keeping it: a pale colour cannot be a link", () => {
     const theme = deriveBrandTheme("#f7e26b");
-    expect(theme.primary).toBe("#f7e26b");
-    expect(theme.primaryForeground).toBe(BRAND_INK);
-    expect(theme.adjusted).toBe(false);
-    expect(contrastRatio(theme.primary, theme.primaryForeground)).toBeGreaterThanOrEqual(4.5);
+    expect(theme.adjusted).toBe(true);
+    expect(theme.primary).not.toBe("#f7e26b");
+    expect(theme.primaryForeground).toBe("#ffffff");
+    expect(contrastRatio(theme.primary, BRAND_DEFAULT_GROUND)).toBeGreaterThanOrEqual(4.5);
   });
 
   it("darkens a colour neither text reads on until white does, and says so", () => {
@@ -83,7 +94,7 @@ describe("deriveBrandTheme", () => {
     expect(contrastRatio(theme.primary, "#ffffff")).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("always ends with a fill its ink reads on, whatever the colour", () => {
+  it("always reads as text on the ground and its tint, and as a fill under its ink, whatever the colour", () => {
     for (const color of [
       "#ffffff",
       "#000000",
@@ -92,8 +103,11 @@ describe("deriveBrandTheme", () => {
       "#0000ff",
       "#808080",
       "#ffff00",
+      "#158462",
     ]) {
       const theme = deriveBrandTheme(color);
+      expect(contrastRatio(theme.primary, BRAND_DEFAULT_GROUND)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(theme.primary, theme.primaryTint)).toBeGreaterThanOrEqual(4.5);
       expect(contrastRatio(theme.primary, theme.primaryForeground)).toBeGreaterThanOrEqual(4.5);
     }
   });

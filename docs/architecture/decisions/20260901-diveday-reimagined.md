@@ -45,8 +45,8 @@ What lands, and where each rule comes from:
 | Rule | Value | Supersedes |
 | --- | --- | --- |
 | Ground | sand `#fbf7ef`, shell (surface) `#fffdf8`, tideline (sunken) `#f3ecdd`, rope (border) `#e6dcc8`, rope-strong `#8a8065` | Clearwater's `#faf9f6` / `#ffffff` / `#f1efe9` / `#e3e0d7` / `#8a8577` |
-| Ink | ink `#0c2a35`, muted `#5b6f77` | unchanged |
-| Lagoon | primary `#0e7490`, hover (lagoon-deep) `#0a4d61`, wash (tint) `#dceef0`, and a new decorative **shallows** `#7fd0d6` for water fills that carry no fact | hover `#155e75`; tint was a 10% mix |
+| Ink | ink `#0c2a35`, muted `#576b72` (was `#5b6f77`; 4.48:1 on the new tideline, nudged 2026-09-02) | unchanged |
+| Lagoon | primary `#0e7490`, hover (lagoon-deep) `#0a4d61`, wash (tint) `#e0f0f2` (drawn as `#dceef0`; lightened 2026-09-02 so lagoon text on it clears 4.5:1 — it read 4.47), and a new decorative **shallows** `#7fd0d6` for water fills that carry no fact | hover `#155e75`; tint was a 10% mix |
 | Coral | `#ff6f61`, deep `#a83a2c` as ink on a coral wash `#ffeee9` | unchanged values; the wash is new |
 | Signals | success / warning / danger keep their values; each gains a wash (`#e6f0e8`, `#f8eee2`, `#f8e8e6`) as its tint | tints were 10% mixes |
 | Radii | control 10 · inset 18 · panel 28 · pill 999 | panel 16 (`rounded-2xl`), control 10 |
@@ -78,7 +78,12 @@ overlay with a default, never a requirement.
   and the storefront says nothing about it; hover is the colour darkened 12%; the tint is a 10% mix
   over the surface; ink-on-brand is white or ink by contrast. The result is emitted as the public
   layout's `--primary`, `--primary-hover`, `--primary-tint`, `--primary-foreground` — so every
-  existing primitive re-skins with no per-component work.
+  existing primitive re-skins with no per-component work. *Amended 2026-09-02:* the check is as
+  **text**, not as a fill — 4.5:1 against the ground (sand) and against the colour's own tint,
+  darkening until both hold. The same token is every storefront link and the selected pill's own
+  words, and a colour white reads on can still sit at 4.36 on sand (the seeded green did; 22 axe
+  failures). A colour that reads on sand is dark enough for white on it, so one loop serves both
+  and the pale-colour-with-ink branch is gone.
 - **The display face** labels headings only — the shop's name, a section title, the trip's title.
   Every fact (a time, a price, a seat count, a state, a control) stays in Geist and in ink.
 - **Where the brand may never go**: the waiver text, the payment step, any status, the manifest,

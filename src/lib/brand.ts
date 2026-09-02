@@ -11,9 +11,11 @@
  * Two rules the ADR states that this file enforces rather than remembers:
  *
  * - **A brand colour never fails contrast.** `deriveBrandTheme` checks the
- *   colour as a button fill against white and against ink; a colour that works
- *   with neither is darkened until white text reads on it, and the theme says
- *   so (`adjusted`) rather than the storefront saying anything.
+ *   colour as *text* — every storefront link, the selected pill's own words
+ *   over its tint — against the ground and the tint, and darkens it until it
+ *   reads; a colour that reads on sand is dark enough for white text on it as
+ *   a fill. The theme says so (`adjusted`) rather than the storefront saying
+ *   anything.
  * - **Codes, never words.** A display face and a badge are codes so they arrive
  *   in every language and so DiveDay never draws a logo it has no right to
  *   show. The words live in the message bundles; this file owns the lists.
@@ -180,6 +182,8 @@ const WHITE = "#ffffff";
 export const BRAND_INK = "#0c2a35";
 /** Reef's shell — the surface a tint is mixed over when the caller names none. */
 export const BRAND_DEFAULT_SURFACE = "#fffdf8";
+/** Reef's sand — the ground a storefront's links sit on, so the colour has to read as text on it. */
+export const BRAND_DEFAULT_GROUND = "#fbf7ef";
 
 export type BrandTheme = {
   /** The button fill and link colour, darkened if the shop's colour failed contrast. */
@@ -190,44 +194,51 @@ export type BrandTheme = {
   primaryTint: string;
   /** The text on the fill: white where it reads, ink where the colour is pale. */
   primaryForeground: string;
-  /** True when the stored colour had to be darkened to read as a fill. */
+  /** True when the stored colour had to be darkened to read as text on the ground. */
   adjusted: boolean;
 };
 
 /**
- * The derivation rule (ADR 20260901-diveday-reimagined, decision 2):
+ * The derivation rule (ADR 20260901-diveday-reimagined, decision 2, amended
+ * 2026-09-02):
  *
- * 1. If white reads on the colour (4.5:1), it is the fill and white is the ink.
- * 2. Else if ink reads on it — a pale brand — it is the fill and ink is the ink.
- * 3. Else the colour is darkened in 8% steps until white reads on it, and the
- *    theme says so. The storefront says nothing; a shop learns in Settings.
+ * 1. The colour is darkened in 8% steps until it reads as **text** (4.5:1) on
+ *    the ground and on its own tint, and the theme says so. The first cut of
+ *    this rule checked the colour only as a button *fill* — white or ink on
+ *    it — and the seeded `#158462` passed that while sitting at 4.36 on sand
+ *    and 4.03 on its tint, which is what every storefront link and the
+ *    selected pill actually are (22 axe failures on 2026-09-02). A colour
+ *    that reads on sand has a luminance of at most 0.17, so white reads on it
+ *    as a fill at 4.8 or better — one loop serves both readings, and the
+ *    "keep a pale colour with ink on it" branch is gone with it: a pale
+ *    colour cannot be a link. Twelve steps reach near-black from any hue.
+ * 2. The text on the fill is white where it reads, ink where it does not —
+ *    which only a ground lighter than sand could still produce.
  *
  * Hover is the fill darkened 12%; the tint is 10% of the fill over the surface.
+ * The storefront says nothing about an adjustment; a shop learns in Settings.
  */
 export function deriveBrandTheme(
   color: string,
-  { surface = BRAND_DEFAULT_SURFACE }: { surface?: string } = {},
+  {
+    surface = BRAND_DEFAULT_SURFACE,
+    ground = BRAND_DEFAULT_GROUND,
+  }: { surface?: string; ground?: string } = {},
 ): BrandTheme {
+  const tintOf = (fill: string) => mixHex(surface, fill, 0.1);
+  const readsAsText = (fill: string) =>
+    contrastRatio(fill, ground) >= AA_TEXT_CONTRAST &&
+    contrastRatio(fill, tintOf(fill)) >= AA_TEXT_CONTRAST;
   let primary = color.toLowerCase();
-  let adjusted = false;
-  let primaryForeground = WHITE;
-  if (contrastRatio(primary, WHITE) < AA_TEXT_CONTRAST) {
-    if (contrastRatio(primary, BRAND_INK) >= AA_TEXT_CONTRAST) {
-      primaryForeground = BRAND_INK;
-    } else {
-      // Twelve steps of 8% reach near-black from any hue, so this always ends.
-      for (let step = 0; step < 12 && contrastRatio(primary, WHITE) < AA_TEXT_CONTRAST; step++) {
-        primary = mixHex(primary, "#000000", 0.08);
-      }
-      adjusted = true;
-    }
+  for (let step = 0; step < 12 && !readsAsText(primary); step++) {
+    primary = mixHex(primary, "#000000", 0.08);
   }
   return {
     primary,
     primaryHover: mixHex(primary, "#000000", 0.12),
-    primaryTint: mixHex(surface, primary, 0.1),
-    primaryForeground,
-    adjusted,
+    primaryTint: tintOf(primary),
+    primaryForeground: contrastRatio(primary, WHITE) >= AA_TEXT_CONTRAST ? WHITE : BRAND_INK,
+    adjusted: primary !== color.toLowerCase(),
   };
 }
 
