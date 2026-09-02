@@ -6,8 +6,9 @@ import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
-import { SwitchingConcierge } from "@/components/SwitchingConcierge";
+import { SWITCH_EMAIL, SwitchingConcierge } from "@/components/SwitchingConcierge";
 import { SwitchingImportCta } from "@/components/SwitchingImportCta";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
@@ -220,6 +221,68 @@ async function GuideBody({
               >
                 {t("switching.common.seePricing")}
               </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* The website ledger (FareHarbor today): what the shop pasted from the
+          incumbent beside the DiveDay embed that replaces it, the hosted-site
+          comparison, and the built-to-order website. It sits between the
+          coexist argument and the mid-page door so the reader who has just
+          been told "keep it, or leave it" sees the leave path is not a
+          rebuild of their site — and the demo door follows immediately, first
+          of the two, as everywhere on these pages. No third door of its own:
+          the offer's one action is the address to write to. */}
+      {guide.website && (
+        <section className="border-b border-border">
+          <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20">
+            <p className="text-sm font-semibold tracking-widest text-primary uppercase">
+              {t("switching.competitor.websiteEyebrow")}
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-balance sm:text-4xl">
+              {t(guide.website.heading)}
+            </h2>
+            <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">{t(guide.website.intro)}</p>
+
+            {/* The two column labels render at every width — on a phone the
+                rows are two narrow columns rather than a stack, so a reader
+                who never sees a desktop still knows which side is whose. */}
+            <div className="mt-8 grid grid-cols-[7.5rem_1fr] gap-3 sm:grid-cols-[15rem_1fr] sm:gap-4">
+              <span className={groupLabelClass()}>
+                {t("switching.competitor.websiteTheirs", { competitor: guide.competitor })}
+              </span>
+              <span className={groupLabelClass()}>{t("switching.competitor.websiteOurs")}</span>
+            </div>
+            <ul className="mt-3 divide-y divide-border border-y border-border">
+              {guide.website.ledger.map((row) => (
+                <li
+                  key={row.theirs}
+                  className="grid grid-cols-[7.5rem_1fr] items-baseline gap-3 py-3 sm:grid-cols-[15rem_1fr] sm:gap-4"
+                >
+                  <span className="font-medium text-foreground">{t(row.theirs)}</span>
+                  <span className="text-sm leading-6 text-muted">{t(row.ours)}</span>
+                </li>
+              ))}
+            </ul>
+
+            <p className="mt-8 max-w-2xl leading-7 text-muted">
+              {t(guide.website.sitesNote, { sitesPrice: guide.website.sitesPrice })}
+            </p>
+
+            <div className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-6">
+              <h3 className="text-lg font-semibold tracking-tight">
+                {t(guide.website.offer.heading)}
+              </h3>
+              <p className="mt-2 leading-7 text-muted">{t(guide.website.offer.body)}</p>
+              {/* The concierge's own door, reused word for word: one address
+                  for the switch and the website, said the same way twice. */}
+              <a
+                href={`mailto:${SWITCH_EMAIL}`}
+                className="mt-4 inline-block font-medium text-primary underline underline-offset-4"
+              >
+                {t("switching.concierge.emailCta", { email: SWITCH_EMAIL })}
+              </a>
             </div>
           </div>
         </section>

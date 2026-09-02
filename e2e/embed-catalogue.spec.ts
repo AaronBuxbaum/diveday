@@ -32,10 +32,11 @@ test.describe("the widget views", () => {
     const primary = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--primary").trim(),
     );
-    // The host's colour, as `BrandStyle` derives every brand: darkened until it
-    // reads as text on sand (`deriveBrandTheme`), never the raw hex — an amber
-    // that reads white-on-fill still sat under 4.5:1 as a link.
-    expect(primary).toBe(deriveBrandTheme("#b45309").primary);
+    // The host's colour is darkened one step so it reads as text on the
+    // widget's ground (deriveBrandTheme), the same rule a shop's own colour
+    // gets on the storefront; #b45309 alone reads at 4.6:1 on white but not
+    // on the sand.
+    expect(primary).toBe("#a64c08");
     const font = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--font-sans").trim(),
     );
