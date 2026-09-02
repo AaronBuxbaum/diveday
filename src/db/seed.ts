@@ -26,6 +26,7 @@ import {
   closeoutLeftoverDecisions,
   courseInquiries,
   courses,
+  crewAssignmentRequests,
   crewAvailabilityBlocks,
   dayCloseouts,
   divePackageEntitlements,
@@ -227,7 +228,10 @@ async function seedStaffShifts(db: DbExecutor, shopId: string, personIds: string
  * Deliberately **one person, next week, with a note** — not a shop where
  * everybody is on holiday. It is the ordinary case: somebody said they were
  * away, the week shows it quietly, and nobody has been taken off a boat.
- * Stable like the shifts beside it, so a schedule reset leaves it alone.
+ *
+ * **Reset-owned**, unlike the shifts beside it: the staffing week is a surface
+ * specs write to, so a blackout one worker records must not survive into the
+ * next test's board (`resetDemoSchedule`, ADR 20260815-per-test-private-shops).
  */
 async function seedCrewAway(db: DbExecutor, shopId: string, personIds: string[]): Promise<void> {
   const [personId] = personIds;
@@ -433,12 +437,6 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
     shop.id,
     staff.map((person) => person.id),
   );
-  await seedCrewAway(
-    db,
-    shop.id,
-    staff.map((person) => person.id),
-  );
-
   await seedDemoSchedule(db, shop.id, opts);
 
   // Stable half, like staff and their shifts: a backup destination is a
@@ -655,12 +653,6 @@ export async function createDemoShop(
     shop.id,
     staff.map((person) => person.id),
   );
-  await seedCrewAway(
-    db,
-    shop.id,
-    staff.map((person) => person.id),
-  );
-
   // A visitor's demo should carry the same owner-facing story as the
   // canonical demo, including sailed trips, tips, and reviews. Test-only
   // private shops can opt into the lean schedule when they need isolation
@@ -701,6 +693,12 @@ export async function seedDemoSchedule(
   const reliefInstructor = instructorsByName.get(RELIEF_INSTRUCTOR_NAME);
   if (!instructor) throw new Error("seed: lead instructor missing from stable staff");
   if (!reliefInstructor) throw new Error("seed: relief instructor missing from stable staff");
+
+  // **Reset-owned, not settings.** A blackout is a fact about one week, and the
+  // staffing week is a surface specs write to — so it lives in the resettable
+  // half, where `/api/test/reset` clears it before the next test rather than
+  // leaking one worker's "away" into another's board.
+  await seedCrewAway(db, shopId, [instructor.id]);
 
   // Only the canonical blue-mantis demo pins the recap booking's id — the visual
   // tests mint a recap link from that fixed id. A freshly-minted demo shop gets a
@@ -974,6 +972,13 @@ export async function resetDemoSchedule(
   // over. Shop-wide, because there is no seeded row here to preserve.
   await db.delete(internalNotes).where(eq(internalNotes.shopId, shopId));
   await db.delete(activityEvents).where(eq(activityEvents.shopId, shopId));
+  // The staffing week's two crew-authored tables, both keyed on people and on
+  // trips that are about to go. Reset-owned rather than settings: a blackout is
+  // a fact about one week, and both are surfaces a spec writes to — leaving
+  // either standing would leak one worker's "away" or one worker's ask into the
+  // next test's board (`seedCrewAway` re-seeds the demo's own blackout).
+  await db.delete(crewAssignmentRequests).where(eq(crewAssignmentRequests.shopId, shopId));
+  await db.delete(crewAvailabilityBlocks).where(eq(crewAvailabilityBlocks.shopId, shopId));
   // The close-out trail references people (its actor), so it clears before the
   // people purge below — and clearing it at all is what keeps the close-out
   // surface deterministic between specs: a day one test closed must read as

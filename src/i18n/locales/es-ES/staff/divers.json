@@ -138,6 +138,7 @@
     "lastAboard": "último embarque {date}",
     "bookedOn": "reservado {date} · {time}",
     "importedOnly": "llegó desde tu sistema anterior",
+    "selfRegistered": "Se registró en el mostrador · {date}",
     "letterOther": "#",
     "pagination": {
       "total": "{count, plural, one {# buceador} other {# buceadores}}"

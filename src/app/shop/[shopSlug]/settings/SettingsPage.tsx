@@ -65,6 +65,7 @@ import { publicAppUrl } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { CONNECT_CLIENT_ID } from "@/lib/payments/connect";
 import { SUPPORT_EMAIL, UPGRADE_EMAIL } from "@/lib/platform-mail";
+import { publicShopRegisterPath } from "@/lib/public-routes";
 import { RENTABLE_ITEMS, SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/rentals";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
@@ -105,6 +106,7 @@ import {
   saveUnitsAction,
   updateBoatAction,
 } from "./actions";
+import { CounterQrCard } from "./CounterQrCard";
 import { SECTION_IDS, SETTINGS_GROUPS, type SectionId } from "./settings-groups";
 
 export const metadata: Metadata = { title: "Shop settings — DiveDay" };
@@ -2258,6 +2260,18 @@ export default async function SettingsPage({
               </ShopNotice>
             </section>
           ) : null}
+
+          {/* The counter's own door (issue #1236): a QR a shop prints and puts
+              on the desk, so a walk-in who has booked nothing can put
+              themselves on file before they reach the front of the queue. It
+              sits here rather than behind a row of its own because there is
+              nothing to configure — the page exists, this is where its address
+              lives. */}
+          <CounterQrCard
+            url={`${publicAppUrl() ?? ""}${publicShopRegisterPath(shopSlug)}`}
+            title={t("settings.main.counterQr.heading")}
+            description={t("settings.main.counterQr.description")}
+          />
 
           <InsetGroup>
             <SettingsDoorRow

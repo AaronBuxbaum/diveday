@@ -538,6 +538,26 @@ export const people = pgTable(
     /** Keeps history intact while removing a person from active shop workspaces. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     /**
+     * **The diver filled this record in themselves**, at the shop's own QR or
+     * printed card, before any booking existed (issue #1236).
+     *
+     * A date rather than a flag, because "when" is what a staffer standing at
+     * the counter actually wants: a person who registered this morning is the
+     * one in front of them, and one who registered in March is a returning
+     * diver whose details may have moved on.
+     *
+     * Set **only when the row is created**. A returning diver re-submitting the
+     * form is matched by email and keeps the stamp they already had — and a
+     * person the shop typed in itself never gets one, so the mark means
+     * precisely "this came from the diver" and not "this was recent".
+     *
+     * It is also load-bearing for what a shop trusts: nothing here is reviewed
+     * evidence. The certification is `self_declared_at`, the fit is a
+     * preference, and the medical answers arrive through the ordinary waiver
+     * flow with the ordinary hard block.
+     */
+    selfRegisteredAt: timestamp("self_registered_at", { withTimezone: true }),
+    /**
      * Set when this person's identifying and medical data was destructively
      * erased across the shop's tables (ADR 20260802-diver-data-erasure).
      *

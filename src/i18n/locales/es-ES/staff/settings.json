@@ -329,6 +329,10 @@
     "calendar": {
       "heading": "Suscripciones al calendario"
     },
+    "counterQr": {
+      "heading": "La tarjeta del mostrador",
+      "description": "Imprímela y ponla en el mostrador. Quien llegue sin reserva la escanea, indica su nombre, certificación y tallas, y se le envía el descargo, todo antes de llegar al frente de la cola."
+    },
     "integrations": {
       "heading": "Shopify, QuickBooks y Zapier"
     },

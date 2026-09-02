@@ -37,6 +37,9 @@ cannot see it.
 | Booking-confirmation actions (rental fit, pay, "sign your waiver now") | same file, `confirmContextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Last-minute-list join | `src/app/s/[shopSlug]/actions.ts` | IP, **and** the address any certification claim is *about* | `RATE_LIMITS.lastMinuteListJoin` (10/hour) + `RATE_LIMITS.declarationByPerson` (5/hour) |
 | Course inquiry | `src/app/s/[shopSlug]/courses/[slug]/actions.ts` | IP | `RATE_LIMITS.courseInquiry` (10/hour) |
+| Self-registration (the counter QR) | `src/app/s/[shopSlug]/register/actions.ts` | IP | `RATE_LIMITS.selfRegisterByIp` (10/hour) |
+| Self-registration (the counter QR) | `src/app/s/[shopSlug]/register/actions.ts` | shop | `RATE_LIMITS.selfRegisterByShop` (120/hour) |
+| Self-registration's waiver mail | `src/app/s/[shopSlug]/register/actions.ts` | recipient address | `RATE_LIMITS.selfRegisterEmailByRecipient` (3/hour) — drops the send, never the registration |
 | Readiness actions | `src/app/ready/[token]/actions.ts` `contextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Self-cancelling a booking from the readiness link | same file | IP | `RATE_LIMITS.bookingSelfCancel` (5/hour) |
 | Waiver draft/complete | `src/app/waivers/[token]/page.tsx` | IP | `RATE_LIMITS.capabilityAction` (60/hour) |

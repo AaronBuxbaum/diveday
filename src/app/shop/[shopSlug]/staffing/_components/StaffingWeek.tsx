@@ -375,7 +375,7 @@ function GapChip({
             <input type="hidden" name="tripId" value={gap.tripId} />
             <SubmitButton
               pendingLabel={words.requesting}
-              aria-label={fill(words.requestAria, { trip: gap.title })}
+              ariaLabel={fill(words.requestAria, { trip: gap.title })}
               // A peer of Assign beside it, not a button under it: they are two
               // ways the same short-handed departure gets crewed, and a filled
               // control would read as the louder of the two.
@@ -696,7 +696,7 @@ export function StaffingWeek({
                         <input type="hidden" name="tripId" value={gap.tripId} />
                         <SubmitButton
                           pendingLabel={words.requesting}
-                          aria-label={fill(words.requestAria, { trip: gap.title })}
+                          ariaLabel={fill(words.requestAria, { trip: gap.title })}
                           className={buttonClass({ variant: "link", size: "sm" })}
                         >
                           {words.request}

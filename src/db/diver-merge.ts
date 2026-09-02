@@ -91,6 +91,12 @@ export const STAFF_HISTORY_TABLES = [
   "calendar_feeds",
   "roll_call_crew_events",
   "push_subscriptions",
+  // The staffing week's own two tables (issue #1235). Both are written by, and
+  // about, somebody who crews boats — a days-away block or an ask for a
+  // departure — so either side of a merge holding one is a staff record and the
+  // merge is refused, exactly as a seeded shift refuses it.
+  "crew_availability_blocks",
+  "crew_assignment_requests",
 ] as const;
 export const STAFF_PERSON_ONLY_TABLES = ["trip_assignments", "user_accounts"] as const;
 

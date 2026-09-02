@@ -34,9 +34,11 @@ describe("blockerFixFor", () => {
   });
 
   it("resolves the worst blocker when several are present", () => {
-    // medical_review (severity 0) outranks payment_due, and lives on the roster.
+    // medical_review (severity 0) outranks payment_due, and it points at the
+    // **diver's own record**, not the roster: the physician's clearance is
+    // recorded there and nowhere else (issue #1252).
     const blockers: ReadinessBlocker[] = [{ code: "payment_due" }, { code: "medical_review" }];
-    expect(blockerFixFor(blockers, ctx)?.label).toBe("Open roster");
+    expect(blockerFixFor(blockers, ctx)?.label).toBe("Open Priya’s record");
   });
 
   it("returns null when there is nothing to fix", () => {

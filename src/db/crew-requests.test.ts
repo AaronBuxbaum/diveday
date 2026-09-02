@@ -61,10 +61,11 @@ describe("crew availability blocks", () => {
     });
     expect(outcome.ok).toBe(true);
 
-    const blocks = await listCrewAvailabilityBlocks(db, shop.id, {
-      from: "2026-07-20",
-      to: "2026-07-26",
-    });
+    // Scoped to this person: the demo shop seeds a blackout of its own
+    // (`seedCrewAway`), which is the point of the reader but not of this test.
+    const blocks = (
+      await listCrewAvailabilityBlocks(db, shop.id, { from: "2026-07-20", to: "2026-07-26" })
+    ).filter((block) => block.personId === crew.id);
     expect(blocks).toHaveLength(1);
     expect(blocks[0]).toMatchObject({ personId: crew.id, startsOn: "2026-07-20", note: "Family" });
   });
@@ -80,8 +81,13 @@ describe("crew availability blocks", () => {
       endsOn: "2026-07-20",
     });
     expect(outcome).toEqual({ ok: false, reason: "not_allowed" });
+    // Nothing landed on the owner's row. (The shop's seeded blackout belongs to
+    // whichever staff person `seedCrewAway` picked, so this is scoped rather
+    // than asserting the table is empty.)
     expect(
-      await listCrewAvailabilityBlocks(db, shop.id, { from: "2026-07-01", to: "2026-12-31" }),
+      (
+        await listCrewAvailabilityBlocks(db, shop.id, { from: "2026-07-01", to: "2026-12-31" })
+      ).filter((block) => block.startsOn === "2026-07-20"),
     ).toEqual([]);
   });
 
@@ -147,10 +153,13 @@ describe("crew availability blocks", () => {
       now,
     });
     expect(byOwner.ok).toBe(true);
-    // Gone from every live read, and still on the row.
+    // Gone from every live read, and still on the row. (Scoped past the shop's
+    // own seeded blackout, as above.)
     expect(
-      await listCrewAvailabilityBlocks(db, shop.id, { from: "2026-07-01", to: "2026-12-31" }),
-    ).toEqual([]);
+      (await listCrewAvailabilityBlocks(db, shop.id, { from: "2026-07-01", to: "2026-12-31" })).map(
+        (block) => block.id,
+      ),
+    ).not.toContain(saved.id);
     const [row] = await db
       .select()
       .from(crewAvailabilityBlocks)

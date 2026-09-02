@@ -1018,6 +1018,12 @@ export async function loadShopExportBundleInput(
             // rather than dumps, resolves the pair down to one cell.
             "no_certification_cleared_at",
             "no_certification_cleared_by_person_id",
+            // **Where this record came from.** Set once, when a diver put
+            // themselves on file at the shop's counter QR rather than being
+            // typed in by staff (issue #1236). It changes how a destination
+            // system should read every other cell on the row — a name and a
+            // level nobody has sighted — so it travels with them.
+            "self_registered_at",
             "deleted_at",
             // Erasure travels with the bundle (ADR 20260802-diver-data-erasure).
             // Every identifying column above is already blank for such a row, so
@@ -1049,6 +1055,7 @@ export async function loadShopExportBundleInput(
             row.noCertificationDeclaredAt,
             row.noCertificationClearedAt,
             row.noCertificationClearedByPersonId,
+            row.selfRegisteredAt,
             row.deletedAt,
             row.anonymizedAt,
             row.anonymizedByPersonId,

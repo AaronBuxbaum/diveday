@@ -1338,6 +1338,22 @@ for (const scheme of ["light", "dark"] as const) {
     test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
 
     test.describe("public", () => {
+      /**
+       * **The counter's QR door** (issue #1236): the form a walk-in fills in
+       * before any booking exists. Three groups — who they are, what they say
+       * their card is, and the sizes that save a fitting — on a page a shop
+       * prints a QR for and puts on the desk.
+       */
+      test(`the shopfront's register form renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/s/blue-mantis/register");
+        await page.getByRole("heading", { level: 1 }).waitFor();
+        await page.getByRole("button", { name: "Send it to the shop" }).waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "shopfront-register", scheme);
+      });
+
       test(`the landing page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/");
         await capture(page, "landing", scheme);

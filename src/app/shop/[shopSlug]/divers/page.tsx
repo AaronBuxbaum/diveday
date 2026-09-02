@@ -202,6 +202,14 @@ export default async function DiversPage({
     const fact = rosterRowFact(row);
     if (!fact) return null;
     if (fact.kind === "imported") return t("divers.list.importedOnly");
+    // Where the record came from, dated: "signed up at the counter" this
+    // morning is the person standing there, and in March is a returning diver
+    // the shop has still never seated (issue #1236).
+    if (fact.kind === "selfRegistered") {
+      return t("divers.list.selfRegistered", {
+        date: formatShortDate(fact.at, locale, shop.timezone),
+      });
+    }
     if (fact.kind === "lastAboard") {
       return t("divers.list.lastAboard", {
         date: formatShortDate(fact.at, locale, shop.timezone),

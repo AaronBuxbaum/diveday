@@ -138,6 +138,7 @@
     "lastAboard": "last aboard {date}",
     "bookedOn": "booked {date} · {time}",
     "importedOnly": "brought across from your old system",
+    "selfRegistered": "Signed up at the counter · {date}",
     "letterOther": "#",
     "pagination": {
       "total": "{count, plural, one {# diver} other {# divers}}"
