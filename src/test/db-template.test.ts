@@ -56,7 +56,7 @@ describe("templateBytes", () => {
     const templateBytes = await freshTemplateBytes();
     const bytes = await templateBytes("lean");
     expect(bytes).not.toBeNull();
-    expect(Buffer.from(bytes).toString()).toBe("not-really-a-tar");
+    expect(Buffer.from(bytes as Uint8Array).toString()).toBe("not-really-a-tar");
   });
 
   it("answers null when there is no snapshot, so the caller can seed from scratch", async () => {
@@ -82,7 +82,7 @@ describe("templateBytes", () => {
     await writeFile(path.join(cacheDir, "test-db-template-history.tar"), Buffer.from("history"));
     const templateBytes = await freshTemplateBytes();
     expect(await templateBytes("lean")).toBeNull();
-    expect(Buffer.from(await templateBytes("history")).toString()).toBe("history");
+    expect(Buffer.from((await templateBytes("history")) as Uint8Array).toString()).toBe("history");
   });
 });
 

@@ -5,7 +5,7 @@ import { nowDate, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import type { DeleteCustomerResult } from "@/lib/payments/customers";
 import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
@@ -62,9 +62,17 @@ import { upsertShopStripeAccount } from "./stripe-accounts";
 import { upcomingTripsWithCounts } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
+/**
+ * File-scoped database (issue #1244): one PGlite for the whole file, and a
+ * transaction per test that is rolled back afterwards. The roster is a read
+ * surface — thirty tests that seat, search, page and filter, each reading back
+ * what it just wrote — so nothing here needs its rows committed.
+ */
+const ctx = fileScopedShopContext();
+
 describe("person-first diver records", () => {
   it("uses contact information as the temporary name for contact-first intake", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const byEmail = await createDiver(db, {
       shopId: shop.id,
       email: "contact-first@example.com",
@@ -79,7 +87,7 @@ describe("person-first diver records", () => {
   });
 
   it("resolves the staff member who cleared a self-declared no-certification stamp", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await createDiver(db, {
       shopId: shop.id,
       fullName: "Cleared Casey",
@@ -110,7 +118,7 @@ describe("person-first diver records", () => {
   });
 
   it("composes cards, fit, and history from one diver record", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     // Search explicitly rather than relying on the default (alphabetically
     // sorted, page-sized) listing — the extended roster is well past one page.
@@ -150,7 +158,7 @@ describe("person-first diver records", () => {
   });
 
   it("can add a returning diver before a booking and rejects staff-only records", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const diver = await createDiver(db, {
       shopId: shop.id,
@@ -199,7 +207,7 @@ describe("person-first diver records", () => {
   // at the counter" with nowhere to record it.
   describe("updateDiver emergency contact fields", () => {
     it("writes both fields, leaves them untouched when omitted, and clears them on blank", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const diver = await createDiver(db, { shopId: shop.id, fullName: "Contact Casey" });
       if (!diver) throw new Error("diver insert failed");
 
@@ -245,7 +253,7 @@ describe("person-first diver records", () => {
     });
 
     it("never writes an emergency contact onto another shop's diver", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const [otherShop] = await db
         .insert(shops)
         .values({ name: "Other Shop", slug: "other-shop-divers-contact-test", timezone: "UTC" })
@@ -270,7 +278,7 @@ describe("person-first diver records", () => {
   });
 
   it("soft-deletes a diver without erasing their record", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await createDiver(db, {
       shopId: shop.id,
       fullName: "Archived Alex",
@@ -319,7 +327,7 @@ describe("person-first diver records", () => {
     }
 
     it("lists removed divers under their own view, and nowhere else", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const diver = await removedDiver(db, shop.id);
 
       const removed = await listDiverSummaries(db, shop.id, { filter: "removed", limit: 1000 });
@@ -337,7 +345,7 @@ describe("person-first diver records", () => {
     });
 
     it("searches within the removed view, so a long list is still navigable", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const diver = await removedDiver(db, shop.id);
 
       const byName = await listDiverSummaries(db, shop.id, {
@@ -351,7 +359,7 @@ describe("person-first diver records", () => {
     });
 
     it("keeps an erased record out of the removed view — there is no way back for one", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const diver = await removedDiver(db, shop.id);
       const erased = await anonymizeDiver(db, {
         shopId: shop.id,
@@ -368,7 +376,7 @@ describe("person-first diver records", () => {
     });
 
     it("opens the removed diver's record on request, so the restore has somewhere to live", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const diver = await removedDiver(db, shop.id);
 
       // The default is unchanged — every caller that drives shop work still
@@ -386,7 +394,7 @@ describe("person-first diver records", () => {
     });
 
     it("still refuses an erased record even with removed records included", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const diver = await removedDiver(db, shop.id);
       await anonymizeDiver(db, {
         shopId: shop.id,
@@ -397,7 +405,7 @@ describe("person-first diver records", () => {
     });
 
     it("does not open another shop's removed diver", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const [otherShop] = await db
         .insert(shops)
         .values({ name: "Other Shop", slug: "other-shop-removed-diver-test", timezone: "UTC" })
@@ -416,7 +424,7 @@ describe("person-first diver records", () => {
   });
 
   it("frees a deleted diver's email for a genuinely new person, and refuses to restore into a collision (CR-008)", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const original = await createDiver(db, {
       shopId: shop.id,
       fullName: "Archived Alex",
@@ -443,7 +451,7 @@ describe("person-first diver records", () => {
 
 describe("roster search and pagination", () => {
   it("searches server-side by name, email, or phone", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const byName = await listDiverSummaries(db, shop.id, { query: "priya" });
     expect(byName.divers.map((row) => row.fullName)).toEqual(["Priya Sharma"]);
@@ -461,7 +469,7 @@ describe("roster search and pagination", () => {
   });
 
   it("filters the roster to whoever still owes a safety contact", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const target = (await listDiverSummaries(db, shop.id)).divers[0];
     if (!target) throw new Error("expected seeded divers");
 
@@ -498,7 +506,7 @@ describe("roster search and pagination", () => {
    * same module computed.
    */
   it("filters the roster to whoever has a card waiting on a staffer", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const roster = await listDiverSummaries(db, shop.id, { limit: 1000 });
     const rosterIds = new Set(roster.divers.map((row) => row.id));
 
@@ -558,7 +566,7 @@ describe("roster search and pagination", () => {
   });
 
   it("filters the roster to whoever holds a seat on one of today's boats", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const target = (await listDiverSummaries(db, shop.id)).divers[0];
     if (!target) throw new Error("expected seeded divers");
 
@@ -623,7 +631,7 @@ describe("roster search and pagination", () => {
   });
 
   it("pages by number and never repeats or skips a diver", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     // The extended roster is well past DIVER_PAGE_SIZE, so fetch a limit large
     // enough to get every diver back in one page as ground truth.
@@ -645,7 +653,7 @@ describe("roster search and pagination", () => {
   });
 
   it("goes back a page as well as forward — the whole point of dropping the cursor", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const second = await listDiverSummaries(db, shop.id, { page: 2, limit: 3 });
     const backAgain = await listDiverSummaries(db, shop.id, { page: second.page - 1, limit: 3 });
     const first = await listDiverSummaries(db, shop.id, { page: 1, limit: 3 });
@@ -653,7 +661,7 @@ describe("roster search and pagination", () => {
   });
 
   it("treats a nonsensical page as the first page and one past the end as the last", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const first = await listDiverSummaries(db, shop.id, { page: 1, limit: 3 });
     for (const requested of [0, -3, Number.NaN]) {
       const clamped = await listDiverSummaries(db, shop.id, { page: requested, limit: 3 });
@@ -678,13 +686,13 @@ describe("listBookableDivers (returning-diver picker)", () => {
   }
 
   it("returns nothing for an empty query", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await openTrip(db, shop.id);
     expect(await listBookableDivers(db, shop.id, trip.id, { query: "  " })).toEqual([]);
   });
 
   it("finds a returning diver and carries their rental fit", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await openTrip(db, shop.id);
     const diver = await createDiver(db, {
       shopId: shop.id,
@@ -711,7 +719,7 @@ describe("listBookableDivers (returning-diver picker)", () => {
   });
 
   it("excludes a diver already holding an active seat on the trip", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await openTrip(db, shop.id);
     const diver = await createDiver(db, {
       shopId: shop.id,
@@ -738,7 +746,7 @@ describe("listBookableDivers (returning-diver picker)", () => {
   });
 
   it("omits soft-deleted divers", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await openTrip(db, shop.id);
     const diver = await createDiver(db, {
       shopId: shop.id,
@@ -776,8 +784,8 @@ describe("diver erasure", () => {
   }
 
   /** A diver with a row in every table the sweep touches. */
-  async function erasableDiver() {
-    const { db, shop } = await seededShopContext();
+  async function erasableDiver(override?: { db: AppDb; shop: typeof ctx.shop }) {
+    const { db, shop } = override ?? ctx;
     const ownerId = await personIdByName(db, shop.id, "Dana Reyes");
     const captainId = await personIdByName(db, shop.id, "Sal Moretti");
 
@@ -1310,7 +1318,7 @@ describe("diver erasure", () => {
   });
 
   it("erases a diver who has nothing but a name", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const ownerId = await personIdByName(db, shop.id, "Dana Reyes");
     const diver = await createDiver(db, { shopId: shop.id, fullName: "Bare Bernard" });
     if (!diver) throw new Error("diver insert failed");
@@ -1448,8 +1456,19 @@ describe("diver erasure", () => {
     ).toHaveLength(first.queuedMediaDeletions);
   });
 
+  /**
+   * The one test in this file that needs a **committed** database rather than
+   * the file-scoped transaction, and for a reason worth naming: it provokes a
+   * database error on purpose (`.rejects.toThrow()` on the restore) and then
+   * keeps querying. Postgres aborts the *whole* transaction on a failed
+   * statement — `current transaction is aborted, commands ignored until end of
+   * transaction block` (25P02) — so inside a transaction every line after the
+   * expected rejection fails too. In autocommit only the failing statement
+   * fails, which is what this assertion is written against.
+   */
   it("cannot be restored, by the caller or by the database", async () => {
-    const { db, shop, diver, ownerId } = await erasableDiver();
+    const own = await seededShopContext();
+    const { db, shop, diver, ownerId } = await erasableDiver(own);
     const result = await anonymizeDiver(db, {
       shopId: shop.id,
       personId: diver.id,
@@ -1769,7 +1788,7 @@ describe("diver erasure", () => {
      * timeline. Found by a security review after the trail shipped.
      */
     async function shopWithTrail(fullName: string, memberNames: string[]) {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const ownerId = await personIdByName(db, shop.id, "Dana Reyes");
       const captainId = await personIdByName(db, shop.id, "Sal Moretti");
       const diver = await createDiver(db, { shopId: shop.id, fullName });
@@ -1833,7 +1852,7 @@ describe("diver erasure", () => {
 
   describe("the activity-log name match", () => {
     async function shopWithHistory(fullName: string, messages: string[]) {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const ownerId = await personIdByName(db, shop.id, "Dana Reyes");
       const captainId = await personIdByName(db, shop.id, "Sal Moretti");
       const diver = await createDiver(db, { shopId: shop.id, fullName });
@@ -2251,7 +2270,7 @@ describe("diver erasure", () => {
 
 describe("findSimilarDivers name similarity and exact matching", () => {
   it("finds exact and case-insensitive name matches, and similar names using trigram similarity", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     // Create a diver to match
     const baseDiver = await createDiver(db, {

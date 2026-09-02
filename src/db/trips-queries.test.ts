@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { createDiveSite } from "./dive-sites";
 import { bookings, shops, trips } from "./schema";
 import {
@@ -20,9 +20,18 @@ import {
   weekBoard,
 } from "./trips";
 
+/**
+ * File-scoped database (issue #1244): one PGlite for the whole file, and a
+ * transaction per test that is rolled back afterwards. Every test here reads
+ * the seeded schedule or writes rows it then reads back — none commits, opens
+ * its own transaction, or races another statement — which is the rule
+ * `fileScopedShopContext` documents for when this is safe.
+ */
+const ctx = fileScopedShopContext();
+
 describe("demo seed + schedule queries (in-memory PGlite)", () => {
   it("returns upcoming trips ordered by start with correct booked counts", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const upcoming = await upcomingTripsWithCounts(db, shop.id);
     // 42 before `seed-cert-gates.ts` added the four departures whose cert gates
@@ -51,7 +60,7 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
   });
 
   it("frees the spot when a booking is cancelled", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const before = await upcomingTripsWithCounts(db, shop.id);
     const wreck = before.find((t) => t.title === "Wreck Trip — Spiegel Grove");
@@ -70,7 +79,7 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
 
 describe("paged schedule queries", () => {
   it("pages the board with a keyset cursor, in departure order, without gaps", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const all = await upcomingTripsWithCounts(db, shop.id);
 
     const seen: string[] = [];
@@ -94,7 +103,7 @@ describe("paged schedule queries", () => {
   });
 
   it("treats a hand-crafted cursor carrying a non-uuid id as page one", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // `?after=` on the **public** schedule (`/s/[shopSlug]`) is a URL string
     // from an anonymous visitor, and its id half lands in `gt(trips.id, …)`
     // against a `uuid` column. A cursor of the right shape carrying junk used
@@ -112,7 +121,7 @@ describe("paged schedule queries", () => {
   });
 
   it("filters to fun dives or course sessions on request", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const all = await upcomingTripsWithCounts(db, shop.id);
     expect(all.some((t) => t.course !== null)).toBe(true);
     expect(all.some((t) => t.course === null)).toBe(true);
@@ -137,7 +146,7 @@ describe("paged schedule queries", () => {
   });
 
   it("filters to trips with an open seat on request", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const all = await upcomingTripsWithCounts(db, shop.id);
     expect(all.some((t) => t.booked >= t.capacity)).toBe(true); // the seed has a full trip
     expect(all.some((t) => t.booked < t.capacity)).toBe(true);
@@ -158,7 +167,7 @@ describe("paged schedule queries", () => {
    * (ADR 20260803-one-pagination-model).
    */
   it("offset-pages the same list the board keysets, with an honest count", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const all = await upcomingTripsWithCounts(db, shop.id);
 
     const first = await offsetUpcomingTripsWithCounts(db, shop.id, { limit: 5 });
@@ -201,7 +210,7 @@ describe("paged schedule queries", () => {
    * page a sold-out Saturday into "page 3 of 5" and then render nothing there.
    */
   it("counts only the departures its filters actually list", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const all = await upcomingTripsWithCounts(db, shop.id);
     const withSpaceCount = all.filter((trip) => trip.booked < trip.capacity).length;
     expect(withSpaceCount).toBeLessThan(all.length); // the seed has a full trip
@@ -230,7 +239,7 @@ describe("paged schedule queries", () => {
   });
 
   it("computes board-wide stats that match the full list", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const all = await upcomingTripsWithCounts(db, shop.id);
     const stats = await upcomingScheduleStats(db, shop.id);
 
@@ -247,7 +256,7 @@ describe("paged schedule queries", () => {
   });
 
   it("bounds the page to an explicit month, so the list can follow the calendar", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const now = new Date("2030-07-01T00:00:00.000Z");
 
     const august = await createTrip(db, {
@@ -293,7 +302,7 @@ describe("paged schedule queries", () => {
 
 describe("countShopTrips", () => {
   it("counts only the shop's own departures, from zero, including past and cancelled ones", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     // A brand-new shop next door: zero, untouched by the seeded shop's board.
     const [fresh] = await db
@@ -326,7 +335,7 @@ describe("countShopTrips", () => {
 describe("tripDiveSiteSummaries", () => {
   /** Two sites and a departure that visits them however the test says. */
   const twoSiteShop = async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const benwood = await createDiveSite(db, { shopId: shop.id, name: "Test Benwood" });
     const elbow = await createDiveSite(db, { shopId: shop.id, name: "Test Elbow" });
     return { db, shop, benwood, elbow };
@@ -472,7 +481,7 @@ describe("tripDiveSiteSummaries — a departure with no dive rows", () => {
    * trip's own pointer rather than telling a diver the boat goes nowhere.
    */
   it("falls back to the trip's own site, and says nothing when there isn't one", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const site = await createDiveSite(db, { shopId: shop.id, name: "Test Fallback Reef" });
     const [withPointer] = await db
       .insert(trips)
@@ -508,7 +517,7 @@ describe("tripDiveSiteSummaries — a departure with no dive rows", () => {
   });
 
   it("prefers the dives over the pointer when both exist and disagree", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const stale = await createDiveSite(db, { shopId: shop.id, name: "Test Stale Pointer" });
     const real = await createDiveSite(db, { shopId: shop.id, name: "Test Real Site" });
     const trip = await createTrip(db, {
@@ -539,7 +548,7 @@ describe("trips.dive_site_id — the denormalized pointer the forecast and calen
    * widening it can only add a site the trip already visits.
    */
   it("points at the first dive that has a site, not strictly dive one", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const elbow = await createDiveSite(db, { shopId: shop.id, name: "Test Second Tank Only" });
     const trip = await createTrip(db, {
       shopId: shop.id,
@@ -555,7 +564,7 @@ describe("trips.dive_site_id — the denormalized pointer the forecast and calen
   });
 
   it("still prefers dive one when dive one has a site", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const first = await createDiveSite(db, { shopId: shop.id, name: "Test Tank One" });
     const second = await createDiveSite(db, { shopId: shop.id, name: "Test Tank Two" });
     const trip = await createTrip(db, {
@@ -572,7 +581,7 @@ describe("trips.dive_site_id — the denormalized pointer the forecast and calen
   });
 
   it("stays null when no tank has a site at all", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await createTrip(db, {
       shopId: shop.id,
       title: "Nothing chosen",
@@ -587,7 +596,7 @@ describe("trips.dive_site_id — the denormalized pointer the forecast and calen
   });
 
   it("follows an edit that moves the site from tank one to tank two", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const first = await createDiveSite(db, { shopId: shop.id, name: "Test Edit Tank One" });
     const second = await createDiveSite(db, { shopId: shop.id, name: "Test Edit Tank Two" });
     const trip = await createTrip(db, {
@@ -637,7 +646,7 @@ describe("the week board", () => {
   const OPEN_WATER = "Open Water Diver — three-day course";
 
   it("draws a multi-day course once, as a span, and never as an entry in the days it covers", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const week = await weekBoard(db, shop.id, COURSE_WEEK, TZ);
 
@@ -665,7 +674,7 @@ describe("the week board", () => {
     // the run's own start and length the panels cannot open on it at all, and
     // the desktop board becomes the one place in the app where a multi-day
     // course cannot be moved.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const span = (await weekBoard(db, shop.id, COURSE_WEEK, TZ)).spans.find(
       (row) => row.title === OPEN_WATER,
@@ -685,7 +694,7 @@ describe("the week board", () => {
     // differs — so the site leads the meta line, and `boatId` is what lets the
     // column be asked whether one hull is in two places at once (the board's
     // whole question, which had no answer at desktop).
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const entries = Object.values((await weekBoard(db, shop.id, THIS_WEEK, TZ)).days).flat();
     expect(entries.length).toBeGreaterThan(0);
@@ -704,7 +713,7 @@ describe("the week board", () => {
   });
 
   it("carries a bucket for every day of the week, empty ones included", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     // Far enough out that the demo shop has nothing on the board at all —
     // the seven columns still exist, because an empty cell is the information
@@ -725,7 +734,7 @@ describe("the week board", () => {
   });
 
   it("never draws a departure that has been taken off the board", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const before = Object.values((await weekBoard(db, shop.id, THIS_WEEK, TZ)).days).flat();
     const victim = before[0];
@@ -745,7 +754,7 @@ describe("the week board", () => {
   });
 
   it("calls a departure sailed only once the late-arrival buffer has passed", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const now = new Date("2026-07-21T13:30:00.000Z");
 
     const seeded = Object.values((await weekBoard(db, shop.id, THIS_WEEK, TZ, now)).days).flat()[0];

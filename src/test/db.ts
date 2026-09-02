@@ -3,7 +3,7 @@ import { btree_gist } from "@electric-sql/pglite/contrib/btree_gist";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { onTestFinished } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, onTestFinished } from "vitest";
 import { type AppDb, createTestDb } from "@/db/client";
 import { seedDemo } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
@@ -127,6 +127,145 @@ export async function seededShopContext(options: { history?: boolean } = {}) {
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error('seeded demo shop "blue-mantis" missing');
   return { db, shop };
+}
+
+/**
+ * Thrown to roll a test's transaction back. A sentinel rather than a plain
+ * `Error` so the catch below can tell "the test is over, undo it" from a real
+ * failure inside the transaction, which must still surface.
+ */
+const ROLLBACK = Symbol("diveday:rollback");
+
+/**
+ * One PGlite per **file**, and one transaction per test that is rolled back
+ * afterwards.
+ *
+ * `seededShopContext()` hydrates a fresh database per test at ~0.6-0.9s each,
+ * and that hydration is most of the unit suite's wall-clock: measured on
+ * 2026-09-01, the 38 database-backed files under `src/db` accounted for 849 of
+ * 988 test-seconds. The template already made this ten times cheaper than
+ * migrating per test; what is left is structural, and the only way past it is
+ * to stop hydrating per test.
+ *
+ * Isolation is preserved by the transaction, not by the database: each test
+ * gets an `AppDb` that is really a transaction handle, and every row it writes
+ * is undone before the next test starts. Query code needs no change — the
+ * handle is the same type.
+ *
+ * ## When NOT to use this
+ *
+ * The rollback is the whole mechanism, so anything that needs a *committed*
+ * database, or its own transaction semantics, must stay on
+ * {@link seededShopContext}:
+ *
+ * - **A test that opens its own transaction** gets a savepoint instead of a
+ *   top-level one. Usually equivalent, and not always — which is why the
+ *   money-path files were written against a fresh database on purpose.
+ * - **`FOR UPDATE` and the concurrency races.** Two statements inside one
+ *   transaction cannot contend with each other, so a race test would pass
+ *   without proving anything, which is worse than failing.
+ * - **A test that asserts on `now()`-stamped columns.** Postgres freezes
+ *   `now()` at the start of a transaction, so every `defaultNow()` row a test
+ *   writes carries the same instant. `dbNow()` reads that same frozen clock,
+ *   so a test using it stays consistent — but one comparing two writes
+ *   *expecting* them to differ will not see a difference.
+ *
+ * The rule, short: **read-heavy files that commit nothing.** If a file's tests
+ * only read the seeded fixture and write rows they then read back, this is
+ * safe; if the file's subject is transactions, money, or concurrency, it is
+ * not, and the file says so in a comment where it declines.
+ */
+export function fileScopedShopContext(options: { history?: boolean } = {}) {
+  let base: AppDb | undefined;
+  let shop: Awaited<ReturnType<typeof getShopBySlug>>;
+  /** The handle the tests read. Reassigned per test to the live transaction. */
+  const handle: { db: AppDb } = { db: undefined as unknown as AppDb };
+  let finish: (() => void) | undefined;
+  let settled: Promise<void> | undefined;
+
+  beforeAll(async () => {
+    base = await seededTestDbWithoutTeardown(options);
+    shop = await getShopBySlug(base, "blue-mantis");
+    if (!shop) throw new Error('seeded demo shop "blue-mantis" missing');
+  });
+
+  afterAll(async () => {
+    await (base?.$client as PGlite | undefined)?.close();
+    base = undefined;
+  });
+
+  beforeEach(async () => {
+    const db = base;
+    if (!db) throw new Error("fileScopedShopContext: beforeAll did not run");
+    // `db.transaction` is callback-scoped, so the transaction is held open by
+    // parking the callback on a promise the teardown resolves. Nothing else
+    // touches this PGlite in the meantime — it is a single connection owned by
+    // one test file — so parking it blocks no other work.
+    let ready: () => void = () => {};
+    const opened = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+    settled = db
+      .transaction(async (tx) => {
+        handle.db = tx as unknown as AppDb;
+        ready();
+        await new Promise<void>((resolve) => {
+          finish = resolve;
+        });
+        // Every write this test made goes away with it.
+        throw ROLLBACK;
+      })
+      .catch((error) => {
+        if (error !== ROLLBACK) throw error;
+      });
+    await opened;
+  });
+
+  afterEach(async () => {
+    finish?.();
+    finish = undefined;
+    // Await the rollback before the next test opens its own: overlapping them
+    // would put two top-level transactions on one connection.
+    await settled;
+    settled = undefined;
+    handle.db = undefined as unknown as AppDb;
+  });
+
+  return {
+    /** The current test's transaction, typed as the app's own database. */
+    get db(): AppDb {
+      if (!handle.db) throw new Error("fileScopedShopContext: read outside a test");
+      return handle.db;
+    },
+    /** The seeded demo shop. Read once per file; it is never written. */
+    get shop(): NonNullable<Awaited<ReturnType<typeof getShopBySlug>>> {
+      if (!shop) throw new Error("fileScopedShopContext: read outside a test");
+      return shop;
+    },
+  };
+}
+
+/**
+ * {@link seededTestDb} without the per-test close. Only
+ * {@link fileScopedShopContext} uses it: its database outlives every test in
+ * the file and is closed in `afterAll` instead, and calling `onTestFinished`
+ * from `beforeAll` would either throw or close it after the first test.
+ */
+async function seededTestDbWithoutTeardown(options: { history?: boolean } = {}): Promise<AppDb> {
+  const variant: TemplateVariant = options.history ? "history" : "lean";
+  const bytes = await templateBytes(variant);
+  if (!bytes) {
+    warnAboutFullPrice(variant);
+    const db = await createTestDb();
+    await seedDemo(db, { history: variant === "history" });
+    return db;
+  }
+  return drizzle({
+    client: new PGlite({
+      loadDataDir: templateBlob(variant, bytes),
+      extensions: { pg_trgm, btree_gist },
+    }),
+  });
 }
 
 /**
