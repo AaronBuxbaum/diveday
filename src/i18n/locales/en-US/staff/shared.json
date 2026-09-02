@@ -66,6 +66,16 @@
     "full": "Full",
     "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}"
   },
+  "compass": {
+    "n": "N",
+    "ne": "NE",
+    "e": "E",
+    "se": "SE",
+    "s": "S",
+    "sw": "SW",
+    "w": "W",
+    "nw": "NW"
+  },
   "depth": {
     "meters": "m",
     "feet": "ft"

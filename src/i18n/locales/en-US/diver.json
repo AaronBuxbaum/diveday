@@ -51,16 +51,6 @@
       "feet": "{value} ft",
       "celsius": "{value}°C",
       "fahrenheit": "{value}°F"
-    },
-    "compass": {
-      "n": "N",
-      "ne": "NE",
-      "e": "E",
-      "se": "SE",
-      "s": "S",
-      "sw": "SW",
-      "w": "W",
-      "nw": "NW"
     }
   },
   "shopChrome": {

@@ -66,6 +66,16 @@
     "full": "Completo",
     "spotsLeft": "{count, plural, one {queda # plaza} other {quedan # plazas}}"
   },
+  "compass": {
+    "n": "N",
+    "ne": "NE",
+    "e": "E",
+    "se": "SE",
+    "s": "S",
+    "sw": "SO",
+    "w": "O",
+    "nw": "NO"
+  },
   "depth": {
     "meters": "m",
     "feet": "ft"
