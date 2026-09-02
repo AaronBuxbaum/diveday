@@ -8,6 +8,14 @@ import {
 
 const base = { denyFraming: true } as const;
 
+/** Every optional host-adding switch on at once, so nothing escapes the sweep. */
+const everyOption = {
+  rumRegion: "us-east-1",
+  mediaRegion: "us-east-1",
+  metaSignup: true,
+  development: true,
+} as const;
+
 /** The directives of one serialized policy, keyed by name. */
 function directives(policy: string): Map<string, string[]> {
   return new Map(
@@ -169,9 +177,101 @@ describe("the report-only half", () => {
     // globals.css sets a background-image from a data: URI, which CSS resolves
     // against img-src rather than style-src.
     expect(imgSrc).toContain("data:");
-    // Media image hosts: AWS S3 and CloudFront.
+    // Media image hosts: AWS S3 and CloudFront. The regional bucket form is a
+    // function of `mediaRegion` rather than a second wildcard — this assertion
+    // pinned `https://*.s3.*.amazonaws.com` until 2026-09-02, which is a source
+    // expression every browser drops (issue #1263).
     expect(imgSrc).toContain("https://*.s3.amazonaws.com");
-    expect(imgSrc).toContain("https://*.s3.*.amazonaws.com");
     expect(imgSrc).toContain("https://*.cloudfront.net");
+  });
+});
+
+/**
+ * A CSP host source may wildcard only the **leftmost** label: `*.example.com`
+ * is legal, `a.*.example.com` is not, and a browser drops the whole source
+ * silently apart from one console line. That is not a style rule — a dropped
+ * source means the hosts it was meant to admit are blocked in production while
+ * the policy still reads as if it covers them.
+ *
+ * It had already happened once. `img-src` carried `https://*.s3.*.amazonaws.com`
+ * until 2026-09-02, so every regional bucket URL — the shape
+ * `managedStorageOrigins` produces whenever `MEDIA_AWS_REGION` is set — was
+ * admitted by nothing, while the legacy global-endpoint form kept matching the
+ * neighbouring entry and hid it (issue #1263). `rumConnectHosts` had the rule
+ * written down two hundred lines below the entry that broke it, which is
+ * exactly why this is now a test rather than a comment.
+ */
+describe("every source is a legal source expression", () => {
+  const policies = [
+    ["enforced", enforcedPolicy(base)],
+    ["report-only", reportOnlyPolicy(base)],
+    ["report-only, every option on", reportOnlyPolicy({ ...base, ...everyOption })],
+  ] as const;
+
+  it.each(policies)("%s: wildcards only ever the leftmost label", (_name, policy) => {
+    for (const [directive, sources] of directives(policy)) {
+      for (const source of sources) {
+        if (!source.includes("*")) continue;
+        expect(
+          source,
+          `${directive} carries "${source}", whose wildcard is not the leftmost label — browsers drop the whole source`,
+        ).toMatch(/^(?:[a-z]+:\/\/)?\*(?:\.[^*]+)?$/);
+      }
+    }
+  });
+
+  it.each(policies)("%s: no source can smuggle a second source or directive", (_name, policy) => {
+    for (const [, sources] of directives(policy)) {
+      for (const source of sources) {
+        expect(source).not.toContain(";");
+        expect(source).not.toContain(",");
+        // `\s`, not `trim()`. `trim()` catches only the ends, and `directives`
+        // splits on a literal space, so a plain space is invisible here by
+        // construction — while an *internal* CR or LF, which is the character
+        // class that actually splits a header, passes `trim()` untouched. No
+        // source expression in this policy legitimately contains whitespace.
+        expect(source).not.toMatch(/\s/);
+      }
+    }
+  });
+
+  it("admits the regional bucket host the storage adapter actually writes to", () => {
+    const sources = directives(reportOnlyPolicy({ ...base, mediaRegion: "us-east-1" })).get(
+      "img-src",
+    );
+    expect(sources).toContain("https://*.s3.us-east-1.amazonaws.com");
+    // The legacy global endpoint stays admitted; objects written before the
+    // regional form still resolve.
+    expect(sources).toContain("https://*.s3.amazonaws.com");
+  });
+
+  it("adds no bucket host at all when no region is configured", () => {
+    const sources = directives(reportOnlyPolicy(base)).get("img-src") ?? [];
+    // The regional form only; the global endpoint needs no region and stays.
+    expect(sources.filter((source) => /\.s3\.[a-z]+-[a-z]+-\d\./.test(source))).toEqual([]);
+  });
+
+  it("refuses a region that is not a plain AWS region label", () => {
+    // Compared whole rather than probed for a substring, following the RUM
+    // test above: a `some(...).includes("s3.us")` probe is fooled by case (it
+    // would pass while the policy emitted `s3.US-EAST-1`), by a partial match,
+    // and by the value landing in a directive other than the one being read.
+    //
+    // The CR/LF payloads are the header-splitting ones the concern is actually
+    // about, and they are safe for a reason worth writing down: JavaScript's
+    // `$` without the `m` flag asserts end of *input*, not end of line — unlike
+    // Python and Ruby, where `$` also matches before a trailing newline. Port
+    // this regex to one of those and `"us-east-1\n"` starts matching.
+    for (const region of [
+      "us-east-1 https://evil.example",
+      "*",
+      "; script-src *",
+      "US-EAST-1",
+      "us-east-1\nscript-src *",
+      "us-east-1\r\nX-Injected: 1",
+      " us-east-1",
+    ]) {
+      expect(reportOnlyPolicy({ ...base, mediaRegion: region })).toEqual(reportOnlyPolicy(base));
+    }
   });
 });

@@ -72,19 +72,50 @@ export const CSP_REPORT_PATH = "/api/csp-report";
 const REPORT_GROUP = "csp";
 
 /**
- * Media image hosts: the S3 bucket the app writes to, and the CloudFront
- * distribution that will front it. Still wildcarded over the bucket name
- * because this header is built in the edge layer where the media configuration
- * is not read -- so it is a backstop, not the allowlist. The allowlist that
- * decides whether a URL may be *stored* is `isManagedStorageUrl`
- * (src/lib/storage/blob-host.ts), which compares against the configured bucket
- * and nothing else.
+ * A plain AWS region label, and nothing that could carry a space, a semicolon
+ * or a second host into the header.
  */
-const MEDIA_IMAGE_HOSTS = [
-  "https://*.s3.amazonaws.com",
-  "https://*.s3.*.amazonaws.com",
-  "https://*.cloudfront.net",
-];
+const AWS_REGION = /^[a-z]{2}(-gov)?-[a-z]+-\d$/;
+
+/**
+ * Media image hosts: the S3 bucket the app writes to, and the CloudFront
+ * distribution that fronts it. Wildcarded over the *bucket name* because this
+ * header is built in the edge layer -- so it is a backstop, not the allowlist.
+ * The allowlist that decides whether a URL may be *stored* is
+ * `isManagedStorageUrl` (src/lib/storage/blob-host.ts), which compares against
+ * the configured bucket and nothing else.
+ *
+ * The regional form is a **function of the region**, for the same reason
+ * {@link rumConnectHosts} is: a CSP host source may wildcard only the leftmost
+ * label. This list carried `https://*.s3.*.amazonaws.com` until 2026-09-02, and
+ * Chromium had been dropping it on every page load with
+ *
+ *     The source list for the Content Security Policy directive 'img-src'
+ *     contains an invalid source: 'https://*.s3.*.amazonaws.com'.
+ *     It will be ignored.
+ *
+ * -- so a regional bucket URL (`<bucket>.s3.<region>.amazonaws.com`, which is
+ * what `managedStorageOrigins` produces whenever `MEDIA_AWS_REGION` is set) was
+ * admitted by nothing in this policy. Legacy global-endpoint URLs
+ * (`<bucket>.s3.amazonaws.com`) matched the first entry and kept working, which
+ * is why it went unnoticed: the two shapes differ by one label and only one of
+ * them was covered.
+ *
+ * No region configured, no regional host -- a tighter policy rather than a
+ * vaguer one, matching `rumConnectHosts`.
+ */
+const MEDIA_IMAGE_HOSTS = ["https://*.s3.amazonaws.com", "https://*.cloudfront.net"];
+
+/**
+ * The regional virtual-hosted bucket form, one host per configured region.
+ * Same validation as {@link rumConnectHosts}: anything but a plain AWS region
+ * label is a misconfiguration, and a value interpolated into a header must
+ * never be able to introduce a second source or a second directive.
+ */
+function mediaRegionalImageHosts(region: string | null | undefined): string[] {
+  if (!region || !AWS_REGION.test(region)) return [];
+  return [`https://*.s3.${region}.amazonaws.com`];
+}
 
 /**
  * The map `/ready`, the public trip page's dive briefing and the staff
@@ -154,7 +185,7 @@ function rumConnectHosts(region: string | null | undefined): string[] {
   // Anything but a plain AWS region label is a misconfiguration, and a value
   // interpolated into a header must never be able to introduce a second source
   // or a second directive.
-  if (!region || !/^[a-z]{2}(-gov)?-[a-z]+-\d$/.test(region)) return [];
+  if (!region || !AWS_REGION.test(region)) return [];
   return [
     `https://dataplane.rum.${region}.amazonaws.com`,
     // The guest-credential exchange. `rum-client.tsx` passes *both* an identity
@@ -175,6 +206,12 @@ export type CspOptions = {
   denyFraming: boolean;
   /** `NEXT_PUBLIC_RUM_REGION`, or null when RUM is not configured. */
   rumRegion?: string | null;
+  /**
+   * `MEDIA_AWS_REGION`, or null when no media bucket is configured. Decides the
+   * regional bucket host in {@link mediaRegionalImageHosts}; a wildcard cannot
+   * stand in for it.
+   */
+  mediaRegion?: string | null;
   /**
    * True only on the shop's WhatsApp settings route, the one page that loads a
    * third-party script. See {@link META_SIGNUP_SCRIPT_HOST}.
@@ -250,7 +287,16 @@ export function reportOnlyPolicy(options: CspOptions): string {
     ["style-src", ["'self'", "'unsafe-inline'", GOOGLE_FONTS_STYLESHEET_HOST]],
     // `data:` for the inlined placeholders `next/image` emits, `blob:` for the
     // offline manifest's own cached photos.
-    ["img-src", ["'self'", "data:", "blob:", ...MEDIA_IMAGE_HOSTS]],
+    [
+      "img-src",
+      [
+        "'self'",
+        "data:",
+        "blob:",
+        ...MEDIA_IMAGE_HOSTS,
+        ...mediaRegionalImageHosts(options.mediaRegion),
+      ],
+    ],
     ["font-src", ["'self'", GOOGLE_FONTS_FILE_HOST]],
     [
       "connect-src",
