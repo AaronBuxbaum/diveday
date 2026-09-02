@@ -72,7 +72,8 @@
     "spokenLanguages": "Hablamos {languages}",
     "languageFallback": "DiveDay todavía no está en {requested}. Esta página está en {shown}, el idioma en el que trabaja {shop}.",
     "conservationCommitmentsHeading": "Compromisos de conservación declarados por el centro",
-    "conservationCommitmentsDisclaimer": "Estas son declaraciones del centro; DiveDay no las verifica ni las respalda."
+    "conservationCommitmentsDisclaimer": "Estas son declaraciones del centro; DiveDay no las verifica ni las respalda.",
+    "credit": "Reservas con DiveDay"
   },
   "schedule": {
     "eyebrow": "Salidas",
@@ -118,7 +119,9 @@
       "bookThisBoat": "Reservar esta salida"
     },
     "poweredByDiveDay": "Con la tecnología de DiveDay",
-    "moreWaysHeading": "Otras formas de ayudarte"
+    "moreWaysHeading": "Otras formas de ayudarte",
+    "boatsHeading": "Las embarcaciones",
+    "boatSeats": "{count, plural, one {# buceador} other {# buceadores}}"
   },
   "trip": {
     "courseSession": "Sesión de curso",
@@ -3311,5 +3314,23 @@
       "exampleMessage": "Reef Runner zarpa el sábado a las 8:00. Presentaos en el muelle 30 minutos antes.",
       "testMessage": "Este es un mensaje de prueba de DiveDay. Tu conexión de WhatsApp funciona."
     }
+  },
+  "brand": {
+    "since": "Desde {year}",
+    "badges": {
+      "padi_5_star": "Centro de buceo PADI 5 estrellas",
+      "padi_idc": "Centro de desarrollo de instructores PADI",
+      "ssi_diamond": "Centro de buceo SSI Diamond",
+      "naui_pro": "Centro NAUI Pro",
+      "tripadvisor": "Recomendado en Tripadvisor",
+      "blue_star": "Operador Blue Star",
+      "green_fins": "Miembro de Green Fins",
+      "dan_partner": "Socio empresarial de DAN",
+      "readers_choice": "Premio Readers' Choice"
+    }
+  },
+  "embed": {
+    "book": "Reservar",
+    "enrol": "Inscribirme"
   }
 }

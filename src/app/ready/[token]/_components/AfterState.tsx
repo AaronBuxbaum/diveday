@@ -534,7 +534,7 @@ function DiveRecord({
       aria-labelledby="dive-record-heading"
       // Flat at rest, like every other panel (Clearwater decision 1). In print
       // it drops its chrome entirely and takes the page.
-      className="mt-8 rounded-2xl border border-border bg-surface p-5 sm:p-6 print:mt-0 print:rounded-none print:border-0 print:p-0"
+      className="mt-8 rounded-panel border border-border bg-surface shadow-bed p-5 sm:p-6 print:mt-0 print:rounded-none print:border-0 print:p-0"
     >
       <div className="flex items-start justify-between gap-4">
         <h2 id="dive-record-heading" className="text-lg font-semibold tracking-tight">

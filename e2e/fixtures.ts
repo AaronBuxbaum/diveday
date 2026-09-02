@@ -419,6 +419,16 @@ export const test = base.extend<
     // something the destination page renders (`pnpm check:e2e-hygiene` refuses
     // the alternative), never for the network to go quiet.
     await context.route("https://maps.google.com/**", (route) => route.abort());
+    // The storefront's brand display face is a Google Fonts stylesheet (see
+    // src/lib/brand.ts). Answering it with an empty sheet keeps every capture
+    // on the same fallback face wherever the fleet runs — a font that arrives
+    // some milliseconds after paint is a visual flake, and on a runner with no
+    // route to Google the request never resolves and `load` never fires.
+    // The link tag itself is still on the page for a spec to assert.
+    await context.route("https://fonts.googleapis.com/**", (route) =>
+      route.fulfill({ status: 200, contentType: "text/css", body: "" }),
+    );
+    await context.route("https://fonts.gstatic.com/**", (route) => route.abort());
     await use(context);
   },
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { switchDemoRoleAction } from "@/app/actions/demo";
 import { setLocaleAction } from "@/app/actions/set-locale";
+import { BrandStyle } from "@/components/BrandStyle";
 import { DemoBanner } from "@/components/DemoBanner";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { LanguageFallbackNotice } from "@/components/LanguageFallbackNotice";
@@ -26,7 +27,13 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
-import { EMBED_REQUEST_HEADER } from "@/lib/embed-routes";
+import {
+  EMBED_BRAND_HEADER,
+  EMBED_FONT_HEADER,
+  EMBED_REQUEST_HEADER,
+  parseEmbedBrandParam,
+  parseEmbedFontParam,
+} from "@/lib/embed-routes";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { publicCoursesPath, publicSchedulePath } from "@/lib/public-routes";
 import { isLiveShopStaff } from "@/lib/session";
@@ -63,6 +70,12 @@ export default function PublicShopLayout({
   const fallbackT = diverTranslator(DEFAULT_DIVER_LOCALE);
   return (
     <>
+      {/* The shop's brand as tokens, streamed like the chrome so no request read
+          sits above {children} (ADR 20260804-instant-navigation). A `<style>`
+          applies wherever it lands, so it needs no wrapper around the page. */}
+      <Suspense fallback={null}>
+        <PublicShopBrand params={params} />
+      </Suspense>
       {/* The fallback holds the header's height as well as its skip link. The
           skip link follows the root layout's pattern — the default-locale label
           is in the static shell so a keyboard user always has a target, and the
@@ -314,5 +327,24 @@ function PublicShopChromePlaceholder({ label }: { label: DiverTranslator }) {
       <SkipLink href="#public-shop-main-content" label={label("shopChrome.skipToContent")} />
       <div className="h-(--chrome-h) border-b border-border bg-background" aria-hidden />
     </>
+  );
+}
+
+async function PublicShopBrand({ params }: { params: Promise<{ shopSlug: string }> }) {
+  const { shopSlug } = await params;
+  const shop = await getShopBySlug(await getDb(), shopSlug);
+  if (!shop) return null;
+  // An embed that inherits its host page arrives with the host's colour and
+  // face, validated and forwarded by the proxy; the host wins over the shop's
+  // own setting, because the widget is sitting *on* that page.
+  const requestHeaders = await headers();
+  const hostColor = parseEmbedBrandParam(requestHeaders.get(EMBED_BRAND_HEADER));
+  const hostFont = parseEmbedFontParam(requestHeaders.get(EMBED_FONT_HEADER));
+  return (
+    <BrandStyle
+      brandColor={hostColor ?? shop.brandColor}
+      brandDisplayFont={hostFont ? null : shop.brandDisplayFont}
+      hostFont={hostFont}
+    />
   );
 }

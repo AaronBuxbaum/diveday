@@ -9,28 +9,32 @@ import { type ReactNode, useId } from "react";
  * `rounded-3xl`) and six paddings, with `shadow-sm` on only 26 of them — so
  * identically-shaped cards sat at two different elevations on one page, and
  * two sibling settings routes one tap apart rendered the same panel at two
- * different corner radii. (That shadow has since retired from every one of
- * them; see "Flat at rest" below.)
+ * different corner radii.
  *
- * The canonical spelling is the one `ShopStat` and the `<Table>` shell already
- * share: `rounded-2xl border border-border bg-surface`. A card, a stat tile and
- * a table shell are the same object, so they read as one.
+ * The canonical spelling is the one the `<Table>` shell and every loading
+ * skeleton share: `rounded-panel border border-border bg-surface shadow-bed`.
+ * A card, a stat tile and a table shell are the same object, so they read as
+ * one.
  *
- * ## Flat at rest
+ * ## On the warm bed
  *
- * **There is no shadow and no `elevated` prop** (ADR
- * 20260827-clearwater-surface-language, decision 1: elevation is earned). A
- * panel sitting in the page is `bg-surface` and a 1px hairline; a shadow says
- * "this floats above the page" and therefore belongs to menus, sheets, dialogs
- * and toasts alone, which carry `shadow-lg`/`shadow-2xl` at their own call
- * sites. The `elevated={false}` escape hatch went with it: it existed so a card
- * nested inside another card could stop stacking surface on surface, and with
- * no shadow at rest there is nothing left to stack.
+ * **A resting panel sits on the bed** (ADR 20260901-diveday-reimagined,
+ * decision 1, slice 13a): Reef's 28px `--radius-panel` and the one soft warm
+ * shadow `--shadow-bed`, `0 2px 10px rgba(88, 66, 30, 0.06)`. This is the one
+ * deliberate reversal of Clearwater's "elevation is earned" (ADR
+ * 20260827-clearwater-surface-language, decision 1), and it reverses it for
+ * the panel alone: menus, sheets, dialogs and toasts keep their own
+ * `shadow-lg`/`shadow-2xl` lift because they float, and the header tiles,
+ * logos and markers that #1228 flattened stay flat because they are not
+ * panels. There is still no `elevated` prop and no `shadow-sm` anywhere near a
+ * panel — the bed is a token, so it moves with the palette and never with a
+ * call site.
  *
  * The rule reaches the panels this component does not own, too: `card.test.tsx`
- * fails the build on any class string in `src/` that wears `rounded-2xl` and
- * `shadow-sm` together, so a hand-rolled panel cannot end up the only raised
- * thing on a page of flat ones.
+ * fails the build on any class string in `src/` that still wears the retired
+ * `rounded-2xl` shell, or that pairs the panel radius with `shadow-sm`, so a
+ * hand-rolled panel cannot end up at a second radius or a second elevation on
+ * a page of consistent ones.
  *
  * There is deliberately **no `radius` prop**. A prop that lets every call site
  * keep the radius it happens to have today would preserve the drift behind an
@@ -133,7 +137,7 @@ export function sectionCardClass({
   padding?: SectionCardPadding;
   className?: string;
 } = {}): string {
-  return `rounded-2xl border border-border bg-surface ${PADDING[padding]} ${className}`
+  return `rounded-panel border border-border bg-surface shadow-bed ${PADDING[padding]} ${className}`
     .replace(/\s+/g, " ")
     .trim();
 }

@@ -454,14 +454,24 @@ describe("RowKind", () => {
 });
 
 describe("InsetGroup", () => {
-  it("is one hairline shell of divided rows, flat at rest", () => {
+  it("is one hairline shell of divided rows on the panel's bed", () => {
     const { container } = render(
       <InsetGroup label="Data & integrations">
         <div>a row</div>
       </InsetGroup>,
     );
     const shell = container.firstElementChild?.lastElementChild;
-    expect(shell).toHaveClass("rounded-2xl", "border", "border-border", "bg-surface", "divide-y");
-    expect(shell?.className).not.toMatch(/\bshadow(-|$)/);
+    // The same object as a SectionCard and a table shell: Reef's panel radius
+    // and the warm bed, never the ad-hoc `shadow-sm` (ADR
+    // 20260901-diveday-reimagined, 13a).
+    expect(shell).toHaveClass(
+      "rounded-panel",
+      "border",
+      "border-border",
+      "bg-surface",
+      "shadow-bed",
+      "divide-y",
+    );
+    expect(shell?.className).not.toMatch(/\bshadow-sm\b/);
   });
 });

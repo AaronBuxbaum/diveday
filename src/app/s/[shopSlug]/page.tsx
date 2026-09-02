@@ -11,6 +11,7 @@ import { ShopReviews } from "@/components/ShopReviews";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRowList } from "@/components/ui/disclosure";
+import { listBoats } from "@/db/boats";
 import { type AppDb, getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { tripRequirementSummaries } from "@/db/readiness";
@@ -29,6 +30,7 @@ import { DIVER_CERTIFICATION_LEVEL_KEYS, tripRequirementMarkers } from "@/i18n/r
 import { requestTranslator } from "@/i18n/request";
 import { timeZoneLabel } from "@/i18n/timezone-labels";
 import { courseDepthFormat } from "@/i18n/unit-labels";
+import { parseBrandBadges } from "@/lib/brand";
 import { addMonths, type MonthRef, monthKey, monthLabel, parseMonthKey } from "@/lib/calendar";
 import { nowDate } from "@/lib/clock";
 import { parseConservationCommitments } from "@/lib/conservation-commitments";
@@ -245,7 +247,7 @@ export default async function SchedulePage({
   //
   // Both, and the courses shelf, stand down inside the frame: `?embed=1`
   // renders neither the hero nor the shelves.
-  const [range, { trips: upcoming, nextCursor }, reviewAggregate, activeCourses] =
+  const [range, { trips: upcoming, nextCursor }, reviewAggregate, activeCourses, boats] =
     await Promise.all([
       upcomingScheduleRange(db, shop.id, now, { publicOnly: true }),
       pagedUpcomingTripsWithCounts(db, shop.id, {
@@ -258,6 +260,9 @@ export default async function SchedulePage({
       }),
       isEmbed ? EMPTY_REVIEW_AGGREGATE : getShopReviewAggregate(db, shop.id),
       isEmbed ? [] : listActiveCourses(db, shop.id),
+      // The fleet, for the storefront's boats section (Harbor). Not in the
+      // widget: an embed is the list-first window and names no hulls.
+      isEmbed ? [] : listBoats(db, shop.id),
     ]);
   // The widget shows a window; the page shows the schedule. Sliced here rather
   // than asked for in the query so the two surfaces read the same list and can
@@ -523,7 +528,7 @@ export default async function SchedulePage({
             <img
               src={shop.logoUrl}
               alt=""
-              className="size-16 shrink-0 rounded-2xl border border-border bg-surface object-cover"
+              className="size-16 shrink-0 rounded-xl border border-border bg-surface object-cover"
             />
           ) : null}
           <div className="min-w-0 flex-1">
@@ -532,6 +537,13 @@ export default async function SchedulePage({
               tagline={shop.tagline}
               aggregate={reviewAggregate}
               commitments={parseConservationCommitments(shop.conservationCommitments)}
+              heroImage={
+                shop.brandHeroImageUrl
+                  ? { url: shop.brandHeroImageUrl, alt: shop.brandHeroImageAlt ?? "" }
+                  : null
+              }
+              badges={parseBrandBadges(shop.brandBadges)}
+              establishedYear={shop.establishedYear}
               locale={locale}
               t={t}
             />
@@ -560,7 +572,9 @@ export default async function SchedulePage({
       <div className={isEmbed ? undefined : "mt-10"}>
         {isEmbed ? null : (
           <div className="mb-4">
-            <h2 className="text-lg font-semibold tracking-tight">{t("schedule.title")}</h2>
+            <h2 className="font-brand-display text-lg font-semibold tracking-tight">
+              {t("schedule.title")}
+            </h2>
             {/* Whose morning is "7:30 AM"? A diver comparing boats from another
                 timezone reads these times against their own clock unless
                 something says otherwise (review finding I18N-L2) — so it is
@@ -785,6 +799,32 @@ export default async function SchedulePage({
           t={t}
         />
       )}
+      {/* The boats, by name and seats (Harbor — ADR 20260901-diveday-reimagined:
+          the storefront is the shop's website, and a shop's site always names
+          its hulls). Only when the shop has any: an empty fleet is not a section. */}
+      {isEmbed || boats.length === 0 ? null : (
+        <section aria-labelledby="boats-heading" className="mt-12">
+          <h2
+            id="boats-heading"
+            className="font-brand-display text-lg font-semibold tracking-tight"
+          >
+            {t("schedule.boatsHeading")}
+          </h2>
+          <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {boats.map((boat) => (
+              <li
+                key={boat.id}
+                className="flex min-h-14 items-center justify-between gap-3 rounded-panel border border-border bg-surface px-4 py-3 shadow-bed"
+              >
+                <span className="font-medium">{boat.name}</span>
+                <span className="text-sm text-muted tabular-nums">
+                  {t("schedule.boatSeats", { count: boat.capacity })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {/* Reviews are a full-page, diver-facing signal: the embed stays a
           compact booking widget (docs ADR 20260726-schedule-embed), and staff
           moderate from /shop/[shopSlug]/reviews rather than reading them here.
@@ -829,7 +869,10 @@ export default async function SchedulePage({
           namespaces those components need and no more. */}
       {!isEmbed ? (
         <section aria-labelledby="more-ways-heading" className="mt-12">
-          <h2 id="more-ways-heading" className="text-lg font-semibold tracking-tight">
+          <h2
+            id="more-ways-heading"
+            className="font-brand-display text-lg font-semibold tracking-tight"
+          >
             {t("schedule.moreWaysHeading")}
           </h2>
           <DiverIntlProvider

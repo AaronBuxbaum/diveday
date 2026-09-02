@@ -3,7 +3,11 @@
 // hand-rolled approximation is the whole point of this file.
 import { pathToRegexp } from "next/dist/compiled/path-to-regexp";
 import { describe, expect, it } from "vitest";
-import { isEmbeddableShopRoute } from "./embed-routes";
+import {
+  isEmbeddableShopRoute,
+  isEmbedWidgetRoute,
+  isUnknownEmbedWidgetRoute,
+} from "./embed-routes";
 import { LEGACY_PUBLIC_SHOP_REDIRECTS } from "./public-routes";
 
 /**
@@ -100,5 +104,29 @@ describe("isEmbeddableShopRoute", () => {
     ]) {
       expect(isEmbeddableShopRoute(path)).toBe(false);
     }
+  });
+});
+
+/**
+ * A widget path naming no widget is the proxy's 404, not the page's: under
+ * partial prerendering the shell has already answered 200 by the time
+ * `notFound()` runs, so a host page with a typo would frame a 200 not-found.
+ */
+describe("isUnknownEmbedWidgetRoute", () => {
+  it("matches an embed path whose last segment is not a widget", () => {
+    expect(isUnknownEmbedWidgetRoute("/s/blue-mantis/embed/nope")).toBe(true);
+    expect(isUnknownEmbedWidgetRoute("/s/blue-mantis/embed/Grid/")).toBe(true);
+  });
+
+  it("leaves every real widget, and every other path, alone", () => {
+    for (const widget of ["grid", "departure", "courses"]) {
+      const path = `/s/blue-mantis/embed/${widget}`;
+      expect(isUnknownEmbedWidgetRoute(path), path).toBe(false);
+      expect(isEmbedWidgetRoute(path), path).toBe(true);
+    }
+    expect(isUnknownEmbedWidgetRoute("/s/blue-mantis/embed")).toBe(false);
+    expect(isUnknownEmbedWidgetRoute("/s/blue-mantis/embed/grid/extra")).toBe(false);
+    expect(isUnknownEmbedWidgetRoute("/s/blue-mantis")).toBe(false);
+    expect(isUnknownEmbedWidgetRoute("/shop/blue-mantis/embed/nope")).toBe(false);
   });
 });

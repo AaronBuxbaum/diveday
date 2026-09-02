@@ -243,6 +243,21 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // that state.
       // i18n-exempt: a shop types its own tagline, like its packing list.
       tagline: "Small-boat reef and wreck diving out of Key Largo.",
+      // **Blue Mantis wears its own brand** (Harbor, ADR
+      // 20260901-diveday-reimagined): the demo is where a shop leaving
+      // FareHarbor first sees a storefront that is not DiveDay-coloured, so the
+      // demo shop has a colour, a face, a cover photo and a badge wall. Mantis
+      // green, chosen because it is not the product's teal and dark enough for
+      // white text as typed (so the demo's Settings carry no darkening hint);
+      // the photo is one of the bundled Molasses Reef frames the site catalog
+      // already ships.
+      brandColor: "#158462",
+      brandDisplayFont: "bricolage_grotesque",
+      brandHeroImageUrl: `/dive-sites/${encodeURIComponent("Elkhorn coral 8 Molasses Reef 20080309.jpg")}`,
+      // i18n-exempt: a shop writes its own alt text, like its tagline.
+      brandHeroImageAlt: "Elkhorn coral on Molasses Reef, sunlight from above",
+      establishedYear: 1998,
+      brandBadges: ["padi_5_star", "blue_star", "tripadvisor"],
       timezone: DEMO_SHOP_TIMEZONE,
       // **Blue Mantis finished its own onboarding**, like the trading shop it
       // is meant to portray. Without this the queue asks it which currency it

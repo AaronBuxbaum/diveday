@@ -189,3 +189,46 @@ describe("the conservation line", () => {
     expect(screen.queryByText(/Stated by the shop/)).not.toBeInTheDocument();
   });
 });
+
+/**
+ * Harbor (ADR 20260901-diveday-reimagined, decision 2): the shop's display face
+ * labels the name and nothing that carries a fact.
+ */
+describe("the shop's face", () => {
+  it("dresses the name in the display face and leaves the rating in Geist", () => {
+    const { container } = render(
+      <ShopfrontHero
+        name="Blue Mantis Divers"
+        tagline={null}
+        aggregate={{ average: 4.3, count: 83, suppressedCount: 0 }}
+        commitments={[]}
+        locale="en-US"
+        t={t}
+      />,
+    );
+    expect(container.querySelector("h1")).toHaveClass("font-brand-display");
+    const faced = [...container.querySelectorAll(".font-brand-display")];
+    expect(faced).toHaveLength(1);
+    expect(faced[0]?.tagName).toBe("H1");
+  });
+
+  it("puts the name on the cover photograph when the shop has one, and the wall beneath", () => {
+    render(
+      <ShopfrontHero
+        name="Blue Mantis Divers"
+        tagline="Two tanks before lunch."
+        aggregate={null}
+        commitments={[]}
+        heroImage={{ url: "/dive-sites/reef.jpg", alt: "Elkhorn coral" }}
+        badges={["padi_5_star"]}
+        establishedYear={1998}
+        locale="en-US"
+        t={t}
+      />,
+    );
+    expect(screen.getByAltText("Elkhorn coral")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Blue Mantis Divers");
+    expect(screen.getByText("Since 1998")).toBeInTheDocument();
+    expect(screen.getByText("PADI 5 Star Dive Center")).toBeInTheDocument();
+  });
+});

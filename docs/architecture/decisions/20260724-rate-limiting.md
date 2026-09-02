@@ -73,7 +73,11 @@ per-source abuse control. PR #139 explicitly deferred per-token/IP recap limits 
   file through one shared server and one shared `127.0.0.1` "IP." Real throttling there would fail
   unrelated tests for having no bug, only shared state — so `playwright.config.ts` sets this env var
   the same way it sets `DIVEDAY_CLOCK`, and `src/lib/rate-limit.ts` refuses to honor it whenever a
-  real `DATABASE_URL` is configured, so it can never reach production.
+  real `DATABASE_URL` is configured, so it can never reach production. *Amended 2026-09-02:*
+  `pnpm dev` sets it as well, defaulting rather than forcing (`${DIVEDAY_RATE_LIMIT_DISABLED-1}`),
+  because `scripts/screenshot.mjs` signs in through the real form against that server and the
+  per-email budget was refusing an ordinary afternoon's second look — see the runbook's "Local dev
+  and the e2e fleet".
 
 ## Alternatives considered
 

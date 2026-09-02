@@ -71,7 +71,7 @@ describe("parseFieldGuideSelection", () => {
       "banana",
       "{",
       "{}",
-      '"' + butterflyfish + '"',
+      `"${butterflyfish}"`,
       7,
       {},
       true,

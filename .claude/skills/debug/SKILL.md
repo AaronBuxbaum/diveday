@@ -257,6 +257,7 @@ question. When a failure has no local reproduction, spend the first commit makin
 | A page body with no `__reactFiber$` on anything, and `<!--$~-->` markers that never resolve | The tab is hidden, not the build broken — React's batched reveal waits on an animation frame. See the hidden-tab section above; `document.hidden` answers it in one line |
 | Framework behaving "wrong" | This is **Next 16** — check `node_modules/next/dist/docs/` before assuming our bug (middleware→proxy, async `searchParams`, `connection()`) |
 | Redirect loops / auth bounces | Two layers run: `src/proxy.ts` (edge, redirects to `/sign-in` or `/`) and `requireStaffSession()` (server). Identify which bounced before changing either |
+| `scripts/screenshot.mjs` says sign-in was refused, or a `/shop/**` capture stalls on `/sign-in` | The server was started without `DIVEDAY_RATE_LIMIT_DISABLED=1` (`pnpm dev` sets it; a bare `next dev` does not) and the 8-per-email sign-in budget is spent — restart it with the flag, never wait the 15 minutes out. The page reads the same for a wrong password, so compare the credentials with `src/db/dev-credentials.ts` first |
 | Sign-in silently fails in dev | `verifyCredentials` returns null for four distinct reasons (no account, disabled, bad password, no staff role) by design — check the seeded account state, don't add error leakage |
 
 ## Long-running background processes (dev server, e2e)

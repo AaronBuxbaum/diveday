@@ -57,7 +57,7 @@ export function EmptyState({
   const Heading = TITLE_TAG[titleAs];
   return (
     <div
-      className={`rounded-2xl border border-dashed border-border-strong bg-surface p-10 text-center${
+      className={`rounded-panel border border-dashed border-border-strong bg-surface shadow-bed p-10 text-center${
         className ? ` ${className}` : ""
       }`}
     >

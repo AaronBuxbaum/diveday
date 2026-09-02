@@ -72,7 +72,7 @@ export default function ProductLoading() {
                 ))}
               </div>
             </div>
-            <div className="h-80 rounded-2xl border border-border bg-surface" />
+            <div className="h-80 rounded-panel border border-border bg-surface shadow-bed" />
           </div>
         </section>
       </main>
