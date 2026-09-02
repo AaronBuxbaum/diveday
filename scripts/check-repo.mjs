@@ -70,6 +70,7 @@ const checks = [
   ["open-graph", "check-open-graph.mjs"],
   ["critical-text", "check-critical-text.mjs"],
   ["stack-ci-skip", "check-stack-ci-skip.mjs"],
+  ["ci-change-detection", "check-ci-change-detection.mjs"],
 ];
 
 function runCheck(label, scriptFile) {
