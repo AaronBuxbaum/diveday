@@ -154,6 +154,36 @@ const IDLE_MS = 4_000;
 /** Next's per-request log line, which is the only in-flight signal there is. */
 const REQUEST_LOG = /\b(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\/\S*\s+\d{3}\b/;
 
+/**
+ * Reassemble a stream's `data` chunks into whole lines.
+ *
+ * Every reader below matches a pattern against one of Next's lines, and a
+ * `data` event is not a line: Node splits wherever the pipe happened to fill,
+ * so `- Local: http://localhost:3001` can arrive as two chunks and match
+ * nothing. The consequences are not cosmetic — the port banner missed means the
+ * health probe knocks on the wrong port for its whole deadline, and the refusal
+ * missed means a permanently-refused start gets retried.
+ *
+ * `flush` returns whatever is left unterminated, which matters because the last
+ * thing a dying process writes often has no trailing newline — and on this
+ * child that last thing is the reason it died.
+ */
+export function lineSplitter() {
+  let rest = "";
+  return {
+    push(chunk) {
+      const lines = (rest + chunk).split("\n");
+      rest = lines.pop() ?? "";
+      return lines;
+    },
+    flush() {
+      const last = rest;
+      rest = "";
+      return last ? [last] : [];
+    },
+  };
+}
+
 /** How long to wait for `/api/health` after a start before giving up on warming. */
 const READY_TIMEOUT_MS = 180_000;
 const READY_POLL_MS = 1_000;
@@ -661,22 +691,26 @@ async function main(argv = process.argv.slice(2)) {
       stdio: ["inherit", "pipe", "pipe"],
     });
 
-    const scan = (chunk, stream) => {
-      stream.write(chunk);
-      const text = chunk.toString();
-      if (FATAL_OUTPUT.test(text)) fatal = true;
-      if (REQUEST_LOG.test(text)) lastRequestAt = Date.now();
-      const drift = portInUseFromLine(text);
+    const readLine = (line) => {
+      if (FATAL_OUTPUT.test(line)) fatal = true;
+      if (REQUEST_LOG.test(line)) lastRequestAt = Date.now();
+      const drift = portInUseFromLine(line);
       if (drift) {
         say(
           `port ${drift.requested} belongs to another process, so Next took ${drift.chosen} — read ${drift.chosen}, and whatever still answers on ${drift.requested} is not this server`,
         );
       }
-      const found = localPortFromLine(text);
+      const found = localPortFromLine(line);
       if (found) port = found;
     };
-    child.stdout.on("data", (chunk) => scan(chunk, process.stdout));
-    child.stderr.on("data", (chunk) => scan(chunk, process.stderr));
+    const stdoutLines = lineSplitter();
+    const stderrLines = lineSplitter();
+    const pipe = (chunk, stream, splitter) => {
+      stream.write(chunk);
+      for (const line of splitter.push(chunk.toString())) readLine(line);
+    };
+    child.stdout.on("data", (chunk) => pipe(chunk, process.stdout, stdoutLines));
+    child.stderr.on("data", (chunk) => pipe(chunk, process.stderr, stderrLines));
 
     const warmController = new AbortController();
     warming = warm(() => port, child.pid, warmController.signal);
@@ -754,6 +788,10 @@ async function main(argv = process.argv.slice(2)) {
     child.on("exit", (code, signal) => {
       clearInterval(poll);
       warmController.abort();
+      // The last thing a dying process writes usually has no trailing newline,
+      // and on this child that last thing is the reason it died — including the
+      // refusal that decides whether any of this is worth retrying.
+      for (const line of [...stdoutLines.flush(), ...stderrLines.flush()]) readLine(line);
       if (stopping) return;
 
       // `next dev` runs until it is stopped, so *any* exit we did not ask for

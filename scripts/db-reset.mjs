@@ -39,14 +39,38 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 /** Where Next records the dev server holding this checkout. */
 const LOCK_FILES = [".next/dev/lock", ".next/lock"];
 
-/** True when `pid` names a process this user could signal. */
-export function pidIsAlive(pid) {
+/**
+ * Whether `pid` is a live process that still looks like the dev server.
+ *
+ * Liveness alone is not enough. A dev server here is usually killed rather than
+ * stopped, so its lockfile outlives it, and pids are recycled — a stale lock
+ * naming a pid the OS has since handed to something unrelated would make this
+ * refuse forever, and name the wrong process while doing it.
+ *
+ * So on Linux — which is where the agent sessions this protects actually run —
+ * the pid's own command line has to mention `next`. `/proc` does not exist on
+ * macOS; there, liveness is all there is and the behaviour is unchanged, which
+ * is the right way round for a check whose failure mode is refusing a reset
+ * rather than performing a dangerous one.
+ */
+export function pidIsAlive(pid, readCmdline = defaultReadCmdline) {
   try {
     process.kill(pid, 0);
-    return true;
   } catch (error) {
     // EPERM means it exists and belongs to somebody else — still running.
-    return error.code === "EPERM";
+    if (error.code !== "EPERM") return false;
+  }
+  const cmdline = readCmdline(pid);
+  if (cmdline === null) return true;
+  return /\bnext\b/.test(cmdline);
+}
+
+/** `/proc/<pid>/cmdline` with its NUL separators flattened, or null off Linux. */
+function defaultReadCmdline(pid) {
+  try {
+    return readFileSync(`/proc/${pid}/cmdline`, "utf8").replace(/\0/g, " ");
+  } catch {
+    return null;
   }
 }
 
@@ -75,6 +99,19 @@ export function dataDir(env = process.env) {
   return configured === "memory" ? null : configured;
 }
 
+/**
+ * That directory as an absolute path, resolved the way PGlite resolves it.
+ *
+ * `src/db/client.ts` passes the configured value straight to the `PGlite`
+ * constructor, so a relative one is relative to the process's working directory
+ * and an absolute one is taken as given. Anything that deletes it has to agree
+ * exactly, which `path.join` does not: it would turn `/tmp/pglite` into
+ * `<repo>/tmp/pglite`.
+ */
+export function resolveDataDir(dir, root = ROOT) {
+  return path.isAbsolute(dir) ? dir : path.resolve(root, dir);
+}
+
 function main() {
   for (const file of LOCK_FILES) {
     const full = path.join(ROOT, file);
@@ -99,7 +136,12 @@ function main() {
     return;
   }
 
-  const full = path.join(ROOT, dir);
+  // `path.join(ROOT, "/tmp/pglite")` is `<repo>/tmp/pglite`, which is not where
+  // `src/db/client.ts` opened the database — it hands the configured value
+  // straight to PGlite, so an absolute one stays absolute. Joining would have
+  // this report "does not exist" for the real directory while standing ready to
+  // delete an unrelated path inside the repository that happens to match.
+  const full = resolveDataDir(dir);
   if (!existsSync(full)) {
     process.stdout.write(
       `db:reset: ${dir} does not exist; next \`pnpm dev\` migrates and seeds.\n`,

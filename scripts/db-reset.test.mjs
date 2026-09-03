@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dataDir, runningDevServer } from "./db-reset.mjs";
+import { dataDir, pidIsAlive, resolveDataDir, runningDevServer } from "./db-reset.mjs";
 
 const LIVE = '{"pid":16223,"port":3000,"hostname":"localhost","appUrl":"http://localhost:3000"}';
 
@@ -27,6 +27,45 @@ describe("runningDevServer", () => {
 
   it("survives a lockfile with no port — the pid is what the refusal needs", () => {
     expect(runningDevServer('{"pid":42}', () => true)).toEqual({ pid: 42, port: undefined });
+  });
+});
+
+describe("pidIsAlive", () => {
+  const alive = () => process.pid;
+
+  it("accepts a live pid whose command line is a next process", () => {
+    expect(pidIsAlive(alive(), () => "node /repo/node_modules/next/dist/bin/next dev")).toBe(true);
+  });
+
+  it("refuses a recycled pid now running something else", () => {
+    // A dev server here is usually killed rather than stopped, so its lockfile
+    // outlives it. Liveness alone would have this refuse every future reset and
+    // name an unrelated process while doing it.
+    expect(pidIsAlive(alive(), () => "/usr/bin/postgres -D /var/lib/postgresql")).toBe(false);
+  });
+
+  it("falls back to liveness alone where /proc does not exist", () => {
+    // macOS. Unchanged behaviour there, which is the right way round: this
+    // check's failure mode is refusing a reset, never performing a bad one.
+    expect(pidIsAlive(alive(), () => null)).toBe(true);
+  });
+
+  it("is false for a pid that is simply gone", () => {
+    // 2^22 is above every default pid_max, so nothing can be running there.
+    expect(pidIsAlive(4194304, () => null)).toBe(false);
+  });
+});
+
+describe("resolveDataDir", () => {
+  it("leaves an absolute PGLITE_DATA_DIR absolute", () => {
+    // `path.join(root, "/tmp/pglite")` would be `<repo>/tmp/pglite` — not the
+    // directory src/db/client.ts opened, and possibly one that exists.
+    expect(resolveDataDir("/tmp/pglite-probe", "/repo")).toBe("/tmp/pglite-probe");
+  });
+
+  it("resolves a relative one against the repository, the way PGlite resolves it", () => {
+    expect(resolveDataDir(".pglite", "/repo")).toBe("/repo/.pglite");
+    expect(resolveDataDir(".pglite-e2e", "/repo")).toBe("/repo/.pglite-e2e");
   });
 });
 

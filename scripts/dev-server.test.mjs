@@ -7,6 +7,7 @@ import {
   devLockPid,
   formatMb,
   hardLimitBytes,
+  lineSplitter,
   localPortFromLine,
   memoryBudgetBytes,
   memoryCeilingBytes,
@@ -331,6 +332,38 @@ describe("localPortFromLine", () => {
 
   it("is null for any other line", () => {
     expect(localPortFromLine("✓ Ready in 407ms")).toBeNull();
+  });
+});
+
+describe("lineSplitter", () => {
+  it("joins a line split across two chunks, which is what a data event does", () => {
+    // The failure this exists for: Next's port banner arriving as
+    // "- Local:   http://localho" + "st:3001\n" matched neither reader, so the
+    // health probe knocked on the requested port for its whole deadline.
+    const split = lineSplitter();
+    expect(split.push("- Local:   http://localho")).toEqual([]);
+    expect(split.push("st:3001\n")).toEqual(["- Local:   http://localhost:3001"]);
+  });
+
+  it("returns every complete line in one chunk and holds back the tail", () => {
+    const split = lineSplitter();
+    expect(split.push("one\ntwo\nthr")).toEqual(["one", "two"]);
+    expect(split.push("ee\n")).toEqual(["three"]);
+  });
+
+  it("flushes an unterminated last line, which is what a dying process leaves", () => {
+    // `⨯ Another next dev server is already running.` with no trailing newline
+    // decides whether the supervisor retries or stands down.
+    const split = lineSplitter();
+    expect(split.push("⨯ Another next dev server is already running.")).toEqual([]);
+    expect(split.flush()).toEqual(["⨯ Another next dev server is already running."]);
+    expect(split.flush()).toEqual([]);
+  });
+
+  it("holds nothing back when the chunk ends on a newline", () => {
+    const split = lineSplitter();
+    expect(split.push("done\n")).toEqual(["done"]);
+    expect(split.flush()).toEqual([]);
   });
 });
 
