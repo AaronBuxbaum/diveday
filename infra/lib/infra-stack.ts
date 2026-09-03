@@ -16,7 +16,6 @@ import * as rum from "aws-cdk-lib/aws-rum";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as scheduler from "aws-cdk-lib/aws-scheduler";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
-import * as ses from "aws-cdk-lib/aws-ses";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as subscriptions from "aws-cdk-lib/aws-sns-subscriptions";
 import * as cr from "aws-cdk-lib/custom-resources";
@@ -38,12 +37,20 @@ import {
   mutationDurationFilterPattern,
   queryConstructIdFor,
   SAVED_LOG_QUERIES,
-  SES_REPUTATION_SIGNALS,
-  sesReputationAlarmNameFor,
   WEB_VITAL_SIGNALS,
   webVitalAlarmNameFor,
   webVitalFilterPatternFor,
 } from "./observability";
+import {
+  alertEmailFrom,
+  EMAIL_STACK_NAME,
+  MAIN_STACK_NAME,
+  SES_CONFIGURATION_SET_NAME,
+  SES_EVENT_TOPIC_NAME,
+  SES_REGION,
+  sesEmailDomainFrom,
+  webhookHostFrom,
+} from "./stack-config";
 
 /** The credential hand-off document. Slash-separated for the `diveday/*` secret namespace. */
 const CREDENTIALS_SECRET_NAME = "diveday/env";
@@ -194,7 +201,14 @@ export class InfraStack extends cdk.Stack {
     // create-then-delete, so the user is transiently at IAM's two-key ceiling
     // and never below one working key.
     //
-    //   pnpm infra:deploy --parameters CredentialSerial=2
+    //   pnpm infra:deploy DiveDay --parameters CredentialSerial=2
+    //
+    // Naming the stack is not decoration: `--parameters` with no `STACK:`
+    // qualifier is applied to every stack in the deploy, and the email stack
+    // (S8) declares no parameters at all -- so an unqualified rotation would
+    // rotate these keys and then fail on `Parameters: [CredentialSerial] do not
+    // exist in the template`, leaving the operator to work out whether the
+    // rotation happened. scripts/infra-deploy.mjs refuses that shape outright.
     //
     // **A CloudFormation parameter, not a `--context` value, and that is the
     // whole point.** Context is per-invocation: with `--context`, the deploy
@@ -348,18 +362,35 @@ export class InfraStack extends cdk.Stack {
     const bootstrapQualifier: string =
       this.node.tryGetContext("@aws-cdk/core:bootstrapQualifier") ??
       cdk.DefaultStackSynthesizer.DEFAULT_QUALIFIER;
-    const bootstrapRoleArn = (roleName: string) =>
-      `arn:${this.partition}:iam::${this.account}:role/cdk-${bootstrapQualifier}-${roleName}-${this.account}-${this.region}`;
+    //
+    // Two regions, because a deploy is now two stacks (S8, ADR
+    // 20260903-ses-lives-in-its-own-region) and a bootstrap role's name ends in
+    // the region it was bootstrapped into. An identity holding only this
+    // region's four cannot deploy the email stack at all, and the failure is
+    // `sts:AssumeRole` on `cdk-<qualifier>-deploy-role-<account>-us-east-2`,
+    // which reads as a bad trust policy rather than as a missing grant. Deduped,
+    // so setting SES_REGION back to this stack's own region leaves these lists
+    // as they were rather than doubling every entry.
+    const deploymentRegions = [...new Set([this.region, SES_REGION])];
+    const bootstrapRoleArns = (roleName: string) =>
+      deploymentRegions.map(
+        (region) =>
+          `arn:${this.partition}:iam::${this.account}:role/cdk-${bootstrapQualifier}-${roleName}-${this.account}-${region}`,
+      );
+    const bootstrapVersionParameterArns = deploymentRegions.map(
+      (region) =>
+        `arn:${this.partition}:ssm:${region}:${this.account}:parameter/cdk-bootstrap/${bootstrapQualifier}/version`,
+    );
 
     deployerUser.addToPolicy(
       new iam.PolicyStatement({
         sid: "AssumeCdkBootstrapRoles",
         actions: ["sts:AssumeRole"],
         resources: [
-          bootstrapRoleArn("deploy-role"),
-          bootstrapRoleArn("file-publishing-role"),
-          bootstrapRoleArn("image-publishing-role"),
-          bootstrapRoleArn("lookup-role"),
+          ...bootstrapRoleArns("deploy-role"),
+          ...bootstrapRoleArns("file-publishing-role"),
+          ...bootstrapRoleArns("image-publishing-role"),
+          ...bootstrapRoleArns("lookup-role"),
         ],
       }),
     );
@@ -369,8 +400,10 @@ export class InfraStack extends cdk.Stack {
         sid: "ReadStackStatusAndBootstrapVersion",
         actions: ["cloudformation:DescribeStacks", "ssm:GetParameter"],
         resources: [
-          `arn:${this.partition}:cloudformation:${this.region}:${this.account}:stack/*/*`,
-          `arn:${this.partition}:ssm:${this.region}:${this.account}:parameter/cdk-bootstrap/${bootstrapQualifier}/version`,
+          ...deploymentRegions.map(
+            (region) => `arn:${this.partition}:cloudformation:${region}:${this.account}:stack/*/*`,
+          ),
+          ...bootstrapVersionParameterArns,
         ],
       }),
     );
@@ -422,7 +455,7 @@ export class InfraStack extends cdk.Stack {
     // check-in), and the AWS cost alerts were the one that still landed
     // somewhere else. Kept as a context override so a fork or a second account
     // can point it elsewhere without editing the stack (OPS-4).
-    const alertEmail = this.node.tryGetContext("alertEmail") || "alerts@dive.day";
+    const alertEmail = alertEmailFrom(this);
     // Raised from 5 to 30 on 2026-08-12 (amendment to ADR
     // 20260802-aws-cost-guardrails). At 5 the fixed floor -- the credentials
     // secret, two metrics past CloudWatch's always-free ten -- was already a
@@ -523,156 +556,78 @@ export class InfraStack extends cdk.Stack {
     //
     // Must be the canonical origin. `dive.day` 308-redirects to `www.dive.day`,
     // and a redirect is not a confirmation.
-    const webhookHost = this.node.tryGetContext("webhookHost") || "https://www.dive.day";
+    const webhookHost = webhookHostFrom(this);
     const webhookSubscription = (path: string) =>
       new subscriptions.UrlSubscription(`${webhookHost}${path}`);
 
-    // 8. SES email-provider infra. SES is the app's sole provider in code
-    // (ADR 20260803-ses-sole-email-provider, superseding 20260802-ses-adapter-
-    // and-webhook's opt-in flag and 20260802-ses-email-transition-prep's
-    // original "prep ahead of a possible Resend swap" framing) - but the
-    // AWS-side production access request, DKIM DNS verification, and credential
-    // minting are still manual steps, so this stays inert until those are done.
-    const sesEmailDomain = this.node.tryGetContext("sesEmailDomain") || "ses.dive.day";
-
-    // The envelope sender (Return-Path), a different address from the From
-    // header and one that has to live on its own subdomain - never the one you
-    // send from, so not `ses.dive.day` itself.
+    // 8. The app's SES credential. Everything else about SES -- the verified
+    // identity, the configuration set and its event destination, the SNS topic
+    // the events arrive on, and the two reputation alarms -- moved to its own
+    // stack in its own region on 2026-09-03 (infra/lib/email-stack.ts, ADR
+    // 20260903-ses-lives-in-its-own-region). The sandbox is per region and AWS
+    // refused the us-east-1 production-access request; CloudFormation is
+    // regional, so moving the mail means a second stack.
     //
-    // Without this, SES uses a shared `amazonses.com` subdomain as the envelope
-    // sender. Mail still authenticates (DKIM signs as the identity domain), but
-    // SPF then aligns to Amazon's domain rather than ours, so DMARC passes on
-    // DKIM alone. Owning the envelope domain gets both halves aligned, which is
-    // what makes a booking confirmation survive a strict receiver.
+    // The sender stays here, and it is not an oversight: IAM is global, its
+    // access key belongs in the one credentials document this stack renders
+    // (S16), and keeping it out of the email stack is what lets the two share
+    // no synth-time reference at all. The policy below is therefore written
+    // against ARNs built from `stack-config.ts`'s constants rather than from
+    // the constructs that create them -- the one place a name typed twice
+    // would matter, which is why neither name is typed twice.
     //
-    // Derived from the identity, not written out flat, because SES requires the
-    // MAIL FROM domain be a *child* of the verified identity - a sibling under
-    // the same parent is rejected. This is settled by experiment, not by
-    // reading: `mail.dive.day` was tried against identity `ses.dive.day` and
-    // SES answered 400 with
-    //
-    //   Provided MAIL-FROM domain <mail.dive.day> is not subdomain of the
-    //   domain of the identity <ses.dive.day>
-    //
-    // which contradicts the developer guide's "subdomain of the parent domain
-    // of a verified identity" and matches the SetIdentityMailFromDomain API
-    // reference's "subdomain of the verified identity". Trust the API reference.
-    // Deriving the name keeps the two in step if `sesEmailDomain` ever moves.
-    const sesMailFromDomain =
-      this.node.tryGetContext("sesMailFromDomain") || `mail.${sesEmailDomain}`;
-
-    const sesEventNotifications = new sns.Topic(this, "SesEmailEventNotifications", {
-      topicName: "diveday-ses-email-events",
-    });
-
-    sesEventNotifications.addSubscription(webhookSubscription("/api/webhooks/ses"));
-
-    const sesConfigurationSet = new ses.ConfigurationSet(this, "SesConfigurationSet", {
-      configurationSetName: "diveday-transactional-email",
-      // A permanent bounce or a recipient complaint must stop future sends to
-      // that address automatically. App-level delivery records help staff
-      // investigate, but SES's account-level suppression is the send-time
-      // safeguard that protects the account's reputation across every
-      // notification path.
-      suppressionReasons: ses.SuppressionReasons.BOUNCES_AND_COMPLAINTS,
-      // Per-configuration-set bounce and complaint rates in CloudWatch beside
-      // the account-level ones S13 alarms on: when the account rate moves,
-      // this is what says whether it was DiveDay's mail or something else the
-      // account sends.
-      reputationMetrics: true,
-      vdmOptions: { optimizedSharedDelivery: true },
-    });
-
-    new ses.ConfigurationSetEventDestination(this, "SesEmailEventDestination", {
-      configurationSet: sesConfigurationSet,
-      destination: ses.EventDestination.snsTopic(sesEventNotifications),
-      // Bounces, complaints, and delivery outcomes. OPEN/CLICK are deliberately
-      // excluded - the same no-opens/no-clicks privacy stance documented in
-      // docs/engineering/ses-email-runbook.md.
-      events: [
-        ses.EmailSendingEvent.BOUNCE,
-        ses.EmailSendingEvent.COMPLAINT,
-        ses.EmailSendingEvent.DELIVERY,
-        ses.EmailSendingEvent.DELIVERY_DELAY,
-        ses.EmailSendingEvent.REJECT,
-        ses.EmailSendingEvent.RENDERING_FAILURE,
-      ],
-    });
-
-    const sesEmailIdentity = new ses.EmailIdentity(this, "SesEmailIdentity", {
-      identity: ses.Identity.domain(sesEmailDomain),
-      configurationSet: sesConfigurationSet,
-      mailFromDomain: sesMailFromDomain,
-      // Degrade rather than refuse. REJECT_MESSAGE would turn a missing or
-      // slow-propagating MX record into a hard failure on every send - the
-      // envelope domain is a deliverability improvement, not a precondition for
-      // a diver getting their booking confirmation. Falling back to the
-      // amazonses.com envelope is exactly the behaviour we have today.
-      mailFromBehaviorOnMxFailure: ses.MailFromBehaviorOnMxFailure.USE_DEFAULT_VALUE,
-      // Bounce and complaint notifications arrive through the configuration
-      // set's SNS destination above and land on the notification row and the
-      // shop's dashboard. SES's default is to *also* forward each one as an
-      // email to the sender address, which is noreply@ses.dive.day: a mailbox
-      // nobody reads, on a subdomain that receives no mail. Off, so the one
-      // record of a bounce is the one the app keeps.
-      feedbackForwarding: false,
-    });
+    // A deploy of this stack alone drops the old region's identity, topic and
+    // alarms; a deploy of both moves the mail. They can go in either order:
+    // sends fail with `MessageRejected` in the window where the credential
+    // names a region whose identity does not exist yet, and recover with no
+    // intervention once it does.
+    const sesEmailDomain = sesEmailDomainFrom(this);
 
     const sesSenderUser = new iam.User(this, "SesSenderUser", {
       userName: SES_SENDER_USER_NAME,
     });
-    sesEmailIdentity.grantSendEmail(sesSenderUser);
 
     // A send is authorized against **every** SES resource it touches, and the
-    // configuration set above is attached to the identity -- so it is on every
-    // send, whether or not the app names it. `grantSendEmail` only ever adds
-    // the identity ARN (aws-cdk-lib/aws-ses `EmailIdentityBase.grant`), which
-    // leaves the config set unauthorized and every send answering 403
+    // configuration set is attached to the identity -- so it is on every send,
+    // whether or not the app names it. `EmailIdentity.grantSendEmail`, which
+    // this replaced when the identity moved, only ever adds the identity ARN,
+    // which leaves the config set unauthorized and every send answering 403
     // `AccessDeniedException` on `configuration-set/diveday-transactional-email`
     // -- including sends to the mailbox simulator, which is how this was found.
-    // Granting the identity alone is a working setup only for an identity with
-    // no configuration set.
+    // Both ARNs, or neither works.
     sesSenderUser.addToPrincipalPolicy(
       new iam.PolicyStatement({
         actions: ["ses:SendEmail", "ses:SendRawEmail"],
         resources: [
           this.formatArn({
             service: "ses",
+            region: SES_REGION,
+            resource: "identity",
+            resourceName: sesEmailDomain,
+          }),
+          this.formatArn({
+            service: "ses",
+            region: SES_REGION,
             resource: "configuration-set",
-            resourceName: sesConfigurationSet.configurationSetName,
+            resourceName: SES_CONFIGURATION_SET_NAME,
           }),
         ],
       }),
     );
 
     const sesSenderKey = mintAccessKey("SesSenderUserAccessKey", sesSenderUser);
-    envValues.SES_AWS_REGION = this.region;
+    // Named, not `this.region`, for the same reason PLACES_AWS_REGION is (S12):
+    // the region an AWS credential calls is a decision when the service is set
+    // up in exactly one of them. The SDK builds `email.<region>.amazonaws.com`
+    // out of this string, and the identity exists in one region only.
+    envValues.SES_AWS_REGION = SES_REGION;
     envValues.SES_AWS_ACCESS_KEY_ID = sesSenderKey.id;
     envValues.SES_AWS_SECRET_ACCESS_KEY = sesSenderKey.secret;
 
-    new cdk.CfnOutput(this, "SesDkimRecords", {
-      value: cdk.Stack.of(this).toJsonString(sesEmailIdentity.dkimRecords),
-      description: `DNS CNAME records to add for ${sesEmailDomain} to complete DKIM verification (three name/value pairs).`,
-    });
-
-    // Authoritative DNS for dive.day is Vercel, not Route53, so these two
-    // records are added by hand rather than by this stack - there is no hosted
-    // zone here to write them into. Exactly one MX record is required: SES fails
-    // the MAIL FROM setup outright if the subdomain has more than one.
-    new cdk.CfnOutput(this, "SesMailFromRecords", {
-      value: `MX ${sesMailFromDomain} -> 10 feedback-smtp.${this.region}.amazonses.com | TXT ${sesMailFromDomain} -> "v=spf1 include:amazonses.com ~all"`,
-      description: `DNS records to add for the custom MAIL FROM domain ${sesMailFromDomain}, in Vercel DNS. Exactly one MX record - SES rejects the setup if there are several.`,
-    });
-
-    new cdk.CfnOutput(this, "SesEventNotificationsTopicArn", {
-      value: sesEventNotifications.topicArn,
-      description: `SNS topic for SES bounce/complaint/delivery events. ${webhookHost}/api/webhooks/ses is subscribed by this stack; set this ARN as SES_SNS_TOPIC_ARN in the app.`,
-    });
-
     // 9. SNS direct-to-phone SMS sending - see ADR 20260802-sns-sms-adapter.
-    // This is a distinct SNS use from SesEmailEventNotifications above (that
-    // topic carries *inbound* SES event notifications the app subscribes to;
-    // this IAM user only ever calls sns:Publish outbound, no topic involved).
+    // This is a distinct SNS use from the email stack's SesEmailEventNotifications
+    // (that topic carries *inbound* SES event notifications the app subscribes
+    // to; this IAM user only ever calls sns:Publish outbound, no topic involved).
     // A least-privilege IAM user, scoped to publishing only - never full SNS
     // access, and never able to create/manage topics or subscriptions.
     const snsSmsSenderUser = new iam.User(this, "SnsSmsSenderUser", {
@@ -1370,24 +1325,9 @@ exports.handler = async (event) => {
     // starts a review (S8 sends; infra/lib/observability.ts says why the
     // thresholds are what they are). AWS publishes the metric; this only
     // watches it, so there is no filter and no custom metric to pay for.
-    for (const signal of SES_REPUTATION_SIGNALS) {
-      new cloudwatch.Alarm(this, `${signal.constructId}Alarm`, {
-        alarmName: sesReputationAlarmNameFor(signal),
-        alarmDescription: `${signal.title}. ${signal.response}`,
-        metric: new cloudwatch.Metric({
-          namespace: "AWS/SES",
-          metricName: signal.metricName,
-          statistic: "Average",
-          period: cdk.Duration.hours(1),
-        }),
-        threshold: signal.threshold,
-        evaluationPeriods: 1,
-        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-        // No mail this hour means no rate, not a clean bill; and the sandbox
-        // publishes nothing at all.
-        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-      }).addAlarmAction(alarmAction);
-    }
+    // SES's own bounce and complaint rates are alarmed in the email stack
+    // (infra/lib/email-stack.ts), not here: `AWS/SES` publishes them in the
+    // sending region, and an alarm cannot notify a topic in another one.
 
     // Core Web Vitals, read out of the `web_vital.reported` line the browser
     // beacon writes (ADR 20260806-cloudwatch-rum-and-vitals). Same machinery as
@@ -1860,7 +1800,16 @@ exports.handler = async (event) => {
     // non-interactively (ADR 20260811-ci-deploy-full-wizard) -- a narrower reach
     // than the deployer's own already has, and one the resource-scoped Allow below
     // cannot widen past this one secret.
-    envValues.SES_SNS_TOPIC_ARN = sesEventNotifications.topicArn;
+    // Built from the name rather than read off the construct: the topic is in
+    // the email stack, in another region, and an ARN assembled from two
+    // constants is a cheaper joint than a cross-region reference -- which would
+    // have shuttled it through an SSM parameter and made these two stacks
+    // deploy in a fixed order.
+    envValues.SES_SNS_TOPIC_ARN = this.formatArn({
+      service: "sns",
+      region: SES_REGION,
+      resource: SES_EVENT_TOPIC_NAME,
+    });
     envValues.SMS_SNS_TOPIC_ARN = smsDeliveryReceipts.topicArn;
     // The generated seed is resolved by CloudFormation into this hand-off
     // document. It never appears in a stack output, and the distribution
@@ -1937,16 +1886,17 @@ exports.handler = async (event) => {
         id: "cdk-bootstrap",
         title: "Bootstrap the account for CDK",
         category: "Prerequisites",
-        when: "once per account and region",
+        when: "once per account, and once per region -- both of them",
         why: "CDK deploys through four roles that a bootstrap stack provisions. S5's deployer holds sts:AssumeRole on exactly those four ARNs and nothing else, so without them it can deploy nothing. The wrapper opens aws login if needed, reads the signed-in profile's AWS account, asks you to confirm it, then sets the account-level S3 public-access configuration the visual-report bucket needs.",
         run: ["pnpm infra:bootstrap"],
         produces:
-          "The cdk-<qualifier>-{deploy,file-publishing,image-publishing,lookup}-role roles.",
+          "The cdk-<qualifier>-{deploy,file-publishing,image-publishing,lookup}-role roles, in each region this app deploys into.",
         verify: [
           "aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version",
+          "aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version --region us-east-2",
           "aws s3control get-public-access-block --account-id <12-digit-account-id> --query PublicAccessBlockConfiguration",
         ],
-        note: "The wrapper requires you to type the resolved account id; in a non-interactive terminal pass --confirm-account <12-digit-account-id>. It does not require a root-user credential: programmatic root credentials are a security regression. The account-level Block Public Access change permits public buckets but does not itself make any bucket public; an AWS Organizations policy can still prohibit it. If you bootstrap with --qualifier, infra-stack.ts S5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value -- set it to match, or the deployer's AssumeRole silently matches nothing. --cloudformation-execution-policies defaults to empty, so pass scoped policies here to avoid an administrator-equivalent deployer credential.",
+        note: "The wrapper requires you to type the resolved account id; in a non-interactive terminal pass --confirm-account <12-digit-account-id>. It does not require a root-user credential: programmatic root credentials are a security regression. The account-level Block Public Access change permits public buckets but does not itself make any bucket public; an AWS Organizations policy can still prohibit it. If you bootstrap with --qualifier, infra-stack.ts S5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value -- set it to match, or the deployer's AssumeRole silently matches nothing. --cloudformation-execution-policies defaults to empty, so pass scoped policies here to avoid an administrator-equivalent deployer credential. The wrapper bootstraps both regions in one run because the email stack lives in us-east-2 (ADR 20260903-ses-lives-in-its-own-region); a region left unbootstrapped surfaces as an sts:AssumeRole failure on a role name ending in it, which reads as a broken trust policy rather than an unfinished prerequisite.",
       },
       {
         id: "cloudfront-account-verification",
@@ -2163,20 +2113,20 @@ exports.handler = async (event) => {
         category: "Credentials",
         when: "on suspected exposure, on operator change, or on a schedule you choose",
         why: "Rotation itself is a deploy -- CloudFormation replaces each key when Serial increases. What stays manual is re-placing the new values everywhere the old ones went, because those destinations are the four platforms above.",
-        run: ["pnpm infra:deploy --parameters CredentialSerial=<previous + 1>"],
+        run: ["pnpm infra:deploy DiveDay --parameters CredentialSerial=<previous + 1>"],
         store:
           "The same four destinations as the placement steps above: .env.local, Vercel's environment variables, GitHub Actions repository secrets, and the off-dotenv homes. All eight keys rotate together, so all four need re-doing.",
         verify: [
           "aws iam list-access-keys --user-name diveday-ses-sender -- one key, created just now.",
           'aws cloudformation describe-stacks --stack-name diveday-infra --query "Stacks[0].Parameters" -- CredentialSerial is the value you passed.',
         ],
-        note: "The serial is a CloudFormation parameter rather than a --context value, so a later deploy that omits it keeps the deployed value instead of rotating everything back to 1 (cdk deploy defaults --previous-parameters to true). It may only ever increase. Nothing warns you that a stale copy of an old key is still in use somewhere.",
+        note: "The serial is a CloudFormation parameter rather than a --context value, so a later deploy that omits it keeps the deployed value instead of rotating everything back to 1 (cdk deploy defaults --previous-parameters to true). It may only ever increase. Nothing warns you that a stale copy of an old key is still in use somewhere. Name DiveDay in the command: an unqualified --parameters is applied to every stack in the deploy, and the email stack declares none -- scripts/infra-deploy.mjs refuses that rather than half-rotating.",
       },
       {
         id: "ses-dkim-dns",
         title: "Add the SES DKIM records",
         category: "DNS",
-        when: "once per sending domain",
+        when: "once per sending domain, and again whenever SES_REGION changes",
         why: "Authoritative DNS for dive.day is Vercel, not Route53 -- this stack has no hosted zone to write into. Adding one would mean replicating the live mail records and replacing Vercel's apex ALIAS with anycast A records Vercel owns and rotates.",
         run: [
           "For each name/value pair in SesDkimRecords: pnpm exec vercel dns add dive.day <name-without-.dive.day> CNAME <value>.",
@@ -2184,41 +2134,44 @@ exports.handler = async (event) => {
         store:
           "Vercel DNS for dive.day. The CLI creates the three CNAME records on the SES identity subdomain.",
         verify: [
-          "aws sesv2 get-email-identity --email-identity <sesEmailDomain> --query DkimAttributes.Status  # SUCCESS",
+          "aws sesv2 get-email-identity --region us-east-2 --email-identity <sesEmailDomain> --query DkimAttributes.Status  # SUCCESS",
         ],
+        note: "The tokens are per region. Moving the identity to another region mints three new ones, so this is redone -- and the previous region's three CNAMEs deleted -- on every move.",
       },
       {
         id: "ses-mail-from-dns",
         title: "Add the SES custom MAIL FROM records",
         category: "DNS",
-        when: "once per sending domain",
+        when: "once per sending domain, and again whenever SES_REGION changes",
         why: "Same reason as the DKIM records: the zone is at Vercel.",
         run: [
-          "pnpm exec vercel dns add dive.day mail.ses MX feedback-smtp.<region>.amazonses.com 10",
+          "pnpm exec vercel dns rm <the existing mail.ses MX, if one names another region>",
+          "pnpm exec vercel dns add dive.day mail.ses MX feedback-smtp.us-east-2.amazonses.com 10",
           "pnpm exec vercel dns add dive.day mail.ses TXT 'v=spf1 include:amazonses.com ~all'",
         ],
         store:
-          "Vercel -> dive.day -> DNS, on the MAIL FROM subdomain. Exactly one MX record -- SES fails the setup outright if the subdomain has several.",
+          "Vercel -> dive.day -> DNS, on the MAIL FROM subdomain. Exactly one MX record -- SES fails the setup outright if the subdomain has several, which is why a region move is a delete-then-add rather than an add.",
         verify: [
-          "aws sesv2 get-email-identity --email-identity <sesEmailDomain> --query MailFromAttributes.MailFromDomainStatus  # SUCCESS",
+          "aws sesv2 get-email-identity --region us-east-2 --email-identity <sesEmailDomain> --query MailFromAttributes.MailFromDomainStatus  # SUCCESS",
         ],
+        note: "The MX names the SES region. One naming a region the identity no longer lives in does not fail loudly: mail keeps sending on the shared amazonses.com envelope, with SPF aligned to Amazon rather than to us, and only DMARC reporting says so.",
       },
       {
         id: "ses-production-access",
         title: "Request SES production access",
         category: "AWS account",
-        when: "once per region, before sending to anyone who has not verified their address",
-        why: "A human-reviewed AWS Support case. There is no API, and the sandbox is per region.",
+        when: `once per region -- currently us-east-2, before sending to anyone who has not verified their address`,
+        why: "A human-reviewed AWS Support case. There is no API, and the sandbox is per region -- which is why the identity moved regions at all: us-east-1 refused, and a refusal in one region carries no weight in another (ADR 20260903-ses-lives-in-its-own-region).",
         run: [
           "Read docs/engineering/ses-email-runbook.md, 'Production access: the second request', and paste its case text.",
-          "SES console -> Account dashboard -> Request production access (Transactional, https://dive.day), then answer the reviewer's follow-up in the same case.",
+          `SES console, switched to us-east-2 -> Account dashboard -> Request production access (Transactional, https://dive.day), then answer the reviewer's follow-up in the same case.`,
         ],
         produces:
           "Sending to arbitrary recipients. Until then SES is in the sandbox: pre-verified addresses and the mailbox simulator only.",
-        verify: ["aws sesv2 get-account --query ProductionAccessEnabled"],
+        verify: [`aws sesv2 get-account --region us-east-2 --query ProductionAccessEnabled`],
         onFailure:
           "A denial with no reason is the norm, not the end: reply on the same case with the runbook's follow-up answers, and if it is closed, open a new case that names the closed case id. A second region is its own sandbox and its own request.",
-        note: "Everything the reviewer asks for is already in the stack: DKIM and a custom MAIL FROM on the identity, bounce and complaint events to /api/webhooks/ses, account-level suppression on the configuration set, one-click unsubscribe headers, Reply-To and a postal footer from the shop record, and the two reputation alarms in S13. The case text lists them; do not paraphrase it shorter.",
+        note: "Everything the reviewer asks for is already in the stack: DKIM and a custom MAIL FROM on the identity, bounce and complaint events to /api/webhooks/ses, account-level suppression on the configuration set, one-click unsubscribe headers, Reply-To and a postal footer from the shop record, and the two reputation alarms in the email stack. The case text lists them; do not paraphrase it shorter.",
       },
       {
         id: "sns-sms-account-limits",
@@ -2258,7 +2211,7 @@ exports.handler = async (event) => {
         when: "after every deploy that created or replaced a subscription",
         why: "An HTTPS subscription is only real once the endpoint answers SNS's handshake, and both routes answer 503 until their topic ARN is in the app's environment. On a fresh environment the stack therefore creates a subscription the app cannot yet confirm, and SNS deletes it after roughly three days. Nothing else detects this: every hop either side reads healthy while no event ever arrives.",
         run: [
-          "aws sns list-subscriptions-by-topic --topic-arn <SesEventNotificationsTopicArn>",
+          `aws sns list-subscriptions-by-topic --region us-east-2 --topic-arn <SesEventNotificationsTopicArn>`,
           "aws sns list-subscriptions-by-topic --topic-arn <SmsDeliveryReceiptsTopicArn>",
         ],
 
@@ -2270,16 +2223,17 @@ exports.handler = async (event) => {
         id: "confirm-observability-alarms",
         title: "Confirm the observability alarm subscription email",
         category: "AWS account",
-        when: "once per alert address, and again if the address changes",
-        why: "An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts S13) transitions correctly and notifies nobody, which is the failure mode the alarms exist to prevent.",
+        when: "twice per alert address -- once per alarm topic -- and again if the address changes",
+        why: "An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts S13) and both SES reputation alarms (infra/lib/email-stack.ts) transition correctly and notify nobody, which is the failure mode the alarms exist to prevent.",
         run: [
-          "Open the 'AWS Notification - Subscription Confirmation' mail sent to the alert address and click Confirm subscription.",
+          "Open both 'AWS Notification - Subscription Confirmation' mails sent to the alert address and click Confirm subscription in each.",
           "aws sns list-subscriptions-by-topic --topic-arn <ObservabilityAlarmTopicArn>",
+          `aws sns list-subscriptions-by-topic --region us-east-2 --topic-arn <SesAlarmTopicArn>`,
         ],
-        verify: ['A real SubscriptionArn, not "PendingConfirmation".'],
+        verify: ['Both list a real SubscriptionArn, not "PendingConfirmation".'],
         onFailure:
           "The confirmation link expires after three days. Re-issue it with `aws sns subscribe --topic-arn <ObservabilityAlarmTopicArn> --protocol email --notification-endpoint <address>`, which mails a fresh one without touching the stack.",
-        note: "The alert address is alerts@dive.day unless the stack was deployed with --context alertEmail=...; the CostAlertEmail output names the resolved one.",
+        note: `The alert address is alerts@dive.day unless the stack was deployed with --context alertEmail=...; the CostAlertEmail output names the resolved one. Two topics rather than one because the two SES reputation alarms read AWS/SES metrics published in us-east-2 and a CloudWatch alarm cannot notify a topic in another region -- the second mail is the email stack's SesAlarms.`,
       },
       {
         id: "verify-sms-delivery-status",
@@ -2401,8 +2355,14 @@ exports.handler = async (event) => {
         "sts:AssumeRoleWithWebIdentity",
       );
 
-    const cdkStackArn = `arn:${this.partition}:cloudformation:${this.region}:${this.account}:stack/diveday-infra/*`;
-    const bootstrapVersionParameterArn = `arn:${this.partition}:ssm:${this.region}:${this.account}:parameter/cdk-bootstrap/${bootstrapQualifier}/version`;
+    // Both stacks, each scoped to the region it actually lives in rather than
+    // to a wildcard over the pair -- an unscoped `stack/*/*` would let either
+    // CI role reach every CloudFormation stack in the account, and the whole
+    // point of these two roles is that they cannot.
+    const cdkStackArns = [
+      `arn:${this.partition}:cloudformation:${this.region}:${this.account}:stack/${MAIN_STACK_NAME}/*`,
+      `arn:${this.partition}:cloudformation:${SES_REGION}:${this.account}:stack/${EMAIL_STACK_NAME}/*`,
+    ];
     const denyReadingAnySecret = () =>
       new iam.PolicyStatement({
         sid: "NeverReadAnySecretValue",
@@ -2428,14 +2388,14 @@ exports.handler = async (event) => {
           "cloudformation:DescribeChangeSet",
           "cloudformation:DeleteChangeSet",
         ],
-        resources: [cdkStackArn],
+        resources: cdkStackArns,
       }),
     );
     cdkDiffRole.addToPolicy(
       new iam.PolicyStatement({
         sid: "ReadBootstrapVersion",
         actions: ["ssm:GetParameter"],
-        resources: [bootstrapVersionParameterArn],
+        resources: bootstrapVersionParameterArns,
       }),
     );
     // `cdk diff` always publishes the stack template as an asset before
@@ -2467,7 +2427,7 @@ exports.handler = async (event) => {
       new iam.PolicyStatement({
         sid: "AssumeCdkFilePublishingRole",
         actions: ["sts:AssumeRole"],
-        resources: [bootstrapRoleArn("file-publishing-role")],
+        resources: bootstrapRoleArns("file-publishing-role"),
       }),
     );
     cdkDiffRole.addToPolicy(denyReadingAnySecret());
@@ -2490,10 +2450,10 @@ exports.handler = async (event) => {
         sid: "AssumeCdkBootstrapRoles",
         actions: ["sts:AssumeRole"],
         resources: [
-          bootstrapRoleArn("deploy-role"),
-          bootstrapRoleArn("file-publishing-role"),
-          bootstrapRoleArn("image-publishing-role"),
-          bootstrapRoleArn("lookup-role"),
+          ...bootstrapRoleArns("deploy-role"),
+          ...bootstrapRoleArns("file-publishing-role"),
+          ...bootstrapRoleArns("image-publishing-role"),
+          ...bootstrapRoleArns("lookup-role"),
         ],
       }),
     );
@@ -2508,14 +2468,14 @@ exports.handler = async (event) => {
           "cloudformation:ExecuteChangeSet",
           "cloudformation:DeleteChangeSet",
         ],
-        resources: [cdkStackArn],
+        resources: cdkStackArns,
       }),
     );
     cdkDeployRole.addToPolicy(
       new iam.PolicyStatement({
         sid: "ReadBootstrapVersion",
         actions: ["ssm:GetParameter"],
-        resources: [bootstrapVersionParameterArn],
+        resources: bootstrapVersionParameterArns,
       }),
     );
     // The post-deploy wizard's Vercel-sync step (scripts/import-vercel-env.mjs)
@@ -2535,17 +2495,27 @@ exports.handler = async (event) => {
     // The wizard's last step writes this identity's DKIM tokens into DNS, and
     // reads them back out of SES first (`aws sesv2 get-email-identity
     // --query DkimAttributes.Tokens`). Read-only, and scoped to the one
-    // identity this stack creates: the tokens it returns are published as
+    // identity the email stack creates: the tokens it returns are published as
     // public CNAME records by construction, so this discloses nothing the
     // zone file does not already say out loud. Found by a real CI deploy on
     // 2026-08-12 that got through every other wizard step and then hit
     // AccessDeniedException here.
+    //
+    // `region: SES_REGION`, not this stack's own: an identity ARN names the
+    // region the identity lives in, and the wizard calls `aws sesv2
+    // get-email-identity --region` there. A grant on the wrong region's ARN
+    // matches nothing and fails exactly as an absent grant does.
     cdkDeployRole.addToPolicy(
       new iam.PolicyStatement({
         sid: "ReadSesIdentityDkimTokens",
         actions: ["ses:GetEmailIdentity"],
         resources: [
-          this.formatArn({ service: "ses", resource: "identity", resourceName: sesEmailDomain }),
+          this.formatArn({
+            service: "ses",
+            region: SES_REGION,
+            resource: "identity",
+            resourceName: sesEmailDomain,
+          }),
         ],
       }),
     );

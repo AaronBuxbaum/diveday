@@ -22,13 +22,14 @@ this file is the checklist, not the argument.
     note     The only long-lived administrator credential in this picture. Everything else in the checklist exists to replace a use of it, so it should be reached for rarely and stored like it matters.
 
 [2] Bootstrap the account for CDK
-    when     once per account and region
+    when     once per account, and once per region -- both of them
     why      CDK deploys through four roles that a bootstrap stack provisions. S5's deployer holds sts:AssumeRole on exactly those four ARNs and nothing else, so without them it can deploy nothing. The wrapper opens aws login if needed, reads the signed-in profile's AWS account, asks you to confirm it, then sets the account-level S3 public-access configuration the visual-report bucket needs.
     run      pnpm infra:bootstrap
-    produces The cdk-<qualifier>-{deploy,file-publishing,image-publishing,lookup}-role roles.
+    produces The cdk-<qualifier>-{deploy,file-publishing,image-publishing,lookup}-role roles, in each region this app deploys into.
     verify   aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version
+             aws ssm get-parameter --name /cdk-bootstrap/hnb659fds/version --region us-east-2
              aws s3control get-public-access-block --account-id <12-digit-account-id> --query PublicAccessBlockConfiguration
-    note     The wrapper requires you to type the resolved account id; in a non-interactive terminal pass --confirm-account <12-digit-account-id>. It does not require a root-user credential: programmatic root credentials are a security regression. The account-level Block Public Access change permits public buckets but does not itself make any bucket public; an AWS Organizations policy can still prohibit it. If you bootstrap with --qualifier, infra-stack.ts S5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value -- set it to match, or the deployer's AssumeRole silently matches nothing. --cloudformation-execution-policies defaults to empty, so pass scoped policies here to avoid an administrator-equivalent deployer credential.
+    note     The wrapper requires you to type the resolved account id; in a non-interactive terminal pass --confirm-account <12-digit-account-id>. It does not require a root-user credential: programmatic root credentials are a security regression. The account-level Block Public Access change permits public buckets but does not itself make any bucket public; an AWS Organizations policy can still prohibit it. If you bootstrap with --qualifier, infra-stack.ts S5 builds the four role ARNs from the @aws-cdk/core:bootstrapQualifier context value -- set it to match, or the deployer's AssumeRole silently matches nothing. --cloudformation-execution-policies defaults to empty, so pass scoped policies here to avoid an administrator-equivalent deployer credential. The wrapper bootstraps both regions in one run because the email stack lives in us-east-2 (ADR 20260903-ses-lives-in-its-own-region); a region left unbootstrapped surfaces as an sts:AssumeRole failure on a role name ending in it, which reads as a broken trust policy rather than an unfinished prerequisite.
 
 [3] Get the account verified for CloudFront
     when     once per account, before the first deploy, on any account that has never held a CloudFront distribution
@@ -104,14 +105,14 @@ this file is the checklist, not the argument.
 
 ```text
 [10] Request SES production access
-    when     once per region, before sending to anyone who has not verified their address
-    why      A human-reviewed AWS Support case. There is no API, and the sandbox is per region.
+    when     once per region -- currently us-east-2, before sending to anyone who has not verified their address
+    why      A human-reviewed AWS Support case. There is no API, and the sandbox is per region -- which is why the identity moved regions at all: us-east-1 refused, and a refusal in one region carries no weight in another (ADR 20260903-ses-lives-in-its-own-region).
     run      Read docs/engineering/ses-email-runbook.md, 'Production access: the second request', and paste its case text.
-             SES console -> Account dashboard -> Request production access (Transactional, https://dive.day), then answer the reviewer's follow-up in the same case.
+             SES console, switched to us-east-2 -> Account dashboard -> Request production access (Transactional, https://dive.day), then answer the reviewer's follow-up in the same case.
     produces Sending to arbitrary recipients. Until then SES is in the sandbox: pre-verified addresses and the mailbox simulator only.
-    verify   aws sesv2 get-account --query ProductionAccessEnabled
+    verify   aws sesv2 get-account --region us-east-2 --query ProductionAccessEnabled
     if not   A denial with no reason is the norm, not the end: reply on the same case with the runbook's follow-up answers, and if it is closed, open a new case that names the closed case id. A second region is its own sandbox and its own request.
-    note     Everything the reviewer asks for is already in the stack: DKIM and a custom MAIL FROM on the identity, bounce and complaint events to /api/webhooks/ses, account-level suppression on the configuration set, one-click unsubscribe headers, Reply-To and a postal footer from the shop record, and the two reputation alarms in S13. The case text lists them; do not paraphrase it shorter.
+    note     Everything the reviewer asks for is already in the stack: DKIM and a custom MAIL FROM on the identity, bounce and complaint events to /api/webhooks/ses, account-level suppression on the configuration set, one-click unsubscribe headers, Reply-To and a postal footer from the shop record, and the two reputation alarms in the email stack. The case text lists them; do not paraphrase it shorter.
 
 [11] Leave the SMS sandbox, raise the spend limit, register an origination identity
     when     once, before sending SMS to a diver
@@ -123,13 +124,14 @@ this file is the checklist, not the argument.
     note     Skipping this does not fail anything visibly: the pipeline reads healthy end to end while sends are capped or dropped.
 
 [12] Confirm the observability alarm subscription email
-    when     once per alert address, and again if the address changes
-    why      An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts S13) transitions correctly and notifies nobody, which is the failure mode the alarms exist to prevent.
-    run      Open the 'AWS Notification - Subscription Confirmation' mail sent to the alert address and click Confirm subscription.
+    when     twice per alert address -- once per alarm topic -- and again if the address changes
+    why      An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts S13) and both SES reputation alarms (infra/lib/email-stack.ts) transition correctly and notify nobody, which is the failure mode the alarms exist to prevent.
+    run      Open both 'AWS Notification - Subscription Confirmation' mails sent to the alert address and click Confirm subscription in each.
              aws sns list-subscriptions-by-topic --topic-arn <ObservabilityAlarmTopicArn>
-    verify   A real SubscriptionArn, not "PendingConfirmation".
+             aws sns list-subscriptions-by-topic --region us-east-2 --topic-arn <SesAlarmTopicArn>
+    verify   Both list a real SubscriptionArn, not "PendingConfirmation".
     if not   The confirmation link expires after three days. Re-issue it with `aws sns subscribe --topic-arn <ObservabilityAlarmTopicArn> --protocol email --notification-endpoint <address>`, which mails a fresh one without touching the stack.
-    note     The alert address is alerts@dive.day unless the stack was deployed with --context alertEmail=...; the CostAlertEmail output names the resolved one.
+    note     The alert address is alerts@dive.day unless the stack was deployed with --context alertEmail=...; the CostAlertEmail output names the resolved one. Two topics rather than one because the two SES reputation alarms read AWS/SES metrics published in us-east-2 and a CloudWatch alarm cannot notify a topic in another region -- the second mail is the email stack's SesAlarms.
 ```
 
 ## Verification

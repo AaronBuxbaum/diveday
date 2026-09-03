@@ -1,5 +1,6 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { SES_REGION } from "../config/aws-regions.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -252,12 +253,19 @@ export async function runPostDeployWizard({
     const emailDomain = contextValue(cdkArguments, "sesEmailDomain", "ses.dive.day");
     const mailFromDomain = contextValue(cdkArguments, "sesMailFromDomain", `mail.${emailDomain}`);
     const dnsZone = syncEnvironment?.VERCEL_DNS_ZONE?.trim() || "dive.day";
+    // `--region`, explicitly: the identity lives in the email stack's region
+    // (config/aws-regions.mjs), which is not the one this wizard's session
+    // defaults to. Without it the call answers NotFoundException against the
+    // main region and the whole DNS step reads as "the identity was never
+    // created" -- while the real identity sits verified one region over.
     const tokens = JSON.parse(
       execute(
         "aws",
         [
           "sesv2",
           "get-email-identity",
+          "--region",
+          SES_REGION,
           "--email-identity",
           emailDomain,
           "--query",
@@ -327,7 +335,11 @@ export async function runPostDeployWizard({
       {
         name: recordName(mailFromDomain, dnsZone),
         type: "MX",
-        value: `feedback-smtp.${syncEnvironment.AWS_DEFAULT_REGION || "us-east-1"}.amazonses.com`,
+        // The SES region, never the session's: this MX is what SES checks the
+        // MAIL FROM domain against, and one naming the wrong region fails the
+        // setup silently -- mail keeps sending, on the shared amazonses.com
+        // envelope, with SPF aligned to Amazon rather than to us.
+        value: `feedback-smtp.${SES_REGION}.amazonses.com`,
         extraArguments: ["10"],
       },
       {

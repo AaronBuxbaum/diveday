@@ -37,7 +37,10 @@ describe("post-deploy wizard", () => {
       ask: async () => answers.shift() ?? "no",
       cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
       credentialsDocument: "AWS_ACCESS_KEY_ID=deployer-id\n",
-      syncEnvironment: { AWS_DEFAULT_REGION: "us-east-2" },
+      // Deliberately *not* the SES region: both the get-email-identity call and
+      // the MAIL FROM MX below must name where the identity actually lives, and
+      // a session whose default region happens to match would prove neither.
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-west-2" },
       execute: (command, arguments_, options) => {
         commands.push({ command, arguments_, options });
         if (command === "aws") return JSON.stringify(["first", "second", "third"]);
@@ -58,6 +61,12 @@ describe("post-deploy wizard", () => {
         [
           "sesv2",
           "get-email-identity",
+          // The identity is in the email stack's region, not the session's
+          // default one (ADR 20260903-ses-lives-in-its-own-region). Without
+          // this the call answers NotFoundException and the whole DNS step
+          // reads as "the identity was never created".
+          "--region",
+          "us-east-2",
           "--email-identity",
           "ses.example.com",
           "--query",
@@ -267,6 +276,12 @@ describe("post-deploy wizard", () => {
         [
           "sesv2",
           "get-email-identity",
+          // The identity is in the email stack's region, not the session's
+          // default one (ADR 20260903-ses-lives-in-its-own-region). Without
+          // this the call answers NotFoundException and the whole DNS step
+          // reads as "the identity was never created".
+          "--region",
+          "us-east-2",
           "--email-identity",
           "ses.example.com",
           "--query",
