@@ -739,7 +739,7 @@ test("staff edit the single shop waiver and each edit is kept as a version", asy
   // Two taps on the material path, and only there: the second one repeats what
   // it is about to cost.
   await page.getByRole("button", { name: "Publish", exact: true }).click();
-  await page.getByRole("button", { name: /Publish — \d+ sign again/ }).click();
+  await page.getByRole("button", { name: /Publish: \d+ signs? again/ }).click();
   await expect(page.getByRole("status")).toContainText("sign again before boarding");
   // The shop now owes those divers a link, and the batch send is one tap away
   // rather than a hunt.
@@ -790,7 +790,7 @@ test("saving the release unchanged publishes nothing and says so", async ({ page
   // changed is what happens when it lands.
   await page.getByRole("radio", { name: /A material change/ }).check();
   await page.getByRole("button", { name: "Publish", exact: true }).click();
-  await page.getByRole("button", { name: /Publish — \d+ sign again/ }).click();
+  await page.getByRole("button", { name: /Publish: \d+ signs? again/ }).click();
 
   await expect(page.getByRole("status")).toContainText("No change");
   await expect(page.getByText(/Version 3 ·/)).toBeVisible();
@@ -952,7 +952,7 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
   // masthead moment fires rather than the waiver group's notice (`successUrl`
   // routes a now-clear record to `diver-clear`). Either way the fact to assert
   // is the standing itself: held becomes signed.
-  await expect(page.getByRole("status")).toContainText("nothing is waiting on Morgan Vale");
+  await expect(page.getByRole("status")).toContainText("Nothing is waiting on Morgan Vale");
   const waiverGroup = page.getByRole("region", { name: "Waiver" });
   await expect(waiverGroup.getByText("Signed", { exact: true })).toBeVisible();
   await expect(waiverGroup.getByText("Medical review", { exact: true })).toHaveCount(0);

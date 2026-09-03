@@ -4469,7 +4469,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "The release" }).waitFor();
         await page.getByRole("radio", { name: /A material change/ }).check();
         await page.getByRole("button", { name: "Publish", exact: true }).click();
-        await page.getByRole("button", { name: /Publish — \d+ sign again/ }).waitFor();
+        await page.getByRole("button", { name: /Publish: \d+ signs? again/ }).waitFor();
         await capture(page, "waiver-materiality-choice", scheme);
       });
 

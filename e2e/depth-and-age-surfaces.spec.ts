@@ -114,7 +114,7 @@ test.describe("staff", () => {
       .getByText(/divers: Reaches .* deeper than the .* their certification qualifies them for/)
       .first();
     await expect(warning).toBeVisible();
-    await expect(warning).toContainText("Not a block");
+    await expect(warning).toContainText("This is not a block");
     const juneCard = page.locator("#roster li").filter({ hasText: "June Park" }).first();
     await expect(juneCard.getByText("Depth advisory")).toBeVisible();
     await expect(juneCard.getByText(/deeper than the/)).toHaveCount(0);
