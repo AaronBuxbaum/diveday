@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { shopPromoCodes } from "@/db/schema";
 import { seededShopContext } from "@/test/db";
@@ -83,10 +83,6 @@ function withPromo(promoId: string, extra: Record<string, string> = {}) {
   for (const [key, value] of Object.entries(extra)) formData.set(key, value);
   return formData;
 }
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("turning a discount code on or off", () => {
   it("refuses a captain — a discount code is the shop's pricing, not deck work", async () => {

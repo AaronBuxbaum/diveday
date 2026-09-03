@@ -1,5 +1,5 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import {
   bookings,
@@ -113,10 +113,6 @@ function attested() {
   formData.set("medicalAttested", "on");
   return formData;
 }
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 /**
  * Both tests here declare 40s rather than taking the file's 20s default. They

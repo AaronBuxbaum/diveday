@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { people, personRoles, userAccounts } from "@/db/schema";
 import { listShopStaff } from "@/db/staff-accounts";
@@ -94,10 +94,6 @@ function signIn(shop: { id: string; slug: string }, personId: string) {
     staffSession({ shopId: shop.id, shopSlug: shop.slug, personId }),
   );
 }
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("editing the team's roles", () => {
   it("refuses a captain who posts himself an owner role — this is the escalation path", async () => {
