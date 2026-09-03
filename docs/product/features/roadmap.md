@@ -226,7 +226,11 @@ first morning, argued in the Proposed ADR
 **Every slice of this section shipped 2026-08-28** ([shipped.md](../shipped.md)) — 10a–10d.
 
 
-### 11. Product ideas from the sweep (each needs an owner's nod)
+### 11. Product ideas from the sweep (all thirteen deferred past pilot)
+
+**Ruled 2026-09-02 (Aaron Buxbaum, #1079): all thirteen are later.** None is scheduled and none
+is to be picked up by a session before the first pilot shop has run a boat day. The sketches below
+stay so that a green-light after the pilot starts warm; re-triage them then, not now.
 
 Thirteen ideas from the 2026-08-27 design sweep, each composing into a surface items 6–10 already
 design — none adds a nav destination. Every one carries a schema/lib/surface sketch here so a
@@ -310,7 +314,11 @@ The 2026-09-01 whole-field comparison
 ([competitive-landscape-20260901.md](../assessments/competitive-landscape-20260901.md)) found
 DiveDay complete on every table-stakes row of a 32-product feature table and ahead on the rare
 ones; the seven rows it lacks that are not deliberate non-goals are filed as `needs-triage` issues
-under parent #1248, unsequenced until an owner ranks them:
+under parent #1248.
+
+**Ruled 2026-09-02 (Aaron Buxbaum): all later.** The hotel/agent rate cards (#1237) and the agency
+rail partnership (#1239) are deferred past pilot and their issues closed; the prepaid air-fill card
+(#1234) keeps the boundary now written into H-11. Re-triage the rest after the first pilot boat day.
 
 - **Prepaid air-fill cards** as package-style entitlements (#1234) — the feature owners keep
   paying the retail incumbents for; a commercial count, not the fill log H-11 declines.
@@ -323,7 +331,6 @@ under parent #1248, unsequenced until an owner ranks them:
 - **PADI Adventures as a coexist channel guide** (#1238) — gated on a verified export path.
 - **The agency rail as a partnership question** (#1239) — H-10 dropped the API; nobody has
   scheduled the conversation.
-- **Merging two person records** (#1240) — the switching complaint nobody answers.
 
 ### 15. The maker is the proof (design complete; 15a and 15c wait on H-66)
 

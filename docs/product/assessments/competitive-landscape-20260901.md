@@ -513,7 +513,7 @@ tracked" links the existing home; "filed" is a new `needs-triage` issue from thi
 | Private / buyout charters and a boat entity (12 of 32 multi-boat) | [roadmap §4](../features/roadmap.md#4-multi-boat--multi-shop-configuration) and the boat-resource ADR |
 | Snorkellers and riders (Checkfront-style participant types) | [participant-types.md](../features/participant-types.md) |
 | Nitrox fill / analysis log, compressor logs (DiveOne) | [roadmap §3](../features/roadmap.md#3-nitrox-fill--analysis-log-open-question), H-11 |
-| No-show frees the seat; morning Go / Watching call; seasonal price windows; counted share links; load-out checklist templates; tips by crew; refresher counsel; outbound Google review door | [roadmap §11](../features/roadmap.md#11-product-ideas-from-the-sweep-each-needs-an-owners-nod), triaged in #1079 |
+| No-show frees the seat; morning Go / Watching call; seasonal price windows; counted share links; load-out checklist templates; tips by crew; refresher counsel; outbound Google review door | [roadmap §11](../features/roadmap.md#11-product-ideas-from-the-sweep-all-thirteen-deferred-past-pilot), ruled later in #1079 |
 | Credit ledger, buddy referral credit, course cohorts, group pay-your-own-share, alternative-day salvage, cohort/retention view, thermal receipt print | [brainstorm.md](../features/brainstorm.md) |
 | Cert-card OCR, natural-language ops assistant, diver Q&A (the "AI agent" wave: DiveOne, Anolla, EquipDash, MOLA, DiveOps.ai, DiveAdmin's Coral, ScubaHub's daily brief) | [ai-ml.md](../features/ai-ml.md) — DiveDay's Today queue already is the "daily brief"; the guardrail stands |
 | Guardian co-signature on a minor's waiver (AbyssOS, EquipDash) | H-21: solo signature accepted as-is, returns with H-01–H-03 |
