@@ -1,5 +1,6 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { SES_REGION } from "../config/aws-regions.mjs";
 import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -252,12 +253,19 @@ export async function runPostDeployWizard({
     const emailDomain = contextValue(cdkArguments, "sesEmailDomain", "ses.dive.day");
     const mailFromDomain = contextValue(cdkArguments, "sesMailFromDomain", `mail.${emailDomain}`);
     const dnsZone = syncEnvironment?.VERCEL_DNS_ZONE?.trim() || "dive.day";
+    // `--region`, explicitly: the identity lives in the email stack's region
+    // (config/aws-regions.mjs), which is not the one this wizard's session
+    // defaults to. Without it the call answers NotFoundException against the
+    // main region and the whole DNS step reads as "the identity was never
+    // created" -- while the real identity sits verified one region over.
     const tokens = JSON.parse(
       execute(
         "aws",
         [
           "sesv2",
           "get-email-identity",
+          "--region",
+          SES_REGION,
           "--email-identity",
           emailDomain,
           "--query",
@@ -327,7 +335,11 @@ export async function runPostDeployWizard({
       {
         name: recordName(mailFromDomain, dnsZone),
         type: "MX",
-        value: `feedback-smtp.${syncEnvironment.AWS_DEFAULT_REGION || "us-east-1"}.amazonses.com`,
+        // The SES region, never the session's: this MX is what SES checks the
+        // MAIL FROM domain against, and one naming the wrong region fails the
+        // setup silently -- mail keeps sending, on the shared amazonses.com
+        // envelope, with SPF aligned to Amazon rather than to us.
+        value: `feedback-smtp.${SES_REGION}.amazonses.com`,
         extraArguments: ["10"],
       },
       {
@@ -338,11 +350,42 @@ export async function runPostDeployWizard({
       },
     ];
 
+    // **Exactly one MX**, or SES refuses the whole MAIL FROM setup. That makes
+    // the MX the one record here an *add* can break: every other desired record
+    // is either absent or already exactly right, but a `mail.ses` MX left over
+    // from another region is present, wrong, and invisible to the
+    // does-it-already-exist check above -- which asks whether the *desired*
+    // value is there, not whether a rival is. Adding beside it produces two,
+    // and SES then reports the setup Pending for up to 72 hours before marking
+    // it Failed, with mail sending normally the whole time on the shared
+    // envelope. So a rival is found and named rather than added around; the
+    // wizard never deletes a DNS record, because the one that would make that
+    // safe to automate is the one it cannot verify it read correctly.
+    const mailFromMxName = recordName(mailFromDomain, dnsZone);
+    const desiredMailFromMx = `feedback-smtp.${SES_REGION}.amazonses.com`;
+    const conflictingMailFromMx = existingRecords
+      .split("\n")
+      .filter(
+        (line) =>
+          containsField(line, mailFromMxName) &&
+          containsField(line, "MX") &&
+          !containsField(line, desiredMailFromMx, { allowTrailingDot: true }),
+      )
+      .map((line) => line.trim());
+
+    const missingRecords = desiredRecords.filter(
+      ({ name, type, value }) => !dnsRecordExists(name, type, value),
+    );
+
     return {
       dnsZone,
-      missingRecords: desiredRecords.filter(
-        ({ name, type, value }) => !dnsRecordExists(name, type, value),
-      ),
+      conflictingMailFromMx,
+      // Held back rather than dropped from the plan: the operator is told which
+      // record to remove, and the same wizard run adds the rest.
+      missingRecords:
+        conflictingMailFromMx.length > 0
+          ? missingRecords.filter((record) => record.type !== "MX")
+          : missingRecords,
     };
   };
 
@@ -355,7 +398,8 @@ export async function runPostDeployWizard({
   } else {
     try {
       sesDnsPlan = readSesDnsPlan();
-      sesDnsNeedsUpdate = sesDnsPlan.missingRecords.length > 0;
+      sesDnsNeedsUpdate =
+        sesDnsPlan.missingRecords.length > 0 || sesDnsPlan.conflictingMailFromMx.length > 0;
     } catch {
       log("Could not check the SES DNS handoff; leaving its question visible.");
       sesDnsNeedsUpdate = true;
@@ -364,6 +408,11 @@ export async function runPostDeployWizard({
 
   if (sesDnsNeedsUpdate && yes(await ask("Add the SES DNS records through Vercel DNS? [y/N] "))) {
     sesDnsPlan ??= readSesDnsPlan();
+    for (const line of sesDnsPlan.conflictingMailFromMx) {
+      log(
+        `SES MAIL FROM: not adding the ${SES_REGION} MX -- ${sesDnsPlan.dnsZone} already carries a different one, and SES refuses the setup outright when the subdomain has several. Remove it first (\`pnpm exec vercel dns rm <record-id>\`), then rerun this wizard. The record: ${line}`,
+      );
+    }
     let added = 0;
     for (const { name, type, value, extraArguments } of sesDnsPlan.missingRecords) {
       run(
