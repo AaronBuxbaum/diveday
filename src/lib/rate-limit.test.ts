@@ -273,14 +273,22 @@ describe("checkRateLimit — e2e disable switch", () => {
     // did not, and `node scripts/screenshot.mjs` signs in through the real
     // form against that server: with 8 sign-ins per email per 15 minutes
     // (`signInByEmail`), the second look of an afternoon was refused and the
-    // session waited the window out. The `${VAR-1}` default keeps
+    // session waited the window out. The `??=` default keeps
     // `DIVEDAY_RATE_LIMIT_DISABLED=0 pnpm dev` as the way to watch the
     // limiter itself, and `rateLimitDisabled()` still refuses the switch
     // under a real DATABASE_URL, so this cannot reach a deployment.
+    //
+    // Asserted against the supervisor rather than the `dev` script since ADR
+    // 20260903-the-dev-server-is-supervised: the default used to be a shell
+    // prefix in package.json, which meant it applied to `pnpm dev` and to no
+    // other way of starting the app — including the bare
+    // `node scripts/dev-server.mjs` that AGENTS.md's `pnpm dev` row now names.
+    // Both halves are pinned, because the guarantee needs the default to exist
+    // *and* the script to route through the file that sets it.
     const { scripts } = JSON.parse(readFileSync(path.join(process.cwd(), "package.json"), "utf8"));
-    expect(scripts.dev).toMatch(
-      /DIVEDAY_RATE_LIMIT_DISABLED=\$\{DIVEDAY_RATE_LIMIT_DISABLED-1\} next dev/,
-    );
+    expect(scripts.dev).toMatch(/node scripts\/dev-server\.mjs/);
+    const supervisor = readFileSync(path.join(process.cwd(), "scripts/dev-server.mjs"), "utf8");
+    expect(supervisor).toMatch(/env\.DIVEDAY_RATE_LIMIT_DISABLED \?\?= "1"/);
   });
 
   it("allows unlimited requests when DIVEDAY_RATE_LIMIT_DISABLED=1 and no real database is configured", async () => {

@@ -198,8 +198,9 @@ export async function isDemoShopSeeded(db: DbExecutor): Promise<boolean> {
  * once the demo shop exists) that work is pure waste repeated on every new
  * serverless instance. `isDemoShopSeeded` short-circuits all of it with one
  * cheap `SELECT`; only a genuinely fresh database falls through to the slow,
- * locked, three-function path. `lock` is optional so the single-connection
- * PGlite branch (no cross-process race to guard against) can skip it.
+ * locked, three-function path. `lock` is optional because the PGlite branch has
+ * nothing to take one *on* — an advisory lock is held by a database, and two
+ * openers of one data directory do not share one (see `init`).
  */
 export async function seedProductionDb(
   db: AppDb,
@@ -237,6 +238,23 @@ export async function refreshPgliteDemo(db: AppDb, databaseUrl = process.env.DAT
   await refreshCanonicalDemoSchedule(db);
 }
 
+/**
+ * Open the database this process will use for its lifetime.
+ *
+ * **PGlite takes no lock on its data directory, in process or across
+ * processes, and this does not add one.** Two processes that open the same
+ * `.pglite` do not error, do not warn and do not block — they fork the
+ * database, each seeing only its own writes, and whichever closes last lands
+ * its copy on disk over the other's. Verified by experiment on 2026-09-03: two
+ * processes, forty committed rows each, neither observing the other, one set
+ * surviving.
+ *
+ * So a local `pnpm build` beside a running `pnpm dev` silently loses writes,
+ * and `pnpm db:reset` under a live server neither stops nor reaches it —
+ * `scripts/db-reset.mjs` refuses for that reason. Guarding the rest is
+ * GitHub issue #1325; until it lands the rule is prose, in AGENTS.md's
+ * `db:reset` row and the debug skill.
+ */
 async function init(): Promise<AppDb> {
   const databaseUrl = process.env.DATABASE_URL;
   if (databaseUrl) {
@@ -280,10 +298,12 @@ async function init(): Promise<AppDb> {
       : new PGlite(dataDir, { extensions: { pg_trgm, btree_gist } });
   const db = drizzle({ client });
   await migrate(db, { migrationsFolder: "drizzle" });
-  // PGlite is single-connection (no cross-process race to guard against, so
-  // no lock), but still gets the same fast-path skip + transactional
-  // atomicity as the Postgres branch above — useful across dev-server
-  // restarts against a persisted `.pglite` data dir.
+  // No advisory lock here, because a Postgres advisory lock is a *database*
+  // lock and each opener of this directory has its own database — see the
+  // warning above `init`. It is skipped for want of anything to lock, not
+  // because there is no race. The fast-path skip and the transactional
+  // atomicity are the same as the Postgres branch above, and both still earn
+  // their keep across dev-server restarts against a persisted `.pglite`.
   await seedProductionDb(db);
   await refreshPgliteDemo(db, databaseUrl);
   return db;

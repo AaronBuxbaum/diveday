@@ -18,6 +18,7 @@ under the same sync duties (docs/README.md).
 | `design-implementation` | Building a slice from a design canvas in `docs/design/canvases/` — the read order that keeps a drawing from overriding shipped code, and the four obligations that close the loop when a slice lands |
 | `brand-voice` | Creating or reviewing brand, voice, visual, merch, vendor, or promotional collateral, and reading any run of user-facing prose for the tells that mark it as machine-written |
 | `schema-change` | Editing `src/db/schema.ts`; anything needing new persistent state |
+| `run` | Starting, waiting for, or stopping the local app; looking at a change in the real app; a dev server that died, refuses to start, or answers on the wrong port |
 | `debug` | Any failing test, red CI, flaky spec, or bug report — before attempting fixes |
 | `instant-navigation` | Adding or restructuring any page or layout; a `blocking-prerender-*` build failure; redirect or client-navigation surprises under Next 16's `cacheComponents` |
 | `e2e-and-visual` | Adding/changing a user-facing flow or surface; maintaining Playwright functional flows and visual specs |
