@@ -46,13 +46,13 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Dive shop software for the whole dive day — DiveDay",
   description:
-    "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place. Easy to try in a live demo, safe to run the boat on, and your records come in clean and leave the same way.",
+    "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place. Try it in a live demo, run the boat on it, and take your records with you if you ever leave.",
   alternates: { canonical: "/" },
   openGraph: {
     ...openGraphSite,
     title: "DiveDay — dive shop software for the whole dive day",
     description:
-      "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place — from first booking to final head count.",
+      "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place, from first booking to final head count.",
     url: "/",
   },
   // `summary_large_image`: the shared link card is attached to this page by
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "DiveDay — dive shop software for the whole dive day",
     description:
-      "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place — from first booking to final head count.",
+      "Bookings, waivers, cert checks, trip prep, and the boat manifest in one calm place, from first booking to final head count.",
   },
 };
 

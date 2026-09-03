@@ -1,6 +1,6 @@
 ---
 name: brand-voice
-description: Create or review DiveDay brand, voice, visual, merch, vendor, or promotional collateral so it stays consistent with the current identity and claims policy.
+description: Create or review DiveDay brand, voice, visual, merch, vendor, or promotional collateral, and any run of user-facing prose, so it stays consistent with the current identity and claims policy and carries none of the tells that mark copy as machine-written.
 ---
 
 # Brand and voice
@@ -30,15 +30,21 @@ the workflow for applying it.
    judged by whether it makes the piece clearer and more instinctive, never by novelty alone.
 3. Make the outcome concrete. The default voice is a competent divemaster: warm, plain, brief,
    and exact when safety or money is involved.
-4. For merch or vendor work, provide the ground color, imprint colors, type treatment, placement,
+4. Read every sentence against "What gives us away" in `docs/design/brand.md` before it ships. A
+   divemaster says the thing; they do not set it up, pivot to it with a dash, contrast it with what
+   it is not, or tell you it is true. No em-dash in prose, no "not a project, a file", no
+   "No X. No Y. No Z.", no *actually*/*genuinely*/*plainly*, no "Here's how", no aphorism or
+   rhetorical question as a heading, no closing flourish. `pnpm check:voice` refuses the mechanical
+   half in every message bundle; the rest is this step.
+5. For merch or vendor work, provide the ground color, imprint colors, type treatment, placement,
    production constraints, and proof checklist. Keep coral as a small accent and use the bubble
    trail without stretching, rotating, or decorating it.
-5. Separate current facts from proposals. Any new slogan, font, logo variant, palette change, or
+6. Separate current facts from proposals. Any new slogan, font, logo variant, palette change, or
    campaign claim must be labeled proposed and require product-owner approval before purchase or
    publication.
-6. Keep implementation language out of user-facing copy. Translate machinery into the human
+7. Keep implementation language out of user-facing copy. Translate machinery into the human
    outcome; use the product glossary for dive terms.
-7. Update `docs/design/brand.md` when the approved identity changes. Do not hide brand decisions in
+8. Update `docs/design/brand.md` when the approved identity changes. Do not hide brand decisions in
    a one-off vendor note or chat transcript.
 
 ## Review checklist
@@ -46,6 +52,9 @@ the workflow for applying it.
 - [ ] Name is spelled `DiveDay`.
 - [ ] Voice is calm, capable, warm, plain, and not mascot-like.
 - [ ] Copy leads with a concrete outcome and uses verbs for actions.
+- [ ] No prose em-dash, staccato run, "not X, Y" contrast, intensifier, lead-in, aphorism heading,
+      rhetorical-question heading, or closing flourish (`docs/design/brand.md`, "What gives us away").
+- [ ] Read aloud, it sounds like one person briefing a crew, not a landing page.
 - [ ] No fabricated proof, unsupported superlatives, or unapproved commercial claims.
 - [ ] Colors match the current palette; coral is restrained.
 - [ ] Geist Sans is the default type direction; Geist Mono is utility-only.
@@ -61,6 +70,7 @@ For documentation-only work, run:
 ```bash
 pnpm check:docs
 pnpm check:agents
+pnpm check:voice
 ```
 
 If code or public pages changed, also follow the relevant `design-review`, `marketing-page`, or

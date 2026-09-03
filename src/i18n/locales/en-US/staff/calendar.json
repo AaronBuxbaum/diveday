@@ -2,7 +2,7 @@
   "eyebrow": "Settings",
   "title": "Calendar subscriptions",
   "description": "Put your DiveDay departures on the calendar you already use. Subscribing is read-only: DiveDay never reads or changes anything in your calendar.",
-  "refreshNote": "Your calendar decides how often it re-reads the feed — usually within a few hours, not instantly. Treat DiveDay as the source of truth for a same-day change.",
+  "refreshNote": "Your calendar decides how often it re-reads the feed, usually within a few hours rather than instantly. Treat DiveDay as the source of truth for a same-day change.",
   "scope": {
     "assignments": {
       "name": "My departures",
@@ -17,7 +17,7 @@
     "none": "Not subscribed yet.",
     "active": "Subscribed {issued}.",
     "lastRead": "Your calendar last read it {when}.",
-    "neverRead": "No calendar has read it yet — paste the link into one to finish."
+    "neverRead": "No calendar has read it yet. Paste the link into one to finish."
   },
   "actions": {
     "create": "Create subscription link",
@@ -37,14 +37,14 @@
   },
   "newLink": {
     "heading": "Your subscription link",
-    "shownOnce": "Copy this now — it is shown once. If you lose it, replace the link to get a new one.",
+    "shownOnce": "Copy this now, because it is shown once. If you lose it, replace the link to get a new one.",
     "webcalLabel": "Apple Calendar and Outlook",
     "httpsLabel": "Google Calendar and everything else",
     "webcalHint": "Opens your calendar app and subscribes.",
     "httpsHint": "Paste under \"Other calendars → From URL\"."
   },
   "warning": {
-    "rotate": "Replacing the link stops the old one working right away. Any calendar still using it will quietly stop updating until you paste the new link in.",
+    "rotate": "Replacing the link stops the old one working right away. Any calendar still using it will stop updating until you paste the new link in.",
     "shared": "Anyone with this link can read these departures without signing in. Treat it like a password."
   },
   "notice": {

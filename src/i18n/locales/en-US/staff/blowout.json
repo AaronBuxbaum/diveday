@@ -3,11 +3,11 @@
   "confirm": {
     "title": "Call a blow-out?",
     "lead": "This cancels {tripTitle} and sends every booked diver one message: what happened, where their money stands, and the upcoming departures they already qualify for, as booking links.",
-    "moneyNote": "Card payments go back automatically. Anything taken at the counter — or a card DiveDay can't reach — stays with you to return, and those divers are told a refund is owed.",
+    "moneyNote": "Card payments go back automatically. Anything taken at the counter, or on a card DiveDay can't reach, stays with you to return, and those divers are told a refund is owed.",
     "diversHeading": "{count, plural, one {# diver will be messaged} other {# divers will be messaged}}",
     "noEmail": "No email — flagged for a call",
-    "noDivers": "Nobody is booked on this departure. Calling it simply cancels the trip.",
-    "departed": "This departure has already left — there is nothing to blow out.",
+    "noDivers": "Nobody is booked on this departure. Calling it cancels the trip.",
+    "departed": "This departure has already left, so there is nothing to blow out.",
     "button": "Call the blow-out",
     "calling": "Calling…",
     "backToTrip": "Back to the trip"
@@ -19,7 +19,7 @@
     "rebooked": "Rebooked",
     "rebookedDetail": "hold a seat on another departure",
     "unresolved": "Unresolved",
-    "unresolvedDetail": "no new seat yet — the blow-out isn't over",
+    "unresolvedDetail": "no new seat yet, so the blow-out isn't over",
     "allResolvedDetail": "everyone has somewhere to go",
     "table": {
       "diver": "Diver",
@@ -35,7 +35,7 @@
     "messageFailed": "Not sent",
     "messageNoEmail": "No email",
     "callThem": "Call {phone}",
-    "noOffers": "No qualifying dates — sent the schedule instead",
+    "noOffers": "No qualifying dates, so the schedule was sent instead",
     "rebookedBadge": "Rebooked",
     "unresolvedBadge": "Unresolved",
     "noPayment": "No payment taken",
@@ -44,9 +44,9 @@
     "empty": "No divers were booked when the blow-out was called."
   },
   "notices": {
-    "called": "Blow-out called — the trip is cancelled and every diver's message is on its way.",
+    "called": "Blow-out called. The trip is cancelled and every diver's message is on its way.",
     "resumed": "Retried the unsent messages.",
-    "departed": "This departure has already left — nothing was cancelled.",
-    "error": "That didn't work — try again."
+    "departed": "This departure has already left, so nothing was cancelled.",
+    "error": "That didn't work. Try again."
   }
 }

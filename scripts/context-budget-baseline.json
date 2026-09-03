@@ -2,8 +2,8 @@
   "note": "Words of agent context every session loads before reading any code. A ratchet: a count may never rise, and a fall is banked with `node scripts/check-context-budget.mjs --write`. See the module comment in scripts/check-context-budget.mjs.",
   "budgets": {
     "CLAUDE.md": 49,
-    "AGENTS.md": 11296,
-    ".claude/skills/*/SKILL.md (description lines)": 723,
+    "AGENTS.md": 11358,
+    ".claude/skills/*/SKILL.md (description lines)": 740,
     ".claude/agents/*.md (description lines)": 130
   },
   "raises": [
@@ -29,6 +29,13 @@
       "why": "a new hard rule: text a human will copy is written unwrapped, so the copy does not arrive in a mailbox or support form full of hard breaks",
       "files": {
         "AGENTS.md": "11188 -> 11296"
+      }
+    },
+    {
+      "why": "a new check:repo guard needs a row in the command table (check:voice), and the brand-voice skill's description now names the voice tells so a session writing copy loads it",
+      "files": {
+        "AGENTS.md": "11296 -> 11358",
+        ".claude/skills/*/SKILL.md (description lines)": "723 -> 740"
       }
     }
   ]

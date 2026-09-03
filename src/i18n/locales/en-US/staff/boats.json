@@ -40,7 +40,7 @@
   "boatDeleted": "Boat deleted.",
   "boatInvalid": "Provide a boat name and capacity.",
   "concurrencyWarning": "{tripCount} concurrent boat trips scheduled, but your shop has {boatCount, plural, =1 {1 boat} other {# boats}}.",
-  "doubleBookedWarning": "{boats} is on two departures at once — one boat cannot be in two places.",
+  "doubleBookedWarning": "{boats} is on two departures at once, and one boat cannot be in two places.",
   "diveModeLabel": "Dive mode",
   "modeBoat": "Boat dive",
   "modeShore": "Shore dive",
@@ -49,11 +49,11 @@
   "unassignedBoat": "Any / unassigned boat",
   "requestBoatSuggestion": "Suggested boat: {boatName} ({capacity, plural, one {# seat} other {# seats}})",
   "requestBoatExceeded": "Party size exceeds largest boat capacity.",
-  "requestCrewSuggestion": "Bring {divemasters, plural, one {# divemaster} other {# divemasters}} — your {ratio}:1 target.",
+  "requestCrewSuggestion": "Bring {divemasters, plural, one {# divemaster} other {# divemasters}} for your {ratio}:1 target.",
   "requestPlanBoatRecommendationOne": "Suggested boat: {boatName} ({capacity} seat)",
   "requestPlanBoatRecommendationOther": "Suggested boat: {boatName} ({capacity} seats)",
   "requestPlanBoatExceeded": "Group exceeds largest boat capacity",
-  "requestPlanCrewSuggestionOne": "Bring {divemasters} divemaster — your {ratio}:1 target.",
-  "requestPlanCrewSuggestionOther": "Bring {divemasters} divemasters — your {ratio}:1 target.",
+  "requestPlanCrewSuggestionOne": "Bring {divemasters} divemaster for your {ratio}:1 target.",
+  "requestPlanCrewSuggestionOther": "Bring {divemasters} divemasters for your {ratio}:1 target.",
   "descriptionLabel": "One line about the boat, for your public page (optional)"
 }

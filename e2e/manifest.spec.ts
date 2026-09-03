@@ -850,11 +850,11 @@ test("the manifest offers a per-device push opt-in without asking for permission
   const optIn = page.getByRole("heading", { name: "Wake this phone" });
   await expect(optIn).toBeVisible();
 
-  // The promise the copy makes is the one the feature can keep. "A ping is a
-  // heads-up, not a guarantee" is load-bearing: a captain who reads silence as
+  // The promise the copy makes is the one the feature can keep. "A ping can be
+  // missed" is load-bearing: a captain who reads silence as
   // "nothing changed" is the failure mode this wording exists to prevent, and
   // an earlier draft ("so this phone carries the latest") invited exactly that.
-  await expect(page.getByText(/A ping is a heads-up, not a guarantee/)).toBeVisible();
+  await expect(page.getByText(/A ping can be missed/)).toBeVisible();
 
   // Present, and off until someone taps it.
   await expect(page.getByRole("button", { name: "Notify this device" })).toBeVisible();

@@ -35,6 +35,7 @@ const checks = [
   ["tokens", "check-tokens.mjs"],
   ["tinted-ink", "check-tinted-ink.mjs"],
   ["type-ramp", "check-type-ramp.mjs"],
+  ["voice", "check-voice.mjs"],
   ["logical-properties", "check-logical-properties.mjs"],
   ["clock", "check-clock.mjs"],
   ["db-concurrency", "check-db-concurrency.mjs"],

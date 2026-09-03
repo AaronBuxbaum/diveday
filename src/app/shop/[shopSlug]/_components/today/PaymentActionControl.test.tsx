@@ -21,17 +21,17 @@ afterEach(() => {
 const COPY: PaymentActionCopy = {
   copyLink: "Copy payment link",
   linkCopied: "Link copied.",
-  copyFailed: "Couldn’t copy — copy it from the invoice instead.",
+  copyFailed: "Couldn’t copy. Copy it from the invoice instead.",
   resendInvoice: "Resend invoice",
   resending: "Resending…",
   invoiceResent: "Invoice resent.",
   errors: {
     // The record is an "order" wherever it is named; "invoice" survives only
     // for the Stripe artifact itself (the resend action, the hosted page).
-    notFound: "That order could not be found — open the trip to check it.",
-    notOpen: "This order is no longer open — open the trip to check its status.",
+    notFound: "That order could not be found. Open the trip to check it.",
+    notOpen: "This order is no longer open. Open the trip to check its status.",
     notConfigured: "Payments aren’t connected for this shop yet.",
-    failed: "Still couldn’t resend it — open the trip to check the order.",
+    failed: "Still couldn’t resend it. Open the trip to check the order.",
   },
 };
 

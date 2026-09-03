@@ -70,7 +70,7 @@
     "overlap": "That person already has an overlapping shift.",
     "personNotFound": "That person isn't on this shop's roster.",
     "requestApproved": "Approved, and they're on the crew.",
-    "requestApprovedNotAssigned": "Approved — but the assignment was refused. Crew that departure from its own page to see why.",
+    "requestApprovedNotAssigned": "Approved, but the assignment was refused. Crew that departure from its own page to see why.",
     "requestDeclined": "Declined.",
     "requestNotFound": "That's already gone.",
     "requestSent": "Sent. The shop will see it on the week.",
@@ -110,7 +110,7 @@
     "removing": "Removing…",
     "rosterEmptyHeading": "No crew on the books yet",
     "rosterEmptyManagerBody": "Invite the instructors and divemasters who run your boats, then give them shifts here.",
-    "rosterEmptyBody": "An owner or manager adds crew from Team settings — ask one of them to get you started.",
+    "rosterEmptyBody": "An owner or manager adds crew from Team settings. Ask one of them to get you started.",
     "rosterEmptyAction": "Invite your crew"
   }
 }

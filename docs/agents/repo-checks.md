@@ -1,12 +1,12 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 41 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 42 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
 shape being refused.
 
-Only the 20 guards whose reasoning is not obvious from their own failure message are
+Only the 21 guards whose reasoning is not obvious from their own failure message are
 written up here. The rest say everything they need to say when they go red.
 
 This is the long-form half of one row in [AGENTS.md](../../AGENTS.md)'s command table, and it lives
@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, logical-property, clock, transaction-concurrency, timezone, Intl-cache, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, destructive-migration, migration-graph, e2e-hygiene, follow-ups, agent-layer (skills/index/task-context), Open-Graph-site, infra-ASCII, stack-CI-skip and CI-change-detection safeguards.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, voice, logical-property, clock, transaction-concurrency, timezone, Intl-cache, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, destructive-migration, migration-graph, e2e-hygiene, follow-ups, agent-layer (skills/index/task-context), Open-Graph-site, infra-ASCII, stack-CI-skip and CI-change-detection safeguards.
 
 ## The guards worth reading about
 
@@ -111,6 +111,33 @@ per-file table. It lands at zero, so it behaves as a full gate today; the ratche
 branch cut before the sweep, whose spellings are pre-existing debt rather than new drift. A heading
 that genuinely is not on the ramp — a rendered email, an `ImageResponse` card Tailwind never reaches
 — says `diveday:allow-type-ramp: <why>` on the line or the line above.
+
+### voice
+
+The voice one (`scripts/check-voice.mjs`) refuses the mechanical half of the list in
+[docs/design/brand.md](../design/brand.md)'s "What gives us away": a **prose em-dash** (one between
+two clauses of three or more words, or anywhere in a string carrying a sentence terminator), the
+**intensifiers** (*actually, genuinely, simply, quietly, truly, seamless, effortless, robust,
+empower, streamline, leverage*), the **lead-ins** (*here's how, the best part, rest assured, say
+goodbye to, whether you're*), the **"not just" contrast**, and the **staccato run** of short
+sentences that each begin "No". Every message bundle under `src/i18n/locales/`, per locale, and a
+locale with no word list is a failure rather than a pass.
+
+It exists because every word of DiveDay is written by a language model, and a language model has a
+house style. On 2026-09-03 the marketing bundle carried an em-dash in one sentence out of five, the
+"not a project, a file" contrast twenty-eight times, four "Here's how" lead-ins and a "No X. No Y.
+No Z." pricing hero; the staff bundles carried 573 more prose dashes. Each sentence read well on its
+own. Together they read as the voice a buyer has learned to skim, and a page that exists to be
+believed cannot afford that. A regex cannot see an aphorism heading or a rhetorical question, so
+those stay in the brand doc and the [brand-voice](../../.claude/skills/brand-voice/SKILL.md)
+checklist; what it *can* see it refuses outright.
+
+A short label separator is deliberately not a hit: "Boarded — tap again to undo" and "Checked in —
+2" are not sentences, and the tell is the dash that replaced a full stop or a comma in running
+prose. Ratcheted per file in `scripts/voice-baseline.json` exactly like `check:copy` (`--write`
+banks a fall and refuses a rise, `--absorb` records growth arriving from a merge, `--report
+[prefix]` lists every hit with its key and rule). It landed at zero, so it behaves as a full gate
+today; the ratchet is there for the branch cut before the sweep.
 
 ### logical-property
 

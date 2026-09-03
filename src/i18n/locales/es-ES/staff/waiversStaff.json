@@ -23,7 +23,7 @@
   "placeholder": "Escribe la exención que leerá y firmará el buceador.",
   "pendingLabel": "Publicando…",
   "releaseDescription": {
-    "sample": "Este es un texto de muestra para empezar — edítalo para tu centro y haz que tu propio asesor legal lo revise."
+    "sample": "Este es un texto de muestra para empezar. Edítalo para tu centro y haz que tu propio asesor legal lo revise."
   },
   "versionInfo": "Versión {version} · publicado el {date}",
   "signatures": {

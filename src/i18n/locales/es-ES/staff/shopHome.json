@@ -1,18 +1,18 @@
 {
   "createdNotice": {
     "single": "“{title}” ya está en el calendario. 🤙",
-    "series": "“{title}” ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}. 🤙"
+    "series": "“{title}” ya está en el calendario con {count, plural, one {# salida programada} other {# salidas programadas}}. 🤙"
   },
   "firstBookable": {
-    "heading": "“{title}” ya está en el calendario — tu centro ya acepta reservas.",
-    "headingSeries": "“{title}” ya está en el calendario — {count, plural, one {# salida programada} other {# salidas programadas}}, y tu centro ya acepta reservas.",
-    "body": "Este enlace es tu calendario público — la página desde la que reservan los buceadores. Ponlo en tu web, tus redes sociales y donde te encuentren los buceadores.",
+    "heading": "“{title}” ya está en el calendario y tu centro ya acepta reservas.",
+    "headingSeries": "“{title}” ya está en el calendario con {count, plural, one {# salida programada} other {# salidas programadas}}, y tu centro ya acepta reservas.",
+    "body": "Este enlace es tu calendario público, la página desde la que reservan los buceadores. Ponlo en tu web, tus redes sociales y donde te encuentren los buceadores.",
     "linkLabel": "Tu enlace de reservas",
     "viewAsDiver": "Míralo como lo verán tus buceadores"
   },
-  "demoReset": "Datos de demostración reiniciados — barco nuevo, pizarra limpia.",
+  "demoReset": "Datos de demostración reiniciados, con barco nuevo y pizarra limpia.",
   "emailResent": "Correo de confirmación reenviado.",
-  "emailFailed": "Ese correo no se pudo enviar — revisa la dirección y la configuración de correo.",
+  "emailFailed": "Ese correo no se pudo enviar. Revisa la dirección y la configuración de correo.",
   "offlineLabel": "Sin conexión: este tablón puede estar desactualizado",
   "nextDeparture": "La próxima es <link>{title}</link> el {date} a las {time}.",
   "noDeparturesEmpty": "Todavía no hay nada programado. Programa una salida y aparecerá aquí la mañana que zarpe.",
@@ -39,7 +39,7 @@
     "roles": {
       "owner": {
         "title": "Estás al mando de todo el centro",
-        "desc": "Hoy es tu cola de trabajo — reservas, bloqueos y las salidas de hoy en un solo lugar.",
+        "desc": "Hoy es tu cola de trabajo: reservas, bloqueos y las salidas de hoy en un solo lugar.",
         "tryThis": "Abre Tablero para ver las salidas de esta semana."
       },
       "manager": {
@@ -74,7 +74,7 @@
     "subtitle": "{count, plural, one {# paso} other {# pasos}} y los buceadores podrán reservar.",
     "progress": "{done} de {total, plural, one {# completado} other {# completados}}",
     "contactTitle": "Añade tus datos de contacto",
-    "contactBody": "Teléfono y correo para que los buceadores — y DiveDay — puedan contactarte.",
+    "contactBody": "Teléfono y correo para que los buceadores y DiveDay puedan contactarte.",
     "contactAction": "Añadir datos de contacto",
     "contactDone": "Datos de contacto guardados.",
     "profileTitle": "Añade el perfil y marca de tu centro",
@@ -92,7 +92,7 @@
     "scheduleBody": "Pega el enlace en tu web o redes sociales.",
     "scheduleCopy": "Copiar enlace",
     "scheduleCopied": "Copiado",
-    "scheduleCopyFailed": "No se pudo copiar — selecciona el enlace de arriba.",
+    "scheduleCopyFailed": "No se pudo copiar. Selecciona el enlace de arriba.",
     "stripeTitle": "Conecta los pagos",
     "stripeBody": "Los buceadores pagan al reservar; los fondos llegan a tu cuenta",
     "stripeAction": "Conectar pagos",
@@ -114,7 +114,7 @@
     "quietHeading": "Un día tranquilo en el muelle.",
     "quietSentence": "Hoy no sale ninguna salida y no hay nada pendiente para ti.",
     "deskLabel": "En recepción",
-    "deskPaymentsRow": "Los pagos no están conectados — los buceadores pueden reservar y pagar en recepción.",
+    "deskPaymentsRow": "Los pagos no están conectados, así que los buceadores pueden reservar y pagar en recepción.",
     "deskPaymentsAction": "Abrir ajustes de pago",
     "tomorrow": "Mañana · {date}",
     "week": "Esta semana",
@@ -127,13 +127,13 @@
     "until": "hasta las {time}",
     "stationClear": "Nada pendiente antes de las {time}.",
     "crewing": "Formas parte de la tripulación",
-    "aboardNamed": "{name} está a bordo — {reason}",
-    "aboardCount": "{count, plural, one {# buceador está a bordo — {reason}} other {# buceadores están a bordo — {reason}}}",
+    "aboardNamed": "{name} está a bordo y {reason}",
+    "aboardCount": "{count, plural, one {# buceador está a bordo y {reason}} other {# buceadores están a bordo y {reason}}}",
     "aboardReasonMedical": "hay una respuesta médica que un médico tiene que autorizar; nadie a bordo puede darla por buena.",
     "aboardReasonCertification": "falta una certificación que esta inmersión pide y que no hemos visto.",
     "aboardReasonUnknown": "no hay nada en la ficha que lo autorice. Sin exención firmada no hay declaración médica.",
     "aboardReasonPayment": "queda un pago pendiente. Está en la lista de abajo.",
-    "crewRollCallOpen": "Todos los buceadores están a bordo: falta pasar lista a la tripulación.",
+    "crewRollCallOpen": "Todos los buceadores están a bordo y falta pasar lista a la tripulación.",
     "allHome": "Todos los barcos están en puerto: {out} salieron, {back} volvieron.",
     "firstBoatHome": "Tu primer barco está en puerto: {out} salieron, {back} volvieron.",
     "firstBooking": "Tu primera reserva",

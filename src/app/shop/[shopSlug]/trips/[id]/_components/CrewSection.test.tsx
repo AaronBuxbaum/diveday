@@ -31,11 +31,11 @@ describe("the shop's divemaster target", () => {
         crewGapCode="none"
         copy={{
           ...COPY,
-          underTargetNote: "9 divers with no divemaster — your 6:1 target wants 2 divemasters.",
+          underTargetNote: "9 divers with no divemaster. Your 6:1 target wants 2 divemasters.",
         }}
       />,
     );
-    expect(screen.getByText(/your 6:1 target wants 2 divemasters/)).toBeTruthy();
+    expect(screen.getByText(/Your 6:1 target wants 2 divemasters/)).toBeTruthy();
   });
 
   it("says nothing at all once the target is met", () => {

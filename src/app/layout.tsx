@@ -50,7 +50,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(publicAppUrl() ?? "http://localhost:3000"),
   title: "DiveDay — a calmer way to run a dive day",
   description:
-    "Bookings, waivers, cert checks, trip prep, and boat manifests — one calm system for the whole dive shop.",
+    "Bookings, waivers, cert checks, trip prep, and boat manifests in one calm place for the dive shop.",
   // The app-wide floor, inherited only by pages that export no `openGraph`
   // block of their own — every page that does export one spreads
   // `openGraphSite` itself. See src/lib/site-metadata.ts.

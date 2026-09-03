@@ -10,13 +10,13 @@
   "imageInput": {
     "tooMany": "{count, plural, one {Elige hasta # foto por vez.} other {Elige hasta # fotos por vez.}}",
     "wrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",
-    "tooBigSuffix": ": supera los {maxMb} MB — prueba con una foto más pequeña.",
+    "tooBigSuffix": ": supera los {maxMb} MB, prueba con una foto más pequeña.",
     "choose": "Elige una foto",
     "chooseAnother": "Elige otra foto"
   },
   "paperWaiver": {
     "markSignedOnPaper": "Marcar como firmado en papel",
-    "medicalAttestationLabel": "Tengo la liberación firmada de este buceador archivada y he revisado su cuestionario médico — ninguna respuesta necesita el visto bueno de un médico.",
+    "medicalAttestationLabel": "Tengo la liberación firmada de este buceador archivada, he revisado su cuestionario médico y ninguna respuesta necesita el visto bueno de un médico.",
     "recording": "Registrando…",
     "recordPaperSignature": "Registrar firma en papel"
   },
@@ -49,9 +49,9 @@
     "reasonTextUnconfigured": "DiveDay todavía no puede enviar mensajes desde esta instalación",
     "reasonNoAppOrigin": "Esta instalación no tiene una dirección web pública configurada, así que no se puede crear un enlace",
     "sent": "Exención enviada a {names}.",
-    "alreadyDoneOne": "{names} ya tiene una exención firmada — no se reenvió nada.",
-    "alreadyDoneOther": "{names} ya tienen una exención firmada — no se reenvió nada.",
-    "errors": "No se pudo enviar a {names} — revisa la reserva en el listado.",
+    "alreadyDoneOne": "{names} ya tiene una exención firmada, así que no se reenvió nada.",
+    "alreadyDoneOther": "{names} ya tienen una exención firmada, así que no se reenvió nada.",
+    "errors": "No se pudo enviar a {names}. Revisa la reserva en el listado.",
     "confirmResend": "Sí, reenviar",
     "neverMind": "Cancelar",
     "emptySelection": "Marca al menos un buceador y envía la exención a toda la selección."
@@ -165,7 +165,7 @@
       "certificationInsufficient": "Se requiere {level} o superior para esta salida.",
       "specialtyMissing": "Se requiere la especialidad {specialty}; no hay certificación registrada.",
       "specialtyPending": "La certificación de especialidad {specialty} espera verificación del personal.",
-      "specialtyImportUnconfirmed": "La certificación de especialidad {specialty} llegó en una importación — un miembro del personal debe confirmarla antes de esta inmersión.",
+      "specialtyImportUnconfirmed": "La certificación de especialidad {specialty} llegó en una importación y un miembro del personal debe confirmarla antes de esta inmersión.",
       "nitroxMissing": "Se requiere certificación de nitrox; no hay un registro de certificación.",
       "nitroxPending": "La certificación de nitrox espera verificación del personal.",
       "nitroxSelfDeclared": "El buceador marcó nitrox por su cuenta. No se ha verificado ninguna evidencia de certificación: pide los datos y verifica el registro.",
@@ -237,24 +237,24 @@
       "resending": "Reenviando…",
       "confirmationResent": "Confirmación reenviada.",
       "errors": {
-        "invalid": "No se encontró esa reserva — abre la salida para revisarla.",
-        "noEmail": "No hay correo registrado — añade uno desde el listado y vuelve a intentarlo.",
+        "invalid": "No se encontró esa reserva. Abre la salida para revisarla.",
+        "noEmail": "No hay correo registrado. Añade uno desde el listado y vuelve a intentarlo.",
         "notConfigured": "El correo todavía no está configurado para este centro.",
-        "failed": "Sigue sin poder entregarse — abre la salida para revisar la reserva."
+        "failed": "Sigue sin poder entregarse. Abre la salida para revisar la reserva."
       }
     },
     "paymentAction": {
       "copyLink": "Copiar enlace de pago",
       "linkCopied": "Enlace copiado.",
-      "copyFailed": "No se pudo copiar — cópialo desde la factura.",
+      "copyFailed": "No se pudo copiar. Cópialo desde la factura.",
       "resendInvoice": "Reenviar factura",
       "resending": "Reenviando…",
       "invoiceResent": "Factura reenviada.",
       "errors": {
-        "notFound": "No se encontró ese pedido — abre la salida para revisarlo.",
-        "notOpen": "Este pedido ya no está abierto — abre la salida para verificar su estado.",
+        "notFound": "No se encontró ese pedido. Abre la salida para revisarlo.",
+        "notOpen": "Este pedido ya no está abierto. Abre la salida para verificar su estado.",
         "notConfigured": "Los pagos todavía no están conectados para este centro.",
-        "failed": "Sigue sin poder reenviarse — abre la salida para revisar el pedido."
+        "failed": "Sigue sin poder reenviarse. Abre la salida para revisar el pedido."
       }
     },
     "helpRequest": {
@@ -378,23 +378,23 @@
       "openCrewRollCall": "El barco ha vuelto y el recuento de tripulación de la inmersión {dive} está sin terminar: {uncounted, plural, one {# de {total} tripulantes no tiene} other {# de {total} tripulantes no tienen}} resultado. Contabiliza a todos antes de dejar el muelle.",
       "openCrewRollCallUnderway": "El barco sigue fuera y el recuento de tripulación de la inmersión {dive} está a medias: {uncounted, plural, one {# de {total} tripulantes no tiene} other {# de {total} tripulantes no tienen}} resultado. Contacta con el barco ahora, mientras está en el sitio.",
       "openCrewRollCallStale": "El recuento de tripulación de la inmersión {dive} nunca se cerró: {uncounted, plural, one {# de {total} tripulantes sigue sin} other {# de {total} tripulantes siguen sin}} resultado. Demasiado antiguo para resolverlo en el muelle: reconstrúyelo desde el manifiesto.",
-      "departureCountOpen": "El recuento en el muelle nunca se completó: {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado en la salida. Es papeleo, no un buceador en el agua: resuélvelo para que el próximo recuento parta de una lista real.",
+      "departureCountOpen": "El recuento en el muelle nunca se completó. {uncounted, plural, one {# de {total} buceadores no tiene} other {# de {total} buceadores no tienen}} resultado en la salida. Es papeleo, no un buceador en el agua. Resuélvelo para que el próximo recuento parta de una lista real.",
       "noRollCall": "No se hizo ningún recuento: {total, plural, one {# buceador zarpó} other {# buceadores zarparon}} sin nada registrado. Nadie fue dado por desaparecido; no hay registro.",
       "missingFit": "{count, plural, one {A # buceador le faltan} other {A # buceadores les faltan}} tallas de alquiler, así que la lista de preparación está incompleta.",
-      "ungatedNitrox": "{count, plural, one {# buceador pidió} other {# buceadores pidieron}} nitrox sin certificación verificada — esos tanques están planeados con aire.",
-      "highWindAlert": "Previsión de viento de {speed} nudos{hasDirection, select, yes { del {direction}} other {}}{hasGusts, select, yes { (rachas de {gusts} nudos)} other {}} — comprueba las condiciones antes de salir.",
+      "ungatedNitrox": "{count, plural, one {# buceador pidió} other {# buceadores pidieron}} nitrox sin certificación verificada, así que esos tanques están planeados con aire.",
+      "highWindAlert": "Previsión de viento de {speed} nudos{hasDirection, select, yes { del {direction}} other {}}{hasGusts, select, yes { (rachas de {gusts} nudos)} other {}}. Revisa las condiciones antes de salir.",
       "instructorMissing": "Esta sesión de curso no tiene instructor asignado y no puede aceptar inscripciones.",
       "overRatio": "{booked, plural, one {# reservado} other {# reservados}}, pero la tripulación asignada solo cubre {capacity} según la ratio de nivel inicial publicada por PADI.",
-      "overRatioIntro": "{booked, plural, one {# reservado} other {# reservados}} en esta sesión de iniciación, la tripulación cubre {capacity}: {perInstructor} por instructor para la inmersión en aguas abiertas, y un asistente certificado no lo aumenta. Solo otro instructor añade plazas.",
+      "overRatioIntro": "{booked, plural, one {# reservado} other {# reservados}} en esta sesión de iniciación, y la tripulación cubre {capacity} a {perInstructor} por instructor para la inmersión en aguas abiertas. Un asistente certificado no lo aumenta; solo otro instructor añade plazas.",
       "uncrewedDeparture": "{divers, plural, one {# buceador reservado} other {# buceadores reservados}} y no hay divemaster ni instructor asignado para supervisar esta salida.",
-      "crewBelowTarget": "{divers, plural, one {# buceador} other {# buceadores}} con {divemasterCount, plural, one {# supervisor} other {# supervisores}} — bajo tu objetivo de {ratio}:1.",
-      "missingContact": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} contacto de emergencia registrado — pregunta en el mostrador; se imprime en el manifiesto.",
-      "missingContactNamed": "No tiene contacto de emergencia registrado — pregunta en el mostrador; se imprime en el manifiesto.",
+      "crewBelowTarget": "{divers, plural, one {# buceador} other {# buceadores}} con {divemasterCount, plural, one {# supervisor} other {# supervisores}}, bajo tu objetivo de {ratio}:1.",
+      "missingContact": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} contacto de emergencia registrado. Pregunta en el mostrador; se imprime en el manifiesto.",
+      "missingContactNamed": "No tiene contacto de emergencia registrado. Pregunta en el mostrador; se imprime en el manifiesto.",
       "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}} sin oferta de última hora enviada todavía.",
       "waitlistSeat": "{seats, plural, one {se liberó # plaza} other {se liberaron # plazas}} y {waiting, plural, one {# persona está} other {# personas están}} en la lista de espera.",
       "emailNotConfigured": {
-        "waiver": "Su enlace de exención nunca se envió — el correo no está configurado.",
-        "confirmation": "Su confirmación de reserva nunca se envió — el correo no está configurado."
+        "waiver": "Su enlace de exención nunca se envió porque el correo no está configurado.",
+        "confirmation": "Su confirmación de reserva nunca se envió porque el correo no está configurado."
       },
       "emailFailed": {
         "waiver": "No se pudo entregar su enlace de exención{attempts, plural, =0 {} =1 {} other { tras # intentos}}.",
@@ -426,10 +426,10 @@
       "night": "Trabajando hasta tarde, {name}"
     },
     "seasonalBriefing": {
-      "summer": "Aprovecha el intervalo de superficie — busca sombra{hasShop, select, true { en {shopName}} other {}}, bebe agua y nos vemos en el próximo barco.",
-      "autumn": "Aprovecha el intervalo de superficie — toma una toalla calentita{hasShop, select, true { en {shopName}} other {}}, revisa la brisa y nos vemos en el próximo barco.",
-      "winter": "Aprovecha el intervalo de superficie — abrígate con un chubasquero seco{hasShop, select, true { en {shopName}} other {}} y nos vemos en el próximo barco.",
-      "spring": "Aprovecha el intervalo de superficie — disfruta del sol{hasShop, select, true { en {shopName}} other {}}, revisa tu equipo y nos vemos en el próximo barco."
+      "summer": "Aprovecha el intervalo de superficie. Busca sombra{hasShop, select, true { en {shopName}} other {}}, bebe agua y nos vemos en el próximo barco.",
+      "autumn": "Aprovecha el intervalo de superficie. Toma una toalla calentita{hasShop, select, true { en {shopName}} other {}}, revisa la brisa y nos vemos en el próximo barco.",
+      "winter": "Aprovecha el intervalo de superficie. Abrígate con un chubasquero seco{hasShop, select, true { en {shopName}} other {}} y nos vemos en el próximo barco.",
+      "spring": "Aprovecha el intervalo de superficie. Disfruta del sol{hasShop, select, true { en {shopName}} other {}}, revisa tu equipo y nos vemos en el próximo barco."
     },
     "opsAlert": {
       "operationKind": {
@@ -446,16 +446,16 @@
         "diveSitePhoto": "Foto del sitio de buceo"
       },
       "stuckDetail": {
-        "withId": "{kind} atascado desde {when} — Stripe: {id}. Revísalo en el panel de Stripe.",
+        "withId": "{kind} atascado desde {when} (Stripe: {id}). Revísalo en el panel de Stripe.",
         "withoutId": "{kind} atascado desde {when}. Revísalo en el panel de Stripe."
       },
-      "mediaDeletionDetail": "{kind} eliminada de la aplicación pero todavía no borrada del almacenamiento — en cola desde {when}.",
-      "owedRefundDetail": "{amount} de {tripTitle} del {when} — cancelaste la salida y el dinero no pudo volver por tarjeta. Devuélvelo y luego marca la plaza como reembolsada.",
-      "owedRefundDetailNoAmount": "Pendiente de {tripTitle} del {when} — cancelaste la salida y no se registró ningún importe en el pago. Devuelve lo que pagó y luego marca la plaza como reembolsada."
+      "mediaDeletionDetail": "{kind} eliminada de la aplicación pero todavía no borrada del almacenamiento, en cola desde {when}.",
+      "owedRefundDetail": "{amount} de {tripTitle} del {when}. Cancelaste la salida y el dinero no pudo volver por tarjeta. Devuélvelo y luego marca la plaza como reembolsada.",
+      "owedRefundDetailNoAmount": "Pendiente de {tripTitle} del {when}. Cancelaste la salida y no se registró ningún importe en el pago. Devuelve lo que pagó y luego marca la plaza como reembolsada."
     },
     "reviewsPending": {
       "subject": "{count, plural, one {# reseña espera} other {# reseñas esperan}} tu revisión",
-      "detail": "Los buceadores escribieron sobre sus salidas — publica las buenas palabras u oculta el resto con discreción."
+      "detail": "Los buceadores escribieron sobre sus salidas. Publica las buenas palabras u oculta el resto."
     },
     "unitsUnconfirmed": {
       "subject": "¿En qué moneda y unidad de profundidad trabaja este centro?",
@@ -466,16 +466,16 @@
       "dueBackDetail": "{unitLabel} debe devolverse hoy.",
       "serviceDueDetail": "{clockLabel} vence el {dueOn}.",
       "serviceOverdueDetail": "{clockLabel} venció el {dueOn}.",
-      "neverPickedUpDetail": "{unitLabel} estaba reservado hasta el {dueOn} y nunca se recogió — libéralo."
+      "neverPickedUpDetail": "{unitLabel} estaba reservado hasta el {dueOn} y nunca se recogió. Libéralo."
     },
     "staffCredential": {
       "dueDetail": "La renovación de {credential} para esta persona es el {dueOn}.",
-      "overdueDetail": "{credential} para esta persona venció el {dueOn} — actualiza el registro."
+      "overdueDetail": "{credential} para esta persona venció el {dueOn}. Actualiza el registro."
     }
   },
   "tripDiveFields": {
     "heading": "Plan de inmersiones",
-    "description": "Dejar una inmersión en blanco no pasa nada — los buceadores igualmente verán un plan claro de {tripShape}.",
+    "description": "Dejar una inmersión en blanco no pasa nada. Los buceadores igualmente verán un plan claro de {tripShape}.",
     "twoTankTrip": "dos tanques",
     "diveCountTripOne": "{count} inmersión",
     "diveCountTripOther": "{count} inmersiones",
@@ -493,7 +493,7 @@
     "travelLabelOther": "Minutos desde el sitio anterior",
     "travelHint": "(en blanco usa tu trayecto habitual)",
     "diverFacingDetailsLabel": "Detalles para los buceadores",
-    "footerNote": "Elegir un sitio trae sus notas guardadas — mapa, referencias, guía de campo — al briefing de esa inmersión."
+    "footerNote": "Elegir un sitio trae sus notas guardadas (mapa, referencias, guía de campo) al briefing de esa inmersión."
   },
   "offlineManifest": {
     "freshnessCopy": {
@@ -509,15 +509,15 @@
     "loadingMessage": "Abriendo el manifiesto guardado en este dispositivo…",
     "openingHeading": "Abriendo la copia guardada en este dispositivo",
     "reconcile": {
-      "reachError": "No se pudo contactar con DiveDay en este momento — tus cambios siguen guardados en este teléfono e intentarán enviarse de nuevo en el próximo cambio o al reconectar.",
-      "pendingRejectedSingle": "{count, plural, one {# cambio necesita revisión — abre el manifiesto en vivo para resolverlo.} other {# cambios necesitan revisión — abre el manifiesto en vivo para resolverlo.}}",
+      "reachError": "No se pudo contactar con DiveDay en este momento. Tus cambios siguen guardados en este teléfono e intentarán enviarse de nuevo en el próximo cambio o al reconectar.",
+      "pendingRejectedSingle": "{count, plural, one {# cambio necesita revisión. Abre el manifiesto en vivo para resolverlo.} other {# cambios necesitan revisión. Abre el manifiesto en vivo para resolverlo.}}",
       "pendingWaiting": "{count, plural, one {# cambio todavía se está enviando.} other {# cambios todavía se están enviando.}}",
       "allCaughtUp": "Todo enviado.",
       "listLoadError": "Este dispositivo no pudo abrir sus manifiestos guardados. Guarda una copia nueva mientras tengas señal.",
       "singleLoadError": "Este dispositivo no pudo abrir su manifiesto guardado. Guarda una copia nueva mientras tengas señal.",
       "savedCount": "{count, plural, one {# manifiesto guardado} other {# manifiestos guardados}} en este dispositivo.",
       "noneSavedYet": "Todavía no hay nada guardado en este dispositivo.",
-      "listPendingRejected": "{count, plural, one {# cambio necesita revisión — abre esa salida para resolverlo.} other {# cambios necesitan revisión — abre esa salida para resolverlo.}}",
+      "listPendingRejected": "{count, plural, one {# cambio necesita revisión. Abre esa salida para resolverlo.} other {# cambios necesitan revisión. Abre esa salida para resolverlo.}}",
       "listAllCaughtUp": "Todo enviado en estas salidas.",
       "ready": "El manifiesto guardado en este dispositivo está listo.",
       "noneForTrip": "No hay ningún manifiesto guardado actualmente para esta salida en este dispositivo."
@@ -544,7 +544,7 @@
       "skipLink": "Ir directo al pase de lista sin conexión",
       "savedAt": "Guardado {when}",
       "expiredBanner": "Esta copia guardada ha caducado y no se puede usar para embarcar buceadores. Cualquier cambio que siga esperando para enviarse abajo seguirá intentándolo, pero el nuevo pase de lista debe registrarse en el manifiesto en vivo.",
-      "freshnessBanner": "{freshnessNote}. La disponibilidad refleja ese momento — lo verificamos todo de nuevo en cuanto tengas señal.",
+      "freshnessBanner": "{freshnessNote}. La disponibilidad refleja ese momento, y lo verificamos todo de nuevo en cuanto tengas señal.",
       "pendingRejectedCounts": "{pending} esperando para enviarse · {rejected} necesitan revisión",
       "checkpointNavAria": "Punto del pase de lista",
       "statsDivers": "Buceadores",
@@ -552,15 +552,15 @@
       "statsAwaiting": "Pendientes",
       "rollCallCompleteHeading": "Pase de lista completo",
       "checkpointRollCallHeading": "Pase de lista de {checkpoint}",
-      "allAboard": "Todos tienen un resultado — todos a bordo.",
-      "someNotBoarded": "Todos tienen un resultado — {count, plural, one {# marcado como no embarcado} other {# marcados como no embarcados}}. Confirma que están localizados antes de continuar.",
+      "allAboard": "Todos tienen un resultado y todos están a bordo.",
+      "someNotBoarded": "Todos tienen un resultado, con {count, plural, one {# marcado como no embarcado} other {# marcados como no embarcados}}. Confirma que están localizados antes de continuar.",
       "crewHeading": "Tripulación a bordo",
       "crewAllAccountedFor": "{assigned, plural, one {# tripulante, contabilizado.} other {Los # tripulantes, contabilizados.}}",
       "crewNoneAssigned": "No hay tripulación asignada a esta salida, así que no hay a quién pasar lista. La tripulación se añade en la lista de tripulación de la salida, que necesita cobertura: este control sigue abierto hasta entonces.",
-      "crewNoneAboard": "Toda la tripulación de esta salida figura en tierra, así que nadie a bordo está en la lista de tripulación. Quien saliera de verdad se añade en la lista de tripulación de la salida, que necesita cobertura: este control sigue abierto hasta entonces.",
+      "crewNoneAboard": "Toda la tripulación de esta salida figura en tierra, así que nadie a bordo está en la lista de tripulación. Quien saliera se añade en la lista de tripulación de la salida, que necesita cobertura: este control sigue abierto hasta entonces.",
       "crewNotBackAboard": "{count, plural, one {# tripulante no ha vuelto a bordo.} other {# tripulantes no han vuelto a bordo.}} Este control sigue abierto.",
-      "crewOlderCopy": "{count, plural, one {A # tripulante no se le puede pasar lista en esta copia guardada} other {A # tripulantes no se les puede pasar lista en esta copia guardada}}: se guardó antes de que el pase de lista de tripulación funcionara sin conexión. Actualiza la copia la próxima vez que tengas cobertura o regístralos en el manifiesto en vivo.",
-      "buddyReadOnlyHere": "Los equipos de buceo se muestran tal como se guardaron. Si alguien del equipo está a bordo se registra en el pase de lista en vivo — esta copia no lo sigue.",
+      "crewOlderCopy": "{count, plural, one {A # tripulante no se le puede pasar lista en esta copia guardada} other {A # tripulantes no se les puede pasar lista en esta copia guardada}} porque se guardó antes de que el pase de lista de tripulación funcionara sin conexión. Actualiza la copia la próxima vez que tengas cobertura o regístralos en el manifiesto en vivo.",
+      "buddyReadOnlyHere": "Los equipos de buceo se muestran tal como se guardaron. Si alguien del equipo está a bordo se registra en el pase de lista en vivo, y esta copia no lo sigue.",
       "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}} Cada persona de la lista de tripulación necesita su propio resultado.",
       "readyBadge": "Listo cuando se guardó",
       "blockedBadge": "Bloqueado cuando se guardó",
@@ -580,15 +580,15 @@
       "confirmAboard": "Confirmar que {name} está a bordo",
       "confirmAboardHint": "Toca de nuevo para registrar que ves a {name} y que ya está de vuelta en el barco.",
       "confirmAboardCancel": "Mantener “sin regresar a bordo”",
-      "markedElsewhere": "Registrado en otro dispositivo o en el manifiesto en vivo — deshazlo allí, no aquí.",
+      "markedElsewhere": "Registrado en otro dispositivo o en el manifiesto en vivo. Deshazlo allí, no aquí.",
       "openLiveManifest": "Abrir manifiesto en vivo",
       "record": {
-        "expiredCannotRecord": "Esta copia guardada ha caducado — abre el manifiesto en vivo para registrar el pase de lista.",
+        "expiredCannotRecord": "Esta copia guardada ha caducado. Abre el manifiesto en vivo para registrar el pase de lista.",
         "expiredRecordOnLive": "Caducado — regístralo en el manifiesto en vivo",
-        "saved": "Guardado en este teléfono — se enviará en cuanto recuperes la conexión.",
-        "genericError": "Ese cambio no se pudo guardar en este dispositivo — inténtalo de nuevo.",
-        "notAllowed": "Este buceador aún no puede embarcar — resuelve lo pendiente en el manifiesto en vivo primero.",
-        "unavailable": "Esta copia guardada ya no está disponible — abre el manifiesto en vivo para registrar el pase de lista."
+        "saved": "Guardado en este teléfono. Se enviará en cuanto recuperes la conexión.",
+        "genericError": "Ese cambio no se pudo guardar en este dispositivo. Inténtalo de nuevo.",
+        "notAllowed": "Este buceador aún no puede embarcar. Resuelve lo pendiente en el manifiesto en vivo primero.",
+        "unavailable": "Esta copia guardada ya no está disponible. Abre el manifiesto en vivo para registrar el pase de lista."
       },
       "checklist": {
         "heading": "Comprobación previa a la salida",
@@ -604,7 +604,7 @@
     "discarded": {
       "heading": "Se eliminó un pase de lista que nunca se envió",
       "body": "{count, plural, one {# cambio de recuento registrado} other {# cambios de recuento registrados}} en este dispositivo nunca llegaron a DiveDay, y la copia guardada superó la fecha en que un manifiesto puede permanecer en un dispositivo. Vuelve a introducir en el manifiesto en vivo lo que siga haciendo falta.",
-      "item": "{shop} · {trip} — {count, plural, one {# cambio perdido} other {# cambios perdidos}}",
+      "item": "{shop} · {trip} · {count, plural, one {# cambio perdido} other {# cambios perdidos}}",
       "acknowledge": "Entendido"
     }
   },
@@ -630,7 +630,7 @@
     },
     "nitroxFillsLabel": "Llenados de nitrox",
     "itemWithSize": "{item} {size}",
-    "notRecorded": "No hay equipo registrado — aún no se ha preguntado",
+    "notRecorded": "No hay equipo registrado, aún no se ha preguntado",
     "ownKit": "Trae su propio equipo",
     "needsStaffFit": "Necesita ajuste del personal en el check-in",
     "needsStaffFitWithNote": "Necesita ajuste del personal — {note}"
@@ -683,8 +683,8 @@
   },
   "supportNeeds": {
     "label": "Apoyo en la inmersión",
-    "supportDiversFromShop": "{count, plural, one {# buceador de apoyo en el agua — lo organiza el centro} other {# buceadores de apoyo en el agua — los organiza el centro}}",
-    "supportDiversOwn": "{count, plural, one {# buceador de apoyo en el agua — lo trae el buceador} other {# buceadores de apoyo en el agua — los trae el buceador}}",
+    "supportDiversFromShop": "{count, plural, one {# buceador de apoyo en el agua, lo organiza el centro} other {# buceadores de apoyo en el agua, los organiza el centro}}",
+    "supportDiversOwn": "{count, plural, one {# buceador de apoyo en el agua, lo trae el buceador} other {# buceadores de apoyo en el agua, los trae el buceador}}",
     "boardingAssistance": "Ayuda para subir a bordo",
     "waterLift": "Grúa para entrar y salir del agua",
     "briefingSign": "Briefing en lengua de signos",
@@ -693,7 +693,7 @@
     "briefingSignals": "Señales acordadas",
     "equipment": "Equipo: {note}",
     "divesWith": "Bucea con {name}",
-    "divesWithOnDeparture": "Bucea con {name} — en esta salida",
-    "divesWithNotOnDeparture": "Bucea con {name} — sin reserva en esta salida"
+    "divesWithOnDeparture": "Bucea con {name}, en esta salida",
+    "divesWithNotOnDeparture": "Bucea con {name}, sin reserva en esta salida"
   }
 }

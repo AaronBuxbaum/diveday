@@ -88,15 +88,15 @@
       "refreshFailed": "No se pudo contactar con Stripe para actualizar este pedido.",
       "voided": "Pedido anulado.",
       "voidFailed": "No se pudo anular este pedido.",
-      "refunded": "Pago reembolsado — la salida ahora aparece como no pagada para este buceador.",
+      "refunded": "Pago reembolsado. La salida ahora aparece como no pagada para este buceador.",
       "refundInvalidAmount": "Ese importe no es uno que este pedido pueda devolver. Introduce un importe que no supere lo que aún se retiene.",
       "partlyRefunded": "Parte de este pago ya va de vuelta. El resto sigue contigo y la salida sigue apareciendo como pagada para este buceador.",
       "refundFailed": "No se pudo reembolsar este pedido.",
-      "refundInProgress": "Ya hay un reembolso de este pedido en curso. Espera un momento y actualiza la página — no lo envíes de nuevo.",
-      "refundNeedsReconciliation": "Stripe ya envió un reembolso de este pedido que no llegamos a registrar. Compruébalo en tu panel de Stripe antes de enviar más — este pedido está en la lista de pagos atascados.",
-      "notAuthorized": "Los reembolsos están limitados a propietarios y gerentes — pide a uno de ellos que lo tramite.",
-      "demoDisabled": "Este es un pedido de demostración — no se puede modificar.",
-      "fallback": "Algo cambió en este pedido — los detalles de abajo están al día."
+      "refundInProgress": "Ya hay un reembolso de este pedido en curso. Espera un momento y actualiza la página. No lo envíes de nuevo.",
+      "refundNeedsReconciliation": "Stripe ya envió un reembolso de este pedido que no llegamos a registrar. Compruébalo en tu panel de Stripe antes de enviar más. Este pedido está en la lista de pagos atascados.",
+      "notAuthorized": "Los reembolsos están limitados a propietarios y gerentes. Pide a uno de ellos que lo tramite.",
+      "demoDisabled": "Este es un pedido de demostración, así que no se puede modificar.",
+      "fallback": "Algo cambió en este pedido. Los detalles de abajo están al día."
     },
     "sentBy": "Enviado por {partner}"
   },
@@ -106,8 +106,8 @@
     "newOrder": "Nuevo pedido",
     "monthlyReport": "Informe mensual",
     "notice": {
-      "paymentNotConnected": "Los pagos aún no están conectados, así que no hay ninguna cuenta desde la que facturar — conecta una para empezar a cobrar a los buceadores.",
-      "notAuthorized": "Enviar una factura está limitado a propietarios y gerentes — pide a uno de ellos que le facture a este buceador."
+      "paymentNotConnected": "Los pagos aún no están conectados, así que no hay ninguna cuenta desde la que facturar. Conecta una para empezar a cobrar a los buceadores.",
+      "notAuthorized": "Enviar una factura está limitado a propietarios y gerentes. Pide a uno de ellos que le facture a este buceador."
     },
     "filters": {
       "searchLabel": "Buscar pedidos",
@@ -127,7 +127,7 @@
     "openFilteredTrip": "Abrir la salida",
     "emptyAll": "Todavía no hay pedidos de DiveDay.",
     "emptyFiltered": "Ningún pedido de DiveDay coincide con estos filtros.",
-    "emptyNoPayments": "Todavía no hay pedidos de DiveDay — conecta los pagos y recepción podrá enviar su primer pedido desde aquí.",
+    "emptyNoPayments": "Todavía no hay pedidos de DiveDay. Conecta los pagos y recepción podrá enviar su primer pedido desde aquí.",
     "ledger": {
       "today": "Hoy · {date}",
       "continued": "{day}, continuación",
@@ -167,7 +167,7 @@
     "paymentOps": {
       "sectionLabel": "Pagos que necesitan revisión",
       "heading": "{count, plural, one {# pago} other {# pagos}} que no pudimos confirmar. Revísalos en Stripe.",
-      "detail": "Se le pidió algo a Stripe y la aplicación nunca confirmó cómo salió — revisa cada uno en el panel de Stripe y termínalo a mano.",
+      "detail": "Se le pidió algo a Stripe y la aplicación nunca confirmó cómo salió. Revisa cada uno en el panel de Stripe y termínalo a mano.",
       "started": "iniciado {date}",
       "stripeId": "Stripe: {id}",
       "openTrip": "Abrir salida",

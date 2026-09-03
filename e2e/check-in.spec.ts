@@ -237,7 +237,7 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   // proves it actually did — a looser pattern would pass either way.
   await expect(page).toHaveURL("/shop/blue-mantis/check-in");
   await expect(
-    page.getByText("Added to this boat’s list — but their waiver wasn’t emailed."),
+    page.getByText("Added to this boat’s list, but their waiver wasn’t emailed."),
   ).toBeVisible();
   // Searched, because the queue now shows one departure at a time and the boat
   // the picker offered first is not necessarily the one in focus.
@@ -282,7 +282,7 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   await page.getByRole("button", { name: "Add to trip" }).click();
   await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
   await expect(page.getByRole("status")).toContainText(
-    "Diver added to the trip — but their waiver wasn’t emailed.",
+    "Diver added to the trip, but their waiver wasn’t emailed.",
   );
 
   // The boat is now full — a counter walk-in onto it is refused, not silently
@@ -307,7 +307,7 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   // because Next's route announcer is also role="alert".
   await expect(page.getByRole("alert").filter({ hasText: "That boat is full" })).toBeVisible();
   await expect(
-    page.getByText("That boat is full — try the wait list from its trip page instead."),
+    page.getByText("That boat is full. Try the wait list from its trip page instead."),
   ).toBeVisible();
 });
 

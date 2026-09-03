@@ -278,6 +278,15 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   now "What happens to my records if I leave?" with the same answer underneath. **A test enforces
   this** ("no marketing page apologizes for the company's size or age"), pinning the specific
   phrasings out by name, because each one shipped as a sentence its author thought was honest.
+- **A person wrote it, not a model.** Every word of these pages is written by a language model,
+  and a model has a house style a buyer has learned to skim: the em-dash pivot in every second
+  sentence, "not a project, a file", "No X. No Y. No Z.", *actually* and *plainly*, "Here's how",
+  the aphorism heading ("The door swings both ways.") and the closing flourish. On 2026-09-03 the
+  marketing bundle carried all of them, densely, and every page read as the same voice. The list,
+  with a before/after table, is "What gives us away" in [design/brand.md](../design/brand.md);
+  `pnpm check:voice` refuses the mechanical half of it in every bundle, and the rest is read for
+  by hand before a page ships. The rule underneath is the one already above: a divemaster giving a
+  briefing says the thing.
 - **Concrete nouns over software jargon.** The buyer runs a shop, a counter, a boat — not an
   "operating system", "platform", or "solution". Name what DiveDay replaces: the whiteboard, the
   clipboard, the three apps and a spreadsheet.

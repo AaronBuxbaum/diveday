@@ -64,13 +64,13 @@ describe("the add-a-departure link", () => {
 
   it("does not render on the undated tail — there is no day to put a boat on", () => {
     render(
-      <RequestDayGroup id="no-date" label="No date named — 1 request">
+      <RequestDayGroup id="no-date" label="No date named: 1 request">
         <li>a request</li>
       </RequestDayGroup>,
     );
     expect(screen.queryByRole("link")).toBeNull();
     expect(
-      screen.getByRole("heading", { level: 2, name: "No date named — 1 request" }),
+      screen.getByRole("heading", { level: 2, name: "No date named: 1 request" }),
     ).toBeTruthy();
   });
 });
@@ -85,7 +85,7 @@ describe("the day's advice", () => {
     const lines = requestAdviceLines(adviseRequests(party(3, 2), MANTIS), 6, t);
     expect(lines.map((line) => line.text)).toEqual([
       "Suggested boat: Mantis II (12 seats)",
-      "Bring 1 divemaster — your 6:1 target.",
+      "Bring 1 divemaster for your 6:1 target.",
     ]);
     expect(lines.every((line) => line.tone === undefined)).toBe(true);
   });
@@ -110,7 +110,7 @@ describe("the day's advice", () => {
       6,
       t,
     );
-    expect(lines.map((line) => line.text)).toEqual(["Bring 1 divemaster — your 6:1 target."]);
+    expect(lines.map((line) => line.text)).toEqual(["Bring 1 divemaster for your 6:1 target."]);
   });
 
   it("renders the parts as one quiet line under the label", () => {
@@ -127,7 +127,7 @@ describe("the day's advice", () => {
     // the day rather than as a card's worth of bullet lines.
     expect(container.querySelectorAll("p")).toHaveLength(1);
     expect(container.querySelector("p")?.textContent).toBe(
-      "Suggested boat: Mantis II (12 seats) · Bring 1 divemaster — your 6:1 target.",
+      "Suggested boat: Mantis II (12 seats) · Bring 1 divemaster for your 6:1 target.",
     );
   });
 });

@@ -2,10 +2,10 @@
   "title": "Requested dates",
   "description": "Nothing here holds a seat.",
   "emptyHeading": "No requests yet",
-  "emptyDetail": "Divers ask from your schedule page and from any course page — “Nothing on a date that works?”.",
+  "emptyDetail": "Divers ask under “Nothing on a date that works?” on your schedule page and on any course page.",
   "group": {
     "day": "{date} — {groups, plural, one {# group} other {# groups}} · {divers, plural, one {# diver} other {# divers}}",
-    "noDate": "No date named — {count, plural, one {# request} other {# requests}}"
+    "noDate": "No date named: {count, plural, one {# request} other {# requests}}"
   },
   "addDeparture": "Add a departure",
   "flexible": "Flexible",

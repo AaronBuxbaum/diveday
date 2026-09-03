@@ -223,7 +223,7 @@ describe("CourseSessions featured date", () => {
     render(<CourseSessions sessions={[]} {...props} inquiryHref={null} />);
 
     expect(
-      screen.getByText(/No dates on the books right now — this course runs on request/),
+      screen.getByText(/No dates on the books right now. This course runs on request/),
     ).toBeInTheDocument();
   });
 });

@@ -283,7 +283,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     );
 
     const indicator = screen.getByTestId("gear-status-indicator");
-    expect(indicator).toHaveTextContent("Bringing own gear — no rental needed.");
+    expect(indicator).toHaveTextContent("Bringing own gear, so no rental needed.");
   });
 
   it("renders 'Select sizes' when rentals are selected but size is missing", () => {
@@ -345,7 +345,7 @@ describe("RentalFitForm Gear-Status Light-up Indicator", () => {
     );
 
     const indicator = screen.getByTestId("gear-status-indicator");
-    expect(indicator).toHaveTextContent("Bringing own gear — no rental needed.");
+    expect(indicator).toHaveTextContent("Bringing own gear, so no rental needed.");
 
     // Check BCD rental checkbox by selecting specifically input[type="checkbox"] label
     const bcdCheckbox = screen.getByLabelText(/bcd/i, {

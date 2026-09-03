@@ -132,7 +132,7 @@
     "fitNotePlaceholder": "Poco profundo, resguardado y una buena primera inmersión en mar abierto después de la piscina.",
     "landmarks": {
       "legend": "Referencias",
-      "description": "Una referencia sin nota igual vale la pena: los buceadores buscan el nombre.",
+      "description": "Incluye una referencia aunque no lleve nota, porque los buceadores buscan el nombre.",
       "nameLabel": "Referencia",
       "namePlaceholder": "Faro de Molasses Reef",
       "kindLabel": "Qué tipo",
@@ -181,10 +181,10 @@
     "optionalHint": "(opcional)",
     "errorCoordinates": "Agrega ambas coordenadas GPS: una ubicación necesita latitud y longitud.",
     "errorDepth": "Esa profundidad máxima es mayor que la de cualquier sitio de buceo.",
-    "errorImages": "Una de esas fotos no se pudo guardar — un sitio admite hasta seis, y cada una tiene que ser JPG, PNG, WebP o HEIC de menos de 5 MB. Todo lo demás que escribiste sigue aquí.",
-    "errorImagesUnconfigured": "El almacenamiento de fotos aún no está configurado para este centro — guarda el briefing sin fotos por ahora, o pide al propietario o gerente de tu centro que lo configure.",
+    "errorImages": "Una de esas fotos no se pudo guardar. Un sitio admite hasta seis, y cada una tiene que ser JPG, PNG, WebP o HEIC de menos de 5 MB. Todo lo demás que escribiste sigue aquí.",
+    "errorImagesUnconfigured": "El almacenamiento de fotos aún no está configurado para este centro. Guarda el briefing sin fotos por ahora, o pide al propietario o gerente de tu centro que lo configure.",
     "errorConflict": "Alguien más cambió este briefing mientras lo tenías abierto, así que no se guardó nada. Lo que escribiste sigue aquí: copia lo que necesites y recarga la página.",
-    "errorNameTaken": "Otro sitio de buceo de este centro ya se llama así, y un sitio eliminado también conserva su nombre. Dale a este briefing un nombre propio y vuelve a guardar — todo lo demás que escribiste sigue aquí."
+    "errorNameTaken": "Otro sitio de buceo de este centro ya se llama así, y un sitio eliminado también conserva su nombre. Dale a este briefing un nombre propio y vuelve a guardar. Todo lo demás que escribiste sigue aquí."
   },
   "edit": {
     "description": "Los cambios llegan a cada próxima inmersión que visite este sitio.",

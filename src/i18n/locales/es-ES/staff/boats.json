@@ -40,7 +40,7 @@
   "boatDeleted": "Embarcación eliminada.",
   "boatInvalid": "Proporciona un nombre de embarcación y una capacidad.",
   "concurrencyWarning": "{tripCount} salidas en barco simultáneas programadas, pero tu centro tiene {boatCount, plural, =1 {1 embarcación} other {# embarcaciones}}.",
-  "doubleBookedWarning": "{boats} tiene dos salidas a la vez — un barco no puede estar en dos sitios.",
+  "doubleBookedWarning": "{boats} tiene dos salidas a la vez, y un barco no puede estar en dos sitios.",
   "diveModeLabel": "Modo de inmersión",
   "modeBoat": "Inmersión en barco",
   "modeShore": "Inmersión desde costa",
@@ -49,11 +49,11 @@
   "unassignedBoat": "Cualquiera / sin asignar",
   "requestBoatSuggestion": "Embarcación sugerida: {boatName} ({capacity, plural, one {# plaza} other {# plazas}})",
   "requestBoatExceeded": "El número de personas supera la capacidad de la embarcación más grande.",
-  "requestCrewSuggestion": "Lleva {divemasters, plural, one {# divemaster} other {# divemasters}} — tu objetivo de {ratio}:1.",
+  "requestCrewSuggestion": "Lleva {divemasters, plural, one {# divemaster} other {# divemasters}} para tu objetivo de {ratio}:1.",
   "requestPlanBoatRecommendationOne": "Embarcación sugerida: {boatName} ({capacity} plaza)",
   "requestPlanBoatRecommendationOther": "Embarcación sugerida: {boatName} ({capacity} plazas)",
   "requestPlanBoatExceeded": "El grupo supera la capacidad de tu embarcación más grande",
-  "requestPlanCrewSuggestionOne": "Lleva {divemasters} divemaster — tu objetivo de {ratio}:1.",
-  "requestPlanCrewSuggestionOther": "Lleva {divemasters} divemasters — tu objetivo de {ratio}:1.",
+  "requestPlanCrewSuggestionOne": "Lleva {divemasters} divemaster para tu objetivo de {ratio}:1.",
+  "requestPlanCrewSuggestionOther": "Lleva {divemasters} divemasters para tu objetivo de {ratio}:1.",
   "descriptionLabel": "Una línea sobre la embarcación, para tu página pública (opcional)"
 }

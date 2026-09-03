@@ -34,7 +34,7 @@ describe("the settled station's post-trip recap note", () => {
 
   it("says so plainly when there is no note, rather than showing an empty line", () => {
     render(<RecapNoteEditor action={vi.fn()} shoutout={null} saved={false} t={t} />);
-    expect(screen.getByText("No note yet — recaps go out without one.")).toBeInTheDocument();
+    expect(screen.getByText("No note yet. Recaps go out without one.")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Post-trip recap note" })).toHaveValue("");
   });
 
@@ -53,7 +53,7 @@ describe("the settled station's post-trip recap note", () => {
     );
     expect(container.querySelector("details")?.open).toBe(true);
     expect(
-      screen.getByText(/Recap note saved — it rides along on every diver's recap\./),
+      screen.getByText(/Recap note saved\. It rides along on every diver's recap\./),
     ).toBeInTheDocument();
   });
 

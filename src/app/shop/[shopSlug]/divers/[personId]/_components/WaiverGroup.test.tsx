@@ -208,7 +208,7 @@ describe("the waiver group", () => {
     renderCard(diver({ email: "priya@dive.day" }), {
       form: "waiver",
       tone: "success",
-      text: "Paper waiver recorded — signed and on file.",
+      text: "Paper waiver recorded, signed and on file.",
     } as ComponentProps<typeof WaiverGroup>["status"]);
 
     expect(screen.queryByRole("checkbox")).toBeNull();

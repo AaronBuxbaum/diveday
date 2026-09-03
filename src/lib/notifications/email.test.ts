@@ -230,7 +230,7 @@ describe("tripReminderEmail", () => {
     // Not "Sign your waiver": the diver may already have tapped the dead link,
     // and a reminder that repeats it reads as the shop not having noticed.
     expect(email.text).toContain("Still to sort before you board:");
-    expect(email.text).toContain("- Your waiver link expired — grab a fresh one");
+    expect(email.text).toContain("- Your waiver link expired. Grab a fresh one");
     expect(email.html).toContain("<li>Your waiver link expired");
     expect(email.text).not.toContain("Sign your waiver");
     // …and the fresh link is genuinely reachable from the message.
@@ -621,7 +621,7 @@ describe("courseInquiryEmail", () => {
       preferredDate: "2026-08-06",
       dateFlexible: true,
     });
-    expect(email.text).toContain("Dates asked for: Aug 6, 2026 — can move a few days");
+    expect(email.text).toContain("Dates asked for: Aug 6, 2026 (can move a few days)");
     // One date named, so no disjunction to build.
     expect(email.text).not.toContain(" or ");
   });

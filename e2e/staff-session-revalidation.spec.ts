@@ -42,7 +42,7 @@ test.describe("a disabled staff account loses its live session", () => {
     // not a database shortcut.
     await page.goto(`/shop/${privateShop.slug}/settings/team`);
     await page.getByRole("button", { name: "Disable Sal Moretti" }).click();
-    await expect(page.getByText("Account disabled — they can no longer sign in.")).toBeVisible();
+    await expect(page.getByText("Account disabled. They can no longer sign in.")).toBeVisible();
 
     // The captain's browser still holds its original, unchanged cookie — no
     // sign-out happened on that profile. Its very next request is what must
@@ -71,7 +71,7 @@ test.describe("a disabled staff account loses its live session", () => {
 
     await page.goto(`/shop/${privateShop.slug}/settings/team`);
     await page.getByRole("button", { name: "Disable Sal Moretti" }).click();
-    await expect(page.getByText("Account disabled — they can no longer sign in.")).toBeVisible();
+    await expect(page.getByText("Account disabled. They can no longer sign in.")).toBeVisible();
 
     // Same still-stale cookie, visited directly at the sign-in page this
     // time. The edge `authorized()` callback (src/lib/auth.config.ts) still

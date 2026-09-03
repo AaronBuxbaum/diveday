@@ -57,7 +57,7 @@ describe("the diver record's Dive support group", () => {
     expect(summary).toHaveTextContent(/Dive support\s*6 arrangements/);
 
     for (const fact of [
-      "2 support divers in the water — the shop arranges",
+      "2 support divers in the water, arranged by the shop",
       "Help getting aboard",
       "Lift in and out of the water",
       "Briefing in writing",

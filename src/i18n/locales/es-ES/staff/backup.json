@@ -1,6 +1,6 @@
 {
   "title": "Respaldos",
-  "description": "Cada semana, una copia completa de los registros de tu centro llega a un almacenamiento que es tuyo. Si algún día te vas — o DiveDay desaparece — la copia ya está en tus manos.",
+  "description": "Cada semana, una copia completa de los registros de tu centro llega a un almacenamiento que es tuyo. Si algún día te vas, o DiveDay desaparece, la copia ya está en tus manos.",
   "notice": {
     "saved": "Destino de respaldo guardado.",
     "invalid": "Revisa los datos del destino e inténtalo de nuevo.",
@@ -19,7 +19,7 @@
   "status": {
     "configuredHeading": "Los respaldos están configurados",
     "notConfiguredHeading": "Todavía no hay destino de respaldo",
-    "notConfiguredDescription": "Apunta DiveDay a un bucket compatible con S3 que sea tuyo — AWS S3, Cloudflare R2, Backblaze B2 y similares — y un paquete de exportación completo llegará allí cada semana.",
+    "notConfiguredDescription": "Apunta DiveDay a un bucket compatible con S3 que sea tuyo (AWS S3, Cloudflare R2, Backblaze B2 y similares) y un paquete de exportación completo llegará allí cada semana.",
     "verified": "Entrega verificada",
     "unproven": "Sin verificar todavía",
     "endpoint": "Endpoint",
@@ -36,7 +36,7 @@
     "heading": "Destino",
     "description": "Usa una credencial que solo pueda escribir en este bucket: DiveDay nunca necesita leer, listar ni borrar nada.",
     "endpointLabel": "Endpoint",
-    "endpointHint": "El origen de la API S3 de tu proveedor — HTTPS, sin bucket ni ruta.",
+    "endpointHint": "El origen de la API S3 de tu proveedor: HTTPS, sin bucket ni ruta.",
     "regionLabel": "Región",
     "regionHint": "La región de firma: “auto” en Cloudflare R2, del estilo “us-east-1” en AWS.",
     "bucketLabel": "Bucket",
@@ -44,14 +44,14 @@
     "optionalHint": "(opcional)",
     "accessKeyIdLabel": "ID de clave de acceso",
     "secretLabel": "Clave de acceso secreta",
-    "secretHint": "No vuelve a mostrarse nunca — ni siquiera a ti.",
+    "secretHint": "No vuelve a mostrarse nunca, ni siquiera a ti.",
     "secretKeepHint": "Déjala en blanco para conservar la clave actual.",
     "submit": "Guardar destino",
     "submitting": "Guardando…"
   },
   "how": {
     "heading": "Cómo funciona",
-    "weekly": "Es el mismo paquete que la descarga de exportación de datos — cada CSV, el README, tus fotos.",
+    "weekly": "Es el mismo paquete que la descarga de exportación de datos: cada CSV, el README, tus fotos.",
     "contents": "Tu calendario de salidas viaja incluido como trips.ics, legible por cualquier app de calendario.",
     "failures": "Una entrega que falla se reintenta en la siguiente pasada semanal."
   },

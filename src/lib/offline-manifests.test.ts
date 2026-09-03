@@ -423,7 +423,7 @@ describe("offline manifest policy", () => {
       pending: false,
       implied: false,
       // Not `local` any more, which is what switches the line under the row to
-      // "Recorded on another device or on the live manifest — undo it there,
+      // "Recorded on another device or on the live manifest. Undo it there,
       // not here." That sentence is now literally true.
       local: false,
       clientEventId: undefined,

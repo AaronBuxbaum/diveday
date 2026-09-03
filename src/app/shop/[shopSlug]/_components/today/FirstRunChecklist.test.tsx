@@ -14,7 +14,7 @@ const COPY: FirstRunChecklistCopy = {
   subtitle: "Seven steps and divers can start booking.",
   progress: "2 of 7 done",
   contactTitle: "Add your contact details",
-  contactBody: "Phone and email so divers — and DiveDay — can reach you.",
+  contactBody: "Phone and email so divers and DiveDay can reach you.",
   contactAction: "Add contact details",
   contactDone: "Contact details on file.",
   profileTitle: "Add your shop profile & branding",

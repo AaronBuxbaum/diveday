@@ -1,6 +1,6 @@
 {
   "notice": {
-    "closed": "Day closed. The record is below — see you tomorrow.",
+    "closed": "Day closed. The record is below. See you tomorrow.",
     "recapSent": "Any still-outstanding recaps were sent.",
     "recapAttention": "Some recaps need attention. Open the departure they belong to.",
     "recapNotReady": "Recaps cannot be sent until four hours after the departure ends.",
@@ -23,11 +23,11 @@
       "allHome": "{booked, plural, =0 {Nobody was booked} one {# diver, head count closed} other {# divers, head count closed}}.",
       "stillOut": "Due back at {time}.",
       "notDeparted": "Departs at {time}.",
-      "missingDiver": "{count, plural, one {# diver was marked not back aboard after dive {dive}.} other {# divers were marked not back aboard after dive {dive}.}} Find them — the count closes on the manifest.",
-      "missingCrew": "{count, plural, one {# crew member was marked not back aboard after dive {dive}.} other {# crew members were marked not back aboard after dive {dive}.}} Find them — the count closes on the manifest.",
+      "missingDiver": "{count, plural, one {# diver was marked not back aboard after dive {dive}.} other {# divers were marked not back aboard after dive {dive}.}} Find them. The count closes on the manifest.",
+      "missingCrew": "{count, plural, one {# crew member was marked not back aboard after dive {dive}.} other {# crew members were marked not back aboard after dive {dive}.}} Find them. The count closes on the manifest.",
       "afterDiveUncounted": "{count, plural, one {# diver has no result after dive {dive}.} other {# divers have no result after dive {dive}.}} The count was never closed.",
       "crewUncounted": "{count, plural, one {# crew member has no result after dive {dive}.} other {# crew members have no result after dive {dive}.}} The count was never closed.",
-      "departureUncounted": "{count, plural, one {The dock count never finished — # diver has no result at departure.} other {The dock count never finished — # divers have no result at departure.}}",
+      "departureUncounted": "{count, plural, one {The dock count never finished, and # diver has no result at departure.} other {The dock count never finished, and # divers have no result at departure.}}",
       "noRollCall": "No roll call was recorded on this trip."
     }
   },
@@ -95,7 +95,7 @@
   },
   "record": {
     "closedBy": "Closed by {name} at {time}.",
-    "closeCount": "{count, plural, other {Closed # times today — each close is its own record.}}",
+    "closeCount": "{count, plural, other {Closed # times today, and each close is its own record.}}",
     "outstandingHeading": "Recorded as outstanding",
     "nothingOutstanding": "Nothing was outstanding.",
     "carried": "Carried to tomorrow",

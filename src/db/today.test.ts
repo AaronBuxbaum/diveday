@@ -973,7 +973,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
     const row = work.actions.find((action) => action.id === `crew-target:${reef.id}`);
     expect(row?.kind).toBe("crew_below_target");
     expect(row?.detail).toBe(
-      `${reef.booked} divers booked with 1 supervisor rostered — short of your 6:1 target.`,
+      `${reef.booked} divers booked with 1 supervisor rostered, short of your 6:1 target.`,
     );
   });
 

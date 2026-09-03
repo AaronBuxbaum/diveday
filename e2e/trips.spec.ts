@@ -373,7 +373,7 @@ test.describe("undoing a removal after the trip is cancelled", () => {
     }).toPass();
     await row.getByRole("button", { name: "Yes, remove booking" }).click();
     const removedNotice = page.getByRole("status").filter({ hasText: "Booking cancelled" });
-    await expect(removedNotice).toContainText("Booking cancelled — the spot is open again.");
+    await expect(removedNotice).toContainText("Booking cancelled. The spot is open again.");
     const undo = removedNotice.getByRole("button", { name: "Undo" });
     await expect(undo).toBeVisible();
 
@@ -393,7 +393,7 @@ test.describe("undoing a removal after the trip is cancelled", () => {
 
     await undo.click();
     await expect(page.getByRole("alert").filter({ hasText: "Couldn't undo" })).toContainText(
-      "Couldn't undo — this trip has been cancelled. Reinstate the trip first, then add them back.",
+      "Couldn't undo. This trip has been cancelled. Reinstate the trip first, then add them back.",
     );
     // Refused, not partially applied: the diver is still off the roster.
     await expect(page.getByRole("link", { name: diver })).toHaveCount(0);

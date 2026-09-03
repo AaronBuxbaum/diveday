@@ -1,18 +1,18 @@
 {
   "createdNotice": {
     "single": "“{title}” is on the board. 🤙",
-    "series": "“{title}” is on the board — {count, plural, one {# trip} other {# trips}} scheduled. 🤙"
+    "series": "“{title}” is on the board with {count, plural, one {# trip} other {# trips}} scheduled. 🤙"
   },
   "firstBookable": {
-    "heading": "“{title}” is on the board — your shop is bookable.",
-    "headingSeries": "“{title}” is on the board — {count, plural, one {# trip} other {# trips}} scheduled, and your shop is bookable.",
-    "body": "This link is your public schedule — the page divers book from. Put it on your website, your socials, and wherever divers find you.",
+    "heading": "“{title}” is on the board, and your shop is bookable.",
+    "headingSeries": "“{title}” is on the board with {count, plural, one {# trip} other {# trips}} scheduled, and your shop is bookable.",
+    "body": "This link is your public schedule, the page divers book from. Put it on your website, your socials, and wherever divers find you.",
     "linkLabel": "Your booking link",
     "viewAsDiver": "See it the way your divers will"
   },
-  "demoReset": "Demo data reset — fresh boat, clean slate.",
+  "demoReset": "Demo data reset to a fresh boat and a clean slate.",
   "emailResent": "Confirmation email re-sent.",
-  "emailFailed": "That email still couldn’t be sent — check the address and email configuration.",
+  "emailFailed": "That email still couldn’t be sent. Check the address and email configuration.",
   "offlineLabel": "Offline — this board may be out of date",
   "nextDeparture": "Next up is <link>{title}</link> on {date} at {time}.",
   "noDeparturesEmpty": "Nothing is on the books yet. Schedule a trip and it will show up here the morning it sails.",
@@ -39,7 +39,7 @@
     "roles": {
       "owner": {
         "title": "You're steering the whole shop",
-        "desc": "Today is your work queue — bookings, blockers, and today's departures in one place.",
+        "desc": "Today is your work queue: bookings, blockers, and today's departures in one place.",
         "tryThis": "Open Board to see this week's departures."
       },
       "manager": {
@@ -74,7 +74,7 @@
     "subtitle": "{count, plural, one {# step} other {# steps}} and divers can start booking.",
     "progress": "{done} of {total} done",
     "contactTitle": "Add your contact details",
-    "contactBody": "Phone and email so divers — and DiveDay — can reach you.",
+    "contactBody": "Phone and email so divers and DiveDay can reach you.",
     "contactAction": "Add contact details",
     "contactDone": "Contact details on file.",
     "profileTitle": "Add your shop profile & branding",
@@ -92,7 +92,7 @@
     "scheduleBody": "Paste it on your website or socials.",
     "scheduleCopy": "Copy link",
     "scheduleCopied": "Copied",
-    "scheduleCopyFailed": "Couldn’t copy — select the link above instead.",
+    "scheduleCopyFailed": "Couldn’t copy. Select the link above instead.",
     "stripeTitle": "Connect payments",
     "stripeBody": "Divers pay when they book; payouts land in your account",
     "stripeAction": "Connect payments",
@@ -114,7 +114,7 @@
     "quietHeading": "A quiet day at the dock.",
     "quietSentence": "No boats today, and nothing is waiting on you.",
     "deskLabel": "At the desk",
-    "deskPaymentsRow": "Payments aren’t connected — divers can book, and pay at the counter.",
+    "deskPaymentsRow": "Payments aren’t connected, so divers can book and pay at the counter.",
     "deskPaymentsAction": "Open payment settings",
     "tomorrow": "Tomorrow · {date}",
     "week": "This week",
@@ -127,15 +127,15 @@
     "until": "until {time}",
     "stationClear": "Nothing left before {time}.",
     "crewing": "You’re crewing",
-    "aboardNamed": "{name} is aboard — {reason}",
-    "aboardCount": "{count, plural, one {# diver is aboard — {reason}} other {# divers are aboard — {reason}}}",
+    "aboardNamed": "{name} is aboard with {reason}",
+    "aboardCount": "{count, plural, one {# diver is aboard with {reason}} other {# divers are aboard with {reason}}}",
     "aboardReasonMedical": "a medical hold. A doctor has to sign off, so nobody aboard can clear it.",
     "aboardReasonCertification": "a certification this dive asks for that we have not seen.",
     "aboardReasonUnknown": "nothing on file that clears them. An unsigned waiver is no medical declaration.",
     "aboardReasonPayment": "payment still owed. It is in the list below.",
-    "crewRollCallOpen": "Every diver is aboard — the crew roll call is still open.",
-    "allHome": "All boats are home — {out} out, {back} back.",
-    "firstBoatHome": "Your first boat is home — {out} out, {back} back.",
+    "crewRollCallOpen": "Every diver is aboard, and the crew roll call is still open.",
+    "allHome": "All boats are home: {out} out, {back} back.",
+    "firstBoatHome": "Your first boat is home: {out} out, {back} back.",
     "firstBooking": "Your first booking",
     "close": {
       "back": "{back} of {booked} back",

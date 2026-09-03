@@ -401,7 +401,7 @@ describe("the person a diver must dive with is checked against this departure", 
     const { container } = renderList({
       divers: [withBuddy("Omar"), diver({ bookingId: "b-2", fullName: "Omar Haddad" })],
     });
-    expect(container.textContent).toContain("Dives with Omar — on this departure");
+    expect(container.textContent).toContain("Dives with Omar, on this departure");
   });
 
   it("counts the crew, who are on the boat but not on the diver list", () => {

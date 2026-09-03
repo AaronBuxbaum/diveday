@@ -182,7 +182,7 @@ test.describe("staff", () => {
     await page.getByLabel("Conditions overview").fill("The captain is watching a passing squall.");
     await page.getByRole("button", { name: "Publish crew prediction" }).click();
     await expect(page.getByRole("status")).toContainText(
-      "Crew prediction published — divers will see it now.",
+      "Crew prediction published. Divers will see it now.",
     );
     await signOut(page);
 

@@ -29,13 +29,13 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Pricing — one flat price per shop | DiveDay",
   description:
-    "One flat price for the whole dive shop — bookings, waivers, cert checks, trip prep, and the boat manifest included. No setup fee, no per-seat math, no feature tiers.",
+    "One flat price for the dive shop, with bookings, waivers, cert checks, trip prep, and the boat manifest included. No setup fee, no per-seat charge, and no feature tiers.",
   alternates: { canonical: "/pricing" },
   openGraph: {
     ...sharedLinkCard,
     title: "DiveDay pricing — one flat price per shop",
     description:
-      "Every workflow DiveDay ships, in one plan. No setup fee, no per-seat math, no feature tiers.",
+      "Every workflow DiveDay ships, in one plan. No setup fee, no per-seat charge, and no feature tiers.",
     url: "/pricing",
   },
   // `summary_large_image`: the OG block above names the shared link card
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "DiveDay pricing — one flat price per shop",
     description:
-      "Every workflow DiveDay ships, in one plan. No setup fee, no per-seat math, no feature tiers.",
+      "Every workflow DiveDay ships, in one plan. No setup fee, no per-seat charge, and no feature tiers.",
   },
 };
 

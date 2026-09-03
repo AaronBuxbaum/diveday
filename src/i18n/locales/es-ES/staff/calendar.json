@@ -44,7 +44,7 @@
     "httpsHint": "Pégalo en “Otros calendarios → Desde URL”."
   },
   "warning": {
-    "rotate": "Al sustituir el enlace, el anterior deja de funcionar de inmediato. Cualquier calendario que siga usándolo dejará de actualizarse en silencio hasta que pegues el nuevo.",
+    "rotate": "Al sustituir el enlace, el anterior deja de funcionar de inmediato. Cualquier calendario que siga usándolo dejará de actualizarse hasta que pegues el nuevo.",
     "shared": "Cualquiera que tenga este enlace puede ver estas salidas sin iniciar sesión. Trátalo como una contraseña."
   },
   "notice": {

@@ -1,6 +1,6 @@
 {
   "notice": {
-    "closed": "Día cerrado. El registro está abajo — hasta mañana.",
+    "closed": "Día cerrado. El registro está abajo. Hasta mañana.",
     "recapSent": "Se enviaron los resúmenes que aún estaban pendientes.",
     "recapAttention": "Algunos resúmenes requieren atención. Abre la salida a la que pertenecen.",
     "recapNotReady": "Los resúmenes no se pueden enviar hasta cuatro horas después del final de la salida.",
@@ -23,11 +23,11 @@
       "allHome": "{booked, plural, =0 {No había buceadores reservados} one {# buceador, recuento cerrado} other {# buceadores, recuento cerrado}}.",
       "stillOut": "Vuelve a las {time}.",
       "notDeparted": "Zarpa a las {time}.",
-      "missingDiver": "{count, plural, one {# buceador quedó marcado como no regresado a bordo tras la inmersión {dive}.} other {# buceadores quedaron marcados como no regresados a bordo tras la inmersión {dive}.}} Localízalos — el recuento se cierra en el manifiesto.",
-      "missingCrew": "{count, plural, one {# tripulante quedó marcado como no regresado a bordo tras la inmersión {dive}.} other {# tripulantes quedaron marcados como no regresados a bordo tras la inmersión {dive}.}} Localízalos — el recuento se cierra en el manifiesto.",
+      "missingDiver": "{count, plural, one {# buceador quedó marcado como no regresado a bordo tras la inmersión {dive}.} other {# buceadores quedaron marcados como no regresados a bordo tras la inmersión {dive}.}} Localízalos. El recuento se cierra en el manifiesto.",
+      "missingCrew": "{count, plural, one {# tripulante quedó marcado como no regresado a bordo tras la inmersión {dive}.} other {# tripulantes quedaron marcados como no regresados a bordo tras la inmersión {dive}.}} Localízalos. El recuento se cierra en el manifiesto.",
       "afterDiveUncounted": "{count, plural, one {# buceador no tiene resultado tras la inmersión {dive}.} other {# buceadores no tienen resultado tras la inmersión {dive}.}} El recuento nunca se cerró.",
       "crewUncounted": "{count, plural, one {# tripulante no tiene resultado tras la inmersión {dive}.} other {# tripulantes no tienen resultado tras la inmersión {dive}.}} El recuento nunca se cerró.",
-      "departureUncounted": "{count, plural, one {El recuento en muelle nunca se terminó — # buceador sin resultado en la salida.} other {El recuento en muelle nunca se terminó — # buceadores sin resultado en la salida.}}",
+      "departureUncounted": "{count, plural, one {El recuento en muelle nunca se terminó y # buceador quedó sin resultado en la salida.} other {El recuento en muelle nunca se terminó y # buceadores quedaron sin resultado en la salida.}}",
       "noRollCall": "No se registró pase de lista en esta salida."
     }
   },
@@ -95,7 +95,7 @@
   },
   "record": {
     "closedBy": "Cerrado por {name} a las {time}.",
-    "closeCount": "{count, plural, other {Cerrado # veces hoy — cada cierre es su propio registro.}}",
+    "closeCount": "{count, plural, other {Cerrado # veces hoy, y cada cierre es su propio registro.}}",
     "outstandingHeading": "Registrado como pendiente",
     "nothingOutstanding": "No quedó nada pendiente.",
     "carried": "Llevado a mañana",
