@@ -269,7 +269,7 @@ describe("a station's safety notes", () => {
         }),
       ],
     });
-    expect(screen.getByText(/Grace Mensah is aboard —/)).toBeInTheDocument();
+    expect(screen.getByText(/Grace Mensah is aboard with/)).toBeInTheDocument();
   });
 
   it("renders one line per kind, never one reason spread over a whole count", () => {
@@ -286,8 +286,8 @@ describe("a station's safety notes", () => {
         }),
       ],
     });
-    expect(screen.getByText(/Grace Mensah is aboard —/)).toBeInTheDocument();
-    expect(screen.getByText(/4 divers are aboard —/)).toBeInTheDocument();
+    expect(screen.getByText(/Grace Mensah is aboard with/)).toBeInTheDocument();
+    expect(screen.getByText(/4 divers are aboard with/)).toBeInTheDocument();
   });
 
   it("says the crew roll call is open on a full boat nobody has counted the crew on", () => {
@@ -366,7 +366,7 @@ describe("the desk group", () => {
       showPaymentsRow: true,
     });
     expect(
-      screen.getByText("Payments aren’t connected — divers can book, and pay at the counter."),
+      screen.getByText("Payments aren’t connected, so divers can book and pay at the counter."),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open payment settings" })).toHaveAttribute(
       "href",
@@ -1028,7 +1028,7 @@ describe("the evening reading", () => {
   it("marks the day's homecoming once, and only when every count closed clean", () => {
     renderSpine({ departures: [], evening: evening([closed({ tripId: "t1", booked: 10 })]) });
 
-    const line = screen.getAllByText("All boats are home — 10 out, 10 back.");
+    const line = screen.getAllByText("All boats are home: 10 out, 10 back.");
     expect(line).toHaveLength(1);
     expect(line[0]).toHaveAttribute("role", "status");
   });
@@ -1057,7 +1057,7 @@ describe("the evening reading", () => {
       departures: [],
       evening: evening([closed({ tripId: "t1", booked: 3 })], { firstEver: true }),
     });
-    expect(screen.getByText("Your first boat is home — 3 out, 3 back.")).toBeInTheDocument();
+    expect(screen.getByText("Your first boat is home: 3 out, 3 back.")).toBeInTheDocument();
     expect(screen.queryByText(/All boats are home/)).toBeNull();
   });
 

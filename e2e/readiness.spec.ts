@@ -140,7 +140,7 @@ test.describe("staff-prepared trip", () => {
     await page.getByLabel("Anything else the crew should know?").fill("Titanium hip, I run heavy.");
     await page.getByRole("button", { name: "Save note" }).click();
     await expect(
-      page.getByRole("status").filter({ hasText: "Saved — the crew will see that" }),
+      page.getByRole("status").filter({ hasText: "Saved. The crew will see that" }),
     ).toBeVisible();
     // Read back off the control itself, which is what the diver comes back to.
     // Re-opened first, because the save is a redirect: the fresh render puts
@@ -180,7 +180,7 @@ test.describe("staff-prepared trip", () => {
       .selectOption({ label: "More than five years ago" });
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(
-      page.getByRole("status").filter({ hasText: "Thanks — the crew will see that" }),
+      page.getByRole("status").filter({ hasText: "Thanks. The crew will see that" }),
     ).toBeVisible();
     // The answer is the Day-of step's settled line now, so it reads without
     // opening anything — and the step has moved the figure, which is the

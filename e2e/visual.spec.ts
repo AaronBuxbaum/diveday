@@ -2237,7 +2237,9 @@ for (const scheme of ["light", "dark"] as const) {
       // diff here should be read against.
       test(`the switching hub renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/switching");
-        await page.getByRole("heading", { name: "The door swings both ways." }).waitFor();
+        await page
+          .getByRole("heading", { name: "Records come in with a file and leave with a button." })
+          .waitFor();
         await capture(page, "switching-hub", scheme);
       });
 
@@ -2261,7 +2263,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/switching/spreadsheet");
-        await page.getByRole("heading", { name: "The spreadsheet got you this far." }).waitFor();
+        await page.getByRole("heading", { name: "Bring the spreadsheet with you." }).waitFor();
         await capture(page, "switching-spreadsheet", scheme);
       });
 
@@ -2593,7 +2595,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis");
         // The destination's own words, not a timing guess: this sentence is
         // what the capture exists for.
-        await page.getByText(/is aboard —/).waitFor();
+        await page.getByText(/is aboard with/).waitFor();
         await capture(page, "today-blocked-aboard", scheme);
       });
 
@@ -4467,7 +4469,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "The release" }).waitFor();
         await page.getByRole("radio", { name: /A material change/ }).check();
         await page.getByRole("button", { name: "Publish", exact: true }).click();
-        await page.getByRole("button", { name: /Publish — \d+ sign again/ }).waitFor();
+        await page.getByRole("button", { name: /Publish: \d+ signs? again/ }).waitFor();
         await capture(page, "waiver-materiality-choice", scheme);
       });
 

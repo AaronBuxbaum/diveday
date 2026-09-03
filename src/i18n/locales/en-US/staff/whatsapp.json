@@ -43,19 +43,19 @@
     "encryption-key-invalid": "This DiveDay instance's encryption key is misconfigured, so nothing was saved.",
     "signup-unavailable": "WhatsApp connecting isn't switched on for this DiveDay instance yet.",
     "signup-failed-exchange": "Meta didn't accept the connection. Press Connect to start again.",
-    "signup-failed-register": "Meta couldn't activate that phone number for sending. It may already be in use with the WhatsApp app — remove it there first, then try again.",
+    "signup-failed-register": "Meta couldn't activate that phone number for sending. It may already be in use with the WhatsApp app. Remove it there first, then try again.",
     "signup-failed-subscribe": "Your number connected, but DiveDay couldn't subscribe to its delivery updates. Press Connect to try again.",
     "signup-failed-template": "Your number connected, but the message template couldn't be submitted for approval. Press Connect to try again."
   },
   "comingSoon": {
     "heading": "Coming soon",
-    "body": "Connecting your WhatsApp number goes through Meta's approval of DiveDay, which is in progress. Nothing to do yet — trip reminders keep going out as SMS until it clears."
+    "body": "Connecting your WhatsApp number goes through Meta's approval of DiveDay, which is in progress. There is nothing to do yet, and trip reminders keep going out as SMS until it clears."
   },
   "signup": {
     "connect": "Connect WhatsApp",
     "reconnect": "Reconnect WhatsApp",
     "connecting": "Connecting…",
-    "cancelled": "Connection cancelled — nothing was changed.",
+    "cancelled": "Connection cancelled. Nothing was changed.",
     "blocked": "Meta's window could not open. Check that your browser isn't blocking pop-ups, then try again."
   }
 }

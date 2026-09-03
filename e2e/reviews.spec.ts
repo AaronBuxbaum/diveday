@@ -31,7 +31,7 @@ test("a diver's bare rating publishes straight away and reaches the public page"
   await page.getByRole("button", { name: "Leave my review" }).click();
 
   // No words to moderate, so it counts immediately.
-  await expect(page.getByText("Thanks — your rating is up.")).toBeVisible();
+  await expect(page.getByText("Thanks. Your rating is up.")).toBeVisible();
   // Reloading shows the diver what they already said, rather than a blank form.
   await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
   await expect(page.getByText("You rated this 5 out of 5.")).toBeVisible();
@@ -80,7 +80,7 @@ test("a review carrying words waits for staff, and publishing it puts it on the 
   await page.getByLabel("Anything you’d tell another diver?").fill(comment);
   await page.getByRole("button", { name: "Leave my review" }).click();
   await expect(
-    page.getByText("Thanks — the shop will read your words before they go up."),
+    page.getByText("Thanks. The shop will read your words before they go up."),
   ).toBeVisible();
 
   // Unmoderated words are not on the shop's public page.

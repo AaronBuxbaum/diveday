@@ -301,8 +301,9 @@ export const areas = {
       "Coral is a restrained accent; feedback colors are not general brand colors.",
       "Public and sales copy remains truthful and shipped-only under the marketing claims policy.",
       "New brand directions are labeled proposed until product-owner approval.",
+      'Copy carries none of the machine-written tells in docs/design/brand.md\'s "What gives us away": no prose em-dash, no intensifier, no lead-in, no rhetorical contrast, no aphorism heading.',
     ],
-    validate: ["pnpm check:docs", "pnpm check:agents"],
+    validate: ["pnpm check:docs", "pnpm check:agents", "pnpm check:voice"],
   },
   database: {
     goal: "Change persistence safely while preserving tenant, capacity, and transactional invariants.",

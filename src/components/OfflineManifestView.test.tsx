@@ -2032,7 +2032,7 @@ describe("OfflineManifestView — reporting roll call the ceiling threw away", (
       await screen.findByText("Roll call that never sent has been removed"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Reef Runners · Morning Two-Tank — 2 changes lost"),
+      screen.getByText("Reef Runners · Morning Two-Tank · 2 changes lost"),
     ).toBeInTheDocument();
     expect(screen.getByText(/2 roll-call changes/)).toBeInTheDocument();
   });

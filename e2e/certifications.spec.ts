@@ -154,7 +154,7 @@ test("an instructor certifies a diver from the course roster, and they can book 
   await row.getByLabel("Level").selectOption({ label: "Open Water" });
   await row.getByRole("button", { name: "Confirm certification" }).click();
   await expect(
-    page.getByText("Certified — they can book their next level with no further review."),
+    page.getByText("Certified. They can book their next level with no further review."),
   ).toBeVisible();
 
   // The other half of the loop: no staffer retyped anything, and the same

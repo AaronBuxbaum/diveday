@@ -48,8 +48,8 @@ const COPY: BuilderCopy = {
   dayCountLabelOne: "{count} day",
   dayCountLabelOther: "{count} days",
   impactTitle: "If you move it",
-  impactToldOne: "{count} diver has already been told this date — moving it sends nothing.",
-  impactToldOther: "{count} divers have already been told this date — moving it sends nothing.",
+  impactToldOne: "{count} diver has already been told this date. Moving it sends nothing.",
+  impactToldOther: "{count} divers have already been told this date. Moving it sends nothing.",
   impactGearOne: "{count} reserved unit travels with it.",
   impactGearOther: "{count} reserved units travel with it.",
   impactPaidOne: "{count} seat is already paid.",
@@ -65,7 +65,7 @@ const COPY: BuilderCopy = {
   noPriceSet: "No price set",
   noPriceSetAria: "Set a price for {ref}",
   noPriceSetAll:
-    "None of these departures has a price yet — divers already see them on the schedule. Open a departure to set one.",
+    "None of these departures has a price yet, and divers already see them on the schedule. Open a departure to set one.",
   rollCallOpen: "Roll call · {count} not counted",
   rollCallOpenAria: "Finish the dive {dive} roll call for {ref}",
   rollCallOpenNote: "Back at the dock with the dive {dive} roll call still open.",
@@ -104,7 +104,7 @@ const COPY: BuilderCopy = {
   moving: "Moving…",
   moveIt: "Move it",
   copyTo: "Copy to",
-  copyDescription: "Same dive, same seats, same price — no divers and no crew.",
+  copyDescription: "Same dive, same seats, same price, with no divers and no crew.",
   departureTime: "Departure time",
   copying: "Copying…",
   copyIt: "Copy it",
@@ -121,7 +121,7 @@ const COPY: BuilderCopy = {
   isPrivateLabel: "Private charter",
   selfGuidedLabel: "Self-guided dive",
   selfGuidedHint: "Buddy pairs go in without a guide.",
-  isPrivateHint: "Off the public schedule — only divers with the link can book it.",
+  isPrivateHint: "Off the public schedule. Only divers with the link can book it.",
   daysLabel: "How many days",
   daysDescription: "Most departures are one day.",
   payAtBookingLegend: "Pay at booking",
@@ -1455,28 +1455,28 @@ describe("ScheduleBuilder request plan: copy composed on the client", () => {
       locale: "en-US",
       count: 1,
       panel: "Starting from requests",
-      crew: "Bring 1 divemaster — your 4:1 target.",
+      crew: "Bring 1 divemaster for your 4:1 target.",
       lead: "Marisol (1 diver)",
     },
     {
       locale: "en-US",
       count: 3,
       panel: "Starting from requests",
-      crew: "Bring 3 divemasters — your 4:1 target.",
+      crew: "Bring 3 divemasters for your 4:1 target.",
       lead: "Marisol (3 divers)",
     },
     {
       locale: "es-ES",
       count: 1,
       panel: "Partir de las peticiones",
-      crew: "Lleva 1 divemaster — tu objetivo de 4:1.",
+      crew: "Lleva 1 divemaster para tu objetivo de 4:1.",
       lead: "Marisol (1 buceador)",
     },
     {
       locale: "es-ES",
       count: 3,
       panel: "Partir de las peticiones",
-      crew: "Lleva 3 divemasters — tu objetivo de 4:1.",
+      crew: "Lleva 3 divemasters para tu objetivo de 4:1.",
       lead: "Marisol (3 buceadores)",
     },
   ];
@@ -1976,7 +1976,7 @@ describe("ScheduleBuilder week board", () => {
     board(
       week({
         nextDeparture: {
-          label: "Nothing this week — the next departure is Thu, Sep 10.",
+          label: "Nothing this week. The next departure is Thu, Sep 10.",
           href: "/shop/blue-mantis/schedule/board?week=2026-09-10",
         },
       }),
@@ -1984,7 +1984,7 @@ describe("ScheduleBuilder week board", () => {
 
     expect(
       within(grid()).getByRole("link", {
-        name: "Nothing this week — the next departure is Thu, Sep 10.",
+        name: "Nothing this week. The next departure is Thu, Sep 10.",
       }),
     ).toHaveAttribute("href", "/shop/blue-mantis/schedule/board?week=2026-09-10");
   });
@@ -2081,7 +2081,7 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
 
     expect(
       await screen.findByText(
-        "4 divers have already been told this date — moving it sends nothing.",
+        "4 divers have already been told this date. Moving it sends nothing.",
       ),
     ).toBeInTheDocument();
     // Singular and plural both resolved server-side, picked here by count.
@@ -2140,7 +2140,7 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
     expect(screen.getByRole("button", { name: COPY.moveIt })).toBeEnabled();
     // The facts survive the refusal — they are why it is worth reading.
     expect(
-      screen.getByText("6 divers have already been told this date — moving it sends nothing."),
+      screen.getByText("6 divers have already been told this date. Moving it sends nothing."),
     ).toBeInTheDocument();
   });
 

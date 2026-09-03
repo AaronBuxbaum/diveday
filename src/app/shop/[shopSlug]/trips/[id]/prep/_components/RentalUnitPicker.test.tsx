@@ -16,10 +16,10 @@ const COPY = {
   pickUnit: "Pick a unit…",
   assigning: "Assigning…",
   refusals: {
-    unit_unavailable: "Somebody got that unit first — pick another.",
+    unit_unavailable: "Somebody got that unit first. Pick another.",
     unit_out_of_service: "That unit is off the wall for service.",
   },
-  refusalFallback: "That pick didn't take — try another unit.",
+  refusalFallback: "That pick didn't take. Try another unit.",
 };
 
 const GROUPS = [

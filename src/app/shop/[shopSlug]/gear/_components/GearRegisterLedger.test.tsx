@@ -285,7 +285,7 @@ describe("the all-home line", () => {
       },
     );
     const line = screen.getByRole("status");
-    expect(line.textContent).toBe("All home — every unit is back on the wall.");
+    expect(line.textContent).toBe("All home. Every unit is back on the wall.");
     expect(line.className).not.toMatch(/rise-in/);
     // One coral element, and one group heading — nothing else on the surface.
     expect(container.querySelectorAll(".bg-accent\\/10")).toHaveLength(1);

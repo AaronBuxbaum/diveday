@@ -28,7 +28,7 @@
   "checkInButton": "Registrar",
   "checkInAriaLabel": "Registrar a {name}",
   "checkingIn": "Registrando…",
-  "sendFailed": "No se envió: toca la fila otra vez.",
+  "sendFailed": "No se envió. Toca la fila otra vez.",
   "offlineLabel": "Sin conexión: este listado puede estar desactualizado",
   "pullToRefresh": {
     "pulling": "Desliza hacia abajo para sincronizar…",
@@ -55,15 +55,15 @@
     "notFound": "No se encontró esa reserva.",
     "staffNotFound": "No se pudo confirmar tu acceso de personal.",
     "invalid": "Elige un buceador de la cola antes de registrarlo.",
-    "waiverMedicalAttestation": "Confirma que revisaste el cuestionario médico antes de registrar una liberación en papel — o envía el enlace digital para que el buceador lo responda.",
+    "waiverMedicalAttestation": "Confirma que revisaste el cuestionario médico antes de registrar una liberación en papel, o envía el enlace digital para que el buceador lo responda.",
     "waiverError": "No se pudo registrar esa liberación en papel. Inténtalo de nuevo, o abre la salida del buceador para ver por qué.",
-    "walkinAdded": "Añadido a la lista de este barco: regístralo cuando llegue.",
+    "walkinAdded": "Añadido a la lista de este barco. Regístralo cuando llegue.",
     "walkinAddedWaiverUndelivered": "Añadido a la lista de este barco, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
-    "walkinFull": "Ese barco está completo — prueba la lista de espera desde su página de salida.",
+    "walkinFull": "Ese barco está completo. Prueba la lista de espera desde su página de salida.",
     "walkinAlready": "Ese buceador ya está en este barco.",
-    "walkinCourseUnstaffed": "Esa es una sesión de curso sin instructor asignado — asigna uno desde su página de salida primero.",
+    "walkinCourseUnstaffed": "Esa es una sesión de curso sin instructor asignado. Asigna uno desde su página de salida primero.",
     "walkinCoursePrerequisite": "Ese curso exige una titulación previa verificada que este buceador no tiene registrada.",
-    "walkinCourseRatioFull": "Esa sesión está en su límite de ratio instructor-alumno — otro instructor, o la lista de espera.",
+    "walkinCourseRatioFull": "Esa sesión está en su límite de ratio instructor-alumno. Añade otro instructor o usa la lista de espera.",
     "walkinCourseMinAge": "Ese buceador está por debajo de la edad mínima del curso el día que se imparte, según la fecha de nacimiento registrada.",
     "walkinTripPrerequisite": "Las titulaciones de ese buceador no alcanzan lo que exigen este barco y sus sitios de buceo.",
     "walkinUnavailable": "Ese buceador no puede tomar una plaza en este barco ahora mismo.",
@@ -80,7 +80,7 @@
     "changeTrip": "¿No es este? Elige otro barco.",
     "addToBoat": "Añadir al barco",
     "addPersonAriaLabel": "Añadir a {name} a este barco",
-    "handEntryDescription": "El correo es opcional — la tripulación puede recogerlo más tarde. Con el nombre basta para subirlo al barco ahora."
+    "handEntryDescription": "El correo es opcional y la tripulación puede recogerlo más tarde. Con el nombre basta para subirlo al barco ahora."
   },
   "blockerReasonsWithFirst": "{reason} {count, plural, one {Y # motivo más.} other {Y # motivos más.}}"
 }

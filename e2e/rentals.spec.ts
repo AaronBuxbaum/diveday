@@ -34,7 +34,7 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // price is struck through and the saving is named. It used to be invisible —
   // the total simply read $45 with nothing to say anything had come off.
   await expect(fit.getByText("Before the full-set discount: $65.00")).toBeVisible();
-  await expect(fit.getByText("Full-set price — you save $20.00.")).toBeVisible();
+  await expect(fit.getByText("Full-set price. You save $20.00.")).toBeVisible();
   // Target the checkbox specifically: "BCD" also substring-matches the "BCD size"
   // select's label, which would make a bare getByLabel("BCD") ambiguous.
   await fit.getByRole("checkbox", { name: /BCD/ }).uncheck();
@@ -43,7 +43,7 @@ test("a diver sees rental prices and an estimate on the booking confirmation", a
   // weights $5 + dive computer $10 = $50) would cost more than the set, and a
   // diver skipping one piece is never charged more than the full set (H-06, HD-9).
   await expect(fit.getByText(/Estimated rental: \$45\.00 per person/)).toBeVisible();
-  await expect(fit.getByText("Full-set price — you save $5.00.")).toBeVisible();
+  await expect(fit.getByText("Full-set price. You save $5.00.")).toBeVisible();
   // Nitrox is *not* here, and its absence is the assertion. Rin has no nitrox
   // card, and since ADR 20260821-the-ready-page-asks-once the section does not
   // exist until the card that makes it real does — asking a diver whether they

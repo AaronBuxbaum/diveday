@@ -162,7 +162,7 @@
     "reviewLink": {
       "heading": "Enlace de reseñas",
       "description": "Tu página de reseñas de Google Business, TripAdvisor o Facebook.",
-      "detail": "Cuando está configurada, el recap posterior al viaje invita al buceador a dejar una reseña — vacía el campo para dejar de pedirlas.",
+      "detail": "Cuando está configurada, el recap posterior al viaje invita al buceador a dejar una reseña. Vacía el campo para dejar de pedirlas.",
       "label": "Enlace de reseñas",
       "hint": "(opcional)",
       "submit": "Guardar enlace de reseñas",
@@ -172,7 +172,7 @@
       "heading": "Aparecer en buscadores",
       "valueListed": "Visible",
       "valueHidden": "Oculto",
-      "detail": "Si desmarcas esto, lo que ya esté indexado puede tardar unas semanas en desaparecer — y una página que alguien haya enlazado sigue siendo accesible por ese enlace.",
+      "detail": "Si desmarcas esto, lo que ya esté indexado puede tardar unas semanas en desaparecer, y una página que alguien haya enlazado sigue siendo accesible por ese enlace.",
       "label": "Mostrar mis páginas públicas en los buscadores",
       "submit": "Guardar",
       "submitting": "Guardando…"
@@ -248,7 +248,7 @@
     "units": {
       "heading": "Unidades",
       "depthLabel": "Mostrar profundidades en",
-      "depthDetail": "Las profundidades siempre se guardan en metros, así que cambiar esto solo afecta a lo que escribes y lees — ninguna profundidad registrada se mueve.",
+      "depthDetail": "Las profundidades siempre se guardan en metros, así que cambiar esto solo afecta a lo que escribes y lees. Ninguna profundidad registrada se mueve.",
       "meters": "Metros (m)",
       "feet": "Pies (ft)",
       "temperatureLabel": "Mostrar la temperatura del agua en",
@@ -309,9 +309,9 @@
     },
     "stripe": {
       "notConnectedHeading": "Ninguna cuenta de Stripe conectada",
-      "notConnectedDetail": "DiveDay nunca retiene tu dinero — los pagos de pedidos van directo a tu propio saldo de Stripe.",
+      "notConnectedDetail": "DiveDay nunca retiene tu dinero. Los pagos de pedidos van directo a tu propio saldo de Stripe.",
       "connect": "Conectar Stripe",
-      "notConfiguredWarning": "Los pagos en línea todavía no están activados en DiveDay — escribe a {email} y los ponemos en marcha.",
+      "notConfiguredWarning": "Los pagos en línea todavía no están activados en DiveDay. Escribe a {email} y los ponemos en marcha.",
       "connectedHeading": "Cuenta de Stripe conectada",
       "readyBadge": "Lista para pagos",
       "notReadyBadge": "Todavía no está lista",
@@ -353,7 +353,7 @@
       "expiredValue": "Terminó el {endDate}"
     },
     "support": {
-      "description": "Una mala mañana en el mostrador, una función que echas en falta, un fallo — escribe cuando quieras.",
+      "description": "Una mala mañana en el mostrador, una función que echas en falta, un fallo. Escribe cuando quieras.",
       "emailCta": "Escribir a {email}"
     },
     "groups": {
@@ -429,7 +429,7 @@
       "heading": "Referencia de emergencia",
       "value": "{count, plural, one {# número} other {# números}} que la tripulación puede ver sin conexión",
       "empty": "Sin registrar",
-      "intro": "Aparecen en la lista de pasajeros, también sin conexión. DiveDay nunca los rellena — la cámara más cercana y la línea correcta dependen de dónde bucees.",
+      "intro": "Aparecen en la lista de pasajeros, también sin conexión. DiveDay nunca los rellena, porque la cámara más cercana y la línea correcta dependen de dónde bucees.",
       "lineLabel": "Qué es {n}",
       "linePlaceholder": "Cámara, línea de accidentes de buceo, guardacostas…",
       "phoneLabel": "Número {n}",
@@ -466,17 +466,17 @@
       "inviteResent": "Invitación reenviada.",
       "changesSaved": "Cambios del equipo guardados.",
       "reactivated": "Cuenta reactivada.",
-      "disabled": "Cuenta deshabilitada — ya no puede iniciar sesión.",
+      "disabled": "Cuenta deshabilitada. Ya no puede iniciar sesión.",
       "removed": "Eliminado: está fuera de tu equipo y ya no puede iniciar sesión.",
       "restored": "Acceso al equipo restaurado.",
-      "restoreFailed": "No se pudo restaurar el acceso de esa persona — revisa su cuenta primero.",
+      "restoreFailed": "No se pudo restaurar el acceso de esa persona. Revisa su cuenta primero.",
       "inviteInvalid": "Introduce un nombre, un correo válido y marca al menos un rol.",
       "rolesInvalid": "Marca al menos un rol antes de guardar.",
       "rolesConflict": "Alguien más cambió estos roles mientras tenías la fila abierta, así que no se guardó nada. Recarga para ver cómo están ahora.",
       "inviteAlreadyOnTeam": "Esa persona ya tiene una cuenta aquí.",
       "inviteEmailTaken": "Ese correo no está disponible aquí. Invita a esta persona en otra dirección.",
       "inviteEmailReserved": "Esa dirección de correo está reservada y no puede recibir mensajes. Invita a esta persona en una dirección que pueda leer.",
-      "lastOwner": "No se puede hacer eso — el centro necesita al menos un propietario. Convierte a otra persona en propietario primero.",
+      "lastOwner": "No se puede hacer eso, porque el centro necesita al menos un propietario. Convierte a otra persona en propietario primero.",
       "notFound": "Esa persona no está en el equipo de este centro.",
       "notAuthorized": "La gestión del equipo está limitada a propietarios y gerentes.",
       "contactSaved": "Contacto de emergencia guardado.",
@@ -547,11 +547,11 @@
   "safetyChecklist": {
     "eyebrow": "Ajustes",
     "title": "Lista de comprobación previa a la salida",
-    "description": "Las líneas que tu tripulación confirma antes de que el barco zarpe. Tú escribes cada elemento — DiveDay no lo hace.",
+    "description": "Las líneas que tu tripulación confirma antes de que el barco zarpe. Tú escribes cada elemento, y DiveDay no añade ninguno propio.",
     "listHeading": "Lista de comprobación",
     "empty": {
       "title": "Aún no hay nada en la lista",
-      "body": "Añade la primera línea abajo — la tripulación la ve en el manifiesto de cada salida."
+      "body": "Añade la primera línea abajo. La tripulación la ve en el manifiesto de cada salida."
     },
     "addLabel": "Nueva línea",
     "addPlaceholder": "Kit de oxígeno de emergencia a bordo",
@@ -562,10 +562,10 @@
     "notice": {
       "added": "Añadido a la lista de comprobación.",
       "deleted": "Eliminado de la lista de comprobación.",
-      "invalid": "Eso no se guardó — inténtalo de nuevo.",
+      "invalid": "Eso no se guardó. Inténtalo de nuevo.",
       "duplicateLabel": "Esa línea ya está en la lista.",
       "notAuthorized": "No tienes permiso para cambiar esto.",
-      "moveRefused": "Eso no se movió — inténtalo de nuevo."
+      "moveRefused": "Eso no se movió. Inténtalo de nuevo."
     }
   },
   "export": {
@@ -574,7 +574,7 @@
     "description": "Todo lo que el centro guarda en DiveDay, en CSV simple: buceadores, registros de certificación, salidas, reservas, exenciones firmadas, tallas de alquiler, pedidos, listas de espera, sitios de buceo y cursos. Incluye un archivo de contactos listo para importar.",
     "downloadButton": {
       "idle": "Descargar exportación",
-      "acknowledged": "En camino — revisa tus descargas"
+      "acknowledged": "En camino, revisa tus descargas"
     },
     "bundle": {
       "heading": "Qué contiene el paquete",
@@ -613,7 +613,7 @@
       },
       "diveInsurance": {
         "what": "Seguro de buceo (DAN)",
-        "detail": "Se traslada como texto libre, exactamente como lo tenga tu archivo. Nunca es una barrera — solo información que la tripulación quiere tener a mano."
+        "detail": "Se traslada como texto libre, exactamente como lo tenga tu archivo, para que la tripulación lo tenga a mano. Nunca es una barrera para nadie."
       },
       "rentalSizes": {
         "what": "Tallas de alquiler",
@@ -621,7 +621,7 @@
       },
       "certificationCard": {
         "what": "Registro de certificación",
-        "detail": "Llega con la ficha del buceador, marcada como importada, y abre la puerta del nivel — salvo que tu archivo diga que la tarjeta nunca se verificó, y entonces espera al personal. Los niveles no reconocidos requieren entrada manual."
+        "detail": "Llega con la ficha del buceador, marcada como importada, y abre la puerta del nivel. Si tu archivo dice que la tarjeta nunca se verificó, espera al personal. Los niveles no reconocidos requieren entrada manual."
       },
       "specialtyCards": {
         "what": "Certificaciones de especialidad (profundidad, naufragios, nocturna, traje seco)",
@@ -633,7 +633,7 @@
       },
       "signedWaivers": {
         "what": "Exenciones firmadas y aptitud médica",
-        "detail": "Una fila marcada como ya aceptada se da por buena, aptitud médica incluida, y queda marcada como importada — las respuestas médicas individuales nunca se reconstruyen, solo el resultado."
+        "detail": "Una fila marcada como ya aceptada se da por buena, aptitud médica incluida, y queda marcada como importada. Las respuestas médicas individuales nunca se reconstruyen, solo el resultado."
       },
       "waiverDocuments": {
         "what": "Documentos de exención / médicos",
@@ -649,7 +649,7 @@
       },
       "pastVisits": {
         "what": "Visitas pasadas (qué reservaron y cuándo)",
-        "detail": "Cada fila de reserva se convierte en historial de visitas — no es una inmersión, y nunca aparece en tu horario ni cuenta para el aforo."
+        "detail": "Cada fila de reserva se convierte en historial de visitas. No es una inmersión, y nunca aparece en tu horario ni cuenta para el aforo."
       },
       "paymentHistory": {
         "what": "Historial de pagos y recibos",
@@ -774,16 +774,16 @@
         "cardsSkippedNote": " {count} certificación(es) ya presentes en esos registros se dejaron sin tocar.",
         "rowsSkippedNote": " {count} fila(s) omitidas.",
         "cardsHeldByAnother": "{count} número(s) de certificación del archivo ya están en otro buceador de tu centro, así que esos registros no se añadieron a nadie. Revisa el archivo por si hay un número repetido y luego revisa y añade los registros de certificación en DiveDay.",
-        "specialtyGateNote": "Una inmersión que requiere una de esas especialidades espera esa confirmación — tócala en el registro del buceador y la puerta se abre.",
+        "specialtyGateNote": "Una inmersión que requiere una de esas especialidades espera esa confirmación. Tócala en el registro del buceador y la puerta se abre.",
         "waiversLineOne": "{count} waiver importado como aceptado, marcado “importado” en el perfil del buceador.",
         "waiversLineOther": "{count} waivers importados como aceptados, marcados “importado” en el perfil del buceador.",
         "waiversSkippedExistingNote": " {count} buceador(es) ya tenían un waiver vigente en el archivo, se dejaron sin tocar.",
-        "waiversSkippedNoTemplateNoteOne": " {count} omitido — configura primero una plantilla de exención.",
-        "waiversSkippedNoTemplateNoteOther": " {count} omitidos — configura primero una plantilla de exención.",
+        "waiversSkippedNoTemplateNoteOne": " {count} omitido. Configura primero una plantilla de exención.",
+        "waiversSkippedNoTemplateNoteOther": " {count} omitidos. Configura primero una plantilla de exención.",
         "waiverDocumentsFailedNote": " {count} enlace(s) de documento no se pudieron descargar y se dejaron fuera del registro.",
         "visitsLineOne": "{count} visita anterior añadida al historial del centro de los buceadores.",
         "visitsLineOther": "{count} visitas anteriores añadidas al historial del centro de los buceadores.",
-        "visitsSkippedNote": " {count} ya estaban importadas y se dejaron como están — volver a ejecutar la misma exportación no duplica el historial de nadie.",
+        "visitsSkippedNote": " {count} ya estaban importadas y se dejaron como están, así que volver a ejecutar la misma exportación no duplica el historial de nadie.",
         "paymentHistoryLineOne": "{count} registro de pago / recibo del origen sin verificar añadido a Pedidos.",
         "paymentHistoryLineOther": "{count} registros de pago / recibo del origen sin verificar añadidos a Pedidos.",
         "paymentHistorySkippedNote": " {count} ya estaban importados y se dejaron como están.",
@@ -794,46 +794,46 @@
       }
     },
     "issues": {
-      "emailInvalid": "El correo “{email}” no parece válido — importado sin correo.",
-      "cardMarkedUnverified": "Tu archivo marca esta certificación como “{status}” — importada para revisión del personal en lugar de como verificada, ya que tus propios registros no la dan por revisada.",
-      "specialtyNotGated": "La especialidad “{specialty}” no es una especialidad que controlemos (profunda, naufragios, nocturna, traje seco) — no se importó nada para ella.",
-      "specialtyNoCardNumber": "La especialidad “{specialty}” no tiene número de certificación en la fila — no se importó. Una certificación sin número no se puede verificar.",
+      "emailInvalid": "El correo “{email}” no parece válido, así que el buceador se importó sin correo.",
+      "cardMarkedUnverified": "Tu archivo marca esta certificación como “{status}”. Se importó para revisión del personal en lugar de como verificada, ya que tus propios registros no la dan por revisada.",
+      "specialtyNotGated": "La especialidad “{specialty}” no es una especialidad que controlemos (profunda, naufragios, nocturna, traje seco), así que no se importó nada para ella.",
+      "specialtyNoCardNumber": "La especialidad “{specialty}” no tiene número de certificación en la fila, así que no se importó. Una certificación sin número no se puede verificar.",
       "specialtyImportedVerifiedOne": "Certificación de especialidad importada como verificada desde tus registros y marcada como importada. Una inmersión que la exija espera a que alguien del equipo confirme haberla visto.",
       "specialtyImportedVerifiedOther": "{count} certificaciones de especialidad importadas como verificadas desde tus registros y marcadas como importadas. Una inmersión que las exija espera a que alguien del equipo confirme haberlas visto.",
-      "specialtyImportedPendingOne": "Certificación de especialidad importada para revisión del personal — ver la nota anterior.",
-      "specialtyImportedPendingOther": "{count} certificaciones de especialidad importadas para revisión del personal — ver la nota anterior.",
-      "agencyUnrecognized": "Agencia de certificación no reconocida — importada como “otra”.",
-      "levelNamesSpecialty": "La certificación «{level}» nombra una especialidad, no un nivel, y se usó la columna de especialidad de esta fila en su lugar — no se importó ninguna certificación de nivel. Añade ese registro de certificación en DiveDay si es independiente.",
+      "specialtyImportedPendingOne": "Certificación de especialidad importada para revisión del personal. Ver la nota anterior.",
+      "specialtyImportedPendingOther": "{count} certificaciones de especialidad importadas para revisión del personal. Ver la nota anterior.",
+      "agencyUnrecognized": "Agencia de certificación no reconocida, así que se importó como “otra”.",
+      "levelNamesSpecialty": "La certificación “{level}” nombra una especialidad, no un nivel, y se usó la columna de especialidad de esta fila en su lugar, así que no se importó ninguna certificación de nivel. Añade ese registro de certificación en DiveDay si es independiente.",
       "levelIsTechnical": "La titulación “{level}” es técnica o de entornos con techo, no un peldaño recreativo: no se importa ni se interpreta como un nivel cercano. Regístrala a mano si tu centro la exige.",
-      "levelNotGated": "La certificación «{level}» no es un nivel que controlemos — certificación no importada. Añade el registro en DiveDay si tu centro necesita conservarlo.",
-      "levelNoCardNumber": "El nivel de certificación «{level}» no tiene un número de certificación utilizable — certificación no importada. Una evidencia sin número no se puede verificar.",
-      "certImportedVerified": "Certificación importada como verificada desde tus registros — marcada como importada, con una confirmación de un toque para el personal.",
-      "certImportedPending": "Certificación importada para revisión del personal — ver la nota anterior.",
-      "nitroxImportedVerified": "Certificación de nitrox importada como verificada desde tus registros — marcada como importada. Los rellenos dan aire normal hasta que el personal confirme.",
-      "nitroxImportedPending": "Certificación de nitrox importada para revisión del personal — ver la nota anterior. Una salida que exige nitrox retiene a este buceador hasta que se confirme.",
-      "nitroxNoCardNumber": "Nitrox marcado en el origen sin número de certificación — añade y verifica la certificación de nitrox en DiveDay.",
-      "waiverDateInvalid": "La fecha de aceptación del waiver “{value}” no es una fecha de calendario real (se espera AAAA-MM-DD) — se importó fechada hoy en su lugar.",
+      "levelNotGated": "La certificación “{level}” no es un nivel que controlemos, así que la certificación no se importó. Añade el registro en DiveDay si tu centro necesita conservarlo.",
+      "levelNoCardNumber": "El nivel de certificación “{level}” no tiene un número de certificación utilizable, así que la certificación no se importó. Una evidencia sin número no se puede verificar.",
+      "certImportedVerified": "Certificación importada como verificada desde tus registros y marcada como importada, con una confirmación de un toque para el personal.",
+      "certImportedPending": "Certificación importada para revisión del personal. Ver la nota anterior.",
+      "nitroxImportedVerified": "Certificación de nitrox importada como verificada desde tus registros y marcada como importada. Los rellenos dan aire normal hasta que el personal confirme.",
+      "nitroxImportedPending": "Certificación de nitrox importada para revisión del personal. Ver la nota anterior. Una salida que exige nitrox retiene a este buceador hasta que se confirme.",
+      "nitroxNoCardNumber": "Nitrox marcado en el origen sin número de certificación. Añade y verifica la certificación de nitrox en DiveDay.",
+      "waiverDateInvalid": "La fecha de aceptación de la exención “{value}” no es una fecha de calendario real (se espera AAAA-MM-DD), así que se importó fechada hoy en su lugar.",
       "waiverImported": "Exención importada como aceptada: se acepta la del centro anterior, incluida la aptitud médica, y se marca como “importada”.",
-      "dobInvalid": "La fecha de nacimiento “{value}” no es una fecha de calendario plausible (se espera AAAA-MM-DD, 1900 o posterior, no en el futuro) — importada sin ella.",
-      "visitDateUnreadable": "La fecha de visita “{value}” no es una fecha que podamos leer — el buceador se importa sin esta visita.",
+      "dobInvalid": "La fecha de nacimiento “{value}” no es una fecha de calendario plausible (se espera AAAA-MM-DD, 1900 o posterior, no en el futuro), así que el buceador se importó sin ella.",
+      "visitDateUnreadable": "La fecha de visita “{value}” no es una fecha que podamos leer, así que el buceador se importa sin esta visita.",
       "visitNoReference": "Visita importada sin referencia de reserva: una reimportación coincide por fecha, nombre e importe, así que dos reservas idénticas el mismo día entran como una sola visita.",
-      "visitNoDate": "Esta fila nombra una reserva anterior pero no lleva fecha — el buceador se importa sin esta visita.",
-      "paymentHistoryDateUnreadable": "La fecha del historial de pagos “{value}” no es una fecha que podamos leer — ese registro del origen no se importará.",
+      "visitNoDate": "Esta fila nombra una reserva anterior pero no lleva fecha, así que el buceador se importa sin esta visita.",
+      "paymentHistoryDateUnreadable": "La fecha del historial de pagos “{value}” no es una fecha que podamos leer, así que ese registro del origen no se importará.",
       "paymentHistoryNoDate": "Esta fila de pago o recibo del origen no tiene una fecha utilizable, así que no se importará.",
-      "noName": "Sin nombre — fila omitida.",
-      "mergedDuplicate": "Mismo buceador que la fila {row} ({email}) — las certificaciones, el waiver y la visita anterior de esta fila se añaden a ese registro; los datos de contacto se dejan como los tiene la fila anterior.",
-      "noEmailNewRecord": "Sin correo — importado como registro nuevo; una reimportación no podrá relacionarlo para actualizarlo."
+      "noName": "Esta fila no tiene nombre y se omitió.",
+      "mergedDuplicate": "Mismo buceador que la fila {row} ({email}), así que las certificaciones, la exención y la visita anterior de esta fila se añaden a ese registro; los datos de contacto se dejan como los tiene la fila anterior.",
+      "noEmailNewRecord": "Esta fila no tiene correo y se importó como registro nuevo; una reimportación no podrá relacionarlo para actualizarlo."
     },
     "errors": {
       "notOwnerOrManager": "Importar contactos está limitado al propietario o gerente del centro.",
       "csvRequired": "Elige un archivo CSV para importar.",
-      "noImportableRows": "No hay filas importables — a todas les faltaba un nombre o estaban duplicadas.",
-      "fileTooLarge": "El archivo es demasiado grande — el límite es {limitMb} MB.",
+      "noImportableRows": "No se pudo importar ninguna fila. A todas les faltaba un nombre o estaban duplicadas.",
+      "fileTooLarge": "El archivo es demasiado grande. El límite es {limitMb} MB.",
       "fileEmpty": "El archivo está vacío.",
-      "tooManyColumns": "Demasiadas columnas ({count}) — el límite es {limit}.",
-      "tooManyRows": "Demasiadas filas ({count}) — el límite es {limit} por importación. Divide el archivo e impórtalo en lotes.",
-      "cellTooLongHeader": "Una celda de la fila de encabezado tiene más de {limit} caracteres — revisa que no sea un documento pegado en vez de una hoja de cálculo.",
-      "cellTooLongRow": "Una celda de la fila {row} tiene más de {limit} caracteres — revisa que no sea un documento pegado en vez de una hoja de cálculo.",
+      "tooManyColumns": "Demasiadas columnas ({count}). El límite es {limit}.",
+      "tooManyRows": "Demasiadas filas ({count}). El límite es {limit} por importación, así que divide el archivo e impórtalo en lotes.",
+      "cellTooLongHeader": "Una celda de la fila de encabezado tiene más de {limit} caracteres. Revisa que no sea un documento pegado en vez de una hoja de cálculo.",
+      "cellTooLongRow": "Una celda de la fila {row} tiene más de {limit} caracteres. Revisa que no sea un documento pegado en vez de una hoja de cálculo.",
       "noNameColumn": "No se encontró columna de nombre. El archivo necesita un nombre completo, o nombre y apellido, para importar personas."
     }
   },

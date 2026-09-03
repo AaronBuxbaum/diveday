@@ -70,7 +70,7 @@ test.describe("staff", () => {
 
     await page.getByRole("button", { name: "Mark returned" }).click();
     await expect(page.getByRole("status").filter({ hasText: "the unit is home" })).toBeVisible();
-    await expect(page.getByText("In the shop — nothing reserved.")).toBeVisible();
+    await expect(page.getByText("In the shop, nothing reserved.")).toBeVisible();
   });
 
   /**

@@ -30,7 +30,7 @@
     "importing": "Importing…",
     "importToLibrary": "Import to my library",
     "backToCatalog": "← All templates",
-    "previewNote": "Everything below is copied into your own library on import — and everything is yours to rewrite afterwards.",
+    "previewNote": "Everything below is copied into your own library on import, and everything is yours to rewrite afterwards.",
     "preview_location": "Where it is",
     "preview_depth": "Depth",
     "preview_difficulty": "Difficulty",
@@ -76,7 +76,7 @@
     "tooManyPhotos": "{max, plural, one {A site holds up to # photo.} other {A site holds up to # photos.}}",
     "route": {
       "legend": "The route you swim",
-      "description": "Click the map to drop a waypoint, in the order you swim them. The map can't be dragged — it's fixed to this site's coordinates and zoom, so the line you draw is the line a diver sees.",
+      "description": "Click the map to drop a waypoint, in the order you swim them. The map can't be dragged. It's fixed to this site's coordinates and zoom, so the line you draw is the line a diver sees.",
       "needsCoordinates": "Fill in the GPS location above and the map appears here, ready to draw on.",
       "labelLabel": "What the route is called",
       "labelPlaceholder": "Reef garden loop",
@@ -90,7 +90,7 @@
       "mapAriaLabel": "Map — click to add a route waypoint",
       "status": {
         "empty": "Click where the dive starts.",
-        "one": "One waypoint down — click where it goes next.",
+        "one": "One waypoint down. Click where it goes next.",
         "some": "{count, plural, one {# waypoint} other {# waypoints}}.",
         "full": "That's the most waypoints a route can carry ({count}). Undo to change one."
       }
@@ -122,7 +122,7 @@
     "conservationNoteHint": "Optional shop-stated guidance for divers at this site.",
     "conservationNotePlaceholder": "Marine park rules, mooring buoy use, buoyancy awareness, or local reef protection guidelines.",
     "fitLegend": "Who this site suits",
-    "fitDescription": "The line a diver reads above the site facts. Left on “work it out”, DiveDay reads it off the difficulty, depth and current below — which is a guess at words you wrote for another purpose.",
+    "fitDescription": "The line a diver reads above the site facts. Left on “work it out”, DiveDay reads it off the difficulty, depth and current below, which is a guess at words you wrote for another purpose.",
     "fitToneLabel": "How this site reads",
     "fitToneDerive": "Work it out from the facts below",
     "fitToneWelcoming": "Welcoming dive",
@@ -132,7 +132,7 @@
     "fitNotePlaceholder": "Shallow, sheltered, and a good first ocean dive after a pool course.",
     "landmarks": {
       "legend": "Landmarks",
-      "description": "A landmark with no note is still worth listing — divers look for the name.",
+      "description": "List a landmark even without a note, because divers look for the name.",
       "nameLabel": "Landmark",
       "namePlaceholder": "Molasses Reef Light",
       "kindLabel": "What kind",
@@ -162,7 +162,7 @@
       "full": "{max, plural, one {That's the most species one guide can hold (#).} other {That's the most species one guide can hold (#).}}",
       "notFound": "Not in DiveDay's catalog yet.",
       "requestSpecies": "Tell DiveDay about it",
-      "requestSent": "Thanks — we have noted {name}. It arrives in a release, not today.",
+      "requestSent": "Thanks, we have noted {name}. It arrives in a release, not today.",
       "remove": "Remove",
       "removeAriaLabel": "Remove {name} from the field guide",
       "moveUp": "Up",
@@ -179,12 +179,12 @@
     "nitroxCheckbox": "Nitrox",
     "saving": "Saving…",
     "optionalHint": "(optional)",
-    "errorCoordinates": "Add both GPS coordinates — a location needs a latitude and a longitude.",
+    "errorCoordinates": "Add both GPS coordinates. A location needs a latitude and a longitude.",
     "errorDepth": "That maximum depth is deeper than any dive site.",
-    "errorImages": "One of those photos couldn't be stored — a site holds up to six, and each has to be a JPG, PNG, WebP, or HEIC under 5 MB. Everything else you typed is still here.",
-    "errorImagesUnconfigured": "Photo storage isn't set up for this shop yet — save the briefing without photos for now, or ask your shop's owner or manager to configure it.",
-    "errorConflict": "Somebody else changed this briefing while you had it open, so nothing was saved. What you typed is still here — copy anything you need, then reload the page.",
-    "errorNameTaken": "Another dive site here already goes by that name, and a deleted one still holds its name too. Give this briefing a name of its own and save again — everything else you typed is still here."
+    "errorImages": "One of those photos couldn't be stored. A site holds up to six, and each has to be a JPG, PNG, WebP, or HEIC under 5 MB. Everything else you typed is still here.",
+    "errorImagesUnconfigured": "Photo storage isn't set up for this shop yet. Save the briefing without photos for now, or ask your shop's owner or manager to configure it.",
+    "errorConflict": "Somebody else changed this briefing while you had it open, so nothing was saved. What you typed is still here. Copy anything you need, then reload the page.",
+    "errorNameTaken": "Another dive site here already goes by that name, and a deleted one still holds its name too. Give this briefing a name of its own and save again. Everything else you typed is still here."
   },
   "edit": {
     "description": "Changes reach every upcoming dive that visits this site.",
@@ -197,7 +197,7 @@
     "copiedNotice": "Independent copy ready to tailor.",
     "savedNotice": "Dive site saved.",
     "errorInvalid": "That didn't save. Check the name and links, then try again.",
-    "certificationDescription": "What this site itself demands. Every trip that visits enforces at least this — when the trip asks for more, the stricter rule wins.",
+    "certificationDescription": "What this site itself demands. Every trip that visits enforces at least this, and when the trip asks for more, the stricter rule wins.",
     "requiredSpecialties": "Required specialties",
     "scheduleDeparture": "Schedule departure",
     "saveBriefing": "Save dive site",

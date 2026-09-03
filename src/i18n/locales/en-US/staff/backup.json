@@ -1,6 +1,6 @@
 {
   "title": "Backups",
-  "description": "Every week, a full copy of your shop's records lands in storage you own. If you ever leave — or DiveDay ever disappears — the copy is already yours.",
+  "description": "Every week, a full copy of your shop's records lands in storage you own. If you ever leave, or DiveDay ever disappears, the copy is already yours.",
   "notice": {
     "saved": "Backup destination saved.",
     "invalid": "Check the destination details and try again.",
@@ -19,7 +19,7 @@
   "status": {
     "configuredHeading": "Backups are set up",
     "notConfiguredHeading": "No backup destination yet",
-    "notConfiguredDescription": "Point DiveDay at an S3-compatible bucket you own — AWS S3, Cloudflare R2, Backblaze B2, and friends — and a full export bundle lands there every week.",
+    "notConfiguredDescription": "Point DiveDay at an S3-compatible bucket you own (AWS S3, Cloudflare R2, Backblaze B2, and friends) and a full export bundle lands there every week.",
     "verified": "Delivery proven",
     "unproven": "Not proven yet",
     "endpoint": "Endpoint",
@@ -34,24 +34,24 @@
   },
   "form": {
     "heading": "Destination",
-    "description": "Use a credential that can only write to this bucket — DiveDay never needs to read, list, or delete anything in it.",
+    "description": "Use a credential that can only write to this bucket. DiveDay never needs to read, list, or delete anything in it.",
     "endpointLabel": "Endpoint",
-    "endpointHint": "Your provider's S3 API origin — HTTPS, with no bucket or path in it.",
+    "endpointHint": "Your provider's S3 API origin: HTTPS, with no bucket or path in it.",
     "regionLabel": "Region",
-    "regionHint": "The signing region — “auto” on Cloudflare R2, “us-east-1” style on AWS.",
+    "regionHint": "The signing region: “auto” on Cloudflare R2, “us-east-1” style on AWS.",
     "bucketLabel": "Bucket",
     "prefixLabel": "Folder prefix",
     "optionalHint": "(optional)",
     "accessKeyIdLabel": "Access key ID",
     "secretLabel": "Secret access key",
-    "secretHint": "Never shown again — not even to you.",
+    "secretHint": "Never shown again, not even to you.",
     "secretKeepHint": "Leave blank to keep the current key.",
     "submit": "Save destination",
     "submitting": "Saving…"
   },
   "how": {
     "heading": "How it works",
-    "weekly": "It's the same bundle as the Data export download — every CSV, the README, your photos.",
+    "weekly": "It's the same bundle as the Data export download: every CSV, the README, your photos.",
     "contents": "Your trip schedule rides along as trips.ics, readable by any calendar app.",
     "failures": "A delivery that fails is tried again on the next weekly run."
   },
@@ -75,11 +75,11 @@
     "total": "{count, plural, one {# delivery} other {# deliveries}}"
   },
   "deliveryError": {
-    "upload_unauthorized": "The bucket refused the credential — check the access key and its write permission.",
-    "bucket_not_found": "No bucket by that name answered at the endpoint — check both.",
+    "upload_unauthorized": "The bucket refused the credential. Check the access key and its write permission.",
+    "bucket_not_found": "No bucket by that name answered at the endpoint. Check both.",
     "upload_rejected": "The storage provider rejected the upload.",
     "network_unreachable": "The endpoint couldn't be reached.",
-    "credential_unreadable": "The stored secret key can't be opened any more — enter it again to fix this.",
+    "credential_unreadable": "The stored secret key can't be opened any more. Enter it again to fix this.",
     "shop_missing": "The shop's records couldn't be loaded.",
     "bundle_failed": "The export bundle couldn't be built.",
     "encryption_key_unset": "This DiveDay instance isn't set up to hold credentials safely.",

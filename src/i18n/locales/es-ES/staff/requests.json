@@ -2,10 +2,10 @@
   "title": "Fechas solicitadas",
   "description": "Nada de esto aparta una plaza.",
   "emptyHeading": "Todavía no hay peticiones",
-  "emptyDetail": "Los buceadores piden desde tu página de horarios y desde cualquier página de curso — “¿No hay ninguna fecha que te sirva?”.",
+  "emptyDetail": "Los buceadores piden bajo “¿No hay ninguna fecha que te sirva?” en tu página de horarios y en cualquier página de curso.",
   "group": {
     "day": "{date} — {groups, plural, one {# grupo} other {# grupos}} · {divers, plural, one {# buceador} other {# buceadores}}",
-    "noDate": "Sin fecha concreta — {count, plural, one {# petición} other {# peticiones}}"
+    "noDate": "Sin fecha concreta: {count, plural, one {# petición} other {# peticiones}}"
   },
   "addDeparture": "Añadir una salida",
   "flexible": "Flexible",

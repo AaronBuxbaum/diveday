@@ -82,7 +82,7 @@ test("what a diver arranges on their own page reaches prep and the manifest", as
   const prep = page.getByRole("region", { name: "Dive support" });
   await expect(prep).toContainText(diverName);
   await expect(prep).toContainText("2 support divers to arrange");
-  await expect(prep).toContainText("2 support divers in the water — the shop arranges");
+  await expect(prep).toContainText("2 support divers in the water, arranged by the shop");
   await expect(prep).toContainText("Help getting aboard");
   await expect(prep).toContainText("Lift in and out of the water");
   await expect(prep).toContainText("Briefing in writing");
@@ -98,7 +98,9 @@ test("what a diver arranges on their own page reaches prep and the manifest", as
   const row = page.locator("#roll-call-list > ul > li").filter({ hasText: diverName });
   await openManifestPerson(row);
   const dialog = page.getByRole("dialog");
-  await expect(dialog.getByText("2 support divers in the water — the shop arranges")).toBeVisible();
+  await expect(
+    dialog.getByText("2 support divers in the water, arranged by the shop"),
+  ).toBeVisible();
   await expect(dialog.getByText("Dives with Marisol Vega")).toBeVisible();
 
   // The last refusal, checked where it would actually bite. This diver was

@@ -16,7 +16,7 @@ under the same sync duties (docs/README.md).
 | `verify` | Before every commit; whenever asked to confirm something works |
 | `design-review` | After building or changing any user-facing surface |
 | `design-implementation` | Building a slice from a design canvas in `docs/design/canvases/` — the read order that keeps a drawing from overriding shipped code, and the four obligations that close the loop when a slice lands |
-| `brand-voice` | Creating or reviewing brand, voice, visual, merch, vendor, or promotional collateral |
+| `brand-voice` | Creating or reviewing brand, voice, visual, merch, vendor, or promotional collateral, and reading any run of user-facing prose for the tells that mark it as machine-written |
 | `schema-change` | Editing `src/db/schema.ts`; anything needing new persistent state |
 | `debug` | Any failing test, red CI, flaky spec, or bug report — before attempting fixes |
 | `instant-navigation` | Adding or restructuring any page or layout; a `blocking-prerender-*` build failure; redirect or client-navigation surprises under Next 16's `cacheComponents` |

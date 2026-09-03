@@ -19,7 +19,7 @@
   "removeStandout": "Quitar de destacadas",
   "emptyHeading": "Todavía no hay reseñas",
   "emptyDetail": "A los buceadores se les pide una en su página de resumen después de una salida.",
-  "emptyReviewLinkBody": "Aquí no hay nada que activar: una reseña llega cuando un buceador abre su resumen. Lo que sí decides tú es adónde va después alguien contento.",
+  "emptyReviewLinkBody": "Aquí no hay nada que activar. Una reseña llega cuando un buceador abre su resumen. Lo que sí decides tú es adónde va después alguien contento.",
   "emptyReviewLinkAction": "Configurar tu enlace de reseñas",
   "ratingOnly": "Solo valoración.",
   "rating": "{rating} sobre 5 estrellas",

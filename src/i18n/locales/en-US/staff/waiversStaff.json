@@ -5,7 +5,7 @@
     "savedFirst": "Your waiver is saved.",
     "invalid": "That didn't save. The release needs to be at least a few sentences long.",
     "materialityRequired": "That didn't publish. Say whether this is a correction or a material change, then publish again.",
-    "unchanged": "No change — the release is exactly as it was, so nothing was published and no signature was affected.",
+    "unchanged": "No change. The release is exactly as it was, so nothing was published and no signature was affected.",
     "resigningSendLink": "Send them by departure",
     "resigning": "{count, plural, one {New version published. # diver signs again before boarding.} other {New version published. # divers sign again before boarding.}}"
   },
@@ -17,13 +17,13 @@
     "materialDetail": "{count, plural, one {Asks the # standing signature to sign again.} other {Asks all # standing signatures to sign again.}}",
     "materialBoarding": "{count, plural, one {# diver boards within {days} days.} other {# divers board within {days} days.}}",
     "action": "Publish",
-    "confirm": "{count, plural, one {Publish — # signs again} other {Publish — # sign again}}"
+    "confirm": "{count, plural, one {Publish: # signs again} other {Publish: # sign again}}"
   },
   "fieldLabel": "Release text",
   "placeholder": "Write the release the diver will read and sign.",
   "pendingLabel": "Publishing…",
   "releaseDescription": {
-    "sample": "This is sample wording to start from — edit it to fit your shop, and have your own counsel review it."
+    "sample": "This is sample wording to start from. Edit it to fit your shop, and have your own counsel review it."
   },
   "versionInfo": "Version {version} · published {date}",
   "signatures": {

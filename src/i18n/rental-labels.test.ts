@@ -29,7 +29,7 @@ describe("rental item labels", () => {
 describe("rentalFitLineText", () => {
   it("reads the not-recorded and own-kit states", () => {
     expect(rentalFitLineText(t, "en-US", { state: "not_recorded" })).toBe(
-      "No fit on file — not asked yet",
+      "No fit on file, not asked yet",
     );
     expect(rentalFitLineText(t, "en-US", { state: "own_kit" })).toBe("Own kit");
   });

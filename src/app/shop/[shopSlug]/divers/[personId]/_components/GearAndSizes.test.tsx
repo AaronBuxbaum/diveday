@@ -51,7 +51,7 @@ function renderGear(rentalFit: RentalFit | null, rentalItems: string[] = []) {
 
 describe("GearAndSizes", () => {
   it.each([
-    ["no rental fit on file", null, [], "No fit on file — not asked yet"],
+    ["no rental fit on file", null, [], "No fit on file, not asked yet"],
     ["own kit", makeRentalFit(), [], "Own kit"],
     ["rental fit", makeRentalFit({ rentsBcd: true, bcdSize: "M" }), ["bcd"], "Rental fit on file"],
     [

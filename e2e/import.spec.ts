@@ -187,7 +187,7 @@ test.describe("contact import — specialty cards", () => {
     // The card is on file and verified — and the dive still waits, which is the
     // whole point of the decision. The blocker names the fix, not just the fault.
     await expect(
-      page.getByText(/came across in an import — a staffer needs to confirm it/),
+      page.getByText(/came across in an import, and a staffer needs to confirm it/),
     ).toBeVisible();
 
     // One tap on the diver's record clears it.

@@ -236,10 +236,94 @@ Copy rules:
 | Avoid | Prefer |
 | --- | --- |
 | “DiveDay is an all-in-one dive operations platform.” | “Run the whole dive day, from booking to head count.” |
-| “No records found.” | “No trips yet — schedule your first charter.” |
+| “No records found.” | “No trips yet. Schedule your first charter.” |
 | “Submit” | “Add diver” / “Save trip” / “Send waiver” |
 | “Sync failed.” | “This phone could not refresh. Try again while you have service.” |
 | “Our best-in-class solution.” | “A calmer way to run a dive day.” |
+
+### What gives us away
+
+Agents write every word of DiveDay, and a language model has a house style whether or not it
+means to. On 2026-09-03 the marketing bundle alone carried an em-dash in one sentence out of five,
+the "not a project, a file" contrast twenty-eight times, four "Here's how" lead-ins, a
+"No X. No Y. No Z." hero, and "actually" nine times. Each read as a good sentence on its own.
+Together they read as the voice a buyer has met a thousand times this year and learned to skim,
+and on a page whose one job is to be believed, that is the worst thing a sentence can do.
+
+The rule underneath every item below is the same: **a divemaster giving a briefing says the thing.**
+They do not set it up, pivot to it, contrast it with what it is not, or tell you it is true. The
+briefing is plain sentences in the order the day happens, and the confidence is in the facts.
+
+**Punctuation**
+
+- **No em-dashes in prose.** Not one. The dash is the single strongest tell, because a model reaches
+  for it every time two clauses want joining and a person almost never does. Use what the dash was
+  standing in for: a full stop, a comma, a colon, or "so"/"and"/"because". A dash that survives is
+  a label separator in a short string ("Boarded — tap again to undo", "Checked in — 2"), never a
+  hinge inside a sentence. `pnpm check:voice` refuses the rest.
+- **A colon introduces a list, not a punchline.** "A file, not a project: the importer shows…" is a
+  drum roll. Say the fact.
+- **A sentence fragment is not emphasis.** "One sitting, not a project plan." "Plainly." A fragment
+  after a full sentence reads as a beat for effect, and effect is what we are not doing.
+
+**Shapes**
+
+- **Say what it is, not what it is not.** "A brief in plain words, not a form letter", "A person,
+  not a wizard", "A head count, not a printout", "not a spec written far from the water". The
+  contrast frame is the second-strongest tell and it is everywhere. Name the thing and stop; the
+  reader supplies the alternative. The one exception is a *factual* refusal the reader needs
+  ("No retail register and no agency sync"), which is a scope statement, not a rhetorical shape.
+- **No staccato runs.** "No setup fee. No per-seat math. No feature tiers. No cut of your bookings."
+  Four fragments in a row is a cadence, not a claim. Write it as a sentence with the facts in it.
+- **No triplets for rhythm.** Three parallel nouns or clauses because three sounds finished. A list
+  has however many items are true.
+- **No aphorism headings.** "The door swings both ways." "The spreadsheet got you this far." "That's
+  our whole price." A heading that could open a TED talk is a heading that argues nothing. A heading
+  states a fact the band beneath it can be checked on (the `/about` test in
+  [product/marketing.md](../product/marketing.md) is this rule made mechanical).
+- **No rhetorical questions as headings.** "Rather see it than read about it?" The reader is being
+  handled. Ask a real question only where the reader has one (a FAQ), and answer it.
+- **No lead-ins.** "Here's how", "Here's the whole path", "One rule we won't bend:", "That's the
+  pattern:", "The best part", "Let's be honest". Delete the lead-in; start at the sentence it was
+  introducing.
+- **No closing flourish.** "If your team wouldn't open it on a busy morning, it hasn't done its job."
+  A paragraph that ends on a quotable line is a paragraph that stopped being a briefing.
+
+**Words**
+
+- **No intensifiers.** *actually, genuinely, truly, simply, quietly, plainly, really, literally.*
+  Each one is a sentence admitting it does not expect to be believed. "DiveDay says so plainly" is
+  "DiveDay says so".
+- **No software adjectives.** *seamless, effortless, robust, powerful, intuitive, streamlined,
+  elevated, empowered, frictionless.* Show the thing instead; the reader decides what to call it.
+- **No "the whole" for scale.** "The whole shop", "the whole list", "the whole path", "the whole
+  day". Once per site is a phrase; eleven times is a verbal tic.
+- **No "worth".** "Worth sharing", "worth the room", "worth having". A value judgement pretending to
+  be a fact.
+- **No knowing asides.** "(and it's in the price)", "which is what makes it usable by someone with
+  one hand free". A parenthetical that winks is a parenthetical that goes.
+
+**What does not change**
+
+The claims policy, the concrete nouns, the verbs on buttons, and the [copy-restraint](../../.claude/skills/copy-restraint/SKILL.md)
+filter all still apply; this list is about the *shape* of a sentence that survived them. Removing a
+tell never shortens a fact or softens a refusal, and a rewrite that loses a number, a name, or a
+consequence has fixed the wrong thing.
+
+| Before | After |
+| --- | --- |
+| “Who's booked, who's cleared, who's on the boat — one answer, all day.” | “Who is booked, who is cleared, and who is on the boat. One answer, all day.” |
+| “A file, not a project: the importer shows exactly what comes across — and what doesn't — before a single row saves.” | “The importer shows what comes across and what does not before a single row saves.” |
+| “No setup fee. No per-seat math. No feature tiers. No cut of your bookings.” | “There is no setup fee, no per-seat charge, no feature tier, and no cut of your bookings.” |
+| “A brief in plain words, not a form letter” | “A brief in plain words” |
+| “When DiveDay can't verify something, it says so plainly — no silent passes.” | “When DiveDay cannot verify something, it says so.” |
+| “Here's how to get your file out of EVE yourself.” | “Getting your file out of EVE takes six steps, all on the shop PC.” |
+| “Rather see it than read about it?” | “See it in the live demo” |
+
+`pnpm check:voice` (`scripts/check-voice.mjs`) refuses the mechanical half of this list in every
+message bundle: the prose em-dash, the intensifiers, the lead-ins, the "not just" contrast, and the
+staccato run, per locale. The rest is judgement, and the [brand-voice](../../.claude/skills/brand-voice/SKILL.md)
+skill's checklist is where it is applied.
 
 ### Marketing boundary
 

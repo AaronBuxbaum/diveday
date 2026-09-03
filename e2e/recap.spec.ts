@@ -64,13 +64,13 @@ test.describe("as owner", () => {
     // A 3-star rating isn't "strong" — still no merged ask.
     await page.getByRole("radio", { name: "3 out of 5 stars" }).check();
     await page.getByRole("button", { name: "Leave my review" }).click();
-    await expect(page.getByText("Thanks — your rating is up.")).toBeVisible();
+    await expect(page.getByText("Thanks. Your rating is up.")).toBeVisible();
     await expect(page.getByRole("link", { name: "Leave a public review" })).toHaveCount(0);
 
     // A 5-star rating earns the one merged ask, folded into the success state.
     await page.getByRole("radio", { name: "5 out of 5 stars" }).check();
     await page.getByRole("button", { name: "Leave my review" }).click();
-    await expect(page.getByText("Thanks — your rating is up.")).toBeVisible();
+    await expect(page.getByText("Thanks. Your rating is up.")).toBeVisible();
     // Read as text, not as a heading: slice 7d folded this second ask into the
     // after-state's run of ledger doors, where the label is a `<p>` inside the
     // `<li>` rather than a heading of its own. The ask, its link and where the

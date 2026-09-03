@@ -108,6 +108,11 @@ first-run explanation is not worth the four-hundredth reading.
 - **Legal and medical wording.** Waiver bodies, medical questionnaires, `/privacy`. Precision is
   the product there; this skill does not touch it.
 
+A sentence that survives the filter still has to *sound* right. Restraint decides whether it exists;
+"What gives us away" in `docs/design/brand.md` decides its shape, and the two go together: the
+em-dash pivot, the "not X, Y" contrast and the *actually* are how a sentence that should have been
+deleted disguises itself as one that earned its place.
+
 ## Deleting a string, mechanically
 
 Copy lives in bundles ([i18n-copy](../i18n-copy/SKILL.md)), so a deletion is three edits, and all

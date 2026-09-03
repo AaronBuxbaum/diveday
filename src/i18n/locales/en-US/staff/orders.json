@@ -88,15 +88,15 @@
       "refreshFailed": "Couldn't reach Stripe to refresh this order.",
       "voided": "Order voided.",
       "voidFailed": "Couldn't void this order.",
-      "refunded": "Payment refunded — the trip now shows as unpaid for this diver.",
+      "refunded": "Payment refunded. The trip now shows as unpaid for this diver.",
       "refundInvalidAmount": "That refund amount isn't one this order can give back. Enter an amount up to what's still held.",
       "partlyRefunded": "Part of this payment is on its way back. The rest is still with you, and the trip still shows as paid for this diver.",
       "refundFailed": "Couldn't refund this order.",
-      "refundInProgress": "A refund for this order is already going through. Give it a moment, then refresh — don't send it again.",
-      "refundNeedsReconciliation": "Stripe already sent a refund for this order that we never finished recording. Check it against your Stripe dashboard before sending any more — this order is on the stuck payments list.",
-      "notAuthorized": "Refunds are limited to owners and managers — ask one of them to issue this refund.",
-      "demoDisabled": "This is a demo order — it can't be changed.",
-      "fallback": "Something changed on this order — the details below are current."
+      "refundInProgress": "A refund for this order is already going through. Give it a moment, then refresh. Don't send it again.",
+      "refundNeedsReconciliation": "Stripe already sent a refund for this order that we never finished recording. Check it against your Stripe dashboard before sending any more. This order is on the stuck payments list.",
+      "notAuthorized": "Refunds are limited to owners and managers. Ask one of them to issue this refund.",
+      "demoDisabled": "This is a demo order, so it can't be changed.",
+      "fallback": "Something changed on this order. The details below are current."
     },
     "sentBy": "Sent by {partner}"
   },
@@ -106,8 +106,8 @@
     "newOrder": "New order",
     "monthlyReport": "Monthly report",
     "notice": {
-      "paymentNotConnected": "Payments aren't connected yet, so there's no account to invoice from — connect one to start charging divers.",
-      "notAuthorized": "Sending an invoice is limited to owners and managers — ask one of them to bill this diver."
+      "paymentNotConnected": "Payments aren't connected yet, so there's no account to invoice from. Connect one to start charging divers.",
+      "notAuthorized": "Sending an invoice is limited to owners and managers. Ask one of them to bill this diver."
     },
     "filters": {
       "searchLabel": "Search orders",
@@ -127,7 +127,7 @@
     "openFilteredTrip": "Open the departure",
     "emptyAll": "No DiveDay orders yet.",
     "emptyFiltered": "No DiveDay orders match these filters.",
-    "emptyNoPayments": "No DiveDay orders yet — connect payments and the front desk can send its first order from here.",
+    "emptyNoPayments": "No DiveDay orders yet. Connect payments and the front desk can send its first order from here.",
     "ledger": {
       "today": "Today · {date}",
       "continued": "{day}, continued",
@@ -167,7 +167,7 @@
     "paymentOps": {
       "sectionLabel": "Payments that need a check",
       "heading": "{count, plural, one {# payment} other {# payments}} we couldn't confirm. Check them in Stripe.",
-      "detail": "Stripe was asked to do something and the app never confirmed how it went — check each against the Stripe dashboard and finish it by hand.",
+      "detail": "Stripe was asked to do something and the app never confirmed how it went. Check each against the Stripe dashboard and finish it by hand.",
       "started": "started {date}",
       "stripeId": "Stripe: {id}",
       "openTrip": "Open trip",

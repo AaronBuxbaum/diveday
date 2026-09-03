@@ -12,19 +12,19 @@ import { OfflineManifestManager, type OfflineManifestManagerCopy } from "./Offli
 
 const copy: OfflineManifestManagerCopy = {
   checkingDevice: "Checking this device…",
-  reconcileRejectedOne: "1 change needs a look — open the live manifest to sort it out.",
-  reconcileRejectedOther: "{count} changes need a look — open the live manifest to sort it out.",
+  reconcileRejectedOne: "1 change needs a look. Open the live manifest to sort it out.",
+  reconcileRejectedOther: "{count} changes need a look. Open the live manifest to sort it out.",
   reconcilePendingOne: "1 change is still sending.",
   reconcilePendingOther: "{count} changes are still sending.",
   reconcileCaughtUp: "Everything's sent.",
   reconcileErrorFallback:
-    "Couldn't reach DiveDay just now — your offline changes are still saved here and will try to send again on reconnect.",
+    "Couldn't reach DiveDay just now. Your offline changes are still saved here and will try to send again on reconnect.",
   savingMessage: "Saving the latest manifest to this device…",
   saveErrorFallback:
     "This device couldn't save the manifest. It'll try again once you have signal.",
-  offlineWithSavedCopy: "Offline — showing the last saved copy.",
+  offlineWithSavedCopy: "Offline. Showing the last saved copy.",
   offlineNoSavedCopy: "No offline copy on this device yet.",
-  refreshNoSignal: "No signal — showing the last saved copy.",
+  refreshNoSignal: "No signal. Showing the last saved copy.",
   heading: "Offline safety copy",
   body: "This device keeps an offline copy of the manifest up to date automatically while you have signal. Roll call keeps working offline, and every change is double-checked against the live manifest once you're back.",
   connectivityOfflineWithCopy: "No signal · device copy",

@@ -51,6 +51,11 @@ written down.
 
 - Outcome in the buyer's world, not a category label. Test: could a rival paste this sentence
   truthfully onto their site? If yes, sharpen it.
+- Reads as a person, not a model. No em-dash in prose, no "not a project, a file" contrast, no
+  "No X. No Y. No Z." run, no *actually*/*genuinely*/*plainly*, no "Here's how", no aphorism or
+  rhetorical question as a heading, no closing flourish. The list, with before/after, is "What
+  gives us away" in `docs/design/brand.md`; `pnpm check:voice` refuses the mechanical half. Page
+  `metadata` descriptions are English literals the guard cannot see, so read them by hand.
 - Shipped-only; no "coming soon"; no unprovable superlatives ("everything", "complete").
 - No software jargon ("operating system", "platform", "solution") — name the whiteboard, the
   clipboard, the counter, the boat.
@@ -73,12 +78,12 @@ written down.
 
 ## Verify (the definition of done)
 
-1. `pnpm check` green.
+1. `pnpm check` green (`pnpm check:voice` is the fast local half for a copy change).
 2. `pnpm e2e marketing.spec.ts --reporter=line` — update its pinned headline/price assertions
    deliberately when copy changes; a red marketing spec on a copy change is the test working.
 3. Screenshot every touched route and **look at the PNGs**, light + dark, desktop + phone. The
    visual spec writes them, so a filtered run is the fastest way in:
-   `pnpm e2e:build && npx playwright test e2e/visual.spec.ts -g 'public surfaces' --reporter=line`,
+   `pnpm e2e:build && npx playwright test e2e/visual.spec.ts --grep 'mode public the' --reporter=line`,
    then read the images it wrote under `e2e/screenshots/` (gitignored).
 4. Run the `design-review` skill for anything beyond a copy tweak; new sections or pages get a
    visual snapshot in `e2e/visual.spec.ts` (see `e2e-and-visual`).

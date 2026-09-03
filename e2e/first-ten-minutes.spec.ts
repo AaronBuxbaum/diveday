@@ -85,7 +85,7 @@ test("a brand-new shop is bookable within the four-screen budget, and is shown t
   arrive("today (bookable + share link)");
   await expect(
     page.getByRole("heading", {
-      name: /“Two-Tank Morning Reef” is on the board — your shop is bookable/,
+      name: /“Two-Tank Morning Reef” is on the board, and your shop is bookable/,
     }),
   ).toBeVisible();
   await expect(page.getByText(`/s/${unique}`)).toBeVisible();

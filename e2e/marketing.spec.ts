@@ -16,7 +16,7 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   // it must not promise "no sign-up" on behalf of the trial button beside it.
   await expect(
     page
-      .getByText("The demo opens a working sample shop in one click — no sign-up, no card.")
+      .getByText("The demo opens a working sample shop in one click. No sign-up and no card.")
       .first(),
   ).toBeVisible();
   // Exactly three demo buttons (nav, hero, closing) — the five-chip role
@@ -54,9 +54,9 @@ test("the homepage hero offers one demo door, and the diver preview lives on its
   // this assertion sits under them deliberately: it is the reason they are
   // re-read on every copy change. A "See pricing" link here would answer the
   // same question and cost the budget a door.
-  const heroPriceLine = heroSection.getByText(/^One flat price —/);
+  const heroPriceLine = heroSection.getByText(/^One flat price of/);
   await expect(heroPriceLine).toBeVisible();
-  await expect(heroPriceLine).toContainText("No cut of your bookings.");
+  await expect(heroPriceLine).toContainText("no cut of your bookings.");
   await expect(heroPriceLine.getByRole("link")).toHaveCount(0);
   await expect(heroPriceLine.locator("button")).toHaveCount(0);
 
@@ -104,7 +104,7 @@ test("the homepage answers price and offers a way to ask before the footer", asy
   // 2026-08-28 (docs/product/marketing-review-20260827.md); the closing band
   // keeps the two-year lock, which is the detail a reader wants at the ask
   // rather than at the door.
-  await expect(page.getByText(/^One flat price —/)).toHaveCount(2);
+  await expect(page.getByText(/^One flat price of/)).toHaveCount(2);
   await expect(page.getByText(/locked for two years for founding shops/)).toBeVisible();
   await expect(page.getByRole("link", { name: "See what's included →" })).toHaveAttribute(
     "href",
@@ -113,7 +113,7 @@ test("the homepage answers price and offers a way to ask before the footer", asy
 
   // The contact band: a hesitant buyer who won't self-serve a demo or trial
   // gets a visible human path — not just an unlabeled address in the footer.
-  await expect(page.getByRole("heading", { name: "Rather ask a question first?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ask us first" })).toBeVisible();
   await expect(page.getByRole("link", { name: /Email support@dive\.day/ })).toHaveAttribute(
     "href",
     "mailto:support@dive.day",
@@ -137,12 +137,12 @@ test("the homepage's day reaches the evening, and answers mid-season where it di
     }),
   ).toBeVisible();
   await expect(
-    momentsBand.getByRole("heading", { name: "Divers go home with a page worth sharing" }),
+    momentsBand.getByRole("heading", { name: "Divers go home with a page to share" }),
   ).toBeVisible();
   // The clause that makes this a revenue argument rather than an
   // administrative one: the shop's name is on the artifact the diver sends.
   await expect(
-    momentsBand.getByText("with your shop's name on the thing they send their buddy."),
+    momentsBand.getByText("with your shop's name on the page they send their buddy."),
   ).toBeVisible();
   // The screen is the claim in every row of this band, so the recap is shown,
   // not described — and named for a screen reader by a label the *caller*
@@ -169,9 +169,9 @@ test("the homepage's day reaches the evening, and answers mid-season where it di
     .filter({ has: page.getByRole("heading", { name: "Coming in" }) })
     .filter({ has: page.getByRole("link", { name: "Your spreadsheet, column by column →" }) })
     .last();
-  const midSeason = arrivingColumn.getByText(/^Mid-season isn't a problem:/);
+  const midSeason = arrivingColumn.getByText(/^Mid-season is fine:/);
   await expect(midSeason).toBeVisible();
-  await expect(midSeason).toContainText("an afternoon, not a project plan.");
+  await expect(midSeason).toContainText("Budget an afternoon.");
   // It is the guides' own shared key rendered here, not a homepage wording of
   // the same promise — the rule marketing.md states one namespace over for the
   // export claim. `src/lib/marketing.test.ts` pins the key's home; this pins
@@ -186,7 +186,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
 
   await expect(
     page.getByRole("heading", {
-      name: "Who's booked, who's cleared, who's on the boat — one answer, all day.",
+      name: "Who is booked, who is cleared, and who is on the boat. One answer, all day.",
     }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Product" }).first()).toBeVisible();
@@ -234,9 +234,11 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // The money story and the full capability index — the two things a buyer
   // comparing DiveDay against an incumbent's feature page goes looking for.
   await expect(
-    page.getByRole("heading", { name: "The money runs through your Stripe account, not ours." }),
+    page.getByRole("heading", { name: "The money runs through your own Stripe account." }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "The whole list, plainly." })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Every shipped workflow, in one list." }),
+  ).toBeVisible();
 
   // The click-through above has done its job — the Product link leads here.
   // The capability index is re-checked from a fresh `goto`, so it is asserted
@@ -263,7 +265,9 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // this file, which is the regression guard). The load-gated `goto` stays: it
   // is the navigation's own completion, never a guessed interval.
   await page.goto("/product");
-  await expect(page.getByRole("heading", { name: "The whole list, plainly." })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Every shipped workflow, in one list." }),
+  ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Booking and the public pages" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Your records" })).toBeVisible();
   // The product hero has the same decision budget as the homepage hero: the
@@ -273,10 +277,10 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   const productHero = productMain.locator("section").first();
   await expect(productHero.locator("button:not([disabled])")).toHaveCount(1);
   await expect(productHero.getByRole("link")).toHaveCount(1);
-  const productHeroPrice = productHero.getByText(/^One flat price —/);
+  const productHeroPrice = productHero.getByText(/^One flat price of/);
   await expect(productHeroPrice).toBeVisible();
   await expect(productHeroPrice).toContainText(earlyAccessPrice.price);
-  await expect(productHeroPrice).toContainText("No cut of your bookings.");
+  await expect(productHeroPrice).toContainText("no cut of your bookings.");
   await expect(productHeroPrice.locator("a, button")).toHaveCount(0);
   // The hero says what the trip holds together, in the reader's own terms. It
   // opened "DiveDay is organized around the trip itself:" until 2026-08-28 — a
@@ -322,7 +326,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // to go looking for it: inside the band the capability list closes.
   const indexBand = productMain
     .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "The whole list, plainly." }) });
+    .filter({ has: page.getByRole("heading", { name: "Every shipped workflow, in one list." }) });
   await expect(indexBand.locator('input[name="source"][value="product-index"]')).toHaveCount(1);
 
   // The money band states the figure instead of parking it behind its own
@@ -344,7 +348,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // binds controls, not facts").
   const moneyBand = productMain.locator("section").filter({
     has: page.getByRole("heading", {
-      name: "The money runs through your Stripe account, not ours.",
+      name: "The money runs through your own Stripe account.",
     }),
   });
   await expect(moneyBand.locator("a, button:not([disabled])")).toHaveCount(1);
@@ -377,7 +381,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // demo note beside it answers only for the demo, so before this the trial
   // button carried no terms at all.
   const trialTerms = page.getByText(
-    "The trial is a shop of your own — free for 3 weeks, no card, and nothing switches off when the window ends.",
+    "The trial is a shop of your own: free for 3 weeks, no card, and nothing switches off when the window ends.",
   );
   await expect(trialTerms).toHaveCount(2);
   // The offline row is gone from this page's FAQ, deliberately — the claim
@@ -398,7 +402,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // guide that carries the citation. No claim about what a shop pays in
   // practice and no savings arithmetic: we have no customers to know either.
   await expect(
-    page.getByRole("heading", { name: "A flat price, or a cut of every seat you sell." }),
+    page.getByRole("heading", { name: "A flat price beside a cut of every seat you sell." }),
   ).toBeVisible();
   await expect(
     page.getByText(/monthly subscription plus 3% of every online booking/),
@@ -461,7 +465,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // on. Tagged like `product-mid`, so the position can be shown to have
   // earned its place rather than folding into the page's own bucket
   // (src/lib/funnel.ts).
-  await expect(page.getByRole("heading", { name: "That's our whole price." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "That is the full price." })).toBeVisible();
   const pricingMain = page.getByRole("main");
   // Visible, not merely present: `toHaveCount` passes on a `display:none`
   // anchor, and a closing door nobody can see is the bug this one exists to
@@ -566,7 +570,7 @@ test("the sign-up form answers the hesitation it creates", async ({ page }) => {
   // and a buyer who has been burned reads an unanswered window as a card wall
   // (docs/product/marketing-review-20260827.md).
   await expect(
-    page.getByText("Free for 3 weeks, no card — and nothing switches off when the window ends."),
+    page.getByText("Free for 3 weeks, no card, and nothing switches off when the window ends."),
   ).toBeVisible();
   // The three claims it replaced keep their paragraphs on the marketing pages
   // the visitor came from; the door repeats none of them.
@@ -620,7 +624,7 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
   // docs/product/marketing.md — so the page names no individual, and asserting
   // one here would only re-introduce it by the back door.)
   await expect(
-    page.getByRole("heading", { name: "What we're not going to pretend." }),
+    page.getByRole("heading", { name: "Three facts before you move a season of bookings." }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "DiveDay is new." })).toBeVisible();
   await expect(page.getByRole("heading", { name: "It doesn't do everything." })).toBeVisible();
@@ -640,7 +644,7 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
   // an order rather than a presence, because both blocks existed then too.
   const headings = await page.getByRole("heading", { level: 2 }).allInnerTexts();
   expect(headings.indexOf("Four rules, and you can check every one.")).toBeLessThan(
-    headings.indexOf("What we're not going to pretend."),
+    headings.indexOf("Three facts before you move a season of bookings."),
   );
 
   // A trust page that didn't land on the exit would be missing the point, and
@@ -692,12 +696,12 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
   // costs them their email address, which at the moment of maximum impulse
   // makes scrolling past it the safest move — and by the closing band the
   // impulse is spent.
-  await expect(rulesBand.locator("p", { hasText: "no sign-up, no card" })).toHaveCount(1);
+  await expect(rulesBand.locator("p", { hasText: "No sign-up and no card" })).toHaveCount(1);
   // Once on the page, not under both doors. The answer is worth nothing the
   // second time — repeated under every demo button it stops reading as
   // reassurance and starts reading as insistence — so the closing band repeats
   // the door, not the note.
-  await expect(aboutMain.locator("p", { hasText: "no sign-up, no card" })).toHaveCount(1);
+  await expect(aboutMain.locator("p", { hasText: "No sign-up and no card" })).toHaveCount(1);
 
   // Two positions, in DOM order, each tagged for itself — a reader who moved
   // at the proof is a different moment from one who read the whole page and
@@ -775,7 +779,9 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   await page.goto("/");
   await page.getByRole("contentinfo").getByRole("link", { name: "Switch" }).click();
 
-  await expect(page.getByRole("heading", { name: "The door swings both ways." })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Records come in with a file and leave with a button." }),
+  ).toBeVisible();
 
   // The named incumbents each have a live guide (no coming-soon entries).
   for (const name of [
@@ -794,7 +800,7 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // The three-part promise: export click-path, the scope table, the importer.
   await expect(page.getByRole("heading", { name: "Get your data out of EVE" })).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "What comes across — and what doesn't" }),
+    page.getByRole("heading", { name: "What comes across, and what does not" }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Bring the file into DiveDay" })).toBeVisible();
   // …and the return trip, stated on the same page rather than left implied.
@@ -828,9 +834,7 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // Four doors out, and only four: the nav, the hero, the hinge between the
   // argument and the mechanics, and the close.
   await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(4);
-  await expect(
-    page.getByRole("heading", { name: "Rather see it than read about it?" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "See it in the live demo" })).toBeVisible();
 
   // The scope table is the importer's honesty table — a claimed waiver
   // acceptance is trusted, medical clearance included, and marked imported.
@@ -889,7 +893,7 @@ test("migration guides walk a shop from an incumbent export into the importer", 
   // beside the DiveDay twin, the hosted-site figure rendered from its one
   // source with its attribution, and the built-to-order offer as a mail door.
   await expect(
-    page.getByRole("heading", { name: "Leaving FareHarbor doesn't mean rebuilding your site." }),
+    page.getByRole("heading", { name: "Leaving FareHarbor does not mean rebuilding your site." }),
   ).toBeVisible();
   await expect(page.getByText("Lightframe", { exact: true })).toBeVisible();
   await expect(page.getByText(/third parties report \$5,000 a year/)).toBeVisible();
@@ -977,7 +981,7 @@ test("help arrives before the homework on a switching guide", async ({ page }) =
   // `SwitchingConcierge` block stays on every switching page (marketing.md's
   // claims policy); this is the compressed form arriving first.
   const conciergeHeading = page.getByRole("heading", {
-    name: /switch you on — and off — ourselves/,
+    name: /switch you on, and off, ourselves/,
   });
   await expect(conciergeHeading).toBeVisible();
   const introBox = await moveIntro.boundingBox();
@@ -989,7 +993,7 @@ test("help arrives before the homework on a switching guide", async ({ page }) =
   // order, so an edit that appends it instead lands here.
   const cutoverPhase = page
     .locator("li")
-    .filter({ has: page.getByRole("heading", { name: "Cutover without drama" }) })
+    .filter({ has: page.getByRole("heading", { name: "Cutover without downtime" }) })
     .first();
   const cutoverSteps = await cutoverPhase.getByRole("heading", { level: 4 }).allInnerTexts();
   expect(cutoverSteps).toHaveLength(5);
@@ -1016,7 +1020,7 @@ test("help arrives before the homework on a switching guide", async ({ page }) =
   // cutover rail at all — and with it, none of the parallel-run answer that
   // rail's steps give. That is why the note lives on its import phase instead.
   await page.goto("/switching/spreadsheet");
-  await expect(page.getByRole("heading", { name: "Cutover without drama" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Cutover without downtime" })).toHaveCount(0);
   await expect(
     page.getByRole("heading", { name: "Let the crew walk their screens first" }),
   ).toHaveCount(0);
@@ -1091,7 +1095,7 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
   await page.goto("/switching");
   await page.getByRole("link", { name: /Coming from a spreadsheet/ }).click();
   await expect(
-    page.getByRole("heading", { name: "The spreadsheet got you this far." }),
+    page.getByRole("heading", { name: "Bring the spreadsheet with you." }),
   ).toBeVisible();
 
   // The three-part shape, reframed for a shop with no vendor to leave:
@@ -1100,7 +1104,7 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
     page.getByRole("heading", { name: "Does your sheet have these columns?" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "What comes across — and what doesn't" }),
+    page.getByRole("heading", { name: "What comes across, and what does not" }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Bring the file into DiveDay" })).toBeVisible();
   // The direct-to-import CTA only makes sense for a signed-in owner already
@@ -1141,7 +1145,7 @@ test("the spreadsheet guide brings a no-system shop across for free", async ({ p
   // The owner-authorized concierge switch offer lands, phrased as a human
   // commitment, with a real handoff: an email link the shop can act on.
   await expect(
-    page.getByRole("heading", { name: /switch you on — and off — ourselves/ }),
+    page.getByRole("heading", { name: /switch you on, and off, ourselves/ }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: /Email us at/ })).toHaveAttribute(
     "href",
@@ -1323,9 +1327,9 @@ test.describe("with Accept-Language: es", () => {
   /** One phrase per page, unique to its body and absent from the chrome. */
   const bodyCopy = {
     "/": {
-      english: "Who's booked, who's cleared, who's on the boat — one answer, all day.",
+      english: "Who is booked, who is cleared, and who is on the boat. One answer, all day.",
       spanish:
-        "Quién reservó, quién está listo, quién sube al barco — una sola respuesta, todo el día.",
+        "Quién reservó, quién está listo y quién sube al barco. Una sola respuesta, todo el día.",
     },
     "/product": {
       english: "From the first booking to the last head count.",
@@ -1342,12 +1346,12 @@ test.describe("with Accept-Language: es", () => {
     // `/switching/[competitor]`; the guarantee this test checks is the same
     // either way.
     "/switching": {
-      english: "The door swings both ways.",
-      spanish: "La puerta se abre en ambos sentidos.",
+      english: "Records come in with a file and leave with a button.",
+      spanish: "Los registros entran con un archivo y salen con un botón.",
     },
     "/switching/spreadsheet": {
-      english: "The spreadsheet got you this far.",
-      spanish: "La hoja de cálculo te trajo hasta aquí.",
+      english: "Bring the spreadsheet with you.",
+      spanish: "Trae la hoja de cálculo contigo.",
     },
     "/about": {
       english: "Your season doesn't hang on us.",
@@ -1419,7 +1423,7 @@ test.describe("with Accept-Language: es", () => {
     // the copy that was about to be discarded.
     await expect(
       page.getByRole("heading", {
-        name: "El día termina con un resumen que los buceadores quieren compartir.",
+        name: "El día termina con un resumen que los buceadores comparten.",
       }),
     ).toBeInViewport();
   });

@@ -122,7 +122,7 @@ test.describe("backup settings", () => {
     await expect(page.getByRole("cell", { name: "Delivered" }).first()).toBeVisible();
     await expect(page.getByRole("cell", { name: "Failed" })).toBeVisible();
     await expect(
-      page.getByText("The bucket refused the credential — check the access key"),
+      page.getByText("The bucket refused the credential. Check the access key"),
     ).toBeVisible();
   });
 

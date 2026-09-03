@@ -87,7 +87,7 @@ describe("WaitlistGroup ranking", () => {
   it("tells staff plainly that nobody on the list is owed the seat", () => {
     renderSection(waiting);
 
-    expect(screen.getByText(/nobody here is promised the seat/)).toBeVisible();
+    expect(screen.getByText(/nobody here is promised the seat/i)).toBeVisible();
   });
 });
 

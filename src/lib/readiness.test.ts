@@ -855,7 +855,7 @@ describe("aboardBlockerKind", () => {
  * **One entry per kind, never one reason over a whole count.**
  *
  * The first cut returned a single kind for the group, and the card rendered it
- * against the group's total — "5 divers are aboard — a medical hold" when one
+ * against the group's total — "5 divers are aboard with a medical hold" when one
  * of the five was. Run the other way, four divers with no medical declaration
  * vanish behind the one the crew was told about.
  */
