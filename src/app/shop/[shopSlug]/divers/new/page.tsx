@@ -234,16 +234,10 @@ export default async function NewDiverPage({
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        eyebrow={t("divers.page.newDiverEyebrow")}
+        eyebrow={backLink.label}
+        eyebrowHref={backLink.href}
         title={t("divers.page.newDiverTitle")}
       />
-
-      <Link
-        href={backLink.href}
-        className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
-      >
-        {backLink.label}
-      </Link>
 
       {noticeText ? (
         <ShopNotice tone={noticeIsError ? "danger" : "success"} className="mt-6">

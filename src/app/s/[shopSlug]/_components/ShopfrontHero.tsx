@@ -83,13 +83,16 @@ export function ShopfrontHero({
           <StoredPhoto
             src={heroImage.url}
             alt={heroImage.alt}
-            className="aspect-[16/7] w-full"
+            // Taller on a phone: at 390px a 16:7 frame is 170px, and the
+            // two-line title plus tagline in the scrim below it is more than
+            // that, so the name was cropped at the top of the picture.
+            className="aspect-[4/3] w-full sm:aspect-[16/7]"
             sizes="(min-width: 1152px) 1152px, 100vw"
             priority
           />
           {/* Paper on a scrim of ink, whatever the photograph: legibility does
               not depend on the shop choosing a dark picture. */}
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-device-frame/85 via-device-frame/45 to-transparent px-5 pt-16 pb-5 text-surface sm:px-8 sm:pb-7">
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-device-frame/85 via-device-frame/45 to-transparent px-5 pt-16 pb-5 text-device-frame-foreground sm:px-8 sm:pb-7">
             <h1 className={`font-brand-display ${PAGE_TITLE_CLASS} text-balance sm:text-5xl`}>
               {name}
             </h1>

@@ -795,7 +795,6 @@ export default async function SettingsPage({
               heading={t("settings.main.profile.heading")}
               value={profileValue}
               description={t("settings.main.profile.description")}
-              detail={t("settings.main.profile.detail")}
               sectionId="profile"
               activeSection={activeSection}
             >
@@ -1092,7 +1091,6 @@ export default async function SettingsPage({
             <SettingsRow
               heading={t("settings.main.conservation.heading")}
               value={conservationValue}
-              description={t("settings.main.conservation.description")}
               detail={t("settings.main.conservation.detail")}
               sectionId="conservation"
               activeSection={activeSection}
@@ -1162,7 +1160,6 @@ export default async function SettingsPage({
               heading={t("settings.main.dockCall.heading")}
               value={dockCallValue}
               description={t("settings.main.dockCall.description")}
-              detail={t("settings.main.dockCall.detail")}
               sectionId="dockCall"
               activeSection={activeSection}
             >
@@ -1368,19 +1365,13 @@ export default async function SettingsPage({
                   buttons — inside an open disclosure the reader has already
                   asked for detail, and three ⓘ controls hiding three facts
                   fail remove-until-it-breaks. */}
-                <Field
-                  label={t("settings.main.units.depthLabel")}
-                  description={t("settings.main.units.depthDetail")}
-                >
+                <Field label={t("settings.main.units.depthLabel")}>
                   <select name="depthUnit" defaultValue={shop.depthUnit} className={controlClass}>
                     <option value="meters">{t("settings.main.units.meters")}</option>
                     <option value="feet">{t("settings.main.units.feet")}</option>
                   </select>
                 </Field>
-                <Field
-                  label={t("settings.main.units.temperatureLabel")}
-                  description={t("settings.main.units.temperatureDetail")}
-                >
+                <Field label={t("settings.main.units.temperatureLabel")}>
                   <select
                     name="temperatureUnit"
                     defaultValue={shop.temperatureUnit}
@@ -1395,10 +1386,7 @@ export default async function SettingsPage({
                 the gate against live roles for any submission that carries the
                 field anyway. */}
                 {canPayments ? (
-                  <Field
-                    label={t("settings.main.units.currencyLabel")}
-                    description={t("settings.main.units.currencyDetail")}
-                  >
+                  <Field label={t("settings.main.units.currencyLabel")}>
                     <select
                       name="currency"
                       defaultValue={toShopCurrency(shop.currency)}
@@ -2099,7 +2087,6 @@ export default async function SettingsPage({
                       <Badge tone="warning">{t("settings.main.stripe.notReadyBadge")}</Badge>
                     )
                   }
-                  detail={!account ? t("settings.main.stripe.notConnectedDetail") : undefined}
                   sectionId="stripe"
                   activeSection={activeSection}
                   forceOpen={!account || !ready}

@@ -250,7 +250,7 @@ export default async function GearRegisterPage({
           fleetTotal === 0 ? undefined : (
             // Secondary: the form below carries the page's one primary.
             <AddUnitLink className={buttonClass({ variant: "secondary" })}>
-              <span aria-hidden="true">+</span> {t("gear.addUnit.door")}
+              {t("gear.addUnit.door")}
             </AddUnitLink>
           )
         }
@@ -274,9 +274,7 @@ export default async function GearRegisterPage({
             title={t("gear.empty.heading")}
             action={
               <div className="mt-4 flex flex-wrap justify-center gap-3">
-                <AddUnitLink className={buttonClass()}>
-                  <span aria-hidden="true">+</span> {t("gear.addUnit.door")}
-                </AddUnitLink>
+                <AddUnitLink className={buttonClass()}>{t("gear.addUnit.door")}</AddUnitLink>
               </div>
             }
             className="mt-4"

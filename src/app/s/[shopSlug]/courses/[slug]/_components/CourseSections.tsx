@@ -461,7 +461,6 @@ export function CourseSessions({
                     href={publicTripPath(shopSlug, next.id)}
                     className={buttonClass({
                       variant: full ? "secondary" : "primary",
-                      size: "cta",
                     })}
                   >
                     {full ? t("course.joinWaitList") : t("course.bookThisDate")}

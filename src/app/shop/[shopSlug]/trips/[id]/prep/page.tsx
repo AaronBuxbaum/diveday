@@ -264,7 +264,7 @@ export default async function TripPrepPage({
                 the packing list that follows them onto its own page. Same
                 three numbers, said inline. */}
             <div
-              className={`mt-3 grid gap-3 print:hidden ${showNitrox ? "sm:grid-cols-3" : "sm:grid-cols-1"}`}
+              className={`mt-3 grid gap-3 print:hidden ${showNitrox ? "grid-cols-3" : "grid-cols-1"}`}
             >
               {showNitrox ? (
                 <>
@@ -288,12 +288,7 @@ export default async function TripPrepPage({
                 : [`${t("trips.prep.total")} ${checklist.tanks.total}`]
               ).join(" · ")}
             </p>
-            <p className="mt-2 text-sm text-muted">
-              {checklist.crewCount > 0
-                ? t("trips.prep.includesCrew", { count: checklist.crewCount })
-                : t("trips.prep.diversOnlyNote")}{" "}
-              {t("trips.prep.noGasAnalysisNote")}
-            </p>
+            <p className="mt-2 text-sm text-muted">{t("trips.prep.noGasAnalysisNote")}</p>
           </section>
 
           {showNitrox && checklist.nitroxBlockers.length > 0 ? (

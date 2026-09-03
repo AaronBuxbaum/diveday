@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { buttonClass } from "@/components/ui/button";
 import { getActiveOfflineShellVersion } from "@/lib/offline-manifest-store";
 import { OFFLINE_MANIFEST_SHELL_VERSION } from "@/lib/offline-manifests";
 
@@ -49,7 +50,7 @@ export function OfflineShellVersionBanner({ copy }: { copy: OfflineShellVersionB
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className="inline-flex min-h-9 items-center rounded-lg border border-border-strong px-3 font-semibold"
+          className={buttonClass({ variant: "secondary", size: "sm" })}
         >
           {copy.refreshButton}
         </button>

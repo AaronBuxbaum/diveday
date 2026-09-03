@@ -955,7 +955,6 @@ export default async function WaiverPage({
             <SubmitButton
               pendingLabel={t("waiver.signing")}
               className={buttonClass({
-                size: "lg",
                 className: `mt-6 w-full disabled:opacity-70 ${labelTextBase}`,
               })}
             >

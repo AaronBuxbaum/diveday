@@ -147,7 +147,7 @@ export default async function DiveSitesPage({
         actions={
           librarySize === 0 ? undefined : (
             <Link href={`/shop/${shopSlug}/dive-sites/new`} className={buttonClass()}>
-              <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
+              {t("diveSites.list.createSite")}
             </Link>
           )
         }
@@ -217,7 +217,7 @@ export default async function DiveSitesPage({
                   {t("diveSites.list.browseTemplates")}
                 </Link>
                 <Link href={`/shop/${shopSlug}/dive-sites/new`} className={buttonClass()}>
-                  <span aria-hidden="true">+</span> {t("diveSites.list.createSite")}
+                  {t("diveSites.list.createSite")}
                 </Link>
               </div>
             )
@@ -349,12 +349,10 @@ async function CatalogView({
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <Link href={back} scroll={false} className="text-sm font-medium text-primary hover:underline">
-        {t("diveSites.backToLibrary")}
-      </Link>
-      <div className="mt-4">
+      <div>
         <ShopPageHeader
-          eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
+          eyebrow={t("diveSites.backToLibrary")}
+          eyebrowHref={back}
           title={t("diveSites.catalog.title")}
           description={t("diveSites.catalog.description")}
         />
@@ -472,18 +470,10 @@ function TemplatePreview({
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <Link
-        href={backHref}
-        scroll={false}
-        className="text-sm font-medium text-primary hover:underline"
-      >
-        {t("diveSites.catalog.backToCatalog")}
-      </Link>
-      <div className="mt-4">
+      <div>
         <ShopPageHeader
-          eyebrow={t("diveSites.catalog.templateVersion", {
-            version: template.version.version,
-          })}
+          eyebrow={t("diveSites.catalog.backToCatalog")}
+          eyebrowHref={backHref}
           title={briefing.name}
           description={briefing.description ?? ""}
           actions={
@@ -499,7 +489,6 @@ function TemplatePreview({
           }
         />
       </div>
-      <p className="mt-2 text-sm text-muted">{t("diveSites.catalog.previewNote")}</p>
 
       {facts.length > 0 ? (
         <dl

@@ -91,11 +91,9 @@ test.describe("staff calendar subscriptions", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Calendar subscriptions" }),
     ).toBeVisible();
-    // And the explainer the hub no longer carries is here, where it belongs.
+    // And the page's own one-line lede is here, where it belongs.
     await expect(
-      page.getByText(
-        "Subscribing is read-only: DiveDay never reads or changes anything in your calendar.",
-      ),
+      page.getByText("Put your DiveDay departures on the calendar you already use."),
     ).toBeVisible();
   });
 

@@ -23,7 +23,6 @@ export default function PublicShopError({ reset }: { error: Error; reset: () => 
       body={t("bodyBooked")}
       resetLabel={t("tryAgain")}
       onReset={reset}
-      size="cta"
     />
   );
 }

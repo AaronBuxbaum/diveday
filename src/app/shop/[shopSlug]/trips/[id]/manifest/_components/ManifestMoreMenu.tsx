@@ -62,7 +62,7 @@ export function ManifestMoreMenu({
           aria-label={label}
           aria-expanded={open}
           aria-controls={panelId}
-          className="grid size-11 place-items-center rounded-full border border-border bg-surface text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
+          className="grid size-12 place-items-center rounded-full border border-border bg-surface text-muted transition-colors hover:bg-surface-sunken hover:text-foreground"
           onClick={() => setOpen((current) => !current)}
         >
           <svg

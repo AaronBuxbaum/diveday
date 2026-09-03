@@ -677,8 +677,14 @@ function AddDoor({
     // closes a ledger whose final member is this door.
     <Tag className="list-none border-t border-border last:border-b">
       <AutoOpenDetails id={id} openOnHash={id} open={open} className="group/add scroll-mt-8">
-        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-primary transition-colors select-none [&::-webkit-details-marker]:hidden hover:underline">
-          <span aria-hidden="true">+</span> {label}
+        <summary
+          className={buttonClass({
+            variant: "link",
+            flush: true,
+            className: "list-none select-none [&::-webkit-details-marker]:hidden",
+          })}
+        >
+          {label}
         </summary>
         <div className="pt-1 pb-6">{children}</div>
       </AutoOpenDetails>

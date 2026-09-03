@@ -60,7 +60,7 @@ const COPY: BuilderCopy = {
   impactBlockedNotScheduled: "A cancelled trip can’t be moved.",
   crewLabel: "Crew:",
   crewNobodyYet: "nobody yet",
-  crewMostlyAll: "Crew: {names} unless a departure says otherwise.",
+  crewMostlyAll: "Usual crew: {names}.",
   windLabel: "Wind:",
   noPriceSet: "No price set",
   noPriceSetAria: "Set a price for {ref}",
@@ -139,7 +139,6 @@ const COPY: BuilderCopy = {
   diversSuffix: "divers",
   hoursBeforeSuffix: "hours before",
   repeatLegend: "Repeat",
-  repeatDescription: "Put a standing departure on the board and leave it there.",
   howOftenLabel: "How often",
   doesntRepeat: "Doesn't repeat",
   everyWeek: "Every week",
@@ -281,9 +280,7 @@ describe("ScheduleBuilder crew line", () => {
       { id: "t4", crew: ["Marcus Webb", "Sal Moretti"] },
     ]);
 
-    expect(
-      screen.getByText("Crew: Keiko Tanaka, Sal Moretti unless a departure says otherwise."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Usual crew: Keiko Tanaka, Sal Moretti.")).toBeInTheDocument();
     // Once, above the list — and nowhere on the three rows it speaks for.
     expect(screen.queryByText("Crew: Keiko Tanaka, Sal Moretti")).toBeNull();
     // The one that differs still says who is on it.
@@ -318,7 +315,7 @@ describe("ScheduleBuilder crew line", () => {
       { id: "t6", crew: ["Marcus Webb", "Sal Moretti"] },
     ]);
 
-    expect(screen.queryByText(/unless a departure says otherwise/)).toBeNull();
+    expect(screen.queryByText(/Usual crew/)).toBeNull();
     expect(screen.getAllByText("Crew: Keiko Tanaka, Sal Moretti")).toHaveLength(3);
   });
 
@@ -328,7 +325,7 @@ describe("ScheduleBuilder crew line", () => {
       { id: "t2", crew: USUAL },
     ]);
 
-    expect(screen.queryByText(/unless a departure says otherwise/)).toBeNull();
+    expect(screen.queryByText(/Usual crew/)).toBeNull();
     expect(screen.getAllByText("Crew: Keiko Tanaka, Sal Moretti")).toHaveLength(2);
   });
 });

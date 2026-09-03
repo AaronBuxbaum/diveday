@@ -1,7 +1,5 @@
 {
-  "operationalWindow": {
-    "arrivalsLens": "El modo mostrador muestra las llegadas de {lookback, plural, one {la última # hora} other {las últimas # horas}} hasta las próximas {ahead}."
-  },
+  "operationalWindow": {},
   "skipToContent": "Saltar al contenido principal",
   "publicPreview": {
     "youWorkHere": "Trabajas aquí: esta es la página que ven los buceadores.",

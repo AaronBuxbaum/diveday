@@ -370,10 +370,7 @@ export default async function NewOrderPage({
           </fieldset>
 
           <div className="flex flex-wrap items-center gap-3">
-            <SubmitButton
-              pendingLabel={t("orders.new.sending")}
-              className={buttonClass({ size: "lg" })}
-            >
+            <SubmitButton pendingLabel={t("orders.new.sending")} className={buttonClass()}>
               {t("orders.new.submit")}
             </SubmitButton>
             {/* Why the order was refused, beside the button that tried to send

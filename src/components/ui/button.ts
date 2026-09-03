@@ -145,11 +145,17 @@ const sizes = {
    * without crowding the box, and so the desk's one primary reads at the same
    * size as the dock's `boat` target minus the extra height. `sm` is the dense
    * variant a table row or a chip row reaches for, unchanged at 44/14.
+   *
+   * **The size follows the surface, never the button's importance.** Importance
+   * is the variant's job (filled, bordered, plain); the label size is decided
+   * by what the button sits in — a page header, a form's action row or a card
+   * body takes this default, a ledger row, a table cell or a chip row takes
+   * `sm` — and every button in one row takes the same one. A 16px primary
+   * beside a 14px "Cancel" was the most repeated drift in the app (nine rows,
+   * 2026-09-03), and the former `lg` and `cta` rungs, which differed from this
+   * one only in 4px of padding and a weight, went with it.
    */
   md: { x: "px-4", rest: "min-h-12 py-2.5 text-base font-medium" },
-  lg: { x: "px-5", rest: "min-h-12 py-2.5 text-base font-medium" },
-  /** Marketing calls to action: reads at 16px and carries more weight. */
-  cta: { x: "px-5", rest: "py-3 text-base font-semibold" },
   /**
    * Dock target: a 56px, 16px-label action for wet-hands boat surfaces.
    *
@@ -175,7 +181,7 @@ const sizes = {
    * a fixed height would clip a glyph whose line box is taller than 44px,
    * where a floor grows with it.
    */
-  icon: { x: "px-0", rest: "w-11 text-base" },
+  icon: { x: "px-0", rest: "w-12 min-h-12 text-base" },
   /**
    * The roll-call mark: a **circular 56px** target holding one drawn glyph and
    * no label at all, for the manifest's one-tap-per-person row (ADR

@@ -116,7 +116,7 @@ export default async function BlowoutPage({
         </div>
       }
       actions={
-        <Link href={tripPath} className={buttonClass({ variant: "secondary", size: "sm" })}>
+        <Link href={tripPath} className={buttonClass({ variant: "secondary" })}>
           {t("blowout.confirm.backToTrip")}
         </Link>
       }

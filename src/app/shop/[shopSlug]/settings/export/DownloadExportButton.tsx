@@ -26,7 +26,7 @@ export function DownloadExportButton({
     <a
       href={href}
       download
-      className={buttonClass({ size: "lg" })}
+      className={buttonClass()}
       aria-live="polite"
       onClick={() => {
         setAcknowledged(true);

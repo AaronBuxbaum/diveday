@@ -169,7 +169,7 @@ export function InlineConfirm(props: InlineConfirmProps) {
       );
     }
     return (
-      <div className="rounded-lg border border-border bg-surface-sunken p-4" role="alert">
+      <div className="rise-in rounded-lg border border-border bg-surface-sunken p-4" role="alert">
         <p className="text-sm">{message}</p>
         <div className="mt-3 flex flex-wrap gap-3">
           {Object.entries(confirmFields ?? {}).map(([name, value]) => (

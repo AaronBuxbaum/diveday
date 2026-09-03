@@ -381,7 +381,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
             className="mt-14 flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-between sm:text-left"
           >
             <h3 className={SUB_TITLE_CLASS}>{t("marketing.common.midCtaTitle")}</h3>
-            <FunnelCtas locale={locale} source="product-mid" size="md" />
+            <FunnelCtas locale={locale} source="product-mid" />
           </SectionCard>
         </section>
 
@@ -538,7 +538,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
                 is a spec sheet, and a rounded box at the bottom of it would be
                 the one object in the section that isn't a hairline. */}
             <div className="border-t border-border pt-8">
-              <FunnelCtas locale={locale} source="product-index" size="md" />
+              <FunnelCtas locale={locale} source="product-index" />
             </div>
           </div>
         </div>

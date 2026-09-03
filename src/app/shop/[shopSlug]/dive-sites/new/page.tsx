@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 import { z } from "zod";
 import { EditorRail, UnsavedSections } from "@/components/editor/EditorRail";
@@ -15,7 +14,6 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/lib/dive-sites";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
-import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
 import { routeEditorCopy } from "../_components/route-editor-copy";
 import { SiteFields } from "../_components/SiteFields";
@@ -154,12 +152,10 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
     // measure they had (ADR 20260827-the-shops-shelves, the long-form editor
     // pattern).
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl">
-      <Link href={back} className="text-sm font-medium text-primary hover:underline">
-        {t("diveSites.backToLibrary")}
-      </Link>
-      <div className="mt-4">
+      <div>
         <ShopPageHeader
-          eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
+          eyebrow={t("diveSites.backToLibrary")}
+          eyebrowHref={back}
           title={t("diveSites.new.title")}
           description={t("diveSites.new.description")}
         />

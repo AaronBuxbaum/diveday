@@ -25,7 +25,7 @@ export interface FilterChip {
 }
 
 const chipClass = (active: boolean) =>
-  `inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-medium transition-colors ${
+  `inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm font-medium whitespace-nowrap transition-colors ${
     active
       ? // `-tint` rather than `bg-primary/10`: translucent, the selected pill
         // contrasts against the page behind it, which on `/divers` and
@@ -56,7 +56,13 @@ export function FilterChips({
   return (
     <nav
       aria-label={label}
-      className={`flex flex-wrap items-center gap-2${className ? ` ${className}` : ""}`}
+      // One row that scrolls on a phone, wrapping only from `sm` up. Eleven
+      // gear kinds wrapped to four rows at 390px and pushed the list they
+      // narrow below the fold; a row a thumb can flick through keeps the
+      // control one line tall at every width. The negative margin lets the
+      // row bleed to the screen edge so the last chip peeks in from the
+      // right, which is the only affordance a scrolling row has.
+      className={`flex items-center gap-2 max-sm:-mx-4 max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] sm:flex-wrap${className ? ` ${className}` : ""}`}
     >
       {chips.map((chip) => (
         <Link

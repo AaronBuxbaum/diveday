@@ -101,7 +101,6 @@
     "profile": {
       "heading": "Perfil y marca del centro",
       "description": "Lema, descripción y logotipo visibles en tu calendario público y en las vistas previas de búsqueda.",
-      "detail": "Ofrece a los buceadores una idea clara de tu centro, embarcación, equipo y estilo de buceo antes de reservar.",
       "tagline": "Lema",
       "taglinePlaceholder": "ej. Buceando en Key Largo y los Cayos de Florida desde 2012",
       "descriptionLabel": "Acerca de tu centro",
@@ -179,7 +178,6 @@
     },
     "conservation": {
       "heading": "Compromisos de conservación",
-      "description": "Compromisos codificados que se muestran en tu página pública de reservas como declaraciones de tu centro.",
       "detail": "Selecciona los compromisos que practica tu operación. Se publican como una declaración de tu centro, nunca como una verificación de DiveDay.",
       "value": "{count, plural, one {# compromiso} other {# compromisos}}",
       "commitments": {
@@ -206,7 +204,6 @@
     "dockCall": {
       "heading": "Ritmo del día de buceo",
       "description": "Todos estos números están en minutos.",
-      "detail": "Estos seis números son el horario que tus buceadores leen como «El ritmo de tu jornada» en su página de reserva, y la hora de llegada aparece en las confirmaciones y en todos los recordatorios previos. Pon un momento a 0 y desaparece del día: así indicas que informas a bordo, que el equipo se monta en el barco o que entráis desde la playa. Los momentos previos a la salida nunca caen antes de la hora de llegada.",
       "submit": "Guardar el ritmo del día",
       "submitting": "Guardando…",
       "value": "Llegar {count} min antes",
@@ -248,15 +245,12 @@
     "units": {
       "heading": "Unidades",
       "depthLabel": "Mostrar profundidades en",
-      "depthDetail": "Las profundidades siempre se guardan en metros, así que cambiar esto solo afecta a lo que escribes y lees. Ninguna profundidad registrada se mueve.",
       "meters": "Metros (m)",
       "feet": "Pies (ft)",
       "temperatureLabel": "Mostrar la temperatura del agua en",
-      "temperatureDetail": "Siempre se guarda en Celsius, así que esto solo cambia lo que escribes y lees.",
       "celsius": "Celsius (°C)",
       "fahrenheit": "Fahrenheit (°F)",
       "currencyLabel": "Cobrar y mostrar en",
-      "currencyDetail": "No convierte nada: una salida de 130 sigue en 130, ahora en la nueva moneda. Los pedidos ya liquidados conservan la moneda en que se cobraron.",
       "currencyMismatch": "Cobras en {shopCurrency}, pero Stripe liquida esta cuenta en {accountCurrency} y rechazará un pago que no pueda liquidar. Elige {accountCurrency} aquí o conecta una cuenta que liquide en {shopCurrency}.",
       "submit": "Guardar unidades",
       "submitting": "Guardando…",
@@ -309,7 +303,6 @@
     },
     "stripe": {
       "notConnectedHeading": "Ninguna cuenta de Stripe conectada",
-      "notConnectedDetail": "DiveDay nunca retiene tu dinero. Los pagos de pedidos van directo a tu propio saldo de Stripe.",
       "connect": "Conectar Stripe",
       "notConfiguredWarning": "Los pagos en línea todavía no están activados en DiveDay. Escribe a {email} y los ponemos en marcha.",
       "connectedHeading": "Cuenta de Stripe conectada",
@@ -508,7 +501,7 @@
     "languagesSaving": "Guardando…",
     "invite": {
       "heading": "Invitar a alguien",
-      "description": "Recibirá un correo para establecer su propia contraseña. Invitar con el mismo correo a alguien que ya es buceador añade acceso de personal a su ficha en vez de crear una segunda.",
+      "description": "Recibirá un correo para establecer su propia contraseña.",
       "fullNameLabel": "Nombre completo",
       "emailLabel": "Correo",
       "submit": "Enviar invitación",
@@ -516,7 +509,6 @@
     },
     "current": {
       "heading": "Equipo actual",
-      "description": "Los cambios de rol se guardan al cerrar una fila. Habilitar, deshabilitar y eliminar surten efecto de inmediato.",
       "empty": "Todavía no se ha invitado a nadie.",
       "emptyAction": "Invitar a un compañero"
     },
@@ -840,7 +832,6 @@
   "security": {
     "eyebrow": "Ajustes",
     "title": "Seguridad de la cuenta",
-    "description": "Protege tu cuenta del personal con un segundo factor y revisa las sesiones activas.",
     "twoFactorHeading": "Autenticación en dos pasos",
     "twoFactorDescription": "Usa una aplicación de autenticación para las acciones sensibles. Al desactivarla se elimina el secreto guardado.",
     "enabled": "Activada",
@@ -899,7 +890,6 @@
     "language": "Idioma",
     "languageAuto": "Seguir el navegador del visitante",
     "preview": "Vista previa",
-    "previewNote": "En tu web toma el color y la tipografía de tu página; esta vista previa usa los de tu página pública.",
     "platform": "Dónde va",
     "snippet": "Ponlo en tu web",
     "partnerName": "Colaborador",

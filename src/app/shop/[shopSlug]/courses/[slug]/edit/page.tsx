@@ -164,14 +164,11 @@ export default async function EditCoursePage({
           only ever means "focus this on the render that just failed" — the
           server already computed both, so stripping them changes no output. */}
       <FlashParams params={["notice", "error", "field"]} />
-      <Link href={back} className="text-sm font-medium text-primary hover:underline">
-        {t("courses.edit.backToCourses")}
-      </Link>
-      <div className="mt-4">
+      <div>
         <ShopPageHeader
-          eyebrow={course.agency.toUpperCase()}
+          eyebrow={t("courses.edit.backToCourses")}
+          eyebrowHref={back}
           title={course.title}
-          description={t("courses.edit.description")}
           meta={
             course.isActive ? (
               <p className="text-sm text-muted">
@@ -356,12 +353,7 @@ export default async function EditCoursePage({
                 </FieldGrid>
               </EditorSection>
 
-              <EditorSection
-                as="fieldset"
-                id={photos.id}
-                label={photos.label}
-                description={t("courses.edit.photosDescription")}
-              >
+              <EditorSection as="fieldset" id={photos.id} label={photos.label}>
                 <FieldGrid columns={1} className="gap-y-5">
                   <Field
                     label={t("courses.edit.heroPhotoLabel")}
@@ -492,12 +484,7 @@ export default async function EditCoursePage({
                 </FieldGrid>
               </EditorSection>
 
-              <EditorSection
-                as="fieldset"
-                id={glance.id}
-                label={glance.label}
-                description={t("courses.edit.glanceDescription")}
-              >
+              <EditorSection as="fieldset" id={glance.id} label={glance.label}>
                 <FieldGrid columns={2} className="gap-y-5">
                   <Field label={t("courses.edit.durationLabel")}>
                     <input
