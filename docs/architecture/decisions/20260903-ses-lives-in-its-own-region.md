@@ -75,7 +75,8 @@ undone by one constant, not by a second migration.
   refuses the setup outright if the subdomain carries more than one.
 - **Mail is refused, briefly, in the window between the two deploys.** The credential names a region
   whose identity does not exist yet, so a send answers `MessageRejected` and the app's own retry
-  handles it once the other stack lands. Either order works.
+  handles it once the other stack lands. Nothing in the templates forces an order — but the grants
+  do, once, on the very first deploy; see the last bullet.
 - **`--parameters` now needs a stack named.** Unqualified, it is applied to every stack in the
   deploy, and the email stack declares none — so `pnpm infra:deploy DiveDay --parameters
   CredentialSerial=<n>` is the rotation command, and the wrapper refuses the unqualified form rather
@@ -83,6 +84,23 @@ undone by one constant, not by a second migration.
 - **Production access is per region, and this is a fresh request.** us-east-2 starts in the sandbox:
   pre-verified addresses and the mailbox simulator only, and no `Reputation.*` metrics at all until
   it is granted, so the two alarms sit at their `notBreaching` default meanwhile.
+- **The first deploy is two commands, and the PR's own `cdk diff` is red until it happens.** The
+  deployer user and the two CI roles get their us-east-2 grants *from this stack*, so until it has
+  been deployed once, the identities that deploy and diff it cannot see `diveday-email` at all — the
+  PR check fails with `AccessDenied ... cloudformation:DescribeStacks on
+  arn:aws:cloudformation:us-east-2:*:stack/diveday-email/*`, which is the grant three files down in
+  the same diff. Nothing in the change can fix that; it is what a role that defines its own
+  permissions costs the first time. The order out of it:
+
+  ```bash
+  pnpm infra:bootstrap        # admin profile; bootstraps both regions
+  pnpm infra:deploy DiveDay   # widens the grants, and deletes the us-east-1 SES resources
+  pnpm infra:deploy           # now permitted: both stacks, the email one for the first time
+  ```
+
+  After that first pass every deploy and every diff is one command again. The CI deploy job names
+  both stacks in one run and may need running twice on that first pass, since it is the same
+  `DiveDay` deploy that grants its own session what the `DiveDayEmail` deploy needs.
 
 Revisit when the us-east-2 request is granted and has run long enough to be worth trading for
 proximity, or when it is refused too — at which point the answer is a support plan, not a third

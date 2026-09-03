@@ -137,6 +137,19 @@ how a `--parameters` value reaches the stack that declares it — unqualified, C
 it to every stack in the deploy and rejects it on the one whose template has no such parameter, so
 the wrapper refuses that shape rather than half-doing it.
 
+**The first deploy after the SES split is two commands**, because the deployer's own us-east-2
+grants come from the stack it is deploying — until `DiveDay` has landed once, neither it nor the CI
+roles can see `diveday-email`, and both the deploy and the PR's `cdk diff` answer `AccessDenied` on
+`cloudformation:DescribeStacks`:
+
+```bash
+pnpm infra:bootstrap        # admin profile; bootstraps both regions
+pnpm infra:deploy DiveDay   # widens the grants, and deletes the us-east-1 SES resources
+pnpm infra:deploy           # both stacks; the email one for the first time
+```
+
+Every deploy after that is one command again.
+
 After CloudFormation succeeds, the command writes `.env.local`, `.env.vercel`, and `.env.github`,
 then checks each optional handoff before asking whether it needs an update: generated AWS CLI
 profiles, Vercel Production variables, GitHub visual-test secrets, the CI role-ARN repository
