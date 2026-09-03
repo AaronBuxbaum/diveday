@@ -289,25 +289,52 @@ async function init(): Promise<AppDb> {
     return db;
   }
 
-  const dataDir = process.env.PGLITE_DATA_DIR ?? ".pglite";
+  return openLocalDb(process.env.PGLITE_DATA_DIR ?? ".pglite", { databaseUrl });
+}
+
+/**
+ * The embedded-database half of {@link init}, opened, migrated and seeded.
+ *
+ * Exported with its steps injectable for one reason: the failure path is the
+ * interesting one and cannot otherwise be reached from a test. A migration that
+ * throws must leave **nothing** behind — not the ~170 MB PGlite instance, and
+ * not the directory lock — because `getDb()` clears its memo on a rejection, so
+ * the next request opens another one. Without the cleanup, a database that
+ * fails to migrate stacks an instance per retry for as long as anything keeps
+ * asking, and holds a lock naming a live process while doing it.
+ */
+export async function openLocalDb(
+  dataDir: string,
+  {
+    databaseUrl,
+    runMigrate = async (db) => {
+      await migrate(db, { migrationsFolder: "drizzle" });
+    },
+  }: { databaseUrl?: string; runMigrate?: (db: AppDb) => Promise<void> } = {},
+): Promise<AppDb> {
   // One process at a time on a directory on disk — see `src/db/data-dir-lock.ts`
   // for why PGlite needs that from outside itself. Taken before the client is
   // constructed, because after it there is already a second copy of the
   // database in memory. The in-memory branch is skipped: every process gets its
   // own database there, which is the isolation the e2e fleet is built on.
   const releaseDataDirLock = dataDir === "memory" ? undefined : acquireDataDirLock(dataDir);
-  // pg_trgm backs the trigram GIN search indexes (CR-018) and btree_gist the
-  // gear-reservation exclusion constraint (ADR 20260815-minimal-gear-register)
-  // — PGlite bundles each extension's wasm but only loads it when explicitly
-  // requested here, unlike Neon/real Postgres where CREATE EXTENSION alone is
-  // enough.
-  const client =
-    dataDir === "memory"
-      ? new PGlite({ extensions: { pg_trgm, btree_gist } })
-      : new PGlite(dataDir, { extensions: { pg_trgm, btree_gist } });
+  // `client` is assigned *inside* the try, so a constructor that throws still
+  // drops the lock. Built the other way round it left a lock naming this very
+  // process — alive, therefore believed — and every later attempt in the same
+  // process refused to open the database it had locked against itself.
+  let client: PGlite | undefined;
   try {
+    // pg_trgm backs the trigram GIN search indexes (CR-018) and btree_gist the
+    // gear-reservation exclusion constraint (ADR 20260815-minimal-gear-register)
+    // — PGlite bundles each extension's wasm but only loads it when explicitly
+    // requested here, unlike Neon/real Postgres where CREATE EXTENSION alone is
+    // enough.
+    client =
+      dataDir === "memory"
+        ? new PGlite({ extensions: { pg_trgm, btree_gist } })
+        : new PGlite(dataDir, { extensions: { pg_trgm, btree_gist } });
     const db = drizzle({ client });
-    await migrate(db, { migrationsFolder: "drizzle" });
+    await runMigrate(db);
     // No advisory lock here, because a Postgres advisory lock is a *database*
     // lock and each opener of this directory has its own database — see
     // `src/db/data-dir-lock.ts`, which is where that race is actually stopped.
@@ -323,7 +350,7 @@ async function init(): Promise<AppDb> {
     // the *next* request builds another one: without this, a database that
     // fails to migrate stacks a fresh ~170 MB PGlite instance — and an
     // un-droppable lock — on every retry, for as long as anything keeps asking.
-    await client.close().catch(() => undefined);
+    await client?.close().catch(() => undefined);
     releaseDataDirLock?.();
     throw error;
   }

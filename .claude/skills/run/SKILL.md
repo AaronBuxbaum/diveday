@@ -98,7 +98,8 @@ tasks" with a live shell twice.
   takes no lock of its own — both would open it, both succeed, each sees only its own writes, and
   the last to close overwrites the other with nothing printed — so `src/db/data-dir-lock.ts` takes
   one from outside it. Stop the pid it names, or set `PGLITE_DATA_DIR` to give this process its
-  own. A lock left behind by a killed server is taken over, so never delete the lock file by hand.
+  own. A claim left behind by a killed server is swept up by the next start, so there is never a
+  lock file to delete by hand.
 - **A seed edit needs `pnpm db:reset`, not a restart.** `seedProductionDb` returns early once the
   demo shop exists. A *migration* only needs a restart.
 - **`pnpm e2e` runs a full production build first.** Give it a spec — `pnpm e2e <spec>
