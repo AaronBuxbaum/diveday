@@ -61,9 +61,20 @@ const selectsStacks = cdkArguments.some(
 // "Parameters: [CredentialSerial] do not exist in the template", leaving the
 // operator to work out whether the rotation happened. It did. Refuse instead,
 // and name the fix: CredentialSerial belongs to DiveDay.
-const unqualifiedParameter = cdkArguments.some(
-  (argument, index) => cdkArguments[index - 1] === "--parameters" && !argument.includes(":"),
-);
+//
+// Both spellings, because yargs takes both and an operator who reaches for the
+// equals form is not making a different request: a guard that reads only the
+// separated one lets `--parameters=CredentialSerial=2` through to exactly the
+// half-done rotation it exists to prevent.
+const parameterValueAt = (argument, index) => {
+  if (argument === "--parameters") return cdkArguments[index + 1];
+  if (argument.startsWith("--parameters=")) return argument.slice("--parameters=".length);
+  return undefined;
+};
+const unqualifiedParameter = cdkArguments.some((argument, index) => {
+  const parameter = parameterValueAt(argument, index);
+  return parameter !== undefined && !parameter.includes(":");
+});
 if (!selectsStacks && unqualifiedParameter) {
   console.error(
     "Refusing to deploy: --parameters with no stack named applies to every stack, and a stack that does not declare the parameter fails the deploy half-done. Name the stack the parameter belongs to, e.g. " +

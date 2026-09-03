@@ -2154,7 +2154,7 @@ exports.handler = async (event) => {
         verify: [
           "aws sesv2 get-email-identity --region us-east-2 --email-identity <sesEmailDomain> --query MailFromAttributes.MailFromDomainStatus  # SUCCESS",
         ],
-        note: "The MX names the SES region. One naming a region the identity no longer lives in does not fail loudly: mail keeps sending on the shared amazonses.com envelope, with SPF aligned to Amazon rather than to us, and only DMARC reporting says so.",
+        note: "The MX names the SES region. One naming a region the identity no longer lives in does not fail loudly: mail keeps sending on the shared amazonses.com envelope, with SPF aligned to Amazon rather than to us, and only DMARC reporting says so. The post-deploy wizard will not do the delete for you -- it finds a rival MX, names it, and skips its own add rather than leaving the subdomain with two.",
       },
       {
         id: "ses-production-access",

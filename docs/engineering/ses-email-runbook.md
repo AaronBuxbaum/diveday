@@ -155,6 +155,9 @@ Two records, on `mail.ses.dive.day`, both in the `SesMailFromRecords` stack outp
 | TXT | `v=spf1 include:amazonses.com ~all` |
 
 **Exactly one MX record.** SES fails the whole MAIL FROM setup if that subdomain has more than one.
+Moving regions is therefore a delete-then-add, and it is yours to do: the post-deploy wizard finds a
+rival MX, prints it with the `pnpm exec vercel dns rm <record-id>` to remove it, and skips its own
+add rather than leaving two behind.
 
 These are added through Vercel CLI: authoritative DNS for `dive.day` is **Vercel DNS**, not Route53,
 so the CDK stack has no hosted zone to write them into. It configures the AWS side and prints the

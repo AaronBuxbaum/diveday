@@ -297,6 +297,49 @@ describe("post-deploy wizard", () => {
     ]);
   });
 
+  it("refuses to add a second MAIL FROM MX beside another region's", async () => {
+    const logs = [];
+    const commands = [];
+    await runPostDeployWizard({
+      ask: async (question) =>
+        question === "Add the SES DNS records through Vercel DNS? [y/N] " ? "yes" : "no",
+      checkUpdates: {
+        awsProfiles: true,
+        vercelEnvironment: true,
+        githubSecrets: true,
+        cdkVariables: true,
+        githubEnvironment: true,
+      },
+      cdkArguments: ["--context", "sesEmailDomain=ses.example.com"],
+      credentialsDocument: "",
+      syncEnvironment: { AWS_DEFAULT_REGION: "us-west-2" },
+      execute: (command, arguments_) => {
+        commands.push({ command, arguments_ });
+        if (command === "aws") return JSON.stringify(["first"]);
+        if (arguments_[2] === "dns" && arguments_[3] === "ls") {
+          // The zone as a previous region left it: DKIM and SPF already right,
+          // and one stale MX pointing at the region the identity moved out of.
+          return [
+            "rec_1 first._domainkey.ses.example.com CNAME first.dkim.amazonses.com. 3600",
+            "rec_2 mail.ses.example.com MX 10 feedback-smtp.us-east-1.amazonses.com. 3600",
+            "rec_3 mail.ses.example.com TXT v=spf1 include:amazonses.com ~all 3600",
+          ].join("\n");
+        }
+        return "";
+      },
+      log: (line) => logs.push(line),
+    });
+
+    // SES refuses the whole MAIL FROM setup when the subdomain carries several
+    // MX records, and reports it Pending for up to 72 hours before saying so --
+    // while mail sends normally on the shared envelope. Adding beside the stale
+    // one is therefore worse than not adding at all.
+    const added = commands.filter(({ arguments_ }) => arguments_[3] === "add");
+    expect(added).toEqual([]);
+    expect(logs.join("\n")).toContain("rec_2 mail.ses.example.com MX 10");
+    expect(logs.join("\n")).toContain("vercel dns rm");
+  });
+
   it("passes the Vercel org scope to SES DNS checks and additions", async () => {
     const answers = ["no", "no", "no", "no", "no", "yes", "no"];
     const commands = [];
