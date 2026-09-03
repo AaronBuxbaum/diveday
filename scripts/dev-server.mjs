@@ -76,7 +76,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -188,6 +188,25 @@ export function lineSplitter() {
 const READY_TIMEOUT_MS = 180_000;
 const READY_POLL_MS = 1_000;
 
+/**
+ * Next's generated route types, which are only trustworthy while a dev server
+ * is alive to maintain them.
+ *
+ * `next dev` rewrites these non-atomically, so a server that dies mid-write
+ * leaves them half-finished — and they then fail *every* later command that
+ * type-checks, with dozens of `TS1005`s and "Unterminated string literal" in
+ * files nobody wrote. `pnpm typecheck`, `pnpm build` and `pnpm e2e` all read
+ * them, and none of those failures names the real cause. It cost three separate
+ * rediscoveries in one afternoon writing this file.
+ *
+ * Dying mid-write is no longer an accident here — it is the OOM kill this whole
+ * script exists for. So whenever a child goes down other than by a clean stop,
+ * these are dropped before the next one starts; Next regenerates them as part
+ * of its ordinary compile. Safe at exactly that moment, because the process
+ * that owned them has already exited.
+ */
+const GENERATED_TYPES_DIR = ".next/dev/types";
+
 /** How long a child gets to exit on SIGTERM before it is killed outright. */
 const SIGTERM_GRACE_MS = 5_000;
 
@@ -205,6 +224,58 @@ const HEALTHY_RUN_MS = 20_000;
 
 /** Consecutive too-fast exits before the supervisor stops trying. */
 const MAX_FAST_EXITS = 3;
+
+/**
+ * Consecutive restarts that never got the server under budget before the
+ * supervisor concludes the budget is unreachable and stops restarting.
+ *
+ * A budget below what this app needs at rest cannot be met by restarting: the
+ * server comes back, settles above the line, and is restarted again, forever.
+ * Measured with a deliberately low 1,100 MB budget — twenty-three restarts in
+ * thirty seconds, each costing a warm-up, none of them able to help.
+ *
+ * Futility is judged on the *interval* between restarts, not on whether memory
+ * ever dipped under the line. It always dips: a freshly restarted server boots
+ * at about 150 MB and is under any budget for a few seconds before it grows
+ * back. Reading that as relief made the first version of this check never fire,
+ * which is the sort of thing only a re-run with the low budget shows.
+ *
+ * That is not a contrived setting. On a 4 GB machine the *derived* budget is
+ * the 1 GB floor while this server settles nearer 1.5 GB, so the default would
+ * have thrashed on exactly the small machines least able to afford it. A
+ * supervisor that cannot help has to get out of the way and say so, which is
+ * what this does — the alternative is a second instability shipped inside the
+ * fix for the first.
+ */
+const MAX_FUTILE_RESTARTS = 3;
+
+/**
+ * How soon after the last budget restart another one counts as futile.
+ *
+ * Growth that genuinely earns a restart takes minutes here — around thirty
+ * route requests to cross 8 GB. Coming back over the line within a minute means
+ * the line is the problem, not the growth.
+ */
+const FUTILE_WINDOW_MS = 60_000;
+
+/**
+ * The running count of futile restarts after one more, given how long ago the
+ * previous budget restart was (`null` for none yet).
+ *
+ * Split out so the judgement is pinned by a test rather than only by a live
+ * server with a deliberately wrong budget — which is how the first version's
+ * bug survived: it counted a *dip* under the budget as relief, and a restarted
+ * server always dips.
+ */
+export function countFutileRestart(previous, msSinceLastRestart) {
+  const soonAfterTheLast = msSinceLastRestart !== null && msSinceLastRestart < FUTILE_WINDOW_MS;
+  return soonAfterTheLast ? previous + 1 : 0;
+}
+
+/** Whether that many futile restarts in a row means the budget is unreachable. */
+export function budgetIsUnreachable(futileRestarts) {
+  return futileRestarts >= MAX_FUTILE_RESTARTS;
+}
 
 /**
  * Output that means "this will fail identically next time", so there is nothing
@@ -491,6 +562,15 @@ export function portInUseFromLine(line) {
   return match ? { requested: Number(match[1]), chosen: Number(match[2]) } : null;
 }
 
+/** Remove Next's generated route types; they are rebuilt on the next compile. */
+function dropGeneratedTypes() {
+  try {
+    rmSync(path.join(ROOT, GENERATED_TYPES_DIR), { recursive: true, force: true });
+  } catch {
+    // Best effort: a stale type file is a worse morning, never a reason to fail.
+  }
+}
+
 function say(message) {
   process.stdout.write(`dev: ${message}\n`);
 }
@@ -659,6 +739,10 @@ async function main(argv = process.argv.slice(2)) {
   let stopping = false;
   let warming = null;
   let fastExits = 0;
+  // Cleared to null when the budget proves unreachable — see MAX_FUTILE_RESTARTS.
+  let activeBudget = budget;
+  let futileRestarts = 0;
+  let lastBudgetRestartAt = 0;
 
   const killTree = (signal) => {
     if (!child) return;
@@ -722,6 +806,7 @@ async function main(argv = process.argv.slice(2)) {
           if (!rows) return;
           const rss = treeRssBytes(rows, child.pid);
           lastRss = rss;
+          if (!activeBudget) return;
 
           // Above this the kernel is the next thing to act, so nothing is
           // waited for. Measured cgroup-wide, because that is what the kill is
@@ -739,13 +824,13 @@ async function main(argv = process.argv.slice(2)) {
             return;
           }
 
-          if (rss < budget) {
+          if (rss < activeBudget) {
             overBudget = 0;
             return;
           }
           overBudget += 1;
           if (overBudget < OVER_BUDGET_SAMPLES) {
-            say(`${formatMb(rss)} — over the ${formatMb(budget)} budget`);
+            say(`${formatMb(rss)} — over the ${formatMb(activeBudget)} budget`);
             return;
           }
           // Over budget but still working: hold. A staff-page capture matrix
@@ -753,8 +838,20 @@ async function main(argv = process.argv.slice(2)) {
           // the tool AGENTS.md points at for "look at the UI you changed" a coin
           // flip. The hard limit above is what stops that becoming a crash.
           if (Date.now() - lastRequestAt < IDLE_MS) return;
+          futileRestarts = countFutileRestart(
+            futileRestarts,
+            lastBudgetRestartAt > 0 ? Date.now() - lastBudgetRestartAt : null,
+          );
+          lastBudgetRestartAt = Date.now();
+          if (budgetIsUnreachable(futileRestarts)) {
+            activeBudget = null;
+            say(
+              `giving up on the ${formatMb(budget)} budget: ${MAX_FUTILE_RESTARTS} restarts in a row came back above it, so it is below what this app needs at rest (${formatMb(rss)} here) and no restart can meet it. Supervision is off for this session — the server keeps running, unwatched. Raise DIVEDAY_DEV_MEMORY_BUDGET_MB, or take this as the machine being too small for this dev server.`,
+            );
+            return;
+          }
           say(
-            `restarting: idle, holding ${formatMb(rss)} against a ${formatMb(budget)} budget. Next's dev server grows without a ceiling and would be killed by the kernel instead; the filesystem cache survives this, so the next page is a warm compile. Nothing you were doing caused it.`,
+            `restarting: idle, holding ${formatMb(rss)} against a ${formatMb(activeBudget)} budget. Next's dev server grows without a ceiling and would be killed by the kernel instead; the filesystem cache survives this, so the next page is a warm compile. Nothing you were doing caused it.`,
           );
           warmController.abort();
           restart();
@@ -769,6 +866,8 @@ async function main(argv = process.argv.slice(2)) {
       const forced = setTimeout(() => {
         try {
           process.kill(-dying.pid, "SIGKILL");
+          // Killed outright rather than asked, so it may have been mid-write.
+          dropGeneratedTypes();
         } catch {
           // Already gone.
         }
@@ -812,6 +911,8 @@ async function main(argv = process.argv.slice(2)) {
         process.exitCode = code ?? 1;
         return;
       }
+
+      dropGeneratedTypes();
 
       if (ranMs >= HEALTHY_RUN_MS) {
         fastExits = 0;
