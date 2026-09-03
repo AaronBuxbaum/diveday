@@ -7,7 +7,7 @@
   },
   "packageManager": "pnpm@11.24.0",
   "scripts": {
-    "dev": "pnpm build:sw && DIVEDAY_RATE_LIMIT_DISABLED=${DIVEDAY_RATE_LIMIT_DISABLED-1} NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN-} node scripts/dev-server.mjs",
+    "dev": "pnpm build:sw && node scripts/dev-server.mjs",
     "build": "pnpm build:sw && next build",
     "start": "next start",
     "lint": "biome check .",

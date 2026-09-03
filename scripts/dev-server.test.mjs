@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   cgroupMemoryLimitBytes,
+  databaseDescription,
   devLockPid,
   formatMb,
   localPortFromLine,
@@ -281,6 +282,33 @@ describe("portInUseFromLine", () => {
 
   it("is null for the ordinary banner", () => {
     expect(portInUseFromLine("- Local:         http://localhost:3000")).toBeNull();
+  });
+});
+
+describe("databaseDescription", () => {
+  it("names the embedded database and where it lives", () => {
+    expect(databaseDescription({})).toBe("PGlite in .pglite");
+    expect(databaseDescription({ PGLITE_DATA_DIR: ".pglite-e2e" })).toBe("PGlite in .pglite-e2e");
+    expect(databaseDescription({ PGLITE_DATA_DIR: "memory" })).toBe("PGlite, in memory");
+  });
+
+  it("says plainly when DATABASE_URL has repointed local dev at a real Postgres", () => {
+    // The failure this exists for: `pnpm infra:deploy` writes and overwrites
+    // `.env.local`, and a stale one silently moves local development onto a
+    // real database with nothing else in the boot output to say so.
+    expect(databaseDescription({ DATABASE_URL: "postgres://u:p@db.example.com:5432/app" })).toBe(
+      "postgres at db.example.com:5432 (DATABASE_URL is set — this is not the embedded local database)",
+    );
+  });
+
+  it("still reports a set-but-unparseable DATABASE_URL rather than throwing", () => {
+    expect(databaseDescription({ DATABASE_URL: "not-a-url" })).toContain("a configured host");
+  });
+
+  it("carries no credential out of the connection string", () => {
+    const said = databaseDescription({ DATABASE_URL: "postgres://user:secret@db.example.com/app" });
+    expect(said).not.toContain("secret");
+    expect(said).not.toContain("user");
   });
 });
 

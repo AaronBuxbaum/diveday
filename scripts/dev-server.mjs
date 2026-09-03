@@ -61,6 +61,11 @@
  * warms `/api/health` — one request that proves the process *and* its database
  * — and prints one line, with the real port, when the answer comes back.
  *
+ * It also owns the handful of environment defaults local development wants and
+ * production does not — see {@link applyDevDefaults} — because this is now the
+ * documented way to start the app, and defaults that live in a `package.json`
+ * shell prefix are defaults that only one of the several ways in gets.
+ *
  * Everything the child writes is passed through untouched; this script's own
  * lines are the only additions and all carry the `dev:` prefix.
  *
@@ -427,7 +432,63 @@ async function warm(currentPort, childPid, signal) {
   );
 }
 
+/**
+ * The four things local development wants switched differently from production,
+ * applied here rather than in a `package.json` shell prefix so that every
+ * documented way of starting the app gets them — including the bare
+ * `node scripts/dev-server.mjs` that AGENTS.md now points at.
+ *
+ * Each is `??=`, so naming one on the command line still wins:
+ * `DIVEDAY_DISABLE_EXTERNAL_HTTP=0 pnpm dev` is how you work on the forecast.
+ */
+function applyDevDefaults(env = process.env) {
+  // Sign-in is rate-limited eight attempts per email per fifteen minutes, which
+  // `scripts/screenshot.mjs` can spend in one run of captures across four roles.
+  env.DIVEDAY_RATE_LIMIT_DISABLED ??= "1";
+  // The Sentry DSN is compiled in (`src/lib/sentry-dsn.ts`), so without this
+  // every error raised by half-finished local code is reported to the
+  // production project. `pnpm e2e:build` has always emptied it for the same
+  // reason; there is no reason dev should differ.
+  env.NEXT_PUBLIC_SENTRY_DSN ??= "";
+  // Today, the schedule board and both trip pages fetch Open-Meteo on the
+  // render path. Two requests bounded at four seconds each, and a failure is
+  // not cached — so in a sandbox with no egress that is up to eight seconds
+  // added to *every* render of the surfaces a session looks at most, forever.
+  // `playwright.config.ts` already sets this fleet-wide for exactly that
+  // reason.
+  env.DIVEDAY_DISABLE_EXTERNAL_HTTP ??= "1";
+  // Next's telemetry prints a first-run notice into the log a session is
+  // reading for errors, and leaves a detached uploader plus an uncollected
+  // `_events_<pid>.json` behind on every exit. `playwright.config.ts` sets this
+  // too.
+  env.NEXT_TELEMETRY_DISABLED ??= "1";
+}
+
+/**
+ * The database this server will actually open, as a printable phrase.
+ *
+ * Said out loud at startup because the alternative is finding out later. A
+ * stale `.env.local` — the file `pnpm infra:deploy` generates and overwrites —
+ * silently repoints local development at a real Postgres, and nothing else in
+ * the boot output distinguishes that from the embedded one. The host, never a
+ * credential: `withExplicitSslMode` and the pool config keep the rest.
+ */
+export function databaseDescription(env = process.env) {
+  if (env.DATABASE_URL) {
+    let host = "a configured host";
+    try {
+      host = new URL(env.DATABASE_URL).host;
+    } catch {
+      // An unparseable URL is still worth reporting as "not the local one".
+    }
+    return `postgres at ${host} (DATABASE_URL is set — this is not the embedded local database)`;
+  }
+  const dir = env.PGLITE_DATA_DIR ?? ".pglite";
+  return dir === "memory" ? "PGlite, in memory" : `PGlite in ${dir}`;
+}
+
 async function main(argv = process.argv.slice(2)) {
+  applyDevDefaults();
   const ceiling = memoryCeilingBytes();
   const budget = memoryBudgetBytes(ceiling, {
     overrideMb: process.env.DIVEDAY_DEV_MEMORY_BUDGET_MB,
@@ -443,6 +504,7 @@ async function main(argv = process.argv.slice(2)) {
   const requestedPort = portFromArgs(argv);
   const nextBin = path.join(ROOT, "node_modules", "next", "dist", "bin", "next");
 
+  say(`database: ${databaseDescription()}`);
   if (budget) {
     say(
       `memory budget ${formatMb(budget)} of ${formatMb(ceiling)} — over it for ${(OVER_BUDGET_SAMPLES * POLL_MS) / 1000}s and the server is restarted`,
