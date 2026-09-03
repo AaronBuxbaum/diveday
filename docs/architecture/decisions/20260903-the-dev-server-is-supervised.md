@@ -66,25 +66,51 @@ a budget ends up above the limit that kills, which is the mistake `'auto'` evict
 cgroup generations are read because the two environments this repo runs in disagree: agent
 containers put the session in a nested v1 group, a v2 host answers at `memory.max`.
 
-The budget is 60% of that ceiling, or the ceiling less 3 GB, whichever is lower, floored at 1 GB.
-The 3 GB is one render's measured transient: a budget that leaves less spare than a single page
-render gets the process killed between two polls, which is the failure it was set to prevent.
-`DIVEDAY_DEV_MEMORY_BUDGET_MB` overrides it; `0` turns supervision off.
+There are **two** thresholds, because there are two different situations and one number served
+neither.
 
-The supervisor samples the tree's RSS every five seconds and restarts the server after three
-consecutive samples over budget. Three, not one, because a single render allocates about 3 GB
-transiently and returns most of it — measured on a cold `/terms`: 167 MB → 2,996 MB during the
-request, settling to 1,400 MB three seconds later. A one-sample trigger would restart on the
-ordinary shape of the work rather than on the growth. Fifteen seconds sustained over budget is
-something a spike does not survive.
+The **budget** — 60% of the ceiling, or the ceiling less 3 GB, whichever is lower, floored at 1 GB —
+means "this server has grown past where it should sit". Nothing is on fire, so a restart there waits
+until the server has been idle for four seconds, which costs nobody anything. Idle is read off
+Next's own per-request log line; there is no other in-flight signal.
 
-A restart is cheap and is announced in the terms that matter to whoever reads it: what the number
-was, what the budget is, that Next's dev server grows without a ceiling, that the filesystem cache
-survives so the next page is a warm compile, and that nothing the reader was doing caused it.
-Turbopack's cache and `.pglite` both live on disk, so nothing is lost but any request in flight —
-which is strictly better than losing the whole server to a kill nobody can see. A restart waits for
-the old child to exit before starting the new one, because two processes on one file-backed
-`.pglite` diverge silently.
+The **hard limit** — 80% of the ceiling — means "the kernel is about to take it", and it interrupts
+whatever is running, saying whether anything actually was.
+
+The gap between them is not theoretical, and getting it wrong was the first version of this ADR.
+Capturing two staff pages through `scripts/screenshot.mjs` — light and dark, phone and desktop, the
+ordinary matrix a session runs to look at its own work — was measured peaking at **12,880 MB**, and
+with no supervision at all it OOM-killed the server mid-run. A single-threshold supervisor set
+anywhere below that restarts underneath the browser on ordinary work; one set above it never fires
+in time. So: hold through the spike, and cut in before the kill. Under the two thresholds that same
+capture run completes, having gone 1.5 GB over budget without being touched.
+
+Sampling is every two seconds, and a soft restart needs two consecutive over-budget samples — the
+second only to survive a bad `ps` read, since the idle gate is what keeps a spike from triggering
+anything. Two seconds rather than five because this server climbed 1.6 GB between two five-second
+samples *while idle* (`cacheComponents` re-renders in the background after every settled render);
+at that rate a slow poll hands every restart to the hard limit, which is the one that costs somebody
+a request.
+
+A transient spike is left alone, which is the common case and was verified: a cold `/` took the
+server to 5,886 MB and back to 1,490 MB within three seconds, and nothing restarted.
+
+A restart is announced in the terms that matter to whoever reads it: what the number was, what the
+budget is, that Next's dev server grows without a ceiling, that the filesystem cache survives so the
+next page is a warm compile, and that nothing the reader was doing caused it. Turbopack's cache and
+`.pglite` both live on disk, so nothing is lost but any request in flight — which is strictly better
+than losing the whole server to a kill nobody can see. A restart waits for the old child to exit
+before starting the new one, because two processes on one file-backed `.pglite` diverge silently.
+
+`DIVEDAY_DEV_MEMORY_BUDGET_MB` overrides the budget; `0` turns supervision off.
+
+`scripts/screenshot.mjs` takes the other half of that trade. It now retries a capture once when the
+connection drops mid-run — bounded, and only for a dropped connection, so a genuinely broken page
+still fails the first time and loudly. Its reachability probe grew a timeout in the same pass:
+without one it inherits Node's, and against a server that accepts connections but never answers it
+was measured sitting for **301 seconds** before printing "Nothing answering", which is the one
+explanation that is false. That is the unbounded wait AGENTS.md has a hard rule against, sitting in
+the tool the same file points sessions at.
 
 If the kernel gets there first anyway, the supervisor sees the child exit on `SIGKILL`, says so in
 as many words, and starts it again. That sentence is the only place that failure is ever named.

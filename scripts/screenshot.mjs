@@ -42,6 +42,38 @@ import { MIN_MAIN_TEXT, SKELETON_SELECTOR } from "./screenshot-guards.mjs";
  * This script is the fast mid-iteration look, not the baseline.
  */
 
+/** How long the reachability probe waits before calling the server unresponsive. */
+const PROBE_TIMEOUT_MS = 5_000;
+
+/**
+ * How long one navigation gets, and how long a locator gets.
+ *
+ * Playwright's defaults (30s and 5s) are shaped for a built application. This
+ * one is `next dev`: individual first-hits of a route were measured here at
+ * 12-16 seconds, and a route the supervisor has just restarted underneath pays
+ * that again. These bound a *failure*, never a passing capture, so generous is
+ * free and tight is a flake.
+ */
+const NAVIGATION_TIMEOUT_MS = 120_000;
+const LOCATOR_TIMEOUT_MS = 60_000;
+
+/**
+ * Errors that mean the dev server went away mid-run rather than that the page
+ * is wrong.
+ *
+ * It goes away for a good reason: `scripts/dev-server.mjs` restarts it when it
+ * approaches the memory ceiling, and a capture matrix over two staff pages was
+ * measured peaking at 12,880 MB — which without that supervision OOM-killed the
+ * server outright, mid-run. So this is the ordinary shape of a long capture on
+ * this app, and one retry against a freshly restarted server is the difference
+ * between a tool that works and a coin flip.
+ */
+const SERVER_WENT_AWAY =
+  /net::ERR_CONNECTION_(REFUSED|RESET|CLOSED)|net::ERR_EMPTY_RESPONSE|ECONNREFUSED|ECONNRESET|socket hang up/i;
+
+/** How long to give a restarting server before the one retry. */
+const RESTART_GRACE_MS = 20_000;
+
 // Mirrors src/db/dev-credentials.ts (TS, so not importable from this .mjs).
 // Demo-tenant-only deterministic logins; check-agents does not guard this
 // duplication, so if sign-in starts failing, compare against that file first.
@@ -95,10 +127,25 @@ if (
 
 // A cheap reachability probe before launching a browser, so "the dev server
 // isn't running" reads as exactly that rather than as a Playwright timeout.
+//
+// The timeout is not decoration. Without one this `fetch` inherits Node's, and
+// against a server that accepts the connection but never answers — the shape a
+// dev server takes while it compiles a cold route, or while it is being
+// restarted — it was measured sitting here for **301 seconds** and then
+// printing "Nothing answering", which is the one explanation that is false.
+// That is the wait-with-no-bound AGENTS.md has a hard rule against, in the tool
+// the same file points sessions at for looking at their own work.
 try {
-  await fetch(base, { method: "HEAD" });
-} catch {
-  console.error(`Nothing answering at ${base} — start \`pnpm dev\` first (or pass --base).`);
+  await fetch(base, { method: "HEAD", signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
+} catch (error) {
+  const stalled = error.name === "TimeoutError";
+  console.error(
+    stalled
+      ? `${base} accepted the connection but did not answer within ${PROBE_TIMEOUT_MS / 1000}s. ` +
+          "Something is listening — it is compiling, restarting, or wedged. Read the dev server's " +
+          "own output rather than re-running this."
+      : `Nothing answering at ${base} — start \`pnpm dev\` first (or pass --base).`,
+  );
   process.exit(1);
 }
 
@@ -251,6 +298,56 @@ async function waitPastTheSkeleton(page, target) {
   });
 }
 
+/**
+ * Open one path and wait until the page — not its skeleton — is on screen,
+ * surviving the dev server going away underneath.
+ *
+ * The retry is bounded at one and is conditional on {@link SERVER_WENT_AWAY}:
+ * a page that is genuinely broken fails the same way twice and would only cost
+ * twice as long to say so, and a skeleton that never clears is *already*
+ * loud on the first attempt and must stay that way. This catches exactly one
+ * thing — the connection dropping mid-capture, which on this app is a memory
+ * restart rather than a fault — and says so, so the picture that comes back is
+ * not silently one from a different server state.
+ */
+async function openAndSettle(page, target) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await page.goto(`${base}${target}`, { waitUntil: "load" });
+      // Streaming SSR: give suspended segments a beat to resolve by waiting
+      // for the document title, the same settled-document signal the a11y
+      // spec gates on.
+      await page.waitForFunction(() => document.title.length > 0);
+      await waitPastTheSkeleton(page, target);
+      return;
+    } catch (error) {
+      if (attempt > 0 || !SERVER_WENT_AWAY.test(String(error?.message ?? error))) throw error;
+      console.warn(
+        `screenshot: the dev server dropped the connection during ${target} — it restarts itself ` +
+          `near the memory ceiling (see scripts/dev-server.mjs). Waiting ${RESTART_GRACE_MS / 1000}s ` +
+          "and taking this one again.",
+      );
+      await waitForServerBack();
+    }
+  }
+}
+
+/** Poll the health route until it answers, bounded, then carry on. */
+async function waitForServerBack() {
+  const deadline = Date.now() + RESTART_GRACE_MS;
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(`${base}/api/health`, {
+        signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+      });
+      if (response.ok) return;
+    } catch {
+      // Still down. The deadline is what ends this loop either way.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+}
+
 /** How long the one sign-in gets before a stalled form is called a hang. */
 const SIGN_IN_TIMEOUT_MS = 20_000;
 
@@ -314,14 +411,11 @@ try {
         storageState,
       });
       const page = await context.newPage();
+      page.setDefaultNavigationTimeout(NAVIGATION_TIMEOUT_MS);
+      page.setDefaultTimeout(LOCATOR_TIMEOUT_MS);
 
       for (const target of paths) {
-        await page.goto(`${base}${target}`, { waitUntil: "load" });
-        // Streaming SSR: give suspended segments a beat to resolve by waiting
-        // for the document title, the same settled-document signal the a11y
-        // spec gates on.
-        await page.waitForFunction(() => document.title.length > 0);
-        await waitPastTheSkeleton(page, target);
+        await openAndSettle(page, target);
         // Filesystem-safe name: drop any query/fragment, then collapse every
         // non-alphanumeric run to a dash — `/shop/x/today?view=departures`
         // becomes `shop-x-today` rather than a filename with `?` in it.

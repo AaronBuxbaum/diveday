@@ -85,26 +85,74 @@ import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-/** How often the supervisor reads the server's memory, in ms. */
-const POLL_MS = 5_000;
+/**
+ * How often the supervisor reads the server's memory, in ms.
+ *
+ * Two seconds rather than five because of how fast this particular server
+ * moves: measured climbing 1.6 GB between two five-second samples while
+ * *idle*, as `cacheComponents` re-renders in the background after a burst of
+ * requests. At that rate the whole span between the budget and the hard limit
+ * is under two samples, so a slow poll hands every restart to the hard limit —
+ * the one that can interrupt a request — when the cheap idle one would have
+ * done. One `ps` read costs a few milliseconds; the resolution is worth more.
+ */
+const POLL_MS = 2_000;
 
 /**
- * Consecutive over-budget samples before a restart.
+ * Consecutive over-budget samples before an idle restart.
  *
- * Not one, because a single page render transiently allocates about 3 GB here
- * and gives most of it straight back — measured on a cold `/terms`: 167 MB →
- * 2,996 MB during the request, settling to 1,400 MB three seconds later. A
- * one-sample trigger would restart the server on the ordinary shape of the work
- * rather than on the leak, which is the fastest way to make a supervisor worse
- * than no supervisor. Three samples at {@link POLL_MS} means fifteen seconds
- * *sustained* over budget, which a spike does not survive and growth does.
+ * Two rather than one only to survive a bad `ps` read; the thing that keeps a
+ * spike from triggering a restart is {@link IDLE_MS}, not this. A single page
+ * render transiently allocates about 3 GB here and gives most of it back —
+ * measured on a cold `/terms`: 167 MB → 2,996 MB during the request, settling
+ * to 1,400 MB three seconds later — and four idle seconds is already past that
+ * settle, so by the time this fires the number it is reading is the retained
+ * one.
+ *
+ * Longer would be worse, not safer. Memory here climbs by over a gigabyte
+ * between two five-second samples while the server is doing nothing visible
+ * (`cacheComponents` re-renders in the background after every settled render),
+ * so a slow soft path just hands the work to the hard limit, which is the one
+ * that costs somebody a request.
  */
-const OVER_BUDGET_SAMPLES = 3;
+const OVER_BUDGET_SAMPLES = 2;
 
 /** Where the budget sits inside the ceiling, and the headroom it must leave. */
 const BUDGET_FRACTION = 0.6;
 const HEADROOM_BYTES = 3072 * 1024 * 1024;
 const MIN_BUDGET_BYTES = 1024 * 1024 * 1024;
+
+/**
+ * The share of the ceiling at which a restart stops waiting for a quiet moment.
+ *
+ * There are two thresholds because there are two different situations, and one
+ * number served neither. The budget is "this server has grown past where it
+ * should sit" — nothing is on fire, so it waits for {@link IDLE_MS} with no
+ * request in flight and costs nobody anything. This one is "the kernel is about
+ * to take it", and it interrupts whatever is running, because a lost request is
+ * cheaper than a lost server.
+ *
+ * The gap between them is not theoretical. Capturing two staff pages through
+ * `scripts/screenshot.mjs` — light and dark, phone and desktop, the ordinary
+ * matrix — was measured here peaking at **12,880 MB**, and with no supervision
+ * at all it OOM-killed the server mid-run. A single-threshold supervisor set
+ * anywhere below that restarts underneath the browser on ordinary work; one set
+ * above it never fires in time. So: hold through the spike, and cut in before
+ * the kill.
+ */
+const HARD_LIMIT_FRACTION = 0.8;
+
+/**
+ * How long without a request logged before the server counts as idle.
+ *
+ * Read off Next's own per-request line rather than guessed at, and short,
+ * because the gaps this needs to find are the ones between one capture and the
+ * next — not between one working session and another.
+ */
+const IDLE_MS = 4_000;
+
+/** Next's per-request log line, which is the only in-flight signal there is. */
+const REQUEST_LOG = /\b(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\/\S*\s+\d{3}\b/;
 
 /** How long to wait for `/api/health` after a start before giving up on warming. */
 const READY_TIMEOUT_MS = 180_000;
@@ -232,6 +280,20 @@ export function memoryBudgetBytes(ceilingBytes, { overrideMb } = {}) {
     MIN_BUDGET_BYTES,
     Math.min(ceilingBytes * BUDGET_FRACTION, ceilingBytes - HEADROOM_BYTES),
   );
+}
+
+/**
+ * The point at which a restart stops waiting for the server to go quiet, or
+ * `null` when there is no ceiling to reckon against.
+ *
+ * Always above the budget, never above the ceiling: a hard limit that landed
+ * below the soft one would make every restart an interrupting one, and the
+ * whole reason for two numbers is that most restarts should cost nobody
+ * anything.
+ */
+export function hardLimitBytes(ceilingBytes, budgetBytes) {
+  if (!ceilingBytes || !budgetBytes) return null;
+  return Math.min(ceilingBytes, Math.max(budgetBytes, ceilingBytes * HARD_LIMIT_FRACTION));
 }
 
 /** `ps` rows as `{ pid, ppid, rssBytes }`. */
@@ -504,10 +566,12 @@ async function main(argv = process.argv.slice(2)) {
   const requestedPort = portFromArgs(argv);
   const nextBin = path.join(ROOT, "node_modules", "next", "dist", "bin", "next");
 
+  const hardLimit = hardLimitBytes(ceiling, budget);
+
   say(`database: ${databaseDescription()}`);
   if (budget) {
     say(
-      `memory budget ${formatMb(budget)} of ${formatMb(ceiling)} — over it for ${(OVER_BUDGET_SAMPLES * POLL_MS) / 1000}s and the server is restarted`,
+      `memory budget ${formatMb(budget)} of ${formatMb(ceiling)} — restarted once idle above that${hardLimit ? `, or straight away above ${formatMb(hardLimit)}` : ""}`,
     );
   } else {
     say("memory supervision off — the server will grow until something else stops it");
@@ -541,6 +605,7 @@ async function main(argv = process.argv.slice(2)) {
     let fatal = false;
     let lastRss = 0;
     const startedAt = Date.now();
+    let lastRequestAt = 0;
 
     child = spawn(process.execPath, [nextBin, "dev", ...argv], {
       cwd: ROOT,
@@ -552,6 +617,7 @@ async function main(argv = process.argv.slice(2)) {
       stream.write(chunk);
       const text = chunk.toString();
       if (FATAL_OUTPUT.test(text)) fatal = true;
+      if (REQUEST_LOG.test(text)) lastRequestAt = Date.now();
       const drift = portInUseFromLine(text);
       if (drift) {
         say(
@@ -574,6 +640,19 @@ async function main(argv = process.argv.slice(2)) {
           if (!rows) return;
           const rss = treeRssBytes(rows, child.pid);
           lastRss = rss;
+
+          // Above this the kernel is the next thing to act, so nothing is
+          // waited for.
+          if (hardLimit && rss >= hardLimit) {
+            const busy = Date.now() - lastRequestAt < IDLE_MS;
+            say(
+              `restarting now: ${formatMb(rss)}, past the ${formatMb(hardLimit)} mark where the kernel kills this server outright. ${busy ? "Whatever request was in flight is lost — that is the trade, and the alternative is losing the server with no message at all." : "Nothing was in flight."} The next page is a warm compile.`,
+            );
+            warmController.abort();
+            restart();
+            return;
+          }
+
           if (rss < budget) {
             overBudget = 0;
             return;
@@ -583,8 +662,13 @@ async function main(argv = process.argv.slice(2)) {
             say(`${formatMb(rss)} — over the ${formatMb(budget)} budget`);
             return;
           }
+          // Over budget but still working: hold. A staff-page capture matrix
+          // legitimately runs to 12 GB here, and restarting underneath it makes
+          // the tool AGENTS.md points at for "look at the UI you changed" a coin
+          // flip. The hard limit above is what stops that becoming a crash.
+          if (Date.now() - lastRequestAt < IDLE_MS) return;
           say(
-            `restarting: held ${formatMb(rss)} for ${(OVER_BUDGET_SAMPLES * POLL_MS) / 1000}s, past the ${formatMb(budget)} budget. Next's dev server grows without a ceiling and would be killed by the kernel instead; the filesystem cache survives this, so the next page is a warm compile. Nothing you were doing caused it.`,
+            `restarting: idle, holding ${formatMb(rss)} against a ${formatMb(budget)} budget. Next's dev server grows without a ceiling and would be killed by the kernel instead; the filesystem cache survives this, so the next page is a warm compile. Nothing you were doing caused it.`,
           );
           warmController.abort();
           restart();

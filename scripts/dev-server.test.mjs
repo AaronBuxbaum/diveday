@@ -5,6 +5,7 @@ import {
   databaseDescription,
   devLockPid,
   formatMb,
+  hardLimitBytes,
   localPortFromLine,
   memoryBudgetBytes,
   memoryCeilingBytes,
@@ -152,6 +153,34 @@ describe("memoryBudgetBytes", () => {
   it("is undefined for a malformed override, so the caller can refuse rather than guess", () => {
     expect(memoryBudgetBytes(16 * GB, { overrideMb: "lots" })).toBeUndefined();
     expect(memoryBudgetBytes(16 * GB, { overrideMb: "-1" })).toBeUndefined();
+  });
+});
+
+describe("hardLimitBytes", () => {
+  it("sits at 80% of the ceiling, above the budget", () => {
+    // The measured container: 13,664 MB ceiling → budget 8,198 MB, hard 10,931.
+    // The gap is what a staff-page capture matrix (peaked at 12,880 MB here)
+    // gets to run in without the server being restarted underneath it.
+    const ceiling = 13664 * MB;
+    const hard = hardLimitBytes(ceiling, memoryBudgetBytes(ceiling));
+    expect(Math.round(hard / MB)).toBe(10931);
+    expect(hard).toBeGreaterThan(memoryBudgetBytes(ceiling));
+  });
+
+  it("never lands below the budget, which would make every restart an interrupting one", () => {
+    // A ceiling small enough that the budget floor (1 GB) outruns 80% of it.
+    const ceiling = 1.1 * GB;
+    const budget = memoryBudgetBytes(ceiling);
+    expect(hardLimitBytes(ceiling, budget)).toBeGreaterThanOrEqual(budget);
+  });
+
+  it("never lands above the ceiling", () => {
+    expect(hardLimitBytes(2 * GB, 1.9 * GB)).toBeLessThanOrEqual(2 * GB);
+  });
+
+  it("is null when there is nothing to reckon against", () => {
+    expect(hardLimitBytes(null, 1 * GB)).toBeNull();
+    expect(hardLimitBytes(8 * GB, null)).toBeNull();
   });
 });
 
