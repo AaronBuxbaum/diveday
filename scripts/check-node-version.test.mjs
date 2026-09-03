@@ -180,6 +180,18 @@ describe("findNodeVersionDrift", () => {
     ]);
   });
 
+  it("catches the README's pnpm pin drifting from packageManager", () => {
+    // Found the hard way: a merge bumped `packageManager` to 11.25.0 and left
+    // the Quickstart sentence — which claims the repository pins both — saying
+    // 11.24.0. The Node half was guarded; the pnpm half beside it was not.
+    const files = repoFiles();
+    files.set("README.md", files.get("README.md").replace(/and pnpm [\d.]+/, "and pnpm 11.24.0"));
+    const pinned = JSON.parse(files.get("package.json")).packageManager.replace("pnpm@", "");
+    expect(findNodeVersionDrift(readerFor(files))).toEqual([
+      `README.md (the pnpm version in the Quickstart line) says 11.24.0, and package.json's packageManager says ${pinned}.`,
+    ]);
+  });
+
   it("names a declaration file that has gone missing rather than passing without it", () => {
     // A guard that reads a deleted file as "nothing to check" is worse than no
     // guard: it goes green precisely when the pin it protects is gone.

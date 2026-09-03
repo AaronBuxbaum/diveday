@@ -23,6 +23,13 @@ import { fileURLToPath } from "node:url";
  * So the numbers live here, once, and this refuses any file that drifts from
  * them. Changing the supported major means changing `NODE_MAJOR` and then
  * doing what this guard tells you.
+ *
+ * One rule here is not about Node at all. The README's Quickstart sentence
+ * claims the repository pins *both* the runtime and the package manager, and
+ * for a day only the runtime half was checked — so a merge that bumped
+ * `packageManager` to pnpm 11.25.0 left that sentence saying 11.24.0, which is
+ * the same defect one column over. `packageManager` is the source of truth
+ * there (Renovate bumps it); the README has to follow.
  */
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -143,6 +150,26 @@ export function findNodeVersionDrift(read) {
       );
     }
   }
+  // The one rule whose truth is another file rather than a constant: the
+  // README's Quickstart names the pnpm pin as well as the Node one, and
+  // `packageManager` is what decides it.
+  const manifest = read("package.json");
+  const readme = read("README.md");
+  if (manifest !== undefined && readme !== undefined) {
+    let pinned;
+    try {
+      pinned = JSON.parse(manifest).packageManager?.match(/^pnpm@(\S+)$/)?.[1];
+    } catch {
+      // Already reported above by the engines rule; nothing to add here.
+    }
+    const said = readme.match(/and pnpm ([\d.]+)/)?.[1];
+    if (pinned !== undefined && said !== pinned) {
+      drift.push(
+        `README.md (the pnpm version in the Quickstart line) says ${said ?? "nothing"}, and package.json's packageManager says ${pinned}.`,
+      );
+    }
+  }
+
   return drift;
 }
 
@@ -175,6 +202,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   }
 
   console.log(
-    `node-version: ${DECLARATIONS.length} declarations agree on Node ${NODE_MAJOR} (floor ${NODE_FLOOR}, Lambda nodejs${LAMBDA_NODE_MAJOR}.x)`,
+    `node-version: ${DECLARATIONS.length + 1} declarations agree on Node ${NODE_MAJOR} (floor ${NODE_FLOOR}, Lambda nodejs${LAMBDA_NODE_MAJOR}.x), and the README's pnpm pin matches packageManager`,
   );
 }

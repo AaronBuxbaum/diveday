@@ -63,12 +63,17 @@ Three numbers say so, and they live in one file — `scripts/check-node-version.
   schedule, so the two can legitimately diverge for a while.
 
 `pnpm check:node-version`, inside `pnpm check:repo`, refuses any file that drifts from them. It
-covers nine declarations: `engines.node`, `.nvmrc`, the CI action's `node-version:` **and its own
+covers ten declarations: `engines.node`, `.nvmrc`, the CI action's `node-version:` **and its own
 description prose**, the README's Quickstart line, the `@types/node` major, every
-`lambda.Runtime.NODEJS_*_X` in the stack, the esbuild bundling target beside them, and the one test
-that asserts a synthesized runtime. A missing declaration file is a failure, not a pass — a guard
-that reads a deleted `.nvmrc` as "nothing to check" goes green exactly when the pin it protects is
-gone.
+`lambda.Runtime.NODEJS_*_X` in the stack, the esbuild bundling target beside them, the one test
+that asserts a synthesized runtime — and the pnpm version, which is the one rule here that is not
+about Node. The README's Quickstart claims the repository pins *both* the runtime and the package
+manager; for a day only the runtime half was checked, and a merge that bumped `packageManager` to
+pnpm 11.25.0 left that sentence saying 11.24.0. Same defect, one column over. `packageManager` is
+the source of truth there, since Renovate bumps it, and the README has to follow.
+
+A missing declaration file is a failure, not a pass — a guard that reads a deleted `.nvmrc` as
+"nothing to check" goes green exactly when the pin it protects is gone.
 
 Four things changed to make the tree agree:
 
@@ -123,8 +128,8 @@ own history is that a rule which can be checked mechanically eventually has to b
 
 ## Consequences
 
-- Six disagreeing declarations became nine agreeing ones, and a tenth cannot be added without the
-  guard noticing.
+- Six disagreeing declarations became ten agreeing ones, and an eleventh cannot be added without
+  the guard noticing.
 - `engines` is now a claim that survives contact with the dependency tree. Node 24.0–24.14 and the
   whole of 25 are refused rather than quietly admitted and then refused by `jsdom` under a
   different name.
