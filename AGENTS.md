@@ -27,7 +27,7 @@ adapters and must not introduce unique requirements.
 
 | Command | What |
 | --- | --- |
-| `pnpm dev` | dev server at localhost:3000 |
+| `pnpm dev` | dev server at localhost:3000, supervised by `scripts/dev-server.mjs`. Wait for its **`dev: serving … — warmed in Ns`**; Next's `✓ Ready in 400ms` lands ~26s earlier and means only "listening", which is why a session that trusts it watches its first request hang and starts killing things. `next dev` here grows without a ceiling and is OOM-killed leaving **no** log line, so the supervisor restarts it before the kernel does and says so — expected, costs the request in flight, next compile is warm. One dev server per *checkout*: the lock is `.next/dev/lock`, so `--port` does not buy a second (ADR 20260903-the-dev-server-is-supervised) |
 | `pnpm task:context <area>` | bounded paths, invariants, and validation for a task |
 | `pnpm check:env` | the two structural facts about configuration: `.env.example` still matches `config/env-registry.mjs` (it is generated, and the CDK stack reads it at synth to build the credentials secret), and `.env.manual` speaks only for values a human is the source of. Then reports which manual values are unset and what each one switches off — a report, never a failure, since every one is legitimately absent |
 | `pnpm env:manual` | create or refresh `.env.manual`, the one configuration file a human edits. Never overwrites a value; on first run it lifts the manual values out of a pre-split `.env.local` |
@@ -59,7 +59,7 @@ adapters and must not introduce unique requirements.
 | `pnpm e2e:run <spec> --reporter=line` | fast-iteration path: build once with `pnpm e2e:build`, then `pnpm e2e:run <spec> --reporter=line` reuses that build and skips the rebuild |
 | `pnpm build` | production build |
 | `pnpm db:generate` | generate a Drizzle migration after editing `src/db/schema.ts` (see the **schema-change** skill) |
-| `pnpm db:reset` | clear the dev PGlite database; next `pnpm dev` re-migrates and re-seeds |
+| `pnpm db:reset` | clear the dev PGlite database; next `pnpm dev` re-migrates and re-seeds. **Refuses while a dev server is running**, naming the pid: PGlite takes no lock on its data directory, so two openers fork it silently and the last to close overwrites the other — which is equally why a local `pnpm build` must never run beside `pnpm dev` |
 | `node scripts/screenshot.mjs <path…>` | look at a page against a running `pnpm dev` server — light/dark × phone/desktop PNGs into `screenshots/` (gitignored), with automatic dev-credential sign-in for `/shop/**`. The kept tool that replaces the throwaway `.shots*.mjs` drivers that sessions used to hand-write; review-grade captures still come from a filtered visual-spec run (see the **verify** skill) |
 | `pnpm visual` | capture the visual surfaces and compare them against the S3 baseline for this branch's parent commit (baselines are rendered on CI's Linux runners — on macOS nearly everything reads as changed; triage from the CI report) |
 

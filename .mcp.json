@@ -5,16 +5,14 @@
       "url": "https://mcp.sentry.dev/mcp/diveday/diveday"
     },
     "next-devtools": {
-      "command": "pnpm",
-      "args": ["next-devtools-mcp"]
+      "command": "./node_modules/.bin/next-devtools-mcp"
     },
     "vercel": {
       "type": "http",
       "url": "https://mcp.vercel.com"
     },
     "playwright": {
-      "command": "pnpm",
-      "args": ["@playwright/mcp"]
+      "command": "./node_modules/.bin/playwright-mcp"
     },
     "context7": {
       "type": "http",

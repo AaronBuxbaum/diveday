@@ -1,6 +1,7 @@
 // Keeps the agent layer in sync: skills on disk vs the skill index and AGENTS.md,
 // skill/agent frontmatter, and task:context doc references. Many short-lived parallel
 // sessions rely on these being accurate; drift here silently misroutes every one of them.
+import { existsSync } from "node:fs";
 import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
@@ -194,6 +195,33 @@ for (const file of checkScripts) {
     problems.push(
       `scripts/check-repo.mjs: ${file} exists but is never spawned — wire it into the checks table or it will never run`,
     );
+}
+
+// 8. No stdio MCP server is launched through `pnpm`. An MCP server speaks
+// JSON-RPC over stdout, and `pnpm` writes to stdout too: on any machine whose
+// Node does not satisfy this package's `engines` (agent containers ship Node 22
+// against a `>=24` field) every `pnpm <bin>` prints
+// `[WARN] Unsupported engine: …` as the first line the client reads, the
+// handshake never parses, and the server fails with a 30-second connect
+// timeout. Both stdio entries here were like that until 2026-09-03 — the
+// playwright one doubly so, since `pnpm @playwright/mcp` is not a command at
+// all (the binary is `playwright-mcp`) and so had never once started. The cost
+// is silent and it is paid by every session: two servers' worth of tools
+// missing, and a minute of startup spent finding that out. The binaries run
+// perfectly when invoked directly, which is the only thing this asks for.
+const mcpConfig = JSON.parse(await readFile(path.join(ROOT, ".mcp.json"), "utf8"));
+for (const [name, server] of Object.entries(mcpConfig.mcpServers ?? {})) {
+  const command = server.command;
+  if (!command) continue;
+  if (/(^|\/)(pnpm|npm|yarn|npx)$/.test(command)) {
+    problems.push(
+      `.mcp.json: the "${name}" server is launched through \`${command}\`, whose own warnings go to stdout and corrupt the JSON-RPC stream — point \`command\` straight at the binary (e.g. ./node_modules/.bin/<bin>)`,
+    );
+    continue;
+  }
+  if (command.startsWith("./node_modules/") && !existsSync(path.join(ROOT, command))) {
+    problems.push(`.mcp.json: the "${name}" server points at ${command}, which does not exist`);
+  }
 }
 
 if (problems.length > 0) {

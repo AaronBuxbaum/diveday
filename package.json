@@ -7,7 +7,7 @@
   },
   "packageManager": "pnpm@11.24.0",
   "scripts": {
-    "dev": "pnpm build:sw && DIVEDAY_RATE_LIMIT_DISABLED=${DIVEDAY_RATE_LIMIT_DISABLED-1} next dev",
+    "dev": "pnpm build:sw && DIVEDAY_RATE_LIMIT_DISABLED=${DIVEDAY_RATE_LIMIT_DISABLED-1} NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN-} node scripts/dev-server.mjs",
     "build": "pnpm build:sw && next build",
     "start": "next start",
     "lint": "biome check .",
@@ -74,7 +74,7 @@
     "db:generate": "drizzle-kit generate",
     "db:merge": "node scripts/merge-migration-heads.mjs",
     "db:migrate": "dotenv -c -- drizzle-kit migrate --config drizzle.config.prod.ts",
-    "db:reset": "rm -rf .pglite && echo 'Dev database cleared; next `pnpm dev` re-migrates and re-seeds.'",
+    "db:reset": "node scripts/db-reset.mjs",
     "build:sw": "node scripts/build-service-worker.mjs",
     "check:context-budget": "node scripts/check-context-budget.mjs",
     "agent:health": "node scripts/agent-health.mjs"
