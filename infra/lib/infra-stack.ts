@@ -775,7 +775,7 @@ export class InfraStack extends cdk.Stack {
 
     const smsReceiptForwarder = new lambda.Function(this, "SmsReceiptForwarder", {
       functionName: "diveday-sms-receipt-forwarder",
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: "index.handler",
       timeout: cdk.Duration.seconds(30),
       logGroup: smsReceiptForwarderLogs,
@@ -1689,7 +1689,7 @@ exports.handler = async (event) => {
     // one key and rotation has the room it needs natively.
     const accessKeyPruner = new lambda.Function(this, "AccessKeyPruner", {
       functionName: "diveday-access-key-pruner",
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: "index.handler",
       timeout: cdk.Duration.minutes(2),
       logGroup: new logs.LogGroup(this, "AccessKeyPrunerLogs", {
@@ -2634,7 +2634,7 @@ exports.handler = async (event) => {
 
     const backupFreshnessCheck = new lambda.Function(this, "BackupFreshnessCheck", {
       functionName: "diveday-backup-freshness-check",
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: "index.handler",
       timeout: cdk.Duration.seconds(60),
       logGroup: backupFreshnessLogs,
@@ -3266,7 +3266,7 @@ exports.handler = async () => {
         entryPoints: [entryPath],
         write: false,
         bundle: true,
-        target: "node22",
+        target: "node24",
         format: "cjs",
         platform: "node",
         external: ["@aws-sdk/*"],
@@ -3276,7 +3276,7 @@ exports.handler = async () => {
 
     const visualBucketPruner = new lambda.Function(this, "VisualBucketPruner", {
       functionName: "diveday-visual-bucket-pruner",
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: "index.handler",
       timeout: cdk.Duration.minutes(15),
       memorySize: 512,

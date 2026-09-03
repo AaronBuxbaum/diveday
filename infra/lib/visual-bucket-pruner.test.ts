@@ -27,7 +27,7 @@ describe("visual regression bucket pruner", () => {
   it("is a Lambda with the bucket and repo environment variables", () => {
     template().hasResourceProperties("AWS::Lambda::Function", {
       FunctionName: "diveday-visual-bucket-pruner",
-      Runtime: "nodejs22.x",
+      Runtime: "nodejs24.x",
       Timeout: 900,
       Environment: {
         Variables: Match.objectLike({
