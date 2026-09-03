@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  cgroupAnonBytes,
   cgroupMemoryLimitBytes,
   databaseDescription,
   devLockPid,
@@ -88,6 +89,47 @@ describe("cgroupMemoryLimitBytes", () => {
       "/sys/fs/cgroup/limited/memory.max": String(8 * GB),
     };
     expect(cgroupMemoryLimitBytes(reader(files))).toBe(2 * GB);
+  });
+});
+
+describe("cgroupAnonBytes", () => {
+  it("reads v1's total_rss, which is what the OOM report counted", () => {
+    // The kill line reads `anon-rss:13,091,384kB`, and `total_rss` is that
+    // number for the whole cgroup including descendants.
+    const files = {
+      "/proc/self/cgroup": "4:memory:/session\n",
+      "/sys/fs/cgroup/memory/session/memory.stat": [
+        "cache 3592499200",
+        "rss 637325312",
+        "total_cache 3592499200",
+        "total_rss 1774321664",
+      ].join("\n"),
+    };
+    expect(cgroupAnonBytes(reader(files))).toBe(1774321664);
+  });
+
+  it("reads v2's anon", () => {
+    const files = {
+      "/proc/self/cgroup": "0::/session\n",
+      "/sys/fs/cgroup/session/memory.stat": ["anon 2147483648", "file 999"].join("\n"),
+    };
+    expect(cgroupAnonBytes(reader(files))).toBe(2 * GB);
+  });
+
+  it("never returns page cache, which is reclaimable and would restart the server for nothing", () => {
+    // Measured on this container: 4,108 MB of `memory.usage_in_bytes` against
+    // 637 MB of `total_rss`, the difference being warm filesystem cache.
+    const files = {
+      "/proc/self/cgroup": "4:memory:/session\n",
+      "/sys/fs/cgroup/memory/session/memory.stat": ["total_cache 3592499200", "total_rss 668"].join(
+        "\n",
+      ),
+    };
+    expect(cgroupAnonBytes(reader(files))).toBe(668);
+  });
+
+  it("is null with no cgroup, so the caller falls back to its own tree", () => {
+    expect(cgroupAnonBytes(reader({}))).toBeNull();
   });
 });
 

@@ -68,6 +68,11 @@ const ORPHAN_PATTERNS = [
   { label: "next-server", match: /\bnext-server\b/ },
   { label: "next start", match: /\bnext\b.*\bstart\b/ },
   { label: "next dev", match: /\bnext\b.*\bdev\b/ },
+  // The supervisor `pnpm dev` actually runs. Without this the report has a
+  // blind spot at exactly its own subject: a supervisor whose parent shell has
+  // gone keeps its `next dev` child alive and *restarts* it on schedule, so the
+  // leak it produces is the longest-lived kind there is.
+  { label: "dev-server supervisor", match: /\bscripts\/dev-server\.mjs\b/ },
   { label: "vitest", match: /\bvitest\b/ },
   { label: "playwright", match: /\bplaywright\b.*\btest\b/ },
 ];

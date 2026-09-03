@@ -246,6 +246,54 @@ export function cgroupMemoryLimitBytes(readFile) {
 }
 
 /**
+ * Anonymous (unreclaimable) memory charged to this whole cgroup, or `null`.
+ *
+ * The dev server's own tree is what the *budget* is about, but it is not what
+ * gets killed: the cgroup charges everything in the session — a `pnpm test`
+ * run, a Playwright fleet, the agent itself — and the kill lands on whichever
+ * process is largest when the *total* runs out. A supervisor that watches only
+ * its own child can therefore sit comfortably under budget while the container
+ * dies around it, which is the failure it exists to prevent.
+ *
+ * Anonymous pages specifically, never `memory.usage_in_bytes` / `memory.current`:
+ * measured here at 4,108 MB of "usage" against 637 MB of `total_rss`, the rest
+ * being page cache the kernel reclaims on demand. Restarting the dev server
+ * because the filesystem cache is warm would be pure superstition. The OOM
+ * report names the same figure this reads (`anon-rss:13,091,384kB`).
+ */
+export function cgroupAnonBytes(readFile) {
+  const read = (file) => {
+    try {
+      return readFile(file, "utf8");
+    } catch {
+      return null;
+    }
+  };
+  const cgroups = read("/proc/self/cgroup") ?? "";
+
+  const v1 = /^\d+:[^:]*\bmemory\b[^:]*:(.*)$/m.exec(cgroups);
+  if (v1) {
+    // `total_rss` includes descendant cgroups; `rss` would count only this level.
+    const match = /^total_rss (\d+)$/m.exec(
+      read(`/sys/fs/cgroup/memory${v1[1]}/memory.stat`) ?? "",
+    );
+    if (match) return Number(match[1]);
+  }
+
+  const unified = /^0::(.*)$/m.exec(cgroups);
+  if (unified) {
+    for (const file of [
+      `/sys/fs/cgroup${unified[1] === "/" ? "" : unified[1]}/memory.stat`,
+      "/sys/fs/cgroup/memory.stat",
+    ]) {
+      const match = /^anon (\d+)$/m.exec(read(file) ?? "");
+      if (match) return Number(match[1]);
+    }
+  }
+  return null;
+}
+
+/**
  * The smallest memory ceiling that actually applies to this process.
  *
  * The minimum rather than the first hit: a container can be both cgroup-limited
@@ -642,11 +690,15 @@ async function main(argv = process.argv.slice(2)) {
           lastRss = rss;
 
           // Above this the kernel is the next thing to act, so nothing is
-          // waited for.
-          if (hardLimit && rss >= hardLimit) {
+          // waited for. Measured cgroup-wide, because that is what the kill is
+          // measured against — the server's own tree can be well under budget
+          // while a test run beside it takes the container over.
+          const pressure = cgroupAnonBytes(readFileSync) ?? rss;
+          if (hardLimit && pressure >= hardLimit) {
             const busy = Date.now() - lastRequestAt < IDLE_MS;
+            const elsewhere = pressure - rss;
             say(
-              `restarting now: ${formatMb(rss)}, past the ${formatMb(hardLimit)} mark where the kernel kills this server outright. ${busy ? "Whatever request was in flight is lost — that is the trade, and the alternative is losing the server with no message at all." : "Nothing was in flight."} The next page is a warm compile.`,
+              `restarting now: ${formatMb(pressure)} of anonymous memory against a ${formatMb(hardLimit)} mark, past which the kernel kills the largest process outright — ${formatMb(rss)} of it this server${elsewhere > 256 * MB ? `, ${formatMb(elsewhere)} something else in this session` : ""}. ${busy ? "Whatever request was in flight is lost — that is the trade, and the alternative is losing the server with no message at all." : "Nothing was in flight."} The next page is a warm compile.`,
             );
             warmController.abort();
             restart();
@@ -765,6 +817,9 @@ async function main(argv = process.argv.slice(2)) {
   await warming;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+// `process.argv[1]` is undefined under `node -e` and `node --eval`, where
+// `pathToFileURL` throws rather than returning nothing — so importing this
+// module to read one exported helper would crash on the guard itself.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await main();
 }

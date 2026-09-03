@@ -142,7 +142,7 @@ The canonical process is this file, `docs/`, scripts, and tests. Claude-specific
 in [.claude/skills/README.md](.claude/skills/README.md): **new-feature**, **verify**, **design-implementation**, **i18n-copy**,
 **copy-restraint**, **design-review**, **brand-voice**, **schema-change**, **debug**, **instant-navigation**,
 **e2e-and-visual**, **visual-triage**, **adr**, **stacked-prs**, **triage**, **backlog-routine**,
-**marketing-page**, **switching-pages**, and **commercial-outreach**.
+**marketing-page**, **switching-pages**, **run**, and **commercial-outreach**.
 Other providers
 should read the corresponding `SKILL.md` directly when useful. If a skill conflicts with canonical
 docs, tests, or code, the skill is stale and must be fixed in the same change.

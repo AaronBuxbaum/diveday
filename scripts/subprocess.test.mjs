@@ -154,6 +154,10 @@ describe("scripts/", () => {
         "e2e-server.mjs",
         "an intentionally long-lived async supervisor; its detached process group is the bound and its signal/exit handlers reap the whole group",
       ],
+      [
+        "dev-server.mjs",
+        "the same shape as e2e-server.mjs: an intentionally long-lived async supervisor around `next dev`, whose child is spawned detached so one signal reaches the whole group, and whose SIGINT/SIGTERM/exit handlers reap it. A timeout is the one thing this call must not have -- the bound it needs is a memory budget, which is what the file is. Its only *bounded* call, the `ps` read behind the budget, does go through scripts/subprocess.mjs",
+      ],
     ]);
 
     const offenders = readdirSync(HERE)
