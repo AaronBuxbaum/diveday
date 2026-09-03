@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { orders, shops } from "@/db/schema";
 import { setShopTaxEnabled } from "@/db/shops";
@@ -95,10 +95,6 @@ async function seededCustomer(db: AppDb, shopId: string) {
   if (!customer) throw new Error("seeded shop has no people to invoice");
   return customer.id;
 }
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("raising an invoice", () => {
   it("refuses a captain — billing a diver is owner/manager work, not deck work", async () => {

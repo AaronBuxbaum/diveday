@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { certifications, nitroxCertifications, people } from "@/db/schema";
 import { recordSelfDeclaredCards } from "@/db/self-declared-cards";
@@ -93,10 +93,6 @@ function sighting(certificationId: string, fields: Record<string, string>) {
   for (const [name, value] of Object.entries(fields)) formData.set(name, value);
   return formData;
 }
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("the diver-record action subject", () => {
   it("404s a malformed bound person id before any session or database read", async () => {

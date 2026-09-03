@@ -7,13 +7,6 @@ allowBuilds:
 
 minimumReleaseAge: 0
 
-onlyBuiltDependencies:
-  - '@parcel/watcher'
-  - '@sentry/cli'
-  - '@swc/core'
-  - esbuild
-  - msw
-
 patchedDependencies:
   '@vercel/analytics@2.0.1': patches/@vercel__analytics@2.0.1.patch
 
@@ -29,3 +22,7 @@ supportedArchitectures:
   os:
     - darwin
     - linux
+
+update:
+  ignoreDeps:
+    - '@types/node'

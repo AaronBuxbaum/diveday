@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { mediaDeletionAttempts, processorErasureObligations } from "@/db/schema";
 import { getShopById } from "@/db/shops";
@@ -109,10 +109,6 @@ async function unitsOf(db: AppDb, shopId: string) {
     currency: shop.currency,
   };
 }
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("saving the shop's units", () => {
   it("refuses a captain outright — settings are owner/manager work now", async () => {

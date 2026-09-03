@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { people, personRoles, userAccounts } from "@/db/schema";
 import { getSupportNeeds } from "@/db/support-needs";
@@ -117,10 +117,6 @@ function signIn(shop: { id: string; slug: string }, personId: string) {
     staffSession({ shopId: shop.id, shopSlug: shop.slug, personId }),
   );
 }
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 /**
  * **There is no refund control on this record any more** (ADR

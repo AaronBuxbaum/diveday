@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { getCurrentWaiverTemplate } from "@/db/waivers";
 import { seededShopContext } from "@/test/db";
@@ -75,10 +75,6 @@ async function currentTemplate(db: AppDb, shopId: string) {
     ? { title: template.title, body: template.body, version: template.version }
     : null;
 }
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("publishing a waiver template", () => {
   it("refuses a captain, and the text divers sign is unchanged", async () => {

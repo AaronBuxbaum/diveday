@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import { bookings, tripRequirements, trips } from "@/db/schema";
@@ -179,10 +179,6 @@ async function clearPrice(db: AppDb, tripId: string) {
 function blockedCountFrom(to: string): number {
   return Number(new URL(to, "https://dive.day").searchParams.get("count") ?? 0);
 }
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 describe("setting what a trip admits", () => {
   it("refuses a captain clearing the certification the trip demands", async () => {
