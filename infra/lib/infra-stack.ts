@@ -1170,7 +1170,7 @@ exports.handler = async (event) => {
     // though it lives in the same bucket -- a new prefix is opt-in, not
     // opt-out, which is the direction a mistake should fail in.
     //
-    // **Off until the account is verified.** CloudFront refuses
+    // **Behind the account's CloudFront verification.** CloudFront refuses
     // CreateDistribution on an account with no distribution history until a
     // human-reviewed Support case lifts the gate (S17,
     // `cloudfront-account-verification`), and a stack that carries the
@@ -1179,13 +1179,14 @@ exports.handler = async (event) => {
     // change on main down with it. So the distribution is behind the
     // `cloudfrontVerified` context value in cdk.json: `false` ships the bucket
     // and the uploader alone, with MEDIA_PUBLIC_URL_BASE pointing at the
-    // bucket's REST endpoint, which answers 403 to every viewer -- exactly
-    // what the deployed stack does today, and honest about it in
-    // config/env-registry.mjs. Flipping it to `true` in cdk.json, once
-    // `aws cloudfront list-distributions` no longer answers AccessDenied, is
-    // the whole re-enable. A committed value rather than a `--context` flag on
-    // the command line, so the repo says which state the account is in and a
-    // deploy from the workflow and a deploy from a laptop agree.
+    // bucket's REST endpoint, which answers 403 to every viewer, and is
+    // honest about it in config/env-registry.mjs. The account cleared the gate
+    // on 2026-09-03 and the committed value is now `true`; the flag survives
+    // because it is what a *second* account -- a fresh deploy target, a
+    // recreated one -- deploys behind while its own case is reviewed. A
+    // committed value rather than a `--context` flag on the command line, so
+    // the repo says which state the account is in and a deploy from the
+    // workflow and a deploy from a laptop agree.
     const cloudfrontVerified = String(this.node.tryGetContext("cloudfrontVerified")) === "true";
     const mediaDistribution = cloudfrontVerified
       ? this.buildMediaDistribution(mediaBucket)
@@ -1957,13 +1958,13 @@ exports.handler = async (event) => {
           "AWS Support -> Create case -> Account and billing, service CloudFront, quoting the CreateDistribution error and its Request ID verbatim.",
         ],
         produces:
-          "MediaDistribution (infra-stack.ts S11b) can be created. Until then the stack ships without it: cdk.json carries cloudfrontVerified: false, and every course photo, recap photo, dive-site image and shop logo answers 403 (issue #1013) -- the state the account is in either way.",
+          "MediaDistribution (infra-stack.ts S11b) can be created. Until then the stack ships without it: cdk.json carries cloudfrontVerified: false, and every course photo, recap photo, dive-site image and shop logo answers 403 (issue #1013) -- the state the account is in either way. This account cleared the gate on 2026-09-03 and the committed value is true; the step stands for the next account, not this one.",
         verify: [
           "aws cloudfront list-distributions --query DistributionList.Quantity  (AccessDenied means not yet; a number means verified)",
         ],
         onFailure:
-          "If a deploy was attempted with cloudfrontVerified: true before verification, clear the rolled-back stack before retrying: a first-ever deploy lands in ROLLBACK_COMPLETE, which CloudFormation cannot update, so aws cloudformation delete-stack --stack-name DiveDay first. A later deploy lands in UPDATE_ROLLBACK_COMPLETE and is retryable as-is.",
-        note: "File it early -- an account-and-billing case carries no support-plan charge, so Basic Support can raise it, but the review takes hours to days and nothing else in the checklist shortens that wait. Once verified, flip cloudfrontVerified to true in cdk.json in a pull request and deploy; that is the whole re-enable, and the committed value is what keeps a workflow deploy and a laptop deploy in the same state. The flag exists because CloudFront's refusal is loud rather than silent: with the distribution in the template, an unverified account fails the entire deploy at that one resource and rolls back every other change with it. There is still no second read path -- the media bucket blocks all public access and the flag never opens it.",
+          "If a deploy was attempted with cloudfrontVerified: true before verification, clear the rolled-back stack before retrying: a first-ever deploy lands in ROLLBACK_COMPLETE, which CloudFormation cannot update, so aws cloudformation delete-stack --stack-name diveday-infra first. A later deploy lands in UPDATE_ROLLBACK_COMPLETE and is retryable as-is.",
+        note: "File it early -- an account-and-billing case carries no support-plan charge, so Basic Support can raise it, but the review takes hours to days and nothing else in the checklist shortens that wait; a case that has sat a week is stuck rather than pending, and a reply on it re-queues it where a second case gets closed as a duplicate. Once verified, flip cloudfrontVerified to true in cdk.json in a pull request and deploy; that is the whole re-enable, and the committed value is what keeps a workflow deploy and a laptop deploy in the same state. The flag exists because CloudFront's refusal is loud rather than silent: with the distribution in the template, an unverified account fails the entire deploy at that one resource and rolls back every other change with it. There is still no second read path -- the media bucket blocks all public access and the flag never opens it.",
       },
       {
         id: "github-actions-cdk-oidc",

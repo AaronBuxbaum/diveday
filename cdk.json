@@ -2,6 +2,6 @@
   "app": "npx tsx infra/bin/infra.ts",
   "context": {
     "@aws-cdk/core:newStyleStackSynthesis": true,
-    "cloudfrontVerified": false
+    "cloudfrontVerified": true
   }
 }

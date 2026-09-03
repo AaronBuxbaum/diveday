@@ -53,6 +53,19 @@ function mediaDistribution(): DistributionConfig {
 }
 
 describe("media distribution", () => {
+  /**
+   * The account cleared CloudFront's verification gate, so the committed
+   * value builds the distribution. It is pinned here because the flag is the
+   * one thing standing between the template and a read path: a silent revert
+   * to `false` takes every course photo, recap photo, dive-site image and shop
+   * logo back to the 403 of issue #1013, and no other assertion here would
+   * notice -- every one of them passes its own context.
+   */
+  it("is on by default, as the committed value", () => {
+    const committed = JSON.parse(readFileSync(path.join(process.cwd(), "cdk.json"), "utf8"));
+    expect(committed.context.cloudfrontVerified).toBe(true);
+  });
+
   it("serves exactly the four public prefixes", () => {
     const patterns = (mediaDistribution().CacheBehaviors ?? []).map((b) => b.PathPattern).sort();
     expect(patterns).toEqual(["courses/*", "dive-sites/*", "recap/*", "shop-logos/*"]);
@@ -157,14 +170,11 @@ describe("media distribution", () => {
    * today, documented against MEDIA_PUBLIC_URL_BASE in config/env-registry.mjs.
    */
   describe("before the account is verified", () => {
-    it("leaves the distribution out, and is the committed default", () => {
+    it("leaves the distribution out", () => {
       const off = template({ cloudfrontVerified: false });
       expect(Object.keys(off.findResources("AWS::CloudFront::Distribution"))).toEqual([]);
       expect(Object.keys(off.findResources("AWS::CloudFront::OriginAccessControl"))).toEqual([]);
       expect(Object.keys(off.findOutputs("MediaDistributionDomain"))).toEqual([]);
-
-      const committed = JSON.parse(readFileSync(path.join(process.cwd(), "cdk.json"), "utf8"));
-      expect(committed.context.cloudfrontVerified).toBe(false);
     });
 
     it("still grants nobody a read of the bucket, anonymous or otherwise", () => {
