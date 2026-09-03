@@ -22,7 +22,7 @@
       "x": 0,
       "y": 2360,
       "w": 1280,
-      "h": 1800
+      "h": 1500
     },
     {
       "file": "AboutBuilderPhone.dc.html",
@@ -30,7 +30,7 @@
       "x": 1400,
       "y": 2360,
       "w": 390,
-      "h": 2580
+      "h": 1680
     },
     {
       "file": "HomeProof.dc.html",
@@ -44,7 +44,7 @@
       "file": "CopyLedger.dc.html",
       "title": "The copy ledger",
       "x": 0,
-      "y": 5100,
+      "y": 4200,
       "w": 1180,
       "h": 4460
     }
@@ -53,9 +53,9 @@
     {
       "id": "note-glosses",
       "x": 0,
-      "y": 4220,
+      "y": 3920,
       "w": 420,
-      "text": "The band names Aaron in the third person and says “we” for the team; no signature, no “I”. The facts (Google Maps; a biotech company through to going public; self-driving cars) were confirmed 2026-07-25 and are listed without a tense, so nothing here says what anyone does “these days”. The three paragraphs and the three lines under the facts are drafts: confirm, reword or strike each one — biography is true-only."
+      "text": "Three paragraphs, no ledger, no signature, no name. The background is one plain sentence, and the owner said one passing mention is the whole of it. Every sentence is his to keep, reword or strike."
     },
     {
       "id": "note-support",
@@ -69,7 +69,7 @@
       "x": 1910,
       "y": 3760,
       "w": 380,
-      "text": "The ledger's labels are the confirmed facts; its values are shipped product facts a visitor can check in the demo, so nothing in this band waits on H-66. The one new control is the link, at link weight. The hero's budget (one primary, one secondary) is untouched."
+      "text": "Five plain sentences, every one a shipped fact, the price interpolated from marketing.ts. The one new control is the link. The hero's budget (one primary, one secondary) is untouched. The last sentence moves with the support decision in H-66."
     }
   ],
   "launch": {
