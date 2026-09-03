@@ -494,7 +494,6 @@ export default async function TripDetailPage({
           <a
             href="#book"
             className={buttonClass({
-              size: "cta",
               className: "fixed right-4 bottom-4 z-20 rounded-full shadow-lg sm:hidden",
             })}
           >

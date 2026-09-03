@@ -118,7 +118,6 @@ export function RequestDayGroup({
           // wherever a staffer meets it. The `+` is aria-hidden decoration —
           // it never enters a translated string.
           <Link href={add.href} className={buttonClass({ variant: "secondary", size: "sm" })}>
-            <span aria-hidden="true">+</span>
             {add.label}
           </Link>
         ) : null}

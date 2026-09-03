@@ -30,6 +30,11 @@
    * page. A phone frame is dark in both schemes.
    */
   --device-frame: #0c2a35;
+  /* Paper on the bezel, and on any scrim drawn in `--device-frame`: the
+     storefront hero's name sits on such a scrim over the shop's photograph,
+     and `text-surface` there flipped to ink at night — dark words on a dark
+     wash. Like the frame itself, this does not follow the scheme. */
+  --device-frame-foreground: #fffdf8;
 
   /* Action — lagoon */
   --primary: #0e7490;
@@ -287,6 +292,7 @@
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-device-frame: var(--device-frame);
+  --color-device-frame-foreground: var(--device-frame-foreground);
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
@@ -1302,8 +1308,7 @@ details[open]::details-content {
    * `*, *::before, *::after` does not reach `::details-content` — it is not one
    * of the two pseudo-elements the universal selector names. Without this line
    * every disclosure in the app would keep its 200ms fade for a reader who
-   * asked for reduced motion, which is the same gap `.progress-wave-fill`
-   * documents below for a different reason.
+   * asked for reduced motion.
    */
   details::details-content,
   details[open]::details-content {
@@ -1311,21 +1316,6 @@ details[open]::details-content {
     transition-duration: 0.01ms !important;
   }
 
-  /*
-   * The universal rule above is `!important`, but so is `.progress-wave-fill`'s
-   * animation — and between two `!important` declarations the higher-specificity
-   * class selector wins, so the /ready readiness bar would keep looping forever
-   * for someone who asked for reduced motion (WCAG 2.3.3). Kill it by name. The
-   * solid `background-color` still carries the fill, and the "N of M done" label
-   * still carries the meaning. Any future animated `!important` declaration needs
-   * a matching entry here.
-   */
-  .progress-wave-fill {
-    /* biome-ignore lint/complexity/noImportantStyles: must beat the class rule's own !important */
-    animation: none !important;
-    /* biome-ignore lint/complexity/noImportantStyles: must beat the class rule's own !important */
-    background-image: none !important;
-  }
 
   .marketing-reveal-pending,
   .marketing-reveal-visible,
@@ -1384,54 +1374,6 @@ details[open]::details-content {
   animation-name: coral-bubble-rise;
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
-}
-
-/* Card Expansion Scale Hint */
-/*
- * **The hover cue on a whole-card link.** Three things were wrong with it and
- * each is worth naming, because they are the failure modes the motion tokens
- * exist to prevent (issue #833):
- *
- * - It hard-coded `cubic-bezier(0.4, 0, 0.2, 1)` twice and `ease` once — three
- *   curves in one rule, none of them ours, written before there was a utility
- *   to reach for.
- * - It animated **`box-shadow`**, which paints every frame, against principle
- *   5's transform-and-opacity rule. And the shadow was a literal
- *   `rgba(0, 0, 0, 0.05)`, which is invisible on the dark palette — so half the
- *   readers got the paint cost and none of the effect.
- * - It scaled by 0.5%, which nobody can see.
- *
- * What is left is a border that warms on hover, on the app's own arrival curve
- * and its own token. `transition-property` is named rather than `all` so this
- * cannot start animating a layout property somebody adds later.
- */
-.card-scale-hint {
-  transition-property: border-color, transform;
-  transition-duration: var(--default-transition-duration);
-  transition-timing-function: var(--ease-out-soft);
-}
-.card-scale-hint:hover {
-  transform: scale(1.01);
-}
-
-/* Fluid Progress Wave Fill */
-@keyframes progress-wave-move {
-  0% {
-    background-position-x: 0px;
-  }
-  100% {
-    background-position-x: 60px;
-  }
-}
-.progress-wave-fill {
-  /* biome-ignore lint/complexity/noImportantStyles: overrides tailwind bg classes */
-  background-color: var(--primary) !important;
-  /* biome-ignore lint/complexity/noImportantStyles: overrides tailwind bg classes */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,42.4V0Z' fill='%23ffffff' opacity='.25'/%3E%3C/svg%3E") !important;
-  /* biome-ignore lint/complexity/noImportantStyles: overrides tailwind bg classes */
-  background-size: 60px 100% !important;
-  /* biome-ignore lint/complexity/noImportantStyles: overrides tailwind animation classes */
-  animation: progress-wave-move 1.5s infinite linear !important;
 }
 
 /* Clean-slate close-out: a restrained signal that the board is clear and ready. */

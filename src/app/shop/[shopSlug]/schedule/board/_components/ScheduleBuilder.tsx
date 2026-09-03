@@ -256,7 +256,6 @@ export type BuilderCopy = {
   hoursBeforeSuffix: string;
   hoursSuffix: string;
   repeatLegend: string;
-  repeatDescription: string;
   howOftenLabel: string;
   doesntRepeat: string;
   everyWeek: string;
@@ -998,7 +997,6 @@ function AddPanel({
         className="rounded-lg border border-border bg-surface p-5"
       >
         <legend className="px-1 text-sm font-medium">{copy.repeatLegend}</legend>
-        <p className="text-sm text-muted">{copy.repeatDescription}</p>
         <RepeatFields
           startDate={startDate}
           disabled={!expanded}
@@ -1042,11 +1040,7 @@ function AddPanel({
         <SubmitButton pendingLabel={copy.adding} className={buttonClass()}>
           {copy.putOnBoard}
         </SubmitButton>
-        <button
-          type="button"
-          onClick={onCancel}
-          className={buttonClass({ variant: "ghost", size: "sm" })}
-        >
+        <button type="button" onClick={onCancel} className={buttonClass({ variant: "ghost" })}>
           {copy.cancel}
         </button>
       </div>
@@ -1114,11 +1108,7 @@ function RemovePanel({
         >
           {copy.removeConfirmButton}
         </SubmitButton>
-        <button
-          type="button"
-          onClick={onCancel}
-          className={buttonClass({ variant: "ghost", size: "sm" })}
-        >
+        <button type="button" onClick={onCancel} className={buttonClass({ variant: "ghost" })}>
           {copy.removeCancel}
         </button>
       </div>
@@ -1290,11 +1280,7 @@ function MovePanel({
         <SubmitButton pendingLabel={copy.moving} className={buttonClass()}>
           {copy.moveIt}
         </SubmitButton>
-        <button
-          type="button"
-          onClick={onCancel}
-          className={buttonClass({ variant: "ghost", size: "sm" })}
-        >
+        <button type="button" onClick={onCancel} className={buttonClass({ variant: "ghost" })}>
           {copy.cancel}
         </button>
       </div>
@@ -1346,11 +1332,7 @@ function CopyPanel({
         <SubmitButton pendingLabel={copy.copying} className={buttonClass()}>
           {copy.copyIt}
         </SubmitButton>
-        <button
-          type="button"
-          onClick={onCancel}
-          className={buttonClass({ variant: "ghost", size: "sm" })}
-        >
+        <button type="button" onClick={onCancel} className={buttonClass({ variant: "ghost" })}>
           {copy.cancel}
         </button>
       </div>

@@ -280,7 +280,7 @@ export function ConditionsSection({
                 link-weight beside the section's one primary (principle 8). */}
             <SubmitButton
               pendingLabel={t("trips.conditions.clearing")}
-              className={buttonClass({ variant: "link", size: "sm" })}
+              className={buttonClass({ variant: "link" })}
             >
               {t("trips.conditions.returnToAutomated")}
             </SubmitButton>

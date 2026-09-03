@@ -57,13 +57,11 @@ describe("the motion tokens", () => {
    * principle 5 — with a literal `rgba(0, 0, 0, 0.05)` that is invisible on the
    * dark palette. Half the readers paid for an effect none of them saw.
    */
-  it("leaves no hand-written curve or raw shadow in the card hover cue", () => {
-    const rule = CSS.slice(
-      CSS.indexOf(".card-scale-hint {"),
-      CSS.indexOf("}", CSS.indexOf(".card-scale-hint:hover {")),
-    );
-    expect(rule).not.toContain("cubic-bezier(");
-    expect(rule).not.toContain("rgba(");
-    expect(rule).not.toContain("box-shadow");
+  it("carries no dead motion utility", () => {
+    // `.card-scale-hint` and `.progress-wave-fill` each sat unused for weeks
+    // — a hover cue and a looping wave nothing mounted. A utility no
+    // component reaches for does not come back.
+    expect(CSS).not.toMatch(/^\.card-scale-hint/m);
+    expect(CSS).not.toMatch(/^\.progress-wave-fill/m);
   });
 });

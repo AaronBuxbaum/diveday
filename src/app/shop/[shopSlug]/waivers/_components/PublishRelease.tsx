@@ -125,7 +125,7 @@ export function PublishRelease({
   standingSignatures: boolean;
 }) {
   const [choice, setChoice] = useState<Materiality | null>(null);
-  const publishClass = buttonClass({ size: "lg" });
+  const publishClass = buttonClass();
 
   // A row wrapper on both branches, so the button keeps its own width inside
   // the column rather than stretching to the release textarea's.
@@ -170,7 +170,7 @@ export function PublishRelease({
             // Armed, the button says what it is about to cost rather than
             // repeating "Publish" in a second colour — the word carries the
             // state, the tone only weights it.
-            confirmClassName={buttonClass({ variant: "danger", size: "lg" })}
+            confirmClassName={buttonClass({ variant: "danger" })}
           />
         </div>
       ) : (

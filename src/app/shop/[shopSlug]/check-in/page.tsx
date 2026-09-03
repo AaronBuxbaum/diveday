@@ -23,7 +23,6 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { counterIsClear, counterTally, firstVisitMarksAnException } from "@/lib/check-in";
 import { nowDate } from "@/lib/clock";
 import { formatDayParts, formatTime } from "@/lib/format";
-import { ARRIVALS_AHEAD_HOURS, ARRIVALS_LOOKBACK_HOURS } from "@/lib/operational-window";
 import { requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeCodeOf, noticeFromParam, noticeRole } from "@/lib/staff-notices";
@@ -348,12 +347,6 @@ export default async function CheckInPage({
         // always someone Today also shows (task 141, UX persona lens 17).
         meta={
           <>
-            <p className="mt-1 max-w-2xl text-sm text-muted">
-              {t("shared.operationalWindow.arrivalsLens", {
-                lookback: ARRIVALS_LOOKBACK_HOURS,
-                ahead: ARRIVALS_AHEAD_HOURS,
-              })}
-            </p>
             {/* **Say it before the tap, not after.** The counter is live-only —
                 the boat has an encrypted device copy and this does not — so a
                 dropped signal means the board is stale and the next tap will

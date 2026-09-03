@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -144,15 +143,10 @@ export default async function GearUnitPage({
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
-      <Link
-        href={`/shop/${shopSlug}/gear`}
-        className="text-sm font-medium text-primary hover:underline"
-      >
-        {t("gear.unit.backToRegister")}
-      </Link>
-      <div className="mt-4">
+      <div>
         <ShopPageHeader
-          eyebrow={t("gear.eyebrow")}
+          eyebrow={t("gear.unit.backToRegister")}
+          eyebrowHref={`/shop/${shopSlug}/gear`}
           title={item.label}
           description={identity}
           meta={
@@ -710,7 +704,7 @@ function StatusCard({
             <input type="hidden" name="gearItemId" value={item.id} />
             <SubmitButton
               pendingLabel={t("gear.unit.status.deleting")}
-              className={buttonClass({ variant: "danger-ghost", size: "sm" })}
+              className={buttonClass({ variant: "danger-ghost" })}
             >
               {t("gear.unit.status.delete")}
             </SubmitButton>

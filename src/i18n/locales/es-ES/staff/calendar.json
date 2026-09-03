@@ -1,8 +1,8 @@
 {
   "eyebrow": "Ajustes",
   "title": "Suscripciones de calendario",
-  "description": "Lleva tus salidas de DiveDay al calendario que ya usas. La suscripción es de solo lectura: DiveDay nunca lee ni modifica nada de tu calendario.",
-  "refreshNote": "Tu calendario decide con qué frecuencia vuelve a leer el feed: normalmente en unas horas, no al instante. Para un cambio del mismo día, DiveDay manda.",
+  "description": "Lleva tus salidas de DiveDay al calendario que ya usas.",
+  "refreshNote": "Los calendarios pueden ir horas por detrás. Para un cambio del mismo día, DiveDay manda.",
   "scope": {
     "assignments": {
       "name": "Mis salidas",

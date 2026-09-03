@@ -29,7 +29,6 @@ const copy: EmbedGeneratorCopy = {
   languageAuto: "Follow the browser",
   languages: { "en-US": "English", "es-ES": "Español" },
   preview: "Preview",
-  previewNote: "note",
   platform: "Where it goes",
   platforms: Object.fromEntries(
     PLATFORMS.map((p) => [p, `platform ${p}`]),

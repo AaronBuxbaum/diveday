@@ -584,9 +584,17 @@ import { buttonClass } from "@/components/ui/button";
 ```
 
 Variants: `primary`, `secondary`, `ghost`, `danger`, `danger-solid`, and `link` (reads as inline
-text but still claims a full target). Sizes: `sm`, `md`, `lg`. Pass one-off adjustments through
-`className`; do not rebuild the base. If you find yourself cancelling a variant's own styles, the
-variant is wrong — add one.
+text but still claims a full target). Sizes: `md` (the default, 48px with a 16px label), `sm` (44px
+with a 14px label), `boat`, `icon`. Pass one-off adjustments through `className`; do not rebuild the
+base. If you find yourself cancelling a variant's own styles, the variant is wrong — add one.
+
+**The size follows the surface, never the button's importance.** Importance is the variant's job.
+A page header, a form's action row, a card body and a dialog take `md`; a ledger row, a table cell
+and a chip row take `sm`; and every button in one row takes the same size. A 16px primary beside a
+14px "Cancel" was the app's most repeated drift (nine rows on 2026-09-03), and the former `lg` and
+`cta` rungs — `md` with 4px more padding, or with a heavier weight — went with it: a call to action
+is made by being the row's one primary, or by `w-full` on a phone, never by its own type size.
+`icon` is a 48px square so it sits level with `md` in a header or a pager.
 
 **A `link` that must line up with the prose above it passes `flush: true`, never `className:
 "px-0"`.** Two utilities for one property resolve by **stylesheet** order, not by the order you
@@ -643,6 +651,11 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 - **`size="boat"`** raises the target floor to 56px with 16px labels, for surfaces worked at the
   rail with wet hands and glare (the manifest's checkpoint row). Everything else takes the default
   44px.
+- **The pill slides.** The raised pill is one element that travels from the option it was on to
+  the one it is on now — a FLIP on `transform`, on the arrival curve — so a tap explains where the
+  selection went. Every option is still a navigation; the component keeps the last measured box
+  across the re-render and starts the pill from there. Before JavaScript the current option draws
+  its own fill, so nothing depends on the effect to look selected.
 - **The current item is inert by default** — a `<span>` with `aria-current="page"`, because a tab
   bar's "you are here" is not a destination. A control whose options are views of the *same* page
   (`?view=`, `?checkpoint=`) passes `currentIsLink` (a re-tap is a harmless reload),

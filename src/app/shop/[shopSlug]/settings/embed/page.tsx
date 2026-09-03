@@ -100,7 +100,6 @@ export default async function EmbedSettingsPage({
     languageAuto: t("settings.embed.languageAuto"),
     languages: Object.fromEntries(DIVER_LOCALES.map((l) => [l, localeEndonym(l)])),
     preview: t("settings.embed.preview"),
-    previewNote: t("settings.embed.previewNote"),
     platform: t("settings.embed.platform"),
     platforms,
     platformNotes,

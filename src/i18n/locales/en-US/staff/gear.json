@@ -151,7 +151,7 @@
       "badge": "Deleted",
       "restore": "Restore unit"
     },
-    "backToRegister": "← Gear register",
+    "backToRegister": "Gear register",
     "where": {
       "title": "Where it is",
       "inShop": "In the shop, nothing reserved.",

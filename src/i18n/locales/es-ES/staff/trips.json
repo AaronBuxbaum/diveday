@@ -529,8 +529,6 @@
     "total": "Total",
     "air": "Aire",
     "nitrox": "Nitrox",
-    "includesCrew": "{count, plural, one {Incluye el listado y el divemaster o instructor de esta salida; los de repuesto no se cuentan.} other {Incluye el listado y los divemasters e instructores de esta salida; los de repuesto no se cuentan.}}",
-    "diversOnlyNote": "Solo los buceadores del listado. Los de repuesto no se cuentan. Asigna un divemaster o instructor a esta salida para incluir sus tanques.",
     "noGasAnalysisNote": "DiveDay no registra análisis de gas: cada mezcla se sigue analizando y firmando en la estación de carga.",
     "nitroxBlockedHeading": "Nitrox solicitado sin certificación verificada",
     "nitroxBlockedDescription": "Planeado con aire. Verifica el registro de certificación de nitrox en el perfil del buceador, o avísale en el mostrador antes de que zarpe el barco.",

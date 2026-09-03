@@ -364,7 +364,7 @@ export function DiverList({
                 // after this tap would put that search back in the URL behind
                 // them (same reasoning as the view chips above).
                 onClick={cancelPendingSearch}
-                className={buttonClass({ variant: "primary", className: "whitespace-nowrap" })}
+                className={buttonClass({ variant: "primary", className: "whitespace-nowrap max-sm:w-full" })}
               >
                 {copy.addDiverLabel}
               </Link>

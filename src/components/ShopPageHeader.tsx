@@ -156,7 +156,12 @@ export function ShopPageHeader({
           {description ? <p className="mt-2 max-w-2xl text-muted">{description}</p> : null}
           {meta ? <div className="mt-3">{meta}</div> : null}
         </div>
-        {actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}
+        {/* Below `sm` the header stacks and its actions share the row, each
+            growing to an equal share, so two doors read as one tidy band
+            rather than two buttons of different widths hugging the left. */}
+        {actions ? (
+          <div className="flex shrink-0 flex-wrap gap-2 max-sm:[&>*]:grow">{actions}</div>
+        ) : null}
       </div>
     </header>
   );
@@ -407,7 +412,11 @@ export function ShopNotice({
   return (
     <div
       role={role}
-      className={`rounded-inset border px-4 py-3 text-sm font-medium ${toneClass} ${className}`}
+      // `rise-in`: the app's most-seen success signal used to be the one
+      // feedback vehicle with no entrance — a tap acknowledged itself, the
+      // page reloaded, and the outcome was simply there. The same arrival the
+      // toast and the earned moment make; `prefers-reduced-motion` stills it.
+      className={`rise-in rounded-inset border px-4 py-3 text-sm font-medium ${toneClass} ${className}`}
     >
       {mark ? <StatusMark variant={mark} className="me-1" /> : null}
       {children}

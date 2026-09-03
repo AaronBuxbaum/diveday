@@ -37,13 +37,10 @@ import { type FunnelSource, trialHref } from "@/lib/funnel";
 export function FunnelCtas({
   locale,
   source,
-  size = "cta",
   className,
 }: {
   locale: DiverLocale;
   source: FunnelSource;
-  /** `"cta"` for a hero or closing band; `"md"` for an inline mid-page card. */
-  size?: "cta" | "md";
   /** Placement only — margins, `justify-*`, `shrink-0`. Never colour or weight. */
   className?: string;
 }) {
@@ -55,7 +52,7 @@ export function FunnelCtas({
         <FunnelTag source={source} />
         <SubmitButton
           pendingLabel={t("marketing.common.gettingReady")}
-          className={buttonClass({ size, busy: true, className: width })}
+          className={buttonClass({ busy: true, className: width })}
         >
           {t("marketing.common.tryDemo")}
         </SubmitButton>
@@ -64,7 +61,6 @@ export function FunnelCtas({
         href={trialHref(source)}
         className={buttonClass({
           variant: "secondary",
-          size,
           className: `border-border-strong ${width}`,
         })}
       >

@@ -56,7 +56,9 @@ export function PersonSearchForm({
       {Object.entries(hiddenFields ?? {}).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
-      <Field label={label} className="min-w-0 flex-1">
+      {/* The field takes the whole first row below `sm`: three controls in
+          one 358px row left the input four characters wide ("Name, ema"). */}
+      <Field label={label} className="min-w-0 flex-1 max-sm:basis-full">
         <input
           type="search"
           name={queryName}

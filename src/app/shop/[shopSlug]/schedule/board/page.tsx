@@ -443,7 +443,6 @@ export default async function ScheduleBoardPage({
     diversSuffix: st("schedule.builder.diversSuffix"),
     hoursBeforeSuffix: st("schedule.builder.hoursBeforeSuffix"),
     repeatLegend: st("schedule.builder.repeatLegend"),
-    repeatDescription: st("schedule.builder.repeatDescription"),
     howOftenLabel: st("schedule.builder.howOftenLabel"),
     doesntRepeat: st("schedule.builder.doesntRepeat"),
     everyWeek: st("schedule.builder.everyWeek"),
@@ -973,7 +972,7 @@ export default async function ScheduleBoardPage({
                   scroll={false}
                   className={buttonClass({ variant: "secondary" })}
                 >
-                  <span aria-hidden="true">+</span> {st("schedule.builder.addDeparture")}
+                  {st("schedule.builder.addDeparture")}
                 </Link>
               ) : null}
               {/* The board's primary action. Scheduling a departure is the rarer
