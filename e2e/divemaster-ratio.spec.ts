@@ -69,5 +69,5 @@ test("a shop's target ratio reaches the departure, and refuses nothing", async (
 
   await page.goto(`/shop/${SHOP}/trips/${tripId}`);
   await openTripAbout(page);
-  await expect(crew).toContainText("your 20:1 target wants 1 divemaster");
+  await expect(crew).toContainText("Your 20:1 target wants 1 divemaster");
 });

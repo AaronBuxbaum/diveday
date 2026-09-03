@@ -16,7 +16,7 @@ test("landing demo CTA drops a visitor into the staff shop", async ({ page }) =>
   // millisecond, so the first sentence a prospective buyer read inside the
   // product was recovery instructions for a failure that had not happened
   // (issue #806). The warning that earns its place stays.
-  await expect(page.getByText(/do not enter real customer details/)).toBeVisible();
+  await expect(page.getByText(/Do not enter real customer details/)).toBeVisible();
   await expect(page.getByText(/Session expired\? Sign back in at/)).toBeHidden();
 
   // It is one tap away, behind the control the banner already had — a minted
