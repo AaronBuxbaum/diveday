@@ -52,7 +52,7 @@ test("a shop's target ratio reaches the departure, and refuses nothing", async (
   // `<section>` whose text starts "Crew prediction", and a name filter matches
   // both.
   const crew = page.locator("section#crew");
-  await expect(crew).toContainText("your 1:1 target wants 9 divemasters");
+  await expect(crew).toContainText("Your 1:1 target wants 9 divemasters");
 
   // Advice, not a gate: the panel a shop fixes this in is still fully working
   // while the departure is under target, and nothing on the page has refused.
