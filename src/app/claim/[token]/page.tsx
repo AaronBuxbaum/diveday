@@ -257,7 +257,7 @@ export default async function SeatClaimPage({
           <div>
             <SubmitButton
               pendingLabel={t("seatClaim.claiming")}
-              className={buttonClass({ size: "lg", className: "disabled:opacity-70" })}
+              className={buttonClass({ className: "disabled:opacity-70" })}
             >
               {t("seatClaim.submit")}
             </SubmitButton>

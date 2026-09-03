@@ -529,8 +529,6 @@
     "total": "Total",
     "air": "Air",
     "nitrox": "Nitrox",
-    "includesCrew": "{count, plural, one {Includes the roster and this trip's divemaster or instructor; spares aren't counted.} other {Includes the roster and this trip's divemasters and instructors; spares aren't counted.}}",
-    "diversOnlyNote": "Divers on the roster only. Spares are not counted. Assign a divemaster or instructor to this trip to include their tanks.",
     "noGasAnalysisNote": "DiveDay logs no gas analysis: every mix is still analyzed and signed for at the fill station.",
     "nitroxBlockedHeading": "Nitrox requested without verified certification",
     "nitroxBlockedDescription": "Planned as air. Verify the diver’s nitrox certification record, or tell them at the counter before the boat leaves.",

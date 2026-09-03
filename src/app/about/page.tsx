@@ -211,12 +211,10 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
 
             No words of its own, for the reason `/product`'s index door carries
             none: the four "Check it" lines above are the caption, and a heading
-            here would restate the section it closes. `size="md"` rather than
-            `cta`, so the closing band's pair stays the biggest target on the
-            page — this is the door for a reader already convinced, not the
-            page's own ask. Left-aligned on the section's rail, like the heading
-            block and the grid. */}
-        <FunnelCtas locale={locale} source="about-rules" size="md" className="mt-10" />
+            here would restate the section it closes. This is the door for a
+            reader already convinced, not the page's own ask. Left-aligned on
+            the section's rail, like the heading block and the grid. */}
+        <FunnelCtas locale={locale} source="about-rules" className="mt-10" />
         {/* The demo's cost, stated once on this page — here, because this is
             now the first demo door a reader meets (docs/product/marketing.md,
             "The demo's cost is stated once per page, at the first door"). The

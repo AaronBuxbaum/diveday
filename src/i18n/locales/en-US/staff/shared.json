@@ -1,7 +1,5 @@
 {
-  "operationalWindow": {
-    "arrivalsLens": "Counter mode shows arrivals from the last {lookback, plural, one {# hour} other {# hours}} through the next {ahead}."
-  },
+  "operationalWindow": {},
   "skipToContent": "Skip to main content",
   "publicPreview": {
     "youWorkHere": "You work here. This is the page divers see.",

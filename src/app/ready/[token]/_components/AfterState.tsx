@@ -376,7 +376,6 @@ export function AfterState({
               pendingLabel={t("reviews.submitting")}
               className={buttonClass({
                 variant: externalReviewUrl ? "secondary" : "primary",
-                size: "cta",
               })}
             >
               {t("reviews.submit")}
@@ -970,7 +969,7 @@ function TipDoor({
           <p className="text-base text-muted">{t("recap.tipAllGoes", { shop: shopName })}</p>
           <a
             href={tip.checkoutUrl}
-            className={buttonClass({ variant: "secondary", size: "cta", className: "mt-4" })}
+            className={buttonClass({ variant: "secondary", className: "mt-4" })}
           >
             {t("recap.tipFinish", {
               // `minorToMajor`, never a literal 100 — a ¥3,000 tip is whole
@@ -998,7 +997,7 @@ function TipDoor({
             <div>
               <SubmitButton
                 pendingLabel={t("booking.headingToPayment")}
-                className={buttonClass({ variant: "secondary", size: "cta" })}
+                className={buttonClass({ variant: "secondary" })}
               >
                 {t("recap.tipLeave")}
               </SubmitButton>

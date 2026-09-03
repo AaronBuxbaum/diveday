@@ -50,7 +50,7 @@ export function ShareReviewButton({
       target="_blank"
       rel="noopener"
       onClick={handleClick}
-      className={buttonClass({ size: "cta", className })}
+      className={buttonClass({ className })}
     >
       {copied ? copiedLabel : cta}
     </a>

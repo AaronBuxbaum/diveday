@@ -34,7 +34,6 @@ export type EmbedGeneratorCopy = {
   languageAuto: string;
   languages: Record<string, string>;
   preview: string;
-  previewNote: string;
   platform: string;
   platforms: Record<Platform, string>;
   platformNotes: Record<Platform, string>;
@@ -280,7 +279,6 @@ export function EmbedGenerator({
                 </div>
               )}
             </div>
-            <p className="mt-2 text-xs text-muted">{copy.previewNote}</p>
           </div>
         </div>
       </SectionCard>

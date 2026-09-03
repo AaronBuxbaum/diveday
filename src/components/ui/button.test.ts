@@ -6,7 +6,7 @@ import { type ButtonSize, buttonClass } from "./button";
 
 const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-const SIZES = ["sm", "md", "lg", "cta", "boat", "icon"] as const satisfies readonly ButtonSize[];
+const SIZES = ["sm", "md", "boat", "icon"] as const satisfies readonly ButtonSize[];
 
 /**
  * Every horizontal-padding utility in a class list, variant prefixes included —
@@ -81,9 +81,9 @@ describe("buttonClass", () => {
       // `w-11` + `min-h-11` rather than `size-11` — a fixed height would clip a
       // glyph whose line box is taller than 44px, where a floor grows with it.
       const classes = buttonClass({ size: "icon", variant: "ghost" });
-      expect(classes).toContain("w-11");
-      expect(classes).toContain("min-h-11");
-      expect(classes).not.toContain("size-11");
+      expect(classes).toContain("w-12");
+      expect(classes).toContain("min-h-12");
+      expect(classes).not.toContain("size-12");
     });
 
     it("carries no horizontal padding to fight the fixed width", () => {

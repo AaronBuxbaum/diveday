@@ -137,7 +137,6 @@ export function ImageFileInput({
         <label
           className={buttonClass({
             variant: "secondary",
-            size: "lg",
             className:
               "cursor-pointer focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary",
           })}

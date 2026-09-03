@@ -37,7 +37,6 @@ import { type DiveSiteFormError, parseDiveSiteForm, submittedValues } from "@/li
 import { formatShortDate } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
-import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, noticeUrl, shopPath } from "@/lib/staff-notices";
 import { supersededDiveSitePhotos, uploadDiveSitePhotos } from "@/lib/storage/dive-site-photos";
 import { uuidParam } from "@/lib/uuid";
@@ -329,19 +328,17 @@ export default async function EditDiveSitePage({
           refresh and back-navigation — the same one-shot rule the rest of
           `/shop/**` follows. */}
       <FlashParams params={["notice", "error", "undo"]} />
-      <Link href={back} className="text-sm font-medium text-primary hover:underline">
-        {t("diveSites.backToLibrary")}
-      </Link>
-      <div className="mt-4">
+      <div>
         <ShopPageHeader
-          eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
+          eyebrow={t("diveSites.backToLibrary")}
+          eyebrowHref={back}
           title={site.name}
           description={t("diveSites.edit.description")}
           align="start"
           actions={
             <Link
               href={`/shop/${shopSlug}/schedule/board?add=1&site=${site.id}`}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
+              className={buttonClass({ variant: "secondary" })}
             >
               {t("diveSites.edit.scheduleDeparture")}
             </Link>

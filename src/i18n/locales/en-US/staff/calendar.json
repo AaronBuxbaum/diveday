@@ -1,8 +1,8 @@
 {
   "eyebrow": "Settings",
   "title": "Calendar subscriptions",
-  "description": "Put your DiveDay departures on the calendar you already use. Subscribing is read-only: DiveDay never reads or changes anything in your calendar.",
-  "refreshNote": "Your calendar decides how often it re-reads the feed, usually within a few hours rather than instantly. Treat DiveDay as the source of truth for a same-day change.",
+  "description": "Put your DiveDay departures on the calendar you already use.",
+  "refreshNote": "Calendars can run hours behind. For a same-day change, trust DiveDay.",
   "scope": {
     "assignments": {
       "name": "My departures",

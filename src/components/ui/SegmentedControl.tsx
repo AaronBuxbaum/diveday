@@ -1,5 +1,7 @@
+"use client";
+
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 
 /**
  * The one segmented control: a sunken track with a raised pill on the current
@@ -25,6 +27,17 @@ import type { ReactNode } from "react";
  *   weight (`font-semibold`); selection is carried by the raised pill —
  *   fill, ink, and shadow plus `aria-current` — never by a weight change that
  *   would reflow the row, and never by color alone.
+ * - **The pill slides.** The raised pill is one element that moves from the
+ *   choice it was on to the choice it is on now — a FLIP on `transform`, 200ms
+ *   on the arrival curve, nothing laid out twice — so a tap explains where the
+ *   selection went instead of the highlight blinking off one option and on
+ *   another. Every option is a navigation, so the slide happens across the
+ *   re-render: the component keeps the last measured box in a ref and, when
+ *   `currentKey` changes, starts the pill from there. Before JavaScript, and
+ *   for the first paint, the current option still draws its own fill, so the
+ *   control never depends on the effect to look selected; the pill takes over
+ *   once it has measured. `prefers-reduced-motion` stills it through the
+ *   global kill-switch.
  * - **Overflow wraps, never scrolls.** Labels stay `whitespace-nowrap`, and a
  *   row too wide for its container stacks onto a second line with each row's
  *   options sharing the width, rather than sliding sideways.
@@ -54,9 +67,9 @@ import type { ReactNode } from "react";
  * usually `scroll={false}` so switching views holds the reader's place.
  *
  * Labels arrive resolved: staff copy is server-side only, so each call site
- * translates its own options and passes words. This is a Server Component
- * (no hooks); a Client Component call site (the pathname-reading tab bars)
- * may import it freely.
+ * translates its own options and passes words. A Client Component, for the
+ * pill's measurement only; a Server Component call site may import it freely
+ * (its props are serialisable) and so may a Client Component.
  */
 export type SegmentedControlItem = {
   /** Stable identity, compared against `currentKey`. */
@@ -83,6 +96,9 @@ const sizes = {
 } as const;
 
 export type SegmentedControlSize = keyof typeof sizes;
+
+/** The raised pill's own look — the one place the selected fill is spelled. */
+const PILL_CLASS = "bg-surface shadow-sm";
 
 export function SegmentedControl({
   ariaLabel,
@@ -113,32 +129,109 @@ export function SegmentedControl({
   scroll?: boolean;
   className?: string;
 }) {
+  const navRef = useRef<HTMLElement>(null);
+  const pillRef = useRef<HTMLSpanElement>(null);
+  // The box the pill last sat on, in the track's own coordinates — the "first"
+  // of the FLIP, kept across renders so a navigation can be animated from it.
+  const lastBox = useRef<{ left: number; top: number; width: number; height: number } | null>(null);
+  // Until the pill has measured once, the current option draws its own fill.
+  const [pillReady, setPillReady] = useState(false);
+
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    const pill = pillRef.current;
+    if (!nav || !pill) return;
+
+    const place = (animate: boolean) => {
+      let current: HTMLElement | null = null;
+      for (const option of nav.querySelectorAll<HTMLElement>("[data-key]")) {
+        if (option.dataset.key === currentKey) current = option;
+      }
+      if (!current) {
+        pill.style.opacity = "0";
+        lastBox.current = null;
+        return;
+      }
+      const navBox = nav.getBoundingClientRect();
+      const box = current.getBoundingClientRect();
+      const next = {
+        left: box.left - navBox.left,
+        top: box.top - navBox.top,
+        width: box.width,
+        height: box.height,
+      };
+      pill.style.opacity = "1";
+      pill.style.left = `${next.left}px`;
+      pill.style.top = `${next.top}px`;
+      pill.style.width = `${next.width}px`;
+      pill.style.height = `${next.height}px`;
+      const prev = lastBox.current;
+      lastBox.current = next;
+      if (!animate || !prev || next.width === 0 || next.height === 0) return;
+      const dx = prev.left - next.left;
+      const dy = prev.top - next.top;
+      const sx = prev.width / next.width;
+      const sy = prev.height / next.height;
+      if (dx === 0 && dy === 0 && sx === 1 && sy === 1) return;
+      // Invert: start the pill where it was, then let the transition carry it
+      // to where it is. The reflow between the two writes is what separates
+      // "set" from "transition to" for the browser.
+      pill.style.transition = "none";
+      pill.style.transform = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+      void pill.offsetWidth;
+      pill.style.transition = "";
+      pill.style.transform = "";
+    };
+
+    place(true);
+    setPillReady(true);
+    if (typeof ResizeObserver === "undefined") return;
+    // A wrap or a font swap moves the options; the pill follows without motion.
+    const observer = new ResizeObserver(() => place(false));
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, [currentKey]);
+
   // Block-level `flex` in both shapes, never `inline-flex`: an inline-level
   // box opts out of margin collapsing, so a track with `mt-*` below a header
   // with `mb-*` would stack the two margins instead of taking the larger —
   // +28px of phantom space the old hand-rolled navs (all block-level) never
   // had. Content width comes from `w-fit`, not from being inline.
-  const track = `flex ${
+  const track = `relative flex ${
     fill ? "" : "w-fit max-w-full"
   } flex-wrap gap-1 rounded-inset border border-border bg-surface-sunken p-1 print:hidden ${className}`.trim();
   return (
-    <nav aria-label={ariaLabel} className={track}>
+    <nav ref={navRef} aria-label={ariaLabel} className={track}>
+      {/* First in the tree so every option paints above it; `relative` on the
+          options is what puts them in the same paint order. Positioned by the
+          effect above, invisible until it has measured. */}
+      <span
+        ref={pillRef}
+        aria-hidden="true"
+        className={`pointer-events-none absolute rounded-lg transition-transform ease-out-soft [transform-origin:top_left] ${PILL_CLASS}`}
+        style={{ opacity: 0 }}
+      />
       {items.map((item) => {
         const active = item.key === currentKey;
         // `grow` on the content-width variant too: it does nothing while the
         // row fits (a `w-fit` track is exactly its content), and once the row
         // wraps it is what makes each line share its width instead of sitting
         // ragged — four tabs become a 2x2 block on a phone.
-        const cls = `inline-flex ${
+        const cls = `relative inline-flex ${
           fill ? "flex-1" : "grow"
         } items-center justify-center rounded-lg font-semibold whitespace-nowrap transition-colors ${sizes[size]} ${
           active
-            ? "bg-surface text-primary shadow-sm"
+            ? `text-primary${pillReady ? "" : ` ${PILL_CLASS}`}`
             : "text-muted hover:bg-surface hover:text-foreground"
         }`;
         if (active && !currentIsLink) {
           return (
-            <span key={item.key} aria-current={ariaCurrentValue} className={cls}>
+            <span
+              key={item.key}
+              data-key={item.key}
+              aria-current={ariaCurrentValue}
+              className={cls}
+            >
               {item.label}
             </span>
           );
@@ -147,6 +240,7 @@ export function SegmentedControl({
           <Link
             key={item.key}
             href={item.href}
+            data-key={item.key}
             scroll={scroll}
             aria-current={active ? ariaCurrentValue : undefined}
             className={cls}

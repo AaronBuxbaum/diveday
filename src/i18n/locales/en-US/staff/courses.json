@@ -20,9 +20,8 @@
     }
   },
   "edit": {
-    "backToCourses": "← Courses",
-    "description": "Everything a diver reads before booking: the copy, the photos, and your pricing.",
-    "depthMarkersHint": "<marker>'{depth18}'</marker> is editor shorthand, not text divers see. Put it anywhere you want the diver page to say “18 meters” or “60 feet”, using your shop’s unit. Choose <marker>'{depth12}'</marker>, <marker>'{depth18}'</marker>, <marker>'{depth21}'</marker>, <marker>'{depth30}'</marker> or <marker>'{depth40}'</marker>; add <marker>n</marker> for a bare number in a range, such as <marker>'{depth30n}'</marker>–<marker>'{depth40}'</marker>. Delete a marker whenever you would rather write the depth yourself.",
+    "backToCourses": "Courses",
+    "depthMarkersHint": "<marker>'{depth18}'</marker> prints as “18 meters” or “60 feet” in the diver's unit. Also <marker>'{depth12}'</marker>, <marker>'{depth21}'</marker>, <marker>'{depth30}'</marker> and <marker>'{depth40}'</marker>; add <marker>n</marker> for a bare number in a range. Delete a marker to write the depth yourself.",
     "liveAt": "Live at",
     "hiddenFromDivers": "Hidden from divers and the session picker.",
     "noticeSaved": "Course page saved.",
@@ -47,7 +46,6 @@
     "privatePriceLabel": "Private session price",
     "privatePriceHint": "(optional)",
     "photosLegend": "Photos",
-    "photosDescription": "Upload your own photos. New files are added to the gallery; tick a photo to remove it.",
     "heroPhotoLabel": "Hero photo",
     "heroPhotoHint": "(the wide one at the top)",
     "removeCurrentPhoto": "Remove current photo",
@@ -58,7 +56,6 @@
     "photoCaptionHint": "(optional — read aloud by screen readers)",
     "photoCaptionPlaceholder": "What's in photo {n}?",
     "glanceLegend": "At a glance",
-    "glanceDescription": "The chips across the top of the page, which say how the course runs.",
     "durationLabel": "Duration",
     "durationPlaceholder": "3 days · 8:15am–5:30pm",
     "groupSizeLabel": "Group size",

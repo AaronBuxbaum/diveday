@@ -94,9 +94,9 @@ test("a diver blocked on the spine is the same diver waiting at the counter", as
   await expect(page.getByRole("heading", { name: "Counter check-in", level: 1 })).toBeVisible();
   await expect(page.getByText("Priya Sharma").first()).toBeVisible();
 
-  // Counter mode names its own narrower lens, and only that: no restatement of
-  // the shared horizon, and nothing linking back to a tab.
-  await expect(page.getByText(/Counter mode shows arrivals from the last/)).toBeVisible();
+  // Counter mode explains neither its own lens nor the shared horizon — the
+  // list is the answer — and nothing links back to a tab.
+  await expect(page.getByText(/Counter mode shows arrivals from the last/)).toHaveCount(0);
   await expect(
     page.getByRole("navigation", { name: "The same list, seen another way" }),
   ).toHaveCount(0);

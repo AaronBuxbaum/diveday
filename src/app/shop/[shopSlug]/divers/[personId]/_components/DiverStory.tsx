@@ -234,7 +234,7 @@ export function DiverStory({
         href={`/shop/${shopSlug}/orders/new?personId=${personId}`}
         className={buttonClass({ variant: "link", size: "sm", flush: true })}
       >
-        <span aria-hidden="true">+</span> {t("divers.story.newInvoice")}
+        {t("divers.story.newInvoice")}
       </Link>
     ) : null;
 

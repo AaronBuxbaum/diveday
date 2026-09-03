@@ -101,7 +101,6 @@
     "profile": {
       "heading": "Shop profile & branding",
       "description": "Tagline, about prose, and logo visible on your public schedule and search previews.",
-      "detail": "Give divers a clear sense of your shop, boat, crew, and diving style before they book.",
       "tagline": "Tagline",
       "taglinePlaceholder": "e.g. Diving Key Largo & the Florida Keys since 2012",
       "descriptionLabel": "About your shop",
@@ -179,7 +178,6 @@
     },
     "conservation": {
       "heading": "Conservation commitments",
-      "description": "Coded commitments displayed on your public booking page as your shop's stated commitments.",
       "detail": "Select the commitments your operation practices. These are published as your shop's own claim, never DiveDay's verification.",
       "value": "{count, plural, one {# commitment} other {# commitments}}",
       "commitments": {
@@ -206,7 +204,6 @@
     "dockCall": {
       "heading": "Dock-day rhythm",
       "description": "Every number here is in minutes.",
-      "detail": "These six numbers are the timeline your divers read as “Your dock-day rhythm” on their booking page, and the arrival call carries into confirmations and every pre-trip reminder. Set a beat to 0 and it drops out of the day entirely. That's how you say you brief on the boat, kit up on board, or dive from the beach. Beats before departure can never land earlier than your arrival call.",
       "submit": "Save dock-day rhythm",
       "submitting": "Saving…",
       "value": "Arrive {count} min before",
@@ -248,15 +245,12 @@
     "units": {
       "heading": "Units",
       "depthLabel": "Show depths in",
-      "depthDetail": "Depths are always stored in metres, so switching this changes only what you type in and read back. No recorded site depth moves.",
       "meters": "Metres (m)",
       "feet": "Feet (ft)",
       "temperatureLabel": "Show water temperature in",
-      "temperatureDetail": "Always stored in Celsius, so this changes only what you type and read.",
       "celsius": "Celsius (°C)",
       "fahrenheit": "Fahrenheit (°F)",
       "currencyLabel": "Charge and display in",
-      "currencyDetail": "It converts nothing: a 130 trip stays 130, now meaning 130 of the new currency. Settled orders keep the currency they were charged in.",
       "currencyMismatch": "You charge in {shopCurrency}, but Stripe settles this account in {accountCurrency} and will refuse a payment it can't settle. Pick {accountCurrency} here, or connect an account that settles in {shopCurrency}.",
       "submit": "Save units",
       "submitting": "Saving…",
@@ -309,7 +303,6 @@
     },
     "stripe": {
       "notConnectedHeading": "No Stripe account connected",
-      "notConnectedDetail": "DiveDay never holds your money. Payments for orders go straight into your own Stripe balance.",
       "connect": "Connect Stripe",
       "notConfiguredWarning": "Online payments aren’t switched on for DiveDay yet. Email {email} and we’ll get it set up.",
       "connectedHeading": "Stripe account connected",
@@ -508,7 +501,7 @@
     "languagesSaving": "Saving…",
     "invite": {
       "heading": "Invite someone",
-      "description": "They'll get an email to set their own password. Inviting an existing diver by the same email adds staff access to their record instead of creating a second one.",
+      "description": "They'll get an email to set their own password.",
       "fullNameLabel": "Full name",
       "emailLabel": "Email",
       "submit": "Send invite",
@@ -516,7 +509,6 @@
     },
     "current": {
       "heading": "Current team",
-      "description": "Role changes save when you close a row. Enable, disable, and delete take effect immediately.",
       "empty": "No staff invited yet.",
       "emptyAction": "Invite a teammate"
     },
@@ -840,7 +832,6 @@
   "security": {
     "eyebrow": "Settings",
     "title": "Account security",
-    "description": "Protect your staff account with a second factor and review active sessions.",
     "twoFactorHeading": "Two-factor authentication",
     "twoFactorDescription": "Use an authenticator app for sensitive account actions. Disabling it removes the stored secret.",
     "enabled": "Enabled",
@@ -899,7 +890,6 @@
     "language": "Language",
     "languageAuto": "Follow the visitor’s browser",
     "preview": "Preview",
-    "previewNote": "On your site it reads your page’s colour and font; this preview uses your storefront’s.",
     "platform": "Where it goes",
     "snippet": "Put it on your site",
     "partnerName": "Partner",

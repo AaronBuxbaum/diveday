@@ -111,7 +111,6 @@ export default async function SecurityPage({
       <ShopPageHeader
         eyebrow={t("settings.security.eyebrow")}
         title={t("settings.security.title")}
-        description={t("settings.security.description")}
       />
       {notice ? (
         <div className="mt-6">

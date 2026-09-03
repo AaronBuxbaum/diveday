@@ -175,8 +175,7 @@ async function SignInForm({ searchParams }: { searchParams: Promise<SignInSearch
           href="/forgot-password"
           className={buttonClass({
             variant: "link",
-            size: "sm",
-            className: "-my-2 -mr-3 self-end",
+            className: "-my-2 -mr-4 self-end",
           })}
         >
           {t("account.signIn.forgotPassword")}

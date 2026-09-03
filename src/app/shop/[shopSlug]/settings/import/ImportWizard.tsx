@@ -223,9 +223,7 @@ export function ImportWizard({
   return (
     <SectionCard padding="lg" title={copy.heading} description={intro}>
       <div className="flex flex-wrap items-center gap-3">
-        <label
-          className={buttonClass({ variant: "secondary", size: "lg", className: "cursor-pointer" })}
-        >
+        <label className={buttonClass({ variant: "secondary", className: "cursor-pointer" })}>
           {fileName ? copy.chooseDifferentFile : copy.chooseFile}
           <input
             ref={inputRef}
@@ -493,7 +491,7 @@ export function ImportWizard({
               <SubmitButton
                 pendingLabel={copy.submitting}
                 disabled={prepared.totals.importable === 0}
-                className={buttonClass({ size: "lg" })}
+                className={buttonClass()}
               >
                 {fill(
                   pluralForm(prepared.totals.importable, {

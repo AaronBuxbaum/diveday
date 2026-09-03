@@ -610,9 +610,6 @@ export default async function TeamSettingsPage({
               heading spelling `SectionCard` uses so the two sections on this
               page read at one level. */}
           <h2 className={SECTION_TITLE_CLASS}>{t("settings.team.current.heading")}</h2>
-          <p className="mt-1 max-w-2xl text-sm text-muted">
-            {t("settings.team.current.description")}
-          </p>
           {staff.length === 0 ? (
             <EmptyState
               title={t("settings.team.current.empty")}
