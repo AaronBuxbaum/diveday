@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  budgetIsUnreachable,
   cgroupAnonBytes,
   cgroupMemoryLimitBytes,
+  countFutileRestart,
   databaseDescription,
   devLockPid,
   formatMb,
@@ -332,6 +334,41 @@ describe("localPortFromLine", () => {
 
   it("is null for any other line", () => {
     expect(localPortFromLine("✓ Ready in 407ms")).toBeNull();
+  });
+});
+
+describe("countFutileRestart / budgetIsUnreachable", () => {
+  it("counts a restart that came back over the line within a minute", () => {
+    expect(countFutileRestart(0, 12_000)).toBe(1);
+    expect(countFutileRestart(1, 30_000)).toBe(2);
+    expect(budgetIsUnreachable(countFutileRestart(2, 5_000))).toBe(true);
+  });
+
+  it("resets when the server ran a long time before needing another", () => {
+    // Real growth takes minutes here — about thirty route requests to cross
+    // 8 GB — so a restart an hour later is the supervisor working, not thrashing.
+    expect(countFutileRestart(2, 20 * 60_000)).toBe(0);
+  });
+
+  it("does not count the first restart of a session", () => {
+    expect(countFutileRestart(0, null)).toBe(0);
+  });
+
+  it("needs three in a row before giving up", () => {
+    expect(budgetIsUnreachable(0)).toBe(false);
+    expect(budgetIsUnreachable(2)).toBe(false);
+    expect(budgetIsUnreachable(3)).toBe(true);
+  });
+
+  it("does not treat the post-restart dip as relief", () => {
+    // The bug in the first version of this check: a restarted server boots at
+    // ~150 MB and is briefly under any budget, so "did it ever go under?" was
+    // always yes and the check never fired. Elapsed time cannot be fooled that
+    // way — three quick restarts still count as three.
+    let futile = 0;
+    for (const gap of [null, 8_000, 9_000, 7_000]) futile = countFutileRestart(futile, gap);
+    expect(futile).toBe(3);
+    expect(budgetIsUnreachable(futile)).toBe(true);
   });
 });
 

@@ -50,6 +50,7 @@ All of them start `dev:`. Everything else is Next's own output, passed through u
 | `restarting: idle, holding …` | It restarted while nothing was in flight. Cost nothing. Not a bug |
 | `restarting now: … past the … mark` | It restarted mid-request to stay ahead of the kernel. The request in flight was lost. Also not a bug |
 | `the dev server died … Restarting` | The kernel got there first. Next prints nothing at all when that happens; this line is the only record |
+| `giving up on the … budget` | Three restarts in a minute all came back over the line, so the budget is below what this app needs at rest and no restart can meet it. Supervision switches off, the server keeps running. Raise `DIVEDAY_DEV_MEMORY_BUDGET_MB`, or read it as the machine being too small |
 | `port 3000 belongs to another process, so Next took 3001` | Read 3001. Whatever answers on 3000 is a different app, and it will look exactly like your change not landing |
 | `next dev refused to start` | Read Next's own message above it — it names the pid holding the checkout |
 
@@ -92,19 +93,23 @@ tasks" with a live shell twice.
 - **One dev server per *checkout*.** The lock is `.next/dev/lock` and it holds the whole directory,
   so `--port` does not buy a second one and a probe server on any port blocks you. Need two? Use a
   `git worktree`.
-- **Never run `pnpm build` while `pnpm dev` is up.** PGlite takes no lock on its data directory:
-  both open `.pglite`, both succeed, each sees only its own writes, and the last to close
-  overwrites the other. Nothing errors. `pnpm db:reset` refuses for the same reason and names the
-  pid to stop.
+- **One process at a time on `.pglite`,** and it is enforced now rather than remembered: a
+  `pnpm build` beside a running `pnpm dev` is refused with `is already open by process N`. PGlite
+  takes no lock of its own — both would open it, both succeed, each sees only its own writes, and
+  the last to close overwrites the other with nothing printed — so `src/db/data-dir-lock.ts` takes
+  one from outside it. Stop the pid it names, or set `PGLITE_DATA_DIR` to give this process its
+  own. A lock left behind by a killed server is taken over, so never delete the lock file by hand.
 - **A seed edit needs `pnpm db:reset`, not a restart.** `seedProductionDb` returns early once the
   demo shop exists. A *migration* only needs a restart.
 - **`pnpm e2e` runs a full production build first.** Give it a spec — `pnpm e2e <spec>
   --reporter=line` — and never a bare `--` before arguments (pnpm forwards it and the filter is
   silently dropped). The whole suite belongs to CI.
-- **Stop the server before `pnpm typecheck`.** `next dev` rewrites `.next/dev/types/*.d.ts`
-  non-atomically, and a concurrent `tsc` reads one half-written — seven syntax errors in generated
-  files nobody wrote, "Unterminated string literal" among them. Measured: clean the moment the
-  server is down.
+- **Stop the server before anything that type-checks** — `pnpm typecheck`, `pnpm build`, and
+  `pnpm e2e` (whose `e2e:build` does). `next dev` rewrites `.next/dev/types/*.d.ts`
+  non-atomically, and killing it mid-write leaves them half-finished: dozens of `TS1005` and
+  "Unterminated string literal" errors in generated files nobody wrote, and they persist until
+  something rewrites them. `rm -rf .next/dev/types` clears it — Next regenerates them — and the
+  errors are never in your code. Cost one full e2e run to rediscover on 2026-09-03.
 - **`.next` grows without bound** (about 2 GB across a working day, mostly Turbopack's cache).
   It is not the cause of a stale render, and deleting it buys a cold boot and fixes nothing.
 

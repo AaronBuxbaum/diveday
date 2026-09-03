@@ -95,6 +95,17 @@ a request.
 A transient spike is left alone, which is the common case and was verified: a cold `/` took the
 server to 5,886 MB and back to 1,490 MB within three seconds, and nothing restarted.
 
+**A budget that cannot be met is abandoned rather than pursued.** Three budget restarts inside a
+minute of each other means the line is below what this app needs at rest, and no restart can meet
+it: the server comes back, settles above the line, and is restarted again. Measured with a
+deliberately low 1,100 MB budget — twenty-three restarts in thirty seconds, each costing a warm-up.
+That is not a contrived setting either: on a 4 GB machine the *derived* budget is the 1 GB floor
+while this server settles nearer 1.5 GB, so the default would have thrashed on exactly the machines
+least able to afford it. The supervisor now says so once, in those terms, and leaves the server
+running unwatched. Futility is judged on the interval between restarts, not on whether memory ever
+dipped below the line — it always dips, because a restarted server boots at about 150 MB, and
+reading that as relief made the first version of the check never fire.
+
 A restart is announced in the terms that matter to whoever reads it: what the number was, what the
 budget is, that Next's dev server grows without a ceiling, that the filesystem cache survives so the
 next page is a warm compile, and that nothing the reader was doing caused it. Turbopack's cache and
