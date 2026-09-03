@@ -73,6 +73,13 @@ describe("the word rules", () => {
     expect(rules("It's more than just a list.")).toContain("notJust");
   });
 
+  it("catches a bare not-just with no article after it", () => {
+    // The shape is the tell, whatever follows it: "not just at the base",
+    // "not just this one" read the same as "not just a list".
+    expect(rules("Scan holes at chest height, not just at the base.")).toContain("notJust");
+    expect(rules("That's true at every shop, not just this one.")).toContain("notJust");
+  });
+
   it("leaves a factual scope refusal alone", () => {
     expect(rules("No retail register and no agency sync.")).toEqual([]);
   });

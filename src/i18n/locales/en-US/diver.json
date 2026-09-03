@@ -789,7 +789,7 @@
     "linkInactive": "That link is no longer active. Ask the shop for a fresh one.",
     "rateLimited": "Give it a few seconds and try again. Nothing was lost.",
     "medicalReview": "Thanks. One of your medical answers needs a closer look, and a doctor’s sign-off may be required. Please don’t assume you’re cleared until your shop confirms.",
-    "medicalReviewNext": "A “yes” means a doctor must confirm in writing that you’re fit to dive before you can go out; that’s true at every shop, not just this one. The shop will be in touch. If your trip is soon, contact them now: a sign-off can take a few days.",
+    "medicalReviewNext": "A “yes” means a doctor must confirm in writing that you’re fit to dive before you can go out; that is the rule at every shop, this one included. The shop will be in touch. If your trip is soon, contact them now: a sign-off can take a few days.",
     "medicalContactBoth": "Questions about next steps? Reach out to {shop}: <phone>{phoneNumber}</phone> · <email>{emailAddress}</email>.",
     "medicalContactPhoneOnly": "Questions about next steps? Reach out to {shop}: <phone>{phoneNumber}</phone>.",
     "medicalContactEmailOnly": "Questions about next steps? Reach out to {shop}: <email>{emailAddress}</email>.",
@@ -1225,7 +1225,7 @@
       "goldentail-moray": {
         "name": "Goldentail moray",
         "description": "Dark brown flecked with gold, small enough to live in a fist-sized hole.",
-        "tip": "Scan holes at chest height on the reef face, not just at the base."
+        "tip": "Scan holes at chest height on the reef face as well as at the base."
       },
       "goliath-grouper": {
         "name": "Goliath grouper",

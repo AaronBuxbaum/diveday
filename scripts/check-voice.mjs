@@ -69,7 +69,7 @@ export const RULES = {
     leadIn:
       /\b(?:here's (?:how|what|the|why|where)|here is (?:how|what|why)|the best part|let's be honest|rest assured|look no further|say goodbye to|whether you're|in today's (?:world|market|landscape|economy|fast-paced)|at its core|it's worth noting|the whole point|the thing is)\b/gi,
     notJust:
-      /\b(?:isn't just|is not just|aren't just|not just an?\b|more than just|isn't about|is not about|it's not (?:a|an|about) [^.]{0,40}, it's)\b/gi,
+      /\b(?:isn't just|is not just|aren't just|not just\b|more than just|isn't about|is not about|it's not (?:a|an|about) [^.]{0,40}, it's)\b/gi,
     staccato: /\b(?:No|Nothing|Never) [^.!?]{1,24}[.!?] (?:No|Nothing|Never)\b/g,
   },
   "es-ES": {

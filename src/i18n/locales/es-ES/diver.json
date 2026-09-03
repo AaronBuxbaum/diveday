@@ -789,7 +789,7 @@
     "linkInactive": "Ese enlace ya no está activo. Pide uno nuevo al centro.",
     "rateLimited": "Espera unos segundos e inténtalo de nuevo. No se ha perdido nada.",
     "medicalReview": "Gracias. Una de tus respuestas médicas requiere una revisión más detenida y puede que necesites el visto bueno de un médico. No des por hecho que estás autorizado hasta que tu centro te lo confirme.",
-    "medicalReviewNext": "Un “sí” significa que un médico debe confirmar por escrito que estás apto para bucear antes de salir; eso es así en todos los centros, no solo en este. El centro se pondrá en contacto. Si tu salida es pronto, escríbeles ya: la autorización puede tardar unos días.",
+    "medicalReviewNext": "Un “sí” significa que un médico debe confirmar por escrito que estás apto para bucear antes de salir; esa es la regla en todos los centros, este incluido. El centro se pondrá en contacto. Si tu salida es pronto, escríbeles ya: la autorización puede tardar unos días.",
     "medicalContactBoth": "¿Dudas sobre los siguientes pasos? Escribe a {shop}: <phone>{phoneNumber}</phone> · <email>{emailAddress}</email>.",
     "medicalContactPhoneOnly": "¿Dudas sobre los siguientes pasos? Escribe a {shop}: <phone>{phoneNumber}</phone>.",
     "medicalContactEmailOnly": "¿Dudas sobre los siguientes pasos? Escribe a {shop}: <email>{emailAddress}</email>.",
@@ -1225,7 +1225,7 @@
       "goldentail-moray": {
         "name": "Morena cola dorada",
         "description": "Marrón oscuro salpicada de dorado, tan pequeña que vive en un hueco del tamaño de un puño.",
-        "tip": "Repasa los huecos a la altura del pecho en la pared del arrecife, no solo los de la base."
+        "tip": "Repasa los huecos a la altura del pecho en la pared del arrecife, además de los de la base."
       },
       "goliath-grouper": {
         "name": "Mero guasa",
