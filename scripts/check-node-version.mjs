@@ -33,17 +33,21 @@ export const NODE_MAJOR = 24;
 /**
  * The floor inside that major, and it is **not** `24.0.0`.
  *
- * `jsdom@30`, which is the DOM environment the whole unit suite runs in,
- * declares `engines.node: "^22.22.2 || ^24.15.0 || >=26.0.0"` — so Node 24.0
- * through 24.14 satisfies a `>=24.0.0` field and violates a dependency we
- * install on every machine. A floor that admits versions the tree cannot
- * actually install on is the same false declaration this guard exists to stop,
- * one level down. Re-derive it when a dependency bump moves it:
+ * `jsdom@30`, the DOM environment the whole unit suite runs in, declares
+ * `engines.node: "^22.22.2 || ^24.15.0 || >=26.0.0"`. So Node 24.0 through
+ * 24.14 satisfies a `>=24.0.0` field and violates a dependency we install on
+ * every machine. A floor that admits versions the tree cannot actually install
+ * on is the same false declaration this guard exists to stop, one level down.
  *
- *   node -e 'for (const d of require("node:fs").readdirSync("node_modules/.pnpm")) { …read engines… }'
+ * `engines.node` is therefore `^{NODE_FLOOR}` — a **closed** range — and the
+ * caret is load bearing rather than stylistic. `>={NODE_FLOOR}` would also
+ * advertise every Node 25 release, and jsdom's range excludes the whole odd
+ * major: 25 satisfies neither `^24.15.0` nor `>=26.0.0`. Saying "Node 24" and
+ * meaning it closes both ends.
  *
- * or just read `node_modules/jsdom/package.json`, which has been the binding
- * constraint since 2026-09-03.
+ * `check-node-version.test.mjs` derives this number from every installed
+ * package's `engines.node` rather than trusting it, so a dependency bump that
+ * raises the bar goes red here instead of silently.
  */
 export const NODE_FLOOR = "24.15.0";
 
@@ -64,7 +68,7 @@ const DECLARATIONS = [
   {
     file: "package.json",
     find: (text) => JSON.parse(text).engines?.node,
-    want: `>=${NODE_FLOOR}`,
+    want: `^${NODE_FLOOR}`,
     where: "engines.node",
   },
   {

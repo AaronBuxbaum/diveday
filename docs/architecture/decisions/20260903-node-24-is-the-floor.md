@@ -49,9 +49,15 @@ Three numbers say so, and they live in one file — `scripts/check-node-version.
 
 - `NODE_MAJOR = 24` — what we develop, test and deploy on.
 - `NODE_FLOOR = "24.15.0"` — the floor inside that major, taken from the strictest dependency
-  rather than rounded down to `.0`, so `engines` is a claim that is actually true. Re-derive it
-  when a dependency bump moves it; `node_modules/jsdom/package.json` has been the binding
-  constraint since this was written.
+  rather than rounded down to `.0`, so `engines` is a claim that is actually true. `engines.node`
+  is `^24.15.0`, a **closed** range, and the caret is load bearing rather than stylistic:
+  `>=24.15.0` would also advertise every Node 25 release, and jsdom's range excludes the whole odd
+  major (25 satisfies neither `^24.15.0` nor `>=26.0.0`). Saying "Node 24" and meaning it closes
+  both ends. The number is *derived* rather than trusted — a test reads `engines.node` off all 733
+  installed manifests that declare one and asserts this is the lowest version on the major that
+  every one of them accepts, so a dependency bump that raises the bar goes red instead of
+  silently. Today two set it: `jsdom@30` at `^24.15.0` and `@napi-rs/lzma-linux-x64-gnu` at
+  `^24.12`.
 - `LAMBDA_NODE_MAJOR = 24` — what AWS runs the handlers in `infra/` on. Stated separately because
   it is a different question with a different clock: AWS publishes and retires runtimes on its own
   schedule, so the two can legitimately diverge for a while.
@@ -66,7 +72,7 @@ gone.
 
 Four things changed to make the tree agree:
 
-1. `engines.node` `>=24.0.0` → **`>=24.15.0`**.
+1. `engines.node` `>=24.0.0` → **`^24.15.0`**, closed at both ends for the reason above.
 2. **`.nvmrc` added**, holding `24`. It is what makes the README's "the repository pins both the
    runtime major and the package-manager version" a true sentence: nvm, fnm, mise and asdf all read
    it, and before this nothing in the repo selected a Node at all.
@@ -119,8 +125,9 @@ own history is that a rule which can be checked mechanically eventually has to b
 
 - Six disagreeing declarations became nine agreeing ones, and a tenth cannot be added without the
   guard noticing.
-- `engines` is now a claim that survives contact with the dependency tree. Node 24.0–24.14 is
-  refused rather than quietly admitted and then refused by `jsdom` under a different name.
+- `engines` is now a claim that survives contact with the dependency tree. Node 24.0–24.14 and the
+  whole of 25 are refused rather than quietly admitted and then refused by `jsdom` under a
+  different name.
 - The type layer stops describing a runtime nobody runs. This closes one hole and leaves a bigger
   one open: `tsconfig.json` still says `lib: ["dom","dom.iterable","esnext"]`, which hands the
   compiler ES2025-and-later library types regardless of Node — so an API neither Node 24 nor any
