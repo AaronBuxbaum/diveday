@@ -20,5 +20,3 @@ if (typeof window !== "undefined") {
 if (needsDatabaseTimeout(expect.getState().testPath)) {
   vi.setConfig({ testTimeout: DB_TEST_TIMEOUT_MS, hookTimeout: DB_TEST_TIMEOUT_MS });
 }
-
-export {};

@@ -71,15 +71,22 @@ export type RecapPhotoView = { id: string; imageUrl: string; caption: string | n
  * delivers the `/recap` link no earlier than four hours after the trip ends.
  */
 
-/** A site the trip dived, as the recap page names it. */
+/**
+ * A site the day visited, as the recap names it — which is the name and
+ * nothing else.
+ *
+ * It used to carry six more fields. `locationName`, `marineLife` and the two
+ * forecast coordinates fed `RecapMap`, the stylized boat-track drawing slice
+ * 7d deleted; `maxDepthMeters` and `depthRange` fed a depth line the same
+ * slice's review pass took off the after-state, because a depth *performed* is
+ * the diver's to write and a divemaster's to countersign rather than a
+ * property of the reef. Both went dead where they were *rendered* rather than
+ * where they were read, so nothing failed and the projection kept copying them
+ * (issue #1120, H-49). `AfterState.test.tsx` now refuses a seventh at
+ * compile time, beside the paragraph explaining why.
+ */
 export type RecapSite = {
   name: string;
-  locationName: string | null;
-  marineLife: string | null;
-  forecastLatitude: number | null;
-  forecastLongitude: number | null;
-  maxDepthMeters?: number | null;
-  depthRange?: string | null;
 };
 
 export type RecapPageData = {
@@ -412,15 +419,7 @@ export async function getRecapPageData(
   for (const { diveSite } of dives) {
     if (!diveSite || seen.has(diveSite.name)) continue;
     seen.add(diveSite.name);
-    sites.push({
-      name: diveSite.name,
-      locationName: diveSite.locationName,
-      marineLife: diveSite.marineLife,
-      forecastLatitude: diveSite.forecastLatitude,
-      forecastLongitude: diveSite.forecastLongitude,
-      maxDepthMeters: diveSite.maxDepthMeters,
-      depthRange: diveSite.depthRange,
-    });
+    sites.push({ name: diveSite.name });
   }
 
   // Sites only: this card prints no depth, time or condition of a dive
