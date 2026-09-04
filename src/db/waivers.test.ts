@@ -37,6 +37,7 @@ import {
   completeWaiver,
   getCurrentWaiverTemplate,
   getEmergencyContactForBooking,
+  getMedicalClearanceDocument,
   getSignedWaiverRecordForShop,
   getWaiverForToken,
   hasLiveMedicalHold,
@@ -1941,6 +1942,95 @@ describe("physician medical clearance", () => {
     expect(record.medicalClearanceDocumentUrl).toBe(
       "https://media.example.com/medical-clearances/abc.pdf",
     );
+  });
+
+  /**
+   * **The read path's own query** (issue #1283). #1252 shipped the write
+   * before the read: the document went in and nothing ever came out, so a shop
+   * bought retention liability with no retrieval value. What this pins is that
+   * the reader is shop-scoped in its *own* SQL rather than trusting the route
+   * to have checked, and that it refuses the two states where reaching for the
+   * bytes would be wrong.
+   */
+  describe("getMedicalClearanceDocument", () => {
+    it("hands back the stored evaluation for a cleared record", async () => {
+      const { db, shop, booking, staff } = await heldContext();
+      const url = "https://media.example.com/medical-clearances/abc.pdf";
+      await recordMedicalClearance(db, {
+        shopId: shop.id,
+        personId: booking.personId,
+        recordedByPersonId: staff.id,
+        evaluatedOn: EVALUATED_ON,
+        documentUrl: url,
+        now,
+      });
+      const [record] = await db
+        .select()
+        .from(waiverRecords)
+        .where(eq(waiverRecords.bookingId, booking.id));
+
+      expect((await getMedicalClearanceDocument(db, shop.id, record.id))?.url).toBe(url);
+    });
+
+    it("never reaches another shop's record, on the id alone", async () => {
+      // The route scopes by the session's own shop and passes it here; this is
+      // the second half of that, in SQL, so a route that one day forgot cannot
+      // hand a manager of one shop a diver's medical file from another.
+      const { db, shop, booking, staff } = await heldContext();
+      await recordMedicalClearance(db, {
+        shopId: shop.id,
+        personId: booking.personId,
+        recordedByPersonId: staff.id,
+        evaluatedOn: EVALUATED_ON,
+        documentUrl: "https://media.example.com/medical-clearances/abc.pdf",
+        now,
+      });
+      const [record] = await db
+        .select()
+        .from(waiverRecords)
+        .where(eq(waiverRecords.bookingId, booking.id));
+      const [other] = await db
+        .insert(shops)
+        .values({
+          name: "Rival Reef",
+          slug: "rival-reef-clearance-read",
+          timezone: "America/New_York",
+        })
+        .returning();
+      if (!other) throw new Error("second shop insert failed");
+
+      expect(await getMedicalClearanceDocument(db, other.id, record.id)).toBeNull();
+    });
+
+    it("says nothing for a record still held, and nothing for an erased one", async () => {
+      const { db, shop, booking, staff } = await heldContext();
+      const [held] = await db
+        .select()
+        .from(waiverRecords)
+        .where(eq(waiverRecords.bookingId, booking.id));
+      // Held: no clearance, so by the schema's own check there can be no
+      // document either — and asking anyway would read a column the route's
+      // claimed state does not cover.
+      expect(await getMedicalClearanceDocument(db, shop.id, held.id)).toBeNull();
+
+      await recordMedicalClearance(db, {
+        shopId: shop.id,
+        personId: booking.personId,
+        recordedByPersonId: staff.id,
+        evaluatedOn: EVALUATED_ON,
+        documentUrl: "https://media.example.com/medical-clearances/abc.pdf",
+        now,
+      });
+      expect(await getMedicalClearanceDocument(db, shop.id, held.id)).not.toBeNull();
+
+      // Erased: `anonymizeDiver` destroys the file and keeps the stamp, so a
+      // read through it would be reaching for bytes that are gone.
+      await db
+        .update(waiverRecords)
+        .set({ anonymizedAt: now })
+        .where(eq(waiverRecords.id, held.id));
+      expect(await getMedicalClearanceDocument(db, shop.id, held.id)).toBeNull();
+    });
   });
 
   it("is idempotent — a second recording never rewrites who cleared it or when", async () => {

@@ -385,12 +385,17 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // clearance, its evaluation date, the physician's name and the accountable
     // staff member are all exported; the document is not, for the same reason
     // `token_sealed` is not — a bundle leaves DiveDay's custody entirely, and
-    // this is the most sensitive file the product holds. It is also currently
-    // write-only: nothing in the app reads it back, so a URL in a CSV would
-    // point at an object the recipient cannot fetch either (the media bucket
-    // blocks all public access and the uploader credential holds no GetObject).
-    // A read path is tracked separately; when one lands, this decision is the
-    // one to revisit.
+    // this is the most sensitive file the product holds.
+    //
+    // **Revisited when the read path landed** (issue #1283), and unchanged. The
+    // app can now fetch these bytes back — through one permission-gated route,
+    // signed as the uploader credential — but the object itself stays private:
+    // the media bucket blocks all public access and `medical-clearances/` has
+    // no CloudFront behaviour. So a URL in a CSV would still point at something
+    // its recipient cannot fetch, and a bundle leaves DiveDay's custody
+    // entirely. A broken link in an export is not better than an absent one,
+    // and the file being retrievable *inside* the product is precisely why it
+    // does not need to travel outside it.
     "medical_clearance_document_url",
   ],
   // `created_at` is when DiveDay wrote the row; `occurred_at` is when the

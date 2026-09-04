@@ -12,6 +12,7 @@ import {
   canManageStaffAccounts,
   canManageWaiverTemplates,
   canOverrideGearRequest,
+  canReadMedicalClearanceDocument,
   canRefund,
   canViewShopReports,
   isStaff,
@@ -49,6 +50,11 @@ describe("accountable-role gates (export/import/reports)", () => {
     ["canManageStaffAccounts", canManageStaffAccounts],
     // 20260802-whatsapp-cloud-api-per-shop: a credential that sends as the business.
     ["canManageMessagingSettings", canManageMessagingSettings],
+    // #1283: the physician's evaluation. Same boundary as the shop-wide export,
+    // which already hands a manager every diver's signed medical answers in
+    // bulk — gating one letter tighter than the questionnaires beneath it would
+    // move the door without moving the wall.
+    ["canReadMedicalClearanceDocument", canReadMedicalClearanceDocument],
   ] as const;
 
   for (const [name, gate] of gates) {

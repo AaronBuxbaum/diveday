@@ -7,6 +7,7 @@ import {
   imageStorageProviderFromEnvironment,
   isManagedStorageUrl,
   MAX_COURSE_IMAGE_BYTES,
+  readS3Object,
   storeCourseImage,
   storeImportReceiptDocument,
   storeImportWaiverDocument,
@@ -435,5 +436,116 @@ describe("import document storage — images and PDFs", () => {
     const arg = provider.upload.mock.calls[0][0];
     expect(arg.contentType).toBe("image/jpeg");
     expect(arg.filename).toMatch(/\.jpg$/);
+  });
+});
+
+/**
+ * **The only way back to a stored physician's evaluation** (issue #1283). The
+ * media bucket blocks all public access and `medical-clearances/` has no
+ * CloudFront behaviour, so nothing else can fetch these bytes — which makes
+ * the two refusals below the whole of the security story, since a URL reaching
+ * this function comes out of a database column.
+ */
+describe("readS3Object", () => {
+  const config = {
+    bucket: "diveday-media",
+    region: "us-east-1",
+    accessKeyId: "AKIAIOSFODNN7EXAMPLE",
+    secretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+  };
+  const ok = (contentType: string) =>
+    vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      arrayBuffer: async () => new TextEncoder().encode("%PDF-1.4").buffer,
+      headers: new Headers({ "content-type": contentType }),
+    }));
+
+  it("signs a GET for an object in the named prefix and returns its bytes", async () => {
+    const fetchImpl = ok("application/pdf");
+    const result = await readS3Object(
+      "https://diveday-media.s3.us-east-1.amazonaws.com/medical-clearances/abc.pdf",
+      config,
+      { prefix: "medical-clearances" },
+      fetchImpl as unknown as typeof fetch,
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.contentType).toBe("application/pdf");
+    const [url, init] = fetchImpl.mock.calls[0] as unknown as [URL, RequestInit];
+    expect(url.pathname).toBe("/medical-clearances/abc.pdf");
+    expect(init.method).toBe("GET");
+    // Signed as the uploader credential — never a presigned URL, which would
+    // outlive the permission check that minted it.
+    expect((init.headers as Record<string, string>).authorization).toContain("AWS4-HMAC-SHA256");
+  });
+
+  /**
+   * The same host binding `deleteS3Image` keeps, and for a stronger reason:
+   * this URL comes from a column, so a bad row must not become a request
+   * signed with the shop's credential against a host of somebody's choosing.
+   */
+  it("refuses a foreign host rather than signing a request at it", async () => {
+    const fetchImpl = ok("application/pdf");
+    const result = await readS3Object(
+      "https://attacker.example.com/medical-clearances/victim.pdf",
+      config,
+      { prefix: "medical-clearances" },
+      fetchImpl as unknown as typeof fetch,
+    );
+    expect(result.ok).toBe(false);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The prefix is the caller's word, not the column's. IAM grants `GetObject`
+   * on `medical-clearances/*` and nothing else, so a key outside it would be a
+   * 403 anyway — but the refusal belongs here, where it can be read.
+   */
+  /**
+   * **The escape that survives every obvious guard.** Encoding the *dots* is
+   * dead: `new URL()` folds `/a/../b` and `/a/%2e%2e/b` alike, so neither
+   * reaches the check. Encoding the **separators** does not fold — the whole
+   * thing is one path segment to the parser — so it decodes to a key that
+   * begins with the prefix and then normalizes, on the way into the signature,
+   * to somewhere else entirely.
+   *
+   * The signed path is `/import-waivers/victim.pdf`: another diver's imported
+   * waiver scan. IAM refuses it today, because `GetObject` is granted on this
+   * prefix and no other — but a 403 nobody reads is exactly what naming the
+   * prefix was meant to replace, and the guard has to hold on its own terms.
+   */
+  it("refuses a key that walks out of the prefix through encoded separators", async () => {
+    const fetchImpl = ok("application/pdf");
+    const result = await readS3Object(
+      "https://diveday-media.s3.us-east-1.amazonaws.com/medical-clearances%2F..%2Fimport-waivers%2Fvictim.pdf",
+      config,
+      { prefix: "medical-clearances" },
+      fetchImpl as unknown as typeof fetch,
+    );
+    expect(result.ok).toBe(false);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("refuses a key outside the prefix the caller named", async () => {
+    const fetchImpl = ok("image/jpeg");
+    const result = await readS3Object(
+      "https://diveday-media.s3.us-east-1.amazonaws.com/import-waivers/someone-else.pdf",
+      config,
+      { prefix: "medical-clearances" },
+      fetchImpl as unknown as typeof fetch,
+    );
+    expect(result.ok).toBe(false);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("reports a provider refusal rather than throwing", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 403, headers: new Headers() }));
+    const result = await readS3Object(
+      "https://diveday-media.s3.us-east-1.amazonaws.com/medical-clearances/abc.pdf",
+      config,
+      { prefix: "medical-clearances" },
+      fetchImpl as unknown as typeof fetch,
+    );
+    expect(result).toEqual({ ok: false, error: "provider responded 403" });
   });
 });

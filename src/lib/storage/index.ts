@@ -47,7 +47,13 @@ type StorageEnvironment = Readonly<Record<string, string | undefined>>;
  * directly without pulling in `sharp` via this module's `process-image.ts` import.
  */
 export { isManagedStorageUrl, managedStorageOrigins } from "./blob-host";
-export { deleteS3Image, type S3StorageConfig, s3ImageStorageProvider } from "./s3";
+export {
+  deleteS3Image,
+  readS3Object,
+  type S3StorageConfig,
+  s3ImageStorageProvider,
+  s3StorageConfigSchema,
+} from "./s3";
 
 /** Every accepted upload is re-encoded to JPEG (`processImage`); keep the stored name honest. */
 function withJpegExtension(filename: string): string {

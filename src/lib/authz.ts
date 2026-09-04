@@ -203,6 +203,36 @@ export function canErasePersonalData(roles: readonly Role[] | undefined): boolea
 }
 
 /**
+ * **Open the physician's evaluation a shop stored against a medical
+ * clearance** — the most sensitive file the product holds (issue #1283).
+ *
+ * Owner or manager, and deliberately *not* the staff who may **record** one.
+ * Those are two different acts. Recording is counter work: a diver arrives
+ * with a letter, and whoever is behind the desk types the date and attaches
+ * the paper. Reading it back has no operational use at all — a divemaster at
+ * the rail needs to know the diver is cleared, and readiness already answers
+ * that. What the cardiologist actually wrote is nobody's business on the boat.
+ *
+ * **Why not owner-only, given that.** Not for convenience: needing two people
+ * in the room for the rarest and most sensitive read would be a feature. The
+ * reason is {@link canExportShopData}, which is owner-or-manager and hands
+ * over *every diver's contact details plus their complete signed medical
+ * answers*, in bulk, in one click. Gating one physician's letter tighter than
+ * the bulk export of the questionnaires underneath it moves the door without
+ * moving the wall. It runs the other way too: a trip roster already shows any
+ * staff member which medical prompts flagged (`RosterSection`), so
+ * owner-or-manager here is *stricter* than the surface around it, not looser.
+ *
+ * **What makes it safe is the trail, not the role list.** Every open is
+ * recorded on the diver's own record (`recordDiverActivity`, in the route), so
+ * a shop can see who read a diver's file and when. Without that, the role
+ * boundary alone would be a promise nobody can check.
+ */
+export function canReadMedicalClearanceDocument(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/**
  * Open a departure's incident-ready export — the single document a shop hands
  * to authorities or an insurer after something goes wrong. Owner only, the same
  * strictness as `canErasePersonalData` and deliberately tighter than the

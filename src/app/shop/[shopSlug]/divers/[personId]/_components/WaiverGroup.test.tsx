@@ -37,7 +37,11 @@ function diver(overrides: {
   } as unknown as DiverProfile;
 }
 
-function renderCard(profile: DiverProfile, status?: ComponentProps<typeof WaiverGroup>["status"]) {
+function renderCard(
+  profile: DiverProfile,
+  status?: ComponentProps<typeof WaiverGroup>["status"],
+  canOpenClearance = false,
+) {
   return render(
     <WaiverGroup
       diver={profile}
@@ -46,6 +50,7 @@ function renderCard(profile: DiverProfile, status?: ComponentProps<typeof Waiver
       locale="en-US"
       t={staffTranslator("en-US")}
       timezone="America/Cancun"
+      canOpenClearance={canOpenClearance}
       status={status}
     />,
   );
@@ -114,6 +119,50 @@ describe("the waiver group", () => {
     expect(screen.getAllByText("Signed").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Mark signed on paper" })).toBeNull();
+  });
+
+  /**
+   * **The door to the physician's evaluation** (issue #1283), and the two
+   * reasons it is not drawn.
+   *
+   * The link is offered only when there is a file *and* this reader may open
+   * it. A link that 404s for a divemaster teaches them the diver's record is
+   * broken rather than that the document is not theirs to read — and the route
+   * behind it answers 404 for exactly that caller, deliberately, so the two
+   * would agree on the status and disagree on what it meant.
+   */
+  function clearedDiver(documentOnFile: boolean) {
+    return diver({
+      waiver: {
+        state: "current",
+        expiresAt: new Date("2027-01-01T00:00:00Z"),
+        medical: {
+          at: new Date("2026-05-01T00:00:00Z"),
+          source: "cleared",
+          overriddenReferralAt: null,
+          clearance: { recordId: "record-1", documentOnFile },
+        },
+      } as DiverProfile["waiver"],
+    });
+  }
+
+  it("offers the evaluation to a reader who may open it", () => {
+    renderCard(clearedDiver(true), undefined, true);
+    const link = screen.getByRole("link", { name: "Open the physician's evaluation" });
+    expect(link).toHaveAttribute("href", "/api/medical-clearances/record-1");
+  });
+
+  it("draws no door for a reader who may not open it", () => {
+    renderCard(clearedDiver(true), undefined, false);
+    expect(screen.queryByRole("link", { name: "Open the physician's evaluation" })).toBeNull();
+  });
+
+  it("draws no door when the shop kept the paper instead of uploading it", () => {
+    // A clearance evidenced by the physician's *name* is a complete record and
+    // an ordinary one — there is simply no file, and an offer to open nothing
+    // would read as a fault.
+    renderCard(clearedDiver(false), undefined, true);
+    expect(screen.queryByRole("link", { name: "Open the physician's evaluation" })).toBeNull();
   });
 
   /**

@@ -8,6 +8,7 @@ import {
   gt,
   gte,
   inArray,
+  isNotNull,
   isNull,
   lte,
   ne,
@@ -22,6 +23,7 @@ import { operationalWindow } from "@/lib/operational-window";
 import { personNamesMatch } from "@/lib/person-name";
 import { openSecret, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
 import { inPersonAttestationProvider, localTypedConsentProvider } from "@/lib/signatures";
+import { isUuid } from "@/lib/uuid";
 import { computeWaiverIntegrityHash, verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import {
@@ -1879,6 +1881,50 @@ export async function recordMedicalClearance(
     if (!cleared) return { ok: true, recordId: open.id, alreadyCleared: true };
     return { ok: true, recordId: cleared.id, alreadyCleared: false };
   });
+}
+
+/**
+ * The stored physician's evaluation for one waiver record, or null (issue
+ * #1283).
+ *
+ * Shop-scoped in the query rather than by the caller, and narrowed to a record
+ * that actually holds a clearance: a URL on a row with no `medical_cleared_at`
+ * cannot exist (the `waiver_records_medical_clearance_attributed` check
+ * refuses it), and asking for one anyway means the read matches the state the
+ * route claims to be showing rather than whatever the column happens to hold.
+ *
+ * Returns the URL rather than the bytes. Fetching is `src/lib/storage`'s job
+ * and `src/db` has no business signing an S3 request; keeping the split means
+ * this stays a plain, testable read. The diver's id rides along because the
+ * route has to write who opened their file onto their own record.
+ */
+export async function getMedicalClearanceDocument(
+  db: DbExecutor,
+  shopId: string,
+  recordId: string,
+): Promise<{ url: string; personId: string } | null> {
+  // An id Postgres cannot parse raises 22P02 rather than selecting nothing, and
+  // the throw would escape the route as a 500 where it promises a uniform 404.
+  // The house rule is written at `src/lib/uuid.ts`: an unparseable id names no
+  // row, which is a 404.
+  if (!isUuid(recordId)) return null;
+  const [row] = await db
+    // The person as well as the file: opening a diver's medical document is an
+    // act their own record has to be able to show (issue #1283).
+    .select({ url: waiverRecords.medicalClearanceDocumentUrl, personId: waiverRecords.personId })
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.id, recordId),
+        eq(waiverRecords.shopId, shopId),
+        isNotNull(waiverRecords.medicalClearedAt),
+        // An erased diver's document is destroyed, and the row keeps the
+        // stamp. Reading through it would be reaching for bytes that are gone.
+        isNull(waiverRecords.anonymizedAt),
+      ),
+    )
+    .limit(1);
+  return row?.url ? { url: row.url, personId: row.personId } : null;
 }
 
 /**

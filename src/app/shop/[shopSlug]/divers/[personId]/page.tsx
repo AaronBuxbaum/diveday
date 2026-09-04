@@ -8,6 +8,7 @@ import {
   canPersonErasePersonalData,
   canPersonMergeDiver,
   canPersonOverrideGearRequest,
+  canPersonReadMedicalClearanceDocument,
 } from "@/db/authz";
 import { listDiverMergeCandidates } from "@/db/diver-merge";
 import { getDiverProfile } from "@/db/divers";
@@ -152,6 +153,7 @@ export default async function DiverDetailPage({
     canOverrideFit,
     canErase,
     canExport,
+    canOpenClearance,
     stripeAccount,
     notes,
     activityPage,
@@ -167,6 +169,11 @@ export default async function DiverDetailPage({
     // shop's own copy of everything, re-checked against the database like
     // the other roles on this page.
     canPersonExportShopData(db, shop.id, session.user.personId),
+    // The physician's evaluation itself (issue #1283). Owner/manager, and
+    // deliberately not the staff who may *record* a clearance — the reasoning
+    // is at `canReadMedicalClearanceDocument`. Hiding the link is a courtesy;
+    // the route re-checks the same live roles before it signs anything.
+    canPersonReadMedicalClearanceDocument(db, shop.id, session.user.personId),
     getShopStripeAccount(db, shop.id),
     listDiverRecordNotes(db, shop.id, personId),
     // Shop-scoped from the session, never the slug, like every read on this
@@ -333,6 +340,7 @@ export default async function DiverDetailPage({
         locale={locale}
         t={t}
         timezone={shop.timezone}
+        canOpenClearance={canOpenClearance}
         status={noticeForForm(diverNotice, "waiver")}
       />
       <GearAndSizes

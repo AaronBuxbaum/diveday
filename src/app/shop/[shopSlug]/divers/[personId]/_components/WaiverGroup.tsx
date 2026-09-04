@@ -77,6 +77,7 @@ export function WaiverGroup({
   locale,
   t,
   timezone,
+  canOpenClearance,
   status,
 }: {
   diver: DiverProfile;
@@ -85,6 +86,13 @@ export function WaiverGroup({
   locale: string;
   t: StaffTranslator;
   timezone: string;
+  /**
+   * Whether this reader may open the physician's evaluation itself (issue
+   * #1283) — owner or manager, and not the staff who may record a clearance.
+   * The route re-checks the same live roles; this only decides whether the
+   * door is drawn.
+   */
+  canOpenClearance: boolean;
   /** This group's own outcome, rendered in the group rather than page-top. */
   status?: DiverNotice;
 }) {
@@ -110,6 +118,13 @@ export function WaiverGroup({
   // is not, and the record is where the staffer who can act is standing.
   const overriddenReferralAt =
     diver.waiver.state === "current" ? (diver.waiver.medical?.overriddenReferralAt ?? null) : null;
+  // **The evaluation the shop stored, and a door to it** (issue #1283). Drawn
+  // only when there is a file *and* this reader may open it — a link that
+  // 404s for a divemaster teaches them the record is broken rather than that
+  // the document is not theirs.
+  const clearance =
+    diver.waiver.state === "current" ? (diver.waiver.medical?.clearance ?? null) : null;
+  const clearanceDocument = canOpenClearance && clearance?.documentOnFile ? clearance : null;
   return (
     <DiverFileGroupDisclosure
       id="waiver"
@@ -203,6 +218,21 @@ export function WaiverGroup({
               </WaiverDeliveryActions>
             </div>
           </details>
+        ) : null}
+        {clearanceDocument ? (
+          <p className="px-5 pb-3 text-sm sm:px-6">
+            <a
+              href={`/api/medical-clearances/${clearanceDocument.recordId}`}
+              // A new tab, because the response is an attachment and the
+              // browser would otherwise leave this page on a navigation that
+              // paints nothing.
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-primary underline underline-offset-2"
+            >
+              {t("divers.waiver.openClearanceDocument")}
+            </a>
+          </p>
         ) : null}
         {heldForMedical ? (
           <div className="px-5 py-3 sm:px-6">

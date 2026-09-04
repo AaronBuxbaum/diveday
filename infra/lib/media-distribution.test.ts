@@ -208,3 +208,80 @@ describe("media distribution", () => {
     });
   });
 });
+
+/**
+ * **The one credential that may read a private object back, and the one prefix
+ * it may read** (issue #1283).
+ *
+ * The assertions above prove the CDN cannot serve a physician's evaluation.
+ * This proves the other half: the app itself *can* fetch one, and can fetch
+ * nothing else -- because #1252 shipped the upload with no read grant at all,
+ * so a shop stored the most sensitive document the product holds and could
+ * never open it.
+ *
+ * The failure this guards against is a widening: somebody needing a read path
+ * for some other prefix and reaching for the statement that already exists.
+ * A `GetObject` on `arnForObjects("*")` would let one bug in a URL column turn
+ * this credential into a reader of every imported waiver scan and payment
+ * receipt in the bucket.
+ */
+describe("the media uploader credential", () => {
+  type Statement = { Sid?: string; Action: string | string[]; Resource: unknown };
+  type Policy = {
+    Properties?: { PolicyDocument?: { Statement?: Statement[] }; Users?: unknown[] };
+  };
+
+  /**
+   * **The media uploader's own statements, and nobody else's.**
+   *
+   * Flattening every `AWS::IAM::Policy` in the stack was the first version of
+   * this and it proved less than its name: `some statement mentions the
+   * prefix` is satisfied by an unrelated principal, and a *second* GetObject on
+   * this user scoped to `arnForObjects("*")` would pass while being exactly the
+   * widening these cases exist to catch. So the policy is resolved by the user
+   * it is attached to, and the assertion is over *every* read it grants.
+   */
+  function uploaderStatements(): Statement[] {
+    const t = template();
+    const user = Object.keys(t.findResources("AWS::IAM::User")).find((id) =>
+      id.startsWith("MediaUploaderUser"),
+    );
+    expect(user, "MediaUploaderUser is not in the stack").toBeDefined();
+    const policies = Object.values(t.findResources("AWS::IAM::Policy")) as Policy[];
+    const mine = policies.filter((policy) =>
+      JSON.stringify(policy.Properties?.Users ?? []).includes(user as string),
+    );
+    expect(mine.length, "no policy is attached to MediaUploaderUser").toBeGreaterThan(0);
+    return mine.flatMap((policy) => policy.Properties?.PolicyDocument?.Statement ?? []);
+  }
+
+  it("may read objects under medical-clearances/ and nowhere else", () => {
+    const reads = uploaderStatements().filter((statement) =>
+      [statement.Action].flat().includes("s3:GetObject"),
+    );
+    // It has one, because without it the upload buys retention liability with
+    // no retrieval value -- a shop stores the most sensitive document the
+    // product holds and can never open it (issue #1283).
+    expect(reads).toHaveLength(1);
+    expect(reads[0]?.Sid).toBe("ReadMedicalClearancesOnly");
+    // *Every* read this credential grants is scoped to that prefix. The
+    // resource is a CloudFormation join around the bucket ARN; the prefix is
+    // the literal that matters.
+    for (const read of reads) {
+      expect(JSON.stringify(read.Resource)).toContain("/medical-clearances/*");
+    }
+  });
+
+  it("never grants read across the whole media bucket", () => {
+    // The widening this exists to catch, stated as the thing that must not be
+    // true rather than as a property of one named statement: a GetObject whose
+    // resource ends at `/*` on the bucket root would cover import-waivers/ and
+    // import-receipts/ as well, which nothing in the app has any business
+    // fetching back.
+    for (const statement of uploaderStatements()) {
+      if (![statement.Action].flat().includes("s3:GetObject")) continue;
+      const resource = JSON.stringify(statement.Resource);
+      expect(resource).not.toMatch(/"\/\*"/);
+    }
+  });
+});

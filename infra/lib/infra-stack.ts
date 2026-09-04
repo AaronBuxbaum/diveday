@@ -100,6 +100,16 @@ const MEDIA_UPLOADER_USER_NAME = "diveday-media-uploader";
  * app actually uploads publicly is a failing test rather than a quiet deploy.
  */
 const PUBLIC_MEDIA_PREFIXES = ["courses", "recap", "dive-sites", "shop-logos"] as const;
+
+/**
+ * The one private prefix the app reads back (issue #1283). Named here because
+ * it is both an IAM scope below and the prefix `storeMedicalClearanceDocument`
+ * writes under (`src/lib/storage/index.ts`); the two are a pair, and a rename
+ * on one side that misses the other silently turns every retrieval into a 403.
+ * Deliberately absent from {@link PUBLIC_MEDIA_PREFIXES} -- reading it back is
+ * a permission-gated route, never an edge behaviour.
+ */
+const MEDICAL_CLEARANCE_PREFIX = "medical-clearances";
 const LOG_SHIPPER_USER_NAME = "diveday-cloudwatch-shipper";
 
 /**
@@ -1137,6 +1147,27 @@ exports.handler = async (event) => {
         sid: "ManageMediaObjectsOnly",
         actions: ["s3:PutObject", "s3:DeleteObject", "s3:AbortMultipartUpload"],
         resources: [mediaBucket.arnForObjects("*")],
+      }),
+    );
+
+    // **Read is granted on one prefix and no other** (issue #1283).
+    //
+    // Everything else this credential stores is *public* -- a dive-site photo
+    // or a shop logo reaches a reader through CloudFront, so the app never
+    // needs to fetch its own media back. A physician's evaluation is the
+    // opposite: the bucket blocks all public access and `medical-clearances/`
+    // has no CloudFront behaviour by construction, so without this grant the
+    // upload buys retention liability with no retrieval value -- a shop stores
+    // the most sensitive document the product holds and can never open it.
+    //
+    // Scoped to the prefix rather than added to the statement above, so the
+    // grant reads as what it is: this credential can *read back* medical
+    // clearances, and still cannot read a single other object in the bucket.
+    mediaUploaderUser.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ReadMedicalClearancesOnly",
+        actions: ["s3:GetObject"],
+        resources: [mediaBucket.arnForObjects(`${MEDICAL_CLEARANCE_PREFIX}/*`)],
       }),
     );
 
