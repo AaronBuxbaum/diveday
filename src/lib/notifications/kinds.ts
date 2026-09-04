@@ -657,6 +657,39 @@ export function notificationSubjectEmail(notification: Notification): string | n
   }
 }
 
+/**
+ * **The subject's phone number, for the lead that gave one and no address.**
+ *
+ * An address is not a sufficient handle for a `course_inquiry`, and the
+ * product says so: the public composer's reply-path rule is "an address *or* a
+ * number" (`hasReplyPath`, `src/app/actions/inquiry.ts`), so a diver on a dock
+ * who leaves only a phone number produces a queued notification carrying their
+ * name, their number and up to 1,500 characters of free text with no
+ * `inquirerEmail` at all. That row was unreachable by `subject_email` for
+ * exactly the reason it was unreachable by `recipient_email`
+ * (`security-reviewer`, on issue #1298).
+ *
+ * The same over-reach `scrub` already accepts for `course_inquiries.phone`
+ * applies here and is accepted for the same reason: a household number is
+ * genuinely shared, so this can drop a partner's queued lead. That is a lost
+ * retry of a notification whose underlying row the same transaction blanks
+ * anyway — availability, not disclosure — and it buys the case the address
+ * cannot reach.
+ *
+ * Matched exactly rather than normalised, because `people.phone` and
+ * `course_inquiries.phone` are compared exactly by the sweep beside it and
+ * three spellings of "the same number" would be a different decision than this
+ * one.
+ */
+export function notificationSubjectPhone(notification: Notification): string | null {
+  switch (notification.kind) {
+    case "course_inquiry":
+      return notification.inquirerPhone ?? null;
+    default:
+      return null;
+  }
+}
+
 export function notificationIdempotencyKey(notification: Notification): string {
   switch (notification.kind) {
     case "booking_confirmation":

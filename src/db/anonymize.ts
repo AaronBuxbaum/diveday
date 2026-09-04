@@ -1174,7 +1174,33 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         ),
       )
       .returning({ id: notificationSendQueue.id });
-    logFuzzyMatch(ctx, "send_queue_recipient", dropped.length);
+    logFuzzyMatch(ctx, "send_queue_address", dropped.length);
+  }
+  // The number, for the lead that gave one and no address. Runs after the
+  // address sweep so the count is the rows the number reached that the address
+  // did not — the over-reach, isolated, exactly as the `course_inquiries`
+  // statements below split theirs. It exists because the public composer takes
+  // an address *or* a number (`hasReplyPath`, src/app/actions/inquiry.ts): a
+  // diver who leaves only a number produces a `course_inquiry` carrying their
+  // name, that number and up to 1,500 characters of free text, and no address
+  // handle can see it. The first version of this fix shipped exactly that hole
+  // (`security-reviewer`, issue #1298).
+  //
+  // Fuzzier than the address by the same distance, and accepted for the same
+  // written reason: a household number is shared, so this can drop a partner's
+  // queued lead. That costs a retry of a notification whose own
+  // `course_inquiries` row this transaction blanks anyway.
+  if (ctx.phone) {
+    const droppedByPhone = await tx
+      .delete(notificationSendQueue)
+      .where(
+        and(
+          eq(notificationSendQueue.shopId, shopId),
+          eq(notificationSendQueue.subjectPhone, ctx.phone),
+        ),
+      )
+      .returning({ id: notificationSendQueue.id });
+    logFuzzyMatch(ctx, "send_queue_subject_phone", droppedByPhone.length);
   }
   if (owned) {
     await tx

@@ -3274,41 +3274,60 @@ export const notificationSendQueue = pgTable(
      * a person's queued mail — a rendered message carrying their name and
      * address — and the only matches it ever had were `payload ->> 'to'` and
      * `payload ->> 'bookingId'`. As real columns those matches are typed, and
-     * can no longer silently miss a row whose payload shape drifted. All three
+     * can no longer silently miss a row whose payload shape drifted. All four
      * nullable, because a kind may carry none of them. None is indexed: the
      * address matches are `lower(...)`, which a plain btree would not serve
      * anyway, and an erasure is rare enough that a sequential scan of one
      * shop's queue is the right cost.
      *
-     * None is a new disclosure, and all three are **cleared on every terminal
-     * write**, beside `payload_sealed` — so a row that has sent or failed holds
-     * no personal data at all, exactly as it did when the payload was the only
-     * place an address lived. Nothing prunes this table (it is not in
-     * `RETENTION_DAYS`), which is precisely why the terminal write has to do
-     * it: a `sent` row that kept its recipient would keep it forever.
+     * None is a new disclosure — every one of them is an address or a number
+     * this same tenant already stores in a plaintext column of its own
+     * (`people`, `shops`, `course_inquiries`), unlike the payload, which held
+     * raw bearer tokens that exist nowhere else un-hashed.
+     *
+     * **Cleared when a row is finished with, retained while it is only
+     * parked.** `sent`, `failed` and `missing_payload` clear all four beside
+     * `payload_sealed`, so a row that is done holds nothing — which matters
+     * because nothing prunes this table (it is not in `RETENTION_DAYS`), so a
+     * `sent` row that kept its recipient would keep it forever. The one
+     * exception is `sealed_payload_unreadable`, which keeps the payload *and*
+     * the handles on purpose: that row is waiting for a restored key rather
+     * than finished, and a parked row that had dropped its handles would be a
+     * row an erasure could no longer find. An earlier version of this
+     * paragraph claimed a blanket clear and was wrong about two of the four
+     * writes (`security-reviewer`, on issue #1298).
      *
      * `booking_id` deliberately carries no foreign key: it is a match handle
      * for a sweep, not a relationship, and a real reference would make an
      * erasure's delete order depend on this queue.
      *
-     * **`subject_email` is the person the message is *about***, when that is
-     * not the person it is addressed to — and null when the two are the same,
-     * which is almost every kind. Two are not: `course_inquiry` mails the
-     * shop's own front desk about a diver who used the public composer and
-     * carries their name, address, phone and free-text message; and
-     * `new_account_alert` mails DiveDay about a shop owner. Before this column
-     * a live row for either survived an erasure until it drained, because
-     * neither handle could see it and no `->>` probe can be added to a sealed
-     * payload (issue #1298).
+     * **`subject_email` and `subject_phone` are the person the message is
+     * *about***, when that is not the person it is addressed to — and null when
+     * the two are the same, which is almost every kind. Two are not:
+     * `course_inquiry` mails the shop's own front desk about a diver who used
+     * the public composer and carries their name, address, phone and free-text
+     * message; and `new_account_alert` mails DiveDay about a shop owner.
+     * Before these a live row for either survived an erasure until it drained,
+     * because neither handle could see it and no `->>` probe can be added to a
+     * sealed payload (issue #1298).
      *
-     * It is written from `notificationSubjectEmail`
+     * **Two handles rather than one, because a lead may carry no address at
+     * all.** The public composer takes an address *or* a number, so a diver who
+     * leaves only a number produces a row a `subject_email` alone still could
+     * not reach — the first version of this fix shipped that hole and a
+     * `security-reviewer` pass found it. The phone match carries the same
+     * accepted over-reach the `course_inquiries.phone` sweep does, and for the
+     * same written reason.
+     *
+     * Both are written from `notificationSubjectEmail`/`notificationSubjectPhone`
      * (`src/lib/notifications/kinds.ts`), and `kinds.test.ts` fails on a kind
-     * that declares an address that function has forgotten — so this is not
-     * one more thing to remember the next time a subject and a recipient come
-     * apart.
+     * that declares a contact handle either function has forgotten — so this is
+     * not one more thing to remember the next time a subject and a recipient
+     * come apart.
      */
     recipientEmail: text("recipient_email"),
     subjectEmail: text("subject_email"),
+    subjectPhone: text("subject_phone"),
     bookingId: uuid("booking_id"),
     status: notificationQueueStatus("status").notNull().default("queued"),
     attempts: integer("attempts").notNull().default(0),

@@ -30,6 +30,7 @@ import {
   notificationIdempotencyKey,
   notificationProviderFromEnvironment,
   notificationSubjectEmail,
+  notificationSubjectPhone,
   notify,
   publicAppUrl,
   recipientLocale,
@@ -201,6 +202,7 @@ async function queueRetry(
       // forgets to say so (issue #1298).
       recipientEmail: "to" in input ? input.to : null,
       subjectEmail: notificationSubjectEmail(input),
+      subjectPhone: notificationSubjectPhone(input),
       bookingId: "bookingId" in input ? (input.bookingId ?? null) : null,
       status: "queued",
       nextAttemptAt: retryDueAt(delivery),
@@ -452,6 +454,17 @@ export async function drainNotificationRetries(
           lockedUntil: null,
           errorCode: "missing_payload",
           lastError: null,
+          // **Finished, so it drops its handles like the other finished
+          // writes.** There is nothing here to restore — the payload is
+          // already gone, which is this branch's own condition — and nothing
+          // prunes this table, so a row that kept a recipient would keep it
+          // for good. It did until a `security-reviewer` pass read the four
+          // terminal writes against the schema comment claiming all of them
+          // cleared (issue #1298).
+          recipientEmail: null,
+          subjectEmail: null,
+          subjectPhone: null,
+          bookingId: null,
           updatedAt: nowDate(),
         })
         .where(eq(notificationSendQueue.id, claimed.id));
@@ -466,6 +479,13 @@ export async function drainNotificationRetries(
     // because the two describe different faults, and a `failed` row's
     // `error_code` is the only place either is written down. (The recoverable
     // case, no key at all, never gets this far: the pass returned above.)
+    //
+    // **It keeps its payload and its handles, and that is the one write here
+    // that does.** The value is left in place so a restored key can still
+    // drain it (the test below pins that), which makes this row *parked*
+    // rather than finished — and a parked row that had dropped its handles
+    // would be a row an erasure could no longer find. Erasure's own delete
+    // carries no status filter, so it still reaches this one.
     const opened = openQueuedPayload(candidate.payloadSealed, key);
     if (!opened) {
       await db
@@ -530,6 +550,7 @@ export async function drainNotificationRetries(
           payloadSealed: null,
           recipientEmail: null,
           subjectEmail: null,
+          subjectPhone: null,
           bookingId: null,
           lockedUntil: null,
           providerMessageId: delivery.providerMessageId,
@@ -563,6 +584,7 @@ export async function drainNotificationRetries(
           payloadSealed: null,
           recipientEmail: null,
           subjectEmail: null,
+          subjectPhone: null,
           bookingId: null,
           lockedUntil: null,
           httpStatus: delivery.status === "failed" ? (delivery.httpStatus ?? null) : null,
