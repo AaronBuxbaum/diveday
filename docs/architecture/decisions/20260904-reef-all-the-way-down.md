@@ -1,7 +1,7 @@
 # 20260904-reef-all-the-way-down — Take Reef to the bottom of every surface, decide the delight backlog, and widen the budget along one axis
 
-- **Status:** Proposed — three of its decisions are the owner's (H-67); the rest is the canvas's
-  recommendation and moves nothing until that row is Chosen
+- **Status:** Proposed — three of its decisions are the owner's (H-67). Slices 16b, 16c and the
+  postcard number in 16i wait on that row; every other slice waits only on this record's acceptance
 - **Date:** 2026-09-04
 - **Design:** [the canvas](../../design/canvases/20260904-reef-all-the-way-down/README.md) — twelve
   artboards on two pages: the cover, the verdict ledger, the budget sheet and the measured gap; then
@@ -82,8 +82,9 @@ appears on the home, the board and the storefront; never on the manifest.
 
 Thirty-six issues, one line each on the Verdicts board. **Eighteen drawn** onto the surfaces
 (D01, D02, D12, D14, D15, D18, D20, D22, D24, D33, D35, D40, D42, D47, D49, D51, #1081, #1346).
-**Ten adopted unseen** — built from their own bodies because the primitives already settle their
-shape (D05 on H-67 b, D17, D25, D36 with D45, D44, D52, #1284, #1357, #1363, #1366). **Three
+**Eleven adopted unseen** — built from their own bodies because the primitives already settle their
+shape (D05 on H-67 b, D17, D25, D36 and D45 as one recap variant, D44, D52, #1284, #1357, #1363,
+#1366). **Three
 folded** into the row they duplicate (D19 into D15; D23 into D12's count; D27 into D42). **Three
 held** on the waiting-on lines their issues already carry (D39, D48, D53). **One declined**: D38,
 a message the diver did not ask for, which is the one thing the delight report itself forbids; if it

@@ -34,7 +34,7 @@ So an entry here is the index; the constraint lives beside the code it constrain
 ### The shop home — `/shop/[shopSlug]`
 
 **Proposed 2026-09-04** ([ADR 20260904-reef-all-the-way-down](../architecture/decisions/20260904-reef-all-the-way-down.md), [canvas](canvases/20260904-reef-all-the-way-down/README.md)):
-the station becomes a panel with the tile leading and one sentence per row; the band follows the shop's clock; one fact of scale on the day it is true; a stage chip when the crew set one; the evening counts divers and crew. Nothing here moves until H-67 is Chosen.
+the station becomes a panel with the tile leading and one sentence per row; the band follows the shop's clock; one fact of scale on the day it is true; a stage chip when the crew set one; the evening counts divers and crew. The clock, the fact of scale and the stage chip wait on H-67; the station as a panel waits only on the ADR.
 
 **Reef, 2026-09-02** ([ADR 20260901-diveday-reimagined](../architecture/decisions/20260901-diveday-reimagined.md)):
 the greeting is the one display moment on a staff surface (44/700, `ShopPageHeader`'s `display`);
