@@ -89,6 +89,16 @@ Remove the label to stop. The `/preview` comment path checks `author_association
 `issue_comment` fires for anyone who can comment on a public repository, and this one spends money;
 labelling and pushing already require write access, so those two need no such check.
 
+**It only ever builds a commit from this repository, and that is why the workflow is two jobs.** The
+first holds no credential (no `environment:`) and checks out nothing: it asks the API for the pull
+request's head repository and SHA, and fails if the head is a fork. Only then does the second job —
+the one with the Vercel token — check out that exact SHA. Without the split, `issue_comment` is a
+privileged-checkout hole and CodeQL says so: that event always runs in the base repository's context
+with its secrets available, so a maintainer typing `/preview` on a fork's pull request would check
+that fork's tree out and run `pnpm install` — arbitrary lifecycle scripts — with `VERCEL_TOKEN` in
+the environment. `author_association` gates *who may ask*; it says nothing about *whose code runs*.
+The second job takes the resolved SHA rather than a ref, because a branch can move between the two.
+
 It deploys with `vercel deploy` (a remote build) rather than `vercel build && vercel deploy
 --prebuilt` (a build on the runner). The prebuilt path would save the last of the Vercel build
 minutes and costs pulling the project's Preview environment — `DATABASE_URL` and every sealed

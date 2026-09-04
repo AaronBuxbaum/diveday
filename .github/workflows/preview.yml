@@ -5,8 +5,8 @@
 # project's Vercel build minutes available — over the 63 hours to 2026-09-04
 # this repository carried 170 branch commits against 69 merges, so roughly three
 # of every four builds were previews, and nothing in the repository consumed
-# one: the e2e and visual suites run against locally-built servers in CI, and
-# review screenshots come from `scripts/screenshot.mjs` against a local dev
+# one: the e2e and visual suites run against locally-built servers inside CI,
+# and review screenshots come from `scripts/screenshot.mjs` against a local dev
 # server. What a preview is actually for is a human looking at a branch, which
 # is an event, not a property of every push.
 #
@@ -36,11 +36,28 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
-  deploy:
-    name: Deploy a preview
+  # Two jobs, and the split is the security boundary rather than a tidiness
+  # preference. This one holds no credential — it has no `environment:`, so the
+  # Vercel secrets do not exist for it — and it checks out nothing. All it does
+  # is establish *which commit* the deploy job is allowed to build, and refuse
+  # if that commit is not from this repository.
+  #
+  # Without it, `issue_comment` is a privileged-checkout hole (CodeQL's
+  # `actions/untrusted-checkout`, and it is right): that event always runs in
+  # the base repository's context with its secrets available, so a maintainer
+  # typing `/preview` on a pull request from a fork would check that fork's tree
+  # out and run `pnpm install` — arbitrary lifecycle scripts — with VERCEL_TOKEN
+  # in the environment. The `author_association` check below gates *who may ask*
+  # and says nothing about *whose code runs*.
+  #
+  # Resolving the head by API rather than trusting the event payload also closes
+  # the gap between the two: the `pull_request` payload carries a head repo, the
+  # `issue_comment` payload carries none at all, and one answer for both is one
+  # thing to get right.
+  resolve:
+    name: Resolve the head to build
     # Three conditions, one per door. `issue_comment` fires for issues as well
     # as pull requests, so that arm checks `.pull_request` exists before
     # anything else — and checks `author_association`, because anybody with a
@@ -58,21 +75,46 @@ jobs:
         && startsWith(github.event.comment.body, '/preview')
         && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      sha: ${{ steps.head.outputs.sha }}
+    steps:
+      - id: head
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number || github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          read -r repo sha < <(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR}" \
+            --jq '[.head.repo.full_name, .head.sha] | @tsv')
+          if [ "$repo" != "$GITHUB_REPOSITORY" ]; then
+            echo "::error::#${PR}'s head is on ${repo}, not ${GITHUB_REPOSITORY}. A preview builds and installs the branch it deploys, so this workflow only ever runs code from this repository — where pushing already requires write access. Deploy a fork by hand if you have read the diff."
+            exit 1
+          fi
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy a preview
+    needs: resolve
+    runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
     # The three Vercel credentials live on their own environment with no
     # required reviewer — `infra-deploy`'s copies sit behind an approval gate,
     # which is right for a production deploy and would make an on-demand preview
     # useless. Manual action "preview-deploy-token" is how they get there.
     environment: preview-deploy
     steps:
-      # `github.event.pull_request.head.sha` on a `pull_request` event, and the
-      # pull request's head ref on a comment — where the event carries an issue
-      # and no head at all. `refs/pull/N/head` is the branch tip, deliberately
-      # not `/merge`: a preview is meant to show the branch, not a speculative
-      # merge of it into whatever main is this minute.
+      # The exact commit the job above proved is ours, never a ref: a branch can
+      # move between the two jobs, and a ref would build whatever it moved to.
       - uses: actions/checkout@v7
         with:
-          ref: refs/pull/${{ github.event.pull_request.number || github.event.issue.number }}/head
+          ref: ${{ needs.resolve.outputs.sha }}
       - uses: ./.github/actions/setup
       - name: Confirm the Vercel credentials are set
         env:
@@ -112,11 +154,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           URL: ${{ steps.deploy.outputs.url }}
+          SHA: ${{ needs.resolve.outputs.sha }}
           PR: ${{ github.event.pull_request.number || github.event.issue.number }}
         run: |
           set -euo pipefail
           {
-            echo "Preview: ${URL}"
+            echo "Preview of \`${SHA}\`: ${URL}"
             echo
             echo "Pushes to this branch keep previewing while the \`preview\` label is on. Remove it to stop."
             echo
