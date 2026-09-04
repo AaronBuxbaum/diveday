@@ -973,6 +973,14 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
   }) => {
     // 8 scans at ~3.5s each.
     test.setTimeout(80_000);
+    // **The same reduced-motion state its sibling block scans in**, and for the
+    // identical reason -- `/` is in both lists, and the hero's roll-call rows
+    // are the thing being raced. The marketing-pages scan below explains the
+    // mechanism in full; this block scanned the same landing page without it
+    // and passed on timing alone until a run caught the fade at 3.89:1 and
+    // 2.89:1 (the second row is 120ms behind the first, so it is measured
+    // paler still). Settled, `--success` on the card is over the 4.5 floor.
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await scanStaticRoutes(page, [
       // The landing page and the two account-lifecycle forms. Each renders a
       // single `<h1>`, so matching any non-empty one is enough and keeps this
