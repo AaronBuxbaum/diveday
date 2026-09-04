@@ -1462,7 +1462,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     await screen.findByRole("heading", { name: "Two-Tank Reef" });
 
     expect(
-      await screen.findByRole("checkbox", { name: "Disable spray guard on this device" }),
+      await screen.findByRole("switch", { name: "Disable spray guard on this device" }),
     ).toBeInTheDocument();
   });
 
@@ -1481,7 +1481,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
 
     const deviceGroup = within(disclosure as HTMLElement);
     expect(
-      await deviceGroup.findByRole("checkbox", { name: "Disable spray guard on this device" }),
+      await deviceGroup.findByRole("switch", { name: "Disable spray guard on this device" }),
     ).toBeInTheDocument();
     expect(deviceGroup.getByText("Boat mode", { selector: "legend" })).toBeInTheDocument();
 

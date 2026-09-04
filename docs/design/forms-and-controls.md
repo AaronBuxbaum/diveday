@@ -619,6 +619,34 @@ through `className` cannot reliably beat a size's `text-sm`. Pick the size that 
 center its own content: give it `flex items-center` or `inline-flex items-center`. A height floor
 without centering is the bug.
 
+## Switches: `Switch`
+
+A setting that takes effect **the moment it is tapped** is a switch: `src/components/ui/Switch.tsx`,
+a visually hidden `<input type="checkbox" role="switch">` inside a `<label>`, drawing a track and a
+sliding thumb. Two surfaces drew it by hand with byte-identical class strings — the water locker's
+spray-guard toggle and the haptics toggle — which is the drift `buttonClass()` and
+`SegmentedControl` each exist to end. **Track-and-thumb class strings are never written at a call
+site.**
+
+```tsx
+import { Switch } from "@/components/ui/Switch";
+
+<Switch checked={enabled} onChange={setEnabled} label={copy.label} />;
+```
+
+`onChange` hands back the new boolean rather than a change event, because that is what every caller
+wants. The label's words are the accessible name *and* a tap target; `aria-checked` is derived from
+the same prop as `checked`, so the two cannot disagree; the thumb moves on a bare
+`transition-transform`, so `prefers-reduced-motion` stills it through the global kill-switch; the
+control is `min-h-11` and `print:hidden`.
+
+**A checkbox is not a switch, and the difference is when it takes effect.** A choice that only means
+something once a form is submitted stays a plain `<input type="checkbox" className="size-4
+accent-primary">` — Settings → Team's role and language boxes, a departure's requirement toggles,
+the buddy-team and waiver boxes, roughly 25 sites. None of those should slide: a control that
+animates into its new state is telling the reader something happened, and until the form is
+submitted nothing has.
+
 ## Segmented choices: `SegmentedControl`
 
 A small set of sibling **destinations** — the trip page's tabs, the waiver surface's two tabs, the

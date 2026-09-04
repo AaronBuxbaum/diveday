@@ -216,8 +216,8 @@ describe("WaterLocker", () => {
     });
     expect(screen.getByText("Screen locked — water detected")).toBeInTheDocument();
 
-    const checkbox = screen.getByRole("checkbox", { name: "Disable spray guard on this device" });
-    act(() => fireEvent.click(checkbox));
+    const toggle = screen.getByRole("switch", { name: "Disable spray guard on this device" });
+    act(() => fireEvent.click(toggle));
 
     expect(screen.queryByText("Screen locked — water detected")).toBeNull();
     expect(localStorage.getItem(WATER_LOCKER_DISABLED_STORAGE_KEY)).toBe("true");
@@ -232,9 +232,9 @@ describe("WaterLocker", () => {
     );
     await act(async () => {});
 
-    const checkbox = screen.getByRole("checkbox", { name: "Disable spray guard on this device" });
-    act(() => fireEvent.click(checkbox)); // disable
-    act(() => fireEvent.click(checkbox)); // re-enable
+    const toggle = screen.getByRole("switch", { name: "Disable spray guard on this device" });
+    act(() => fireEvent.click(toggle)); // disable
+    act(() => fireEvent.click(toggle)); // re-enable
 
     act(() => {
       window.dispatchEvent(

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { Switch } from "@/components/ui/Switch";
 import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useFocusTrap } from "@/components/useFocusTrap";
@@ -264,8 +265,7 @@ export function WaterLockerToggle({
     setDisabled(readWaterLockerDisabled());
   }, []);
 
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const next = event.target.checked;
+  const handleChange = (next: boolean) => {
     setDisabled(next);
     try {
       localStorage.setItem(WATER_LOCKER_DISABLED_STORAGE_KEY, String(next));
@@ -283,15 +283,11 @@ export function WaterLockerToggle({
   if (!mounted) return null;
 
   return (
-    <label
-      className={`group inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-3 rounded-lg border border-border bg-surface-sunken p-3 text-sm font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground print:hidden ${className}`.trim()}
-    >
-      <input type="checkbox" checked={disabled} onChange={handleChange} className="peer sr-only" />
-      <span
-        aria-hidden="true"
-        className="relative h-6 w-11 shrink-0 rounded-full bg-border transition-colors after:absolute after:top-1 after:left-1 after:size-4 after:rounded-full after:bg-surface after:shadow-sm after:transition-transform peer-checked:bg-primary peer-checked:after:translate-x-5 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary"
-      />
-      {copy.disableToggleLabel}
-    </label>
+    <Switch
+      checked={disabled}
+      onChange={handleChange}
+      label={copy.disableToggleLabel}
+      className={className}
+    />
   );
 }
