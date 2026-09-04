@@ -782,9 +782,23 @@ function DiveRecord({
 
               A past-tense label, deliberately: "Seen on the day" can only be
               read as a report, where a bare species name beside the conditions
-              could be read as a promise. */}
+              could be read as a promise.
+
+              **`print:hidden`, unlike every other row here.** This card is
+              built to be printed, hand-ruled and countersigned into a paper
+              logbook, and `observedSpecies` is scoped to the *trip* — a diver
+              who sat out the second tank with an ear squeeze would carry that
+              tank's manta onto a page a divemaster signs. The sites line above
+              has the same trip scope and stays, because an itinerary is a
+              property of the day; a sighting is a property of one dive by one
+              group. On screen it is the keepsake's line and belongs there
+              (dive-domain review, 2026-09-04). */}
           {seenNames.length > 0 ? (
-            <Fact label={t("recap.seenOnTheDay")} testId={AFTER_STATE_TEST_IDS.seen}>
+            <Fact
+              label={t("recap.seenOnTheDay")}
+              testId={AFTER_STATE_TEST_IDS.seen}
+              className="print:hidden"
+            >
               <ul className="flex flex-col gap-1">
                 {seenNames.map((name) => (
                   <li key={name} className="font-medium">
@@ -836,16 +850,19 @@ function DiveRecord({
 function Fact({
   label,
   testId,
+  className,
   children,
 }: {
   label: string;
   testId?: string;
+  /** For the one row that is the keepsake's and not the logbook's — see the sighting. */
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
     <div
       data-testid={testId}
-      className="flex flex-col gap-1 py-3 sm:flex-row sm:items-baseline sm:gap-4"
+      className={`flex flex-col gap-1 py-3 sm:flex-row sm:items-baseline sm:gap-4${className ? ` ${className}` : ""}`}
     >
       <dt className="text-xs font-medium text-muted sm:w-28 sm:shrink-0">{label}</dt>
       <dd className="min-w-0 flex-1 text-base">{children}</dd>

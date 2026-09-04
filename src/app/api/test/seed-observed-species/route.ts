@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { upsertExecutedDive } from "@/db/executed-dives";
+import { MARINE_LIFE_CATALOG } from "@/db/marine-life-catalog";
 import { bookings, diveSiteCreatures, tripDives } from "@/db/schema";
 import { DEMO_RECAP_BOOKING_ID } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
@@ -32,10 +33,8 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * reads as an ordinary day with one good moment in it.
  *
  * Written through `upsertExecutedDive` rather than inserted directly, so the
- * row is one the product itself could have produced: the species is checked
- * against the catalog *and* against that site's own field guide, which is the
- * constraint the whole feature rests on. A route that bypassed it could
- * photograph a sighting no crew member could ever record.
+ * row is one the product itself could have produced. A route that bypassed the
+ * writer could photograph a sighting no crew member could ever record.
  *
  * Mutating the shared fixture is safe: each Playwright worker owns its database
  * and `/api/test/reset` restores the schedule before every test. Gated
@@ -64,10 +63,12 @@ export async function POST(request: Request) {
     .limit(1);
   if (!planned?.diveSiteId) return NextResponse.json({ error: "no_planned_site" }, { status: 409 });
 
-  // The first face that site's own guide names, in the shop's saved order. A
-  // site with no guide cannot produce the state at all, which is correct: there
-  // would be nothing for a crew member to have picked.
-  const [listed] = await db
+  // **Off the site's guide, deliberately.** The guide is the eight faces the
+  // reef shows reliably; a sighting is worth recording because it was not the
+  // usual, so a demo whose one sighting is also on the briefing list would
+  // photograph the two claims as the same claim. This picks a catalog species
+  // the site is *not* named for, which is the shape a real crew records.
+  const listed = await db
     .select({ slug: diveSiteCreatures.catalogSlug })
     .from(diveSiteCreatures)
     .where(
@@ -75,10 +76,10 @@ export async function POST(request: Request) {
         eq(diveSiteCreatures.shopId, shop.id),
         eq(diveSiteCreatures.diveSiteId, planned.diveSiteId),
       ),
-    )
-    .orderBy(diveSiteCreatures.position, diveSiteCreatures.id)
-    .limit(1);
-  if (!listed?.slug) return NextResponse.json({ error: "no_field_guide" }, { status: 409 });
+    );
+  const guide = new Set(listed.map((row) => row.slug));
+  const species = MARINE_LIFE_CATALOG.map((entry) => entry.slug).find((slug) => !guide.has(slug));
+  if (!species) return NextResponse.json({ error: "no_species" }, { status: 409 });
 
   const [staff] = await listStaff(db, shop.id);
   if (!staff) return NextResponse.json({ error: "no_staff" }, { status: 404 });
@@ -88,10 +89,10 @@ export async function POST(request: Request) {
     tripId: booking.tripId,
     diveNumber: 1,
     actualSiteId: planned.diveSiteId,
-    observedSpeciesSlug: listed.slug,
+    observedSpeciesSlug: species,
     recordedByPersonId: staff.person.id,
   });
   if (!result.ok) return NextResponse.json({ error: result.reason }, { status: 409 });
 
-  return NextResponse.json({ ok: true, species: listed.slug });
+  return NextResponse.json({ ok: true, species });
 }

@@ -91,11 +91,12 @@ function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps {
  * **The field guide says what a place may hold, never what this dive held**
  * (issue #1192, D32).
  *
- * Nothing DiveDay stores records a sighting, so the drawer is future-tense and
- * site-scoped by construction — and the framing is the whole safety property.
- * Marking what was actually seen is D30 (#1190) and is unbuilt; there is no
- * placeholder for it, because a placeholder for a marking that does not exist
- * is what later reads as a claim.
+ * The drawer is future-tense and site-scoped by construction, and the framing
+ * is the whole safety property. A sighting *is* recorded now (D30, #1190) — and
+ * it is a separate field, separately labelled, on a different part of the page,
+ * for exactly that reason: the moment the two share a source, a shop's standing
+ * claim about a reef starts reading as somebody's report of a day. The cases
+ * below pin both directions.
  */
 describe("the field guide", () => {
   const guide = (siteName: string, slugs: string[]) => ({

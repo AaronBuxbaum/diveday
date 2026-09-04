@@ -2,7 +2,7 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
 import { isMarineLifeSlug } from "./marine-life-catalog";
-import { diveSiteCreatures, diveSites, executedDives, people, tripDives, trips } from "./schema";
+import { diveSites, executedDives, people, tripDives, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 export type ExecutedDiveInput = {
@@ -17,9 +17,12 @@ export type ExecutedDiveInput = {
   notRecorded?: string[];
   /**
    * One species the crew saw, as a `MARINE_LIFE_CATALOG` slug (issue #1190).
+   *
    * Absent or null clears it — like every other field here, this upsert
    * replaces the row rather than patching it, so the form always sends the
-   * whole record and "unset" is a real answer a crew can give.
+   * whole record and "unset" is a real answer a crew can give. A slug the
+   * catalog does not carry is dropped rather than refused; see the note beside
+   * the check for why an ornament may not cost the dive record.
    */
   observedSpeciesSlug?: string | null;
   recordedByPersonId: string;
@@ -65,17 +68,7 @@ export type ExecutedDiveRefusal =
   | "unknown_recorder"
   | "unknown_site"
   | "times_transposed"
-  | "depth_out_of_range"
-  /** A slug that is not in `MARINE_LIFE_CATALOG` at all. */
-  | "unknown_species"
-  /**
-   * A real species, but not one this dive's site lists. The picker only ever
-   * offers the site's own field guide, so reaching this means the site changed
-   * under an open form or the request did not come from the form — and either
-   * way, recording a sighting a shop has never said is possible there is the
-   * "constrained site-aware list" half of D30 going unenforced.
-   */
-  | "species_not_at_site";
+  | "depth_out_of_range";
 
 export type UpsertExecutedDiveResult =
   | { ok: true; dive: typeof executedDives.$inferSelect }
@@ -139,31 +132,41 @@ export async function upsertExecutedDive(
     ) {
       return { ok: false, reason: "depth_out_of_range" };
     }
-    // **Only ever from the site's own field guide.** The picker is built from
-    // `dive_site_creatures` for the site selected above, and this is the same
-    // rule server-side, because a constraint that lives only in a `<select>` is
-    // a suggestion. A dive with no named site has no field guide to draw from,
-    // so it can carry no sighting — you cannot say what you saw somewhere you
-    // declined to name.
-    const observedSpeciesSlug = input.observedSpeciesSlug;
-    if (observedSpeciesSlug) {
-      if (!isMarineLifeSlug(observedSpeciesSlug)) {
-        return { ok: false, reason: "unknown_species" };
-      }
-      if (!actualSiteId) return { ok: false, reason: "species_not_at_site" };
-      const [listed] = await tx
-        .select({ id: diveSiteCreatures.id })
-        .from(diveSiteCreatures)
-        .where(
-          and(
-            eq(diveSiteCreatures.shopId, input.shopId),
-            eq(diveSiteCreatures.diveSiteId, actualSiteId),
-            eq(diveSiteCreatures.catalogSlug, observedSpeciesSlug),
-          ),
-        )
-        .limit(1);
-      if (!listed) return { ok: false, reason: "species_not_at_site" };
-    }
+    // **The catalog, not the site's field guide** — a correction to the first
+    // version of this, which had it backwards (dive-domain review, 2026-09-04).
+    //
+    // A site's guide is a *briefing selection*: at most eight faces
+    // (`MAX_SITE_CREATURES`) a shop picks because that reef shows them
+    // reliably, chosen to tell a diver what to expect. Molasses Reef's is
+    // stoplight parrotfish, French angelfish, blue tang, southern stingray,
+    // elkhorn coral, yellowtail snapper. The catalog also carries the spotted
+    // eagle ray, the whale shark, the nurse shark, the goliath grouper — and
+    // none of those are on anybody's eight, because no shop promises a whale
+    // shark in a briefing.
+    //
+    // So constraining a *sighting* to the guide admitted the mundane and
+    // refused the memorable: a divemaster could record "we saw blue tang" and
+    // not "we saw an eagle ray". Nobody climbs the ladder talking about the
+    // blue tang. The whole reason a sighting is worth writing down is that it
+    // was not the usual, and the person who was in the water is a far better
+    // witness than a marketing list of eight.
+    //
+    // D30's boundary is about *derivation* — never infer a sighting from a
+    // site's usual life — and a catalog-wide domain satisfies it completely,
+    // because the sighting still only exists when a crew member wrote it down.
+    // A species DiveDay does not carry at all is still refused, and that ask
+    // has its own home in `marine_life_requests`.
+    //
+    // **An unusable slug does not cost the dive record.** This is checked
+    // *after* the row is assembled and degrades to null rather than returning,
+    // because entry time, exit time and max depth are what `buildIncidentExport`
+    // seals for an investigator or a treating physician. A decorative field
+    // must never be able to open a hole in that document — which is what an
+    // early return did, on a form a divemaster fills in at the rail.
+    const observedSpeciesSlug =
+      input.observedSpeciesSlug && isMarineLifeSlug(input.observedSpeciesSlug)
+        ? input.observedSpeciesSlug
+        : null;
 
     const values = {
       shopId: input.shopId,

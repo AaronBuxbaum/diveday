@@ -53,7 +53,7 @@
     "visibility": "Visibility",
     "current": "Current",
     "notRecordedDepth": "Depth was not recorded",
-    "observedSpecies": "One thing you saw",
+    "observedSpecies": "Seen on this dive",
     "observedSpeciesNone": "Nothing to note",
     "save": "Save dive record",
     "saved": "Dive record saved.",
@@ -66,10 +66,9 @@
       "unknownRecorder": "Your staff record was not found, so nothing was saved.",
       "invalidTime": "One of the times could not be read. Check both and save again.",
       "invalid": "Nothing was saved. Check the entries and try again.",
-      "wrongDive": "This form is for a different dive. Reload the manifest and try again.",
-      "unknownSpecies": "That species is not one DiveDay carries.",
-      "speciesNotAtSite": "That species is not on this site's field guide. Pick one the site lists, or leave it blank."
-    }
+      "wrongDive": "This form is for a different dive. Reload the manifest and try again."
+    },
+    "observedSpeciesHint": "Divers read this on their recap."
   },
   "addCrewToTrip": "Add crew to trip",
   "manageCrewOnTrip": "Manage this trip's crew",

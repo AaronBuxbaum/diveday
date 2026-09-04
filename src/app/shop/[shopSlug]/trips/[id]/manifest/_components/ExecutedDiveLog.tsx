@@ -35,6 +35,12 @@ export type ExecutedDiveLabels = {
   current: string;
   notRecordedDepth: string;
   observedSpecies: string;
+  /**
+   * The six words that say this is not an internal note. It reaches every
+   * diver's recap, on a form otherwise made entirely of record-keeping, and a
+   * crew member noting something for their own log would be surprised.
+   */
+  observedSpeciesHint: string;
   /** The empty option: a dive where nothing stood out is an ordinary dive. */
   observedSpeciesNone: string;
   save: string;
@@ -55,6 +61,7 @@ export type ExecutedDiveLabels = {
 export function ExecutedDiveLog({
   planned,
   liveDiveSites,
+  catalogSpecies,
   speciesBySite,
   executed,
   action,
@@ -84,16 +91,21 @@ export function ExecutedDiveLog({
   }>;
   liveDiveSites: ReadonlyArray<{ id: string; name: string }>;
   /**
-   * Each live site's field guide, keyed by site id — the species a crew may
-   * say they saw there (issue #1190).
+   * Every species DiveDay carries, in catalog order — the domain of "what did
+   * you see" (issue #1190).
    *
    * Resolved on the server because the names are DiveDay's copy in the
    * reader's own language (`marineLifeCard`, ADR
    * 20260813-marine-life-is-diveday-copy) and a Client Component has no
-   * translator. Keyed by site rather than flattened because the picker has to
-   * follow the *actual site* select above it, which the crew can change: a
-   * sighting is a claim about one reef, so the constrained list has to change
-   * with the reef.
+   * translator.
+   */
+  catalogSpecies: ReadonlyArray<{ slug: string; name: string }>;
+  /**
+   * Each live site's field guide, keyed by site id — the faces that reef is
+   * named for, which *order* the picker rather than bounding it.
+   *
+   * Keyed by site rather than flattened because the ordering follows the
+   * *actual site* select above it, which the crew can change mid-form.
    */
   speciesBySite: Readonly<Record<string, ReadonlyArray<{ slug: string; name: string }>>>;
   executed: ReadonlyArray<{
@@ -151,6 +163,7 @@ export function ExecutedDiveLog({
                   plannedSiteLabel={plannedSiteLabel}
                   row={byNumber.get(diveNumber)}
                   liveDiveSites={liveDiveSites}
+                  catalogSpecies={catalogSpecies}
                   speciesBySite={speciesBySite}
                   action={action}
                   labels={labels}
@@ -178,6 +191,7 @@ function ExecutedDiveForm({
   plannedSiteLabel,
   row,
   liveDiveSites,
+  catalogSpecies,
   speciesBySite,
   action,
   labels,
@@ -190,6 +204,7 @@ function ExecutedDiveForm({
   plannedSiteLabel: string;
   row?: { executed: ExecutedDive; actualSite: { id: string; name: string } | null };
   liveDiveSites: ReadonlyArray<{ id: string; name: string }>;
+  catalogSpecies: ReadonlyArray<{ slug: string; name: string }>;
   speciesBySite: Readonly<Record<string, ReadonlyArray<{ slug: string; name: string }>>>;
   action: (
     previous: ExecutedDiveResult | undefined,
@@ -221,21 +236,22 @@ function ExecutedDiveForm({
     row?.executed.notRecorded.includes("depth") ?? false,
   );
   const [species, setSpecies] = useState(row?.executed.observedSpeciesSlug ?? "");
-  const siteSpecies = speciesBySite[actualSiteId] ?? [];
-  // A sighting belongs to a reef. Changing the site changes which guide is on
-  // offer, so a slug chosen against the old one is dropped rather than carried
-  // across — the writer refuses it anyway (`species_not_at_site`), and a form
-  // that quietly holds a value the server will reject is the shape issue #1018
-  // was about.
-  const speciesValue = siteSpecies.some((entry) => entry.slug === species) ? species : "";
+  // **Every species DiveDay carries, this site's own faces first.** The guide
+  // is a briefing selection of at most eight reliably-seen animals; the things
+  // worth writing down are the ones that are not usually there, so the guide
+  // orders the list and never bounds it (dive-domain review, 2026-09-04).
+  // Changing the site reorders it and drops nothing, because a sighting is a
+  // claim about a moment rather than about a row in the site library.
+  const guideSlugs = new Set((speciesBySite[actualSiteId] ?? []).map((entry) => entry.slug));
+  const speciesOptions = [
+    ...catalogSpecies.filter((entry) => guideSlugs.has(entry.slug)),
+    ...catalogSpecies.filter((entry) => !guideSlugs.has(entry.slug)),
+  ];
   // The two times are what a transposition lands on, so the refusal is wired to
   // both fields as well as stated in the action row — `Field`'s `error` sets
   // `aria-invalid` and `aria-describedby` for a reader who never sees the row.
   const timesError = result?.status === "error" && result.reason === "times_transposed";
   const depthError = result?.status === "error" && result.reason === "depth_out_of_range";
-  const speciesError =
-    result?.status === "error" &&
-    (result.reason === "species_not_at_site" || result.reason === "unknown_species");
 
   return (
     <form action={formAction} className="px-4 pb-4">
@@ -313,37 +329,34 @@ function ExecutedDiveForm({
             className={controlClass}
           />
         </Field>
-        {/* **One species, from this site's own field guide** (issue #1190,
-            delight report D30). Not free text: what a diver reads has to
-            arrive in their language, and the catalog is DiveDay's copy in
-            both (ADR 20260813-marine-life-is-diveday-copy).
+        {/* **One species the crew saw** (issue #1190, delight report D30).
+            Not free text: what a diver reads has to arrive in their language,
+            and the catalog is DiveDay's copy in both (ADR
+            20260813-marine-life-is-diveday-copy).
 
-            Absent — not merely empty, and with no line standing in for it —
-            when the site has no guide or none is named yet. An empty select is
-            a question the crew cannot answer, and a sentence explaining why a
-            control they have never seen is missing earns nothing: the picker
-            appears the moment the site above it does, which is the first field
-            on the form. */}
-        {siteSpecies.length > 0 ? (
-          <Field
-            label={labels.observedSpecies}
-            error={speciesError ? labels.refusals.species_not_at_site : undefined}
+            The whole catalog, with this site's own field guide floated to the
+            top — a first pass bounded it *to* the guide, which had it exactly
+            backwards. The guide is at most eight faces a shop names because
+            the reef shows them reliably; the eagle ray and the nurse shark are
+            in the catalog and on nobody's eight, so the bounded version
+            admitted the blue tang and refused the thing anyone would actually
+            write down. Guide-first keeps the ordinary pick one thumb-flick
+            away without ruling the extraordinary one out. */}
+        <Field label={labels.observedSpecies} description={labels.observedSpeciesHint}>
+          <select
+            name="observedSpeciesSlug"
+            value={species}
+            onChange={(event) => setSpecies(event.target.value)}
+            className={controlClass}
           >
-            <select
-              name="observedSpeciesSlug"
-              value={speciesValue}
-              onChange={(event) => setSpecies(event.target.value)}
-              className={controlClass}
-            >
-              <option value="">{labels.observedSpeciesNone}</option>
-              {siteSpecies.map((entry) => (
-                <option key={entry.slug} value={entry.slug}>
-                  {entry.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-        ) : null}
+            <option value="">{labels.observedSpeciesNone}</option>
+            {speciesOptions.map((entry) => (
+              <option key={entry.slug} value={entry.slug}>
+                {entry.name}
+              </option>
+            ))}
+          </select>
+        </Field>
       </FieldGrid>
       <label className="mt-4 flex min-h-11 items-center gap-3 text-sm">
         <input

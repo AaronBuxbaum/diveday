@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ExecutedDive } from "@/db/schema";
 import { type ExecutedDiveLabels, ExecutedDiveLog } from "./ExecutedDiveLog";
@@ -35,6 +36,9 @@ const labels: ExecutedDiveLabels = {
   visibility: "Visibility",
   current: "Current",
   notRecordedDepth: "Depth was not recorded",
+  observedSpecies: "Seen on this dive",
+  observedSpeciesHint: "Divers read this on their recap.",
+  observedSpeciesNone: "Nothing to note",
   save: "Save dive record",
   saved: "Dive record saved.",
   refusals: {
@@ -48,7 +52,7 @@ const labels: ExecutedDiveLabels = {
     invalid: "Nothing was saved.",
     wrong_dive: "This form is for a different dive.",
   },
-} as ExecutedDiveLabels;
+};
 
 function renderLog(summaryLine: string, executed: ExecutedDiveLogRow[] = []) {
   return render(
@@ -63,7 +67,11 @@ function renderLog(summaryLine: string, executed: ExecutedDiveLogRow[] = []) {
         },
       ]}
       liveDiveSites={[{ id: "site-1", name: "Molasses Reef" }]}
-      speciesBySite={{ "site-1": [{ slug: "green-sea-turtle", name: "Green turtle" }] }}
+      catalogSpecies={[
+        { slug: "blue-tang", name: "Blue tang" },
+        { slug: "spotted-eagle-ray", name: "Spotted eagle ray" },
+      ]}
+      speciesBySite={{ "site-1": [{ slug: "blue-tang", name: "Blue tang" }] }}
       executed={executed}
       action={vi.fn(async () => ({ status: "saved" }) as never)}
       labels={labels}
@@ -114,5 +122,60 @@ describe("the executed-dive record is collapsed, and paper still carries it", ()
     // One checkpoint, one dive: `after_dive_1` shows dive 1 and nothing else.
     expect(screen.getAllByText(/Dive 1/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Dive 2/)).toBeNull();
+  });
+});
+
+/**
+ * **The catalog is the domain; the site's guide is the ordering** (issue #1190,
+ * corrected by a dive-domain review on 2026-09-04).
+ *
+ * The first version bounded the picker *to* the site's field guide, which had
+ * it exactly backwards: a guide is at most eight faces a shop names because
+ * that reef shows them reliably, so the eagle ray and the nurse shark are in
+ * the catalog and on nobody's eight. The bounded picker admitted the blue tang
+ * and refused the thing anyone would climb the ladder talking about.
+ *
+ * This pins both halves — the memorable one is reachable, and the ordinary one
+ * is still first — because the two are one `filter` apart and a refactor that
+ * dropped the ordering would be invisible in a diff.
+ */
+describe("the species picker", () => {
+  function speciesOptions() {
+    const select = document.querySelector(
+      'select[name="observedSpeciesSlug"]',
+    ) as HTMLSelectElement | null;
+    if (!select) throw new Error("species picker is not mounted");
+    return [...select.options].map((option) => option.value);
+  }
+
+  it("offers every species DiveDay carries, with this site's own faces first", () => {
+    renderLog("Dive 1 — not recorded yet");
+
+    // "Nothing to note" leads, because most dives are most dives.
+    expect(speciesOptions()[0]).toBe("");
+    // The site's guide next…
+    expect(speciesOptions()[1]).toBe("blue-tang");
+    // …and the animal nobody promises in a briefing is still reachable, which
+    // is the whole correction.
+    expect(speciesOptions()).toContain("spotted-eagle-ray");
+  });
+
+  it("keeps a chosen species when the crew changes the site", async () => {
+    // A sighting is a claim about a moment, not about a row in the site
+    // library, so re-picking the site reorders the list and drops nothing.
+    renderLog("Dive 1 — not recorded yet");
+    const picker = document.querySelector(
+      'select[name="observedSpeciesSlug"]',
+    ) as HTMLSelectElement;
+    await userEvent.selectOptions(picker, "spotted-eagle-ray");
+    expect(picker.value).toBe("spotted-eagle-ray");
+
+    await userEvent.selectOptions(
+      document.querySelector('select[name="actualSiteId"]') as HTMLSelectElement,
+      "",
+    );
+    expect(
+      (document.querySelector('select[name="observedSpeciesSlug"]') as HTMLSelectElement).value,
+    ).toBe("spotted-eagle-ray");
   });
 });

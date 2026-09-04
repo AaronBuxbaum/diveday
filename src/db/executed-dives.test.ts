@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { deleteExecutedDive, listExecutedDives, upsertExecutedDive } from "./executed-dives";
 import { MARINE_LIFE_CATALOG } from "./marine-life-catalog";
-import { diveSiteCreatures, people, personRoles, trips } from "./schema";
+import { diveSiteCreatures, diveSites, people, personRoles, trips } from "./schema";
 
 async function logFixture() {
   const { db, shop } = await seededShopContext();
@@ -210,87 +210,79 @@ describe("deleteExecutedDive", () => {
  * because a constraint that lives in a form is a suggestion.
  */
 describe("upsertExecutedDive — the observed species", () => {
-  /** A site this shop's field guide actually lists, and one of its species. */
-  async function aGuidedSite(db: Awaited<ReturnType<typeof logFixture>>["db"], shopId: string) {
-    const [row] = await db
-      .select({ siteId: diveSiteCreatures.diveSiteId, slug: diveSiteCreatures.catalogSlug })
-      .from(diveSiteCreatures)
-      .where(eq(diveSiteCreatures.shopId, shopId))
-      .limit(1);
-    if (!row?.slug) throw new Error("seeded shop has no dive-site field guide");
-    return { siteId: row.siteId, slug: row.slug };
-  }
-
-  it("records a species the site's guide lists", async () => {
+  it("records any species DiveDay carries, not only the ones the site is known for", async () => {
+    // The correction a dive-domain review made on 2026-09-04. Bounding this to
+    // the site's field guide had it backwards: a guide is at most eight faces a
+    // shop names because that reef shows them *reliably*, so it holds the blue
+    // tang and not the eagle ray — and the eagle ray is the whole reason
+    // anybody writes a sighting down.
     const { db, shop, owner, trip } = await logFixture();
-    const { siteId, slug } = await aGuidedSite(db, shop.id);
+    const [site] = await db
+      .select({ id: diveSites.id })
+      .from(diveSites)
+      .where(eq(diveSites.shopId, shop.id))
+      .limit(1);
+    if (!site) throw new Error("seeded shop has no dive site");
+
+    const listed = await db
+      .select({ slug: diveSiteCreatures.catalogSlug })
+      .from(diveSiteCreatures)
+      .where(and(eq(diveSiteCreatures.shopId, shop.id), eq(diveSiteCreatures.diveSiteId, site.id)));
+    const guide = new Set(listed.map((row) => row.slug));
+    const offGuide = MARINE_LIFE_CATALOG.map((species) => species.slug).find(
+      (slug) => !guide.has(slug),
+    );
+    if (!offGuide) throw new Error("this site's guide is the whole catalog");
 
     const saved = await upsertExecutedDive(db, {
       shopId: shop.id,
       tripId: trip.id,
       diveNumber: 1,
-      actualSiteId: siteId,
-      observedSpeciesSlug: slug,
+      actualSiteId: site.id,
+      observedSpeciesSlug: offGuide,
       recordedByPersonId: owner.id,
     });
-    expect(saved).toMatchObject({ ok: true, dive: { observedSpeciesSlug: slug } });
+    expect(saved).toMatchObject({ ok: true, dive: { observedSpeciesSlug: offGuide } });
   });
 
-  it("refuses a species that site's guide does not list", async () => {
+  it("records a sighting on a dive that names no site", async () => {
+    // Crews log dives with no site constantly — a shore checkout, a spot not in
+    // the library yet, a drift that ended somewhere nobody named. Some of those
+    // are the days with the manta in them, and a sighting is a fact about a
+    // dive rather than about a row in the site library.
     const { db, shop, owner, trip } = await logFixture();
-    const { siteId, slug } = await aGuidedSite(db, shop.id);
-    // A real catalog species, just not one this reef is said to show. That is
-    // the case the picker cannot produce and the server still has to refuse:
-    // a sighting is a claim about a place, and this one contradicts the only
-    // thing the shop has said about that place.
-    const elsewhere = MARINE_LIFE_CATALOG.map((species) => species.slug).find(
-      (candidate) => candidate !== slug,
-    );
-    if (!elsewhere) throw new Error("the catalog has only one species");
-
-    expect(
-      await upsertExecutedDive(db, {
-        shopId: shop.id,
-        tripId: trip.id,
-        diveNumber: 1,
-        actualSiteId: siteId,
-        observedSpeciesSlug: elsewhere,
-        recordedByPersonId: owner.id,
-      }),
-    ).toEqual({ ok: false, reason: "species_not_at_site" });
+    const [species] = MARINE_LIFE_CATALOG;
+    if (!species) throw new Error("the catalog is empty");
+    const saved = await upsertExecutedDive(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      diveNumber: 1,
+      actualSiteId: null,
+      observedSpeciesSlug: species.slug,
+      recordedByPersonId: owner.id,
+    });
+    expect(saved).toMatchObject({ ok: true, dive: { observedSpeciesSlug: species.slug } });
   });
 
-  it("refuses a slug the catalog does not carry at all", async () => {
+  it("drops a slug the catalog does not carry without losing the dive record", async () => {
+    // **The ornament degrades; the safety record saves.** Entry, exit and depth
+    // are what `buildIncidentExport` seals for an investigator or a treating
+    // physician, and a decorative field must never be able to open a hole in
+    // that document — which an early return did, on a form filled in at the
+    // rail (dive-domain review, 2026-09-04).
     const { db, shop, owner, trip } = await logFixture();
-    const { siteId } = await aGuidedSite(db, shop.id);
-    expect(
-      await upsertExecutedDive(db, {
-        shopId: shop.id,
-        tripId: trip.id,
-        diveNumber: 1,
-        actualSiteId: siteId,
-        observedSpeciesSlug: "mermaid",
-        recordedByPersonId: owner.id,
-      }),
-    ).toEqual({ ok: false, reason: "unknown_species" });
-  });
-
-  it("refuses a sighting on a dive that names no site", async () => {
-    // You cannot say what you saw somewhere you declined to name — and with no
-    // site there is no field guide to constrain the claim against, which would
-    // make this the one path where any catalog species could be recorded.
-    const { db, shop, owner, trip } = await logFixture();
-    const { slug } = await aGuidedSite(db, shop.id);
-    expect(
-      await upsertExecutedDive(db, {
-        shopId: shop.id,
-        tripId: trip.id,
-        diveNumber: 1,
-        actualSiteId: null,
-        observedSpeciesSlug: slug,
-        recordedByPersonId: owner.id,
-      }),
-    ).toEqual({ ok: false, reason: "species_not_at_site" });
+    const saved = await upsertExecutedDive(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      diveNumber: 1,
+      maxDepthMeters: 18,
+      observedSpeciesSlug: "mermaid",
+      recordedByPersonId: owner.id,
+    });
+    expect(saved).toMatchObject({
+      ok: true,
+      dive: { maxDepthMeters: 18, observedSpeciesSlug: null },
+    });
   });
 
   it("leaves the column null when nothing stood out", async () => {
@@ -309,20 +301,19 @@ describe("upsertExecutedDive — the observed species", () => {
 
   it("clears a recorded sighting when the crew takes it back", async () => {
     const { db, shop, owner, trip } = await logFixture();
-    const { siteId, slug } = await aGuidedSite(db, shop.id);
+    const [species] = MARINE_LIFE_CATALOG;
+    if (!species) throw new Error("the catalog is empty");
     await upsertExecutedDive(db, {
       shopId: shop.id,
       tripId: trip.id,
       diveNumber: 1,
-      actualSiteId: siteId,
-      observedSpeciesSlug: slug,
+      observedSpeciesSlug: species.slug,
       recordedByPersonId: owner.id,
     });
     const cleared = await upsertExecutedDive(db, {
       shopId: shop.id,
       tripId: trip.id,
       diveNumber: 1,
-      actualSiteId: siteId,
       observedSpeciesSlug: null,
       recordedByPersonId: owner.id,
     });

@@ -1500,6 +1500,29 @@ new domain concept, define it here in the same PR.
   however, evidence — `buildIncidentExport` renders it into a SHA-256-sealed document for an
   investigator or a treating physician, which is why a dive nobody logged must read as *not
   recorded* rather than being interpolated from its neighbours.
+- **Marine-life catalog** — DiveDay's own list of 148 wider-Caribbean species
+  (`src/db/marine-life-catalog.ts`): a slug, a Latin binomial, a category and a photo, and no prose
+  at all. Every word a person reads about one is DiveDay's, written once in every language and
+  resolved at render (`src/i18n/marine-life-labels.ts`, ADR 20260813-marine-life-is-diveday-copy). A
+  shop **picks** from it and never writes into it; a species we do not carry is refused by the picker
+  and the ask lands in `marine_life_requests`. The opposite contract to a **site template** or a
+  **course template**, whose words are copied onto the shop's row and owned by the shop from then on:
+  a dive plan for one reef is the shop's to write, and what a stoplight parrotfish looks like is the
+  same sentence for every shop in the Caribbean.
+- **Field guide** — the faces a **dive site** is known for: up to eight catalog species a shop picks
+  for that site (`dive_site_creatures`, `MAX_SITE_CREATURES`), in the order it chose. A **briefing
+  selection**, not an inventory — the point is to tell a diver what to *expect*, so it holds the
+  animals a reef shows reliably and not the ones it occasionally produces. A claim about a **place**,
+  standing and future-tense, and never evidence that anybody saw anything.
+- **Observed species** — one catalog species a crew member recorded on one **executed dive**
+  (`executed_dives.observed_species_slug`, issue #1190). A claim about a **moment**: it exists only
+  because somebody wrote it down, and is never inferred from the site's field guide — the two draw
+  from the same catalog and mean opposite things, which is why they are separate columns. Drawn from
+  the **whole catalog** rather than from the site's guide, because a sighting is worth recording
+  precisely when it was not the usual: the guide holds the blue tang, and the eagle ray is what a
+  diver climbs the ladder talking about. Informs and gates nothing, and it is an ornament rather than
+  evidence — an unusable slug is dropped so the dive record still saves. Null means nobody said,
+  never "all good".
 - **Surface interval** — the time between one dive's exit and the next dive's entry. Only ever
   stated between **consecutively numbered** executed dives that were both recorded and do not
   overlap; anything else is "not recorded". An interval measured across a dive nobody logged

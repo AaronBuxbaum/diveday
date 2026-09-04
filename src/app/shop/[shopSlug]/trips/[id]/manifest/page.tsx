@@ -23,7 +23,7 @@ import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-de
 import type { ExecutedDive } from "@/db/schema";
 import { listTripDives } from "@/db/trips";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
-import { fieldGuideCards } from "@/i18n/marine-life-labels";
+import { fieldGuideCards, marineLifeCatalogCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
@@ -155,6 +155,7 @@ function executedDiveLabels(t: StaffTranslator, depthUnit: DepthUnit): ExecutedD
     current: t("manifest.executedDive.current"),
     notRecordedDepth: t("manifest.executedDive.notRecordedDepth"),
     observedSpecies: t("manifest.executedDive.observedSpecies"),
+    observedSpeciesHint: t("manifest.executedDive.observedSpeciesHint"),
     observedSpeciesNone: t("manifest.executedDive.observedSpeciesNone"),
     save: t("manifest.executedDive.save"),
     saved: t("manifest.executedDive.saved"),
@@ -168,8 +169,6 @@ function executedDiveLabels(t: StaffTranslator, depthUnit: DepthUnit): ExecutedD
       invalid_time: t("manifest.executedDive.refusal.invalidTime"),
       invalid: t("manifest.executedDive.refusal.invalid"),
       wrong_dive: t("manifest.executedDive.refusal.wrongDive"),
-      unknown_species: t("manifest.executedDive.refusal.unknownSpecies"),
-      species_not_at_site: t("manifest.executedDive.refusal.speciesNotAtSite"),
     },
   };
 }
@@ -297,10 +296,15 @@ export default async function TripManifestPage({
   // same words the diver will read on their record, and showing a divemaster
   // a different name for the fish they are about to record would be the bug
   // (`marine-life-labels.ts`, ADR 20260813-marine-life-is-diveday-copy).
+  const diverT = diverTranslator(locale);
+  const catalogSpecies = marineLifeCatalogCards(diverT).map((card) => ({
+    slug: card.slug,
+    name: card.name,
+  }));
   const speciesBySite = Object.fromEntries(
     [...fieldGuides].map(([siteId, rows]) => [
       siteId,
-      fieldGuideCards(rows, diverTranslator(locale)).map((card) => ({
+      fieldGuideCards(rows, diverT).map((card) => ({
         slug: card.slug,
         name: card.name,
       })),
@@ -722,6 +726,7 @@ export default async function TripManifestPage({
           }))}
           executed={executedDives}
           liveDiveSites={liveDiveSites.map((site) => ({ id: site.id, name: site.name }))}
+          catalogSpecies={catalogSpecies}
           speciesBySite={speciesBySite}
           action={boundSaveExecutedDiveAction}
           labels={executedDiveLabels(t, shop.depthUnit)}
