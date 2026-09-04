@@ -67,6 +67,7 @@ describe("tripPublicCrew", () => {
       await setCrewPublicConsent(db, {
         shopId: shop.id,
         personId: first.personId,
+        actorPersonId: first.personId,
         consented: false,
       }),
     ).toBe(true);
@@ -100,12 +101,176 @@ describe("tripPublicCrew", () => {
       await setCrewPublicConsent(db, {
         shopId: shop.id,
         personId: member.personId,
+        actorPersonId: member.personId,
         consented: false,
       });
     }
 
     expect(await tripPublicCrew(db, shop.id, tripId)).toEqual([]);
     expect(await tripCrewSpokenLanguages(db, shop.id, tripId)).toEqual(before);
+  });
+
+  /**
+   * **The surname bug this column exists to close** (issue #1351).
+   *
+   * The published name used to be `full_name.trim().split(/\s+/)[0]`, which is
+   * not a first name — it is a bet that the shop typed the given name first. A
+   * row entered surname-first, or comma-style off a spreadsheet, published the
+   * *surname* to an anonymous, indexed page. Each case below writes a name
+   * shape the split gets wrong and asserts on both halves: the chosen name is
+   * what publishes, and the surname appears nowhere in the row at all.
+   */
+  it.each([
+    { fullName: "Tanaka Keiko", chosen: "Keiko", surname: "Tanaka" },
+    { fullName: "Smith, John", chosen: "John", surname: "Smith" },
+    { fullName: "Okonkwo, Talia", chosen: "Talia", surname: "Okonkwo" },
+  ])("publishes $chosen, not $surname, for a row typed $fullName", async (shape) => {
+    const { db, shop, tripId, crew } = await aCrewedDeparture();
+    const [member] = crew;
+    if (!member) throw new Error("expected a consented crew member on the seeded departure");
+
+    await db.update(people).set({ fullName: shape.fullName }).where(eq(people.id, member.personId));
+    expect(
+      await setCrewPublicConsent(db, {
+        shopId: shop.id,
+        personId: member.personId,
+        actorPersonId: member.personId,
+        consented: true,
+        publicName: shape.chosen,
+      }),
+    ).toBe(true);
+
+    const after = await tripPublicCrew(db, shop.id, tripId);
+    const republished = after.find((row) => row.personId === member.personId);
+    expect(republished?.firstName).toBe(shape.chosen);
+    expect(JSON.stringify(after)).not.toContain(shape.surname);
+  });
+
+  /**
+   * A single-token name is published whole. It may itself be a surname, and
+   * that is the person's own call to make in the box — what the reader must
+   * never do is silently cut it.
+   */
+  it("keeps a one-word name whole", async () => {
+    const { db, shop, tripId, crew } = await aCrewedDeparture();
+    const [member] = crew;
+    if (!member) throw new Error("expected a consented crew member on the seeded departure");
+    await db.update(people).set({ fullName: "Prince" }).where(eq(people.id, member.personId));
+    await setCrewPublicConsent(db, {
+      shopId: shop.id,
+      personId: member.personId,
+      actorPersonId: member.personId,
+      consented: true,
+    });
+
+    const after = await tripPublicCrew(db, shop.id, tripId);
+    expect(after.find((row) => row.personId === member.personId)?.firstName).toBe("Prince");
+  });
+
+  /**
+   * **The state that would ship silently.** `tripPublicCrew` reads the stored
+   * column, so a row carrying the consent stamp with no name renders one fewer
+   * person — no error, no failing test. It cannot happen, and this is why: the
+   * two columns are paired by a check constraint, so the database refuses the
+   * row rather than the page rendering it short.
+   */
+  it.each([null, "", "   "])("refuses to hold a consent whose name is %o", async (name) => {
+    const { db, crew } = await aCrewedDeparture();
+    const [member] = crew;
+    if (!member) throw new Error("expected a consented crew member on the seeded departure");
+    // The empty string is the one that would have slipped through a bare null
+    // pairing, and it is the worse of the two: it renders a bullet with the
+    // role and languages after it and no name in front of them.
+    await expect(
+      db.update(people).set({ crewPublicName: name }).where(eq(people.id, member.personId)),
+    ).rejects.toThrow();
+  });
+
+  /**
+   * **A one-tap save is the path this feature is actually used on**, so it is
+   * the one worth asserting on. The box is prefilled from the shop's record and
+   * a person who agrees without editing it stores whatever was offered — which
+   * is why the comma case had to be read rather than guessed at: "Smith, John"
+   * defaulted to `"Smith,"`, the surname with punctuation, one tap from an
+   * indexed page.
+   */
+  it("does not publish a surname when a comma-style record is accepted unedited", async () => {
+    const { db, shop, tripId, crew } = await aCrewedDeparture();
+    const [member] = crew;
+    if (!member) throw new Error("expected a consented crew member on the seeded departure");
+    await db
+      .update(people)
+      .set({ fullName: "Okonkwo, Talia" })
+      .where(eq(people.id, member.personId));
+    // No `publicName`: exactly what the form posts when the box is untouched.
+    await setCrewPublicConsent(db, {
+      shopId: shop.id,
+      personId: member.personId,
+      actorPersonId: member.personId,
+      consented: true,
+    });
+
+    const after = await tripPublicCrew(db, shop.id, tripId);
+    expect(after.find((row) => row.personId === member.personId)?.firstName).toBe("Talia");
+    expect(JSON.stringify(after)).not.toContain("Okonkwo");
+  });
+
+  /**
+   * **The rule that makes this a consent at all**, stated in the writer rather
+   * than only in the one action that calls it. Unlike the blackout beside it on
+   * the same page, there is no case where a manager may record this for
+   * somebody else, so there is no privileged variant to reach.
+   */
+  it("refuses a consent recorded on somebody else's behalf", async () => {
+    const { db, shop, tripId, crew } = await aCrewedDeparture();
+    const [member] = crew;
+    if (!member) throw new Error("expected a consented crew member on the seeded departure");
+    const silent = await listStaff(db, shop.id).then((rows) =>
+      rows.find((row) => row.person.crewPublicConsentAt === null),
+    );
+    if (!silent) throw new Error("seed has nobody who declined");
+
+    expect(
+      await setCrewPublicConsent(db, {
+        shopId: shop.id,
+        personId: silent.person.id,
+        actorPersonId: member.personId,
+        consented: true,
+        publicName: "Whoever",
+      }),
+    ).toBe(false);
+
+    const [row] = await db
+      .select({ name: people.crewPublicName, at: people.crewPublicConsentAt })
+      .from(people)
+      .where(eq(people.id, silent.person.id));
+    expect(row).toEqual({ name: null, at: null });
+    expect(await tripPublicCrew(db, shop.id, tripId)).not.toContainEqual(
+      expect.objectContaining({ personId: silent.person.id }),
+    );
+  });
+
+  /**
+   * Withdrawing takes the string away too. Leaving it on the row would let a
+   * re-invite, an undo, or a plain re-tick republish the name somebody had
+   * already taken down — the same hazard the security pass found in
+   * `removeStaffMember`, one field over.
+   */
+  it("clears the stored name when somebody withdraws", async () => {
+    const { db, shop, crew } = await aCrewedDeparture();
+    const [member] = crew;
+    if (!member) throw new Error("expected a consented crew member on the seeded departure");
+    await setCrewPublicConsent(db, {
+      shopId: shop.id,
+      personId: member.personId,
+      actorPersonId: member.personId,
+      consented: false,
+    });
+    const [row] = await db
+      .select({ name: people.crewPublicName, at: people.crewPublicConsentAt })
+      .from(people)
+      .where(eq(people.id, member.personId));
+    expect(row).toEqual({ name: null, at: null });
   });
 
   it("never reaches another shop's roster on the trip id alone", async () => {
@@ -133,7 +298,12 @@ describe("setCrewPublicConsent", () => {
     // No staff role: the same subject guard `setStaffLanguages` keeps, so this
     // cannot be pointed at an arbitrary `people` row.
     expect(
-      await setCrewPublicConsent(db, { shopId: shop.id, personId: diver.id, consented: true }),
+      await setCrewPublicConsent(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        actorPersonId: diver.id,
+        consented: true,
+      }),
     ).toBe(false);
   });
 
@@ -151,6 +321,7 @@ describe("setCrewPublicConsent", () => {
       await setCrewPublicConsent(db, {
         shopId: other.id,
         personId: staff.person.id,
+        actorPersonId: staff.person.id,
         consented: true,
       }),
     ).toBe(false);
@@ -170,6 +341,7 @@ describe("setCrewPublicConsent", () => {
     await setCrewPublicConsent(db, {
       shopId: shop.id,
       personId: staff.id,
+      actorPersonId: staff.id,
       consented: true,
       now: at,
     });
@@ -181,7 +353,12 @@ describe("setCrewPublicConsent", () => {
     // makes it a record.
     expect(agreed?.consentAt).toEqual(at);
 
-    await setCrewPublicConsent(db, { shopId: shop.id, personId: staff.id, consented: false });
+    await setCrewPublicConsent(db, {
+      shopId: shop.id,
+      personId: staff.id,
+      actorPersonId: staff.id,
+      consented: false,
+    });
     const [withdrawn] = await db
       .select({ consentAt: people.crewPublicConsentAt })
       .from(people)

@@ -1015,6 +1015,11 @@ export async function loadShopExportBundleInput(
             // above and for the same reason: it is a fact about a person this
             // shop holds, so the shop's own copy of everything carries it.
             "crew_public_consent_at",
+            // The string that consent actually publishes (issue #1351). It
+            // travels beside the stamp because it is half of the same record:
+            // a shop restoring this bundle needs to know not just that somebody
+            // agreed, but to what.
+            "crew_public_name",
             "courtesy_email_opt_out_at",
             // The diver's own "I'm not certified yet", which is a statement
             // about them and not a card — it has no row in certifications.csv
@@ -1063,6 +1068,7 @@ export async function loadShopExportBundleInput(
             row.emergencyContactPhone,
             row.spokenLanguages.length > 0 ? [...row.spokenLanguages].sort().join("; ") : null,
             row.crewPublicConsentAt,
+            row.crewPublicName,
             row.courtesyEmailOptOutAt,
             row.noCertificationDeclaredAt,
             row.noCertificationClearedAt,

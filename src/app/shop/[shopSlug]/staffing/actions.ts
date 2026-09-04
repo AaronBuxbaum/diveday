@@ -231,10 +231,15 @@ export async function saveCrewPublicConsentAction(week: string, formData: FormDa
   if (!personId || personId !== session.user.personId) redirect(noticeUrl(path, "invalid", at));
 
   const consented = Boolean(formData.get("consented"));
+  // Passed through raw: trimming, collapsing, capping and the fall back to the
+  // shop's own record all live in `crewPublicNameToStore`, beside the write, so
+  // the register's rules cannot drift from this one form's reading of them.
   const saved = await setCrewPublicConsent(await getDb(), {
     shopId: session.user.shopId,
     personId,
+    actorPersonId: session.user.personId,
     consented,
+    publicName: formData.get("publicName")?.toString() ?? null,
   });
   // Two codes rather than one, because the words are directional: a single
   // "Divers will see your first name" told somebody who had just unticked the

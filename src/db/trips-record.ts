@@ -162,6 +162,12 @@ export type PublicCrewMember = {
  *
  * First names only, and never a photo: D21's boundary is role, first name and
  * languages, and the surname is not part of what a "today with" line needs.
+ *
+ * The name comes off `people.crew_public_name` — the string the person typed
+ * beside the consent — rather than from splitting `full_name` on whitespace.
+ * That split assumed the shop had typed the given name first, so a row entered
+ * "Tanaka Keiko" published the surname to an indexed page, which is not what
+ * anybody agreed to (issue #1351).
  */
 export async function tripPublicCrew(
   db: DbExecutor,
@@ -171,7 +177,12 @@ export async function tripPublicCrew(
   const rows = await db
     .selectDistinct({
       personId: people.id,
+      // Nothing below reads this, and it still has to be selected: this is a
+      // `SELECT DISTINCT`, and Postgres refuses an ORDER BY expression that is
+      // not in the select list. The ordering stays on the shop's own record so
+      // it does not shuffle when somebody edits their public name.
       fullName: people.fullName,
+      publicName: people.crewPublicName,
       tripRole: tripAssignments.tripRole,
       languages: people.spokenLanguages,
     })
@@ -193,14 +204,25 @@ export async function tripPublicCrew(
       ),
     )
     .orderBy(asc(people.fullName));
-  return rows.map((row) => ({
-    personId: row.personId,
-    // The name a shop actually calls them, cut at the first space. A person
-    // with one name keeps it whole.
-    firstName: row.fullName.trim().split(/\s+/)[0] ?? row.fullName,
-    tripRole: row.tripRole,
-    languages: row.languages,
-  }));
+  // A row with a stamp but no stored name cannot exist — the two are paired by
+  // a check constraint on `people` — so this drops nothing in practice. It is
+  // written as a filter rather than a `?? <derivation>` on purpose: falling
+  // back to the old split is exactly the version-tolerance AGENTS.md refuses,
+  // and it would quietly restore the surname bug for any row that reached it.
+  // Dropping the member is also the safe direction if the pairing were ever
+  // broken: a missing name renders one fewer person, never the wrong one.
+  return rows.flatMap((row) =>
+    row.publicName === null
+      ? []
+      : [
+          {
+            personId: row.personId,
+            firstName: row.publicName,
+            tripRole: row.tripRole,
+            languages: row.languages,
+          },
+        ],
+  );
 }
 
 /**

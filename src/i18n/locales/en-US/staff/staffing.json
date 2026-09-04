@@ -117,6 +117,7 @@
   },
   "crewConsent": {
     "label": "Let divers see my first name, role and languages on this shop's public pages.",
+    "nameLabel": "Name divers see",
     "save": "Save",
     "saving": "Saving…"
   }

@@ -117,6 +117,7 @@
   },
   "crewConsent": {
     "label": "Que los buceadores vean mi nombre, mi función y mis idiomas en las páginas públicas del centro.",
+    "nameLabel": "Nombre que ven los buceadores",
     "save": "Guardar",
     "saving": "Guardando…"
   }

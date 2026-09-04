@@ -559,6 +559,23 @@ export const people = pgTable(
      */
     crewPublicConsentAt: timestamp("crew_public_consent_at", { withTimezone: true }),
     /**
+     * **The exact string that publishes** (issue #1351).
+     *
+     * `full_name` is one free-text box a shop types into, so deriving the
+     * published name as its first whitespace token is a guess about naming
+     * order, not a fact: a row entered "Tanaka Keiko" or "Smith, John"
+     * publishes the *surname* to an anonymous, indexed page -- which is
+     * precisely what the consent beside it does not cover. The person types
+     * what divers see, defaulted to that first token so the ordinary case is
+     * still one tap, and `tripPublicCrew` reads this rather than splitting.
+     *
+     * Paired with the stamp by a check constraint below rather than by
+     * convention. A consent with no name stored is not a state worth
+     * tolerating in a reader: it renders an empty crew line with no error and
+     * no failing test, which is the shape that ships silently.
+     */
+    crewPublicName: text("crew_public_name"),
+    /**
      * Set once this person self-serves out of courtesy email — wait-list
      * openings (`waitlist_invite`) and post-trip recaps (`trip_recap`), the two
      * kinds that ask something of the diver's attention beyond their own
@@ -671,6 +688,19 @@ export const people = pgTable(
     // — an index that strips the letter D from phone numbers, and one Postgres
     // would never match against the query's own expression. A character class
     // has nothing to escape.
+    // Consent and the string it publishes travel together, in both directions:
+    // agreeing without a name to show would render an empty line, and holding
+    // somebody's chosen public name after they withdrew would republish it the
+    // moment anything set the stamp again.
+    check(
+      "people_crew_public_name_with_consent",
+      // `nullif(btrim(...), '')` rather than a bare null test: an empty string
+      // is not null, so the plain pairing admitted `consent_at = now(),
+      // crew_public_name = ''` -- a row that renders a bullet with no name on
+      // it, which is the exact silent-empty outcome this constraint exists to
+      // make impossible.
+      sql`(${table.crewPublicConsentAt} is null) = (nullif(btrim(${table.crewPublicName}), '') is null)`,
+    ),
     index("people_phone_digits_trgm_idx").using(
       "gin",
       sql`regexp_replace(coalesce(${table.phone}, ''), '[^0-9]', '', 'g') gin_trgm_ops`,

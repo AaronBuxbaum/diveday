@@ -1577,6 +1577,14 @@ new domain concept, define it here in the same PR.
 - **Conservation note** — a shop's own prose about its conservation practice at one dive site.
   The shop's words, in the shop's language, alongside the rest of the briefing — not a code and
   not a claim DiveDay renders on the shop's behalf.
+- **Crew public name** — the string a consenting staff member shows divers on the departures they
+  crew (`people.crew_public_name`). Theirs to type, not derived: `full_name` is one free-text box
+  a shop fills in, so taking its first whitespace token assumes the given name was typed first and
+  publishes the **surname** for a row entered "Tanaka Keiko" or "Smith, John" — to an anonymous,
+  indexed page, and not to the disclosure anybody agreed to. Defaulted to that first token so the
+  ordinary case is still one tap, and paired with `crew_public_consent_at` by a check constraint
+  in both directions: a consent with nothing to show would render an empty crew line, and a name
+  left standing after a withdrawal would republish itself the moment anything set the stamp again.
 
 ## Modeling notes
 

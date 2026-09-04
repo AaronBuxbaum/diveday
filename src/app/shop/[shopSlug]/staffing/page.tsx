@@ -19,6 +19,7 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import type { Role } from "@/lib/authz";
 import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { CREW_PUBLIC_NAME_MAX, defaultCrewPublicName } from "@/lib/crew-public-name";
 import { formatCalendarDateRange } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
@@ -279,9 +280,13 @@ export default async function StaffingPage({
 
   const myBlocks = blocks.filter((block) => block.personId === session.user.personId);
   // The reader's own standing answer, off the roster this page already read.
-  const crewConsented =
-    staff.find((member) => member.person.id === session.user.personId)?.person
-      .crewPublicConsentAt != null;
+  const me = staff.find((member) => member.person.id === session.user.personId)?.person;
+  const crewConsented = me?.crewPublicConsentAt != null;
+  // What ships, or what would if they said yes. Somebody who has already agreed
+  // sees the string that is on their departures right now; somebody who has not
+  // sees the first token of the shop's record, which is what the box would
+  // store unedited (issue #1351).
+  const crewPublicName = me?.crewPublicName ?? defaultCrewPublicName(me?.fullName ?? "");
   const staffingPath = shopPath(shopSlug, "staffing");
   // **Every act carries the week it was performed in.** The page grew a week
   // dimension and the actions did not, so building next week's roster — the
@@ -620,6 +625,26 @@ export default async function StaffingPage({
               />
               <span>{t("staffing.crewConsent.label")}</span>
             </label>
+            {/* **The box is the disclosure.** Before this, the published name
+                was `full_name.split(/\s+/)[0]` computed at render time, so a
+                person typed into the shop's records as "Tanaka Keiko" agreed to
+                a first name and got their surname on an indexed page (issue
+                #1351). What is in this field is character-for-character what
+                divers see, so the sentence above it is now true.
+
+                No caption under it saying so. The value *is* the claim, and a
+                line explaining that the box means what it shows is the kind of
+                sentence AGENTS.md deletes. The per-trip role is not previewed
+                for a different reason: it is a different word on every
+                departure, so any single one shown here would be a lie. */}
+            <Field label={t("staffing.crewConsent.nameLabel")}>
+              <input
+                name="publicName"
+                defaultValue={crewPublicName}
+                maxLength={CREW_PUBLIC_NAME_MAX}
+                className={controlClass}
+              />
+            </Field>
             <FieldActions>
               <SubmitButton
                 pendingLabel={t("staffing.crewConsent.saving")}

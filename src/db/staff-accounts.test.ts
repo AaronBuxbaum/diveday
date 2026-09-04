@@ -367,6 +367,7 @@ describe("removeStaffMember", () => {
       await setCrewPublicConsent(db, {
         shopId: shop.id,
         personId: staff.personId,
+        actorPersonId: staff.personId,
         consented: true,
       }),
     ).toBe(true);
@@ -391,7 +392,12 @@ describe("removeStaffMember", () => {
     // their answer would make them re-give it for no reason.
     const { db, shop } = await seededShopContext();
     const staff = await makeStaff(db, shop.id, ["crew"]);
-    await setCrewPublicConsent(db, { shopId: shop.id, personId: staff.personId, consented: true });
+    await setCrewPublicConsent(db, {
+      shopId: shop.id,
+      personId: staff.personId,
+      actorPersonId: staff.personId,
+      consented: true,
+    });
 
     await setStaffAccountStatus(db, {
       shopId: shop.id,

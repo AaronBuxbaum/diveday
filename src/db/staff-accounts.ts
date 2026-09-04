@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { crewPublicNameToStore } from "@/lib/crew-public-name";
 import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { hashPassword } from "@/lib/password-hashing";
 import { isSpokenLanguageTag } from "@/lib/spoken-languages";
@@ -535,7 +536,7 @@ export async function removeStaffMember(
     // person is still here to change it.
     await tx
       .update(people)
-      .set({ crewPublicConsentAt: null })
+      .set({ crewPublicConsentAt: null, crewPublicName: null })
       .where(and(eq(people.shopId, input.shopId), eq(people.id, input.personId)));
     return { ok: true };
   });
@@ -562,13 +563,59 @@ export async function setCrewPublicConsent(
   {
     shopId,
     personId,
+    actorPersonId,
     consented,
+    publicName,
     now = nowDate(),
-  }: { shopId: string; personId: string; consented: boolean; now?: Date },
+  }: {
+    shopId: string;
+    personId: string;
+    /** Whose session is writing. Anything but `personId` is refused here, not
+     * only at the one action that calls this today. */
+    actorPersonId: string;
+    consented: boolean;
+    /** What the person typed as the name divers see; blank falls back to the
+     * first token of their record. Ignored when withdrawing. */
+    publicName?: string | null;
+    now?: Date;
+  },
 ): Promise<boolean> {
+  // **The subject is the actor, and that is enforced here.** A consent somebody
+  // else recorded on your behalf is not a consent -- it is the whole of what
+  // this column means, and unlike the blackout beside it there is no case where
+  // a manager may record it for you, so there is no `canManageRoster` escape.
+  // The action above already refuses it; this refuses it for the next surface
+  // that wants a "name divers see" control and does not think to.
+  if (actorPersonId !== personId) return false;
+
+  // The stored name is read off the shop's own record before the write, not
+  // taken from the caller alone, so an empty box still publishes something
+  // sensible and a request that names a person who is not here writes nothing.
+  let nameToStore: string | null = null;
+  if (consented) {
+    const [row] = await db
+      .select({ fullName: people.fullName })
+      .from(people)
+      .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNull(people.deletedAt)))
+      .limit(1);
+    if (!row) return false;
+    nameToStore = crewPublicNameToStore(publicName, row.fullName);
+    // Nothing to show. Refused rather than written, because the alternative is
+    // a consent that renders an empty crew line -- and the check constraint on
+    // `people` would reject it anyway.
+    if (nameToStore === null) return false;
+  }
+
   const updated = await db
     .update(people)
-    .set({ crewPublicConsentAt: consented ? now : null })
+    .set({
+      crewPublicConsentAt: consented ? now : null,
+      // Withdrawing clears the name too. Keeping it would leave the string
+      // somebody chose sitting on the row, ready to republish the moment
+      // anything set the stamp again -- the same hazard the security pass
+      // found in `removeStaffMember`, one field over.
+      crewPublicName: nameToStore,
+    })
     .where(
       and(
         eq(people.id, personId),
