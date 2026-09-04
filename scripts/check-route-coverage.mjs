@@ -54,9 +54,21 @@
 // `exempt` that the route no longer needs. It will never ADD an exemption and
 // never REMOVE a spec or capture from a route's lists: both of those weaken the
 // gate, so both stay deliberate hand edits that show up in review. If a listed
-// spec or capture has genuinely vanished, `--write` refuses and says so;
-// `--absorb` is the loud escape hatch for the one case that is not new debt — a
-// merge from a branch that deleted the spec.
+// spec, capture or a11y scan has genuinely vanished, `--write` refuses and says
+// so; `--absorb` is the loud escape hatch for the one case that is not new debt
+// — a merge from a branch that deleted the spec.
+//
+// **That paragraph was false for a year, in the two directions it promises
+// hardest** (issue #1362). `planLedgerWrite` rebuilt each entry as
+// `{ e2e, visual }`, so every `a11y` list — 56 of them — was silently deleted by
+// any `--write`; and it banked an exemption whenever *either* a spec or a
+// capture survived, where the audit banks only when *both* do, so the one route
+// legitimately exempt from half the bar lost its written reason and then failed
+// the audit for the half it was exempt from. Both are now pinned by
+// `scripts/check-route-coverage.test.ts`, which fails against the old writer.
+// The rule this settles: a writer for a hand-maintained ledger carries every
+// field it does not itself compute, and a promise about a flag is worth exactly
+// as much as the test under it.
 
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -377,6 +389,11 @@ export function planLedgerWrite({ routes, ledger, specs, captures }) {
     const entry = normalizeEntry(existing);
     const keptE2e = entry.e2e.filter((spec) => specs.has(spec));
     const keptVisual = entry.visual.filter((name) => captures.has(name));
+    // `a11y` names specs too, so a vanished scan is a coverage drop like any
+    // other. It was neither filtered nor carried through before, which is the
+    // sharper half of the same omission: the column simply did not survive a
+    // `--write` at all.
+    const keptA11y = (entry.a11y ?? []).filter((spec) => specs.has(spec));
     for (const spec of entry.e2e) {
       if (!specs.has(spec))
         drops.push(`${route}: e2e "${spec}" no longer exists under ${E2E_DIR}/`);
@@ -384,10 +401,23 @@ export function planLedgerWrite({ routes, ledger, specs, captures }) {
     for (const name of entry.visual) {
       if (!captures.has(name)) drops.push(`${route}: visual capture "${name}" is no longer shot`);
     }
+    for (const spec of entry.a11y ?? []) {
+      if (!specs.has(spec))
+        drops.push(`${route}: a11y spec "${spec}" no longer exists under ${E2E_DIR}/`);
+    }
 
     const written = { e2e: keptE2e, visual: keptVisual };
+    if (keptA11y.length > 0) written.a11y = keptA11y;
     if (entry.exempt !== undefined) {
-      if (keptE2e.length > 0 || keptVisual.length > 0) bankedExemptions.push(route);
+      // **The same condition the audit banks on, which is `&&`, not `||`.**
+      // The audit calls a route covered only when it has both a spec and a
+      // capture; this asked for either, so a route exempt from exactly one half
+      // lost the paragraph explaining why — and then failed the audit for the
+      // half it was exempt from, with the reason deleted. Exactly one route is
+      // in that state and it is the one whose exemption is hardest to re-derive:
+      // /shop/[shopSlug]/settings/security has an e2e spec and an argued reason
+      // for having no capture.
+      if (keptE2e.length > 0 && keptVisual.length > 0) bankedExemptions.push(route);
       else written.exempt = entry.exempt;
     }
     next[route] = written;
@@ -424,7 +454,10 @@ function serializeArray(values, keyIndent, columnWhereValueStarts) {
 function serializeEntry(entry, indent) {
   const keyIndent = indent + 2;
   const pad = " ".repeat(keyIndent);
-  const fields = ["e2e", "visual", "exempt"]
+  // `a11y` sits between them because that is the ledger's own reading order,
+  // and because it was missing here too (issue #1362): the writer dropped the
+  // column and the serializer could not have written it back if it had not.
+  const fields = ["e2e", "visual", "a11y", "exempt"]
     .filter((key) => entry[key] !== undefined)
     .map((key) => {
       const prefix = `${pad}${JSON.stringify(key)}: `;
