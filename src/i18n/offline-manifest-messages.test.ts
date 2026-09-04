@@ -11,13 +11,13 @@ import { offlineManifestTranslator } from "./offline-manifest-messages";
  * `OfflineManifestView` is a Client Component, so every namespace its module
  * graph reaches is downloaded by whoever opens the manifest — on a phone, from
  * cache, possibly with no signal. It used to import `staffTranslator`, which
- * pulls both locale barrels: 31 namespaces times two locales to render three.
+ * pulls both locale barrels: 31 namespaces times two locales for the two it reads.
  *
  * **These tests are the whole guard, not a belt beside a braces.** A direct
  * `t("gear.title")` in the view is a compile error, but next-intl's translator
  * is method-declared and therefore bivariant, so passing the narrow translator
  * to a helper typed `StaffTranslator` compiles silently. The compiler will not
- * stop a helper reaching a fourth namespace, and after this change that is no
+ * stop a helper reaching a third namespace, and after this change that is no
  * longer harmless: the key does not resolve, and a roll-call row would render a
  * raw `shared.readiness.status.blocked` beside a diver's name.
  *
@@ -90,34 +90,11 @@ function reachableModules(): string[] {
  * shape-matching regex would get wrong.
  */
 function staffNamespacesIn(file: string, known: readonly string[]): string[] {
-  const source = withoutComments(readFileSync(path.join(ROOT, file), "utf8"));
+  const source = readFileSync(path.join(ROOT, file), "utf8");
   const found = [...source.matchAll(/["`]([a-zA-Z]+)\.[a-zA-Z$][\w.${}]*["`]/g)]
     .map((match) => match[1] as string)
     .filter((namespace) => known.includes(namespace));
   return [...new Set(found)].sort();
-}
-
-/**
- * Source with its block comments and whole-line `//` comments removed.
- *
- * **Because prose about a namespace is not a use of it.** The scan below reads
- * raw text, so a docblock saying `` `trips.json` `` reads as a reference to the
- * `trips` namespace and fails this suite — which is exactly what happened when
- * issue #1359's explanation of *why* `trips` was dropped was written into
- * `offline-manifest-messages.ts`. The guard is about what the code reaches;
- * a comment reaches nothing.
- *
- * Deliberately conservative: only `/* … *\/` blocks and lines whose first
- * non-space characters are `//` or `*`. A trailing `//` on a line of code is
- * left alone, because stripping it would need to know where the strings are,
- * and this over-approximates on purpose (see `reachableModules`).
- */
-function withoutComments(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .split("\n")
-    .filter((line) => !/^\s*(\/\/|\*)/.test(line))
-    .join("\n");
 }
 
 describe("the offline manifest's message bundle", () => {
@@ -152,7 +129,7 @@ describe("the offline manifest's message bundle", () => {
   /**
    * **The actual regression path**, and the one nothing else here covers.
    *
-   * The narrow module's messages come from its own six JSON imports, so nothing
+   * The narrow module's messages come from its own four JSON imports, so nothing
    * the view imports can change them — which means re-adding
    * `import { staffTranslator } from "@/i18n/staff-messages"` to the view
    * brings 107 KB back with every other test in this file still green. The

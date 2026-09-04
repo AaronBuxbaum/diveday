@@ -825,6 +825,18 @@ new domain concept, define it here in the same PR.
   Today nudge. It is never a boarding blocker: a missing contact is an administrative gap, not a
   fitness-to-dive gap, so it surfaces only as a low-priority, dock-settleable nudge on boats within
   three days.
+- **Emergency reference** — the **shop's** own card of numbers a crew dials *during* an incident:
+  its nearest chamber, the dive-accident hotline, the coastguard, the vessel's name, who to raise on
+  shore, and the shop's emergency action plan as prose (`src/lib/emergency-reference.ts`, stored
+  whole on `shops.emergency_reference`). It is **not** the *emergency contact* above, and the two
+  are now read within one scroll of each other on the offline manifest, so the distinction is worth
+  holding: an emergency contact belongs to **one diver** and is the person you phone *afterwards*;
+  an emergency reference belongs to **the shop** and is who you phone *during*. DiveDay authors
+  none of its values and ships no defaults — the nearest chamber differs by dock and the hotline
+  differs by country, so a plausible wrong number here costs the minute it takes to find out. Free
+  text throughout, including the phone lines: an international dive line is not a `tel:`-shaped
+  string until the shop writes it, and nothing on this card links, dials, escalates, or opens an
+  incident. It is a laminated card retyped, priced at zero words of DiveDay's own.
 - **Roll-call event** — an append-only record that a staff member marked one booking boarded,
   not boarded, or cleared, including the time and who recorded it. It carries **no free text**: the
   note field was removed in 2026-08, which also means a roll call records *that* a diver did not
