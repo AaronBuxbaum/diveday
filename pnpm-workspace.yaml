@@ -15,14 +15,6 @@ publicHoistPattern:
   - 'detect-libc'
   - 'semver'
 
-supportedArchitectures:
-  cpu:
-    - arm64
-    - x64
-  os:
-    - darwin
-    - linux
-
 update:
   ignoreDeps:
     - '@types/node'
