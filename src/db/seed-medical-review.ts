@@ -15,6 +15,33 @@ const DEMO_NOT_CLEARED_EMAIL = "medical-not-cleared-demo@demo.invalid";
 type MedicalOutcome = "awaiting" | "not_cleared";
 
 /**
+ * Fixed ids for these two waiver records, and the reason they are the only
+ * seeded waiver rows that carry one.
+ *
+ * Both divers sign at `at(-1, 10)` — the same instant, by construction, because
+ * they are two simultaneous facts a shop reads side by side. The signature log
+ * (`listWaiverIntegrityAudit`) orders by `signedAt` then `id`, which is a total
+ * order on any real dataset but not on this one: `waiver_records.id` is
+ * `defaultRandom()`, so the two rows swapped places on every re-seed and the
+ * three waiver surfaces flip-flopped in the visual suite forever — 8 changed
+ * captures on a pull request that touched no rendering code at all (#1376).
+ *
+ * The tiebreak is not the bug. `desc(id)` is right for production, where an id
+ * is written once and never moves; ADR 20260731-ci-parallelization-resources-build-concurrency
+ * rests the whole visual fleet on this seed being deterministic, and a random
+ * primary key on two rows that tie is the seed breaking that promise. So the
+ * fix is here, at the source, and not a `masked:` region over the two rows —
+ * which is the same rule as "freeze the clock at the harness boundary, never
+ * mask the moving text" (AGENTS.md).
+ *
+ * Any future diver added to this scenario needs one of these too.
+ */
+export const HELD_DIVER_WAIVER_IDS = {
+  "medical-review": "0de3c0de-1eaf-4b0a-9c0f-000000000101",
+  "medical-not-cleared": "0de3c0de-1eaf-4b0a-9c0f-000000000102",
+} as const;
+
+/**
  * Both status-only medical-review scenarios for demo and staff training: a
  * referral still waiting on a physician, and one a physician refused.
  *
@@ -81,7 +108,7 @@ async function seedHeldDiver(
   diverSpec: {
     fullName: string;
     email: string;
-    tokenSuffix: string;
+    tokenSuffix: keyof typeof HELD_DIVER_WAIVER_IDS;
     identifier: string;
     emergencyContactName: string;
     emergencyContactPhone: string;
@@ -164,6 +191,9 @@ async function seedHeldDiver(
   const evaluatedOn = at(-1, 12).toISOString().slice(0, 10);
   const declined = diverSpec.outcome === "not_cleared";
   await db.insert(waiverRecords).values({
+    // Pinned, not `defaultRandom()`. See HELD_DIVER_WAIVER_IDS above: these two
+    // rows tie on `signedAt`, so a random id is what decides their order.
+    id: HELD_DIVER_WAIVER_IDS[diverSpec.tokenSuffix],
     shopId,
     bookingId: booking.id,
     personId: diver.id,
