@@ -6,7 +6,7 @@ import { getMedicalClearanceDocument } from "@/db/waivers";
 import { auth } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { log } from "@/lib/log";
-import { readS3Object, s3StorageConfigSchema } from "@/lib/storage";
+import { mediaStorageConfigFromEnvironment, readS3Object } from "@/lib/storage";
 
 const NO_STORE = { "Cache-Control": "private, no-store" } as const;
 
@@ -85,13 +85,7 @@ export async function GET(
   const document = await getMedicalClearanceDocument(db, shop.id, recordId);
   if (!document) return notFound();
 
-  const parsed = s3StorageConfigSchema.safeParse({
-    bucket: process.env.MEDIA_S3_BUCKET,
-    region: process.env.MEDIA_S3_REGION,
-    accessKeyId: process.env.MEDIA_S3_ACCESS_KEY_ID,
-    secretAccessKey: process.env.MEDIA_S3_SECRET_ACCESS_KEY,
-    publicUrlBase: process.env.MEDIA_PUBLIC_URL_BASE,
-  });
+  const parsed = mediaStorageConfigFromEnvironment();
   if (!parsed.success) {
     // Storage is not configured in this environment — the same absence that
     // makes the *upload* a no-op. A 404 rather than a 500: there is genuinely

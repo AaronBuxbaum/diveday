@@ -66,10 +66,10 @@ function everythingInPlace() {
 }
 
 beforeEach(() => {
-  vi.stubEnv("MEDIA_S3_BUCKET", "diveday-media");
-  vi.stubEnv("MEDIA_S3_REGION", "us-east-1");
-  vi.stubEnv("MEDIA_S3_ACCESS_KEY_ID", "AKIA-test");
-  vi.stubEnv("MEDIA_S3_SECRET_ACCESS_KEY", "secret");
+  vi.stubEnv("MEDIA_BUCKET_NAME", "diveday-media");
+  vi.stubEnv("MEDIA_AWS_REGION", "us-east-1");
+  vi.stubEnv("MEDIA_AWS_ACCESS_KEY_ID", "AKIA-test");
+  vi.stubEnv("MEDIA_AWS_SECRET_ACCESS_KEY", "secret");
   vi.stubEnv("MEDIA_PUBLIC_URL_BASE", "https://media.example.com");
   vi.clearAllMocks();
 });
@@ -166,7 +166,7 @@ describe("GET /api/medical-clearances/[recordId]", () => {
     // document to hand back and the shop has no action to take, so an error
     // page would be furniture over a fact.
     everythingInPlace();
-    vi.stubEnv("MEDIA_S3_BUCKET", "");
+    vi.stubEnv("MEDIA_BUCKET_NAME", "");
     await expectRefused(await GET(request(), params()));
   });
 

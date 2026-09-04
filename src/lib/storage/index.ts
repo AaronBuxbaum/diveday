@@ -113,17 +113,38 @@ const disabledImageStorageProvider: ImageStorageProvider = {
   },
 };
 
-export function imageStorageProviderFromEnvironment(
-  env: StorageEnvironment = process.env,
-  fetchImpl: Fetch = fetch,
-): ImageStorageProvider {
-  const config = s3StorageConfigSchema.safeParse({
+/**
+ * **The one reading of the media storage environment** (issue #1283).
+ *
+ * Four variable names, and until this there were three copies of them: two here
+ * and one in `/api/medical-clearances/[recordId]`, which had them wrong. That
+ * route read `MEDIA_S3_BUCKET`, `MEDIA_S3_REGION`, `MEDIA_S3_ACCESS_KEY_ID` and
+ * `MEDIA_S3_SECRET_ACCESS_KEY` -- four names that appear nowhere else in the
+ * repository, are produced by no stack output, and are declared in no registry.
+ * The parse therefore failed in every deployed environment, and the route's own
+ * "storage is not configured" branch turned that into a 404. A shop stored the
+ * most sensitive document the product holds and could never open it, which is
+ * the precise failure that route exists to remove.
+ *
+ * It stayed green because its test stubbed the same wrong names. So the fix is
+ * not four renames -- it is one accessor, so that a fifth caller cannot invent a
+ * fifth spelling.
+ */
+export function mediaStorageConfigFromEnvironment(env: StorageEnvironment = process.env) {
+  return s3StorageConfigSchema.safeParse({
     bucket: env.MEDIA_BUCKET_NAME,
     region: env.MEDIA_AWS_REGION,
     accessKeyId: env.MEDIA_AWS_ACCESS_KEY_ID,
     secretAccessKey: env.MEDIA_AWS_SECRET_ACCESS_KEY,
     publicUrlBase: env.MEDIA_PUBLIC_URL_BASE,
   });
+}
+
+export function imageStorageProviderFromEnvironment(
+  env: StorageEnvironment = process.env,
+  fetchImpl: Fetch = fetch,
+): ImageStorageProvider {
+  const config = mediaStorageConfigFromEnvironment(env);
   return config.success
     ? s3ImageStorageProvider(config.data, fetchImpl)
     : disabledImageStorageProvider;
@@ -142,13 +163,7 @@ export async function deleteStoredImageTracked(
   env: StorageEnvironment = process.env,
   fetchImpl: Fetch = fetch,
 ): Promise<DeleteImageResult> {
-  const config = s3StorageConfigSchema.safeParse({
-    bucket: env.MEDIA_BUCKET_NAME,
-    region: env.MEDIA_AWS_REGION,
-    accessKeyId: env.MEDIA_AWS_ACCESS_KEY_ID,
-    secretAccessKey: env.MEDIA_AWS_SECRET_ACCESS_KEY,
-    publicUrlBase: env.MEDIA_PUBLIC_URL_BASE,
-  });
+  const config = mediaStorageConfigFromEnvironment(env);
   if (!config.success) return { ok: true };
   return deleteS3Image(url, config.data, fetchImpl);
 }

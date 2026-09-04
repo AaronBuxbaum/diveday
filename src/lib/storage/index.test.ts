@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import sharp from "sharp";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
@@ -7,6 +9,7 @@ import {
   imageStorageProviderFromEnvironment,
   isManagedStorageUrl,
   MAX_COURSE_IMAGE_BYTES,
+  mediaStorageConfigFromEnvironment,
   readS3Object,
   storeCourseImage,
   storeImportReceiptDocument,
@@ -592,5 +595,67 @@ describe("readS3Object", () => {
       fetchImpl as unknown as typeof fetch,
     );
     expect(result).toEqual({ ok: false, error: "provider responded 403" });
+  });
+});
+
+/**
+ * **The variable names the media path reads are the ones the registry
+ * declares** (issue #1283).
+ *
+ * `/api/medical-clearances/[recordId]` read `MEDIA_S3_BUCKET`,
+ * `MEDIA_S3_REGION`, `MEDIA_S3_ACCESS_KEY_ID` and `MEDIA_S3_SECRET_ACCESS_KEY`
+ * -- four names produced by no stack output and declared in no registry. The
+ * parse failed in every deployed environment and the route's own "not
+ * configured" branch turned that into a 404, so a shop stored the most
+ * sensitive document the product holds and could never open it.
+ *
+ * It was green because the route's test stubbed the same wrong names. Two
+ * copies of a mistake agreeing with each other is not a passing test, so this
+ * asserts against `config/env-registry.mjs` -- the one place that says which
+ * variables exist and who produces them -- rather than against another literal
+ * in the tree.
+ */
+describe("mediaStorageConfigFromEnvironment", () => {
+  const REQUIRED = [
+    "MEDIA_BUCKET_NAME",
+    "MEDIA_AWS_REGION",
+    "MEDIA_AWS_ACCESS_KEY_ID",
+    "MEDIA_AWS_SECRET_ACCESS_KEY",
+    "MEDIA_PUBLIC_URL_BASE",
+  ] as const;
+
+  it("reads names the environment registry actually declares", () => {
+    const registry = readFileSync(path.join(process.cwd(), "config/env-registry.mjs"), "utf8");
+    for (const name of REQUIRED) {
+      expect(registry, `${name} is not declared in config/env-registry.mjs`).toContain(
+        `key: "${name}"`,
+      );
+    }
+  });
+
+  it("parses a fully configured environment", () => {
+    const parsed = mediaStorageConfigFromEnvironment({
+      MEDIA_BUCKET_NAME: "diveday-media",
+      MEDIA_AWS_REGION: "us-east-1",
+      MEDIA_AWS_ACCESS_KEY_ID: "AKIA-test",
+      MEDIA_AWS_SECRET_ACCESS_KEY: "secret",
+      MEDIA_PUBLIC_URL_BASE: "https://media.example.com",
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  /**
+   * The exact shape of the bug: an environment carrying the names the route
+   * used to read, and nothing else, must not look configured.
+   */
+  it("does not accept the MEDIA_S3_* names the medical-clearance route used to read", () => {
+    const parsed = mediaStorageConfigFromEnvironment({
+      MEDIA_S3_BUCKET: "diveday-media",
+      MEDIA_S3_REGION: "us-east-1",
+      MEDIA_S3_ACCESS_KEY_ID: "AKIA-test",
+      MEDIA_S3_SECRET_ACCESS_KEY: "secret",
+      MEDIA_PUBLIC_URL_BASE: "https://media.example.com",
+    });
+    expect(parsed.success).toBe(false);
   });
 });
