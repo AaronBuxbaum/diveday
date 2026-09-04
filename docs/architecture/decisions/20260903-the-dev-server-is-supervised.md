@@ -5,8 +5,10 @@
 
 ## Context
 
-`next dev` in this app has no steady-state memory footprint. It grows with every route it serves,
-gives back only part of it, and has no ceiling of its own. Measured on 2026-09-03 against Next
+`next dev` in this app has no steady-state memory footprint. It grows with every route it serves
+and gives back only part of it. There *is* a ceiling — Next never unloads a page's modules once
+it has served them, so the footprint converges when every route has been requested — but on this
+checkout that ceiling sits above the container, which costs the same as not having one. Measured on 2026-09-03 against Next
 16.3.4 with a warm `.next`, one route at a time, reading RSS of the whole `next dev` tree:
 
 | after | RSS |
@@ -124,7 +126,8 @@ dipped below the line — it always dips, because a restarted server boots at ab
 reading that as relief made the first version of the check never fire.
 
 A restart is announced in the terms that matter to whoever reads it: what the number was, what the
-budget is, that Next's dev server grows without a ceiling, that the filesystem cache survives so the
+budget is, that Next's dev server never unloads a route it has served, that the filesystem cache
+survives so the
 next page is a warm compile, and that nothing the reader was doing caused it. Turbopack's cache and
 `.pglite` both live on disk, so nothing is lost but any request in flight — which is strictly better
 than losing the whole server to a kill nobody can see. A restart waits for the old child to exit

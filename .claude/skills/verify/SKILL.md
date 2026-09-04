@@ -58,7 +58,8 @@ this; the script exists so scratch `.shots*.mjs` files stop reaching the index.
 **A long capture run kills the dev server, and the corpse takes the next one with it.** Two facts
 worth knowing before you point that script at thirty paths:
 
-- A Turbopack `next-server` grows without a ceiling. On a memory-capped container it is OOM-killed
+- A Turbopack `next-server` never unloads a route it has served. On a memory-capped container it is
+  OOM-killed
   outright at roughly **thirty page renders** in 16 GB — well inside one capture matrix over a
   handful of staff pages. `scripts/dev-server.mjs` restarts it before the kernel does where it can,
   and `screenshot.mjs` shoots that path again by itself; a kill it cannot come back from is now
