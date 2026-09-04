@@ -60,15 +60,27 @@ function mediaDistribution(): DistributionConfig {
  * exactly these, and the edge must account for exactly these (issue #1352).
  */
 function prefixesTheAppWrites(): string[] {
+  // `MEDIA_KEY_PREFIXES`, not the nine `keyPrefix:` call sites it types.
+  //
+  // Two reasons, and the second bit while this change was being written. A
+  // prefix that never appears as a call-site literal --
+  // `provider.upload({ keyPrefix: someVariable })`, both the provider and its
+  // factory being exported -- was invisible to a call-site scan, so the object
+  // would store and then be unreachable at the edge with every test green:
+  // the same shape as the bug this file now guards (issue #1352), one layer
+  // down. `keyPrefix` is typed to that array now, so the door is shut at
+  // compile time. And a scan for `keyPrefix: "..."` reads *prose* too -- a
+  // docblock in that file naming a hypothetical prefix was duly counted as a
+  // tenth one.
   const source = readFileSync(path.join(process.cwd(), "src/lib/storage/index.ts"), "utf8");
-  const found = [...source.matchAll(/keyPrefix:\s*"([^"]+)"/g)].map((match) => match[1] as string);
-  // An empty read would make every assertion below vacuously true, which is the
-  // one way a test that reads a file is worse than one that restates a list. A
-  // refactor to a shared constant, or a rename of the property, lands here
-  // rather than in a silently green suite.
-  expect(found.length, "found no keyPrefix literals in src/lib/storage/index.ts").toBeGreaterThan(
-    5,
-  );
+  const block = source.match(/export const MEDIA_KEY_PREFIXES = \[([^\]]+)\] as const;/);
+  expect(block, "MEDIA_KEY_PREFIXES not found in src/lib/storage/index.ts").not.toBeNull();
+  const found = [...(block?.[1] ?? "").matchAll(/"([^"]+)"/g)].map((match) => match[1] as string);
+  // A read that came back empty or short would make every assertion below
+  // vacuously true -- the one way a test that reads a file is worse than one
+  // that restates a list. Pinned to the exact count rather than a floor, so a
+  // new prefix has to come here and choose a side.
+  expect(found.length, "MEDIA_KEY_PREFIXES did not parse as nine prefixes").toBe(9);
   return [...new Set(found)].sort();
 }
 
@@ -127,8 +139,11 @@ describe("media distribution", () => {
     // Stated as a literal so that moving a prefix from private to public is a
     // visible edit to this line rather than a silent re-derivation.
     expect(privateNamespaces).toEqual(["import-receipts", "import-waivers", "medical-clearances"]);
+    // And nothing is unaccounted for. There is deliberately no third assertion
+    // that the two sets are disjoint: `privateNamespaces` is `written` minus
+    // `served`, so it cannot intersect `served` by construction, and an
+    // assertion that cannot fail reads like a guarantee while proving nothing.
     expect([...served, ...privateNamespaces].sort()).toEqual(written);
-    expect(served.filter((prefix) => privateNamespaces.includes(prefix))).toEqual([]);
   });
 
   it("has no behaviour that could reach an imported scan, a receipt, or a physician's evaluation", () => {

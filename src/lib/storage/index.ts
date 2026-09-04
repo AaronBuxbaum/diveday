@@ -17,9 +17,38 @@ export type StoredImage =
   | { status: "not_configured" }
   | { status: "failed" };
 
+/**
+ * **Every key prefix this module may write**, as a closed set (issue #1352).
+ *
+ * Typed rather than free text because two lists in `infra/lib/infra-stack.ts`
+ * are derived from it -- the CloudFront behaviours that decide what is served,
+ * and the media uploader's IAM write grant -- and `media-distribution.test.ts`
+ * reads it to assert both. While `keyPrefix` was `string`, any module could
+ * call `provider.upload({ keyPrefix: "gear-photos", ... })` through a door
+ * neither list knew about: the object would store, then be 403'd by IAM and
+ * unreachable at the edge, and both tests would pass. That is exactly how
+ * `shop-heroes` and `arrival` went missing, one layer down.
+ *
+ * A new prefix is now a compile-visible edit to this array, and the decision it
+ * forces -- public at the edge, or private -- is the one worth forcing.
+ */
+export const MEDIA_KEY_PREFIXES = [
+  "arrival",
+  "courses",
+  "dive-sites",
+  "import-receipts",
+  "import-waivers",
+  "medical-clearances",
+  "recap",
+  "shop-heroes",
+  "shop-logos",
+] as const;
+
+export type MediaKeyPrefix = (typeof MEDIA_KEY_PREFIXES)[number];
+
 export type ImageUpload = {
   /** Stable-ish key prefix, e.g. "courses", "recap"; a random suffix keeps names unique. */
-  keyPrefix: string;
+  keyPrefix: MediaKeyPrefix;
   filename: string;
   contentType: string;
   /** A `File`'s raw bytes on the way in; `processImage`'s re-encoded output on the way out. */
@@ -207,10 +236,25 @@ export async function storeShopHeroImage(
  * A shop-authored arrival landmark photo -- what to look for when you get
  * there -- in its own public-media namespace.
  *
- * Rendered by `TripArrivalCard` on the public trip page and on
- * `/ready/[token]`, both fetched by a diver's own browser, so `arrival` is
- * public at the edge for the same reason the hero above it is, and went missing
- * in the same way.
+ * **"Public at the edge" is not "shown to the public", and the difference is
+ * deliberate here.** `TripArrivalCard` renders on `/ready/[token]` and on the
+ * staff departure page, never on the anonymous trip page: that page passes
+ * `revealArrivalDetails={false}`, and `TripChangeLedger` reports only *that*
+ * the arrival photo changed while withholding the value. A shop says when and
+ * how much in the open, and where to meet only to somebody holding a booking.
+ *
+ * So the prefix is served from CloudFront for the same mechanical reason
+ * `recap/` is, and it is the same reason `medical-clearances/` is not:
+ * `next/image` fetches the remote URL server-side with no credentials, so an
+ * object no anonymous request can fetch is an object that cannot render at all
+ * -- including on the capability page it belongs to. What protects it is the
+ * 128 bits of entropy in its key, exactly as for a diver's recap photo. A
+ * gated route with its own role check and audit row is the other answer, and
+ * it is right for a physician's letter and wrong for a photograph of a dock.
+ *
+ * Do not read this as licence to render it anonymously. The prefix having an
+ * edge behaviour is what makes the capability page work; it is not a statement
+ * that the address is public.
  */
 export async function storeArrivalImage(
   upload: Omit<ImageUpload, "keyPrefix">,
@@ -238,7 +282,7 @@ export async function storeImportWaiverDocument(
   upload: Omit<ImageUpload, "keyPrefix">,
   provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
 ): Promise<StoredImage> {
-  const scoped = { ...upload, keyPrefix: "import-waivers" };
+  const scoped: ImageUpload = { ...upload, keyPrefix: "import-waivers" };
   if (looksLikePdf(upload.bytes)) {
     return storePdfDocument(scoped, MAX_IMAGE_BYTES, provider);
   }
@@ -261,7 +305,7 @@ export async function storeMedicalClearanceDocument(
   upload: Omit<ImageUpload, "keyPrefix">,
   provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
 ): Promise<StoredImage> {
-  const scoped = { ...upload, keyPrefix: "medical-clearances" };
+  const scoped: ImageUpload = { ...upload, keyPrefix: "medical-clearances" };
   if (looksLikePdf(upload.bytes)) {
     return storePdfDocument(scoped, MAX_IMAGE_BYTES, provider);
   }
@@ -279,7 +323,7 @@ export async function storeImportReceiptDocument(
   upload: Omit<ImageUpload, "keyPrefix">,
   provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
 ): Promise<StoredImage> {
-  const scoped = { ...upload, keyPrefix: "import-receipts" };
+  const scoped: ImageUpload = { ...upload, keyPrefix: "import-receipts" };
   if (looksLikePdf(upload.bytes)) {
     return storePdfDocument(scoped, MAX_IMAGE_BYTES, provider);
   }

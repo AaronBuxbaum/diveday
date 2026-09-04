@@ -490,10 +490,11 @@ export const ENV_GROUPS = [
       "",
       "Reads go through CloudFront, never the bucket: the bucket blocks all public",
       "access and grants GetObject only to that distribution, whose behaviours",
-      "enumerate the four public prefixes (courses, recap, dive-sites, shop-logos).",
-      "The same bucket holds import-waivers/ and import-receipts/, which are medical",
-      "and financial records read only server-side, so nothing at the edge may reach",
-      "them (issue #1013).",
+      "enumerate the six public prefixes (arrival, courses, dive-sites, recap,",
+      "shop-heroes, shop-logos). The same bucket holds import-waivers/,",
+      "import-receipts/ and medical-clearances/ -- medical and financial records and",
+      "physicians' evaluations, read only server-side -- so nothing at the edge may",
+      "reach them (issues #1013, #1252, #1352).",
     ],
     keys: [
       {
