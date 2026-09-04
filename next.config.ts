@@ -2,6 +2,7 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 import { LEGACY_PUBLIC_SHOP_REDIRECTS } from "./src/lib/public-routes";
 import { securityHeaderRules } from "./src/lib/security-headers";
+import { managedImageRemotePatterns } from "./src/lib/storage/blob-host";
 
 const isE2EBuild = process.env.DIVEDAY_E2E === "1";
 
@@ -165,37 +166,36 @@ const nextConfig: NextConfig = {
     // with a baseline resolved. `pnpm check:image-sizes` covers that gap with
     // arithmetic instead of pixels; this line is why it has to.
     unoptimized: isE2EBuild,
-    // Every photo this app stores (certification cards, course media, recap
-    // photos, dive-site briefings) lands in Vercel Blob behind a per-store
-    // subdomain of this suffix (`BLOB_PUBLIC_HOSTNAME_SUFFIX`,
-    // src/lib/storage/blob-host.ts) — `*` matches exactly that one subdomain
-    // segment. Anything else (a shop-pasted third-party URL that predates
-    // upload-based media, or a legacy Commons URL a dive-site row still
-    // carries) is rendered unoptimized or as a plain `<img>` rather than
-    // widened to a blanket pattern here.
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "*.s3.*.amazonaws.com",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "*.s3.amazonaws.com",
-        pathname: "/**",
-      },
-      {
-        // Where media is actually read from since AWS-8's reading half landed:
-        // the bucket blocks all public access and grants GetObject only to this
-        // distribution, so `MEDIA_PUBLIC_URL_BASE` is a CloudFront domain and
-        // every stored `*_image_url` is one too (issue #1013). The two S3
-        // patterns above stay for a deployment that overrides the base back to
-        // the bucket endpoint. Vercel Blob's host is gone with the provider.
-        protocol: "https",
-        hostname: "*.cloudfront.net",
-        pathname: "/**",
-      },
-    ],
+    // **The optimizer fetches from the distribution we deployed, and nowhere
+    // else** (issue #1358).
+    //
+    // These three patterns were `*.s3.*.amazonaws.com`, `*.s3.amazonaws.com`
+    // and `*.cloudfront.net`, each over `/**` — every public bucket and every
+    // distribution on the internet. `/_next/image?url=…&w=…&q=…` downloads,
+    // decodes, re-encodes and serves whatever it is pointed at, which made this
+    // the app's most expensive request available to anyone with a URL and no
+    // account, and made DiveDay's origin the apparent fetcher of it.
+    //
+    // `managedImageRemotePatterns` is the same list `isManagedStorageUrl`
+    // already keeps (src/lib/storage/blob-host.ts): the CloudFront domain from
+    // `MEDIA_PUBLIC_URL_BASE`, plus the two virtual-hosted forms of
+    // `MEDIA_BUCKET_NAME` for a deployment that overrides the base back to the
+    // bucket. Same three shapes as before, named rather than wildcarded — so a
+    // URL the storage seam would refuse to store is one the optimizer will not
+    // fetch. Read there for what an unconfigured environment gets, and why an
+    // empty allowlist is the right answer rather than a fallback wildcard.
+    //
+    // This is evaluated at build time, and `MEDIA_PUBLIC_URL_BASE` reaches both
+    // local and Vercel builds (config/env-registry.mjs), so a production build
+    // has it. A production build without it already served 403s from the direct
+    // bucket endpoint — the registry's own `absent:` note — so pinning costs
+    // that deployment nothing it had.
+    //
+    // The CSP's `img-src` (src/lib/content-security-policy.ts) stays wildcarded
+    // on purpose and is not the same decision: it is built in the edge layer,
+    // which cannot read this configuration, and it is a backstop rather than an
+    // allowlist.
+    remotePatterns: managedImageRemotePatterns(),
   },
   // TypeScript 7 is the native (Go) compiler and no longer exposes the JS
   // compiler API Next used for its in-build type check. Next drives it through

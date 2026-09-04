@@ -9,6 +9,7 @@ import {
   imageStorageProviderFromEnvironment,
   isManagedStorageUrl,
   MAX_COURSE_IMAGE_BYTES,
+  managedImageRemotePatterns,
   mediaStorageConfigFromEnvironment,
   readS3Object,
   storeCourseImage,
@@ -298,6 +299,76 @@ describe("isManagedStorageUrl", () => {
     expect(
       isManagedStorageUrl("https://diveday-media.s3.us-east-1.amazonaws.com/courses/x.jpg", {}),
     ).toBe(false);
+  });
+});
+
+/**
+ * **The `next/image` allowlist, which is the same list one layer out**
+ * (issue #1358).
+ *
+ * `next.config.ts` calls this at build time. It carried three wildcards until
+ * 2026-09-04 — `*.s3.*.amazonaws.com`, `*.s3.amazonaws.com`, `*.cloudfront.net`
+ * — so `/_next/image?url=…` would fetch and re-serve any object behind any
+ * public bucket or any distribution on the internet. The cases below are the
+ * `isManagedStorageUrl` cases above, asked of the allowlist instead of the
+ * predicate, because the whole point of deriving one from the other is that
+ * they cannot answer differently.
+ */
+describe("managedImageRemotePatterns", () => {
+  it("names the configured bucket's two endpoints, and nothing wildcarded", () => {
+    expect(managedImageRemotePatterns(mockS3Env)).toEqual([
+      { protocol: "https", hostname: "diveday-media.s3.amazonaws.com", port: "", pathname: "/**" },
+      {
+        protocol: "https",
+        hostname: "diveday-media.s3.us-east-1.amazonaws.com",
+        port: "",
+        pathname: "/**",
+      },
+    ]);
+  });
+
+  it("names the deployed distribution when there is one", () => {
+    const env = { ...mockS3Env, MEDIA_PUBLIC_URL_BASE: "https://d1234abcd.cloudfront.net" };
+    expect(managedImageRemotePatterns(env)[0]).toEqual({
+      protocol: "https",
+      hostname: "d1234abcd.cloudfront.net",
+      port: "",
+      pathname: "/**",
+    });
+  });
+
+  /**
+   * The finding itself. A pattern matches by hostname, so the assertion that
+   * bites is that no hostname contains a `*` — a `*.cloudfront.net` here is an
+   * open image proxy however it got written.
+   */
+  it("emits no wildcard hostname, which is the whole of the fix", () => {
+    const env = { ...mockS3Env, MEDIA_PUBLIC_URL_BASE: "https://d1234abcd.cloudfront.net" };
+    const hostnames = managedImageRemotePatterns(env).map((pattern) => pattern.hostname);
+    expect(hostnames).toHaveLength(3);
+    for (const hostname of hostnames) expect(hostname).not.toContain("*");
+  });
+
+  it("refuses a cleartext base rather than letting the optimizer downgrade", () => {
+    const env = { ...mockS3Env, MEDIA_PUBLIC_URL_BASE: "http://media.diveday.test" };
+    expect(managedImageRemotePatterns(env).map((pattern) => pattern.hostname)).not.toContain(
+      "media.diveday.test",
+    );
+  });
+
+  /**
+   * An empty allowlist, not a fallback wildcard. Nothing the seed or the
+   * bundled templates render is remote — every one is a root-relative path
+   * under `public/` — and an upload with no storage configured stores no URL at
+   * all, so there is nothing for a pattern to permit.
+   */
+  it("allows nothing at all when no media storage is configured", () => {
+    expect(managedImageRemotePatterns({})).toEqual([]);
+  });
+
+  it("survives an unparseable base instead of failing the build", () => {
+    const env = { ...mockS3Env, MEDIA_PUBLIC_URL_BASE: "not a url" };
+    expect(managedImageRemotePatterns(env)).toHaveLength(2);
   });
 });
 
