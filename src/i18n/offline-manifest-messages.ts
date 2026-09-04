@@ -1,0 +1,78 @@
+import { createTranslator } from "next-intl";
+import enManifest from "./locales/en-US/staff/manifest.json";
+import enShared from "./locales/en-US/staff/shared.json";
+import enTrips from "./locales/en-US/staff/trips.json";
+import esManifest from "./locales/es-ES/staff/manifest.json";
+import esShared from "./locales/es-ES/staff/shared.json";
+import esTrips from "./locales/es-ES/staff/trips.json";
+import { translatorOnError } from "./on-error";
+import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./settings";
+
+/**
+ * **The three staff namespaces the offline boat manifest reads** (issue #1353).
+ *
+ * `OfflineManifestView` is a Client Component -- it has to be, because the
+ * whole point is a manifest that opens from cache on a phone with no signal at
+ * the rail -- and it imported `staffTranslator`. That module statically imports
+ * both locale barrels, so the route shipped **31 namespaces in two locales, 62
+ * JSON modules**, to render three. At 438.9 KB gzip first load it was the
+ * heaviest page in the app by a wide margin, against a 237.3 KB floor, and the
+ * next largest browser-byte item was about ten times smaller.
+ *
+ * **Its own module, not a second export beside `staffTranslator`.** Putting the
+ * narrow composer in `staff-messages.ts` would leave the saving resting on
+ * export-level tree-shaking of `STAFF_MESSAGES` -- which may well work, and
+ * which nothing here would verify. A separate module that never imports the
+ * barrels cannot regress that way: the bytes are absent because the import is.
+ *
+ * Adding a namespace here is deliberate and costs a diver at the rail its
+ * download. The set is pinned in `offline-manifest-messages.test.ts` against
+ * the keys the view and its helpers actually reach.
+ */
+const OFFLINE_MANIFEST_MESSAGES = {
+  "en-US": { manifest: enManifest, shared: enShared, trips: enTrips },
+  "es-ES": { manifest: esManifest, shared: esShared, trips: esTrips },
+} as const satisfies Record<DiverLocale, unknown>;
+
+export type OfflineManifestMessages = (typeof OFFLINE_MANIFEST_MESSAGES)["en-US"];
+
+/**
+ * A translator over those three namespaces and nothing else.
+ *
+ * Same shape as `staffTranslator`, deliberately: types inferred from the
+ * `messages` argument rather than from `AppConfig`, so this coexists with both
+ * the diver and staff translators without widening either one's key space.
+ */
+export function offlineManifestTranslator(locale: string | null | undefined) {
+  const resolved = toDiverLocale(locale);
+  return createTranslator({
+    locale: resolved,
+    messages: OFFLINE_MANIFEST_MESSAGES[resolved] as OfflineManifestMessages,
+    onError: translatorOnError,
+    getMessageFallback: ({ key }) => offlineManifestFallback(key),
+  });
+}
+
+export type OfflineManifestTranslator = ReturnType<typeof offlineManifestTranslator>;
+
+/**
+ * The English string for a missing key -- walking **these three namespaces**,
+ * never the whole staff bundle.
+ *
+ * This is the half of the change that is easy to get silently wrong. Reusing
+ * `staffFallbackMessage` from `staff-messages.ts` would pull all 31 en-US
+ * namespaces back in at runtime through this one reference, turning roughly
+ * -109 KB gzip into -57 KB, and no guard in the repository reports the
+ * difference. The duplication is a few lines; the alternative is half the
+ * saving, invisibly.
+ */
+function offlineManifestFallback(key: string): string {
+  const value = key
+    .split(".")
+    .reduce<unknown>(
+      (node, part) =>
+        node && typeof node === "object" ? (node as Record<string, unknown>)[part] : undefined,
+      OFFLINE_MANIFEST_MESSAGES[DEFAULT_DIVER_LOCALE],
+    );
+  return typeof value === "string" ? value : key;
+}
