@@ -52,6 +52,26 @@ function mediaDistribution(): DistributionConfig {
   return (media.Properties as { DistributionConfig: DistributionConfig }).DistributionConfig;
 }
 
+/**
+ * Every key prefix the storage layer writes, read off its source rather than
+ * restated here.
+ *
+ * Module scope because two describes need it: the write grant must cover
+ * exactly these, and the edge must account for exactly these (issue #1352).
+ */
+function prefixesTheAppWrites(): string[] {
+  const source = readFileSync(path.join(process.cwd(), "src/lib/storage/index.ts"), "utf8");
+  const found = [...source.matchAll(/keyPrefix:\s*"([^"]+)"/g)].map((match) => match[1] as string);
+  // An empty read would make every assertion below vacuously true, which is the
+  // one way a test that reads a file is worse than one that restates a list. A
+  // refactor to a shared constant, or a rename of the property, lands here
+  // rather than in a silently green suite.
+  expect(found.length, "found no keyPrefix literals in src/lib/storage/index.ts").toBeGreaterThan(
+    5,
+  );
+  return [...new Set(found)].sort();
+}
+
 describe("media distribution", () => {
   /**
    * The account cleared CloudFront's verification gate, so the committed
@@ -66,9 +86,49 @@ describe("media distribution", () => {
     expect(committed.context.cloudfrontVerified).toBe(true);
   });
 
-  it("serves exactly the four public prefixes", () => {
+  it("serves exactly the six public prefixes", () => {
     const patterns = (mediaDistribution().CacheBehaviors ?? []).map((b) => b.PathPattern).sort();
-    expect(patterns).toEqual(["courses/*", "dive-sites/*", "recap/*", "shop-logos/*"]);
+    expect(patterns).toEqual([
+      "arrival/*",
+      "courses/*",
+      "dive-sites/*",
+      "recap/*",
+      "shop-heroes/*",
+      "shop-logos/*",
+    ]);
+  });
+
+  /**
+   * **The direction that was missing, and the reason two prefixes went missing
+   * in it** (issue #1352).
+   *
+   * Everything else here asserts that the private namespaces are *absent* --
+   * the property that matters most, and the one nothing may relax. But absence
+   * is only half a partition: `shop-heroes` and `arrival` were in neither list,
+   * so every negative assertion passed while a shop's storefront hero and a
+   * diver's arrival photo were uploaded successfully and then served by
+   * nothing. Not even a 403: the default behaviour is an origin on a reserved
+   * TLD that can never resolve, so they landed in the black hole built for
+   * `import-waivers/`, and the writer saw a save.
+   *
+   * So this states the whole partition against the prefixes the app actually
+   * writes, read off its source: each is public or private, never both, never
+   * neither. A new prefix now fails here until somebody decides which it is --
+   * which is the decision worth forcing, because one answer publishes it to the
+   * internet and the other makes it unreachable.
+   */
+  it("accounts for every prefix the app writes, as public or private and never both", () => {
+    const written = prefixesTheAppWrites();
+    const served = (mediaDistribution().CacheBehaviors ?? [])
+      .map((b) => b.PathPattern.replace(/\/\*$/, ""))
+      .sort();
+    const privateNamespaces = written.filter((prefix) => !served.includes(prefix)).sort();
+
+    // Stated as a literal so that moving a prefix from private to public is a
+    // visible edit to this line rather than a silent re-derivation.
+    expect(privateNamespaces).toEqual(["import-receipts", "import-waivers", "medical-clearances"]);
+    expect([...served, ...privateNamespaces].sort()).toEqual(written);
+    expect(served.filter((prefix) => privateNamespaces.includes(prefix))).toEqual([]);
   });
 
   it("has no behaviour that could reach an imported scan, a receipt, or a physician's evaluation", () => {
@@ -334,20 +394,6 @@ describe("the media uploader's write grant", () => {
   }
 
   /** Every `keyPrefix` the storage layer writes under, read off the source. */
-  function prefixesTheAppWrites(): string[] {
-    const source = readFileSync(path.join(process.cwd(), "src/lib/storage/index.ts"), "utf8");
-    const found = [...source.matchAll(/keyPrefix:\s*"([^"]+)"/g)].map(
-      (match) => match[1] as string,
-    );
-    // If this ever comes back empty the assertions below would pass vacuously,
-    // which is the one way a test that reads a file can be worse than one that
-    // restates a list.
-    expect(found.length, "found no keyPrefix literals in src/lib/storage/index.ts").toBeGreaterThan(
-      5,
-    );
-    return [...new Set(found)].sort();
-  }
-
   it("grants write on exactly the prefixes the storage layer writes", () => {
     const granted = [
       ...new Set([writeStatement().Resource].flat().map((resource) => grantedKeyPattern(resource))),

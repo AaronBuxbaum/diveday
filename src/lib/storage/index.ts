@@ -187,8 +187,15 @@ export async function storeShopLogoImage(
   return storeImage({ ...upload, keyPrefix: "shop-logos" }, MAX_SHOP_LOGO_BYTES, provider);
 }
 
-/** Store a shop-authored arrival landmark photo in its own public-media namespace. */
-/** The storefront's hero photograph (Harbor, ADR 20260901-diveday-reimagined). */
+/**
+ * The storefront's hero photograph (Harbor, ADR 20260901-diveday-reimagined).
+ *
+ * Rendered by `ShopfrontHero` on `/s/[shopSlug]`, which anyone can open, so
+ * `shop-heroes` is one of `PUBLIC_MEDIA_PREFIXES` in `infra/lib/infra-stack.ts`
+ * and CloudFront carries a behaviour for it. It did not until issue #1352, and
+ * the failure was invisible from here: the upload succeeded and returned a URL,
+ * and every viewer got nothing.
+ */
 export async function storeShopHeroImage(
   upload: Omit<ImageUpload, "keyPrefix">,
   provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
@@ -196,6 +203,15 @@ export async function storeShopHeroImage(
   return storeImage({ ...upload, keyPrefix: "shop-heroes" }, MAX_SHOP_HERO_BYTES, provider);
 }
 
+/**
+ * A shop-authored arrival landmark photo -- what to look for when you get
+ * there -- in its own public-media namespace.
+ *
+ * Rendered by `TripArrivalCard` on the public trip page and on
+ * `/ready/[token]`, both fetched by a diver's own browser, so `arrival` is
+ * public at the edge for the same reason the hero above it is, and went missing
+ * in the same way.
+ */
 export async function storeArrivalImage(
   upload: Omit<ImageUpload, "keyPrefix">,
   provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
