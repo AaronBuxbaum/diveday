@@ -100,4 +100,40 @@ describe("the embed grammar", () => {
       }),
     ).toContain(">&lt;b>&quot;Go&quot;&lt;/b></a>");
   });
+
+  /**
+   * **One course, on the same attribute** (issue #1284, completing ADR
+   * 20260901-diveday-reimagined decision 2's "what it shows": everything, one
+   * departure, one course, a named set).
+   *
+   * The value is a course slug rather than a trip id, and the two are told
+   * apart by the kind alone — which is what makes this additive. The attribute
+   * is `data-show`, the name every snippet a shop already pasted either
+   * carries or does not; nothing was renamed, so nothing on a live site
+   * changes meaning.
+   */
+  it("narrows the courses widget to one course, by slug", () => {
+    const options = { look: "site" as const, lang: "auto", show: "open-water" };
+    expect(embedSnippet(ORIGIN, "blue-mantis", "courses", options, { button: "Book" })).toContain(
+      '<div data-diveday="courses" data-shop="blue-mantis" data-look="site" data-lang="auto" data-show="open-water"></div>',
+    );
+    const url = new URL(embedFrameUrl(ORIGIN, "blue-mantis", "courses", options));
+    expect(url.pathname).toBe("/s/blue-mantis/embed/courses");
+    expect(url.searchParams.get("show")).toBe("open-water");
+  });
+
+  it("leaves the whole-board widgets whole, whatever show is set to", () => {
+    // The grid and the calendar *are* the board. A `show` on either would be a
+    // narrowing nobody chose — the generator does not offer it, and the
+    // grammar refuses it rather than trusting that.
+    const options = { look: "site" as const, lang: "auto", show: "open-water" };
+    for (const kind of ["grid", "calendar"] as const) {
+      expect(
+        new URL(embedFrameUrl(ORIGIN, "blue-mantis", kind, options)).searchParams.has("show"),
+      ).toBe(false);
+      expect(embedSnippet(ORIGIN, "blue-mantis", kind, options, { button: "Book" })).not.toContain(
+        "data-show",
+      );
+    }
+  });
 });

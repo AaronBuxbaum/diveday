@@ -26,6 +26,7 @@ export type EmbedGeneratorCopy = {
   shows: string;
   showEverything: string;
   showDeparture: string;
+  showAllCourses: string;
   look: string;
   lookSite: string;
   lookLight: string;
@@ -68,6 +69,7 @@ export function EmbedGenerator({
   origin,
   shopSlug,
   trips,
+  courses,
   locales,
   previewHost,
   copy,
@@ -75,6 +77,8 @@ export function EmbedGenerator({
   origin: string;
   shopSlug: string;
   trips: readonly { id: string; label: string }[];
+  /** The shop's active courses, by slug, for the courses widget (issue #1284). */
+  courses: readonly { id: string; label: string }[];
   locales: readonly string[];
   /**
    * What the preview frame is told about "the host page" when the look is the
@@ -98,10 +102,21 @@ export function EmbedGenerator({
   // The QR code can point at one boat too — the counter's code for tonight's
   // night dive — so it takes the same choice as a button.
   const needsShow =
-    kind === "departure" || kind === "lightbox" || kind === "button" || kind === "qr";
+    kind === "departure" ||
+    kind === "lightbox" ||
+    kind === "button" ||
+    kind === "qr" ||
+    kind === "courses";
   // A departure card with no departure chosen renders a not-found body, so the
-  // snippet waits for the choice rather than being pasted broken.
+  // snippet waits for the choice rather than being pasted broken. **The
+  // courses widget is deliberately not in that boat**: "every course" is the
+  // whole catalogue and is what it has always meant, so an unchosen course is
+  // a valid embed rather than a missing answer (issue #1284).
   const showMissing = kind === "departure" && !show;
+  // Departures are chosen by id, courses by slug, and one select does both —
+  // so the list has to change with the kind, and a choice made for one kind
+  // must not survive into the other as an id the widget will 404 on.
+  const choices = kind === "courses" ? courses : trips;
   const target = embedTargetUrl(origin, shopSlug, options);
   const snippet =
     kind === "qr" || kind === "partner" || showMissing
@@ -148,7 +163,16 @@ export function EmbedGenerator({
                       name={`${ids.kind}-kind`}
                       value={k}
                       checked={kind === k}
-                      onChange={() => setKind(k)}
+                      onChange={() => {
+                        // `show` holds a trip id for every kind but one, and a
+                        // course slug for `courses`. Crossing that line has to
+                        // clear it or the courses widget is framed with a UUID
+                        // and answers 404; staying on the same side keeps a
+                        // choice the shop already made, so picking "QR code"
+                        // after "One departure" still points at that boat.
+                        if ((k === "courses") !== (kind === "courses")) setShow("");
+                        setKind(k);
+                      }}
                       className="sr-only"
                     />
                     <span className="font-semibold">{copy.kinds[k]}</span>
@@ -168,11 +192,15 @@ export function EmbedGenerator({
                   aria-invalid={showMissing || undefined}
                 >
                   <option value="">
-                    {kind === "departure" ? copy.showDeparture : copy.showEverything}
+                    {kind === "departure"
+                      ? copy.showDeparture
+                      : kind === "courses"
+                        ? copy.showAllCourses
+                        : copy.showEverything}
                   </option>
-                  {trips.map((trip) => (
-                    <option key={trip.id} value={trip.id}>
-                      {trip.label}
+                  {choices.map((choice) => (
+                    <option key={choice.id} value={choice.id}>
+                      {choice.label}
                     </option>
                   ))}
                 </select>

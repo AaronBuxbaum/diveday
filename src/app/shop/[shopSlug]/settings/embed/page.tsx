@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { getDb } from "@/db/client";
+import { listActiveCourses } from "@/db/courses";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { localeEndonym } from "@/i18n/language-labels";
 import { requestLocale } from "@/i18n/request";
@@ -72,6 +73,14 @@ export default async function EmbedSettingsPage({
       label: `${parts.weekday} ${parts.day} ${parts.month} · ${formatTime(trip.startsAt, locale, shop.timezone)} — ${trip.title}`,
     };
   });
+  // The courses widget can frame one course (issue #1284). Active only, and in
+  // the roster's progression order rather than alphabetically — the same order
+  // `listActiveCourses` gives every other surface, so a shop picking "Open
+  // Water" finds it where it always is.
+  const courseChoices = (await listActiveCourses(await getDb(), shop.id)).map((course) => ({
+    id: course.slug,
+    label: course.title,
+  }));
   const kinds = Object.fromEntries(
     EMBED_KINDS.map((kind) => [kind, t(`settings.embed.kinds.${kind}.name`)]),
   ) as Record<EmbedKind, string>;
@@ -92,6 +101,7 @@ export default async function EmbedSettingsPage({
     shows: t("settings.embed.shows"),
     showEverything: t("settings.embed.showEverything"),
     showDeparture: t("settings.embed.showDeparture"),
+    showAllCourses: t("settings.embed.showAllCourses"),
     look: t("settings.embed.look"),
     lookSite: t("settings.embed.lookSite"),
     lookLight: t("settings.embed.lookLight"),
@@ -124,6 +134,7 @@ export default async function EmbedSettingsPage({
         origin={origin}
         shopSlug={shop.slug}
         trips={tripChoices}
+        courses={courseChoices}
         locales={DIVER_LOCALES}
         previewHost={{
           brand: shop.brandColor ?? DIVEDAY_BRAND_COLOR,
