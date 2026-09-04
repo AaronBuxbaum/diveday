@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { bookings, people, trips, waiverRecords } from "./schema";
+import { createDemoShop } from "./seed";
 import { HELD_DIVER_WAIVER_IDS, seedMedicalReview } from "./seed-medical-review";
 
 // The scenario's fixture names, as seedMedicalReview writes them.
@@ -60,8 +61,10 @@ describe("seeded medical-review training scenario", () => {
 
     // Re-running the scenario names the same reviewer it would have the first
     // time; who that is does not matter to this test, only that it is a real
-    // staff row the foreign key accepts.
-    await seedMedicalReview(db, shop.id, template, tripRows, fixturePerson.id);
+    // staff row the foreign key accepts. `canonical: true` because this *is*
+    // blue-mantis, which is what the real seed passes for it — and what makes
+    // the re-inserted row take its pinned id back.
+    await seedMedicalReview(db, shop.id, template, tripRows, fixturePerson.id, true);
 
     const peopleRows = await db
       .select({ id: people.id })
@@ -124,6 +127,37 @@ describe("the held divers' waiver rows sort deterministically", () => {
         ).toBe(true);
       }
     }
+  });
+
+  /**
+   * The bug the first version of this fix shipped, caught in review on #1378.
+   *
+   * A literal primary key can exist once per database, and this seeder runs for
+   * every shop — the per-visitor demo shops of ADR 20260724-per-visitor-demo-shops
+   * and the `privateShop` a spec takes when it writes shop-wide settings
+   * (ADR 20260815-per-test-private-shops). Pinning unconditionally made the
+   * *second* shop in a database fail on a duplicate key, which is a broken demo
+   * signup and a broken e2e fixture, not a flaky picture.
+   *
+   * So the pin is gated on the canonical shop, and this is the assertion that
+   * the gate exists: a second shop seeds without conflict, and its own rows are
+   * database-assigned.
+   */
+  it("does not reuse those ids on a second shop in the same database", async () => {
+    const { db, shop } = await seededShopContext();
+    const second = await createDemoShop(db);
+    expect(second.slug).not.toBe(shop.slug);
+
+    const pinned = Object.values(HELD_DIVER_WAIVER_IDS);
+    const rows = await db
+      .select({ id: waiverRecords.id, shopId: waiverRecords.shopId })
+      .from(waiverRecords)
+      .where(inArray(waiverRecords.id, pinned));
+
+    // Both pinned ids exist exactly once, and both belong to blue-mantis. The
+    // second shop's held divers are there too, under ids Postgres chose.
+    expect(rows).toHaveLength(pinned.length);
+    for (const row of rows) expect(row.shopId).toBe(shop.id);
   });
 
   it("still seeds the two held divers at the same instant", async () => {

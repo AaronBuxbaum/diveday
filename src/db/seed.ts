@@ -747,15 +747,18 @@ export async function seedDemoSchedule(
   // leaking one worker's "away" into another's board.
   await seedCrewAway(db, shopId, [instructor.id]);
 
-  // Only the canonical blue-mantis demo pins the recap booking's id — the visual
-  // tests mint a recap link from that fixed id. A freshly-minted demo shop gets a
-  // random id so a second demo never collides on that primary key.
+  // Only the canonical blue-mantis demo pins any primary key, and everything
+  // that pins one is gated on this: the visual tests mint a recap link from a
+  // fixed booking id, and the two tied medical-review waiver rows need a fixed
+  // order (seed-medical-review.ts). A freshly-minted demo shop — and the
+  // `privateShop` a spec takes for itself — gets random ids, because a literal
+  // one can exist only once per database and a second shop would collide on it.
   const [shopRow] = await db
     .select({ slug: shops.slug, timezone: shops.timezone })
     .from(shops)
     .where(eq(shops.id, shopId))
     .limit(1);
-  const pinRecapBooking = shopRow?.slug === DEMO_SHOP_SLUG;
+  const isCanonicalDemo = shopRow?.slug === DEMO_SHOP_SLUG;
 
   // Before anything issues a waiver: the release's own version history, so the
   // shop's current text is version 3 with two superseded wordings behind it,
@@ -795,7 +798,7 @@ export async function seedDemoSchedule(
     {
       customers,
       tripRows,
-      pinRecapBooking,
+      pinRecapBooking: isCanonicalDemo,
     },
   );
 
@@ -964,7 +967,7 @@ export async function seedDemoSchedule(
   // the demo and staff training a real fail-closed waiver path without storing
   // any health answers. It remains unresolved every time the demo resets; the
   // policy/legal decision behind production medical handling is still H-01–H-03.
-  await seedMedicalReview(db, shopId, waiverTemplate, tripRows, instructor.id);
+  await seedMedicalReview(db, shopId, waiverTemplate, tripRows, instructor.id, isCanonicalDemo);
 
   // Truly last, and updates-only: what the shop's signed evidence looks like
   // once every scenario above has finished writing releases — signatures dated
