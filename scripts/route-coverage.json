@@ -67,6 +67,7 @@
   "/ready/[token]": {
     "e2e": [
       "a11y.spec.ts",
+      "blowout.spec.ts",
       "booking.spec.ts",
       "certifications.spec.ts",
       "courses.spec.ts",
@@ -90,6 +91,7 @@
       "expired-link-readiness",
       "party-organizer-confirmation",
       "readiness",
+      "stranded-diver-card",
       "thread-prep-current-step"
     ],
     "a11y": ["a11y.spec.ts"]

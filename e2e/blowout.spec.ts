@@ -3,6 +3,7 @@ import {
   bookASeatAndOpenThread,
   daysFromNow,
   e2eNow,
+  openThreadStep,
   openTripAbout,
   openTripFromBoard,
   seededTripId,
@@ -141,6 +142,15 @@ test.describe("weather blow-out cascade", () => {
     const threadUrl = page.url();
     await expect(page.getByRole("heading", { name: "Pack with confidence" })).toBeVisible();
 
+    // And they do one piece of preparation, through the real product path —
+    // the sizes are what makes the "still on file" block below have anything
+    // true to say (issue #1197).
+    await openThreadStep(page, "gear");
+    await page.getByLabel("BCD size").selectOption("L");
+    await page.getByLabel("Wetsuit size").selectOption("XL");
+    await page.getByRole("button", { name: "Save rental fit" }).click();
+    await expect(page.getByText("the crew will have your sizes")).toBeVisible();
+
     // The captain calls it off.
     await page.goto(`/shop/${SHOP}/schedule/board`);
     await openTripFromBoard(page, REEF_TRIP);
@@ -162,5 +172,18 @@ test.describe("weather blow-out cascade", () => {
     await expect(page.getByRole("heading", { name: "Pack with confidence" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: /See what.s next/ })).toBeVisible();
     await expect(page.getByText(/Blue Mantis Divers/).first()).toBeVisible();
+
+    // **What the day did not take with it** (issue #1197, delight report D37).
+    // The sizes they saved a moment ago are filed against the person and the
+    // shop, not the seat, so they survive the cancellation — and this is the
+    // beat the ticket exists for: the work was not wasted.
+    await expect(page.getByText("Still on file for you")).toBeVisible();
+    await expect(page.getByText("Your sizes")).toBeVisible();
+    // **And nothing is invented about the preparation that never happened.**
+    // This diver signed no release and showed no card ninety seconds ago, so
+    // neither line is there. A block that listed everything it could think of
+    // would be worth nothing, because it would be true of everybody.
+    await expect(page.getByText("Your signed waiver")).toHaveCount(0);
+    await expect(page.getByText("Your certification")).toHaveCount(0);
   });
 });

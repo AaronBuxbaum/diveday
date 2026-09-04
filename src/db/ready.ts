@@ -1,4 +1,5 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
+import { type CarriedPreparation, carriedPreparation } from "@/lib/carried-preparation";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { withinCancellationWindow } from "@/lib/deposits";
@@ -7,16 +8,18 @@ import { publicAppUrl } from "@/lib/notifications";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import type { RentalPricing } from "@/lib/rentals";
 import type { SupportNeeds } from "@/lib/support-needs";
+import { shopWaiverStatus } from "@/lib/waivers";
 import type { AppDb } from "./client";
 import { getHelpRequestForBooking, type HelpRequest } from "./help-requests";
 import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingPayment } from "./payments";
 import { type BookingReadinessDetail, getBookingReadinessDetail } from "./readiness";
 import { type DiverRentalFit, getRentalFit, toDiverRentalFit } from "./rental-fit";
-import { bookings, people, shops } from "./schema";
+import { bookings, certifications, people, shops } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getSupportNeeds } from "./support-needs";
 import { getTripWithBooked } from "./trips";
+import { getCurrentWaiverTemplate, listSignedWaiversByPerson } from "./waivers";
 
 /**
  * Trips run late, so "has this boat sailed?" allows an hour past the scheduled
@@ -280,4 +283,48 @@ export async function getReadyPageData(
     canCancelBooking,
     departureCancelled: trip.status !== "scheduled",
   };
+}
+
+/**
+ * **What a blown-out day left standing**, for one diver at one shop
+ * (issue #1197).
+ *
+ * Its own reader rather than a field on `getReadyPageData`, because only one
+ * branch of `/ready` ever asks: the terminal card a stranded diver reaches when
+ * their departure was called off. Every other load of that page is about a trip
+ * that is still going, where these three facts are already on the page as
+ * things to *do*.
+ *
+ * Person-scoped and shop-scoped throughout, which is the whole reason the
+ * question has an answer at all — a release is signed once and carries across
+ * every booking here, a card is a card, and sizes are sizes. None of it is
+ * about the seat.
+ */
+export async function carriedPreparationForDiver(
+  db: AppDb,
+  input: { shopId: string; personId: string; hasRentalFit: boolean },
+): Promise<CarriedPreparation[]> {
+  const [levelCards, signedWaivers, waiverTemplate] = await Promise.all([
+    db
+      .select()
+      .from(certifications)
+      .where(
+        and(
+          eq(certifications.shopId, input.shopId),
+          eq(certifications.personId, input.personId),
+          isNull(certifications.deletedAt),
+        ),
+      ),
+    listSignedWaiversByPerson(db, input.shopId, [input.personId]),
+    getCurrentWaiverTemplate(db, input.shopId),
+  ]);
+
+  return carriedPreparation({
+    waiver: shopWaiverStatus({
+      personSignedWaivers: signedWaivers.get(input.personId) ?? [],
+      currentTemplateVersion: waiverTemplate?.materialGeneration ?? null,
+    }),
+    certifications: levelCards,
+    hasRentalFit: input.hasRentalFit,
+  });
 }

@@ -47,7 +47,7 @@ import { getLatestCheckoutForBooking, refreshCheckoutFromStripe } from "@/db/che
 import { getDb } from "@/db/client";
 import { departureRollCallForBooking } from "@/db/manifests";
 import { getBookingPayment } from "@/db/payments";
-import { getReadyPageData, type ReadyPageData } from "@/db/ready";
+import { carriedPreparationForDiver, getReadyPageData, type ReadyPageData } from "@/db/ready";
 import { getRecapPageData } from "@/db/recap";
 import {
   certificationAgency,
@@ -71,6 +71,7 @@ import { checklistDetailText } from "@/i18n/readiness-summary-labels";
 import { requestLocale } from "@/i18n/request";
 import { THREAD_STEP_STATE_KEYS, THREAD_STEP_TITLE_KEYS } from "@/i18n/thread-labels";
 import { claimLinkPath } from "@/lib/booking-capabilities";
+import type { CarriedPreparation as CarriedPreparationItem } from "@/lib/carried-preparation";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
@@ -814,6 +815,59 @@ const CANCEL_PREVIEW_KEY: Record<ReadyPageData["cancelPreview"], DiverMessageKey
   unpaid: null,
 };
 
+/**
+ * **What survived a day that did not happen** (issue #1197, delight report D37).
+ *
+ * A blown-out departure leaves this diver on a terminal card, holding a link to
+ * a boat that is not going. The card already says so warmly and points at the
+ * schedule; what it could not say is that the preparation they did was not
+ * wasted. It was not — the release, the card and the sizes are filed against
+ * the *person and the shop*, not the seat, so nothing here carries anything
+ * anywhere. It reads facts that are already true.
+ *
+ * **Show-only, by the owner's ruling on the ticket**: no offer, no automatic
+ * rebooking, no notification. Money is absent because what a blown-out booking
+ * is owed stays a per-booking staff decision, and a gear reservation is absent
+ * because it is held for a date nobody is diving.
+ *
+ * Renders nothing when nothing carried, including when the readiness lookup
+ * itself did not answer — `carriedPreparation` fails closed, and an empty
+ * panel on a cancellation is worse than the silence it replaced.
+ */
+async function CarriedPreparation({
+  db,
+  data,
+  t,
+}: {
+  db: Awaited<ReturnType<typeof getDb>>;
+  data: ReadyPageData;
+  t: DiverTranslator;
+}) {
+  const carried = await carriedPreparationForDiver(db, {
+    shopId: data.shop.id,
+    personId: data.person.id,
+    hasRentalFit: data.rentalFit !== null,
+  });
+  if (carried.length === 0) return null;
+  return (
+    <div className="text-sm">
+      <p className="font-medium">{t("ready.carriedHeading")}</p>
+      <ul className="mt-1 text-muted">
+        {carried.map((item) => (
+          <li key={item}>{t(CARRIED_KEY[item])}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** One message key per thing the shop still holds — codes in, words here. */
+const CARRIED_KEY: Record<CarriedPreparationItem, DiverMessageKey> = {
+  waiver: "ready.carriedWaiver",
+  certification: "ready.carriedCertification",
+  fit: "ready.carriedFit",
+};
+
 /** The "This booking was cancelled" notice, with refund copy derived from the booking's current payment status. */
 function cancelledNotice(
   paymentStatus: string | null | undefined,
@@ -1323,6 +1377,7 @@ export default async function DiverReadinessPage({
             }}
             t={strandedT}
           >
+            <CarriedPreparation db={db} data={data} t={strandedT} />
             <Link href={publicSchedulePath(data.shop.slug)} className={buttonClass()}>
               {strandedT("recap.seeWhatsNext")}
             </Link>

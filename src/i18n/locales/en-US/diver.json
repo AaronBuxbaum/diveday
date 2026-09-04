@@ -754,7 +754,11 @@
     "supportDivesWithLabel": "Someone who should be on the same boat and team as you",
     "saveSupport": "Save arrangements",
     "supportSaved": "Saved. The crew will have that before you arrive.",
-    "supportUnavailable": "That did not save. Try again, or tell the crew on the day."
+    "supportUnavailable": "That did not save. Try again, or tell the crew on the day.",
+    "carriedHeading": "Still on file for you",
+    "carriedWaiver": "Your signed waiver",
+    "carriedCertification": "Your certification",
+    "carriedFit": "Your sizes"
   },
   "thread": {
     "stepsDoneSuffix": "of {total} done",

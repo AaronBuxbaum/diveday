@@ -754,7 +754,11 @@
     "supportDivesWithLabel": "Alguien que deba ir en el mismo barco y equipo que tú",
     "saveSupport": "Guardar preparativos",
     "supportSaved": "Guardado. La tripulación lo tendrá antes de que llegues.",
-    "supportUnavailable": "No se ha guardado. Inténtalo otra vez o díselo a la tripulación ese día."
+    "supportUnavailable": "No se ha guardado. Inténtalo otra vez o díselo a la tripulación ese día.",
+    "carriedHeading": "Sigue archivado a tu nombre",
+    "carriedWaiver": "Tu exención firmada",
+    "carriedCertification": "Tu certificación",
+    "carriedFit": "Tus tallas"
   },
   "thread": {
     "stepsDoneSuffix": "de {total, plural, one {# paso completado} other {# pasos completados}}",

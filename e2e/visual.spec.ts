@@ -2193,6 +2193,62 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The stranded diver's card, and what a blown-out day left standing**
+       * (issue #1197, delight report D37).
+       *
+       * The third shape of this component and the only one nothing had ever
+       * photographed — which matters more here than on the two above, because
+       * this is the card a diver reads on the morning a trip they had planned
+       * around was called off. It carries the cancellation, the shop's name,
+       * the way to the schedule, and now a short list of the preparation that
+       * survived: those records are filed against the person and the shop, not
+       * the seat, so they are still there.
+       *
+       * The sizes are saved through the real product path first, because the
+       * block renders only what is actually true and a diver who has prepared
+       * nothing sees no block at all — `e2e/blowout.spec.ts` asserts both
+       * directions. Reached the only way it can be reached: book, prepare,
+       * blow the departure out from the staff board, reopen the same link.
+       */
+      test(`the stranded diver's card renders true to the design (${scheme})`, async ({
+        page,
+        browser,
+        staffStorageState,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await bookAVisualRegressionSeat(page, scheme);
+        const threadUrl = new URL(page.url()).pathname;
+        await openThreadStep(page, "gear");
+        await page.getByLabel("BCD size").selectOption("L");
+        await page.getByLabel("Wetsuit size").selectOption("XL");
+        await page.getByRole("button", { name: "Save rental fit" }).click();
+        await expect(page.getByText("the crew will have your sizes")).toBeVisible();
+
+        // The captain calls it off from a second context. This test's own page
+        // is the *diver's* — signed out, which is the whole point of the card
+        // being captured — and `signedInAsOwner()` is describe-scoped, so
+        // borrowing the staff session for one action is what keeps them apart.
+        const staffContext = await browser.newContext({
+          storageState: await staffStorageState("owner"),
+          colorScheme: scheme,
+        });
+        try {
+          const staff = makeActivitySafe(await staffContext.newPage());
+          const tripId = await seededTripId(staff, "blue-mantis", REEF_TRIP);
+          await staff.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
+          await staff.getByRole("button", { name: "Call the blow-out" }).click();
+          await staff.getByRole("heading", { level: 1, name: "Blow-out cascade" }).waitFor();
+        } finally {
+          await staffContext.close();
+        }
+
+        await page.goto(threadUrl);
+        await page.getByRole("heading", { level: 1, name: "This trip was cancelled" }).waitFor();
+        await page.getByText("Still on file for you").waitFor();
+        await capture(page, "stranded-diver-card", scheme);
+      });
+
+      /**
        * The same component's other shape: **no shop to attribute it to.** A
        * token that resolves to no record at all reveals nothing about why,
        * which is the bearer-token model's own guarantee — so the card is the
