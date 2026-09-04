@@ -311,6 +311,23 @@ export default withSentryConfig(nextConfig, {
   // true footprint (~92 KB) is real but not reachable through this option
   // today. Leaving it set anyway: harmless now, and it should start working
   // for free if/when Sentry ships Turbopack parity for this feature.
+  //
+  // 2026-09-04: the obvious way round this was tried and does **not** work, so
+  // it is written down rather than left for the next reader to re-derive.
+  // Setting Sentry's five guard constants directly through Next's own
+  // `compiler.define` — `__SENTRY_DEBUG__`/`__SENTRY_TRACING__` false,
+  // `__RRWEB_EXCLUDE_IFRAME__`/`__RRWEB_EXCLUDE_SHADOW_DOM__`/
+  // `__SENTRY_EXCLUDE_REPLAY_WORKER__` true, polarity read off
+  // `config/webpack.js` rather than guessed — reaches Turbopack, but buys
+  // essentially nothing: 353.2 -> 348.8 KB gzip across the Sentry chunks
+  // (4.4 KB), the shared floor unmoved at 237.4 -> 237.3 KB, total static
+  // chunks *up* 2.77 -> 2.79 MB, and `rrweb` still present in the output. The
+  // constants gate runtime branches; they do not stop the modules being
+  // bundled. Also worth knowing: `bundleSizeOptimizations` is now deprecated in
+  // favour of `webpack.treeshake.*`, and it is the latter that the webpack
+  // `DefinePlugin` path actually reads — so this block is doubly inert here.
+  // Sentry's ~63 KB of the floor is real and still worth removing; the lever is
+  // not a build flag.
   bundleSizeOptimizations: {
     excludeDebugStatements: true,
     excludeTracing: true,
