@@ -3,6 +3,7 @@ import { and, eq, inArray, or } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { crewPublicNameToStore } from "@/lib/crew-public-name";
 import { generateDemoShopIdentity, pinnedDemoShopIdentity } from "@/lib/demo-identity";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
@@ -413,6 +414,16 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
         email: canonicalStaffEmail(s.local),
         emergencyContactName: s.emergencyContact?.[0] ?? null,
         emergencyContactPhone: s.emergencyContact?.[1] ?? null,
+        // Their own answer about being named to divers (issue #1181, D21).
+        // Two of the five, so the demo shows a shop where some people said yes
+        // and some did not. Languages are deliberately not seeded beside it --
+        // see `staffDefs`.
+        crewPublicConsentAt: s.namedToDivers ? nowDate() : null,
+        // Paired with the stamp by a check constraint, and by the same rule a
+        // person's own consent form follows: the name divers see is stored, not
+        // derived at render time (issue #1351). The demo cast is all
+        // given-name-first, so the default is what they would have kept.
+        crewPublicName: s.namedToDivers ? crewPublicNameToStore(null, s.fullName) : null,
       })),
     )
     .returning();
@@ -651,6 +662,12 @@ export async function createDemoShop(
         email: identity.emailFor(s.local),
         emergencyContactName: s.emergencyContact?.[0] ?? null,
         emergencyContactPhone: s.emergencyContact?.[1] ?? null,
+        // **Deliberately not `languages` or `namedToDivers` here.** A minted
+        // shop is a fresh tenant for tests that need blank shop-wide config
+        // (ADR 20260815-per-test-private-shops) — `crew-languages.spec.ts`'s
+        // second case is literally "a shop with no recorded languages shows no
+        // line at all". The demo shop above carries the cast's languages and
+        // consents; this path carries the people and nothing they configured.
       })),
     )
     .returning();

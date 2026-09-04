@@ -44,11 +44,17 @@ export function ConditionsLine({
    * The languages aboard, already formatted into the reader's own list
    * grammar by the page. Null when the crew have declared none.
    *
-   * Crew *names* are deliberately not here. `tripCrewSpokenLanguages` is an
-   * aggregate on purpose — "it names no crew member and makes no promise about
-   * a particular guide" — and this page is anonymous and indexed, so putting a
-   * named staffer's Saturday whereabouts on it is a disclosure decision rather
-   * than a layout one.
+   * Crew *names* are still not here, and for the same reason:
+   * `tripCrewSpokenLanguages` is an aggregate on purpose — "it names no crew
+   * member and makes no promise about a particular guide" — and this line is
+   * about conditions.
+   *
+   * The disclosure decision this used to defer has since been made, and it was
+   * made as a *consent* rather than as a layout choice (issue #1181, D21):
+   * `TripCrewLine` above renders the crew who switched
+   * `crew_public_consent_at` on for themselves, and nobody else. This line is
+   * unchanged by it — a shop whose staff have consented to nothing still says
+   * what languages are aboard.
    */
   crewLanguages: string | null;
   locale: string;

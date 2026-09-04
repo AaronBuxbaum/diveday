@@ -46,7 +46,18 @@ import { recordSeriesSkip } from "./trips-series";
  * (see docs/product/archive/specialist-optimization-audit-20260731.md
  * §7).
  */
-function tripShiftPlan(existingStartsAt: Date, newStartsAt: Date, timeZone: string) {
+/**
+ * The shift `moveTrip` applies: every instant of a departure moved by the same
+ * **wall-clock** delta, so a multi-day block keeps its published times across
+ * a DST boundary instead of drifting by the offset change.
+ *
+ * Exported for the schedule builder's move preview (`crewMoveConflicts`,
+ * src/db/trips-crew.ts), for the same reason `countRollCallEvidence` is: a
+ * preview that computed where the boat lands by its own arithmetic would drift
+ * from where it actually lands, and the drift would show as a warning about a
+ * clash that never happens — or silence about one that does.
+ */
+export function tripShiftPlan(existingStartsAt: Date, newStartsAt: Date, timeZone: string) {
   const deltaMs = wallTimeDeltaMs(
     utcToWallTime(existingStartsAt, timeZone),
     utcToWallTime(newStartsAt, timeZone),

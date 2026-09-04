@@ -319,6 +319,23 @@ export type MedicalWaiverMark = {
    * drift from the records it describes.
    */
   overriddenReferralAt: Date | null;
+  /**
+   * **The record a `cleared` mark hangs on, and whether the physician's
+   * evaluation itself is stored against it** (issue #1283) — null for every
+   * other source.
+   *
+   * Derived here rather than by the diver record, because this function is
+   * already the one place that decides "this release stands because a
+   * physician cleared it", and a second selection of that record elsewhere
+   * would be a second chance to select a different one.
+   *
+   * The URL is deliberately **not** here. It names the shop's own storage
+   * layout, it is useless to any reader — the bucket blocks public access —
+   * and this mark travels to surfaces the crew reads. What travels is the id
+   * of a row and a boolean; opening the file is a permission-gated route
+   * (`/api/medical-clearances/[recordId]`).
+   */
+  clearance: { recordId: string; documentOnFile: boolean } | null;
 };
 
 /**
@@ -383,14 +400,19 @@ export function medicalWaiverMark(
       at: evaluatedAt === null ? record.medicalClearedAt : new Date(evaluatedAt),
       source: "cleared",
       overriddenReferralAt: overridden,
+      clearance: {
+        recordId: record.id,
+        documentOnFile: Boolean(record.medicalClearanceDocumentUrl),
+      },
     };
   }
-  if (record.signatureMethod === "imported") {
-    return { at, source: "imported", overriddenReferralAt: overridden };
-  }
-  if (record.medicalAnswers) return { at, source: "digital", overriddenReferralAt: overridden };
+  // Every other source has no clearance behind it by construction — the branch
+  // above is the only one a `medical_cleared_at` can reach.
+  const uncleared = { overriddenReferralAt: overridden, clearance: null } as const;
+  if (record.signatureMethod === "imported") return { at, source: "imported", ...uncleared };
+  if (record.medicalAnswers) return { at, source: "digital", ...uncleared };
   if (record.signatureMethod === "in_person_attested") {
-    return { at, source: "paper", overriddenReferralAt: overridden };
+    return { at, source: "paper", ...uncleared };
   }
   return null;
 }

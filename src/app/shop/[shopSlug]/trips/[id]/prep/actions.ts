@@ -8,10 +8,11 @@ import {
   type ReserveGearUnitOutcome,
   releaseGearReservation,
   reserveGearUnit,
+  returnTripGearSet,
 } from "@/db/gear";
 import { getShopById } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
-import { tripReservationWindow } from "@/lib/gear";
+import { GEAR_RETURN_OUTCOMES, tripReservationWindow } from "@/lib/gear";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { type NoticeCodeOf, noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -51,6 +52,7 @@ const RESERVATION_ACTION_NOTICE: GearNoticeTable<GearRefusalOf<GearReservationAc
   not_found: "gear-not-found",
   already_returned: "gear-already-returned",
   already_checked_out: "gear-already-checked-out",
+  concern_needs_words: "gear-concern-needs-words",
 };
 
 const assignSchema = z.object({
@@ -180,5 +182,57 @@ export async function releaseGearUnitAction(formData: FormData) {
   revalidateAndRedirect(
     prep,
     noticeUrl(prep, outcome.ok ? "gear-released" : RESERVATION_ACTION_NOTICE[outcome.reason]),
+  );
+}
+
+const returnSetSchema = z.object({
+  tripId: z.uuid(),
+  bookingId: z.uuid(),
+  outcome: z.enum(GEAR_RETURN_OUTCOMES),
+  note: z.string().trim().max(400).optional(),
+});
+
+/**
+ * **Bring one diver's whole rental set home, with how it went** (issue #1186,
+ * delight report D26).
+ *
+ * The set rather than the piece, because that is what a counter is handed: an
+ * armful, at 4pm, by somebody who wants to go home. Asking for an outcome per
+ * unit is the paperwork this replaces.
+ *
+ * The note is bounded here and *required* by the domain writer when the outcome
+ * is a service concern — the refusal lives there rather than in this schema so
+ * the same rule holds for the single-unit path on the register.
+ *
+ * A set with nothing out answers `not_found`, which the prep page words as
+ * "nothing from that set is out" rather than as a missing record: on this
+ * surface the reservation plainly exists, and the honest thing to say is that
+ * somebody else already brought it back.
+ */
+export async function returnTripGearSetAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const parsed = returnSetSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    const gear = shopPath(session.user.shopSlug, "gear");
+    revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
+  }
+  const prep = shopPath(session.user.shopSlug, "trips", parsed.data.tripId, "prep");
+
+  const outcome = await returnTripGearSet(await getDb(), {
+    shopId: session.user.shopId,
+    bookingId: parsed.data.bookingId,
+    outcome: parsed.data.outcome,
+    note: parsed.data.note,
+  });
+  revalidateAndRedirect(
+    prep,
+    noticeUrl(
+      prep,
+      outcome.ok
+        ? "gear-returned-set"
+        : outcome.reason === "not_found"
+          ? "gear-nothing-out"
+          : RESERVATION_ACTION_NOTICE[outcome.reason],
+    ),
   );
 }

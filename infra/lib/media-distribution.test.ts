@@ -52,6 +52,38 @@ function mediaDistribution(): DistributionConfig {
   return (media.Properties as { DistributionConfig: DistributionConfig }).DistributionConfig;
 }
 
+/**
+ * Every key prefix the storage layer writes, read off its source rather than
+ * restated here.
+ *
+ * Module scope because two describes need it: the write grant must cover
+ * exactly these, and the edge must account for exactly these (issue #1352).
+ */
+function prefixesTheAppWrites(): string[] {
+  // `MEDIA_KEY_PREFIXES`, not the nine `keyPrefix:` call sites it types.
+  //
+  // Two reasons, and the second bit while this change was being written. A
+  // prefix that never appears as a call-site literal --
+  // `provider.upload({ keyPrefix: someVariable })`, both the provider and its
+  // factory being exported -- was invisible to a call-site scan, so the object
+  // would store and then be unreachable at the edge with every test green:
+  // the same shape as the bug this file now guards (issue #1352), one layer
+  // down. `keyPrefix` is typed to that array now, so the door is shut at
+  // compile time. And a scan for `keyPrefix: "..."` reads *prose* too -- a
+  // docblock in that file naming a hypothetical prefix was duly counted as a
+  // tenth one.
+  const source = readFileSync(path.join(process.cwd(), "src/lib/storage/index.ts"), "utf8");
+  const block = source.match(/export const MEDIA_KEY_PREFIXES = \[([^\]]+)\] as const;/);
+  expect(block, "MEDIA_KEY_PREFIXES not found in src/lib/storage/index.ts").not.toBeNull();
+  const found = [...(block?.[1] ?? "").matchAll(/"([^"]+)"/g)].map((match) => match[1] as string);
+  // A read that came back empty or short would make every assertion below
+  // vacuously true -- the one way a test that reads a file is worse than one
+  // that restates a list. Pinned to the exact count rather than a floor, so a
+  // new prefix has to come here and choose a side.
+  expect(found.length, "MEDIA_KEY_PREFIXES did not parse as nine prefixes").toBe(9);
+  return [...new Set(found)].sort();
+}
+
 describe("media distribution", () => {
   /**
    * The account cleared CloudFront's verification gate, so the committed
@@ -66,9 +98,52 @@ describe("media distribution", () => {
     expect(committed.context.cloudfrontVerified).toBe(true);
   });
 
-  it("serves exactly the four public prefixes", () => {
+  it("serves exactly the six public prefixes", () => {
     const patterns = (mediaDistribution().CacheBehaviors ?? []).map((b) => b.PathPattern).sort();
-    expect(patterns).toEqual(["courses/*", "dive-sites/*", "recap/*", "shop-logos/*"]);
+    expect(patterns).toEqual([
+      "arrival/*",
+      "courses/*",
+      "dive-sites/*",
+      "recap/*",
+      "shop-heroes/*",
+      "shop-logos/*",
+    ]);
+  });
+
+  /**
+   * **The direction that was missing, and the reason two prefixes went missing
+   * in it** (issue #1352).
+   *
+   * Everything else here asserts that the private namespaces are *absent* --
+   * the property that matters most, and the one nothing may relax. But absence
+   * is only half a partition: `shop-heroes` and `arrival` were in neither list,
+   * so every negative assertion passed while a shop's storefront hero and a
+   * diver's arrival photo were uploaded successfully and then served by
+   * nothing. Not even a 403: the default behaviour is an origin on a reserved
+   * TLD that can never resolve, so they landed in the black hole built for
+   * `import-waivers/`, and the writer saw a save.
+   *
+   * So this states the whole partition against the prefixes the app actually
+   * writes, read off its source: each is public or private, never both, never
+   * neither. A new prefix now fails here until somebody decides which it is --
+   * which is the decision worth forcing, because one answer publishes it to the
+   * internet and the other makes it unreachable.
+   */
+  it("accounts for every prefix the app writes, as public or private and never both", () => {
+    const written = prefixesTheAppWrites();
+    const served = (mediaDistribution().CacheBehaviors ?? [])
+      .map((b) => b.PathPattern.replace(/\/\*$/, ""))
+      .sort();
+    const privateNamespaces = written.filter((prefix) => !served.includes(prefix)).sort();
+
+    // Stated as a literal so that moving a prefix from private to public is a
+    // visible edit to this line rather than a silent re-derivation.
+    expect(privateNamespaces).toEqual(["import-receipts", "import-waivers", "medical-clearances"]);
+    // And nothing is unaccounted for. There is deliberately no third assertion
+    // that the two sets are disjoint: `privateNamespaces` is `written` minus
+    // `served`, so it cannot intersect `served` by construction, and an
+    // assertion that cannot fail reads like a guarantee while proving nothing.
+    expect([...served, ...privateNamespaces].sort()).toEqual(written);
   });
 
   it("has no behaviour that could reach an imported scan, a receipt, or a physician's evaluation", () => {
@@ -206,5 +281,149 @@ describe("media distribution", () => {
       expect(secret).toContain(".s3.");
       expect(secret).not.toContain("MediaDistribution");
     });
+  });
+});
+
+/**
+ * **The one credential that may read a private object back, and the one prefix
+ * it may read** (issue #1283).
+ *
+ * The assertions above prove the CDN cannot serve a physician's evaluation.
+ * This proves the other half: the app itself *can* fetch one, and can fetch
+ * nothing else -- because #1252 shipped the upload with no read grant at all,
+ * so a shop stored the most sensitive document the product holds and could
+ * never open it.
+ *
+ * The failure this guards against is a widening: somebody needing a read path
+ * for some other prefix and reaching for the statement that already exists.
+ * A `GetObject` on `arnForObjects("*")` would let one bug in a URL column turn
+ * this credential into a reader of every imported waiver scan and payment
+ * receipt in the bucket.
+ */
+describe("the media uploader credential", () => {
+  type Statement = { Sid?: string; Action: string | string[]; Resource: unknown };
+  type Policy = {
+    Properties?: { PolicyDocument?: { Statement?: Statement[] }; Users?: unknown[] };
+  };
+
+  /**
+   * **The media uploader's own statements, and nobody else's.**
+   *
+   * Flattening every `AWS::IAM::Policy` in the stack was the first version of
+   * this and it proved less than its name: `some statement mentions the
+   * prefix` is satisfied by an unrelated principal, and a *second* GetObject on
+   * this user scoped to `arnForObjects("*")` would pass while being exactly the
+   * widening these cases exist to catch. So the policy is resolved by the user
+   * it is attached to, and the assertion is over *every* read it grants.
+   */
+  function uploaderStatements(): Statement[] {
+    const t = template();
+    const user = Object.keys(t.findResources("AWS::IAM::User")).find((id) =>
+      id.startsWith("MediaUploaderUser"),
+    );
+    expect(user, "MediaUploaderUser is not in the stack").toBeDefined();
+    const policies = Object.values(t.findResources("AWS::IAM::Policy")) as Policy[];
+    const mine = policies.filter((policy) =>
+      JSON.stringify(policy.Properties?.Users ?? []).includes(user as string),
+    );
+    expect(mine.length, "no policy is attached to MediaUploaderUser").toBeGreaterThan(0);
+    return mine.flatMap((policy) => policy.Properties?.PolicyDocument?.Statement ?? []);
+  }
+
+  it("may read objects under medical-clearances/ and nowhere else", () => {
+    const reads = uploaderStatements().filter((statement) =>
+      [statement.Action].flat().includes("s3:GetObject"),
+    );
+    // It has one, because without it the upload buys retention liability with
+    // no retrieval value -- a shop stores the most sensitive document the
+    // product holds and can never open it (issue #1283).
+    expect(reads).toHaveLength(1);
+    expect(reads[0]?.Sid).toBe("ReadMedicalClearancesOnly");
+    // *Every* read this credential grants is scoped to that prefix. The
+    // resource is a CloudFormation join around the bucket ARN; the prefix is
+    // the literal that matters.
+    for (const read of reads) {
+      expect(JSON.stringify(read.Resource)).toContain("/medical-clearances/*");
+    }
+  });
+
+  it("never grants read across the whole media bucket", () => {
+    // The widening this exists to catch, stated as the thing that must not be
+    // true rather than as a property of one named statement: a GetObject whose
+    // resource ends at `/*` on the bucket root would cover import-waivers/ and
+    // import-receipts/ as well, which nothing in the app has any business
+    // fetching back.
+    for (const statement of uploaderStatements()) {
+      if (![statement.Action].flat().includes("s3:GetObject")) continue;
+      const resource = JSON.stringify(statement.Resource);
+      expect(resource).not.toMatch(/"\/\*"/);
+    }
+  });
+});
+
+/**
+ * **The write grant names the prefixes the app writes, and no more** (issue
+ * #1349).
+ *
+ * `deleteS3Image` now refuses a key whose signed path is not the object it
+ * names, and this is the wall behind that check rather than a restatement of
+ * it: the credential holds `DeleteObject`, the caller's key is the only thing
+ * deciding *which* object, and the grant used to be `arnForObjects("*")` -- so
+ * a key that escaped its namespace was a delete anywhere in the bucket.
+ *
+ * The list is read out of `src/lib/storage/index.ts` rather than restated here,
+ * because a short list fails *silently*: `s3ImageStorageProvider.upload`
+ * returns `{ status: "failed" }` on a non-ok response instead of throwing, so
+ * the tenth prefix somebody adds next year would surface as a shop's upload not
+ * sticking, with nothing in the logs naming IAM. The issue that asked for this
+ * listed seven of the nine, which is the mistake this reads a file to avoid.
+ */
+describe("the media uploader's write grant", () => {
+  type Statement = { Sid?: string; Action: string | string[]; Resource: unknown };
+
+  function writeStatement(): Statement {
+    const t = template();
+    const user = Object.keys(t.findResources("AWS::IAM::User")).find((id) =>
+      id.startsWith("MediaUploaderUser"),
+    );
+    const policies = Object.values(t.findResources("AWS::IAM::Policy")) as {
+      Properties?: { PolicyDocument?: { Statement?: Statement[] }; Users?: unknown[] };
+    }[];
+    const statements = policies
+      .filter((policy) => JSON.stringify(policy.Properties?.Users ?? []).includes(user as string))
+      .flatMap((policy) => policy.Properties?.PolicyDocument?.Statement ?? []);
+    const write = statements.find((statement) =>
+      [statement.Action].flat().includes("s3:DeleteObject"),
+    );
+    expect(write, "no DeleteObject statement on MediaUploaderUser").toBeDefined();
+    return write as Statement;
+  }
+
+  /** The literal tail of a CloudFormation `Fn::Join` around the bucket ARN. */
+  function grantedKeyPattern(resource: unknown): string {
+    const join = (resource as { "Fn::Join"?: [string, unknown[]] })?.["Fn::Join"];
+    const tail = (join?.[1] ?? [])
+      .filter((part): part is string => typeof part === "string")
+      .join("");
+    return tail.replace(/^\//, "");
+  }
+
+  /** Every `keyPrefix` the storage layer writes under, read off the source. */
+  it("grants write on exactly the prefixes the storage layer writes", () => {
+    const granted = [
+      ...new Set([writeStatement().Resource].flat().map((resource) => grantedKeyPattern(resource))),
+    ]
+      .map((pattern) => pattern.replace(/\/\*$/, ""))
+      .sort();
+    expect(granted).toEqual(prefixesTheAppWrites());
+  });
+
+  it("never grants write across the whole media bucket", () => {
+    // Stated as the thing that must not be true rather than as a property of
+    // the named statement, so a second, wider write statement added later is
+    // caught too. A resource ending at `/*` on the bucket root is the shape
+    // that made an escaped key a delete anywhere.
+    const resource = JSON.stringify(writeStatement().Resource);
+    expect(resource).not.toMatch(/"\/\*"/);
   });
 });

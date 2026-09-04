@@ -53,6 +53,8 @@
     "visibility": "Visibility",
     "current": "Current",
     "notRecordedDepth": "Depth was not recorded",
+    "observedSpecies": "Seen on this dive",
+    "observedSpeciesNone": "Nothing to note",
     "save": "Save dive record",
     "saved": "Dive record saved.",
     "refusal": {
@@ -65,7 +67,8 @@
       "invalidTime": "One of the times could not be read. Check both and save again.",
       "invalid": "Nothing was saved. Check the entries and try again.",
       "wrongDive": "This form is for a different dive. Reload the manifest and try again."
-    }
+    },
+    "observedSpeciesHint": "Divers read this on their recap."
   },
   "addCrewToTrip": "Add crew to trip",
   "manageCrewOnTrip": "Manage this trip's crew",
@@ -157,5 +160,13 @@
   "rollCallRecordedShort": "{label} · {time} · {name}",
   "markBackAboard": "Mark back aboard",
   "crewMarkBackAboard": "Mark back aboard",
-  "supportNeedsLabel": "Dive support"
+  "supportNeedsLabel": "Dive support",
+  "emergency": {
+    "heading": "In an emergency",
+    "empty": "No emergency numbers recorded. Add the chamber, the dive-accident hotline and your shore contact in Settings. The crew reads this offline.",
+    "vesselLabel": "Vessel:",
+    "shoreContactLabel": "Shore contact:",
+    "planLabel": "If something goes wrong"
+  },
+  "onThisPhone": "On this phone"
 }

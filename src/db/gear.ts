@@ -23,6 +23,7 @@ import {
   GEAR_KIND_ORDER,
   type GearItemKind,
   type GearItemStatus,
+  type GearReturnOutcome,
   type GearServiceClock,
   type GearServiceKind,
   type GearServiceState,
@@ -668,7 +669,10 @@ export async function reserveGearUnit(
 
 export type GearReservationActionOutcome =
   | { ok: true }
-  | { ok: false; reason: "not_found" | "already_returned" | "already_checked_out" };
+  | {
+      ok: false;
+      reason: "not_found" | "already_returned" | "already_checked_out" | "concern_needs_words";
+    };
 
 /**
  * Record the handover — the unit physically left the counter. Conditional on
@@ -698,14 +702,37 @@ export async function checkOutGearReservation(
   return { ok: false, reason: existing.returnedAt ? "already_returned" : "already_checked_out" };
 }
 
-/** Close the reservation: the unit is home, the window frees immediately. */
+/**
+ * Close the reservation: the unit is home, the window frees immediately.
+ *
+ * **The outcome is optional and its absence means "nobody said"** (issue
+ * #1186). Two callers close a reservation without asking anyone — a cancelled
+ * booking letting go of what it never collected, and the unit page's own quick
+ * return — and defaulting those to `all_good` would put a reassuring answer on
+ * a set nobody looked at, which is exactly what would make the other two
+ * outcomes not worth reading.
+ *
+ * **A service concern must carry words.** A flag with no note is something a
+ * technician cannot act on, and it is the whole of what "only exceptions open
+ * additional detail" means: the fast path stays one tap, and the slow one earns
+ * its extra field.
+ */
 export async function returnGearReservation(
   db: AppDb,
-  input: { shopId: string; reservationId: string; note?: string },
+  input: {
+    shopId: string;
+    reservationId: string;
+    note?: string;
+    outcome?: GearReturnOutcome;
+  },
 ): Promise<GearReservationActionOutcome> {
+  const note = optional(input.note);
+  if (input.outcome === "service_concern" && !note) {
+    return { ok: false, reason: "concern_needs_words" };
+  }
   const [updated] = await db
     .update(gearReservations)
-    .set({ returnedAt: nowDate(), returnNote: optional(input.note) })
+    .set({ returnedAt: nowDate(), returnNote: note, returnOutcome: input.outcome ?? null })
     .where(
       and(
         eq(gearReservations.id, input.reservationId),
@@ -719,6 +746,52 @@ export async function returnGearReservation(
     ok: false,
     reason: (await reservationStamps(db, input)) ? "already_returned" : "not_found",
   };
+}
+
+/**
+ * **Bring a whole rental set home in one act** (issue #1186, delight report
+ * D26).
+ *
+ * A "set" is one diver's units on one departure, which is what a counter
+ * actually hands back: somebody walks up with an armful, and asking for an
+ * outcome per piece is the paperwork this feature exists to remove. So the
+ * outcome is asked once and written to every unit in the set.
+ *
+ * Nothing is invented for a unit that is not out. Only checked-out,
+ * unreturned reservations for this booking are closed, and a set where none
+ * are is `not_found` rather than a silent success — a staffer who taps Return
+ * on a set somebody else already brought back should be told, not reassured.
+ *
+ * The service concern's note is required for the same reason it is required on
+ * the single-unit path, and refused before anything is written, so a set is
+ * never half-closed on a refusal.
+ */
+export async function returnTripGearSet(
+  db: AppDb,
+  input: {
+    shopId: string;
+    bookingId: string;
+    outcome: GearReturnOutcome;
+    note?: string;
+  },
+): Promise<GearReservationActionOutcome> {
+  const note = optional(input.note);
+  if (input.outcome === "service_concern" && !note) {
+    return { ok: false, reason: "concern_needs_words" };
+  }
+  const returned = await db
+    .update(gearReservations)
+    .set({ returnedAt: nowDate(), returnNote: note, returnOutcome: input.outcome })
+    .where(
+      and(
+        eq(gearReservations.shopId, input.shopId),
+        eq(gearReservations.bookingId, input.bookingId),
+        isNotNull(gearReservations.checkedOutAt),
+        isNull(gearReservations.returnedAt),
+      ),
+    )
+    .returning({ id: gearReservations.id });
+  return returned.length > 0 ? { ok: true } : { ok: false, reason: "not_found" };
 }
 
 /**
@@ -939,6 +1012,15 @@ export type GearRowReservation = {
   reservedUntil: CalendarDate;
   checkedOutAt: Date | null;
   returnedAt: Date | null;
+  /**
+   * How the set came home, when somebody said (issue #1186). Null on a row
+   * closed before this existed and on the paths that close one without asking,
+   * and rendered as silence rather than as "all good" — see the column's own
+   * note in `schema.ts`.
+   */
+  returnOutcome: GearReturnOutcome | null;
+  /** The words a `service_concern` had to carry, or whatever else was noted. */
+  returnNote: string | null;
   personName: string;
   tripTitle: string | null;
   /**
@@ -1212,6 +1294,8 @@ async function listOpenReservations(
       reservedUntil: gearReservations.reservedUntil,
       checkedOutAt: gearReservations.checkedOutAt,
       returnedAt: gearReservations.returnedAt,
+      returnOutcome: gearReservations.returnOutcome,
+      returnNote: gearReservations.returnNote,
       personName: people.fullName,
       tripTitle: trips.title,
       // The clock an Out row shows on the last day of its window — taken off
@@ -1407,6 +1491,8 @@ async function listItemReservationHistory(
       reservedUntil: gearReservations.reservedUntil,
       checkedOutAt: gearReservations.checkedOutAt,
       returnedAt: gearReservations.returnedAt,
+      returnOutcome: gearReservations.returnOutcome,
+      returnNote: gearReservations.returnNote,
       personName: people.fullName,
       tripTitle: trips.title,
       tripEndsAt: trips.endsAt,

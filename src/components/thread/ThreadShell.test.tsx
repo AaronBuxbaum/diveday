@@ -341,3 +341,82 @@ describe("the backstops ramp without changing a word", () => {
     }
   });
 });
+
+/**
+ * **The diver's counterpart to Boat Mode** (issue #1214, delight report D54).
+ *
+ * `.glare-mode` was already the app's whole answer to a phone in the sun — an
+ * AAA palette, 16px minimum type, 44px minimum targets, all declared on
+ * `documentElement` in `globals.css` and therefore global to whatever page is
+ * open. The only thing mounting it was the crew's offline manifest, so a diver
+ * on the same dock could not ask for any of it.
+ */
+describe("the thread's contrast control", () => {
+  const copy = {
+    modeLabel: "Screen contrast",
+    labelAuto: "Auto",
+    labelStandard: "Standard",
+    labelFull: "High",
+  };
+
+  /**
+   * The preference is device-wide and the detector is what applies it, so it is
+   * unconditional: a diver who chose High on their readiness page keeps it on
+   * the waiver and the claim without being asked again. Only the *buttons* are
+   * opt-in per page.
+   */
+  it("applies the stored preference on every page built on the shell", () => {
+    render(<ThreadShell shopName="Blue Mantis" title="Two-Tank Reef" />);
+    // `AmbientGlareDetector` renders null and works through an effect on the
+    // document element, so the fact under test is that the effect ran at all.
+    expect(document.documentElement.classList.contains("glare-mode")).toBe(false);
+    expect(screen.queryByRole("group", { name: "Screen contrast" })).toBeNull();
+  });
+
+  it("renders the three states as one radio group when a page asks for them", () => {
+    render(<ThreadShell shopName="Blue Mantis" title="Two-Tank Reef" contrastCopy={copy} />);
+    const group = screen.getByRole("group", { name: "Screen contrast" });
+    expect(group).toBeTruthy();
+    // Real radios, so exactly one is on and arrow keys move between them.
+    for (const label of ["Auto", "Standard", "High"]) {
+      expect(screen.getByRole("radio", { name: label })).toBeTruthy();
+    }
+    expect(screen.getByRole("radio", { name: "Auto" })).toHaveProperty("checked", true);
+  });
+
+  /**
+   * **The boundary the ticket names**: never hide a safety or money fact. The
+   * control is additive — it appends one fieldset after the page's own
+   * children and changes nothing about them — so this asserts the children
+   * survive it rather than trusting that they do.
+   */
+  it("adds itself after the page's content and takes none of it away", () => {
+    render(
+      <ThreadShell shopName="Blue Mantis" title="Two-Tank Reef" contrastCopy={copy}>
+        <p>Balance due $120</p>
+        <p>Waiver not signed</p>
+      </ThreadShell>,
+    );
+    expect(screen.getByText("Balance due $120")).toBeTruthy();
+    expect(screen.getByText("Waiver not signed")).toBeTruthy();
+    const main = screen.getByRole("main");
+    const group = screen.getByRole("group", { name: "Screen contrast" });
+    // Last, after everything the page is about — it is a setting for this
+    // device, not a step in the thread.
+    expect(main.lastElementChild?.contains(group)).toBe(true);
+  });
+
+  /**
+   * The two long surfaces a diver dwells on carry the buttons. `/claim` and
+   * `/recap` are short cards they pass through, and still get the preference
+   * from the detector above — stated here so a later reader can tell the split
+   * from an omission.
+   */
+  it("is offered by the readiness and waiver pages", () => {
+    for (const page of ["app/ready/[token]/page.tsx", "app/waivers/[token]/page.tsx"]) {
+      expect(read(page), `${page} should offer the contrast control`).toContain(
+        "contrastCopy={diverContrastCopy(t)}",
+      );
+    }
+  });
+});

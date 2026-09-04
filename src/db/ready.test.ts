@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking, createBooking, setBookingLastDived } from "./bookings";
 import { setBookingPayment } from "./payments";
-import { getReadyPageData } from "./ready";
-import { bookings } from "./schema";
+import { carriedPreparationForDiver, getReadyPageData } from "./ready";
+import { bookings, people, shops } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
 
@@ -199,5 +199,96 @@ describe("getReadyPageData", () => {
       }),
     ).toBe(false);
     expect((await getReadyPageData(db, bookingId))?.lastDivedBand).toBeNull();
+  });
+});
+
+/**
+ * **What a blown-out day left standing** (issue #1197, delight report D37).
+ *
+ * The seeded demo shop is the fixture on purpose: these three facts are
+ * person-and-shop scoped, so the only honest way to prove the reader finds them
+ * is to read a diver the shop has actually prepared for, rather than a
+ * fabricated row that agrees with the query by construction.
+ */
+describe("carriedPreparationForDiver", () => {
+  it("finds what the shop holds for a diver who prepared", async () => {
+    const { db, shop } = await seededShopContext();
+    const trips = await upcomingTripsWithCounts(db, shop.id);
+    const rosters = await Promise.all(trips.map((trip) => getTripRoster(db, shop.id, trip.id)));
+
+    // The first seeded diver who carries anything at all. There is at least one
+    // — the demo exists to show a shop mid-season — and asserting on "whoever
+    // that is" keeps this from breaking every time a seed scenario is added.
+    const carried = await Promise.all(
+      [...new Set(rosters.flat().map((entry) => entry.person.id))].map((personId) =>
+        carriedPreparationForDiver(db, { shopId: shop.id, personId, hasRentalFit: false }),
+      ),
+    );
+    const someone = carried.find((items) => items.length > 0);
+    expect(
+      someone,
+      "no seeded diver has a release or a card — the reader found nothing",
+    ).toBeTruthy();
+    // Only ever these, and never a duplicate.
+    for (const items of carried) {
+      expect(new Set(items).size).toBe(items.length);
+      for (const item of items) expect(["waiver", "certification", "fit"]).toContain(item);
+    }
+  });
+
+  /**
+   * **The claim that has to fail closed.** A person this shop has never seen
+   * must produce nothing at all, so the surface stays silent rather than
+   * reassuring somebody about preparation that does not exist. `hasRentalFit`
+   * is the caller's own fact and is the one thing this reader takes on trust.
+   */
+  it("claims nothing for a person the shop holds nothing for", async () => {
+    const { db, shop } = await seededShopContext();
+    const [stranger] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Never Prepared" })
+      .returning();
+    if (!stranger) throw new Error("person insert failed");
+
+    expect(
+      await carriedPreparationForDiver(db, {
+        shopId: shop.id,
+        personId: stranger.id,
+        hasRentalFit: false,
+      }),
+    ).toEqual([]);
+    expect(
+      await carriedPreparationForDiver(db, {
+        shopId: shop.id,
+        personId: stranger.id,
+        hasRentalFit: true,
+      }),
+    ).toEqual(["fit"]);
+  });
+
+  /**
+   * Tenant scope, on a reader that takes a `personId` straight from a resolved
+   * capability: asking another shop about this diver must answer nothing, not
+   * their records here.
+   */
+  it("answers nothing when asked about a diver under the wrong shop", async () => {
+    const { db, shop } = await seededShopContext();
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("demo trip missing");
+    const [entry] = await getTripRoster(db, shop.id, trip.id);
+    if (!entry) throw new Error("demo booking missing");
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Rival Reef", slug: "rival-carried-prep", timezone: "UTC" })
+      .returning();
+    if (!other) throw new Error("second shop insert failed");
+
+    expect(
+      await carriedPreparationForDiver(db, {
+        shopId: other.id,
+        personId: entry.person.id,
+        hasRentalFit: false,
+      }),
+    ).toEqual([]);
   });
 });

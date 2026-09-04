@@ -534,6 +534,48 @@ export const people = pgTable(
     // silently storing an arbitrary string (`security-reviewer`, issue #708).
     spokenLanguages: jsonb("spoken_languages").$type<SpokenLanguageTag[]>().notNull().default([]),
     /**
+     * **When this staff member agreed to be named to divers** (issue #1181,
+     * delight report D21) -- null until they say so, which is every row.
+     *
+     * The public trip page has always been able to say *"we speak German"*
+     * (`tripCrewSpokenLanguages`, issue #708): an anonymous claim about the
+     * shop's capability, deliberately naming nobody. Saying *"Marcus, your
+     * divemaster, speaks German"* is a different act on a page anyone on the
+     * internet can read, and it is not the shop's to decide.
+     *
+     * So this is the person's own switch and nobody else's.
+     * `saveStaffLanguagesAction` is behind the team-management gate, because
+     * which languages a shop can field is an operational fact a manager
+     * curates; publishing somebody's name is not, and a consent a manager
+     * recorded on their behalf would not be one. The action that writes this
+     * refuses any `personId` but the caller's, and the team page draws the
+     * control on the reader's own row alone.
+     *
+     * A timestamp rather than a boolean, like `consentedAt` and
+     * `unsubscribedAt`: for a consent record, *when* is half of what makes it
+     * a record. Withdrawing sets it back to null -- the fact worth keeping is
+     * the standing answer, and a shop holding a former employee's revoked
+     * consent date serves nobody.
+     */
+    crewPublicConsentAt: timestamp("crew_public_consent_at", { withTimezone: true }),
+    /**
+     * **The exact string that publishes** (issue #1351).
+     *
+     * `full_name` is one free-text box a shop types into, so deriving the
+     * published name as its first whitespace token is a guess about naming
+     * order, not a fact: a row entered "Tanaka Keiko" or "Smith, John"
+     * publishes the *surname* to an anonymous, indexed page -- which is
+     * precisely what the consent beside it does not cover. The person types
+     * what divers see, defaulted to that first token so the ordinary case is
+     * still one tap, and `tripPublicCrew` reads this rather than splitting.
+     *
+     * Paired with the stamp by a check constraint below rather than by
+     * convention. A consent with no name stored is not a state worth
+     * tolerating in a reader: it renders an empty crew line with no error and
+     * no failing test, which is the shape that ships silently.
+     */
+    crewPublicName: text("crew_public_name"),
+    /**
      * Set once this person self-serves out of courtesy email — wait-list
      * openings (`waitlist_invite`) and post-trip recaps (`trip_recap`), the two
      * kinds that ask something of the diver's attention beyond their own
@@ -646,6 +688,19 @@ export const people = pgTable(
     // — an index that strips the letter D from phone numbers, and one Postgres
     // would never match against the query's own expression. A character class
     // has nothing to escape.
+    // Consent and the string it publishes travel together, in both directions:
+    // agreeing without a name to show would render an empty line, and holding
+    // somebody's chosen public name after they withdrew would republish it the
+    // moment anything set the stamp again.
+    check(
+      "people_crew_public_name_with_consent",
+      // `nullif(btrim(...), '')` rather than a bare null test: an empty string
+      // is not null, so the plain pairing admitted `consent_at = now(),
+      // crew_public_name = ''` -- a row that renders a bullet with no name on
+      // it, which is the exact silent-empty outcome this constraint exists to
+      // make impossible.
+      sql`(${table.crewPublicConsentAt} is null) = (nullif(btrim(${table.crewPublicName}), '') is null)`,
+    ),
     index("people_phone_digits_trgm_idx").using(
       "gin",
       sql`regexp_replace(coalesce(${table.phone}, ''), '[^0-9]', '', 'g') gin_trgm_ops`,
@@ -1954,6 +2009,28 @@ export const executedDives = pgTable(
       .default(null),
     /** Explicit field-level omissions, e.g. `max_depth`, rather than fake zeroes. */
     notRecorded: jsonb("not_recorded").$type<string[]>().notNull().default([]),
+    /**
+     * **One species the crew actually saw on this dive** (issue #1190, delight
+     * report D30). A `MARINE_LIFE_CATALOG` slug, so what a diver reads is
+     * DiveDay's copy in their own language (ADR
+     * 20260813-marine-life-is-diveday-copy).
+     *
+     * The whole point is the verb. `dive_site_creatures` says what a site
+     * *might* show you and is the shop's standing claim about a reef; this says
+     * what somebody *did* see, once, on one dive. They draw from the same
+     * catalog and they must never be the same column, because publishing the
+     * first as the second would be inventing a sighting — the one thing D30's
+     * boundary rules out.
+     *
+     * Null is the ordinary state and stays silent. It is deliberately not in
+     * `not_recorded` beside `depth`: a depth nobody wrote down is a hole in a
+     * record that should have one, and a dive where nothing stood out is just a
+     * dive. There is nothing to declare.
+     *
+     * One, not many. A list would turn a moment into an inventory, and the
+     * surface it reaches is a logbook card, not a species checklist.
+     */
+    observedSpeciesSlug: text("observed_species_slug"),
     recordedByPersonId: uuid("recorded_by_person_id").references(() => people.id),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     deletedByPersonId: uuid("deleted_by_person_id").references(() => people.id),
@@ -6109,6 +6186,29 @@ export const gearItemKind = pgEnum("gear_item_kind", [
 export const gearItemStatus = pgEnum("gear_item_status", ["in_service", "needs_service"]);
 
 /**
+ * **How a rental set came home** (issue #1186, delight report D26).
+ *
+ * Three answers, and the first is the one a counter gives at 4pm on almost
+ * every set: the gear is back and there is nothing to say. The other two are
+ * exceptions and are the only ones that open any further detail.
+ *
+ * `fit_adjusted` is a fact about the *diver* — the size on file was not the
+ * size that worked. `service_concern` is a fact about the *unit*.
+ *
+ * A `service_concern` deliberately does **not** write a `gear_service_events`
+ * row. Those drive the clocks a shop uses to decide when a regulator gets bench
+ * time, and a busy desk tapping "concern" for a scratched mask would turn "this
+ * needs a technician" into "somebody was mildly annoyed" — the way any
+ * badly-tuned alert dies. It raises a flag a technician promotes deliberately,
+ * which keeps the service record something somebody chose to write.
+ */
+export const gearReturnOutcome = pgEnum("gear_return_outcome", [
+  "all_good",
+  "fit_adjusted",
+  "service_concern",
+]);
+
+/**
  * What kind of care a service event records. `service` is the manufacturer
  * service (regulators, BCDs, computers); `hydro_test` and `visual_inspection`
  * are a tank's two independent compliance clocks; `o2_clean` is the nitrox
@@ -6293,7 +6393,23 @@ export const gearReservations = pgTable(
     checkedOutAt: timestamp("checked_out_at", { withTimezone: true }),
     /** When it came home. Non-null ends the reservation and frees the window. */
     returnedAt: timestamp("returned_at", { withTimezone: true }),
-    /** Condition on return, when worth writing down ("torn strap, needs look"). */
+    /**
+     * **How it came home** (issue #1186). Null on a row returned before this
+     * existed, and on the two paths that still close a reservation without
+     * asking — a cancelled booking letting go of what it never collected, and
+     * the unit page's own quick return. Absent means "nobody said", never
+     * "all good": inventing the reassuring answer for a row nobody answered is
+     * exactly what makes the other two worth reading.
+     */
+    returnOutcome: gearReturnOutcome("return_outcome"),
+    /**
+     * Condition on return, when worth writing down ("torn strap, needs look").
+     *
+     * Required by the writer when the outcome is `service_concern` and refused
+     * as the whole record on its own: a flag with no words is a note a
+     * technician cannot act on. Written since the register shipped and read by
+     * nothing at all until #1186 — the detail was there and invisible.
+     */
     returnNote: text("return_note"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

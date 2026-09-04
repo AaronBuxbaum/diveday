@@ -12,6 +12,7 @@ import { type GearItemDetail, getGearItemDetail } from "@/db/gear";
 import {
   gearItemKindLabel,
   gearPhaseLabel,
+  gearReturnOutcomeLabel,
   gearServiceKindLabel,
   gearServiceStateText,
   gearStatusLabel,
@@ -307,6 +308,34 @@ export default async function GearUnitPage({
                       until: formatCalendarDate(reservation.reservedUntil, locale),
                     })}
                   </p>
+                  {/* **How it came home** (issue #1186, D26), which is the whole
+                      reason the counter is asked. `return_note` has been
+                      written since the register shipped and read by nothing at
+                      all — the detail was there and invisible.
+
+                      A concern is warning-toned and carries its words, because
+                      this is the page a technician is standing on when they
+                      decide whether to log bench time. It is a flag they
+                      promote, never a `gear_service_events` row written behind
+                      them: the clocks only mean "this needs a technician" for
+                      as long as somebody chose to say so.
+
+                      Nothing at all when nobody answered — silence is not
+                      "all good", and inventing the reassuring word for a set
+                      closed by a cancellation is what would make the other two
+                      not worth reading. */}
+                  {reservation.returnOutcome ? (
+                    <p
+                      className={`mt-1 text-sm ${
+                        reservation.returnOutcome === "service_concern"
+                          ? "text-warning-strong"
+                          : "text-muted"
+                      }`}
+                    >
+                      {gearReturnOutcomeLabel(t, reservation.returnOutcome)}
+                      {reservation.returnNote ? ` · ${reservation.returnNote}` : ""}
+                    </p>
+                  ) : null}
                 </li>
               ))}
               {priorAssignments.map((assignment) => (

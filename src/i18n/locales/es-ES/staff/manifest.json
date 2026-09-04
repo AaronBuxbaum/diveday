@@ -53,6 +53,8 @@
     "visibility": "Visibilidad",
     "current": "Corriente",
     "notRecordedDepth": "Profundidad no registrada",
+    "observedSpecies": "Visto en esta inmersión",
+    "observedSpeciesNone": "Nada que destacar",
     "save": "Guardar registro de inmersión",
     "saved": "Registro de la inmersión guardado.",
     "refusal": {
@@ -65,7 +67,8 @@
       "invalidTime": "No se pudo leer una de las horas. Revisa las dos y guarda de nuevo.",
       "invalid": "No se guardó nada. Revisa los datos e inténtalo de nuevo.",
       "wrongDive": "Este formulario es de otra inmersión. Recarga la lista de embarque e inténtalo de nuevo."
-    }
+    },
+    "observedSpeciesHint": "Los buceadores lo leen en su resumen."
   },
   "addCrewToTrip": "Añadir tripulación a la salida",
   "manageCrewOnTrip": "Gestionar la tripulación de esta salida",
@@ -157,5 +160,13 @@
   "rollCallRecordedShort": "{label} · {time} · {name}",
   "markBackAboard": "Marcar de vuelta a bordo",
   "crewMarkBackAboard": "Marcar de vuelta a bordo",
-  "supportNeedsLabel": "Apoyo en la inmersión"
+  "supportNeedsLabel": "Apoyo en la inmersión",
+  "emergency": {
+    "heading": "En una emergencia",
+    "empty": "No hay números de emergencia registrados. Añade la cámara hiperbárica, la línea de accidentes de buceo y tu contacto en tierra en Ajustes. La tripulación lee esto sin conexión.",
+    "vesselLabel": "Embarcación:",
+    "shoreContactLabel": "Contacto en tierra:",
+    "planLabel": "Si algo sale mal"
+  },
+  "onThisPhone": "En este teléfono"
 }

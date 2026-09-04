@@ -534,7 +534,8 @@
       "save": "Save contact",
       "saving": "Saving…"
     },
-    "languagesEmpty": "Not set"
+    "languagesEmpty": "Not set",
+    "publicNameSeen": "Divers see “{name}”"
   },
   "safetyChecklist": {
     "eyebrow": "Settings",
@@ -883,6 +884,7 @@
     "shows": "What it shows",
     "showEverything": "Everything on the board",
     "showDeparture": "One departure",
+    "showAllCourses": "Every course",
     "look": "Look",
     "lookSite": "Your site",
     "lookLight": "DiveDay",

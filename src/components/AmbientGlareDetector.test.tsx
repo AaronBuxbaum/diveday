@@ -13,8 +13,8 @@ import {
 const contrastCopy: AmbientContrastCopy = {
   modeLabel: "Boat mode",
   labelAuto: "Auto",
-  labelLand: "Land mode",
-  labelBoat: "Boat mode",
+  labelStandard: "Land mode",
+  labelFull: "Boat mode",
 };
 
 class MockAmbientLightSensor implements EventTarget {

@@ -2,6 +2,7 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 import { LEGACY_PUBLIC_SHOP_REDIRECTS } from "./src/lib/public-routes";
 import { securityHeaderRules } from "./src/lib/security-headers";
+import { managedImageRemotePatterns } from "./src/lib/storage/blob-host";
 
 const isE2EBuild = process.env.DIVEDAY_E2E === "1";
 
@@ -117,6 +118,33 @@ const nextConfig: NextConfig = {
       "node_modules/**/*.d.cts",
       "node_modules/**/*.d.mts",
     ],
+    // **Satori, in 45 staff closures that render no image** (issue #1355).
+    //
+    // `@vercel/og` is 3.07 MiB of renderer, bundled font and WASM. It reaches
+    // every page because `src/app/icon.tsx` and `apple-icon.tsx` import
+    // `ImageResponse`, and Next attaches both as *metadata modules* to every
+    // page entry — so a settings form traces the rasterizer. Measured: 82 of
+    // 144 closures carry it and 7 need it.
+    //
+    // **`/shop/**` and never `/shop`.** These keys are matched with picomatch
+    // and `contains: true`, so they match a *substring* of the route: the bare
+    // key would also match `/api/integrations/shopify/callback`, which has
+    // nothing to do with staff pages. The trailing slash is what makes it a
+    // path segment rather than five letters.
+    //
+    // Safe because no route under `/shop/` renders an image — checked against
+    // the tree, not assumed: every `ImageResponse` route in the app is
+    // `icon`, `apple-icon`, `pwa-icon-maskable`, and four `opengraph-image`
+    // routes at the root, `/recap/[token]`, `/s/[shopSlug]` and
+    // `/s/[shopSlug]/trips/[id]`. A `/shop/**` OG route added later would need
+    // this key narrowed, which is why the list is written out here.
+    //
+    // This is 45 of the 75 closures that do not need it. The other 30 are the
+    // marketing and diver-facing pages, and they cannot be excluded the same
+    // way: substring matching means a `/s/**` key would also match
+    // `/s/[shopSlug]/opengraph-image`, which genuinely needs the module, and
+    // these keys have no negation. Issue #1361 carries that half.
+    "/shop/**": ["node_modules/**/next/dist/compiled/@vercel/og/**"],
   },
   cacheComponents: true,
   images: {
@@ -127,38 +155,60 @@ const nextConfig: NextConfig = {
     // course-page captures a permanent visual-regression coin flip while the
     // layout never moved. Same principle as DIVEDAY_CLOCK: freeze the
     // nondeterminism at the harness boundary, change nothing in production.
+    //
+    // **What it costs, which went unwritten for a year** (issue #1350): with
+    // the optimizer off, `generateImgAttrs` returns `{ srcSet: undefined,
+    // sizes: undefined }`. So every `sizes` attribute in the app is invisible
+    // to the suite that exists to see surfaces — there is no srcset to select
+    // from, no capture can move, and the attribute is not even in the DOM for
+    // a Playwright assertion to read. PR #1347 took a fetched candidate from
+    // 1080px to 384px and reg-suit reported 0 differences across 732 surfaces
+    // with a baseline resolved. `pnpm check:image-sizes` covers that gap with
+    // arithmetic instead of pixels; this line is why it has to.
     unoptimized: isE2EBuild,
-    // Every photo this app stores (certification cards, course media, recap
-    // photos, dive-site briefings) lands in Vercel Blob behind a per-store
-    // subdomain of this suffix (`BLOB_PUBLIC_HOSTNAME_SUFFIX`,
-    // src/lib/storage/blob-host.ts) — `*` matches exactly that one subdomain
-    // segment. Anything else (a shop-pasted third-party URL that predates
-    // upload-based media, or a legacy Commons URL a dive-site row still
-    // carries) is rendered unoptimized or as a plain `<img>` rather than
-    // widened to a blanket pattern here.
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "*.s3.*.amazonaws.com",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "*.s3.amazonaws.com",
-        pathname: "/**",
-      },
-      {
-        // Where media is actually read from since AWS-8's reading half landed:
-        // the bucket blocks all public access and grants GetObject only to this
-        // distribution, so `MEDIA_PUBLIC_URL_BASE` is a CloudFront domain and
-        // every stored `*_image_url` is one too (issue #1013). The two S3
-        // patterns above stay for a deployment that overrides the base back to
-        // the bucket endpoint. Vercel Blob's host is gone with the provider.
-        protocol: "https",
-        hostname: "*.cloudfront.net",
-        pathname: "/**",
-      },
-    ],
+    // **The optimizer fetches from the distribution we deployed, and nowhere
+    // else** (issue #1358).
+    //
+    // These three patterns were `*.s3.*.amazonaws.com`, `*.s3.amazonaws.com`
+    // and `*.cloudfront.net`, each over `/**` — every public bucket and every
+    // distribution on the internet. `/_next/image?url=…&w=…&q=…` downloads,
+    // decodes, re-encodes and serves whatever it is pointed at, which made this
+    // the app's most expensive request available to anyone with a URL and no
+    // account, and made DiveDay's origin the apparent fetcher of it.
+    //
+    // `managedImageRemotePatterns` is the same list `isManagedStorageUrl`
+    // already keeps (src/lib/storage/blob-host.ts): the CloudFront domain from
+    // `MEDIA_PUBLIC_URL_BASE`, plus the two virtual-hosted forms of
+    // `MEDIA_BUCKET_NAME` for a deployment that overrides the base back to the
+    // bucket. Same three shapes as before, named rather than wildcarded — so a
+    // URL the storage seam would refuse to store is one the optimizer will not
+    // fetch. Read there for what an unconfigured environment gets, and why an
+    // empty allowlist is the right answer rather than a fallback wildcard.
+    //
+    // Read from the environment when this file is loaded — at build time on
+    // Vercel, where it is baked into `images-manifest.json`, and again at boot
+    // under `next start`. `MEDIA_PUBLIC_URL_BASE` reaches both local and Vercel
+    // builds (config/env-registry.mjs), so a production build has it; one
+    // without it already served 403s from the direct bucket endpoint — the
+    // registry's own `absent:` note — so pinning costs that deployment nothing
+    // it had.
+    //
+    // **Origin-scoping is not the whole story, and this is the part to know.**
+    // Next's optimizer follows a 3xx by recursing into the redirect target with
+    // only its private-IP guard re-applied — the new URL is never re-tested
+    // against these patterns. Under the old `*.cloudfront.net` that made it a
+    // one-hop open proxy to anywhere; now it takes control of the shop's own
+    // bucket or distribution, which is a different threat entirely. Two further
+    // doors that bypass this list rather than widening it: `images.domains` is
+    // ORed with these patterns, and `assetPrefix` pushes its own host in here
+    // with no `pathname` at all. Both are unset, and `src/test/next-config.test.ts`
+    // is what keeps them that way.
+    //
+    // The CSP's `img-src` (src/lib/content-security-policy.ts) stays wildcarded
+    // on purpose and is not the same decision: it is built in the edge layer,
+    // which cannot read this configuration, and it is a backstop rather than an
+    // allowlist.
+    remotePatterns: managedImageRemotePatterns(),
   },
   // TypeScript 7 is the native (Go) compiler and no longer exposes the JS
   // compiler API Next used for its in-build type check. Next drives it through

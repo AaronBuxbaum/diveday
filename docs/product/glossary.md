@@ -547,6 +547,17 @@ new domain concept, define it here in the same PR.
 - **Working shift** — a dated availability window for a staff member. It is not a crew assignment:
   the shift says who is available, while the trip assignment says who is actually on that
   manifest. Overlapping shifts for one person are rejected.
+- **Crew clash** — one person on two departures whose windows **overlap**. It is a time overlap and
+  never a shared day: a divemaster on the 08:00 and the 14:00 is how a shop runs a Saturday, and
+  `setTripCrew`/`changeTripCrew` allow it deliberately while refusing the overlap outright. The
+  schedule builder's move preview reports it before a move that would create one
+  (`crewMoveConflicts`, issue #1310), by name and with the other departure named too — never as a
+  count, which was built for #1203, measured at 24 of the demo board's 25 departures, and removed.
+  **It is not the whole of "is she free?"**: that question has three readings, and the two the app
+  can answer are this one and the **Working shift** blackout above, reported as its own separate
+  line because one is an inference from the roster and the other is the crew member's own
+  statement. The third — over her hours — is unmodelled, and nothing says otherwise. `moveTrip`
+  does not refuse a clash; the preview informs and the owner decides.
 - **Crew gap** — a scheduled trip with nobody rostered on it, or a course session `courseCrewGap`
   reports as instructorless or booked past its ratio. It is a prompt for staff, not a boarding
   authorization by itself. **Today owns it**: Today names it (`instructor_missing`) and its
@@ -558,14 +569,29 @@ new domain concept, define it here in the same PR.
   the water at all, which takes the slot as `uncrewed_course`** (issue #1338). One departure still
   never carries two rows for one underlying fact (issue #732); that rule is about the count, and the
   count has not moved. What moved is which row, because "Course needs instructor" beside an empty
-  boat reads as though a divemaster is already aboard, and "No crew" beside a course session sends a
+  boat reads as though a divemaster is already aboard, and an empty-water phrase beside a course session sends a
   manager to phone one — who cannot run a training dive or sign anybody off. A session with **nobody
-  booked**, or one the shop marked **self-guided**, keeps the instructor word: neither has anyone to
-  supervise, and not being able to enrol is still the actionable fact. Formerly "coverage gap", which
-  named a second vocabulary that no longer exists. **The five words a staffer reads** are "No crew",
-  "Under target", "Course needs instructor", "No instructor or crew" and "Over student ratio" — the
+  booked**, or one carrying the **self-guided** mark, keeps the instructor word: neither has anyone
+  to supervise, and not being able to enrol is still the actionable fact. That second case is now a
+  statement about the *detector* rather than something a shop can arrange — no trip-creation door
+  writes the mark onto a course session any more (issue #1342, see **Self-guided departure**) — and
+  it is kept because a row written out of band still has to resolve correctly. Formerly "coverage
+  gap", which named a second vocabulary that no longer exists. **The five words a staffer reads** are
+  "Nobody in the water", "Under target", "Course needs instructor", "No instructor or crew" and
+  "Over student ratio" — the
   last says *student* precisely because it is the agency cap and not the target two rows down, and
   they share the same 135px column of the staffing week (issues #1125, #1338).
+- **Self-guided departure** — `trips.self_guided`. A departure the shop has said runs without an
+  in-water guide: buddy pairs go in on their own. It silences the shop's own **Target
+  diver:divemaster ratio** for that one sailing and reaches nothing else — never an agency training
+  ratio, never readiness, trip admission, capacity, roll call or the manifest. It is a **statement,
+  not a permission**: nothing about it clears anybody to do anything. **Never true of a course
+  session** — no trip-creation door will write the two together (issue #1342), because a departure
+  running a course has an instructor of record whether or not they are in the water, so the shop's
+  own target is exactly the signal that should keep applying to it. The refusal only ever *adds* an
+  advisory row, never removes one. Offered at creation as well as on the departure's own form, since
+  the case it exists for is a standing unguided charter created once as a series template (ADR
+  20260827-self-guided-departures).
 - **Integrity-sealed waiver** — a signed waiver whose immutable metadata and template snapshot have
   a matching server-sealed HMAC. `unsealed` means legacy or imported evidence has no seal yet;
   `invalid` means staff must stop and investigate.
@@ -799,6 +825,18 @@ new domain concept, define it here in the same PR.
   Today nudge. It is never a boarding blocker: a missing contact is an administrative gap, not a
   fitness-to-dive gap, so it surfaces only as a low-priority, dock-settleable nudge on boats within
   three days.
+- **Emergency reference** — the **shop's** own card of numbers a crew dials *during* an incident:
+  its nearest chamber, the dive-accident hotline, the coastguard, the vessel's name, who to raise on
+  shore, and the shop's emergency action plan as prose (`src/lib/emergency-reference.ts`, stored
+  whole on `shops.emergency_reference`). It is **not** the *emergency contact* above, and the two
+  are now read within one scroll of each other on the offline manifest, so the distinction is worth
+  holding: an emergency contact belongs to **one diver** and is the person you phone *afterwards*;
+  an emergency reference belongs to **the shop** and is who you phone *during*. DiveDay authors
+  none of its values and ships no defaults — the nearest chamber differs by dock and the hotline
+  differs by country, so a plausible wrong number here costs the minute it takes to find out. Free
+  text throughout, including the phone lines: an international dive line is not a `tel:`-shaped
+  string until the shop writes it, and nothing on this card links, dials, escalates, or opens an
+  incident. It is a laminated card retyped, priced at zero words of DiveDay's own.
 - **Roll-call event** — an append-only record that a staff member marked one booking boarded,
   not boarded, or cleared, including the time and who recorded it. It carries **no free text**: the
   note field was removed in 2026-08, which also means a roll call records *that* a diver did not
@@ -1474,6 +1512,29 @@ new domain concept, define it here in the same PR.
   however, evidence — `buildIncidentExport` renders it into a SHA-256-sealed document for an
   investigator or a treating physician, which is why a dive nobody logged must read as *not
   recorded* rather than being interpolated from its neighbours.
+- **Marine-life catalog** — DiveDay's own list of 148 wider-Caribbean species
+  (`src/db/marine-life-catalog.ts`): a slug, a Latin binomial, a category and a photo, and no prose
+  at all. Every word a person reads about one is DiveDay's, written once in every language and
+  resolved at render (`src/i18n/marine-life-labels.ts`, ADR 20260813-marine-life-is-diveday-copy). A
+  shop **picks** from it and never writes into it; a species we do not carry is refused by the picker
+  and the ask lands in `marine_life_requests`. The opposite contract to a **site template** or a
+  **course template**, whose words are copied onto the shop's row and owned by the shop from then on:
+  a dive plan for one reef is the shop's to write, and what a stoplight parrotfish looks like is the
+  same sentence for every shop in the Caribbean.
+- **Field guide** — the faces a **dive site** is known for: up to eight catalog species a shop picks
+  for that site (`dive_site_creatures`, `MAX_SITE_CREATURES`), in the order it chose. A **briefing
+  selection**, not an inventory — the point is to tell a diver what to *expect*, so it holds the
+  animals a reef shows reliably and not the ones it occasionally produces. A claim about a **place**,
+  standing and future-tense, and never evidence that anybody saw anything.
+- **Observed species** — one catalog species a crew member recorded on one **executed dive**
+  (`executed_dives.observed_species_slug`, issue #1190). A claim about a **moment**: it exists only
+  because somebody wrote it down, and is never inferred from the site's field guide — the two draw
+  from the same catalog and mean opposite things, which is why they are separate columns. Drawn from
+  the **whole catalog** rather than from the site's guide, because a sighting is worth recording
+  precisely when it was not the usual: the guide holds the blue tang, and the eagle ray is what a
+  diver climbs the ladder talking about. Informs and gates nothing, and it is an ornament rather than
+  evidence — an unusable slug is dropped so the dive record still saves. Null means nobody said,
+  never "all good".
 - **Surface interval** — the time between one dive's exit and the next dive's entry. Only ever
   stated between **consecutively numbered** executed dives that were both recorded and do not
   overlap; anything else is "not recorded". An interval measured across a dive nobody logged
@@ -1528,6 +1589,14 @@ new domain concept, define it here in the same PR.
 - **Conservation note** — a shop's own prose about its conservation practice at one dive site.
   The shop's words, in the shop's language, alongside the rest of the briefing — not a code and
   not a claim DiveDay renders on the shop's behalf.
+- **Crew public name** — the string a consenting staff member shows divers on the departures they
+  crew (`people.crew_public_name`). Theirs to type, not derived: `full_name` is one free-text box
+  a shop fills in, so taking its first whitespace token assumes the given name was typed first and
+  publishes the **surname** for a row entered "Tanaka Keiko" or "Smith, John" — to an anonymous,
+  indexed page, and not to the disclosure anybody agreed to. Defaulted to that first token so the
+  ordinary case is still one tap, and paired with `crew_public_consent_at` by a check constraint
+  in both directions: a consent with nothing to show would render an empty crew line, and a name
+  left standing after a withdrawal would republish itself the moment anything set the stamp again.
 
 ## Modeling notes
 

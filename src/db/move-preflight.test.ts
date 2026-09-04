@@ -13,7 +13,14 @@ import {
   shops,
   trips,
 } from "./schema";
-import { getTripRoster, listStaff, moveTrip, upcomingTripsWithCounts } from "./trips";
+import {
+  createTrip,
+  getTripRoster,
+  listStaff,
+  moveTrip,
+  setTripCrew,
+  upcomingTripsWithCounts,
+} from "./trips";
 
 const ctx = fileScopedShopContext();
 
@@ -245,5 +252,59 @@ describe("getMovePreflight", () => {
     const after = await writableState(ctx.shop.id, trip.id);
 
     expect(after).toEqual(before);
+  });
+
+  /**
+   * **The seam the target has to cross.** The two crew lines are the only
+   * facts here that depend on where the departure is going, so they are the
+   * only ones a refactor can silently drop by forgetting to thread an argument
+   * — and the failure would be invisible: a preview that never mentions crew
+   * looks exactly like a shop whose crew are free.
+   */
+  it("carries the crew clash for the hours it is being moved into, and only then", async () => {
+    const [first] = await listStaff(ctx.db, ctx.shop.id);
+    if (!first) throw new Error("expected a seeded staff member");
+    const timeZone = "Pacific/Honolulu";
+    await ctx.db.update(shops).set({ timezone: timeZone }).where(eq(shops.id, ctx.shop.id));
+
+    const moving = await createTrip(ctx.db, {
+      shopId: ctx.shop.id,
+      title: "The one being moved",
+      startsAt: new Date("2030-08-01T18:00:00Z"),
+      endsAt: new Date("2030-08-01T22:00:00Z"),
+      capacity: 6,
+    });
+    const other = await createTrip(ctx.db, {
+      shopId: ctx.shop.id,
+      title: "Thursday's other boat",
+      startsAt: new Date("2030-08-05T18:00:00Z"),
+      endsAt: new Date("2030-08-05T22:00:00Z"),
+      capacity: 6,
+    });
+    if (!moving || !other) throw new Error("departures not created");
+    await setTripCrew(ctx.db, ctx.shop.id, moving.id, [first.person.id]);
+    await setTripCrew(ctx.db, ctx.shop.id, other.id, [first.person.id]);
+
+    // No target: the panel as it opens, before anything has been chosen. The
+    // clash exists in the data and is deliberately not reported, because
+    // nothing is moving anywhere yet.
+    const onOpen = await getMovePreflight(ctx.db, ctx.shop.id, moving.id);
+    expect(onOpen?.sections.some((section) => section.kind === "crew")).toBe(false);
+
+    const intoIt = await getMovePreflight(ctx.db, ctx.shop.id, moving.id, {
+      startsAt: new Date("2030-08-05T18:00:00Z"),
+      timeZone,
+    });
+    expect(intoIt?.sections[0]).toEqual({
+      kind: "crew",
+      clashes: [{ name: first.person.fullName, departure: "Thursday's other boat" }],
+    });
+
+    // The same day, six hours later: an ordinary double shift, and silent.
+    const afterIt = await getMovePreflight(ctx.db, ctx.shop.id, moving.id, {
+      startsAt: new Date("2030-08-06T00:00:00Z"),
+      timeZone,
+    });
+    expect(afterIt?.sections.some((section) => section.kind === "crew")).toBe(false);
   });
 });

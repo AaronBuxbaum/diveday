@@ -34,10 +34,13 @@ import { FIGURE_CLASS, SECTION_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import { matchLocale } from "@/i18n/negotiate";
+import {
+  type OfflineManifestTranslator,
+  offlineManifestTranslator,
+} from "@/i18n/offline-manifest-messages";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { supportNeedsLines } from "@/i18n/support-needs-labels";
 import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
 import { cachedFormatter, cachedListFormat } from "@/lib/intl-cache";
@@ -140,25 +143,30 @@ function relativeAge(savedAt: Date): string {
 }
 
 /**
- * `staffTranslator` (src/i18n/staff-messages.ts) is documented as
+ * The staff bundle (src/i18n/staff-messages.ts) is documented as
  * server-side-only for every other staff surface — its words normally reach a
  * Client Component as a `copy` prop built by a Server Component parent, never
  * as a function crossing that boundary. This view has no such parent request:
  * it renders fully offline from an IndexedDB snapshot (see `deviceLocale`
  * above), so there is no per-request `Accept-Language` header to negotiate
- * from server-side. `staffTranslator` itself has no server-only dependency —
- * it is a plain function over a JSON bundle — so it is called directly here,
- * entirely within this client module, rather than crossing the RSC boundary
- * (which is the thing that's actually unsafe). `matchLocale` gives it the
- * same fuzzy `es-MX` → `es-ES` matching every other surface gets, instead of
- * the exact-tag-only fallback `staffTranslator` uses on its own.
+ * from server-side. `offlineManifestTranslator` itself has no server-only
+ * dependency — it is a plain function over three JSON namespaces — so it is
+ * called directly here, entirely within this client module, rather than
+ * crossing the RSC boundary (which is the thing that's actually unsafe).
+ * `matchLocale` gives it the same fuzzy `es-MX` → `es-ES` matching every other
+ * surface gets, instead of the exact-tag-only fallback it uses on its own.
+ *
+ * **Three namespaces, not the whole staff bundle** (issue #1353). This is a
+ * client module, so whatever it imports a diver downloads; `staffTranslator`
+ * pulled 31 namespaces in two locales to render three, and made this the
+ * heaviest route in the app. See `@/i18n/offline-manifest-messages`.
  */
-function offlineManifestTranslator() {
+function translatorForThisDevice() {
   const requested = deviceLocale();
   const resolved: DiverLocale = requested
     ? (matchLocale([{ tag: requested, quality: 1 }]) ?? DEFAULT_DIVER_LOCALE)
     : DEFAULT_DIVER_LOCALE;
-  return { t: staffTranslator(resolved), locale: resolved };
+  return { t: offlineManifestTranslator(resolved), locale: resolved };
 }
 
 /**
@@ -339,7 +347,7 @@ export function OfflineManifestView() {
   // whenever they change) stay referentially stable across renders — the
   // device's language doesn't change mid-session, so recreating the
   // translator on every render bought nothing except spurious effect reruns.
-  const { t, locale } = useMemo(() => offlineManifestTranslator(), []);
+  const { t, locale } = useMemo(() => translatorForThisDevice(), []);
   const shellVersionCopy = useMemo(
     () => ({
       staleBanner: t("shared.offlineManifest.shellVersion.staleBanner"),
@@ -1311,11 +1319,11 @@ export function OfflineManifestView() {
           // the one surface a crew has offshore.
           reference={envelope.snapshot.shop.emergencyReference ?? EMPTY_EMERGENCY_REFERENCE}
           copy={{
-            heading: t("trips.emergency.heading"),
-            empty: t("trips.emergency.empty"),
-            vesselLabel: t("trips.emergency.vesselLabel"),
-            shoreContactLabel: t("trips.emergency.shoreContactLabel"),
-            planLabel: t("trips.emergency.planLabel"),
+            heading: t("manifest.emergency.heading"),
+            empty: t("manifest.emergency.empty"),
+            vesselLabel: t("manifest.emergency.vesselLabel"),
+            shoreContactLabel: t("manifest.emergency.shoreContactLabel"),
+            planLabel: t("manifest.emergency.planLabel"),
           }}
         />
 
@@ -2215,7 +2223,7 @@ export function OfflineManifestView() {
                 id="offline-phone-heading"
                 className="text-base font-semibold group-hover/summary:underline"
               >
-                {t("trips.onThisPhone")}
+                {t("manifest.onThisPhone")}
               </h2>
             </summary>
             <div className="grid gap-3 pt-4 sm:grid-cols-2">
@@ -2234,8 +2242,8 @@ export function OfflineManifestView() {
                 copy={{
                   modeLabel: t("shared.boatMode.modeLabel"),
                   labelAuto: t("shared.boatMode.labelAuto"),
-                  labelLand: t("shared.boatMode.labelLand"),
-                  labelBoat: t("shared.boatMode.labelBoat"),
+                  labelStandard: t("shared.boatMode.labelLand"),
+                  labelFull: t("shared.boatMode.labelBoat"),
                 }}
               />
             </div>
@@ -2327,7 +2335,7 @@ function DiscardedRecordsNotice({
   records,
   onAcknowledge,
 }: {
-  t: StaffTranslator;
+  t: OfflineManifestTranslator;
   records: DiscardedOfflineRecord[];
   onAcknowledge: () => void;
 }) {
@@ -2372,7 +2380,7 @@ function OfflineBuddyTeamChip({
   locale,
   names,
 }: {
-  t: StaffTranslator;
+  t: OfflineManifestTranslator;
   locale: string;
   names?: string[];
 }) {

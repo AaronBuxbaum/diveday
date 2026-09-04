@@ -1964,6 +1964,37 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The day that turned up something** (issue #1190, D30).
+       *
+       * The recap above renders no sighting at all, which is the ordinary
+       * shape and the one that proves the boundary: a species reaches this card
+       * because a crew member wrote it down, never because the reef is known
+       * for it. This is the other branch.
+       *
+       * It is a *separate* capture from the changed-site one above rather than
+       * folded into it, because the two states have nothing to do with each
+       * other — most days that turn up a turtle go exactly where they meant to,
+       * and photographing them together would suggest they travel as a pair.
+       *
+       * The field guide two rows down is the counterweight worth looking at in
+       * the same frame: the same catalog, the opposite verb.
+       */
+      test(`a recap naming what the crew saw renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const seeded = await request.post("/api/test/seed-observed-species");
+        expect(seeded.ok(), await seeded.text()).toBe(true);
+        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+        await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
+        // Waiting on the line itself, not on the page: photographing the calm
+        // variant twice is the failure this exists to avoid.
+        await page.getByTestId(AFTER_STATE_TEST_IDS.seen).filter({ visible: true }).waitFor();
+        await capture(page, "recap-seen-on-the-day", scheme);
+      });
+
+      /**
        * **The field guide, open** (issue #1192, D32).
        *
        * The drawer is shut on arrival, so the `recap` capture above already
@@ -2114,6 +2145,49 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The same thread with the contrast turned up** (issue #1214, delight
+       * report D54).
+       *
+       * `.glare-mode` is the app's whole answer to a phone in direct sun — an
+       * AAA palette, a 16px floor on type, a 44px floor on every target, all
+       * declared on `documentElement` — and until this it was mounted only on
+       * the crew's offline manifest, so nothing on the diver's side had ever
+       * rendered it and nothing at all had photographed it on this page.
+       *
+       * Captured in both schemes deliberately, even though the mode resolves to
+       * the same light AAA palette in each: that *is* the behaviour, it is what
+       * a diver who keeps their phone in dark mode will actually see, and a
+       * baseline is the only thing that would notice if a future palette edit
+       * quietly broke the dark path into it.
+       *
+       * The chosen mode is the boundary this feature must not cross, so the
+       * assertions below are part of the capture rather than a separate test:
+       * every fact the standard page carries is still on the page after the
+       * switch. Turning the contrast up may not take anything away.
+       */
+      test(`the thread in high contrast renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await bookAVisualRegressionSeat(page, scheme);
+        await page.goto(new URL(page.url()).pathname);
+        await threadStatus(page).waitFor();
+
+        const contrast = page.getByRole("group", { name: "Screen contrast" });
+        // The radios are `sr-only` and the label is the target — which is the
+        // point of the control, so tap it the way a wet thumb does.
+        await contrast.getByText("High", { exact: true }).click();
+        await expect(page.locator("html")).toHaveClass(/glare-mode/);
+
+        // Nothing hidden: the status line, the way to the shop, and the door
+        // out are all still there at maximum contrast.
+        await expect(threadStatus(page)).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Where to go" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Pack with confidence" })).toBeVisible();
+        await capture(page, "thread-high-contrast", scheme);
+      });
+
+      /**
        * **The thread with a later step opened**, which the capture above can
        * never show: at most one step is open at rest, and the one at rest is
        * always the first thing on the diver. Everything the spine does with a
@@ -2159,6 +2233,75 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(new URL(page.url()).pathname);
         await page.getByRole("heading", { name: /readiness link isn.t available/ }).waitFor();
         await capture(page, "expired-link-readiness", scheme);
+      });
+
+      /**
+       * **A demo story's door** (issue #1215, delight report D55) — one stable
+       * link per story, the thing somebody pastes into an email to a shop
+       * owner. The weather day because it is the one with the most to prove:
+       * three lines and one button, and the only claim on the page is a
+       * description of what the visitor is about to see.
+       */
+      test(`a demo story door renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/demo/weather-day");
+        await page.getByRole("heading", { level: 1, name: "A day the weather takes" }).waitFor();
+        await capture(page, "demo-story-door", scheme);
+      });
+
+      /**
+       * **The stranded diver's card, and what a blown-out day left standing**
+       * (issue #1197, delight report D37).
+       *
+       * The third shape of this component and the only one nothing had ever
+       * photographed — which matters more here than on the two above, because
+       * this is the card a diver reads on the morning a trip they had planned
+       * around was called off. It carries the cancellation, the shop's name,
+       * the way to the schedule, and now a short list of the preparation that
+       * survived: those records are filed against the person and the shop, not
+       * the seat, so they are still there.
+       *
+       * The sizes are saved through the real product path first, because the
+       * block renders only what is actually true and a diver who has prepared
+       * nothing sees no block at all — `e2e/blowout.spec.ts` asserts both
+       * directions. Reached the only way it can be reached: book, prepare,
+       * blow the departure out from the staff board, reopen the same link.
+       */
+      test(`the stranded diver's card renders true to the design (${scheme})`, async ({
+        page,
+        browser,
+        staffStorageState,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await bookAVisualRegressionSeat(page, scheme);
+        const threadUrl = new URL(page.url()).pathname;
+        await openThreadStep(page, "gear");
+        await page.getByLabel("BCD size").selectOption("L");
+        await page.getByLabel("Wetsuit size").selectOption("XL");
+        await page.getByRole("button", { name: "Save rental fit" }).click();
+        await expect(page.getByText("the crew will have your sizes")).toBeVisible();
+
+        // The captain calls it off from a second context. This test's own page
+        // is the *diver's* — signed out, which is the whole point of the card
+        // being captured — and `signedInAsOwner()` is describe-scoped, so
+        // borrowing the staff session for one action is what keeps them apart.
+        const staffContext = await browser.newContext({
+          storageState: await staffStorageState("owner"),
+          colorScheme: scheme,
+        });
+        try {
+          const staff = makeActivitySafe(await staffContext.newPage());
+          const tripId = await seededTripId(staff, "blue-mantis", REEF_TRIP);
+          await staff.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
+          await staff.getByRole("button", { name: "Call the blow-out" }).click();
+          await staff.getByRole("heading", { level: 1, name: "Blow-out cascade" }).waitFor();
+        } finally {
+          await staffContext.close();
+        }
+
+        await page.goto(threadUrl);
+        await page.getByRole("heading", { level: 1, name: "This trip was cancelled" }).waitFor();
+        await page.getByText("Still on file for you").waitFor();
+        await capture(page, "stranded-diver-card", scheme);
       });
 
       /**
@@ -2798,6 +2941,37 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "today-evening-closed", scheme);
       });
 
+      // **The evening after the counting** — the same page one act further on,
+      // and the only surface in the product that reaches `spine.allHome`.
+      //
+      // The spine spends one coral element a day (ADR
+      // 20260901-diveday-reimagined, decision 1) and the evening's own moment
+      // outranks the morning's, so this line is what that budget is *for*: a
+      // shop sees it once, when every boat is back and every head count is
+      // closed. `assembleEveningClose` refuses to say it on arithmetic —
+      // every station's status has to be `all_home` — so the seed has to do
+      // the counting, which is what `?heads=closed` added (issue #1122).
+      //
+      // A second capture rather than a change to `today-evening`, because the
+      // uncounted evening above is a real state a shop meets every day at six
+      // and photographing only the resolved one would lose it. The two differ
+      // by exactly one line, which is the point: this is the only baseline
+      // that can catch the coral moment moving.
+      test(`the evening's all-home moment renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        // A seed write that closes every count on the day, then a full-page shot.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await request.post("/api/test/seed-evening?heads=closed");
+        await page.goto("/shop/blue-mantis");
+        // The moment itself, waited on by its own words: a shot taken before
+        // it renders would be `today-evening` under a second name, and the
+        // baseline would agree with it forever.
+        await page.getByText(/^All boats are home:/).waitFor();
+        await capture(page, "today-all-home", scheme);
+      });
+
       // Staffing as a week (ADR 20260827-the-shops-shelves, decision 3):
       // people down the side, seven shop-local days across the top, shifts as
       // quiet chips, credentials as a ledger beneath. The demo's own week,
@@ -2829,7 +3003,7 @@ for (const scheme of ["light", "dark"] as const) {
         await request.post("/api/test/seed-trouble-states?crewGap=1");
         await page.goto("/shop/blue-mantis/staffing");
         // The destination's own words, not a timing guess.
-        await page.getByText("No crew").first().waitFor();
+        await page.getByText("Nobody in the water").first().waitFor();
         await capture(page, "staffing-week-gap", scheme);
       });
 

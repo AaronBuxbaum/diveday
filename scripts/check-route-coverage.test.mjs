@@ -330,22 +330,113 @@ describe("planLedgerWrite (the ratchet)", () => {
 
   // The ratchet's one permitted improvement: a gap that closed gets banked, so
   // the exemption cannot linger as a stale claim.
+  //
+  // **Closed means both halves**, which is what this asserted wrongly until
+  // issue #1362. It used to hand the route one spec and no capture and expect
+  // the exemption gone — the writer banked on `||` where `auditLedger` banks on
+  // `&&`, so `--write` produced a ledger its own audit then failed. The case
+  // below it holds that line.
   it("banks a closed gap by removing the exemption the route outgrew", async () => {
     const result = await plan({
       ledger: {
         ...HEALTHY.ledger,
         "/shop/[shopSlug]/staffing": {
           e2e: ["booking.spec.ts"],
-          visual: [],
+          visual: ["landing"],
           exempt: "no coverage yet — needs a spec",
         },
       },
     });
     expect(result.next["/shop/[shopSlug]/staffing"]).toEqual({
       e2e: ["booking.spec.ts"],
-      visual: [],
+      visual: ["landing"],
     });
     expect(result.bankedExemptions).toEqual(["/shop/[shopSlug]/staffing"]);
+  });
+
+  /**
+   * **A route exempt from half the bar keeps the paragraph that says why**
+   * (issue #1362).
+   *
+   * Exactly one route in the real ledger is in this state, and it is the one
+   * whose reason is hardest to reconstruct: `/shop/[shopSlug]/settings/security`
+   * has a real e2e spec and an argued case for holding no visual baseline (
+   * better-auth stamps `updated_at` from its own clock, the row prints the
+   * Chromium user-agent, the row count depends on how often the run signed in).
+   * `--write` deleted that paragraph and then the audit failed the route for the
+   * capture it was exempt from — a session that ran `--write` saw a failure
+   * somewhere else entirely with no reason to connect the two.
+   */
+  it("keeps the exemption of a route covered on only one of the two axes", async () => {
+    const overrides = {
+      ledger: {
+        ...HEALTHY.ledger,
+        "/shop/[shopSlug]/staffing": {
+          e2e: ["booking.spec.ts"],
+          visual: [],
+          exempt: "no capture: the session list cannot hold a baseline still",
+        },
+      },
+    };
+    const result = await plan(overrides);
+    expect(result.next["/shop/[shopSlug]/staffing"].exempt).toBe(
+      "no capture: the session list cannot hold a baseline still",
+    );
+    expect(result.bankedExemptions).toEqual([]);
+  });
+
+  /**
+   * **The invariant under both cases above**, and the one that would have caught
+   * this without anybody thinking of the half-covered route: a ledger `--write`
+   * produces from a clean ledger must itself be clean. The old writer turned
+   * zero violations into one.
+   */
+  it("writes a ledger its own audit still passes", async () => {
+    const root = await fixture({
+      ...HEALTHY,
+      ledger: {
+        ...HEALTHY.ledger,
+        "/shop/[shopSlug]/staffing": {
+          e2e: ["booking.spec.ts"],
+          visual: [],
+          exempt: "no capture: the session list cannot hold a baseline still",
+        },
+      },
+    });
+    const world = await collectWorld(root);
+    expect(auditLedger(world).violations).toEqual([]);
+    const { next } = planLedgerWrite(world);
+    expect(auditLedger({ ...world, ledger: next }).violations).toEqual([]);
+  });
+
+  /**
+   * The column the writer forgot entirely. Every `a11y` list — 56 of them in the
+   * real ledger — was dropped by any `--write`, and `scripts/agent-health.mjs`
+   * reads that column specifically because it is the one number nothing else
+   * states.
+   */
+  it("carries the a11y column through, and refuses to drop a scan that vanished", async () => {
+    const scanned = {
+      ledger: {
+        ...HEALTHY.ledger,
+        "/": { e2e: ["booking.spec.ts"], visual: ["landing"], a11y: ["a11y.spec.ts"] },
+      },
+    };
+
+    const kept = await plan({ ...scanned, specs: [...HEALTHY.specs, "a11y.spec.ts"] });
+    expect(kept.next["/"].a11y).toEqual(["a11y.spec.ts"]);
+    expect(kept.drops).toEqual([]);
+
+    // And it survives the trip through the serializer, which had the same
+    // omission one layer down: its field list was e2e/visual/exempt.
+    expect(ledgerEntries(JSON.parse(serializeLedger(kept.next)))["/"].a11y).toEqual([
+      "a11y.spec.ts",
+    ]);
+
+    // A scan that genuinely vanished is a coverage drop like any other, so
+    // `--write` refuses rather than quietly shortening the list.
+    const gone = await plan(scanned);
+    expect(gone.drops).toEqual(['/: a11y spec "a11y.spec.ts" no longer exists under e2e/']);
   });
 
   it("drops the entry for a route that was deleted", async () => {

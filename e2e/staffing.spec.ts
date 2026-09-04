@@ -157,7 +157,7 @@ test.describe("staffing", () => {
    * full one with only a captain aboard. The measurement is now
    * `divemasterRatioGap`, the same one Today and the trip page read.
    */
-  test("an empty departure says nothing; the same boat with a diver aboard says No crew", async ({
+  test("an empty departure says nothing; the same boat with a diver aboard says nobody is in the water", async ({
     page,
   }) => {
     // A create, a seating, and two reads of the week — full server round
@@ -194,7 +194,7 @@ test.describe("staffing", () => {
     // The gap is named, worded and actionable in the day it sails — not a
     // count in a sentence at the top of the page with nowhere to go.
     await expect(week.getByText(title).first()).toBeVisible();
-    await expect(week.getByText("No crew").first()).toBeVisible();
+    await expect(week.getByText("Nobody in the water").first()).toBeVisible();
     const assign = page.getByRole("link", { name: `Assign crew to ${title}` });
     await expect(assign).toBeVisible();
 

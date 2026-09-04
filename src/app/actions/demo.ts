@@ -7,12 +7,14 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import type { DbExecutor } from "@/db/client";
 import { getDb } from "@/db/client";
+import { demoStoryPath } from "@/db/demo-stories";
 import { people, personRoles } from "@/db/schema";
 import { createDemoShop, resetDemoSchedule } from "@/db/seed";
 import { getShopById, getShopBySlug } from "@/db/shops";
 import { auth, getAuth } from "@/lib/auth";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import type { DemoRoleId } from "@/lib/demo-roles";
+import { DEMO_STORY_ROLE, type DemoStoryId, isDemoStoryId } from "@/lib/demo-stories";
 import { eventSource } from "@/lib/funnel";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -64,6 +66,20 @@ function requestedDemoRole(formData?: FormData): DemoRoleId {
 }
 
 /**
+ * The story this entry is telling, when the door named one (issue #1215).
+ *
+ * A story decides the role as well as the destination — the person whose call
+ * it is to cancel a departure is the only one the weather day can be told to,
+ * and telling it as a divemaster would land the visitor on a refusal. So a
+ * story overrides `role` rather than sitting beside it; the roles picker and
+ * the stories picker are two doors, never two halves of one.
+ */
+function requestedDemoStory(formData?: FormData): DemoStoryId | null {
+  const raw = formData?.get("story");
+  return isDemoStoryId(raw) ? raw : null;
+}
+
+/**
  * Who holds a role in a shop, looked up by role rather than a hardcoded seed
  * email — works on any seeded demo tenant (the canonical fixture or a minted
  * one). Shared by the landing page's pre-entry role picker and the in-app
@@ -93,7 +109,8 @@ async function findDemoRoleEmail(
  * the page the click came from.
  */
 export async function enterDemoAction(formData?: FormData) {
-  const role = requestedDemoRole(formData);
+  const story = requestedDemoStory(formData);
+  const role = story ? DEMO_STORY_ROLE[story] : requestedDemoRole(formData);
   const source = eventSource(formData?.get("source"));
 
   // Each demo mints a whole seeded shop, so throttle per IP — the reaper bounds
@@ -132,6 +149,8 @@ export async function enterDemoAction(formData?: FormData) {
 
   // The diver pick previews the customer view — the public schedule needs no
   // sign-in at all, so it skips straight there instead of minting a session.
+  // The first-booking story is that same view, which is why it maps to this
+  // role rather than carrying a destination of its own.
   if (role === "diver") {
     redirect(publicSchedulePath(slug));
   }
@@ -154,6 +173,13 @@ export async function enterDemoAction(formData?: FormData) {
   } catch (error) {
     if (error instanceof APIError) redirect("/sign-in?error=1");
     throw error; // unexpected errors propagate
+  }
+  // A story opens on the surface it is about; a plain role opens on the shop
+  // home it always has. Resolved after the session exists, because every story
+  // destination but the first is behind one.
+  if (story) {
+    const shop = await getShopBySlug(db, slug);
+    if (shop) redirect(await demoStoryPath(db, shop.id, slug, story));
   }
   redirect(`/shop/${slug}`);
 }

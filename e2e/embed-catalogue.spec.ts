@@ -43,6 +43,60 @@ test.describe("the widget views", () => {
     expect(font).toBe("Georgia, serif");
   });
 
+  /**
+   * **One course, framed** (issue #1284) — the third of the ADR's four "what
+   * it shows" answers, and the first that narrows a *list* rather than picking
+   * a single object.
+   *
+   * The slug is read off the shop's own course catalogue rather than written
+   * down here, because which courses the demo publishes is the seed's business
+   * and moves when it does.
+   */
+  test("the courses widget frames one course when the snippet names it", async ({ page }) => {
+    await page.goto("/s/blue-mantis/embed/courses");
+    const rows = page.getByRole("listitem");
+    // **Wait for the second row, do not count once.** `goto` resolves on
+    // `load`, and under partial prerendering the static shell is what has
+    // loaded by then — the courses stream in behind it. `count()` does not
+    // retry, so reading it there returns whatever has arrived, which on a
+    // loaded CI runner was 0 (shard 1/4, 2026-09-04). Asserting the second row
+    // is visible says the same thing this needs — more than one course — and
+    // waits for it, so everything read below is present by construction.
+    await expect(rows.nth(1)).toBeVisible();
+    const firstTitle = (await rows.first().locator("p").first().textContent())?.trim() ?? "";
+    const slug = new URL(
+      (await rows.first().getByRole("link").getAttribute("href")) ?? "",
+      "https://diveday.example",
+    ).pathname
+      .split("/")
+      .pop();
+
+    await page.goto(`/s/blue-mantis/embed/courses?show=${slug}`);
+    await expect(page.getByRole("listitem")).toHaveCount(1);
+    await expect(page.getByRole("listitem").first()).toContainText(firstTitle);
+  });
+
+  test("a course the shop does not publish renders not-found, never an empty list", async ({
+    page,
+  }) => {
+    // The same call the departure widget already makes: a shop that
+    // unpublished the course its blog post frames should see the frame say so,
+    // because an empty panel reads as a bug in DiveDay rather than a decision
+    // the shop made.
+    //
+    // **The status is 200 and that is not the bug it looks like.** Under
+    // partial prerendering the static shell has already gone out by the time
+    // the page body runs `notFound()`, so a `notFound()` inside a page can only
+    // change the body (`src/lib/embed-routes.ts` says the same of the widget
+    // path, which is why *that* case is answered by the proxy instead). A path
+    // is enumerable and a crawler will try one; a `?show=` value is not, so
+    // this stays where the departure widget already stands rather than growing
+    // a second proxy rule for a query parameter.
+    const response = await page.goto("/s/blue-mantis/embed/courses?show=no-such-course");
+    expect(response?.status()).toBe(200);
+    await expect(page.getByRole("listitem")).toHaveCount(0);
+  });
+
   test("the storefront itself cannot be recoloured by URL", async ({ page }) => {
     await page.goto("/s/blue-mantis?brand=%23b45309");
     const primary = await page.evaluate(() =>

@@ -3,7 +3,15 @@ import { describe, expect, it } from "vitest";
 import { calendarDateWeekday } from "@/lib/calendar-date";
 import { EVERY_WEEKDAY, weekdaySetFrom } from "@/lib/recurrence";
 import { seededShopContext } from "@/test/db";
-import { bookings, people, rollCallEvents, tripRequirements, tripSeries, trips } from "./schema";
+import {
+  bookings,
+  courses,
+  people,
+  rollCallEvents,
+  tripRequirements,
+  tripSeries,
+  trips,
+} from "./schema";
 import {
   applyDetailsToFutureSeries,
   cancelFutureSeriesTrips,
@@ -745,5 +753,77 @@ describe("recurring trip series (in-memory PGlite)", () => {
       "2030-11-02T11:00:00.000Z",
       "2030-11-09T12:00:00.000Z",
     ]);
+  });
+});
+
+/**
+ * **The nightly roll cannot re-mint a self-guided course session** (issue
+ * #1342).
+ *
+ * `insertTripInstance` refuses the combination for all three creation doors,
+ * and this is the one with nobody in the loop: `materializeWindow` copies
+ * `template.trip.selfGuided` into every instance it makes, every night,
+ * forever. A template that somehow held the mark would stamp it onto dates
+ * nobody was looking at, indefinitely.
+ *
+ * "Covered by construction" is not the same as covered. `duplicateTrip` was
+ * covered by construction too, right up until a PR #1041 review found it
+ * copying `isPrivate` and not this column at all.
+ *
+ * The mark is written behind the writer's back, because that is now the only
+ * way to reach the state — which is also the shape a row predating the rule
+ * would have.
+ */
+describe("the horizon roll never carries a self-guided mark onto a course session", () => {
+  it("materializes course instances with the mark cleared", async () => {
+    const { db, shop } = await seededShopContext();
+    const [course] = await db
+      .select({ id: courses.id })
+      .from(courses)
+      .where(eq(courses.shopId, shop.id))
+      .limit(1);
+    if (!course) throw new Error("seeded shop has no course");
+
+    const created = await createTripSeries(
+      db,
+      seriesInput({ shopId: shop.id, courseId: course.id, endsOn: null }),
+    );
+    if (!created) throw new Error("series not created");
+    expect(created.trips.length).toBeGreaterThan(0);
+
+    // Every instance the create pass made is already clean — the same writer.
+    for (const trip of created.trips) expect(trip.selfGuided).toBe(false);
+
+    // Now put the state on the whole series behind the writer's back, so the
+    // roll's template read finds it and tries to copy it forward.
+    await db.update(trips).set({ selfGuided: true }).where(eq(trips.seriesId, created.series.id));
+
+    const instanceIds = async () =>
+      new Set(
+        (
+          await db.select({ id: trips.id }).from(trips).where(eq(trips.seriesId, created.series.id))
+        ).map((row) => row.id),
+      );
+    // Diffed by id rather than by date: the rows the create pass already made
+    // are the ones just marked, so a date filter would assert against them and
+    // fail for the wrong reason.
+    const before = await instanceIds();
+
+    // A year on, so the horizon has moved and there are new dates to fill.
+    const rolled = await rollSeriesForward(
+      db,
+      shop.id,
+      created.series.id,
+      new Date("2031-09-07T12:00:00.000Z"),
+    );
+    expect(rolled).not.toBeNull();
+
+    const materialized = await db
+      .select({ id: trips.id, selfGuided: trips.selfGuided })
+      .from(trips)
+      .where(eq(trips.seriesId, created.series.id));
+    const fresh = materialized.filter((trip) => !before.has(trip.id));
+    expect(fresh.length).toBeGreaterThan(0);
+    for (const trip of fresh) expect(trip.selfGuided).toBe(false);
   });
 });

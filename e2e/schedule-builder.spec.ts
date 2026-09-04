@@ -82,6 +82,62 @@ test.describe("schedule builder", () => {
     await expect(page).toHaveURL(new RegExp(`${BOARD}$`));
   });
 
+  /**
+   * **The two lines in that preview that depend on where the boat is going**
+   * (issue #1310): whether the people on it are already on another boat at
+   * those hours, and whether any of them said they are away then.
+   *
+   * The round trip this exercises is the part no unit test reaches — the
+   * server action resolving the *shop's* timezone before a date and a time of
+   * day mean an instant, and the client keeping the newest of several answers.
+   *
+   * **The target is read off another departure's own Move panel** rather than
+   * written down here. A hard-coded date would be a bet on the seed's
+   * calendar, and — since the rule is an overlap of hours rather than a shared
+   * day — a bet on its clock as well. Landing this boat exactly where another
+   * one already sits is the one construction that is a clash by definition.
+   */
+  test("says who is already out at the hours a departure would move to", async ({ page }) => {
+    await page.goto(BOARD);
+    await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+
+    const rows = page.getByRole("button", { name: /^Move, copy, or remove / });
+    const titles = await rows.evaluateAll((nodes) =>
+      nodes
+        .map((node) =>
+          /^Move, copy, or remove ([^,]+),/.exec(node.getAttribute("aria-label") ?? ""),
+        )
+        .map((match) => match?.[1] ?? "")
+        .filter(Boolean),
+    );
+    const [mover, host] = [...new Set(titles)];
+    expect(host).toBeTruthy();
+
+    // Where the other boat sits, in the fields' own values.
+    await chooseRowAction(page, "Move", host as string);
+    const landingDate = await page.getByLabel("New date").inputValue();
+    const landingTime = await page.getByLabel("New departure time").inputValue();
+    await page.getByRole("button", { name: "Cancel" }).click();
+
+    await chooseRowAction(page, "Move", mover as string);
+    // Nothing is claimed about the crew until the fields move.
+    await expect(page.getByText(/is already on .+ at that time\./)).toHaveCount(0);
+
+    await page.getByLabel("New date").fill(landingDate);
+    await page.getByLabel("New departure time").fill(landingTime);
+
+    // The demo shop puts the same two or three people on nearly everything, so
+    // landing one boat on top of another is a clash by construction. Matched
+    // by shape rather than by name: which staff member it is belongs to the
+    // seed, and pinning one would fail on a roster change that broke nothing.
+    await expect(page.getByText(/is already on .+ at that time\./).first()).toBeVisible();
+
+    // Still a preview and still not a gate: the move is offered, and nothing
+    // has happened to the board by asking.
+    await expect(page.getByRole("button", { name: "Move it" })).toBeEnabled();
+    await expect(page.getByRole("status")).toHaveCount(0);
+  });
+
   test("staff add, move, copy, and remove a departure without leaving the board", async ({
     page,
   }) => {

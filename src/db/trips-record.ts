@@ -1,8 +1,10 @@
-import { and, asc, count, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import type { TripCrewRole } from "@/lib/crew-roles";
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
+import type { SpokenLanguageTag } from "@/lib/spoken-languages";
 import {
   tripArrivalSnapshot,
   tripChangeSnapshotsEqual,
@@ -128,6 +130,99 @@ export async function tripCrewSpokenLanguages(
       ),
     );
   return rows.map((row) => row.language);
+}
+
+/** One crew member a diver may be told about by name (issue #1181, D21). */
+export type PublicCrewMember = {
+  personId: string;
+  /** First name only. The surname is not part of what anybody consented to. */
+  firstName: string;
+  /** What they are doing on *this* boat, or null when the roster did not say. */
+  tripRole: TripCrewRole | null;
+  languages: SpokenLanguageTag[];
+};
+
+/**
+ * **The crew of one departure who have agreed to be named to divers** (issue
+ * #1181, delight report D21).
+ *
+ * The sibling of `tripCrewSpokenLanguages` above, and the difference between
+ * them is the whole feature. That one answers *"what can this shop say to
+ * me?"* and names nobody — an anonymous claim about capability, which is what
+ * a shop may make about its own staff. This one answers *"who am I diving
+ * with?"*, which is a fact about a person on a page anyone on the internet can
+ * read, so it is filtered by `crew_public_consent_at` and returns nothing at
+ * all for a shop whose staff have not switched it on. Every row here is
+ * somebody's own decision.
+ *
+ * Same live-staff proof as its sibling — a shop's roster, alive, with an
+ * active account and a staff role — because somebody taken off the team should
+ * stop being introduced to divers the moment they are, not when the next
+ * departure is edited.
+ *
+ * First names only, and never a photo: D21's boundary is role, first name and
+ * languages, and the surname is not part of what a "today with" line needs.
+ *
+ * The name comes off `people.crew_public_name` — the string the person typed
+ * beside the consent — rather than from splitting `full_name` on whitespace.
+ * That split assumed the shop had typed the given name first, so a row entered
+ * "Tanaka Keiko" published the surname to an indexed page, which is not what
+ * anybody agreed to (issue #1351).
+ */
+export async function tripPublicCrew(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<PublicCrewMember[]> {
+  const rows = await db
+    .selectDistinct({
+      personId: people.id,
+      // Nothing below reads this, and it still has to be selected: this is a
+      // `SELECT DISTINCT`, and Postgres refuses an ORDER BY expression that is
+      // not in the select list. The ordering stays on the shop's own record so
+      // it does not shuffle when somebody edits their public name.
+      fullName: people.fullName,
+      publicName: people.crewPublicName,
+      tripRole: tripAssignments.tripRole,
+      languages: people.spokenLanguages,
+    })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .innerJoin(people, eq(people.id, tripAssignments.personId))
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .innerJoin(userAccounts, eq(userAccounts.personId, people.id))
+    .where(
+      and(
+        eq(tripAssignments.tripId, tripId),
+        eq(trips.shopId, shopId),
+        eq(people.shopId, shopId),
+        liveTrip(),
+        isNull(people.deletedAt),
+        isNotNull(people.crewPublicConsentAt),
+        eq(userAccounts.status, "active"),
+        inArray(personRoles.role, [...STAFF_ROLES]),
+      ),
+    )
+    .orderBy(asc(people.fullName));
+  // A row with a stamp but no stored name cannot exist — the two are paired by
+  // a check constraint on `people` — so this drops nothing in practice. It is
+  // written as a filter rather than a `?? <derivation>` on purpose: falling
+  // back to the old split is exactly the version-tolerance AGENTS.md refuses,
+  // and it would quietly restore the surname bug for any row that reached it.
+  // Dropping the member is also the safe direction if the pairing were ever
+  // broken: a missing name renders one fewer person, never the wrong one.
+  return rows.flatMap((row) =>
+    row.publicName === null
+      ? []
+      : [
+          {
+            personId: row.personId,
+            firstName: row.publicName,
+            tripRole: row.tripRole,
+            languages: row.languages,
+          },
+        ],
+  );
 }
 
 /**
@@ -285,6 +380,10 @@ export async function updateTrip(
     const [existing] = await tx
       .select({
         id: trips.id,
+        // Read so `selfGuided` can be refused against it below. A trip's course
+        // is fixed at creation and `UpdateTripPatch` carries no `courseId`, so
+        // the row's own value is the only place to learn it.
+        courseId: trips.courseId,
         meetingPointLabel: trips.meetingPointLabel,
         meetingPointAddress: trips.meetingPointAddress,
         arrivalLandmark: trips.arrivalLandmark,
@@ -380,7 +479,22 @@ export async function updateTrip(
         ...(patch.diveMode === undefined ? {} : { diveMode: patch.diveMode }),
         ...(patch.boatId === undefined ? {} : { boatId: patch.boatId }),
         ...(patch.isPrivate === undefined ? {} : { isPrivate: patch.isPrivate }),
-        ...(patch.selfGuided === undefined ? {} : { selfGuided: patch.selfGuided }),
+        // **A course session is never self-guided** (issue #1342), the same
+        // rule `insertTripInstance` applies to every creation door and for the
+        // reason written out there: the mark silences only the shop's own
+        // advisory divemaster target, and a departure running a course has an
+        // instructor of record whether or not they are in the water. Coercing
+        // to false can only add an advisory, never suppress one.
+        //
+        // Refused against the row's own course rather than the patch's,
+        // because a trip's course is fixed at creation and `UpdateTripPatch`
+        // carries none — which makes this unbypassable rather than merely
+        // convenient. The detector is deliberately untouched: a course session
+        // short of its instructor still raises the instructor gap (ADR
+        // 20260827-self-guided-departures).
+        ...(patch.selfGuided === undefined
+          ? {}
+          : { selfGuided: existing.courseId ? false : patch.selfGuided }),
         ...(patch.diveSiteId === undefined
           ? {}
           : { diveSiteId: patch.diveSiteId ?? (drafts ? primaryDiveSiteId(drafts) : null) }),

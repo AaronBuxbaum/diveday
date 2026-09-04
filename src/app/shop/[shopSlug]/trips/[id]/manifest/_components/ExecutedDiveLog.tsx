@@ -34,6 +34,15 @@ export type ExecutedDiveLabels = {
   visibility: string;
   current: string;
   notRecordedDepth: string;
+  observedSpecies: string;
+  /**
+   * The six words that say this is not an internal note. It reaches every
+   * diver's recap, on a form otherwise made entirely of record-keeping, and a
+   * crew member noting something for their own log would be surprised.
+   */
+  observedSpeciesHint: string;
+  /** The empty option: a dive where nothing stood out is an ordinary dive. */
+  observedSpeciesNone: string;
   save: string;
   saved: string;
   /** One per refusal `saveExecutedDiveAction` can return. */
@@ -52,6 +61,8 @@ export type ExecutedDiveLabels = {
 export function ExecutedDiveLog({
   planned,
   liveDiveSites,
+  catalogSpecies,
+  speciesBySite,
   executed,
   action,
   labels,
@@ -79,6 +90,24 @@ export function ExecutedDiveLog({
     summaryLine: string;
   }>;
   liveDiveSites: ReadonlyArray<{ id: string; name: string }>;
+  /**
+   * Every species DiveDay carries, in catalog order — the domain of "what did
+   * you see" (issue #1190).
+   *
+   * Resolved on the server because the names are DiveDay's copy in the
+   * reader's own language (`marineLifeCard`, ADR
+   * 20260813-marine-life-is-diveday-copy) and a Client Component has no
+   * translator.
+   */
+  catalogSpecies: ReadonlyArray<{ slug: string; name: string }>;
+  /**
+   * Each live site's field guide, keyed by site id — the faces that reef is
+   * named for, which *order* the picker rather than bounding it.
+   *
+   * Keyed by site rather than flattened because the ordering follows the
+   * *actual site* select above it, which the crew can change mid-form.
+   */
+  speciesBySite: Readonly<Record<string, ReadonlyArray<{ slug: string; name: string }>>>;
   executed: ReadonlyArray<{
     executed: ExecutedDive;
     actualSite: { id: string; name: string } | null;
@@ -134,6 +163,8 @@ export function ExecutedDiveLog({
                   plannedSiteLabel={plannedSiteLabel}
                   row={byNumber.get(diveNumber)}
                   liveDiveSites={liveDiveSites}
+                  catalogSpecies={catalogSpecies}
+                  speciesBySite={speciesBySite}
                   action={action}
                   labels={labels}
                   timeZone={timeZone}
@@ -160,6 +191,8 @@ function ExecutedDiveForm({
   plannedSiteLabel,
   row,
   liveDiveSites,
+  catalogSpecies,
+  speciesBySite,
   action,
   labels,
   timeZone,
@@ -171,6 +204,8 @@ function ExecutedDiveForm({
   plannedSiteLabel: string;
   row?: { executed: ExecutedDive; actualSite: { id: string; name: string } | null };
   liveDiveSites: ReadonlyArray<{ id: string; name: string }>;
+  catalogSpecies: ReadonlyArray<{ slug: string; name: string }>;
+  speciesBySite: Readonly<Record<string, ReadonlyArray<{ slug: string; name: string }>>>;
   action: (
     previous: ExecutedDiveResult | undefined,
     formData: FormData,
@@ -200,6 +235,18 @@ function ExecutedDiveForm({
   const [depthNotRecorded, setDepthNotRecorded] = useState(
     row?.executed.notRecorded.includes("depth") ?? false,
   );
+  const [species, setSpecies] = useState(row?.executed.observedSpeciesSlug ?? "");
+  // **Every species DiveDay carries, this site's own faces first.** The guide
+  // is a briefing selection of at most eight reliably-seen animals; the things
+  // worth writing down are the ones that are not usually there, so the guide
+  // orders the list and never bounds it (dive-domain review, 2026-09-04).
+  // Changing the site reorders it and drops nothing, because a sighting is a
+  // claim about a moment rather than about a row in the site library.
+  const guideSlugs = new Set((speciesBySite[actualSiteId] ?? []).map((entry) => entry.slug));
+  const speciesOptions = [
+    ...catalogSpecies.filter((entry) => guideSlugs.has(entry.slug)),
+    ...catalogSpecies.filter((entry) => !guideSlugs.has(entry.slug)),
+  ];
   // The two times are what a transposition lands on, so the refusal is wired to
   // both fields as well as stated in the action row — `Field`'s `error` sets
   // `aria-invalid` and `aria-describedby` for a reader who never sees the row.
@@ -281,6 +328,34 @@ function ExecutedDiveForm({
             onChange={(event) => setCurrent(event.target.value)}
             className={controlClass}
           />
+        </Field>
+        {/* **One species the crew saw** (issue #1190, delight report D30).
+            Not free text: what a diver reads has to arrive in their language,
+            and the catalog is DiveDay's copy in both (ADR
+            20260813-marine-life-is-diveday-copy).
+
+            The whole catalog, with this site's own field guide floated to the
+            top — a first pass bounded it *to* the guide, which had it exactly
+            backwards. The guide is at most eight faces a shop names because
+            the reef shows them reliably; the eagle ray and the nurse shark are
+            in the catalog and on nobody's eight, so the bounded version
+            admitted the blue tang and refused the thing anyone would actually
+            write down. Guide-first keeps the ordinary pick one thumb-flick
+            away without ruling the extraordinary one out. */}
+        <Field label={labels.observedSpecies} description={labels.observedSpeciesHint}>
+          <select
+            name="observedSpeciesSlug"
+            value={species}
+            onChange={(event) => setSpecies(event.target.value)}
+            className={controlClass}
+          >
+            <option value="">{labels.observedSpeciesNone}</option>
+            {speciesOptions.map((entry) => (
+              <option key={entry.slug} value={entry.slug}>
+                {entry.name}
+              </option>
+            ))}
+          </select>
         </Field>
       </FieldGrid>
       <label className="mt-4 flex min-h-11 items-center gap-3 text-sm">

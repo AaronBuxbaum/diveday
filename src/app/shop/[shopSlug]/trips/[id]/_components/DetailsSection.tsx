@@ -447,18 +447,34 @@ export function DetailsSection({
             </Field>
             {/* Silences the shop's own divemaster target for this departure and
                 nothing else — an agency training ratio is a safety cap with its
-                own module and a box cannot switch one off (issue #973). */}
-            <Field label={t("schedule.builder.selfGuidedLabel")}>
-              <label className="flex min-h-11 items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="selfGuided"
-                  defaultChecked={trip.selfGuided}
-                  className="size-4"
-                />
-                {t("schedule.builder.selfGuidedHint")}
-              </label>
-            </Field>
+                own module and a box cannot switch one off (issue #973).
+
+                **Not offered at all on a course session** (issue #1342): a
+                departure running a course has an instructor of record, so the
+                shop's own target is exactly the signal that should keep
+                applying to it. `updateTrip` refuses the mark whatever this form
+                posts; the box is absent rather than present-and-ignored. The
+                condition is the trip's own course, since this form has no
+                course picker — a departure's course is fixed when it is
+                created.
+
+                A course session that already carries the mark (a row predating
+                the rule) clears itself the first time this form is saved: the
+                action parses an absent checkbox as `false` rather than
+                `undefined`, so `updateTrip` writes the correction. */}
+            {trip.courseId ? null : (
+              <Field label={t("schedule.builder.selfGuidedLabel")}>
+                <label className="flex min-h-11 items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="selfGuided"
+                    defaultChecked={trip.selfGuided}
+                    className="size-4"
+                  />
+                  {t("schedule.builder.selfGuidedHint")}
+                </label>
+              </Field>
+            )}
           </FieldGrid>
           {/* A sunken inset, not a second card: this group sits *inside* the
               Details card, and surface never stacks on surface (see

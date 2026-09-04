@@ -51,6 +51,8 @@ function reservation(overrides: Partial<GearRowReservation> = {}): GearRowReserv
     reservedUntil: "2026-08-25",
     checkedOutAt: new Date("2026-08-19T13:00:00.000Z"),
     returnedAt: null,
+    returnOutcome: null,
+    returnNote: null,
     personName: "Grace Mensah",
     tripTitle: "Wreck Trip — Spiegel Grove",
     tripEndsAt: null,

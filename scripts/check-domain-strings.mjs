@@ -67,6 +67,7 @@ export const proseFreeFiles = [
   "src/lib/marketing.ts",
   "src/lib/migration-guides.ts",
   "src/lib/demo-roles.ts",
+  "src/lib/demo-stories.ts",
 ];
 
 /** Any quoted or template literal containing whitespace between letter runs — prose-shaped. */

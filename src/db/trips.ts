@@ -31,7 +31,9 @@ export {
   type TripScheduleDayInput,
 } from "./trips-create";
 export {
+  type CrewMoveConflicts,
   changeTripCrew,
+  crewMoveConflicts,
   getTripCrewAssignments,
   getTripCrewIds,
   listStaff,
@@ -80,11 +82,13 @@ export {
   getTripWithBooked,
   listTripDives,
   listTripScheduleDays,
+  type PublicCrewMember,
   setTripStatus,
   type TripConditionsPatch,
   type TripPatch,
   type TripSitePeek,
   tripCrewSpokenLanguages,
+  tripPublicCrew,
   type UpdateTripOutcome,
   updateTrip,
   updateTripConditions,

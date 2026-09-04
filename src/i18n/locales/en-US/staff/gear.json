@@ -134,7 +134,10 @@
     "divesNeedADate": "A dive count needs a due date beside it, because the unit is due at whichever comes first.",
     "importEmpty": "Choose a gear CSV to import.",
     "importNoGearColumn": "That file has no gear tag column. Use the template below.",
-    "imported": "Imported {events} service events across {units} new units, plus {assignments} historical assignments. {skipped} duplicate service events and {assignmentSkipped} unmatched or duplicate assignments were left alone."
+    "imported": "Imported {events} service events across {units} new units, plus {assignments} historical assignments. {skipped} duplicate service events and {assignmentSkipped} unmatched or duplicate assignments were left alone.",
+    "returnedSet": "Back on the wall.",
+    "concernNeedsWords": "A service concern needs a line saying what happened, so a technician can act on it.",
+    "nothingOut": "Nothing from that set is out."
   },
   "import": {
     "eyebrow": "Settings",
@@ -213,7 +216,10 @@
       "delete": "Delete unit",
       "deleting": "Deleting…",
       "deleteHeld": "{name} has this unit until {until}. Release or return it first."
-    }
+    },
+    "returnOutcomeAllGood": "Came back fine",
+    "returnOutcomeFitAdjusted": "Fit adjusted at return",
+    "returnOutcomeServiceConcern": "Service concern raised"
   },
   "prep": {
     "heading": "Rental assignments",
@@ -236,7 +242,12 @@
     "pickUnit": "Pick a unit…",
     "groupExactSize": "Size {size}",
     "groupOtherSizes": "Other sizes free",
-    "groupFree": "Free for these dates"
+    "groupFree": "Free for these dates",
+    "returnAllGood": "All good",
+    "returnFitAdjusted": "Fit adjusted",
+    "returnServiceConcern": "Service concern",
+    "returnNoteLabel": "What to tell the technician",
+    "returnNotePlaceholder": "Torn strap, second stage free-flowed"
   },
   "ticket": {
     "eyebrow": "Rental",

@@ -37,6 +37,7 @@
     "check:voice": "node scripts/check-voice.mjs",
     "check:logical-properties": "node scripts/check-logical-properties.mjs",
     "check:clock": "node scripts/check-clock.mjs",
+    "check:image-sizes": "node scripts/check-image-sizes.mjs",
     "check:db-concurrency": "node scripts/check-db-concurrency.mjs",
     "check:intl-cache": "node scripts/check-intl-cache.mjs",
     "check:adrs": "node scripts/check-adrs.mjs",

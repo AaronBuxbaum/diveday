@@ -51,6 +51,12 @@
       "feet": "{value} ft",
       "celsius": "{value} °C",
       "fahrenheit": "{value} °F"
+    },
+    "contrast": {
+      "modeLabel": "Contraste de la pantalla",
+      "labelAuto": "Automático",
+      "labelStandard": "Estándar",
+      "labelFull": "Alto"
     }
   },
   "shopChrome": {
@@ -164,6 +170,8 @@
     "linkCopyFailed": "No se pudo copiar. Cópialo desde la barra de direcciones.",
     "shareText": "Bucea conmigo. Aquí tienes los detalles de la salida.",
     "packTitle": "Prepara tu equipaje con confianza",
+    "calendarDockCall": "Presentación en el muelle a las {dockCall}. Salimos a las {departure}.",
+    "calendarMeetingPoint": "Punto de encuentro: {place}.",
     "packBring": "Trae",
     "packRenting": "Alquilas",
     "packProvided": "Lo ponemos nosotros",
@@ -267,7 +275,14 @@
     },
     "theSite": "{count, plural, one {El sitio} other {Los sitios}}",
     "siteLandmarksHeading": "Referencias",
-    "siteConservationHeading": "Nota de conservación"
+    "siteConservationHeading": "Nota de conservación",
+    "crewHeading": "Con quién buceas",
+    "crewRole": {
+      "instructor": "Instructor",
+      "divemaster": "Divemaster",
+      "captain": "Patrón",
+      "crew": "Tripulación"
+    }
   },
   "booking": {
     "heading": "Reserva tu plaza",
@@ -302,6 +317,8 @@
     "booking": "Reservando…",
     "fullHeading": "Este barco está completo",
     "findAnotherTrip": "Buscar otra salida",
+    "alternativeSameCourse": "El mismo curso, {date}",
+    "alternativeSameSite": "El mismo sitio de buceo, {date}",
     "reefNotGoingAnywhere": "— el arrecife no se va a ninguna parte.",
     "waitlistHeading": "Anótate en la lista de espera",
     "waitlistBody": "Si se libera una plaza, el centro ya tendrá tus datos.",
@@ -512,6 +529,7 @@
     "externalReviewCta": "Dejar una opinión pública",
     "commentCopied": "Copiado — pégalo cuando llegues",
     "conditionsOnTheDay": "Condiciones del día",
+    "seenOnTheDay": "Visto ese día",
     "yourPhotos": "Tus fotos",
     "captionLabel": "Añade un pie de foto (opcional)",
     "tipCrew": "Deja propina a la tripulación",
@@ -559,9 +577,9 @@
     "dateLabel": "Fecha",
     "vesselLabel": "Embarcación",
     "crewLabel": "Tripulación",
-    "sitesLabel": "Puntos",
+    "sitesLabel": "Sitios",
     "plannedSitesLabel": "Previsto",
-    "fieldGuideTitle": "{count, plural, one {Vida que buscar en este punto} other {Vida que buscar en estos puntos}}",
+    "fieldGuideTitle": "{count, plural, one {Vida que buscar en este sitio} other {Vida que buscar en estos sitios}}",
     "visitMilestone": "Tu {ordinal} día de buceo con {shopName}",
     "recordedBy": "Registrado por {shopName}",
     "milestoneStampFirst": "Primer día",
@@ -742,7 +760,11 @@
     "supportDivesWithLabel": "Alguien que deba ir en el mismo barco y equipo que tú",
     "saveSupport": "Guardar preparativos",
     "supportSaved": "Guardado. La tripulación lo tendrá antes de que llegues.",
-    "supportUnavailable": "No se ha guardado. Inténtalo otra vez o díselo a la tripulación ese día."
+    "supportUnavailable": "No se ha guardado. Inténtalo otra vez o díselo a la tripulación ese día.",
+    "carriedHeading": "Sigue archivado a tu nombre",
+    "carriedWaiver": "Tu exención firmada",
+    "carriedCertification": "Tu certificación",
+    "carriedFit": "Tus tallas"
   },
   "thread": {
     "stepsDoneSuffix": "de {total, plural, one {# paso completado} other {# pasos completados}}",
@@ -2121,7 +2143,7 @@
       "recordHeading": "Registro de la inmersión",
       "visits": "Tu 3.er día de buceo",
       "boatLabel": "Barco",
-      "sitesLabel": "Puntos",
+      "sitesLabel": "Sitios",
       "conditionsLabel": "Condiciones",
       "reviewAsk": "¿Qué tal tu día?",
       "reviewSubmit": "Enviar mi opinión"
@@ -2222,6 +2244,22 @@
         "title": "Buceador",
         "desc": "Lo que ven tus clientes: reservar un viaje, firmar la exención, pedir equipo de alquiler.",
         "tryThis": "Elige un viaje en el horario y reserva una plaza."
+      }
+    },
+    "stories": {
+      "eyebrow": "Demo en vivo",
+      "enter": "Abrir esta historia",
+      "firstBooking": {
+        "title": "Una primera reserva",
+        "desc": "El calendario público del centro y el formulario que rellena quien nunca ha buceado con ellos."
+      },
+      "returningDiver": {
+        "title": "Alguien que ya ha venido",
+        "desc": "La lista de preparación de mañana, con las tallas que recepción ya tenía archivadas."
+      },
+      "weatherDay": {
+        "title": "Un día que se lleva el tiempo",
+        "desc": "Cancela una salida y mira cómo se entera cada buceador reservado, con otro sitio al que ir."
       }
     }
   },

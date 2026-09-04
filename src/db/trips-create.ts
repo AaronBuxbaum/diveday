@@ -245,7 +245,41 @@ export async function insertTripInstance(
       plannedDives: params.plannedDives,
       diveSiteId: primaryDiveSiteId(params.drafts),
       isPrivate: params.isPrivate ?? false,
-      selfGuided: params.selfGuided ?? false,
+      // **A course session is never self-guided** (issue #1342).
+      //
+      // The mark silences the shop's own advisory divemaster target for one
+      // departure and reaches nothing else. A departure that runs a course has
+      // an instructor of record whether or not they are in the water, so that
+      // target is exactly the signal that should keep applying to it — the
+      // glossary's **Target diver:divemaster ratio** says it applies to every
+      // dive, fun dive or course session alike.
+      //
+      // **The direction of error is the safety argument.** Coercing to false
+      // can only ever *add* an advisory, never suppress one:
+      // `divemasterRatioGap` returns `none` outright when the mark is set. So
+      // even for the courses DiveDay actually ships with no in-water
+      // requirement — Emergency Oxygen Provider and Equipment Specialist are
+      // dry classroom courses, PADI's Nitrox specialty has no training dives,
+      // and a Divemaster candidate's mapping project is unguided by design —
+      // the worst case is one extra advisory row on a departure that
+      // legitimately has no guide. Never a missed gap. (An earlier version of
+      // this comment claimed no certification dive is ever unsupervised, which
+      // this repository's own course catalog contradicts.)
+      //
+      // Coerced here rather than in `createTrip` because this is the one
+      // function all three creation doors pass through: `createTrip`,
+      // `duplicateTrip` (which copies `source.selfGuided` straight in) and the
+      // series horizon roll (which copies `template.trip.selfGuided`, nightly,
+      // forever — so one bad template would re-mint the state indefinitely).
+      // Coerced rather than refused because two of those three have no human
+      // to receive a refusal, and a nightly roll that drops a date leaves a
+      // shop's Saturday missing from the board over a normalized flag.
+      //
+      // This refuses the *input*. It deliberately does not change the output
+      // for a row that already holds it: `courseCrewGap` takes no `selfGuided`
+      // parameter and must never grow one (ADR
+      // 20260827-self-guided-departures).
+      selfGuided: params.courseId ? false : (params.selfGuided ?? false),
       diveMode: params.diveMode ?? "boat",
       boatId: params.boatId ?? null,
     })

@@ -4,6 +4,7 @@ import {
   type GearItemKind,
   type GearItemStatus,
   type GearReservationPhase,
+  type GearReturnOutcome,
   type GearServiceKind,
   type GearServiceState,
 } from "@/lib/gear";
@@ -127,4 +128,24 @@ const PHASE_KEYS: Record<GearReservationPhase, StaffMessageKey> = {
 /** Where a reservation stands — "Reserved", "Out", "Due back today", "Overdue". */
 export function gearPhaseLabel(t: StaffTranslator, phase: GearReservationPhase): string {
   return t(PHASE_KEYS[phase]);
+}
+
+/**
+ * **How a rental set came home**, in the reader's own language (issue #1186,
+ * delight report D26).
+ *
+ * Past tense in all three, because every one of them is a report of something
+ * that already happened at a counter — a present-tense "needs service" would
+ * read as a state the unit is in, which is the service clocks' claim to make
+ * and not this one's.
+ */
+export function gearReturnOutcomeLabel(t: StaffTranslator, outcome: GearReturnOutcome): string {
+  switch (outcome) {
+    case "all_good":
+      return t("gear.unit.returnOutcomeAllGood");
+    case "fit_adjusted":
+      return t("gear.unit.returnOutcomeFitAdjusted");
+    case "service_concern":
+      return t("gear.unit.returnOutcomeServiceConcern");
+  }
 }

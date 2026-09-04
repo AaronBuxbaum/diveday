@@ -198,11 +198,41 @@ export async function deleteS3Image(
   try {
     const parsedUrl = new URL(url);
     if (!configuredOrigins(config).includes(parsedUrl.origin)) {
-      return { ok: false, error: "url is not on this shop's configured media host" };
+      return { ok: false, error: "url is not on the configured media host" };
     }
     const key = decodeURIComponent(parsedUrl.pathname.replace(/^\/+/, ""));
     const s3Host = `${config.bucket}.s3.${config.region}.amazonaws.com`;
-    const deleteUrl = new URL(`https://${s3Host}/${encodeS3KeyPath(key)}`);
+    const encodedKey = encodeS3KeyPath(key);
+    const deleteUrl = new URL(`https://${s3Host}/${encodedKey}`);
+    // **The object deleted has to be the object named**, stated as the equality
+    // it actually is rather than as a blocklist. `signS3Request` signs
+    // `url.pathname`, and building a `URL` folds dot segments — so a URL whose
+    // *separators* are encoded arrives here as one path segment the parser has
+    // nothing to fold in, survives `encodeS3KeyPath` (which does not encode
+    // dots), and then folds on the way into the signature:
+    // `.../recap%2F..%2Fimport-waivers%2Fx.pdf` signs `/import-waivers/x.pdf`.
+    //
+    // Note this cannot be written as "refuse a `..` in the pathname" the way it
+    // first reads: by the time there is a pathname the folding has already
+    // happened and there is no `..` left to find. It has to compare the path
+    // against the key it was built from. Dot folding is the only thing the URL
+    // parser changes here — `encodeS3KeyPath` emits unreserved characters and
+    // `%XX`, both of which it passes through — so the equality is exact rather
+    // than approximate, and it also covers whatever else a future encoder
+    // change might let through.
+    //
+    // Unlike the read path below there is no prefix to check against: these
+    // callers delete across nine namespaces, and threading a prefix through
+    // each call site is how a guard ends up wrong at the fourth one.
+    //
+    // Not currently reachable — every URL comes from a column our own storage
+    // layer wrote. It matters anyway because `queueAndAttemptMediaDeletion`
+    // records the URL in the deletion ledger: a folding key would leave a row
+    // asserting one object was removed while S3 lost a different one, and the
+    // ledger is the thing that has to be true.
+    if (deleteUrl.pathname !== `/${encodedKey}`) {
+      return { ok: false, error: "url does not name the object it would delete" };
+    }
 
     const signedHeaders = signS3Request({
       method: "DELETE",
@@ -224,5 +254,81 @@ export async function deleteS3Image(
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "unknown delete error" };
+  }
+}
+
+/**
+ * **Read one private object back out of the media bucket**, signed as the
+ * uploader credential (issue #1283).
+ *
+ * The bucket blocks all public access and `medical-clearances/` has no
+ * CloudFront behaviour by construction, so a stored physician's evaluation has
+ * no URL anybody can fetch — which is the point, and which also meant the
+ * upload bought retention liability with no retrieval value. This is the only
+ * way back to those bytes, and it exists to be called by exactly one
+ * permission-gated route.
+ *
+ * **Same origin proof as `deleteS3Image`.** The URL reaching this function
+ * comes out of a database column, so a bad row must not become a row this
+ * accepts. It is deliberately *not* an SSRF control: the request never goes to
+ * the URL's own host, because the host is rebuilt below from `config.bucket`
+ * and `config.region`. What the origin check decides is **which stored rows we
+ * are willing to act on**, and nothing about where the request goes.
+ *
+ * That leaves `prefix` as the only control over *which object*, which is why
+ * it is applied to the normalized path rather than to the key — see below. IAM
+ * grants `s3:GetObject` on `medical-clearances/*` and nothing else, so a key
+ * outside it would be refused by AWS anyway; the point of naming it here is
+ * that the refusal is readable instead of arriving as a 403.
+ */
+export async function readS3Object(
+  url: string,
+  config: S3StorageConfig,
+  options: { prefix: string },
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ ok: true; bytes: ArrayBuffer; contentType: string } | { ok: false; error: string }> {
+  try {
+    const parsedUrl = new URL(url);
+    if (!configuredOrigins(config).includes(parsedUrl.origin)) {
+      return { ok: false, error: "url is not on the configured media host" };
+    }
+    const key = decodeURIComponent(parsedUrl.pathname.replace(/^\/+/, ""));
+    const s3Host = `${config.bucket}.s3.${config.region}.amazonaws.com`;
+    const getUrl = new URL(`https://${s3Host}/${encodeS3KeyPath(key)}`);
+    // **Checked on the path that will actually be signed**, not on the key
+    // before it. `signS3Request` signs `url.pathname`, and building a `URL`
+    // folds dot segments — so a guard applied to the pre-normalized key can be
+    // walked out of by encoding the *separators* rather than the dots:
+    // `medical-clearances%2F..%2Fimport-waivers%2Fx.pdf` is one path segment to
+    // the URL parser (nothing to fold), decodes to a key that starts with the
+    // prefix, and then normalizes to `/import-waivers/x.pdf` on the way into
+    // the signature. IAM refuses that today — `GetObject` is granted on this
+    // prefix and no other — but a 403 nobody reads is exactly what naming the
+    // prefix here was meant to replace.
+    if (!getUrl.pathname.startsWith(`/${options.prefix}/`)) {
+      return { ok: false, error: "url is not in the expected prefix" };
+    }
+
+    const signedHeaders = signS3Request({
+      method: "GET",
+      url: getUrl,
+      payloadSha256Hex: sha256Hex(""),
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
+      region: config.region,
+    });
+
+    const response = await fetchImpl(getUrl, { method: "GET", headers: signedHeaders });
+    if (!response.ok) return { ok: false, error: `provider responded ${response.status}` };
+    return {
+      ok: true,
+      bytes: await response.arrayBuffer(),
+      // What S3 was told at upload, not what the caller guesses now. The
+      // uploader re-encodes to JPEG or proves a real PDF by its magic bytes
+      // before storing, so this value was established against the actual file.
+      contentType: response.headers.get("content-type") ?? "application/octet-stream",
+    };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "unknown read error" };
   }
 }

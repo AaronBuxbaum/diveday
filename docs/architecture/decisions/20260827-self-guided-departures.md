@@ -55,6 +55,56 @@ session short of its instructor still raises `instructor_missing` with `self_gui
 `courseCrewGap` takes no such parameter and must never grow one. Readiness, trip admission and
 capacity never see this column at all.
 
+**Amended 2026-09-04 (issue #1342): no trip-creation door writes the combination any more, and the
+detector is unchanged.** The paragraph above describes the *output* for a course session carrying
+`self_guided`, and that behaviour is correct and stays — `courseCrewGap` still takes no such
+parameter. What it did not do was stop the state being stored, and the schedule builder offered the
+checkbox in the same disclosed panel as the course picker.
+
+**Why the combination is refused.** Not because a certification dive is always supervised — a
+`dive-domain-expert` review of this change found that absolute contradicted by DiveDay's own course
+catalog, where Emergency Oxygen Provider and Equipment Specialist are dry classroom courses, PADI's
+Nitrox specialty has no training dives at all, and a Divemaster candidate's mapping project is
+unguided by design. The load-bearing reason is narrower and true of every course we ship: the mark
+silences *the shop's own advisory divemaster target* and reaches nothing else, and a departure that
+runs a course has an instructor of record whether or not they are in the water, so that target is
+exactly the signal that should keep applying to it. The glossary's **Target diver:divemaster ratio**
+already says it applies to every dive, fun dive or course session alike; this restores that.
+
+**The direction of error is the safety argument.** `divemasterRatioGap` returns `none` outright when
+the mark is set, so coercing it to false can only ever *add* an advisory row, never suppress one.
+Even in the Divemaster-mapping-project case the worst outcome is one extra advisory on a departure
+that legitimately has no guide.
+
+So `insertTripInstance` now coerces `self_guided` to false whenever `course_id` is non-null — there
+rather than in `createTrip`, because it is the one function all three creation doors pass through
+(`createTrip`, `duplicateTrip`, and the series horizon roll, which copies the template's flag
+nightly and would otherwise re-mint the state forever). `updateTrip` applies the same rule, read
+against the existing row's course rather than the patch's, since a departure's course is fixed at
+creation and `UpdateTripPatch` carries no `course_id`. Both editors drop the checkbox rather than
+ignoring it, and the board's sits *below* the course select so a tick cannot vanish above the fold
+when a course is picked afterwards.
+
+**Coerced, not refused, and that is deliberate.** Two of the three remaining callers have no human
+to tell. A refusal in the nightly roll drops the date — the shop's Saturday silently never reaches
+the board — and a refusal in `duplicateTrip` is a dead end a staffer cannot edit their way out of,
+since the source's course is fixed. Both are worse failures than a normalized flag. The one human
+case, a stale form post, cannot arise: neither editor renders the control.
+
+**Not enforced in the schema, and that is a choice rather than an oversight.** A
+`course_id is null or self_guided = false` check constraint would close the six seed modules that
+insert into `trips` directly, and this repository does enforce twice elsewhere (see the glossary's
+**Card sighting**). It is left out because two tests deliberately write the state behind the writer's
+back to pin the "a row predating this rule still resolves correctly" case, and a constraint makes
+those unwritable. The claim above is therefore about the creation doors, not about the column.
+
+Such a row is not permanent, either: the trip's details form parses an absent checkbox as `false`
+rather than `undefined`, so the first save of a legacy course session clears the mark.
+
+The sentence above therefore now describes a state no creation door produces. It is kept, not
+deleted: the detector's behaviour is the load-bearing half, and a row written out of band still has
+to resolve correctly.
+
 ## Alternatives considered
 
 **Leave it as shipped and wait for a shop to complain.** DiveDay is pre-pilot (H-49) with no usage

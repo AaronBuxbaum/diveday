@@ -4,7 +4,8 @@
  * Then any number of these, each a widget from Settings → Website embed:
  *
  *   <div data-diveday="calendar|grid|departure|courses" data-shop="<slug>"
- *        data-look="site|light" data-lang="auto|en-US|es-ES" [data-show="<trip id>"]></div>
+ *        data-look="site|light" data-lang="auto|en-US|es-ES"
+ *        [data-show="<trip id> on departure, <course slug> on courses"]></div>
  *   <a href="…" data-diveday="button|lightbox" data-shop="<slug>" data-look="site|light">Book a dive</a>
  *
  * The attribute names are a contract (src/lib/embed-snippets.ts pins them, and
@@ -76,8 +77,13 @@
     const slug = el.getAttribute("data-shop") || "";
     const url = new URL(kind === "calendar" ? `/s/${slug}` : `/s/${slug}/embed/${kind}`, origin);
     if (kind === "calendar") url.searchParams.set("embed", "1");
+    // A trip id on "departure", a course slug on "courses" (issue #1284) —
+    // told apart by the kind, never by the value. Kept as a list rather than
+    // an equality so the mirror in src/lib/embed-snippets.ts (SHOWS_ONE) has
+    // an obvious counterpart here; src/lib/embed-loader.test.ts runs this file
+    // against a host page and pins both.
     const show = el.getAttribute("data-show");
-    if (show && kind === "departure") url.searchParams.set("show", show);
+    if (show && (kind === "departure" || kind === "courses")) url.searchParams.set("show", show);
     const lang = el.getAttribute("data-lang");
     if (lang && lang !== "auto") url.searchParams.set("lang", lang);
     if ((el.getAttribute("data-look") || "site") === "site") {

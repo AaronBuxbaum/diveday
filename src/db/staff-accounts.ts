@@ -1,6 +1,8 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
+import { crewPublicNameToStore } from "@/lib/crew-public-name";
 import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { hashPassword } from "@/lib/password-hashing";
 import { isSpokenLanguageTag } from "@/lib/spoken-languages";
@@ -29,6 +31,38 @@ export type StaffMember = {
   emergencyContactPhone: string | null;
   /** BCP-47 tags this person can hold a conversation in (issue #708). Empty until a shop records one. */
   spokenLanguages: string[];
+  /**
+   * The name this person publishes to divers, or null if they have not
+   * consented (issue #1357).
+   *
+   * The shop is accountable for what its own public pages say, and until this
+   * it could not read them without browsing `/s/<slug>/trips/<id>` departure by
+   * departure — `crew_public_name` is typed by each person for themselves
+   * (issue #1351), so it is the one string on a public page nobody at the shop
+   * chose. Read-only on the roster, and deliberately: taking a name down is an
+   * override of somebody else's consent and needs a human answer about what
+   * happens to the consent afterwards, which is why the issue leaves it open.
+   *
+   * Null is *both* "declined" and "never asked", indistinguishably, which is
+   * the boundary the whole feature rests on: a roster that showed who said no
+   * would be a list of who said no.
+   *
+   * One column rather than two, but the equivalence is narrower than it looks
+   * and the roster's reader is written for the narrow one.
+   * `people_crew_public_name_with_consent` pairs the stamp with a name that is
+   * non-blank **after Postgres `btrim`** — which strips ASCII space and nothing
+   * else — so a tab-only name would satisfy it, and `'   '` beside a null stamp
+   * satisfies it too. No writer can produce either today
+   * (`crewPublicNameToStore` maps every `\p{Cc}` to a space and trims), and the
+   * surface trims again rather than resting on that.
+   *
+   * The stamp is also not the whole condition for publishing: `tripPublicCrew`
+   * requires an `active` account as well, and a disable deliberately leaves a
+   * consent standing. So a surface stating what divers *see* reads
+   * `accountStatus` beside this — both found by a security pass on the commit
+   * that added the column to this projection.
+   */
+  crewPublicName: string | null;
 };
 
 /**
@@ -65,6 +99,7 @@ export async function listShopStaff(db: DbExecutor, shopId: string): Promise<Sta
       emergencyContactName: people.emergencyContactName,
       emergencyContactPhone: people.emergencyContactPhone,
       spokenLanguages: people.spokenLanguages,
+      crewPublicName: people.crewPublicName,
       role: personRoles.role,
       userAccountId: userAccounts.id,
       accountStatus: userAccounts.status,
@@ -98,6 +133,7 @@ export async function listShopStaff(db: DbExecutor, shopId: string): Promise<Sta
       emergencyContactName: row.emergencyContactName,
       emergencyContactPhone: row.emergencyContactPhone,
       spokenLanguages: row.spokenLanguages,
+      crewPublicName: row.crewPublicName,
     });
   }
   return [...byPerson.values()].sort((a, b) => a.fullName.localeCompare(b.fullName));
@@ -523,6 +559,111 @@ export async function removeStaffMember(
           eq(pushSubscriptions.personId, input.personId),
         ),
       );
+    // And withdraw their agreement to be named to divers (issue #1181), for the
+    // same reason and one step further: a removed person has no login, so there
+    // is no path left by which *they* can withdraw it. Leaving the stamp makes
+    // republishing their name a one-tap owner decision — the Undo banner, a
+    // plain re-enable, or a re-invite at the same email months later all put
+    // them back on public trip pages without them ever being asked again. Note
+    // this is deliberately not done by `setStaffAccountStatus("disabled")`: a
+    // temporary disable should not destroy a standing answer, because the
+    // person is still here to change it.
+    await tx
+      .update(people)
+      .set({ crewPublicConsentAt: null, crewPublicName: null })
+      .where(and(eq(people.shopId, input.shopId), eq(people.id, input.personId)));
     return { ok: true };
   });
+}
+
+/**
+ * **Record, or withdraw, one staff member's agreement to be named to divers**
+ * (issue #1181, D21).
+ *
+ * Same shape and same staff-subject guard as `setStaffLanguages` above, and
+ * one deliberate difference in who may call it: languages are an operational
+ * fact a manager curates, and this is a consent. The action above this refuses
+ * any `personId` but the caller's own, because a consent somebody else
+ * recorded on your behalf is not one — that is the whole of what the column
+ * means, and the reason it is a separate write rather than a field on the
+ * languages form.
+ *
+ * Withdrawing writes null rather than a second timestamp. The standing answer
+ * is the fact worth keeping; a shop holding a former employee's revoked
+ * consent date serves nobody, and H-02 would have to age it out.
+ */
+export async function setCrewPublicConsent(
+  db: DbExecutor,
+  {
+    shopId,
+    personId,
+    actorPersonId,
+    consented,
+    publicName,
+    now = nowDate(),
+  }: {
+    shopId: string;
+    personId: string;
+    /** Whose session is writing. Anything but `personId` is refused here, not
+     * only at the one action that calls this today. */
+    actorPersonId: string;
+    consented: boolean;
+    /** What the person typed as the name divers see; blank falls back to the
+     * first token of their record. Ignored when withdrawing. */
+    publicName?: string | null;
+    now?: Date;
+  },
+): Promise<boolean> {
+  // **The subject is the actor, and that is enforced here.** A consent somebody
+  // else recorded on your behalf is not a consent -- it is the whole of what
+  // this column means, and unlike the blackout beside it there is no case where
+  // a manager may record it for you, so there is no `canManageRoster` escape.
+  // The action above already refuses it; this refuses it for the next surface
+  // that wants a "name divers see" control and does not think to.
+  if (actorPersonId !== personId) return false;
+
+  // The stored name is read off the shop's own record before the write, not
+  // taken from the caller alone, so an empty box still publishes something
+  // sensible and a request that names a person who is not here writes nothing.
+  let nameToStore: string | null = null;
+  if (consented) {
+    const [row] = await db
+      .select({ fullName: people.fullName })
+      .from(people)
+      .where(and(eq(people.id, personId), eq(people.shopId, shopId), isNull(people.deletedAt)))
+      .limit(1);
+    if (!row) return false;
+    nameToStore = crewPublicNameToStore(publicName, row.fullName);
+    // Nothing to show. Refused rather than written, because the alternative is
+    // a consent that renders an empty crew line -- and the check constraint on
+    // `people` would reject it anyway.
+    if (nameToStore === null) return false;
+  }
+
+  const updated = await db
+    .update(people)
+    .set({
+      crewPublicConsentAt: consented ? now : null,
+      // Withdrawing clears the name too. Keeping it would leave the string
+      // somebody chose sitting on the row, ready to republish the moment
+      // anything set the stamp again -- the same hazard the security pass
+      // found in `removeStaffMember`, one field over.
+      crewPublicName: nameToStore,
+    })
+    .where(
+      and(
+        eq(people.id, personId),
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+        inArray(
+          people.id,
+          db
+            .select({ id: personRoles.personId })
+            .from(personRoles)
+            .where(inArray(personRoles.role, [...STAFF_ROLES])),
+        ),
+      ),
+    )
+    .returning({ id: people.id });
+  return updated.length > 0;
 }

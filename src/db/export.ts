@@ -1010,6 +1010,16 @@ export async function loadShopExportBundleInput(
             // like every other fact this file carries regardless of who it's
             // ever actually populated for.
             "spoken_languages",
+            // A staff member's own agreement to be named to divers on the
+            // departures they crew (issue #1181). Same call as the languages
+            // above and for the same reason: it is a fact about a person this
+            // shop holds, so the shop's own copy of everything carries it.
+            "crew_public_consent_at",
+            // The string that consent actually publishes (issue #1351). It
+            // travels beside the stamp because it is half of the same record:
+            // a shop restoring this bundle needs to know not just that somebody
+            // agreed, but to what.
+            "crew_public_name",
             "courtesy_email_opt_out_at",
             // The diver's own "I'm not certified yet", which is a statement
             // about them and not a card — it has no row in certifications.csv
@@ -1057,6 +1067,8 @@ export async function loadShopExportBundleInput(
             row.emergencyContactName,
             row.emergencyContactPhone,
             row.spokenLanguages.length > 0 ? [...row.spokenLanguages].sort().join("; ") : null,
+            row.crewPublicConsentAt,
+            row.crewPublicName,
             row.courtesyEmailOptOutAt,
             row.noCertificationDeclaredAt,
             row.noCertificationClearedAt,
@@ -1988,6 +2000,11 @@ export async function loadShopExportBundleInput(
             "max_depth_meters",
             "observed_conditions",
             "not_recorded",
+            // One species a crew member said they saw on this dive (issue
+            // #1190). A catalog slug rather than a name, because the words are
+            // DiveDay's copy in the reader's language and a CSV has no reader
+            // to resolve them for — the slug is the durable fact.
+            "observed_species_slug",
             "recorded_by_person_id",
             "deleted_at",
             "created_at",
@@ -2005,6 +2022,7 @@ export async function loadShopExportBundleInput(
             row.maxDepthMeters,
             JSON.stringify(row.observedConditions),
             JSON.stringify(row.notRecorded),
+            row.observedSpeciesSlug,
             row.recordedByPersonId,
             row.deletedAt,
             row.createdAt,
@@ -2434,6 +2452,7 @@ export async function loadShopExportBundleInput(
             "reserved_until",
             "checked_out_at",
             "returned_at",
+            "return_outcome",
             "return_note",
             "created_at",
           ],
@@ -2451,6 +2470,7 @@ export async function loadShopExportBundleInput(
               row.reservedUntil,
               row.checkedOutAt,
               row.returnedAt,
+              row.returnOutcome,
               row.returnNote,
               row.createdAt,
             ];

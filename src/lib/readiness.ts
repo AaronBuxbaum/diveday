@@ -61,18 +61,23 @@ export function paymentGateIsUnclearable(
 }
 
 /**
- * The five-rung certification ladder. Labels for these — and for
- * `DiveSpecialty` below — live in the message bundles
- * (`src/i18n/readiness-labels.ts` maps each code to a translation key), never
- * here: this file states facts about ordering and gates, `src/app` chooses
- * words.
+ * The five-rung certification ladder, and the set a trip may demand.
+ *
+ * Both live in `./certification-levels.ts` and are re-exported here so every
+ * caller is unchanged. They moved because `src/i18n/readiness-labels.ts` needs
+ * one value from this module and nothing else, and that single import was
+ * dragging the waiver and medical copy into two public diver pages' first load
+ * (issue #1354). Labels for these — and for `DiveSpecialty` below — live in the
+ * message bundles, never here: this file states facts about ordering and gates,
+ * `src/app` chooses words.
  */
-export type CertificationLevel =
-  | "open_water"
-  | "advanced_open_water"
-  | "rescue"
-  | "divemaster"
-  | "instructor";
+import type { CertificationLevel } from "./certification-levels";
+
+export type {
+  CertificationLevel,
+  RequirableCertificationLevel,
+} from "./certification-levels";
+export { REQUIRABLE_CERTIFICATION_LEVELS } from "./certification-levels";
 
 const levelRank: Record<CertificationLevel, number> = {
   open_water: 1,
@@ -86,35 +91,6 @@ const levelRank: Record<CertificationLevel, number> = {
 export function certificationRank(level: CertificationLevel): number {
   return levelRank[level];
 }
-
-/**
- * **What a site or a trip may demand of a diver — the top of it is Rescue.**
- *
- * Deliberately a different set from `CertificationLevel`, which is what a
- * person can *hold*. Divemaster and Instructor are working ratings: crew hold
- * them, `src/lib/course-ratios.ts` counts them, and an instructor-led session
- * is gated on one being assigned. None of that is a shop telling a paying
- * diver to hold a professional rating to board a charter, which is the only
- * thing this list is for (issue #630).
- *
- * It stops at Rescue because Rescue is the highest *modelled* recreational
- * rung. Master Scuba Diver is not one: MSD is Rescue plus five specialties
- * plus fifty dives, which a linear ladder cannot express, and the import path
- * deliberately files it under `level_not_gated`
- * (ADR 20260725-imported-card-sighting).
- *
- * The `satisfies` is the same guard `DECLARABLE_CERTIFICATION_LEVELS` carries:
- * a rung spelled wrong here is a compile error rather than a requirement
- * nobody can pick.
- */
-export const REQUIRABLE_CERTIFICATION_LEVELS = [
-  "open_water",
-  "advanced_open_water",
-  "rescue",
-] as const satisfies readonly CertificationLevel[];
-
-/** A level a site or trip is allowed to demand — see the list above. */
-export type RequirableCertificationLevel = (typeof REQUIRABLE_CERTIFICATION_LEVELS)[number];
 
 /** The stricter of two levels; null means "no level demanded" and never wins. */
 export function higherCertificationLevel(

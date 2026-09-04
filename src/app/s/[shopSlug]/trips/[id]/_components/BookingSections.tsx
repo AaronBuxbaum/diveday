@@ -159,6 +159,7 @@ export function TripFullSection({
   errorMessage,
   contactEmail,
   contactPhone,
+  alternatives = [],
   terms,
 }: {
   shopSlug: string;
@@ -176,6 +177,20 @@ export function TripFullSection({
    * vanished the moment it sold out.
    */
   terms?: React.ReactNode;
+  /**
+   * Up to two departures worth offering instead (issue #1166, D06), already
+   * chosen by `similarDepartures` and dated in the shop's own zone. Empty
+   * whenever nothing is genuinely similar, which is most of the time — the
+   * boundary is "relevant alternatives or none", and the link to the whole
+   * schedule above already covers "show me anything".
+   */
+  alternatives?: readonly {
+    tripId: string;
+    title: string;
+    href: string;
+    when: { weekday: string; day: string; month: string };
+    reason: "same_course" | "same_site";
+  }[];
 }) {
   const t = useTranslations("booking");
   const tTrip = useTranslations("trip");
@@ -206,6 +221,32 @@ export function TripFullSection({
         </Link>{" "}
         {t("reefNotGoingAnywhere")}
       </p>
+      {/* **The shop's own better answer**, above the wait list rather than
+          under it: a diver who would happily take Thursday should meet
+          Thursday before they queue for a seat that may never open (issue
+          #1166). Two at most, each saying why it is here — an unexplained list
+          of other boats is the schedule page with extra steps. */}
+      {alternatives.length > 0 ? (
+        <ul className="mt-4 flex flex-col gap-2">
+          {alternatives.map((alternative) => (
+            <li key={alternative.tripId} className="text-sm">
+              <Link href={alternative.href} className="font-medium text-primary hover:underline">
+                {alternative.title}
+              </Link>{" "}
+              <span className="text-muted">
+                {t(
+                  alternative.reason === "same_course"
+                    ? "alternativeSameCourse"
+                    : "alternativeSameSite",
+                  {
+                    date: `${alternative.when.weekday} ${alternative.when.day} ${alternative.when.month}`,
+                  },
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <form
         action={joinWaitlist.bind(null, tripRef)}
         className="mt-6 flex flex-col gap-4 border-t border-border pt-6"

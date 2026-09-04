@@ -47,13 +47,34 @@ export function isEmbedKind(value: unknown): value is EmbedKind {
   return typeof value === "string" && (EMBED_KINDS as readonly string[]).includes(value);
 }
 
+/**
+ * The framed kinds that `show` means something to: one departure, or one
+ * course out of the catalogue (issue #1284). `grid` and `calendar` are the
+ * whole board by definition, so a `show` on either is silently nothing rather
+ * than a narrowing nobody asked for.
+ *
+ * **Adding a kind here is additive by construction**: the attribute is
+ * `data-show` in every case, which is the name `public/embed.js` has always
+ * read and `embed-snippets.test.ts` pins. A snippet a shop pasted last season
+ * carries no `data-show` at all and keeps meaning what it meant.
+ */
+const SHOWS_ONE: ReadonlySet<EmbedKind> = new Set(["departure", "courses"]);
+
 export type EmbedLook = "site" | "light";
 export type EmbedOptions = {
   /** `site` reads the host page's colour and face; `light` is DiveDay's own. */
   look: EmbedLook;
   /** A diver locale to fix the widget to, or `auto` for the visitor's browser. */
   lang: string;
-  /** A trip id (departure, lightbox) or a course slug (courses), when one is chosen. */
+  /**
+   * What the widget narrows to: a trip id for `departure` (and for the button,
+   * lightbox and QR code, which link at one departure), or a **course slug**
+   * for `courses`.
+   *
+   * The two are told apart by the kind, never by the value — a slug and a UUID
+   * are both opaque strings here, and the widget that reads one looks it up in
+   * its own namespace.
+   */
   show?: string | null;
 };
 
@@ -74,7 +95,9 @@ export function embedFrameUrl(
     origin,
   );
   if (kind === "calendar") url.searchParams.set("embed", "1");
-  if (options.show && kind === "departure") url.searchParams.set("show", options.show);
+  // `departure` and `courses` are the two widgets that can narrow to one
+  // thing; `grid` and `calendar` are the whole board by definition.
+  if (options.show && SHOWS_ONE.has(kind)) url.searchParams.set("show", options.show);
   if (options.lang !== "auto") url.searchParams.set("lang", options.lang);
   if (options.look === "site") {
     if (host.brand) url.searchParams.set("brand", host.brand);
@@ -146,6 +169,6 @@ export function embedSnippet(
   if (kind === "button" || kind === "lightbox") {
     return `${loader}\n<a href="${attr(embedTargetUrl(origin, shopSlug, options))}" data-diveday="${kind}" ${common}>${attr(words.button)}</a>`;
   }
-  const show = options.show && kind === "departure" ? ` data-show="${attr(options.show)}"` : "";
+  const show = options.show && SHOWS_ONE.has(kind) ? ` data-show="${attr(options.show)}"` : "";
   return `${loader}\n<div data-diveday="${kind}" ${common}${show}></div>`;
 }

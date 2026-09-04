@@ -431,14 +431,41 @@ async function landAfterAdd(
  * Scoped by the session's own shop, never the slug, and null for anyone who
  * cannot define trips — the same gate as the panel itself.
  */
-export async function loadMovePreflightAction(tripId: string): Promise<MovePreflight | null> {
+export async function loadMovePreflightAction(
+  tripId: string,
+  /**
+   * The date and time the panel's fields currently name, when together they
+   * are not where the departure already sits. Null on mount, and whenever
+   * either field is empty or half-typed — which is the shape a date or time
+   * input holds until every segment is filled.
+   *
+   * The parts of the preview that depend on it are the two crew lines (issue
+   * #1310), so the panel re-calls this as the fields change rather than once
+   * on mount. A native date or time input publishes a value only when it is
+   * complete, so that is at most a handful of calls per open panel and needs
+   * no debounce — deliberately not `input`-per-keystroke against a text field.
+   */
+  target: { date: string; startTime: string } | null = null,
+): Promise<MovePreflight | null> {
   const parsed = z.uuid().safeParse(tripId);
   if (!parsed.success) return null;
   const session = await requireStaffSession();
   const db = await getDb();
   const shopId = session.user.shopId;
   if (!(await canPersonConfigureTrips(db, shopId, session.user.personId))) return null;
-  return getMovePreflight(db, shopId, parsed.data);
+  const shop = await getShopById(db, shopId);
+  // The zone is the shop's, read here rather than taken from the caller: a
+  // date and a time of day are only an instant once somebody says where. A
+  // pair the reader cannot parse is simply no target, exactly as no pair is.
+  const wall = target ? parseWallTime(target.date, target.startTime) : null;
+  return getMovePreflight(
+    db,
+    shopId,
+    parsed.data,
+    wall && shop
+      ? { startsAt: wallTimeToUtc(wall, shop.timezone), timeZone: shop.timezone }
+      : undefined,
+  );
 }
 
 const moveSchema = z.object({

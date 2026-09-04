@@ -1,8 +1,10 @@
-import { and, asc, eq, gt, inArray, lt, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
+import { shopDayOf } from "@/lib/closeout";
 import { countInWaterCrew, type TripCrewRole } from "@/lib/crew-roles";
 import { reviewManifestChange } from "@/lib/manifest-change-review";
 import type { AppDb, DbExecutor } from "./client";
+import { listCrewAvailabilityBlocks } from "./crew-requests";
 import { publishManifestEvent } from "./manifest-events";
 import {
   people,
@@ -13,6 +15,7 @@ import {
   trips,
 } from "./schema";
 import { liveTrip } from "./trips-live";
+import { tripShiftPlan } from "./trips-schedule";
 
 /**
  * Who is working a departure.
@@ -61,6 +64,173 @@ export async function getTripCrewIds(db: AppDb, shopId: string, tripId: string):
     .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
     .where(and(eq(tripAssignments.tripId, tripId), eq(trips.shopId, shopId), liveTrip()));
   return rows.map((r) => r.personId);
+}
+
+/** One crew member the move would put somewhere they cannot be. */
+export type CrewMoveConflict = {
+  personId: string;
+  fullName: string;
+  /** The other departure they are on, for a clash; absent for a blackout. */
+  otherTitle?: string;
+};
+
+export type CrewMoveConflicts = {
+  /**
+   * Already crewing another departure whose window **overlaps** the one this
+   * move proposes. A physical impossibility, not a busy day.
+   */
+  clashes: CrewMoveConflict[];
+  /** Told the shop, in their own words, that they are away on one of those days. */
+  away: CrewMoveConflict[];
+};
+
+/**
+ * **What moving this departure would ask of the people on it** (issue #1310) —
+ * the one consequence of a move that nothing else in the app can answer, and
+ * the only part of the preview that depends on where the boat is going.
+ *
+ * ## Two questions, because the shop knows two different things
+ *
+ * "Is she free on Thursday?" means three things, and the app can answer two:
+ *
+ * - **Double-booked** — already on another departure whose window overlaps.
+ *   Read here from `trip_assignments`, and never wrong.
+ * - **Away** — she told the shop so. `crew_availability_blocks` has held this
+ *   since #1235, and it *informs, never gates*: a blackout does not take
+ *   anybody off a boat. So the crew stay assigned, no clash is found, and a
+ *   preview that asked only the first question would sit **silent** while a
+ *   manager slid a whole departure onto somebody's approved holiday — the
+ *   case the shop has explicitly recorded, missed in favour of the one it
+ *   only implies.
+ * - **Over their hours** — genuinely unmodelled, and left alone.
+ *
+ * They are separate lists because they are separate facts: one is an
+ * inference from the roster, the other is the crew member's own statement.
+ *
+ * ## The window, not the day
+ *
+ * A clash is a **time overlap**, computed against the days the move actually
+ * proposes — every leg of a multi-day course, shifted by the same wall-clock
+ * delta `moveTrip` will apply. Two reasons it cannot be "the same calendar
+ * day":
+ *
+ * 1. `setTripCrew` and `changeTripCrew` already define a crew conflict, and
+ *    they define it exactly this way — and *refuse* it. A preview using a
+ *    looser rule would report as a problem a state the shop can only be in
+ *    because the model deliberately allows it.
+ * 2. A morning two-tank and an afternoon single are an ordinary double shift
+ *    for a divemaster. Calling that a clash is the saturation failure #757 and
+ *    #1203 already paid for once: a warning that is routinely wrong is one a
+ *    crew learns to click past, and the cost lands on the next warning, which
+ *    may be right.
+ *
+ * Tenancy is proved through `trips` on both sides, because `trip_assignments`
+ * carries no `shop_id` of its own (CR-007). Reads only.
+ */
+export async function crewMoveConflicts(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  newStartsAt: Date,
+  timeZone: string,
+): Promise<CrewMoveConflicts> {
+  const none: CrewMoveConflicts = { clashes: [], away: [] };
+  if (Number.isNaN(newStartsAt.getTime())) return none;
+
+  const [trip] = await db
+    .select({ startsAt: trips.startsAt, endsAt: trips.endsAt })
+    .from(trips)
+    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+    .limit(1);
+  if (!trip) return none;
+
+  const crewIds = await getTripCrewIds(db, shopId, tripId);
+  if (crewIds.length === 0) return none;
+
+  // The same shift the mutation will apply, from the same function — so the
+  // preview and the move cannot disagree about where the boat lands.
+  const shift = tripShiftPlan(trip.startsAt, newStartsAt, timeZone);
+  const days = await db
+    .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
+    .from(tripScheduleDays)
+    .where(eq(tripScheduleDays.tripId, tripId));
+  const proposed = (
+    days.length > 0 ? days : [{ startsAt: trip.startsAt, endsAt: trip.endsAt }]
+  ).map((day) => ({ startsAt: shift(day.startsAt), endsAt: shift(day.endsAt) }));
+
+  const [overlapping, blocks] = await Promise.all([
+    db
+      .select({
+        personId: tripAssignments.personId,
+        fullName: people.fullName,
+        title: trips.title,
+        startsAt: trips.startsAt,
+      })
+      .from(tripAssignments)
+      .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+      .innerJoin(people, eq(people.id, tripAssignments.personId))
+      .leftJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
+      .where(
+        and(
+          liveTrip(),
+          eq(trips.shopId, shopId),
+          // A called-off departure holds nobody's day. `setTripCrew`'s own
+          // conflict check does not exclude these; this one does, and the
+          // difference is filed rather than quietly copied.
+          eq(trips.status, "scheduled"),
+          ne(trips.id, tripId),
+          inArray(tripAssignments.personId, crewIds),
+          eq(people.shopId, shopId),
+          isNull(people.deletedAt),
+          // The predicate `setTripCrew` refuses on, against the *other* side's
+          // own legs where it has them.
+          or(
+            ...proposed.map((day) =>
+              and(
+                lt(sql`coalesce(${tripScheduleDays.startsAt}, ${trips.startsAt})`, day.endsAt),
+                gt(sql`coalesce(${tripScheduleDays.endsAt}, ${trips.endsAt})`, day.startsAt),
+              ),
+            ),
+          ),
+        ),
+      )
+      .orderBy(asc(people.fullName), asc(trips.startsAt)),
+    // The shop-local days the move would occupy, from the earliest leg to the
+    // latest — `min`/`max` rather than first and last, because
+    // `trip_schedule_days` comes back in no particular order and a course
+    // whose legs are stored out of sequence would otherwise ask about an
+    // inverted range and match nothing.
+    listCrewAvailabilityBlocks(db, shopId, {
+      from: shopDayOf(
+        new Date(Math.min(...proposed.map((day) => day.startsAt.getTime()))),
+        timeZone,
+      ),
+      to: shopDayOf(new Date(Math.max(...proposed.map((day) => day.endsAt.getTime()))), timeZone),
+    }),
+  ]);
+
+  // **Distinct on the id, never the name.** Two crew members who share a name
+  // are two people to ring, and collapsing them loses one of them silently.
+  const clashes: CrewMoveConflict[] = [];
+  const seen = new Set<string>();
+  for (const row of overlapping) {
+    if (seen.has(row.personId)) continue;
+    seen.add(row.personId);
+    clashes.push({ personId: row.personId, fullName: row.fullName, otherTitle: row.title });
+  }
+
+  const crew = new Set(crewIds);
+  const awayIds = [...new Set(blocks.filter((b) => crew.has(b.personId)).map((b) => b.personId))];
+  const names =
+    awayIds.length === 0
+      ? []
+      : await db
+          .select({ personId: people.id, fullName: people.fullName })
+          .from(people)
+          .where(and(eq(people.shopId, shopId), inArray(people.id, awayIds)))
+          .orderBy(asc(people.fullName));
+
+  return { clashes, away: names.map((row) => ({ ...row })) };
 }
 
 /**

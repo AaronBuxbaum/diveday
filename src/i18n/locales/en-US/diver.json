@@ -51,6 +51,12 @@
       "feet": "{value} ft",
       "celsius": "{value}°C",
       "fahrenheit": "{value}°F"
+    },
+    "contrast": {
+      "modeLabel": "Screen contrast",
+      "labelAuto": "Auto",
+      "labelStandard": "Standard",
+      "labelFull": "High"
     }
   },
   "shopChrome": {
@@ -164,6 +170,8 @@
     "linkCopyFailed": "Couldn’t copy. Copy it from the address bar instead.",
     "shareText": "Dive with me. Here are the trip details.",
     "packTitle": "Pack with confidence",
+    "calendarDockCall": "Dock call {dockCall}. We leave at {departure}.",
+    "calendarMeetingPoint": "Meet at {place}.",
     "packBring": "Bring",
     "packRenting": "Renting",
     "packProvided": "We provide",
@@ -267,7 +275,14 @@
     },
     "theSite": "{count, plural, one {The site} other {The sites}}",
     "siteLandmarksHeading": "Landmarks",
-    "siteConservationHeading": "Conservation note"
+    "siteConservationHeading": "Conservation note",
+    "crewHeading": "Who you're diving with",
+    "crewRole": {
+      "instructor": "Instructor",
+      "divemaster": "Divemaster",
+      "captain": "Captain",
+      "crew": "Crew"
+    }
   },
   "booking": {
     "heading": "Grab a spot",
@@ -302,6 +317,8 @@
     "booking": "Booking…",
     "fullHeading": "This boat’s full",
     "findAnotherTrip": "Find another trip",
+    "alternativeSameCourse": "Same course, {date}",
+    "alternativeSameSite": "Same site, {date}",
     "reefNotGoingAnywhere": "— the reef isn’t going anywhere.",
     "waitlistHeading": "Join the wait list",
     "waitlistBody": "If a spot opens, the shop will have your details ready.",
@@ -512,6 +529,7 @@
     "externalReviewCta": "Leave a public review",
     "commentCopied": "Copied — paste it in when you get there",
     "conditionsOnTheDay": "Conditions on the day",
+    "seenOnTheDay": "Seen on the day",
     "yourPhotos": "Your photos",
     "captionLabel": "Add a caption (optional)",
     "tipCrew": "Tip your crew",
@@ -742,7 +760,11 @@
     "supportDivesWithLabel": "Someone who should be on the same boat and team as you",
     "saveSupport": "Save arrangements",
     "supportSaved": "Saved. The crew will have that before you arrive.",
-    "supportUnavailable": "That did not save. Try again, or tell the crew on the day."
+    "supportUnavailable": "That did not save. Try again, or tell the crew on the day.",
+    "carriedHeading": "Still on file for you",
+    "carriedWaiver": "Your signed waiver",
+    "carriedCertification": "Your certification",
+    "carriedFit": "Your sizes"
   },
   "thread": {
     "stepsDoneSuffix": "of {total} done",
@@ -2222,6 +2244,22 @@
         "title": "Diver",
         "desc": "What your customers see: book a trip, sign the waiver, request rental gear.",
         "tryThis": "Pick a trip on the schedule and book a spot."
+      }
+    },
+    "stories": {
+      "eyebrow": "Live demo",
+      "enter": "Open this story",
+      "firstBooking": {
+        "title": "A first booking",
+        "desc": "The shop's public schedule, and the form a diver who has never dived with them fills in."
+      },
+      "returningDiver": {
+        "title": "A diver who has been before",
+        "desc": "Tomorrow's prep list, with the sizes the front desk already had on file."
+      },
+      "weatherDay": {
+        "title": "A day the weather takes",
+        "desc": "Call off a departure and watch every booked diver hear about it, with somewhere else to go."
       }
     }
   },

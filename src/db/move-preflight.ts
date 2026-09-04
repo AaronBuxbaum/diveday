@@ -4,6 +4,7 @@ import type { AppDb } from "./client";
 import { countOpenTripGearReservations } from "./gear";
 import { countTripOrders } from "./orders";
 import { bookings, notificationDeliveries, type notificationKind, trips } from "./schema";
+import { crewMoveConflicts } from "./trips-crew";
 import { liveTrip } from "./trips-live";
 import { countRollCallEvidence } from "./trips-schedule";
 
@@ -25,6 +26,22 @@ export async function getMovePreflight(
   db: AppDb,
   shopId: string,
   tripId: string,
+  /**
+   * Where the departure is being moved to — the exact instant, and the shop's
+   * zone the move will shift its other legs in. Omitted while the Move panel's
+   * fields still hold the departure's own date and time, which is how it opens.
+   *
+   * **The one time-dependent fact here** (issue #1310). Every other
+   * consequence is a property of the departure and is the same wherever it
+   * lands, so the panel could fetch them once on mount; a crew clash has to be
+   * re-read for each time a staff member picks, and the *time* matters as much
+   * as the date — a morning boat and an afternoon boat on one day are an
+   * ordinary double shift, and only the overlap is a problem. Passing the
+   * target in, rather than adding a second round trip beside this one, keeps
+   * the preview a single answer that cannot half-update, at the cost of
+   * re-running four cheap counts on a deliberate act.
+   */
+  target?: { startsAt: Date; timeZone: string },
 ): Promise<MovePreflight | null> {
   const [trip] = await db
     .select({ status: trips.status, cancellationWindowHours: trips.cancellationWindowHours })
@@ -35,11 +52,14 @@ export async function getMovePreflight(
   // no preview — the panel simply shows its fields, exactly as it does today.
   if (!trip) return null;
 
-  const [toldSeats, gearReserved, paidOrders, rollCallEvidence] = await Promise.all([
+  const [toldSeats, gearReserved, paidOrders, rollCallEvidence, crew] = await Promise.all([
     countToldSeats(db, shopId, tripId),
     countOpenTripGearReservations(db, shopId, tripId),
     countTripOrders(db, shopId, tripId, "paid"),
     countRollCallEvidence(db, shopId, tripId),
+    target
+      ? crewMoveConflicts(db, shopId, tripId, target.startsAt, target.timeZone)
+      : { clashes: [], away: [] },
   ]);
 
   return composeMovePreflight({
@@ -49,6 +69,11 @@ export async function getMovePreflight(
     cancellationWindowHours: trip.cancellationWindowHours,
     rollCallEvidence,
     scheduled: trip.status === "scheduled",
+    crewClashes: crew.clashes.map((row) => ({
+      name: row.fullName,
+      departure: row.otherTitle ?? "",
+    })),
+    crewAway: crew.away.map((row) => row.fullName),
   });
 }
 

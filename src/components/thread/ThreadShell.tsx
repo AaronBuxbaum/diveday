@@ -1,4 +1,9 @@
 import type { ReactNode } from "react";
+import {
+  AmbientContrastControl,
+  type AmbientContrastCopy,
+  AmbientGlareDetector,
+} from "@/components/AmbientGlareDetector";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 
@@ -55,6 +60,7 @@ export function ThreadShell({
   shopName,
   title,
   meta,
+  contrastCopy,
   children,
 }: {
   /** The eyebrow — the shop's own name, always. */
@@ -63,10 +69,37 @@ export function ThreadShell({
   title: ReactNode;
   /** The quiet line(s) under the title, rendered as given. */
   meta?: ReactNode;
+  /**
+   * Words for the contrast control at the foot of the page (issue #1214).
+   *
+   * **Optional, and its absence is the whole of the decision about where the
+   * control belongs.** Every page built on this shell gets the *preference* —
+   * the detector below is unconditional, so a diver who chose High on their
+   * readiness page keeps it on the waiver and the claim without asking again.
+   * What the copy decides is which pages also carry the three buttons, and that
+   * is the two long surfaces a diver actually dwells on rather than every short
+   * card they pass through.
+   */
+  contrastCopy?: AmbientContrastCopy;
   children?: ReactNode;
 }) {
   return (
     <main className={THREAD_MEASURE_CLASS}>
+      {/*
+        **Boat Mode's counterpart, on the diver's side** (issue #1214, delight
+        report D54). `.glare-mode` was already the app's whole answer to a
+        phone in the sun — an AAA palette, 16px minimum type, 44px minimum
+        targets, all of it on `documentElement` and therefore global — and the
+        only thing mounting it was the crew's offline manifest. A diver
+        standing on the same dock, reading the same white card, had no way to
+        ask for any of it.
+
+        Here rather than in each route's layout because this shell is already
+        the one file that owns what the four bearer pages share, and a
+        preference mounted per-route is a preference that stops applying the
+        moment somebody adds a fifth page.
+      */}
+      <AmbientGlareDetector />
       <header>
         <p className={EYEBROW_CLASS}>{shopName}</p>
         {/* `text-balance` because the titles that wrap here are trip names
@@ -76,6 +109,18 @@ export function ThreadShell({
         {meta}
       </header>
       {children}
+      {contrastCopy ? (
+        /*
+         * At the foot, after everything the page is actually about. It is a
+         * setting for this device, not a step in the thread — the same reason
+         * the manifest files it under "On this phone" rather than beside the
+         * roll call. `print:hidden` and the rest of its chrome come from the
+         * control itself.
+         */
+        <div className="mt-10 border-t border-border pt-5">
+          <AmbientContrastControl copy={contrastCopy} className="" />
+        </div>
+      ) : null}
     </main>
   );
 }

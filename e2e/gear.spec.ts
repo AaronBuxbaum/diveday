@@ -189,6 +189,53 @@ test.describe("staff", () => {
     ).toBeVisible();
   });
 
+  /**
+   * **The gear comes home in one act** (issue #1186, delight report D26).
+   *
+   * The demo shop never has a unit out — it reserves against a departure five
+   * days away — so the state comes from `?gearOut=1`, the same route the
+   * register's own Out and Overdue captures use.
+   *
+   * What this proves that a unit test cannot: the pane is only on the diver
+   * whose set is actually out, one tap closes the whole set, and the service
+   * concern refuses without words *at the form* rather than only in the
+   * writer.
+   */
+  test("returns a whole rental set from the prep page, and refuses a wordless concern", async ({
+    page,
+    request,
+  }) => {
+    // The trip id first: `seed-trouble-states` reshapes the board, and paging
+    // it afterwards is a race this test has no reason to run.
+    const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
+    await request.post("/api/test/seed-trouble-states?gearOut=1");
+    await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
+    const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
+
+    // Exactly one diver has a set out, so exactly one pane exists. A pane on a
+    // diver whose units are still on the wall would be the paperwork this
+    // replaces rather than the removal of it.
+    const allGood = assignments.getByRole("button", { name: "All good" });
+    await expect(allGood).toHaveCount(1);
+
+    // The concern arms a field instead of submitting — a flag a technician
+    // cannot act on is worse than no flag.
+    await assignments.getByRole("button", { name: "Service concern" }).first().click();
+    const note = assignments.getByLabel("What to tell the technician");
+    await expect(note).toBeVisible();
+    await expect(note).toHaveAttribute("required", "");
+
+    // And the ordinary evening still works *with the concern armed*, which is
+    // the whole reason the fast answers carry `formNoValidate`: the empty
+    // required note sits in the same form, and without it the browser refuses
+    // to submit "All good" until somebody fills in a field they opened by
+    // mistake. This assertion is the bug it was written after.
+    await allGood.click();
+    await expect(page.getByRole("status").filter({ hasText: "Back on the wall." })).toBeVisible();
+    // Gone, because nothing is out any more.
+    await expect(assignments.getByRole("button", { name: "All good" })).toHaveCount(0);
+  });
+
   test("prints a diver their own rental ticket from the prep page", async ({ page }) => {
     const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
     await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);

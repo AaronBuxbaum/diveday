@@ -133,6 +133,7 @@ describe("medical waiver mark", () => {
       at: signedAt,
       source: "digital",
       overriddenReferralAt: null,
+      clearance: null,
     });
   });
 
@@ -146,7 +147,7 @@ describe("medical waiver mark", () => {
           signedAt,
         }),
       ),
-    ).toEqual({ at: signedAt, source: "paper", overriddenReferralAt: null });
+    ).toEqual({ at: signedAt, source: "paper", overriddenReferralAt: null, clearance: null });
   });
 
   it("marks an imported acceptance distinctly, even though it carries no questionnaire", () => {
@@ -155,7 +156,7 @@ describe("medical waiver mark", () => {
       medicalWaiverMark(
         completedWaiver({ medicalAnswers: null, signatureMethod: "imported", signedAt }),
       ),
-    ).toEqual({ at: signedAt, source: "imported", overriddenReferralAt: null });
+    ).toEqual({ at: signedAt, source: "imported", overriddenReferralAt: null, clearance: null });
   });
 
   it("surfaces nothing for an in-review, unrecognised, or absent record", () => {
@@ -175,7 +176,7 @@ describe("medical waiver mark", () => {
     const completedAt = new Date(SIGN_NOW.getTime() - 5_000);
     expect(
       medicalWaiverMark(completedWaiver({ medicalAnswers: answers, signedAt: null, completedAt })),
-    ).toEqual({ at: completedAt, source: "digital", overriddenReferralAt: null });
+    ).toEqual({ at: completedAt, source: "digital", overriddenReferralAt: null, clearance: null });
   });
 });
 
@@ -478,6 +479,11 @@ describe("physician clearance", () => {
       at: clearedAt,
       source: "cleared",
       overriddenReferralAt: null,
+      // The record the clearance hangs on, and whether the physician's
+      // evaluation itself is stored against it (issue #1283). The URL is
+      // deliberately absent: this mark travels to the boat manifest, and
+      // opening the file is a permission-gated route.
+      clearance: { recordId: cleared().id, documentOnFile: false },
     });
     // The date is the clearance, not the signature: that is the day the
     // fitness question was actually answered.

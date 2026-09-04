@@ -100,7 +100,15 @@ export default async function EmbedWidgetPage({
       />
     );
   } else if (widget === "courses") {
-    const courses = await listActiveCourses(db, shop.id);
+    const active = await listActiveCourses(db, shop.id);
+    // **One course, or the catalogue** (issue #1284, completing ADR
+    // 20260901-diveday-reimagined decision 2's "what it shows"). A slug that
+    // names no active course is a 404 rather than a silently empty list, the
+    // same call the departure card makes one branch up: a shop that unpublished
+    // the course its blog post frames should see the frame say so, not show an
+    // empty panel that reads as a bug in DiveDay.
+    const courses = showId ? active.filter((course) => course.slug === showId) : active;
+    if (showId && courses.length === 0) notFound();
     body = (
       <ul className="divide-y divide-border rounded-panel border border-border bg-surface shadow-bed">
         {courses.map((course) => (

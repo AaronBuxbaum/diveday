@@ -32,6 +32,21 @@ import { createHash, randomBytes } from "node:crypto";
  * `@/i18n/readiness-labels`), so moving the import rather than rerouting one
  * component is what actually closes it.
  *
+ * **The chain above no longer exists, and the diagram is kept as history.** It
+ * was cut a second time by issue #1354: `readiness-labels.ts` now takes
+ * `REQUIRABLE_CERTIFICATION_LEVELS` from `./certification-levels.ts`, a leaf
+ * that imports nothing, so its first line reads
+ * `src/i18n/readiness-labels.ts -> src/lib/certification-levels.ts` and stops
+ * there. What had grown back through it by then was not `node:crypto` but the
+ * RSTC medical questionnaire's copy — 2,631 B gzip of it in the first load of
+ * both public diver pages.
+ *
+ * That is the lesson worth keeping: **this edge has been cut twice.** Moving
+ * the crypto out of the tail fixed the symptom the CSP pass could see and left
+ * the edge itself standing, so the next thing to grow down it arrived
+ * unannounced. `src/lib/certification-levels.test.ts` now fails if that leaf
+ * grows an import, which is the narrow thing that actually holds.
+ *
  * **Keep this module out of anything a client component can reach.** Nothing
  * but `src/db` should import it; the pure waiver rules stay in
  * `src/lib/waivers.ts` where the readiness chain can go on reading them.

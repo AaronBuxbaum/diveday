@@ -73,6 +73,7 @@ export async function buildAfterStateProps(input: {
     // so both routes rendering this surface get the same answer.
     diveRecord: data.diveRecord,
     fieldGuide: data.fieldGuide,
+    observedSpecies: data.observedSpecies,
     shoutout: data.shoutout,
     photos: data.photos,
     maxPhotos: MAX_RECAP_PHOTOS_PER_BOOKING,

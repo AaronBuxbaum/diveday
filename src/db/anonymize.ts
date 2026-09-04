@@ -164,6 +164,18 @@ const ERASED_PERSON_COLUMNS = {
   // there — an assertion about a body whose record is supposed to be gone.
   noCertificationClearedAt: null,
   noCertificationClearedByPersonId: null,
+  // A published name is a personal name, and it is the one that was on a page
+  // the whole internet could read. Unreachable today — `anonymizeDiver` refuses
+  // anybody holding a staff role, and the only way to lose every staff role is
+  // `removeStaffMember`, which clears both of these in its own transaction — so
+  // this is two guards deep rather than a live gap. It costs nothing here and
+  // stops the erasure set depending on that refusal never being relaxed.
+  //
+  // Both halves, and in this order for the check constraint's sake: the pair
+  // must be null together, and a `set` writing one without the other would be
+  // refused by the database.
+  crewPublicConsentAt: null,
+  crewPublicName: null,
 } as const;
 
 /**

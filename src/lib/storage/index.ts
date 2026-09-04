@@ -17,9 +17,38 @@ export type StoredImage =
   | { status: "not_configured" }
   | { status: "failed" };
 
+/**
+ * **Every key prefix this module may write**, as a closed set (issue #1352).
+ *
+ * Typed rather than free text because two lists in `infra/lib/infra-stack.ts`
+ * are derived from it -- the CloudFront behaviours that decide what is served,
+ * and the media uploader's IAM write grant -- and `media-distribution.test.ts`
+ * reads it to assert both. While `keyPrefix` was `string`, any module could
+ * call `provider.upload({ keyPrefix: "gear-photos", ... })` through a door
+ * neither list knew about: the object would store, then be 403'd by IAM and
+ * unreachable at the edge, and both tests would pass. That is exactly how
+ * `shop-heroes` and `arrival` went missing, one layer down.
+ *
+ * A new prefix is now a compile-visible edit to this array, and the decision it
+ * forces -- public at the edge, or private -- is the one worth forcing.
+ */
+export const MEDIA_KEY_PREFIXES = [
+  "arrival",
+  "courses",
+  "dive-sites",
+  "import-receipts",
+  "import-waivers",
+  "medical-clearances",
+  "recap",
+  "shop-heroes",
+  "shop-logos",
+] as const;
+
+export type MediaKeyPrefix = (typeof MEDIA_KEY_PREFIXES)[number];
+
 export type ImageUpload = {
   /** Stable-ish key prefix, e.g. "courses", "recap"; a random suffix keeps names unique. */
-  keyPrefix: string;
+  keyPrefix: MediaKeyPrefix;
   filename: string;
   contentType: string;
   /** A `File`'s raw bytes on the way in; `processImage`'s re-encoded output on the way out. */
@@ -46,8 +75,18 @@ type StorageEnvironment = Readonly<Record<string, string | undefined>>;
  * file, with no server-only imports, so a "use client" component can import it
  * directly without pulling in `sharp` via this module's `process-image.ts` import.
  */
-export { isManagedStorageUrl, managedStorageOrigins } from "./blob-host";
-export { deleteS3Image, type S3StorageConfig, s3ImageStorageProvider } from "./s3";
+export {
+  isManagedStorageUrl,
+  managedImageRemotePatterns,
+  managedStorageOrigins,
+} from "./blob-host";
+export {
+  deleteS3Image,
+  readS3Object,
+  type S3StorageConfig,
+  s3ImageStorageProvider,
+  s3StorageConfigSchema,
+} from "./s3";
 
 /** Every accepted upload is re-encoded to JPEG (`processImage`); keep the stored name honest. */
 function withJpegExtension(filename: string): string {
@@ -78,17 +117,38 @@ const disabledImageStorageProvider: ImageStorageProvider = {
   },
 };
 
-export function imageStorageProviderFromEnvironment(
-  env: StorageEnvironment = process.env,
-  fetchImpl: Fetch = fetch,
-): ImageStorageProvider {
-  const config = s3StorageConfigSchema.safeParse({
+/**
+ * **The one reading of the media storage environment** (issue #1283).
+ *
+ * Four variable names, and until this there were three copies of them: two here
+ * and one in `/api/medical-clearances/[recordId]`, which had them wrong. That
+ * route read `MEDIA_S3_BUCKET`, `MEDIA_S3_REGION`, `MEDIA_S3_ACCESS_KEY_ID` and
+ * `MEDIA_S3_SECRET_ACCESS_KEY` -- four names that appear nowhere else in the
+ * repository, are produced by no stack output, and are declared in no registry.
+ * The parse therefore failed in every deployed environment, and the route's own
+ * "storage is not configured" branch turned that into a 404. A shop stored the
+ * most sensitive document the product holds and could never open it, which is
+ * the precise failure that route exists to remove.
+ *
+ * It stayed green because its test stubbed the same wrong names. So the fix is
+ * not four renames -- it is one accessor, so that a fifth caller cannot invent a
+ * fifth spelling.
+ */
+export function mediaStorageConfigFromEnvironment(env: StorageEnvironment = process.env) {
+  return s3StorageConfigSchema.safeParse({
     bucket: env.MEDIA_BUCKET_NAME,
     region: env.MEDIA_AWS_REGION,
     accessKeyId: env.MEDIA_AWS_ACCESS_KEY_ID,
     secretAccessKey: env.MEDIA_AWS_SECRET_ACCESS_KEY,
     publicUrlBase: env.MEDIA_PUBLIC_URL_BASE,
   });
+}
+
+export function imageStorageProviderFromEnvironment(
+  env: StorageEnvironment = process.env,
+  fetchImpl: Fetch = fetch,
+): ImageStorageProvider {
+  const config = mediaStorageConfigFromEnvironment(env);
   return config.success
     ? s3ImageStorageProvider(config.data, fetchImpl)
     : disabledImageStorageProvider;
@@ -107,13 +167,7 @@ export async function deleteStoredImageTracked(
   env: StorageEnvironment = process.env,
   fetchImpl: Fetch = fetch,
 ): Promise<DeleteImageResult> {
-  const config = s3StorageConfigSchema.safeParse({
-    bucket: env.MEDIA_BUCKET_NAME,
-    region: env.MEDIA_AWS_REGION,
-    accessKeyId: env.MEDIA_AWS_ACCESS_KEY_ID,
-    secretAccessKey: env.MEDIA_AWS_SECRET_ACCESS_KEY,
-    publicUrlBase: env.MEDIA_PUBLIC_URL_BASE,
-  });
+  const config = mediaStorageConfigFromEnvironment(env);
   if (!config.success) return { ok: true };
   return deleteS3Image(url, config.data, fetchImpl);
 }
@@ -181,8 +235,15 @@ export async function storeShopLogoImage(
   return storeImage({ ...upload, keyPrefix: "shop-logos" }, MAX_SHOP_LOGO_BYTES, provider);
 }
 
-/** Store a shop-authored arrival landmark photo in its own public-media namespace. */
-/** The storefront's hero photograph (Harbor, ADR 20260901-diveday-reimagined). */
+/**
+ * The storefront's hero photograph (Harbor, ADR 20260901-diveday-reimagined).
+ *
+ * Rendered by `ShopfrontHero` on `/s/[shopSlug]`, which anyone can open, so
+ * `shop-heroes` is one of `PUBLIC_MEDIA_PREFIXES` in `infra/lib/infra-stack.ts`
+ * and CloudFront carries a behaviour for it. It did not until issue #1352, and
+ * the failure was invisible from here: the upload succeeded and returned a URL,
+ * and every viewer got nothing.
+ */
 export async function storeShopHeroImage(
   upload: Omit<ImageUpload, "keyPrefix">,
   provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
@@ -190,6 +251,30 @@ export async function storeShopHeroImage(
   return storeImage({ ...upload, keyPrefix: "shop-heroes" }, MAX_SHOP_HERO_BYTES, provider);
 }
 
+/**
+ * A shop-authored arrival landmark photo -- what to look for when you get
+ * there -- in its own public-media namespace.
+ *
+ * **"Public at the edge" is not "shown to the public", and the difference is
+ * deliberate here.** `TripArrivalCard` renders on `/ready/[token]` and on the
+ * staff departure page, never on the anonymous trip page: that page passes
+ * `revealArrivalDetails={false}`, and `TripChangeLedger` reports only *that*
+ * the arrival photo changed while withholding the value. A shop says when and
+ * how much in the open, and where to meet only to somebody holding a booking.
+ *
+ * So the prefix is served from CloudFront for the same mechanical reason
+ * `recap/` is, and it is the same reason `medical-clearances/` is not:
+ * `next/image` fetches the remote URL server-side with no credentials, so an
+ * object no anonymous request can fetch is an object that cannot render at all
+ * -- including on the capability page it belongs to. What protects it is the
+ * 128 bits of entropy in its key, exactly as for a diver's recap photo. A
+ * gated route with its own role check and audit row is the other answer, and
+ * it is right for a physician's letter and wrong for a photograph of a dock.
+ *
+ * Do not read this as licence to render it anonymously. The prefix having an
+ * edge behaviour is what makes the capability page work; it is not a statement
+ * that the address is public.
+ */
 export async function storeArrivalImage(
   upload: Omit<ImageUpload, "keyPrefix">,
   provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
@@ -216,7 +301,7 @@ export async function storeImportWaiverDocument(
   upload: Omit<ImageUpload, "keyPrefix">,
   provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
 ): Promise<StoredImage> {
-  const scoped = { ...upload, keyPrefix: "import-waivers" };
+  const scoped: ImageUpload = { ...upload, keyPrefix: "import-waivers" };
   if (looksLikePdf(upload.bytes)) {
     return storePdfDocument(scoped, MAX_IMAGE_BYTES, provider);
   }
@@ -239,7 +324,7 @@ export async function storeMedicalClearanceDocument(
   upload: Omit<ImageUpload, "keyPrefix">,
   provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
 ): Promise<StoredImage> {
-  const scoped = { ...upload, keyPrefix: "medical-clearances" };
+  const scoped: ImageUpload = { ...upload, keyPrefix: "medical-clearances" };
   if (looksLikePdf(upload.bytes)) {
     return storePdfDocument(scoped, MAX_IMAGE_BYTES, provider);
   }
@@ -257,7 +342,7 @@ export async function storeImportReceiptDocument(
   upload: Omit<ImageUpload, "keyPrefix">,
   provider: ImageStorageProvider = imageStorageProviderFromEnvironment(),
 ): Promise<StoredImage> {
-  const scoped = { ...upload, keyPrefix: "import-receipts" };
+  const scoped: ImageUpload = { ...upload, keyPrefix: "import-receipts" };
   if (looksLikePdf(upload.bytes)) {
     return storePdfDocument(scoped, MAX_IMAGE_BYTES, provider);
   }

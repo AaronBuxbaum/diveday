@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ComponentProps, StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -48,6 +48,8 @@ const COPY: BuilderCopy = {
   dayCountLabelOne: "{count} day",
   dayCountLabelOther: "{count} days",
   impactTitle: "If you move it",
+  impactCrewClash: "{name} is already on {departure} at that time.",
+  impactCrewAway: "{name} has told you they are away then.",
   impactToldOne: "{count} diver has already been told this date. Moving it sends nothing.",
   impactToldOther: "{count} divers have already been told this date. Moving it sends nothing.",
   impactGearOne: "{count} reserved unit travels with it.",
@@ -222,7 +224,10 @@ const loadOptions = vi.fn(async () => ({
  * renders no block, which is the shape the component must stay correct in.
  */
 const loadMovePreflight = vi.fn(
-  async (_tripId: string): Promise<MovePreflight | null> => ({ blocked: null, sections: [] }),
+  async (
+    _tripId: string,
+    _target: { date: string; startTime: string } | null,
+  ): Promise<MovePreflight | null> => ({ blocked: null, sections: [] }),
 );
 
 afterEach(() => {
@@ -593,6 +598,57 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
       "SSI Open Water Diver",
     );
     expect(courseSelect.querySelector('optgroup[label="NAUI"]')).toHaveTextContent("Custom Course");
+  });
+
+  /**
+   * **The self-guided box goes away once a course is picked** (issue #1342).
+   *
+   * Self-guided means the divers go in unguided in buddy pairs; a certification
+   * dive requires the instructor supervising. `insertTripInstance` refuses the
+   * combination whatever this form posts, so the box would be *ignored* rather
+   * than obeyed — and a control that has no effect is worse than one that is
+   * absent, because a staffer who ticks it believes something about the day
+   * that is not true.
+   *
+   * Asserted on the input itself rather than on the label, because the panel
+   * hides with a class: a `hidden` wrapper still submits its checkbox.
+   */
+  it("takes the self-guided box away once a course is chosen", async () => {
+    loadOptions.mockResolvedValueOnce({
+      courses: [{ id: "padi-ow", title: "Open Water Diver", agency: "padi" }],
+      diveSites: [],
+    });
+    const { container } = renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
+
+    const courseSelect = (await vi.waitFor(() => {
+      const select = container.querySelector('select[name="courseId"]');
+      if (!select) throw new Error("course selector is not mounted yet");
+      return select;
+    })) as HTMLSelectElement;
+
+    // The box lives in the disclosed half of the panel, beside the course
+    // picker it now depends on.
+    await userEvent.click(screen.getByRole("button", { name: /More options/ }));
+
+    const selfGuided = () => container.querySelector('input[name="selfGuided"]');
+    // Offered on a fun dive, which is what the panel opens as.
+    expect(selfGuided()).not.toBeNull();
+    expect((selfGuided() as HTMLInputElement).disabled).toBe(false);
+    expect(selfGuided()?.closest(".hidden")).toBeNull();
+
+    await userEvent.selectOptions(courseSelect, "padi-ow");
+    // Both halves, because they fail differently: a `hidden` wrapper still
+    // submits the checkbox it contains, so hiding without disabling would
+    // leave the value posted and only the explanation missing.
+    expect(selfGuided()?.closest(".hidden")).not.toBeNull();
+    expect((selfGuided() as HTMLInputElement).disabled).toBe(true);
+
+    // And back, because clearing the course makes the departure a fun dive
+    // again — the rule is about course sessions, not about the mark.
+    await userEvent.selectOptions(courseSelect, "");
+    expect(selfGuided()?.closest(".hidden")).toBeNull();
+    expect((selfGuided() as HTMLInputElement).disabled).toBe(false);
   });
 });
 
@@ -2133,7 +2189,9 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
     expect(loadMovePreflight).not.toHaveBeenCalled();
 
     await openMovePanel();
-    expect(loadMovePreflight).toHaveBeenCalledWith("trip-1");
+    // `null` for the date: the panel opens on the date the departure already
+    // sits on, and moving a boat to where it is has no consequences to preview.
+    expect(loadMovePreflight).toHaveBeenCalledWith("trip-1", null);
   });
 
   it("says what the move will cost, once it knows", async () => {
@@ -2254,12 +2312,137 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
     );
 
     await openMovePanel();
-    await waitFor(() => expect(loadMovePreflight).toHaveBeenCalledWith("trip-1"));
+    await waitFor(() => expect(loadMovePreflight).toHaveBeenCalledWith("trip-1", null));
 
     await userEvent.click(
       screen.getByRole("button", { name: /^Move, copy, or remove Night Dive/ }),
     );
     await userEvent.click(screen.getByRole("button", { name: /^Move Night Dive/ }));
-    await waitFor(() => expect(loadMovePreflight).toHaveBeenCalledWith("trip-2"));
+    await waitFor(() => expect(loadMovePreflight).toHaveBeenCalledWith("trip-2", null));
+  });
+
+  /**
+   * **The two crew lines, and the re-read that makes them possible** (issue
+   * #1310).
+   *
+   * Every other line in this preview is a property of the departure and is the
+   * same wherever it lands, so the panel could — and did — fetch once on
+   * mount. These have to be asked again for each date *and time* a staff
+   * member picks, because the rule is an overlap of hours rather than a shared
+   * day: a morning boat and an afternoon boat are an ordinary double shift.
+   */
+  it("asks again, with the date and the time, when either changes", async () => {
+    loadMovePreflight.mockImplementation(
+      async (_tripId: string, target: { date: string; startTime: string } | null) => ({
+        blocked: null,
+        sections:
+          target?.date === "2026-08-06"
+            ? [
+                {
+                  kind: "crew" as const,
+                  clashes: [{ name: "Marcus Webb", departure: "Night Dive" }],
+                },
+              ]
+            : [],
+      }),
+    );
+    renderBoard();
+    await openMovePanel();
+    await waitFor(() => expect(loadMovePreflight).toHaveBeenCalledWith("trip-1", null));
+
+    fireEvent.change(screen.getByLabelText(COPY.newDate), { target: { value: "2026-08-06" } });
+
+    // The other boat is named, because otherwise the reader has to leave the
+    // panel to find out whether "another departure" is the 07:00 or the 15:00
+    // — which is the question they opened it to settle.
+    expect(
+      await screen.findByText("Marcus Webb is already on Night Dive at that time."),
+    ).toBeInTheDocument();
+    expect(loadMovePreflight).toHaveBeenCalledWith("trip-1", {
+      date: "2026-08-06",
+      startTime: "08:30",
+    });
+
+    // The time is part of the question too, so changing it asks again.
+    fireEvent.change(screen.getByLabelText(COPY.newDepartureTime), {
+      target: { value: "14:00" },
+    });
+    await waitFor(() =>
+      expect(loadMovePreflight).toHaveBeenCalledWith("trip-1", {
+        date: "2026-08-06",
+        startTime: "14:00",
+      }),
+    );
+  });
+
+  /**
+   * The blackout is a separate sentence because it is a separate fact — the
+   * crew member's own statement, which the app has held since #1235 and which
+   * *informs rather than gates*, so nobody is taken off a boat by it and no
+   * clash is ever found for it. Without this line the panel is silent on the
+   * case the shop wrote down.
+   */
+  it("says who has told the shop they are away, in its own words", async () => {
+    loadMovePreflight.mockImplementation(async (_tripId: string, target) => ({
+      blocked: null,
+      sections: target ? [{ kind: "crewAway" as const, names: ["Talia Okonkwo"] }] : [],
+    }));
+    renderBoard();
+    await openMovePanel();
+    fireEvent.change(screen.getByLabelText(COPY.newDate), { target: { value: "2026-08-06" } });
+
+    expect(
+      await screen.findByText("Talia Okonkwo has told you they are away then."),
+    ).toBeInTheDocument();
+  });
+
+  it("names each of them on its own line, never a count of them", async () => {
+    // The deliberate call the ticket turns on: a count read `crew: 2` on 24 of
+    // the demo board's 25 departures, and the row this panel opens under
+    // already prints the crew's names.
+    loadMovePreflight.mockImplementation(async (_tripId: string, target) => ({
+      blocked: null,
+      sections: target
+        ? [
+            {
+              kind: "crew" as const,
+              clashes: [
+                { name: "Marcus Webb", departure: "Night Dive" },
+                { name: "Talia Okonkwo", departure: "Two-Tank Reef" },
+              ],
+            },
+          ]
+        : [],
+    }));
+    renderBoard();
+    await openMovePanel();
+    fireEvent.change(screen.getByLabelText(COPY.newDate), { target: { value: "2026-08-06" } });
+
+    expect(
+      await screen.findByText("Marcus Webb is already on Night Dive at that time."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Talia Okonkwo is already on Two-Tank Reef at that time."),
+    ).toBeInTheDocument();
+  });
+
+  it("asks nothing new when the fields return to where the departure already is", async () => {
+    renderBoard();
+    await openMovePanel();
+    await waitFor(() => expect(loadMovePreflight).toHaveBeenCalledWith("trip-1", null));
+
+    fireEvent.change(screen.getByLabelText(COPY.newDate), { target: { value: "2026-08-06" } });
+    await waitFor(() =>
+      expect(loadMovePreflight).toHaveBeenCalledWith("trip-1", {
+        date: "2026-08-06",
+        startTime: "08:30",
+      }),
+    );
+
+    fireEvent.change(screen.getByLabelText(COPY.newDate), { target: { value: "2026-08-01" } });
+    await waitFor(() => expect(loadMovePreflight.mock.calls.at(-1)).toEqual(["trip-1", null]));
+    // Three reads for three distinct answers, not one per keystroke: a date or
+    // time input publishes a value only once all its segments are filled.
+    expect(loadMovePreflight).toHaveBeenCalledTimes(3);
   });
 });

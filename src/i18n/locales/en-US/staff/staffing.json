@@ -77,7 +77,9 @@
     "shiftDeleted": "Shift removed.",
     "shiftSaved": "Shift saved.",
     "staffNotFound": "That staff member is no longer on this shop's team.",
-    "tripNotFound": "That departure is no longer on the board."
+    "tripNotFound": "That departure is no longer on the board.",
+    "crewConsentSaved": "Saved. Divers will see your first name on the departures you crew.",
+    "crewConsentWithdrawn": "Saved. Your name comes off the departures you crew."
   },
   "title": "Staffing",
   "week": {
@@ -112,5 +114,11 @@
     "rosterEmptyManagerBody": "Invite the instructors and divemasters who run your boats, then give them shifts here.",
     "rosterEmptyBody": "An owner or manager adds crew from Team settings. Ask one of them to get you started.",
     "rosterEmptyAction": "Invite your crew"
+  },
+  "crewConsent": {
+    "label": "Let divers see my first name, role and languages on this shop's public pages.",
+    "nameLabel": "Name divers see",
+    "save": "Save",
+    "saving": "Saving…"
   }
 }

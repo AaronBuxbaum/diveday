@@ -15,6 +15,10 @@
     "visual": ["seat-claim"],
     "a11y": ["a11y.spec.ts"]
   },
+  "/demo/[story]": {
+    "e2e": ["demo-stories.spec.ts"],
+    "visual": ["demo-story-door"]
+  },
   "/forgot-password": {
     "e2e": ["account-lifecycle.spec.ts"],
     "visual": ["forgot-password"],
@@ -67,6 +71,7 @@
   "/ready/[token]": {
     "e2e": [
       "a11y.spec.ts",
+      "blowout.spec.ts",
       "booking.spec.ts",
       "certifications.spec.ts",
       "courses.spec.ts",
@@ -90,6 +95,8 @@
       "expired-link-readiness",
       "party-organizer-confirmation",
       "readiness",
+      "stranded-diver-card",
+      "thread-high-contrast",
       "thread-prep-current-step"
     ],
     "a11y": ["a11y.spec.ts"]
@@ -201,6 +208,7 @@
       "nav-more-sheet",
       "today",
       "today-empty",
+      "today-all-home",
       "today-evening",
       "today-evening-closed",
       "today-first-bookable",

@@ -12,6 +12,7 @@ import {
   canManageWaiverTemplates,
   canMergeDiver,
   canOverrideGearRequest,
+  canReadMedicalClearanceDocument,
   canRefund,
   type Role,
 } from "@/lib/authz";
@@ -155,6 +156,19 @@ export const canPersonMergeDiver = (db: DbExecutor, shopId: string, personId: st
  */
 export const canPersonErasePersonalData = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canErasePersonalData);
+
+/**
+ * The live check behind the physician's-evaluation route (issue #1283). Read
+ * from `person_roles` on every request rather than from the session's stamped
+ * roles, for the same reason the erasure gate above does: a manager demoted
+ * this morning must not still be able to open a diver's medical file with a
+ * tab they left open.
+ */
+export const canPersonReadMedicalClearanceDocument = (
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+) => canPerson(db, shopId, personId, canReadMedicalClearanceDocument);
 
 export const canPersonConfigureTrips = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canConfigureTrips);

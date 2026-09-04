@@ -3,7 +3,7 @@ import { cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { EMPTY_RENTAL_PRICING, type RentalPricing } from "@/lib/rentals";
 import { renderDiver } from "@/test/intl";
-import { BookSpotSection } from "./BookingSections";
+import { BookSpotSection, TripFullSection } from "./BookingSections";
 import type { Trip } from "./types";
 
 /**
@@ -429,5 +429,58 @@ describe("BookSpotSection tax disclosure", () => {
     );
 
     expect(screen.queryByText("Tax")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * **A full boat stops being the end of the conversation** (issue #1166, D06).
+ *
+ * The restraint is the half worth guarding hardest: this surface already links
+ * to the whole schedule, so a list of vaguely-similar departures would be that
+ * page with extra steps. Relevant, or nothing.
+ */
+describe("TripFullSection — the shop's own better answer", () => {
+  const alternative = {
+    tripId: "trip-2",
+    title: "Palancar Reef Two-Tank",
+    href: "/s/reef-shop/trips/trip-2",
+    when: { weekday: "Thu", day: "7", month: "Aug" },
+    reason: "same_site" as const,
+  };
+
+  function renderFull(alternatives?: React.ComponentProps<typeof TripFullSection>["alternatives"]) {
+    return renderDiver(
+      <TripFullSection
+        shopSlug="reef-shop"
+        trip={trip({ booked: 8 })}
+        tripRef={tripRef}
+        remaining={0}
+        alternatives={alternatives}
+      />,
+    );
+  }
+
+  it("names each alternative, with the reason it is one", () => {
+    renderFull([alternative]);
+    const link = screen.getByRole("link", { name: "Palancar Reef Two-Tank" });
+    expect(link).toHaveAttribute("href", "/s/reef-shop/trips/trip-2");
+    // Why, not just what: an unexplained list of other boats tells a diver
+    // nothing they could not get from the schedule link above it.
+    expect(screen.getByText("Same site, Thu 7 Aug")).toBeInTheDocument();
+  });
+
+  it("says which are the same course, and which merely the same place", () => {
+    renderFull([{ ...alternative, reason: "same_course" }]);
+    expect(screen.getByText("Same course, Thu 7 Aug")).toBeInTheDocument();
+    expect(screen.queryByText(/Same site/)).toBeNull();
+  });
+
+  it("renders no list at all when nothing is similar, and still offers the wait list", () => {
+    // The ordinary case. A heading over an empty list is the furniture this
+    // whole surface is written not to build, and the wait list is still the
+    // page's real next step.
+    renderFull([]);
+    expect(screen.queryByRole("list")).toBeNull();
+    expect(screen.getAllByText("Join the wait list").length).toBeGreaterThan(0);
   });
 });

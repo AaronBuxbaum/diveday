@@ -71,6 +71,25 @@ describe("the loader", () => {
     expect(departure.searchParams.get("show")).toBe("t1");
   });
 
+  it("pins a course by slug, and never narrows the grid", () => {
+    // The loader's half of issue #1284. `data-show` is one attribute doing two
+    // jobs, and which job it does is decided by `data-diveday` — so a grid
+    // that somehow carries one is still the whole board.
+    host(`
+      <div data-diveday="courses" data-shop="blue-mantis" data-look="light" data-lang="auto" data-show="open-water"></div>
+      <div data-diveday="grid" data-shop="blue-mantis" data-look="light" data-lang="auto" data-show="open-water"></div>
+    `);
+    const courses = new URL(
+      document.querySelector<HTMLIFrameElement>('iframe[data-diveday-frame="courses"]')?.src ?? "",
+    );
+    expect(courses.pathname).toBe("/s/blue-mantis/embed/courses");
+    expect(courses.searchParams.get("show")).toBe("open-water");
+    const grid = new URL(
+      document.querySelector<HTMLIFrameElement>('iframe[data-diveday-frame="grid"]')?.src ?? "",
+    );
+    expect(grid.searchParams.has("show")).toBe(false);
+  });
+
   it("darkens a pale host colour until white reads on the button", () => {
     // Amber: 1.9:1 on white as it stands. The settings copy promises the
     // button darkens itself, and this is the rule that keeps that promise —

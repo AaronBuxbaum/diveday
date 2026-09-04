@@ -87,19 +87,84 @@ const MEDIA_UPLOADER_USER_NAME = "diveday-media-uploader";
 /**
  * The media key prefixes CloudFront is allowed to serve.
  *
- * Mirrors the four public `keyPrefix` values in `src/lib/storage/index.ts`
+ * Mirrors the six public `keyPrefix` values in `src/lib/storage/index.ts`
  * (`storeCourseImage`, `storeRecapImage`, `storeDiveSiteImage`,
- * `storeShopLogo`). The three it deliberately omits -- `import-waivers`,
- * `import-receipts` and `medical-clearances` -- sit in the same bucket and hold
- * imported medical and financial records, and physicians' evaluations of named
- * divers (issue #1252). They are read server-side only and must have no route
- * out of the edge (issue #1013).
+ * `storeShopLogo`, `storeShopHeroImage`, `storeArrivalImage`). The three it
+ * deliberately omits -- `import-waivers`, `import-receipts` and
+ * `medical-clearances` -- sit in the same bucket and hold imported medical and
+ * financial records, and physicians' evaluations of named divers (issue
+ * #1252). They are read server-side only and must have no route out of the
+ * edge (issue #1013).
  *
- * Adding a prefix here publishes it. `infra/lib/media-distribution.test.ts`
- * asserts all three private ones are absent, so growing this list past what the
- * app actually uploads publicly is a failing test rather than a quiet deploy.
+ * `shop-heroes` and `arrival` were missing until issue #1352, and the way they
+ * failed is the argument for the completeness test below. The upload succeeds:
+ * `s3ImageStorageProvider.upload` stores the object and hands back the public
+ * URL whatever the edge is configured to do, so a shop saw a save and a row was
+ * written. Every viewer then got nothing -- and not even a tidy 403, because
+ * the default behaviour is an origin on a reserved TLD that can never resolve,
+ * so a storefront hero and a diver's arrival photo were landing in a black hole
+ * built for `import-waivers/`. Nothing in the app logs says so; it is the
+ * reader's failure, not the writer's.
+ *
+ * Adding a prefix here publishes it, so this list is checked in **both**
+ * directions by `infra/lib/media-distribution.test.ts`: the three private ones
+ * must be absent, and every prefix the app writes must be either served here or
+ * in that file's explicit private list -- never both, never neither. One
+ * direction alone is what let two prefixes go missing while the tests stayed
+ * green.
  */
-const PUBLIC_MEDIA_PREFIXES = ["courses", "recap", "dive-sites", "shop-logos"] as const;
+const PUBLIC_MEDIA_PREFIXES = [
+  "arrival",
+  "courses",
+  "dive-sites",
+  "recap",
+  "shop-heroes",
+  "shop-logos",
+] as const;
+
+/**
+ * The one private prefix the app reads back (issue #1283). Named here because
+ * it is both an IAM scope below and the prefix `storeMedicalClearanceDocument`
+ * writes under (`src/lib/storage/index.ts`); the two are a pair, and a rename
+ * on one side that misses the other silently turns every retrieval into a 403.
+ * Deliberately absent from {@link PUBLIC_MEDIA_PREFIXES} -- reading it back is
+ * a permission-gated route, never an edge behaviour.
+ */
+const MEDICAL_CLEARANCE_PREFIX = "medical-clearances";
+
+/**
+ * **Every key prefix the app writes**, and therefore the exact reach of the
+ * media uploader's write grant (issue #1349).
+ *
+ * This is the wall behind `deleteS3Image`'s key check, not a restatement of it.
+ * That credential holds `DeleteObject`, the only control over *which* object is
+ * the key the caller names, and the grant used to be `arnForObjects("*")` -- so
+ * a key that escaped its namespace was a delete anywhere in the bucket. Named
+ * here, the worst case is a delete inside another prefix.
+ *
+ * Wider than {@link PUBLIC_MEDIA_PREFIXES} on purpose: the app *writes* the
+ * import and medical namespaces, it just never serves them from the edge. The
+ * two lists answer different questions and neither is derivable from the other.
+ *
+ * `infra/lib/media-distribution.test.ts` asserts this equals the `keyPrefix`
+ * values in `src/lib/storage/index.ts`, read out of that file rather than
+ * restated -- because the failure mode of a short list is silent. On a missing
+ * prefix `s3ImageStorageProvider.upload` sees a non-ok response and returns
+ * `{ status: "failed" }` rather than throwing, so the first symptom is a shop's
+ * upload not sticking, with nothing in the logs pointing at IAM.
+ */
+const MEDIA_WRITE_PREFIXES = [
+  "arrival",
+  "courses",
+  "dive-sites",
+  "import-receipts",
+  "import-waivers",
+  MEDICAL_CLEARANCE_PREFIX,
+  "recap",
+  "shop-heroes",
+  "shop-logos",
+] as const;
+
 const LOG_SHIPPER_USER_NAME = "diveday-cloudwatch-shipper";
 
 /**
@@ -1136,7 +1201,28 @@ exports.handler = async (event) => {
       new iam.PolicyStatement({
         sid: "ManageMediaObjectsOnly",
         actions: ["s3:PutObject", "s3:DeleteObject", "s3:AbortMultipartUpload"],
-        resources: [mediaBucket.arnForObjects("*")],
+        resources: MEDIA_WRITE_PREFIXES.map((prefix) => mediaBucket.arnForObjects(`${prefix}/*`)),
+      }),
+    );
+
+    // **Read is granted on one prefix and no other** (issue #1283).
+    //
+    // Everything else this credential stores is *public* -- a dive-site photo
+    // or a shop logo reaches a reader through CloudFront, so the app never
+    // needs to fetch its own media back. A physician's evaluation is the
+    // opposite: the bucket blocks all public access and `medical-clearances/`
+    // has no CloudFront behaviour by construction, so without this grant the
+    // upload buys retention liability with no retrieval value -- a shop stores
+    // the most sensitive document the product holds and can never open it.
+    //
+    // Scoped to the prefix rather than added to the statement above, so the
+    // grant reads as what it is: this credential can *read back* medical
+    // clearances, and still cannot read a single other object in the bucket.
+    mediaUploaderUser.addToPolicy(
+      new iam.PolicyStatement({
+        sid: "ReadMedicalClearancesOnly",
+        actions: ["s3:GetObject"],
+        resources: [mediaBucket.arnForObjects(`${MEDICAL_CLEARANCE_PREFIX}/*`)],
       }),
     );
 
@@ -1156,7 +1242,7 @@ exports.handler = async (event) => {
     // the S3 half had shipped.
     //
     // **The bucket is not made public, and cannot be.** One flat bucket holds
-    // the four public prefixes *and* `import-waivers/` and `import-receipts/` --
+    // the six public prefixes *and* `import-waivers/` and `import-receipts/` --
     // imported waiver scans and payment receipts, which are medical and
     // financial records read only server-side by the export bundler. Keys are
     // namespaced by content type, never by shop, and a random 16-byte suffix is
@@ -1164,7 +1250,7 @@ exports.handler = async (event) => {
     // that bucket publishes the scans.
     //
     // So: an Origin Access Control, a bucket policy granting GetObject to this
-    // distribution alone, and cache behaviours enumerating the four public
+    // distribution alone, and cache behaviours enumerating the six public
     // prefixes. The default behaviour answers 403 rather than reaching the
     // origin, which is what keeps `import-*` unreachable from the edge even
     // though it lives in the same bucket -- a new prefix is opt-in, not
@@ -3364,7 +3450,7 @@ exports.handler = async () => {
     const mediaDistribution = new cloudfront.Distribution(this, "MediaDistribution", {
       comment: "DiveDay media (AWS-8) -- public prefixes only",
       // An origin that does not exist, on a reserved TLD that can never resolve.
-      // Every request not matching one of the four behaviours below lands here,
+      // Every request not matching one of the behaviours below lands here,
       // so it never reaches the bucket -- `import-waivers/` and
       // `import-receipts/` have no route out of it at all. The viewer gets a
       // gateway error rather than a tidy 403, which is the trade for keeping
@@ -3389,7 +3475,7 @@ exports.handler = async () => {
     new cdk.CfnOutput(this, "MediaDistributionDomain", {
       value: mediaDistribution.distributionDomainName,
       description:
-        "CloudFront domain serving the four public media prefixes (courses, recap, dive-sites, shop-logos). Any other path reaches no origin, so import-* is never served -- see AWS-8 in docs/architecture/aws-migration-dossier.md.",
+        "CloudFront domain serving the six public media prefixes (arrival, courses, dive-sites, recap, shop-heroes, shop-logos). Any other path reaches no origin, so import-* and medical-clearances are never served -- see AWS-8 in docs/architecture/aws-migration-dossier.md.",
     });
     return mediaDistribution;
   }

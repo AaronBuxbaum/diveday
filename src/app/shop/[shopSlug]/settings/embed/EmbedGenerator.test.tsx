@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DIVEDAY_BRAND_COLOR } from "@/lib/brand";
@@ -21,6 +21,7 @@ const copy: EmbedGeneratorCopy = {
   shows: "What it shows",
   showEverything: "Everything",
   showDeparture: "One departure",
+  showAllCourses: "Every course",
   look: "Look",
   lookSite: "Your site",
   lookLight: "DiveDay",
@@ -56,6 +57,7 @@ function renderGenerator() {
       origin="https://diveday.example"
       shopSlug="blue-mantis"
       trips={[{ id: "t1", label: "Thu 27 Aug · 7:00 AM — Two-Tank Reef" }]}
+      courses={[{ id: "open-water", label: "Open Water Diver" }]}
       locales={["en-US", "es-ES"]}
       previewHost={{ brand: DIVEDAY_BRAND_COLOR, font: null }}
       copy={copy}
@@ -91,6 +93,55 @@ describe("EmbedGenerator", () => {
     expect(snippet.value).toContain('data-show="t1"');
     expect(snippet.value).toContain('data-look="light"');
     expect(snippet.value).toContain('data-lang="es-ES"');
+  });
+
+  /**
+   * **"What it shows" now has four answers, not two** (issue #1284, completing
+   * ADR 20260901-diveday-reimagined decision 2). The courses widget can frame
+   * one course, chosen by slug from the shop's active list.
+   */
+  it("offers the shop's courses when the widget is the course list", async () => {
+    const user = userEvent.setup();
+    renderGenerator();
+    await user.click(screen.getByRole("radio", { name: /kind courses/ }));
+
+    const select = screen.getByLabelText("What it shows");
+    // "Every course" rather than "Everything on the board": the catalogue is
+    // still the default, and it is a valid answer rather than a missing one.
+    expect(within(select).getByRole("option", { name: "Every course" })).toBeInTheDocument();
+    expect(screen.queryByText("Pick the departure this card is for.")).toBeNull();
+    expect((screen.getByLabelText("Embed code") as HTMLTextAreaElement).value).not.toContain(
+      "data-show",
+    );
+
+    await user.selectOptions(select, "open-water");
+    expect((screen.getByLabelText("Embed code") as HTMLTextAreaElement).value).toContain(
+      'data-diveday="courses"',
+    );
+    expect((screen.getByLabelText("Embed code") as HTMLTextAreaElement).value).toContain(
+      'data-show="open-water"',
+    );
+  });
+
+  /**
+   * The bug this guards is silent and only shows up on the shop's own website:
+   * `show` holds a trip id for every kind but one and a course slug for
+   * `courses`, so a choice carried across that line frames the courses widget
+   * with a UUID and the diver gets a 404 where a course list should be.
+   */
+  it("forgets the departure when the shop crosses to courses, and keeps it otherwise", async () => {
+    const user = userEvent.setup();
+    renderGenerator();
+
+    await user.click(screen.getByRole("radio", { name: /kind departure/ }));
+    await user.selectOptions(screen.getByLabelText("What it shows"), "t1");
+    // Same namespace: the QR code points at the departure already chosen.
+    await user.click(screen.getByRole("radio", { name: /kind qr/ }));
+    expect(screen.getByLabelText("What it shows")).toHaveValue("t1");
+
+    await user.click(screen.getByRole("radio", { name: /kind courses/ }));
+    expect(screen.getByLabelText("What it shows")).toHaveValue("");
+    expect((screen.getByLabelText("Embed code") as HTMLTextAreaElement).value).not.toContain("t1");
   });
 
   it("draws the QR code from the target and offers the partner link attributed", async () => {
