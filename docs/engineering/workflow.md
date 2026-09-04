@@ -50,8 +50,8 @@ How to build anything here. Written for AI agents; humans may follow along.
 - [ ] Any visual diffs reviewed for expected changes; any red visual result triaged
       (`visual-triage` skill) with a comment for the human
 - [ ] Every review thread on the PR read and answered — fixed and replied to, or declined with a
-      reason, or filed as a `needs-triage` issue whose number is in the thread. Bot reviews
-      (`sourcery-ai`, `coderabbitai`) count; silence is not an answer
+      reason, or filed as a `needs-triage` issue whose number is in the thread. The bot review
+      (`sourcery-ai` — `coderabbitai` declines this repository) counts; silence is not an answer
 
 ## Rules
 

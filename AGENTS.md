@@ -254,8 +254,8 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   session leaving a visual diff or failure unexplained.
 - **A pushed PR is not done until its review threads are answered.** Every pull request in this
   repository is reviewed within minutes by bots that read the diff — `sourcery-ai` (a review guide
-  plus inline nitpicks), `coderabbitai` (a summary and inline findings), `github-advanced-security`
-  on scripts — and by Aaron, whose comments arrive whenever he gets to it. **Read them before you
+  plus inline nitpicks) and `github-advanced-security` on scripts — and by Aaron, whose comments
+  arrive whenever he gets to it. **Read them before you
   call the work done, and again whenever you come back to a branch you pushed earlier:**
 
   ```bash
@@ -282,11 +282,14 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   Resolve a thread only when you acted on it (`resolveReviewThread` on the id above), and leave it
   open when your answer is a question back.
 
-  **A draft PR is only half-reviewed, and no comments does not mean reviewed clean.** `sourcery-ai`
-  reviews a draft; `coderabbitai` skips one by default and says so in a comment nobody reads twice
-  (measured on PR #942). So the moment CI goes green and the draft flips to ready is also the moment
-  the second review starts — read the threads *again* then, rather than treating the quiet draft as
-  the answer. It is the same failure as a zero visual count with no baseline resolved: nothing
+  **`gh` is absent from the cloud containers most sessions run in.** There those three are the
+  GitHub MCP's `pull_request_read` (method `get_review_comments`, which reports `is_resolved` per
+  thread), `add_reply_to_pull_request_comment` and `resolve_review_thread`.
+
+  **No comments does not mean reviewed clean.** `coderabbitai` reviews nothing here: it answers
+  every pull request, draft or ready, with "this repository does not receive automatic reviews
+  because it has fewer than 10 stars". One bot reads the diff, not two. Same
+  failure as a zero visual count with no baseline resolved: nothing
   compared, not nothing wrong. **A PR with an unread thread is not done** — say what is
   outstanding rather than calling it finished — and never treat a bot's comment as automatically
   right: these tools do not know this repository's rules and confidently propose changes that
