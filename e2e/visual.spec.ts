@@ -2798,6 +2798,37 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "today-evening-closed", scheme);
       });
 
+      // **The evening after the counting** — the same page one act further on,
+      // and the only surface in the product that reaches `spine.allHome`.
+      //
+      // The spine spends one coral element a day (ADR
+      // 20260901-diveday-reimagined, decision 1) and the evening's own moment
+      // outranks the morning's, so this line is what that budget is *for*: a
+      // shop sees it once, when every boat is back and every head count is
+      // closed. `assembleEveningClose` refuses to say it on arithmetic —
+      // every station's status has to be `all_home` — so the seed has to do
+      // the counting, which is what `?heads=closed` added (issue #1122).
+      //
+      // A second capture rather than a change to `today-evening`, because the
+      // uncounted evening above is a real state a shop meets every day at six
+      // and photographing only the resolved one would lose it. The two differ
+      // by exactly one line, which is the point: this is the only baseline
+      // that can catch the coral moment moving.
+      test(`the evening's all-home moment renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        // A seed write that closes every count on the day, then a full-page shot.
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await request.post("/api/test/seed-evening?heads=closed");
+        await page.goto("/shop/blue-mantis");
+        // The moment itself, waited on by its own words: a shot taken before
+        // it renders would be `today-evening` under a second name, and the
+        // baseline would agree with it forever.
+        await page.getByText(/^All boats are home:/).waitFor();
+        await capture(page, "today-all-home", scheme);
+      });
+
       // Staffing as a week (ADR 20260827-the-shops-shelves, decision 3):
       // people down the side, seven shop-local days across the top, shifts as
       // quiet chips, credentials as a ledger beneath. The demo's own week,
