@@ -3448,7 +3448,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/divers?q=Morgan");
         await page.getByRole("link", { name: "Morgan Vale" }).click();
         await page.getByRole("heading", { level: 1, name: "Morgan Vale" }).waitFor();
-        await page.getByRole("button", { name: "Record the physician\u2019s answer" }).click();
+        await page.getByRole("button", { name: "Record the physician's answer" }).click();
         // The submit is what the disclosure reveals, so waiting on it is
         // waiting on the panel being open rather than on a duration.
         await page.getByRole("button", { name: "Record the answer" }).waitFor();

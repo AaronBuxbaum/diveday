@@ -975,7 +975,7 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
   await diver.getByRole("link", { name: "Record physician clearance" }).click();
   await expect(page.getByRole("heading", { name: "Morgan Vale", level: 1 })).toBeVisible();
 
-  await page.getByRole("button", { name: "Record the physician\u2019s answer" }).click();
+  await page.getByRole("button", { name: "Record the physician's answer" }).click();
   const confirm = page.getByRole("button", { name: "Record the answer" });
   await expect(confirm).toBeVisible();
   // The outcome has no default (issue #1283), so every submit below has to say
@@ -1045,7 +1045,7 @@ test("a refused physician evaluation stops the chase without lifting the hold", 
   await page.getByRole("link", { name: "Morgan Vale" }).click();
   await expect(page.getByRole("heading", { name: "Morgan Vale", level: 1 })).toBeVisible();
 
-  await page.getByRole("button", { name: "Record the physician\u2019s answer" }).click();
+  await page.getByRole("button", { name: "Record the physician's answer" }).click();
   const confirm = page.getByRole("button", { name: "Record the answer" });
   await expect(confirm).toBeVisible();
 
@@ -1067,9 +1067,7 @@ test("a refused physician evaluation stops the chase without lifting the hold", 
   const waiverGroup = page.getByRole("region", { name: "Waiver" });
   await expect(waiverGroup.getByText("Not cleared", { exact: true }).first()).toBeVisible();
   await expect(waiverGroup.getByText("Medical review", { exact: true })).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Record the physician\u2019s answer" }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Record the physician's answer" })).toHaveCount(0);
 
   // And at the rail, where it decides who gets in the water: still blocked,
   // and now saying why rather than saying "waiting".
