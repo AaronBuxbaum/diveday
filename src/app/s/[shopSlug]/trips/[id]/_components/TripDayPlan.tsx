@@ -183,7 +183,20 @@ export function TripMoments({ briefings, locale }: { briefings: DiveBriefing[]; 
                 src={moment.imageUrl}
                 alt=""
                 className="aspect-[3/2] w-full rounded-inset"
-                sizes="(min-width: 640px) 17rem, 100vw"
+                // Tracks the grid above it, which is only two-column when
+                // there is more than one moment. Declared flat at `17rem` it
+                // was right for a pair and half the truth for a single
+                // moment, which fills the row: measured at 528px on a 768px
+                // viewport against a 272px declaration, so the browser fetched
+                // a candidate for a slot half the size and the diver got a
+                // visibly soft photo. Nothing could see it — the visual suite
+                // builds with `images.unoptimized`, so there is no srcset for
+                // `sizes` to select from (issue #1350).
+                sizes={
+                  shown.length > 1
+                    ? "(min-width: 640px) 17rem, 100vw"
+                    : "(min-width: 640px) 33rem, 100vw"
+                }
               />
               <figcaption className="mt-2 text-sm text-muted">{moment.caption}</figcaption>
             </figure>

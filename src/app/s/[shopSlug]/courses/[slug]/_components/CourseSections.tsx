@@ -334,7 +334,13 @@ export function CourseGallery({
               t("course.photoAltFallback", { course: title, n: index + 2 }),
             )}
             className="h-40 w-full rounded-inset border border-border sm:h-48"
-            sizes="(min-width: 640px) 33vw, 50vw"
+            // The third condition is the container, not the viewport: this
+            // grid sits inside the same 896px-capped column the hero above
+            // declares, so past that width a cell stops growing and `33vw`
+            // starts describing a slot three times too wide. Measured at 273px
+            // on a 1920px viewport against a 634px declaration — the browser
+            // fetched a 1920px candidate where 640px covers it (issue #1350).
+            sizes="(min-width: 896px) 17rem, (min-width: 640px) 33vw, 50vw"
           />
         ))}
       </div>

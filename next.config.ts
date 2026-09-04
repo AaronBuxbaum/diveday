@@ -55,6 +55,16 @@ const nextConfig: NextConfig = {
     // course-page captures a permanent visual-regression coin flip while the
     // layout never moved. Same principle as DIVEDAY_CLOCK: freeze the
     // nondeterminism at the harness boundary, change nothing in production.
+    //
+    // **What it costs, which went unwritten for a year** (issue #1350): with
+    // the optimizer off, `generateImgAttrs` returns `{ srcSet: undefined,
+    // sizes: undefined }`. So every `sizes` attribute in the app is invisible
+    // to the suite that exists to see surfaces — there is no srcset to select
+    // from, no capture can move, and the attribute is not even in the DOM for
+    // a Playwright assertion to read. PR #1347 took a fetched candidate from
+    // 1080px to 384px and reg-suit reported 0 differences across 732 surfaces
+    // with a baseline resolved. `pnpm check:image-sizes` covers that gap with
+    // arithmetic instead of pixels; this line is why it has to.
     unoptimized: isE2EBuild,
     // Every photo this app stores (certification cards, course media, recap
     // photos, dive-site briefings) lands in Vercel Blob behind a per-store
