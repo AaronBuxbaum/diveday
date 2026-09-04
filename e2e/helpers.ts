@@ -242,19 +242,31 @@ export async function openTripFromBoard(page: Page, title: string) {
  * re-select.
  */
 export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep") {
-  const link = page.getByRole("navigation", { name: "Trip" }).getByRole("link", { name: tab });
-  // Trip is now the canonical root surface. A board link already lands there,
-  // so the helper treats an already-active Trip tab as a successful no-op;
+  // Trip is the canonical root surface. A board link already lands there, so
+  // the helper treats an already-active Trip tab as a successful no-op;
   // Manifest and Prep remain explicit navigations.
-  if (tab === "Trip" && (await link.count()) === 0) {
-    await expect(page).toHaveURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
-    return;
-  }
+  //
+  // **Answered from the URL, never from whether the link has rendered.** This
+  // asked `link.count() === 0` — and `count()` is the one locator call that
+  // does not retry, so on a page whose sub-nav had not painted yet it returned
+  // 0, took the no-op branch, and asserted the trip URL while standing on
+  // `/manifest`. That is exactly how it failed on CI on 2026-09-04, in the one
+  // spec that calls this *from* the manifest: an intermittent failure in a
+  // suite that runs `retries: 0` so a flake gets root-caused rather than
+  // re-run. The URL is the authoritative answer to "am I already on the Trip
+  // surface", it is available synchronously, and it cannot race.
+  if (tab === "Trip" && TRIP_ROOT_URL.test(page.url())) return;
+  const link = page.getByRole("navigation", { name: "Trip" }).getByRole("link", { name: tab });
+  // `click()` auto-waits for the link, so the tab arriving late is handled
+  // rather than guessed at.
   await link.click();
   await page.waitForURL(
-    tab === "Trip" ? /\/trips\/[^/?#]+(?:[?#]|$)/ : new RegExp(`/${tab.toLowerCase()}(\\?|#|$)`),
+    tab === "Trip" ? TRIP_ROOT_URL : new RegExp(`/${tab.toLowerCase()}(\\?|#|$)`),
   );
 }
+
+/** The trip record's own surface: `/trips/<id>` with no tab segment after it. */
+const TRIP_ROOT_URL = /\/trips\/[^/?#]+(?:[?#]|$)/;
 
 /** Open the Trip surface's compact About disclosure before using its details. */
 export async function openTripAbout(page: Page): Promise<Locator> {
