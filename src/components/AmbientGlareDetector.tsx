@@ -19,12 +19,22 @@ export type ContrastMode = "auto" | "standard" | "full";
 export const CONTRAST_MODE_STORAGE_KEY = "diveday:contrast-mode";
 export const CONTRAST_MODE_CHANGE_EVENT = "diveday:contrast-mode-change";
 
-/** Every word `AmbientContrastControl` renders, resolved server-side. */
+/**
+ * Every word `AmbientContrastControl` renders, resolved server-side.
+ *
+ * **Named for the three states, not for one caller's words.** These were
+ * `labelLand`/`labelBoat` when the crew's boat manifest was the only surface
+ * that mounted this. The diver's thread mounts it too now (issue #1214), where
+ * "Land mode" is the wrong word for somebody standing on a dock — and a slot
+ * called `labelBoat` that a second caller fills with "High" is a prop name that
+ * lies. The internal vocabulary this repeats is the same one the stored value
+ * and the stylesheet already use: `auto`, `standard`, `full`.
+ */
 export interface AmbientContrastCopy {
   modeLabel: string;
   labelAuto: string;
-  labelLand: string;
-  labelBoat: string;
+  labelStandard: string;
+  labelFull: string;
 }
 
 /**
@@ -216,7 +226,7 @@ export function AmbientContrastControl({
   };
 
   const labelFor = (value: ContrastMode) =>
-    value === "auto" ? copy.labelAuto : value === "standard" ? copy.labelLand : copy.labelBoat;
+    value === "auto" ? copy.labelAuto : value === "standard" ? copy.labelStandard : copy.labelFull;
 
   return (
     // Real radios in a fieldset, not styled buttons: exactly one of the three

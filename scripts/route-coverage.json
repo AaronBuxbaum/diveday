@@ -92,6 +92,7 @@
       "party-organizer-confirmation",
       "readiness",
       "stranded-diver-card",
+      "thread-high-contrast",
       "thread-prep-current-step"
     ],
     "a11y": ["a11y.spec.ts"]

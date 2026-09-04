@@ -51,6 +51,12 @@
       "feet": "{value} ft",
       "celsius": "{value}°C",
       "fahrenheit": "{value}°F"
+    },
+    "contrast": {
+      "modeLabel": "Screen contrast",
+      "labelAuto": "Auto",
+      "labelStandard": "Standard",
+      "labelFull": "High"
     }
   },
   "shopChrome": {

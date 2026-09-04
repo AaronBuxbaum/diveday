@@ -2145,6 +2145,49 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The same thread with the contrast turned up** (issue #1214, delight
+       * report D54).
+       *
+       * `.glare-mode` is the app's whole answer to a phone in direct sun — an
+       * AAA palette, a 16px floor on type, a 44px floor on every target, all
+       * declared on `documentElement` — and until this it was mounted only on
+       * the crew's offline manifest, so nothing on the diver's side had ever
+       * rendered it and nothing at all had photographed it on this page.
+       *
+       * Captured in both schemes deliberately, even though the mode resolves to
+       * the same light AAA palette in each: that *is* the behaviour, it is what
+       * a diver who keeps their phone in dark mode will actually see, and a
+       * baseline is the only thing that would notice if a future palette edit
+       * quietly broke the dark path into it.
+       *
+       * The chosen mode is the boundary this feature must not cross, so the
+       * assertions below are part of the capture rather than a separate test:
+       * every fact the standard page carries is still on the page after the
+       * switch. Turning the contrast up may not take anything away.
+       */
+      test(`the thread in high contrast renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await bookAVisualRegressionSeat(page, scheme);
+        await page.goto(new URL(page.url()).pathname);
+        await threadStatus(page).waitFor();
+
+        const contrast = page.getByRole("group", { name: "Screen contrast" });
+        // The radios are `sr-only` and the label is the target — which is the
+        // point of the control, so tap it the way a wet thumb does.
+        await contrast.getByText("High", { exact: true }).click();
+        await expect(page.locator("html")).toHaveClass(/glare-mode/);
+
+        // Nothing hidden: the status line, the way to the shop, and the door
+        // out are all still there at maximum contrast.
+        await expect(threadStatus(page)).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Where to go" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Pack with confidence" })).toBeVisible();
+        await capture(page, "thread-high-contrast", scheme);
+      });
+
+      /**
        * **The thread with a later step opened**, which the capture above can
        * never show: at most one step is open at rest, and the one at rest is
        * always the first thing on the diver. Everything the spine does with a

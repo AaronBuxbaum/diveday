@@ -59,6 +59,7 @@ import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopById, getShopBySlug } from "@/db/shops";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trips";
+import { diverContrastCopy } from "@/i18n/contrast-copy";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import {
@@ -1926,6 +1927,7 @@ export default async function DiverReadinessPage({
       <ThreadShell
         shopName={detail.shop.name}
         title={detail.trip.title}
+        contrastCopy={diverContrastCopy(t)}
         meta={
           <>
             <p className="mt-1 text-base text-muted">

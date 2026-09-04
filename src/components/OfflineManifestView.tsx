@@ -2242,8 +2242,8 @@ export function OfflineManifestView() {
                 copy={{
                   modeLabel: t("shared.boatMode.modeLabel"),
                   labelAuto: t("shared.boatMode.labelAuto"),
-                  labelLand: t("shared.boatMode.labelLand"),
-                  labelBoat: t("shared.boatMode.labelBoat"),
+                  labelStandard: t("shared.boatMode.labelLand"),
+                  labelFull: t("shared.boatMode.labelBoat"),
                 }}
               />
             </div>
