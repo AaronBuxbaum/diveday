@@ -110,6 +110,40 @@ const PUBLIC_MEDIA_PREFIXES = ["courses", "recap", "dive-sites", "shop-logos"] a
  * a permission-gated route, never an edge behaviour.
  */
 const MEDICAL_CLEARANCE_PREFIX = "medical-clearances";
+
+/**
+ * **Every key prefix the app writes**, and therefore the exact reach of the
+ * media uploader's write grant (issue #1349).
+ *
+ * This is the wall behind `deleteS3Image`'s key check, not a restatement of it.
+ * That credential holds `DeleteObject`, the only control over *which* object is
+ * the key the caller names, and the grant used to be `arnForObjects("*")` -- so
+ * a key that escaped its namespace was a delete anywhere in the bucket. Named
+ * here, the worst case is a delete inside another prefix.
+ *
+ * Wider than {@link PUBLIC_MEDIA_PREFIXES} on purpose: the app *writes* the
+ * import and medical namespaces, it just never serves them from the edge. The
+ * two lists answer different questions and neither is derivable from the other.
+ *
+ * `infra/lib/media-distribution.test.ts` asserts this equals the `keyPrefix`
+ * values in `src/lib/storage/index.ts`, read out of that file rather than
+ * restated -- because the failure mode of a short list is silent. On a missing
+ * prefix `s3ImageStorageProvider.upload` sees a non-ok response and returns
+ * `{ status: "failed" }` rather than throwing, so the first symptom is a shop's
+ * upload not sticking, with nothing in the logs pointing at IAM.
+ */
+const MEDIA_WRITE_PREFIXES = [
+  "arrival",
+  "courses",
+  "dive-sites",
+  "import-receipts",
+  "import-waivers",
+  MEDICAL_CLEARANCE_PREFIX,
+  "recap",
+  "shop-heroes",
+  "shop-logos",
+] as const;
+
 const LOG_SHIPPER_USER_NAME = "diveday-cloudwatch-shipper";
 
 /**
@@ -1146,7 +1180,7 @@ exports.handler = async (event) => {
       new iam.PolicyStatement({
         sid: "ManageMediaObjectsOnly",
         actions: ["s3:PutObject", "s3:DeleteObject", "s3:AbortMultipartUpload"],
-        resources: [mediaBucket.arnForObjects("*")],
+        resources: MEDIA_WRITE_PREFIXES.map((prefix) => mediaBucket.arnForObjects(`${prefix}/*`)),
       }),
     );
 

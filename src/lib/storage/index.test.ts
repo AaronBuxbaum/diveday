@@ -343,6 +343,51 @@ describe("deleteS3Image host binding", () => {
     expect(result.ok).toBe(false);
     expect(fetchImpl).not.toHaveBeenCalled();
   });
+
+  /**
+   * **The delete twin of the read path's encoded-separator case** (issue
+   * #1349). The origin check above constrains the *host*; until this guard,
+   * nothing constrained the *key*, and there is no prefix here to constrain it
+   * with — these callers delete across nine namespaces.
+   *
+   * The mechanics are the same: `%2F` is one path segment to the URL parser,
+   * so nothing folds on the way in; the key decodes with the `..` intact;
+   * `encodeS3KeyPath` does not encode dots; and the `new URL()` that builds the
+   * request folds it, so the *signed* path is somewhere else entirely.
+   *
+   * What makes it worth refusing even though no caller can reach it is the
+   * deletion ledger: `queueAndAttemptMediaDeletion` records the URL it was
+   * given, so a folding key leaves a row asserting one object was removed
+   * while S3 lost another. Unlike the read path there is no IAM backstop —
+   * `DeleteObject` is granted on the whole bucket.
+   */
+  it("refuses a url whose signed path is not the object it names", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: true, status: 204 }));
+    const result = await deleteS3Image(
+      "https://diveday-media.s3.us-east-1.amazonaws.com/recap%2F..%2Fimport-waivers%2Fvictim.pdf",
+      config,
+      fetchImpl as unknown as typeof fetch,
+    );
+    expect(result.ok).toBe(false);
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The guard is an equality against the key, so it has to leave alone every
+   * key we actually write — spaces, parentheses and non-ASCII all survive
+   * `encodeS3KeyPath` as percent-escapes the URL parser passes through
+   * untouched. A guard that refused these would fail closed on real uploads.
+   */
+  it("still deletes a key carrying spaces, parentheses and non-ASCII", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: true, status: 204 }));
+    const result = await deleteS3Image(
+      "https://diveday-media.s3.us-east-1.amazonaws.com/shop-logos/pe%C3%B1a%20cove%20(2).png",
+      config,
+      fetchImpl as unknown as typeof fetch,
+    );
+    expect(result).toEqual({ ok: true });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("import document storage — images and PDFs", () => {

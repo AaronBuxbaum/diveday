@@ -202,7 +202,37 @@ export async function deleteS3Image(
     }
     const key = decodeURIComponent(parsedUrl.pathname.replace(/^\/+/, ""));
     const s3Host = `${config.bucket}.s3.${config.region}.amazonaws.com`;
-    const deleteUrl = new URL(`https://${s3Host}/${encodeS3KeyPath(key)}`);
+    const encodedKey = encodeS3KeyPath(key);
+    const deleteUrl = new URL(`https://${s3Host}/${encodedKey}`);
+    // **The object deleted has to be the object named**, stated as the equality
+    // it actually is rather than as a blocklist. `signS3Request` signs
+    // `url.pathname`, and building a `URL` folds dot segments — so a URL whose
+    // *separators* are encoded arrives here as one path segment the parser has
+    // nothing to fold in, survives `encodeS3KeyPath` (which does not encode
+    // dots), and then folds on the way into the signature:
+    // `.../recap%2F..%2Fimport-waivers%2Fx.pdf` signs `/import-waivers/x.pdf`.
+    //
+    // Note this cannot be written as "refuse a `..` in the pathname" the way it
+    // first reads: by the time there is a pathname the folding has already
+    // happened and there is no `..` left to find. It has to compare the path
+    // against the key it was built from. Dot folding is the only thing the URL
+    // parser changes here — `encodeS3KeyPath` emits unreserved characters and
+    // `%XX`, both of which it passes through — so the equality is exact rather
+    // than approximate, and it also covers whatever else a future encoder
+    // change might let through.
+    //
+    // Unlike the read path below there is no prefix to check against: these
+    // callers delete across nine namespaces, and threading a prefix through
+    // each call site is how a guard ends up wrong at the fourth one.
+    //
+    // Not currently reachable — every URL comes from a column our own storage
+    // layer wrote. It matters anyway because `queueAndAttemptMediaDeletion`
+    // records the URL in the deletion ledger: a folding key would leave a row
+    // asserting one object was removed while S3 lost a different one, and the
+    // ledger is the thing that has to be true.
+    if (deleteUrl.pathname !== `/${encodedKey}`) {
+      return { ok: false, error: "url does not name the object it would delete" };
+    }
 
     const signedHeaders = signS3Request({
       method: "DELETE",

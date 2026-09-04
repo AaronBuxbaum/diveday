@@ -285,3 +285,84 @@ describe("the media uploader credential", () => {
     }
   });
 });
+
+/**
+ * **The write grant names the prefixes the app writes, and no more** (issue
+ * #1349).
+ *
+ * `deleteS3Image` now refuses a key whose signed path is not the object it
+ * names, and this is the wall behind that check rather than a restatement of
+ * it: the credential holds `DeleteObject`, the caller's key is the only thing
+ * deciding *which* object, and the grant used to be `arnForObjects("*")` -- so
+ * a key that escaped its namespace was a delete anywhere in the bucket.
+ *
+ * The list is read out of `src/lib/storage/index.ts` rather than restated here,
+ * because a short list fails *silently*: `s3ImageStorageProvider.upload`
+ * returns `{ status: "failed" }` on a non-ok response instead of throwing, so
+ * the tenth prefix somebody adds next year would surface as a shop's upload not
+ * sticking, with nothing in the logs naming IAM. The issue that asked for this
+ * listed seven of the nine, which is the mistake this reads a file to avoid.
+ */
+describe("the media uploader's write grant", () => {
+  type Statement = { Sid?: string; Action: string | string[]; Resource: unknown };
+
+  function writeStatement(): Statement {
+    const t = template();
+    const user = Object.keys(t.findResources("AWS::IAM::User")).find((id) =>
+      id.startsWith("MediaUploaderUser"),
+    );
+    const policies = Object.values(t.findResources("AWS::IAM::Policy")) as {
+      Properties?: { PolicyDocument?: { Statement?: Statement[] }; Users?: unknown[] };
+    }[];
+    const statements = policies
+      .filter((policy) => JSON.stringify(policy.Properties?.Users ?? []).includes(user as string))
+      .flatMap((policy) => policy.Properties?.PolicyDocument?.Statement ?? []);
+    const write = statements.find((statement) =>
+      [statement.Action].flat().includes("s3:DeleteObject"),
+    );
+    expect(write, "no DeleteObject statement on MediaUploaderUser").toBeDefined();
+    return write as Statement;
+  }
+
+  /** The literal tail of a CloudFormation `Fn::Join` around the bucket ARN. */
+  function grantedKeyPattern(resource: unknown): string {
+    const join = (resource as { "Fn::Join"?: [string, unknown[]] })?.["Fn::Join"];
+    const tail = (join?.[1] ?? [])
+      .filter((part): part is string => typeof part === "string")
+      .join("");
+    return tail.replace(/^\//, "");
+  }
+
+  /** Every `keyPrefix` the storage layer writes under, read off the source. */
+  function prefixesTheAppWrites(): string[] {
+    const source = readFileSync(path.join(process.cwd(), "src/lib/storage/index.ts"), "utf8");
+    const found = [...source.matchAll(/keyPrefix:\s*"([^"]+)"/g)].map(
+      (match) => match[1] as string,
+    );
+    // If this ever comes back empty the assertions below would pass vacuously,
+    // which is the one way a test that reads a file can be worse than one that
+    // restates a list.
+    expect(found.length, "found no keyPrefix literals in src/lib/storage/index.ts").toBeGreaterThan(
+      5,
+    );
+    return [...new Set(found)].sort();
+  }
+
+  it("grants write on exactly the prefixes the storage layer writes", () => {
+    const granted = [
+      ...new Set([writeStatement().Resource].flat().map((resource) => grantedKeyPattern(resource))),
+    ]
+      .map((pattern) => pattern.replace(/\/\*$/, ""))
+      .sort();
+    expect(granted).toEqual(prefixesTheAppWrites());
+  });
+
+  it("never grants write across the whole media bucket", () => {
+    // Stated as the thing that must not be true rather than as a property of
+    // the named statement, so a second, wider write statement added later is
+    // caught too. A resource ending at `/*` on the bucket root is the shape
+    // that made an escaped key a delete anywhere.
+    const resource = JSON.stringify(writeStatement().Resource);
+    expect(resource).not.toMatch(/"\/\*"/);
+  });
+});
