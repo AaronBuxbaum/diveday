@@ -23,9 +23,20 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // shells out to it — forever with no diagnosis.
 //
 // One exception: `follow-ups` calls `gh issue list`, a real network round trip. It fails
-// open (exits 0 with a warning) when `gh` cannot answer rather than blocking a commit on
-// network state — see check-follow-ups.mjs's module doc comment — but it still pays this
-// timeout like every other check here if `gh` itself wedges.
+// open (SKIPPED, with a warning) when `gh` cannot answer rather than blocking a commit on
+// network state — see check-follow-ups.mjs's module doc comment.
+//
+// That fail-open path is only reachable if `gh`'s own timeout fires *first*. It did not:
+// `ghCli` was 120s against this 90s, so a wedged `gh` was killed here — as a hard failure,
+// which is the exact outcome the SKIPPED path exists to prevent, arrived at by the one
+// route nobody tests. `SUBPROCESS_TIMEOUTS.ghCliInCheckGate` is the shorter ceiling that
+// closes it, and `scripts/subprocess.test.mjs` pins the ordering so re-raising it fails a
+// test rather than silently restoring the inversion.
+//
+// That test reads this number out of this file as *text* rather than importing it. This
+// script is entirely top-level, so importing it runs all 43 checks — 43 subprocesses inside
+// a unit test. Keeping this a plain `const` is deliberate: an export would invite exactly
+// that import.
 const CHECK_TIMEOUT_MS = 90_000;
 
 // label -> script path (relative to this file's directory)

@@ -78,6 +78,23 @@ export const SUBPROCESS_TIMEOUTS = {
   vercelCli: 120_000,
   /** One `gh` call. */
   ghCli: 120_000,
+  /**
+   * One `gh` call made from inside `pnpm check:repo`.
+   *
+   * Deliberately shorter than `ghCli`, and the reason is the only thing that
+   * makes `check-follow-ups.mjs`'s fail-open behaviour real. That check exits
+   * SKIPPED when `gh` cannot answer, so an unreachable GitHub never blocks a
+   * commit — but `scripts/check-repo.mjs` kills any check at its own
+   * `CHECK_TIMEOUT_MS` and reports a **failure**. At the shared 120s, a wedged
+   * `gh` never reached its own timeout: the runner killed it at 90s first, and
+   * the carefully-built SKIPPED path was unreachable by the one route that
+   * needed it most.
+   *
+   * 45s is well inside that ceiling with room for the check's own file work.
+   * `subprocess.test.mjs` asserts this stays below `CHECK_TIMEOUT_MS`, so
+   * raising either one without the other fails a test.
+   */
+  ghCliInCheckGate: 45_000,
   /** A sibling script in this repo that only reads and writes files. */
   nodeScript: 120_000,
   /**
