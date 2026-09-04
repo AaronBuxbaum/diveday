@@ -16,7 +16,8 @@
  * dashboard, $0.50/GB ingested and $0.12/GB scanned.
  *
  * This registry currently declares 17 metrics (11 log signals + 5 web vitals
- * + the mutation-duration metric) and 13 alarms (8 + the 3 alarmed vitals + the
+ * + the mutation-duration metric, which is one metric *permanently* because its
+ * filter carries no dimension -- see `MUTATION_DURATION_SIGNAL`) and 13 alarms (8 + the 3 alarmed vitals + the
  * 2 SES reputation rates, which alarm on metrics AWS publishes for free), so it
  * sits 7 metrics and 3 alarms over the free allowance at about $2.40/month once
  * every metric receives data (7 x $0.30 + 3 x $0.10). A counted signal without an
@@ -369,7 +370,18 @@ export const WEB_VITAL_SIGNALS: readonly WebVitalSignal[] = [
   },
 ];
 
-/** Client-observed settled mutation time, grouped by its stable action label. */
+/**
+ * Client-observed settled mutation time, as **one aggregate metric**.
+ *
+ * The filter that publishes it carries no `Action` dimension: a dimensioned
+ * metric filter bills one custom metric per distinct label, and this app has
+ * thirty-odd server actions, so the one metric this registry counts would have
+ * become about thirty the day mutations started flowing (issue #1241). The
+ * per-action ranking lives in the dashboard's "Slowest mutations (p75)" Logs
+ * Insights widget, which reads the same lines and groups them by `action` on
+ * demand. The log line still carries the label; nothing about what is emitted
+ * changed.
+ */
 export const MUTATION_DURATION_SIGNAL = {
   metricName: "MutationDuration",
   title: "Mutation duration (ms)",
