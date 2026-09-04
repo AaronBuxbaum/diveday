@@ -947,7 +947,12 @@ function TodaySkeleton() {
         {[0, 1].map((station) => (
           <div
             key={`station-${station}`}
-            className="grid grid-cols-1 gap-y-2 sm:grid-cols-[96px_40px_1fr] sm:gap-y-0"
+            // The station's own three tracks, so the skeleton hands over
+            // without the spine shifting under the reader. It had drifted on
+            // both counts: 40px in the middle where the mark needs 112, and
+            // 96px in the time column that a 12-hour time no longer fits
+            // (issue #1112).
+            className="grid grid-cols-1 gap-y-2 sm:grid-cols-[112px_112px_1fr] sm:gap-y-0"
           >
             <div className="sm:flex sm:justify-end">
               <div className="h-6 w-20 rounded bg-surface-sunken" />

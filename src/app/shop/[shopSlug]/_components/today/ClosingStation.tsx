@@ -78,7 +78,10 @@ export function ClosingStation({
   const checkpoint = close.diveNumber >= 1 ? `after_dive_${close.diveNumber}` : "departure";
 
   return (
-    <li className="grid grid-cols-1 gap-y-2 sm:grid-cols-[96px_112px_1fr] sm:gap-y-0">
+    // The same three tracks the morning station uses, and 112px for the same
+    // reason: two station kinds sit in one spine, so a rail that differed by
+    // 16px between them would read as two lists (issue #1112).
+    <li className="grid grid-cols-1 gap-y-2 sm:grid-cols-[112px_112px_1fr] sm:gap-y-0">
       <div className="sm:pt-1 sm:text-end">
         {/* The same machine-readable instant the morning station renders: the
             spine's whole claim is that these read in clock order, and a

@@ -218,9 +218,20 @@ from today's crew-first ordering.
 - The morning all-clear line (the existing good-news moment) renders between the summary sentence
   and the first station. Its condition restates in spine terms: no danger or warning rows on any
   of today's stations or in the desk group — tomorrow's and the week's jobs may remain.
-- The spine: `grid-cols-[96px_40px_1fr]` on desktop; the middle column draws the 1px `--border`
+- The spine: `grid-cols-[112px_112px_1fr]` on desktop; the middle column draws the 1px `--border`
   line and a 12px `--primary`-ring dot per station. Phone drops the rail (time becomes the
   station's first line).
+  - **Both numbers moved after the drawing, and this is where they were settled.** The middle
+    column went to 112px when the station's drawn site mark landed on the rail (13f) — 40px was
+    the width of the dot the mark replaced. The time column went to 112px in issue #1112: at
+    `text-2xl` a 12-hour time with a double-digit hour is about 107px wide, so at 96px "11:30 PM"
+    broke onto two lines and pushed the whole time block below its own station's title, for every
+    departure between 10:00 and 12:59 and never in a 24-hour locale. Widening is the only one of
+    the four options a reader cannot see the cost of: shrinking the type breaks the spine's scale,
+    dropping the meridiem costs a 12-hour reader the distinction that makes a time legible, and
+    formatting double-digit hours differently from single-digit ones makes the column change shape
+    by the hour. `DayStation`, `ClosingStation` and the shop home's skeleton all read these two
+    numbers, and a difference between them reads as two lists.
 - A station: time (`text-2xl font-bold tabular-nums`) + end time quiet; title (`text-lg`,
   links to the trip page); meta line (site · boat · crew · price, `text-sm text-muted`); capacity
   figure right (`text-xl font-bold tabular-nums` over "N spots open" quiet); a 4px quiet meter
