@@ -215,6 +215,17 @@ function StaffRow({
         <div>
           <p className="font-medium">{member.fullName}</p>
           <p className="text-sm text-muted">{member.email}</p>
+          {/* What this person publishes to divers, when they have said yes on
+              their own staffing page (issue #1357). Read-only here: the switch
+              is theirs, and a shop that could edit it would be overriding
+              somebody's consent from the other side. Nothing at all for
+              somebody who declined — a row that said so would be a list of who
+              declined, which is the boundary the feature rests on. */}
+          {member.crewPublicName ? (
+            <p className="text-sm text-muted">
+              {t("settings.team.publicNameSeen", { name: member.crewPublicName })}
+            </p>
+          ) : null}
         </div>
         <Badge tone={status.tone}>{status.label}</Badge>
       </div>

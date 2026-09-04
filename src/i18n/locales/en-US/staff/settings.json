@@ -534,7 +534,8 @@
       "save": "Save contact",
       "saving": "Saving…"
     },
-    "languagesEmpty": "Not set"
+    "languagesEmpty": "Not set",
+    "publicNameSeen": "Divers see “{name}”"
   },
   "safetyChecklist": {
     "eyebrow": "Settings",

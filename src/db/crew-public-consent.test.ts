@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { seededShopContext } from "@/test/db";
 import { people, personRoles, shops, tripAssignments } from "./schema";
-import { setCrewPublicConsent, setStaffLanguages } from "./staff-accounts";
+import { listShopStaff, setCrewPublicConsent, setStaffLanguages } from "./staff-accounts";
 import {
   listStaff,
   tripCrewSpokenLanguages,
@@ -367,5 +367,76 @@ describe("setCrewPublicConsent", () => {
     // keeping, and a shop holding a former employee's revoked consent date
     // serves nobody.
     expect(withdrawn?.consentAt).toBeNull();
+  });
+});
+
+/**
+ * **The other half of the arrangement** (issue #1357).
+ *
+ * The consent is the person's, and `crew_public_name` is typed by them for
+ * themselves — so it is the one string on a public page that nobody at the shop
+ * chose. The shop is still accountable for what its own pages say, and until
+ * this reader carried the column an owner could only learn what was published
+ * under their name by opening `/s/<slug>/trips/<id>` departure by departure.
+ */
+describe("listShopStaff and the name a diver reads", () => {
+  it("carries the stored name for somebody who consented", async () => {
+    const { db, shop } = await seededShopContext();
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("seeded shop has no staff");
+
+    expect(
+      await setCrewPublicConsent(db, {
+        shopId: shop.id,
+        personId: staff.person.id,
+        actorPersonId: staff.person.id,
+        consented: true,
+        publicName: "Mar",
+      }),
+    ).toBe(true);
+
+    const roster = await listShopStaff(db, shop.id);
+    const row = roster.find((member) => member.personId === staff.person.id);
+    // The string itself, not a derivation of `full_name` — the roster and the
+    // public page have to be able to disagree with the record, because that is
+    // the whole point of the person typing it (issue #1351).
+    expect(row?.crewPublicName).toBe("Mar");
+  });
+
+  /**
+   * **The boundary the feature rests on.** Somebody who declined and somebody
+   * who was never asked have to look identical here, or the roster becomes a
+   * list of who said no — which is a different thing from a shop reading its
+   * own public pages.
+   *
+   * Read against the seeded shop rather than a fabricated one, so the two
+   * answers are told apart by a row that really does publish: null here has to
+   * mean "not consented" and not "the column is never selected", and only a
+   * roster carrying both shapes at once can say which.
+   */
+  it("shows nothing for somebody who declined, exactly as for somebody never asked", async () => {
+    const { db, shop } = await seededShopContext();
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("seeded shop has no staff");
+
+    await setCrewPublicConsent(db, {
+      shopId: shop.id,
+      personId: staff.person.id,
+      actorPersonId: staff.person.id,
+      consented: true,
+      publicName: "Mar",
+    });
+    await setCrewPublicConsent(db, {
+      shopId: shop.id,
+      personId: staff.person.id,
+      actorPersonId: staff.person.id,
+      consented: false,
+    });
+
+    const roster = await listShopStaff(db, shop.id);
+    expect(roster.find((member) => member.personId === staff.person.id)?.crewPublicName).toBeNull();
+    // The seed's own consenting crew member, untouched by this test, is what
+    // makes the null above mean something.
+    expect(roster.filter((member) => member.crewPublicName !== null).length).toBeGreaterThan(0);
   });
 });

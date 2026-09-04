@@ -534,7 +534,8 @@
       "save": "Guardar contacto",
       "saving": "Guardando…"
     },
-    "languagesEmpty": "No indicado"
+    "languagesEmpty": "No indicado",
+    "publicNameSeen": "Los buceadores ven “{name}”"
   },
   "safetyChecklist": {
     "eyebrow": "Ajustes",

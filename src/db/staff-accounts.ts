@@ -31,6 +31,27 @@ export type StaffMember = {
   emergencyContactPhone: string | null;
   /** BCP-47 tags this person can hold a conversation in (issue #708). Empty until a shop records one. */
   spokenLanguages: string[];
+  /**
+   * The name this person publishes to divers, or null if they have not
+   * consented (issue #1357).
+   *
+   * The shop is accountable for what its own public pages say, and until this
+   * it could not read them without browsing `/s/<slug>/trips/<id>` departure by
+   * departure — `crew_public_name` is typed by each person for themselves
+   * (issue #1351), so it is the one string on a public page nobody at the shop
+   * chose. Read-only on the roster, and deliberately: taking a name down is an
+   * override of somebody else's consent and needs a human answer about what
+   * happens to the consent afterwards, which is why the issue leaves it open.
+   *
+   * Null is *both* "declined" and "never asked", indistinguishably, which is
+   * the boundary the whole feature rests on: a roster that showed who said no
+   * would be a list of who said no.
+   *
+   * One column rather than two: `people_crew_public_name_with_consent` makes
+   * the stamp and a non-blank name equivalent in the database, so a name here
+   * is a consent and the consent cannot be read without one.
+   */
+  crewPublicName: string | null;
 };
 
 /**
@@ -67,6 +88,7 @@ export async function listShopStaff(db: DbExecutor, shopId: string): Promise<Sta
       emergencyContactName: people.emergencyContactName,
       emergencyContactPhone: people.emergencyContactPhone,
       spokenLanguages: people.spokenLanguages,
+      crewPublicName: people.crewPublicName,
       role: personRoles.role,
       userAccountId: userAccounts.id,
       accountStatus: userAccounts.status,
@@ -100,6 +122,7 @@ export async function listShopStaff(db: DbExecutor, shopId: string): Promise<Sta
       emergencyContactName: row.emergencyContactName,
       emergencyContactPhone: row.emergencyContactPhone,
       spokenLanguages: row.spokenLanguages,
+      crewPublicName: row.crewPublicName,
     });
   }
   return [...byPerson.values()].sort((a, b) => a.fullName.localeCompare(b.fullName));
