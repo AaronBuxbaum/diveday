@@ -2446,6 +2446,7 @@ export async function loadShopExportBundleInput(
             "reserved_until",
             "checked_out_at",
             "returned_at",
+            "return_outcome",
             "return_note",
             "created_at",
           ],
@@ -2463,6 +2464,7 @@ export async function loadShopExportBundleInput(
               row.reservedUntil,
               row.checkedOutAt,
               row.returnedAt,
+              row.returnOutcome,
               row.returnNote,
               row.createdAt,
             ];
