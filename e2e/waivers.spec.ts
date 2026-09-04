@@ -980,8 +980,8 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
   await expect(confirm).toBeVisible();
   // The outcome has no default (issue #1283), so every submit below has to say
   // which answer it is recording — including the ones that get refused.
-  const cleared = page.getByRole("radio", { name: "Cleared to dive" });
-  await expect(cleared).not.toBeChecked();
+  const clearedRadio = page.getByRole("radio", { name: "Cleared to dive" });
+  await expect(clearedRadio).not.toBeChecked();
 
   // **The shop's own today, not the wall clock's.** The date box carries
   // `max={today}` and the fleet's clock is frozen at Tue 21 July 2026, so a
@@ -991,7 +991,7 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
 
   // Neither the physician's name nor their evaluation: the record would say
   // only that a staff member pressed a button, and the domain refuses it.
-  await cleared.check();
+  await clearedRadio.check();
   await page.getByLabel("Date of the physician's evaluation").fill(EVALUATED_ON);
   await confirm.click();
   await expect(page.getByText("Name the physician, or attach their evaluation.")).toBeVisible();
