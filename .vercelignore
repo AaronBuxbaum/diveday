@@ -1,0 +1,58 @@
+# What must not be uploaded when a deploy is driven from a workstation.
+#
+# `scripts/post-deploy-wizard.mjs` runs `vercel --prod --archive=tgz`, which
+# tarballs the working directory and ships it to Vercel as deployment source.
+# The Vercel CLI does **not** read `.gitignore` — it ignores that file as a
+# *rule source*, and applies a hard-coded list of 26 entries instead (read out
+# of the installed CLI: `.git`, `.next`, `node_modules`, `.vercel`, `.env.local`,
+# `.env.*.local`, and twenty others). So this repo's "secrets never enter the
+# repo" rule, which is a `.gitignore` promise, does not reach that upload.
+#
+# This file is additive: the CLI applies its own list first and then these, so
+# nothing here can re-enable `.next` or `node_modules`. Never add a `!` negation
+# for those. Never create a `.nowignore` beside this file either — the CLI
+# fails the build with CONFLICTING_IGNORE_FILES rather than merging them.
+
+# ---------------------------------------------------------------------------
+# Credentials. This is the reason the file exists.
+#
+# `.gitignore` covers `.env*`; the CLI covers only `.env.local` and
+# `.env.*.local`. Everything else this repo generates — `.env.manual` (the one
+# file a human types secrets into), `.env.vercel` and `.env.github` (both
+# rendered from the AWS credentials secret by `scripts/distribute-env.mjs`) —
+# matched nothing and was uploaded verbatim. The wizard writes and reads all
+# three *before* it calls `vercel --prod`, so a workstation that has run it once
+# had them in every subsequent deploy tarball.
+.env*
+!.env.example
+
+# ---------------------------------------------------------------------------
+# The local database. 70 MB, and it is a *database*: whatever a developer has
+# been testing with is in it. Gitignored, therefore invisible to the CLI.
+.pglite
+
+# ---------------------------------------------------------------------------
+# Local build and test output. All gitignored, none of it read by the build.
+screenshots
+test-results
+playwright-report
+blob-report
+.reg-report
+coverage
+*.tsbuildinfo
+
+# ---------------------------------------------------------------------------
+# Deliberately NOT excluded, each for a reason worth knowing before you add it:
+#
+#   patches/          `pnpm-workspace.yaml` declares a patchedDependency there;
+#                     without it `pnpm install` fails before the build starts.
+#   scripts/          `vercel.json`'s buildCommand is `node scripts/vercel-build.mjs`,
+#                     and `src/db/migrations.postgres.test.ts` imports from it.
+#   drizzle/          `scripts/vercel-build.mjs` runs `check-migration-graph`,
+#                     which shells `drizzle-kit check` — and that walk reads the
+#                     per-migration `snapshot.json` files. Excluding them does not
+#                     fail: `prepareOutFolder` filters the snapshot list with
+#                     `existsSync`, so an empty list passes **vacuously**. The
+#                     commutativity guard would go quietly green on every deploy.
+#                     They are 80 MB on disk and 3.3 MB of the gzipped upload;
+#                     that is not worth a guard that lies.

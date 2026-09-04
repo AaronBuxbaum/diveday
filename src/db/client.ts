@@ -13,7 +13,6 @@ import { acquireDataDirLock } from "./data-dir-lock";
 import { refreshCanonicalDemoSchedule } from "./demo-refresh";
 import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import { shops } from "./schema";
-import { seedIfEmpty } from "./seed";
 
 // drizzle 1.0 moved relational config out of the driver `schema` option
 // (into `defineRelations`); we build queries through `.select()/.from()`, which
@@ -223,6 +222,16 @@ export async function seedProductionDb(
     // now runs inside this one transaction, so a failure partway
     // through rolls back every row instead of leaving a half-seeded
     // shop a retry would find already-non-empty and stop repairing.
+    // Imported here rather than at module scope, and this is not style. The
+    // seed reaches `./schema` (360 KB), `./course-templates` (186 KB) and
+    // `./dive-site-templates`, and `client.ts` is imported by every route that
+    // touches the database — so a static edge here put that whole subgraph in
+    // the module closure of 122 of this app's 127 route entries, including
+    // every marketing page and API handler that never seeds anything.
+    // Deferring it takes that to 16. In `next dev` Turbopack keeps each
+    // entrypoint's modules in memory with no eviction, so the shared graph is
+    // what the per-route growth is made of.
+    const { seedIfEmpty } = await import("./seed");
     await seedIfEmpty(tx);
   });
 }
