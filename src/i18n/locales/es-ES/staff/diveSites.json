@@ -75,7 +75,7 @@
     "tooManyPhotos": "{max, plural, one {Un sitio admite hasta # foto.} other {Un sitio admite hasta # fotos.}}",
     "route": {
       "legend": "La ruta que se bucea",
-      "description": "Toca el mapa para marcar un punto, en el orden en que se bucean. El mapa no se puede arrastrar: está fijo a las coordenadas y el zoom de este sitio, así que la línea que dibujas es la que ve el buceador.",
+      "description": "Toca el mapa para marcar un punto, en el orden en que se bucean. El mapa no se puede arrastrar: la línea que dibujas es la que ve el buceador.",
       "needsCoordinates": "Completa la ubicación GPS de arriba y el mapa aparece aquí, listo para dibujar.",
       "labelLabel": "Cómo se llama la ruta",
       "labelPlaceholder": "Vuelta por el jardín de coral",
@@ -121,7 +121,7 @@
     "conservationNoteHint": "Orientación opcional del centro para los buceadores en este sitio.",
     "conservationNotePlaceholder": "Normas del parque marino, uso de boyas de amarre, control de flotabilidad o pautas locales de protección del arrecife.",
     "fitLegend": "Para quién es este sitio",
-    "fitDescription": "La línea que un buceador lee sobre los datos del sitio. Si la dejas en “deducirlo”, DiveDay la saca de la dificultad, la profundidad y la corriente de abajo, que son palabras que escribiste con otro propósito.",
+    "fitDescription": "La línea que un buceador lee sobre los datos del sitio. Si la dejas en “deducirlo”, DiveDay la deduce de la dificultad, la profundidad y la corriente de abajo.",
     "fitToneLabel": "Cómo se lee este sitio",
     "fitToneDerive": "Deducirlo de los datos de abajo",
     "fitToneWelcoming": "Inmersión acogedora",

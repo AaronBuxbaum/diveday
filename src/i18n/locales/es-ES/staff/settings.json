@@ -259,7 +259,7 @@
     "tax": {
       "heading": "Impuestos (IVA y ventas)",
       "description": "Añade IVA, impuestos sobre las ventas y otros impuestos similares a los nuevos pagos de reservas y facturas del personal mediante Stripe.",
-      "detail": "El impuesto se añade al precio publicado y se muestra al buceador en el checkout de Stripe. Stripe usa la configuración de impuestos de tu cuenta conectada y la ubicación del cliente. Las propinas posteriores a la salida son independientes y este ajuste no las afecta. Desactívalo si gestionas los impuestos por tu cuenta.",
+      "detail": "El impuesto se añade al precio publicado y se muestra al buceador en el checkout de Stripe. Las propinas posteriores a la salida son independientes y este ajuste no las afecta. Desactívalo si gestionas los impuestos por tu cuenta.",
       "enabledValue": "Activados",
       "disabledValue": "Desactivados",
       "checkboxLabel": "Usar Stripe Tax para nuevos pagos de reservas y facturas",
@@ -407,7 +407,7 @@
       "processorErasures": {
         "sectionLabel": "Borrados sin terminar en Stripe",
         "heading": "{count, plural, one {# registro} other {# registros}} de un buceador borrado siguen en Stripe",
-        "detail": "Borrar a un buceador también elimina su cliente de Stripe. Estos no se completaron. Un registro de cliente se reintenta solo esta noche. Una factura no: Stripe copia el nombre y el correo en cada factura, y solo una solicitud de eliminación de datos a Stripe lo borra. Preséntala y márcalo como hecho.",
+        "detail": "Borrar a un buceador también elimina su cliente de Stripe. Estos no se completaron. Un registro de cliente se reintenta solo esta noche. Una factura no: solo una solicitud de eliminación de datos a Stripe borra el nombre y el correo que copió. Preséntala y márcalo como hecho.",
         "raised": "registrado el {date}",
         "retry": "Reintentar borrado",
         "retrying": "Reintentando…",
@@ -597,15 +597,15 @@
     "scopeTable": {
       "contact": {
         "what": "Nombre, correo, teléfono",
-        "detail": "Se importan tal cual. Una fila con correo se empareja con un buceador existente al reimportar; sin él, siempre es una ficha nueva."
+        "detail": "Una fila con correo se empareja con un buceador existente al reimportar; sin él, siempre es una ficha nueva."
       },
       "emergencyContact": {
         "what": "Contacto de emergencia",
-        "detail": "El nombre y el teléfono se trasladan cuando están."
+        "detail": "El nombre y el teléfono, cuando tu archivo los tenga."
       },
       "diveInsurance": {
         "what": "Seguro de buceo (DAN)",
-        "detail": "Se traslada como texto libre, exactamente como lo tenga tu archivo, para que la tripulación lo tenga a mano. Nunca es una barrera para nadie."
+        "detail": "Texto libre, exactamente como lo tenga tu archivo. Nunca es una barrera para nadie."
       },
       "rentalSizes": {
         "what": "Tallas de alquiler",
@@ -613,15 +613,15 @@
       },
       "certificationCard": {
         "what": "Registro de certificación",
-        "detail": "Llega con la ficha del buceador, marcada como importada, y abre la puerta del nivel. Si tu archivo dice que la tarjeta nunca se verificó, espera al personal. Los niveles no reconocidos requieren entrada manual."
+        "detail": "Marcada como importada, abre la puerta del nivel. Si tu archivo dice que la tarjeta nunca se verificó, espera al personal. Los niveles no reconocidos requieren entrada manual."
       },
       "specialtyCards": {
         "what": "Certificaciones de especialidad (profundidad, naufragios, nocturna, traje seco)",
-        "detail": "Llegan con la ficha del buceador, marcadas como importadas. La puerta de cada una sigue cerrada hasta que el personal la confirme con un toque, diga lo que diga tu archivo."
+        "detail": "Marcadas como importadas. La puerta de cada una sigue cerrada hasta que el personal la confirme, diga lo que diga tu archivo."
       },
       "nitrox": {
         "what": "Nitrox",
-        "detail": "Llega con la ficha del buceador, marcada como importada. Hasta que el personal la confirme con un toque, ese buceador recibe aire normal. El embarque solo espera si tu archivo dice que la tarjeta nunca se verificó."
+        "detail": "Marcada como importada. Hasta que el personal la confirme, ese buceador recibe aire normal. El embarque solo espera si tu archivo dice que la tarjeta nunca se verificó."
       },
       "signedWaivers": {
         "what": "Exenciones firmadas y aptitud médica",
@@ -629,11 +629,11 @@
       },
       "waiverDocuments": {
         "what": "Documentos de exención / médicos",
-        "detail": "Se descargan una vez desde la URL de tu archivo y se guardan de nuevo en el almacenamiento propio de DiveDay para auditoría. Imágenes y PDF de hasta 5 MB."
+        "detail": "Se descargan una vez desde la URL de tu archivo y se guardan para auditoría. Imágenes y PDF de hasta 5 MB."
       },
       "role": {
         "what": "Rol",
-        "detail": "Todo el mundo se importa como buceador. Los roles de personal y los accesos nunca se conceden por importación."
+        "detail": "Todo el mundo se importa como buceador, nunca con un rol de personal ni un acceso."
       },
       "cardOnFile": {
         "what": "Tarjeta guardada / credencial de pago",
@@ -641,19 +641,19 @@
       },
       "pastVisits": {
         "what": "Visitas pasadas (qué reservaron y cuándo)",
-        "detail": "Cada fila de reserva se convierte en historial de visitas. No es una inmersión, y nunca aparece en tu horario ni cuenta para el aforo."
+        "detail": "Cada fila de reserva se convierte en historial de visitas. Nunca aparece en tu horario ni cuenta para el aforo."
       },
       "paymentHistory": {
         "what": "Historial de pagos y recibos",
-        "detail": "Las filas de pagos, reembolsos y recibos del origen se importan como historial sin verificar en Pedidos. Una cantidad claramente interpretada en la moneda de tu centro se indica en el agregado de ingresos/reembolsos; nunca se convierte en un pedido Stripe activo ni en un pago de reserva."
+        "detail": "Historial sin verificar en Pedidos. Una cantidad claramente interpretada en la moneda de tu centro se indica en el agregado de ingresos/reembolsos; nunca se convierte en un pedido Stripe activo ni en un pago de reserva."
       },
       "serviceHistory": {
         "what": "Historial de mantenimiento de equipo",
-        "detail": "Se importa aparte, desde Ajustes → Importar historial del equipo; las unidades coinciden por etiqueta o número de serie y conservan sus registros fechados."
+        "detail": "Se importa aparte, desde Ajustes → Importar historial del equipo. Las unidades coinciden por etiqueta o número de serie."
       },
       "diverNotes": {
         "what": "Notas internas y del buceador",
-        "detail": "Las notas del personal y observaciones se importan directamente como notas privadas en el perfil del buceador."
+        "detail": "Las notas del personal y observaciones pasan a notas privadas en el perfil del buceador."
       }
     },
     "wizard": {
@@ -787,22 +787,22 @@
     },
     "issues": {
       "emailInvalid": "El correo “{email}” no parece válido, así que el buceador se importó sin correo.",
-      "cardMarkedUnverified": "Tu archivo marca esta certificación como “{status}”. Se importó para revisión del personal en lugar de como verificada, ya que tus propios registros no la dan por revisada.",
+      "cardMarkedUnverified": "Tu archivo marca esta certificación como “{status}”, así que se importó para revisión del personal en lugar de como verificada.",
       "specialtyNotGated": "La especialidad “{specialty}” no es una especialidad que controlemos (profunda, naufragios, nocturna, traje seco), así que no se importó nada para ella.",
-      "specialtyNoCardNumber": "La especialidad “{specialty}” no tiene número de certificación en la fila, así que no se importó. Una certificación sin número no se puede verificar.",
-      "specialtyImportedVerifiedOne": "Certificación de especialidad importada como verificada desde tus registros y marcada como importada. Una inmersión que la exija espera a que alguien del equipo confirme haberla visto.",
-      "specialtyImportedVerifiedOther": "{count} certificaciones de especialidad importadas como verificadas desde tus registros y marcadas como importadas. Una inmersión que las exija espera a que alguien del equipo confirme haberlas visto.",
-      "specialtyImportedPendingOne": "Certificación de especialidad importada para revisión del personal. Ver la nota anterior.",
-      "specialtyImportedPendingOther": "{count} certificaciones de especialidad importadas para revisión del personal. Ver la nota anterior.",
+      "specialtyNoCardNumber": "La especialidad “{specialty}” no tiene número de certificación en la fila, así que no se importó.",
+      "specialtyImportedVerifiedOne": "Certificación de especialidad importada como verificada desde tus registros. Una inmersión que la exija espera a que alguien del equipo confirme haberla visto.",
+      "specialtyImportedVerifiedOther": "{count} certificaciones de especialidad importadas como verificadas desde tus registros. Una inmersión que las exija espera a que alguien del equipo confirme haberlas visto.",
+      "specialtyImportedPendingOne": "Certificación de especialidad importada para revisión del personal.",
+      "specialtyImportedPendingOther": "{count} certificaciones de especialidad importadas para revisión del personal.",
       "agencyUnrecognized": "Agencia de certificación no reconocida, así que se importó como “otra”.",
-      "levelNamesSpecialty": "La certificación “{level}” nombra una especialidad, no un nivel, y se usó la columna de especialidad de esta fila en su lugar, así que no se importó ninguna certificación de nivel. Añade ese registro de certificación en DiveDay si es independiente.",
-      "levelIsTechnical": "La titulación “{level}” es técnica o de entornos con techo, no un peldaño recreativo: no se importa ni se interpreta como un nivel cercano. Regístrala a mano si tu centro la exige.",
+      "levelNamesSpecialty": "La certificación “{level}” nombra una especialidad, no un nivel, así que se usó la columna de especialidad y no se importó ningún nivel. Añade ese registro de certificación en DiveDay si es independiente.",
+      "levelIsTechnical": "La titulación “{level}” es técnica o de entornos con techo, no un peldaño recreativo, así que no se importó. Regístrala a mano si tu centro la exige.",
       "levelNotGated": "La certificación “{level}” no es un nivel que controlemos, así que la certificación no se importó. Añade el registro en DiveDay si tu centro necesita conservarlo.",
-      "levelNoCardNumber": "El nivel de certificación “{level}” no tiene un número de certificación utilizable, así que la certificación no se importó. Una evidencia sin número no se puede verificar.",
-      "certImportedVerified": "Certificación importada como verificada desde tus registros y marcada como importada, con una confirmación de un toque para el personal.",
-      "certImportedPending": "Certificación importada para revisión del personal. Ver la nota anterior.",
-      "nitroxImportedVerified": "Certificación de nitrox importada como verificada desde tus registros y marcada como importada. Los rellenos dan aire normal hasta que el personal confirme.",
-      "nitroxImportedPending": "Certificación de nitrox importada para revisión del personal. Ver la nota anterior. Una salida que exige nitrox retiene a este buceador hasta que se confirme.",
+      "levelNoCardNumber": "El nivel de certificación “{level}” no tiene un número de certificación utilizable, así que la certificación no se importó.",
+      "certImportedVerified": "Certificación importada como verificada desde tus registros.",
+      "certImportedPending": "Certificación importada para revisión del personal.",
+      "nitroxImportedVerified": "Certificación de nitrox importada como verificada desde tus registros. Los rellenos dan aire normal hasta que el personal confirme.",
+      "nitroxImportedPending": "Certificación de nitrox importada para revisión del personal. Una salida que exige nitrox retiene a este buceador hasta que se confirme.",
       "nitroxNoCardNumber": "Nitrox marcado en el origen sin número de certificación. Añade y verifica la certificación de nitrox en DiveDay.",
       "waiverDateInvalid": "La fecha de aceptación de la exención “{value}” no es una fecha de calendario real (se espera AAAA-MM-DD), así que se importó fechada hoy en su lugar.",
       "waiverImported": "Exención importada como aceptada: se acepta la del centro anterior, incluida la aptitud médica, y se marca como “importada”.",
