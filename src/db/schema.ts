@@ -5018,6 +5018,42 @@ export const waiverRecords = pgTable(
      * better version of the same assurance.
      */
     medicalClearancePhysicianName: text("medical_clearance_physician_name"),
+    /**
+     * **The physician answered, and the answer was no** (issue #1283).
+     *
+     * The RSTC Physician's Evaluation Form has two outcomes and DiveDay only
+     * modelled one. A diver who came back disapproved left the record parked in
+     * `medical_review` — safe, and correctly fail-closed, but indistinguishable
+     * from *we are still waiting*. So the shop kept chasing a diver whose answer
+     * had already arrived, Today kept surfacing the row as outstanding work, and
+     * the crew never learned that the answer was no.
+     *
+     * **Deliberately not `medical_cleared_at` carrying a second meaning.** That
+     * column is the pivot every constraint and every consumer keys off:
+     * `isCleanCompletion` reads it as a signed release, `isCompletedWaiverCurrent`
+     * shortens the currency window on it, and readiness lifts the hold on it.
+     * Recording a refusal there would read as *cleared* to all three — the exact
+     * inversion of the safety property — so a refusal gets its own column and the
+     * two are mutually exclusive by check constraint.
+     *
+     * **The block stands.** This is not a second kind of clearance; it is the
+     * absence of one, recorded. `isUnresolvedMedicalHold` still holds the diver
+     * off the boat, and the only thing that changes is that the surfaces can stop
+     * saying "waiting" and the shop can stop chasing.
+     *
+     * **Final for this record.** A refusal is never overwritten by a later
+     * clearance: a physician who re-evaluates a diver is answering a fresh
+     * disclosure, which signs a new record and parks a new hold. Letting a
+     * clearance land on top of a refusal would make a recorded "no" erasable by
+     * whoever is at the desk next.
+     */
+    medicalClearanceDeclinedAt: timestamp("medical_clearance_declined_at", {
+      withTimezone: true,
+    }),
+    /** The staff member who recorded the refusal — `medical_cleared_by_person_id`'s twin, and accountable the same way. */
+    medicalClearanceDeclinedByPersonId: uuid("medical_clearance_declined_by_person_id").references(
+      () => people.id,
+    ),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     /** HMAC over the immutable signed metadata; null means legacy/unverified. */
     integrityHash: text("integrity_hash"),
@@ -5053,12 +5089,19 @@ export const waiverRecords = pgTable(
     index("waiver_records_shop_status_idx").on(table.shopId, table.status),
     // The per-person carry-forward lookup: a diver's completed releases at a shop.
     index("waiver_records_shop_person_status_idx").on(table.shopId, table.personId, table.status),
-    // A clearance without an accountable staff member is not a record of
-    // anything, and a document with no clearance is a file nobody claimed.
+    // A physician's answer without an accountable staff member is not a record
+    // of anything, and a document with no answer beside it is a file nobody
+    // claimed. Both outcomes carry the same obligation, and a record can hold
+    // only one of them: a clearance and a refusal on the same row would leave
+    // every reader to guess which one the shop meant (issue #1283).
     check(
       "waiver_records_medical_clearance_attributed",
       sql`(${table.medicalClearedAt} is null) = (${table.medicalClearedByPersonId} is null)
-        and (${table.medicalClearanceDocumentUrl} is null or ${table.medicalClearedAt} is not null)`,
+        and (${table.medicalClearanceDeclinedAt} is null) = (${table.medicalClearanceDeclinedByPersonId} is null)
+        and (${table.medicalClearedAt} is null or ${table.medicalClearanceDeclinedAt} is null)
+        and (${table.medicalClearanceDocumentUrl} is null
+          or ${table.medicalClearedAt} is not null
+          or ${table.medicalClearanceDeclinedAt} is not null)`,
     ),
     // Nothing to clear unless the questionnaire referred this diver. Written
     // against `medical_review_required` rather than `status`, because that
@@ -5066,11 +5109,14 @@ export const waiverRecords = pgTable(
     // lifecycle does.
     check(
       "waiver_records_medical_clearance_needs_referral",
-      sql`${table.medicalClearedAt} is null or ${table.medicalReviewRequired}`,
+      sql`(${table.medicalClearedAt} is null and ${table.medicalClearanceDeclinedAt} is null)
+        or ${table.medicalReviewRequired}`,
     ),
-    // A clearance says when the physician evaluated the diver, and points at
-    // either their evaluation or their name. Neither is optional, because
-    // without them the row records only that a staff member pressed a button.
+    // An answer — cleared or not cleared — says when the physician evaluated
+    // the diver, and points at either their evaluation or their name. Neither
+    // is optional, because without them the row records only that a staff
+    // member pressed a button. A refusal earns the requirement more than a
+    // clearance does: it is the one that keeps a paying diver off the boat.
     //
     // **Except after an erasure**, which destroys both: `anonymizeDiver` nulls
     // the document URL, and a clearance evidenced only by a document would then
@@ -5081,7 +5127,8 @@ export const waiverRecords = pgTable(
     // erasure in production.
     check(
       "waiver_records_medical_clearance_evidenced",
-      sql`${table.medicalClearedAt} is null or ${table.anonymizedAt} is not null or (
+      sql`(${table.medicalClearedAt} is null and ${table.medicalClearanceDeclinedAt} is null)
+        or ${table.anonymizedAt} is not null or (
         ${table.medicalClearanceEvaluatedOn} is not null
         and (${table.medicalClearanceDocumentUrl} is not null
           or ${table.medicalClearancePhysicianName} is not null))`,

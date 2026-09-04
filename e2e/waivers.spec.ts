@@ -975,9 +975,13 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
   await diver.getByRole("link", { name: "Record physician clearance" }).click();
   await expect(page.getByRole("heading", { name: "Morgan Vale", level: 1 })).toBeVisible();
 
-  await page.getByRole("button", { name: "Record physician clearance" }).click();
-  const confirm = page.getByRole("button", { name: "A physician cleared this diver to dive" });
+  await page.getByRole("button", { name: "Record the physician\u2019s answer" }).click();
+  const confirm = page.getByRole("button", { name: "Record the answer" });
   await expect(confirm).toBeVisible();
+  // The outcome has no default (issue #1283), so every submit below has to say
+  // which answer it is recording — including the ones that get refused.
+  const cleared = page.getByRole("radio", { name: "Cleared to dive" });
+  await expect(cleared).not.toBeChecked();
 
   // **The shop's own today, not the wall clock's.** The date box carries
   // `max={today}` and the fleet's clock is frozen at Tue 21 July 2026, so a
@@ -987,19 +991,22 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
 
   // Neither the physician's name nor their evaluation: the record would say
   // only that a staff member pressed a button, and the domain refuses it.
+  await cleared.check();
   await page.getByLabel("Date of the physician's evaluation").fill(EVALUATED_ON);
   await confirm.click();
   await expect(page.getByText("Name the physician, or attach their evaluation.")).toBeVisible();
 
   // A letter written before the answers it would clear cannot stand for them.
+  await page.getByRole("radio", { name: "Cleared to dive" }).check();
   await page.getByLabel("Date of the physician's evaluation").fill("2020-01-01");
   await page.getByLabel("Physician", { exact: true }).fill("Dr. Imani Reyes");
-  await page.getByRole("button", { name: "A physician cleared this diver to dive" }).click();
+  await page.getByRole("button", { name: "Record the answer" }).click();
   await expect(page.getByText("That evaluation predates the answers it would clear")).toBeVisible();
 
+  await page.getByRole("radio", { name: "Cleared to dive" }).check();
   await page.getByLabel("Date of the physician's evaluation").fill(EVALUATED_ON);
   await page.getByLabel("Physician", { exact: true }).fill("Dr. Imani Reyes");
-  await page.getByRole("button", { name: "A physician cleared this diver to dive" }).click();
+  await page.getByRole("button", { name: "Record the answer" }).click();
   // The clearance was the last thing waiting on this diver, so the record's own
   // masthead moment fires rather than the waiver group's notice (`successUrl`
   // routes a now-clear record to `diver-clear`). Either way the fact to assert
@@ -1018,4 +1025,64 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
     .filter({ has: page.getByText("Morgan Vale", { exact: true }) })
     .filter({ visible: true });
   await expect(cleared.getByText("Medical review", { exact: true })).toHaveCount(0);
+});
+
+/**
+ * **The answer that was no** (issue #1283).
+ *
+ * The RSTC form has two outcomes and DiveDay modelled one, so a diver whose
+ * physician refused to clear them sat in `medical_review` reading exactly like
+ * one nobody had heard from: the shop kept chasing, Today kept the row as
+ * outstanding work, and the crew never learned the answer had arrived. This
+ * walks the whole of the other half — the outcome having no default, the
+ * refusal recording, the block explicitly *not* lifting, and the record
+ * refusing a later clearance on top of it.
+ */
+test("a refused physician evaluation stops the chase without lifting the hold", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/divers?q=Morgan");
+  await page.getByRole("link", { name: "Morgan Vale" }).click();
+  await expect(page.getByRole("heading", { name: "Morgan Vale", level: 1 })).toBeVisible();
+
+  await page.getByRole("button", { name: "Record the physician\u2019s answer" }).click();
+  const confirm = page.getByRole("button", { name: "Record the answer" });
+  await expect(confirm).toBeVisible();
+
+  // A refusal is evidenced exactly as a clearance is — it is the record of why
+  // somebody stayed ashore, so it may not be the cheaper one to write.
+  await page.getByRole("radio", { name: "Not cleared" }).check();
+  await page.getByLabel("Date of the physician's evaluation").fill("2026-07-21");
+  await confirm.click();
+  await expect(page.getByText("Name the physician, or attach their evaluation.")).toBeVisible();
+
+  await page.getByRole("radio", { name: "Not cleared" }).check();
+  await page.getByLabel("Date of the physician's evaluation").fill("2026-07-21");
+  await page.getByLabel("Physician", { exact: true }).fill("Dr. Imani Reyes");
+  await confirm.click();
+  await expect(page.getByRole("status")).toContainText("The physician did not clear this diver");
+
+  // The standing changed and the block did not: the group says the answer
+  // arrived, and offers no second form to record another one.
+  const waiverGroup = page.getByRole("region", { name: "Waiver" });
+  await expect(waiverGroup.getByText("Not cleared", { exact: true }).first()).toBeVisible();
+  await expect(waiverGroup.getByText("Medical review", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Record the physician\u2019s answer" }),
+  ).toHaveCount(0);
+
+  // And at the rail, where it decides who gets in the water: still blocked,
+  // and now saying why rather than saying "waiting".
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
+  await openTripTab(page, "Trip");
+  const row = page
+    .locator("li")
+    .filter({ has: page.getByText("Morgan Vale", { exact: true }) })
+    .filter({ visible: true });
+  await expect(row.getByText("Not cleared", { exact: true }).first()).toBeVisible();
+  await expect(row.getByText("The hold stands. This diver does not board.")).toBeVisible();
+  // The one door that would be wrong to draw here: another link lets a refused
+  // diver answer the questionnaire again and board on a fresh clean signature.
+  await expect(row.getByRole("link", { name: "Record physician clearance" })).toHaveCount(0);
 });

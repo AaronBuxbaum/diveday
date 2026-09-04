@@ -122,7 +122,25 @@ export type IncidentWaiverStatus = {
    */
   medicalClearedAt: string | null;
   medicalClearedByName: string | null;
-  /** The day printed on the physician's evaluation, which is not the day it was recorded. */
+  /**
+   * **When a physician's evaluation came back negative, and who recorded that**
+   * (issue #1283).
+   *
+   * The mirror of the two fields above, and on a document handed to an insurer
+   * it is the one that matters most: a shop that recorded "not cleared" and
+   * kept the diver ashore has the strongest possible evidence it acted on the
+   * evaluation, and a shop where this is set on a diver who then boarded has a
+   * problem the packet must not hide. Only ever set with `medicalClearedAt`
+   * null — the two are mutually exclusive by check constraint.
+   */
+  medicalClearanceDeclinedAt: string | null;
+  medicalClearanceDeclinedByName: string | null;
+  /**
+   * The day printed on the physician's evaluation, which is not the day it was
+   * recorded. Carried for either answer: a refusal is evidenced exactly as a
+   * clearance is, and dating one and not the other would make the negative
+   * finding the weaker record of the two.
+   */
   medicalClearanceEvaluatedOn: string | null;
   medicalClearancePhysicianName: string | null;
   /** Whether the evaluation itself is stored, which a claims reader will ask. */
@@ -366,6 +384,8 @@ export type IncidentDiverEvidenceInput = {
   waiverRecordedByName?: string | null;
   /** The staff member who recorded a physician's clearance on the governing record, if any. */
   waiverMedicalClearedByName?: string | null;
+  /** The staff member who recorded a physician's refusal on it, if any (issue #1283). */
+  waiverMedicalClearanceDeclinedByName?: string | null;
 };
 
 export type IncidentExportInput = {
@@ -473,6 +493,7 @@ function waiverStatus(
   now: Date,
   recordedByName: string | null | undefined,
   medicalClearedByName: string | null | undefined,
+  medicalClearanceDeclinedByName: string | null | undefined,
 ): IncidentWaiverStatus {
   // The same fail-closed derivation readiness uses. A record parked in medical
   // review reads `medical_review` — a status, never the answers behind it.
@@ -493,6 +514,8 @@ function waiverStatus(
       recordedByName: null,
       medicalClearedAt: null,
       medicalClearedByName: null,
+      medicalClearanceDeclinedAt: null,
+      medicalClearanceDeclinedByName: null,
       medicalClearanceEvaluatedOn: null,
       medicalClearancePhysicianName: null,
       medicalClearanceDocumentOnFile: false,
@@ -508,16 +531,26 @@ function waiverStatus(
       record.signatureMethod === "in_person_attested" ? (recordedByName ?? null) : null,
     medicalClearedAt: iso(record.medicalClearedAt),
     medicalClearedByName: record.medicalClearedAt ? (medicalClearedByName ?? null) : null,
-    medicalClearanceEvaluatedOn: record.medicalClearedAt
+    medicalClearanceDeclinedAt: iso(record.medicalClearanceDeclinedAt),
+    medicalClearanceDeclinedByName: record.medicalClearanceDeclinedAt
+      ? (medicalClearanceDeclinedByName ?? null)
+      : null,
+    // Keyed off *either* answer, so a refusal prints its evidence. Narrowing
+    // these to `medicalClearedAt` would have left the packet stating "not
+    // cleared" with no date, no clinician and no document beside it.
+    medicalClearanceEvaluatedOn: answered(record)
       ? (record.medicalClearanceEvaluatedOn ?? null)
       : null,
-    medicalClearancePhysicianName: record.medicalClearedAt
+    medicalClearancePhysicianName: answered(record)
       ? (record.medicalClearancePhysicianName ?? null)
       : null,
-    medicalClearanceDocumentOnFile: Boolean(
-      record.medicalClearedAt && record.medicalClearanceDocumentUrl,
-    ),
+    medicalClearanceDocumentOnFile: Boolean(answered(record) && record.medicalClearanceDocumentUrl),
   };
+}
+
+/** A physician answered this record, either way. The evidence columns hang off this, not off the verdict. */
+function answered(record: WaiverRecord): boolean {
+  return Boolean(record.medicalClearedAt || record.medicalClearanceDeclinedAt);
 }
 
 /** One roll-call line per checkpoint — a checkpoint with no result states `awaiting`. */
@@ -614,6 +647,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
         input.generatedAt,
         evidence?.waiverRecordedByName,
         evidence?.waiverMedicalClearedByName,
+        evidence?.waiverMedicalClearanceDeclinedByName,
       ),
     };
   });

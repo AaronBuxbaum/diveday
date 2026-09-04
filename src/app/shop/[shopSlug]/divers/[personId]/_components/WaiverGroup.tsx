@@ -59,6 +59,12 @@ function waiverDetail(
   if (diver.waiver.state === "medical_review") {
     return t("divers.stats.waiverHeldSince", { date: date(diver.waiver.at) });
   }
+  // The date the answer arrived, not the date the hold started: the row above
+  // already says the diver is not cleared, and what a staffer reading this
+  // needs next is whether that is news (issue #1283).
+  if (diver.waiver.state === "medical_not_cleared") {
+    return t("divers.stats.waiverNotClearedOn", { date: date(diver.waiver.declinedAt) });
+  }
   if (diver.waiverRequest === "failed") return t("divers.stats.waiverFailed");
   if (diver.waiver.state === "expired") {
     return t("divers.stats.waiverLastSigned", { date: date(diver.waiver.signedAt) });
@@ -123,7 +129,14 @@ export function WaiverGroup({
   // 404s for a divemaster teaches them the record is broken rather than that
   // the document is not theirs.
   const clearance =
-    diver.waiver.state === "current" ? (diver.waiver.medical?.clearance ?? null) : null;
+    diver.waiver.state === "current"
+      ? (diver.waiver.medical?.clearance ?? null)
+      : // A refusal's own letter gets the same door as a clearance's. It is the
+        // one a claims adjuster asks for first, and the reader who may open one
+        // may open the other — the route gates both on the same live roles.
+        diver.waiver.state === "medical_not_cleared"
+        ? diver.waiver.evaluation
+        : null;
   const clearanceDocument = canOpenClearance && clearance?.documentOnFile ? clearance : null;
   return (
     <DiverFileGroupDisclosure

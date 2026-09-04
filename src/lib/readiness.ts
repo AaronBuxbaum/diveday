@@ -181,6 +181,7 @@ export type ReadinessBlockerCode =
   | "waiver_pending"
   | "waiver_expired"
   | "medical_review"
+  | "medical_not_cleared"
   | "certification_missing"
   | "certification_pending"
   | "certification_self_declared"
@@ -221,6 +222,10 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   waiver_pending: "waiver",
   waiver_expired: "waiver",
   medical_review: "waiver",
+  // The same family as the hold it settles: it is still the release that is not
+  // usable, and folding it in keeps a diver from appearing under two headings
+  // for one fact.
+  medical_not_cleared: "waiver",
   certification_missing: "certification",
   certification_pending: "certification",
   certification_self_declared: "certification",
@@ -289,6 +294,9 @@ export type AboardBlockerKind = "medical" | "unknown" | "certification" | "payme
 
 const ABOARD_KIND: Record<ReadinessBlockerCode, AboardBlockerKind> = {
   medical_review: "medical",
+  // `medical`, emphatically: at the rail a refused evaluation is the *most*
+  // conclusive version of the hold, and the one thing nobody aboard may waive.
+  medical_not_cleared: "medical",
 
   waiver_not_sent: "unknown",
   waiver_pending: "unknown",
@@ -710,6 +718,12 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     if (state === "expired") blockers.push({ code: "waiver_expired" });
     if (state === "medical_review") {
       blockers.push({ code: "medical_review" });
+    }
+    // The block is identical — a refused evaluation lifts nothing — and only
+    // the word changes, so the crew reads "the doctor said no" rather than
+    // "still waiting on the doctor" (issue #1283).
+    if (state === "medical_not_cleared") {
+      blockers.push({ code: "medical_not_cleared" });
     }
   }
 

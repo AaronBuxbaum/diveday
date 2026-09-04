@@ -166,6 +166,16 @@ const NOTICE_KEYS: Record<
     tone: "success",
     key: "divers.notices.medicalClearanceRecorded",
   },
+  // The other answer (issue #1283). Not a success tone: nothing good happened
+  // to this diver, and a green tick under "the doctor said no" would read as
+  // congratulation. Not danger either — the shop did the right thing by
+  // recording it, and the record is now honest. The block it leaves standing is
+  // stated by the row above the form, not by this line.
+  "medical-not-cleared-recorded": {
+    form: "waiver",
+    tone: "warning",
+    key: "divers.notices.medicalNotClearedRecorded",
+  },
   // Not a failure — the answer to the question the staffer asked. Nothing of
   // this diver's is parked in review here, so there is nothing to clear.
   "medical-clearance-no-hold": {
@@ -199,6 +209,22 @@ const NOTICE_KEYS: Record<
     form: "waiver",
     tone: "danger",
     key: "divers.notices.medicalClearanceEvidenceRequired",
+  },
+  // No outcome chosen. Reachable only with the radios stripped, since the form
+  // marks both `required` — but a write this final does not get a default, so
+  // the server refuses rather than picking one.
+  "medical-clearance-outcome-required": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.medicalClearanceOutcomeRequired",
+  },
+  // A physician's answer is already on this record and the two do not overwrite
+  // each other. Warning rather than danger: the record is correct, and the
+  // staffer is being told what it says.
+  "medical-clearance-answer-recorded": {
+    form: "waiver",
+    tone: "warning",
+    key: "divers.notices.medicalClearanceAnswerRecorded",
   },
 
   // Rental fit.

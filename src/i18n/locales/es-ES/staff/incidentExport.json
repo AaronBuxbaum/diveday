@@ -58,6 +58,8 @@
   "medicalClearanceOnFile": "La evaluación está archivada.",
   "medicalClearancePhysician": "Médico: {name}.",
   "medicalClearanceRecorded": "Autorización médica registrada el {date}; evaluación fechada el {evaluatedOn}.",
+  "medicalNotClearedRecordedBy": "Evaluación médica registrada el {date} por {name} como no autorizada; evaluación fechada el {evaluatedOn}. La retención médica sigue en pie.",
+  "medicalNotClearedRecorded": "Evaluación médica registrada el {date} como no autorizada; evaluación fechada el {evaluatedOn}. La retención médica sigue en pie.",
   "medicalClearanceRecordedBy": "Autorización médica registrada el {date} por {name}; evaluación fechada el {evaluatedOn}.",
   "noBuddyRecorded": "No se registró ningún equipo de buceo",
   "notOnFile": "No registrado",

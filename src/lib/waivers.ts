@@ -79,6 +79,13 @@ function signatureTime(record: WaiverRecord): number {
  * is every other case, including the overwhelmingly common one of a record that
  * never needed clearing. Fails closed by construction: only an explicit
  * clearance narrows this, never the lack of a field.
+ *
+ * **A recorded refusal is still a hold** (issue #1283), and deliberately reads
+ * as one here: `medicalClearanceDeclinedAt` is not consulted, so a diver whose
+ * physician said no stays exactly as blocked as one nobody has heard from. The
+ * refusal changes what the surfaces *say* — an answer arrived, stop chasing —
+ * and nothing about who boards. Anything that wants that distinction asks
+ * {@link waiverState}, which is presentation; this one is the gate.
  */
 export function isUnresolvedMedicalHold(record: WaiverRecord): boolean {
   return record.status === "medical_review" && !record.supersededAt && !record.medicalClearedAt;
@@ -216,7 +223,28 @@ export type ShopWaiverStatus =
    */
   | { state: "expired"; signedAt: Date }
   /** A health disclosure is waiting on a person, and fails closed until it is resolved. */
-  | { state: "medical_review"; at: Date };
+  | { state: "medical_review"; at: Date }
+  /**
+   * The physician answered and the answer was no (issue #1283). The block is
+   * the same block — this diver does not board — and the difference is that
+   * there is nothing left to wait for, so the shop can stop chasing and the
+   * crew can be told before the dock instead of at it. `at` is still the
+   * disclosure the refusal answers, so the row ages the way every other waiver
+   * row does; `declinedAt` is when the shop recorded the answer.
+   */
+  | {
+      state: "medical_not_cleared";
+      at: Date;
+      declinedAt: Date;
+      /**
+       * The refused evaluation itself, when the shop attached it — the same
+       * door a clearance gets (`MedicalWaiverMark.clearance`). A physician's
+       * letter saying *no* is the one a claims adjuster asks for first, and
+       * storing it with no way back to it is the shape issue #1283 exists to
+       * close.
+       */
+      evaluation: { recordId: string; documentOnFile: boolean };
+    };
 
 /**
  * The diver's standing with the shop, from their signed evidence here.
@@ -244,7 +272,20 @@ export function shopWaiverStatus(input: {
     .filter(isUnresolvedMedicalHold)
     .filter((record) => signatureTime(record) >= cleanTime)
     .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
-  if (hold) return { state: "medical_review", at: new Date(signatureTime(hold)) };
+  if (hold) {
+    const at = new Date(signatureTime(hold));
+    return hold.medicalClearanceDeclinedAt
+      ? {
+          state: "medical_not_cleared",
+          at,
+          declinedAt: hold.medicalClearanceDeclinedAt,
+          evaluation: {
+            recordId: hold.id,
+            documentOnFile: Boolean(hold.medicalClearanceDocumentUrl),
+          },
+        }
+      : { state: "medical_review", at };
+  }
 
   if (clean) {
     return {
@@ -270,7 +311,9 @@ export type WaiverState =
   | "awaiting_signature"
   | "expired"
   | "complete"
-  | "medical_review";
+  | "medical_review"
+  /** Referred, answered, and the answer was no (issue #1283). Blocked, and not waiting on anyone. */
+  | "medical_not_cleared";
 
 /** Presentational state stays derived so an expired pending record fails closed. */
 export function waiverState(record: WaiverRecord | null, now: Date = nowDate()): WaiverState {
@@ -280,7 +323,12 @@ export function waiverState(record: WaiverRecord | null, now: Date = nowDate()):
   // were reviewed by a physician, and a staff member recorded it. The record
   // keeps saying `medical_review` because that is what happened to it.
   if (record.status === "medical_review") {
-    return record.medicalClearedAt ? "complete" : "medical_review";
+    if (record.medicalClearedAt) return "complete";
+    // A refusal is not a third kind of pending. It blocks exactly as the hold
+    // above it does — `isUnresolvedMedicalHold` does not read this column —
+    // and says so in its own words so nobody reads "waiting" and goes chasing
+    // an answer that has already arrived (issue #1283).
+    return record.medicalClearanceDeclinedAt ? "medical_not_cleared" : "medical_review";
   }
   return record.expiresAt <= now ? "expired" : "awaiting_signature";
 }

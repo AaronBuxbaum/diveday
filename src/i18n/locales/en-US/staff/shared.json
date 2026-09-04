@@ -19,14 +19,17 @@
     "recordPaperSignature": "Record paper signature"
   },
   "medicalClearance": {
-    "recordClearance": "Record physician clearance",
+    "recordClearance": "Record the physician's answer",
+    "outcomeLegend": "What did the physician say?",
+    "outcomeCleared": "Cleared to dive",
+    "outcomeNotCleared": "Not cleared",
     "evaluatedOnLabel": "Date of the physician's evaluation",
     "physicianNameLabel": "Physician",
     "evidenceHint": "Their name, or attach the evaluation below. One or the other.",
     "documentLabel": "Physician's evaluation form",
     "documentHint": "An image or PDF of the signed form.",
     "recording": "Recording…",
-    "confirm": "A physician cleared this diver to dive"
+    "confirm": "Record the answer"
   },
   "waiverSend": {
     "sending": "Sending…",
@@ -157,6 +160,7 @@
       "waiverPending": "Waiver is waiting for the diver’s signature.",
       "waiverExpired": "Waiver link expired; issue a fresh link.",
       "medicalReview": "A medical answer needs staff follow-up.",
+      "medicalNotCleared": "A physician did not clear this diver to dive.",
       "certificationMissing": "No certification is on file for this trip.",
       "certificationPending": "Certification is waiting for staff verification.",
       "certificationSelfDeclared": "The diver said their level themselves. No certification record has been verified. Ask for the details and verify them.",
@@ -282,6 +286,7 @@
       "rollCallDepartureOpen": "Dock count",
       "rollCallNotStarted": "No roll call",
       "medicalReview": "Medical",
+      "medicalNotCleared": "Not cleared",
       "readinessUnavailable": "Readiness",
       "identity": "Identity",
       "certification": "Certifications",
@@ -318,6 +323,7 @@
       "nudgeWaiver": "Nudge waiver",
       "reissueWaiver": "Reissue waiver",
       "reviewMedical": "Review medical",
+      "contactDiver": "Contact the diver",
       "addCard": "Add certification",
       "askForCard": "Ask for certification details",
       "verifyCard": "Verify certification",
@@ -339,6 +345,7 @@
       "nudgeWaivers": "Nudge waivers",
       "reissueWaivers": "Reissue waivers",
       "reviewMedicals": "Review medicals",
+      "contactDivers": "Contact the divers",
       "reviewCards": "Review certifications",
       "askForCards": "Ask for certifications",
       "verifyCards": "Verify certifications",
@@ -664,7 +671,8 @@
     "none": "Not signed",
     "current": "Signed",
     "expired": "Needs signing again",
-    "medicalReview": "Medical review"
+    "medicalReview": "Medical review",
+    "medicalNotCleared": "Not cleared"
   },
   "certificationSummary": {
     "selfDeclared": "{value} — unverified",

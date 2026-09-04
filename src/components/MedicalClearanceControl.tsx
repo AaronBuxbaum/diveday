@@ -8,13 +8,22 @@ import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { WaiverActionIcon } from "@/components/WaiverActionIcon";
 
 /**
- * **"A physician cleared this diver" — the one door out of a medical hold.**
+ * **"Here is what the physician said" — the one door out of a medical hold, and
+ * since issue #1283 the one door out of the waiting too.**
  *
  * The questionnaire refers a diver, the release parks in review, and readiness
  * refuses to board them. The diver then comes back with a signed physician
  * evaluation, and before this there was nowhere to put it: the only lift was
  * the paper-waiver attestation, whose checkbox says *no answer needs physician
  * sign-off* — the opposite of what the diver is holding (issue #1252).
+ *
+ * **Both answers, and neither is the default.** The RSTC form has two outcomes
+ * and the first cut of this control could only record one, so a diver who came
+ * back disapproved sat in "waiting" forever while the shop chased an answer
+ * that had already arrived. The outcome is a required radio pair with nothing
+ * pre-selected rather than two submit buttons: a refusal is final on the record
+ * it lands on, and a form where the wrong answer is one mis-tap away is the
+ * wrong shape for a write nobody can take back.
  *
  * So it is a separate control from `PaperWaiverControl`, and shaped the same
  * way for the same reasons: an explicit open/cancel pair rather than a
@@ -88,6 +97,24 @@ export function MedicalClearanceControl({
       className={`${className} w-full max-w-md rounded-xl border border-border bg-surface-sunken p-4`}
     >
       <FieldGrid columns={1}>
+        {/* A fieldset rather than a `Field`: the legend is the question and the
+            two inputs answer it together, which is the one control shape
+            `Field`'s single-`htmlFor` caption cannot describe. `required` on
+            both radios is what makes "no answer" unsubmittable — there is no
+            default here, on purpose. */}
+        <fieldset>
+          <legend className="text-sm font-medium">{copy.outcomeLegend}</legend>
+          <div className="mt-2 flex flex-wrap gap-3">
+            <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm hover:bg-surface">
+              <input type="radio" name="outcome" value="cleared" required />
+              {copy.outcomeCleared}
+            </label>
+            <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm hover:bg-surface">
+              <input type="radio" name="outcome" value="not_cleared" required />
+              {copy.outcomeNotCleared}
+            </label>
+          </div>
+        </fieldset>
         <Field label={copy.evaluatedOnLabel} htmlFor="evaluatedOn">
           <input
             id="evaluatedOn"

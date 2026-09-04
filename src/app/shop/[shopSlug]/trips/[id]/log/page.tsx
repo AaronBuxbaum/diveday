@@ -701,6 +701,45 @@ function WaiverLine({
   if (waiver.state === "medical_review") {
     return <>{t("incidentExport.waiverMedicalReview")}</>;
   }
+  {
+    /* The same act with the opposite answer, and stated the same careful way
+       (issue #1283): `{date}` is when a staff member recorded the outcome and
+       `{name}` is that staff member, never a sentence putting words in a
+       clinician's mouth. The physician's own evaluation date, their name and
+       whether the letter is on file follow, because a refusal earns that
+       evidence more than a clearance does — it is the record of why somebody
+       stayed ashore. */
+  }
+  if (waiver.state === "medical_not_cleared") {
+    return (
+      <>
+        {waiver.medicalClearanceDeclinedAt && waiver.medicalClearanceEvaluatedOn ? (
+          <>
+            {waiver.medicalClearanceDeclinedByName
+              ? t("incidentExport.medicalNotClearedRecordedBy", {
+                  date: dateTime(waiver.medicalClearanceDeclinedAt),
+                  name: waiver.medicalClearanceDeclinedByName,
+                  evaluatedOn: waiver.medicalClearanceEvaluatedOn,
+                })
+              : t("incidentExport.medicalNotClearedRecorded", {
+                  date: dateTime(waiver.medicalClearanceDeclinedAt),
+                  evaluatedOn: waiver.medicalClearanceEvaluatedOn,
+                })}
+            {waiver.medicalClearancePhysicianName
+              ? ` ${t("incidentExport.medicalClearancePhysician", {
+                  name: waiver.medicalClearancePhysicianName,
+                })}`
+              : ""}
+            {waiver.medicalClearanceDocumentOnFile
+              ? ` ${t("incidentExport.medicalClearanceOnFile")}`
+              : ""}
+          </>
+        ) : (
+          t("incidentExport.waiverMedicalReview")
+        )}
+      </>
+    );
+  }
   if (waiver.state === "awaiting_signature") {
     return <>{t("incidentExport.waiverPending")}</>;
   }

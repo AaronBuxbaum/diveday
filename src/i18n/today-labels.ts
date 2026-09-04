@@ -18,6 +18,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   roll_call_departure_open: "shared.today.actionKind.rollCallDepartureOpen",
   roll_call_not_started: "shared.today.actionKind.rollCallNotStarted",
   medical_review: "shared.today.actionKind.medicalReview",
+  medical_not_cleared: "shared.today.actionKind.medicalNotCleared",
   readiness_unavailable: "shared.today.actionKind.readinessUnavailable",
   identity: "shared.today.actionKind.identity",
   certification: "shared.today.actionKind.certification",
@@ -56,6 +57,10 @@ const BLOCKER_ACTION_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> =
   waiver_pending: "shared.today.blockerAction.nudgeWaiver",
   waiver_expired: "shared.today.blockerAction.reissueWaiver",
   medical_review: "shared.today.blockerAction.reviewMedical",
+  // Not "review": there is nothing left to review. What the refusal creates
+  // is a conversation about a seat this diver can no longer take, and the
+  // label stops there rather than choosing refund or rebook for the shop.
+  medical_not_cleared: "shared.today.blockerAction.contactDiver",
   certification_missing: "shared.today.blockerAction.addCard",
   certification_pending: "shared.today.blockerAction.verifyCard",
   // Never "Verify card": there is no number to look up with an agency, only a
@@ -82,6 +87,7 @@ const BLOCKER_GROUP_LABEL_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = 
   waiver_pending: "shared.today.blockerGroup.nudgeWaivers",
   waiver_expired: "shared.today.blockerGroup.reissueWaivers",
   medical_review: "shared.today.blockerGroup.reviewMedicals",
+  medical_not_cleared: "shared.today.blockerGroup.contactDivers",
   certification_missing: "shared.today.blockerGroup.reviewCards",
   certification_pending: "shared.today.blockerGroup.verifyCards",
   certification_self_declared: "shared.today.blockerGroup.askForCards",
