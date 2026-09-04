@@ -87,9 +87,12 @@ test("the public trip page names the crew who agreed, by first name only", async
   // **No surname, anywhere on the page.** It is not part of what anybody
   // consented to, and a "who you're diving with" line does not need one.
   await expect(page.getByText("Webb")).toHaveCount(0);
-  // And nobody who did not agree: Talia speaks two languages and has not
-  // switched this on, which is exactly the pairing the seed exists to prove —
-  // filling in languages is not what publishes a name.
+  // And nobody who did not agree. Talia is on this shop's team and has not
+  // switched it on, which is the pairing the seed exists to prove: being crew
+  // is not what publishes a name, agreeing is. (The roster-level form of the
+  // same assertion — everybody assigned to a departure who said yes is named,
+  // everybody assigned who did not is absent — is pinned as an equality in
+  // `src/db/crew-public-consent.test.ts`.)
   await expect(page.getByText("Talia")).toHaveCount(0);
 });
 

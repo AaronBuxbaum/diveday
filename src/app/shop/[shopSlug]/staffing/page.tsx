@@ -67,6 +67,7 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
   overlap: { tone: "danger", key: "staffing.notice.overlap" },
   "staff-not-found": { tone: "danger", key: "staffing.notice.staffNotFound" },
   "crew-consent-saved": { tone: "success", key: "staffing.notice.crewConsentSaved" },
+  "crew-consent-withdrawn": { tone: "success", key: "staffing.notice.crewConsentWithdrawn" },
   invalid: { tone: "danger", key: "staffing.notice.invalid" },
   "not-authorized": { tone: "danger", key: "staffing.notice.notAuthorized" },
   "credential-saved": { tone: "success", key: "staffing.notice.credentialSaved" },

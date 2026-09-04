@@ -38,12 +38,21 @@ export function TripCrewLine({
     <section className={`mt-6 ${className}`}>
       <h2 className="text-sm font-semibold">{t("trip.crewHeading")}</h2>
       <ul className="mt-2 flex flex-col gap-1 text-sm text-muted">
-        {crew.map((member) => {
+        {crew.map((member, index) => {
           const languages = member.languages
             .map((language) => languageNameIn(language, locale) ?? language)
             .filter(Boolean);
           return (
-            <li key={member.personId}>
+            // Keyed by position, not `member.personId`. React serializes an
+            // element as `["$", type, key, props]`, so a key reaches the flight
+            // payload embedded in the HTML even though this is a Server
+            // Component and the props never cross the boundary — which would
+            // put a staff member's internal uuid in view-source on a page
+            // anyone can read and Google indexes, as a stable cross-departure
+            // correlator for an individual. The list is server-ordered by name
+            // and nothing else here needs the id.
+            // biome-ignore lint/suspicious/noArrayIndexKey: see above
+            <li key={index}>
               <span className="font-medium text-foreground">{member.firstName}</span>
               {member.tripRole ? ` · ${t(`trip.crewRole.${member.tripRole}`)}` : ""}
               {/* The languages are the reason a diver reads this line at all,

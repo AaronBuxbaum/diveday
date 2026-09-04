@@ -78,7 +78,8 @@
     "shiftSaved": "Turno guardado.",
     "staffNotFound": "Esa persona ya no forma parte del equipo de este centro.",
     "tripNotFound": "Esa salida ya no está en el tablero.",
-    "crewConsentSaved": "Guardado. Los buceadores verán tu nombre en las salidas que tripules."
+    "crewConsentSaved": "Guardado. Los buceadores verán tu nombre en las salidas que tripules.",
+    "crewConsentWithdrawn": "Guardado. Tu nombre desaparece de las salidas que tripules."
   },
   "title": "Personal",
   "week": {
@@ -115,7 +116,7 @@
     "rosterEmptyAction": "Invitar a tu tripulación"
   },
   "crewConsent": {
-    "label": "Que los buceadores vean mi nombre y mis idiomas en la página de la salida.",
+    "label": "Que los buceadores vean mi nombre, mi función y mis idiomas en las páginas públicas del centro.",
     "save": "Guardar",
     "saving": "Guardando…"
   }

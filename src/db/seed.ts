@@ -414,10 +414,10 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
         email: canonicalStaffEmail(s.local),
         emergencyContactName: s.emergencyContact?.[0] ?? null,
         emergencyContactPhone: s.emergencyContact?.[1] ?? null,
-        spokenLanguages: [...(s.languages ?? [])] as SpokenLanguageTag[],
         // Their own answer about being named to divers (issue #1181, D21).
         // Two of the five, so the demo shows a shop where some people said yes
-        // and some did not.
+        // and some did not. Languages are deliberately not seeded beside it --
+        // see `staffDefs`.
         crewPublicConsentAt: s.namedToDivers ? nowDate() : null,
       })),
     )

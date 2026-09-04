@@ -560,6 +560,30 @@ describe("schema coverage", () => {
     // now forces a decision here too.
     expect(undecided).toEqual({});
   });
+
+  it("keeps every row exactly as wide as its own header", async () => {
+    const { db, shop } = await seededShopContext();
+    const input = await loadShopExportBundleInput(db, shop.id);
+    if (!input) throw new Error("seeded shop failed to load");
+
+    const ragged = input.tables
+      .map((table) => {
+        const widths = [...new Set(table.rows.map((row) => row.length))].filter(
+          (width) => width !== table.header.length,
+        );
+        return widths.length > 0 ? { file: table.file, header: table.header.length, widths } : null;
+      })
+      .filter((entry) => entry !== null);
+    // A header and its projection are two hand-maintained lists that must stay
+    // in step, and nothing above notices when they don't: the column test reads
+    // only `header`, so adding a name there without its value passes both
+    // assertions while shifting every later cell one column left. That is not a
+    // hypothetical — `crew_public_consent_at` did exactly this (issue #1181),
+    // and the only thing that caught it was two unrelated tests that happened
+    // to read `people.csv` by header index. A shop's CSV would have carried
+    // every date one column off, silently, into whatever it was imported to.
+    expect(ragged).toEqual([]);
+  });
 });
 
 describe("full-shop export dataset", () => {

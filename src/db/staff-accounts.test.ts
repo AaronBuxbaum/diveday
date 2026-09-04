@@ -12,6 +12,7 @@ import {
   listShopSpokenLanguages,
   listShopStaff,
   removeStaffMember,
+  setCrewPublicConsent,
   setStaffAccountStatus,
   setStaffEmergencyContact,
   setStaffLanguages,
@@ -352,6 +353,58 @@ describe("removeStaffMember", () => {
         .from(pushSubscriptions)
         .where(eq(pushSubscriptions.personId, staff.personId)),
     ).toHaveLength(0);
+  });
+
+  it("withdraws the leaver's agreement to be named to divers", async () => {
+    // A removed person has no login, so there is no path left by which *they*
+    // can withdraw it. Left standing, the stamp makes republishing their name
+    // on a public trip page a one-tap owner decision — the Undo banner, a plain
+    // re-enable, or a re-invite at the same email months later — without them
+    // ever being asked again (issue #1181, security review).
+    const { db, shop } = await seededShopContext();
+    const staff = await makeStaff(db, shop.id, ["crew"]);
+    expect(
+      await setCrewPublicConsent(db, {
+        shopId: shop.id,
+        personId: staff.personId,
+        consented: true,
+      }),
+    ).toBe(true);
+
+    await removeStaffMember(db, {
+      shopId: shop.id,
+      personId: staff.personId,
+      userAccountId: staff.userAccountId,
+    });
+
+    const [row] = await db
+      .select({ consentAt: people.crewPublicConsentAt })
+      .from(people)
+      .where(eq(people.id, staff.personId));
+    expect(row?.consentAt).toBeNull();
+  });
+
+  it("keeps a standing consent through a temporary disable", async () => {
+    // The other half of the rule above, and the reason it lives in
+    // `removeStaffMember` rather than in the status write: somebody suspended
+    // for a fortnight is still here to change their own mind, so destroying
+    // their answer would make them re-give it for no reason.
+    const { db, shop } = await seededShopContext();
+    const staff = await makeStaff(db, shop.id, ["crew"]);
+    await setCrewPublicConsent(db, { shopId: shop.id, personId: staff.personId, consented: true });
+
+    await setStaffAccountStatus(db, {
+      shopId: shop.id,
+      personId: staff.personId,
+      userAccountId: staff.userAccountId,
+      status: "disabled",
+    });
+
+    const [row] = await db
+      .select({ consentAt: people.crewPublicConsentAt })
+      .from(people)
+      .where(eq(people.id, staff.personId));
+    expect(row?.consentAt).toBeInstanceOf(Date);
   });
 
   it("strips staff roles and disables the account, leaving a diver role in place", async () => {

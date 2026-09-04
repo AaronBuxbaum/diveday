@@ -78,7 +78,8 @@
     "shiftSaved": "Shift saved.",
     "staffNotFound": "That staff member is no longer on this shop's team.",
     "tripNotFound": "That departure is no longer on the board.",
-    "crewConsentSaved": "Saved. Divers will see your first name on the departures you crew."
+    "crewConsentSaved": "Saved. Divers will see your first name on the departures you crew.",
+    "crewConsentWithdrawn": "Saved. Your name comes off the departures you crew."
   },
   "title": "Staffing",
   "week": {
@@ -115,7 +116,7 @@
     "rosterEmptyAction": "Invite your crew"
   },
   "crewConsent": {
-    "label": "Let divers see my first name and languages on the trip page.",
+    "label": "Let divers see my first name, role and languages on this shop's public pages.",
     "save": "Save",
     "saving": "Saving…"
   }

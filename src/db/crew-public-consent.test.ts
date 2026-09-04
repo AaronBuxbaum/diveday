@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import { STAFF_ROLES } from "@/lib/authz";
 import { seededShopContext } from "@/test/db";
-import { people, personRoles, shops } from "./schema";
-import { setCrewPublicConsent } from "./staff-accounts";
+import { people, personRoles, shops, tripAssignments } from "./schema";
+import { setCrewPublicConsent, setStaffLanguages } from "./staff-accounts";
 import {
   listStaff,
   tripCrewSpokenLanguages,
@@ -32,13 +32,30 @@ async function aCrewedDeparture() {
 
 describe("tripPublicCrew", () => {
   it("names only the crew who said yes, and never their surname", async () => {
-    const { crew } = await aCrewedDeparture();
+    const { db, tripId, crew } = await aCrewedDeparture();
     expect(crew.length).toBeGreaterThan(0);
     for (const member of crew) {
       // First names only: the surname is not part of what anybody consented to,
       // and a "who you're diving with" line does not need one.
       expect(member.firstName).not.toContain(" ");
     }
+
+    // The assertions above pass unchanged with the consent filter deleted — a
+    // shop's whole assigned roster is also non-empty and also has first names.
+    // So state the filter as an equality against the roster: everybody assigned
+    // to this departure who said yes is named, and everybody assigned who did
+    // not is absent. The seed deliberately leaves some of the cast silent
+    // (`staffDefs.namedToDivers`), so both halves have members.
+    const assigned = await db
+      .select({ personId: tripAssignments.personId, consentAt: people.crewPublicConsentAt })
+      .from(tripAssignments)
+      .innerJoin(people, eq(people.id, tripAssignments.personId))
+      .where(eq(tripAssignments.tripId, tripId));
+    const consented = assigned.filter((row) => row.consentAt !== null).map((row) => row.personId);
+    const silent = assigned.filter((row) => row.consentAt === null).map((row) => row.personId);
+    expect(consented.length).toBeGreaterThan(0);
+    expect(silent.length).toBeGreaterThan(0);
+    expect([...crew.map((member) => member.personId)].sort()).toEqual([...consented].sort());
   });
 
   it("stops naming somebody the moment they withdraw", async () => {
@@ -65,6 +82,17 @@ describe("tripPublicCrew", () => {
    */
   it("leaves the anonymous languages line alone when everybody withdraws", async () => {
     const { db, shop, tripId, crew } = await aCrewedDeparture();
+    // The seed deliberately records no staff languages — three
+    // `listShopSpokenLanguages` cases read the demo as a shop that has recorded
+    // none, and `crew-languages.spec.ts` records them through the UI as its own
+    // subject — so this test states its own.
+    for (const member of crew) {
+      await setStaffLanguages(db, {
+        shopId: shop.id,
+        personId: member.personId,
+        languages: ["en", "es"],
+      });
+    }
     const before = await tripCrewSpokenLanguages(db, shop.id, tripId);
     expect(before.length).toBeGreaterThan(0);
 

@@ -524,6 +524,19 @@ export async function removeStaffMember(
           eq(pushSubscriptions.personId, input.personId),
         ),
       );
+    // And withdraw their agreement to be named to divers (issue #1181), for the
+    // same reason and one step further: a removed person has no login, so there
+    // is no path left by which *they* can withdraw it. Leaving the stamp makes
+    // republishing their name a one-tap owner decision — the Undo banner, a
+    // plain re-enable, or a re-invite at the same email months later all put
+    // them back on public trip pages without them ever being asked again. Note
+    // this is deliberately not done by `setStaffAccountStatus("disabled")`: a
+    // temporary disable should not destroy a standing answer, because the
+    // person is still here to change it.
+    await tx
+      .update(people)
+      .set({ crewPublicConsentAt: null })
+      .where(and(eq(people.shopId, input.shopId), eq(people.id, input.personId)));
     return { ok: true };
   });
 }

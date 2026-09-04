@@ -20,7 +20,6 @@ export const staffDefs = [
     local: "dana",
     roles: ["owner", "manager"],
     emergencyContact: ["Marisol Reyes (wife)", "+1-305-555-0101"],
-    languages: undefined,
     namedToDivers: false,
   },
   {
@@ -28,8 +27,7 @@ export const staffDefs = [
     local: "marcus",
     roles: ["instructor"],
     emergencyContact: ["Yvonne Webb (mother)", "+1-305-555-0102"],
-    languages: ["en", "es"],
-    // **Two of four, on purpose** (issue #1181, D21). The public "who you're
+    // **Two of five, on purpose** (issue #1181, D21). The public "who you're
     // diving with" line renders only the crew who switched it on for
     // themselves, so a demo where everybody had would show a feature with no
     // shape: what a shop actually sees is some of its people named and some
@@ -42,7 +40,6 @@ export const staffDefs = [
     local: "keiko",
     roles: ["divemaster"],
     emergencyContact: ["Haru Tanaka (brother)", "+81-3-555-0103"],
-    languages: ["en", "ja"],
     namedToDivers: true,
   },
   // No contact on file: the crew-side twin of the divers' deliberate gaps
@@ -60,7 +57,6 @@ export const staffDefs = [
     emergencyContact: undefined,
     // Spelled out for the same `as const` reason the contact above is: an
     // omitted key leaves the union without it and every read stops compiling.
-    languages: undefined,
     namedToDivers: false,
   },
   /**
@@ -81,24 +77,25 @@ export const staffDefs = [
     local: "talia",
     roles: ["instructor"],
     emergencyContact: ["Chidi Okonkwo (husband)", "+234-1-555-0105"],
-    languages: ["en", "fr"],
-    // Speaks two languages and has *not* agreed to be named, which is the
-    // pairing worth seeding: it proves the two facts are independent, so a
-    // shop reading the demo cannot conclude that filling in languages is what
-    // publishes a name.
     namedToDivers: false,
   },
 ] as const satisfies ReadonlyArray<{
   fullName: string;
   local: string;
   roles: readonly string[];
-  /** BCP-47 primary tags, as `people.spoken_languages` holds them (issue #708). */
-  languages: readonly string[] | undefined;
   /**
    * Whether this person has agreed to be named to divers on the departures
    * they crew (issue #1181, D21) — their own switch, on the staffing page.
    * Seeded rather than left off for every member, because a feature no seed
    * exercises is a feature no e2e or capture can see.
+   *
+   * **Languages are deliberately *not* seeded beside it.** Three
+   * `listShopSpokenLanguages` cases read the demo as a shop that has recorded
+   * none, and `crew-languages.spec.ts` records them through the UI as its own
+   * subject — seeding them would rewrite what those tests are about to make
+   * this one prettier. So the demo's crew line reads "Marcus · Instructor",
+   * which is the feature: D21 publishes role and first name always, and
+   * languages only where the person has them.
    */
   namedToDivers: boolean;
   /**

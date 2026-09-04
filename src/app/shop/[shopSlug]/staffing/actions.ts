@@ -230,15 +230,24 @@ export async function saveCrewPublicConsentAction(week: string, formData: FormDa
   // person exists.
   if (!personId || personId !== session.user.personId) redirect(noticeUrl(path, "invalid", at));
 
+  const consented = Boolean(formData.get("consented"));
   const saved = await setCrewPublicConsent(await getDb(), {
     shopId: session.user.shopId,
     personId,
-    consented: Boolean(formData.get("consented")),
+    consented,
   });
-  revalidateAndRedirect(
-    path,
-    noticeUrl(path, saved ? "crew-consent-saved" : "staff-not-found", at),
-  );
+  // Two codes rather than one, because the words are directional: a single
+  // "Divers will see your first name" told somebody who had just unticked the
+  // box the opposite of what had happened, in a success-toned banner. On any
+  // other form that is a copy nit; on the withdrawal of a consent it is the one
+  // sentence the person reads to decide whether they need to go and find their
+  // owner.
+  const code = saved
+    ? consented
+      ? "crew-consent-saved"
+      : "crew-consent-withdrawn"
+    : "staff-not-found";
+  revalidateAndRedirect(path, noticeUrl(path, code, at));
 }
 
 export async function saveAwayAction(week: string, formData: FormData) {
