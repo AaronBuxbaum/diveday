@@ -77,12 +77,45 @@ const nextConfig: NextConfig = {
   //
   // The store path and the hoisted symlink are both traced, so both shapes are
   // listed. `**` as the key is every route (picomatch, `contains: true`).
+  //
+  // PGlite's WASM payload is the same shape of waste, one layer in. `init()` in
+  // `src/db/client.ts` branches on `DATABASE_URL`: with one it builds a
+  // node-postgres `Pool`, and the embedded-database branch is never taken. The
+  // *module* still loads, because the import at the top of that file is static —
+  // but `new PGlite()` never runs, so the 17.40 MiB of `.wasm`, `.data` and
+  // extension tarballs beside it are never opened. Measured off the traces:
+  // present, byte-identical, in **126 of the 142** closures.
+  //
+  //     9.62 MiB  pglite.wasm
+  //     6.00 MiB  pglite.data
+  //     1.10 MiB  pgcrypto.tar.gz
+  //     0.38 MiB  initdb.wasm
+  //     0.30 MiB  36 more extension tarballs
+  //
+  // Only the payload is excluded, deliberately: the JS stays traced, so the
+  // static import still resolves at cold start and no code moves. Excluding the
+  // whole package would buy 2.80 MiB more and require making five imports in
+  // `client.ts` dynamic — which is a real change with a real failure mode, for
+  // 14% more off a budget that has 71% headroom.
+  //
+  // What this does cost: a production deploy with `DATABASE_URL` *unset* would
+  // fail on a missing `.wasm` instead of quietly opening an ephemeral local
+  // database that vanishes with the instance. That is the better failure.
+  //
+  // Type declarations are the third: `.d.ts` files are compiler input and are
+  // never read by a running function.
   outputFileTracingExcludes: {
     "**": [
       "node_modules/.pnpm/@img+sharp-darwin-*/**",
       "node_modules/.pnpm/@img+sharp-libvips-darwin-*/**",
       "node_modules/@img/sharp-darwin-*/**",
       "node_modules/@img/sharp-libvips-darwin-*/**",
+      "node_modules/.pnpm/@electric-sql+pglite@*/node_modules/@electric-sql/pglite/dist/*.wasm",
+      "node_modules/.pnpm/@electric-sql+pglite@*/node_modules/@electric-sql/pglite/dist/*.data",
+      "node_modules/.pnpm/@electric-sql+pglite@*/node_modules/@electric-sql/pglite/dist/*.tar.gz",
+      "node_modules/**/*.d.ts",
+      "node_modules/**/*.d.cts",
+      "node_modules/**/*.d.mts",
     ],
   },
   cacheComponents: true,
@@ -173,7 +206,11 @@ export default withSentryConfig(nextConfig, {
   // actually removes them once Sentry has them.
   sourcemaps: {
     disable: isE2EBuild,
-    filesToDeleteAfterUpload: [".next/**/*.js.map", ".next/**/*.mjs.map"],
+    // `.css.map` too: Sentry symbolicates JavaScript, never stylesheets, so the
+    // two that survived its own strip pass are 141,995 bytes of deployed static
+    // output that nothing will ever fetch — a browser requests a CSS map only
+    // with devtools open.
+    filesToDeleteAfterUpload: [".next/**/*.js.map", ".next/**/*.mjs.map", ".next/**/*.css.map"],
   },
 
   // Only print logs for uploading source maps in CI
