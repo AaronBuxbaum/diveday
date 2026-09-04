@@ -11,8 +11,8 @@ agents that encode how work gets done here.
 
 ## Quickstart
 
-Requires Node 24 and pnpm 11.24.0 (the repository pins both the runtime major and
-the package-manager version).
+Requires Node 24 and pnpm 11.25.0 — the repository pins both, in `.nvmrc` and `packageManager`,
+and `pnpm check:node-version` keeps every other place that names a version agreeing with them.
 
 ```bash
 pnpm install

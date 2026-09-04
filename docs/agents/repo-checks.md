@@ -1,12 +1,12 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 42 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 43 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
 shape being refused.
 
-Only the 21 guards whose reasoning is not obvious from their own failure message are
+Only the 22 guards whose reasoning is not obvious from their own failure message are
 written up here. The rest say everything they need to say when they go red.
 
 This is the long-form half of one row in [AGENTS.md](../../AGENTS.md)'s command table, and it lives
@@ -16,9 +16,13 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, voice, logical-property, clock, transaction-concurrency, timezone, Intl-cache, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, destructive-migration, migration-graph, e2e-hygiene, follow-ups, agent-layer (skills/index/task-context), Open-Graph-site, infra-ASCII, stack-CI-skip and CI-change-detection safeguards.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, voice, logical-property, clock, transaction-concurrency, timezone, Intl-cache, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, destructive-migration, migration-graph, e2e-hygiene, follow-ups, agent-layer (skills/index/task-context), Open-Graph-site, infra-ASCII, stack-CI-skip, CI-change-detection and Node-version safeguards.
 
 ## The guards worth reading about
+
+### Node-version
+
+The Node-version one (`scripts/check-node-version.mjs`) holds the three numbers that say which Node this project runs on — `NODE_MAJOR`, `NODE_FLOOR`, `LAMBDA_NODE_MAJOR` — and refuses any of the ten declarations that drifts from them: `engines.node`, `.nvmrc`, the CI setup action's `node-version:` **and its own description prose**, the README's Quickstart line, the `@types/node` major, every `lambda.Runtime.NODEJS_*_X` in the stack, the esbuild bundling target beside them, the one test that asserts a synthesized runtime, and — the one rule here not about Node — the pnpm version, which the README also claims is pinned and which follows `packageManager` rather than a constant. Change the numbers here first; the guard then names every file still to follow. It exists because six declarations disagreed and only one was enforced (issue #1326, ADR 20260903-node-24-is-the-floor), and because the consequence of the drift was not cosmetic: `engines` is warn-only, pnpm writes that warning to **stdout** as the first line of `pnpm install` and every `pnpm <script>`, and that is how two MCP servers launched through `pnpm` had their JSON-RPC handshake corrupted and cost every session a 30-second connect timeout each (fixed in #1324; `check:agents`' check 8 keeps `.mcp.json` off package managers). Two details worth knowing before editing it. The floor is `24.15.0` rather than `24.0.0` because `jsdom@30` declares `^22.22.2 || ^24.15.0 || >=26.0.0`, so a `>=24.0.0` field admits versions the tree cannot install on — a floor rounded down to `.0` is the same false declaration one level down, and it is derived by a test from every installed manifest that declares an `engines.node`, rather than asserted here. And the Lambda major is a *separate* constant from the toolchain major, deliberately: AWS publishes and retires runtimes on its own schedule, so the two can legitimately diverge, and the guard's job is to make that a decision rather than an accident. A missing declaration file fails rather than passes — a guard that reads a deleted `.nvmrc` as "nothing to check" goes green exactly when the pin it protects is gone.
 
 ### CI-change-detection
 

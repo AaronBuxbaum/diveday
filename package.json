@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=24.0.0"
+    "node": "^24.15.0"
   },
   "packageManager": "pnpm@11.25.0",
   "scripts": {
@@ -63,6 +63,7 @@
     "check:migrations": "node scripts/check-migrations.mjs",
     "check:migration-graph": "node scripts/check-migration-graph.mjs",
     "check:open-graph": "node scripts/check-open-graph.mjs",
+    "check:node-version": "node scripts/check-node-version.mjs",
     "env:manual": "node scripts/env-manual.mjs",
     "check:env": "node scripts/check-env.mjs",
     "check:repo": "node scripts/check-repo.mjs",
