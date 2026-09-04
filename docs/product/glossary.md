@@ -569,14 +569,29 @@ new domain concept, define it here in the same PR.
   the water at all, which takes the slot as `uncrewed_course`** (issue #1338). One departure still
   never carries two rows for one underlying fact (issue #732); that rule is about the count, and the
   count has not moved. What moved is which row, because "Course needs instructor" beside an empty
-  boat reads as though a divemaster is already aboard, and "No crew" beside a course session sends a
+  boat reads as though a divemaster is already aboard, and an empty-water phrase beside a course session sends a
   manager to phone one — who cannot run a training dive or sign anybody off. A session with **nobody
-  booked**, or one the shop marked **self-guided**, keeps the instructor word: neither has anyone to
-  supervise, and not being able to enrol is still the actionable fact. Formerly "coverage gap", which
-  named a second vocabulary that no longer exists. **The five words a staffer reads** are "No crew",
-  "Under target", "Course needs instructor", "No instructor or crew" and "Over student ratio" — the
+  booked**, or one carrying the **self-guided** mark, keeps the instructor word: neither has anyone
+  to supervise, and not being able to enrol is still the actionable fact. That second case is now a
+  statement about the *detector* rather than something a shop can arrange — no trip-creation door
+  writes the mark onto a course session any more (issue #1342, see **Self-guided departure**) — and
+  it is kept because a row written out of band still has to resolve correctly. Formerly "coverage
+  gap", which named a second vocabulary that no longer exists. **The five words a staffer reads** are
+  "Nobody in the water", "Under target", "Course needs instructor", "No instructor or crew" and
+  "Over student ratio" — the
   last says *student* precisely because it is the agency cap and not the target two rows down, and
   they share the same 135px column of the staffing week (issues #1125, #1338).
+- **Self-guided departure** — `trips.self_guided`. A departure the shop has said runs without an
+  in-water guide: buddy pairs go in on their own. It silences the shop's own **Target
+  diver:divemaster ratio** for that one sailing and reaches nothing else — never an agency training
+  ratio, never readiness, trip admission, capacity, roll call or the manifest. It is a **statement,
+  not a permission**: nothing about it clears anybody to do anything. **Never true of a course
+  session** — no trip-creation door will write the two together (issue #1342), because a departure
+  running a course has an instructor of record whether or not they are in the water, so the shop's
+  own target is exactly the signal that should keep applying to it. The refusal only ever *adds* an
+  advisory row, never removes one. Offered at creation as well as on the departure's own form, since
+  the case it exists for is a standing unguided charter created once as a series template (ADR
+  20260827-self-guided-departures).
 - **Integrity-sealed waiver** — a signed waiver whose immutable metadata and template snapshot have
   a matching server-sealed HMAC. `unsealed` means legacy or imported evidence has no seal yet;
   `invalid` means staff must stop and investigate.

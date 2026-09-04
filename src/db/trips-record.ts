@@ -458,11 +458,17 @@ export async function updateTrip(
         ...(patch.boatId === undefined ? {} : { boatId: patch.boatId }),
         ...(patch.isPrivate === undefined ? {} : { isPrivate: patch.isPrivate }),
         // **A course session is never self-guided** (issue #1342), the same
-        // rule `insertTripInstance` applies to every creation door. Refused
-        // against the row's own course rather than the patch's, because a
-        // trip's course is fixed at creation and this patch cannot carry one.
-        // The detector is deliberately untouched: a course session short of
-        // its instructor still raises the instructor gap (ADR
+        // rule `insertTripInstance` applies to every creation door and for the
+        // reason written out there: the mark silences only the shop's own
+        // advisory divemaster target, and a departure running a course has an
+        // instructor of record whether or not they are in the water. Coercing
+        // to false can only add an advisory, never suppress one.
+        //
+        // Refused against the row's own course rather than the patch's,
+        // because a trip's course is fixed at creation and `UpdateTripPatch`
+        // carries none — which makes this unbypassable rather than merely
+        // convenient. The detector is deliberately untouched: a course session
+        // short of its instructor still raises the instructor gap (ADR
         // 20260827-self-guided-departures).
         ...(patch.selfGuided === undefined
           ? {}

@@ -623,32 +623,6 @@ function AddPanel({
           </div>
         </label>
       </Field>
-      {/* Offered at creation, not only on the trip's own edit form. The shape
-          this exists for is a *standing* unguided charter — created once as a
-          series template and materialized weekly — so a mark you can only
-          apply after the fact is a mark the case it was built for never gets
-          in time (issue #973). */}
-      {/* **Absent once a course is picked** (issue #1342), not merely ignored:
-          self-guided means the divers go in unguided in buddy pairs, and a
-          certification dive requires the instructor supervising, so the two
-          cannot both be true of one departure. `insertTripInstance` refuses the
-          combination whatever this form posts; a control that has no effect is
-          worse than one that is not there. */}
-      <Field label={null} className={expanded && courseId === "" ? undefined : "hidden"}>
-        <label className="flex items-center gap-2 text-sm font-medium cursor-pointer py-2">
-          <input
-            type="checkbox"
-            name="selfGuided"
-            value="true"
-            disabled={!expanded || courseId !== ""}
-            className="size-4 rounded border-border"
-          />
-          <div className="flex flex-col">
-            <span>{copy.selfGuidedLabel}</span>
-            <span className="text-xs font-normal text-muted">{copy.selfGuidedHint}</span>
-          </div>
-        </label>
-      </Field>
       <FieldGrid columns={3} className="gap-y-4">
         <Field label={copy.date}>
           {/* Read here as well as submitted: the repeat fieldset below pre-checks
@@ -945,6 +919,41 @@ function AddPanel({
               ))
             )}
           </select>
+        </Field>
+        {/* Offered at creation, not only on the trip's own edit form. The shape
+            this exists for is a *standing* unguided charter — created once as a
+            series template and materialized weekly — so a mark you can only
+            apply after the fact is a mark the case it was built for never gets
+            in time (issue #973). */}
+        {/* **Absent once a course is picked** (issue #1342), not merely
+            ignored: the mark silences the shop's own divemaster target, and a
+            departure running a course has an instructor of record, so that
+            target is exactly the signal that should keep applying to it.
+            `insertTripInstance` refuses the combination whatever this form
+            posts, and a control that has no effect is worse than one that is
+            not there.
+
+            **Below the course select, deliberately**, though it reads as an
+            odd place for it. Above, a staffer could tick this, scroll down,
+            pick a course, and never see the box disappear — on a phone at the
+            desk it goes off the top of the fold and they leave believing
+            something about the day that is not true. The control that governs
+            it is now read first. The input stays uncontrolled, so switching
+            back to an ordinary trip restores whatever they had ticked. */}
+        <Field label={null} className={expanded && courseId === "" ? undefined : "hidden"}>
+          <label className="flex items-center gap-2 text-sm font-medium cursor-pointer py-2">
+            <input
+              type="checkbox"
+              name="selfGuided"
+              value="true"
+              disabled={!expanded || courseId !== ""}
+              className="size-4 rounded border-border"
+            />
+            <div className="flex flex-col">
+              <span>{copy.selfGuidedLabel}</span>
+              <span className="text-xs font-normal text-muted">{copy.selfGuidedHint}</span>
+            </div>
+          </label>
         </Field>
         {/* One site for the day, or — expanded — `dive-N-siteId` per dive.
             Never both: dive one's select is seeded from this one on the first
