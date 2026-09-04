@@ -51,7 +51,7 @@ const GAP_WORDS: GapWords = {
   no_instructor: "This course session has no instructor yet",
   over_ratio: "More divers booked than the crew can supervise",
   uncrewed_course: "No instructor or crew",
-  uncrewed_departure: "No crew",
+  uncrewed_departure: "Nobody in the water",
   crew_below_target: "Under target",
 };
 
@@ -141,7 +141,7 @@ describe("StaffingWeek", () => {
     renderWeek({ gaps: [GAP] });
 
     // The word, not the hue: every colour-carried state also carries one.
-    expect(screen.getAllByText("No crew").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Nobody in the water").length).toBeGreaterThan(0);
     // And the act, named for the departure it belongs to, pointing at that
     // trip's crew section rather than at a nav tab.
     for (const link of screen.getAllByRole("link", { name: "Assign crew to Spiegel Grove" })) {
