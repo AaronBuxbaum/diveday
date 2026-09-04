@@ -28,6 +28,17 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./setting
  * Adding a namespace here is deliberate and costs a diver at the rail its
  * download. The set is pinned in `offline-manifest-messages.test.ts` against
  * the keys the view and its helpers actually reach.
+ *
+ * **Both locales stay statically imported, and that is not an oversight.**
+ * Splitting them behind a dynamic import would halve this again, and it is the
+ * wrong trade on this exact surface: the service worker discovers assets by
+ * regexing the shell HTML plus one level of lazy chunks
+ * (`lazyChunkEntries`, explicitly best-effort over minified JavaScript), and
+ * `cacheOfflineShell` is all-or-nothing. A locale chunk it failed to find means
+ * a Spanish divemaster reloading at the dock lands in the error boundary
+ * instead of the roll call. Fewer bytes is worth having here — 107 KB less is
+ * directly fewer failed saves on a marina connection — but not at the cost of
+ * the offline guarantee the page exists for.
  */
 const OFFLINE_MANIFEST_MESSAGES = {
   "en-US": { manifest: enManifest, shared: enShared, trips: enTrips },
