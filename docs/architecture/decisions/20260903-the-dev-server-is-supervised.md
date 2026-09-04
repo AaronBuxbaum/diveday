@@ -42,6 +42,23 @@ pressure." Under a cgroup there is no pressure to notice: this container's limit
 kill. Setting it to `'full'` was measured over the same twenty routes and did not change the
 trajectory (5,266 MB against 5,339 MB), which is why this is a script and not a config line.
 
+**It converges, and "unbounded" was the wrong word for it.** Next's own memory guide, shipped with
+the installed 16.3.4 at `node_modules/next/dist/docs/01-app/02-guides/memory-usage.md:169`, says the
+server preloads each page's modules and "doesn't unload these JavaScript modules, meaning that even
+with this optimization disabled, the memory footprint of your Next.js server will eventually be the
+same if all pages are eventually requested." So the climb has a ceiling — the whole route graph —
+and the problem is that this checkout's ceiling is above the box, not that there is none. That layer
+is also not the one `turbopackMemoryEviction` governs, which is the other half of why `'full'` was a
+no-op: it evicts Turbopack's *persisted compiler cache*, and the page modules are the *Node server's*.
+Two retention layers, one knob, and the knob is on the other one.
+
+For scale, the only vendor figures for this version line: Vercel reports nextjs.org at 840 MB and the
+vercel.com dashboard at 2 GB after compiling **fifty** routes
+([next-16-3-turbopack](https://nextjs.org/blog/next-16-3-turbopack)). This checkout reaches 5,027 MB
+at twenty. That post never states whether its numbers are RSS, V8 heap or total allocation, and ours
+are RSS, so the ratio is suggestive rather than rigorous — but it is the only published comparison
+that exists, and the gap is wide enough to be worth writing down.
+
 Two other measurements ruled out the suspects worth ruling out. The database is not involved: a
 first request to `/terms`, which reads nothing, spikes the same ~3 GB, and PGlite's whole
 migrate-and-seed footprint is 658 MB standalone. And `experimental.cpus: 1` is not involved either —

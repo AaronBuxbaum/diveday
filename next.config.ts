@@ -1,4 +1,4 @@
-import { withSentryConfig } from "@sentry/nextjs";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 import { LEGACY_PUBLIC_SHOP_REDIRECTS } from "./src/lib/public-routes";
 import { securityHeaderRules } from "./src/lib/security-headers";
