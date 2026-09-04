@@ -63,6 +63,44 @@ Three things to know before you read a cancelled deployment as a problem:
   commit would have rebuilt. Vercel still counts a cancellation against the daily deployment quota
   and against concurrent build slots — it saves build minutes, not deployment count.
 
+### Previews happen when somebody asks for one
+
+`vercel.json`'s `git.deploymentEnabled` is `{"**": false, "*": false, "main": true}` — **no branch
+but `main` deploys on a push.** That is the largest reduction in build minutes available here: over
+the same 63 hours, 170 branch commits against 69 merges, so roughly three of every four builds were
+previews. Nothing in this repository consumed one. The e2e and visual suites run against
+locally-built servers inside CI (`e2e/servers.ts`), review screenshots come from
+`node scripts/screenshot.mjs` against a local `pnpm dev`, and no workflow reads a `*.vercel.app` URL.
+A preview is for a human looking at a branch, which is an event rather than a property of every push.
+
+Both `*` and `**` are listed because minimatch's `*` does not cross a `/`, and every agent branch in
+this repository is `claude/…`. `main` matches all three rules and Vercel's stated tie-break is that
+one `true` wins, so production is untouched.
+
+`.github/workflows/preview.yml` is the door back in. Three ways through it:
+
+| You do | You get |
+| --- | --- |
+| Add the `preview` label to a pull request | A preview now, and another on every push while the label is on |
+| Comment `/preview` on a pull request | One preview of the current head |
+| Push to a pull request already labelled `preview` | A preview |
+
+Remove the label to stop. The `/preview` comment path checks `author_association` before it acts —
+`issue_comment` fires for anyone who can comment on a public repository, and this one spends money;
+labelling and pushing already require write access, so those two need no such check.
+
+It deploys with `vercel deploy` (a remote build) rather than `vercel build && vercel deploy
+--prebuilt` (a build on the runner). The prebuilt path would save the last of the Vercel build
+minutes and costs pulling the project's Preview environment — `DATABASE_URL` and every sealed
+credential with it — down onto a GitHub runner. A handful of requested previews a week is not worth
+moving secrets for.
+
+The workflow needs `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` on a **`preview-deploy`**
+environment — not `infra-deploy`'s copies, whose required-reviewer approval is right for a production
+deploy and would make an on-demand preview absurd. Manual action `preview-deploy-token` in
+[manual-actions.md](manual-actions.md) is how they get there. Until they do, the workflow fails at
+its first step naming the empty one; nothing else changes, and production deploys never touch it.
+
 A docs-only commit therefore never reaches `pnpm db:migrate` either. That is safe by construction:
 `drizzle/` is code, so any commit carrying a migration is a commit that builds.
 

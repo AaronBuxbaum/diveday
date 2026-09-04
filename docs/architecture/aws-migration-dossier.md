@@ -209,7 +209,17 @@ question is narrower: *do we still need a clickable per-PR URL?*
 Options: Amplify (buys it back), a per-PR ECS service plus a Neon/Aurora branch (expensive and
 slow), or accept that CI's e2e and visual fleet is the evidence and previews go away.
 
-**Recommendation:** decide this *before* AWS-5, not after. It may be what selects Amplify.
+**2026-09-04: half of this is now answered, and it narrows the row rather than closing it.** Vercel
+no longer builds a preview on every push — `vercel.json`'s `git.deploymentEnabled` is `main` only,
+and a preview is requested per pull request with a `preview` label or a `/preview` comment
+(`.github/workflows/preview.yml`; see
+[deploy-and-migrations-runbook.md](../engineering/deploy-and-migrations-runbook.md)). That was a
+build-minutes decision, not a hosting one, but it settles the shape of the requirement: what is
+needed is *a preview on request*, not one per push. A per-PR ECS service priced for every open pull
+request was always the expensive reading of this row, and it is no longer the one being priced.
+
+**Recommendation:** decide this *before* AWS-5, not after. It may be what selects Amplify — though
+"on request" is a materially cheaper thing to reproduce than "always on".
 
 ### AWS-7 — Postgres: Neon → Aurora Serverless v2
 
@@ -366,7 +376,8 @@ happens.
 3. **May a production canary create real bookings?** If not, a synthetic canary-only shop has to be
    designed before AWS-1's browser canaries are written.
 4. **Is a clickable per-PR preview URL still required?** (AWS-6.) It may be the whole reason to
-   choose Amplify.
+   choose Amplify. Narrowed on 2026-09-04: previews are now opt-in per pull request rather than
+   automatic, so the question is whether a *requested* preview is required — not a per-push one.
 5. **What cutover downtime is acceptable?** DNS plus a database move is measured in minutes at best;
    a zero-downtime cutover roughly doubles AWS-5's cost.
 6. **What is the monthly ceiling for observability?** Canary frequency and the RUM sample rate are
