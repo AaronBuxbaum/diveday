@@ -2,7 +2,7 @@ import { and, asc, eq, gte, inArray, lt, ne } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
-import { bookings, rollCallCrewEvents, rollCallEvents, trips } from "@/db/schema";
+import { bookings, rollCallCrewEvents, rollCallEvents, tripAssignments, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { listStaff } from "@/db/trips";
 import { liveTrip } from "@/db/trips-live";
@@ -74,6 +74,16 @@ type LatestState = "boarded" | "not_boarded" | undefined;
  * nobody counted is a claim the shop's own records do not support. So the only
  * way to photograph that moment is to do the counting.
  *
+ * **This is a fixture, and the day it makes is not reachable through the
+ * product.** It inserts into `roll_call_events` directly, so it walks past the
+ * gate `recordRollCall` puts on a `boarded` at the dock — the shared readiness
+ * service has to prove the diver ready at the moment staff board them, and the
+ * seeded day deliberately contains divers who are not (an unconfirmed identity
+ * on the night charter, the blocked seats the *morning* reading exists to
+ * show). A shop could not close this day by tapping; the picture is of the
+ * state, not of a path to it. Said here because the alternative is a reader
+ * inferring that the gate is optional.
+ *
  * Safe to mutate freely because of the fleet's topology (`e2e/servers.ts`):
  * each Playwright worker has its own `next start` server on its own port
  * backed by its own in-memory PGlite database, and `e2e/fixtures.ts` resets
@@ -119,15 +129,21 @@ export async function POST(request: Request) {
   }
   moved.reverse();
 
-  const closed =
+  const close =
     new URL(request.url).searchParams.get("heads") === "closed"
       ? await closeHeadCounts(db, shop.id, moved)
       : null;
+  // A day that cannot be honestly closed is a refusal, not a partial success.
+  // The caller is a visual spec, and the alternative to a 409 naming the trip
+  // and the checkpoint is a picture that is quietly of the wrong state.
+  if (close && !close.ok) return NextResponse.json(close, { status: 409 });
 
   return NextResponse.json({
     ok: true,
     moved: moved.length,
-    closed,
+    // Events written, not counts closed — `null` when nobody asked for any,
+    // which is a different fact from having tried and written none.
+    eventsWritten: close ? close.eventsWritten : null,
     departures: moved.map((trip) => ({
       id: trip.id,
       startsAt: trip.startsAt.toISOString(),
@@ -135,52 +151,77 @@ export async function POST(request: Request) {
     })),
   });
 }
+/**
+ * What closing the day's counts did, or the reason the day cannot be closed.
+ *
+ * A refusal rather than a best effort: this route's whole job is to produce one
+ * exact state, and a caller that gets `ok: true` over a day still holding an
+ * open alarm would photograph the wrong picture and never know.
+ */
+type CloseOutcome =
+  | { ok: true; eventsWritten: number }
+  | { ok: false; reason: "alarm_standing"; tripId: string; checkpoint: string; subject: string };
 
 /**
  * Close every open head count on the departures just moved, the way a crew
- * does: by appending results to the trail, never by rewriting it.
+ * does: by appending results to the trail, never by contradicting it.
  *
- * ## What it will and will not record
+ * ## The one rule
  *
- * A **no-show** — the latest result at `departure` is `not_boarded` — is left
- * exactly as it stands. That is not an open count, it is a closed one whose
- * answer was "they never came"; `inAfterDivePopulation` (src/db/today.ts)
- * already leaves those bookings out of every after-dive scan, so nothing is
- * waiting on them. Writing a `boarded` over it would be inventing a diver onto
- * a boat, which is the one thing a seed route holding safety history must not
- * do.
+ * **Never write over a recorded answer.** Everything below is that rule met by
+ * a different shape of evidence, and it is worth stating as the rule because
+ * the route does happily invent a `boarded` for a booking nobody answered for
+ * — which on the demo shop is most of the roster.
  *
- * A **missing diver** — `not_boarded` at an after-dive checkpoint — is
- * resolved rather than skipped, with a later `boarded`. That is a real act and
- * a common one: the alarm says nobody could account for them at the time, and
- * the tap that follows says they turned up. It is also the only honest way to
- * reach the state this parameter names, since a standing alarm is precisely
- * what `all_home` refuses to be said over.
+ * A **no-show** — `not_boarded` at the dock with nothing after it — is a
+ * recorded answer, so it stands. It is not an open count: it is a closed one
+ * whose answer was "they never came", and `inAfterDivePopulation`
+ * (`src/db/today.ts`) leaves those bookings out of every after-dive scan, so
+ * nothing is waiting on them. A diver marked not-boarded at the dock who
+ * nevertheless carries a later result is a different person entirely — they
+ * joined at the second site — and they *are* in that population, so they are
+ * counted like anybody else. The predicate here is the same one, deliberately.
  *
- * **Crew are counted only where the shop already counts them.** The crew
- * roster for a head count is whoever has a crew result on the trip, so a shop
- * that has never tapped one has no crew subjects at all
- * (`listRollCallGaps`). Inserting crew events where there were none would
- * manufacture a population — and then a gap — rather than close one.
+ * A **missing diver or missing crew member** — a standing `not_boarded` at an
+ * after-dive checkpoint — makes this route **refuse**. That row is the loudest
+ * thing in the product: a human looked at the water and said a body did not
+ * come back. Resolving it in a loop is exactly the shape the real surface
+ * refuses to offer — asserting aboard over a stated "not back aboard" needs a
+ * confirming second tap naming the person, on a separate control, so that a
+ * wet thumb on a rolling boat cannot turn that row green by bouncing. A
+ * fixture whose job is a clean day says "this day is not clean" rather than
+ * cleaning it, and a test that fails with the trip and the checkpoint in the
+ * message is worth more than a picture that was quietly wrong.
  *
- * Returns the number of events written.
+ * ## Who gets counted
+ *
+ * Divers are every non-cancelled booking. **Crew are the trip's assigned
+ * crew** — `trip_assignments` — and not merely whoever already has a crew
+ * result on it. That distinction was the bug in the first version of this: no
+ * seed in the repository writes a `roll_call_crew_events` row, so "whoever has
+ * a result" was empty on every departure, no crew rows were written, and the
+ * day reached `allHome` on the shop home while every one of its manifests
+ * still read `crew_awaiting`. `rollCallCompleteness` (`src/lib/manifests.ts`)
+ * counts the *assigned* crew and says why: a checkpoint satisfied without them
+ * "hands back exactly the silent pass this whole check exists to remove". The
+ * people most reliably still in the water at the end of a day are the crew.
  */
 async function closeHeadCounts(
   db: Awaited<ReturnType<typeof getDb>>,
   shopId: string,
   departures: readonly MovedDeparture[],
-): Promise<number> {
-  if (departures.length === 0) return 0;
+): Promise<CloseOutcome> {
+  if (departures.length === 0) return { ok: true, eventsWritten: 0 };
   const tripIds = departures.map((trip) => trip.id);
 
   // Any of the shop's staff: this is a seeded record of who did the counting,
   // and `recorded_by_person_id` is a display field on the manifest rather than
   // anything a head count is derived from.
   const [staff] = await listStaff(db, shopId);
-  if (!staff) return 0;
+  if (!staff) return { ok: true, eventsWritten: 0 };
   const recordedByPersonId = staff.person.id;
 
-  const [roster, events, crewEvents] = await Promise.all([
+  const [roster, crewRoster, events, crewEvents] = await Promise.all([
     db
       .select({ tripId: bookings.tripId, bookingId: bookings.id })
       .from(bookings)
@@ -191,6 +232,13 @@ async function closeHeadCounts(
           ne(bookings.status, "cancelled"),
         ),
       ),
+    // Tenancy through `trips`: `trip_assignments` carries no `shop_id` of its
+    // own (CR-007), so the trip id alone must never reach a roster.
+    db
+      .select({ tripId: tripAssignments.tripId, personId: tripAssignments.personId })
+      .from(tripAssignments)
+      .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+      .where(and(liveTrip(), eq(trips.shopId, shopId), inArray(tripAssignments.tripId, tripIds))),
     db
       .select({
         bookingId: rollCallEvents.bookingId,
@@ -229,20 +277,21 @@ async function closeHeadCounts(
   const latestByBooking = new Map<string, (typeof events)[number]>();
   for (const event of events) latestByBooking.set(`${event.bookingId}\0${event.checkpoint}`, event);
   const latestByCrew = new Map<string, (typeof crewEvents)[number]>();
-  const crewByTrip = new Map<string, Set<string>>();
   for (const event of crewEvents) {
     latestByCrew.set(`${event.tripId}\0${event.personId}\0${event.checkpoint}`, event);
-    const people = crewByTrip.get(event.tripId) ?? new Set<string>();
-    people.add(event.personId);
-    crewByTrip.set(event.tripId, people);
   }
 
-  const rosterByTrip = new Map<string, string[]>();
-  for (const row of roster) {
-    const list = rosterByTrip.get(row.tripId) ?? [];
-    list.push(row.bookingId);
-    rosterByTrip.set(row.tripId, list);
-  }
+  const byTrip = <T extends { tripId: string }, K>(rows: readonly T[], pick: (row: T) => K) => {
+    const map = new Map<string, K[]>();
+    for (const row of rows) {
+      const list = map.get(row.tripId) ?? [];
+      list.push(pick(row));
+      map.set(row.tripId, list);
+    }
+    return map;
+  };
+  const rosterByTrip = byTrip(roster, (row) => row.bookingId);
+  const crewByTrip = byTrip(crewRoster, (row) => row.personId);
 
   const diverRows: (typeof rollCallEvents.$inferInsert)[] = [];
   const crewRows: (typeof rollCallCrewEvents.$inferInsert)[] = [];
@@ -255,19 +304,33 @@ async function closeHeadCounts(
     const step = (trip.endsAt.getTime() - trip.startsAt.getTime()) / checkpoints.length;
 
     /**
-     * What to write at each checkpoint for one subject, or `null` to leave the
-     * subject alone. `standing` reads the result that currently holds.
+     * What to write at each checkpoint for one subject: `null` to leave the
+     * subject alone, or an alarm that stops the whole route. `standing` reads
+     * the result that currently holds at a checkpoint.
      */
-    const results = (standing: (checkpoint: string) => LatestState) => {
-      // A recorded no-show is an answer, not an open count. See the docblock.
-      if (standing("departure") === "not_boarded") return null;
+    const results = (
+      subject: string,
+      standing: (checkpoint: string) => LatestState,
+    ): { checkpoint: string; occurredAt: Date }[] | null | CloseOutcome => {
+      // A recorded no-show is an answer, not an open count — but only while it
+      // is their *whole* answer. `inAfterDivePopulation`, in one line.
+      const afterDive = checkpoints.slice(1);
+      const joinedLater = afterDive.some((checkpoint) => standing(checkpoint) !== undefined);
+      if (standing("departure") === "not_boarded" && !joinedLater) return null;
       const writes: { checkpoint: string; occurredAt: Date }[] = [];
       for (const [index, checkpoint] of checkpoints.entries()) {
         const current = standing(checkpoint);
         // Already boarded here: nothing to close.
         if (current === "boarded") continue;
-        const at = new Date(trip.startsAt.getTime() + index * step);
-        writes.push({ checkpoint, occurredAt: at });
+        if (current === "not_boarded") {
+          // Only an after-dive checkpoint can reach here — a dock `not_boarded`
+          // returned above unless the subject joined later, and a subject who
+          // joined later was never off the boat at the dock in the sense this
+          // refusal is about.
+          if (index === 0) continue;
+          return { ok: false, reason: "alarm_standing", tripId: trip.id, checkpoint, subject };
+        }
+        writes.push({ checkpoint, occurredAt: new Date(trip.startsAt.getTime() + index * step) });
       }
       return writes;
     };
@@ -277,7 +340,9 @@ async function closeHeadCounts(
         const event = latestByBooking.get(`${bookingId}\0${checkpoint}`);
         return !event || event.status === "cleared" ? undefined : event.status;
       };
-      for (const write of results(standing) ?? []) {
+      const outcome = results(bookingId, standing);
+      if (outcome !== null && !Array.isArray(outcome)) return outcome;
+      for (const write of outcome ?? []) {
         const held = latestByBooking.get(`${bookingId}\0${write.checkpoint}`);
         diverRows.push({
           shopId,
@@ -299,7 +364,9 @@ async function closeHeadCounts(
         const event = latestByCrew.get(`${trip.id}\0${personId}\0${checkpoint}`);
         return !event || event.status === "cleared" ? undefined : event.status;
       };
-      for (const write of results(standing) ?? []) {
+      const outcome = results(personId, standing);
+      if (outcome !== null && !Array.isArray(outcome)) return outcome;
+      for (const write of outcome ?? []) {
         const held = latestByCrew.get(`${trip.id}\0${personId}\0${write.checkpoint}`);
         crewRows.push({
           shopId,
@@ -317,7 +384,7 @@ async function closeHeadCounts(
 
   if (diverRows.length > 0) await db.insert(rollCallEvents).values(diverRows);
   if (crewRows.length > 0) await db.insert(rollCallCrewEvents).values(crewRows);
-  return diverRows.length + crewRows.length;
+  return { ok: true, eventsWritten: diverRows.length + crewRows.length };
 }
 
 /** The later of a computed instant and the one it has to supersede. */
