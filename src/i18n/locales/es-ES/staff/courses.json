@@ -21,7 +21,7 @@
   },
   "edit": {
     "backToCourses": "Cursos",
-    "depthMarkersHint": "<marker>'{depth18}'</marker> se imprime como «18 metros» o «60 pies», en la unidad del buceador. También <marker>'{depth12}'</marker>, <marker>'{depth21}'</marker>, <marker>'{depth30}'</marker> y <marker>'{depth40}'</marker>; añade <marker>n</marker> para un número sin unidad en un rango. Borra la marca para escribir tú la profundidad.",
+    "depthMarkersHint": "<marker>'{depth18}'</marker> se imprime como “18 metros” o “60 pies”, en la unidad del buceador. También <marker>'{depth12}'</marker>, <marker>'{depth21}'</marker>, <marker>'{depth30}'</marker> y <marker>'{depth40}'</marker>; añade <marker>n</marker> para un número sin unidad en un rango. Borra la marca para escribir tú la profundidad.",
     "liveAt": "Publicado en",
     "hiddenFromDivers": "Oculto para los buceadores y el selector de sesiones.",
     "noticeSaved": "Página del curso guardada.",

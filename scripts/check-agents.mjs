@@ -6,6 +6,7 @@ import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
+import { findLaunchProblems } from "./mcp-launch-guard.mjs";
 import { areas } from "./task-context-data.mjs";
 
 const ROOT = process.cwd();
@@ -197,32 +198,27 @@ for (const file of checkScripts) {
     );
 }
 
-// 8. No stdio MCP server is launched through `pnpm`. An MCP server speaks
-// JSON-RPC over stdout, and `pnpm` writes to stdout too: on any machine whose
-// Node does not satisfy this package's `engines` (agent containers ship Node 22
-// against a `>=24` field) every `pnpm <bin>` prints
-// `[WARN] Unsupported engine: …` as the first line the client reads, the
-// handshake never parses, and the server fails with a 30-second connect
-// timeout. Both stdio entries here were like that until 2026-09-03 — the
-// playwright one doubly so, since `pnpm @playwright/mcp` is not a command at
-// all (the binary is `playwright-mcp`) and so had never once started. The cost
-// is silent and it is paid by every session: two servers' worth of tools
-// missing, and a minute of startup spent finding that out. The binaries run
-// perfectly when invoked directly, which is the only thing this asks for.
-const mcpConfig = JSON.parse(await readFile(path.join(ROOT, ".mcp.json"), "utf8"));
-for (const [name, server] of Object.entries(mcpConfig.mcpServers ?? {})) {
-  const command = server.command;
-  if (!command) continue;
-  if (/(^|\/)(pnpm|npm|yarn|npx)$/.test(command)) {
-    problems.push(
-      `.mcp.json: the "${name}" server is launched through \`${command}\`, whose own warnings go to stdout and corrupt the JSON-RPC stream — point \`command\` straight at the binary (e.g. ./node_modules/.bin/<bin>)`,
-    );
-    continue;
-  }
-  if (command.startsWith("./node_modules/") && !existsSync(path.join(ROOT, command))) {
-    problems.push(`.mcp.json: the "${name}" server points at ${command}, which does not exist`);
-  }
-}
+// 8. Nothing agent-facing is launched through a package manager in a way that
+// corrupts the stream a client reads. The rule and its reasoning live in
+// scripts/mcp-launch-guard.mjs, which the test imports; this is the call that
+// points it at the real tree.
+const [mcpConfig, launchConfig] = await Promise.all(
+  [".mcp.json", ".claude/launch.json"].map(async (file) => {
+    try {
+      return JSON.parse(await readFile(path.join(ROOT, file), "utf8"));
+    } catch {
+      problems.push(`${file}: missing or not valid JSON`);
+      return undefined;
+    }
+  }),
+);
+problems.push(
+  ...findLaunchProblems({
+    mcp: mcpConfig,
+    launch: launchConfig,
+    exists: (command) => existsSync(path.resolve(ROOT, command)),
+  }),
+);
 
 if (problems.length > 0) {
   console.error(`Agent-layer drift:\n${problems.map((item) => `- ${item}`).join("\n")}`);

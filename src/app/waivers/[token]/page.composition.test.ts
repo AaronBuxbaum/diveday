@@ -176,9 +176,16 @@ describe("what this slice was forbidden to touch", () => {
   });
 
   it("leaves the signature and medical semantics where it found them", () => {
+    // `readFormMedicalAnswers` is the `FormData` adapter over
+    // `readMedicalAnswers`, which moved to src/lib/medical.ts in issue #1135 —
+    // it is the one function deciding what enters a signed medical record, it
+    // is written by three callers that have to agree, and it had no test at all
+    // while it was a private helper in this file. What this line guards is
+    // unchanged: the complete path still reads the questionnaire, and reads it
+    // without `allowIncomplete`.
     for (const guard of [
       "completeSignatureSchema",
-      "readMedicalAnswers(formData, questionnaire)",
+      "readFormMedicalAnswers(formData, questionnaire)",
       "refusedSubmitPath",
       "questionnaireForJurisdiction(shop.jurisdiction)",
       "name_mismatch",

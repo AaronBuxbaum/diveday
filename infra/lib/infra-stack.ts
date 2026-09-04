@@ -1428,13 +1428,22 @@ exports.handler = async (event) => {
       return metric.with({ label: signal.title });
     });
 
+    // **Undimensioned, deliberately.** A `dimensions: { Action: "$.action" }`
+    // here publishes one billed custom metric per distinct action label --
+    // $0.30 each per month, and this app has thirty-odd server actions, so the
+    // registry's "one metric" becomes about $9/month the day mutations start
+    // flowing (2026-09-01 cost audit, issue #1241). What it would buy is a
+    // per-action breakdown of the same log lines the "Slowest mutations (p75)"
+    // widget twenty lines below already ranks by action, on demand, for the
+    // price of a query. So the metric is the aggregate trend -- the thing worth
+    // watching over time -- and the ranking stays in Logs Insights, where a
+    // reader deciding which mutation to optimise already looks.
     const mutationDurationFilter = new logs.MetricFilter(this, "MutationDurationFilter", {
       logGroup: appLogGroup,
       metricNamespace: METRIC_NAMESPACE,
       metricName: MUTATION_DURATION_SIGNAL.metricName,
       filterPattern: logs.FilterPattern.literal(mutationDurationFilterPattern()),
       metricValue: `$.${MUTATION_DURATION_SIGNAL.field}`,
-      dimensions: { Action: "$.action" },
     });
     const mutationDurationMetric = mutationDurationFilter.metric({
       statistic: "p75",

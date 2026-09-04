@@ -75,7 +75,7 @@
     "tooManyPhotos": "{max, plural, one {A site holds up to # photo.} other {A site holds up to # photos.}}",
     "route": {
       "legend": "The route you swim",
-      "description": "Click the map to drop a waypoint, in the order you swim them. The map can't be dragged. It's fixed to this site's coordinates and zoom, so the line you draw is the line a diver sees.",
+      "description": "Click the map to drop a waypoint, in the order you swim them. The map can't be dragged: the line you draw is the line a diver sees.",
       "needsCoordinates": "Fill in the GPS location above and the map appears here, ready to draw on.",
       "labelLabel": "What the route is called",
       "labelPlaceholder": "Reef garden loop",
@@ -121,7 +121,7 @@
     "conservationNoteHint": "Optional shop-stated guidance for divers at this site.",
     "conservationNotePlaceholder": "Marine park rules, mooring buoy use, buoyancy awareness, or local reef protection guidelines.",
     "fitLegend": "Who this site suits",
-    "fitDescription": "The line a diver reads above the site facts. Left on “work it out”, DiveDay reads it off the difficulty, depth and current below, which is a guess at words you wrote for another purpose.",
+    "fitDescription": "The line a diver reads above the site facts. Left on “work it out”, DiveDay guesses it from the difficulty, depth and current below.",
     "fitToneLabel": "How this site reads",
     "fitToneDerive": "Work it out from the facts below",
     "fitToneWelcoming": "Welcoming dive",

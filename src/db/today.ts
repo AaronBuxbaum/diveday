@@ -41,6 +41,7 @@ import {
   staffCredentialDueDetailText,
   stuckOperationKindText,
   stuckPaymentOperationDetailText,
+  uncrewedCourseDetailText,
   uncrewedDepartureDetailText,
   ungatedNitroxDetailText,
   unitsUnconfirmedDetailText,
@@ -1384,7 +1385,47 @@ export async function getTodayWork(
       assistantCount: counts.assistantCount,
       booked: trip.booked,
     });
-    if (crewGap.code !== "none") {
+    // The shop's own divemaster target is resolved before either row is
+    // pushed, because the zero-crew case outranks the instructor gap and needs
+    // this answer to know whether it applies (issue #1338, and the matching
+    // walk in `staffingWeek`, src/db/staffing.ts).
+    const ratioGap = divemasterRatioGap({
+      divers: trip.booked,
+      divemasterCount: inWaterDivemasterCount(counts),
+      diversPerDivemaster,
+      // A departure the shop has marked self-guided raises neither of the
+      // two rows below. Read here rather than branched on afterwards, so
+      // this queue and the trip page cannot disagree (issue #973).
+      selfGuided: trip.selfGuided,
+    });
+    // **Nobody in the water outranks the instructor gap.** A course session
+    // with no crew at all satisfies both rules, and issue #732 settled that a
+    // departure carries one row for one underlying fact — but that rule is
+    // about the count, not about which code wins. The course gap winning
+    // outright meant an empty boat said "This course session has no instructor
+    // assigned", a sentence that mentions no divemaster and so reads as though
+    // one is already aboard.
+    //
+    // `divemasterRatioGap` decides rather than a bare `inWaterDivemasterCount
+    // === 0`, because the count alone is also true where "no crew" would be
+    // the wrong thing to say: a self-guided departure wants no supervisor, and
+    // one with nobody booked has no one to supervise. Both keep the instructor
+    // sentence, which stays true and actionable for them — a session without
+    // an instructor cannot take an enrolment however empty it is.
+    //
+    // Two things this is safe because of, neither obvious from the code.
+    // `over_ratio` can never be the suppressed code: it requires
+    // `instructorCount >= 1` (src/lib/course-ratios.ts), which forces a
+    // non-zero in-water count, so `uncrewed` is always false when it fires and
+    // a ratio breach can never hide behind a zero-crew row. And the shop's own
+    // `diversPerDivemaster` cannot route a departure between these rows —
+    // with divers aboard and nobody in the water, `ceil(divers / ratio) >= 1`
+    // across the whole legal range (`MIN_`/`MAX_DIVERS_PER_DIVEMASTER`), so
+    // `under_target` always holds and only the two exemptions decide. A
+    // shop-set preference deciding whether a supervision signal appears would
+    // be alarming; it cannot.
+    const uncrewed = ratioGap.code === "under_target" && ratioGap.divemasterCount === 0;
+    if (crewGap.code !== "none" && !uncrewed) {
       actions.push({
         id: `instructor:${trip.id}`,
         kind: "instructor_missing",
@@ -1413,36 +1454,22 @@ export async function getTodayWork(
       });
     }
 
-    // The shop's own divemaster target (`divemasterRatioGap`,
-    // src/lib/divemaster-ratio.ts) — applies to every dive the shop runs,
-    // course session or fun dive alike, unlike `courseCrewGap` above, which
-    // is an agency-published training ratio and only ever fires for a course
-    // (issue #732). Reuses `counts`: the same crew count `courseCrewGap` just
-    // read, never a second query or a second definition of who is in the
-    // water (`countInWaterCrew`, src/lib/crew-roles.ts). Binds nothing —
-    // this only informs, exactly as it does on the trip page.
+    // The shop's own target (`divemasterRatioGap`, src/lib/divemaster-ratio.ts)
+    // — every dive the shop runs, course session or fun dive alike, unlike
+    // `courseCrewGap` above, which is an agency-published training ratio and
+    // only ever fires for a course (issue #732). It reuses `counts`: the same
+    // crew count `courseCrewGap` read, never a second query or a second
+    // definition of who is in the water (`countInWaterCrew`,
+    // src/lib/crew-roles.ts). Binds nothing — informs only, as on the trip page.
     //
-    // Skipped entirely when `courseCrewGap` already fired: a course session
-    // missing its instructor is already flagged above, more precisely (its
-    // sentence cites the actual agency ratio a seat is refused against), and
-    // firing both would put two rows under one departure header naming the
-    // same underlying gap in two vocabularies — the wallpaper failure this
-    // codebase designs hard against elsewhere (DOM-H3). `courseCrewGap`
-    // returns `"none"` for every fun dive by construction, so this never
-    // suppresses the signal this ticket exists to add.
-    const ratioGap =
-      crewGap.code === "none"
-        ? divemasterRatioGap({
-            divers: trip.booked,
-            divemasterCount: inWaterDivemasterCount(counts),
-            diversPerDivemaster,
-            // A departure the shop has marked self-guided raises neither of the
-            // two rows below. Read here rather than branched on afterwards, so
-            // this queue and the trip page cannot disagree (issue #973).
-            selfGuided: trip.selfGuided,
-          })
-        : { code: "none" as const };
-    if (ratioGap.code === "under_target") {
+    // Still one row per departure. The below-target row is suppressed when the
+    // instructor gap was placed above, because that gap is the more precise
+    // statement of the same shortfall and firing both would name one fact in
+    // two vocabularies (the wallpaper failure DOM-H3 designs against). The
+    // zero-crew row is not suppressed — it *replaced* the instructor row
+    // rather than joining it. `courseCrewGap` returns `"none"` for every fun
+    // dive by construction, so a fun dive reaches both rows exactly as before.
+    if (ratioGap.code === "under_target" && (uncrewed || crewGap.code === "none")) {
       // Two different sentences for two different problems, not one branching
       // on count: "nobody is rostered at all" and "one short of your target"
       // read as different severities because they are. The zero-crew case
@@ -1450,15 +1477,25 @@ export async function getTodayWork(
       // case gets a quieter one, ranked with the other purely-advisory rows
       // (`KIND_SEVERITY`, src/lib/today.ts).
       if (ratioGap.divemasterCount === 0) {
+        // Which of the two zero-crew rows is the course/fun-dive split, read
+        // off `crewGap` rather than off `trip.course` so the two cannot
+        // disagree: with nobody in the water `instructorCount` is 0, so
+        // `courseCrewGap` returns `no_instructor` for exactly the sessions
+        // that have a course attached. The course row says both words —
+        // "No crew" alone would send a manager looking for any divemaster,
+        // and only an instructor closes a course gap.
+        const course = crewGap.code === "no_instructor";
         actions.push({
           id: `uncrewed:${trip.id}`,
-          kind: "uncrewed_departure",
+          kind: course ? "uncrewed_course" : "uncrewed_departure",
           urgency: urgencyFor(trip.startsAt, now),
           subject: trip.title,
           context: when,
           departure,
           aboutDeparture: true,
-          detail: uncrewedDepartureDetailText(t, ratioGap.divers),
+          detail: course
+            ? uncrewedCourseDetailText(t, ratioGap.divers)
+            : uncrewedDepartureDetailText(t, ratioGap.divers),
           actionLabel: openCrewActionText(t),
           href: `${tripHref}#crew`,
           dueAt: trip.startsAt,

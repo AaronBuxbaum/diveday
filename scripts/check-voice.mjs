@@ -39,6 +39,20 @@ import { pathToFileURL } from "node:url";
  * Every locale states its own word list, and a locale with none is a failure
  * rather than a pass: a third language must name what it refuses.
  *
+ * **Two places, one rule set** (issue #1317). The bundles are most of the
+ * words, but not all of them: a route's `metadata` block is English literals
+ * by design — one canonical URL, one `<head>`, no locale in the path (ADR
+ * 20260812-reader-chosen-language) — and those literals are a search snippet
+ * and a link-preview card, which is where a reader meets the voice before
+ * they meet the page. They were swept by hand on 2026-09-03 and nothing
+ * stopped the next edit putting an em-dash pivot back.
+ *
+ * `docs/` is deliberately **not** scanned. An em-dash in a runbook is ordinary
+ * typesetting, `check:docs` has a different job, and pointing this at prose
+ * written for a reader who is not a customer would train people to add
+ * exemptions. The pilot-kit collateral is read by a human against
+ * `docs/design/brand.md` instead.
+ *
  * Ratcheted like `check:copy` — a per-file count in `scripts/voice-baseline.json`
  * that may only fall. `--write` banks a fall and refuses a rise, `--absorb`
  * records growth that arrived in a merge, `--report [prefix]` prints every hit.
@@ -128,6 +142,106 @@ function walkValues(node, prefix, visit) {
   }
 }
 
+/** Where a route's own English literals live. */
+export const APP_DIR = "src/app";
+
+/**
+ * The block a route's metadata literals sit in, found by matching braces from
+ * the declaration rather than by a regex over the whole file.
+ *
+ * A regex cannot tell `description:` inside `metadata` from one inside a
+ * `<Chart description={…}>` prop or a zod schema forty lines below, and this
+ * check reports per file — so a false positive there would be a hit nobody can
+ * remove without an exemption. Brace matching is the cheap way to be sure the
+ * string was in the block.
+ */
+function metadataBlocks(source) {
+  const blocks = [];
+  const declaration = /export\s+(?:const\s+metadata\b|(?:async\s+)?function\s+generateMetadata\b)/g;
+  for (const match of source.matchAll(declaration)) {
+    let index = source.indexOf("{", match.index);
+    if (index === -1) continue;
+    let depth = 0;
+    const start = index;
+    for (; index < source.length; index += 1) {
+      const char = source[index];
+      if (char === "{") depth += 1;
+      else if (char === "}") {
+        depth -= 1;
+        if (depth === 0) break;
+      }
+    }
+    blocks.push(source.slice(start, index + 1));
+  }
+  return blocks;
+}
+
+/**
+ * `title:` and `description:` string literals inside a metadata block.
+ *
+ * Only *static* strings. A template literal carrying `${…}` is built from a
+ * shop's own row or a translator call — `${shop.name} — DiveDay` is a shop's
+ * name beside a label, not DiveDay's prose, and the translated half is already
+ * covered where it lives, in the bundle. Escapes are unescaped so a value
+ * written with `\'` measures the same as one written with `'`.
+ */
+export function metadataStrings(source) {
+  const found = [];
+  const literal =
+    /\b(title|description)\s*:\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|`([^`$]*)`)/g;
+  for (const block of metadataBlocks(source)) {
+    for (const match of block.matchAll(literal)) {
+      const raw = match[2] ?? match[3] ?? match[4];
+      if (raw === undefined) continue;
+      const value = raw.replace(/\\(.)/g, "$1");
+      if (value.trim() === "") continue;
+      found.push({ key: `metadata.${match[1]}`, value });
+    }
+  }
+  return found;
+}
+
+/** Every `page.tsx`/`layout.tsx` under `src/app`, deepest last. */
+async function routeFiles(relativeDirectory) {
+  let entries;
+  try {
+    entries = await readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true });
+  } catch (error) {
+    if (error?.code === "ENOENT") return [];
+    throw error;
+  }
+  const files = [];
+  for (const entry of entries) {
+    const relativePath = path.join(relativeDirectory, entry.name);
+    if (entry.isDirectory()) files.push(...(await routeFiles(relativePath)));
+    else if (entry.name === "page.tsx" || entry.name === "layout.tsx") files.push(relativePath);
+  }
+  return files.sort();
+}
+
+/**
+ * Voice tells in route metadata, counted per route file.
+ *
+ * `en-US` rules throughout, because these literals have no locale: there is no
+ * `[locale]` route and the `<head>` is written once.
+ */
+export async function scanMetadata() {
+  const counts = new Map();
+  const details = new Map();
+  for (const file of await routeFiles(APP_DIR)) {
+    const source = await readFile(path.join(ROOT, file), "utf8");
+    const hits = [];
+    for (const { key, value } of metadataStrings(source)) {
+      for (const tell of findTells(value, "en-US")) hits.push({ key, ...tell });
+    }
+    if (hits.length > 0) {
+      counts.set(file, hits.length);
+      details.set(file, hits);
+    }
+  }
+  return { counts, details };
+}
+
 async function bundleFiles(relativeDirectory) {
   let entries;
   try {
@@ -174,7 +288,13 @@ export async function scanBundles() {
 }
 
 async function main() {
-  const { counts, details } = await scanBundles();
+  const bundles = await scanBundles();
+  const metadata = await scanMetadata();
+  // One map, so the baseline, the ratchet and the report treat a route file
+  // exactly as they treat a bundle. Neither scan can produce the other's
+  // paths, so nothing collides.
+  const counts = new Map([...bundles.counts, ...metadata.counts]);
+  const details = new Map([...bundles.details, ...metadata.details]);
 
   const reportIndex = process.argv.indexOf("--report");
   if (reportIndex !== -1) {
@@ -186,7 +306,7 @@ async function main() {
       for (const hit of hits) console.log(`  ${hit.key}\t${hit.rule}\t${hit.text}`);
       shown += hits.length;
     }
-    console.log(`\n${shown} voice tells under "${prefix || LOCALES_DIR}"`);
+    console.log(`\n${shown} voice tells under "${prefix || `${LOCALES_DIR} and ${APP_DIR}`}"`);
     process.exit(0);
   }
 
@@ -231,7 +351,7 @@ async function main() {
       for (const file of added) console.warn(`- ${file}: new file with ${counts.get(file)}`);
     }
     const next = {
-      "//": "Voice tells still in a message bundle, per file. Written by `node scripts/check-voice.mjs --write`. This number may only go down — see scripts/check-voice.mjs.",
+      "//": "Voice tells still in a message bundle or a route's metadata block, per file. Written by `node scripts/check-voice.mjs --write`. This number may only go down — see scripts/check-voice.mjs.",
       ...Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b))),
     };
     await writeFile(path.join(ROOT, BASELINE_PATH), `${JSON.stringify(next, null, 2)}\n`);
@@ -288,7 +408,7 @@ async function main() {
 
   const remaining = [...counts.values()].reduce((sum, n) => sum + n, 0);
   console.log(
-    `voice: ${remaining} tell${remaining === 1 ? "" : "s"} across ${counts.size} bundle${counts.size === 1 ? "" : "s"}`,
+    `voice: ${remaining} tell${remaining === 1 ? "" : "s"} across ${counts.size} file${counts.size === 1 ? "" : "s"} (message bundles and route metadata)`,
   );
 }
 

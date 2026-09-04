@@ -2,8 +2,6 @@
   "findHeading": "Find a returning diver",
   "findLabel": "Search by name, email, or phone",
   "findPlaceholder": "Start typing a name…",
-  "search": "Search",
-  "searching": "Searching…",
   "noMatches": "No matches for “{query}”.",
   "noEmailOnFile": "No email on file",
   "adding": "Adding…",

@@ -518,6 +518,7 @@
     "unavailableHeading": "This recap link isn’t available",
     "unavailableBody": "Ask your dive shop for a fresh link.",
     "didNotDiveBody": "There’s no recap for this booking to rate or add a photo to.",
+    "noRecapBody": "There’s no recap for this booking.",
     "noShowHeading": "This booking is marked as a no-show",
     "noShowBody": "{shop} recorded that you didn’t make this departure, so there’s no day to look back on.",
     "photoAdded": "Added to your recap. Thanks for sharing!",
@@ -1722,7 +1723,6 @@
     "orPhone": "(or phone)",
     "orEmail": "(or email)",
     "dateOptionsHeading": "When would you like to dive?",
-    "dateOptionsHint": "Choose a preferred date, an alternative, or tell us when your timing is flexible.",
     "whenSuits": "Flexible timing",
     "whereYouAreUpTo": "Where you are up to",
     "chooseOne": "Choose one",
@@ -2509,7 +2509,7 @@
           },
           "emergencyContact": {
             "what": "Emergency contact",
-            "detail": "Name and phone carry over when present."
+            "detail": "Name and phone, when your file has them."
           },
           "diveInsurance": {
             "what": "Dive insurance (DAN)",
@@ -2525,11 +2525,11 @@
           },
           "specialtyCards": {
             "what": "Specialty certifications (deep, wreck, night, drysuit)",
-            "detail": "Come across with the diver's record, marked imported. Each one's gate stays shut until staff give it a one-tap confirm, whatever your file says."
+            "detail": "Marked imported. Each one's gate stays shut until staff give it a one-tap confirm, whatever your file says."
           },
           "nitrox": {
             "what": "Nitrox",
-            "detail": "Comes across with the diver's record, marked imported. Until staff give it a one-tap confirm, that diver gets plain air. Boarding waits on it only where your file says the card was never verified."
+            "detail": "Marked imported. Until staff give it a one-tap confirm, that diver gets plain air. Boarding waits on it only where your file says the card was never verified."
           },
           "signedWaivers": {
             "what": "Signed waivers & medical clearance",
@@ -2537,11 +2537,11 @@
           },
           "waiverDocuments": {
             "what": "Waiver / medical documents",
-            "detail": "Fetched once from your file's URL and re-stored in DiveDay's own storage for audit. Images and PDFs up to 5 MB."
+            "detail": "Fetched once from your file's URL and kept for audit. Images and PDFs up to 5 MB."
           },
           "role": {
             "what": "Role",
-            "detail": "Everyone imports as a diver. Staff roles and logins are never granted by import."
+            "detail": "Everyone imports as a diver, never a staff role or a login."
           },
           "cardOnFile": {
             "what": "Credit card details",
@@ -2561,7 +2561,7 @@
           },
           "diverNotes": {
             "what": "Diver & staff notes",
-            "detail": "Customer remarks and staff notes carry over directly into private notes on the diver's profile."
+            "detail": "Customer remarks and staff notes become private notes on the diver's profile."
           }
         }
       },

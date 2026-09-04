@@ -1149,17 +1149,58 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // erasing the deleted record drops the live person's queued mail. There is
   // still no tighter predicate — this queue carries no `person_id` — so the
   // match stays and the count is logged.
+  //
+  // **Both address handles, not just the recipient's.** A kind whose *subject*
+  // is not the person it is addressed to used to be out of reach entirely:
+  // `course_inquiry` mails the shop's own front desk about a diver who used
+  // the public composer and carries their name, address, phone and free-text
+  // message, and `new_account_alert` is the same shape about an owner. A
+  // retryable failure plus an erasure before the retry drained left all of
+  // that in a live row nothing here matched. `subject_email` is what
+  // `queueRetry` now lifts out for them (issue #1298); one statement rather
+  // than two because the delete is the same delete and the count is the same
+  // count.
   if (ctx.email) {
+    const address = ctx.email.toLowerCase();
     const dropped = await tx
       .delete(notificationSendQueue)
       .where(
         and(
           eq(notificationSendQueue.shopId, shopId),
-          sql`lower(${notificationSendQueue.recipientEmail}) = ${ctx.email.toLowerCase()}`,
+          or(
+            sql`lower(${notificationSendQueue.recipientEmail}) = ${address}`,
+            sql`lower(${notificationSendQueue.subjectEmail}) = ${address}`,
+          ),
         ),
       )
       .returning({ id: notificationSendQueue.id });
-    logFuzzyMatch(ctx, "send_queue_recipient", dropped.length);
+    logFuzzyMatch(ctx, "send_queue_address", dropped.length);
+  }
+  // The number, for the lead that gave one and no address. Runs after the
+  // address sweep so the count is the rows the number reached that the address
+  // did not — the over-reach, isolated, exactly as the `course_inquiries`
+  // statements below split theirs. It exists because the public composer takes
+  // an address *or* a number (`hasReplyPath`, src/app/actions/inquiry.ts): a
+  // diver who leaves only a number produces a `course_inquiry` carrying their
+  // name, that number and up to 1,500 characters of free text, and no address
+  // handle can see it. The first version of this fix shipped exactly that hole
+  // (`security-reviewer`, issue #1298).
+  //
+  // Fuzzier than the address by the same distance, and accepted for the same
+  // written reason: a household number is shared, so this can drop a partner's
+  // queued lead. That costs a retry of a notification whose own
+  // `course_inquiries` row this transaction blanks anyway.
+  if (ctx.phone) {
+    const droppedByPhone = await tx
+      .delete(notificationSendQueue)
+      .where(
+        and(
+          eq(notificationSendQueue.shopId, shopId),
+          eq(notificationSendQueue.subjectPhone, ctx.phone),
+        ),
+      )
+      .returning({ id: notificationSendQueue.id });
+    logFuzzyMatch(ctx, "send_queue_subject_phone", droppedByPhone.length);
   }
   if (owned) {
     await tx

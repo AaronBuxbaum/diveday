@@ -1636,10 +1636,17 @@ export async function loadShopExportBundleInput(
             "party_lead_booking_id",
             "claimed_at",
             // Which partner's link brought this diver (issue #1285). A plain
-            // fact about the seat, like `claimed_at` above it, and the one the
-            // month's "Who sent divers" figures are a sum of — a shop that
+            // fact about the seat, like `claimed_at` above it — a shop that
             // exported its bookings and got them back un-credited would have
             // silently lost every partner's attribution.
+            //
+            // Kept here although no *page* renders it any more (issue #1294):
+            // an export is the shop's own database handed back under the
+            // strictest gate in the product, and its contract is completeness.
+            // That is a different question from a staff surface presenting a
+            // stranger's text as a business fact. Hostile text cannot escape a
+            // CSV cell either — `csvCell`'s formula guard covers the one
+            // reachable shape, a leading `-`.
             "referral_source",
             "hotel_pickup_location",
             "pickup_time",

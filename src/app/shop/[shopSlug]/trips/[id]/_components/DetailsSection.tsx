@@ -231,7 +231,6 @@ export function DetailsSection({
               <Field
                 label={t("trips.details.arrivalParkingLabel")}
                 hint={t("trips.details.optionalHint")}
-                description={t("trips.details.arrivalParkingDescription")}
               >
                 <textarea
                   name="arrivalParkingNote"
@@ -244,7 +243,6 @@ export function DetailsSection({
               <Field
                 label={t("trips.details.arrivalTransitLabel")}
                 hint={t("trips.details.optionalHint")}
-                description={t("trips.details.arrivalTransitDescription")}
               >
                 <textarea
                   name="arrivalTransitNote"

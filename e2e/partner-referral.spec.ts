@@ -23,10 +23,21 @@ import {
  * before booking. The attribution has to survive that page load, which is the
  * whole reason there is a cookie rather than a hidden field.
  *
- * Both tests name a partner the demo seed never writes, so neither can pass on
+ * **What the report says has changed** (issue #1294, owner ruling 2026-09-02).
+ * It used to name each partner in a "Who sent divers" list. `partnerLinkUrl`
+ * writes no row, so nothing can tell a hotel's slug from one an anonymous
+ * visitor invented by editing the storefront URL and booking a seat — and the
+ * slug below is written to look like exactly that. The report now says how many
+ * seats arrived on a partner link and never prints the slug, so what these
+ * tests assert is the count moving and the text staying off the page.
+ *
+ * The slug is one the demo seed never writes, so neither test can pass on
  * `seed-partner-referrals.ts`'s rows instead of on the path under test.
  */
-const PARTNER = "test-partner-lodge";
+const PARTNER = "call-555-0100-for-cheaper-dives";
+
+/** The report's one partner line: "N seats arrived on a partner link". */
+const ARRIVALS = /\d+ seats? arrived on a partner link/;
 
 test.describe("a partner's referral", () => {
   signedInAsOwner();
@@ -74,9 +85,11 @@ test.describe("a partner's referral", () => {
 
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/reports");
-    await expect(
-      page.getByRole("list", { name: "Who sent divers" }).getByText(PARTNER),
-    ).toBeVisible();
+    // The seat reached the month, and the slug did not reach the screen. Both
+    // halves matter: the first is the feature, the second is issue #1294.
+    await expect(page.getByText(ARRIVALS)).toBeVisible();
+    await expect(page.getByText(PARTNER)).toHaveCount(0);
+    expect(await page.content()).not.toContain("call-555-0100");
   });
 
   test("credits nobody for a visit that is not a partner link", async ({ page }) => {
@@ -99,6 +112,12 @@ test.describe("a partner's referral", () => {
     await page.goto(`/s/blue-mantis?utm_source=newsletter&utm_campaign=${PARTNER}`, {
       waitUntil: "domcontentloaded",
     });
+    // The leg this test is really about: the edge mints a referral only for the
+    // pair the generator writes (`utm_source=partner&utm_medium=referral`), so
+    // nothing is remembered here and nothing can be credited later.
+    expect(
+      (await page.context().cookies()).find((cookie) => cookie.name === "diveday_ref"),
+    ).toBeUndefined();
     await page
       .getByRole("list", { name: "Upcoming trips" })
       .locator("li")
@@ -115,9 +134,15 @@ test.describe("a partner's referral", () => {
 
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/reports");
-    // The month's report is on screen — the seeded partners are there — and
-    // this one is not on it.
-    await expect(page.getByRole("list", { name: "Who sent divers" })).toBeVisible();
+    // The report is on screen, and this booking is not counted into it.
+    //
+    // The count is asserted at the cookie above rather than by arithmetic
+    // here: the report's number includes the demo seed's own partner seats, so
+    // a "still N" assertion would pin a seeded figure that any change to
+    // `seed-partner-referrals.ts` moves. What actually decides whether this
+    // visit is credited is whether the edge minted a cookie for it, and that
+    // is now checked where it happens.
+    await expect(page.getByText(ARRIVALS)).toBeVisible();
     await expect(page.getByText(PARTNER)).toHaveCount(0);
   });
 });

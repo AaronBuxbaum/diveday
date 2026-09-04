@@ -203,6 +203,20 @@ test("a booking cancelled after the recap page loaded gets an honest notice, not
     // otherwise.
     page.getByText("There’s no recap for this booking to rate or add a photo to."),
   ).toBeVisible();
+
+  // The same dead booking opened *cold*, with no `?review=`/`?photo=` on the
+  // URL — the branch a diver reaches by tapping the recap link in an old
+  // email rather than by submitting something. It used to say "Ask your dive
+  // shop for a fresh link", which is advice nobody can act on: a recap token
+  // is signed rather than stored and has deliberately no self-serve rescue
+  // (issue #850), and for a booking that was cancelled or not boarded there is
+  // no recap for the shop to send either (issue #1334).
+  await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+  await expect(page.getByText("There’s no recap for this booking.")).toBeVisible();
+  await expect(page.getByText(/fresh link/i)).toHaveCount(0);
+  // What replaced the dead advice: the shop's own name and contact, which is
+  // what a diver who thinks this is wrong actually needs.
+  await expect(page.getByText("Blue Mantis")).toBeVisible();
 });
 
 test("a whole pick of photos submits in one request, not one page reload per photo (task 55)", async ({

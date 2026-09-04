@@ -256,9 +256,20 @@ export default async function StaffingPage({
   // can fix the gap — Today's chip labels for the shop's own target, the trip
   // pulse's for the agency training ratio. The staffing week owns no crew
   // vocabulary of its own (ADR 20260806-staffing-is-the-shift-roster).
+  //
+  // All five now read at chip length. The two pulse keys were whole sentences
+  // written for the trip page, where a full-width row has all the space a
+  // sentence wants; here the day column is about 135px and "This course
+  // session has no instructor yet" took four lines beside "No crew" (#1125).
+  //
+  // `uncrewed_course` is the one that has to say two things in that column
+  // (issue #1338): a course session with nobody in the water needs an
+  // instructor *and* has nobody supervising, and a chip saying only the second
+  // sends a manager to phone any divemaster, who cannot close the first.
   const gapWords: GapWords = {
     no_instructor: t("trips.pulse.needsInstructor"),
     over_ratio: t("trips.pulse.overRatio"),
+    uncrewed_course: t("shared.today.actionKind.uncrewedCourse"),
     uncrewed_departure: t("shared.today.actionKind.uncrewedDeparture"),
     crew_below_target: t("shared.today.actionKind.crewBelowTarget"),
   };

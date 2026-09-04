@@ -97,8 +97,7 @@
       "notAuthorized": "Los reembolsos están limitados a propietarios y gerentes. Pide a uno de ellos que lo tramite.",
       "demoDisabled": "Este es un pedido de demostración, así que no se puede modificar.",
       "fallback": "Algo cambió en este pedido. Los detalles de abajo están al día."
-    },
-    "sentBy": "Enviado por {partner}"
+    }
   },
   "index": {
     "eyebrow": "Recepción",

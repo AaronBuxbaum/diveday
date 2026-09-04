@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { connection } from "next/server";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { buildAfterStateProps } from "@/app/ready/[token]/_lib/after-state-data";
 import { EntryDone } from "@/components/account/EntryShell";
+import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
+import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
-import { getRecapPageData, type RecapSite } from "@/db/recap";
+import { getRecapPageData, getRecapPageState, type RecapSite } from "@/db/recap";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale, requestTranslator } from "@/i18n/request";
 import { cachedListFormat } from "@/lib/intl-cache";
+import { publicSchedulePath } from "@/lib/public-routes";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { openGraphSite } from "@/lib/site-metadata";
 import { startTipAction, submitReviewAction, uploadRecapPhotoAction } from "./actions";
@@ -115,43 +119,83 @@ export default async function DiveRecapPage({
   }
 
   const db = await getDb();
-  const data = await getRecapPageData(db, bookingId);
-  if (!data) {
-    // **Deliberately terse, and not for the reason this comment used to give.**
-    //
-    // It said the collapse matched "a bad or forged token", which is not so: a
-    // recap token is signed, and `verifyRecapToken` above rejects a forged one
-    // before this branch is reachable. Everything that arrives here carries a
-    // signature DiveDay wrote (`security-reviewer`, on issue #801).
-    //
-    // The real reason to keep it is that a recap token has **no revocation** —
-    // no `booking_capabilities` row to revoke, no expiry short of the
-    // signature's own — so this collapse is the only thing that closes the page
-    // when a booking is cancelled underneath it. `/ready` names its shop on a
-    // dead link precisely because its token *can* be revoked and expired; this
-    // one cannot, so widening what it discloses widens it forever.
-    //
-    // `getRecapPageData` nulls the whole page uniformly for a cancelled
-    // booking, a no-show, and — since a review caught it on 2026-08-28 — a
-    // cancelled *departure*, whose bookings a blow-out deliberately leaves
-    // active. So a diver who was rating or adding a photo when staff cancelled
-    // underneath them lands right back here on redirect. This is the one
-    // honest thing this branch *can* say without weakening the fail-closed
-    // uniformity a forged token still gets: the token itself parsed, so this
-    // is a real diver on a real booking rather than a guess, and saying only
-    // that there is no recap to act on reveals nothing the diver's own crew
-    // has not already told them (task 56). It stopped saying "didn't sail" in
-    // the same review — for a no-show the boat sailed, without them.
-    const didNotDive = review === "did_not_dive" || photo === "cancelled";
+  const state = await getRecapPageState(db, bookingId);
+  if (state.kind === "unknown") {
+    // The signature verified and resolved no booking at all — a booking
+    // deleted out from under a link DiveDay itself signed. There is no shop to
+    // attribute it to without guessing, and a bearer token reveals only its
+    // own record, so this is the account-tier door: warm, terminal, naming
+    // nobody.
     return (
       <EntryDone
         glyph="expired"
         title={anonT("recap.unavailableHeading")}
-        text={anonT(didNotDive ? "recap.didNotDiveBody" : "waiver.unavailableBody")}
+        text={anonT("recap.unavailableBody")}
       />
     );
   }
 
+  if (state.kind !== "recap") {
+    const deadT = diverTranslator(await requestLocale(state.shop.defaultLocale));
+    if (state.kind === "departure-cancelled") {
+      // **The departure was called off, and this is the same sentence
+      // `/ready` already says to this diver** (`ready/[token]/page.tsx`'s
+      // stranded branch). A blow-out cancels the trip and leaves every booking
+      // active, so the diver opening an older recap email has a live seat on a
+      // boat that is not running. Telling them their link has run out is the
+      // one thing that is false — and "ask your dive shop for a fresh link" is
+      // advice that cannot help, because no fresher link will ever exist. The
+      // `cancelled` mark rather than `expired`: the link did not expire.
+      return (
+        <ExpiredLinkCard
+          glyph="cancelled"
+          title={deadT("booking.cancelledHeading")}
+          text={deadT("ready.tripCancelledBody")}
+          shop={state.shop}
+          t={deadT}
+        >
+          <Link href={publicSchedulePath(state.shop.slug)} className={buttonClass()}>
+            {deadT("recap.seeWhatsNext")}
+          </Link>
+        </ExpiredLinkCard>
+      );
+    }
+
+    // **The booking tier** (ADR 20260827-first-light, decision 3): a diver is
+    // holding a phone and the link does not work, and their one question is
+    // who to ask. The signature is DiveDay's own, so this is a real diver on a
+    // real booking rather than a guess, and what the card adds is the shop's
+    // own published name and contact details — nothing the shop hides, and
+    // exactly what the other three booking tokens already hand over.
+    //
+    // **One sentence covers a cancelled booking and a no-show**, deliberately,
+    // so the failure state never itself discloses which of the two happened —
+    // the fail-closed uniformity `getRecapPageData` was written for, kept
+    // where it is actually about the diver.
+    //
+    // **Neither sentence offers a fresh link, because none can be minted.**
+    // This branch rendered `waiver.unavailableBody` — "Ask your dive shop for a
+    // fresh link" — until issue #1334. That is true on `/waivers`, which has
+    // `emailFreshWaiverLink`, and on `/ready`, which hands over a button; a
+    // recap token is signed rather than stored and has **deliberately no
+    // self-serve rescue** (issue #850, and the recap row of
+    // docs/engineering/capability-telemetry-runbook.md). For a booking that was
+    // cancelled or not boarded there is no recap for anyone — shop included —
+    // to send. So the sentence says the thing that is true and that no retry
+    // changes: there is nothing to link to. The shop's name and contact render
+    // directly beneath, which is what a reader who thinks that is wrong needs.
+    const didNotDive = review === "did_not_dive" || photo === "cancelled";
+    return (
+      <ExpiredLinkCard
+        title={deadT("recap.unavailableHeading")}
+        text={deadT(didNotDive ? "recap.didNotDiveBody" : "recap.noRecapBody")}
+        shop={state.shop}
+        t={deadT}
+      />
+    );
+  }
+
+  const { data } = state;
   const { locale, t } = await requestTranslator(data.shop.defaultLocale);
   const props = await buildAfterStateProps({
     db,

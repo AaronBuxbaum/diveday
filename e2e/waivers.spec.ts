@@ -459,6 +459,58 @@ test("saving a draft preserves partial conditional questionnaire answers", async
 });
 
 /**
+ * **A restored draft must not answer a Box the diver never opened** — issue
+ * #1135, and the half a unit test cannot reach on its own.
+ *
+ * The path is entirely ordinary: a diver answers the page-one list, saves (or
+ * mistypes their name and gets refused, which saves the same draft), comes
+ * back, and honestly changes "I am over 45" to yes. Before this, every draft
+ * carried an explicit `no` for all thirty-three Box children — the form reader
+ * wrote one for every child of every *unanswered* parent — so Box B opened with
+ * its four cardiac questions already answered, the rail read the medical step
+ * done, and the next thing the diver did was sign.
+ *
+ * The existing draft test above walks straight past it: no Box is open on
+ * reload, so the phantom answers are never rendered and never counted.
+ */
+test("a Box opened after a draft reload asks its questions rather than answering them", async ({
+  page,
+}) => {
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, TRIP);
+  await openTripTab(page, "Trip");
+  const waiverHref = await sendWaiverForFirstDiver(page);
+
+  await page.goto(waiverHref ?? "/");
+  await page.getByLabel("Type your full name").fill("Reopened Box Diver");
+  const noRadios = page.getByRole("radio", { name: "No" });
+  await noRadios.first().waitFor();
+  // The whole page-one list, "no" throughout — including the over-45 question,
+  // which is the one that opens Box B.
+  const questionCount = await noRadios.count();
+  for (let i = 0; i < questionCount; i++) await noRadios.nth(i).check();
+  await page.getByRole("button", { name: "Save and finish later" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "progress is saved" })).toBeVisible();
+
+  // Come back to the saved draft and correct the one answer.
+  await page.goto(waiverHref ?? "/");
+  const over45 = page.getByRole("group", { name: /over 45 years of age/i });
+  await over45.getByRole("radio", { name: "Yes" }).check();
+
+  // Box B is on the page, and every one of its questions is unanswered.
+  //
+  // Scoped to the heading's own parent rather than to `section` + a `has:`
+  // filter: the questionnaire is itself inside a section, so the filter matches
+  // that ancestor too and the ten page-one answers count as the Box's.
+  const boxB = page.getByRole("heading", { name: /BOX B/ }).locator("xpath=..");
+  await expect(boxB.getByRole("radio").first()).toBeVisible();
+  await expect(boxB.getByRole("radio", { checked: true })).toHaveCount(0);
+  // And the Box genuinely has questions in it, so the count above is not zero
+  // because the scope came back empty.
+  expect(await boxB.getByRole("radio").count()).toBeGreaterThan(0);
+});
+
+/**
  * **The waiver paces itself** — ADR 20260827-the-divers-thread, decision 5.
  *
  * The counting rule, walked end to end on the real page: fresh draft 0 of 3,

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MedicalQuestion, MedicalQuestionnaire } from "@/lib/medical";
-import { medicalProgress, medicalQuestionField } from "@/lib/medical";
+import { applicableResponsesOnly, medicalProgress, medicalQuestionField } from "@/lib/medical";
 
 /**
  * Every word this component renders, resolved server-side. The waiver page has
@@ -133,9 +133,14 @@ export function MedicalQuestionnaireFields({
   copy: MedicalQuestionnaireCopy;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const [responses, setResponses] = useState<Record<string, boolean>>(() => ({
-    ...(initialResponses ?? {}),
-  }));
+  // **Pruned on the way in**, not trusted as given (issue #1135). A draft is
+  // restored through here, and a draft written before this rule existed carries
+  // an explicit `false` for every child of every unanswered Box. Seeded like
+  // that, a later honest yes opens the Box with its questions already answered
+  // and `answer()` never runs, because the value going in is `true`.
+  const [responses, setResponses] = useState<Record<string, boolean>>(() =>
+    applicableResponsesOnly(questionnaire, initialResponses ?? {}),
+  );
   const primary = questionnaire.questions.filter((question) => question.section === "primary");
   const questionIdByField = useMemo(
     () =>
@@ -168,38 +173,63 @@ export function MedicalQuestionnaireFields({
       }
       if (selected.size > 0) {
         setResponses((previous) => {
-          const next = { ...previous };
+          const merged = { ...previous };
           let changed = false;
           for (const [questionId, answer] of selected) {
-            if (next[questionId] !== answer) {
-              next[questionId] = answer;
+            if (merged[questionId] !== answer) {
+              merged[questionId] = answer;
               changed = true;
             }
           }
-          return changed ? next : previous;
+          if (!changed) return previous;
+          // **Pruned after the merge**, because this is the third door into the
+          // response map and it bypasses `answer()` entirely (issue #1135). The
+          // sequence it closes: a Box is server-rendered open with its children
+          // checked, the diver taps the parent "no" before hydration — nothing
+          // hides, so the children are still checked in the DOM — and this
+          // effect then harvests all five. Render closes the Box; state would
+          // otherwise keep the children, and reopening would show them back.
+          return applicableResponsesOnly(questionnaire, merged);
         });
       }
     }
-  }, [questionIdByField]);
+  }, [questionIdByField, questionnaire]);
 
   function answer(id: string, value: boolean) {
     setResponses((previous) => {
       const next = { ...previous, [id]: value };
-      // A branch that is *closing* is not applicable; clear stale child values
-      // so a changed answer can never carry a hidden yes into the result.
+      // A branch that is *closing* is not applicable; drop its child answers so
+      // a changed answer can never carry a hidden yes into the result, and so a
+      // reopened Box asks again rather than opening pre-filled.
       //
-      // `previous[id] === true` is the whole rule: only a branch that was open
-      // has children the diver has seen. Without it, every no on a page-one
-      // question wrote a no into the children of a Box that had never been
-      // opened — answering no to all ten primaries silently filled Box B's four
-      // questions, so `medicalProgress` counted zero follow-ups remaining, the
-      // outcome line read `outcomeClear`, and four answers the diver never read
-      // went into the signed record.
+      // **`delete`, not `= false`** (issue #1135, owner ruling 2026-09-02). The
+      // sequence: a diver answers yes to "I am over 45 years of age", works
+      // through Box B's four cardiac questions, changes their mind, sets it to
+      // no, then back to yes. Writing `false` reopened the Box with all four
+      // already answered — the diver's own answers, but ones they had not
+      // looked at since, and the next thing they do is sign. Deleting leaves
+      // them blank, and each radio's own `required` attribute then holds the
+      // signature until they are answered again.
+      //
+      // The cost is real and was weighed: `medicalProgress` counts a blank
+      // follow-up as remaining, so the rail's Medical step reopens and the
+      // outcome line drops back to `follow_ups_open` on every parent toggle.
+      // That falls only on a diver who changes their mind twice. Nothing
+      // reaching a signed medical record should be a value its signer has not
+      // seen in its final state.
+      //
+      // `previous[id] === true` is the other half of the rule: only a branch
+      // that was open has children the diver has seen. Without it, every no on
+      // a page-one question wrote a no into the children of a Box that had
+      // never been opened — answering no to all ten primaries silently filled
+      // Box B's four questions, so `medicalProgress` counted zero follow-ups
+      // remaining, the outcome line read `outcomeClear`, and four answers the
+      // diver never read went into the signed record.
       if (value === false && previous[id] === true) {
         for (const child of questionnaire.questions.filter(
           (question) => question.parentId === id,
         )) {
-          next[child.id] = false;
+          delete next[child.id];
         }
       }
       return next;

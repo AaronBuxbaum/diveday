@@ -518,6 +518,7 @@
     "unavailableHeading": "Este enlace de resumen no está disponible",
     "unavailableBody": "Pide a tu centro un enlace nuevo.",
     "didNotDiveBody": "Esta reserva no tiene resumen que puntuar ni al que añadir una foto.",
+    "noRecapBody": "Esta reserva no tiene resumen.",
     "noShowHeading": "Esta reserva figura como no presentado",
     "noShowBody": "{shop} registró que no llegaste a esta salida, así que no hay día que recordar.",
     "photoAdded": "Añadida a tu resumen. ¡Gracias por compartirla!",
@@ -570,11 +571,11 @@
   },
   "register": {
     "title": "Regístrate con {shop}",
-    "intro": "Rellena esto una vez y queda archivado. Te enviaremos el descargo para que lo firmes; trae tu tarjeta de certificación el día de la inmersión.",
+    "intro": "Rellena esto una vez y queda archivado. Te enviaremos la exención para que la firmes; trae tu tarjeta de certificación el día de la inmersión.",
     "nameLabel": "Tu nombre",
     "emailLabel": "Correo electrónico",
     "phoneLabel": "Teléfono",
-    "contactHint": "Uno de los dos, para poder enviarte el descargo.",
+    "contactHint": "Uno de los dos, para poder enviarte la exención.",
     "certHeading": "Tu certificación",
     "certHint": "Lo que indiques aquí queda archivado como tu propia declaración. Trae la tarjeta y la comprobamos el día de la inmersión.",
     "agencyLabel": "Agencia",
@@ -589,7 +590,7 @@
     "submit": "Enviar al centro",
     "submitting": "Enviando…",
     "doneTitle": "Ya estás archivado",
-    "doneBody": "{shop} tiene tus datos. Atento al descargo: fírmalo antes de tu primera inmersión y listo.",
+    "doneBody": "{shop} tiene tus datos. Atento a la exención: fírmala antes de tu primera inmersión y listo.",
     "invalid": "Algo del formulario no llegó bien. Revísalo e inténtalo de nuevo.",
     "contactRequired": "Deja un correo o un teléfono para poder contactarte.",
     "unavailable": "Ese centro no acepta registros en este momento."
@@ -770,7 +771,7 @@
     "freshLinkNoEmail": "No hay ninguna dirección de correo registrada, así que no podemos enviártelo. Escribe al centro y te darán un enlace nuevo.",
     "freshLinkUnavailable": "No podemos enviar un enlace nuevo para esta exención. Escribe al centro y lo resolverán.",
     "freshLinkFailed": "No se pudo enviar. Inténtalo de nuevo en un momento o escribe al centro.",
-    "scheduledSites": "Tus puntos de buceo previstos",
+    "scheduledSites": "Tus sitios de buceo previstos",
     "templateVersion": "{title} · versión {version}",
     "emergencyContact": "Contacto de emergencia",
     "contactName": "Nombre del contacto",
@@ -1722,7 +1723,6 @@
     "orPhone": "(o teléfono)",
     "orEmail": "(o correo)",
     "dateOptionsHeading": "¿Cuándo te gustaría bucear?",
-    "dateOptionsHint": "Elige una fecha preferida, una alternativa o cuéntanos si tienes flexibilidad.",
     "whenSuits": "Fechas flexibles",
     "whereYouAreUpTo": "Por dónde vas",
     "chooseOne": "Elige una opción",
@@ -2505,11 +2505,11 @@
         "scopeTable": {
           "contact": {
             "what": "Nombre, correo, teléfono",
-            "detail": "Se importan tal cual. Una fila con correo se empareja con un buceador existente al reimportar; sin él, siempre es una ficha nueva."
+            "detail": "Una fila con correo se empareja con un buceador existente al reimportar; sin él, siempre es una ficha nueva."
           },
           "emergencyContact": {
             "what": "Contacto de emergencia",
-            "detail": "El nombre y el teléfono se trasladan cuando están."
+            "detail": "El nombre y el teléfono, cuando tu archivo los tenga."
           },
           "diveInsurance": {
             "what": "Seguro de buceo (DAN)",
@@ -2525,11 +2525,11 @@
           },
           "specialtyCards": {
             "what": "Certificaciones de especialidad (profundidad, naufragios, nocturna, traje seco)",
-            "detail": "Llegan con la ficha del buceador, marcadas como importadas. La puerta de cada una sigue cerrada hasta que el personal la confirme con un toque, diga lo que diga tu archivo."
+            "detail": "Marcadas como importadas. La puerta de cada una sigue cerrada hasta que el personal la confirme con un toque, diga lo que diga tu archivo."
           },
           "nitrox": {
             "what": "Nitrox",
-            "detail": "Llega con la ficha del buceador, marcada como importada. Hasta que el personal la confirme con un toque, ese buceador recibe aire normal. El embarque solo espera si tu archivo dice que la tarjeta nunca se verificó."
+            "detail": "Marcada como importada. Hasta que el personal la confirme con un toque, ese buceador recibe aire normal. El embarque solo espera si tu archivo dice que la tarjeta nunca se verificó."
           },
           "signedWaivers": {
             "what": "Exenciones firmadas y aptitud médica",
@@ -2537,11 +2537,11 @@
           },
           "waiverDocuments": {
             "what": "Documentos de exención / médicos",
-            "detail": "Se descargan una vez desde la URL de tu archivo y se guardan de nuevo en el almacenamiento propio de DiveDay para auditoría. Imágenes y PDF de hasta 5 MB."
+            "detail": "Se descargan una vez desde la URL de tu archivo y se guardan para auditoría. Imágenes y PDF de hasta 5 MB."
           },
           "role": {
             "what": "Rol",
-            "detail": "Todo el mundo se importa como buceador. Los roles de personal y los accesos nunca se conceden por importación."
+            "detail": "Todo el mundo se importa como buceador, nunca con un rol de personal ni un acceso."
           },
           "cardOnFile": {
             "what": "Tarjeta guardada / credencial de pago",
@@ -2561,7 +2561,7 @@
           },
           "diverNotes": {
             "what": "Notas internas y del buceador",
-            "detail": "Las notas del personal y observaciones se importan directamente como notas privadas en el perfil del buceador."
+            "detail": "Las notas del personal y observaciones pasan a notas privadas en el perfil del buceador."
           }
         }
       },
@@ -3118,7 +3118,7 @@
         "sentryTerm": "Sentry",
         "sentryBody": "informes de errores. Cuando algo se rompe, el fallo se envía aquí para que podamos arreglarlo. A la dirección de la página se le quita cualquier token antes de enviarla, y no mandamos registros de buceadores con ella.",
         "googleTerm": "Google",
-        "googleBody": "el mapa incrustado en la ficha de un punto de buceo y en la página de preparación de un buceador. Abrir una de esas páginas contacta con Google directamente, así que ve la petición como la ve cualquier mapa incrustado; el enlace propio de la página se le oculta.",
+        "googleBody": "el mapa incrustado en la ficha de un sitio de buceo y en la página de preparación de un buceador. Abrir una de esas páginas contacta con Google directamente, así que ve la petición como la ve cualquier mapa incrustado; el enlace propio de la página se le oculta.",
         "pushTerm": "Apple, Google, Mozilla y Microsoft",
         "pushBody": "notificaciones push del navegador para el personal que las activa. Cada uno recibe una dirección de dispositivo y un contenido cifrado que no puede leer."
       },

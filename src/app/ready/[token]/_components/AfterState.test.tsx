@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import type { RecapSite } from "@/db/recap";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import { DIVEDAY_BRAND_COLOR } from "@/lib/brand";
 import { AFTER_STATE_TEST_IDS, AfterState, type AfterStateProps } from "./AfterState";
@@ -60,20 +61,9 @@ function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps {
     },
     when: "Sat, Aug 29",
     diverName: "Yara Halabi",
-    // The site still *carries* its own maximum depth — that is a real fact
-    // about the reef — and the record deliberately never renders it. See "what
-    // the record may claim" below.
-    sites: [
-      {
-        name: "French Reef",
-        locationName: null,
-        marineLife: null,
-        forecastLatitude: null,
-        forecastLongitude: null,
-        maxDepthMeters: 12,
-        depthRange: "40–60 ft, sandy patches",
-      },
-    ],
+    // A site is its name here and nothing else — see "what the record may
+    // claim" below for why, and for the type assertion that now holds it.
+    sites: [{ name: "French Reef" }],
     shoutout: null,
     photos: [],
     maxPhotos: 12,
@@ -257,6 +247,15 @@ describe("the day's facts render once", () => {
  * records nothing about dives *performed*, so the only honest page is one that
  * prints what the shop wrote down and leaves the rest as ruled blanks.
  */
+/**
+ * A compile-time half of the rule below: `RecapSite` carries the site's name
+ * and nothing else, so a widened projection is a `pnpm typecheck` failure
+ * here, beside the paragraph saying why, rather than a depth quietly reaching
+ * a page a divemaster is asked to sign (issue #1120).
+ */
+type AssertNever<T extends never> = T;
+type _RecapSiteCarriesOnlyItsName = AssertNever<Exclude<keyof RecapSite, "name">>;
+
 describe("what the record may claim", () => {
   it("counts no dives — DiveDay has no record of dives performed", () => {
     // It printed `max(trips.planned_dives, sites.length)` as "{n} dives
@@ -273,19 +272,24 @@ describe("what the record may claim", () => {
     expect(screen.getByText("recap.recordedBy(Blue Mantis Divers)")).toBeInTheDocument();
   });
 
-  it("names the sites and prints no depth beside them", () => {
+  it("names the sites and has nothing else about them to print", () => {
     // `dive_sites.max_depth_meters` is the *site's* deepest point — the
     // glossary says it "exists solely to be comparable to a certification's
     // depth ceiling" — and when it was null the label fell back to
     // `depth_range`, free-text briefing prose, so "Max depth: 40–60 ft, sandy
     // patches" could print under a max-depth label. Neither is this diver's
-    // dive, and both are in `props()` above precisely so this can say so.
+    // dive.
+    //
+    // Both used to sit in `props()` so this test could watch them not render.
+    // They are gone from `RecapSite` itself as of issue #1120, which is the
+    // stronger guarantee: the surface cannot print a depth it is not handed,
+    // and `_RecapSiteCarriesOnlyItsName` above fails `pnpm typecheck` the
+    // moment the projection grows a second field. What is left here is the
+    // half a type cannot state — that the sites *are* named.
     render(<AfterState {...props()} />);
     const sites = screen.getByTestId(AFTER_STATE_TEST_IDS.sites);
     expect(sites.textContent).toContain("French Reef");
     expect(sites.textContent).not.toContain("maxDepthLabel");
-    expect(sites.textContent).not.toContain("sandy patches");
-    expect(sites.textContent).not.toContain("12");
   });
 
   it("still gives the printer its ruled blanks to write the dive up on", () => {

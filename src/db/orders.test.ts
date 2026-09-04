@@ -37,7 +37,7 @@ import {
 } from "./orders";
 import { startPaymentOperation } from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
-import { orders, paymentOperationIntents, people, shops } from "./schema";
+import { bookings, orders, paymentOperationIntents, people, shops } from "./schema";
 import { setShopCurrency, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
@@ -2038,6 +2038,7 @@ describe("pagedOrdersByDay", () => {
       totalCents?: number;
       status?: "open" | "paid" | "void" | "partly_refunded";
       refundedCents?: number;
+      currency?: string;
     }) {
       counter += 1;
       await db.insert(orders).values({
@@ -2045,7 +2046,7 @@ describe("pagedOrdersByDay", () => {
         personId: diver.id,
         createdByPersonId: staff,
         status: patch.status ?? "paid",
-        currency: "usd",
+        currency: patch.currency ?? "usd",
         totalCents: patch.totalCents ?? 10_000,
         amountPaidCents: 0,
         refundedCents: patch.refundedCents ?? 0,
@@ -2082,7 +2083,7 @@ describe("pagedOrdersByDay", () => {
 
     const everything = await pagedOrdersByDay(db, shop.id, SHOP_TZ, {}, { pageSize: 20 });
     expect(everything.groups[0]?.count).toBe(2);
-    expect(everything.groups[0]?.subtotalCents).toBe(21_000);
+    expect(everything.groups[0]?.subtotals).toEqual([{ currency: "usd", cents: 21_000 }]);
 
     // The pager-scope rule of ADR 20260803-one-pagination-model, applied to a
     // subtotal: a header summing rows the filter removed is the same lie as a
@@ -2095,7 +2096,7 @@ describe("pagedOrdersByDay", () => {
       { pageSize: 20 },
     );
     expect(openOnly.groups[0]?.count).toBe(1);
-    expect(openOnly.groups[0]?.subtotalCents).toBe(12_000);
+    expect(openOnly.groups[0]?.subtotals).toEqual([{ currency: "usd", cents: 12_000 }]);
   });
 
   it("drops a void order out of the money and counts a refund at its net", async () => {
@@ -2116,7 +2117,33 @@ describe("pagedOrdersByDay", () => {
     // in", so an invoice that was cancelled is worth nothing and one that gave
     // money back is worth what is left.
     expect(ledger.groups[0]?.count).toBe(3);
-    expect(ledger.groups[0]?.subtotalCents).toBe(25_000);
+    expect(ledger.groups[0]?.subtotals).toEqual([{ currency: "usd", cents: 25_000 }]);
+  });
+
+  it("keeps a day's two currencies apart rather than summing them into one figure", async () => {
+    const { db, shop, invoice } = await ledgerFixture();
+    const day = "2026-08-27T14:00:00Z";
+    // A shop may change `shops.currency` after taking money — settled rows keep
+    // their own and nothing is converted (ADR 20260731-shop-currency, and the
+    // settings card's own copy). A day straddling that change therefore holds
+    // two, and one summed figure would re-price the older rows in a currency
+    // they were never charged in. DiveDay holds no exchange rates.
+    await invoice({ createdAt: new Date(day), totalCents: 40_000, currency: "usd" });
+    await invoice({ createdAt: new Date(day), totalCents: 9_000, currency: "eur" });
+    await invoice({ createdAt: new Date(day), totalCents: 2_000, currency: "eur" });
+
+    const ledger = await pagedOrdersByDay(db, shop.id, SHOP_TZ, {}, { pageSize: 20 });
+    expect(ledger.groups).toHaveLength(1);
+    // All three rows still belong to the one day, and the day still owns their
+    // count — it is only the money that splits.
+    expect(ledger.groups[0]?.count).toBe(3);
+    expect(ledger.groups[0]?.orders).toHaveLength(3);
+    // Largest first, so a shop that changed the setting still reads the
+    // currency it mostly trades in at the head of the line.
+    expect(ledger.groups[0]?.subtotals).toEqual([
+      { currency: "usd", cents: 40_000 },
+      { currency: "eur", cents: 11_000 },
+    ]);
   });
 
   it("restates a split day on the next page, with the whole day's money either side", async () => {
@@ -2138,8 +2165,8 @@ describe("pagedOrdersByDay", () => {
     // not the page slice's, and must not read as new money.
     expect(second.groups[0]?.continued).toBe(true);
     expect(second.groups[0]?.count).toBe(3);
-    expect(second.groups[0]?.subtotalCents).toBe(60_000);
-    expect(first.groups[0]?.subtotalCents).toBe(60_000);
+    expect(second.groups[0]?.subtotals).toEqual([{ currency: "usd", cents: 60_000 }]);
+    expect(first.groups[0]?.subtotals).toEqual([{ currency: "usd", cents: 60_000 }]);
   });
 
   it("searches what a row shows — the diver's name and the departure it names", async () => {
@@ -2191,5 +2218,53 @@ describe("pagedOrdersByDay", () => {
     );
     expect(byNeither.page.total).toBe(0);
     expect(byNeither.groups).toEqual([]);
+  });
+});
+
+/**
+ * **An order never carries the partner slug off the booking it is for**
+ * (issue #1294, owner ruling 2026-09-02).
+ *
+ * The order detail page used to print "Sent by <slug>" on its quiet meta line,
+ * on the stated assumption that "the slug is the shop's own, from its own embed
+ * generator". It is not: `partnerLinkUrl` writes no row, so nothing can tell a
+ * hotel's slug from one an anonymous visitor invented by editing the storefront
+ * URL and booking a seat. That page was the cheaper of the two surfaces to
+ * abuse — the month's report is owner/manager and took ten bookings to displace
+ * a real partner; this page is every staff role and took one.
+ *
+ * Pinned at the query rather than in the browser, because the query is where it
+ * would come back: a `bookings` join re-added for some other column brings the
+ * whole row within reach again.
+ */
+describe("an order and the booking's partner slug", () => {
+  it("returns no referral slug for a booking that carries one", async () => {
+    const { db, shop, entry, staff } = await orderContext();
+    await connectedShop(db, shop.id);
+    const hostile = "call-555-0100-for-cheaper-dives";
+    await db
+      .update(bookings)
+      .set({ referralSource: hostile })
+      .where(eq(bookings.id, entry.booking.id));
+
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: staff,
+        bookingId: entry.booking.id,
+        lineItems,
+      },
+      fakeInvoicing(),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const fetched = await getOrder(db, shop.id, result.order.id);
+    expect(fetched).not.toBeNull();
+    // Over the whole serialised order, not one field: a future column carrying
+    // the slug back out would pass a per-field check.
+    expect(JSON.stringify(fetched)).not.toContain("call-555-0100");
   });
 });

@@ -360,7 +360,13 @@ export default async function OrdersIndexPage({
       label: group.continued ? t("orders.index.ledger.continued", { day: named }) : named,
       meta: t("orders.index.ledger.dayMeta", {
         count: group.count,
-        subtotal: formatMoneyCents(group.subtotalCents, shop.currency, locale),
+        // One figure per currency the day's orders were charged in, each in
+        // its own. Almost always one; two only for a day that straddles a
+        // change of `shops.currency`, where a single figure in the *current*
+        // setting would re-price what was charged in the old one.
+        subtotal: group.subtotals
+          .map((entry) => formatMoneyCents(entry.cents, entry.currency, locale))
+          .join(" · "),
       }),
       rows: group.orders.map((row) => {
         const amount = formatMoneyCents(row.order.totalCents, row.order.currency, locale);

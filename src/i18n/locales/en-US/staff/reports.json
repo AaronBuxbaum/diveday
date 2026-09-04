@@ -50,6 +50,5 @@
   "pagination": {
     "total": "{count, plural, one {# trip} other {# trips}}"
   },
-  "partners": "Who sent divers",
-  "partnerSeats": "{count, plural, one {# seat} other {# seats}}"
+  "partnerArrivals": "{count, plural, one {# seat} other {# seats}} arrived on a partner link"
 }

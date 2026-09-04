@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { hapticsAvailable, hapticsEnabled, setHapticsEnabled } from "./haptics";
+import { Switch } from "./ui/Switch";
 
 /**
  * **The vibration switch, on the device that does the vibrating.**
@@ -47,23 +48,14 @@ export function HapticsToggle({
   if (!ready || !available) return null;
 
   return (
-    <label
-      className={`group inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-3 rounded-lg border border-border bg-surface-sunken p-3 text-sm font-medium text-muted transition-colors hover:border-border-strong hover:text-foreground print:hidden ${className}`.trim()}
-    >
-      <input
-        type="checkbox"
-        checked={enabled}
-        onChange={(event) => {
-          setEnabled(event.target.checked);
-          setHapticsEnabled(event.target.checked);
-        }}
-        className="peer sr-only"
-      />
-      <span
-        aria-hidden="true"
-        className="relative h-6 w-11 shrink-0 rounded-full bg-border transition-colors after:absolute after:top-1 after:left-1 after:size-4 after:rounded-full after:bg-surface after:shadow-sm after:transition-transform peer-checked:bg-primary peer-checked:after:translate-x-5 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary"
-      />
-      {copy.label}
-    </label>
+    <Switch
+      checked={enabled}
+      onChange={(next) => {
+        setEnabled(next);
+        setHapticsEnabled(next);
+      }}
+      label={copy.label}
+      className={className}
+    />
   );
 }

@@ -241,11 +241,12 @@ test.describe("minimum age (H-08, fail open)", () => {
     await expect(page.getByRole("status")).toContainText("Diver details updated");
 
     await page.goto(`${tripPath}`);
-    // Scope to the add-diver section: the global command palette also has a
-    // button named "Search".
+    // Scope to the add-diver section: the picker is one of several boxes on
+    // this page.
     const addDiver = page.locator("#add-diver");
-    await addDiver.getByLabel("Find a returning diver").fill(`Young Diver ${stamp}`);
-    await addDiver.getByRole("button", { name: "Search" }).click();
+    const search = addDiver.getByLabel("Find a returning diver");
+    await search.fill(`Young Diver ${stamp}`);
+    await search.press("Enter");
     // The picker's button is labelled per diver ("Add <name> to the trip"),
     // unlike the by-hand form's plain "Add to trip" used by the fail-open test.
     const addYoungDiverButton = addDiver.getByRole("button", {

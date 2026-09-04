@@ -65,12 +65,15 @@ So the bill is **$22–24 a month**, and $20 of it is Vercel. What moving would 
   and buys durability the free tier lacks. The right move is the one `pnpm cost:report` already
   names: Neon Launch at $19/month before the first pilot shop, because the free tier's ceiling
   suspends the endpoint rather than billing.
-- **AWS trimming.** Real but small, and each item is filed rather than done here: the
-  `MutationDuration` metric is dimensioned by action label and will cost $0.30 per distinct label
-  once traffic arrives; three implicit Lambda log groups never expire; two IAM users exist for an
-  MCP consumer that no longer does; the visual bucket's 30-day lifecycle rule can delete a main
-  baseline the pruner is preserving; RUM samples 100% of sessions. Together they are under $10 a
-  month at pilot scale, and all of them are one-line changes in the stack.
+- **AWS trimming.** Real but small, and each remaining item is filed rather than done here: three
+  implicit Lambda log groups never expire; two IAM users exist for an MCP consumer that no longer
+  does; the visual bucket's 30-day lifecycle rule can delete a main baseline the pruner is
+  preserving; RUM samples 100% of sessions. Together they are under $10 a month at pilot scale, and
+  all of them are one-line changes in the stack. The largest of them is **done**: the
+  `MutationDuration` metric filter was dimensioned by action label, which would have billed $0.30
+  per distinct label — about $9/month across thirty-odd server actions — and is now one aggregate
+  metric, with the per-action ranking left to the Logs Insights widget that already did it
+  (issue #1241).
 
 The cost worth engineering against is therefore **CI wall-clock**, not dollars — see
 `.github/workflows/ci.yml`'s `changes` gate (a docs-only change skips the build, the Playwright

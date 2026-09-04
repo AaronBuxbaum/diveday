@@ -105,7 +105,18 @@ export function DayStation({
     station.crewReason !== "crew_none_assigned";
 
   return (
-    <li className="grid grid-cols-1 gap-y-2 sm:grid-cols-[96px_112px_1fr] sm:gap-y-0">
+    // The time column is 112px rather than the 96px the canvas pinned: at
+    // `text-2xl` a 12-hour time with a double-digit hour ("11:30 PM",
+    // "12:45 AM") is about 107px wide, so from 10:00 to 12:59 the meridiem
+    // wrapped onto its own line and pushed the whole time block below its own
+    // station's title — for half of every day, in every 12-hour locale, and
+    // never in a 24-hour one. Widening is the only one of the four options
+    // that costs nothing a reader can see: shrinking the type breaks the
+    // spine's scale, dropping the meridiem costs a 12-hour reader the
+    // distinction that makes the time legible, and formatting double-digit
+    // hours differently from single-digit ones would make the column change
+    // shape by the hour (issue #1112).
+    <li className="grid grid-cols-1 gap-y-2 sm:grid-cols-[112px_112px_1fr] sm:gap-y-0">
       <div className="sm:pt-1 sm:text-end">
         {/* A real `<time>`: the spine's whole claim is that these read in clock
             order, and a machine-readable instant is what lets anything but a

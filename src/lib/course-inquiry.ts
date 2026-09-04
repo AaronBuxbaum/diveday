@@ -79,7 +79,6 @@ export interface DateRequestCopy {
   orPhone: string;
   orEmail: string;
   dateOptionsHeading: string;
-  dateOptionsHint: string;
   preferredDate: string;
   alternateDate: string;
   whenSuits: string;

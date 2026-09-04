@@ -30,6 +30,7 @@
 // server from empty. That job is the proof; this is the fast, offline gate in
 // front of it, and the only one that runs on every pull request.
 
+import { existsSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import process from "node:process";
@@ -50,6 +51,103 @@ const MIGRATIONS_DIR = process.argv[2] ?? "drizzle";
 // string. A check that needs a production credential to answer a question
 // about files on disk is a check that gets skipped on somebody's laptop.
 const ARGS = ["check", "--dialect", "postgresql", "--out", MIGRATIONS_DIR];
+
+// ---------------------------------------------------------------------------
+// What `drizzle-kit check` cannot tell you, and why this runs before it.
+//
+// The commutativity walk reads `snapshot.json`, and only that. drizzle-kit's
+// `prepareOutFolder` builds its list with
+// `readdirSync(out).map(d => join(out, d, "snapshot.json")).filter(existsSync)`,
+// then `checkHandler` loops over that list. An empty list means the loop body
+// never runs, so the command prints `Everything's fine` and exits 0. **A
+// missing-snapshot state is indistinguishable from a checked-and-clean one**,
+// and the silence is loudest exactly where it matters: `scripts/vercel-build.mjs`
+// runs this inside the production deploy.
+//
+// The concrete way that happens is not hypothetical. `drizzle/` is 80 MB of
+// snapshots and 3.3 MB of the gzipped upload, and excluding it is the obvious
+// saving the first time somebody reads the build log. `.vercelignore` says at
+// its foot why the exclusion is refused; this is what makes the refusal
+// enforced rather than merely written down.
+//
+// The rule is per folder rather than a count, because the same hole comes in
+// smaller sizes. `readMigrationFiles` in drizzle-orm keys on `migration.sql`,
+// so a folder with SQL and no snapshot **is applied in production** and is
+// still invisible to the walk above -- its DDL cannot collide with anything as
+// far as this check is concerned. One folder like that exists today and is
+// named below; it creates a whole table.
+const MIGRATIONS_PATH = path.resolve(ROOT, MIGRATIONS_DIR);
+
+// Folders whose SQL runs but whose DDL the commutativity walk cannot see.
+// Each one is a hole in this check, so the list is a list of known holes and
+// not a category of acceptable ones -- adding to it needs a reason, and the
+// reason is never "the guard went red".
+//
+//   20260824090000_prior-gear-assignments  hand-written on #1155 without a
+//   generated snapshot. It creates `prior_gear_assignments` with three foreign
+//   keys and three indexes, none of which drizzle-kit can see conflicting with
+//   a parallel branch. Backfilling the snapshot means reconstructing the whole
+//   schema as of that commit, which is a change to migration history and a
+//   ticket of its own rather than a line here.
+const KNOWN_UNSNAPSHOTTED = new Set(["20260824090000_prior-gear-assignments"]);
+
+/** Every subdirectory of the migrations folder that carries SQL to apply. */
+function migrationFolders(dir) {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .filter((name) => existsSync(path.join(dir, name, "migration.sql")))
+    .sort();
+}
+
+const folders = migrationFolders(MIGRATIONS_PATH);
+const withSnapshot = folders.filter((name) =>
+  existsSync(path.join(MIGRATIONS_PATH, name, "snapshot.json")),
+);
+
+if (folders.length > 0 && withSnapshot.length === 0) {
+  // Reported apart from the per-folder case below on purpose: naming every
+  // folder in the tree would bury the one sentence that matters, and this is
+  // the shape an upload-time exclusion actually takes.
+  console.error(
+    `migration-graph: ${MIGRATIONS_DIR}/ holds ${folders.length} migrations and not one snapshot.json.
+
+\`drizzle-kit check\` would exit 0 on this tree. It filters its snapshot list
+through \`existsSync\`, so with none present its walk has nothing to iterate and
+it reports success -- the same output as a graph it has read and found clean.
+This guard exists so that state is a failure instead of a silence.
+
+If the snapshots are absent from a deployment upload, restore them: see the
+foot of .vercelignore. If they are absent from a checkout, the tree is
+incomplete and \`git status\` will say so.`,
+  );
+  process.exit(1);
+}
+
+const unsnapshotted = folders.filter(
+  (name) =>
+    !existsSync(path.join(MIGRATIONS_PATH, name, "snapshot.json")) &&
+    !KNOWN_UNSNAPSHOTTED.has(name),
+);
+
+if (unsnapshotted.length > 0) {
+  console.error(
+    `migration-graph: migration SQL the commutativity walk cannot see, because the folder holds no snapshot.json:
+
+${unsnapshotted.map((name) => `  ${MIGRATIONS_DIR}/${name}`).join("\n")}
+
+drizzle-orm applies a folder on the strength of its migration.sql, so this DDL
+will run. drizzle-kit's commutativity walk reads snapshot.json, so it will run
+unseen -- it cannot collide with a parallel branch's migration, however
+squarely the two contradict each other.
+
+A generated migration gets its snapshot from \`pnpm db:generate\`. A hand-written
+one needs the snapshot written alongside it, or the folder is DDL nothing
+polices.`,
+  );
+  process.exit(1);
+}
 
 /** The remedy, spelled out. drizzle prints the diagram; it does not print this. */
 const REMEDY = `

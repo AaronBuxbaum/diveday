@@ -9,22 +9,24 @@ import { bookings, people } from "./schema";
  * A shop hands a resort an attributed link (`partnerLinkUrl`,
  * src/lib/embed-snippets.ts); a diver arriving on it has the partner remembered
  * in a cookie at the edge, and their booking carries the slug. Without this the
- * whole path ships invisible: the "Who sent divers" group on Reports renders
- * nothing when nobody was credited, which is correct and also means the surface
- * has only ever been seen in jsdom.
+ * whole path ships invisible: Reports renders nothing about partner arrivals
+ * when nobody was credited, which is correct and also means the line has only
+ * ever been seen in jsdom.
  *
  * **A column on seats that already exist**, exactly like `seed-dive-recency.ts`
  * and for the same reason: a referral is a fact about a booking, so seeding it
  * beside the demo rather than inside it would show a partner crediting nobody.
  * It is safe to write onto an asserted fixture because it **gates nothing** — no
  * head count moves, no readiness blocker reads it, no money changes. Reports'
- * five figures are identical either way; one quiet group appears beneath them.
+ * five figures are identical either way; one quiet line appears beneath them.
  *
- * **Two partners, not one.** A single row reads like a label; two make the
- * ordering visible and show what the group is for — which of a shop's partners
- * is actually sending people. And most of the demo's divers are still
- * unattributed, which is what a real shop's month looks like: the list answers
- * "who sends us divers", not "where did everybody come from".
+ * **Two partners, not one — and the report no longer says so.** Issue #1294
+ * replaced the per-partner group with a count, because `partnerLinkUrl` writes
+ * no row and nothing can tell a hotel's slug from one an anonymous visitor
+ * invented. So the second partner no longer makes an ordering visible; what
+ * these rows still earn is a non-zero number on the `reports` visual capture,
+ * which is the only reason they are here now. Most of the demo's divers stay
+ * unattributed, which is what a real shop's month looks like.
  *
  * Matched by email rather than by position, so re-ordering an earlier scenario
  * cannot silently move which seat carries which partner. A name that is not

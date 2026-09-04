@@ -42,6 +42,7 @@ import {
   people,
   priorVisits,
   recapPhotos,
+  type Shop,
   shops,
   tripRecapPhotos,
   trips,
@@ -70,15 +71,22 @@ export type RecapPhotoView = { id: string; imageUrl: string; caption: string | n
  * delivers the `/recap` link no earlier than four hours after the trip ends.
  */
 
-/** A site the trip dived, as the recap page names it. */
+/**
+ * A site the day visited, as the recap names it — which is the name and
+ * nothing else.
+ *
+ * It used to carry six more fields. `locationName`, `marineLife` and the two
+ * forecast coordinates fed `RecapMap`, the stylized boat-track drawing slice
+ * 7d deleted; `maxDepthMeters` and `depthRange` fed a depth line the same
+ * slice's review pass took off the after-state, because a depth *performed* is
+ * the diver's to write and a divemaster's to countersign rather than a
+ * property of the reef. Both went dead where they were *rendered* rather than
+ * where they were read, so nothing failed and the projection kept copying them
+ * (issue #1120, H-49). `AfterState.test.tsx` now refuses a seventh at
+ * compile time, beside the paragraph explaining why.
+ */
 export type RecapSite = {
   name: string;
-  locationName: string | null;
-  marineLife: string | null;
-  forecastLatitude: number | null;
-  forecastLongitude: number | null;
-  maxDepthMeters?: number | null;
-  depthRange?: string | null;
 };
 
 export type RecapPageData = {
@@ -186,6 +194,96 @@ export const MAX_CREW_RECAP_PHOTOS_PER_TRIP = 24;
  * caller's caption is truncated, never stored unbounded.
  */
 export const MAX_RECAP_CAPTION_LENGTH = 140;
+
+/**
+ * The shop behind a dead recap link — its own published name and the contact
+ * details it already publishes, and nothing else.
+ */
+export type DeadRecapShop = Pick<
+  Shop,
+  "name" | "slug" | "contactEmail" | "contactPhone" | "defaultLocale"
+>;
+
+export type RecapPageState =
+  /** There is a recap to read: the thread's after-state. */
+  | { kind: "recap"; data: RecapPageData }
+  /**
+   * The departure was called off and this seat was never cancelled — the
+   * blow-out shape, where `callTripBlowout` cancels the trip and leaves every
+   * booking active because whether each seat is refunded stays a per-booking
+   * staff decision.
+   */
+  | { kind: "departure-cancelled"; shop: DeadRecapShop }
+  /** Dead, but ours: the booking tier — name the shop, offer its hand. */
+  | { kind: "dead"; shop: DeadRecapShop }
+  /** The token parsed and resolved no booking at all: name nobody. */
+  | { kind: "unknown" };
+
+/**
+ * **What `/recap/[token]` renders, once its signature has verified.**
+ *
+ * A recap token is *signed* rather than stored, so unlike the other three
+ * booking capabilities there is no row to look up and no revocation — which is
+ * exactly why the page used to collapse every dead cause into one bare notice
+ * that named nobody. What that collapse was protecting against is a forged
+ * token, and `verifyRecapToken` already rejects one before this function is
+ * reachable: everything that gets here carries a signature DiveDay itself
+ * wrote. So the split is the same one the other three booking tokens make (ADR
+ * 20260827-first-light, decision 3) — a *verified* holder is a real diver on a
+ * real booking and is owed the shop's name and its hand; an unverified one
+ * never reaches this code.
+ *
+ * **What stays collapsed.** A cancelled booking and a no-show still get the
+ * one sentence between them, so the failure state itself never says which
+ * happened. What is split out is the *departure's* cancellation, which is not
+ * a fact about the diver at all: their trip stopped running, the shop took it
+ * off its public board, and "ask your dive shop for a fresh link" is advice
+ * that cannot help them because no fresher link will ever exist. `/ready`
+ * already says exactly this to the same diver, in the same words.
+ */
+export async function getRecapPageState(
+  db: AppDb,
+  bookingId: string,
+  checkoutProvider?: CheckoutProvider,
+): Promise<RecapPageState> {
+  const data = await getRecapPageData(db, bookingId, checkoutProvider);
+  if (data) return { kind: "recap", data };
+
+  const [row] = await db
+    .select({
+      name: shops.name,
+      slug: shops.slug,
+      contactEmail: shops.contactEmail,
+      contactPhone: shops.contactPhone,
+      defaultLocale: shops.defaultLocale,
+      bookingStatus: bookings.status,
+      tripStatus: trips.status,
+    })
+    .from(bookings)
+    .innerJoin(shops, eq(shops.id, bookings.shopId))
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(and(eq(bookings.id, bookingId), liveTrip()))
+    .limit(1);
+  if (!row) return { kind: "unknown" };
+
+  const { bookingStatus, tripStatus, ...shop } = row;
+  // **The booking tier wins first, and by name rather than by a negation.**
+  // Written as `bookingStatus !== "cancelled" && tripStatus === "cancelled"`
+  // it read correctly and behaved otherwise: a `no_show` on a called-off
+  // departure is not `"cancelled"`, so it took the departure branch — and a
+  // bearer who could see the trip had left the shop's public board could then
+  // tell a cancelled seat from a no-show by which card rendered, which is the
+  // one distinction the paragraph above promises never to make. Nothing in the
+  // product writes `no_show` yet (`src/db/today.ts`), so it was latent; the
+  // day an action does write one it would have shipped working (`security-reviewer`,
+  // on issue #1119).
+  if (bookingStatus === "cancelled" || bookingStatus === "no_show") return { kind: "dead", shop };
+  if (tripStatus === "cancelled") return { kind: "departure-cancelled", shop };
+  // An active booking on a live departure that `getRecapPageData` still nulled
+  // — no path reaches it today. The booking tier is the honest fallback: it
+  // says the least of the three.
+  return { kind: "dead", shop };
+}
 
 /**
  * Everything the recap page renders for one booking, or null when there was no
@@ -321,15 +419,7 @@ export async function getRecapPageData(
   for (const { diveSite } of dives) {
     if (!diveSite || seen.has(diveSite.name)) continue;
     seen.add(diveSite.name);
-    sites.push({
-      name: diveSite.name,
-      locationName: diveSite.locationName,
-      marineLife: diveSite.marineLife,
-      forecastLatitude: diveSite.forecastLatitude,
-      forecastLongitude: diveSite.forecastLongitude,
-      maxDepthMeters: diveSite.maxDepthMeters,
-      depthRange: diveSite.depthRange,
-    });
+    sites.push({ name: diveSite.name });
   }
 
   // Sites only: this card prints no depth, time or condition of a dive
