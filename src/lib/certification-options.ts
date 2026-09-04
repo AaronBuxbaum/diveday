@@ -34,7 +34,14 @@ export const CERTIFICATION_AGENCIES = [
 ] as const;
 
 /**
- * The sixth option on the level `<select>`: "I am not certified".
+ * "I am not certified", the answer that is not a certification level.
+ *
+ * Deliberately no ordinal here. `DiveDeclarationFields` renders it *second*,
+ * between the empty placeholder and the five levels, and any count would drift
+ * the moment an option moved. The word "sixth" in `dive-declaration.ts` means
+ * something different and still holds there: this is a sixth *value* the select
+ * accepts, never a sixth rung on the five-rung ladder `certificationRank` sorts
+ * and `trip-admission.ts` asserts against.
  *
  * It lives here rather than beside the parser in `src/lib/dive-declaration.ts`
  * for the same reason as the agencies above. That module's line 1 is
