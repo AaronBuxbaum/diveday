@@ -55,6 +55,26 @@ session short of its instructor still raises `instructor_missing` with `self_gui
 `courseCrewGap` takes no such parameter and must never grow one. Readiness, trip admission and
 capacity never see this column at all.
 
+**Amended 2026-09-04 (issue #1342): the writer now refuses the combination, and the detector is
+unchanged.** The paragraph above describes the *output* for a course session carrying
+`self_guided`, and that behaviour is correct and stays — `courseCrewGap` still takes no such
+parameter. What it did not do was stop the state being stored, and the schedule builder offered the
+checkbox in the same disclosed panel as the course picker. The two are mutually exclusive in the
+water: self-guided means the divers go in unguided in buddy pairs, and a certification dive requires
+the instructor present and supervising, under every agency the glossary lists.
+
+So `insertTripInstance` now coerces `self_guided` to false whenever `course_id` is non-null — there
+rather than in `createTrip`, because it is the one function all three creation doors pass through
+(`createTrip`, `duplicateTrip`, and the series horizon roll, which copies the template's flag
+nightly and would otherwise re-mint the state forever). `updateTrip` applies the same rule, read
+against the existing row's course rather than the patch's, since a departure's course is fixed at
+creation and `UpdateTripPatch` carries no `course_id`. Both editors drop the checkbox rather than
+ignoring it.
+
+The sentence above therefore now describes a state no writer can produce. It is kept, not deleted:
+the detector's behaviour is the load-bearing half, and a row predating this rule — or one written
+behind the writer's back — still resolves correctly.
+
 ## Alternatives considered
 
 **Leave it as shipped and wait for a shop to complain.** DiveDay is pre-pilot (H-49) with no usage

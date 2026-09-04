@@ -447,18 +447,28 @@ export function DetailsSection({
             </Field>
             {/* Silences the shop's own divemaster target for this departure and
                 nothing else — an agency training ratio is a safety cap with its
-                own module and a box cannot switch one off (issue #973). */}
-            <Field label={t("schedule.builder.selfGuidedLabel")}>
-              <label className="flex min-h-11 items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="selfGuided"
-                  defaultChecked={trip.selfGuided}
-                  className="size-4"
-                />
-                {t("schedule.builder.selfGuidedHint")}
-              </label>
-            </Field>
+                own module and a box cannot switch one off (issue #973).
+
+                **Not offered at all on a course session** (issue #1342): those
+                divers are students under direct supervision, so "they go in
+                unguided" is not a thing this departure can be. `updateTrip`
+                refuses it whatever this form posts; the box is absent rather
+                than present-and-ignored. The condition is the trip's own
+                course, since this form has no course picker — a departure's
+                course is fixed when it is created. */}
+            {trip.courseId ? null : (
+              <Field label={t("schedule.builder.selfGuidedLabel")}>
+                <label className="flex min-h-11 items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="selfGuided"
+                    defaultChecked={trip.selfGuided}
+                    className="size-4"
+                  />
+                  {t("schedule.builder.selfGuidedHint")}
+                </label>
+              </Field>
+            )}
           </FieldGrid>
           {/* A sunken inset, not a second card: this group sits *inside* the
               Details card, and surface never stacks on surface (see

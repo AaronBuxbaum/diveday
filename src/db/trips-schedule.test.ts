@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
-import { rollCallCrewEvents, tripDives, trips } from "./schema";
+import { courses, rollCallCrewEvents, tripDives, trips } from "./schema";
 import {
   createTrip,
   deleteTrip,
@@ -13,6 +13,7 @@ import {
   moveTrip,
   pagedUpcomingTripsWithCounts,
   upcomingTripsWithCounts,
+  updateTrip,
 } from "./trips";
 
 describe("moveTrip / duplicateTrip across a DST transition", () => {
@@ -410,6 +411,137 @@ describe("a self-guided departure keeps its mark when copied", () => {
 
     if (!copied) throw new Error("duplicateTrip returned nothing");
     const [row] = await db.select().from(trips).where(eq(trips.id, copied.id));
+    expect(row?.selfGuided).toBe(true);
+  });
+});
+
+/**
+ * **A course session is never self-guided** (issue #1342).
+ *
+ * Self-guided means the divers go in unguided in buddy pairs; a certification
+ * dive requires the instructor present and supervising, under every agency the
+ * glossary lists. The two cannot both be true of one departure, and until this
+ * nothing refused the combination — the schedule builder offered the checkbox
+ * beside the course picker and `insertTripInstance` wrote whatever it was sent.
+ *
+ * Refused at `insertTripInstance` rather than at `createTrip` because that is
+ * the one function all three creation doors pass through. `duplicateTrip` gets
+ * its own case below: it copies `source.selfGuided` straight in, and the series
+ * horizon roll does the same thing nightly, forever, so a template holding the
+ * state would re-mint it indefinitely.
+ *
+ * The *detector* is deliberately untouched. A course session short of its
+ * instructor still raises the instructor gap, because `courseCrewGap` takes no
+ * `selfGuided` parameter and must never grow one (ADR
+ * 20260827-self-guided-departures). This refuses the input; that ADR governs
+ * the output.
+ */
+describe("a course session is never self-guided", () => {
+  async function aCourse(db: Awaited<ReturnType<typeof seededShopContext>>["db"], shopId: string) {
+    const [course] = await db
+      .select({ id: courses.id })
+      .from(courses)
+      .where(eq(courses.shopId, shopId))
+      .limit(1);
+    if (!course) throw new Error("seeded shop has no course");
+    return course.id;
+  }
+
+  it("refuses the mark at creation, even when the caller asks for it", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      courseId: await aCourse(db, shop.id),
+      title: "Open Water — session 1",
+      startsAt: wallTimeToUtc({ year: 2026, month: 9, day: 5, hour: 8, minute: 0 }, shop.timezone),
+      endsAt: wallTimeToUtc({ year: 2026, month: 9, day: 5, hour: 12, minute: 0 }, shop.timezone),
+      capacity: 6,
+      plannedDives: 2,
+      selfGuided: true,
+    });
+    if (!trip) throw new Error("failed to create the course session");
+    const [row] = await db.select().from(trips).where(eq(trips.id, trip.id));
+    expect(row?.selfGuided).toBe(false);
+  });
+
+  /**
+   * The path most likely to regress: it does not go through `createTrip` at
+   * all, and it copies the flag rather than being told it. A trip that somehow
+   * already holds the state must not propagate it.
+   */
+  it("does not let a copy carry it onto a course session", async () => {
+    const { db, shop } = await seededShopContext();
+    const courseId = await aCourse(db, shop.id);
+    const source = await createTrip(db, {
+      shopId: shop.id,
+      courseId,
+      title: "Open Water — session 2",
+      startsAt: wallTimeToUtc({ year: 2026, month: 9, day: 6, hour: 8, minute: 0 }, shop.timezone),
+      endsAt: wallTimeToUtc({ year: 2026, month: 9, day: 6, hour: 12, minute: 0 }, shop.timezone),
+      capacity: 6,
+      plannedDives: 2,
+    });
+    if (!source) throw new Error("failed to create the source departure");
+    // Written behind the writer's back, which is the only way to reach the
+    // state now — exactly the shape a row predating this rule would have.
+    await db.update(trips).set({ selfGuided: true }).where(eq(trips.id, source.id));
+
+    const copied = await duplicateTrip(
+      db,
+      shop.id,
+      source.id,
+      wallTimeToUtc({ year: 2026, month: 9, day: 13, hour: 8, minute: 0 }, shop.timezone),
+    );
+    if (!copied) throw new Error("duplicateTrip returned nothing");
+    const [row] = await db.select().from(trips).where(eq(trips.id, copied.id));
+    expect(row?.selfGuided).toBe(false);
+  });
+
+  it("refuses the mark on an edit, read against the row's own course", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      courseId: await aCourse(db, shop.id),
+      title: "Open Water — session 3",
+      startsAt: wallTimeToUtc({ year: 2026, month: 9, day: 7, hour: 8, minute: 0 }, shop.timezone),
+      endsAt: wallTimeToUtc({ year: 2026, month: 9, day: 7, hour: 12, minute: 0 }, shop.timezone),
+      capacity: 6,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("failed to create the course session");
+
+    // `UpdateTripPatch` carries no `courseId` — a departure's course is fixed
+    // at creation — so the refusal has to read the existing row inside the
+    // transaction. A patch that could be trusted for the course would be no
+    // guard at all.
+    const result = await updateTrip(db, shop.id, trip.id, {
+      title: "Open Water — session 3",
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      capacity: 6,
+      plannedDives: 2,
+      selfGuided: true,
+    });
+    expect(result.ok).toBe(true);
+    const [row] = await db.select().from(trips).where(eq(trips.id, trip.id));
+    expect(row?.selfGuided).toBe(false);
+  });
+
+  it("still lets a fun dive be marked self-guided", async () => {
+    // The rule is about course sessions, not about the mark. A guard that took
+    // the feature down with the incoherent state would be worse than the state.
+    const { db, shop } = await seededShopContext();
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      title: "Standing shore dive — buddy pairs",
+      startsAt: wallTimeToUtc({ year: 2026, month: 9, day: 8, hour: 8, minute: 0 }, shop.timezone),
+      endsAt: wallTimeToUtc({ year: 2026, month: 9, day: 8, hour: 12, minute: 0 }, shop.timezone),
+      capacity: 8,
+      plannedDives: 2,
+      selfGuided: true,
+    });
+    if (!trip) throw new Error("failed to create the shore dive");
+    const [row] = await db.select().from(trips).where(eq(trips.id, trip.id));
     expect(row?.selfGuided).toBe(true);
   });
 });

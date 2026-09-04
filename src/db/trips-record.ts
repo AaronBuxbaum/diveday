@@ -358,6 +358,10 @@ export async function updateTrip(
     const [existing] = await tx
       .select({
         id: trips.id,
+        // Read so `selfGuided` can be refused against it below. A trip's course
+        // is fixed at creation and `UpdateTripPatch` carries no `courseId`, so
+        // the row's own value is the only place to learn it.
+        courseId: trips.courseId,
         meetingPointLabel: trips.meetingPointLabel,
         meetingPointAddress: trips.meetingPointAddress,
         arrivalLandmark: trips.arrivalLandmark,
@@ -453,7 +457,16 @@ export async function updateTrip(
         ...(patch.diveMode === undefined ? {} : { diveMode: patch.diveMode }),
         ...(patch.boatId === undefined ? {} : { boatId: patch.boatId }),
         ...(patch.isPrivate === undefined ? {} : { isPrivate: patch.isPrivate }),
-        ...(patch.selfGuided === undefined ? {} : { selfGuided: patch.selfGuided }),
+        // **A course session is never self-guided** (issue #1342), the same
+        // rule `insertTripInstance` applies to every creation door. Refused
+        // against the row's own course rather than the patch's, because a
+        // trip's course is fixed at creation and this patch cannot carry one.
+        // The detector is deliberately untouched: a course session short of
+        // its instructor still raises the instructor gap (ADR
+        // 20260827-self-guided-departures).
+        ...(patch.selfGuided === undefined
+          ? {}
+          : { selfGuided: existing.courseId ? false : patch.selfGuided }),
         ...(patch.diveSiteId === undefined
           ? {}
           : { diveSiteId: patch.diveSiteId ?? (drafts ? primaryDiveSiteId(drafts) : null) }),

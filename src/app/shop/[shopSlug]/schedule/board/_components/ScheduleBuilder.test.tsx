@@ -599,6 +599,57 @@ describe("ScheduleBuilder add panel: price, and options fetched on open", () => 
     );
     expect(courseSelect.querySelector('optgroup[label="NAUI"]')).toHaveTextContent("Custom Course");
   });
+
+  /**
+   * **The self-guided box goes away once a course is picked** (issue #1342).
+   *
+   * Self-guided means the divers go in unguided in buddy pairs; a certification
+   * dive requires the instructor supervising. `insertTripInstance` refuses the
+   * combination whatever this form posts, so the box would be *ignored* rather
+   * than obeyed — and a control that has no effect is worse than one that is
+   * absent, because a staffer who ticks it believes something about the day
+   * that is not true.
+   *
+   * Asserted on the input itself rather than on the label, because the panel
+   * hides with a class: a `hidden` wrapper still submits its checkbox.
+   */
+  it("takes the self-guided box away once a course is chosen", async () => {
+    loadOptions.mockResolvedValueOnce({
+      courses: [{ id: "padi-ow", title: "Open Water Diver", agency: "padi" }],
+      diveSites: [],
+    });
+    const { container } = renderBuilder();
+    await userEvent.click(screen.getByRole("button", { name: "Add a departure on Sat, Aug 1" }));
+
+    const courseSelect = (await vi.waitFor(() => {
+      const select = container.querySelector('select[name="courseId"]');
+      if (!select) throw new Error("course selector is not mounted yet");
+      return select;
+    })) as HTMLSelectElement;
+
+    // The box lives in the disclosed half of the panel, beside the course
+    // picker it now depends on.
+    await userEvent.click(screen.getByRole("button", { name: /More options/ }));
+
+    const selfGuided = () => container.querySelector('input[name="selfGuided"]');
+    // Offered on a fun dive, which is what the panel opens as.
+    expect(selfGuided()).not.toBeNull();
+    expect((selfGuided() as HTMLInputElement).disabled).toBe(false);
+    expect(selfGuided()?.closest(".hidden")).toBeNull();
+
+    await userEvent.selectOptions(courseSelect, "padi-ow");
+    // Both halves, because they fail differently: a `hidden` wrapper still
+    // submits the checkbox it contains, so hiding without disabling would
+    // leave the value posted and only the explanation missing.
+    expect(selfGuided()?.closest(".hidden")).not.toBeNull();
+    expect((selfGuided() as HTMLInputElement).disabled).toBe(true);
+
+    // And back, because clearing the course makes the departure a fun dive
+    // again — the rule is about course sessions, not about the mark.
+    await userEvent.selectOptions(courseSelect, "");
+    expect(selfGuided()?.closest(".hidden")).toBeNull();
+    expect((selfGuided() as HTMLInputElement).disabled).toBe(false);
+  });
 });
 
 describe("ScheduleBuilder row status slot — one grammar (issue 758)", () => {

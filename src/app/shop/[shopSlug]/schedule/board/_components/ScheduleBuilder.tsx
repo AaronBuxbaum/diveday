@@ -628,13 +628,19 @@ function AddPanel({
           series template and materialized weekly — so a mark you can only
           apply after the fact is a mark the case it was built for never gets
           in time (issue #973). */}
-      <Field label={null} className={expanded ? undefined : "hidden"}>
+      {/* **Absent once a course is picked** (issue #1342), not merely ignored:
+          self-guided means the divers go in unguided in buddy pairs, and a
+          certification dive requires the instructor supervising, so the two
+          cannot both be true of one departure. `insertTripInstance` refuses the
+          combination whatever this form posts; a control that has no effect is
+          worse than one that is not there. */}
+      <Field label={null} className={expanded && courseId === "" ? undefined : "hidden"}>
         <label className="flex items-center gap-2 text-sm font-medium cursor-pointer py-2">
           <input
             type="checkbox"
             name="selfGuided"
             value="true"
-            disabled={!expanded}
+            disabled={!expanded || courseId !== ""}
             className="size-4 rounded border-border"
           />
           <div className="flex flex-col">

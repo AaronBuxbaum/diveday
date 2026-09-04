@@ -245,7 +245,23 @@ export async function insertTripInstance(
       plannedDives: params.plannedDives,
       diveSiteId: primaryDiveSiteId(params.drafts),
       isPrivate: params.isPrivate ?? false,
-      selfGuided: params.selfGuided ?? false,
+      // **A course session is never self-guided** (issue #1342). Self-guided
+      // means the divers go in unguided in buddy pairs; a certification dive
+      // requires the instructor present and supervising, under every agency the
+      // glossary lists. The two cannot both be true of one departure.
+      //
+      // Coerced here rather than in `createTrip` because this is the one
+      // function all three creation doors pass through: `createTrip`,
+      // `duplicateTrip` (which copies `source.selfGuided` straight in) and the
+      // series horizon roll (which copies `template.trip.selfGuided`, nightly,
+      // forever — so one bad template would re-mint the state indefinitely).
+      //
+      // This refuses the *input*. It deliberately does not change the output
+      // for a row that already holds it: `courseCrewGap` takes no `selfGuided`
+      // parameter and must never grow one, so a course session short of its
+      // instructor still raises the instructor gap (ADR
+      // 20260827-self-guided-departures).
+      selfGuided: params.courseId ? false : (params.selfGuided ?? false),
       diveMode: params.diveMode ?? "boat",
       boatId: params.boatId ?? null,
     })
