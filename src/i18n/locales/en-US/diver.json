@@ -164,6 +164,8 @@
     "linkCopyFailed": "Couldn’t copy. Copy it from the address bar instead.",
     "shareText": "Dive with me. Here are the trip details.",
     "packTitle": "Pack with confidence",
+    "calendarDockCall": "Dock call {dockCall}. We leave at {departure}.",
+    "calendarMeetingPoint": "Meet at {place}.",
     "packBring": "Bring",
     "packRenting": "Renting",
     "packProvided": "We provide",

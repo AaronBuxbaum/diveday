@@ -103,13 +103,22 @@ export function calendarDocument(input: {
   return `${lines.join("\r\n")}\r\n`;
 }
 
-/** A portable single-event calendar file: the diver's "add to my calendar" download. */
-export function tripCalendarFile(trip: CalendarTrip): string {
+/**
+ * A portable single-event calendar file: the diver's "add to my calendar"
+ * download.
+ *
+ * `stamp` is separable from `startsAt` because the event a diver puts in their
+ * calendar **begins at the dock call**, not at the moment the lines come off
+ * (issue #1165) — while DTSTAMP still wants an instant tied to the trip
+ * itself. Defaulting it to `startsAt` keeps every existing caller byte-for-byte
+ * identical.
+ */
+export function tripCalendarFile(trip: CalendarTrip & { stamp?: Date }): string {
   return calendarDocument({
     events: [{ ...trip, uid: `${trip.url}@diveday` }],
-    // A one-off download is produced now and never re-fetched, so the trip's
-    // own start is a stable stamp — and one that keeps the file byte-identical
-    // across renders, which the visual and e2e fleets depend on.
-    stamp: trip.startsAt,
+    // A one-off download is produced now and never re-fetched, so an instant
+    // of the trip's own is a stable stamp — and one that keeps the file
+    // byte-identical across renders, which the visual and e2e fleets depend on.
+    stamp: trip.stamp ?? trip.startsAt,
   });
 }

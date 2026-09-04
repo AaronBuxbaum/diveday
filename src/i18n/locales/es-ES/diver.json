@@ -164,6 +164,8 @@
     "linkCopyFailed": "No se pudo copiar. Cópialo desde la barra de direcciones.",
     "shareText": "Bucea conmigo. Aquí tienes los detalles de la salida.",
     "packTitle": "Prepara tu equipaje con confianza",
+    "calendarDockCall": "Presentación en el muelle a las {dockCall}. Salimos a las {departure}.",
+    "calendarMeetingPoint": "Punto de encuentro: {place}.",
     "packBring": "Trae",
     "packRenting": "Alquilas",
     "packProvided": "Lo ponemos nosotros",
