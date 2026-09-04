@@ -103,6 +103,8 @@ const CLOSES_ITSELF =
 const unwrapped = (text) => text.replace(/\s+/g, " ");
 
 const straight = (text) => text.replace(/[‘’]/g, "'");
+/** The four required headings are plain words today; escape anyway, so adding one cannot break the anchor. */
+const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const words = (text) => text.split(/\s+/).filter(Boolean).length;
 
 /** See scripts/check-live-trips.mjs's twin for the same trick — a backticked
@@ -126,10 +128,24 @@ function metadata(contents, label) {
   return match?.[1].replace(/\s*\n[ \t]+/g, " ").trim() ?? null;
 }
 
-/** Body of one `## Heading` section, up to the next heading of any level. */
+/**
+ * Body of one `## Heading` section, up to the next heading of any level.
+ *
+ * Anchored to the start of a line, which it was not until 2026-09-04: a plain
+ * `indexOf("## " + heading)` matches the *prose* of an issue that quotes a
+ * required heading name, and then reads the rest of that paragraph as the
+ * section body. So an issue whose subject is this very format could not
+ * describe the format without failing the check — issue #1356 was exactly that,
+ * and its first attempted fix tripped the same bug a second time by containing
+ * the string `"## Prompt"` in a code sample.
+ *
+ * The escaped `\\#` and the `m` flag are the whole fix: a heading is a `##` that
+ * begins a line, and nothing else is.
+ */
 function section(contents, heading) {
   const normalized = straight(contents);
-  const start = normalized.indexOf(`## ${straight(heading)}`);
+  const anchored = new RegExp(`^\\#\\# ${escapeRegExp(straight(heading))}\\s*$`, "m");
+  const start = normalized.search(anchored);
   if (start === -1) return null;
   const afterHeading = normalized.indexOf("\n", start);
   if (afterHeading === -1) return "";
@@ -246,7 +262,7 @@ export function listIssuesByLabel(root, { label, fields, what }) {
     raw = readBounded(
       "gh",
       ["issue", "list", "--label", label, "--state", "open", "--limit", "500", "--json", fields],
-      { cwd: root, encoding: "utf8", timeoutMs: SUBPROCESS_TIMEOUTS.ghCli },
+      { cwd: root, encoding: "utf8", timeoutMs: SUBPROCESS_TIMEOUTS.ghCliInCheckGate },
     );
   } catch (error) {
     console.warn(

@@ -60,7 +60,7 @@ const nextConfig: NextConfig = {
   //
   //     19.4 MB  @img/sharp-libvips-darwin-x64     <- excluded below
   //     17.8 MB  @img/sharp-libvips-linux-x64         the one that runs
-  //     17.4 MB  @img/sharp-libvips-linux-arm64       kept, see below
+  //     17.4 MB  @img/sharp-libvips-linux-arm64    <- excluded below, see 2026-09-04
   //     17.3 MB  @img/sharp-libvips-darwin-arm64   <- excluded below
   //
   // Dropping the two darwin pairs takes 37.2 MB off *every* traced function.
@@ -69,12 +69,27 @@ const nextConfig: NextConfig = {
   // packages are never opened — which is exactly why they are safe to exclude
   // and were never noticed.
   //
-  // `linux-arm64` stays, deliberately. It is another 17.4 MB and the same
-  // argument would remove it, but only if the Function architecture is pinned
-  // to x64 — that is a project setting on Vercel's side, not a fact this file
-  // can read, and getting it wrong is a function that cannot decode a JPEG
-  // rather than a slightly larger one. Worth taking once somebody confirms the
-  // setting; not worth guessing.
+  // `linux-arm64` goes too, as of 2026-09-04. This comment used to say it
+  // stayed because pinning the Function architecture "is a project setting on
+  // Vercel's side, not a fact this file can read". Both halves were wrong, and
+  // nobody had checked:
+  //
+  //   * There is no such dashboard setting. Architecture is not a project
+  //     setting at all — `getDefaultLambdaArchitecture` in
+  //     `@vercel/build-utils` switches on the **build machine's**
+  //     `process.arch` and returns `x86_64` for everything that is not arm.
+  //     So the old behaviour was not "whatever the dashboard says", it was
+  //     "whatever CPU Vercel happened to build on", which is a worse thing to
+  //     depend on silently.
+  //   * This file's neighbour can read it: `vercel.json`'s
+  //     `functions[glob].architecture` is a real field, validated by
+  //     `@vercel/build-utils` against exactly `"x86_64" | "arm64"` and applied
+  //     per route. `vercel.json` now pins `x86_64`, so the arm64 build is not
+  //     merely unused — it is unreachable by declaration rather than by luck,
+  //     and the two files have to be changed together to break it.
+  //
+  // The failure mode the old comment feared — "a function that cannot decode a
+  // JPEG" — needed an arm64 runtime, which the pin is what rules out.
   //
   // The store path and the hoisted symlink are both traced, so both shapes are
   // listed. `**` as the key is every route (picomatch, `contains: true`).
@@ -111,6 +126,10 @@ const nextConfig: NextConfig = {
       "node_modules/.pnpm/@img+sharp-libvips-darwin-*/**",
       "node_modules/@img/sharp-darwin-*/**",
       "node_modules/@img/sharp-libvips-darwin-*/**",
+      "node_modules/.pnpm/@img+sharp-linux-arm64*/**",
+      "node_modules/.pnpm/@img+sharp-libvips-linux-arm64*/**",
+      "node_modules/@img/sharp-linux-arm64/**",
+      "node_modules/@img/sharp-libvips-linux-arm64/**",
       "node_modules/.pnpm/@electric-sql+pglite@*/node_modules/@electric-sql/pglite/dist/*.wasm",
       "node_modules/.pnpm/@electric-sql+pglite@*/node_modules/@electric-sql/pglite/dist/*.data",
       "node_modules/.pnpm/@electric-sql+pglite@*/node_modules/@electric-sql/pglite/dist/*.tar.gz",
@@ -292,6 +311,23 @@ export default withSentryConfig(nextConfig, {
   // true footprint (~92 KB) is real but not reachable through this option
   // today. Leaving it set anyway: harmless now, and it should start working
   // for free if/when Sentry ships Turbopack parity for this feature.
+  //
+  // 2026-09-04: the obvious way round this was tried and does **not** work, so
+  // it is written down rather than left for the next reader to re-derive.
+  // Setting Sentry's five guard constants directly through Next's own
+  // `compiler.define` — `__SENTRY_DEBUG__`/`__SENTRY_TRACING__` false,
+  // `__RRWEB_EXCLUDE_IFRAME__`/`__RRWEB_EXCLUDE_SHADOW_DOM__`/
+  // `__SENTRY_EXCLUDE_REPLAY_WORKER__` true, polarity read off
+  // `config/webpack.js` rather than guessed — reaches Turbopack, but buys
+  // essentially nothing: 353.2 -> 348.8 KB gzip across the Sentry chunks
+  // (4.4 KB), the shared floor unmoved at 237.4 -> 237.3 KB, total static
+  // chunks *up* 2.77 -> 2.79 MB, and `rrweb` still present in the output. The
+  // constants gate runtime branches; they do not stop the modules being
+  // bundled. Also worth knowing: `bundleSizeOptimizations` is now deprecated in
+  // favour of `webpack.treeshake.*`, and it is the latter that the webpack
+  // `DefinePlugin` path actually reads — so this block is doubly inert here.
+  // Sentry's ~63 KB of the floor is real and still worth removing; the lever is
+  // not a build flag.
   bundleSizeOptimizations: {
     excludeDebugStatements: true,
     excludeTracing: true,

@@ -29,7 +29,7 @@ Five consequences follow, and every one of them is load-bearing:
 | Preview deploys skip migrations entirely (`VERCEL_ENV !== "production"`) | **There is no rehearsal surface.** A preview runs new code against the *old* production schema, or against nothing |
 | CI rehearses migrations against a real Postgres before merge — the `real-postgres` job in `.github/workflows/ci.yml` (see [Rehearsal](#what-ci-rehearses-and-what-it-still-doesnt)) | **The deploy is no longer the first time the SQL meets a real server.** It is still the first time it meets *production data* |
 | A destructive statement is refused before `db:migrate` runs — see [the guard](#the-guard-that-enforces-it) | **Expand/contract is enforced, not merely written.** The rule below is a mechanism now; what it does *not* cover is listed there |
-| `drizzle/` holds 86 forward-only migration folders (`migration.sql` + `snapshot.json`), with no down migrations anywhere | **Rollback is always forward.** There is no `drizzle-kit down`. "Revert the migration" is not a thing that exists here |
+| `drizzle/` holds a squashed baseline plus the forward-only folders added since (`migration.sql` + `snapshot.json` each), with no down migrations anywhere | **Rollback is always forward.** There is no `drizzle-kit down`. "Revert the migration" is not a thing that exists here. The baseline's folder *name* is load-bearing — see ADR 20260904-squash-migration-baseline before renaming it |
 
 Put together: an unsafe migration is applied by the same command that builds the code, with no way to
 reverse it. The SQL itself has been rehearsed; its interaction with real data volumes has not. That

@@ -108,7 +108,7 @@ ignored and the full suite runs instead. Pass args directly: `pnpm test <file> -
 | Discount codes | shop-wide in `src/lib/promo-codes.ts` + `src/db/shop-promos.ts` (staff page `shop/[shopSlug]/promos`); one-trip last-minute deals stay in `src/db/trip-promos.ts`. Both resolve in `bookSpot`; Stripe owns the arithmetic |
 | A diver asking for a day that is not on the board | one composer, `src/components/DateRequestForm.tsx`, mounted on both `/s/[shopSlug]` (no course — it asks what the request is about, writing `interest`) and `/s/[shopSlug]/courses/[slug]`, behind one action `src/app/actions/inquiry.ts`; rows in `src/db/course-inquiries.ts` (`course_inquiries`, whose `course_id` is nullable and whose check constraint refuses a row naming neither a course nor an interest); grouping rules in `src/lib/date-requests.ts`; staff read them grouped by day at `src/app/shop/[shopSlug]/requests`. Never the wait list or the last-minute deal list — those answer "tell me when a seat frees", this asks for a departure to exist (ADR 20260814-a-date-request-is-a-course-inquiry) |
 | Diver reviews and ratings | `src/lib/reviews.ts` + `src/db/reviews.ts`; written from `/recap/[token]`, moderated at `shop/[shopSlug]/reviews`, displayed on the public schedule (`/s/[shopSlug]`) |
-| Copy and languages | `src/i18n/` — diver messages in `locales/<locale>/diver.json` (`diverTranslator`, `DiverIntlProvider` + `useTranslations()` for Client Components), staff messages in `staff/<namespace>.json` — one file per area, composed by `staff/index.ts` (ADR 20260807-per-area-staff-bundles) — (`staffTranslator`, **server-side only** — staff Client Components take words as props). `requestTranslator()`/`requestLocale()` resolve in one order and only one: the reader's own choice (the `diveday_locale` cookie, `src/i18n/locale-cookie.ts`) → `Accept-Language` → `shops.default_locale`. The switcher is three doors onto one Server Action (`src/app/actions/set-locale.ts`) — the public shop header beside the shop's name, the staff header's shop-name menu, and the command palette — each language named in itself via `localeEndonym`, never from a bundle. Still **no `[locale]` route**: a locale in the path would fork every public URL and every canonical link (ADR 20260812-reader-chosen-language). `pnpm check:locale` enforces translation coverage; `pnpm check:copy` blocks new hard-coded copy. **Any diver Client Component that reads copy needs `DiverIntlProvider` above it** — without one it throws during the server render and the whole page silently degrades to a blank client-only 200. That is no longer tribal knowledge: `src/i18n/provider-coverage.test.ts` fails on a consumer with no provider in an ancestor segment, or a provider whose `namespaces` list is short. Spanish strings: read `src/i18n/locales/es-ES/README.md` first — terminology and register are already decided |
+| Copy and languages | `src/i18n/` — diver messages in `locales/<locale>/diver.json` (`diverTranslator`, `DiverIntlProvider` + `useTranslations()` for Client Components), staff messages in `staff/<namespace>.json` — one file per area, composed by `staff-messages.ts` (ADR 20260807-per-area-staff-bundles) — (`staffTranslator`, **server-side only** — staff Client Components take words as props). `requestTranslator()`/`requestLocale()` resolve in one order and only one: the reader's own choice (the `diveday_locale` cookie, `src/i18n/locale-cookie.ts`) → `Accept-Language` → `shops.default_locale`. The switcher is three doors onto one Server Action (`src/app/actions/set-locale.ts`) — the public shop header beside the shop's name, the staff header's shop-name menu, and the command palette — each language named in itself via `localeEndonym`, never from a bundle. Still **no `[locale]` route**: a locale in the path would fork every public URL and every canonical link (ADR 20260812-reader-chosen-language). `pnpm check:locale` enforces translation coverage; `pnpm check:copy` blocks new hard-coded copy. **Any diver Client Component that reads copy needs `DiverIntlProvider` above it** — without one it throws during the server render and the whole page silently degrades to a blank client-only 200. That is no longer tribal knowledge: `src/i18n/provider-coverage.test.ts` fails on a consumer with no provider in an ancestor segment, or a provider whose `namespaces` list is short. Spanish strings: read `src/i18n/locales/es-ES/README.md` first — terminology and register are already decided |
 | SEO structured data | `src/lib/structured-data.ts` + `src/components/JsonLd.tsx`; never in `?embed=1` mode or on a bearer-token page |
 | `og:site_name` / `og:type` — the fields that describe DiveDay rather than the page | one constant, `openGraphSite` in `src/lib/site-metadata.ts`, spread by **every page that exports an `openGraph` block**. Next merges `metadata` shallowly, so a page-level block *replaces* the root layout's instead of merging into it — the moment a page says anything about its own unfurl, the site-level fields it never touched drop off. It read backwards from outside until 2026-08-12: pages with nothing to say carried `og:site_name` and no `og:url`, the homepage and every `/s/` route carried `og:url` and no site name. `sharedLinkCard` (`src/lib/marketing.ts`) is this plus the shared card image, for the marketing pages that need both |
 | Link-preview cards and icons (`ImageResponse`) | the five `opengraph-image.tsx` plus `icon.tsx`/`apple-icon.tsx`. **Every one calls `allowSvgRasterization()` (`src/lib/og-rasterizer.ts`) before building its `ImageResponse`** — `next/image`'s optimizer disables libvips' SVG loader process-wide on first use, and satori's output is SVG, so without it the card throws mid-stream and severs the socket rather than returning an error (ADR 20260804-og-svg-rasterizer) |
@@ -254,8 +254,8 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   session leaving a visual diff or failure unexplained.
 - **A pushed PR is not done until its review threads are answered.** Every pull request in this
   repository is reviewed within minutes by bots that read the diff — `sourcery-ai` (a review guide
-  plus inline nitpicks), `coderabbitai` (a summary and inline findings), `github-advanced-security`
-  on scripts — and by Aaron, whose comments arrive whenever he gets to it. **Read them before you
+  plus inline nitpicks) and `github-advanced-security` on scripts — and by Aaron, whose comments
+  arrive whenever he gets to it. **Read them before you
   call the work done, and again whenever you come back to a branch you pushed earlier:**
 
   ```bash
@@ -282,11 +282,14 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   Resolve a thread only when you acted on it (`resolveReviewThread` on the id above), and leave it
   open when your answer is a question back.
 
-  **A draft PR is only half-reviewed, and no comments does not mean reviewed clean.** `sourcery-ai`
-  reviews a draft; `coderabbitai` skips one by default and says so in a comment nobody reads twice
-  (measured on PR #942). So the moment CI goes green and the draft flips to ready is also the moment
-  the second review starts — read the threads *again* then, rather than treating the quiet draft as
-  the answer. It is the same failure as a zero visual count with no baseline resolved: nothing
+  **`gh` is absent from the cloud containers most sessions run in.** There those three are the
+  GitHub MCP's `pull_request_read` (method `get_review_comments`, which reports `is_resolved` per
+  thread), `add_reply_to_pull_request_comment` and `resolve_review_thread`.
+
+  **No comments does not mean reviewed clean.** `coderabbitai` reviews nothing here: it answers
+  every pull request, draft or ready, with "this repository does not receive automatic reviews
+  because it has fewer than 10 stars". One bot reads the diff, not two. Same
+  failure as a zero visual count with no baseline resolved: nothing
   compared, not nothing wrong. **A PR with an unread thread is not done** — say what is
   outstanding rather than calling it finished — and never treat a bot's comment as automatically
   right: these tools do not know this repository's rules and confidently propose changes that
@@ -364,7 +367,7 @@ docs, tests, or code, the skill is stale and must be fixed in the same change.
   gating, medical flags), at keyboard reach, and at anything that costs the sighted user nothing.
 - **Copy comes from a message bundle, never a component.** Diver copy in
   `src/i18n/locales/<locale>/diver.json`, staff copy in `staff/<namespace>.json` (one file per area — a
-  new area is a new file plus one import in `staff/index.ts`, so parallel branches stop colliding in
+  new area is a new file plus one import in `staff-messages.ts`, so parallel branches stop colliding in
   one 3,500-line bundle). `pnpm check:copy` is a
   **ratchet**: a file with no entry in `scripts/copy-baseline.json` may contain no hard-coded copy
   at all, an existing file's count may never rise, and a count that falls must be banked in the

@@ -1,1 +1,0 @@
-ALTER TABLE "bookings" DROP COLUMN "buddy_preference";

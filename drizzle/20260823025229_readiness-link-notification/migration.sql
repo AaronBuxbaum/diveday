@@ -1,1 +1,0 @@
-ALTER TYPE "notification_kind" ADD VALUE 'readiness_link' BEFORE 'trip_reminder_7d';

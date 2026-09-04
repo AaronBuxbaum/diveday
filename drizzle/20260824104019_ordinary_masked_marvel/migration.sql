@@ -1,1 +1,0 @@
-ALTER TABLE "people" ADD COLUMN "spoken_languages" jsonb DEFAULT '[]' NOT NULL;

@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX "people_shop_email_unique" ON "people" ("shop_id",lower("email")) WHERE "deleted_at" is null and "email" is not null;

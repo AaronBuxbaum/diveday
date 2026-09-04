@@ -1,1 +1,0 @@
-ALTER TABLE "waiver_records" ADD COLUMN "token_sealed" text;

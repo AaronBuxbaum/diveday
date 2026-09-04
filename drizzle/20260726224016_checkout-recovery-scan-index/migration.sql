@@ -1,1 +1,0 @@
-CREATE INDEX "booking_checkouts_recovery_scan_idx" ON "booking_checkouts" ("created_at") WHERE "status" = 'pending' and "abandoned_recovery_sent_at" is null;

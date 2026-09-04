@@ -173,3 +173,37 @@ describe("scripts/", () => {
     ).toEqual([]);
   });
 });
+
+describe("timeouts that must stay ordered", () => {
+  /**
+   * `check-follow-ups.mjs` exits SKIPPED when `gh` cannot answer, so an
+   * unreachable GitHub never blocks a commit. That path is only reachable if
+   * `gh`'s own timeout fires before `check-repo.mjs` kills the check — and
+   * until 2026-09-04 it did not: `ghCli` was 120s against a 90s runner
+   * ceiling, so a wedged `gh` became the hard failure the SKIPPED path exists
+   * to prevent. Pinned here rather than remembered, because the failure is
+   * invisible until GitHub is actually down.
+   *
+   * Read as text, not imported: `check-repo.mjs` is entirely top-level, so
+   * importing it would run all 43 checks inside this unit test.
+   */
+  it("lets the in-gate gh call time out before check-repo kills the check", () => {
+    const source = readFileSync(path.join(HERE, "check-repo.mjs"), "utf8");
+    const declared = source.match(/const CHECK_TIMEOUT_MS = ([\d_]+);/);
+    expect(
+      declared,
+      "check-repo.mjs no longer declares CHECK_TIMEOUT_MS the way this test reads it",
+    ).not.toBeNull();
+    const checkTimeoutMs = Number(declared[1].replace(/_/g, ""));
+
+    expect(SUBPROCESS_TIMEOUTS.ghCliInCheckGate).toBeLessThan(checkTimeoutMs);
+    // Room for the check's own file work after `gh` gives up, not a hairline pass.
+    expect(checkTimeoutMs - SUBPROCESS_TIMEOUTS.ghCliInCheckGate).toBeGreaterThanOrEqual(30_000);
+  });
+
+  it("is the timeout check-follow-ups actually passes to gh", () => {
+    const source = readFileSync(path.join(HERE, "check-follow-ups.mjs"), "utf8");
+    expect(source).toContain("SUBPROCESS_TIMEOUTS.ghCliInCheckGate");
+    expect(source).not.toContain("SUBPROCESS_TIMEOUTS.ghCli,");
+  });
+});

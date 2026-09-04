@@ -55,8 +55,8 @@ either build it or say why you are not.
    diff image, explain each one in the pull request, and carry on
    ([visual-triage](../visual-triage/SKILL.md)).
 
-   **Read the review comments in the same pass, not only the checks.** `sourcery-ai` and
-   `coderabbitai` review every pull request here within minutes of it opening, and Aaron's comments
+   **Read the review comments in the same pass, not only the checks.** `sourcery-ai` reviews every
+   pull request here within minutes of it opening, and Aaron's comments
    land whenever he gets to them — all of it arrives while you are building the next ticket, which
    is exactly why this step exists:
 

@@ -1,1 +1,0 @@
-ALTER TABLE "user_accounts" ADD COLUMN "orientation_dismissed_at" timestamp with time zone;

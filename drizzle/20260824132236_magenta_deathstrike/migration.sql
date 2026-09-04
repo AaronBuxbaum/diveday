@@ -1,7 +1,0 @@
-ALTER TABLE "certifications" ADD COLUMN "issued_by_shop_at" timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "certifications" ADD COLUMN "issued_from_trip_id" uuid;--> statement-breakpoint
-ALTER TABLE "certifications" ADD COLUMN "issued_by_person_id" uuid;--> statement-breakpoint
-ALTER TABLE "certifications" ADD CONSTRAINT "certifications_issued_from_trip_id_trips_id_fkey" FOREIGN KEY ("issued_from_trip_id") REFERENCES "trips"("id") ON DELETE SET NULL;--> statement-breakpoint
-ALTER TABLE "certifications" ADD CONSTRAINT "certifications_issued_by_person_id_people_id_fkey" FOREIGN KEY ("issued_by_person_id") REFERENCES "people"("id");--> statement-breakpoint
--- diveday:allow-destructive drop-constraint certifications.identifier: widens the CHECK to a strict superset (issue #717) — every row that satisfied the old constraint still satisfies the new one, so no row written by the previous release's code can ever be rejected mid-deploy, and no row already in the table can be invalidated by the swap.
-ALTER TABLE "certifications" DROP CONSTRAINT "certifications_identifier_present_unless_self_declared", ADD CONSTRAINT "certifications_identifier_present_unless_self_declared" CHECK (("identifier" is not null and length(btrim("identifier", E' \t\n\r\f\v')) > 0) or ("self_declared_at" is not null and "status" = 'pending') or ("issued_by_shop_at" is not null));

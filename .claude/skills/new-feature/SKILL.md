@@ -47,14 +47,15 @@ The full loop. Details live in `docs/engineering/workflow.md` — this is the ex
    the follow-up visual-only check; run the `visual-triage` skill for any red visual job, forked
    PR, or diff the generated baseline commit does not explain. The PR is not done while a visual
    diff or failure is unexplained.
-11. **Answer the review.** `gh pr view <n> --comments` — `sourcery-ai` and `coderabbitai` review
+11. **Answer the review.** `gh pr view <n> --comments` — `sourcery-ai` reviews
    every pull request here within minutes, and Aaron's comments arrive later. Each open thread gets
    an action and a reply: fixed (push, then say which commit), declined with the reason (a nitpick
    that contradicts a rule in AGENTS.md is declined by naming it), or filed as a `needs-triage`
    issue whose number goes in the thread. A bot is often wrong about this repository's conventions —
    check its claim against `pnpm check:repo` before you act on it. Unread threads mean the PR is not
-   done; see AGENTS.md's Hard rules for reading the open ones via GraphQL. **Read them once more
-   after the draft flips to ready** — `coderabbitai` skips drafts, so a quiet draft has had one
-   review, not two.
+   done; see AGENTS.md's Hard rules for reading the open ones via GraphQL, and for the GitHub MCP
+   calls that stand in where `gh` is absent. One bot reads the diff, not two: `coderabbitai` is
+   installed but declines this repository for having fewer than 10 stars, so a quiet PR is thinner
+   evidence than it looks.
 
 Definition of done: the checklist in `docs/engineering/workflow.md`. All boxes, no exceptions.

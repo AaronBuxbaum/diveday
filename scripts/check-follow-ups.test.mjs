@@ -48,6 +48,24 @@ describe("a well-formed issue", () => {
     expect(problemsFor(valid.body)).toEqual([]);
   });
 
+  /**
+   * The bug this pins cost two round trips of CI on 2026-09-04. `section()`
+   * found a heading with a bare `indexOf("## " + heading)`, which matches the
+   * *prose* of an issue that quotes a required heading name — so it read the
+   * rest of that sentence as the section body and reported the real section
+   * missing. Issue #1356 was about this very format and could not describe it;
+   * its first attempted fix tripped the same bug again by containing the
+   * string in a fenced code sample.
+   */
+  it("is not fooled by a required heading name quoted in the prose", () => {
+    const quoting = valid.body.replace(
+      "The booking form accepts",
+      'The four sections a follow-up needs are "## What I noticed", "## Why it isn\'t already done",\n' +
+        '"## Proposed change" and "## Prompt", and none of them may be empty. The booking form accepts',
+    );
+    expect(problemsFor(quoting)).toEqual([]);
+  });
+
   it("reports the paths the caller checks against disk", () => {
     expect(findIssueProblems(valid).touched).toEqual(["src/lib", "docs/agents/issue-tracker.md"]);
   });

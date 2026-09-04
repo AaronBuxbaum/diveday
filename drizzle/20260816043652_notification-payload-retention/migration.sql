@@ -1,1 +1,0 @@
-ALTER TABLE "notification_send_queue" ALTER COLUMN "payload" DROP NOT NULL;

@@ -228,7 +228,7 @@ commit, then the `POST .../stacks` above.
 
 ## Answering review across layers
 
-Every layer is reviewed on its own — `sourcery-ai` and `coderabbitai` comment on each one as it
+Every layer is reviewed on its own — `sourcery-ai` comments on each one as it
 opens, so a six-layer stack collects six reviews while you are still building the top of it. Read
 them per layer, on the same pass that reads each layer's CI:
 

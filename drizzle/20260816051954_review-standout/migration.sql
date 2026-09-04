@@ -1,1 +1,0 @@
-ALTER TABLE "trip_reviews" ADD COLUMN "is_standout" boolean DEFAULT false NOT NULL;
