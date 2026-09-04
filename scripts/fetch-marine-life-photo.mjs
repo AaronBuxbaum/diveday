@@ -44,8 +44,30 @@ const API = "https://commons.wikimedia.org/w/api.php";
  * The long edge, and the encoder settings the existing 93 were made with.
  * Recorded in the README as a promise to the licences ("changes indicated"),
  * so they live here rather than in a habit.
+ *
+ * 640 is not a taste: it is the largest candidate `next/image` ever fetches for
+ * any of these. Four surfaces render a catalog species — the diver's field
+ * guide and the recap's at `sizes="48px"`, the species picker at `80px`, and
+ * the published-catalog preview at `(min-width: 640px) 180px, 50vw`, whose cell
+ * measures 171-173px. Run through the candidate ladder in
+ * `scripts/image-sizes-lib.mjs` (`fetchedCandidate`) at every viewport x DPR
+ * 1/2/3, the largest request any of them makes is **640**, from the catalog
+ * preview at DPR 3. A wider source is bytes the optimizer discards.
+ *
+ * It was 800 until 2026-09-04. The reason it could not fall before then was one
+ * surface: the catalog preview declared `(min-width: 640px) 25vw, 50vw`, which
+ * resolved to 480 CSS px on a 1920px screen and fetched a 960px candidate.
+ * PR #1347 corrected that declaration to the slot's real 171px, which is what
+ * unblocked this (issue #1337).
+ *
+ * Measured, not asserted: 9.45 MB -> 6.40 MB across the 149 files, and at the
+ * catalog preview's own rendered size (171 CSS px at DPR 2 = 342 device px) a
+ * 640-sourced render differs from an 800-sourced one by a median 40.2 dB PSNR,
+ * worst 35.7. Twenty-two of these files were **already** narrower than 640 —
+ * `boulder-star-coral.jpg` is 337px — so this band was shipping and accepted
+ * long before it was chosen.
  */
-const MAX_EDGE = 800;
+const MAX_EDGE = 640;
 const JPEG = { quality: 78, mozjpeg: true };
 
 /**

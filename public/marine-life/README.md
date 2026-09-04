@@ -5,11 +5,16 @@ a dive site's field guide. They are bundled here rather than hot-linked for the 
 image in this app is: a briefing page must never make a live request to a host someone else
 controls. Each source page below carries the photographer credit and the licence terms.
 
-**These are downscaled derivatives, not the originals** — bounded to **800px on the long edge**,
+**These are downscaled derivatives, not the originals** — bounded to **640px on the long edge**,
 re-encoded as mozjpeg quality 78, EXIF orientation baked in and metadata stripped (noted here
-because the CC licences ask that changes be indicated). Keep any photo added here inside the same
-bound: these render as ~150–350 CSS px tiles, and the originals run to several megabytes apiece —
-which a diver on a phone pays for on every briefing they open.
+because the CC licences ask that changes be indicated). The 135 files that were wider than that
+were downscaled a second time on 2026-09-04, from the 800px bound they carried until then.
+
+Keep any photo added here inside the same bound. 640 is where `next/image` stops asking: the four
+surfaces that render a species declare `48px`, `48px`, `80px` and — for the published-catalog
+preview, the largest — a slot measuring 171px, and the widest candidate any of them fetches across
+every viewport at DPR 3 is 640. A wider source is bytes the optimizer throws away, and the
+originals run to several megabytes apiece.
 
 - `arrow-crab.jpg` — [Cangrejo araña (Stenorhynchus seticornis), franja marina Teno-Rasca, Tenerife, España, 2022-01-05, DD 94.jpg](https://commons.wikimedia.org/wiki/File:Cangrejo_ara%C3%B1a_(Stenorhynchus_seticornis),_franja_marina_Teno-Rasca,_Tenerife,_Espa%C3%B1a,_2022-01-05,_DD_94.jpg) · CC BY-SA 4.0 · Diego Delso
 - `atlantic-spadefish.jpg` — [Atlantic Spadefish PLW edit.jpg](https://commons.wikimedia.org/wiki/File:Atlantic_Spadefish_PLW_edit.jpg) · CC BY-SA 2.0 · Matthew Hoelscher (original photograph), Kaldari (crop), Papa Lima Whiskey (white balance adjustments)
