@@ -533,6 +533,31 @@ export const people = pgTable(
     // silently storing an arbitrary string (`security-reviewer`, issue #708).
     spokenLanguages: jsonb("spoken_languages").$type<SpokenLanguageTag[]>().notNull().default([]),
     /**
+     * **When this staff member agreed to be named to divers** (issue #1181,
+     * delight report D21) -- null until they say so, which is every row.
+     *
+     * The public trip page has always been able to say *"we speak German"*
+     * (`tripCrewSpokenLanguages`, issue #708): an anonymous claim about the
+     * shop's capability, deliberately naming nobody. Saying *"Marcus, your
+     * divemaster, speaks German"* is a different act on a page anyone on the
+     * internet can read, and it is not the shop's to decide.
+     *
+     * So this is the person's own switch and nobody else's.
+     * `saveStaffLanguagesAction` is behind the team-management gate, because
+     * which languages a shop can field is an operational fact a manager
+     * curates; publishing somebody's name is not, and a consent a manager
+     * recorded on their behalf would not be one. The action that writes this
+     * refuses any `personId` but the caller's, and the team page draws the
+     * control on the reader's own row alone.
+     *
+     * A timestamp rather than a boolean, like `consentedAt` and
+     * `unsubscribedAt`: for a consent record, *when* is half of what makes it
+     * a record. Withdrawing sets it back to null -- the fact worth keeping is
+     * the standing answer, and a shop holding a former employee's revoked
+     * consent date serves nobody.
+     */
+    crewPublicConsentAt: timestamp("crew_public_consent_at", { withTimezone: true }),
+    /**
      * Set once this person self-serves out of courtesy email — wait-list
      * openings (`waitlist_invite`) and post-trip recaps (`trip_recap`), the two
      * kinds that ask something of the diver's attention beyond their own

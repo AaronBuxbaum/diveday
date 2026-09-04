@@ -16,6 +16,7 @@ import {
 import { PackingSection } from "@/app/s/[shopSlug]/trips/[id]/_components/PackingSection";
 import { RentalFitForm } from "@/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm";
 import { TripActions } from "@/app/s/[shopSlug]/trips/[id]/_components/TripActions";
+import { TripCrewLine } from "@/app/s/[shopSlug]/trips/[id]/_components/TripCrewLine";
 import { TripTerms } from "@/app/s/[shopSlug]/trips/[id]/_components/TripTerms";
 import { type DoorGlyphId, EntryDone } from "@/components/account/EntryShell";
 import { EarnedMoment } from "@/components/EarnedMoment";
@@ -57,7 +58,7 @@ import {
 import { issuePartySeatClaims } from "@/db/seat-claims";
 import { getShopById, getShopBySlug } from "@/db/shops";
 import { listTripChangeEvents } from "@/db/trip-change-events";
-import { getTripWithBooked, listTripDives } from "@/db/trips";
+import { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import {
@@ -1551,11 +1552,16 @@ export default async function DiverReadinessPage({
   // One round trip, not two: the trip reads are scoped by `shop.id`, which the
   // verified capability already resolved, so none of them has to wait on the
   // shop row `PackingSection` needs for its units and rental catalogue.
-  const [fullShop, fullTrip, tripDives, changeEvents] = await Promise.all([
+  const [fullShop, fullTrip, tripDives, changeEvents, publicCrew] = await Promise.all([
     getShopBySlug(db, shop.slug),
     getTripWithBooked(db, shop.id, data.trip.id),
     listTripDives(db, shop.id, data.trip.id),
     listTripChangeEvents(db, shop.id, data.trip.id),
+    // Only the crew who agreed to be named (issue #1181, D21). This thread is
+    // reached by a capability URL rather than indexed, but the consent is the
+    // person's answer about divers, not about search engines — so it is the
+    // same filter and the same words as the public page.
+    tripPublicCrew(db, shop.id, data.trip.id),
   ]);
   // What one seat on this departure costs. Null on an unpriced trip, which
   // then quotes nothing rather than guessing — see `resolvePaymentReceipt`,
@@ -1996,6 +2002,7 @@ export default async function DiverReadinessPage({
             className="mt-8"
           />
         ) : null}
+        <TripCrewLine crew={publicCrew} locale={locale} />
         <TripChangeLedger
           events={changeEvents}
           locale={locale}

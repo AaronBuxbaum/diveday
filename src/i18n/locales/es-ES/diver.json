@@ -269,7 +269,14 @@
     },
     "theSite": "{count, plural, one {El sitio} other {Los sitios}}",
     "siteLandmarksHeading": "Referencias",
-    "siteConservationHeading": "Nota de conservación"
+    "siteConservationHeading": "Nota de conservación",
+    "crewHeading": "Con quién buceas",
+    "crewRole": {
+      "instructor": "Instructor",
+      "divemaster": "Divemaster",
+      "captain": "Patrón",
+      "crew": "Tripulación"
+    }
   },
   "booking": {
     "heading": "Reserva tu plaza",

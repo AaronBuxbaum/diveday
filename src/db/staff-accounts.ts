@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
+import { nowDate } from "@/lib/clock";
 import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { hashPassword } from "@/lib/password-hashing";
 import { isSpokenLanguageTag } from "@/lib/spoken-languages";
@@ -525,4 +526,50 @@ export async function removeStaffMember(
       );
     return { ok: true };
   });
+}
+
+/**
+ * **Record, or withdraw, one staff member's agreement to be named to divers**
+ * (issue #1181, D21).
+ *
+ * Same shape and same staff-subject guard as `setStaffLanguages` above, and
+ * one deliberate difference in who may call it: languages are an operational
+ * fact a manager curates, and this is a consent. The action above this refuses
+ * any `personId` but the caller's own, because a consent somebody else
+ * recorded on your behalf is not one — that is the whole of what the column
+ * means, and the reason it is a separate write rather than a field on the
+ * languages form.
+ *
+ * Withdrawing writes null rather than a second timestamp. The standing answer
+ * is the fact worth keeping; a shop holding a former employee's revoked
+ * consent date serves nobody, and H-02 would have to age it out.
+ */
+export async function setCrewPublicConsent(
+  db: DbExecutor,
+  {
+    shopId,
+    personId,
+    consented,
+    now = nowDate(),
+  }: { shopId: string; personId: string; consented: boolean; now?: Date },
+): Promise<boolean> {
+  const updated = await db
+    .update(people)
+    .set({ crewPublicConsentAt: consented ? now : null })
+    .where(
+      and(
+        eq(people.id, personId),
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+        inArray(
+          people.id,
+          db
+            .select({ id: personRoles.personId })
+            .from(personRoles)
+            .where(inArray(personRoles.role, [...STAFF_ROLES])),
+        ),
+      ),
+    )
+    .returning({ id: people.id });
+  return updated.length > 0;
 }

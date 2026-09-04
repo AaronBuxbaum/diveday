@@ -1,8 +1,10 @@
-import { and, asc, count, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import type { TripCrewRole } from "@/lib/crew-roles";
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
+import type { SpokenLanguageTag } from "@/lib/spoken-languages";
 import {
   tripArrivalSnapshot,
   tripChangeSnapshotsEqual,
@@ -128,6 +130,77 @@ export async function tripCrewSpokenLanguages(
       ),
     );
   return rows.map((row) => row.language);
+}
+
+/** One crew member a diver may be told about by name (issue #1181, D21). */
+export type PublicCrewMember = {
+  personId: string;
+  /** First name only. The surname is not part of what anybody consented to. */
+  firstName: string;
+  /** What they are doing on *this* boat, or null when the roster did not say. */
+  tripRole: TripCrewRole | null;
+  languages: SpokenLanguageTag[];
+};
+
+/**
+ * **The crew of one departure who have agreed to be named to divers** (issue
+ * #1181, delight report D21).
+ *
+ * The sibling of `tripCrewSpokenLanguages` above, and the difference between
+ * them is the whole feature. That one answers *"what can this shop say to
+ * me?"* and names nobody — an anonymous claim about capability, which is what
+ * a shop may make about its own staff. This one answers *"who am I diving
+ * with?"*, which is a fact about a person on a page anyone on the internet can
+ * read, so it is filtered by `crew_public_consent_at` and returns nothing at
+ * all for a shop whose staff have not switched it on. Every row here is
+ * somebody's own decision.
+ *
+ * Same live-staff proof as its sibling — a shop's roster, alive, with an
+ * active account and a staff role — because somebody taken off the team should
+ * stop being introduced to divers the moment they are, not when the next
+ * departure is edited.
+ *
+ * First names only, and never a photo: D21's boundary is role, first name and
+ * languages, and the surname is not part of what a "today with" line needs.
+ */
+export async function tripPublicCrew(
+  db: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<PublicCrewMember[]> {
+  const rows = await db
+    .selectDistinct({
+      personId: people.id,
+      fullName: people.fullName,
+      tripRole: tripAssignments.tripRole,
+      languages: people.spokenLanguages,
+    })
+    .from(tripAssignments)
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .innerJoin(people, eq(people.id, tripAssignments.personId))
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .innerJoin(userAccounts, eq(userAccounts.personId, people.id))
+    .where(
+      and(
+        eq(tripAssignments.tripId, tripId),
+        eq(trips.shopId, shopId),
+        eq(people.shopId, shopId),
+        liveTrip(),
+        isNull(people.deletedAt),
+        isNotNull(people.crewPublicConsentAt),
+        eq(userAccounts.status, "active"),
+        inArray(personRoles.role, [...STAFF_ROLES]),
+      ),
+    )
+    .orderBy(asc(people.fullName));
+  return rows.map((row) => ({
+    personId: row.personId,
+    // The name a shop actually calls them, cut at the first space. A person
+    // with one name keeps it whole.
+    firstName: row.fullName.trim().split(/\s+/)[0] ?? row.fullName,
+    tripRole: row.tripRole,
+    languages: row.languages,
+  }));
 }
 
 /**

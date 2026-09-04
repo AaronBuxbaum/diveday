@@ -20,18 +20,30 @@ export const staffDefs = [
     local: "dana",
     roles: ["owner", "manager"],
     emergencyContact: ["Marisol Reyes (wife)", "+1-305-555-0101"],
+    languages: undefined,
+    namedToDivers: false,
   },
   {
     fullName: "Marcus Webb",
     local: "marcus",
     roles: ["instructor"],
     emergencyContact: ["Yvonne Webb (mother)", "+1-305-555-0102"],
+    languages: ["en", "es"],
+    // **Two of four, on purpose** (issue #1181, D21). The public "who you're
+    // diving with" line renders only the crew who switched it on for
+    // themselves, so a demo where everybody had would show a feature with no
+    // shape: what a shop actually sees is some of its people named and some
+    // not, and the ones who declined must be indistinguishable from the ones
+    // who were never rostered.
+    namedToDivers: true,
   },
   {
     fullName: "Keiko Tanaka",
     local: "keiko",
     roles: ["divemaster"],
     emergencyContact: ["Haru Tanaka (brother)", "+81-3-555-0103"],
+    languages: ["en", "ja"],
+    namedToDivers: true,
   },
   // No contact on file: the crew-side twin of the divers' deliberate gaps
   // below. The captain is the person a coastguard most needs to reach, and
@@ -41,7 +53,16 @@ export const staffDefs = [
   // Spelled `undefined` rather than omitted, because `as const` keeps each
   // entry's own literal type — an omitted key is absent from the union and
   // `s.emergencyContact` stops compiling for every member, not just this one.
-  { fullName: "Sal Moretti", local: "sal", roles: ["captain"], emergencyContact: undefined },
+  {
+    fullName: "Sal Moretti",
+    local: "sal",
+    roles: ["captain"],
+    emergencyContact: undefined,
+    // Spelled out for the same `as const` reason the contact above is: an
+    // omitted key leaves the union without it and every read stops compiling.
+    languages: undefined,
+    namedToDivers: false,
+  },
   /**
    * The shop's second instructor (DOM-M7, review 20260802). A real shop of this
    * size has one lead and one more who teaches some of the week — and without
@@ -60,11 +81,26 @@ export const staffDefs = [
     local: "talia",
     roles: ["instructor"],
     emergencyContact: ["Chidi Okonkwo (husband)", "+234-1-555-0105"],
+    languages: ["en", "fr"],
+    // Speaks two languages and has *not* agreed to be named, which is the
+    // pairing worth seeding: it proves the two facts are independent, so a
+    // shop reading the demo cannot conclude that filling in languages is what
+    // publishes a name.
+    namedToDivers: false,
   },
 ] as const satisfies ReadonlyArray<{
   fullName: string;
   local: string;
   roles: readonly string[];
+  /** BCP-47 primary tags, as `people.spoken_languages` holds them (issue #708). */
+  languages: readonly string[] | undefined;
+  /**
+   * Whether this person has agreed to be named to divers on the departures
+   * they crew (issue #1181, D21) — their own switch, on the staffing page.
+   * Seeded rather than left off for every member, because a feature no seed
+   * exercises is a feature no e2e or capture can see.
+   */
+  namedToDivers: boolean;
   /**
    * Same shape and same intent as `customerDefs` below: real-looking people a
    * crew could actually ring, with one deliberate gap. Staff used to share a

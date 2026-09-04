@@ -40,6 +40,7 @@ import {
   requestCrewAction,
   reviewStaffCredentialAction,
   saveAwayAction,
+  saveCrewPublicConsentAction,
   saveStaffCredentialAction,
 } from "./actions";
 
@@ -65,6 +66,7 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
   "shift-deleted": { tone: "success", key: "staffing.notice.shiftDeleted" },
   overlap: { tone: "danger", key: "staffing.notice.overlap" },
   "staff-not-found": { tone: "danger", key: "staffing.notice.staffNotFound" },
+  "crew-consent-saved": { tone: "success", key: "staffing.notice.crewConsentSaved" },
   invalid: { tone: "danger", key: "staffing.notice.invalid" },
   "not-authorized": { tone: "danger", key: "staffing.notice.notAuthorized" },
   "credential-saved": { tone: "success", key: "staffing.notice.credentialSaved" },
@@ -275,6 +277,10 @@ export default async function StaffingPage({
   };
 
   const myBlocks = blocks.filter((block) => block.personId === session.user.personId);
+  // The reader's own standing answer, off the roster this page already read.
+  const crewConsented =
+    staff.find((member) => member.person.id === session.user.personId)?.person
+      .crewPublicConsentAt != null;
   const staffingPath = shopPath(shopSlug, "staffing");
   // **Every act carries the week it was performed in.** The page grew a week
   // dimension and the actions did not, so building next week's roster — the
@@ -291,6 +297,7 @@ export default async function StaffingPage({
   const requestCrew = requestCrewAction.bind(null, weekStart);
   const decideRequest = decideCrewRequestAction.bind(null, weekStart);
   const saveAway = saveAwayAction.bind(null, weekStart);
+  const saveCrewConsent = saveCrewPublicConsentAction.bind(null, weekStart);
   const deleteAway = deleteAwayAction.bind(null, weekStart);
   const saveCredential = saveStaffCredentialAction.bind(null, weekStart);
   const reviewCredential = reviewStaffCredentialAction.bind(null, weekStart);
@@ -582,6 +589,45 @@ export default async function StaffingPage({
               </ul>
             ) : null}
           </AddDoor>
+
+          {/* **The third crew-owned act on this page** (issue #1181, D21), and
+              the reason it is here rather than on the team page: that page is
+              behind `canPersonManageStaffAccounts`, so a divemaster could
+              never reach a switch that lived there — and a consent an owner
+              recorded on somebody's behalf would not be a consent.
+
+              The shop has always been able to tell divers "we speak German"
+              without naming anyone (`tripCrewSpokenLanguages`). Saying
+              "Marcus, your divemaster, speaks German" is a fact about a person
+              on a page the whole internet can read, so it is theirs to switch
+              on. Which languages the shop can field stays a manager's to
+              curate; who gets named does not.
+
+              No door and no disclosure: it is one line and one checkbox, and
+              burying a consent behind a chevron is how nobody ever finds it. */}
+          <form
+            action={saveCrewConsent}
+            className="mt-6 flex flex-col gap-3 rounded-inset border border-border bg-surface p-4"
+          >
+            <input type="hidden" name="personId" value={session.user.personId} />
+            <label className="flex items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                name="consented"
+                defaultChecked={crewConsented}
+                className="mt-0.5 size-4 accent-primary"
+              />
+              <span>{t("staffing.crewConsent.label")}</span>
+            </label>
+            <FieldActions>
+              <SubmitButton
+                pendingLabel={t("staffing.crewConsent.saving")}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("staffing.crewConsent.save")}
+              </SubmitButton>
+            </FieldActions>
+          </form>
 
           {/* Owner/manager work, as it was before this slice — the
               recomposition moved the furniture, not who may see it. The group

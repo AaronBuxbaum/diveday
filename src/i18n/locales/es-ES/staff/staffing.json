@@ -77,7 +77,8 @@
     "shiftDeleted": "Turno eliminado.",
     "shiftSaved": "Turno guardado.",
     "staffNotFound": "Esa persona ya no forma parte del equipo de este centro.",
-    "tripNotFound": "Esa salida ya no está en el tablero."
+    "tripNotFound": "Esa salida ya no está en el tablero.",
+    "crewConsentSaved": "Guardado. Los buceadores verán tu nombre en las salidas que tripules."
   },
   "title": "Personal",
   "week": {
@@ -112,5 +113,10 @@
     "rosterEmptyManagerBody": "Invita a los instructores y divemasters que llevan tus barcos y luego asígnales turnos aquí.",
     "rosterEmptyBody": "Un propietario o gerente añade tripulación desde los ajustes de Equipo. Pídele a alguno que lo ponga en marcha.",
     "rosterEmptyAction": "Invitar a tu tripulación"
+  },
+  "crewConsent": {
+    "label": "Que los buceadores vean mi nombre y mis idiomas en la página de la salida.",
+    "save": "Guardar",
+    "saving": "Guardando…"
   }
 }

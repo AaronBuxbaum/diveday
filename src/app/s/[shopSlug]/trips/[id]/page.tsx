@@ -26,6 +26,7 @@ import {
   listTripScheduleDays,
   pagedUpcomingTripsWithCounts,
   tripCrewSpokenLanguages,
+  tripPublicCrew,
 } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { languageEndonymList } from "@/i18n/language-labels";
@@ -70,6 +71,7 @@ import { ConditionsLine } from "./_components/ConditionsLine";
 import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
 import { StaffPreviewBar } from "./_components/StaffPreviewBar";
 import { TripActions } from "./_components/TripActions";
+import { TripCrewLine } from "./_components/TripCrewLine";
 import {
   TripDayPlan,
   TripLookFor,
@@ -191,13 +193,16 @@ export default async function TripDetailPage({
       manageHref={`/shop/${shopSlug}/trips/${tripId}`}
     />
   ) : null;
-  const [trip, tripDives, meetingDays, crewLanguages] = await Promise.all([
+  const [trip, tripDives, meetingDays, crewLanguages, publicCrew] = await Promise.all([
     getTripWithBooked(db, shop.id, tripId),
     listTripDives(db, shop.id, tripId),
     // Shop-scoped by the query's own join on `trips.shop_id`, like every other
     // read on this page. A departure always has at least one of these rows.
     listTripScheduleDays(db, shop.id, tripId),
     tripCrewSpokenLanguages(db, shop.id, tripId),
+    // Only the crew who said yes (issue #1181, D21). Empty for every shop that
+    // has switched nothing on, which is every shop until somebody does.
+    tripPublicCrew(db, shop.id, tripId),
   ]);
   if (!trip) notFound();
   // A cancelled trip gets its own soft landing (task 13) rather than the same
@@ -563,6 +568,7 @@ export default async function TripDetailPage({
         <TripLookFor briefings={diveBriefings} locale={locale} />
         <TripMoments briefings={diveBriefings} locale={locale} />
         <TripSiteNotes briefings={diveBriefings} locale={locale} />
+        <TripCrewLine crew={publicCrew} locale={locale} />
         <ConditionsLine
           shop={shop}
           trip={trip}

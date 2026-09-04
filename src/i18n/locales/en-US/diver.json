@@ -269,7 +269,14 @@
     },
     "theSite": "{count, plural, one {The site} other {The sites}}",
     "siteLandmarksHeading": "Landmarks",
-    "siteConservationHeading": "Conservation note"
+    "siteConservationHeading": "Conservation note",
+    "crewHeading": "Who you're diving with",
+    "crewRole": {
+      "instructor": "Instructor",
+      "divemaster": "Divemaster",
+      "captain": "Captain",
+      "crew": "Crew"
+    }
   },
   "booking": {
     "heading": "Grab a spot",

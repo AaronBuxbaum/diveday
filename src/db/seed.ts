@@ -4,6 +4,7 @@ import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { generateDemoShopIdentity, pinnedDemoShopIdentity } from "@/lib/demo-identity";
+import type { SpokenLanguageTag } from "@/lib/spoken-languages";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
@@ -413,6 +414,11 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
         email: canonicalStaffEmail(s.local),
         emergencyContactName: s.emergencyContact?.[0] ?? null,
         emergencyContactPhone: s.emergencyContact?.[1] ?? null,
+        spokenLanguages: [...(s.languages ?? [])] as SpokenLanguageTag[],
+        // Their own answer about being named to divers (issue #1181, D21).
+        // Two of the five, so the demo shows a shop where some people said yes
+        // and some did not.
+        crewPublicConsentAt: s.namedToDivers ? nowDate() : null,
       })),
     )
     .returning();
@@ -651,6 +657,12 @@ export async function createDemoShop(
         email: identity.emailFor(s.local),
         emergencyContactName: s.emergencyContact?.[0] ?? null,
         emergencyContactPhone: s.emergencyContact?.[1] ?? null,
+        // **Deliberately not `languages` or `namedToDivers` here.** A minted
+        // shop is a fresh tenant for tests that need blank shop-wide config
+        // (ADR 20260815-per-test-private-shops) — `crew-languages.spec.ts`'s
+        // second case is literally "a shop with no recorded languages shows no
+        // line at all". The demo shop above carries the cast's languages and
+        // consents; this path carries the people and nothing they configured.
       })),
     )
     .returning();

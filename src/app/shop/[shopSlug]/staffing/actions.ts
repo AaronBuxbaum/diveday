@@ -11,6 +11,7 @@ import {
   saveCrewAvailabilityBlock,
 } from "@/db/crew-requests";
 import { getShopById } from "@/db/shops";
+import { setCrewPublicConsent } from "@/db/staff-accounts";
 import {
   createStaffCredential,
   deleteStaffCredential,
@@ -198,6 +199,47 @@ const awaySchema = z.object({
   endsOn: z.string().refine(isValidCalendarDate),
   note: z.string().trim().max(120),
 });
+
+/**
+ * **One staff member's own agreement to be named to divers** (issue #1181,
+ * delight report D21).
+ *
+ * The third of this page's crew-owned writes, and it belongs beside the other
+ * two for the reason ADR 20260902-crew-requests-and-blackouts gives: a crew
+ * member writes their own rows. It is deliberately *not* on the team page,
+ * which is behind `canPersonManageStaffAccounts` — a divemaster could never
+ * reach a switch that lives there, and a consent an owner recorded on their
+ * behalf would not be a consent at all.
+ *
+ * Which languages a shop can field stays a manager's to curate
+ * (`saveStaffLanguagesAction`): that is an operational fact about the shop.
+ * Publishing somebody's first name on a page anyone on the internet can read
+ * is a fact about *them*.
+ *
+ * No `canManage` branch and no `<select>`: unlike the away form beside it,
+ * there is no case where recording this for somebody else is the right act, so
+ * the person is the session's own and any other `personId` is refused outright.
+ */
+export async function saveCrewPublicConsentAction(week: string, formData: FormData) {
+  const at = weekExtra(week);
+  const session = await requireStaffSession();
+  const path = shopPath(session.user.shopSlug, "staffing");
+  const personId = String(formData.get("personId") ?? "");
+  // Not a refusal notice: a request naming somebody else is not a mistake a
+  // form can make, so it gets no explanation and no trace of whether that
+  // person exists.
+  if (!personId || personId !== session.user.personId) redirect(noticeUrl(path, "invalid", at));
+
+  const saved = await setCrewPublicConsent(await getDb(), {
+    shopId: session.user.shopId,
+    personId,
+    consented: Boolean(formData.get("consented")),
+  });
+  revalidateAndRedirect(
+    path,
+    noticeUrl(path, saved ? "crew-consent-saved" : "staff-not-found", at),
+  );
+}
 
 export async function saveAwayAction(week: string, formData: FormData) {
   const at = weekExtra(week);
