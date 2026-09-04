@@ -581,13 +581,33 @@ export type OrdersDayGroup = {
   /** Every order this day holds under the active filter — not just this page's. */
   count: number;
   /**
-   * What the day is worth under the active filter, in minor units — the whole
-   * day's, never the page slice's.
+   * What the day is worth under the active filter — the whole day's, never the
+   * page slice's — in minor units, **one entry per currency the day's orders
+   * were actually charged in**, largest first.
+   *
+   * Almost always exactly one: a shop declares a single `shops.currency` (ADR
+   * 20260731-shop-currency) and every new row takes it. But that setting is
+   * deliberately changeable after money has been taken — settled rows keep
+   * their own currency and nothing is converted — so a day straddling the
+   * change holds two, and a single figure denominated in the *current* setting
+   * would re-price rows that were charged in the old one. DiveDay holds no
+   * exchange rates, so the only honest answer is to keep them apart.
    */
-  subtotalCents: number;
+  subtotals: readonly { currency: string; cents: number }[];
   /** This day's rows began on the previous page, so its header is a restatement. */
   continued: boolean;
 };
+
+/**
+ * The currency a day is mostly worth leads, so a shop that changed the setting
+ * still reads its own money first. The code breaks the tie, so a day whose two
+ * currencies happen to net the same figure renders in a stable order.
+ */
+function byLargest(a: { currency: string; cents: number }, b: { currency: string; cents: number }) {
+  // A plain comparison, not `localeCompare`: these are ASCII ISO 4217 codes,
+  // and a collator would be an `Intl` construction per sort in `src/db`.
+  return b.cents - a.cents || (a.currency < b.currency ? -1 : a.currency > b.currency ? 1 : 0);
+}
 
 /**
  * **The order index, grouped into the days its rows belong to** — ADR
@@ -634,12 +654,16 @@ export async function pagedOrdersByDay(
   // `text` and an `interval` overload, and an untyped parameter leaves Postgres
   // to pick between them.
   const localDay = sql<string>`to_char(${orders.createdAt} at time zone ${timeZone}::text, 'YYYY-MM-DD')`;
-  const [paged, dayTotals] = await queryAll(db, [
+  const [paged, perCurrency] = await queryAll(db, [
     () => listShopOrders(db, shopId, filter, page),
     () =>
       db
         .select({
           day: localDay,
+          // Grouped alongside the day, never summed across: a stored amount is
+          // an integer count of *this* currency's minor units, and ¥ and $ do
+          // not even share an exponent.
+          currency: orders.currency,
           count: count(),
           // `status = 'void'` contributes 0; everything else contributes what is
           // left after refunds. `coalesce` because an empty group sums to null.
@@ -662,9 +686,24 @@ export async function pagedOrdersByDay(
         // must appear in the GROUP BY clause* (42803), pointing at a GROUP BY
         // that plainly contains it. `1` is the one form that cannot drift from
         // the column it names.
-        .groupBy(sql`1`)
-        .orderBy(sql`1 desc`),
+        .groupBy(sql`1`, sql`2`)
+        .orderBy(sql`1 desc`, sql`2`),
   ]);
+
+  // Back to one entry per day. Ordered by the day descending above, so the
+  // insertion order here *is* the render order and nothing re-sorts by a date
+  // string.
+  const dayTotals = perCurrency.reduce<
+    { day: string; count: number; subtotals: { currency: string; cents: number }[] }[]
+  >((days, row) => {
+    const day = days.at(-1)?.day === row.day ? days.at(-1) : undefined;
+    const entry = day ?? { day: row.day, count: 0, subtotals: [] };
+    if (!day) days.push(entry);
+    entry.count += Number(row.count);
+    entry.subtotals.push({ currency: row.currency, cents: Number(row.subtotalCents) });
+    return days;
+  }, []);
+  for (const day of dayTotals) day.subtotals.sort(byLargest);
 
   const offset = (paged.page - 1) * paged.pageSize;
   const end = offset + paged.rows.length;
@@ -683,7 +722,7 @@ export async function pagedOrdersByDay(
       day: day.day,
       orders: paged.rows.slice(taken, taken + slice),
       count: dayCount,
-      subtotalCents: Number(day.subtotalCents),
+      subtotals: day.subtotals,
       continued: start < offset,
     });
     taken += slice;
@@ -696,15 +735,16 @@ export async function pagedOrdersByDay(
   if (taken < paged.rows.length) {
     const rest = paged.rows.slice(taken);
     const day = calendarDateInTimezone(rest[0]?.order.createdAt ?? nowDate(), timeZone);
+    const subtotals = new Map<string, number>();
+    for (const row of rest) {
+      const net = row.order.status === "void" ? 0 : row.order.totalCents - row.order.refundedCents;
+      subtotals.set(row.order.currency, (subtotals.get(row.order.currency) ?? 0) + net);
+    }
     groups.push({
       day,
       orders: rest,
       count: rest.length,
-      subtotalCents: rest.reduce(
-        (sum, row) =>
-          row.order.status === "void" ? sum : sum + row.order.totalCents - row.order.refundedCents,
-        0,
-      ),
+      subtotals: [...subtotals].map(([currency, cents]) => ({ currency, cents })).sort(byLargest),
       continued: false,
     });
   }
