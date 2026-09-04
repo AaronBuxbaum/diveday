@@ -117,6 +117,33 @@ const nextConfig: NextConfig = {
       "node_modules/**/*.d.cts",
       "node_modules/**/*.d.mts",
     ],
+    // **Satori, in 45 staff closures that render no image** (issue #1355).
+    //
+    // `@vercel/og` is 3.07 MiB of renderer, bundled font and WASM. It reaches
+    // every page because `src/app/icon.tsx` and `apple-icon.tsx` import
+    // `ImageResponse`, and Next attaches both as *metadata modules* to every
+    // page entry — so a settings form traces the rasterizer. Measured: 82 of
+    // 144 closures carry it and 7 need it.
+    //
+    // **`/shop/**` and never `/shop`.** These keys are matched with picomatch
+    // and `contains: true`, so they match a *substring* of the route: the bare
+    // key would also match `/api/integrations/shopify/callback`, which has
+    // nothing to do with staff pages. The trailing slash is what makes it a
+    // path segment rather than five letters.
+    //
+    // Safe because no route under `/shop/` renders an image — checked against
+    // the tree, not assumed: every `ImageResponse` route in the app is
+    // `icon`, `apple-icon`, `pwa-icon-maskable`, and four `opengraph-image`
+    // routes at the root, `/recap/[token]`, `/s/[shopSlug]` and
+    // `/s/[shopSlug]/trips/[id]`. A `/shop/**` OG route added later would need
+    // this key narrowed, which is why the list is written out here.
+    //
+    // This is 45 of the 75 closures that do not need it. The other 30 are the
+    // marketing and diver-facing pages, and they cannot be excluded the same
+    // way: substring matching means a `/s/**` key would also match
+    // `/s/[shopSlug]/opengraph-image`, which genuinely needs the module, and
+    // these keys have no negation. Issue #1361 carries that half.
+    "/shop/**": ["node_modules/**/next/dist/compiled/@vercel/og/**"],
   },
   cacheComponents: true,
   images: {
