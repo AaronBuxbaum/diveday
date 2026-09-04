@@ -120,9 +120,10 @@ export function WaiverPacing({
     );
     setQuestionTotal(names.size || medicalTotal);
     // Everything on screen that is answered, whoever answered it: the server
-    // from a draft, the diver a moment ago, or React re-opening a Box whose
-    // children it had already set. The delegated listener below sees only the
-    // middle one, and the set is a union so nothing it saw is ever dropped.
+    // from a draft, or the diver a moment ago. The delegated listener below
+    // sees only the second, and the set is a union so nothing it saw is ever
+    // dropped. A reopened Box no longer arrives with its children already set
+    // — that state is gone as of issue #1135.
     setAnswered((previous) => {
       const next = new Set(previous);
       for (const input of container.querySelectorAll<HTMLInputElement>(

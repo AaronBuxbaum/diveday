@@ -141,8 +141,16 @@ describe("a closed branch carries no hidden yes", () => {
    * primary was wrong and corrects it. The box disappears — but if the child
    * yes is still in state, reopening the box shows it, and any submission built
    * from that state reports a referral the diver never stood behind.
+   *
+   * **A reopened Box asks again** (issue #1135, owner ruling 2026-09-02). This
+   * case used to assert the opposite — that each child read "explicitly no" —
+   * which is what a `next[child.id] = false` produces. Both are honest about
+   * the *record*: `readMedicalAnswers` writes false for every child of a closed
+   * branch whichever we do. The difference is the last thing the diver looks at
+   * before signing, and four cardiac answers they gave five minutes ago and
+   * have not re-read is not it.
    */
-  it("clears a child yes when its parent flips to no, proven by reopening the box", async () => {
+  it("blanks a child answer when its parent flips to no, proven by reopening the box", async () => {
     const user = userEvent.setup();
     render(<MedicalQuestionnaireFields questionnaire={BRANCHING} {...LABELS} />);
     const heart = radiosFor("Have you ever had problems with your heart?");
@@ -156,11 +164,32 @@ describe("a closed branch carries no hidden yes", () => {
     await user.click(heart.no);
     await user.click(heart.yes);
 
-    // Both children must read "no" — not "yes", and not unanswered.
+    // Neither radio is checked: the Box opens unanswered, and each child's own
+    // `required` attribute is what holds the signature until it is answered.
     for (const prompt of ["Heart surgery", "High blood pressure"]) {
       const child = radiosFor(prompt);
       expect(child.yes, `${prompt} must not still be yes`).not.toBeChecked();
-      expect(child.no, `${prompt} must be explicitly no`).toBeChecked();
+      expect(child.no, `${prompt} must not be answered for the diver`).not.toBeChecked();
+      expect(child.yes, `${prompt} must still block the signature`).toBeRequired();
+    }
+  });
+
+  it("does not answer a reopened box's questions for a diver who flips a parent twice", async () => {
+    // The same sequence the issue describes, at the primary that actually
+    // opens Box B on the real questionnaire: the diver never touches the
+    // children at all, so nothing may appear in them.
+    const user = userEvent.setup();
+    render(<MedicalQuestionnaireFields questionnaire={BRANCHING} {...LABELS} />);
+    const heart = radiosFor("Have you ever had problems with your heart?");
+
+    await user.click(heart.yes);
+    await user.click(heart.no);
+    await user.click(heart.yes);
+
+    for (const prompt of ["Heart surgery", "High blood pressure"]) {
+      const child = radiosFor(prompt);
+      expect(child.yes, `${prompt} yes`).not.toBeChecked();
+      expect(child.no, `${prompt} no`).not.toBeChecked();
     }
   });
 
@@ -193,6 +222,47 @@ describe("prefilled answers", () => {
 
     expect(screen.getByRole("group", { name: "Heart surgery" })).toBeInTheDocument();
     expect(radiosFor("Heart surgery").yes).toBeChecked();
+  });
+
+  it("does not open a seeded Box's questions for a diver who never saw them", async () => {
+    // **The draft-restore hole** (issue #1135). A refused signature saves a
+    // draft — most often a mistyped signer name — and a draft written by the
+    // old form reader carried an explicit `false` for every child of every
+    // unanswered Box. Seeded like that, the diver corrects the name, honestly
+    // changes the primary to yes, and the Box opens with its questions already
+    // answered. `answer()` never runs, because the value going in is `true`,
+    // which is why the fix could not live there alone.
+    const user = userEvent.setup();
+    render(
+      <MedicalQuestionnaireFields
+        questionnaire={BRANCHING}
+        initialResponses={{ p1: false, box_a_1: false, box_a_2: false }}
+        {...LABELS}
+      />,
+    );
+
+    await user.click(radiosFor("Have you ever had problems with your heart?").yes);
+
+    for (const prompt of ["Heart surgery", "High blood pressure"]) {
+      const child = radiosFor(prompt);
+      expect(child.yes, `${prompt} yes`).not.toBeChecked();
+      expect(child.no, `${prompt} no`).not.toBeChecked();
+    }
+  });
+
+  it("keeps a seeded answer whose branch is genuinely open", async () => {
+    // The other side of the same prune: applicable answers survive it, or
+    // resuming a half-finished waiver would lose the diver's real work.
+    render(
+      <MedicalQuestionnaireFields
+        questionnaire={BRANCHING}
+        initialResponses={{ p1: true, box_a_1: true, box_a_2: false }}
+        {...LABELS}
+      />,
+    );
+
+    expect(radiosFor("Heart surgery").yes).toBeChecked();
+    expect(radiosFor("High blood pressure").no).toBeChecked();
   });
 
   it("does not mutate the caller's initialResponses object", async () => {
@@ -240,6 +310,54 @@ describe("answers made before hydration", () => {
       await expect
         .poll(() => within(host).queryByRole("group", { name: "Heart surgery" }))
         .not.toBeNull();
+    } finally {
+      root.unmount();
+      host.remove();
+    }
+  });
+
+  it("drops a Box's children when the pre-hydration tap closed it", async () => {
+    // The mirror of the case above, and the third door into the response map
+    // (issue #1135). The effect harvests every checked radio out of the DOM
+    // without going through `answer()`. A Box server-rendered open with a
+    // checked child, closed by a tap before the bundle attaches, leaves those
+    // children checked in the DOM — nothing hid them — so the harvest would
+    // pull them into state behind the rule.
+    const host = document.createElement("div");
+    document.body.append(host);
+    const seeded = { p1: true, box_a_1: true };
+    host.innerHTML = renderToString(
+      <MedicalQuestionnaireFields
+        questionnaire={BRANCHING}
+        initialResponses={seeded}
+        {...LABELS}
+      />,
+    );
+    const heart = within(host).getByRole("group", {
+      name: "Have you ever had problems with your heart?",
+    });
+    within(heart).getByRole("radio", { name: COPY.noLabel }).click();
+
+    const root = hydrateRoot(
+      host,
+      <MedicalQuestionnaireFields
+        questionnaire={BRANCHING}
+        initialResponses={seeded}
+        {...LABELS}
+      />,
+    );
+    try {
+      // The Box closes, which is the parent answer taking effect...
+      await expect
+        .poll(() => within(host).queryByRole("group", { name: "Heart surgery" }))
+        .toBeNull();
+      // ...and reopening it must ask again rather than show the harvested yes.
+      within(heart).getByRole("radio", { name: COPY.yesLabel }).click();
+      await expect
+        .poll(() => within(host).queryByRole("group", { name: "Heart surgery" }))
+        .not.toBeNull();
+      const reopened = within(host).getByRole("group", { name: "Heart surgery" });
+      expect(within(reopened).getByRole("radio", { name: COPY.yesLabel })).not.toBeChecked();
     } finally {
       root.unmount();
       host.remove();

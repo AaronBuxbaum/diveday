@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applicableMedicalQuestions,
+  applicableResponsesOnly,
   calculateMedicalResult,
   emptyMedicalAnswers,
   findQuestionnaireVersion,
@@ -9,6 +10,7 @@ import {
   needsPhysicianReview,
   questionnaireForJurisdiction,
   RSTC_QUESTIONNAIRE,
+  readMedicalAnswers,
   validateMedicalAnswers,
 } from "./medical";
 
@@ -220,5 +222,109 @@ describe("live questionnaire progress", () => {
     const stale = { ...allNo, q1: false, box_a_1: true };
     expect(medicalProgress(RSTC_QUESTIONNAIRE, stale).outcome).toBe("clear");
     expect(calculateMedicalResult(answers(stale)).status).toBe("clear");
+  });
+});
+
+/**
+ * **The one function that decides what enters a signed medical record**, and
+ * until issue #1135 the one with no test — it lived in `page.tsx` as a private
+ * helper, so nothing could reach it.
+ *
+ * Two properties matter here and neither was pinned. A Box the diver was never
+ * asked to open must contribute *nothing*, not an explicit no; and the answer
+ * must not depend on where a question sits in the literal.
+ */
+describe("reading a submitted questionnaire", () => {
+  const BOX_PARENTS = RSTC_QUESTIONNAIRE.questions.filter((question) => !question.parentId);
+  const CHILDREN = RSTC_QUESTIONNAIRE.questions.filter((question) => question.parentId);
+
+  /** Answers every primary the given way and every Box child "no". */
+  const answering = (primary: "yes" | "no") => (questionId: string) =>
+    CHILDREN.some((child) => child.id === questionId) ? ("no" as const) : primary;
+
+  it("stores nothing for a Box the diver was never asked to open", () => {
+    // The paper form leaves an unasked Box item blank. An explicit `false` is
+    // the deviation, and it is what a draft used to carry for all of them.
+    const answers = readMedicalAnswers(RSTC_QUESTIONNAIRE, answering("no"));
+    expect(answers).not.toBeNull();
+    for (const child of CHILDREN) {
+      expect(answers?.responses, `${child.id} must be absent, not false`).not.toHaveProperty(
+        child.id,
+      );
+    }
+    expect(Object.keys(answers?.responses ?? {})).toHaveLength(BOX_PARENTS.length);
+  });
+
+  it("stores a Box's answers once its parent is yes", () => {
+    const parent = CHILDREN[0]?.parentId;
+    if (!parent) throw new Error("the questionnaire has no branching question");
+    const answers = readMedicalAnswers(RSTC_QUESTIONNAIRE, (questionId) =>
+      questionId === parent ? "yes" : "no",
+    );
+    const opened = CHILDREN.filter((child) => child.parentId === parent);
+    expect(opened.length).toBeGreaterThan(0);
+    for (const child of opened) {
+      expect(answers?.responses[child.id]).toBe(false);
+    }
+  });
+
+  it("does not depend on where a question sits in the list", () => {
+    // It used to resolve a child's parent out of the map it was still
+    // building, so it was correct only because the literal happens to list
+    // every primary before any Box child. Moving a Box's items to sit under
+    // the parent they belong to — an ordinary edit to a 40-item literal —
+    // would have made it write `false` for a child *without reading the form*,
+    // recording a real yes as a no.
+    const reversed = {
+      ...RSTC_QUESTIONNAIRE,
+      questions: [...RSTC_QUESTIONNAIRE.questions].reverse(),
+    };
+    const parent = CHILDREN[0]?.parentId;
+    if (!parent) throw new Error("the questionnaire has no branching question");
+    const read = (questionId: string) => (questionId === parent ? "yes" : ("yes" as const));
+    expect(readMedicalAnswers(reversed, read)?.responses).toEqual(
+      readMedicalAnswers(RSTC_QUESTIONNAIRE, read)?.responses,
+    );
+  });
+
+  it("refuses an incomplete set, and tolerates one when asked to", () => {
+    const missingOne = (questionId: string) =>
+      questionId === BOX_PARENTS[0]?.id ? null : ("no" as const);
+    expect(readMedicalAnswers(RSTC_QUESTIONNAIRE, missingOne)).toBeNull();
+    const draft = readMedicalAnswers(RSTC_QUESTIONNAIRE, missingOne, { allowIncomplete: true });
+    expect(draft).not.toBeNull();
+    expect(draft?.responses).not.toHaveProperty(BOX_PARENTS[0]?.id ?? "");
+  });
+});
+
+describe("pruning inapplicable answers", () => {
+  it("drops a child whose parent is unanswered or no, and keeps one whose parent is yes", () => {
+    const parent = RSTC_QUESTIONNAIRE.questions.find((question) => !question.parentId);
+    const child = RSTC_QUESTIONNAIRE.questions.find((question) => question.parentId);
+    if (!parent || !child) throw new Error("the questionnaire has no branching question");
+    const other = RSTC_QUESTIONNAIRE.questions.find(
+      (question) => question.parentId === child.parentId && question.id !== child.id,
+    );
+
+    // Parent unanswered — the draft-restore shape.
+    expect(applicableResponsesOnly(RSTC_QUESTIONNAIRE, { [child.id]: false })).toEqual({});
+    // Parent no.
+    expect(
+      applicableResponsesOnly(RSTC_QUESTIONNAIRE, {
+        [child.parentId ?? ""]: false,
+        [child.id]: true,
+      }),
+    ).toEqual({ [child.parentId ?? ""]: false });
+    // Parent yes: the child's own answer is the diver's and survives.
+    const open = {
+      [child.parentId ?? ""]: true,
+      [child.id]: true,
+      ...(other ? { [other.id]: false } : {}),
+    };
+    expect(applicableResponsesOnly(RSTC_QUESTIONNAIRE, open)).toEqual(open);
+  });
+
+  it("drops a key the questionnaire does not have at all", () => {
+    expect(applicableResponsesOnly(RSTC_QUESTIONNAIRE, { not_a_question: true })).toEqual({});
   });
 });

@@ -1042,7 +1042,9 @@ new domain concept, define it here in the same PR.
 - **Medical questionnaire** — the versioned diver-medical form a waiver presents, selected by the
   shop's **jurisdiction** (the 2026 UHMS/DMSC RSTC participant form by default). Defined as data
   in `src/lib/medical.ts`; a completed waiver stores the questionnaire id + version and the
-  server-side yes/no answers, so a later edit never re-interprets signed evidence. Questions 3,
+  server-side yes/no answers for the questions that **applied**, so a later edit never
+  re-interprets signed evidence. An item in a Box the diver was never asked to open is stored
+  absent rather than as a no, which is what the paper form does with it (issue #1135). Questions 3,
   5, and 10 and the affirmative answers in an applicable Box are
   physician referrals; a parent question can therefore be yes and still clear when its Box is all
   no. Unknown or incomplete questionnaires **fail closed** (review required), never waved through.

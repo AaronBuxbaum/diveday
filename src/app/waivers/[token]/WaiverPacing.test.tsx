@@ -186,6 +186,58 @@ describe("the count as the diver moves through the form", () => {
     expect(screen.getByText(COPY.outcomeFollowUpsOpen)).toBeInTheDocument();
   });
 
+  it("re-asks a Box the diver closes and reopens, rather than showing back their old answers", async () => {
+    // **Issue #1135, owner ruling 2026-09-02.** The sibling of the case above,
+    // and the half it left standing. A diver answers yes to "over 45", works
+    // through Box B's four cardiac questions, changes their mind, sets it to
+    // no, then back to yes. `answer()` used to write `false` into each child on
+    // the way down, so the Box reopened with all four already answered — the
+    // diver's own answers from minutes earlier, but ones they had not looked at
+    // since, and the next thing they do is sign.
+    //
+    // Clicked because this is the toggle path, and `answer()` is what it
+    // exercises. Seeding is not the weaker harness — it is the *production*
+    // path for a restored draft, and it carried its own version of this bug
+    // through a different writer; that half is pinned in
+    // `MedicalQuestionnaireFields.test.tsx`'s seeded-draft case.
+    render(pacing({ initialAnswered: [], initialFollowUpsRemaining: 0, responses: {} }));
+    const rail = screen.getByTestId(WAIVER_RAIL_TEST_ID);
+    const over45 = () => within(screen.getByRole("group", { name: OVER_45 }));
+    const openBoxB = () => {
+      const heading = screen.getByRole("heading", { name: /BOX B/ }).parentElement;
+      if (!heading) throw new Error("Box B did not open under the question that opens it");
+      return heading;
+    };
+
+    // The whole page-one list first, so the outcome line under the questions is
+    // reporting on a complete answer set and the rail's Medical step is the
+    // only thing Box B can move.
+    for (const question of PRIMARY) {
+      await userEvent.click(
+        within(screen.getByRole("group", { name: question.prompt })).getByRole("radio", {
+          name: "No",
+        }),
+      );
+    }
+    await waitFor(() => expect(rail).toHaveTextContent("2 of 3 done"));
+
+    await userEvent.click(over45().getByRole("radio", { name: "Yes" }));
+    for (const radio of within(openBoxB()).getAllByRole("radio", { name: "No" })) {
+      await userEvent.click(radio);
+    }
+    expect(within(openBoxB()).queryAllByRole("radio", { checked: true })).toHaveLength(4);
+
+    // Change of mind, and back again.
+    await userEvent.click(over45().getByRole("radio", { name: "No" }));
+    await userEvent.click(over45().getByRole("radio", { name: "Yes" }));
+
+    // Nothing is answered for them, and the rail says so rather than reporting
+    // a step the diver would have to trust it about.
+    expect(within(openBoxB()).queryAllByRole("radio", { checked: true })).toHaveLength(0);
+    await waitFor(() => expect(rail).toHaveTextContent("1 of 3 done"));
+    expect(screen.getByText(COPY.outcomeFollowUpsOpen)).toBeInTheDocument();
+  });
+
   it("counts the page-one list only, so answering honestly never lengthens the form", async () => {
     // The other half of the same rule: the *denominator* stays the ten
     // questions the diver was handed. A Box answer moves the settle mark, never
