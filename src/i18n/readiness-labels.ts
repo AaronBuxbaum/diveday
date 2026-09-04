@@ -1,14 +1,17 @@
 import type { CertificationAgency, DiveSpecialty } from "@/db/schema";
-import type { DiveRecencyBand } from "@/lib/dive-recency";
-import { cachedListFormat } from "@/lib/intl-cache";
+// **The leaf, not `@/lib/readiness`.** This is the only *value* this module
+// takes from that side of the app, and taking it from the barrel held the
+// waiver and medical copy in the first load of both public diver pages
+// (issue #1354). The types below erase, so they cost nothing wherever they
+// come from -- the import that matters is the one on the line above them.
 import {
   type CertificationLevel,
   REQUIRABLE_CERTIFICATION_LEVELS,
-  type ReadinessBlocker,
-  type ReadinessBlockerCode,
-  type ReadinessStatus,
   type RequirableCertificationLevel,
-} from "@/lib/readiness";
+} from "@/lib/certification-levels";
+import type { DiveRecencyBand } from "@/lib/dive-recency";
+import { cachedListFormat } from "@/lib/intl-cache";
+import type { ReadinessBlocker, ReadinessBlockerCode, ReadinessStatus } from "@/lib/readiness";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import type { DiverMessageKey, DiverTranslator } from "./messages";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
