@@ -1707,20 +1707,47 @@ export async function recordInPersonWaiver(
 }
 
 /**
- * What happened when a shop tried to record a physician's clearance.
+ * **Which way the physician answered.** The RSTC Physician's Evaluation Form
+ * has two outcomes, and until issue #1283 DiveDay modelled only the first.
+ *
+ * `not_cleared` is not a weaker clearance: it is the absence of one, recorded.
+ * The hold stands either way it is written down — what changes is that the
+ * record can finally say the answer *arrived*, so the shop stops chasing a
+ * diver whose doctor has already said no and the crew learns it before the
+ * dock rather than at it.
+ */
+export type MedicalEvaluationOutcome = "cleared" | "not_cleared";
+
+/**
+ * What happened when a shop tried to record a physician's answer.
  *
  * `no_medical_hold` is the interesting refusal: this diver has nothing parked
- * in review here, so there is nothing to clear. It is not an error state to
+ * in review here, so there is nothing to answer. It is not an error state to
  * apologise for — it is the answer to a question the staffer asked — and the
  * surface words it as such.
  */
-export type MedicalClearanceOutcome =
-  | { ok: true; recordId: string; alreadyCleared: boolean }
+export type MedicalEvaluationResult =
+  | {
+      ok: true;
+      recordId: string;
+      /** Which answer now stands on the record — the one just written, or the one already there. */
+      outcome: MedicalEvaluationOutcome;
+      /** The answer was already on file, so nothing was written. A double submit, not a failure. */
+      alreadyRecorded: boolean;
+    }
   | {
       ok: false;
       reason:
         | "staff_not_found"
         | "no_medical_hold"
+        /**
+         * This record already carries the *other* answer, and neither
+         * overwrites the other. A physician's "no" is not erasable by whoever
+         * is at the desk next, and a diver re-evaluated after a refusal is
+         * answering a fresh disclosure — which signs a new release and parks a
+         * new hold that can be cleared on its own terms.
+         */
+        | "answer_already_recorded"
         /** No evaluation date, or one that is not a calendar date. */
         | "evaluation_date_required"
         /**
@@ -1742,7 +1769,8 @@ export type MedicalClearanceOutcome =
     };
 
 /**
- * Whether this diver has a medical hold nobody has cleared, at this shop.
+ * Whether this diver has a medical hold **no physician has answered yet**, at
+ * this shop.
  *
  * A cheap read the surface runs **before** it stores a physician's evaluation.
  * Without it, uploading first and refusing second left the most sensitive file
@@ -1751,8 +1779,16 @@ export type MedicalClearanceOutcome =
  * (security review H2). The honest-mistake path was the bad one: a staffer opens
  * the wrong diver's record, uploads a real evaluation, and is told there is
  * nothing to clear.
+ *
+ * **Not the same question as `isUnresolvedMedicalHold`, and the difference is
+ * the point of issue #1283.** That one asks *may this diver board* — a refusal
+ * leaves it `true`, because the block stands. This one asks *is there an answer
+ * outstanding*, and a refusal makes it `false`: the answer arrived. Reading
+ * either for the other's question inverts a safety property in one direction or
+ * re-opens a settled refusal in the other, so they are deliberately two
+ * functions with two names rather than one shared predicate.
  */
-export async function hasLiveMedicalHold(
+export async function hasUnansweredMedicalHold(
   db: DbExecutor,
   shopId: string,
   personId: string,
@@ -1768,6 +1804,7 @@ export async function hasLiveMedicalHold(
         isNull(waiverRecords.supersededAt),
         isNull(waiverRecords.anonymizedAt),
         isNull(waiverRecords.medicalClearedAt),
+        isNull(waiverRecords.medicalClearanceDeclinedAt),
       ),
     )
     .limit(1);
@@ -1775,7 +1812,7 @@ export async function hasLiveMedicalHold(
 }
 
 /**
- * **A staff member records that a physician cleared this diver to dive.**
+ * **A staff member records what a physician said about this diver.**
  *
  * The questionnaire refers a diver, the release parks in `medical_review`, and
  * readiness refuses to board them (`src/lib/readiness.ts`). Then the diver comes
@@ -1787,8 +1824,9 @@ export async function hasLiveMedicalHold(
  *
  * So this is its own act, and deliberately not a widening of that one. It never
  * writes a release, never touches the signed evidence or its integrity seal,
- * and cannot be reached by a tap on "Mark ready" — it stamps three columns on
- * the record that was referred, one of which is the accountable staff member.
+ * and cannot be reached by a tap on "Mark ready" — it stamps the answer and its
+ * evidence onto the record that was referred, one column of which is always the
+ * accountable staff member.
  *
  * **The subject is the person, and the record is resolved here rather than
  * posted.** A client that could name the waiver record it is clearing could
@@ -1801,16 +1839,28 @@ export async function hasLiveMedicalHold(
  * (there is no longer a questionnaire to have been evaluated); and the actor
  * must be this shop's live staff, the same rule paper attestation applies.
  *
- * Idempotent: a diver whose hold is already cleared comes back `alreadyCleared`
- * rather than being stamped twice, so a double submit cannot rewrite who
- * recorded it or when.
+ * Idempotent: a diver whose hold already carries this answer comes back
+ * `alreadyRecorded` rather than being stamped twice, so a double submit cannot
+ * rewrite who recorded it or when. The *other* answer is a refusal rather than
+ * an overwrite — see `answer_already_recorded`.
+ *
+ * **Both outcomes, one act** (issue #1283). "Not cleared" asks for exactly the
+ * same evidence and runs exactly the same refusals, because it is the same
+ * conversation at the desk with the opposite result — and it is the outcome
+ * with teeth, since it is the one that keeps a paying diver off the boat. What
+ * it does *not* do is lift anything: a refusal writes no `medicalClearedAt`, so
+ * `isUnresolvedMedicalHold` still holds the diver and readiness still refuses to
+ * board them. Nothing about the block changes; only what the surfaces can say
+ * about it.
  */
-export async function recordMedicalClearance(
+export async function recordMedicalEvaluation(
   db: AppDb,
   input: {
     shopId: string;
     personId: string;
     recordedByPersonId: string;
+    /** Which way the physician answered. Never inferred — the staffer says which. */
+    outcome: MedicalEvaluationOutcome;
     /** The day the physician evaluated the diver, as printed on the form. */
     evaluatedOn: string;
     /** The clinician who signed it. Required unless the evaluation itself is attached. */
@@ -1819,7 +1869,7 @@ export async function recordMedicalClearance(
     documentUrl?: string | null;
     now?: Date;
   },
-): Promise<MedicalClearanceOutcome> {
+): Promise<MedicalEvaluationResult> {
   const now = input.now ?? nowDate();
   const physicianName = input.physicianName?.trim() || null;
   const documentUrl = input.documentUrl ?? null;
@@ -1832,9 +1882,9 @@ export async function recordMedicalClearance(
   if (input.evaluatedOn > calendarDateInTimezone(now, "UTC")) {
     return { ok: false, reason: "evaluation_in_future" };
   }
-  return db.transaction(async (tx): Promise<MedicalClearanceOutcome> => {
-    const clearedBy = await activeStaffAttestorId(tx, input.shopId, input.recordedByPersonId);
-    if (!clearedBy) return { ok: false, reason: "staff_not_found" };
+  return db.transaction(async (tx): Promise<MedicalEvaluationResult> => {
+    const recordedBy = await activeStaffAttestorId(tx, input.shopId, input.recordedByPersonId);
+    if (!recordedBy) return { ok: false, reason: "staff_not_found" };
 
     const held = await tx
       .select()
@@ -1850,12 +1900,27 @@ export async function recordMedicalClearance(
       )
       .orderBy(desc(waiverRecords.completedAt));
 
-    const already = held.find((record) => record.medicalClearedAt !== null);
-    const open = held.find((record) => record.medicalClearedAt === null);
+    // "Answered" is either stamp: a refusal resolves the question as
+    // conclusively as a clearance does, and only an unanswered record is open
+    // to be written.
+    const answered = held.find(
+      (record) => record.medicalClearedAt !== null || record.medicalClearanceDeclinedAt !== null,
+    );
+    const open = held.find(
+      (record) => record.medicalClearedAt === null && record.medicalClearanceDeclinedAt === null,
+    );
     if (!open) {
-      return already
-        ? { ok: true, recordId: already.id, alreadyCleared: true }
-        : { ok: false, reason: "no_medical_hold" };
+      if (!answered) return { ok: false, reason: "no_medical_hold" };
+      const standing: MedicalEvaluationOutcome = answered.medicalClearedAt
+        ? "cleared"
+        : "not_cleared";
+      // The same answer twice is a double submit. The opposite answer is
+      // somebody trying to overwrite a physician's word from the desk, and it
+      // is refused in both directions: a "no" is not erasable, and a "yes" is
+      // not quietly downgraded either.
+      return standing === input.outcome
+        ? { ok: true, recordId: answered.id, outcome: standing, alreadyRecorded: true }
+        : { ok: false, reason: "answer_already_recorded" };
     }
 
     // The evaluation must post-date the answers it clears. Compared as calendar
@@ -1865,21 +1930,45 @@ export async function recordMedicalClearance(
       return { ok: false, reason: "evaluation_predates_disclosure" };
     }
 
-    const [cleared] = await tx
+    const cleared = input.outcome === "cleared";
+    const [written] = await tx
       .update(waiverRecords)
       .set({
-        medicalClearedAt: now,
-        medicalClearedByPersonId: clearedBy,
+        medicalClearedAt: cleared ? now : null,
+        medicalClearedByPersonId: cleared ? recordedBy : null,
+        medicalClearanceDeclinedAt: cleared ? null : now,
+        medicalClearanceDeclinedByPersonId: cleared ? null : recordedBy,
         medicalClearanceEvaluatedOn: input.evaluatedOn,
         medicalClearancePhysicianName: physicianName,
         medicalClearanceDocumentUrl: documentUrl,
       })
-      .where(and(eq(waiverRecords.id, open.id), isNull(waiverRecords.medicalClearedAt)))
+      // Both stamps are in the guard, not just the one being written: two
+      // staffers answering opposite ways in the same breath must not both
+      // succeed, and narrowing on only the column this call sets would let the
+      // second overwrite the first's row from the other side.
+      .where(
+        and(
+          eq(waiverRecords.id, open.id),
+          isNull(waiverRecords.medicalClearedAt),
+          isNull(waiverRecords.medicalClearanceDeclinedAt),
+        ),
+      )
       .returning({ id: waiverRecords.id });
-    // Lost the race with a concurrent clearance: somebody else recorded it in
-    // the same breath, which is the idempotent answer, not a failure.
-    if (!cleared) return { ok: true, recordId: open.id, alreadyCleared: true };
-    return { ok: true, recordId: cleared.id, alreadyCleared: false };
+    // Lost the race: somebody else answered in the same breath. Re-read rather
+    // than assume it was the same answer — reporting a refusal as a recorded
+    // clearance is the one mistake this whole path exists to prevent.
+    if (!written) {
+      const [current] = await tx
+        .select({ clearedAt: waiverRecords.medicalClearedAt })
+        .from(waiverRecords)
+        .where(eq(waiverRecords.id, open.id))
+        .limit(1);
+      const standing: MedicalEvaluationOutcome = current?.clearedAt ? "cleared" : "not_cleared";
+      return standing === input.outcome
+        ? { ok: true, recordId: open.id, outcome: standing, alreadyRecorded: true }
+        : { ok: false, reason: "answer_already_recorded" };
+    }
+    return { ok: true, recordId: written.id, outcome: input.outcome, alreadyRecorded: false };
   });
 }
 
@@ -1888,8 +1977,8 @@ export async function recordMedicalClearance(
  * #1283).
  *
  * Shop-scoped in the query rather than by the caller, and narrowed to a record
- * that actually holds a clearance: a URL on a row with no `medical_cleared_at`
- * cannot exist (the `waiver_records_medical_clearance_attributed` check
+ * that actually holds a physician's answer: a URL on a row carrying neither
+ * stamp cannot exist (the `waiver_records_medical_clearance_attributed` check
  * refuses it), and asking for one anyway means the read matches the state the
  * route claims to be showing rather than whatever the column happens to hold.
  *
@@ -1917,7 +2006,16 @@ export async function getMedicalClearanceDocument(
       and(
         eq(waiverRecords.id, recordId),
         eq(waiverRecords.shopId, shopId),
-        isNotNull(waiverRecords.medicalClearedAt),
+        // Either answer, because a physician's letter saying *no* is a stored
+        // evaluation like any other — the `..._attributed` check lets a
+        // document hang off either stamp, and a read narrowed to clearances
+        // would leave the refusal's own evidence unreachable, which is the
+        // retention-liability-with-no-retrieval-value shape issue #1283 exists
+        // to close.
+        or(
+          isNotNull(waiverRecords.medicalClearedAt),
+          isNotNull(waiverRecords.medicalClearanceDeclinedAt),
+        ),
         // An erased diver's document is destroyed, and the row keeps the
         // stamp. Reading through it would be reaching for bytes that are gone.
         isNull(waiverRecords.anonymizedAt),

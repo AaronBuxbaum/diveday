@@ -8,8 +8,11 @@ import { operationalWindow } from "@/lib/operational-window";
 import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
 import {
   DEFAULT_WAIVER_TITLE,
+  isCleanCompletion,
+  isUnresolvedMedicalHold,
   shopWaiverStatus,
   WAIVER_SIGNATURE_VALIDITY_MS,
+  waiverState,
 } from "@/lib/waivers";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
@@ -40,13 +43,13 @@ import {
   getMedicalClearanceDocument,
   getSignedWaiverRecordForShop,
   getWaiverForToken,
-  hasLiveMedicalHold,
+  hasUnansweredMedicalHold,
   issueWaiverRequest,
   listSignedWaiversByPerson,
   listWaiverIntegrityAudit,
   listWaiverTemplateHistory,
   recordInPersonWaiver,
-  recordMedicalClearance,
+  recordMedicalEvaluation,
   saveBookingEmergencyContact,
   saveWaiverTemplate,
   standingWaiverExposure,
@@ -1832,7 +1835,8 @@ describe("physician medical clearance", () => {
     expect(before?.blockers).toContainEqual(expect.objectContaining({ code: "medical_review" }));
 
     const clearedAt = new Date(now.getTime() + 60_000);
-    const outcome = await recordMedicalClearance(db, {
+    const outcome = await recordMedicalEvaluation(db, {
+      outcome: "cleared",
       shopId: shop.id,
       personId: booking.personId,
       recordedByPersonId: staff.id,
@@ -1840,7 +1844,7 @@ describe("physician medical clearance", () => {
       physicianName: "Dr. Imani Reyes",
       now: clearedAt,
     });
-    expect(outcome).toMatchObject({ ok: true, alreadyCleared: false });
+    expect(outcome).toMatchObject({ ok: true, alreadyRecorded: false });
 
     const [record] = await db
       .select()
@@ -1906,7 +1910,8 @@ describe("physician medical clearance", () => {
 
   it("leaves the signed evidence verifiable — a clearance is not a tamper", async () => {
     const { db, shop, booking, staff } = await heldContext();
-    await recordMedicalClearance(db, {
+    await recordMedicalEvaluation(db, {
+      outcome: "cleared",
       shopId: shop.id,
       personId: booking.personId,
       recordedByPersonId: staff.id,
@@ -1925,7 +1930,8 @@ describe("physician medical clearance", () => {
 
   it("stores the physician's evaluation when one is handed over", async () => {
     const { db, shop, booking, staff } = await heldContext();
-    await recordMedicalClearance(db, {
+    await recordMedicalEvaluation(db, {
+      outcome: "cleared",
       shopId: shop.id,
       personId: booking.personId,
       recordedByPersonId: staff.id,
@@ -1956,7 +1962,8 @@ describe("physician medical clearance", () => {
     it("hands back the stored evaluation for a cleared record", async () => {
       const { db, shop, booking, staff } = await heldContext();
       const url = "https://media.example.com/medical-clearances/abc.pdf";
-      await recordMedicalClearance(db, {
+      await recordMedicalEvaluation(db, {
+        outcome: "cleared",
         shopId: shop.id,
         personId: booking.personId,
         recordedByPersonId: staff.id,
@@ -1977,7 +1984,8 @@ describe("physician medical clearance", () => {
       // the second half of that, in SQL, so a route that one day forgot cannot
       // hand a manager of one shop a diver's medical file from another.
       const { db, shop, booking, staff } = await heldContext();
-      await recordMedicalClearance(db, {
+      await recordMedicalEvaluation(db, {
+        outcome: "cleared",
         shopId: shop.id,
         personId: booking.personId,
         recordedByPersonId: staff.id,
@@ -2013,7 +2021,8 @@ describe("physician medical clearance", () => {
       // claimed state does not cover.
       expect(await getMedicalClearanceDocument(db, shop.id, held.id)).toBeNull();
 
-      await recordMedicalClearance(db, {
+      await recordMedicalEvaluation(db, {
+        outcome: "cleared",
         shopId: shop.id,
         personId: booking.personId,
         recordedByPersonId: staff.id,
@@ -2036,7 +2045,8 @@ describe("physician medical clearance", () => {
   it("is idempotent — a second recording never rewrites who cleared it or when", async () => {
     const { db, shop, booking, staff } = await heldContext();
     const first = new Date(now.getTime() + 60_000);
-    await recordMedicalClearance(db, {
+    await recordMedicalEvaluation(db, {
+      outcome: "cleared",
       shopId: shop.id,
       personId: booking.personId,
       recordedByPersonId: staff.id,
@@ -2044,7 +2054,8 @@ describe("physician medical clearance", () => {
       physicianName: "Dr. Imani Reyes",
       now: first,
     });
-    const second = await recordMedicalClearance(db, {
+    const second = await recordMedicalEvaluation(db, {
+      outcome: "cleared",
       shopId: shop.id,
       personId: booking.personId,
       recordedByPersonId: staff.id,
@@ -2052,7 +2063,7 @@ describe("physician medical clearance", () => {
       physicianName: "Dr. Imani Reyes",
       now: new Date(now.getTime() + 120_000),
     });
-    expect(second).toMatchObject({ ok: true, alreadyCleared: true });
+    expect(second).toMatchObject({ ok: true, alreadyRecorded: true });
     const [record] = await db
       .select()
       .from(waiverRecords)
@@ -2073,7 +2084,8 @@ describe("physician medical clearance", () => {
       medicalAnswers: clearAnswers,
       now,
     });
-    const outcome = await recordMedicalClearance(db, {
+    const outcome = await recordMedicalEvaluation(db, {
+      outcome: "cleared",
       shopId: shop.id,
       personId: booking.personId,
       recordedByPersonId: staff.id,
@@ -2090,7 +2102,8 @@ describe("physician medical clearance", () => {
       .insert(people)
       .values({ shopId: shop.id, fullName: "Not Staff", email: `outsider-${randomUUID()}@x.test` })
       .returning();
-    const outcome = await recordMedicalClearance(db, {
+    const outcome = await recordMedicalEvaluation(db, {
+      outcome: "cleared",
       shopId: shop.id,
       personId: booking.personId,
       recordedByPersonId: outsider.id,
@@ -2110,7 +2123,8 @@ describe("physician medical clearance", () => {
       .insert(shops)
       .values({ name: "Other", slug: `other-${randomUUID()}`, timezone: "America/New_York" })
       .returning();
-    const outcome = await recordMedicalClearance(db, {
+    const outcome = await recordMedicalEvaluation(db, {
+      outcome: "cleared",
       shopId: otherShop.id,
       personId: booking.personId,
       recordedByPersonId: staff.id,
@@ -2125,7 +2139,8 @@ describe("physician medical clearance", () => {
   it("refuses a clearance with nothing behind it — a button press is not evidence", async () => {
     const { db, shop, booking, staff } = await heldContext();
     expect(
-      await recordMedicalClearance(db, {
+      await recordMedicalEvaluation(db, {
+        outcome: "cleared",
         shopId: shop.id,
         personId: booking.personId,
         recordedByPersonId: staff.id,
@@ -2134,7 +2149,8 @@ describe("physician medical clearance", () => {
       }),
     ).toEqual({ ok: false, reason: "evidence_required" });
     expect(
-      await recordMedicalClearance(db, {
+      await recordMedicalEvaluation(db, {
+        outcome: "cleared",
         shopId: shop.id,
         personId: booking.personId,
         recordedByPersonId: staff.id,
@@ -2149,7 +2165,8 @@ describe("physician medical clearance", () => {
     // A letter written in March cannot clear a stent placed in June. The
     // referral here was signed on 2026-07-18.
     const { db, shop, booking, staff } = await heldContext();
-    const outcome = await recordMedicalClearance(db, {
+    const outcome = await recordMedicalEvaluation(db, {
+      outcome: "cleared",
       shopId: shop.id,
       personId: booking.personId,
       recordedByPersonId: staff.id,
@@ -2166,7 +2183,8 @@ describe("physician medical clearance", () => {
   it("refuses an evaluation dated after today — that is a typo, not a clearance", async () => {
     const { db, shop, booking, staff } = await heldContext();
     expect(
-      await recordMedicalClearance(db, {
+      await recordMedicalEvaluation(db, {
+        outcome: "cleared",
         shopId: shop.id,
         personId: booking.personId,
         recordedByPersonId: staff.id,
@@ -2202,7 +2220,8 @@ describe("physician medical clearance", () => {
       status: "active",
     });
 
-    const outcome = await recordMedicalClearance(db, {
+    const outcome = await recordMedicalEvaluation(db, {
+      outcome: "cleared",
       shopId: otherShop.id,
       personId: booking.personId,
       recordedByPersonId: otherStaff.id,
@@ -2216,13 +2235,188 @@ describe("physician medical clearance", () => {
     expect(after?.blockers).toContainEqual(expect.objectContaining({ code: "medical_review" }));
   });
 
-  it("answers the cheap pre-read the surface runs before it stores an evaluation", async () => {
-    // The upload happens only when this says yes, so that a staffer who opens
-    // the wrong diver's record never puts a real physician's evaluation into
-    // the bucket with no row pointing at it (security review H2).
+  it("records a refusal without lifting the block, and says the answer arrived", async () => {
+    // The whole point of issue #1283: before this, a diver whose physician said
+    // no was indistinguishable from one nobody had heard from, so the shop kept
+    // chasing and the crew never learned the answer.
     const { db, shop, booking, staff } = await heldContext();
-    expect(await hasLiveMedicalHold(db, shop.id, booking.personId)).toBe(true);
-    await recordMedicalClearance(db, {
+    const declinedAt = new Date(now.getTime() + 60_000);
+    const outcome = await recordMedicalEvaluation(db, {
+      outcome: "not_cleared",
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      evaluatedOn: EVALUATED_ON,
+      physicianName: "Dr. Imani Reyes",
+      now: declinedAt,
+    });
+    expect(outcome).toMatchObject({ ok: true, outcome: "not_cleared", alreadyRecorded: false });
+
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "medical_review")),
+      );
+    expect(record).toMatchObject({
+      status: "medical_review",
+      // The safety property, pinned: nothing a refusal writes may read as a
+      // clearance to the consumers that key off `medicalClearedAt`.
+      medicalClearedAt: null,
+      medicalClearedByPersonId: null,
+      medicalClearanceDeclinedAt: declinedAt,
+      medicalClearanceDeclinedByPersonId: staff.id,
+      medicalClearanceEvaluatedOn: EVALUATED_ON,
+    });
+    expect(isUnresolvedMedicalHold(record)).toBe(true);
+    expect(isCleanCompletion(record)).toBe(false);
+    expect(waiverState(record, declinedAt)).toBe("medical_not_cleared");
+
+    // Fail-closed end to end: readiness still refuses to board them, and the
+    // blocker it raises is the one that says why.
+    const after = await getBookingReadiness(db, shop.id, booking.id);
+    expect(after?.blockers).toContainEqual(
+      expect.objectContaining({ code: "medical_not_cleared" }),
+    );
+    expect(after?.blockers).not.toContainEqual(expect.objectContaining({ code: "medical_review" }));
+  });
+
+  it("refuses a clearance on a record a physician already refused, in both directions", async () => {
+    // A recorded "no" is not erasable from the desk. A diver re-evaluated after
+    // a refusal is answering a fresh disclosure, which signs a new release.
+    const { db, shop, booking, staff } = await heldContext();
+    const base = {
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      evaluatedOn: EVALUATED_ON,
+      physicianName: "Dr. Imani Reyes",
+    };
+    await recordMedicalEvaluation(db, { ...base, outcome: "not_cleared", now });
+    expect(
+      await recordMedicalEvaluation(db, {
+        ...base,
+        outcome: "cleared",
+        now: new Date(now.getTime() + 60_000),
+      }),
+    ).toEqual({ ok: false, reason: "answer_already_recorded" });
+
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "medical_review")),
+      );
+    expect(record.medicalClearedAt).toBeNull();
+    expect(record.medicalClearanceDeclinedAt).not.toBeNull();
+  });
+
+  it("refuses a refusal on a record a physician already cleared", async () => {
+    // The same rule read the other way, so neither answer is the one that can
+    // be quietly overwritten.
+    const { db, shop, booking, staff } = await heldContext();
+    const base = {
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      evaluatedOn: EVALUATED_ON,
+      physicianName: "Dr. Imani Reyes",
+    };
+    await recordMedicalEvaluation(db, { ...base, outcome: "cleared", now });
+    expect(
+      await recordMedicalEvaluation(db, {
+        ...base,
+        outcome: "not_cleared",
+        now: new Date(now.getTime() + 60_000),
+      }),
+    ).toEqual({ ok: false, reason: "answer_already_recorded" });
+  });
+
+  it("is idempotent on a repeated refusal, and never rewrites who recorded it", async () => {
+    const { db, shop, booking, staff } = await heldContext();
+    const base = {
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      evaluatedOn: EVALUATED_ON,
+      physicianName: "Dr. Imani Reyes",
+      outcome: "not_cleared",
+    } as const;
+    const first = new Date(now.getTime() + 60_000);
+    await recordMedicalEvaluation(db, { ...base, now: first });
+    expect(
+      await recordMedicalEvaluation(db, { ...base, now: new Date(now.getTime() + 120_000) }),
+    ).toMatchObject({ ok: true, outcome: "not_cleared", alreadyRecorded: true });
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "medical_review")),
+      );
+    expect(record.medicalClearanceDeclinedAt).toEqual(first);
+  });
+
+  it("applies a refusal the same evidence rules as a clearance", async () => {
+    // Same act, same evidence: the refusal is the record of why somebody stayed
+    // ashore, so it may not be the cheaper one to write.
+    const { db, shop, booking, staff } = await heldContext();
+    const base = {
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      outcome: "not_cleared",
+      now,
+    } as const;
+    expect(await recordMedicalEvaluation(db, { ...base, evaluatedOn: EVALUATED_ON })).toEqual({
+      ok: false,
+      reason: "evidence_required",
+    });
+    expect(
+      await recordMedicalEvaluation(db, { ...base, evaluatedOn: "", physicianName: "Dr. Reyes" }),
+    ).toEqual({ ok: false, reason: "evaluation_date_required" });
+    expect(
+      await recordMedicalEvaluation(db, {
+        ...base,
+        evaluatedOn: "2026-01-01",
+        physicianName: "Dr. Reyes",
+      }),
+    ).toEqual({ ok: false, reason: "evaluation_predates_disclosure" });
+  });
+
+  it("hands back the refused evaluation itself, which a claims reader asks for first", async () => {
+    // The document read was narrowed to clearances when it shipped. A refusal's
+    // own letter is the one an insurer wants, and storing it with no way back
+    // to it is the shape issue #1283 exists to close.
+    const { db, shop, booking, staff } = await heldContext();
+    await recordMedicalEvaluation(db, {
+      outcome: "not_cleared",
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      evaluatedOn: EVALUATED_ON,
+      documentUrl: "https://media.example.com/medical-clearances/refused.pdf",
+      now,
+    });
+    const [held] = await db
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "medical_review")),
+      );
+    expect(await getMedicalClearanceDocument(db, shop.id, held.id)).toEqual({
+      url: "https://media.example.com/medical-clearances/refused.pdf",
+      personId: booking.personId,
+    });
+  });
+
+  it("stops asking for an answer once a refusal has arrived", async () => {
+    // `hasUnansweredMedicalHold` and `isUnresolvedMedicalHold` deliberately
+    // disagree here, and this is the pair that proves it: no answer is
+    // outstanding, and the diver is still blocked.
+    const { db, shop, booking, staff } = await heldContext();
+    expect(await hasUnansweredMedicalHold(db, shop.id, booking.personId)).toBe(true);
+    await recordMedicalEvaluation(db, {
+      outcome: "not_cleared",
       shopId: shop.id,
       personId: booking.personId,
       recordedByPersonId: staff.id,
@@ -2230,12 +2424,64 @@ describe("physician medical clearance", () => {
       physicianName: "Dr. Imani Reyes",
       now,
     });
-    expect(await hasLiveMedicalHold(db, shop.id, booking.personId)).toBe(false);
+    expect(await hasUnansweredMedicalHold(db, shop.id, booking.personId)).toBe(false);
+    const after = await getBookingReadiness(db, shop.id, booking.id);
+    expect(after?.status).toBe("blocked");
+  });
+
+  it("erases a refused evaluation the way it erases a cleared one", async () => {
+    // The erasure exemption on `..._evidenced` was written for a clearance
+    // evidenced only by a document; a refusal reaches the same clause and would
+    // otherwise take the whole erasure transaction down with it.
+    const { db, shop, booking, staff } = await heldContext();
+    await recordMedicalEvaluation(db, {
+      outcome: "not_cleared",
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      evaluatedOn: EVALUATED_ON,
+      documentUrl: "https://media.example.com/medical-clearances/refused.pdf",
+      now,
+    });
+    await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      actorPersonId: staff.id,
+    });
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(
+        and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "medical_review")),
+      );
+    expect(record.medicalClearanceDocumentUrl).toBeNull();
+    // The shop's own act survives the erasure, as a clearance's does.
+    expect(record.medicalClearanceDeclinedAt).not.toBeNull();
+    expect(record.medicalClearanceDeclinedByPersonId).toBe(staff.id);
+  });
+
+  it("answers the cheap pre-read the surface runs before it stores an evaluation", async () => {
+    // The upload happens only when this says yes, so that a staffer who opens
+    // the wrong diver's record never puts a real physician's evaluation into
+    // the bucket with no row pointing at it (security review H2).
+    const { db, shop, booking, staff } = await heldContext();
+    expect(await hasUnansweredMedicalHold(db, shop.id, booking.personId)).toBe(true);
+    await recordMedicalEvaluation(db, {
+      outcome: "cleared",
+      shopId: shop.id,
+      personId: booking.personId,
+      recordedByPersonId: staff.id,
+      evaluatedOn: EVALUATED_ON,
+      physicianName: "Dr. Imani Reyes",
+      now,
+    });
+    expect(await hasUnansweredMedicalHold(db, shop.id, booking.personId)).toBe(false);
   });
 
   it("destroys the physician's evaluation when the diver is erased, and keeps the fact", async () => {
     const { db, shop, booking, staff } = await heldContext();
-    await recordMedicalClearance(db, {
+    await recordMedicalEvaluation(db, {
+      outcome: "cleared",
       shopId: shop.id,
       personId: booking.personId,
       recordedByPersonId: staff.id,

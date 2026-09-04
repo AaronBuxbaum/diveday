@@ -2231,6 +2231,15 @@ export async function loadShopExportBundleInput(
             "medical_cleared_at",
             "medical_cleared_by_person_id",
             "medical_cleared_by_name",
+            // The same act with the opposite answer (issue #1283), exported for
+            // the same reason and with more force: a refusal is the record of
+            // why a diver stayed ashore, and a restore that lost it would show
+            // the destination a diver still "awaiting" an answer that arrived
+            // months ago. Its document is excluded exactly as the clearance's
+            // is; the fact and its accountable staff member are the shop's own.
+            "medical_clearance_declined_at",
+            "medical_clearance_declined_by_person_id",
+            "medical_clearance_declined_by_name",
             "medical_clearance_evaluated_on",
             "medical_clearance_physician_name",
             "integrity_hash",
@@ -2271,6 +2280,11 @@ export async function loadShopExportBundleInput(
             row.medicalClearedAt,
             row.medicalClearedByPersonId,
             row.medicalClearedByPersonId ? personName.get(row.medicalClearedByPersonId) : null,
+            row.medicalClearanceDeclinedAt,
+            row.medicalClearanceDeclinedByPersonId,
+            row.medicalClearanceDeclinedByPersonId
+              ? personName.get(row.medicalClearanceDeclinedByPersonId)
+              : null,
             row.medicalClearanceEvaluatedOn,
             row.medicalClearancePhysicianName,
             row.integrityHash,
@@ -4077,6 +4091,12 @@ export async function loadDiverExportBundleInput(
             // recorded it is named for the same reason `recorded_by_name` is.
             "medical_cleared_at",
             "medical_cleared_by_name",
+            // And the refusal (issue #1283), which is the diver's own fact more
+            // plainly than the clearance is: it is the finding that kept them
+            // off a boat, and a subject-access bundle that withheld it would be
+            // hiding from somebody the one record they are most entitled to.
+            "medical_clearance_declined_at",
+            "medical_clearance_declined_by_name",
             "medical_clearance_evaluated_on",
             "medical_clearance_physician_name",
             "superseded_at",
@@ -4100,6 +4120,10 @@ export async function loadDiverExportBundleInput(
             row.medicalReviewRequired,
             row.medicalClearedAt,
             row.medicalClearedByPersonId ? personName.get(row.medicalClearedByPersonId) : null,
+            row.medicalClearanceDeclinedAt,
+            row.medicalClearanceDeclinedByPersonId
+              ? personName.get(row.medicalClearanceDeclinedByPersonId)
+              : null,
             row.medicalClearanceEvaluatedOn,
             row.medicalClearancePhysicianName,
             row.supersededAt,

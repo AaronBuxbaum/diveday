@@ -60,6 +60,7 @@ export type TodayActionKind =
   | "roll_call_departure_open"
   | "roll_call_not_started"
   | "medical_review"
+  | "medical_not_cleared"
   | "identity"
   | "certification"
   | "waiver"
@@ -113,6 +114,11 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   /** The same, for a crew member who boarded and has no result after a dive. */
   roll_call_crew_unfinished: 3,
   medical_review: 4,
+  // Tied with the hold it settles, deliberately. This table ranks by how long a
+  // fix takes to land, and both answers put the same diver off the same boat —
+  // the difference is what the shop does next, not how soon it must start.
+  // `help_request` and `payment` already share a rank for the same reason.
+  medical_not_cleared: 4,
   readiness_unavailable: 5,
   // An unconfirmed identity can hide a missing medical/cert for a different
   // human, so it ranks with the other hard safety gates, above card/waiver work.
@@ -226,6 +232,7 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   crew_below_target: ["owner", "manager", "instructor", "divemaster", "captain"],
   instructor_missing: ["owner", "manager", "instructor"],
   medical_review: ["owner", "manager", "instructor"],
+  medical_not_cleared: ["owner", "manager", "instructor"],
   identity: ["owner", "manager", "instructor"],
   certification: ["owner", "manager", "instructor"],
   requirements: ["owner", "manager", "instructor"],
@@ -292,6 +299,7 @@ export const ACTION_KIND_META = {
   roll_call_departure_open: { tone: "warning" },
   roll_call_not_started: { tone: "warning" },
   medical_review: { tone: "danger" },
+  medical_not_cleared: { tone: "danger" },
   readiness_unavailable: { tone: "danger" },
   identity: { tone: "danger" },
   certification: { tone: "warning" },
@@ -512,6 +520,10 @@ export const BLOCKER_ACTIONS: Record<
   // one blocker in the app that needed a human to walk somewhere sent them to
   // the surface that could do the least about it.
   medical_review: { kind: "medical_review", target: "diver" },
+  // The diver too, and for a sharper reason than the row above: the work a
+  // refusal creates is entirely about the person — tell them, move them, refund
+  // them — and none of it happens on the departure they can no longer join.
+  medical_not_cleared: { kind: "medical_not_cleared", target: "diver" },
   certification_missing: { kind: "certification", target: "diver" },
   certification_pending: { kind: "certification", target: "diver" },
   certification_self_declared: { kind: "certification", target: "diver" },

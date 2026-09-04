@@ -17,6 +17,15 @@ export const CHECKLIST_DETAIL_KEYS: Record<ChecklistDetailCode, DiverMessageKey>
   waiver_pending: "ready.checklistDetail.waiverPending",
   waiver_expired: "ready.checklistDetail.waiverExpired",
   medical_review: "ready.checklistDetail.medicalReview",
+  // **Deliberately the same sentence as the hold above it** (issue #1283). The
+  // three surfaces that had to tell a refusal apart from a wait are all staff
+  // ones; this is the diver's own page, reached by a bearer token anyone
+  // holding the link can open. Restating a physician's negative finding there
+  // would publish a medical outcome to whoever has the URL, and it would tell
+  // the diver nothing their own doctor has not already told them. What is still
+  // true either way is the half that matters to them: the shop will be in
+  // touch.
+  medical_not_cleared: "ready.checklistDetail.medicalReview",
   certification_missing: "ready.checklistDetail.certificationMissing",
   certification_pending: "ready.checklistDetail.certificationPending",
   certification_self_declared: "ready.checklistDetail.certificationSelfDeclared",

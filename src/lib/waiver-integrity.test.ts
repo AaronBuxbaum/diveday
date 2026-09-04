@@ -40,6 +40,8 @@ const record = {
   medicalReviewRequired: false,
   medicalClearedAt: null,
   medicalClearedByPersonId: null,
+  medicalClearanceDeclinedAt: null,
+  medicalClearanceDeclinedByPersonId: null,
   medicalClearanceDocumentUrl: null,
   medicalClearanceEvaluatedOn: null,
   medicalClearancePhysicianName: null,

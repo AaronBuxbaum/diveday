@@ -110,6 +110,12 @@ export async function getIncidentExport(
     if (row.waiver?.medicalClearedByPersonId) {
       accountableStaffIds.add(row.waiver.medicalClearedByPersonId);
     }
+    // And the same act with the opposite answer (issue #1283) — a refusal is
+    // the more consequential of the two on a document an insurer reads, so it
+    // names its staff member exactly as a clearance does.
+    if (row.waiver?.medicalClearanceDeclinedByPersonId) {
+      accountableStaffIds.add(row.waiver.medicalClearanceDeclinedByPersonId);
+    }
     for (const card of [
       ...row.certifications,
       ...row.specialtyCertifications,
@@ -229,6 +235,9 @@ export async function getIncidentExport(
         : null,
       waiverMedicalClearedByName: row.waiver?.medicalClearedByPersonId
         ? (accountableStaffNameById.get(row.waiver.medicalClearedByPersonId) ?? null)
+        : null,
+      waiverMedicalClearanceDeclinedByName: row.waiver?.medicalClearanceDeclinedByPersonId
+        ? (accountableStaffNameById.get(row.waiver.medicalClearanceDeclinedByPersonId) ?? null)
         : null,
     })),
     events,

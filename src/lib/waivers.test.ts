@@ -4,7 +4,9 @@ import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "./medical";
 import { localTypedConsentProvider } from "./signatures";
 import {
   effectiveWaiverForBooking,
+  isCleanCompletion,
   isCompletedWaiverCurrent,
+  isUnresolvedMedicalHold,
   medicalWaiverMark,
   needsMedicalReview,
   overriddenReferralAt,
@@ -387,6 +389,47 @@ describe("shop-level waiver standing", () => {
       supersededAt: SIGN_NOW,
     });
     expect(status([hold]).state).toBe("none");
+  });
+
+  it("tells a refused evaluation apart from one nobody has answered", () => {
+    // The whole of issue #1283 at the level the diver record reads: same block,
+    // different sentence, and the refused letter reachable rather than stored
+    // with no door back to it.
+    const declinedAt = new Date(SIGN_NOW.getTime() + 60_000);
+    const refused = completedWaiver({
+      id: "refused",
+      status: "medical_review",
+      medicalClearanceDeclinedAt: declinedAt,
+      medicalClearanceDeclinedByPersonId: "staff-1",
+      medicalClearanceEvaluatedOn: "2026-07-18",
+      medicalClearanceDocumentUrl: "https://media.example.com/medical-clearances/refused.pdf",
+    });
+    expect(status([refused])).toMatchObject({
+      state: "medical_not_cleared",
+      declinedAt,
+      evaluation: { recordId: "refused", documentOnFile: true },
+    });
+    // And the gate is unmoved: a refusal is still an unresolved hold, still not
+    // a clean completion, and still never a current release.
+    expect(isUnresolvedMedicalHold(refused)).toBe(true);
+    expect(isCleanCompletion(refused)).toBe(false);
+    expect(isCompletedWaiverCurrent(refused, 1, SIGN_NOW)).toBe(false);
+    expect(waiverState(refused, SIGN_NOW)).toBe("medical_not_cleared");
+  });
+
+  it("keeps a refusal out of the mark a manifest reads", () => {
+    // `medicalWaiverMark` is what prints "cleared by a physician" at the rail.
+    // A refusal must never reach it: the crew's line about this diver comes
+    // from the blocker, which says the opposite thing.
+    const refused = completedWaiver({
+      id: "refused",
+      status: "medical_review",
+      medicalClearanceDeclinedAt: SIGN_NOW,
+      medicalClearanceDeclinedByPersonId: "staff-1",
+      medicalClearanceEvaluatedOn: "2026-07-18",
+      medicalClearancePhysicianName: "Dr. Imani Reyes",
+    });
+    expect(medicalWaiverMark(refused)).toBeNull();
   });
 });
 

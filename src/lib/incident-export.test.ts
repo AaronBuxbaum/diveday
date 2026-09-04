@@ -186,6 +186,8 @@ describe("buildIncidentExport", () => {
       recordedByName: null,
       medicalClearedAt: null,
       medicalClearedByName: null,
+      medicalClearanceDeclinedAt: null,
+      medicalClearanceDeclinedByName: null,
       medicalClearanceEvaluatedOn: null,
       medicalClearancePhysicianName: null,
       medicalClearanceDocumentOnFile: false,
@@ -259,6 +261,8 @@ describe("buildIncidentExport", () => {
       recordedByName: null,
       medicalClearedAt: null,
       medicalClearedByName: null,
+      medicalClearanceDeclinedAt: null,
+      medicalClearanceDeclinedByName: null,
       medicalClearanceEvaluatedOn: null,
       medicalClearancePhysicianName: null,
       medicalClearanceDocumentOnFile: false,
@@ -994,6 +998,47 @@ describe("physician clearance on the departure log", () => {
     });
   });
 
+  it("states a refusal with its evidence, on the document an insurer reads", () => {
+    // The negative finding is the one a claims reader asks for first, and it
+    // must not be the weaker record of the two: stating "not cleared" with no
+    // date, no clinician and no document beside it would be worse than saying
+    // nothing (issue #1283).
+    const doc = buildIncidentExport(
+      baseInput({
+        diverEvidence: [
+          {
+            bookingId: "b1",
+            certifications: [],
+            specialtyCertifications: [],
+            nitroxCertifications: [],
+            waiver: completedWaiver({
+              status: "medical_review",
+              medicalReviewRequired: true,
+              medicalClearanceDeclinedAt: new Date("2026-08-03T09:00:00.000Z"),
+              medicalClearanceDeclinedByPersonId: "staff-1",
+              medicalClearanceEvaluatedOn: "2026-08-02",
+              medicalClearancePhysicianName: "Dr. Imani Reyes",
+              medicalClearanceDocumentUrl: "https://media.example.com/medical-clearances/no.pdf",
+            }),
+            waiverMedicalClearanceDeclinedByName: "Dana Reyes",
+          },
+        ],
+      }),
+    );
+    expect(doc.roster[0]?.waiver).toMatchObject({
+      state: "medical_not_cleared",
+      // Never the clearance stamp: every consumer of this document reads that
+      // one as "a physician said yes".
+      medicalClearedAt: null,
+      medicalClearedByName: null,
+      medicalClearanceDeclinedAt: "2026-08-03T09:00:00.000Z",
+      medicalClearanceDeclinedByName: "Dana Reyes",
+      medicalClearanceEvaluatedOn: "2026-08-02",
+      medicalClearancePhysicianName: "Dr. Imani Reyes",
+      medicalClearanceDocumentOnFile: true,
+    });
+  });
+
   it("states nothing at all about a clearance nobody recorded", () => {
     const doc = buildIncidentExport(
       baseInput({
@@ -1015,6 +1060,8 @@ describe("physician clearance on the departure log", () => {
       state: "medical_review",
       medicalClearedAt: null,
       medicalClearedByName: null,
+      medicalClearanceDeclinedAt: null,
+      medicalClearanceDeclinedByName: null,
       medicalClearanceEvaluatedOn: null,
       medicalClearanceDocumentOnFile: false,
     });

@@ -49,7 +49,12 @@ import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
 import { certificationAgency, certificationLevel, people } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
 import { getSupportNeeds, saveSupportNeeds } from "@/db/support-needs";
-import { hasLiveMedicalHold, recordInPersonWaiver, recordMedicalClearance } from "@/db/waivers";
+import {
+  hasUnansweredMedicalHold,
+  type MedicalEvaluationOutcome,
+  recordInPersonWaiver,
+  recordMedicalEvaluation,
+} from "@/db/waivers";
 import { isPlausibleDateOfBirth } from "@/lib/age";
 import { canOverrideGearRequest, isStaff } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
@@ -1159,13 +1164,20 @@ export async function markWaiverInPersonAction(
 }
 
 /**
- * **A physician cleared this diver, recorded from their own record.**
+ * **What the physician said about this diver, recorded from their own record.**
  *
  * The end of the one readiness blocker that had no door. A referral parks the
  * release in `medical_review` and readiness refuses to board the diver; the
  * diver comes back holding a signed evaluation; before this the only lift was
  * `markWaiverInPersonAction` above, whose checkbox asserts that *no answer
  * needs physician sign-off* — untrue of exactly this diver (issue #1252).
+ *
+ * **Either answer** (issue #1283). A refusal is the same act with the opposite
+ * result and it lifts nothing — the hold stands, readiness still refuses, and
+ * what changes is only that the record can say the answer arrived. The outcome
+ * is read off the form rather than assumed, and an unrecognised value is a
+ * refusal rather than a guess: defaulting it would mean picking a medical
+ * outcome on the staffer\'s behalf.
  *
  * Same subject rule as the paper release, and for the same reason: the diver is
  * this route's path segment, never a form field, and `recordMedicalClearance`
@@ -1205,10 +1217,21 @@ export async function recordMedicalClearanceAction(
   personId = context.personId;
   const { base, db, staff } = context;
 
-  if (!(await hasLiveMedicalHold(db, staff.user.shopId, personId))) {
+  if (!(await hasUnansweredMedicalHold(db, staff.user.shopId, personId))) {
     revalidateAndRedirect(base, backTo(base, "medical-clearance-no-hold", "waiver"));
     return;
   }
+
+  const posted = String(formData.get("outcome") ?? "");
+  if (posted !== "cleared" && posted !== "not_cleared") {
+    // Refused before the upload, like the no-hold check above it: a missing or
+    // unrecognised outcome must never store a file, and it must never be
+    // resolved to a default — the two answers have opposite consequences for
+    // whether somebody gets in the water.
+    revalidateAndRedirect(base, backTo(base, "medical-clearance-outcome-required", "waiver"));
+    return;
+  }
+  const outcome: MedicalEvaluationOutcome = posted;
 
   const evaluatedOn = String(formData.get("evaluatedOn") ?? "").trim();
   const physicianName = String(formData.get("physicianName") ?? "").trim();
@@ -1228,15 +1251,16 @@ export async function recordMedicalClearanceAction(
     documentUrl = stored.url;
   }
 
-  const outcome = await recordMedicalClearance(db, {
+  const result = await recordMedicalEvaluation(db, {
     shopId: staff.user.shopId,
     personId,
     recordedByPersonId: staff.user.personId,
+    outcome,
     evaluatedOn,
     physicianName,
     documentUrl,
   });
-  if (!outcome.ok && documentUrl) {
+  if (!result.ok && documentUrl) {
     await queueAndAttemptMediaDeletion(db, {
       shopId: staff.user.shopId,
       kind: "waiver_document",
@@ -1247,9 +1271,13 @@ export async function recordMedicalClearanceAction(
     base,
     await successUrl(
       context,
-      outcome.ok ? "medical-clearance-recorded" : MEDICAL_CLEARANCE_NOTICES[outcome.reason],
+      result.ok
+        ? result.outcome === "cleared"
+          ? "medical-clearance-recorded"
+          : "medical-not-cleared-recorded"
+        : MEDICAL_CLEARANCE_NOTICES[result.reason],
       "waiver",
-      outcome.ok,
+      result.ok,
     ),
   );
 }
@@ -1259,10 +1287,11 @@ export async function recordMedicalClearanceAction(
  * compile error here rather than a silent fall-through to "something failed".
  */
 const MEDICAL_CLEARANCE_NOTICES: Record<
-  Extract<Awaited<ReturnType<typeof recordMedicalClearance>>, { ok: false }>["reason"],
+  Extract<Awaited<ReturnType<typeof recordMedicalEvaluation>>, { ok: false }>["reason"],
   string
 > = {
   no_medical_hold: "medical-clearance-no-hold",
+  answer_already_recorded: "medical-clearance-answer-recorded",
   evaluation_date_required: "medical-clearance-date-required",
   evaluation_predates_disclosure: "medical-clearance-date-too-early",
   evaluation_in_future: "medical-clearance-date-in-future",

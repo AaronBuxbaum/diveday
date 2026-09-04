@@ -139,7 +139,7 @@ export function managedImageRemotePatterns(
 ): { protocol: "https"; hostname: string; port: string; pathname: "/**" }[] {
   return managedStorageOrigins(env).flatMap((origin) => {
     const url = toUrl(origin);
-    if (!url || url.protocol !== "https:") return [];
+    if (url?.protocol !== "https:") return [];
     return [
       {
         protocol: "https" as const,

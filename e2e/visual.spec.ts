@@ -3448,14 +3448,36 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/divers?q=Morgan");
         await page.getByRole("link", { name: "Morgan Vale" }).click();
         await page.getByRole("heading", { level: 1, name: "Morgan Vale" }).waitFor();
-        await page.getByRole("button", { name: "Record physician clearance" }).click();
+        await page.getByRole("button", { name: "Record the physician's answer" }).click();
         // The submit is what the disclosure reveals, so waiting on it is
         // waiting on the panel being open rather than on a duration.
-        await page
-          .getByRole("button", { name: "A physician cleared this diver to dive" })
-          .waitFor();
+        await page.getByRole("button", { name: "Record the answer" }).waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "diver-medical-clearance-form", scheme);
+      });
+
+      /**
+       * **The record of an answer that was no** (issue #1283).
+       *
+       * The other half of the form above, and the state that had no picture
+       * because it had no representation: a diver whose physician refused to
+       * clear them used to render identically to one nobody had heard from, so
+       * the shop kept chasing and the crew never learned. The demo's Rowan Pike
+       * carries the synthetic refusal, and what this photographs is the row
+       * saying so, dated, with no send-another-link door beside it.
+       */
+      test(`a refused physician evaluation renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/shop/blue-mantis/divers?q=Rowan");
+        await page.getByRole("link", { name: "Rowan Pike" }).click();
+        await page.getByRole("heading", { level: 1, name: "Rowan Pike" }).waitFor();
+        // The waiver group's own summary carries the standing, so waiting for
+        // the words is waiting for the group to have resolved rather than for
+        // a duration.
+        await page.getByText("Not cleared").first().waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "diver-medical-not-cleared", scheme);
       });
 
       /**

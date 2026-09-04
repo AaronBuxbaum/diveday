@@ -106,6 +106,10 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // in a week on a booking made months ahead.
   waiver_expired: "action",
   medical_review: "waiting",
+  // "waiting", like the hold it settles: there has never been anything here for
+  // the diver to do, and a refusal is the one state where that is most
+  // emphatically true.
+  medical_not_cleared: "waiting",
   certification_missing: "action",
   certification_pending: "waiting",
   // "action", not "waiting": the diver said a level and nobody has seen a card,

@@ -161,13 +161,24 @@ export function buildDiverStatus(
       // A held medical is the one waiver state nobody here can move; see the
       // `action` docstring above.
       action:
-        waiverBlocker.code === "medical_review"
+        waiverBlocker.code === "medical_review" || waiverBlocker.code === "medical_not_cleared"
           ? undefined
           : { labelKey: "divers.status.acts.sendWaiver", target: "send_waiver" },
       tripContext,
     });
   } else if (diver.waiver.state === "medical_review") {
     rows.push({ kind: "waiver", tone: "danger", sentence: { key: "divers.status.waiverHeld" } });
+  } else if (diver.waiver.state === "medical_not_cleared") {
+    // Its own branch above the generic one, and with no act, for the same
+    // reason the hold has none: "Send the waiver" is the one offer that is
+    // actively wrong here. Another link lets a diver whose physician said no
+    // answer the questionnaire again and board on a fresh clean signature
+    // (issue #1282's hole), which is the last thing this row should invite.
+    rows.push({
+      kind: "waiver",
+      tone: "danger",
+      sentence: { key: "divers.status.waiverNotCleared" },
+    });
   } else if (diver.waiver.state !== "current") {
     rows.push({
       kind: "waiver",

@@ -63,6 +63,7 @@ describe("the roster's needs-waiver chip", () => {
       expired: true,
       complete: false,
       medical_review: false,
+      medical_not_cleared: false,
     };
     for (const [state, expected] of Object.entries(sendable)) {
       expect(rosterRowNeedsWaiver(state as WaiverState)).toBe(expected);

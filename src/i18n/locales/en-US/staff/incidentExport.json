@@ -58,6 +58,8 @@
   "medicalClearanceOnFile": "The evaluation is on file.",
   "medicalClearancePhysician": "Physician: {name}.",
   "medicalClearanceRecorded": "Physician clearance recorded {date}; evaluation dated {evaluatedOn}.",
+  "medicalNotClearedRecordedBy": "Physician evaluation recorded {date} by {name} as not cleared; evaluation dated {evaluatedOn}. The medical hold stands.",
+  "medicalNotClearedRecorded": "Physician evaluation recorded {date} as not cleared; evaluation dated {evaluatedOn}. The medical hold stands.",
   "medicalClearanceRecordedBy": "Physician clearance recorded {date} by {name}; evaluation dated {evaluatedOn}.",
   "noBuddyRecorded": "No buddy team recorded",
   "notOnFile": "Not on file",

@@ -19,14 +19,17 @@
     "recordPaperSignature": "Registrar firma en papel"
   },
   "medicalClearance": {
-    "recordClearance": "Registrar la autorización médica",
+    "recordClearance": "Registrar la respuesta del médico",
+    "outcomeLegend": "¿Qué dijo el médico?",
+    "outcomeCleared": "Autorizado a bucear",
+    "outcomeNotCleared": "No autorizado",
     "evaluatedOnLabel": "Fecha de la evaluación médica",
     "physicianNameLabel": "Médico",
     "evidenceHint": "Su nombre, o adjunta la evaluación abajo. Una de las dos.",
     "documentLabel": "Formulario de evaluación médica",
     "documentHint": "Una imagen o un PDF del formulario firmado.",
     "recording": "Registrando…",
-    "confirm": "Un médico autorizó a este buceador a bucear"
+    "confirm": "Registrar la respuesta"
   },
   "waiverSend": {
     "sending": "Enviando…",
@@ -157,6 +160,7 @@
       "waiverPending": "La exención espera la firma del buceador.",
       "waiverExpired": "El enlace de la exención caducó; emite uno nuevo.",
       "medicalReview": "Una respuesta médica necesita seguimiento del personal.",
+      "medicalNotCleared": "Un médico no autorizó a esta persona a bucear.",
       "certificationMissing": "No hay ninguna certificación registrada para esta salida.",
       "certificationPending": "La certificación espera verificación del personal.",
       "certificationSelfDeclared": "El buceador indicó su nivel por su cuenta. No se ha verificado ningún registro de certificación: pide los datos y verifícalos.",
@@ -282,6 +286,7 @@
       "rollCallDepartureOpen": "Recuento en muelle",
       "rollCallNotStarted": "Sin recuento",
       "medicalReview": "Médico",
+      "medicalNotCleared": "No autorizado",
       "readinessUnavailable": "Disponibilidad",
       "identity": "Identidad",
       "certification": "Certificaciones",
@@ -318,6 +323,7 @@
       "nudgeWaiver": "Recordar exención",
       "reissueWaiver": "Reemitir exención",
       "reviewMedical": "Revisar informe médico",
+      "contactDiver": "Avisar a la persona",
       "addCard": "Añadir certificación",
       "askForCard": "Pedir datos de certificación",
       "verifyCard": "Verificar certificación",
@@ -339,6 +345,7 @@
       "nudgeWaivers": "Recordar exenciones",
       "reissueWaivers": "Reemitir exenciones",
       "reviewMedicals": "Revisar informes médicos",
+      "contactDivers": "Avisar a las personas",
       "reviewCards": "Revisar certificaciones",
       "askForCards": "Pedir certificaciones",
       "verifyCards": "Verificar certificaciones",
@@ -664,7 +671,8 @@
     "none": "Sin firmar",
     "current": "Firmado",
     "expired": "Hay que firmarlo de nuevo",
-    "medicalReview": "Revisión médica"
+    "medicalReview": "Revisión médica",
+    "medicalNotCleared": "No autorizado"
   },
   "certificationSummary": {
     "selfDeclared": "{value} — sin verificar",

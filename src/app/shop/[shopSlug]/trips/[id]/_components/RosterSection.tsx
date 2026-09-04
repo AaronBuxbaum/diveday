@@ -136,6 +136,16 @@ const WAIVER_CONTROL_KEYS: Record<ReturnType<typeof waiverState>, WaiverControlK
     action: null,
     confirm: false,
   },
+  // Danger where the review above it is warning: a hold might still clear, and
+  // this one will not. `action: null` for the same reason as `complete` —
+  // there is no next tap here, and a refusal is the one waiver state where
+  // sending another link would be the wrong thing to offer (issue #1283).
+  medical_not_cleared: {
+    labelKey: "trips.roster.waiverMedicalNotCleared",
+    tone: "bg-danger-tint text-danger-strong",
+    action: null,
+    confirm: false,
+  },
 };
 
 /**
@@ -430,7 +440,8 @@ export function RosterSection({
     const waiverStatus = waiverState(currentWaiver);
     const waiverControl = WAIVER_CONTROLS[waiverStatus];
     const flaggedPrompts =
-      waiverStatus === "medical_review" && currentWaiver?.medicalAnswers
+      (waiverStatus === "medical_review" || waiverStatus === "medical_not_cleared") &&
+      currentWaiver?.medicalAnswers
         ? flaggedMedicalPrompts(currentWaiver.medicalAnswers)
         : [];
     const nitrox = nitroxByBooking.get(booking.id);
@@ -818,19 +829,39 @@ export function RosterSection({
             the one thing on this row that must be read before the diver
             boards. It carries the **status word** as well as the instruction
             (caught by waivers.spec.ts). */}
-        {waiverStatus === "medical_review" ? (
-          <div className="mt-3 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
+        {waiverStatus === "medical_review" || waiverStatus === "medical_not_cleared" ? (
+          <div
+            className={`mt-3 rounded-lg px-3 py-2 text-sm ${
+              waiverStatus === "medical_not_cleared"
+                ? "bg-danger-tint text-danger-strong"
+                : "bg-warning-tint text-warning-strong"
+            }`}
+          >
             <p className="font-semibold">{waiverControl.label}</p>
-            <p className="mt-0.5 font-medium">{t("trips.roster.followUpBeforeBoarding")}</p>
+            <p className="mt-0.5 font-medium">
+              {/* The hold reads "follow up before boarding" because somebody
+                  still can. A refusal has nobody left to follow up with, and
+                  saying so is the whole of issue #1283 at the rail. */}
+              {t(
+                waiverStatus === "medical_not_cleared"
+                  ? "trips.roster.notClearedBeforeBoarding"
+                  : "trips.roster.followUpBeforeBoarding",
+              )}
+            </p>
             {flaggedPrompts.length > 0 ? (
               <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
                 {flaggedPrompts.map((prompt) => (
                   <li key={prompt}>{prompt}</li>
                 ))}
               </ul>
-            ) : (
+            ) : waiverStatus === "medical_review" ? (
+              // Only while the answer is still outstanding. This sentence ends
+              // "confirm physician clearance before boarding", which under a
+              // recorded refusal contradicts the line directly above it and
+              // tells a crew member to go looking for a clearance that has
+              // already been refused (caught by looking at the row).
               <p className="mt-1">{t("trips.roster.medicalFollowUpDescription")}</p>
-            )}
+            ) : null}
             <div className="flex flex-wrap items-center gap-x-4">
               {currentWaiver ? (
                 <Link
@@ -849,13 +880,19 @@ export function RosterSection({
                   every dock surface pointed them at a page where the hold
                   could be read and not resolved. The act itself lives on the
                   diver's record, because a clearance is a fact about the
-                  person rather than about Saturday's boat. */}
-              <Link
-                href={`/shop/${shopSlug}/divers/${person.id}#waiver`}
-                className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline"
-              >
-                {t("trips.roster.recordPhysicianClearance")}
-              </Link>
+                  person rather than about Saturday's boat.
+
+                  Not drawn once the answer has arrived: the record has nowhere
+                  for a second one to go, and offering the door anyway sends a
+                  staffer to a form that is no longer there. */}
+              {waiverStatus === "medical_review" ? (
+                <Link
+                  href={`/shop/${shopSlug}/divers/${person.id}#waiver`}
+                  className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline"
+                >
+                  {t("trips.roster.recordPhysicianClearance")}
+                </Link>
+              ) : null}
             </div>
           </div>
         ) : null}

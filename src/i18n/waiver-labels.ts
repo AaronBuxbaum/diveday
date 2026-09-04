@@ -20,6 +20,7 @@ const WAIVER_STATUS_KEYS: Record<ShopWaiverStatus["state"], StaffMessageKey> = {
   current: "shared.waiverStatus.current",
   expired: "shared.waiverStatus.expired",
   medical_review: "shared.waiverStatus.medicalReview",
+  medical_not_cleared: "shared.waiverStatus.medicalNotCleared",
 };
 
 /** The one word a shop-level waiver standing goes by, in the staff bundle's language. */
@@ -67,6 +68,7 @@ export function waiverRowStateTone(state: WaiverRowState): "success" | "warning"
     case "current":
       return "success";
     case "medical_review":
+    case "medical_not_cleared":
     case "failed":
       return "danger";
     default:
