@@ -28,7 +28,7 @@
   "publish": "Publicar",
   "saving": "Guardando…",
   "pagination": {
-    "total": "{count, plural, one {# reseña} other {# reseñas}}"
+    "total": "{count, plural, one {# reseña ya resuelta} other {# reseñas ya resueltas}}"
   },
   "hideConfirm": "Ocultar esta reseña",
   "hideReasonLabel": "¿Por qué la retiras?",

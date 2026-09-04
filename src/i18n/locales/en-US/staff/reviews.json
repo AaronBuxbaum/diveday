@@ -28,7 +28,7 @@
   "publish": "Publish",
   "saving": "Saving…",
   "pagination": {
-    "total": "{count, plural, one {# review} other {# reviews}}"
+    "total": "{count, plural, one {# review you have ruled on} other {# reviews you have ruled on}}"
   },
   "hideConfirm": "Hide this review",
   "hideReasonLabel": "Why are you taking it down?",
