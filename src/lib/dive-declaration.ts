@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { type CertificationAgency, certificationAgency } from "@/db/schema";
 import { isPlausibleCardNumber, MAX_CARD_NUMBER_LENGTH } from "./card-number";
+import { NO_CERTIFICATION_ANSWER } from "./certification-options";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "./rate-limit";
 import type { CertificationLevel } from "./readiness";
 
@@ -67,7 +68,7 @@ export const DECLARABLE_CERTIFICATION_LEVELS = [
  * The wire value is namespaced away from the level codes so nothing can ever
  * `as CertificationLevel` it by accident.
  */
-export const NO_CERTIFICATION_ANSWER = "none_declared";
+export { NO_CERTIFICATION_ANSWER } from "./certification-options";
 
 /**
  * **The card number, as a stranger may type it.**

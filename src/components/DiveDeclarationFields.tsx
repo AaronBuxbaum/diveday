@@ -4,13 +4,12 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
-import { certificationAgency } from "@/db/schema";
 import {
   DIVER_CERTIFICATION_AGENCY_KEYS,
   DIVER_CERTIFICATION_LEVEL_KEYS,
 } from "@/i18n/readiness-labels";
 import { CARD_NUMBER_INPUT_PATTERN, MAX_CARD_NUMBER_LENGTH } from "@/lib/card-number";
-import { NO_CERTIFICATION_ANSWER } from "@/lib/dive-declaration";
+import { CERTIFICATION_AGENCIES, NO_CERTIFICATION_ANSWER } from "@/lib/certification-options";
 
 /**
  * **"What can you dive?", asked in the same words wherever it is asked.** The
@@ -237,7 +236,7 @@ export function DiveCardFields({ shown, index }: { shown: boolean; index?: numbe
           className={controlClass}
         >
           <option value="">{t("common.certification.agencyUnsaid")}</option>
-          {certificationAgency.enumValues.map((agency) => (
+          {CERTIFICATION_AGENCIES.map((agency) => (
             <option key={agency} value={agency}>
               {t(DIVER_CERTIFICATION_AGENCY_KEYS[agency])}
             </option>

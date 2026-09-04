@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { fill, pluralForm } from "@/i18n/fill";
-import { type CourseScheduleDay, MAX_SCHEDULE_DAY_ITEMS, MAX_SCHEDULE_DAYS } from "@/lib/courses";
+import { MAX_SCHEDULE_DAY_ITEMS, MAX_SCHEDULE_DAYS } from "@/lib/course-limits";
+import type { CourseScheduleDay } from "@/lib/courses";
 import { draftFieldValue } from "./UnsavedChangesGuard";
 
 /**

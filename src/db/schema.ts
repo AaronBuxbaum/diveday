@@ -18,6 +18,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { CERTIFICATION_AGENCIES } from "@/lib/certification-options";
 import type { CloseoutSnapshot } from "@/lib/closeout";
 import type { CourseTemplateSnapshot } from "@/lib/course-template-sync";
 import type { CourseFaq, CourseGalleryPhoto, CourseScheduleDay } from "@/lib/courses";
@@ -818,18 +819,7 @@ export const tripSeriesSkips = pgTable(
  * `src/lib/course-ratios.ts` reads for the PADI-only entry-level ratio cap. This
  * enum does not reach it.
  */
-export const certificationAgency = pgEnum("certification_agency", [
-  "padi",
-  "ssi",
-  "naui",
-  "sdi",
-  "tdi",
-  "cmas",
-  "raid",
-  "gue",
-  "bsac",
-  "other",
-]);
+export const certificationAgency = pgEnum("certification_agency", CERTIFICATION_AGENCIES);
 
 /**
  * One name for the agency list, so a widening lands everywhere at once.

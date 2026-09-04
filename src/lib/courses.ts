@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { OrderLineItemKind } from "@/db/schema";
+import { MAX_FAQS, MAX_SCHEDULE_DAY_ITEMS, MAX_SCHEDULE_DAYS } from "./course-limits";
 import type { DepthUnit } from "./depth-units";
 import { cachedFormatter } from "./intl-cache";
 
@@ -68,12 +69,7 @@ export function formatScheduleDayTime(
   return day.timeNote?.trim() || undefined;
 }
 
-/** Caps enforced both here and by DayByDayEditor's "Add day"/"Add item" buttons, so a save can never build a schedule the server would reject. */
-export const MAX_SCHEDULE_DAYS = 30;
-export const MAX_SCHEDULE_DAY_ITEMS = 20;
-
-/** Caps enforced both here and by `FaqEditor`'s "Add question" button. */
-export const MAX_FAQS = 20;
+export { MAX_FAQS, MAX_SCHEDULE_DAY_ITEMS, MAX_SCHEDULE_DAYS } from "./course-limits";
 
 const faqInputSchema = z.object({
   question: z.string().max(200).optional().default(""),

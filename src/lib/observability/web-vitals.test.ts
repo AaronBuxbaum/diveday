@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  mutationDurationBeaconSchema,
   mutationDurationLogContext,
   normalizeBeaconPath,
   ratingFor,
   WEB_VITAL_NAMES,
   WEB_VITALS,
-  webVitalsBeaconSchema,
   webVitalsLogContext,
 } from "./web-vitals";
+import { mutationDurationBeaconSchema, webVitalsBeaconSchema } from "./web-vitals-beacon";
 
 describe("the Core Web Vitals registry", () => {
   it("keeps every field name distinct — a metric filter reads one field each", () => {

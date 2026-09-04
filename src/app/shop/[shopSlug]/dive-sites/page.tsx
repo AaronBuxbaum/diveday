@@ -595,11 +595,18 @@ function TemplatePreview({
           <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-4">
             {species.map((entry) => (
               <li key={entry.slug}>
+                {/* 25vw was a lie about this grid. The enclosing <main> is
+                    `max-w-3xl` (768px) less `sm:px-6` (48px), so four columns
+                    and their three `gap-x-3` gaps leave 171px a cell — never a
+                    quarter of the viewport. On a 1920px screen 25vw resolved to
+                    480px and the browser duly fetched a 960px candidate for a
+                    slot that can show 342. 180px keeps headroom over 171 and
+                    still lands on a 384px candidate at DPR2. */}
                 <StoredPhoto
                   src={entry.imageUrl}
                   alt={entry.name}
                   className="aspect-[4/3] w-full rounded-lg bg-surface-sunken"
-                  sizes="(min-width: 640px) 25vw, 50vw"
+                  sizes="(min-width: 640px) 180px, 50vw"
                 />
                 <p className="mt-1.5 text-sm font-medium leading-tight">{entry.name}</p>
                 <p className="text-xs text-muted">{entry.kind}</p>

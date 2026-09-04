@@ -54,8 +54,8 @@ All of them start `dev:`. Everything else is Next's own output, passed through u
 | `port 3000 belongs to another process, so Next took 3001` | Read 3001. Whatever answers on 3000 is a different app, and it will look exactly like your change not landing |
 | `next dev refused to start` | Read Next's own message above it — it names the pid holding the checkout |
 
-Why any of this exists: `next dev` here grows without a ceiling (155 MB at boot, 1.4 GB after one
-page, 13 GB and OOM-killed after ~30 routes) and no Node flag bounds it, because the memory is
+Why any of this exists: `next dev` here never unloads a route it has served (155 MB at boot, 1.4 GB
+after one page, 13 GB and OOM-killed after ~30 routes) and no Node flag bounds it, because the memory is
 Turbopack's rather than V8's. ADR 20260903-the-dev-server-is-supervised has the measurements.
 
 ## Look at a change
