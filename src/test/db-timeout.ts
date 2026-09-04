@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 /**
  * **Which test files get a longer ceiling than the suite's own, and how long.**
  *
@@ -29,14 +31,35 @@ export const DB_TEST_TIMEOUT_MS = 60_000;
 /**
  * True for a test file that hydrates an embedded Postgres.
  *
- * `src/db/**` rather than "anything importing `src/test/db.ts`", because the
- * predicate has to answer from the path alone: it runs in the setup file,
- * before the test file's own imports are evaluated. That makes it a slight
- * over-reach — a handful of `src/db` files are pure — and an under-reach for
- * the db-backed tests that live beside their feature. Both are fine: this
- * raises a *ceiling*, so covering a file that never needed it costs nothing,
- * and a file it misses is exactly where it was before.
+ * Two rules, because the layer a file lives in answers most of it and not all
+ * of it. `src/db/**` is the bulk, and it is a path test so it holds even when a
+ * file reaches the fixture through a local helper. The second rule closes the
+ * gap this docblock used to name as acceptable: **a db-backed test that lives
+ * beside its feature.** `src/app/api/test/seed-evening/route.test.ts` hydrates
+ * six times and is not under `src/db`, so it kept the 20s ceiling and timed out
+ * on a contended runner — inside `seededShopContext()` on a test's first line,
+ * the identical signature #1306 recorded.
+ *
+ * Reading the file settles it exactly. The original rationale for a path-only
+ * answer was that this runs before the test file's own imports are evaluated —
+ * true, and beside the point: the *source text* is on disk either way, and a
+ * direct `from "@/test/db"` is what actually predicts the cost. One small
+ * synchronous read per test file, against a per-file worker startup of ~292ms.
+ *
+ * A transitive import is not matched, and does not need to be: this raises a
+ * *ceiling*, so a file it covers unnecessarily loses nothing and a file it
+ * misses is exactly where it was before. Unreadable is false, for the same
+ * reason — a predicate that threw would fail the run rather than the test.
  */
 export function needsDatabaseTimeout(testPath: string | undefined): boolean {
-  return /[/\\]src[/\\]db[/\\]/.test(testPath ?? "");
+  if (!testPath) return false;
+  if (/[/\\]src[/\\]db[/\\]/.test(testPath)) return true;
+  try {
+    return IMPORTS_TEST_DB.test(readFileSync(testPath, "utf8"));
+  } catch {
+    return false;
+  }
 }
+
+/** `@/test/db` from anywhere, or the relative spellings used inside `src/test`. */
+const IMPORTS_TEST_DB = /\bfrom\s+["'](?:@\/test\/db|(?:\.{1,2}\/)+(?:test\/)?db)["']/;
