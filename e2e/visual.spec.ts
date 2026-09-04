@@ -2236,6 +2236,19 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **A demo story's door** (issue #1215, delight report D55) — one stable
+       * link per story, the thing somebody pastes into an email to a shop
+       * owner. The weather day because it is the one with the most to prove:
+       * three lines and one button, and the only claim on the page is a
+       * description of what the visitor is about to see.
+       */
+      test(`a demo story door renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/demo/weather-day");
+        await page.getByRole("heading", { level: 1, name: "A day the weather takes" }).waitFor();
+        await capture(page, "demo-story-door", scheme);
+      });
+
+      /**
        * **The stranded diver's card, and what a blown-out day left standing**
        * (issue #1197, delight report D37).
        *

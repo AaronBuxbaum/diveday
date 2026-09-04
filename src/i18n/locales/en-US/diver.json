@@ -2245,6 +2245,22 @@
         "desc": "What your customers see: book a trip, sign the waiver, request rental gear.",
         "tryThis": "Pick a trip on the schedule and book a spot."
       }
+    },
+    "stories": {
+      "eyebrow": "Live demo",
+      "enter": "Open this story",
+      "firstBooking": {
+        "title": "A first booking",
+        "desc": "The shop's public schedule, and the form a diver who has never dived with them fills in."
+      },
+      "returningDiver": {
+        "title": "A diver who has been before",
+        "desc": "Tomorrow's prep list, with the sizes the front desk already had on file."
+      },
+      "weatherDay": {
+        "title": "A day the weather takes",
+        "desc": "Call off a departure and watch every booked diver hear about it, with somewhere else to go."
+      }
     }
   },
   "marketing": {

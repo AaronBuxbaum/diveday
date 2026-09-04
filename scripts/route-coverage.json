@@ -15,6 +15,10 @@
     "visual": ["seat-claim"],
     "a11y": ["a11y.spec.ts"]
   },
+  "/demo/[story]": {
+    "e2e": ["demo-stories.spec.ts"],
+    "visual": ["demo-story-door"]
+  },
   "/forgot-password": {
     "e2e": ["account-lifecycle.spec.ts"],
     "visual": ["forgot-password"],

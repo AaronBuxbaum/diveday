@@ -2245,6 +2245,22 @@
         "desc": "Lo que ven tus clientes: reservar un viaje, firmar la exención, pedir equipo de alquiler.",
         "tryThis": "Elige un viaje en el horario y reserva una plaza."
       }
+    },
+    "stories": {
+      "eyebrow": "Demo en vivo",
+      "enter": "Abrir esta historia",
+      "firstBooking": {
+        "title": "Una primera reserva",
+        "desc": "El calendario público del centro y el formulario que rellena quien nunca ha buceado con ellos."
+      },
+      "returningDiver": {
+        "title": "Alguien que ya ha venido",
+        "desc": "La lista de preparación de mañana, con las tallas que recepción ya tenía archivadas."
+      },
+      "weatherDay": {
+        "title": "Un día que se lleva el tiempo",
+        "desc": "Cancela una salida y mira cómo se entera cada buceador reservado, con otro sitio al que ir."
+      }
     }
   },
   "marketing": {

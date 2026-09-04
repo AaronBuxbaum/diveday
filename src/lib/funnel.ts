@@ -1,3 +1,4 @@
+import { DEMO_STORY_IDS, type DemoStoryId } from "./demo-stories";
 import { MIGRATION_GUIDE_SLUGS } from "./migration-guides";
 import { publicSchedulePath } from "./public-routes";
 
@@ -104,10 +105,26 @@ const FIXED_SOURCES = [
  * build one, and the route has already 404'd an unregistered slug before any
  * page can ask for its tag.
  */
-export type FunnelSource = (typeof FIXED_SOURCES)[number] | `switching-${string}`;
+export type FunnelSource =
+  | (typeof FIXED_SOURCES)[number]
+  | `switching-${string}`
+  | `story-${DemoStoryId}`;
 export type GuidePosition = "mid" | "close";
 
 const FIXED = new Set<string>(FIXED_SOURCES);
+
+/**
+ * The funnel tag for one of the demo's three stories (issue #1215).
+ *
+ * Per story rather than one `demo-story` tag, and for the same reason the
+ * switching guides are split per slug: which story a shop owner opened is the
+ * question this number exists to answer. The 30-day goal these doors serve is
+ * five shop conversations, and "the weather day is the one they all click" is a
+ * fact worth being able to read.
+ */
+export function storySource(story: DemoStoryId): FunnelSource {
+  return `story-${story}`;
+}
 
 /** The funnel tag for one switching guide, from the slug the route validated. */
 export function guideSource(slug: string, position?: GuidePosition): FunnelSource {
@@ -124,6 +141,7 @@ export function eventSource(value: unknown): FunnelSource | "unknown" {
   if (typeof value !== "string") return "unknown";
   const known =
     FIXED.has(value) ||
+    DEMO_STORY_IDS.some((story) => storySource(story) === value) ||
     MIGRATION_GUIDE_SLUGS.some((slug) =>
       [guideSource(slug), guideSource(slug, "mid"), guideSource(slug, "close")].some(
         (source) => source === value,
