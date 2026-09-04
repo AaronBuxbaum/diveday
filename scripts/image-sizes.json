@@ -46,8 +46,9 @@
     "exempt": "Not yet measured. The dive-site editor's photo grid. See the note on the course editor above — same string, same suspicion."
   },
 
-  "src/app/shop/[shopSlug]/dive-sites/page.tsx :: (min-width: 640px) 25vw, 50vw": {
-    "exempt": "Not yet measured: the demo's dive-sites index renders no photos, and the catalog view that does needs `?view=catalog`. This is the exact declaration PR #1347 measured by hand at 171px against a 25vw claim, so it is the first one to register when somebody returns to this."
+  "src/app/shop/[shopSlug]/dive-sites/page.tsx :: (min-width: 640px) 180px, 50vw": {
+    "measured": "2026-09-04, /shop/blue-mantis/dive-sites?view=catalog&template=molasses-reef \u2014 the published site catalog's preview pane, which is the only place this grid renders. Its <main> is max-w-3xl, so above 640px the four columns and their three gap-x-3 gaps leave a cell that never grows again; below it the grid is two columns of a viewport-width main. PR #1347 derived the 171 from that arithmetic and shipped the fix before this guard existed; this is the same number read off the element in a browser.",
+    "rendered": { "390": 173, "768": 171, "1280": 171, "1920": 171 }
   },
 
   "src/components/DiveSitesPeek.tsx :: (min-width: 640px) 50vw, 100vw": {

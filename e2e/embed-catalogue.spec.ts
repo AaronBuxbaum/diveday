@@ -55,8 +55,14 @@ test.describe("the widget views", () => {
   test("the courses widget frames one course when the snippet names it", async ({ page }) => {
     await page.goto("/s/blue-mantis/embed/courses");
     const rows = page.getByRole("listitem");
-    const all = await rows.count();
-    expect(all).toBeGreaterThan(1);
+    // **Wait for the second row, do not count once.** `goto` resolves on
+    // `load`, and under partial prerendering the static shell is what has
+    // loaded by then — the courses stream in behind it. `count()` does not
+    // retry, so reading it there returns whatever has arrived, which on a
+    // loaded CI runner was 0 (shard 1/4, 2026-09-04). Asserting the second row
+    // is visible says the same thing this needs — more than one course — and
+    // waits for it, so everything read below is present by construction.
+    await expect(rows.nth(1)).toBeVisible();
     const firstTitle = (await rows.first().locator("p").first().textContent())?.trim() ?? "";
     const slug = new URL(
       (await rows.first().getByRole("link").getAttribute("href")) ?? "",

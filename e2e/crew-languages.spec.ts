@@ -82,18 +82,30 @@ test("the public trip page names the crew who agreed, by first name only", async
   const crew = page.getByRole("heading", { name: "Who you're diving with" });
   await expect(crew).toBeVisible();
   const list = crew.locator("xpath=..").getByRole("list");
-  await expect(list).toContainText("Marcus");
 
-  // **No surname, anywhere on the page.** It is not part of what anybody
-  // consented to, and a "who you're diving with" line does not need one.
-  await expect(page.getByText("Webb")).toHaveCount(0);
-  // And nobody who did not agree. Talia is on this shop's team and has not
-  // switched it on, which is the pairing the seed exists to prove: being crew
-  // is not what publishes a name, agreeing is. (The roster-level form of the
-  // same assertion — everybody assigned to a departure who said yes is named,
-  // everybody assigned who did not is absent — is pinned as an equality in
-  // `src/db/crew-public-consent.test.ts`.)
-  await expect(page.getByText("Talia")).toHaveCount(0);
+  // **The two people on this departure are the whole argument.** The seed
+  // rosters Keiko, who switched being named on, beside Sal, who did not — so
+  // this one list carries both halves of the rule, and neither name proves
+  // anything without the other: being crew is not what publishes a name,
+  // agreeing is.
+  //
+  // Naming anybody else here would prove something about the *rostering*
+  // instead. Marcus also consented, and this test used to assert his name —
+  // but he is not aboard this departure at all, so the assertion turned on
+  // who the seed crews rather than on who agreed, and it failed for that
+  // reason rather than finding a defect. Sal is the one that matters: he is
+  // assigned to this very trip and silent, so his absence from the list is
+  // the filter doing its work rather than a person who was simply never
+  // rostered. (The roster-level form — everybody assigned who said yes is
+  // named, everybody assigned who did not is absent — is pinned as an
+  // equality in `src/db/crew-public-consent.test.ts`.)
+  await expect(list).toContainText("Keiko");
+  await expect(list).not.toContainText("Sal");
+
+  // **No surname, anywhere on the page** — and hers is the one that could
+  // leak, because hers is the name the page prints. It is not part of what
+  // she agreed to, and a "who you're diving with" line does not need one.
+  await expect(page.getByText("Tanaka")).toHaveCount(0);
 });
 
 test("a shop with no recorded languages shows no line at all", async ({ page, privateShop }) => {
