@@ -316,23 +316,45 @@ export async function getStaffingView(
         gap,
         meetings: meetingsFor(entry.trip),
       });
-    if (courseGap.code !== "none") {
-      place(courseGap.code);
-      continue;
-    }
     // Then the shop's own target, which reaches every departure it runs rather
     // than only the courses — and which owns the two exemptions this walk used
-    // to miss: a self-guided departure, and one with nobody booked.
+    // to miss: a self-guided departure, and one with nobody booked. Computed
+    // before the course gap is placed rather than after, because the zero-crew
+    // case below outranks it and needs this answer to know whether it applies.
     const ratioGap = divemasterRatioGap({
       divers: entry.booked,
       divemasterCount: inWaterDivemasterCount(counts),
       diversPerDivemaster,
       selfGuided: entry.trip.selfGuided,
     });
+    // **Nobody in the water outranks the instructor gap** (issue #1338). A
+    // course session with no crew at all satisfies both rules, and issue #732
+    // settled that a departure carries one row — but #732's rule is about the
+    // *count*, not about which code wins, and the course gap winning outright
+    // meant an empty boat read as "Course needs instructor". A staffer takes
+    // that to mean a divemaster is already on it. Since #1125 shortened the
+    // chip to those three words there is no sentence beside it to correct the
+    // inference.
+    //
+    // `divemasterRatioGap` decides, rather than `inWaterDivemasterCount(counts)
+    // === 0` read directly, because the count alone is true of cases where
+    // "No crew" would be wrong: a self-guided departure wants no supervisor,
+    // and one with nobody booked has no one to supervise. Both still say
+    // "Course needs instructor", which is the honest and actionable fact for
+    // them — a session with no instructor cannot take an enrolment however
+    // empty it is.
+    if (ratioGap.code === "under_target" && ratioGap.divemasterCount === 0) {
+      place("uncrewed_departure");
+      continue;
+    }
+    if (courseGap.code !== "none") {
+      place(courseGap.code);
+      continue;
+    }
     if (ratioGap.code === "none") continue;
-    // Two problems, two words — Today's own, not a second spelling of them:
-    // nobody in the water at all, and short of the shop's target.
-    place(ratioGap.divemasterCount === 0 ? "uncrewed_departure" : "crew_below_target");
+    // Short of the shop's target but not empty — the zero case returned above,
+    // so this is Today's quieter of the two words by construction.
+    place("crew_below_target");
   }
   gapTrips.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 

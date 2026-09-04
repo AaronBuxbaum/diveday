@@ -1027,13 +1027,37 @@ describe("uncrewed and below-target departures (issue #732)", () => {
   });
 
   /**
-   * A course session missing its instructor already raises `instructor_missing`
-   * — the more precise, agency-ratio-citing row — so `uncrewed_departure` must
-   * not also fire for the same trip. Two rows naming one gap in two
-   * vocabularies is exactly the wallpaper failure `KIND_SEVERITY`'s own
-   * comments elsewhere design against.
+   * The crew-gap rows one departure raised, in the order Today ranked them.
+   *
+   * Three ids, because #732's rule is about these three and nothing else: a
+   * departure legitimately carries `dive_prep`, waiver and payment rows beside
+   * whichever of these fires.
    */
-  it("does not double-fire uncrewed_departure for a course session already flagged instructor_missing", async () => {
+  function crewGapKindsFor(work: { actions: { id: string; kind: string }[] }, tripId: string) {
+    const ids = [`instructor:${tripId}`, `uncrewed:${tripId}`, `crew-target:${tripId}`];
+    return work.actions.filter((action) => ids.includes(action.id)).map((action) => action.kind);
+  }
+
+  /**
+   * **One row per departure, and which one wins when both rules hold.**
+   *
+   * A course session with divers aboard and nobody in the water satisfies
+   * `courseCrewGap` and `divemasterRatioGap` at once. Issue #732 established
+   * that it gets one row, never two — two rows naming one gap in two
+   * vocabularies is the wallpaper failure `KIND_SEVERITY`'s own comments
+   * design against — and this fixture is the shape that produces it: an
+   * instructor rostered, the session books out, and the instructor is then
+   * reassigned to `crew`, which contributes nothing in the water
+   * (`inWaterCrewRole`, src/lib/crew-roles.ts).
+   *
+   * The row it gets is `uncrewed_departure`, not `instructor_missing`, as of
+   * issue #1338. #732's rule is about the *count*, and the count is unchanged;
+   * what moved is that `instructor_missing`'s sentence mentions no divemaster,
+   * so a manager reading it on an empty boat concludes one is already aboard
+   * and only the instructor is outstanding. The bigger fact goes first, and
+   * the Crew panel one tap away holds the detail.
+   */
+  it("places the zero-crew row, not the instructor one, for a course session with nobody in the water", async () => {
     const { db, shop } = ctx;
     const [course] = await db
       .select()
@@ -1081,12 +1105,70 @@ describe("uncrewed and below-target departures (issue #732)", () => {
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
 
-    expect(work.actions.some((action) => action.id === `instructor:${trip.id}`)).toBe(true);
-    expect(
-      work.actions.some(
-        (action) => action.id === `uncrewed:${trip.id}` || action.id === `crew-target:${trip.id}`,
-      ),
-    ).toBe(false);
+    // Exactly one *crew-gap* row for this departure — #732's rule, asserted
+    // over all three ids rather than as the absence of the two the old
+    // assertion happened to name. Other kinds (`dive_prep` and friends) fire
+    // for the same departure and are not what that rule is about.
+    expect(crewGapKindsFor(work, trip.id)).toEqual(["uncrewed_departure"]);
+  });
+
+  /**
+   * The boundary the test above used to hold, restated where it is actually
+   * about a boundary: a course session **with** somebody in the water and no
+   * instructor. "No crew" is false here, so `instructor_missing` is both the
+   * true row and the more precise one — it cites the agency ratio a seat is
+   * refused against — and `crew_below_target` must still not fire beside it.
+   */
+  it("keeps the instructor row, and only it, once a divemaster is in the water", async () => {
+    const { db, shop } = ctx;
+    const [course] = await db
+      .select()
+      .from(courses)
+      .where(and(eq(courses.shopId, shop.id), eq(courses.title, "Open Water Diver")));
+    const staff = await listStaff(db, shop.id);
+    const instructor = staff.find((entry) => entry.roles.includes("instructor"));
+    if (!course || !instructor) throw new Error("seeded fixture missing");
+    const startsAt = new Date(nowMs() + 3 * 60 * 60 * 1000);
+    const trip = await createTrip(db, {
+      shopId: shop.id,
+      courseId: course.id,
+      title: "Divemaster-only Open Water session",
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * 60 * 60 * 1000),
+      capacity: 8,
+      plannedDives: 2,
+    });
+    if (!trip) throw new Error("failed to create course trip");
+    // Same shape as the fixture above, one role apart: rostered before the
+    // booking gate runs (which refuses a course session with no instructor —
+    // `course_unstaffed`), then reassigned afterwards. `divemaster` rather
+    // than `crew`, so the same person now counts as a certified assistant in
+    // the water and the session is short an instructor without being empty
+    // (`inWaterCrewRole`, src/lib/crew-roles.ts).
+    await db.insert(tripAssignments).values({ tripId: trip.id, personId: instructor.person.id });
+    const party = await createBookingParty(db, [
+      {
+        actor: "staff" as const,
+        shopId: shop.id,
+        tripId: trip.id,
+        fullName: "Divemaster Only Diver",
+        email: "divemaster-only-diver@example.com",
+      },
+    ]);
+    if (!party.ok) throw new Error(`booking failed: ${party.reason}`);
+    await db
+      .update(tripAssignments)
+      .set({ tripRole: "divemaster" })
+      .where(
+        and(
+          eq(tripAssignments.tripId, trip.id),
+          eq(tripAssignments.personId, instructor.person.id),
+        ),
+      );
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+
+    expect(crewGapKindsFor(work, trip.id)).toEqual(["instructor_missing"]);
   });
 
   /**

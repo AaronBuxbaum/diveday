@@ -375,6 +375,119 @@ describe("staffing view", () => {
   });
 
   /**
+   * **Which of two true facts a course session shows when both hold.**
+   *
+   * A course session with nobody in the water satisfies `courseCrewGap` (no
+   * instructor) and `divemasterRatioGap` (nobody supervising) at once. Issue
+   * #732 settled that a departure carries one row for one underlying fact, and
+   * the course gap won outright — so an empty boat read "Course needs
+   * instructor", which a manager takes to mean a divemaster is already on it
+   * and only the instructor is outstanding. Since issue #1125 shortened the
+   * chip to those three words there is no sentence beside it to correct the
+   * inference. Issue #1338.
+   *
+   * #732's rule survives: still exactly one row, still never both.
+   */
+  describe("a course session with nobody in the water", () => {
+    /** A course session on `Open Water Diver`, crewed by the given people. */
+    async function courseSession(
+      db: AppDb,
+      shopId: string,
+      title: string,
+      crew: { personId: string; tripRole: "captain" | "divemaster" | "instructor" }[],
+    ) {
+      const [course] = await db
+        .select()
+        .from(courses)
+        .where(and(eq(courses.shopId, shopId), eq(courses.title, "Open Water Diver")));
+      if (!course) throw new Error("Open Water Diver course missing");
+      const startsAt = new Date(nowMs() + OPEN_TEST_SESSION_OFFSET_MS);
+      const endsAt = new Date(startsAt.getTime() + 4 * HOUR_MS);
+      const trip = await createTrip(db, {
+        shopId,
+        courseId: course.id,
+        title,
+        startsAt,
+        endsAt,
+        capacity: 12,
+        plannedDives: 2,
+      });
+      if (!trip) throw new Error(`failed to create ${title}`);
+      // Written straight to the row: `setTripCrew` refuses to leave a course
+      // session instructorless, and an instructorless session is the whole
+      // subject here. These states arrive anyway — a data import, or a crew
+      // member who has since lost their instructor role.
+      if (crew.length > 0)
+        await db.insert(tripAssignments).values(
+          crew.map((entry) => ({
+            tripId: trip.id,
+            personId: entry.personId,
+            tripRole: entry.tripRole,
+          })),
+        );
+      const readWeek = async () =>
+        getStaffingView(
+          db,
+          shopId,
+          new Date(startsAt.getTime() - HOUR_MS),
+          new Date(endsAt.getTime() + HOUR_MS),
+        );
+      return { trip, readWeek };
+    }
+
+    it("says the bigger fact — nobody aboard, not a missing instructor", async () => {
+      const { db, shop } = await seededShopContext();
+      const staff = await listStaff(db, shop.id);
+      const captain = staff.find((entry) => entry.roles.includes("captain"));
+      if (!captain) throw new Error("seeded captain missing");
+      // A captain is driving the boat, not supervising anybody in the water
+      // (`inWaterCrewRole`, src/lib/crew-roles.ts), so this is a session with a
+      // crew row and nobody in the water — the state that reads most
+      // convincingly as "a divemaster is already on it".
+      const { trip, readWeek } = await courseSession(db, shop.id, "Empty session", [
+        { personId: captain.person.id, tripRole: "captain" },
+      ]);
+      await seatDiver(db, shop.id, trip.id, "empty-session");
+
+      const view = await readWeek();
+      expect(view.gapTrips.map((gap) => gap.gap)).toEqual(["uncrewed_departure"]);
+      // #732's rule, restated where it could regress: the fix places a
+      // different code, never a second row.
+      expect(view.crewGaps).toEqual({ departures: 1, needCrew: 1 });
+    });
+
+    it("still names the instructor gap once somebody is in the water", async () => {
+      // The half that must not move. A divemaster aboard makes "No crew"
+      // false, and the instructor is then genuinely the one thing outstanding.
+      const { db, shop } = await seededShopContext();
+      const staff = await listStaff(db, shop.id);
+      const divemaster = staff.find(
+        (entry) => entry.roles.includes("divemaster") && !entry.roles.includes("instructor"),
+      );
+      if (!divemaster) throw new Error("seeded divemaster missing");
+      const { trip, readWeek } = await courseSession(db, shop.id, "Divemaster-only session", [
+        { personId: divemaster.person.id, tripRole: "divemaster" },
+      ]);
+      await seatDiver(db, shop.id, trip.id, "dm-only-session");
+
+      expect((await readWeek()).gapTrips.map((gap) => gap.gap)).toEqual(["no_instructor"]);
+    });
+
+    it("still names the instructor gap when there is nobody to supervise", async () => {
+      // The exemption that makes `divemasterRatioGap` the right judge rather
+      // than a bare zero-crew count. An unbooked session has nobody in the
+      // water *and* nobody who needs supervising, so "No crew" would be noise
+      // — while "Course needs instructor" stays true and stays actionable,
+      // since a session without one cannot take an enrolment however empty it
+      // is.
+      const { db, shop } = await seededShopContext();
+      const { readWeek } = await courseSession(db, shop.id, "Unbooked session", []);
+
+      expect((await readWeek()).gapTrips.map((gap) => gap.gap)).toEqual(["no_instructor"]);
+    });
+  });
+
+  /**
    * The quieter half of the same measurement: rostered, but under the shop's
    * own target. Today ranks this with the advisory rows and words it "Under
    * target"; the week has to say the same thing rather than either shouting or
