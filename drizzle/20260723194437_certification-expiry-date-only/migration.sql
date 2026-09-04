@@ -1,2 +1,0 @@
-ALTER TABLE "certifications" ALTER COLUMN "expires_at" SET DATA TYPE date USING "expires_at"::date;--> statement-breakpoint
-ALTER TABLE "specialty_certifications" ALTER COLUMN "expires_at" SET DATA TYPE date USING "expires_at"::date;

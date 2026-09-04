@@ -1,1 +1,0 @@
-ALTER TABLE "course_inquiries" ALTER COLUMN "experience_level" DROP NOT NULL;

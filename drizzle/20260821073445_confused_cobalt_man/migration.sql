@@ -1,2 +1,0 @@
-CREATE TYPE "dive_recency_band" AS ENUM('this_season', 'within_a_year', 'one_to_five_years', 'over_five_years', 'never');--> statement-breakpoint
-ALTER TABLE "bookings" ADD COLUMN "last_dived_band" "dive_recency_band";

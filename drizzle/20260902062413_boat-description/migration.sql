@@ -1,1 +1,0 @@
-ALTER TABLE "boats" ADD COLUMN "description" text;

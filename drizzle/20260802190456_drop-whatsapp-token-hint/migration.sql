@@ -1,1 +1,0 @@
-ALTER TABLE "shop_whatsapp_accounts" DROP COLUMN "access_token_hint";

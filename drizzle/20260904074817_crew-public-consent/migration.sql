@@ -1,1 +1,0 @@
-ALTER TABLE "people" ADD COLUMN "crew_public_consent_at" timestamp with time zone;

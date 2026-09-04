@@ -1,2 +1,0 @@
-ALTER TABLE "booking_checkout_bookings" ADD COLUMN "gear_cents" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
-ALTER TABLE "booking_checkout_bookings" ADD CONSTRAINT "booking_checkout_bookings_gear_cents_nonnegative" CHECK ("gear_cents" >= 0);

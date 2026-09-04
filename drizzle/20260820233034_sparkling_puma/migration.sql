@@ -1,1 +1,0 @@
-ALTER TABLE "specialty_certifications" ADD COLUMN "self_declared_at" timestamp with time zone;

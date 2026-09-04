@@ -1,1 +1,0 @@
-ALTER TABLE "trips" ADD COLUMN "conditions_hold" boolean DEFAULT false NOT NULL;

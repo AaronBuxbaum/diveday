@@ -1,1 +1,0 @@
-ALTER TABLE "stripe_webhook_events" ADD COLUMN "claimed_at" timestamp with time zone DEFAULT now();

@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX "calendar_feeds_live_person_scope_idx" ON "calendar_feeds" ("person_id","scope") WHERE "revoked_at" IS NULL;

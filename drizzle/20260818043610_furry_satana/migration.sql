@@ -1,1 +1,0 @@
-ALTER TABLE "dive_sites" ADD COLUMN "template_update_undo" jsonb;

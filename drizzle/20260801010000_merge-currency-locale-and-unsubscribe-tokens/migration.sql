@@ -1,9 +1,0 @@
--- Merge migration: reconciles two independently-generated migration
--- heads (20260731231802_shop-currency-and-person-locale and
--- 20260801001928_last-minute-list-unsubscribe-tokens) that both branched
--- from 20260731132135_user-accounts-orientation-dismissed without either
--- declaring the other as a parent. Both sides are purely additive and
--- touch disjoint objects (people.locale/shops.currency vs the
--- last_minute_list_unsubscribe_tokens table), so there is nothing left to
--- apply here -- this migration exists only to give drizzle-kit generate a
--- single unambiguous tip to diff future schema changes against.

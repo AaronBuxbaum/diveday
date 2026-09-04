@@ -1,1 +1,0 @@
-ALTER TABLE "executed_dives" ADD COLUMN "observed_species_slug" text;

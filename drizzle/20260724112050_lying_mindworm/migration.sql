@@ -1,1 +1,0 @@
-ALTER TABLE "bookings" ADD COLUMN "identity_unconfirmed_at" timestamp with time zone;

@@ -74,8 +74,7 @@ const ARGS = ["check", "--dialect", "postgresql", "--out", MIGRATIONS_DIR];
 // smaller sizes. `readMigrationFiles` in drizzle-orm keys on `migration.sql`,
 // so a folder with SQL and no snapshot **is applied in production** and is
 // still invisible to the walk above -- its DDL cannot collide with anything as
-// far as this check is concerned. One folder like that exists today and is
-// named below; it creates a whole table.
+// far as this check is concerned.
 const MIGRATIONS_PATH = path.resolve(ROOT, MIGRATIONS_DIR);
 
 // Folders whose SQL runs but whose DDL the commutativity walk cannot see.
@@ -83,13 +82,16 @@ const MIGRATIONS_PATH = path.resolve(ROOT, MIGRATIONS_DIR);
 // not a category of acceptable ones -- adding to it needs a reason, and the
 // reason is never "the guard went red".
 //
-//   20260824090000_prior-gear-assignments  hand-written on #1155 without a
-//   generated snapshot. It creates `prior_gear_assignments` with three foreign
-//   keys and three indexes, none of which drizzle-kit can see conflicting with
-//   a parallel branch. Backfilling the snapshot means reconstructing the whole
-//   schema as of that commit, which is a change to migration history and a
-//   ticket of its own rather than a line here.
-const KNOWN_UNSNAPSHOTTED = new Set(["20260824090000_prior-gear-assignments"]);
+// **Empty since 2026-09-04.** It held one entry,
+// `20260824090000_prior-gear-assignments` -- hand-written on #1155 with no
+// generated snapshot, creating a whole table with three foreign keys and three
+// indexes that drizzle-kit could not see conflicting with a parallel branch.
+// The note here said backfilling its snapshot "means reconstructing the whole
+// schema as of that commit, which is a change to migration history and a ticket
+// of its own". That ticket was #1343, and the squash to a single baseline is
+// what closed it: the folder no longer exists, and the baseline that replaced
+// it carries a generated snapshot like every other folder.
+const KNOWN_UNSNAPSHOTTED = new Set([]);
 
 /** Every subdirectory of the migrations folder that carries SQL to apply. */
 function migrationFolders(dir) {
