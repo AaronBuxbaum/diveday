@@ -172,11 +172,23 @@ export default async function DiveRecapPage({
     // so the failure state never itself discloses which of the two happened —
     // the fail-closed uniformity `getRecapPageData` was written for, kept
     // where it is actually about the diver.
+    //
+    // **Neither sentence offers a fresh link, because none can be minted.**
+    // This branch rendered `waiver.unavailableBody` — "Ask your dive shop for a
+    // fresh link" — until issue #1334. That is true on `/waivers`, which has
+    // `emailFreshWaiverLink`, and on `/ready`, which hands over a button; a
+    // recap token is signed rather than stored and has **deliberately no
+    // self-serve rescue** (issue #850, and the recap row of
+    // docs/engineering/capability-telemetry-runbook.md). For a booking that was
+    // cancelled or not boarded there is no recap for anyone — shop included —
+    // to send. So the sentence says the thing that is true and that no retry
+    // changes: there is nothing to link to. The shop's name and contact render
+    // directly beneath, which is what a reader who thinks that is wrong needs.
     const didNotDive = review === "did_not_dive" || photo === "cancelled";
     return (
       <ExpiredLinkCard
         title={deadT("recap.unavailableHeading")}
-        text={deadT(didNotDive ? "recap.didNotDiveBody" : "waiver.unavailableBody")}
+        text={deadT(didNotDive ? "recap.didNotDiveBody" : "recap.noRecapBody")}
         shop={state.shop}
         t={deadT}
       />

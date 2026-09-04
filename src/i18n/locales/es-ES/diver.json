@@ -518,6 +518,7 @@
     "unavailableHeading": "Este enlace de resumen no está disponible",
     "unavailableBody": "Pide a tu centro un enlace nuevo.",
     "didNotDiveBody": "Esta reserva no tiene resumen que puntuar ni al que añadir una foto.",
+    "noRecapBody": "Esta reserva no tiene resumen.",
     "noShowHeading": "Esta reserva figura como no presentado",
     "noShowBody": "{shop} registró que no llegaste a esta salida, así que no hay día que recordar.",
     "photoAdded": "Añadida a tu resumen. ¡Gracias por compartirla!",

@@ -518,6 +518,7 @@
     "unavailableHeading": "This recap link isn’t available",
     "unavailableBody": "Ask your dive shop for a fresh link.",
     "didNotDiveBody": "There’s no recap for this booking to rate or add a photo to.",
+    "noRecapBody": "There’s no recap for this booking.",
     "noShowHeading": "This booking is marked as a no-show",
     "noShowBody": "{shop} recorded that you didn’t make this departure, so there’s no day to look back on.",
     "photoAdded": "Added to your recap. Thanks for sharing!",
