@@ -81,6 +81,7 @@ function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps {
     // `undefined` where the routes always pass a value.
     diveRecord: null,
     fieldGuide: [],
+    observedSpecies: [],
     actions: { submitReview: noop, uploadPhoto: noop, startTip: noop },
     ...overrides,
   };
@@ -100,6 +101,62 @@ describe("the field guide", () => {
   const guide = (siteName: string, slugs: string[]) => ({
     siteName,
     rows: slugs.map((slug) => ({ id: `${siteName}-${slug}`, catalogSlug: slug })),
+  });
+
+  /**
+   * **The boundary of D30** (issue #1190): a species is on this card because a
+   * crew member wrote it down, never because the reef is known for it.
+   *
+   * The two lists draw from one catalog and read almost identically, which is
+   * exactly why this is pinned rather than left to the reader of the component:
+   * a future refactor that resolved the record's line from `fieldGuide` because
+   * both are "the species on this page" would be invisible in a diff and would
+   * turn every shop's standing claim about a reef into a report of somebody's
+   * day.
+   */
+  it("never puts the guide's species on the record as something seen", () => {
+    const { container } = render(
+      <AfterState
+        {...props({
+          fieldGuide: [guide("French Reef", ["arrow-crab", "atlantic-spadefish"])],
+          observedSpecies: [],
+        })}
+      />,
+    );
+    // The guide is present and full, so this is not passing for want of data.
+    const drawer = within(
+      container.querySelector("[data-recap-door='field-guide']") as HTMLElement,
+    );
+    expect(drawer.getByText("marineLife.species.arrow-crab.name")).toBeTruthy();
+    // And the record says nothing at all — no line, no empty label.
+    expect(container.querySelector("[data-testid='dive-record-seen']")).toBeNull();
+    expect(screen.queryByText("recap.seenOnTheDay")).toBeNull();
+  });
+
+  it("names what the crew recorded, in the reader's own language", () => {
+    const { container } = render(
+      <AfterState
+        {...props({
+          fieldGuide: [guide("French Reef", ["arrow-crab"])],
+          observedSpecies: ["green-sea-turtle"],
+        })}
+      />,
+    );
+    const seen = within(container.querySelector("[data-testid='dive-record-seen']") as HTMLElement);
+    // A bundle key, per this file's convention: the point is that the sighting
+    // is resolved through the same `marineLife.*` copy the guide uses, so it
+    // arrives in the diver's language whatever the crew was reading.
+    expect(seen.getByText("marineLife.species.green-sea-turtle.name")).toBeTruthy();
+    // And it is not the species the guide lists, which is the other half of
+    // the same claim.
+    expect(seen.queryByText("marineLife.species.arrow-crab.name")).toBeNull();
+  });
+
+  it("drops a slug the catalog no longer carries rather than printing it raw", () => {
+    const { container } = render(
+      <AfterState {...props({ observedSpecies: ["a-species-diveday-retired"] })} />,
+    );
+    expect(container.querySelector("[data-testid='dive-record-seen']")).toBeNull();
   });
 
   it("names each site above its own faces, so the list is about a place", () => {

@@ -34,6 +34,9 @@ export type ExecutedDiveLabels = {
   visibility: string;
   current: string;
   notRecordedDepth: string;
+  observedSpecies: string;
+  /** The empty option: a dive where nothing stood out is an ordinary dive. */
+  observedSpeciesNone: string;
   save: string;
   saved: string;
   /** One per refusal `saveExecutedDiveAction` can return. */
@@ -52,6 +55,7 @@ export type ExecutedDiveLabels = {
 export function ExecutedDiveLog({
   planned,
   liveDiveSites,
+  speciesBySite,
   executed,
   action,
   labels,
@@ -79,6 +83,19 @@ export function ExecutedDiveLog({
     summaryLine: string;
   }>;
   liveDiveSites: ReadonlyArray<{ id: string; name: string }>;
+  /**
+   * Each live site's field guide, keyed by site id — the species a crew may
+   * say they saw there (issue #1190).
+   *
+   * Resolved on the server because the names are DiveDay's copy in the
+   * reader's own language (`marineLifeCard`, ADR
+   * 20260813-marine-life-is-diveday-copy) and a Client Component has no
+   * translator. Keyed by site rather than flattened because the picker has to
+   * follow the *actual site* select above it, which the crew can change: a
+   * sighting is a claim about one reef, so the constrained list has to change
+   * with the reef.
+   */
+  speciesBySite: Readonly<Record<string, ReadonlyArray<{ slug: string; name: string }>>>;
   executed: ReadonlyArray<{
     executed: ExecutedDive;
     actualSite: { id: string; name: string } | null;
@@ -134,6 +151,7 @@ export function ExecutedDiveLog({
                   plannedSiteLabel={plannedSiteLabel}
                   row={byNumber.get(diveNumber)}
                   liveDiveSites={liveDiveSites}
+                  speciesBySite={speciesBySite}
                   action={action}
                   labels={labels}
                   timeZone={timeZone}
@@ -160,6 +178,7 @@ function ExecutedDiveForm({
   plannedSiteLabel,
   row,
   liveDiveSites,
+  speciesBySite,
   action,
   labels,
   timeZone,
@@ -171,6 +190,7 @@ function ExecutedDiveForm({
   plannedSiteLabel: string;
   row?: { executed: ExecutedDive; actualSite: { id: string; name: string } | null };
   liveDiveSites: ReadonlyArray<{ id: string; name: string }>;
+  speciesBySite: Readonly<Record<string, ReadonlyArray<{ slug: string; name: string }>>>;
   action: (
     previous: ExecutedDiveResult | undefined,
     formData: FormData,
@@ -200,11 +220,22 @@ function ExecutedDiveForm({
   const [depthNotRecorded, setDepthNotRecorded] = useState(
     row?.executed.notRecorded.includes("depth") ?? false,
   );
+  const [species, setSpecies] = useState(row?.executed.observedSpeciesSlug ?? "");
+  const siteSpecies = speciesBySite[actualSiteId] ?? [];
+  // A sighting belongs to a reef. Changing the site changes which guide is on
+  // offer, so a slug chosen against the old one is dropped rather than carried
+  // across — the writer refuses it anyway (`species_not_at_site`), and a form
+  // that quietly holds a value the server will reject is the shape issue #1018
+  // was about.
+  const speciesValue = siteSpecies.some((entry) => entry.slug === species) ? species : "";
   // The two times are what a transposition lands on, so the refusal is wired to
   // both fields as well as stated in the action row — `Field`'s `error` sets
   // `aria-invalid` and `aria-describedby` for a reader who never sees the row.
   const timesError = result?.status === "error" && result.reason === "times_transposed";
   const depthError = result?.status === "error" && result.reason === "depth_out_of_range";
+  const speciesError =
+    result?.status === "error" &&
+    (result.reason === "species_not_at_site" || result.reason === "unknown_species");
 
   return (
     <form action={formAction} className="px-4 pb-4">
@@ -282,6 +313,37 @@ function ExecutedDiveForm({
             className={controlClass}
           />
         </Field>
+        {/* **One species, from this site's own field guide** (issue #1190,
+            delight report D30). Not free text: what a diver reads has to
+            arrive in their language, and the catalog is DiveDay's copy in
+            both (ADR 20260813-marine-life-is-diveday-copy).
+
+            Absent — not merely empty, and with no line standing in for it —
+            when the site has no guide or none is named yet. An empty select is
+            a question the crew cannot answer, and a sentence explaining why a
+            control they have never seen is missing earns nothing: the picker
+            appears the moment the site above it does, which is the first field
+            on the form. */}
+        {siteSpecies.length > 0 ? (
+          <Field
+            label={labels.observedSpecies}
+            error={speciesError ? labels.refusals.species_not_at_site : undefined}
+          >
+            <select
+              name="observedSpeciesSlug"
+              value={speciesValue}
+              onChange={(event) => setSpecies(event.target.value)}
+              className={controlClass}
+            >
+              <option value="">{labels.observedSpeciesNone}</option>
+              {siteSpecies.map((entry) => (
+                <option key={entry.slug} value={entry.slug}>
+                  {entry.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        ) : null}
       </FieldGrid>
       <label className="mt-4 flex min-h-11 items-center gap-3 text-sm">
         <input

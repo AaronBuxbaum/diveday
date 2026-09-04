@@ -63,6 +63,7 @@ function renderLog(summaryLine: string, executed: ExecutedDiveLogRow[] = []) {
         },
       ]}
       liveDiveSites={[{ id: "site-1", name: "Molasses Reef" }]}
+      speciesBySite={{ "site-1": [{ slug: "green-sea-turtle", name: "Green turtle" }] }}
       executed={executed}
       action={vi.fn(async () => ({ status: "saved" }) as never)}
       labels={labels}

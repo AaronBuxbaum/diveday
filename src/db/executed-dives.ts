@@ -1,7 +1,8 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
-import { diveSites, executedDives, people, tripDives, trips } from "./schema";
+import { isMarineLifeSlug } from "./marine-life-catalog";
+import { diveSiteCreatures, diveSites, executedDives, people, tripDives, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 export type ExecutedDiveInput = {
@@ -14,6 +15,13 @@ export type ExecutedDiveInput = {
   maxDepthMeters?: number | null;
   observedConditions?: Record<string, unknown> | null;
   notRecorded?: string[];
+  /**
+   * One species the crew saw, as a `MARINE_LIFE_CATALOG` slug (issue #1190).
+   * Absent or null clears it — like every other field here, this upsert
+   * replaces the row rather than patching it, so the form always sends the
+   * whole record and "unset" is a real answer a crew can give.
+   */
+  observedSpeciesSlug?: string | null;
   recordedByPersonId: string;
 };
 
@@ -57,7 +65,17 @@ export type ExecutedDiveRefusal =
   | "unknown_recorder"
   | "unknown_site"
   | "times_transposed"
-  | "depth_out_of_range";
+  | "depth_out_of_range"
+  /** A slug that is not in `MARINE_LIFE_CATALOG` at all. */
+  | "unknown_species"
+  /**
+   * A real species, but not one this dive's site lists. The picker only ever
+   * offers the site's own field guide, so reaching this means the site changed
+   * under an open form or the request did not come from the form — and either
+   * way, recording a sighting a shop has never said is possible there is the
+   * "constrained site-aware list" half of D30 going unenforced.
+   */
+  | "species_not_at_site";
 
 export type UpsertExecutedDiveResult =
   | { ok: true; dive: typeof executedDives.$inferSelect }
@@ -121,6 +139,32 @@ export async function upsertExecutedDive(
     ) {
       return { ok: false, reason: "depth_out_of_range" };
     }
+    // **Only ever from the site's own field guide.** The picker is built from
+    // `dive_site_creatures` for the site selected above, and this is the same
+    // rule server-side, because a constraint that lives only in a `<select>` is
+    // a suggestion. A dive with no named site has no field guide to draw from,
+    // so it can carry no sighting — you cannot say what you saw somewhere you
+    // declined to name.
+    const observedSpeciesSlug = input.observedSpeciesSlug;
+    if (observedSpeciesSlug) {
+      if (!isMarineLifeSlug(observedSpeciesSlug)) {
+        return { ok: false, reason: "unknown_species" };
+      }
+      if (!actualSiteId) return { ok: false, reason: "species_not_at_site" };
+      const [listed] = await tx
+        .select({ id: diveSiteCreatures.id })
+        .from(diveSiteCreatures)
+        .where(
+          and(
+            eq(diveSiteCreatures.shopId, input.shopId),
+            eq(diveSiteCreatures.diveSiteId, actualSiteId),
+            eq(diveSiteCreatures.catalogSlug, observedSpeciesSlug),
+          ),
+        )
+        .limit(1);
+      if (!listed) return { ok: false, reason: "species_not_at_site" };
+    }
+
     const values = {
       shopId: input.shopId,
       tripId: input.tripId,
@@ -140,6 +184,7 @@ export async function upsertExecutedDive(
           )
         : null,
       notRecorded: [...new Set(input.notRecorded ?? [])].filter((value) => value === "depth"),
+      observedSpeciesSlug: observedSpeciesSlug ?? null,
       recordedByPersonId: recorder.id,
       updatedAt: nowDate(),
     };

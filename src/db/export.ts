@@ -1994,6 +1994,11 @@ export async function loadShopExportBundleInput(
             "max_depth_meters",
             "observed_conditions",
             "not_recorded",
+            // One species a crew member said they saw on this dive (issue
+            // #1190). A catalog slug rather than a name, because the words are
+            // DiveDay's copy in the reader's language and a CSV has no reader
+            // to resolve them for — the slug is the durable fact.
+            "observed_species_slug",
             "recorded_by_person_id",
             "deleted_at",
             "created_at",
@@ -2011,6 +2016,7 @@ export async function loadShopExportBundleInput(
             row.maxDepthMeters,
             JSON.stringify(row.observedConditions),
             JSON.stringify(row.notRecorded),
+            row.observedSpeciesSlug,
             row.recordedByPersonId,
             row.deletedAt,
             row.createdAt,

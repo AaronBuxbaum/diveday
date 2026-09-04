@@ -123,14 +123,24 @@ export type AfterStateProps = {
   /**
    * Per site the day dived, the species that site's field guide names.
    *
-   * **What the place may hold, never what this dive did.** Nothing in
-   * `executed_dives` or anywhere else records a sighting, so the drawer this
-   * feeds is future-tense and scoped to the site by construction (issue #1192).
-   * Marking what was actually seen is D30 (#1190) and is unbuilt; there is
-   * deliberately no placeholder for it here, because a placeholder for a
-   * marking that does not exist is what later reads as a claim.
+   * **What the place may hold, never what this dive did.** The drawer this
+   * feeds is future-tense and scoped to the site by construction (issue #1192),
+   * and it stays that way now that a sighting can be recorded: `observedSpecies`
+   * below is the other field, deliberately, because merging them would let the
+   * shop's standing claim about a reef render as somebody's report of a day.
    */
   fieldGuide: { siteName: string; rows: { id: string; catalogSlug: string | null }[] }[];
+  /**
+   * **What the crew wrote down that they saw** — catalog slugs, in dive order,
+   * deduped (issue #1190, delight report D30).
+   *
+   * Present only when somebody recorded it. Empty is the ordinary state and
+   * renders nothing, which is the boundary: a species is never inferred from
+   * the guide above, and a day where nothing stood out is just a day. The words
+   * come from the same `marineLife.*` copy the guide uses, so this arrives in
+   * the diver's own language whatever the crew was reading when they picked it.
+   */
+  observedSpecies: string[];
   shoutout: string | null;
   photos: RecapPhotoView[];
   /** How many photos one booking may hold — `MAX_RECAP_PHOTOS_PER_BOOKING`. */
@@ -206,6 +216,7 @@ export const AFTER_STATE_TEST_IDS = {
   printNotes: "dive-record-print-notes",
   printSignature: "dive-record-print-signature",
   face: "dive-record-face",
+  seen: "dive-record-seen",
 } as const;
 
 export function AfterState({
@@ -218,6 +229,7 @@ export function AfterState({
   sites,
   diveRecord,
   fieldGuide,
+  observedSpecies,
   shoutout,
   photos,
   maxPhotos,
@@ -315,6 +327,7 @@ export function AfterState({
         diverName={diverName}
         sites={sites}
         diveRecord={diveRecord}
+        observedSpecies={observedSpecies}
         visitCount={visitCount}
         siteMark={siteMark}
       />
@@ -618,6 +631,7 @@ function DiveRecord({
   diverName,
   sites,
   diveRecord,
+  observedSpecies,
   visitCount,
   siteMark,
 }: Pick<
@@ -629,6 +643,7 @@ function DiveRecord({
   | "diverName"
   | "sites"
   | "diveRecord"
+  | "observedSpecies"
   | "visitCount"
   | "siteMark"
 > & {
@@ -650,6 +665,13 @@ function DiveRecord({
       : null,
     trip.surfaceConditions ? { label: t("trip.surface"), value: trip.surfaceConditions } : null,
   ].filter((fact): fact is { label: string; value: string } => fact !== null);
+  // `fieldGuideCards` drops a slug the catalog no longer carries, the same way
+  // the guide below does: a species DiveDay has retired has no words, and a
+  // sighting rendered as a raw slug is worse than one not rendered at all.
+  const seenNames = fieldGuideCards(
+    observedSpecies.map((slug, index) => ({ id: String(index), catalogSlug: slug })),
+    t,
+  ).map((card) => card.name);
   const milestone = visitMilestone(visitCount);
   const stampText = milestone
     ? milestone === 1
@@ -748,6 +770,28 @@ function DiveRecord({
               <span className="tabular-nums">
                 {conditions.map((fact) => `${fact.label}: ${fact.value}`).join(" · ")}
               </span>
+            </Fact>
+          ) : null}
+          {/* **Only when a crew member wrote it down** (issue #1190, D30). The
+              field guide further down this page says what the reef *may* show
+              you and is the shop's standing claim about a place; this line is
+              somebody saying they saw it, on this day. Nothing here is derived
+              from that guide — a sighting inferred from a site's usual life is
+              the one thing D30's boundary rules out, and the two are separate
+              fields so it cannot happen by accident.
+
+              A past-tense label, deliberately: "Seen on the day" can only be
+              read as a report, where a bare species name beside the conditions
+              could be read as a promise. */}
+          {seenNames.length > 0 ? (
+            <Fact label={t("recap.seenOnTheDay")} testId={AFTER_STATE_TEST_IDS.seen}>
+              <ul className="flex flex-col gap-1">
+                {seenNames.map((name) => (
+                  <li key={name} className="font-medium">
+                    {name}
+                  </li>
+                ))}
+              </ul>
             </Fact>
           ) : null}
         </dl>

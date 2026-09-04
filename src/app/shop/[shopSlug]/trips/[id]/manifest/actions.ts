@@ -122,6 +122,10 @@ const executedDiveSchema = z.object({
   maxDepthMeters: z.union([z.literal(""), z.coerce.number().finite().min(0)]),
   visibility: z.string().trim().max(120).optional(),
   current: z.string().trim().max(120).optional(),
+  // Bounded here, believed nowhere: `upsertExecutedDive` checks it against the
+  // catalog *and* against the site's own field guide, since a constraint that
+  // lives in a `<select>` is a suggestion (issue #1190).
+  observedSpeciesSlug: z.union([z.literal(""), z.string().trim().max(80)]).optional(),
 });
 
 /**
@@ -185,6 +189,7 @@ export async function saveExecutedDiveAction(
       current: parsed.data.current || null,
     },
     notRecorded,
+    observedSpeciesSlug: parsed.data.observedSpeciesSlug || null,
     recordedByPersonId: staff.user.personId,
   });
   if (!saved.ok) return { status: "error", reason: saved.reason };

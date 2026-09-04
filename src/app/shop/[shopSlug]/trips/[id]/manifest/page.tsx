@@ -15,7 +15,7 @@ import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
-import { listDiveSites } from "@/db/dive-sites";
+import { listDiveSites, listSiteFieldGuides } from "@/db/dive-sites";
 import { listExecutedDives } from "@/db/executed-dives";
 import { getTripManifests } from "@/db/manifests";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
@@ -23,6 +23,8 @@ import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-de
 import type { ExecutedDive } from "@/db/schema";
 import { listTripDives } from "@/db/trips";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
+import { fieldGuideCards } from "@/i18n/marine-life-labels";
+import { diverTranslator } from "@/i18n/messages";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
@@ -152,6 +154,8 @@ function executedDiveLabels(t: StaffTranslator, depthUnit: DepthUnit): ExecutedD
     visibility: t("manifest.executedDive.visibility"),
     current: t("manifest.executedDive.current"),
     notRecordedDepth: t("manifest.executedDive.notRecordedDepth"),
+    observedSpecies: t("manifest.executedDive.observedSpecies"),
+    observedSpeciesNone: t("manifest.executedDive.observedSpeciesNone"),
     save: t("manifest.executedDive.save"),
     saved: t("manifest.executedDive.saved"),
     refusals: {
@@ -164,6 +168,8 @@ function executedDiveLabels(t: StaffTranslator, depthUnit: DepthUnit): ExecutedD
       invalid_time: t("manifest.executedDive.refusal.invalidTime"),
       invalid: t("manifest.executedDive.refusal.invalid"),
       wrong_dive: t("manifest.executedDive.refusal.wrongDive"),
+      unknown_species: t("manifest.executedDive.refusal.unknownSpecies"),
+      species_not_at_site: t("manifest.executedDive.refusal.speciesNotAtSite"),
     },
   };
 }
@@ -278,6 +284,28 @@ export default async function TripManifestPage({
     listExecutedDives(db, shop.id, tripId),
     listDiveSites(db, shop.id),
   ]);
+  // Each live site's field guide, for the dive log's "one thing you saw"
+  // picker (issue #1190). Read after the sites resolve because it is keyed by
+  // their ids, and the species a crew may claim to have seen are exactly the
+  // ones the shop has said that reef shows.
+  const fieldGuides = await listSiteFieldGuides(
+    db,
+    shop.id,
+    liveDiveSites.map((site) => site.id),
+  );
+  // The **diver** translator, on a staff page, deliberately: these are the
+  // same words the diver will read on their record, and showing a divemaster
+  // a different name for the fish they are about to record would be the bug
+  // (`marine-life-labels.ts`, ADR 20260813-marine-life-is-diveday-copy).
+  const speciesBySite = Object.fromEntries(
+    [...fieldGuides].map(([siteId, rows]) => [
+      siteId,
+      fieldGuideCards(rows, diverTranslator(locale)).map((card) => ({
+        slug: card.slug,
+        name: card.name,
+      })),
+    ]),
+  );
   const departureManifest = completeManifests?.[0];
   if (!departureManifest || !completeManifests) notFound();
 
@@ -694,6 +722,7 @@ export default async function TripManifestPage({
           }))}
           executed={executedDives}
           liveDiveSites={liveDiveSites.map((site) => ({ id: site.id, name: site.name }))}
+          speciesBySite={speciesBySite}
           action={boundSaveExecutedDiveAction}
           labels={executedDiveLabels(t, shop.depthUnit)}
           timeZone={shop.timezone}

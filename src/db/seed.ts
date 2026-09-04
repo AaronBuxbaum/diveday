@@ -4,7 +4,6 @@ import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { generateDemoShopIdentity, pinnedDemoShopIdentity } from "@/lib/demo-identity";
-import type { SpokenLanguageTag } from "@/lib/spoken-languages";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";

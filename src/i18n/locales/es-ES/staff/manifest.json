@@ -53,6 +53,8 @@
     "visibility": "Visibilidad",
     "current": "Corriente",
     "notRecordedDepth": "Profundidad no registrada",
+    "observedSpecies": "Algo que viste",
+    "observedSpeciesNone": "Nada que destacar",
     "save": "Guardar registro de inmersión",
     "saved": "Registro de la inmersión guardado.",
     "refusal": {
@@ -64,7 +66,9 @@
       "unknownRecorder": "No se encontró tu ficha de personal, así que no se guardó nada.",
       "invalidTime": "No se pudo leer una de las horas. Revisa las dos y guarda de nuevo.",
       "invalid": "No se guardó nada. Revisa los datos e inténtalo de nuevo.",
-      "wrongDive": "Este formulario es de otra inmersión. Recarga la lista de embarque e inténtalo de nuevo."
+      "wrongDive": "Este formulario es de otra inmersión. Recarga la lista de embarque e inténtalo de nuevo.",
+      "unknownSpecies": "Esa especie no está en el catálogo de DiveDay.",
+      "speciesNotAtSite": "Esa especie no está en la guía de este punto. Elige una de las que aparecen, o déjalo en blanco."
     }
   },
   "addCrewToTrip": "Añadir tripulación a la salida",

@@ -1964,6 +1964,37 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The day that turned up something** (issue #1190, D30).
+       *
+       * The recap above renders no sighting at all, which is the ordinary
+       * shape and the one that proves the boundary: a species reaches this card
+       * because a crew member wrote it down, never because the reef is known
+       * for it. This is the other branch.
+       *
+       * It is a *separate* capture from the changed-site one above rather than
+       * folded into it, because the two states have nothing to do with each
+       * other — most days that turn up a turtle go exactly where they meant to,
+       * and photographing them together would suggest they travel as a pair.
+       *
+       * The field guide two rows down is the counterweight worth looking at in
+       * the same frame: the same catalog, the opposite verb.
+       */
+      test(`a recap naming what the crew saw renders true to the design (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const seeded = await request.post("/api/test/seed-observed-species");
+        expect(seeded.ok(), await seeded.text()).toBe(true);
+        await page.goto(`/recap/${signRecapToken(DEMO_RECAP_BOOKING_ID)}`);
+        await page.getByRole("heading", { name: "Dive log entry" }).waitFor();
+        // Waiting on the line itself, not on the page: photographing the calm
+        // variant twice is the failure this exists to avoid.
+        await page.getByTestId(AFTER_STATE_TEST_IDS.seen).filter({ visible: true }).waitFor();
+        await capture(page, "recap-seen-on-the-day", scheme);
+      });
+
+      /**
        * **The field guide, open** (issue #1192, D32).
        *
        * The drawer is shut on arrival, so the `recap` capture above already
@@ -2860,7 +2891,7 @@ for (const scheme of ["light", "dark"] as const) {
         await request.post("/api/test/seed-trouble-states?crewGap=1");
         await page.goto("/shop/blue-mantis/staffing");
         // The destination's own words, not a timing guess.
-        await page.getByText("No crew").first().waitFor();
+        await page.getByText("Nobody in the water").first().waitFor();
         await capture(page, "staffing-week-gap", scheme);
       });
 

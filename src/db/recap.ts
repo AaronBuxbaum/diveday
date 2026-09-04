@@ -156,6 +156,18 @@ export type RecapPageData = {
    * are what a site *may* hold, never what this dive did (issue #1192).
    */
   fieldGuide: { siteName: string; rows: { id: string; catalogSlug: string | null }[] }[];
+  /**
+   * **What the crew actually saw**, in dive order, deduped — the other half of
+   * the sentence `fieldGuide` starts (issue #1190, delight report D30).
+   *
+   * The two draw from the same catalog and mean opposite things: one is the
+   * shop's standing claim about a reef, this is a person saying they saw it,
+   * once, on this day. Empty is the ordinary state and renders nothing. Nothing
+   * here is ever inferred from the guide above — that inference is exactly what
+   * D30's boundary rules out, and it is why they are separate fields rather
+   * than one field with a flag.
+   */
+  observedSpecies: string[];
   /** The booking this recap belongs to — the scope an uploaded photo attaches to. */
   bookingId: string;
   /** A short crew-authored note for this trip, or null when the crew wrote none. */
@@ -448,6 +460,16 @@ export async function getRecapPageData(
     });
   }
 
+  // In dive order, first mention wins. A day where both tanks turned up the
+  // same turtle says "turtle" once: this is a keepsake line, not a tally.
+  const observedSpecies: string[] = [];
+  for (const { executed } of [...livedDives].sort(
+    (a, b) => a.executed.diveNumber - b.executed.diveNumber,
+  )) {
+    const slug = executed.observedSpeciesSlug;
+    if (slug && !observedSpecies.includes(slug)) observedSpecies.push(slug);
+  }
+
   const diveRecord = compareDiveRecord(
     dives.map(({ dive, diveSite }) => ({
       diveNumber: dive.diveNumber,
@@ -512,6 +534,7 @@ export async function getRecapPageData(
     sites,
     diveRecord,
     fieldGuide,
+    observedSpecies,
     bookingId,
     shoutout: trip.recapShoutout,
     photos,

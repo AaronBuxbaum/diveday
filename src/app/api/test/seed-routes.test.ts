@@ -30,6 +30,7 @@ const seedTroubleStates = await import("./seed-trouble-states/route");
 const seedPrivateShop = await import("./seed-private-shop/route");
 const seedEvening = await import("./seed-evening/route");
 const seedChangedDiveSite = await import("./seed-changed-dive-site/route");
+const seedObservedSpecies = await import("./seed-observed-species/route");
 
 const secret = "e2e-test-secret";
 
@@ -104,6 +105,18 @@ const routes: SeedRoute[] = [
     // misconfigured deployment would be putting a fabricated dive into a real
     // shop's log, which is the table `buildIncidentExport` reads for an
     // investigator.
+    expectPastTheGuard: async () => {
+      expect(getDb).toHaveBeenCalled();
+    },
+  },
+  {
+    slug: "seed-observed-species",
+    POST: seedObservedSpecies.POST,
+    // The same `executed_dives` write as the route above, carrying a *claim
+    // about what somebody saw* — so a route answering on a misconfigured
+    // deployment would put a sighting nobody made onto a real diver's keepsake,
+    // over a shop's name. Reaching the database is what proves the guard let it
+    // through.
     expectPastTheGuard: async () => {
       expect(getDb).toHaveBeenCalled();
     },
