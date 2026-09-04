@@ -7,16 +7,18 @@ import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { getTripManifest, recordCrewRollCall } from "./manifests";
 import type { Course } from "./schema";
-import { bookings, courses, people, personRoles, shops } from "./schema";
+import { bookings, courses, crewAvailabilityBlocks, people, personRoles, shops } from "./schema";
 import {
   changeTripCrew,
   createTrip,
+  crewMoveConflicts,
   deleteTrip,
   getTripCrewAssignments,
   getTripCrewIds,
   getTripRoster,
   listStaff,
   listTripScheduleDays,
+  moveTrip,
   setTripCrew,
   upcomingStaffSchedule,
   upcomingTripsWithCounts,
@@ -567,5 +569,357 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
     // A real second shop, asking about shop's real, booked trip — not a
     // hardcoded placeholder id — sees nothing.
     expect(await getTripRoster(db, otherShop.id, trip.id)).toEqual([]);
+  });
+});
+
+/**
+ * **What moving a departure would ask of the people on it** (issue #1310) —
+ * the move preview's only time-dependent lines.
+ *
+ * Two things are load-bearing here and neither is obvious:
+ *
+ * **The window, not the day.** A clash is a *time overlap*, computed against
+ * the days the move proposes. `setTripCrew` and `changeTripCrew` already
+ * define a crew conflict exactly that way and refuse it, so a morning boat
+ * plus an afternoon boat is a state the shop can only be in because the model
+ * deliberately allows it — an ordinary double shift for a divemaster. Calling
+ * that a clash is the saturation failure #757 already paid for once.
+ *
+ * **The shop's zone.** These run in a shop deliberately far from UTC, because
+ * every server and CI box here is UTC and a reading that quietly used the host
+ * zone would answer the same on a midday instant and differently either side
+ * of a shop-local midnight.
+ */
+describe("crewMoveConflicts", () => {
+  /** A shop in Honolulu: UTC-10, no DST, so a shop day runs 10:00Z to 10:00Z. */
+  async function honoluluShop(db: AppDb, shopId: string) {
+    await db.update(shops).set({ timezone: "Pacific/Honolulu" }).where(eq(shops.id, shopId));
+    return "Pacific/Honolulu";
+  }
+
+  async function boat(
+    db: AppDb,
+    shopId: string,
+    title: string,
+    startsAt: string,
+    endsAt: string,
+    crew: string[],
+  ) {
+    const trip = await createTrip(db, {
+      shopId,
+      title,
+      startsAt: new Date(startsAt),
+      endsAt: new Date(endsAt),
+      capacity: 6,
+    });
+    if (!trip) throw new Error(`${title} not created`);
+    if (crew.length > 0) await setTripCrew(db, shopId, trip.id, crew);
+    return trip;
+  }
+
+  /** The moving departure: shop-local 2030-08-01, 08:00–12:00. */
+  async function movingBoat(db: AppDb, shopId: string, crew: string[]) {
+    return boat(
+      db,
+      shopId,
+      "The one being moved",
+      "2030-08-01T18:00:00Z",
+      "2030-08-01T22:00:00Z",
+      crew,
+    );
+  }
+
+  it("names the crew member whose hours the move would collide with, and the boat", async () => {
+    const { db, shop } = await seededShopContext();
+    const timeZone = await honoluluShop(db, shop.id);
+    const [first, second] = await listStaff(db, shop.id);
+    if (!first || !second) throw new Error("expected two seeded staff");
+
+    const moving = await movingBoat(db, shop.id, [first.person.id, second.person.id]);
+    // Shop-local 2030-08-05 08:00–12:00 — the same hours the move proposes.
+    await boat(
+      db,
+      shop.id,
+      "Thursday's other boat",
+      "2030-08-05T18:00:00Z",
+      "2030-08-05T22:00:00Z",
+      [first.person.id],
+    );
+
+    const { clashes } = await crewMoveConflicts(
+      db,
+      shop.id,
+      moving.id,
+      new Date("2030-08-05T18:00:00Z"),
+      timeZone,
+    );
+    expect(clashes).toEqual([
+      {
+        personId: first.person.id,
+        fullName: first.person.fullName,
+        otherTitle: "Thursday's other boat",
+      },
+    ]);
+  });
+
+  /**
+   * **The finding that sent the first version of this back.** A day is not a
+   * conflict; overlapping hours are. A divemaster on the 08:00 and the 14:00 is
+   * how a dive shop runs a Saturday, and the roster lets it happen on purpose.
+   */
+  it("leaves the ordinary double shift alone", async () => {
+    const { db, shop } = await seededShopContext();
+    const timeZone = await honoluluShop(db, shop.id);
+    const [first] = await listStaff(db, shop.id);
+    if (!first) throw new Error("expected a seeded staff member");
+
+    const moving = await movingBoat(db, shop.id, [first.person.id]);
+    // Shop-local 2030-08-05 14:00–18:00 — the same day, two hours after the
+    // move's boat ties up.
+    await boat(
+      db,
+      shop.id,
+      "The afternoon single",
+      "2030-08-06T00:00:00Z",
+      "2030-08-06T04:00:00Z",
+      [first.person.id],
+    );
+
+    const conflicts = await crewMoveConflicts(
+      db,
+      shop.id,
+      moving.id,
+      new Date("2030-08-05T18:00:00Z"),
+      timeZone,
+    );
+    expect(conflicts.clashes).toEqual([]);
+    expect(conflicts.away).toEqual([]);
+  });
+
+  it("asks the same question the roster refuses on, so the two cannot disagree", async () => {
+    // The proof rather than the claim: whatever this reports a clash for is a
+    // crew list `setTripCrew` would refuse to write.
+    const { db, shop } = await seededShopContext();
+    await honoluluShop(db, shop.id);
+    const [first] = await listStaff(db, shop.id);
+    if (!first) throw new Error("expected a seeded staff member");
+
+    const moving = await movingBoat(db, shop.id, [first.person.id]);
+    const other = await boat(
+      db,
+      shop.id,
+      "Thursday's other boat",
+      "2030-08-05T18:00:00Z",
+      "2030-08-05T22:00:00Z",
+      [],
+    );
+    // Move it for real — `moveTrip`, so the schedule days travel with the trip
+    // row exactly as they would on the board — then ask the roster to put the
+    // same person on the boat it landed beside. Refused, for the reason the
+    // preview reports; a preview using a looser rule than this would be
+    // warning about states the roster happily writes, and staying quiet about
+    // one it does not.
+    const landing = new Date("2030-08-05T18:00:00Z");
+    expect((await moveTrip(db, shop.id, moving.id, landing)).ok).toBe(true);
+    expect(await setTripCrew(db, shop.id, other.id, [first.person.id])).toBe(false);
+  });
+
+  /**
+   * **Every leg, not only the first.** A three-day course moved by a week
+   * lands on three days, and day one is the least likely of them to be the
+   * problem. The preview shifts each leg by the same wall-clock delta the
+   * mutation will.
+   */
+  it("checks every day of a multi-day departure, not only the one it starts on", async () => {
+    const { db, shop } = await seededShopContext();
+    const timeZone = await honoluluShop(db, shop.id);
+    const [first] = await listStaff(db, shop.id);
+    if (!first) throw new Error("expected a seeded staff member");
+
+    const course = await createTrip(db, {
+      shopId: shop.id,
+      title: "Rescue, over three days",
+      startsAt: new Date("2030-08-01T18:00:00Z"),
+      endsAt: new Date("2030-08-03T22:00:00Z"),
+      capacity: 6,
+      scheduleDays: [
+        {
+          dayNumber: 1,
+          startsAt: new Date("2030-08-01T18:00:00Z"),
+          endsAt: new Date("2030-08-01T22:00:00Z"),
+        },
+        {
+          dayNumber: 2,
+          startsAt: new Date("2030-08-02T18:00:00Z"),
+          endsAt: new Date("2030-08-02T22:00:00Z"),
+        },
+        {
+          dayNumber: 3,
+          startsAt: new Date("2030-08-03T18:00:00Z"),
+          endsAt: new Date("2030-08-03T22:00:00Z"),
+        },
+      ],
+    });
+    if (!course) throw new Error("course not created");
+    await setTripCrew(db, shop.id, course.id, [first.person.id]);
+    // A boat on what would be the course's **third** day after a four-day move.
+    await boat(
+      db,
+      shop.id,
+      "The boat on day three",
+      "2030-08-07T18:00:00Z",
+      "2030-08-07T22:00:00Z",
+      [first.person.id],
+    );
+
+    const { clashes } = await crewMoveConflicts(
+      db,
+      shop.id,
+      course.id,
+      new Date("2030-08-05T18:00:00Z"),
+      timeZone,
+    );
+    expect(clashes.map((row) => row.otherTitle)).toEqual(["The boat on day three"]);
+  });
+
+  it("reads the hours in the shop's zone, not the host's", async () => {
+    // 2030-08-06T06:00Z is 2030-08-05, 20:00 in Honolulu. A reader working in
+    // UTC would place the moving boat on the 6th and find no overlap at all —
+    // green on every UTC box, wrong for the shop.
+    const { db, shop } = await seededShopContext();
+    const timeZone = await honoluluShop(db, shop.id);
+    const [first] = await listStaff(db, shop.id);
+    if (!first) throw new Error("expected a seeded staff member");
+
+    const moving = await movingBoat(db, shop.id, [first.person.id]);
+    await boat(db, shop.id, "The evening boat", "2030-08-06T06:00:00Z", "2030-08-06T09:00:00Z", [
+      first.person.id,
+    ]);
+
+    const { clashes } = await crewMoveConflicts(
+      db,
+      shop.id,
+      moving.id,
+      // Shop-local 2030-08-05, 20:00 — straight into the evening boat.
+      new Date("2030-08-06T06:00:00Z"),
+      timeZone,
+    );
+    expect(clashes.map((row) => row.otherTitle)).toEqual(["The evening boat"]);
+  });
+
+  /**
+   * **The line the first version of this feature was silent on.** A blackout
+   * informs and never gates, so the crew stay assigned and no clash is found —
+   * and a preview that asked only about clashes would say nothing at all while
+   * a manager slid a whole departure onto somebody's approved holiday.
+   */
+  it("says who has told the shop they are away on the days it would move to", async () => {
+    const { db, shop } = await seededShopContext();
+    const timeZone = await honoluluShop(db, shop.id);
+    const [first, second] = await listStaff(db, shop.id);
+    if (!first || !second) throw new Error("expected two seeded staff");
+
+    const moving = await movingBoat(db, shop.id, [first.person.id, second.person.id]);
+    await db.insert(crewAvailabilityBlocks).values({
+      shopId: shop.id,
+      personId: second.person.id,
+      createdByPersonId: second.person.id,
+      startsOn: "2030-08-04",
+      endsOn: "2030-08-06",
+    });
+
+    const conflicts = await crewMoveConflicts(
+      db,
+      shop.id,
+      moving.id,
+      new Date("2030-08-05T18:00:00Z"),
+      timeZone,
+    );
+    // Nobody is double-booked — this is the case that would otherwise be quiet.
+    expect(conflicts.clashes).toEqual([]);
+    expect(conflicts.away).toEqual([
+      { personId: second.person.id, fullName: second.person.fullName },
+    ]);
+
+    // And a week the blackout does not touch says nothing.
+    const elsewhere = await crewMoveConflicts(
+      db,
+      shop.id,
+      moving.id,
+      new Date("2030-08-12T18:00:00Z"),
+      timeZone,
+    );
+    expect(elsewhere.away).toEqual([]);
+  });
+
+  it("never counts the departure against itself", async () => {
+    const { db, shop } = await seededShopContext();
+    const timeZone = await honoluluShop(db, shop.id);
+    const [first] = await listStaff(db, shop.id);
+    if (!first) throw new Error("expected a seeded staff member");
+
+    const moving = await movingBoat(db, shop.id, [first.person.id]);
+    const { clashes } = await crewMoveConflicts(
+      db,
+      shop.id,
+      moving.id,
+      new Date("2030-08-01T18:00:00Z"),
+      timeZone,
+    );
+    expect(clashes).toEqual([]);
+  });
+
+  it("ignores a departure that has been taken off the board or called off", async () => {
+    // Both are boats nobody is standing on. `check:live-trips` refuses a read
+    // of `trips` that carries neither `liveTrip()` nor a written exemption,
+    // and a called-off departure holds no crew member's hours either.
+    const { db, shop } = await seededShopContext();
+    const timeZone = await honoluluShop(db, shop.id);
+    const [first] = await listStaff(db, shop.id);
+    if (!first) throw new Error("expected a seeded staff member");
+
+    const moving = await movingBoat(db, shop.id, [first.person.id]);
+    const deleted = await boat(
+      db,
+      shop.id,
+      "Deleted that morning",
+      "2030-08-05T18:00:00Z",
+      "2030-08-05T22:00:00Z",
+      [first.person.id],
+    );
+    const at = new Date("2030-08-05T18:00:00Z");
+    expect((await crewMoveConflicts(db, shop.id, moving.id, at, timeZone)).clashes).toHaveLength(1);
+
+    await deleteTrip(db, shop.id, deleted.id);
+    expect((await crewMoveConflicts(db, shop.id, moving.id, at, timeZone)).clashes).toEqual([]);
+  });
+
+  it("answers nothing for another shop's departure, or for a time it cannot read", async () => {
+    const { db, shop } = await seededShopContext();
+    const timeZone = await honoluluShop(db, shop.id);
+    const [first] = await listStaff(db, shop.id);
+    if (!first) throw new Error("expected a seeded staff member");
+
+    const moving = await movingBoat(db, shop.id, [first.person.id]);
+    await boat(
+      db,
+      shop.id,
+      "Thursday's other boat",
+      "2030-08-05T18:00:00Z",
+      "2030-08-05T22:00:00Z",
+      [first.person.id],
+    );
+    const at = new Date("2030-08-05T18:00:00Z");
+
+    // `trip_assignments` carries no shop_id of its own (CR-007), so the trip
+    // id alone must never be enough to read one shop's roster from another.
+    expect((await crewMoveConflicts(db, FOREIGN_SHOP_ID, moving.id, at, timeZone)).clashes).toEqual(
+      [],
+    );
+    // A half-typed time is not a question. The panel re-reads as its fields
+    // change, and they hold nothing until every segment is filled.
+    expect(
+      (await crewMoveConflicts(db, shop.id, moving.id, new Date("nope"), timeZone)).clashes,
+    ).toEqual([]);
   });
 });

@@ -547,6 +547,17 @@ new domain concept, define it here in the same PR.
 - **Working shift** — a dated availability window for a staff member. It is not a crew assignment:
   the shift says who is available, while the trip assignment says who is actually on that
   manifest. Overlapping shifts for one person are rejected.
+- **Crew clash** — one person on two departures whose windows **overlap**. It is a time overlap and
+  never a shared day: a divemaster on the 08:00 and the 14:00 is how a shop runs a Saturday, and
+  `setTripCrew`/`changeTripCrew` allow it deliberately while refusing the overlap outright. The
+  schedule builder's move preview reports it before a move that would create one
+  (`crewMoveConflicts`, issue #1310), by name and with the other departure named too — never as a
+  count, which was built for #1203, measured at 24 of the demo board's 25 departures, and removed.
+  **It is not the whole of "is she free?"**: that question has three readings, and the two the app
+  can answer are this one and the **Working shift** blackout above, reported as its own separate
+  line because one is an inference from the roster and the other is the crew member's own
+  statement. The third — over her hours — is unmodelled, and nothing says otherwise. `moveTrip`
+  does not refuse a clash; the preview informs and the owner decides.
 - **Crew gap** — a scheduled trip with nobody rostered on it, or a course session `courseCrewGap`
   reports as instructorless or booked past its ratio. It is a prompt for staff, not a boarding
   authorization by itself. **Today owns it**: Today names it (`instructor_missing`) and its

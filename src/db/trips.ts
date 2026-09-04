@@ -31,7 +31,9 @@ export {
   type TripScheduleDayInput,
 } from "./trips-create";
 export {
+  type CrewMoveConflicts,
   changeTripCrew,
+  crewMoveConflicts,
   getTripCrewAssignments,
   getTripCrewIds,
   listStaff,

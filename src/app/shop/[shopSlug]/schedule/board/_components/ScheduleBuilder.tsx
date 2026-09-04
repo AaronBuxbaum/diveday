@@ -208,6 +208,13 @@ export type BuilderCopy = {
   moveIt: string;
   /* ---- the move panel's impact preview (issue #1203, D43) ---- */
   impactTitle: string;
+  /**
+   * Named, one line per person — never a count (issue #1310). The clash takes
+   * `{name}` and `{departure}`; the blackout takes `{name}`. Neither needs a
+   * plural pair, because each renders once per person.
+   */
+  impactCrewClash: string;
+  impactCrewAway: string;
   impactToldOne: string;
   impactToldOther: string;
   impactGearOne: string;
@@ -1137,18 +1144,40 @@ function RemovePanel({
  */
 function MoveImpact({
   tripId,
+  target,
   copy,
   loadPreflight,
 }: {
   tripId: string;
+  /**
+   * Where the fields say the departure is going, or null while they say where
+   * it already is (which is how the panel opens) or hold no complete pair at
+   * all. Only the two crew lines depend on it — see `getMovePreflight`.
+   */
+  target: { date: string; startTime: string } | null;
   copy: BuilderCopy;
-  loadPreflight: (tripId: string) => Promise<MovePreflight | null>;
+  loadPreflight: (
+    tripId: string,
+    target: { date: string; startTime: string } | null,
+  ) => Promise<MovePreflight | null>;
 }) {
   const [preflight, setPreflight] = useState<MovePreflight | null>(null);
+  // Destructured, because `target` is a fresh object on every render of the
+  // panel: depending on it would re-read on each keystroke anywhere in the
+  // form, and the two strings are the whole of what the answer turns on.
+  const targetDate = target?.date ?? null;
+  const targetTime = target?.startTime ?? null;
   useEffect(() => {
     let live = true;
-    loadPreflight(tripId).then(
+    loadPreflight(
+      tripId,
+      targetDate && targetTime ? { date: targetDate, startTime: targetTime } : null,
+    ).then(
       (result) => {
+        // `live` is what makes the re-read safe: a staff member picking three
+        // dates in a row has three requests in flight, and without this the
+        // slowest one wins whichever it was. The cleanup runs before each new
+        // effect, so only the newest can still write.
         if (live) setPreflight(result);
       },
       // A failed read leaves the panel exactly as it was before this existed —
@@ -1158,7 +1187,7 @@ function MoveImpact({
     return () => {
       live = false;
     };
-  }, [tripId, loadPreflight]);
+  }, [tripId, targetDate, targetTime, loadPreflight]);
 
   if (!preflight) return null;
   const lines = preflight.sections.flatMap((section) => impactLines(section, copy));
@@ -1196,6 +1225,21 @@ function MoveImpact({
  */
 function impactLines(section: MovePreflightSection, copy: BuilderCopy): string[] {
   switch (section.kind) {
+    // One line per person, which is why neither crew section has a plural
+    // pair. A joined list would need a locale in a component that deliberately
+    // takes every word preformatted, and naming them one at a time is the more
+    // specific reading anyway — the whole point of #1310 is that a *count* of
+    // crew told a reader nothing.
+    //
+    // The clash names the other departure too. Without it the reader has to
+    // leave the panel to find out whether "another departure" is the 07:00 or
+    // the 15:00, which is the question they opened the panel to settle.
+    case "crew":
+      return section.clashes.map((clash) =>
+        fill(copy.impactCrewClash, { name: clash.name, departure: clash.departure }),
+      );
+    case "crewAway":
+      return section.names.map((name) => fill(copy.impactCrewAway, { name }));
     case "told":
       return [
         fill(
@@ -1240,9 +1284,33 @@ function MovePanel({
   copy: BuilderCopy;
   // i18n-exempt: type annotation, not copy — the scanner misreads the union as a string.
   action: (formData: FormData) => void | Promise<void>;
-  loadPreflight: (tripId: string) => Promise<MovePreflight | null>;
+  loadPreflight: (
+    tripId: string,
+    target: { date: string; startTime: string } | null,
+  ) => Promise<MovePreflight | null>;
   onCancel: () => void;
 }) {
+  // **The date and the time are state here only because two lines of the
+  // preview depend on them** (issue #1310): whether this boat's crew are
+  // already on another whose window overlaps where this one is going, and
+  // whether any of them said they are away then. Everything else the panel
+  // shows is a property of the departure and the same wherever it lands.
+  //
+  // The *time* matters as much as the date, which is why it is state too: a
+  // morning boat and an afternoon boat on one day are an ordinary double
+  // shift, and only an overlap is a problem — the same rule `setTripCrew`
+  // refuses on.
+  //
+  // `onChange` rather than a debounce: a `date` or `time` input publishes a
+  // value only once all its segments are filled, so a staff member picking one
+  // produces one read, not one per keystroke. The pair the departure already
+  // sits on reads as no target at all — moving a boat to where it is changes
+  // nothing, and a standing double-booking there is the staffing week's
+  // problem rather than this panel's.
+  const [date, setDate] = useState(trip.dateIso);
+  const [startTime, setStartTime] = useState(trip.startTime);
+  const unchanged = date === trip.dateIso && startTime === trip.startTime;
+  const target = date && startTime && !unchanged ? { date, startTime } : null;
   return (
     <FieldGrid
       as="form"
@@ -1258,7 +1326,7 @@ function MovePanel({
           subject. Data, not copy: the shop's own title for its own departure,
           so there is no bundle key to translate. */}
       <p className="sm:col-span-2 text-sm font-medium">{trip.title}</p>
-      <MoveImpact tripId={trip.id} copy={copy} loadPreflight={loadPreflight} />
+      <MoveImpact tripId={trip.id} target={target} copy={copy} loadPreflight={loadPreflight} />
       <Field
         label={copy.newDate}
         description={
@@ -1269,7 +1337,8 @@ function MovePanel({
           name="date"
           type="date"
           required
-          defaultValue={trip.dateIso}
+          value={date}
+          onChange={(event) => setDate(event.target.value)}
           className={controlClass}
           ref={focusOnMount}
         />
@@ -1279,7 +1348,8 @@ function MovePanel({
           name="startTime"
           type="time"
           required
-          defaultValue={trip.startTime}
+          value={startTime}
+          onChange={(event) => setStartTime(event.target.value)}
           className={controlClass}
         />
       </Field>
@@ -1436,7 +1506,10 @@ export function ScheduleBuilder({
   /** Fetches the add panel's course and dive-site options, first time it opens. */
   loadOptions: () => Promise<BuilderOptions>;
   /** The move panel's impact preview, fetched per departure when one opens. */
-  loadMovePreflight: (tripId: string) => Promise<MovePreflight | null>;
+  loadMovePreflight: (
+    tripId: string,
+    target: { date: string; startTime: string } | null,
+  ) => Promise<MovePreflight | null>;
   price: BuilderPriceInput;
   actions: BuilderActions;
   /** The soonest day on the board, for the "Add a departure" button in the header. */

@@ -25,13 +25,31 @@
  * with none of those produces no sections at all, and the panel renders nothing
  * — never three empty headings.
  *
- * **Crew is the deliberate omission**, and the ticket names it. A count would
- * duplicate the row: measured against the demo shop's board, every departure
- * but one rosters the same two people, which is the identical failure issue
- * #757 fixed on the crew line itself. The consequence worth stating is not how
- * many are on it but whether they are free on the *new* date, and nothing in
- * this app models a crew member's availability yet — so this says nothing
- * rather than something true and useless.
+ * **Crew is a name or nothing, never a count.** A count was built for #1203
+ * and measured against the demo shop's board at 24 of its 25 upcoming
+ * departures — every one rosters the same two people — which is the identical
+ * failure issue #757 fixed on the crew line itself, so it was removed. What
+ * replaced it (issue #1310) is the half that is actually a *consequence of the
+ * move*, and it is two facts rather than one:
+ *
+ * - a **clash**: somebody on this boat is already on another whose window
+ *   overlaps where this one is going. The same overlap `setTripCrew` refuses,
+ *   so the preview cannot call a problem something the roster would let you
+ *   build — and a morning boat plus an afternoon boat stays the ordinary
+ *   double shift it is;
+ * - **away**: somebody on this boat has told the shop they are away then. That
+ *   is the shop's own record (`crew_availability_blocks`, #1235), and it
+ *   informs rather than gates — a blackout takes nobody off a boat — so
+ *   without this line the panel would go quiet on the case the shop had
+ *   explicitly written down.
+ *
+ * The third reading of "is she free on Thursday?" — over her hours — is
+ * genuinely unmodelled, and nothing here implies it.
+ *
+ * **They are also the only facts here that depend on where the boat is
+ * going**, which is why both arrive already resolved: the composer stays pure,
+ * and the decision about *when* to re-read them belongs to the panel that owns
+ * the date and time fields.
  *
  * **No judgement of its own.** The one thing that stops a move is roll-call
  * evidence, and that question is asked by `countRollCallEvidence` — the same
@@ -77,6 +95,22 @@ export type MovePreflightFacts = {
   rollCallEvidence: number;
   /** False for a cancelled departure, which `moveTrip` refuses too. */
   scheduled: boolean;
+  /**
+   * Assigned crew the move would put in two places at once, and the departure
+   * it would collide with (`crewMoveConflicts`). Empty when no new time has
+   * been chosen yet, when the chosen one is where the departure already sits —
+   * moving a boat to where it is changes nothing, so a standing double-booking
+   * there is the staffing week's problem rather than this panel's — and, most
+   * of the time, because nobody clashes.
+   */
+  crewClashes: readonly { name: string; departure: string }[];
+  /**
+   * Assigned crew who have told the shop they are away on one of the days the
+   * move proposes. Their own words, not an inference — and no bar to the move:
+   * the owner assigns crew, and a shorthanded Saturday with somebody's holiday
+   * on it is a conversation.
+   */
+  crewAway: readonly string[];
 };
 
 /**
@@ -84,6 +118,8 @@ export type MovePreflightFacts = {
  * report, so an untouched departure composes to none.
  */
 export type MovePreflightSection =
+  | { kind: "crew"; clashes: readonly { name: string; departure: string }[] }
+  | { kind: "crewAway"; names: readonly string[] }
   | {
       /** Seats that have already had a reminder naming the current date. */
       kind: "told";
@@ -103,8 +139,10 @@ export type MovePreflight = {
 };
 
 /**
- * The preview for one departure. Pure, total, and ordered: people first, then
- * the kit, then the money — widest consequence to narrowest.
+ * The preview for one departure. Pure, total, and ordered: the crew who
+ * cannot be there, then the crew who said they would not be, then the divers
+ * already written to, then the kit, then the money — the reasons to stop, and
+ * after them the costs of going ahead, widest to narrowest.
  *
  * A blocked departure still reports its sections. The move is refused, but the
  * facts are the reason it is worth knowing, and blanking them would leave a
@@ -112,6 +150,16 @@ export type MovePreflight = {
  */
 export function composeMovePreflight(facts: MovePreflightFacts): MovePreflight {
   const sections: MovePreflightSection[] = [];
+
+  // Crew lead, ahead of the divers they would otherwise follow. Every other
+  // line here describes work the move creates — letters to write, kit to
+  // re-reserve, money to explain. These two can mean the move should not
+  // happen, and a reason to stop belongs above the costs of going ahead.
+  //
+  // The clash outranks the blackout because it is a physical impossibility
+  // rather than a preference the owner may decide to override.
+  if (facts.crewClashes.length > 0) sections.push({ kind: "crew", clashes: facts.crewClashes });
+  if (facts.crewAway.length > 0) sections.push({ kind: "crewAway", names: facts.crewAway });
 
   // Silence when nobody has been told. A departure whose divers have heard
   // nothing yet costs no letters, and saying "0 have been told" is the empty
