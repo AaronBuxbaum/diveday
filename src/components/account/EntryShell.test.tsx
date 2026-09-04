@@ -176,14 +176,23 @@ describe("the dead-link law has two tiers", () => {
    * be the bare door for *every* cause, which meant the most ordinary way of
    * reaching one — the seat was already claimed, so the link died inside the
    * claim itself — told a party member holding a forwarded URL to ask a shop
-   * the page would not name. `/recap` is the fourth booking token and is
-   * deliberately absent: it still renders the bare door for every dead cause,
-   * which is drift against decision 3 that no slice of this program covers.
+   * the page would not name.
+   *
+   * `/recap` is the fourth, and was the last one outside the rule (issue
+   * #1119). Its token is *signed* rather than stored, so there is no
+   * `booking_capabilities` row and no revocation, and it collapsed every dead
+   * cause into the bare door on the strength of that. What the collapse was
+   * protecting against is a forged token, and `verifyRecapToken` rejects one
+   * before any of these branches is reachable — so a dead recap link that gets
+   * this far carries DiveDay's own signature, and is owed the shop's hand like
+   * the other three. It keeps the bare door for the one case that resolves
+   * nothing at all.
    */
   const BOOKING_TIER = [
     "app/waivers/[token]/page.tsx",
     "app/ready/[token]/page.tsx",
     "app/claim/[token]/page.tsx",
+    "app/recap/[token]/page.tsx",
   ];
 
   it.each(ACCOUNT_TIER)("%s renders the bare door, never the shop's hand", (page) => {

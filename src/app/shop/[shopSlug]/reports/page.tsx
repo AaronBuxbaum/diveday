@@ -46,7 +46,6 @@ import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { DepartureLedger, type DepartureRow } from "./_components/DepartureLedger";
 import { type MonthFigure, MonthFigures } from "./_components/MonthFigures";
-import { PartnerLedger } from "./_components/PartnerLedger";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately. It is not a claim that the route has a static shell: the staff
@@ -604,15 +603,22 @@ export default async function ReportsPage({
             </section>
           ) : null}
 
-          {/* Only ever rows, never a heading over a blank: a shop that has
-              handed out no partner links renders nothing here at all. */}
-          <PartnerLedger
-            className="mt-10"
-            label={t("reports.partners")}
-            labelId="reports-partners"
-            rows={report.partnerReferrals}
-            seatsWord={(seats) => t("reports.partnerSeats", { count: seats })}
-          />
+          {/* **A count, never the slugs** (issue #1294). This was a "Who sent
+              divers" ledger naming each partner; nothing anywhere can tell a
+              hotel's slug from one an anonymous visitor invented by editing the
+              storefront URL and booking a seat, because `partnerLinkUrl` writes
+              no row. So the shop is told the fact — their partner links are
+              working, and how hard — without a staff page printing a stranger's
+              text as a business fact.
+
+              A quiet line rather than a section, on the tax line's pattern: one
+              number does not earn a heading over it, and a month with no
+              referred seats renders nothing at all. */}
+          {report.partnerReferredSeats > 0 ? (
+            <p className="mt-3 text-end text-sm text-muted tabular-nums">
+              {t("reports.partnerArrivals", { count: report.partnerReferredSeats })}
+            </p>
+          ) : null}
 
           {report.tripCount > 0 ? (
             <DepartureLedger

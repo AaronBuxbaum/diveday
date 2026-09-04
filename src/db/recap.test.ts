@@ -14,6 +14,7 @@ import {
   deleteCrewRecapPhoto,
   deleteRecapPhoto,
   getRecapPageData,
+  getRecapPageState,
   listCrewRecapPhotosForTrip,
   listRecapPhotosForTrip,
   MAX_RECAP_CAPTION_LENGTH,
@@ -285,6 +286,101 @@ async function pendingTipContext() {
   if (!started.ok) throw new Error(`tip start failed: ${started.reason}`);
   return { ...ctx, checkoutUrl: started.checkoutUrl };
 }
+
+/**
+ * The dead-link tier, decided in `src/db/recap.ts` rather than in the page, so
+ * no branch up there can widen what a dead recap URL discloses (ADR
+ * 20260827-first-light, decision 3; issue #1119).
+ */
+describe("getRecapPageState", () => {
+  it("hands back the recap itself while there is one to read", async () => {
+    const { db, bookingId } = await recapContext();
+    const state = await getRecapPageState(db, bookingId);
+    expect(state.kind).toBe("recap");
+    if (state.kind !== "recap") return;
+    expect(state.data.diverName).toBe("Rae Recap");
+  });
+
+  it("names nobody when the signature resolves no booking at all", async () => {
+    // The one case that keeps the bare door. There is no shop to attribute the
+    // link to without guessing, and a bearer token reveals only its own record.
+    const { db } = await recapContext();
+    expect(await getRecapPageState(db, "00000000-0000-0000-0000-000000000000")).toEqual({
+      kind: "unknown",
+    });
+  });
+
+  it("gives a cancelled booking and a no-show the same answer, so neither is disclosed", async () => {
+    const { db, bookingId } = await recapContext();
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
+    const cancelled = await getRecapPageState(db, bookingId);
+
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, bookingId));
+    const noShow = await getRecapPageState(db, bookingId);
+
+    // Same kind, so the failure state itself never says which happened — and
+    // both carry the shop, which is what the diver actually came for.
+    expect(cancelled.kind).toBe("dead");
+    expect(noShow.kind).toBe("dead");
+    if (cancelled.kind !== "dead" || noShow.kind !== "dead") return;
+    expect(cancelled.shop).toEqual(noShow.shop);
+    expect(cancelled.shop.name).toBeTruthy();
+  });
+
+  it("gives a called-off departure its own answer, because no fresher link will exist", async () => {
+    // The blow-out shape: the trip is cancelled and every booking stays active,
+    // so this diver holds a live seat on a boat that is not running. "Ask your
+    // dive shop for a fresh link" is advice that cannot help them.
+    const { db, reef, bookingId } = await recapContext();
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, reef.id));
+
+    const state = await getRecapPageState(db, bookingId);
+    expect(state.kind).toBe("departure-cancelled");
+    if (state.kind !== "departure-cancelled") return;
+    // The slug too: this is the one dead branch with a way onward, and it goes
+    // to the shop's own public schedule.
+    expect(state.shop.slug).toBeTruthy();
+  });
+
+  it("keeps a no-show off it too, which is the corner a negation got wrong", async () => {
+    // `no_show` is not `"cancelled"`, so a branch written as "the booking was
+    // not cancelled and the trip was" sent this diver to the departure card —
+    // and a bearer who can see the trip left the shop's public board could
+    // then read which card rendered and tell a cancelled seat from a no-show.
+    // That is exactly the distinction this reader promises never to make.
+    const { db, reef, bookingId } = await recapContext();
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, reef.id));
+    await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, bookingId));
+    expect((await getRecapPageState(db, bookingId)).kind).toBe("dead");
+  });
+
+  it("keeps a diver who cancelled their own seat off the departure-cancelled sentence", async () => {
+    // Both are true at once when a shop calls off a trip a diver had already
+    // left. Their own cancellation is the fact about them, and it stays
+    // collapsed with the no-show.
+    const { db, reef, bookingId } = await recapContext();
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, reef.id));
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
+    expect((await getRecapPageState(db, bookingId)).kind).toBe("dead");
+  });
+
+  it("discloses the shop's published contact details and nothing else", async () => {
+    const { db, bookingId } = await recapContext();
+    await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
+    const state = await getRecapPageState(db, bookingId);
+    if (state.kind !== "dead") throw new Error("expected the booking tier");
+    // Pinned as a whole object rather than field by field: the failure this
+    // guards against is a later read adding the diver's name or email to the
+    // select beside the shop's, which a `toContain`-shaped assertion misses.
+    expect(Object.keys(state.shop).sort()).toEqual([
+      "contactEmail",
+      "contactPhone",
+      "defaultLocale",
+      "name",
+      "slug",
+    ]);
+  });
+});
 
 describe("getRecapPageData tip reconciliation", () => {
   it("never shows a tip as paid on a bare return-URL alone — only once Stripe confirms it", async () => {

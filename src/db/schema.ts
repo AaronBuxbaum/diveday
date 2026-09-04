@@ -2187,11 +2187,21 @@ export const bookings = pgTable(
      * most divers arrive without a partner link, and nothing about a booking
      * depends on this.
      *
-     * **A slug, never a name.** It is a third party's identity stored against a
-     * person's booking, so it is bounded, character-restricted, and never
-     * rendered as anything but the shop's own label for a link it generated.
-     * The shop typed the partner's name into its own embed generator; DiveDay
-     * neither verifies it nor shows it to the diver.
+     * **A slug, never a name, and never rendered** (issue #1294). It is a third
+     * party's identity stored against a person's booking, so it is bounded and
+     * character-restricted — and this comment used to go on to call it "the
+     * shop's own label for a link it generated", which is what made an order
+     * page print it. It is not. `partnerLinkUrl` writes no row, so nothing can
+     * tell a hotel's slug from one an anonymous visitor invented by editing the
+     * storefront URL and booking a seat. Every value here is
+     * attacker-influenceable text until a stored partner list exists.
+     *
+     * So no surface prints it: the month's report counts these seats and names
+     * none of them, and the order page's "Sent by" line is gone. The column
+     * stays because the arrival is real and a partner list arriving later can
+     * name these seats retroactively; the full-shop export still carries it,
+     * which is a shop's own database handed back to it rather than a page
+     * presenting a stranger's text as a fact.
      *
      * On the booking rather than the person for the same reason
      * `lastDivedBand` is: it is a fact about one visit. "Which hotel sends us
@@ -2209,10 +2219,12 @@ export const bookings = pgTable(
     /** Backs the organizer's "who has claimed" panel — member seats by their lead. */
     index("bookings_party_lead_idx").on(table.partyLeadBookingId),
     /**
-     * Backs the per-partner count on Reports — one shop's referred seats,
-     * grouped by partner. Two columns, not three: the report's month window is
-     * on `trips.starts_at`, never on `bookings.created_at`, so a third column
-     * here would buy the query that names it nothing.
+     * Backs the referred-seat count on Reports — one shop's seats carrying any
+     * partner slug. There is no `group by` any more (issue #1294): the report
+     * is a count, so this covers the `shop_id` + is-not-null half of it. Two
+     * columns, not three: the report's month window is on `trips.starts_at`,
+     * never on `bookings.created_at`, so a third column here would buy the
+     * query that names it nothing.
      */
     index("bookings_shop_referral_idx").on(table.shopId, table.referralSource),
   ],
@@ -3257,40 +3269,67 @@ export const notificationSendQueue = pgTable(
      */
     payloadSealed: text("payload_sealed"),
     /**
-     * The two handles legal erasure needs, lifted out of the payload because
+     * The three handles legal erasure needs, lifted out of the payload because
      * it is now sealed and no `->>` can reach inside it (issue #1297).
      *
      * `scrub` (src/db/anonymize.ts, reached from `anonymizeDiver`) has to drop
      * a person's queued mail — a rendered message carrying their name and
      * address — and the only matches it ever had were `payload ->> 'to'` and
      * `payload ->> 'bookingId'`. As real columns those matches are typed, and
-     * can no longer silently miss a row whose payload shape drifted. Both
-     * nullable, because a kind may carry neither. Neither is indexed: the
-     * address match is `lower(recipient_email)`, which a plain btree would not
-     * serve anyway, and an erasure is rare enough that a sequential scan of one
+     * can no longer silently miss a row whose payload shape drifted. All four
+     * nullable, because a kind may carry none of them. None is indexed: the
+     * address matches are `lower(...)`, which a plain btree would not serve
+     * anyway, and an erasure is rare enough that a sequential scan of one
      * shop's queue is the right cost.
      *
-     * Neither is a new disclosure, and both are **cleared on every terminal
-     * write**, beside `payload_sealed` — so a row that has sent or failed holds
-     * no personal data at all, exactly as it did when the payload was the only
-     * place an address lived. Nothing prunes this table (it is not in
-     * `RETENTION_DAYS`), which is precisely why the terminal write has to do
-     * it: a `sent` row that kept its recipient would keep it forever.
+     * None is a new disclosure — every one of them is an address or a number
+     * this same tenant already stores in a plaintext column of its own
+     * (`people`, `shops`, `course_inquiries`), unlike the payload, which held
+     * raw bearer tokens that exist nowhere else un-hashed.
+     *
+     * **Cleared when a row is finished with, retained while it is only
+     * parked.** `sent`, `failed` and `missing_payload` clear all four beside
+     * `payload_sealed`, so a row that is done holds nothing — which matters
+     * because nothing prunes this table (it is not in `RETENTION_DAYS`), so a
+     * `sent` row that kept its recipient would keep it forever. The one
+     * exception is `sealed_payload_unreadable`, which keeps the payload *and*
+     * the handles on purpose: that row is waiting for a restored key rather
+     * than finished, and a parked row that had dropped its handles would be a
+     * row an erasure could no longer find. An earlier version of this
+     * paragraph claimed a blanket clear and was wrong about two of the four
+     * writes (`security-reviewer`, on issue #1298).
      *
      * `booking_id` deliberately carries no foreign key: it is a match handle
      * for a sweep, not a relationship, and a real reference would make an
      * erasure's delete order depend on this queue.
      *
-     * **They are the handles the sweep has, not every handle it could want.**
-     * A kind whose *subject* is not its recipient is out of their reach —
-     * `course_inquiry` mails the shop's own front desk and carries the diver's
-     * name, address and message inside the sealed blob, and `new_account_alert`
-     * is the same shape. Those rows are unreachable by any `->>` probe now, so
-     * a live one survives an erasure until it drains (issue #1298). Bounded by
-     * the three-day retry window and by the terminal clear above, not by the
-     * sweep.
+     * **`subject_email` and `subject_phone` are the person the message is
+     * *about***, when that is not the person it is addressed to — and null when
+     * the two are the same, which is almost every kind. Two are not:
+     * `course_inquiry` mails the shop's own front desk about a diver who used
+     * the public composer and carries their name, address, phone and free-text
+     * message; and `new_account_alert` mails DiveDay about a shop owner.
+     * Before these a live row for either survived an erasure until it drained,
+     * because neither handle could see it and no `->>` probe can be added to a
+     * sealed payload (issue #1298).
+     *
+     * **Two handles rather than one, because a lead may carry no address at
+     * all.** The public composer takes an address *or* a number, so a diver who
+     * leaves only a number produces a row a `subject_email` alone still could
+     * not reach — the first version of this fix shipped that hole and a
+     * `security-reviewer` pass found it. The phone match carries the same
+     * accepted over-reach the `course_inquiries.phone` sweep does, and for the
+     * same written reason.
+     *
+     * Both are written from `notificationSubjectEmail`/`notificationSubjectPhone`
+     * (`src/lib/notifications/kinds.ts`), and `kinds.test.ts` fails on a kind
+     * that declares a contact handle either function has forgotten — so this is
+     * not one more thing to remember the next time a subject and a recipient
+     * come apart.
      */
     recipientEmail: text("recipient_email"),
+    subjectEmail: text("subject_email"),
+    subjectPhone: text("subject_phone"),
     bookingId: uuid("booking_id"),
     status: notificationQueueStatus("status").notNull().default("queued"),
     attempts: integer("attempts").notNull().default(0),

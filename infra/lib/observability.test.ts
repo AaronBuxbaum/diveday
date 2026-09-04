@@ -263,8 +263,14 @@ describe("the synthesized observability stack", () => {
     expect(mutationFilter?.Properties?.MetricTransformations?.[0]?.MetricValue).toBe(
       "$.durationMs",
     );
-    expect(JSON.stringify(mutationFilter)).toContain('"Key":"Action"');
-    expect(JSON.stringify(mutationFilter)).toContain('"Value":"$.action"');
+    // **No dimension, and that is the assertion.** A metric filter dimensioned
+    // by `$.action` bills one custom metric per distinct label -- $0.30/month
+    // each, across thirty-odd server actions -- while the dashboard's "Slowest
+    // mutations (p75)" widget already ranks the same lines by action for the
+    // price of a query (issue #1241). This used to require the dimension; it
+    // now refuses it, because the number this registry's header states depends
+    // on the metric staying one metric after traffic arrives.
+    expect(JSON.stringify(mutationFilter)).not.toContain('"Dimensions"');
   });
 
   it("alarms on SES's own bounce and complaint rates at AWS's review line", () => {

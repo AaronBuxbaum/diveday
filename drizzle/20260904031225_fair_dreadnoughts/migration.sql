@@ -1,0 +1,1 @@
+ALTER TABLE "notification_send_queue" ADD COLUMN "subject_phone" text;

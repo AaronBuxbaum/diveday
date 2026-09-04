@@ -181,7 +181,7 @@ test.describe("contact import — specialty cards", () => {
       name: "Find a returning diver",
     });
     await returningDiverSearch.fill("Deep Dana");
-    await addDiver.getByRole("button", { name: "Search" }).click();
+    await returningDiverSearch.press("Enter");
     await addDiver.getByRole("button", { name: "Add Deep Dana to the trip" }).click();
 
     // The card is on file and verified — and the dive still waits, which is the

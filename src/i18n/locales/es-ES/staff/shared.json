@@ -14,7 +14,7 @@
   },
   "paperWaiver": {
     "markSignedOnPaper": "Marcar como firmado en papel",
-    "medicalAttestationLabel": "Tengo la liberación firmada de este buceador archivada, he revisado su cuestionario médico y ninguna respuesta necesita el visto bueno de un médico.",
+    "medicalAttestationLabel": "Tengo la exención firmada de este buceador archivada, he revisado su cuestionario médico y ninguna respuesta necesita el visto bueno de un médico.",
     "recording": "Registrando…",
     "recordPaperSignature": "Registrar firma en papel"
   },
@@ -130,7 +130,7 @@
     "levelNoCard": "Esta salida exige {level} y nada en la ficha de este buceador llega a ese nivel. Añade su certificación de {level} si la tiene; si no, resérvale una salida acorde a su nivel o el curso de {level}.",
     "cards": "{count, plural, one {Esta salida exige la certificación {list}. No hay ninguna en la ficha de este buceador.} other {Esta salida exige las certificaciones {list}. No hay ninguna de ellas en la ficha de este buceador.}}",
     "nitrox": "Nitrox",
-    "generic": "Las titulaciones registradas de este buceador no alcanzan lo que exigen esta salida y sus puntos de inmersión."
+    "generic": "Las titulaciones registradas de este buceador no alcanzan lo que exigen esta salida y sus sitios de buceo."
   },
   "readiness": {
     "certificationLevels": {
@@ -287,7 +287,8 @@
       "certification": "Certificaciones",
       "requirements": "Configuración",
       "waiver": "Exención",
-      "instructorMissing": "Tripulación",
+      "instructorMissing": "El curso necesita instructor",
+      "uncrewedCourse": "Sin instructor ni supervisión",
       "uncrewedDeparture": "Sin tripulación",
       "nitroxGate": "Nitrox",
       "highWindAlert": "Viento fuerte",
@@ -382,6 +383,7 @@
       "ungatedNitrox": "{count, plural, one {# buceador pidió} other {# buceadores pidieron}} nitrox sin certificación verificada, así que esos tanques están planeados con aire.",
       "highWindAlert": "Previsión de viento de {speed} nudos{hasDirection, select, yes { del {direction}} other {}}{hasGusts, select, yes { (rachas de {gusts} nudos)} other {}}. Revisa las condiciones antes de salir.",
       "instructorMissing": "Esta sesión de curso no tiene instructor asignado y no puede aceptar inscripciones.",
+      "uncrewedCourse": "{divers, plural, one {# buceador reservado} other {# buceadores reservados}} y nadie en el agua. Esta sesión no puede aceptar inscripciones hasta que se asigne un instructor.",
       "overRatio": "{booked, plural, one {# reservado} other {# reservados}}, pero la tripulación asignada solo cubre {capacity} según la ratio de nivel inicial publicada por PADI.",
       "overRatioIntro": "{booked, plural, one {# reservado} other {# reservados}} en esta sesión de iniciación, y la tripulación cubre {capacity} a {perInstructor} por instructor para la inmersión en aguas abiertas. Un asistente certificado no lo aumenta; solo otro instructor añade plazas.",
       "uncrewedDeparture": "{divers, plural, one {# buceador reservado} other {# buceadores reservados}} y no hay divemaster ni instructor asignado para supervisar esta salida.",

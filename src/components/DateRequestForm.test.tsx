@@ -11,8 +11,6 @@ const copy: DateRequestCopy = {
   whatToDive: "What would you like to dive?",
   whatToDivePlaceholder: "Two dives on the wrecks",
   dateOptionsHeading: "When would you like to dive?",
-  dateOptionsHint:
-    "Choose a preferred date, an alternative, or tell us when your timing is flexible.",
   preferredDate: "Preferred date",
   alternateDate: "Alternative date",
   yourName: "Your name",

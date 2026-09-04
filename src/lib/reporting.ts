@@ -58,14 +58,24 @@ export type MonthlyReportInput = {
   /** How many tips that total is made of — the tip card's detail line. */
   tipCount: number;
   /**
-   * Which partners' links sent divers on this month's departures, biggest
-   * first — the slug the shop's own embed generator wrote, and the seats it
-   * accounts for (issue #1285).
+   * How many of this month's seats arrived on a partner link (issue #1285),
+   * as a count and deliberately **not** a list of which partners.
    *
-   * Empty for the ordinary shop, which has handed out no partner links; the
+   * The slug does not leave `getMonthlyReport`, and that is the point rather
+   * than an omission. `partnerLinkUrl` is stateless — it turns a name a
+   * manager typed into a URL and writes no row — so there is no record of the
+   * partners a shop generated, and nothing can tell a hotel's slug from one an
+   * anonymous visitor invented by editing the storefront URL and booking a
+   * seat. Every value in that column is therefore attacker-influenceable text,
+   * and a report that printed it would present
+   * `call-555-0100-for-cheaper-dives` to an owner as a business fact (issue
+   * #1294, owner ruling 2026-09-02). Keeping the type a number is what makes
+   * that unrenderable rather than merely unrendered.
+   *
+   * Zero for the ordinary shop, which has handed out no partner links; the
    * surface renders nothing at all in that case rather than an empty state.
    */
-  partnerReferrals: { partner: string; seats: number }[];
+  partnerReferredSeats: number;
 };
 
 export type MonthlyReport = {
@@ -101,8 +111,8 @@ export type MonthlyReport = {
   waiverOutstanding: number;
   /** waiverComplete / seatsBooked in [0, 1], or null when there were no bookings. */
   waiverCompletion: number | null;
-  /** Partners whose links sent divers this month, biggest first; empty for most shops. */
-  partnerReferrals: { partner: string; seats: number }[];
+  /** Seats that arrived on a partner link this month; zero for most shops. A count, never the slugs — see the input type. */
+  partnerReferredSeats: number;
 };
 
 /** Bookings on active statuses. Mirrors the roster's "who is on this boat" set. */
@@ -135,7 +145,7 @@ export function summarizeMonth(input: MonthlyReportInput): MonthlyReport {
     waiverComplete,
     waiverOutstanding: Math.max(0, seatsBooked - waiverComplete),
     waiverCompletion: seatsBooked > 0 ? waiverComplete / seatsBooked : null,
-    partnerReferrals: input.partnerReferrals,
+    partnerReferredSeats: input.partnerReferredSeats,
   };
 }
 

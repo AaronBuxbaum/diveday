@@ -253,8 +253,6 @@ export default async function NewBookingDiverPage({
           findHeading: t("seatDiver.findHeading"),
           findLabel: t("seatDiver.findLabel"),
           findPlaceholder: t("seatDiver.findPlaceholder"),
-          search: t("seatDiver.search"),
-          searching: t("seatDiver.searching"),
           noEmailOnFile: t("seatDiver.noEmailOnFile"),
           adding: t("seatDiver.adding"),
           addLabel: t("bookings.new.addToTrip"),

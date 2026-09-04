@@ -33,8 +33,10 @@ export default defineConfig({
     // stack output, and nothing else in `pnpm check` synthesizes it — lint and
     // tsc see TypeScript, not a CloudFormation template.
     include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.mjs", "infra/**/*.test.ts"],
-    // PGlite-backed integration tests hydrate an embedded Postgres per test;
-    // generous ceiling so slow CI runners don't flake.
+    // The ceiling for pure logic, which is most of the suite. `src/db/**`
+    // hydrates an embedded Postgres per test and gets its own, longer one from
+    // `src/test/db-timeout.ts` — read that before changing this number, and do
+    // not raise this one to solve a database test's problem (issue #1306).
     testTimeout: 20_000,
     // The same ceiling for hooks, because `fileScopedShopContext` moved the
     // hydration *out* of the test body and into `beforeAll` (src/test/db.ts).
@@ -43,7 +45,7 @@ export default defineConfig({
     // inside a test. This is not widening a timeout to paper over a flake: the
     // work did not grow, it moved, and the budget follows it. It gets *rarer*
     // at the same time, since a file now hydrates once instead of once per
-    // test.
+    // test. `src/db/**` raises both together, for the same reason.
     hookTimeout: 20_000,
     // Back to Vitest 4's own default after a worker_threads-specific PGlite
     // failure finally surfaced — the exact condition the "threads" note here

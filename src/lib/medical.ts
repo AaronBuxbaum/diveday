@@ -367,6 +367,92 @@ export function applicableMedicalQuestions(
 }
 
 /**
+ * The same responses with every inapplicable answer dropped.
+ *
+ * **One rule, three writers** (issue #1135). A questionnaire response map is
+ * written in three places — the form reader on submit, the component's initial
+ * state, and the pre-hydration effect that harvests checked radios out of the
+ * DOM — and each of them could put back what the others took out. The rule they
+ * all have to obey is one line: a child answer only exists while its parent
+ * reads `true`.
+ *
+ * Enforcing it in `answer()` alone was not enough, and the hole was the
+ * ordinary path rather than an exotic one. A refused signature saves a draft
+ * (most often a mistyped signer name), and a draft written by the old form
+ * reader carried an explicit `false` for every Box child of every unanswered
+ * parent — all thirty-three of them. Reload, correct the name, honestly change
+ * "I am over 45" to yes, and Box B opened with its four cardiac questions
+ * already answered. `answer()` never ran, because the value going in was
+ * `true`.
+ *
+ * The paper form is the tiebreak: an item in a Box the diver was never asked to
+ * open is **blank** there, not "no". Absent is the honest storage, and it reads
+ * identically to every consumer — `medicalProgress` counts an applicable answer
+ * by `typeof … === "boolean"`, and `calculateMedicalResult` only ever asks
+ * `=== true`.
+ */
+export function applicableResponsesOnly(
+  questionnaire: MedicalQuestionnaire,
+  responses: Readonly<Record<string, boolean | undefined>>,
+): Record<string, boolean> {
+  const applicable = new Set(
+    applicableMedicalQuestions(questionnaire, responses).map((question) => question.id),
+  );
+  const next: Record<string, boolean> = {};
+  for (const [id, value] of Object.entries(responses)) {
+    if (typeof value === "boolean" && applicable.has(id)) next[id] = value;
+  }
+  return next;
+}
+
+/**
+ * The questionnaire answers a submitted form carries, or `null` when an
+ * applicable question is unanswered and the caller wanted a complete set.
+ *
+ * **Here rather than in the route** (AGENTS.md's layout rule) because it is the
+ * one function that decides what enters a signed medical record, and while it
+ * lived in `page.tsx` as a private helper it had no test at all. It also had an
+ * invariant nothing pinned: it read `responses[question.parentId]` while
+ * building `responses`, so it was correct only because the literal happens to
+ * list all ten primaries before any Box child. Moving a Box's items to sit
+ * under the parent they belong to — an ordinary editorial change to a 40-item
+ * literal — would have made it write `false` for a child *without reading the
+ * form*, silently recording a diver's real "yes" to a cardiac question as no.
+ * It now resolves each parent from the answers it has already read for
+ * *primaries*, and the test shuffles the order to prove it.
+ */
+export function readMedicalAnswers(
+  questionnaire: MedicalQuestionnaire,
+  read: (questionId: string) => "yes" | "no" | null,
+  options: { allowIncomplete?: boolean } = {},
+): MedicalAnswers | null {
+  const responses: Record<string, boolean> = {};
+  // Parents first, so a child's applicability never depends on where its parent
+  // sits in the list.
+  const ordered = [
+    ...questionnaire.questions.filter((question) => !question.parentId),
+    ...questionnaire.questions.filter((question) => question.parentId),
+  ];
+  for (const question of ordered) {
+    // A Box the diver was never asked to open contributes nothing — not a
+    // `false`. See `applicableResponsesOnly` above for why absent rather than
+    // no, and for the draft-restore hole that made it matter.
+    if (question.parentId && responses[question.parentId] !== true) continue;
+    const value = read(question.id);
+    if (value !== "yes" && value !== "no") {
+      if (options.allowIncomplete) continue;
+      return null;
+    }
+    responses[question.id] = value === "yes";
+  }
+  return {
+    questionnaireId: questionnaire.id,
+    questionnaireVersion: questionnaire.version,
+    responses,
+  };
+}
+
+/**
  * Where a half-filled questionnaire stands, for the diver filling it in.
  *
  * The published form opens with its own directions — "answer all 10; a NO to

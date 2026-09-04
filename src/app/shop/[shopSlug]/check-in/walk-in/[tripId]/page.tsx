@@ -150,8 +150,6 @@ export default async function WalkInDiverPage({
           findHeading: t("seatDiver.findHeading"),
           findLabel: t("seatDiver.findLabel"),
           findPlaceholder: t("seatDiver.findPlaceholder"),
-          search: t("seatDiver.search"),
-          searching: t("seatDiver.searching"),
           noEmailOnFile: t("seatDiver.noEmailOnFile"),
           adding: t("seatDiver.adding"),
           addLabel: t("checkIn.walkIn.addToBoat"),

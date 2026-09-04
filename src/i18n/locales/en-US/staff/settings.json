@@ -259,7 +259,7 @@
     "tax": {
       "heading": "Sales tax & VAT",
       "description": "Add sales tax, VAT, and similar taxes to new booking payments and staff invoices through Stripe.",
-      "detail": "Tax is added on top of your listed prices and shown to divers at Stripe checkout. Stripe uses your connected account's tax settings and the customer's location. Post-trip tips are separate and are not affected by this setting. Turn this off if you handle tax yourself.",
+      "detail": "Tax is added on top of your listed prices and shown to divers at Stripe checkout. Tips after the trip are separate and unaffected. Turn this off if you handle tax yourself.",
       "enabledValue": "On",
       "disabledValue": "Off",
       "checkboxLabel": "Use Stripe Tax for new booking and invoice payments",
@@ -407,7 +407,7 @@
       "processorErasures": {
         "sectionLabel": "Erasures not finished at Stripe",
         "heading": "{count, plural, one {# record} other {# records}} from an erased diver still at Stripe",
-        "detail": "Erasing a diver also deletes their Stripe customer. These didn't finish. A customer record retries on its own tonight. An invoice can't: Stripe copies the name and email onto every invoice, and only a data-deletion request to Stripe clears that. File one, then mark it done.",
+        "detail": "Erasing a diver also deletes their Stripe customer. These didn't finish. A customer record retries on its own tonight. An invoice can't: only a data-deletion request to Stripe clears the name and email it copied. File one, then mark it done.",
         "raised": "raised {date}",
         "retry": "Retry delete",
         "retrying": "Retrying…",
@@ -597,15 +597,15 @@
     "scopeTable": {
       "contact": {
         "what": "Names, email, phone",
-        "detail": "Imported as given. A row with an email matches an existing diver on re-import; without one, it's always a new record."
+        "detail": "A row with an email matches an existing diver on re-import; without one, it's always a new record."
       },
       "emergencyContact": {
         "what": "Emergency contact",
-        "detail": "Name and phone carry over when present."
+        "detail": "Name and phone, when your file has them."
       },
       "diveInsurance": {
         "what": "Dive insurance (DAN)",
-        "detail": "Carried across as free text, exactly as your file holds it, for the crew to have on hand. It never gates anyone."
+        "detail": "Free text, exactly as your file holds it. It never gates anyone."
       },
       "rentalSizes": {
         "what": "Rental sizes",
@@ -613,15 +613,15 @@
       },
       "certificationCard": {
         "what": "Certification record",
-        "detail": "Comes across with the diver's record, marked imported, and clears the level gate. If your file says the card was never verified, it waits for staff instead. Unrecognized levels need manual entry."
+        "detail": "Marked imported, and clears the level gate. If your file says the card was never verified, it waits for staff instead. Unrecognized levels need manual entry."
       },
       "specialtyCards": {
         "what": "Specialty certifications (deep, wreck, night, drysuit)",
-        "detail": "Come across with the diver's record, marked imported. Each one's gate stays shut until staff give it a one-tap confirm, whatever your file says."
+        "detail": "Marked imported. Each one's gate stays shut until staff give it a one-tap confirm, whatever your file says."
       },
       "nitrox": {
         "what": "Nitrox",
-        "detail": "Comes across with the diver's record, marked imported. Until staff give it a one-tap confirm, that diver gets plain air. Boarding waits on it only where your file says the card was never verified."
+        "detail": "Marked imported. Until staff give it a one-tap confirm, that diver gets plain air. Boarding waits on it only where your file says the card was never verified."
       },
       "signedWaivers": {
         "what": "Signed waivers & medical clearance",
@@ -629,11 +629,11 @@
       },
       "waiverDocuments": {
         "what": "Waiver / medical documents",
-        "detail": "Fetched once from your file's URL and re-stored in DiveDay's own storage for audit. Images and PDFs up to 5 MB."
+        "detail": "Fetched once from your file's URL and kept for audit. Images and PDFs up to 5 MB."
       },
       "role": {
         "what": "Role",
-        "detail": "Everyone imports as a diver. Staff roles and logins are never granted by import."
+        "detail": "Everyone imports as a diver, never a staff role or a login."
       },
       "cardOnFile": {
         "what": "Credit card details",
@@ -645,15 +645,15 @@
       },
       "paymentHistory": {
         "what": "Payment & receipt history",
-        "detail": "Source payment, refund, and receipt rows come across as unverified history in Orders. A clearly parsed amount in your shop currency is called out in the revenue/refund aggregate; it never becomes a live Stripe order or booking payment."
+        "detail": "Unverified history in Orders. A clearly parsed amount in your shop currency counts in the revenue/refund aggregate; it never becomes a live Stripe order or booking payment."
       },
       "serviceHistory": {
         "what": "Gear service history",
-        "detail": "Imported separately, through Settings → Import gear history. Units match by tag or serial number, and dated service records stay attached to the unit."
+        "detail": "Imported separately, through Settings → Import gear history. Units match by tag or serial number."
       },
       "diverNotes": {
         "what": "Internal & diver notes",
-        "detail": "Customer remarks and staff notes carry over directly into private notes on the diver's profile."
+        "detail": "Customer remarks and staff notes become private notes on the diver's profile."
       }
     },
     "wizard": {
@@ -787,22 +787,22 @@
     },
     "issues": {
       "emailInvalid": "Email \"{email}\" doesn't look valid, so the diver was imported without one.",
-      "cardMarkedUnverified": "Your file marks this certification \"{status}\". It was imported for staff review rather than as verified, since your own records don't call it checked.",
+      "cardMarkedUnverified": "Your file marks this certification \"{status}\", so it was imported for staff review rather than as verified.",
       "specialtyNotGated": "Specialty \"{specialty}\" isn't a specialty we gate on (deep, wreck, night, drysuit), so nothing was imported for it.",
-      "specialtyNoCardNumber": "Specialty \"{specialty}\" has no certification number on the row, so it was not imported. A certification without a number can't be verified.",
-      "specialtyImportedVerifiedOne": "Specialty certification imported as verified from your records, flagged imported. A dive that requires one waits until a staffer confirms they've seen it.",
-      "specialtyImportedVerifiedOther": "{count} specialty certifications imported as verified from your records, flagged imported. A dive that requires one waits until a staffer confirms they've seen it.",
-      "specialtyImportedPendingOne": "Specialty certification imported for staff review. See the note above.",
-      "specialtyImportedPendingOther": "{count} specialty certifications imported for staff review. See the note above.",
+      "specialtyNoCardNumber": "Specialty \"{specialty}\" has no certification number on the row, so it was not imported.",
+      "specialtyImportedVerifiedOne": "Specialty certification imported as verified from your records. A dive that requires one waits until a staffer confirms they've seen it.",
+      "specialtyImportedVerifiedOther": "{count} specialty certifications imported as verified from your records. A dive that requires one waits until a staffer confirms they've seen it.",
+      "specialtyImportedPendingOne": "Specialty certification imported for staff review.",
+      "specialtyImportedPendingOther": "{count} specialty certifications imported for staff review.",
       "agencyUnrecognized": "Certification agency unrecognized, so it was imported as “other”.",
-      "levelNamesSpecialty": "Certification \"{level}\" names a specialty, not a level, and this row's specialty column was used instead, so no level certification was imported. Add that certification record in DiveDay if it's a separate one.",
-      "levelIsTechnical": "Certification \"{level}\" is a technical or overhead rating, not a recreational rung. It was not imported, and is never read as a nearby level. Record it by hand if your shop gates on it.",
+      "levelNamesSpecialty": "Certification \"{level}\" names a specialty, not a level, so the specialty column was used and no level was imported. Add that certification record in DiveDay if it's a separate one.",
+      "levelIsTechnical": "Certification \"{level}\" is a technical or overhead rating, not a recreational rung, so it was not imported. Record it by hand if your shop gates on it.",
       "levelNotGated": "Certification \"{level}\" isn't a level we gate on, so the certification was not imported. Add the record in DiveDay if your shop needs to keep it.",
-      "levelNoCardNumber": "Certification level \"{level}\" has no usable certification number, so the certification was not imported. Evidence without a number can't be verified.",
-      "certImportedVerified": "Certification imported as verified from your records and flagged imported, with a one-tap confirm for staff.",
-      "certImportedPending": "Certification imported for staff review. See the note above.",
-      "nitroxImportedVerified": "Nitrox certification imported as verified from your records and flagged imported. Fills give plain air until a staffer taps confirm.",
-      "nitroxImportedPending": "Nitrox certification imported for staff review. See the note above. A nitrox-required departure holds this diver until it is confirmed.",
+      "levelNoCardNumber": "Certification level \"{level}\" has no usable certification number, so the certification was not imported.",
+      "certImportedVerified": "Certification imported as verified from your records.",
+      "certImportedPending": "Certification imported for staff review.",
+      "nitroxImportedVerified": "Nitrox certification imported as verified from your records. Fills give plain air until a staffer taps confirm.",
+      "nitroxImportedPending": "Nitrox certification imported for staff review. A nitrox-required departure holds this diver until it is confirmed.",
       "nitroxNoCardNumber": "Nitrox marked on the source with no certification number. Add and verify the nitrox certification in DiveDay.",
       "waiverDateInvalid": "Waiver accepted date \"{value}\" isn't a real calendar date (expected YYYY-MM-DD), so it was imported dated to today instead.",
       "waiverImported": "Waiver imported as accepted: trusted from the prior shop, medical clearance included, and marked “imported”.",

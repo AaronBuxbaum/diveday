@@ -55,6 +55,21 @@ captures the light/dark × phone/desktop matrix into `screenshots/` (gitignored)
 through the seeded dev credentials for `/shop/**` paths. Never hand-write a throwaway driver for
 this; the script exists so scratch `.shots*.mjs` files stop reaching the index.
 
+**A long capture run kills the dev server, and the corpse takes the next one with it.** Two facts
+worth knowing before you point that script at thirty paths:
+
+- A Turbopack `next-server` grows without a ceiling. On a memory-capped container it is OOM-killed
+  outright at roughly **thirty page renders** in 16 GB — well inside one capture matrix over a
+  handful of staff pages. `scripts/dev-server.mjs` restarts it before the kernel does where it can,
+  and `screenshot.mjs` shoots that path again by itself; a kill it cannot come back from is now
+  reported as one, naming how many captures landed, rather than as
+  "Nothing answering — start `pnpm dev` first" (issue #1321). Capture in smaller batches.
+- **`rm -rf .next` before restarting.** A server started over the directory a killed process left
+  behind serves the not-found page for **every `/shop/**` route**, in ~50ms of application code,
+  until a file change forces Turbopack to recompile. That reads exactly like the change you just
+  made breaking every staff route — one session spent most of an hour on it, and a `git checkout`
+  that "fixed" it made a correct change look like the cause.
+
 ## 4. Behavior changed: exercise it
 
 For domain logic with no UI yet, drive it directly (a scratch script or `vitest run` on the new

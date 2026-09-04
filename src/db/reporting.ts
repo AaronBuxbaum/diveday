@@ -3,7 +3,6 @@ import {
   asc,
   count,
   countDistinct,
-  desc,
   eq,
   exists,
   gt,
@@ -105,13 +104,6 @@ const COLLECTED_PAYMENT_STATUSES = ["paid", "deposit_paid", "partly_refunded"] a
  * waiver-completed count in a single grouped select double-counts across the
  * join fan-out, and revenue lives on different tables entirely.
  */
-/**
- * How many partners the month's report will name. See the cap's own note inside
- * `getMonthlyReport`: the rows are anonymous-writable, so the list is bounded
- * at the query rather than at the component.
- */
-const MAX_REPORTED_PARTNERS = 10;
-
 export async function getMonthlyReport(
   db: DbExecutor,
   shopId: string,
@@ -454,33 +446,37 @@ export async function getMonthlyReport(
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(and(inWindow, eq(tips.shopId, shopId), eq(tips.status, "paid")));
 
-  // **Which partners sent divers this month.** One row per partner slug, the
-  // seats they account for, biggest first.
+  // **How many seats arrived on a partner link this month** — a count, and
+  // deliberately not a list of who.
   //
   // Counted on the same basis as `seatsBooked` — active bookings on this
-  // month's live trips — so a shop reading "34 seats" above and "Coral Sands
-  // 6" here is reading two slices of one number rather than two numbers that
-  // happen to sit on one page. The referral is on the seat, so a party of
-  // four booked through a hotel's link counts four.
+  // month's live trips — so a shop reading "34 seats" above and "6 arrived on
+  // a partner link" here is reading two slices of one number rather than two
+  // numbers that happen to sit on one page. The referral is on the seat, so a
+  // party of four booked through a hotel's link counts four.
   //
-  // The unattributed majority is deliberately absent: this list answers "who
-  // sends us divers", and a row for the divers nobody sent is the difference
-  // between two figures already on the page.
+  // **The slug never leaves this function** (issue #1294, owner ruling
+  // 2026-09-02: "show unrecognised partner links as a count; never render the
+  // stranger's text"). `partnerLinkUrl` is stateless — it turns a name a
+  // manager typed into a URL and writes no row — so there is no list of
+  // partners a shop generated, and nothing anywhere can tell a hotel's slug
+  // from one an anonymous visitor invented by hand-editing the storefront URL
+  // and booking a seat. Until a stored partner list exists (deferred with the
+  // rest of the adjacent-business work), *every* value in this column is
+  // attacker-influenceable text, and a monthly report that prints it presents
+  // `call-555-0100-for-cheaper-dives` to an owner as a business fact.
   //
-  // **Capped, because every distinct value here was chosen by an anonymous
-  // visitor.** The slug is bounded and character-restricted, so nothing hostile
-  // can be *rendered*; what is not bounded is how many distinct ones a stream of
-  // public bookings can mint, and an uncapped `group by` behind an uncapped list
-  // is how a staff page grows a thousand rows of somebody else's text (security
-  // review of issue #1285, finding 3). Ten is far above any real shop's partner
-  // list and far below anything worth abusing. The honest long-term answer is to
-  // credit only slugs the shop's own generator wrote, which needs a stored
-  // partner list this product does not have yet (issue #1294).
-  const referralRows = await db
-    .select({
-      partner: bookings.referralSource,
-      seats: count(bookings.id),
-    })
+  // A count carries none of that payload and still tells the shop the thing
+  // they would otherwise lose: that their partner links are working, and how
+  // hard. The raw slug stays on the booking — the arrival is real, and a
+  // partner list arriving later can name these seats retroactively.
+  //
+  // This replaced a `group by referral_source ... limit 10`. The cap bounded
+  // how many rows could appear; it reserved none of them for a partner the
+  // shop knew, so a quiet month with two genuine partners at one booking each
+  // was fully displaced by an attacker with two bookings per invented slug.
+  const [referredTotals] = await db
+    .select({ seats: count(bookings.id) })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .where(
@@ -491,10 +487,7 @@ export async function getMonthlyReport(
         isNotNull(bookings.referralSource),
         inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
       ),
-    )
-    .groupBy(bookings.referralSource)
-    .orderBy(desc(count(bookings.id)), bookings.referralSource)
-    .limit(MAX_REPORTED_PARTNERS);
+    );
 
   const waiverByTrip = new Map(waiverRows.map((row) => [row.tripId, Number(row.waiverComplete)]));
 
@@ -539,9 +532,7 @@ export async function getMonthlyReport(
     importedFinancialRecordCount: Number(importedFinancialTotals?.count ?? 0),
     tipsCents: Number(tipTotals?.total ?? 0),
     tipCount: Number(tipTotals?.tipCount ?? 0),
-    partnerReferrals: referralRows.flatMap((row) =>
-      row.partner ? [{ partner: row.partner, seats: Number(row.seats) }] : [],
-    ),
+    partnerReferredSeats: Number(referredTotals?.seats ?? 0),
   };
 }
 

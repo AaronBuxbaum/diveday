@@ -411,6 +411,63 @@ describe("what the retry queue is allowed to hold", () => {
     },
   );
 
+  it("lifts the subject's own handles out for a message addressed to somebody else", async () => {
+    // The seam the erasure sweep rests on, exercised through `queueRetry`
+    // rather than by inserting a row by hand: `course_inquiry` is addressed to
+    // the shop's front desk and is *about* a diver, so `recipient_email` is
+    // the desk and the two subject handles are the diver's. Without this,
+    // deleting either `notificationSubjectEmail`/`notificationSubjectPhone`
+    // call from the insert broke nothing in the suite (`security-reviewer`,
+    // issue #1298).
+    const { db, shop } = await seededShopContext();
+    await sendNotification(
+      db,
+      {
+        kind: "course_inquiry",
+        courseInquiryId: "00000000-0000-4000-8000-00000000c001",
+        shopId: shop.id,
+        to: "front-desk@example.invalid",
+        locale: "en-US",
+        shopName: "Blue Mantis Divers",
+        courseTitle: "Open Water",
+        inquirerName: "Elena Marsh",
+        inquirerEmail: "elena@example.invalid",
+        inquirerPhone: "+1 305 555 0134",
+      } as Notification,
+      failsRetryably,
+    );
+
+    const [queued] = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    expect(queued?.recipientEmail).toBe("front-desk@example.invalid");
+    expect(queued?.subjectEmail).toBe("elena@example.invalid");
+    expect(queued?.subjectPhone).toBe("+1 305 555 0134");
+
+    // And a row that finishes drops all of them, because nothing prunes this
+    // table — a `sent` row that kept a diver's number would keep it forever.
+    await drainNotificationRetries(db, {
+      provider: {
+        async send() {
+          return { status: "sent", providerMessageId: "m1" };
+        },
+      },
+      now: new Date(nowMs() + 60 * 60_000),
+    });
+    const [drained] = await db
+      .select()
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    expect(drained).toMatchObject({
+      status: "sent",
+      payloadSealed: null,
+      recipientEmail: null,
+      subjectEmail: null,
+      subjectPhone: null,
+    });
+  });
+
   it("still delivers the working link a sealed retry was queued with", async () => {
     const { db, shop } = await seededShopContext();
     await sendNotification(db, linkBearing(shop.id, "email_verification"), failsRetryably);

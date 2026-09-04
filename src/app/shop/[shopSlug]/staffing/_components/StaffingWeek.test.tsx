@@ -50,6 +50,7 @@ const WORDS: StaffingWeekWords = {
 const GAP_WORDS: GapWords = {
   no_instructor: "This course session has no instructor yet",
   over_ratio: "More divers booked than the crew can supervise",
+  uncrewed_course: "No instructor or crew",
   uncrewed_departure: "No crew",
   crew_below_target: "Under target",
 };

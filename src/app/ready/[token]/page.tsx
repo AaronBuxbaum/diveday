@@ -1361,8 +1361,13 @@ export default async function DiverReadinessPage({
 
   const data = await getReadyPageData(db, bookingId);
   if (!data) {
+    // `ready.unavailableBody`, not the waiver subtree's identical sentence,
+    // which this read until issue #1334. The two say the same words today, so
+    // nothing on screen moves — but `/waivers` and `/ready` are different
+    // surfaces with different rescues, and a reword of one should not be able
+    // to reach the other by accident.
     return (
-      <Notice title={anonT("ready.unavailableHeading")} text={anonT("waiver.unavailableBody")} />
+      <Notice title={anonT("ready.unavailableHeading")} text={anonT("ready.unavailableBody")} />
     );
   }
 

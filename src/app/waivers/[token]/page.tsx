@@ -42,7 +42,12 @@ import { emergencyContactSchema } from "@/lib/contact";
 import { telHref } from "@/lib/contact-links";
 import { formatDateTimeTz, formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import type { MedicalQuestionnaire } from "@/lib/medical";
-import { medicalProgress, medicalQuestionField, questionnaireForJurisdiction } from "@/lib/medical";
+import {
+  medicalProgress,
+  medicalQuestionField,
+  questionnaireForJurisdiction,
+  readMedicalAnswers,
+} from "@/lib/medical";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
@@ -132,30 +137,27 @@ const WAIVER_FIELD_ERROR: Record<WaiverInvalidField, { textKey: DiverMessageKey;
     acknowledged: { textKey: "waiver.errorAgreement", anchor: "acknowledged" },
   };
 
-/** Reads only applicable questions; a closed Box is stored as an explicit no. */
-function readMedicalAnswers(
+/**
+ * This form's questionnaire answers.
+ *
+ * The rule itself lives in `src/lib/medical.ts` — it is the one function that
+ * decides what enters a signed medical record, it is written by three callers
+ * that have to agree, and it had no test while it was a private helper here.
+ * This is the `FormData` adapter over it.
+ */
+function readFormMedicalAnswers(
   formData: FormData,
   questionnaire: MedicalQuestionnaire,
   options: { allowIncomplete?: boolean } = {},
 ): MedicalAnswers | null {
-  const responses: Record<string, boolean> = {};
-  for (const question of questionnaire.questions) {
-    if (question.parentId && responses[question.parentId] !== true) {
-      responses[question.id] = false;
-      continue;
-    }
-    const value = formData.get(medicalQuestionField(question.id));
-    if (value !== "yes" && value !== "no") {
-      if (options.allowIncomplete) continue;
-      return null;
-    }
-    responses[question.id] = value === "yes";
-  }
-  return {
-    questionnaireId: questionnaire.id,
-    questionnaireVersion: questionnaire.version,
-    responses,
-  };
+  return readMedicalAnswers(
+    questionnaire,
+    (questionId) => {
+      const value = formData.get(medicalQuestionField(questionId));
+      return value === "yes" || value === "no" ? value : null;
+    },
+    options,
+  );
 }
 
 /**
@@ -530,7 +532,7 @@ export default async function WaiverPage({
       redirect(`/waivers/${token}?error=rate`);
     }
     const parsed = signatureSchema.safeParse(Object.fromEntries(formData));
-    const answers = readMedicalAnswers(formData, questionnaire, { allowIncomplete: true });
+    const answers = readFormMedicalAnswers(formData, questionnaire, { allowIncomplete: true });
     if (!parsed.success || !answers) {
       const invalidField = firstInvalidWaiverField(
         parsed.success ? new Set() : new Set(parsed.error.issues.map((issue) => issue.path[0])),
@@ -590,7 +592,7 @@ export default async function WaiverPage({
       redirect(`/waivers/${token}?error=rate`);
     }
     const parsed = completeSignatureSchema.safeParse(Object.fromEntries(formData));
-    const answers = readMedicalAnswers(formData, questionnaire);
+    const answers = readFormMedicalAnswers(formData, questionnaire);
     if (!parsed.success || !answers) {
       const invalidField = firstInvalidWaiverField(
         parsed.success ? new Set() : new Set(parsed.error.issues.map((issue) => issue.path[0])),

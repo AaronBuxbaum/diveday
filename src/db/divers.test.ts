@@ -1042,6 +1042,47 @@ describe("diver erasure", () => {
         payloadSealed: "v1.sealed-waiver-request",
         nextAttemptAt: erasureNow,
       },
+      {
+        shopId: shop.id,
+        idempotencyKey: "erasure-elena-by-subject",
+        // **A `course_inquiry`**: addressed to the shop's own front desk, about
+        // her. It carries her name, address, phone and free-text message inside
+        // the sealed blob, so before `subject_email` existed neither handle
+        // could see it and a live one outlived the erasure (issue #1298). No
+        // booking either — a public lead is written before any seat is.
+        recipientEmail: "desk@blue-mantis.example",
+        subjectEmail: "ELENA@example.com",
+        bookingId: null,
+        payloadSealed: "v1.sealed-course-inquiry",
+        nextAttemptAt: erasureNow,
+      },
+      {
+        shopId: shop.id,
+        idempotencyKey: "erasure-elena-by-subject-phone",
+        // **The lead that left a number and no address.** The public composer
+        // takes one or the other, so this row carries her name, her number and
+        // her message and no address handle at all — the hole the first
+        // version of this fix shipped (`security-reviewer`, issue #1298).
+        recipientEmail: "desk@blue-mantis.example",
+        subjectEmail: null,
+        subjectPhone: "+1 305 555 0142",
+        bookingId: null,
+        payloadSealed: "v1.sealed-course-inquiry",
+        nextAttemptAt: erasureNow,
+      },
+      {
+        shopId: shop.id,
+        idempotencyKey: "erasure-someone-else-entirely",
+        // The control. Neither handle is hers, so this row must survive — an
+        // erasure that emptied the shop's whole queue would pass every
+        // assertion above and be a very different bug.
+        recipientEmail: "desk@blue-mantis.example",
+        subjectEmail: "another-diver@example.com",
+        subjectPhone: "+1 305 555 9999",
+        bookingId: null,
+        payloadSealed: "v1.sealed-course-inquiry",
+        nextAttemptAt: erasureNow,
+      },
     ]);
     await db.insert(calendarFeeds).values({
       shopId: shop.id,
@@ -1264,14 +1305,18 @@ describe("diver erasure", () => {
       .where(eq(notificationDeliveryAttempts.bookingId, bookingId));
     expect(attempt).toMatchObject({ sendError: null, sendErrorCode: "bounced" });
 
-    // The un-normalized PII blob: matched both by recipient address (case
-    // insensitively) and by the booking it names.
-    expect(
-      await db
-        .select()
-        .from(notificationSendQueue)
-        .where(eq(notificationSendQueue.shopId, shop.id)),
-    ).toHaveLength(0);
+    // The un-normalized PII blob, matched four ways: by the recipient address,
+    // by the booking it names, and — since issue #1298 — by the address *or*
+    // the number of the person it is about, for a kind addressed to somebody
+    // else. Both address matches are case-insensitive, which is why the
+    // fixtures above are cased differently; the number is matched exactly, the
+    // same way the `course_inquiries` sweep matches it. The one row naming none
+    // of her handles stays.
+    const queued = await db
+      .select({ idempotencyKey: notificationSendQueue.idempotencyKey })
+      .from(notificationSendQueue)
+      .where(eq(notificationSendQueue.shopId, shop.id));
+    expect(queued.map((row) => row.idempotencyKey)).toEqual(["erasure-someone-else-entirely"]);
 
     const [feed] = await db
       .select()

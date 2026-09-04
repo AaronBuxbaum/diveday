@@ -71,6 +71,7 @@ export type TodayActionKind =
   | "nitrox_gate"
   | "high_wind_alert"
   | "instructor_missing"
+  | "uncrewed_course"
   | "uncrewed_departure"
   | "crew_below_target"
   | "waitlist_seat"
@@ -119,67 +120,83 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   certification: 7,
   requirements: 8,
   waiver: 9,
-  instructor_missing: 10,
-  // Divers booked, zero in-water crew rostered — course session or fun dive
-  // alike (issue #732). Placed directly beside `instructor_missing`: both are
-  // the same underlying question, "is anyone qualified assigned to supervise
-  // this water time", one scoped to the agency's course ratio and this one to
-  // the shop's own divemaster target — and both rank above `nitrox_gate`
-  // because nobody in the water outranks a single diver's tank fill. It still
-  // sits below every kind above it: those describe one diver's own evidence
-  // (a medical flag, an unconfirmed identity, a card) which can take days to
-  // resolve, while a shop that notices this row can fix it in one tap on the
-  // crew editor if it has anyone free to roster.
+  // **The three crew rows, worst first.** All of them ask one question — "is
+  // anyone qualified assigned to supervise this water time" — and all three
+  // rank above `nitrox_gate`, because nobody in the water outranks a single
+  // diver's tank fill. They still sit below every kind above them: those
+  // describe one diver's own evidence (a medical flag, an unconfirmed
+  // identity, a card) which can take days to resolve, while a shop that
+  // notices one of these can fix it in one tap on the crew editor if it has
+  // anyone free to roster.
+  //
+  // A course session with nobody in the water is both of the other two at once
+  // (issue #1338): the boat cannot run *and* the session cannot enrol. Nothing
+  // else here is two gates.
+  uncrewed_course: 10,
+  // Divers booked, nobody in the water, fun dive (issue #732). Above
+  // `instructor_missing` as of #1338, which reversed the order the two had
+  // carried since #732 — that ordering was written when a zero-crew course
+  // session took `instructor_missing`, so the row above it *was* this
+  // situation and the rank was reading the right severity off the wrong code.
+  // With `uncrewed_course` carrying that case, what is left at
+  // `instructor_missing` is a session whose divers **are** supervised and
+  // which cannot certify or enrol them — a sale and a signature, not a boat.
   uncrewed_departure: 11,
-  nitrox_gate: 12,
-  high_wind_alert: 13,
+  // A course session short of its instructor with somebody else in the water.
+  // It refuses a sale (`course_unstaffed`, src/db/bookings.ts) and no
+  // certification can be issued from it, which is why it is not merely
+  // advisory — but its divers have a supervisor, so it ranks below the two
+  // rows where nobody does.
+  instructor_missing: 12,
+  nitrox_gate: 13,
+  high_wind_alert: 14,
   // The dock-side counts. An unfinished *departure* count is paperwork — the
   // boat is home and nobody was ever unaccounted for in the water — so it
   // deliberately sits far below the after-dive kinds above. Collapsing the
   // two into one row is what turns the red row into wallpaper (DOM-H3).
-  roll_call_departure_open: 14,
-  roll_call_not_started: 15,
-  dive_prep: 16,
-  help_request: 17,
-  payment: 17,
-  email_delivery: 18,
-  waitlist_seat: 19,
+  roll_call_departure_open: 15,
+  roll_call_not_started: 16,
+  dive_prep: 17,
+  help_request: 18,
+  payment: 18,
+  email_delivery: 19,
+  waitlist_seat: 20,
   // A revenue opportunity, not anything blocking or dock-settleable — ranks
   // with the other purely-commercial rows.
-  last_minute_fill: 20,
+  last_minute_fill: 21,
   // Dock-settleable and never a boarding blocker, so it rides near the bottom.
-  emergency_contact: 21,
+  emergency_contact: 22,
   // Below-target crewing (issue #732): `divemasterRatioGap`'s own docblock
   // is explicit that the target "binds nothing" and is advice a shop may act
   // on or not, unlike `uncrewed_departure` above, which describes a
   // departure with nobody in the water at all. Ranked with the other purely
   // advisory, non-blocking rows so it reads as a nudge, not a problem.
-  crew_below_target: 22,
+  crew_below_target: 23,
   // Platform-health chores (task 157) — never a departure blocker, so they
   // sink below every per-diver row when severity is what breaks a tie.
-  stuck_payment_operation: 23,
-  failed_photo_deletion: 24,
+  stuck_payment_operation: 24,
+  failed_photo_deletion: 25,
   // Somebody is owed their money back for a departure the shop called off.
   // Ranked above the other two platform-health rows: a diver is waiting on
   // this one, and has already been told the shop would be in touch.
-  owed_refund: 25,
+  owed_refund: 26,
   // Divers said something worth publishing; nothing sails or refunds on it.
-  reviews_pending: 26,
+  reviews_pending: 27,
   // The gear register's rows (ADR 20260815-minimal-gear-register). All
   // counter work, never a boarding blocker — a unit that never came home
   // outranks one due back tonight, and both outrank a bench clock, because
   // that is the order the desk actually chases them in.
-  gear_overdue: 27,
-  gear_due_back: 28,
-  gear_service_due: 29,
-  staff_credential_due: 30,
+  gear_overdue: 28,
+  gear_due_back: 29,
+  gear_service_due: 30,
+  staff_credential_due: 31,
   // Bottom of the queue, and rightly: this is a question nobody has answered
   // rather than anything that has gone wrong. It is here at all because the
   // first-run checklist that asked it stops rendering at the shop's first
   // departure — step 4 of that same checklist — so a shop that scheduled a
   // trip before opening the Units row would never be asked again, and currency
   // decides what a diver's card is charged in (issue #835).
-  units_unconfirmed: 31,
+  units_unconfirmed: 32,
 };
 
 /**
@@ -201,6 +218,11 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   nitrox_gate: ["owner", "manager", "instructor", "divemaster", "captain", "crew"],
   high_wind_alert: ["owner", "manager", "instructor", "divemaster", "captain"],
   uncrewed_departure: ["owner", "manager", "instructor", "divemaster", "captain"],
+  // The wider of its two parents' audiences. `instructor_missing` is
+  // owner/manager/instructor because only they can close it; this row says the
+  // boat has nobody in the water, which the divemaster and captain reading the
+  // queue at the rail are exactly the people to notice.
+  uncrewed_course: ["owner", "manager", "instructor", "divemaster", "captain"],
   crew_below_target: ["owner", "manager", "instructor", "divemaster", "captain"],
   instructor_missing: ["owner", "manager", "instructor"],
   medical_review: ["owner", "manager", "instructor"],
@@ -279,6 +301,7 @@ export const ACTION_KIND_META = {
   // Same tone as instructor_missing, its fun-dive sibling: nobody is in the
   // water yet, but it is not paperwork either.
   uncrewed_departure: { tone: "warning" },
+  uncrewed_course: { tone: "warning" },
   nitrox_gate: { tone: "warning" },
   high_wind_alert: { tone: "warning" },
   dive_prep: { tone: "neutral" },

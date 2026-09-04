@@ -14,7 +14,7 @@
     "applyDescription": "Copies this date's title, description, capacity, pricing, and dive plan onto every upcoming date. Each date keeps its own time, crew, roster, and conditions.",
     "saving": "Saving…",
     "stopRepeating": "Stop repeating",
-    "stopRepeatingDescription": "Keeps every date already on the board and stops adding new ones. You can start it up again from here.",
+    "stopRepeatingDescription": "Keeps every date already on the board and stops adding new ones.",
     "startRepeating": "Start repeating again",
     "startRepeatingDescription": "Puts the next {days, plural, one {# day} other {# days}} of this trip back on the board, and keeps them there.",
     "editCadence": "Change the days it runs",
@@ -25,7 +25,7 @@
     "offCadenceDateBooked": "{date} — {count, plural, one {# diver booked} other {# divers booked}}",
     "cancelOffCadence": "{count, plural, one {Cancel that date} other {Cancel those # dates}}",
     "offCadenceDescription": "Takes them off the public schedule. Reinstate any single one from its own trip page.",
-    "offCadenceDescriptionBooked": "{count, plural, one {# of them has divers booked. They keep their bookings and their history, and you'll want to tell them.} other {# of them have divers booked. They keep their bookings and their history, and you'll want to tell them.}} Leave this alone and the dates stay on the board.",
+    "offCadenceDescriptionBooked": "{count, plural, one {# of them has divers booked. They keep their bookings and their history, and you'll want to tell them.} other {# of them have divers booked. They keep their bookings and their history, and you'll want to tell them.}}",
     "cancelling": "Cancelling…",
     "cancelAllUpcoming": "Cancel every upcoming date",
     "cancelDescription": "{count, plural, one {Takes the remaining # date off the public schedule.} other {Takes the remaining # dates off the public schedule.}} Also stops the repeat. Reinstate any single date from its own trip page."

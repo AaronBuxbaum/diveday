@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRow, DisclosureRowMessage } from "@/components/ui/disclosure";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
-import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
+import { LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { telHref } from "@/lib/contact-links";
 import {
   COURSE_INQUIRY_EXPERIENCE,
@@ -286,14 +286,27 @@ export function DateRequestForm({
               className={controlClass}
             />
           </Field>
-          {/* These are three ways to describe one answer: a first choice, an
-              alternative, or a flexible window. The fieldset gives them one
-              accessible question and the labels say exactly how each answer is
-              used by the shop. */}
+          {/* **One question, three ways to answer it**: a first choice, an
+              alternative, or a flexible window. The fieldset is what makes it
+              one question to a screen reader; what it was missing is the half a
+              sighted reader gets, because the legend was set at exactly a
+              `Field` label's size and weight and read as a fourth field name in
+              a flat list of nine (issue #1314). It leads at the section size
+              now, so the three answers below it are visibly *its* answers.
+
+              The hint under it is gone rather than reworded: "Choose a
+              preferred date, an alternative, or tell us when your timing is
+              flexible" restated the three labels directly beneath it word for
+              word, which is the caption AGENTS.md's copy-restraint rule
+              deletes. Nothing about how the shop uses the dates was in it.
+
+              `FieldGrid` rather than a hand-rolled `grid sm:grid-cols-2`: it is
+              the wrapper the hard rule names, and its subgrid is what puts the
+              two dates' captions and boxes on shared rows so the pair reads as
+              a pair rather than as two boxes that happen to be adjacent. */}
           <fieldset className="sm:col-span-2">
-            <legend className="text-sm font-semibold">{copy.dateOptionsHeading}</legend>
-            <p className="mt-1 text-sm text-muted">{copy.dateOptionsHint}</p>
-            <div className="mt-3 grid gap-5 sm:grid-cols-2">
+            <legend className={SECTION_TITLE_CLASS}>{copy.dateOptionsHeading}</legend>
+            <FieldGrid columns={2} className="mt-3 gap-y-5">
               <Field label={copy.preferredDate} hint={copy.optional}>
                 <input
                   name="preferredDate"
@@ -322,7 +335,7 @@ export function DateRequestForm({
                   className={controlClass}
                 />
               </Field>
-            </div>
+            </FieldGrid>
           </fieldset>
           <Field label={copy.whereYouAreUpTo} hint={copy.optional} className="sm:col-span-2">
             <select

@@ -920,6 +920,43 @@ const CAPTURE_TRANSITIONS_OFF = `
 `;
 
 /**
+ * **Wait for a fragment-opened page to have finished scrolling itself.**
+ *
+ * A `page.goto("/x#y")` scrolls twice: the browser's own fragment navigation
+ * runs first, and `ScrollToHash` (`src/components/ScrollToHash.tsx`) scrolls
+ * again on mount, because a Next client transition would otherwise leave the
+ * anchor a thousand pixels below the fold. Between those two the page is at a
+ * scroll position neither of them chose.
+ *
+ * That matters here and almost nowhere else. Chromium paints a `position:
+ * fixed` element into the strip that is under it when that strip is
+ * rasterized, so a full-page screenshot taken across the two scrolls stitches
+ * the shop header and the staff dock at whatever offset it caught — which is
+ * how `trip-guests-deal-seeded` reported itself changed on a branch whose whole
+ * diff was vitest sharding, with 234 of 2,529 rows differing and a **0.0%**
+ * cross-match proving the bands had relocated rather than re-rendered (issue
+ * #1304).
+ *
+ * `paintWholeDocument`'s own `scrollTo(0, 0)` closes the window *after* the
+ * second scroll; this closes it before the first screenshot is even prepared,
+ * so there is one scroll to settle rather than two to race. Call it after the
+ * usual content wait and before `capture`, on any surface opened at a
+ * `#fragment`.
+ *
+ * It is not a timing guess: `ScrollToHash` stamps `data-hash-landed` in every
+ * branch it can return through, including the ones that scroll nothing, so
+ * this resolves on the page's own signal or fails saying the page never sent
+ * one.
+ */
+async function waitForHashLanding(page: Page) {
+  await page.waitForFunction(
+    () => document.documentElement.hasAttribute("data-hash-landed"),
+    undefined,
+    { timeout: 15_000 },
+  );
+}
+
+/**
  * Runs `shoot` with {@link CAPTURE_TRANSITIONS_OFF} installed, and takes it
  * back out afterwards. Scoped rather than global because the tests keep running
  * after a capture: `useExitAnimation` and friends wait on a real `transitionend`
@@ -2706,7 +2743,20 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("navigation", { name: "Choose a departure" })
           .getByRole("link", { name: /Dawn Two-Tank — Molasses Reef/ })
           .click();
-        await page.getByRole("heading", { name: /^Checked in — \d+$/ }).waitFor();
+        // **The heading that names the boat in focus, not one every departure
+        // renders.** This used to wait on `Checked in — <n>`, which the
+        // *origin* page renders too: the counter always has a departure in
+        // focus and always groups its checked-in divers under that heading, so
+        // the wait was satisfied before the click had navigated anywhere and
+        // the capture could shoot the default boat or a half-swapped frame
+        // (issue #1315). The focus `h2` is the one thing on this page that
+        // differs between the two — it links to *this* departure's manifest —
+        // so it is the destination's own signal, which is the rule the debug
+        // skill states for this whole class of race.
+        await page
+          .getByRole("heading", { level: 2 })
+          .getByRole("link", { name: "Dawn Two-Tank — Molasses Reef" })
+          .waitFor();
         // Same frame, same search box, same race — this one simply has not lost
         // it yet.
         await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
@@ -2971,19 +3021,21 @@ for (const scheme of ["light", "dark"] as const) {
        * read has landed — the preview is fetched when the panel opens, so the
        * `Board` heading and the pager are both true before it exists.
        *
-       * **Opened at the phone width on purpose.** The board has two
+       * **Both widths show the panel** as of issue #1309. This used to force
+       * the phone viewport before opening, because the board's two
        * compositions — the vertical day stream below `xl`, the week grid at and
-       * above it — and they key their panels separately (`move:` against
-       * `w:move:`), so whichever one is open closes when `capture()` resizes
-       * through the other. `MovePanel` is module scope and shared by both, so
-       * one composition covers the component either way; the narrow column is
-       * the half worth photographing, because a block of prose stacked above a
-       * two-field form is where crowding would show. The 1280 sibling is
-       * therefore the plain week grid.
+       * above it — keyed their panels separately (`move:` against `w:move:`),
+       * so whichever was open closed the moment `capture()` resized through the
+       * other and the 1280 sibling was a duplicate of the plain week grid: two
+       * baseline names for one image, and a reviewer triaging the same board
+       * change twice. The panel now renders once for the whole board, outside
+       * both compositions, so it survives the resize and each width photographs
+       * what it says it does — the narrow column where a block of prose stacked
+       * above a two-field form would crowd, and the wide one where it runs full
+       * width beneath the grid.
        */
       test(`the move panel says what a move will cost (${scheme})`, async ({ page }) => {
         const title = "Wreck Trip — Spiegel Grove";
-        await page.setViewportSize({ width: 390, height: 844 });
         await page.goto("/shop/blue-mantis/schedule/board");
         await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
         await boardListSettled(page);
@@ -3478,6 +3530,7 @@ for (const scheme of ["light", "dark"] as const) {
         // The `#last-minute-deal` anchor is what auto-opens the disclosure.
         await page.goto(`/shop/blue-mantis/trips/${tripId}#last-minute-deal`);
         await page.getByText("Open Water — unverified").waitFor();
+        await waitForHashLanding(page);
         await capture(page, "trip-guests-deal-recipients", scheme);
       });
 
@@ -3526,6 +3579,7 @@ for (const scheme of ["light", "dark"] as const) {
 
         await page.goto(`/shop/blue-mantis/trips/${tripId}#last-minute-deal`);
         await page.getByRole("heading", { name: "Nobody to send this to yet" }).waitFor();
+        await waitForHashLanding(page);
         await capture(page, "trip-guests-deal-below-requirement", scheme);
       });
 
@@ -3557,6 +3611,7 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = await seededTripId(page, "blue-mantis", "Night Dive — City of Washington");
         await page.goto(`/shop/blue-mantis/trips/${tripId}#last-minute-deal`);
         await page.getByText(/Open Water — unverified/).waitFor();
+        await waitForHashLanding(page);
         await capture(page, "trip-guests-deal-seeded", scheme);
       });
 
@@ -3602,6 +3657,7 @@ for (const scheme of ["light", "dark"] as const) {
           .locator("#roster")
           .getByText("Open Water · below this departure's minimum")
           .waitFor();
+        await waitForHashLanding(page);
         await capture(page, "trip-guests-waitlist", scheme);
       });
 

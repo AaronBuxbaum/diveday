@@ -49,7 +49,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/product" },
   openGraph: {
     ...sharedLinkCard,
-    title: "The DiveDay product — booking to head count",
+    title: "DiveDay product — booking to head count",
     description:
       "Bookings, waivers, cert checks, trip prep, and the boat manifest, organized around the trip itself.",
     url: "/product",
@@ -61,7 +61,7 @@ export const metadata: Metadata = {
   // never unfurls with the root layout's generic site-level words.
   twitter: {
     card: "summary_large_image",
-    title: "The DiveDay product — booking to head count",
+    title: "DiveDay product — booking to head count",
     description:
       "Bookings, waivers, cert checks, trip prep, and the boat manifest, organized around the trip itself.",
   },

@@ -554,9 +554,18 @@ new domain concept, define it here in the same PR.
   "N departures in this window still need crew" — and links across
   (ADR 20260806-staffing-is-the-shift-roster). A **different** gap, the shop's own **Target
   diver:divemaster ratio** below, fires `uncrewed_departure`/`crew_below_target` instead —
-  `courseCrewGap` wins when both would apply to the same course session, so one departure never
-  carries two rows for one underlying fact (issue #732). Formerly "coverage gap", which named a second
-  vocabulary that no longer exists.
+  `courseCrewGap` wins when both would apply to the same course session, **except where nobody is in
+  the water at all, which takes the slot as `uncrewed_course`** (issue #1338). One departure still
+  never carries two rows for one underlying fact (issue #732); that rule is about the count, and the
+  count has not moved. What moved is which row, because "Course needs instructor" beside an empty
+  boat reads as though a divemaster is already aboard, and "No crew" beside a course session sends a
+  manager to phone one — who cannot run a training dive or sign anybody off. A session with **nobody
+  booked**, or one the shop marked **self-guided**, keeps the instructor word: neither has anyone to
+  supervise, and not being able to enrol is still the actionable fact. Formerly "coverage gap", which
+  named a second vocabulary that no longer exists. **The five words a staffer reads** are "No crew",
+  "Under target", "Course needs instructor", "No instructor or crew" and "Over student ratio" — the
+  last says *student* precisely because it is the agency cap and not the target two rows down, and
+  they share the same 135px column of the staffing week (issues #1125, #1338).
 - **Integrity-sealed waiver** — a signed waiver whose immutable metadata and template snapshot have
   a matching server-sealed HMAC. `unsealed` means legacy or imported evidence has no seal yet;
   `invalid` means staff must stop and investigate.
@@ -1033,7 +1042,9 @@ new domain concept, define it here in the same PR.
 - **Medical questionnaire** — the versioned diver-medical form a waiver presents, selected by the
   shop's **jurisdiction** (the 2026 UHMS/DMSC RSTC participant form by default). Defined as data
   in `src/lib/medical.ts`; a completed waiver stores the questionnaire id + version and the
-  server-side yes/no answers, so a later edit never re-interprets signed evidence. Questions 3,
+  server-side yes/no answers for the questions that **applied**, so a later edit never
+  re-interprets signed evidence. An item in a Box the diver was never asked to open is stored
+  absent rather than as a no, which is what the paper form does with it (issue #1135). Questions 3,
   5, and 10 and the affirmative answers in an applicable Box are
   physician referrals; a parent question can therefore be yes and still clear when its Box is all
   no. Unknown or incomplete questionnaires **fail closed** (review required), never waved through.

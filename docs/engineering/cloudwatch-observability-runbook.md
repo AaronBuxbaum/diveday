@@ -103,13 +103,19 @@ regressed, not to be woken up for on their own.
 Every shared `SubmitButton` can report a bounded action label and the elapsed time from the tap
 until the server action settles. The browser sends the same-origin beacon to `/api/vitals`; the
 server writes `mutation_duration.reported` and CloudWatch publishes `MutationDuration` in the
-`DiveDay/App` namespace, dimensioned by the action name. There is no record id or URL in the line,
-and one action is never allowed to create an unbounded label or duration.
+`DiveDay/App` namespace. There is no record id or URL in the line, and one action is never allowed
+to create an unbounded label or duration.
 
-The dashboard's **Slowest mutations (p75)** widget groups these lines by action. Use it to decide
-which safe mutation is a candidate for optimistic UI; it is evidence, not an alarm. A slow action
-that is safety-sensitive should keep its settled-state behavior until the product decision and
-failure path are understood.
+**One metric, not one per action.** The filter carries no `Action` dimension, because a dimensioned
+metric filter bills a separate custom metric per distinct label at $0.30/month — thirty-odd server
+actions, about $9/month, for a breakdown the dashboard already answers for the price of a query
+(issue #1241). The graph is the aggregate trend; the **Slowest mutations (p75)** widget below it is
+the ranking, reading the same lines and grouping them by `action`. The label is still in every log
+line, so nothing here stops you slicing it further in Logs Insights.
+
+Use the ranking to decide which safe mutation is a candidate for optimistic UI; it is evidence, not
+an alarm. A slow action that is safety-sensitive should keep its settled-state behavior until the
+product decision and failure path are understood.
 
 Three consecutive hours, not one: a single slow hour on a young product is one visitor on hotel
 wifi.

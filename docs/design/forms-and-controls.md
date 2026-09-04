@@ -619,6 +619,34 @@ through `className` cannot reliably beat a size's `text-sm`. Pick the size that 
 center its own content: give it `flex items-center` or `inline-flex items-center`. A height floor
 without centering is the bug.
 
+## Switches: `Switch`
+
+A setting that takes effect **the moment it is tapped** is a switch: `src/components/ui/Switch.tsx`,
+a visually hidden `<input type="checkbox" role="switch">` inside a `<label>`, drawing a track and a
+sliding thumb. Two surfaces drew it by hand with byte-identical class strings — the water locker's
+spray-guard toggle and the haptics toggle — which is the drift `buttonClass()` and
+`SegmentedControl` each exist to end. **Track-and-thumb class strings are never written at a call
+site.**
+
+```tsx
+import { Switch } from "@/components/ui/Switch";
+
+<Switch checked={enabled} onChange={setEnabled} label={copy.label} />;
+```
+
+`onChange` hands back the new boolean rather than a change event, because that is what every caller
+wants. The label's words are the accessible name *and* a tap target; `aria-checked` is derived from
+the same prop as `checked`, so the two cannot disagree; the thumb moves on a bare
+`transition-transform`, so `prefers-reduced-motion` stills it through the global kill-switch; the
+control is `min-h-11` and `print:hidden`.
+
+**A checkbox is not a switch, and the difference is when it takes effect.** A choice that only means
+something once a form is submitted stays a plain `<input type="checkbox" className="size-4
+accent-primary">` — Settings → Team's role and language boxes, a departure's requirement toggles,
+the buddy-team and waiver boxes, roughly 25 sites. None of those should slide: a control that
+animates into its new state is telling the reader something happened, and until the form is
+submitted nothing has.
+
 ## Segmented choices: `SegmentedControl`
 
 A small set of sibling **destinations** — the trip page's tabs, the waiver surface's two tabs, the
@@ -711,9 +739,12 @@ diver roster's bare box, the dive-site library's bordered card with a "Find a si
 Search button, and the counter's captioned box with a "Search queue" button — and which one a page
 got was a function of when it was written. The Clearwater decision that demoted the orders filter
 card to a toolbar is the precedent (ADR 20260827-clearwater-surface-language, decision 7): a search
-is a toolbar control, and the glyph is what says so. The seat-diver picker (`PersonSearchForm`) is
-the one search that still carries a visible caption and a Search button: it is a step in a flow
-rather than a list's toolbar, and its button is a keyboard-reachable target the e2e suite drives.
+is a toolbar control, and the glyph is what says so. **There is no exception left.** The seat-diver
+picker (`PersonSearchForm`) was the last one — a visible "Find a returning diver" caption, a bare
+box, and a secondary Search button standing beside the band's own primary, which on a 390px phone
+wrapped the caption onto two lines and left the box about 130px wide. It wears `SearchField` as of
+issue #1230; Enter submits the GET form before and after hydration, which is all the button did,
+and "Add diver" is the band's one primary again.
 
 ## Action rows: one primary, not many
 
