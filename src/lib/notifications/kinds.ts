@@ -620,6 +620,43 @@ export const notificationSchema = z
 
 export type Notification = z.infer<typeof notificationSchema>;
 
+/**
+ * **The address of the person a message is *about*, when that is not the person
+ * it is addressed to** — and null when the two are the same.
+ *
+ * Legal erasure has to reach a queued notification carrying an erased diver's
+ * identity, and since issue #1297 sealed `notification_send_queue.payload`
+ * there is nothing left to probe: the sweep can only match handles lifted into
+ * real columns. `to` covers every kind whose subject *is* its recipient, which
+ * is almost all of them. Two are addressed elsewhere and carry a person in the
+ * body:
+ *
+ * - `course_inquiry` mails the shop's own front desk about a diver who used
+ *   the public composer, and carries their name, address, phone and free-text
+ *   message;
+ * - `new_account_alert` mails DiveDay about a shop owner who just signed up.
+ *
+ * A diver who submits a date request, whose notification then fails
+ * retryably, and who asks to be erased before the retry drains kept all of
+ * that in a live queue row the sweep could not see (issue #1298).
+ *
+ * **`kinds.test.ts` refuses a kind this function has forgotten.** It walks
+ * every schema in the union for a field carrying an address and fails unless
+ * each one is either `to` or reachable here — which is what stops this from
+ * being one more thing to remember the next time a kind's subject differs
+ * from its recipient.
+ */
+export function notificationSubjectEmail(notification: Notification): string | null {
+  switch (notification.kind) {
+    case "course_inquiry":
+      return notification.inquirerEmail ?? null;
+    case "new_account_alert":
+      return notification.ownerEmail;
+    default:
+      return null;
+  }
+}
+
 export function notificationIdempotencyKey(notification: Notification): string {
   switch (notification.kind) {
     case "booking_confirmation":

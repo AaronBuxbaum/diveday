@@ -29,6 +29,7 @@ import {
   type NotificationSender,
   notificationIdempotencyKey,
   notificationProviderFromEnvironment,
+  notificationSubjectEmail,
   notify,
   publicAppUrl,
   recipientLocale,
@@ -194,8 +195,12 @@ async function queueRetry(
       idempotencyKey: notificationIdempotencyKey(input),
       payloadSealed: sealSecret(JSON.stringify(input), key),
       // Kept beside the sealed blob, not inside it: legal erasure sweeps on
-      // these and cannot read through the seal (issue #1297).
+      // these and cannot read through the seal (issue #1297). `subjectEmail`
+      // is the person the message is *about* when that is not the person it is
+      // addressed to — two kinds, and `kinds.test.ts` refuses a third that
+      // forgets to say so (issue #1298).
       recipientEmail: "to" in input ? input.to : null,
+      subjectEmail: notificationSubjectEmail(input),
       bookingId: "bookingId" in input ? (input.bookingId ?? null) : null,
       status: "queued",
       nextAttemptAt: retryDueAt(delivery),
@@ -524,6 +529,7 @@ export async function drainNotificationRetries(
           status: "sent",
           payloadSealed: null,
           recipientEmail: null,
+          subjectEmail: null,
           bookingId: null,
           lockedUntil: null,
           providerMessageId: delivery.providerMessageId,
@@ -556,6 +562,7 @@ export async function drainNotificationRetries(
           status: "failed",
           payloadSealed: null,
           recipientEmail: null,
+          subjectEmail: null,
           bookingId: null,
           lockedUntil: null,
           httpStatus: delivery.status === "failed" ? (delivery.httpStatus ?? null) : null,

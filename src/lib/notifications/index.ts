@@ -80,6 +80,7 @@ export {
   type NotificationSender,
   notificationIdempotencyKey,
   notificationSchema,
+  notificationSubjectEmail,
   recipientLocale,
 } from "./kinds";
 export type { NotificationDelivery, NotificationProvider } from "./provider";

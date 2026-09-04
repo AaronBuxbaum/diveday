@@ -1149,13 +1149,28 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   // erasing the deleted record drops the live person's queued mail. There is
   // still no tighter predicate — this queue carries no `person_id` — so the
   // match stays and the count is logged.
+  //
+  // **Both address handles, not just the recipient's.** A kind whose *subject*
+  // is not the person it is addressed to used to be out of reach entirely:
+  // `course_inquiry` mails the shop's own front desk about a diver who used
+  // the public composer and carries their name, address, phone and free-text
+  // message, and `new_account_alert` is the same shape about an owner. A
+  // retryable failure plus an erasure before the retry drained left all of
+  // that in a live row nothing here matched. `subject_email` is what
+  // `queueRetry` now lifts out for them (issue #1298); one statement rather
+  // than two because the delete is the same delete and the count is the same
+  // count.
   if (ctx.email) {
+    const address = ctx.email.toLowerCase();
     const dropped = await tx
       .delete(notificationSendQueue)
       .where(
         and(
           eq(notificationSendQueue.shopId, shopId),
-          sql`lower(${notificationSendQueue.recipientEmail}) = ${ctx.email.toLowerCase()}`,
+          or(
+            sql`lower(${notificationSendQueue.recipientEmail}) = ${address}`,
+            sql`lower(${notificationSendQueue.subjectEmail}) = ${address}`,
+          ),
         ),
       )
       .returning({ id: notificationSendQueue.id });

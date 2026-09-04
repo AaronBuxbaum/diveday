@@ -3267,20 +3267,20 @@ export const notificationSendQueue = pgTable(
      */
     payloadSealed: text("payload_sealed"),
     /**
-     * The two handles legal erasure needs, lifted out of the payload because
+     * The three handles legal erasure needs, lifted out of the payload because
      * it is now sealed and no `->>` can reach inside it (issue #1297).
      *
      * `scrub` (src/db/anonymize.ts, reached from `anonymizeDiver`) has to drop
      * a person's queued mail — a rendered message carrying their name and
      * address — and the only matches it ever had were `payload ->> 'to'` and
      * `payload ->> 'bookingId'`. As real columns those matches are typed, and
-     * can no longer silently miss a row whose payload shape drifted. Both
-     * nullable, because a kind may carry neither. Neither is indexed: the
-     * address match is `lower(recipient_email)`, which a plain btree would not
-     * serve anyway, and an erasure is rare enough that a sequential scan of one
+     * can no longer silently miss a row whose payload shape drifted. All three
+     * nullable, because a kind may carry none of them. None is indexed: the
+     * address matches are `lower(...)`, which a plain btree would not serve
+     * anyway, and an erasure is rare enough that a sequential scan of one
      * shop's queue is the right cost.
      *
-     * Neither is a new disclosure, and both are **cleared on every terminal
+     * None is a new disclosure, and all three are **cleared on every terminal
      * write**, beside `payload_sealed` — so a row that has sent or failed holds
      * no personal data at all, exactly as it did when the payload was the only
      * place an address lived. Nothing prunes this table (it is not in
@@ -3291,16 +3291,24 @@ export const notificationSendQueue = pgTable(
      * for a sweep, not a relationship, and a real reference would make an
      * erasure's delete order depend on this queue.
      *
-     * **They are the handles the sweep has, not every handle it could want.**
-     * A kind whose *subject* is not its recipient is out of their reach —
-     * `course_inquiry` mails the shop's own front desk and carries the diver's
-     * name, address and message inside the sealed blob, and `new_account_alert`
-     * is the same shape. Those rows are unreachable by any `->>` probe now, so
-     * a live one survives an erasure until it drains (issue #1298). Bounded by
-     * the three-day retry window and by the terminal clear above, not by the
-     * sweep.
+     * **`subject_email` is the person the message is *about***, when that is
+     * not the person it is addressed to — and null when the two are the same,
+     * which is almost every kind. Two are not: `course_inquiry` mails the
+     * shop's own front desk about a diver who used the public composer and
+     * carries their name, address, phone and free-text message; and
+     * `new_account_alert` mails DiveDay about a shop owner. Before this column
+     * a live row for either survived an erasure until it drained, because
+     * neither handle could see it and no `->>` probe can be added to a sealed
+     * payload (issue #1298).
+     *
+     * It is written from `notificationSubjectEmail`
+     * (`src/lib/notifications/kinds.ts`), and `kinds.test.ts` fails on a kind
+     * that declares an address that function has forgotten — so this is not
+     * one more thing to remember the next time a subject and a recipient come
+     * apart.
      */
     recipientEmail: text("recipient_email"),
+    subjectEmail: text("subject_email"),
     bookingId: uuid("booking_id"),
     status: notificationQueueStatus("status").notNull().default("queued"),
     attempts: integer("attempts").notNull().default(0),
