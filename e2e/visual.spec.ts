@@ -920,6 +920,43 @@ const CAPTURE_TRANSITIONS_OFF = `
 `;
 
 /**
+ * **Wait for a fragment-opened page to have finished scrolling itself.**
+ *
+ * A `page.goto("/x#y")` scrolls twice: the browser's own fragment navigation
+ * runs first, and `ScrollToHash` (`src/components/ScrollToHash.tsx`) scrolls
+ * again on mount, because a Next client transition would otherwise leave the
+ * anchor a thousand pixels below the fold. Between those two the page is at a
+ * scroll position neither of them chose.
+ *
+ * That matters here and almost nowhere else. Chromium paints a `position:
+ * fixed` element into the strip that is under it when that strip is
+ * rasterized, so a full-page screenshot taken across the two scrolls stitches
+ * the shop header and the staff dock at whatever offset it caught — which is
+ * how `trip-guests-deal-seeded` reported itself changed on a branch whose whole
+ * diff was vitest sharding, with 234 of 2,529 rows differing and a **0.0%**
+ * cross-match proving the bands had relocated rather than re-rendered (issue
+ * #1304).
+ *
+ * `paintWholeDocument`'s own `scrollTo(0, 0)` closes the window *after* the
+ * second scroll; this closes it before the first screenshot is even prepared,
+ * so there is one scroll to settle rather than two to race. Call it after the
+ * usual content wait and before `capture`, on any surface opened at a
+ * `#fragment`.
+ *
+ * It is not a timing guess: `ScrollToHash` stamps `data-hash-landed` in every
+ * branch it can return through, including the ones that scroll nothing, so
+ * this resolves on the page's own signal or fails saying the page never sent
+ * one.
+ */
+async function waitForHashLanding(page: Page) {
+  await page.waitForFunction(
+    () => document.documentElement.hasAttribute("data-hash-landed"),
+    undefined,
+    { timeout: 15_000 },
+  );
+}
+
+/**
  * Runs `shoot` with {@link CAPTURE_TRANSITIONS_OFF} installed, and takes it
  * back out afterwards. Scoped rather than global because the tests keep running
  * after a capture: `useExitAnimation` and friends wait on a real `transitionend`
@@ -3491,6 +3528,7 @@ for (const scheme of ["light", "dark"] as const) {
         // The `#last-minute-deal` anchor is what auto-opens the disclosure.
         await page.goto(`/shop/blue-mantis/trips/${tripId}#last-minute-deal`);
         await page.getByText("Open Water — unverified").waitFor();
+        await waitForHashLanding(page);
         await capture(page, "trip-guests-deal-recipients", scheme);
       });
 
@@ -3539,6 +3577,7 @@ for (const scheme of ["light", "dark"] as const) {
 
         await page.goto(`/shop/blue-mantis/trips/${tripId}#last-minute-deal`);
         await page.getByRole("heading", { name: "Nobody to send this to yet" }).waitFor();
+        await waitForHashLanding(page);
         await capture(page, "trip-guests-deal-below-requirement", scheme);
       });
 
@@ -3570,6 +3609,7 @@ for (const scheme of ["light", "dark"] as const) {
         const tripId = await seededTripId(page, "blue-mantis", "Night Dive — City of Washington");
         await page.goto(`/shop/blue-mantis/trips/${tripId}#last-minute-deal`);
         await page.getByText(/Open Water — unverified/).waitFor();
+        await waitForHashLanding(page);
         await capture(page, "trip-guests-deal-seeded", scheme);
       });
 
@@ -3615,6 +3655,7 @@ for (const scheme of ["light", "dark"] as const) {
           .locator("#roster")
           .getByText("Open Water · below this departure's minimum")
           .waitFor();
+        await waitForHashLanding(page);
         await capture(page, "trip-guests-waitlist", scheme);
       });
 
