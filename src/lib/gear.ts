@@ -521,3 +521,24 @@ export function groupUnitsForSize<T extends { label: string; size: string | null
   }
   return { exact, rest };
 }
+
+/**
+ * **How a rental set came home**, in the order a counter reads them (issue
+ * #1186, delight report D26).
+ *
+ * "All good" first and by a distance: it is the answer for almost every set,
+ * and the whole point of the pane is that the ordinary evening costs one tap.
+ * The two exceptions follow, and they are the only ones that open a further
+ * field — a service concern must carry words a technician can act on, which
+ * `returnTripGearSet` enforces rather than the form.
+ *
+ * Framework-free and shared, so the pg enum, the action's schema and the
+ * buttons cannot drift into three different lists.
+ */
+export const GEAR_RETURN_OUTCOMES = ["all_good", "fit_adjusted", "service_concern"] as const;
+export type GearReturnOutcome = (typeof GEAR_RETURN_OUTCOMES)[number];
+
+/** The one outcome that asks for words before it will be written. */
+export function gearReturnOutcomeNeedsNote(outcome: string): boolean {
+  return outcome === "service_concern";
+}

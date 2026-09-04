@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { gearServiceState, tripReservationWindow } from "@/lib/gear";
 import { seededShopContext } from "@/test/db";
@@ -27,6 +27,7 @@ import {
   reserveGearUnit,
   restoreGearItem,
   returnGearReservation,
+  returnTripGearSet,
   setGearItemStatus,
   updateGearItem,
 } from "./gear";
@@ -1405,5 +1406,155 @@ describe("a departure that moves takes its gear with it", () => {
     // schedule edit the crew has already agreed with a customer.
     const [trip] = await db.select().from(trips).where(eq(trips.id, maya.trip.id));
     expect(trip?.startsAt.toISOString()).toBe("2026-09-08T12:00:00.000Z");
+  });
+});
+
+/**
+ * **A rental set comes home in one act, and says how it went** (issue #1186,
+ * delight report D26).
+ *
+ * The set rather than the piece, because that is what a counter is handed at
+ * 4pm. The outcome is asked once and written to every unit that was actually
+ * out — which is also what stops the fast path from becoming the paperwork it
+ * replaces.
+ */
+describe("returning a whole rental set", () => {
+  async function aSetOut(db: AppDb, shopId: string) {
+    const bcd = mustCreate(
+      await createGearItem(db, { shopId, kind: "bcd", label: "BCD #21", size: "M" }),
+    );
+    const reg = mustCreate(
+      await createGearItem(db, { shopId, kind: "regulator", label: "Reg #21" }),
+    );
+    const diver = await shopBooking(db, shopId, "Nadia Osei");
+    const ids: string[] = [];
+    for (const unit of [bcd, reg]) {
+      const reserved = await reserveGearUnit(db, {
+        shopId,
+        gearItemId: unit.id,
+        bookingId: diver.bookingId,
+        reservedFrom: "2026-09-10",
+        reservedUntil: "2026-09-11",
+      });
+      if (!reserved.ok) throw new Error("reserve failed");
+      await checkOutGearReservation(db, { shopId, reservationId: reserved.reservation.id });
+      ids.push(reserved.reservation.id);
+    }
+    return { bookingId: diver.bookingId, reservationIds: ids };
+  }
+
+  async function outcomesOf(db: AppDb, ids: string[]) {
+    const rows = await db
+      .select({
+        id: gearReservations.id,
+        returnedAt: gearReservations.returnedAt,
+        outcome: gearReservations.returnOutcome,
+        note: gearReservations.returnNote,
+      })
+      .from(gearReservations)
+      .where(inArray(gearReservations.id, ids));
+    return rows;
+  }
+
+  it("closes every unit in the set with the one answer the counter gave", async () => {
+    const { db, shop } = await gearShopContext();
+    const { bookingId, reservationIds } = await aSetOut(db, shop.id);
+
+    expect(
+      await returnTripGearSet(db, { shopId: shop.id, bookingId, outcome: "all_good" }),
+    ).toEqual({ ok: true });
+
+    const rows = await outcomesOf(db, reservationIds);
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.returnedAt).toBeInstanceOf(Date);
+      expect(row.outcome).toBe("all_good");
+    }
+  });
+
+  it("refuses a service concern with no words, and writes nothing", async () => {
+    // A flag a technician cannot act on is worse than no flag, and the set must
+    // not be half-closed on the way to finding that out.
+    const { db, shop } = await gearShopContext();
+    const { bookingId, reservationIds } = await aSetOut(db, shop.id);
+
+    expect(
+      await returnTripGearSet(db, { shopId: shop.id, bookingId, outcome: "service_concern" }),
+    ).toEqual({ ok: false, reason: "concern_needs_words" });
+    for (const row of await outcomesOf(db, reservationIds)) {
+      expect(row.returnedAt).toBeNull();
+      expect(row.outcome).toBeNull();
+    }
+
+    expect(
+      await returnTripGearSet(db, {
+        shopId: shop.id,
+        bookingId,
+        outcome: "service_concern",
+        note: "second stage free-flowed on the descent",
+      }),
+    ).toEqual({ ok: true });
+    for (const row of await outcomesOf(db, reservationIds)) {
+      expect(row.outcome).toBe("service_concern");
+      expect(row.note).toBe("second stage free-flowed on the descent");
+    }
+  });
+
+  it("says nothing is out rather than reporting a success", async () => {
+    // A staffer who taps Return on a set somebody else already brought back
+    // should be told, not reassured — the same reason the single-unit path
+    // distinguishes `already_returned` from a silent no-op.
+    const { db, shop } = await gearShopContext();
+    const { bookingId } = await aSetOut(db, shop.id);
+    expect(
+      await returnTripGearSet(db, { shopId: shop.id, bookingId, outcome: "all_good" }),
+    ).toEqual({ ok: true });
+    expect(
+      await returnTripGearSet(db, { shopId: shop.id, bookingId, outcome: "all_good" }),
+    ).toEqual({ ok: false, reason: "not_found" });
+  });
+
+  it("leaves a unit that never left the counter alone", async () => {
+    // Reserved is not out. Closing it would erase the assignment rather than
+    // record a return, and the register's release is the honest path for that.
+    const { db, shop } = await gearShopContext();
+    const { bookingId, reservationIds } = await aSetOut(db, shop.id);
+    const stillOnTheWall = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "fins", label: "Fins #21" }),
+    );
+    const reserved = await reserveGearUnit(db, {
+      shopId: shop.id,
+      gearItemId: stillOnTheWall.id,
+      bookingId,
+      reservedFrom: "2026-09-10",
+      reservedUntil: "2026-09-11",
+    });
+    if (!reserved.ok) throw new Error("reserve failed");
+
+    expect(
+      await returnTripGearSet(db, { shopId: shop.id, bookingId, outcome: "all_good" }),
+    ).toEqual({ ok: true });
+
+    const [untouched] = await outcomesOf(db, [reserved.reservation.id]);
+    expect(untouched?.returnedAt).toBeNull();
+    expect(untouched?.outcome).toBeNull();
+    expect(await outcomesOf(db, reservationIds)).toHaveLength(2);
+  });
+
+  it("leaves the outcome null when a reservation is closed without asking", async () => {
+    // The cancellation path and the register's quick return close a row with
+    // nobody looking at the gear. Null there means "nobody said", and putting
+    // the reassuring answer on those is what would make the other two not worth
+    // reading.
+    const { db, shop } = await gearShopContext();
+    const { reservationIds } = await aSetOut(db, shop.id);
+    const [first] = reservationIds;
+    if (!first) throw new Error("expected a reservation");
+    expect(await returnGearReservation(db, { shopId: shop.id, reservationId: first })).toEqual({
+      ok: true,
+    });
+    const [row] = await outcomesOf(db, [first]);
+    expect(row?.returnedAt).toBeInstanceOf(Date);
+    expect(row?.outcome).toBeNull();
   });
 });

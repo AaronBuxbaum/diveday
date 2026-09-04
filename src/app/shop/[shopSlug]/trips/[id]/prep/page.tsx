@@ -35,8 +35,9 @@ import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices"
 import { uuidParam } from "@/lib/uuid";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
 import { TripSurfaceNav } from "../_components/TripSurfaceNav";
+import { GearReturnPane } from "./_components/GearReturnPane";
 import { RentalUnitPicker } from "./_components/RentalUnitPicker";
-import { assignGearUnit, releaseGearUnitAction } from "./actions";
+import { assignGearUnit, releaseGearUnitAction, returnTripGearSetAction } from "./actions";
 
 /** `?notice=` codes the gear-assignment forms redirect back with. Read through
  * `noticeFromParam`, never a bare index — the param is attacker-supplied. */
@@ -51,6 +52,9 @@ const GEAR_NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> =
   "gear-invalid-window": { tone: "danger", key: "gear.notice.invalid" },
   "gear-invalid": { tone: "danger", key: "gear.notice.invalid" },
   "gear-already-returned": { tone: "warning", key: "gear.notice.alreadyReturned" },
+  "gear-returned-set": { tone: "success", key: "gear.notice.returnedSet" },
+  "gear-concern-needs-words": { tone: "warning", key: "gear.notice.concernNeedsWords" },
+  "gear-nothing-out": { tone: "warning", key: "gear.notice.nothingOut" },
 };
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -843,6 +847,26 @@ export default async function TripPrepPage({
                           </dd>
                         </div>
                       ))}
+                      {/* **The set comes home in one act** (issue #1186, D26).
+                          Only when something is actually out: a diver whose
+                          units are still on the wall has nothing to return, and
+                          a pane offering to close a set that never left would
+                          be the paperwork this replaces rather than the removal
+                          of it. */}
+                      {assigned.some((assignment) => assignment.checkedOutAt !== null) ? (
+                        <GearReturnPane
+                          tripId={tripId}
+                          bookingId={diver.bookingId}
+                          action={returnTripGearSetAction}
+                          labels={{
+                            allGood: t("gear.prep.returnAllGood"),
+                            fitAdjusted: t("gear.prep.returnFitAdjusted"),
+                            serviceConcern: t("gear.prep.returnServiceConcern"),
+                            noteLabel: t("gear.prep.returnNoteLabel"),
+                            notePlaceholder: t("gear.prep.returnNotePlaceholder"),
+                          }}
+                        />
+                      ) : null}
                       {wanted.map((item) => {
                         const kindLabel = gearItemKindLabel(t, item.kind);
                         const pieceLabel = item.size

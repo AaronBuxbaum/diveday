@@ -6166,6 +6166,29 @@ export const gearItemKind = pgEnum("gear_item_kind", [
 export const gearItemStatus = pgEnum("gear_item_status", ["in_service", "needs_service"]);
 
 /**
+ * **How a rental set came home** (issue #1186, delight report D26).
+ *
+ * Three answers, and the first is the one a counter gives at 4pm on almost
+ * every set: the gear is back and there is nothing to say. The other two are
+ * exceptions and are the only ones that open any further detail.
+ *
+ * `fit_adjusted` is a fact about the *diver* — the size on file was not the
+ * size that worked. `service_concern` is a fact about the *unit*.
+ *
+ * A `service_concern` deliberately does **not** write a `gear_service_events`
+ * row. Those drive the clocks a shop uses to decide when a regulator gets bench
+ * time, and a busy desk tapping "concern" for a scratched mask would turn "this
+ * needs a technician" into "somebody was mildly annoyed" — the way any
+ * badly-tuned alert dies. It raises a flag a technician promotes deliberately,
+ * which keeps the service record something somebody chose to write.
+ */
+export const gearReturnOutcome = pgEnum("gear_return_outcome", [
+  "all_good",
+  "fit_adjusted",
+  "service_concern",
+]);
+
+/**
  * What kind of care a service event records. `service` is the manufacturer
  * service (regulators, BCDs, computers); `hydro_test` and `visual_inspection`
  * are a tank's two independent compliance clocks; `o2_clean` is the nitrox
@@ -6350,7 +6373,23 @@ export const gearReservations = pgTable(
     checkedOutAt: timestamp("checked_out_at", { withTimezone: true }),
     /** When it came home. Non-null ends the reservation and frees the window. */
     returnedAt: timestamp("returned_at", { withTimezone: true }),
-    /** Condition on return, when worth writing down ("torn strap, needs look"). */
+    /**
+     * **How it came home** (issue #1186). Null on a row returned before this
+     * existed, and on the two paths that still close a reservation without
+     * asking — a cancelled booking letting go of what it never collected, and
+     * the unit page's own quick return. Absent means "nobody said", never
+     * "all good": inventing the reassuring answer for a row nobody answered is
+     * exactly what makes the other two worth reading.
+     */
+    returnOutcome: gearReturnOutcome("return_outcome"),
+    /**
+     * Condition on return, when worth writing down ("torn strap, needs look").
+     *
+     * Required by the writer when the outcome is `service_concern` and refused
+     * as the whole record on its own: a flag with no words is a note a
+     * technician cannot act on. Written since the register shipped and read by
+     * nothing at all until #1186 — the detail was there and invisible.
+     */
     returnNote: text("return_note"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

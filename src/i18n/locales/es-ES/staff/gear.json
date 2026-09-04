@@ -134,7 +134,10 @@
     "divesNeedADate": "Un número de inmersiones necesita una fecha al lado, porque la unidad vence con lo que ocurra primero.",
     "importEmpty": "Elige un CSV de equipo para importar.",
     "importNoGearColumn": "El archivo no tiene una columna de etiqueta del equipo. Usa la plantilla.",
-    "imported": "Se importaron {events} eventos de mantenimiento en {units} unidades nuevas y {assignments} asignaciones históricas. Se dejaron {skipped} eventos duplicados y {assignmentSkipped} asignaciones sin cambios."
+    "imported": "Se importaron {events} eventos de mantenimiento en {units} unidades nuevas y {assignments} asignaciones históricas. Se dejaron {skipped} eventos duplicados y {assignmentSkipped} asignaciones sin cambios.",
+    "returnedSet": "De vuelta en la estantería.",
+    "concernNeedsWords": "Para revisar un equipo hace falta una línea que diga qué pasó, para que el técnico pueda actuar.",
+    "nothingOut": "De ese conjunto no hay nada fuera."
   },
   "import": {
     "eyebrow": "Ajustes",
@@ -213,7 +216,10 @@
       "delete": "Eliminar unidad",
       "deleting": "Eliminando…",
       "deleteHeld": "{name} tiene esta unidad hasta el {until}. Libérala o márcala como devuelta primero."
-    }
+    },
+    "returnOutcomeAllGood": "Volvió bien",
+    "returnOutcomeFitAdjusted": "Talla ajustada al devolverlo",
+    "returnOutcomeServiceConcern": "Equipo a revisar"
   },
   "prep": {
     "heading": "Asignaciones de alquiler",
@@ -236,7 +242,12 @@
     "pickUnit": "Elige una unidad…",
     "groupExactSize": "Talla {size}",
     "groupOtherSizes": "Otras tallas libres",
-    "groupFree": "Libres para estas fechas"
+    "groupFree": "Libres para estas fechas",
+    "returnAllGood": "Todo bien",
+    "returnFitAdjusted": "Talla ajustada",
+    "returnServiceConcern": "Revisar equipo",
+    "returnNoteLabel": "Qué contarle al técnico",
+    "returnNotePlaceholder": "Correa rota, la segunda etapa se disparó"
   },
   "ticket": {
     "eyebrow": "Alquiler",
