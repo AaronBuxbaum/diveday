@@ -556,7 +556,10 @@ new domain concept, define it here in the same PR.
   diver:divemaster ratio** below, fires `uncrewed_departure`/`crew_below_target` instead —
   `courseCrewGap` wins when both would apply to the same course session, so one departure never
   carries two rows for one underlying fact (issue #732). Formerly "coverage gap", which named a second
-  vocabulary that no longer exists.
+  vocabulary that no longer exists. **The four words a staffer reads** are "No crew", "Under target",
+  "Course needs instructor" and "Over student ratio" — the last says *student* precisely because it is
+  the agency cap and not the target two rows down, and the two sit in the same 135px column of the
+  staffing week (issue #1125).
 - **Integrity-sealed waiver** — a signed waiver whose immutable metadata and template snapshot have
   a matching server-sealed HMAC. `unsealed` means legacy or imported evidence has no seal yet;
   `invalid` means staff must stop and investigate.

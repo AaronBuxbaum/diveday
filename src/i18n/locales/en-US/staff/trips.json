@@ -114,8 +114,8 @@
     "seatsFull": "Full boat — {capacity, plural, one {the # seat is booked} other {all # seats booked}}",
     "aboard": "{count} aboard",
     "blocked": "{count, plural, one {# diver can’t board yet} other {# divers can’t board yet}}",
-    "needsInstructor": "This course session has no instructor yet",
-    "overRatio": "More divers booked than the crew can supervise",
+    "needsInstructor": "Course needs instructor",
+    "overRatio": "Over student ratio",
     "prepGaps": "{count, plural, one {# diver is missing rental sizes} other {# divers are missing rental sizes}}",
     "awaitingPayment": "{count, plural, one {# order is awaiting payment} other {# orders are awaiting payment}}"
   },

@@ -249,7 +249,21 @@ export default async function ManageTripPage({
         // A course session whose crew can't cover it is a can-this-boat-sail fact
         // in the pulse's exact register — until it surfaces here, the strip's
         // quiet reads as an all clear the Crew panel three screens down would
-        // contradict. The panel keeps the full sentence; this is the door to it.
+        // contradict. The panel keeps the full sentence; this is the door to it,
+        // and since #1125 these two read at the length a door is. They used to
+        // be whole sentences ("This course session has no instructor yet"),
+        // which the staffing week's ~135px day column — the *other* surface
+        // rendering these two keys — wrapped onto four lines beside its
+        // two-word codes.
+        //
+        // Shortened to a requirement rather than a state, on a
+        // `dive-domain-expert` read: a fun dive with no instructor is an
+        // ordinary Tuesday, and a course session without one cannot take a
+        // single enrolment. "No instructor" described the harmless one. And
+        // "Over student ratio" rather than "Over ratio" because DiveDay has two
+        // ratios and the other one renders in the same column as "Under target"
+        // — the agency's published training cap refuses seats, the shop's own
+        // diver:divemaster target binds nothing (docs/product/glossary.md).
         ...(crewGap.code === "no_instructor"
           ? [
               {

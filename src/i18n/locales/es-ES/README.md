@@ -121,6 +121,27 @@ reading two names for one thing — which is the exact confusion the English fix
 and *ficha* below no longer names a dive-site record — it was doing the job the English word
 "briefing" wrongly did.
 
+## The supervision ratio is **la ratio**, feminine, and it is *excedida* rather than *fuera*
+
+DiveDay counts two different ratios and both reach a Spanish reader (`docs/product/glossary.md`
+warns not to confuse them): the agency's published training cap, which refuses seats, and the
+shop's own diver:divemaster target, which binds nothing.
+
+- **The noun is `ratio`, and it is feminine** — *la ratio*, as `staff/shared.json` already renders
+  it in the entry-level cap sentence. LatAm instructors say it colloquially, and *proporción* is the
+  word agency course materials use; the two are both defensible and the point of this row is that
+  the bundle picks one. Anything agreeing with it agrees in the feminine: *ratio excedida*.
+- **Exceeding it is `excedida`, never `fuera de`.** *Fuera de* reads both ways in Spanish —
+  *fuera de rango* is "past it", but *fuera de cupo* is "excluded from it" — and the second reading
+  is the opposite of the fact. So the chip is **"Ratio de alumnos excedida"**, and it says *de
+  alumnos* because the other ratio sits one column away wearing **"Bajo el objetivo"** (issue #1125).
+- **Never *fuera de proporción*.** In Spanish that means *disproportionate*, which is a judgement
+  about the shop rather than a count of divers.
+
+A crew shortfall on a course session is a requirement, not a state: **"El curso necesita
+instructor"**, not *"Sin instructor"*. A fun dive without an instructor is an ordinary day; a course
+session without one cannot take a single enrolment, and *sin* describes the harmless one.
+
 ## The waiver is **la exención**
 
 One document, one word — settled 2026-08-14, after a sweep found the marketing bundle promising to
