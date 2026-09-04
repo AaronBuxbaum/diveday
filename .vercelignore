@@ -42,6 +42,27 @@ coverage
 *.tsbuildinfo
 
 # ---------------------------------------------------------------------------
+# Prose and repository furniture. `scripts/vercel-build.mjs` runs
+# check-migrations, check-migration-graph, db:migrate and `pnpm build`, and none
+# of them opens any of this. Every reference to `docs/` under `src/` is a link
+# inside a comment, not a read — checked before excluding.
+#
+# `docs/` is the big one: 472 files, 5,725,158 bytes on disk, **2,085,157 bytes
+# gzipped — 8.9% of the whole 23.6 MB upload.** It is the largest thing in the
+# tarball that nothing in the build can see.
+docs
+.claude
+.github
+
+# ---------------------------------------------------------------------------
+# A build output that only *looks* like a source file. `public/manifest-sw.js`
+# is written by `scripts/build-service-worker.mjs` from `src/worker/manifest-sw.ts`,
+# and `pnpm build` is `pnpm build:sw && next build` — so Vercel regenerates it
+# and the copy sitting in a developer's working tree is stale by definition.
+# It is gitignored, which is exactly why the CLI could not see it.
+public/manifest-sw.js
+
+# ---------------------------------------------------------------------------
 # Deliberately NOT excluded, each for a reason worth knowing before you add it:
 #
 #   patches/          `pnpm-workspace.yaml` declares a patchedDependency there;
