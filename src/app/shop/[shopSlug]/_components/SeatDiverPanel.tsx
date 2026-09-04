@@ -16,8 +16,6 @@ export type SeatDiverPanelCopy = {
   findHeading: string;
   findLabel: string;
   findPlaceholder: string;
-  search: string;
-  searching: string;
   noEmailOnFile: string;
   adding: string;
   addLabel: string;
@@ -146,8 +144,6 @@ export function SeatDiverPanel({
           hiddenFields={searchHiddenFields}
           label={copy.findLabel}
           placeholder={copy.findPlaceholder}
-          submitLabel={copy.search}
-          pendingLabel={copy.searching}
           addDiverHref={!query ? addHref : undefined}
           addDiverLabel={!query ? copy.addDiver || "Add diver" : undefined}
         />

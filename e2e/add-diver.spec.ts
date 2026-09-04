@@ -172,8 +172,12 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
 
   // Search the shop's existing people and add one by identity — their record,
   // not a re-typed name, lands on the roster.
+  // Enter submits the picker's GET form, before and after hydration. The
+  // secondary Search button beside it is gone (issue #1230): "Add diver" is
+  // the band's one primary, and pressing Enter in a search box is what the
+  // button was doing.
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill("Priya");
-  await addDiver.getByRole("button", { name: "Search" }).click();
+  await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
 
   const candidate = addDiver.getByRole("button", { name: "Add Priya Sharma to the trip" });
   await expect(candidate).toBeVisible();
@@ -188,7 +192,7 @@ test("staff adds a returning diver by picking them, no re-entry", async ({ page 
   // Picking the same diver again is no longer offered — the roster can't
   // double-book them.
   await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).fill("Priya");
-  await addDiver.getByRole("button", { name: "Search" }).click();
+  await addDiver.getByLabel("Find a returning diver").filter({ visible: true }).press("Enter");
   await expect(page.getByText(/No returning diver matches/)).toBeVisible();
 });
 

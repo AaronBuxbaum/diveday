@@ -739,9 +739,12 @@ diver roster's bare box, the dive-site library's bordered card with a "Find a si
 Search button, and the counter's captioned box with a "Search queue" button — and which one a page
 got was a function of when it was written. The Clearwater decision that demoted the orders filter
 card to a toolbar is the precedent (ADR 20260827-clearwater-surface-language, decision 7): a search
-is a toolbar control, and the glyph is what says so. The seat-diver picker (`PersonSearchForm`) is
-the one search that still carries a visible caption and a Search button: it is a step in a flow
-rather than a list's toolbar, and its button is a keyboard-reachable target the e2e suite drives.
+is a toolbar control, and the glyph is what says so. **There is no exception left.** The seat-diver
+picker (`PersonSearchForm`) was the last one — a visible "Find a returning diver" caption, a bare
+box, and a secondary Search button standing beside the band's own primary, which on a 390px phone
+wrapped the caption onto two lines and left the box about 130px wide. It wears `SearchField` as of
+issue #1230; Enter submits the GET form before and after hydration, which is all the button did,
+and "Add diver" is the band's one primary again.
 
 ## Action rows: one primary, not many
 

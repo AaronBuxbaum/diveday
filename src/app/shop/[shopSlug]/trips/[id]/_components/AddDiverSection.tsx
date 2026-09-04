@@ -135,8 +135,6 @@ export function AddDiverSection({
             query={query}
             label={t("trips.addDiver.findLabel")}
             placeholder={t("trips.addDiver.findPlaceholder")}
-            submitLabel={t("seatDiver.search")}
-            pendingLabel={t("seatDiver.searching")}
             addDiverHref={newDiverHref(shopSlug, {
               query,
               surface: "trip-guests",
