@@ -4,10 +4,9 @@ import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
 import { canonicalAgency, courseSlug } from "@/lib/courses";
-import { seededShopContext } from "@/test/db";
+import { seededShopContext, unseededTestDb } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
-import { createTestDb } from "./client";
 import { COURSE_TEMPLATES, courseTemplateSnapshot, getCourseTemplate } from "./course-templates";
 import {
   getCourseBySlug,
@@ -1441,7 +1440,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
 
 describe("sitemap queries (in-memory PGlite)", () => {
   it("includes a live shop's schedule and active course, and excludes hidden courses and demo shops", async () => {
-    const db = await createTestDb();
+    const db = await unseededTestDb();
     const [liveShop] = await db
       .insert(shops)
       .values({ name: "Live Shop", slug: "live-shop-sitemap", timezone: "America/New_York" })
@@ -1514,7 +1513,7 @@ describe("sitemap queries (in-memory PGlite)", () => {
  */
 describe("hasActiveCourses", () => {
   it("is false for a shop that teaches nothing, and never sees another shop's catalog", async () => {
-    const db = await createTestDb();
+    const db = await unseededTestDb();
     const [empty] = await db
       .insert(shops)
       .values({ name: "Empty Shop", slug: "empty-shop-nav", timezone: "America/New_York" })
@@ -1531,7 +1530,7 @@ describe("hasActiveCourses", () => {
   });
 
   it("goes false again when the shop's last course is hidden, and true when it comes back", async () => {
-    const db = await createTestDb();
+    const db = await unseededTestDb();
     const [shop] = await db
       .insert(shops)
       .values({ name: "Toggling Shop", slug: "toggling-shop-nav", timezone: "America/New_York" })
