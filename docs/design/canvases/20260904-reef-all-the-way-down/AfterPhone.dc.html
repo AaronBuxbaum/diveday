@@ -1,0 +1,144 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .sunk { background: var(--tideline); border-radius: 28px; }
+    .inset { border-radius: 18px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; box-sizing: border-box; }
+    .btn-p { background: var(--lagoon); color: #ffffff; }
+    .btn-s { background: var(--shell); color: var(--ink); border: 1px solid var(--rope); }
+    .btn-g { color: var(--muted); }
+    .btn-sm { height: 44px; padding: 0 12px; font-size: 14px; }
+    .row { display: flex; align-items: center; gap: 14px; min-height: 52px; border-top: 1px solid var(--rope); }
+    .kind { font-size: 13px; font-weight: 650; min-width: 96px; }
+    .act { font-size: 15px; font-weight: 600; color: var(--lagoon); white-space: nowrap; }
+    .tab { font-size: 15px; font-weight: 500; color: var(--muted); padding: 9px 14px; border-radius: 10px; white-space: nowrap; }
+    .sitetile { width: 84px; height: 60px; border-radius: 18px; background: var(--lagoon-wash); color: var(--lagoon-deep); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+    .src { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+    .src i { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; }
+    .h3 { font-size: 16px; font-weight: 600; }
+    .body { font-size: 14px; line-height: 1.55; }
+    .muted { color: var(--muted); }
+    .bm { --green: #13795a; --green-tint: #ecf4ef; }
+    .bm-display { font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; letter-spacing: -0.02em; }
+    .bm-btn { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 20px; border-radius: 10px; background: #13795a; color: #ffffff; font-size: 16px; font-weight: 500; white-space: nowrap; }
+    .pill { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--rope-strong); background: var(--shell); font-size: 14px; font-weight: 500; }
+    .kv { display: flex; align-items: baseline; gap: 10px; font-size: 13.5px; min-height: 26px; } .kv .num { white-space: nowrap; }
+    .door { display: flex; align-items: center; gap: 11px; min-height: 52px; border-top: 1px solid var(--rope); }
+  </style>
+</helmet>
+<div class="bm" style="width: 390px; height: 1720px; background: var(--sand); box-sizing: border-box; overflow: hidden; position: relative;">
+  <div style="padding: 28px 20px 0;">
+    <p class="eyebrow" style="color: #13795a;">Blue Mantis Divers</p>
+    <h1 class="bm-display" style="font-size: 28px; font-weight: 700; line-height: 1.12; margin-top: 8px;">Welcome back, Yara.</h1>
+    <p class="num" style="font-size: 14.5px; color: var(--muted); margin-top: 7px;">Two-Tank Reef &mdash; Molasses &amp; French &middot; Sat, Aug 29</p>
+
+    <!-- The postcard: the site in the hand, the day's facts once, the stamp. This is the part the image export carries (#1081) and the one place the private line goes (D33). -->
+    <div style="margin-top: 22px; border-radius: 28px; overflow: hidden; background: var(--shell); border: 1px solid var(--rope); box-shadow: var(--bed);">
+      <div style="height: 132px; background: var(--green-tint); position: relative; display: flex; align-items: center; justify-content: center;">
+        <svg width="350" height="30" viewBox="0 0 260 26" preserveAspectRatio="none" class="hand" style="position: absolute; left: 0; bottom: 8px; color: #13795a; opacity: .35;"><path d="M0 14c26-11 52-11 78 0s52 11 78 0 52-11 78 0 22 6 26 4"></path><path d="M0 22c26-11 52-11 78 0s52 11 78 0 52-11 78 0 22 6 26 4" opacity=".4"></path></svg>
+        <div style="width: 120px; height: 84px; border-radius: 18px; background: var(--shell); color: #0f6b52; display: flex; align-items: center; justify-content: center;">
+          <svg width="84" height="60" viewBox="0 0 120 80" class="hand">
+            <path d="M30 42c10-16 30-22 50-16 8 2 14 6 18 12-4 6-10 10-18 12-20 6-40 0-50-8Z" fill="#fffdf8"></path>
+            <path d="M30 42 16 30v24Z" fill="#fffdf8"></path>
+            <path d="M56 38c6-6 14-6 20 0M52 50c4 4 10 4 14 0"></path>
+            <path d="M64 34c2 3 2 7 0 10M72 33c2 3 2 8 0 11" opacity=".55"></path>
+            <circle cx="82" cy="37" r="2" fill="currentColor" stroke="none"></circle>
+            <circle cx="44" cy="44" r="3.2" fill="#ff6f61" stroke="none"></circle>
+          </svg>
+        </div>
+        <span style="position: absolute; right: 16px; top: 14px; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #13795a;">Dive day &numero; 3</span>
+      </div>
+      <div style="padding: 16px 18px 18px;">
+        <p class="bm-display" style="font-size: 20px; font-weight: 700;">Molasses &amp; French Reef</p>
+        <p class="num" style="font-size: 13px; color: var(--muted); margin-top: 2px;">Saturday, August 29, 2026 &middot; Mantis II &middot; Keiko Tanaka, Sal Moretti</p>
+        <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 2px;">
+          <div class="kv"><span style="color: var(--muted); width: 64px;">Dive 1</span><span style="font-weight: 600;">Molasses Reef</span><span class="num" style="margin-left: auto; color: var(--muted);">12 m to 12 m &middot; 48 minmiddot; 48 min</span></div>
+          <div class="kv"><span style="color: var(--muted); width: 64px;">Dive 2</span><span style="font-weight: 600;">French Reef</span><span class="num" style="margin-left: auto; color: var(--muted);">14 m to 14 m &middot; 44 minmiddot; 44 min</span></div>
+          <div class="kv"><span style="color: var(--muted); width: 64px;">Water</span><span class="num" style="font-weight: 600; white-space: nowrap;">27<div class="kv"><span style="color: var(--muted); width: 64px;">Water</span><span class="num" style="font-weight: 600;">27&deg;C &middot; 24 m vis &middot; calm</span>deg;C <div class="kv"><span style="color: var(--muted); width: 64px;">Water</span><span class="num" style="font-weight: 600;">27&deg;C &middot; 24 m vis &middot; calm</span>middot; 24 m <div class="kv"><span style="color: var(--muted); width: 64px;">Water</span><span class="num" style="font-weight: 600;">27&deg;C &middot; 24 m vis &middot; calm</span>middot; calm</span><span class="src" style="margin-left: auto;"><i style="background: #15803d;"></i>Observed</span></div>
+          <div class="kv"><span style="color: var(--muted); width: 64px;">Seen</span><span style="font-weight: 600;">Green turtle, spotted eagle ray</span></div>
+        </div>
+        <!-- D33: the private line. Only ever in the image the diver saves. Never sent, never stored here. -->
+        <div style="margin-top: 12px; padding: 10px 12px; border-radius: 12px; border: 1px dashed var(--rope-strong); font-size: 14px; font-style: italic; color: var(--muted);">A line for yourself &mdash; goes on the picture, stays on your phone</div>
+        <div style="margin-top: 12px; border-top: 1px solid var(--rope); padding-top: 12px; display: flex; align-items: center; gap: 10px;">
+          <p style="flex: 1; font-size: 12.5px; color: var(--muted);">Recorded by Blue Mantis Divers &middot; Key Largo</p>
+          <span style="font-size: 13.5px; font-weight: 600; color: #13795a;">Save as image</span>
+          <span style="font-size: 13.5px; font-weight: 600; color: #13795a;">Print</span>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin: 22px 0 0; font-size: 16.5px; line-height: 1.5;">&#8220;Yara found the eagle ray before I did &mdash; come back for the wreck.&#8221;</p>
+    <p style="margin: 6px 0 0; font-size: 13px; color: var(--muted);">Keiko, your divemaster</p>
+
+    <!-- The one ask -->
+    <div class="panel" style="margin-top: 22px; padding: 18px 18px 20px;">
+      <p class="bm-display" style="font-size: 20px; font-weight: 700;">How was it?</p>
+      <div style="display: flex; gap: 8px; margin-top: 12px;">
+        <svg width="36" height="36" viewBox="0 0 16 16" fill="#ff6f61"><path d="M8 1l2 4.6 5 .5-3.8 3.3 1.2 4.9L8 11.7 3.6 14.3l1.2-4.9L1 6.1l5-.5Z"></path></svg><svg width="36" height="36" viewBox="0 0 16 16" fill="#ff6f61"><path d="M8 1l2 4.6 5 .5-3.8 3.3 1.2 4.9L8 11.7 3.6 14.3l1.2-4.9L1 6.1l5-.5Z"></path></svg><svg width="36" height="36" viewBox="0 0 16 16" fill="#ff6f61"><path d="M8 1l2 4.6 5 .5-3.8 3.3 1.2 4.9L8 11.7 3.6 14.3l1.2-4.9L1 6.1l5-.5Z"></path></svg><svg width="36" height="36" viewBox="0 0 16 16" fill="#ff6f61"><path d="M8 1l2 4.6 5 .5-3.8 3.3 1.2 4.9L8 11.7 3.6 14.3l1.2-4.9L1 6.1l5-.5Z"></path></svg><svg width="36" height="36" viewBox="0 0 16 16" fill="#e6dcc8"><path d="M8 1l2 4.6 5 .5-3.8 3.3 1.2 4.9L8 11.7 3.6 14.3l1.2-4.9L1 6.1l5-.5Z"></path></svg>
+      </div>
+      <div style="margin-top: 12px; min-height: 72px; border: 1px solid var(--rope-strong); border-radius: 10px; background: var(--shell); padding: 10px 12px; font-size: 14.5px; color: var(--muted);">A few words, if you like. The shop reads it first.</div>
+      <span class="bm-btn" style="width: 100%; margin-top: 12px;">Send the review</span>
+      <!-- D40: the private pulse, beside the review, never in it -->
+      <p style="margin-top: 16px; font-size: 13.5px; font-weight: 600;">Anything we should fix? <span style="font-weight: 400; color: var(--muted);">just for the shop</span></p>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
+        <span class="pill">The gear</span><span class="pill">The briefing</span><span class="pill">The boat</span><span class="pill">Timing</span><span class="pill">Something else</span>
+      </div>
+      <p class="note" style="font-size: 12.5px; margin-top: 8px;">Dana reads these. If it&#8217;s about your gear, she&#8217;ll tell you what changed.</p>
+    </div>
+
+    <!-- D35: the next best dive, one card with its reason -->
+    <p class="glabel" style="margin-top: 26px;">Your next dive</p>
+    <div class="panel" style="margin-top: 8px; padding: 16px 18px; display: flex; align-items: center; gap: 14px;">
+      <div style="width: 56px; height: 40px; border-radius: 12px; background: var(--green-tint); color: #0f6b52; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="40" height="28" viewBox="0 0 120 80" class="hand" style="stroke-width: 2.2;"><path d="M20 34h14v14H20z" fill="#fffdf8"></path><path d="M34 36 96 20v42L34 46Z" fill="currentColor" fill-opacity=".14"></path><circle cx="84" cy="40" r="3" fill="currentColor" stroke="none"></circle></svg>
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <p style="font-size: 15px; font-weight: 600;">Wreck Trip &mdash; Spiegel Grove &middot; Sat, Sep 12</p>
+        <p class="note" style="font-size: 13px;">Keiko said the wreck. Your Advanced card covers it. 6 spots.</p>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+    </div>
+
+    <div style="margin-top: 22px;">
+      <div class="door"><span style="flex: 1; font-size: 15px; font-weight: 600;">Your photos</span><span class="num" style="font-size: 12.5px; color: var(--muted);">2 added</span><svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="color: var(--muted); stroke-width: 1.8;"><path d="M3 4.5 6 7.5 9 4.5"></path></svg></div>
+      <div class="door" style="border-bottom: 1px solid var(--rope);"><span style="flex: 1; font-size: 15px; font-weight: 600;">Tip the crew</span><svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="color: var(--muted); stroke-width: 1.8;"><path d="M3 4.5 6 7.5 9 4.5"></path></svg></div>
+    </div>
+    <p style="margin-top: 26px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12.5px; color: var(--muted);">
+      <svg width="16" height="16" viewBox="0 0 64 64" fill="none"><circle cx="22" cy="44" r="12" stroke="#54676d" stroke-width="3"></circle><circle cx="40" cy="26" r="8" stroke="#54676d" stroke-width="3"></circle><circle cx="52" cy="12" r="4.5" fill="#ff6f61"></circle></svg>
+      Bookings by DiveDay
+    </p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

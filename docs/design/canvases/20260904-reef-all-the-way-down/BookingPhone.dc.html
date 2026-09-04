@@ -1,0 +1,171 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .sunk { background: var(--tideline); border-radius: 28px; }
+    .inset { border-radius: 18px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; box-sizing: border-box; }
+    .btn-p { background: var(--lagoon); color: #ffffff; }
+    .btn-s { background: var(--shell); color: var(--ink); border: 1px solid var(--rope); }
+    .btn-g { color: var(--muted); }
+    .btn-sm { height: 44px; padding: 0 12px; font-size: 14px; }
+    .row { display: flex; align-items: center; gap: 14px; min-height: 52px; border-top: 1px solid var(--rope); }
+    .kind { font-size: 13px; font-weight: 650; min-width: 96px; }
+    .act { font-size: 15px; font-weight: 600; color: var(--lagoon); white-space: nowrap; }
+    .tab { font-size: 15px; font-weight: 500; color: var(--muted); padding: 9px 14px; border-radius: 10px; white-space: nowrap; }
+    .sitetile { width: 84px; height: 60px; border-radius: 18px; background: var(--lagoon-wash); color: var(--lagoon-deep); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+    .src { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+    .src i { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; }
+    .h3 { font-size: 16px; font-weight: 600; }
+    .body { font-size: 14px; line-height: 1.55; }
+    .muted { color: var(--muted); }
+    .bm { --green: #13795a; --green-tint: #ecf4ef; }
+    .bm-display { font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; letter-spacing: -0.02em; }
+    .bm-btn { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 20px; border-radius: 10px; background: #13795a; color: #ffffff; font-size: 16px; font-weight: 500; white-space: nowrap; }
+    .field { border: 1px solid var(--rope-strong); border-radius: 10px; background: var(--shell); min-height: 44px; display: flex; align-items: center; padding: 0 12px; font-size: 15px; box-sizing: border-box; }
+    .pill { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--rope-strong); background: var(--shell); font-size: 14.5px; font-weight: 500; }
+    .pill.on { background: #13795a; border-color: #13795a; color: #ffffff; }
+    .kv { display: flex; align-items: baseline; gap: 10px; font-size: 14.5px; min-height: 28px; }
+    .step { border-top: 1px solid var(--rope); padding: 14px 0; }
+  </style>
+</helmet>
+<div class="bm" style="width: 390px; height: 2140px; background: var(--sand); box-sizing: border-box; overflow: hidden; position: relative;">
+
+  <div style="height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 16px; background: var(--shell); border-bottom: 1px solid var(--rope); box-sizing: border-box;">
+    <svg width="26" height="26" viewBox="0 0 34 34" class="hand" style="color: #13795a;"><path d="M5.5 20.5c2.6-6.4 7.4-10.2 13.6-10.9"></path><path d="M19.1 9.6c4.4-.4 7.6 1.4 9.4 5.1"></path><path d="M28.5 14.7c-1.2 4.6-4.3 7.6-8.4 8.8"></path><path d="M8.9 15.7l1.6 3.1M12.3 13.1l1.8 3.2M16 11.3l1.7 3.3"></path><path d="M20.1 23.5c-3.1.9-5.9.2-8.2-1.8"></path><path d="M11.9 21.7l-4.6 3.6M11.9 21.7l-1 5.5"></path></svg>
+    <span class="bm-display" style="font-size: 18px; font-weight: 700;">Blue Mantis Divers</span>
+    <span style="margin-left: auto; font-size: 14px; font-weight: 600; color: #13795a;">Schedule</span>
+  </div>
+
+  <div style="padding: 22px 20px 0;">
+    <p class="eyebrow" style="color: #13795a;">&larr; This week</p>
+    <h1 class="bm-display" style="font-size: 30px; font-weight: 700; line-height: 1.1; margin-top: 8px;">Two-Tank Reef &mdash; Molasses &amp; French</h1>
+    <p class="num" style="font-size: 14.5px; color: var(--muted); margin-top: 8px;">Sat, Aug 29 &middot; 7:00 &ndash; 10:30 AM &middot; Mantis II</p>
+    <p style="font-size: 15px; margin-top: 10px; line-height: 1.5;">Two easy reef dives on the outer edge. The second tank is where the turtles are.</p>
+    <div style="display: flex; align-items: baseline; gap: 8px; margin-top: 12px;">
+      <span class="num" style="font-size: 30px; font-weight: 600; letter-spacing: -0.02em;">$95</span><span class="muted">per diver</span>
+      <span class="num" style="margin-left: auto; font-size: 14px; font-weight: 600;">4 spots left</span>
+    </div>
+
+    <!-- The pitch, bounded: three beats and one door. The shipped page runs 5,782px before the form; this one reaches it in a screen and a half. -->
+    <div style="margin-top: 20px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+      <span class="chip" style="background: var(--green-tint); color: #13795a;">Easygoing reef</span>
+      <span class="chip" style="background: var(--tideline); color: var(--ink);">Open Water or higher</span>
+      <span class="chip" style="background: var(--tideline); color: var(--ink);">to 14 m</span>
+    </div>
+
+    <div style="margin-top: 18px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
+      <div style="border-radius: 12px; overflow: hidden; background: linear-gradient(160deg, #13795a, #0a4d61); height: 76px; position: relative;"><span style="position: absolute; left: 8px; bottom: 6px; font-size: 10.5px; font-weight: 600; color: #fffdf8;">Parrotfish</span></div>
+      <div style="border-radius: 12px; overflow: hidden; background: linear-gradient(160deg, #0f6b52, #071720); height: 76px; position: relative;"><span style="position: absolute; left: 8px; bottom: 6px; font-size: 10.5px; font-weight: 600; color: #fffdf8;">Green turtle</span></div>
+      <div style="border-radius: 12px; overflow: hidden; background: linear-gradient(160deg, #0a4d61, #0c2a35); height: 76px; position: relative;"><span style="position: absolute; left: 8px; bottom: 6px; font-size: 10.5px; font-weight: 600; color: #fffdf8;">Elkhorn</span></div>
+      <div style="border-radius: 12px; background: var(--tideline); height: 76px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: var(--muted);">+ 7 more</div>
+    </div>
+    <p class="note" style="margin-top: 8px;">What Molasses Reef holds, from the shop&#8217;s field guide &middot; <span style="color: #13795a; font-weight: 600;">The site, the route, the crew &rarr;</span></p>
+
+    <!-- D01: also worth a look. Two alternates with their reasons, never a gate, never hidden. -->
+    <div style="margin-top: 22px;">
+      <p class="glabel">Also worth a look</p>
+      <div style="margin-top: 6px; display: flex; flex-direction: column;">
+        <div class="row" style="gap: 10px; min-height: 56px;">
+          <div style="flex: 1; min-width: 0;"><p style="font-size: 15px; font-weight: 600;">Fri 8:00 AM &middot; Benwood &amp; French</p><p class="why note" style="font-size: 13px;">Same two tanks, shallower, and the shop&#8217;s pick for a first dive back.</p></div>
+          <span class="num" style="font-size: 13.5px; font-weight: 600; white-space: nowrap;">7 spots</span>
+          <svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+        </div>
+        <div class="row" style="gap: 10px; min-height: 56px; border-bottom: 1px solid var(--rope);">
+          <div style="flex: 1; min-width: 0;"><p style="font-size: 15px; font-weight: 600;">Fri 1:00 PM &middot; Macro Afternoon</p><p class="why note" style="font-size: 13px;">One slow site for cameras, if that&#8217;s what this trip is for.</p></div>
+          <span class="num" style="font-size: 13.5px; font-weight: 600; white-space: nowrap;">4 spots</span>
+          <svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- The form: the page's terminal word -->
+    <div class="panel" style="margin-top: 26px; padding: 20px 18px 22px;">
+      <div style="display: flex; align-items: baseline; gap: 10px;">
+        <h2 class="bm-display" style="font-size: 24px; font-weight: 700;">Grab a spot</h2>
+        <span class="num" style="margin-left: auto; font-size: 13.5px; color: var(--muted);">4 left</span>
+      </div>
+
+      <p style="font-size: 13.5px; font-weight: 600; margin-top: 16px;">How many divers</p>
+      <div style="display: flex; gap: 8px; margin-top: 8px;">
+        <span class="pill on" style="min-width: 44px;">1</span><span class="pill" style="min-width: 44px;">2</span><span class="pill" style="min-width: 44px;">3</span><span class="pill">More</span>
+      </div>
+
+      <div style="margin-top: 16px;">
+        <p style="font-size: 13.5px; font-weight: 600;">Name</p>
+        <div class="field" style="margin-top: 6px;">Yara Halabi</div>
+        <p style="font-size: 13.5px; font-weight: 600; margin-top: 12px;">Email</p>
+        <div class="field" style="margin-top: 6px;">yara@demo.invalid</div>
+      </div>
+
+      <!-- D12: the intent question. One optional tap, plain words, and the crew sees only a count. -->
+      <div style="margin-top: 18px;">
+        <p style="font-size: 13.5px; font-weight: 600;">What&#8217;s this dive for? <span style="font-weight: 400; color: var(--muted);">optional</span></p>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+          <span class="pill">Getting comfortable again</span>
+          <span class="pill on">Small life &amp; photos</span>
+          <span class="pill">A wreck, someday</span>
+          <span class="pill">Practising skills</span>
+          <span class="pill">Just a good day out</span>
+        </div>
+        <p class="note" style="margin-top: 8px; font-size: 12.5px;">Your crew sees how many picked each, not who. <span style="color: #13795a; font-weight: 600;">Change it any time.</span></p>
+      </div>
+
+      <!-- D18: the rusty diver, offered a choice instead of a warning. Renders only when recency is old. -->
+      <div style="margin-top: 18px; padding: 14px 16px; border-radius: 18px; background: var(--tideline);">
+        <p style="font-size: 15px; font-weight: 600; line-height: 1.35;">Your last logged dive was four years ago. Welcome back.</p>
+        <p class="note" style="margin-top: 4px;">Pick whichever helps. None of these changes whether you can book.</p>
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
+          <span class="pill" style="justify-content: flex-start; background: var(--shell);">A five-minute refresher to read tonight</span>
+          <span class="pill on" style="justify-content: flex-start;">A word with the divemaster on deck</span>
+          <span class="pill" style="justify-content: flex-start; background: var(--shell);">See the Friday refresher course</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 18px; display: flex; flex-direction: column; gap: 6px;">
+        <div class="kv"><span style="flex: 1;">$95 &times; 1 diver</span><span class="num">$95.00</span></div>
+        <div class="kv" style="font-weight: 600; border-top: 1px solid var(--rope); padding-top: 8px;"><span style="flex: 1;">Due at the shop</span><span class="num">$95.00</span></div>
+      </div>
+      <span class="bm-btn" style="width: 100%; margin-top: 16px;">Book this spot</span>
+      <p class="note" style="margin-top: 10px; font-size: 12.5px; text-align: center;">You&#8217;ll get one link for the waiver, your sizes and the day-of details.</p>
+    </div>
+
+    <p class="note" style="margin-top: 22px; text-align: center;">Questions? <span class="num">+1 305 555 0142</span> &middot; hello@demo.invalid</p>
+    <p style="margin-top: 26px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12.5px; color: var(--muted);">
+      <svg width="16" height="16" viewBox="0 0 64 64" fill="none"><circle cx="22" cy="44" r="12" stroke="#54676d" stroke-width="3"></circle><circle cx="40" cy="26" r="8" stroke="#54676d" stroke-width="3"></circle><circle cx="52" cy="12" r="4.5" fill="#ff6f61"></circle></svg>
+      Bookings by DiveDay
+    </p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

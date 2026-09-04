@@ -1,0 +1,117 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .sunk { background: var(--tideline); border-radius: 28px; }
+    .inset { border-radius: 18px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; box-sizing: border-box; }
+    .btn-p { background: var(--lagoon); color: #ffffff; }
+    .btn-s { background: var(--shell); color: var(--ink); border: 1px solid var(--rope); }
+    .btn-g { color: var(--muted); }
+    .btn-sm { height: 44px; padding: 0 12px; font-size: 14px; }
+    .row { display: flex; align-items: center; gap: 14px; min-height: 52px; border-top: 1px solid var(--rope); }
+    .kind { font-size: 13px; font-weight: 650; min-width: 96px; }
+    .act { font-size: 15px; font-weight: 600; color: var(--lagoon); white-space: nowrap; }
+    .tab { font-size: 15px; font-weight: 500; color: var(--muted); padding: 9px 14px; border-radius: 10px; white-space: nowrap; }
+    .sitetile { width: 84px; height: 60px; border-radius: 18px; background: var(--lagoon-wash); color: var(--lagoon-deep); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+    .src { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+    .src i { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; }
+    .h3 { font-size: 16px; font-weight: 600; }
+    .body { font-size: 14px; line-height: 1.55; }
+    .muted { color: var(--muted); }
+    .lede { font-size: 17px; line-height: 1.5; color: var(--muted); }
+    .h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+    .n { width: 28px; height: 28px; border-radius: 999px; background: var(--lagoon-wash); color: var(--lagoon); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .r { display: flex; gap: 16px; align-items: flex-start; padding: 16px 0; border-top: 1px solid var(--rope); }
+    .tag { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .card { background: var(--shell); border: 1px solid var(--rope); border-radius: 18px; padding: 18px 20px; }
+  </style>
+</helmet>
+<div style="width: 1180px; min-height: 2260px; background: var(--sand); box-sizing: border-box; overflow: hidden; padding: 56px 60px;">
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 40px;">
+    <div style="max-width: 780px; display: flex; flex-direction: column; gap: 14px;">
+      <p class="eyebrow">Every surface &middot; every open idea &middot; 2026-09-04</p>
+      <h1 style="font-size: 44px; font-weight: 700; letter-spacing: -0.028em; line-height: 1.04;">Reef, all the way down.</h1>
+      <p class="lede">The direction was picked on September 1 and its tokens shipped the next day. The pictures did not: the app is Reef&#8217;s colours on Clearwater&#8217;s lists. This canvas takes the direction to the bottom of every surface a shop and a diver live in, decides all thirty-six open feature ideas, and widens the delight budget along one axis &mdash; <em>time</em> &mdash; while keeping every ban. Nothing here is normative; the ADR carries the decisions, three of them are the owner&#8217;s, and code obeys the ADR.</p>
+    </div>
+    <svg aria-hidden="true" viewBox="0 0 64 64" width="64" height="64" fill="none" style="flex-shrink: 0; margin-top: 8px;"><circle cx="22" cy="44" r="12" stroke="#0c2a35" stroke-width="2.5"></circle><circle cx="40" cy="26" r="8" stroke="#0c2a35" stroke-width="2.5"></circle><circle cx="52" cy="12" r="4.5" fill="#ff6f61"></circle></svg>
+  </div>
+
+  <div style="margin-top: 40px; display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 48px;">
+    <div>
+      <p class="tag">Three findings</p>
+      <div class="r" style="margin-top: 10px;"><span class="n">1</span><p class="body"><strong>The gap is composition, not colour.</strong> The home&#8217;s stations are a rail list where Reef drew panels; a settled boat is the busiest block on the page; an owner&#8217;s rare act sits at button weight beside every boat. Read from the running app, with numbers, on the Gap board.</p></div>
+      <div class="r"><span class="n">2</span><p class="body"><strong>The booking page is unbounded.</strong> 5,782px on a phone before the form. The thread ADR put the form last and was right; nobody bounded what came before it.</p></div>
+      <div class="r" style="border-bottom: 1px solid var(--rope);"><span class="n">3</span><p class="body"><strong>The product does not know what time it is.</strong> Between Reef&#8217;s three moments, nothing on any surface says a boat is out, that it is dusk, or that today is one the shop will remember. That is where the restraint costs delight, and where the budget widens.</p></div>
+
+      <p class="tag" style="margin-top: 36px;">The owner&#8217;s three (H-67)</p>
+      <div class="r" style="margin-top: 10px;"><span class="n" style="background: var(--coral-wash); color: var(--coral-deep);">a</span><p class="body">Whether the budget widens as drawn: the band follows the clock, the boat is the one drawing that moves, one fact of scale a day.</p></div>
+      <div class="r"><span class="n" style="background: var(--coral-wash); color: var(--coral-deep);">b</span><p class="body">D05&#8217;s revision counter: which edits bump it, and where it lives.</p></div>
+      <div class="r" style="border-bottom: 1px solid var(--rope);"><span class="n" style="background: var(--coral-wash); color: var(--coral-deep);">c</span><p class="body">The two words that print to a diver: &#8220;Dive day &numero; 3&#8221; on the postcard, and the crew&#8217;s stage words as the storefront shows them.</p></div>
+    </div>
+
+    <div>
+      <p class="tag">Five moves, in the order they land</p>
+      <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 12px;">
+        <div class="card"><p class="h2" style="font-size: 18px;">1 &middot; The station becomes a panel</p><p class="note" style="margin-top: 6px;">Home and HomePhone. A <code style="font-size: 12.5px;">SectionCard</code> per departure with the site tile leading, one sentence per row, the log door moved to the evening. The intent count, the welcome cue and the no-show row join as rows in the same grammar. The morning gets its fact of scale; the band gets its clock.</p></div>
+        <div class="card"><p class="h2" style="font-size: 18px;">2 &middot; The boat says where it is</p><p class="note" style="margin-top: 6px;">ManifestPhone, Home, Storefront, ThreadPhone. Five words the crew taps; a chip, a live panel, one line. The single feature that reaches every surface. The manifest also gets its catch-up strip and its plan-change door, and loses nothing the safety rules require.</p></div>
+        <div class="card"><p class="h2" style="font-size: 18px;">3 &middot; The booking page is bounded and the storefront gets the shop&#8217;s words</p><p class="note" style="margin-top: 6px;">BookingPhone and Storefront. Three tiles and a door where ten photographs were; two alternates with reasons; one optional question about what the dive is for; a kind offer to a diver who has been away. On the shopfront, the lens rail and &#8220;next with space&#8221;.</p></div>
+        <div class="card"><p class="h2" style="font-size: 18px;">4 &middot; The thread keeps what it knows</p><p class="note" style="margin-top: 6px;">ThreadPhone. One step, &#8220;Anything changed?&#8221;, over the facts the shop kept, each with its own door; the arrival card&#8217;s facts say where they came from; on the day, the link says the boat is back.</p></div>
+        <div class="card"><p class="h2" style="font-size: 18px;">5 &middot; The evening counts souls and explains itself</p><p class="note" style="margin-top: 6px;">Evening and AfterPhone. Divers and crew out, all back; a settled boat is the swell and two rows; the seats that stayed open get their facts. The diver&#8217;s postcard gains its number, its private line, the image to keep, the private pulse and the next dive with its reason.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 44px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+    <div>
+      <p class="tag">How to read the canvas</p>
+      <p class="body" style="margin-top: 10px;"><strong>This page</strong> argues: this cover, the Verdicts ledger (every issue, one line), the Budget sheet (the eight rules), and the Gap board (the running app beside the drawing, measured).</p>
+      <p class="body" style="margin-top: 8px;"><strong>Page 2</strong> shows: the home at 6:40 AM and 6:10 PM at 1440 and the morning at 390; the storefront at 1440; the booking page, the thread, the recap and the manifest at 390. Every board is Blue Mantis Divers on Thursday, August 27, 2026 &mdash; the fiction every canvas since Clearwater holds to &mdash; and every name on it is invented.</p>
+      <p class="body" style="margin-top: 8px;">Reef in Geist, as the owner decided: no second face on a staff surface. Harbor on the diver&#8217;s: the demo shop&#8217;s green and its chosen face, DiveDay a credit line.</p>
+    </div>
+    <div>
+      <p class="tag">What this canvas leaves alone</p>
+      <p class="body" style="margin-top: 10px;">The tokens, the radii, the type ladder and the bed (13a); the three shipped moments; the safety floor and every ban on the manifest, the roll call, the cert, the waiver and the payment; the coral count; the door order and the claims policy on the marketing pages; the schedule board, settings, orders and the counter, whose 2026-08-28 compositions read as drawn.</p>
+      <p class="body" style="margin-top: 8px;">Held, with their own waiting-on lines: the conservation receipt, the language cue cards, the return ritual (declined outright), and the consent grammar&#8217;s wording, which counsel decides. Adopted without a picture: ten issues whose shape the primitives already settle, listed on the Verdicts board.</p>
+    </div>
+  </div>
+
+  <div style="margin-top: 40px; padding: 22px 26px; border-radius: 28px; background: var(--shell); border: 1px solid var(--rope); box-shadow: var(--bed); display: flex; gap: 24px; align-items: center;">
+    <svg width="120" height="80" viewBox="0 0 120 80" class="hand" style="color: var(--lagoon-deep); flex-shrink: 0;"><path d="M18 50h84l-10 14H30Z" fill="#fffdf8"></path><path d="M46 50V36h26v14M58 36V22"></path><path d="M6 70c14-8 28-8 42 0s28 8 42 0 20-6 30-2"></path><path d="M96 30c3 2 3 6 0 8" opacity=".6"></path></svg>
+    <div>
+      <p style="font-size: 18px; font-weight: 600;">The hand gains its eighth drawing: the boat.</p>
+      <p class="note" style="margin-top: 4px; max-width: 800px;">A hull, a wheelhouse, the swell under it, one round cap on the mast. It is the only drawing that ever moves, and it moves once, when the crew says the boat has left. It appears on the home, the board and the storefront. It never appears on the manifest, where the boat is the thing you are standing on.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

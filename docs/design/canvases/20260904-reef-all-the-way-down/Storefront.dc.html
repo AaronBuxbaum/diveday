@@ -1,0 +1,261 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700;800&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .sunk { background: var(--tideline); border-radius: 28px; }
+    .inset { border-radius: 18px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; box-sizing: border-box; }
+    .btn-p { background: var(--lagoon); color: #ffffff; }
+    .btn-s { background: var(--shell); color: var(--ink); border: 1px solid var(--rope); }
+    .btn-g { color: var(--muted); }
+    .btn-sm { height: 44px; padding: 0 12px; font-size: 14px; }
+    .row { display: flex; align-items: center; gap: 14px; min-height: 52px; border-top: 1px solid var(--rope); }
+    .kind { font-size: 13px; font-weight: 650; min-width: 96px; }
+    .act { font-size: 15px; font-weight: 600; color: var(--lagoon); white-space: nowrap; }
+    .tab { font-size: 15px; font-weight: 500; color: var(--muted); padding: 9px 14px; border-radius: 10px; white-space: nowrap; }
+    .sitetile { width: 84px; height: 60px; border-radius: 18px; background: var(--lagoon-wash); color: var(--lagoon-deep); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+    .src { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+    .src i { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; }
+    .h3 { font-size: 16px; font-weight: 600; }
+    .body { font-size: 14px; line-height: 1.55; }
+    .muted { color: var(--muted); }
+    .bm { --green: #13795a; --green-hover: #0f6b52; --green-tint: #ecf4ef; --brand-ink: #0c2a35; }
+    .bm-display { font-family: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif; letter-spacing: -0.02em; }
+    .bm-btn { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 20px; border-radius: 10px; background: #13795a; color: #ffffff; font-size: 16px; font-weight: 500; white-space: nowrap; }
+    .bm-badge { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border: 1px solid var(--rope); border-radius: 999px; background: var(--shell); font-size: 13.5px; font-weight: 600; white-space: nowrap; }
+    .lens { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--rope); background: var(--shell); font-size: 14.5px; font-weight: 600; white-space: nowrap; }
+    .lens.on { background: #13795a; border-color: #13795a; color: #ffffff; }
+    .wrow { display: grid; grid-template-columns: 150px minmax(0, 1fr) 190px 110px 28px; align-items: center; column-gap: 18px; min-height: 60px; border-top: 1px solid var(--rope); }
+    .why { font-size: 13px; color: var(--muted); }
+  </style>
+</helmet>
+<div class="bm" style="width: 1440px; min-height: 2540px; background: var(--sand); box-sizing: border-box; overflow: hidden;">
+
+  <!-- The shop's own header, 72px -->
+  <div style="height: 72px; display: flex; align-items: center; gap: 32px; padding: 0 84px; background: var(--shell); border-bottom: 1px solid var(--rope); box-sizing: border-box;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <svg width="34" height="34" viewBox="0 0 34 34" class="hand" style="color: #13795a;"><path d="M5.5 20.5c2.6-6.4 7.4-10.2 13.6-10.9"></path><path d="M19.1 9.6c4.4-.4 7.6 1.4 9.4 5.1"></path><path d="M28.5 14.7c-1.2 4.6-4.3 7.6-8.4 8.8"></path><path d="M8.9 15.7l1.6 3.1M12.3 13.1l1.8 3.2M16 11.3l1.7 3.3"></path><path d="M20.1 23.5c-3.1.9-5.9.2-8.2-1.8"></path><path d="M11.9 21.7l-4.6 3.6M11.9 21.7l-1 5.5"></path><circle cx="21.6" cy="12.4" r="1.5"></circle><circle cx="25.4" cy="11.6" r="1.5"></circle></svg>
+      <span class="bm-display" style="font-size: 22px; font-weight: 700;">Blue Mantis Divers</span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 6px;">
+      <span class="tab" style="background: var(--green-tint); color: #13795a; font-weight: 600;">Schedule</span>
+      <span class="tab">Courses</span>
+      <span class="tab" style="display: inline-flex; align-items: center; gap: 6px;"><svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 1.6;"><circle cx="8" cy="8" r="6"></circle><path d="M2 8h12M8 2c2.5 2 2.5 10 0 12M8 2c-2.5 2-2.5 10 0 12"></path></svg>English</span>
+    </div>
+  </div>
+
+  <div style="width: 1120px; margin: 0 auto; padding: 32px 0 64px; display: flex; flex-direction: column; gap: 40px;">
+
+    <!-- Hero: the shop's photograph, its name in its face. The photo is the shop's own; drawn here as its water. -->
+    <div>
+      <div style="position: relative; height: 420px; border-radius: 28px; overflow: hidden; background: linear-gradient(160deg, #0f6b52 0%, #0a4d61 55%, #071720 100%); box-shadow: var(--bed);">
+        <svg width="1120" height="420" viewBox="0 0 1120 420" preserveAspectRatio="none" fill="none" stroke="#7fd0d6" stroke-width="1.4" stroke-linecap="round" style="position: absolute; inset: 0; opacity: .28;">
+          <path d="M0 300c140-40 280-40 420 0s280 40 420 0 200-30 280-10"></path>
+          <path d="M0 340c140-40 280-40 420 0s280 40 420 0 200-30 280-10" opacity=".6"></path>
+          <path d="M0 380c140-40 280-40 420 0s280 40 420 0 200-30 280-10" opacity=".35"></path>
+        </svg>
+        <span style="position: absolute; right: 22px; top: 18px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,.7); letter-spacing: .04em;">The shop&#8217;s photograph</span>
+        <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 120px 40px 34px; background: linear-gradient(180deg, rgba(12,42,53,0) 0%, rgba(12,42,53,.72) 70%); color: #fffdf8;">
+          <h1 class="bm-display" style="font-size: 56px; font-weight: 700; line-height: 1;">Blue Mantis Divers</h1>
+          <p style="font-size: 20px; margin-top: 10px; opacity: .92;">Small-boat reef and wreck diving out of Key Largo.</p>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 22px; margin-top: 18px;">
+        <p style="display: flex; align-items: center; gap: 8px; font-size: 16px;">
+          <svg width="88" height="16" viewBox="0 0 88 16" fill="#ff6f61"><path d="M8 1l2 4.6 5 .5-3.8 3.3 1.2 4.9L8 11.7 3.6 14.3l1.2-4.9L1 6.1l5-.5Z"></path><path d="M26 1l2 4.6 5 .5-3.8 3.3 1.2 4.9L26 11.7l-4.4 2.6 1.2-4.9L19 6.1l5-.5Z"></path><path d="M44 1l2 4.6 5 .5-3.8 3.3 1.2 4.9L44 11.7l-4.4 2.6 1.2-4.9L37 6.1l5-.5Z"></path><path d="M62 1l2 4.6 5 .5-3.8 3.3 1.2 4.9L62 11.7l-4.4 2.6 1.2-4.9L55 6.1l5-.5Z"></path><path d="M80 1l2 4.6 5 .5-3.8 3.3 1.2 4.9L80 11.7l-4.4 2.6 1.2-4.9L73 6.1l5-.5Z" fill="#e6dcc8"></path></svg>
+          <span class="num" style="font-weight: 600;">4.3</span><span class="muted num">&middot; 83 reviews</span>
+        </p>
+        <span class="bm-badge">Since 1998</span>
+        <span class="bm-badge"><svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: #13795a; stroke-width: 2;"><path d="M3 8.5l3.5 3.5L13 5"></path></svg>PADI 5 Star Dive Center</span>
+        <span class="bm-badge"><svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: #13795a; stroke-width: 2;"><path d="M3 8.5l3.5 3.5L13 5"></path></svg>Blue Star Operator</span>
+        <span class="bm-badge"><svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: #13795a; stroke-width: 2;"><path d="M3 8.5l3.5 3.5L13 5"></path></svg>Recommended on Tripadvisor</span>
+      </div>
+    </div>
+
+    <!-- The live line (D20, public half): only when the crew set a stage. The boat is the hand's eighth drawing. -->
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 24px; align-items: stretch;">
+      <div class="panel" style="padding: 26px 30px; display: flex; align-items: center; gap: 24px; background: var(--green-tint); border-color: #d7e6dc;">
+        <svg width="112" height="70" viewBox="0 0 120 80" class="hand" style="color: #0f6b52; flex-shrink: 0;">
+          <path d="M18 50h84l-10 14H30Z" fill="#fffdf8"></path>
+          <path d="M46 50V36h26v14M58 36V22"></path>
+          <path d="M6 70c14-8 28-8 42 0s28 8 42 0 20-6 30-2"></path>
+          <path d="M96 30c3 2 3 6 0 8" opacity=".6"></path>
+        </svg>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <p class="eyebrow" style="color: #13795a;">Right now</p>
+          <p class="bm-display" style="font-size: 26px; font-weight: 700; line-height: 1.15;">Mantis II is out on Molasses Reef.</p>
+          <p class="num" style="font-size: 15px; color: var(--muted);">Left the dock at 7:04 &middot; back around 10:30 &middot; 10 divers aboard <span class="src" style="margin-left: 6px;"><i style="background: var(--ink);"></i>Crew, 7:04 AM</span></p>
+        </div>
+      </div>
+      <div class="panel" style="padding: 24px 26px; display: flex; flex-direction: column; gap: 6px;">
+        <p class="eyebrow" style="color: #13795a;">Next boat with space</p>
+        <p class="num" style="font-size: 32px; font-weight: 600; letter-spacing: -0.02em; line-height: 1;">7:30 PM <span style="font-size: 17px; font-weight: 500; color: var(--muted);">tonight</span></p>
+        <p class="bm-display" style="font-size: 20px; font-weight: 600; margin-top: 2px;">Night Dive &mdash; City of Washington</p>
+        <p class="num" style="font-size: 14.5px; color: var(--muted);">5 spots left &middot; $120 per diver &middot; the 1:00 wreck is full</p>
+        <span class="bm-btn" style="margin-top: 12px; width: 100%;">Book this boat</span>
+      </div>
+    </div>
+
+    <!-- The lenses (D02): the shop's own words for its departures. A lens is a kind of day, never a level. -->
+    <div>
+      <div style="display: flex; align-items: baseline; gap: 16px;">
+        <h2 class="bm-display" style="font-size: 34px; font-weight: 700;">This week</h2>
+        <span class="muted">All times are Key Largo&#8217;s.</span>
+        <span style="margin-left: auto; font-size: 15px; font-weight: 600; color: #13795a;">September &rarr;</span>
+      </div>
+      <div style="display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap;">
+        <span class="lens on">Every boat</span>
+        <span class="lens">Easygoing reef</span>
+        <span class="lens">Wrecks</span>
+        <span class="lens">After dark</span>
+        <span class="lens">Small life &amp; cameras</span>
+        <span class="lens">First time back in a while</span>
+        <span class="lens">Learning</span>
+        <span class="lens" style="margin-left: auto; border-style: dashed;">Has space</span>
+      </div>
+
+      <div style="margin-top: 22px;">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0 10px;">
+          <span class="num" style="font-size: 30px; font-weight: 600; line-height: 1; letter-spacing: -0.02em;">27</span>
+          <span style="display: flex; flex-direction: column; line-height: 1.1;"><span style="font-size: 14px; font-weight: 700; letter-spacing: .16em;">THU</span><span style="font-size: 14px; font-weight: 500; letter-spacing: .16em; color: var(--muted);">AUG &middot; TODAY</span></span>
+          <span style="height: 1px; flex: 1; background: var(--rope);"></span>
+        </div>
+        <div class="wrow">
+          <span class="num" style="font-size: 16px; font-weight: 600; color: var(--muted);">7:00 &ndash; 10:30 AM</span>
+          <span><span style="font-size: 16px; font-weight: 600; color: var(--muted);">Two-Tank Reef &mdash; Molasses &amp; French</span><br><span class="why">Out now &middot; easygoing reef</span></span>
+          <span class="why">Open Water or higher</span>
+          <span class="num" style="font-size: 15px; color: var(--muted);">Underway</span>
+          <span></span>
+        </div>
+        <div class="wrow">
+          <span class="num" style="font-size: 16px; font-weight: 600;">1:00 &ndash; 5:00 PM</span>
+          <span><span style="font-size: 16px; font-weight: 600;">Wreck Trip &mdash; Spiegel Grove</span><br><span class="why">Wrecks &middot; deep, current possible</span></span>
+          <span class="why">Advanced &middot; Deep</span>
+          <span class="num" style="font-size: 15px; font-weight: 600;">Full &middot; <span class="muted">$145</span></span>
+          <span style="font-size: 14px; font-weight: 600; color: #13795a;">Wait</span>
+        </div>
+        <div class="wrow" style="border-bottom: 1px solid var(--rope);">
+          <span class="num" style="font-size: 16px; font-weight: 600;">7:30 &ndash; 11:00 PM</span>
+          <span><span style="font-size: 16px; font-weight: 600;">Night Dive &mdash; City of Washington</span><br><span class="why">After dark &middot; the shop&#8217;s favourite for a first night dive</span></span>
+          <span class="why">Open Water or higher &middot; Night</span>
+          <span class="num" style="font-size: 15px; font-weight: 600;">5 spots &middot; <span class="muted">$120</span></span>
+          <svg width="16" height="16" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; padding: 26px 0 10px;">
+          <span class="num" style="font-size: 30px; font-weight: 600; line-height: 1; letter-spacing: -0.02em;">28</span>
+          <span style="display: flex; flex-direction: column; line-height: 1.1;"><span style="font-size: 14px; font-weight: 700; letter-spacing: .16em;">FRI</span><span style="font-size: 14px; font-weight: 500; letter-spacing: .16em; color: var(--muted);">AUG</span></span>
+          <span style="height: 1px; flex: 1; background: var(--rope);"></span>
+        </div>
+        <div class="wrow">
+          <span class="num" style="font-size: 16px; font-weight: 600;">8:00 &ndash; 11:30 AM</span>
+          <span><span style="font-size: 16px; font-weight: 600;">Two-Tank Reef &mdash; Benwood &amp; French</span><br><span class="why">Easygoing reef &middot; first time back in a while</span></span>
+          <span class="why">Open Water or higher</span>
+          <span class="num" style="font-size: 15px; font-weight: 600;">7 spots &middot; <span class="muted">$95</span></span>
+          <svg width="16" height="16" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+        </div>
+        <div class="wrow">
+          <span class="num" style="font-size: 16px; font-weight: 600;">9:00 AM &ndash; 12:00 PM</span>
+          <span><span style="font-size: 16px; font-weight: 600;">Scuba Refresher &mdash; half day</span><br><span class="why">Learning &middot; pool, then one easy reef</span></span>
+          <span class="why">Any certification</span>
+          <span class="num" style="font-size: 15px; font-weight: 600; color: var(--warning);">Only 2 spots</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+        </div>
+        <div class="wrow" style="border-bottom: 1px solid var(--rope);">
+          <span class="num" style="font-size: 16px; font-weight: 600;">1:00 &ndash; 5:00 PM</span>
+          <span><span style="font-size: 16px; font-weight: 600;">Macro Afternoon &mdash; Snapper Ledge</span><br><span class="why">Small life &amp; cameras &middot; slow, shallow, one site</span></span>
+          <span class="why">Open Water or higher</span>
+          <span class="num" style="font-size: 15px; font-weight: 600;">4 spots &middot; <span class="muted">$110</span></span>
+          <svg width="16" height="16" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; padding: 26px 0 10px;">
+          <span class="num" style="font-size: 30px; font-weight: 600; line-height: 1; letter-spacing: -0.02em;">29</span>
+          <span style="display: flex; flex-direction: column; line-height: 1.1;"><span style="font-size: 14px; font-weight: 700; letter-spacing: .16em;">SAT</span><span style="font-size: 14px; font-weight: 500; letter-spacing: .16em; color: var(--muted);">AUG</span></span>
+          <span style="height: 1px; flex: 1; background: var(--rope);"></span>
+        </div>
+        <div class="wrow" style="border-bottom: 1px solid var(--rope);">
+          <span class="num" style="font-size: 16px; font-weight: 600;">7:00 &ndash; 10:30 AM</span>
+          <span><span style="font-size: 16px; font-weight: 600;">Two-Tank Reef &mdash; Molasses &amp; French</span><br><span class="why">Easygoing reef</span></span>
+          <span class="why">Open Water or higher</span>
+          <span class="num" style="font-size: 15px; font-weight: 600;">Full &middot; <span class="muted">$95</span></span>
+          <span style="font-size: 14px; font-weight: 600; color: #13795a;">Wait</span>
+        </div>
+        <div style="margin-top: 18px;"><span class="btn btn-s">Show later departures</span></div>
+      </div>
+    </div>
+
+    <!-- Courses, boats, reviews: the shipped shelves, unchanged in shape -->
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px;">
+      <div class="panel" style="overflow: hidden;">
+        <div style="height: 150px; background: linear-gradient(160deg, #13795a, #0a4d61);"></div>
+        <div style="padding: 18px 20px 22px;"><p class="bm-display" style="font-size: 20px; font-weight: 600;">Discover Scuba Diving</p><p class="why" style="margin-top: 4px;">Half a day &middot; next Tue, Sep 8</p><p class="num" style="font-size: 16px; font-weight: 600; margin-top: 10px;">$175</p></div>
+      </div>
+      <div class="panel" style="overflow: hidden;">
+        <div style="height: 150px; background: linear-gradient(160deg, #0f6b52, #0c2a35);"></div>
+        <div style="padding: 18px 20px 22px;"><p class="bm-display" style="font-size: 20px; font-weight: 600;">Open Water Diver</p><p class="why" style="margin-top: 4px;">3 days &middot; next Sun, Sep 13</p><p class="num" style="font-size: 16px; font-weight: 600; margin-top: 10px;">$709</p></div>
+      </div>
+      <div class="panel" style="overflow: hidden;">
+        <div style="height: 150px; background: linear-gradient(160deg, #0a4d61, #071720);"></div>
+        <div style="padding: 18px 20px 22px;"><p class="bm-display" style="font-size: 20px; font-weight: 600;">Nitrox Diver</p><p class="why" style="margin-top: 4px;">One day &middot; classroom &amp; two dives</p><p class="num" style="font-size: 16px; font-weight: 600; margin-top: 10px;">$150</p></div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+      <div>
+        <h2 class="bm-display" style="font-size: 28px; font-weight: 700;">What divers say</h2>
+        <p style="font-size: 18px; line-height: 1.5; margin-top: 14px;">&#8220;Vis was unreal and the crew found us a turtle on the second tank.&#8221;</p>
+        <p class="why" style="margin-top: 4px;">Grace H. &middot; Two-Tank Reef &middot; Aug 20</p>
+        <p style="font-size: 18px; line-height: 1.5; margin-top: 14px;">&#8220;Calm, unhurried briefing &mdash; exactly what I wanted for my first boat dive back.&#8221;</p>
+        <p class="why" style="margin-top: 4px;">Lars P. &middot; Wreck Trip &middot; Aug 17</p>
+      </div>
+      <div>
+        <h2 class="bm-display" style="font-size: 28px; font-weight: 700;">The boats</h2>
+        <div style="display: flex; flex-direction: column; margin-top: 10px;">
+          <div class="row" style="min-height: 56px;"><span style="font-weight: 600;">Mantis II</span><span class="why">20 divers &middot; camera table, warm freshwater showers and a ladder on each side.</span></div>
+          <div class="row" style="min-height: 56px; border-bottom: 1px solid var(--rope);"><span style="font-weight: 600;">Skiff</span><span class="why">8 divers &middot; the small boat, a shaded deck, ten minutes to the reef.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 20px; padding-top: 24px; border-top: 1px solid var(--rope); font-size: 13.5px; color: var(--muted);">
+      <span>100 Ocean Drive, Key Largo, FL 33037 &middot; +1 305 555 0142 &middot; hello@demo.invalid</span>
+      <span style="margin-left: auto; display: inline-flex; align-items: center; gap: 8px;">
+        <svg width="20" height="20" viewBox="0 0 64 64" fill="none"><circle cx="22" cy="44" r="12" stroke="#54676d" stroke-width="3"></circle><circle cx="40" cy="26" r="8" stroke="#54676d" stroke-width="3"></circle><circle cx="52" cy="12" r="4.5" fill="#ff6f61"></circle></svg>
+        Bookings by DiveDay
+      </span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

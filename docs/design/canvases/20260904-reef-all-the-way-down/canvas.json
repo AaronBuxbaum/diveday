@@ -1,0 +1,27 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "The loop" },
+    { "id": "page-2", "name": "The surfaces" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Reef, all the way down — read me first", "x": 0, "y": 0, "w": 1180, "h": 2260, "page": "page-1" },
+    { "file": "Verdicts.dc.html", "title": "Every open idea, one verdict each", "x": 1300, "y": 0, "w": 1180, "h": 2780, "page": "page-1" },
+    { "file": "Budget.dc.html", "title": "The delight budget, widened", "x": 2600, "y": 0, "w": 1180, "h": 3840, "page": "page-1" },
+    { "file": "Gap.dc.html", "title": "The gap, measured from the running app", "x": 3900, "y": 0, "w": 1180, "h": 3480, "page": "page-1" },
+    { "file": "Home.dc.html", "title": "The shop home — 6:40 AM, boarding", "x": 0, "y": 0, "w": 1440, "h": 1760, "page": "page-2" },
+    { "file": "Evening.dc.html", "title": "The shop home — 6:10 PM, two boats home", "x": 1560, "y": 0, "w": 1440, "h": 1400, "page": "page-2" },
+    { "file": "HomePhone.dc.html", "title": "The shop home — phone, 6:40 AM", "x": 3120, "y": 0, "w": 390, "h": 1560, "page": "page-2" },
+    { "file": "Storefront.dc.html", "title": "/s/blue-mantis — the live line and the lenses", "x": 0, "y": 1900, "w": 1440, "h": 2540, "page": "page-2" },
+    { "file": "BookingPhone.dc.html", "title": "The booking page — bounded", "x": 1560, "y": 1900, "w": 390, "h": 2140, "page": "page-2" },
+    { "file": "ThreadPhone.dc.html", "title": "/ready — anything changed?", "x": 2070, "y": 1900, "w": 390, "h": 1500, "page": "page-2" },
+    { "file": "AfterPhone.dc.html", "title": "/recap — the postcard", "x": 2580, "y": 1900, "w": 390, "h": 1720, "page": "page-2" },
+    { "file": "ManifestPhone.dc.html", "title": "The manifest — the strip and the stage", "x": 3090, "y": 1900, "w": 390, "h": 1860, "page": "page-2" }
+  ],
+  "annotations": [
+    { "id": "read-order", "x": 0, "y": -170, "w": 520, "text": "Read left to right: the cover, then every open issue with its verdict, then the eight budget rules, then the shipped app measured against the drawing. Page 2 holds the surfaces.", "page": "page-1" },
+    { "id": "fiction", "x": 0, "y": -170, "w": 560, "text": "Blue Mantis Divers, Thursday August 27, 2026. Every name is invented. Reef in Geist on the staff boards; the demo shop's green and Bricolage Grotesque on the diver's.", "page": "page-2" },
+    { "id": "manifest-rule", "x": 3090, "y": 1740, "w": 390, "text": "The manifest board carries no drawing, no coral and no motion. The stage strip and the catch-up strip are words on the tideline, nothing else.", "page": "page-2" },
+    { "id": "booking-bound", "x": 1560, "y": 1740, "w": 390, "text": "The shipped page is 5,782px before the form. This one is 2,140px. Everything cut is one tap away, opened in place.", "page": "page-2" }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}

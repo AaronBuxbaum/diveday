@@ -1,0 +1,210 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .sunk { background: var(--tideline); border-radius: 28px; }
+    .inset { border-radius: 18px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; box-sizing: border-box; }
+    .btn-p { background: var(--lagoon); color: #ffffff; }
+    .btn-s { background: var(--shell); color: var(--ink); border: 1px solid var(--rope); }
+    .btn-g { color: var(--muted); }
+    .btn-sm { height: 44px; padding: 0 12px; font-size: 14px; }
+    .row { display: flex; align-items: center; gap: 14px; min-height: 52px; border-top: 1px solid var(--rope); }
+    .kind { font-size: 13px; font-weight: 650; min-width: 96px; }
+    .act { font-size: 15px; font-weight: 600; color: var(--lagoon); white-space: nowrap; }
+    .tab { font-size: 15px; font-weight: 500; color: var(--muted); padding: 9px 14px; border-radius: 10px; white-space: nowrap; }
+    .sitetile { width: 84px; height: 60px; border-radius: 18px; background: var(--lagoon-wash); color: var(--lagoon-deep); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+    .src { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+    .src i { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; }
+    .h3 { font-size: 16px; font-weight: 600; }
+    .body { font-size: 14px; line-height: 1.55; }
+    .muted { color: var(--muted); }
+  </style>
+</helmet>
+<div style="width: 390px; height: 1560px; background: var(--sand); box-sizing: border-box; overflow: hidden; position: relative;">
+
+  <div style="height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 16px; background: rgba(251,247,239,.92); border-bottom: 1px solid var(--rope); box-sizing: border-box;">
+    <div style="width: 32px; height: 32px; border-radius: 10px; background: var(--lagoon); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div>
+    <span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+    <svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="color: var(--muted); stroke-width: 1.8;"><path d="M3 4.5 6 7.5 9 4.5"></path></svg>
+    <span style="margin-left: auto; width: 44px; height: 44px; border-radius: 999px; border: 1px solid var(--rope); background: var(--shell); display: flex; align-items: center; justify-content: center;">
+      <svg width="16" height="16" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 1.8;"><circle cx="7" cy="7" r="4.6"></circle><path d="M10.6 10.6 13.6 13.6"></path></svg>
+    </span>
+  </div>
+
+  <div style="height: 168px; background: linear-gradient(180deg, #f6ecd9 0%, #e9f1ec 46%, #fbf7ef 100%); position: relative; overflow: hidden;">
+    <div style="padding: 22px 20px 0; display: flex; flex-direction: column; gap: 6px; position: relative;">
+      <p class="eyebrow">Today &middot; Thu, Aug 27 &middot; 6:40 AM</p>
+      <h1 style="font-size: 34px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.05;">Good morning, Dana.</h1>
+      <p style="font-size: 16px; color: var(--muted); line-height: 1.4;">Three boats. Two things need you before the 7:00 leaves.</p>
+      <p class="num" style="font-size: 13.5px; color: var(--muted);">Flat seas, 1&#8211;2 ft &middot; 84&deg; by noon &middot; <span class="src" style="font-size: 10.5px;">Forecast</span></p>
+    </div>
+  </div>
+
+  <div style="padding: 0 16px 90px; display: flex; flex-direction: column; gap: 14px;">
+
+    <div style="display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 18px; background: var(--coral-wash); border: 1px solid #f3d4cc;">
+      <svg width="28" height="20" viewBox="0 0 34 24" fill="none" style="flex-shrink: 0;"><circle cx="8" cy="17" r="5" stroke="#a83a2c" stroke-width="1.7"></circle><circle cx="18" cy="10" r="3.4" stroke="#a83a2c" stroke-width="1.7"></circle><circle cx="27" cy="4.5" r="2.4" fill="#ff6f61"></circle></svg>
+      <p style="font-size: 14px; font-weight: 600; color: var(--coral-deep); line-height: 1.35;">Ben Okafor boards the 7:00 as your 400th diver of the season.</p>
+    </div>
+
+    <div class="panel" style="padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; border-color: #edcfc8;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <svg width="20" height="20" viewBox="0 0 18 18" class="hand" style="color: var(--danger); stroke-width: 1.9; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M6.2 6.2 11.8 11.8M11.8 6.2 6.2 11.8"></path></svg>
+        <p class="glabel" style="color: var(--danger);">First thing &middot; 20 min</p>
+      </div>
+      <p style="font-size: 17px; font-weight: 600; line-height: 1.3;">Grace Mensah can&#8217;t board the 7:00 until her Advanced card is verified.</p>
+      <span class="btn btn-p" style="width: 100%;">Verify her card</span>
+    </div>
+
+    <div class="panel" style="padding: 16px 18px 6px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div class="sitetile" style="width: 44px; height: 30px; border-radius: 10px;">
+          <svg width="33" height="22" viewBox="0 0 120 80" class="hand" style="stroke-width: 2.4;">
+            <path d="M30 42c10-16 30-22 50-16 8 2 14 6 18 12-4 6-10 10-18 12-20 6-40 0-50-8Z" fill="#fffdf8"></path>
+            <path d="M30 42 16 30v24Z" fill="#fffdf8"></path>
+            <circle cx="82" cy="37" r="3" fill="currentColor" stroke="none"></circle>
+            <circle cx="44" cy="44" r="4" fill="#ff6f61" stroke="none"></circle>
+          </svg>
+        </div>
+        <span class="num" style="font-size: 24px; font-weight: 700; letter-spacing: -0.015em; line-height: 1;">7:00 AM</span>
+        <span class="chip" style="margin-left: auto; background: var(--lagoon-wash); color: var(--lagoon-deep); height: 26px; font-size: 12px;">Boarding &middot; 6 of 10</span>
+      </div>
+      <div>
+        <p style="font-size: 17px; font-weight: 600; letter-spacing: -0.008em; line-height: 1.3;">Two-Tank Reef &mdash; Molasses &amp; French</p>
+        <p style="font-size: 13.5px; color: var(--muted); margin-top: 3px;">Mantis II &middot; Keiko, Sal &middot; <span class="num">10 of 12</span> &middot; 2 spots open</p>
+      </div>
+      <div style="display: flex; flex-direction: column;">
+        <div class="row" style="gap: 10px; align-items: flex-start; padding: 12px 0;">
+          <svg width="18" height="18" viewBox="0 0 18 18" class="hand" style="color: var(--danger); stroke-width: 1.8; flex-shrink: 0; margin-top: 2px;"><circle cx="9" cy="9" r="7.2"></circle><path d="M6.2 6.2 11.8 11.8M11.8 6.2 6.2 11.8"></path></svg>
+          <div style="flex: 1; min-width: 0;">
+            <p style="font-size: 15px; line-height: 1.4;"><span style="font-weight: 650; color: var(--danger);">Certification</span> &middot; Grace Mensah&#8217;s Advanced card is waiting for verification.</p>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2; flex-shrink: 0; margin-top: 4px;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+        </div>
+        <div class="row" style="gap: 10px; align-items: flex-start; padding: 12px 0; flex-wrap: wrap;">
+          <svg width="18" height="18" viewBox="0 0 18 18" class="hand" style="color: var(--warning); stroke-width: 1.8; flex-shrink: 0; margin-top: 2px;"><path d="M9 2.4 16.6 15.2H1.4L9 2.4Z"></path><path d="M9 7.2v3.4"></path><circle cx="9" cy="12.9" r=".5" fill="#b45309"></circle></svg>
+          <p style="flex: 1; min-width: 0; font-size: 15px; line-height: 1.4;"><span style="font-weight: 650; color: var(--warning);">Waiver</span> &middot; Priya Sharma hasn&#8217;t been sent hers.</p>
+          <span class="btn btn-s btn-sm" style="margin-left: 28px;">Send waiver</span>
+        </div>
+        <div class="row" style="gap: 10px; align-items: flex-start; padding: 12px 0;">
+          <svg width="18" height="18" viewBox="0 0 18 18" class="hand" style="color: var(--warning); stroke-width: 1.8; flex-shrink: 0; margin-top: 2px;"><circle cx="9" cy="9" r="7.2"></circle><path d="M9 5.2V9l2.6 1.8"></path></svg>
+          <p style="flex: 1; min-width: 0; font-size: 15px; line-height: 1.4;"><span style="font-weight: 650; color: var(--warning);">Not here yet</span> &middot; Hugo Marsh hasn&#8217;t checked in. Two people are on the wait list.</p>
+          <svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2; flex-shrink: 0; margin-top: 4px;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+        </div>
+        <div class="row" style="gap: 10px; align-items: flex-start; padding: 12px 0;">
+          <svg width="18" height="18" viewBox="0 0 18 18" class="hand" style="color: var(--muted); stroke-width: 1.8; flex-shrink: 0; margin-top: 2px;"><path d="M3 15c1-4 3-6 6-6s5 2 6 6"></path><circle cx="9" cy="5.6" r="2.6"></circle></svg>
+          <p style="flex: 1; min-width: 0; font-size: 15px; line-height: 1.4; color: var(--muted);"><span style="font-weight: 650;">Say hello</span> &middot; Ben Okafor&#8217;s first time with you. Ada Lindqvist is back after three years.</p>
+          <svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2; flex-shrink: 0; margin-top: 4px;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+        </div>
+        <div class="row" style="gap: 10px; align-items: flex-start; padding: 12px 0;">
+          <svg width="18" height="18" viewBox="0 0 18 18" class="hand" style="color: var(--muted); stroke-width: 1.8; flex-shrink: 0; margin-top: 2px;"><rect x="3.2" y="3.2" width="11.6" height="11.6" rx="3"></rect><path d="M6.4 9h5.2M9 6.4v5.2"></path></svg>
+          <p style="flex: 1; min-width: 0; font-size: 15px; line-height: 1.4; color: var(--muted);"><span style="font-weight: 650;">Prep</span> &middot; Three divers still need rental sizes.</p>
+          <svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2; flex-shrink: 0; margin-top: 4px;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="padding: 16px 18px 6px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div class="sitetile" style="width: 44px; height: 30px; border-radius: 10px;">
+          <svg width="33" height="22" viewBox="0 0 120 80" class="hand" style="stroke-width: 2.4;"><path d="M20 34h14v14H20z" fill="#fffdf8"></path><path d="M34 36 96 20v42L34 46Z" fill="currentColor" fill-opacity=".14"></path><circle cx="84" cy="40" r="3" fill="currentColor" stroke="none"></circle></svg>
+        </div>
+        <span class="num" style="font-size: 24px; font-weight: 700; letter-spacing: -0.015em; line-height: 1;">1:00 PM</span>
+        <span class="num" style="margin-left: auto; font-size: 13px; color: var(--muted);">Full &middot; 10 of 10</span>
+      </div>
+      <div>
+        <p style="font-size: 17px; font-weight: 600; letter-spacing: -0.008em; line-height: 1.3;">Wreck Trip &mdash; Spiegel Grove</p>
+        <p style="font-size: 13.5px; color: var(--muted); margin-top: 3px;">Mantis II &middot; no crew assigned &middot; boards at 12:30</p>
+      </div>
+      <div style="display: flex; flex-direction: column;">
+        <div class="row" style="gap: 10px; align-items: flex-start; padding: 12px 0;">
+          <svg width="18" height="18" viewBox="0 0 18 18" class="hand" style="color: var(--danger); stroke-width: 1.8; flex-shrink: 0; margin-top: 2px;"><circle cx="9" cy="9" r="7.2"></circle><path d="M6.2 6.2 11.8 11.8M11.8 6.2 6.2 11.8"></path></svg>
+          <p style="flex: 1; min-width: 0; font-size: 15px; line-height: 1.4;"><span style="font-weight: 650; color: var(--danger);">Crew</span> &middot; No divemaster or instructor is assigned.</p>
+          <svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2; flex-shrink: 0; margin-top: 4px;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+        </div>
+        <div class="row" style="gap: 10px; align-items: flex-start; padding: 12px 0;">
+          <svg width="18" height="18" viewBox="0 0 18 18" class="hand" style="color: var(--danger); stroke-width: 1.8; flex-shrink: 0; margin-top: 2px;"><circle cx="9" cy="9" r="7.2"></circle><path d="M6.2 6.2 11.8 11.8M11.8 6.2 6.2 11.8"></path></svg>
+          <p style="flex: 1; min-width: 0; font-size: 15px; line-height: 1.4;"><span style="font-weight: 650; color: var(--danger);">Certification</span> &middot; Tom&aacute;s Ferreira has none on file for a deep wreck.</p>
+          <svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2; flex-shrink: 0; margin-top: 4px;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="padding: 16px 18px; display: flex; align-items: center; gap: 12px;">
+      <div class="sitetile" style="width: 44px; height: 30px; border-radius: 10px; background: var(--lagoon-deep); color: var(--lagoon-wash);">
+        <svg width="33" height="22" viewBox="0 0 120 80" class="hand" style="stroke-width: 2.4;"><path d="M20 34h14v14H20z" fill="#0a4d61"></path><path d="M34 36 96 20v42L34 46Z" fill="currentColor" fill-opacity=".18"></path><circle cx="84" cy="40" r="3" fill="currentColor" stroke="none"></circle></svg>
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <p class="num" style="font-size: 17px; font-weight: 700; line-height: 1.2;">7:30 PM <span style="font-size: 14px; font-weight: 600; color: var(--muted);">Night Dive</span></p>
+        <p style="font-size: 13.5px; color: var(--muted); margin-top: 2px;">3 of 8 &middot; one job: send a deal</p>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+    </div>
+
+    <div style="padding: 4px 4px 0;">
+      <p class="glabel">At the desk</p>
+      <div class="row" style="gap: 10px; margin-top: 6px;">
+        <p style="flex: 1; font-size: 15px; color: var(--muted);"><span style="font-weight: 650;">Requests</span> &middot; Two divers asked for days that aren&#8217;t on the board.</p>
+        <svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2; flex-shrink: 0;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="row" style="gap: 10px; border-bottom: 1px solid var(--rope);">
+        <p style="flex: 1; font-size: 15px; color: var(--muted);"><span style="font-weight: 650;">Reviews</span> &middot; One is waiting on you.</p>
+        <svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2; flex-shrink: 0;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div class="sunk" style="padding: 14px 18px; display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 15px; font-weight: 600;">Tomorrow &middot; Fri, Aug 28</span>
+        <span class="num" style="margin-left: auto; font-size: 13.5px; color: var(--muted);">3 boats &middot; 5 jobs</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="sunk" style="padding: 14px 18px; display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 15px; font-weight: 600;">The rest of the week</span>
+        <span class="num" style="margin-left: auto; font-size: 13.5px; color: var(--muted);">11 jobs</span>
+        <svg width="14" height="14" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- The dock: five tabs, the sixth is More, that is the ceiling -->
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 74px; background: var(--shell); border-top: 1px solid var(--rope); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 6px 4px 14px; box-sizing: border-box;">
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--lagoon);"><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><circle cx="11" cy="11" r="7.5"></circle><path d="M11 7v4l2.6 1.8"></path></svg>Today</div>
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 500; color: var(--muted);"><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><path d="M5 11.5l4 4 8-9"></path></svg>Check-in</div>
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 500; color: var(--muted);"><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><circle cx="8.5" cy="8" r="3"></circle><circle cx="15" cy="9" r="2.4"></circle><path d="M3 18c1-3.5 3-5 5.5-5s4.5 1.5 5.5 5M13.5 17c.6-2 1.8-3 3.5-3s2.6 1 3 3"></path></svg>Divers</div>
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 500; color: var(--muted);"><svg width="22" height="22" viewBox="0 0 22 22" class="hand" style="stroke-width: 1.8;"><rect x="3.5" y="4.5" width="15" height="14" rx="3"></rect><path d="M7 2.8v3.4M15 2.8v3.4M3.5 9.5h15"></path></svg>Board</div>
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 11px; font-weight: 500; color: var(--muted);"><svg width="22" height="22" viewBox="0 0 22 22" fill="#54676d"><circle cx="5" cy="11" r="1.8"></circle><circle cx="11" cy="11" r="1.8"></circle><circle cx="17" cy="11" r="1.8"></circle></svg>More</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
