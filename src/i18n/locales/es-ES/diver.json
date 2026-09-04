@@ -2505,11 +2505,11 @@
         "scopeTable": {
           "contact": {
             "what": "Nombre, correo, teléfono",
-            "detail": "Se importan tal cual. Una fila con correo se empareja con un buceador existente al reimportar; sin él, siempre es una ficha nueva."
+            "detail": "Una fila con correo se empareja con un buceador existente al reimportar; sin él, siempre es una ficha nueva."
           },
           "emergencyContact": {
             "what": "Contacto de emergencia",
-            "detail": "El nombre y el teléfono se trasladan cuando están."
+            "detail": "El nombre y el teléfono, cuando tu archivo los tenga."
           },
           "diveInsurance": {
             "what": "Seguro de buceo (DAN)",
@@ -2525,11 +2525,11 @@
           },
           "specialtyCards": {
             "what": "Certificaciones de especialidad (profundidad, naufragios, nocturna, traje seco)",
-            "detail": "Llegan con la ficha del buceador, marcadas como importadas. La puerta de cada una sigue cerrada hasta que el personal la confirme con un toque, diga lo que diga tu archivo."
+            "detail": "Marcadas como importadas. La puerta de cada una sigue cerrada hasta que el personal la confirme con un toque, diga lo que diga tu archivo."
           },
           "nitrox": {
             "what": "Nitrox",
-            "detail": "Llega con la ficha del buceador, marcada como importada. Hasta que el personal la confirme con un toque, ese buceador recibe aire normal. El embarque solo espera si tu archivo dice que la tarjeta nunca se verificó."
+            "detail": "Marcada como importada. Hasta que el personal la confirme con un toque, ese buceador recibe aire normal. El embarque solo espera si tu archivo dice que la tarjeta nunca se verificó."
           },
           "signedWaivers": {
             "what": "Exenciones firmadas y aptitud médica",
@@ -2537,11 +2537,11 @@
           },
           "waiverDocuments": {
             "what": "Documentos de exención / médicos",
-            "detail": "Se descargan una vez desde la URL de tu archivo y se guardan de nuevo en el almacenamiento propio de DiveDay para auditoría. Imágenes y PDF de hasta 5 MB."
+            "detail": "Se descargan una vez desde la URL de tu archivo y se guardan para auditoría. Imágenes y PDF de hasta 5 MB."
           },
           "role": {
             "what": "Rol",
-            "detail": "Todo el mundo se importa como buceador. Los roles de personal y los accesos nunca se conceden por importación."
+            "detail": "Todo el mundo se importa como buceador, nunca con un rol de personal ni un acceso."
           },
           "cardOnFile": {
             "what": "Tarjeta guardada / credencial de pago",
@@ -2561,7 +2561,7 @@
           },
           "diverNotes": {
             "what": "Notas internas y del buceador",
-            "detail": "Las notas del personal y observaciones se importan directamente como notas privadas en el perfil del buceador."
+            "detail": "Las notas del personal y observaciones pasan a notas privadas en el perfil del buceador."
           }
         }
       },

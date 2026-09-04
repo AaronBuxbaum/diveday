@@ -617,11 +617,11 @@
       },
       "specialtyCards": {
         "what": "Certificaciones de especialidad (profundidad, naufragios, nocturna, traje seco)",
-        "detail": "Marcadas como importadas. La puerta de cada una sigue cerrada hasta que el personal la confirme, diga lo que diga tu archivo."
+        "detail": "Marcadas como importadas. La puerta de cada una sigue cerrada hasta que el personal la confirme con un toque, diga lo que diga tu archivo."
       },
       "nitrox": {
         "what": "Nitrox",
-        "detail": "Marcada como importada. Hasta que el personal la confirme, ese buceador recibe aire normal. El embarque solo espera si tu archivo dice que la tarjeta nunca se verificó."
+        "detail": "Marcada como importada. Hasta que el personal la confirme con un toque, ese buceador recibe aire normal. El embarque solo espera si tu archivo dice que la tarjeta nunca se verificó."
       },
       "signedWaivers": {
         "what": "Exenciones firmadas y aptitud médica",
@@ -641,7 +641,7 @@
       },
       "pastVisits": {
         "what": "Visitas pasadas (qué reservaron y cuándo)",
-        "detail": "Cada fila de reserva se convierte en historial de visitas. Nunca aparece en tu horario ni cuenta para el aforo."
+        "detail": "Cada fila de reserva se convierte en historial de visitas. No es una inmersión, y nunca aparece en tu horario ni cuenta para el aforo."
       },
       "paymentHistory": {
         "what": "Historial de pagos y recibos",
