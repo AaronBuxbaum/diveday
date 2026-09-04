@@ -1,7 +1,45 @@
 import { nowDate } from "./clock";
-import { recordLogLine } from "./observability/cloudwatch";
 
 export type LogLevel = "info" | "warn" | "error";
+
+/** What {@link log} hands each finished line to after writing it to the console. */
+type LogSink = (line: string, timestamp: number) => void;
+
+/**
+ * Where a written line goes *in addition to* the console. Nothing, until a
+ * server instance installs one.
+ *
+ * This used to be a static `import { recordLogLine } from
+ * "./observability/cloudwatch"`, and that import was a browser seam of the kind
+ * PR #1347 spent itself closing. The path is three hops and none of them looks
+ * like logging: `src/i18n/on-error.ts` — the ICU error handler every translator
+ * is built with, and therefore reachable from every Client Component that reads
+ * copy — imports `log`, which imported the shipper, which reaches
+ * `@aws-sdk/client-cloudwatch-logs`. Turbopack browserified it: **316.6 KB raw
+ * / 93.7 KB gzip across two emitted chunks**, measured off `.next/static`.
+ *
+ * Being behind `await import()` in the shipper made it lazy, not absent — so it
+ * never entered a first-load bundle and `pnpm perf:budget`, which measures the
+ * intersection of first-load chunks, could not see it. The offline-manifest
+ * service worker could: it caches the built shell, on the one surface in this
+ * app designed for a divemaster on marina Wi-Fi.
+ *
+ * Inverting it is not a workaround for the bundler. The browser has no
+ * CloudWatch credentials and never had any, so `recordLogLine` there was always
+ * dead code that returned on its first config read — this makes the module
+ * graph say what was already true at runtime.
+ *
+ * Installed from `src/instrumentation.ts`, beside `setFlushDeferrer`, for the
+ * reason written there: `src/lib` is framework-free by rule, and that file is
+ * the one place that already runs exactly once per server instance, Node
+ * runtime only.
+ */
+let sink: LogSink | null = null;
+
+/** Install the process-wide sink. Server-side only; see {@link sink}. */
+export function setLogSink(next: LogSink | null): void {
+  sink = next;
+}
 
 /**
  * Structured-log context: ids and codes only. Never a diver/staff name, an email
@@ -41,5 +79,5 @@ export function log(event: string, level: LogLevel, context: LogContext = {}): v
   if (level === "error") console.error(line);
   else if (level === "warn") console.warn(line);
   else console.log(line);
-  recordLogLine(line, time.getTime());
+  sink?.(line, time.getTime());
 }

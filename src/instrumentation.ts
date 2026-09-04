@@ -24,13 +24,23 @@ export async function register() {
   // framework-free by rule, and because this is the one file that already runs
   // exactly once per server instance. Node runtime only: the Edge entry point
   // reaches this function above and returns.
-  const [{ after }, { setFlushDeferrer }] = await Promise.all([
+  const [{ after }, { recordLogLine, setFlushDeferrer }, { setLogSink }] = await Promise.all([
     import("next/server"),
     import("@/lib/observability"),
+    import("@/lib/log"),
   ]);
   setFlushDeferrer((task) => {
     after(task);
   });
+  // And the shipper itself, for the same reason one line up. `src/lib/log.ts`
+  // used to import `recordLogLine` directly, which put
+  // `@aws-sdk/client-cloudwatch-logs` in the browser: `src/i18n/on-error.ts` is
+  // the ICU error handler every translator carries, so every Client Component
+  // that reads copy reached the shipper, and Turbopack browserified it into
+  // 93.7 KB gzip of chunks the offline-manifest service worker then cached.
+  // Nothing was lost by inverting it — a browser has no CloudWatch credentials,
+  // so that code returned on its first config read wherever it landed.
+  setLogSink(recordLogLine);
 
   // Validates the *effective* origin, not the raw variable: with the default
   // compiled in, an override is the only thing that can be malformed, and it
