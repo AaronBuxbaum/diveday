@@ -173,12 +173,38 @@ test.describe("staff", () => {
     // the roster's deliberate 20-row page size.
     const rows: string[] = [];
     const headings: string[] = [];
+    let visited = 0;
+    let pageCount = 0;
     for (;;) {
+      // **Wait for the pager before reading anything off the page.** This route
+      // is `instant = true`, so a navigation paints the segment's `loading.tsx`
+      // first and the roster streams in behind it; `count()` and
+      // `allInnerTexts()` are the two locator calls that do *not* retry, so
+      // reading either against that skeleton answers 0 and `[]` truthfully
+      // about a page that simply has not arrived. The pager is the right anchor
+      // because it renders on every page of a multi-page list, last one
+      // included (`Pager` returns null only when `pageCount <= 1`), so its
+      // presence means the streamed body is here — after which the reads below
+      // are answers about the roster rather than about the skeleton.
+      //
+      // That is not hypothetical. On 2026-09-04 this walk broke one page early
+      // on CI and the suite reported a *missing agency* — `["PADI", "SDI"]`
+      // against an expected `["PADI", "SDI", "SSI"]` — because SSI sorts last
+      // and therefore lives on the last page. The same non-retrying `count()`
+      // had already been root-caused in `openTripTab` two days before.
+      const pager = page.getByRole("navigation", { name: "Pages" });
+      await expect(pager).toBeVisible();
+      const position = (await pager.getByText(/^Page \d+ of \d+/).innerText()).match(
+        /^Page (\d+) of (\d+)/,
+      );
+      expect(position, "the pager did not state its position").not.toBeNull();
+      pageCount = Number(position?.[2]);
+      visited += 1;
+
       rows.push(...(await page.locator("main ul > li").allInnerTexts()));
       headings.push(...(await page.locator("main h2").allInnerTexts()));
-      const next = page.getByRole("navigation", { name: "Pages" }).getByRole("link", {
-        name: "Next",
-      });
+
+      const next = pager.getByRole("link", { name: "Next" });
       if ((await next.count()) === 0) break;
       // Read the server-rendered destination before navigating. A client-side
       // click can leave the old pager in the DOM during the RSC transition,
@@ -187,6 +213,12 @@ test.describe("staff", () => {
       if (!href) break;
       await page.goto(href);
     }
+    // The guard that makes a truncated walk say so. Without it, stopping early
+    // is indistinguishable from a group that genuinely is not there, and the
+    // failure lands on an assertion two screens further down.
+    expect(visited, `the pager walk stopped after ${visited} of ${pageCount} pages`).toBe(
+      pageCount,
+    );
     const at = (title: string) => rows.findIndex((row) => row.trimStart().startsWith(title));
     expect(at("Discover Scuba Diving")).toBeGreaterThanOrEqual(0);
     expect(at("Discover Scuba Diving")).toBeLessThan(at("Open Water Diver"));
