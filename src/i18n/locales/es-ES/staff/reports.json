@@ -50,6 +50,5 @@
   "pagination": {
     "total": "{count, plural, one {# salida} other {# salidas}}"
   },
-  "partners": "Quién envió buceadores",
-  "partnerSeats": "{count, plural, one {# plaza} other {# plazas}}"
+  "partnerArrivals": "{count, plural, one {# plaza llegó} other {# plazas llegaron}} desde un enlace de socio"
 }

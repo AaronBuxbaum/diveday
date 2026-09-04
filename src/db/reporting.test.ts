@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/authz";
 import { summarizeMonth } from "@/lib/reporting";
@@ -697,7 +698,7 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
     return row.id;
   }
 
-  it("counts seats per partner, biggest first, and leaves the unattributed out", async () => {
+  it("counts referred seats across every partner, and leaves the unattributed out", async () => {
     const { db, shop } = await seededShopContext();
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
     await referredBooking(db, shop.id, trip, "Referred One", "coral-sands");
@@ -706,31 +707,50 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
     await referredBooking(db, shop.id, trip, "Walked In", null);
 
     const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
-    expect(report.partnerReferrals).toEqual([
-      { partner: "coral-sands", seats: 2 },
-      { partner: "harbour-house", seats: 1 },
-    ]);
+    expect(report.partnerReferredSeats).toBe(3);
     // A slice of the seats figure, never a second number beside it.
     expect(summarizeMonth(report).seatsBooked).toBe(4);
   });
 
-  it("is empty for the shop that has handed out no partner links", async () => {
+  /**
+   * **The slug never leaves this function** (issue #1294, owner ruling
+   * 2026-09-02). `partnerLinkUrl` writes no row, so there is no list of the
+   * partners a shop generated and nothing can tell a hotel's slug from one an
+   * anonymous visitor invented by editing the storefront URL and booking a
+   * seat. A report that named them would print
+   * `call-555-0100-for-cheaper-dives` to an owner as a business fact.
+   *
+   * Asserted over the whole serialised report rather than over one field: a
+   * future field carrying the slug back out would pass a per-field check.
+   */
+  it("returns no partner slug anywhere in the report", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
+    await referredBooking(db, shop.id, trip, "Referred One", "call-555-0100-for-cheaper-dives");
+
+    const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+    expect(report.partnerReferredSeats).toBe(1);
+    expect(JSON.stringify(report)).not.toContain("call-555-0100");
+    expect(JSON.stringify(summarizeMonth(report))).not.toContain("call-555-0100");
+  });
+
+  it("is zero for the shop that has handed out no partner links", async () => {
     const { db, shop } = await seededShopContext();
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
     await referredBooking(db, shop.id, trip, "Walked In", null);
 
     const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
-    expect(report.partnerReferrals).toEqual([]);
+    expect(report.partnerReferredSeats).toBe(0);
   });
 
   /**
-   * Every distinct value here was chosen by an anonymous visitor: the booking
-   * form is public, and one POST mints one slug. The slug itself is bounded and
-   * character-restricted, so nothing hostile can be rendered — what is not
-   * bounded is *how many*, and an uncapped `group by` behind an uncapped list is
-   * how a staff page grows a thousand rows of somebody else's text.
+   * The count is not capped, and does not need to be: it is one number
+   * whatever a visitor does to the column. The `limit(10)` this replaced
+   * bounded how many rows could appear but reserved none of them for a partner
+   * the shop knew, so a quiet month with two genuine partners at one booking
+   * each was fully displaced by an attacker with two bookings per slug.
    */
-  it("caps how many partners a month can name", async () => {
+  it("counts every referred seat however many distinct slugs there are", async () => {
     const { db, shop } = await seededShopContext();
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 40, "Reef");
     for (let index = 0; index < 14; index++) {
@@ -738,7 +758,7 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
     }
 
     const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
-    expect(report.partnerReferrals).toHaveLength(10);
+    expect(report.partnerReferredSeats).toBe(14);
   });
 
   it("excludes a cancelled seat, on the same basis as every other figure", async () => {
@@ -748,7 +768,47 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
     await referredBooking(db, shop.id, trip, "Called Off", "coral-sands", "cancelled");
 
     const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
-    expect(report.partnerReferrals).toEqual([{ partner: "coral-sands", seats: 1 }]);
+    expect(report.partnerReferredSeats).toBe(1);
+  });
+
+  it("excludes a referred seat whose own shop_id doesn't match the trip's (CR-007)", async () => {
+    // **The booking-side `shop_id` filter, pinned so it cannot look
+    // redundant.** A test that merely reports on an empty second shop passes
+    // whether or not `eq(bookings.shopId, shopId)` is in the query — the trip
+    // scope alone carries it — and that is exactly how CR-007 happened. So the
+    // hostile row is hung off *this* shop's trip while carrying the other
+    // shop's id, which is the inconsistency the rule exists to distrust.
+    const { db, shop } = await seededShopContext();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-referral-test", timezone: "UTC" })
+      .returning();
+    if (!otherShop) throw new Error("second shop insert failed");
+    const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
+    await referredBooking(db, shop.id, trip, "Ours", "coral-sands");
+    await referredBooking(db, otherShop.id, trip, "Theirs", "coral-sands");
+
+    expect((await getMonthlyReport(db, shop.id, JUNE_START, JULY_START)).partnerReferredSeats).toBe(
+      1,
+    );
+    expect(
+      (await getMonthlyReport(db, otherShop.id, JUNE_START, JULY_START)).partnerReferredSeats,
+    ).toBe(0);
+  });
+
+  it("excludes a referred seat on a cancelled departure", async () => {
+    // The seats figure this is a slice of counts live departures only, so a
+    // called-off trip's referred seats must not be in the total either. Nothing
+    // else pins the trip-status half: `check:live-trips` catches a dropped
+    // `liveTrip()`, and nothing catches a dropped `ne(status, "cancelled")`.
+    const { db, shop } = await seededShopContext();
+    const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
+    await referredBooking(db, shop.id, trip, "Aboard A Cancelled Boat", "coral-sands");
+    await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, trip));
+
+    const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
+    expect(report.partnerReferredSeats).toBe(0);
+    expect(summarizeMonth(report).seatsBooked).toBe(0);
   });
 });
 

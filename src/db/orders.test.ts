@@ -37,7 +37,7 @@ import {
 } from "./orders";
 import { startPaymentOperation } from "./payment-operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
-import { orders, paymentOperationIntents, people, shops } from "./schema";
+import { bookings, orders, paymentOperationIntents, people, shops } from "./schema";
 import { setShopCurrency, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
@@ -2218,5 +2218,53 @@ describe("pagedOrdersByDay", () => {
     );
     expect(byNeither.page.total).toBe(0);
     expect(byNeither.groups).toEqual([]);
+  });
+});
+
+/**
+ * **An order never carries the partner slug off the booking it is for**
+ * (issue #1294, owner ruling 2026-09-02).
+ *
+ * The order detail page used to print "Sent by <slug>" on its quiet meta line,
+ * on the stated assumption that "the slug is the shop's own, from its own embed
+ * generator". It is not: `partnerLinkUrl` writes no row, so nothing can tell a
+ * hotel's slug from one an anonymous visitor invented by editing the storefront
+ * URL and booking a seat. That page was the cheaper of the two surfaces to
+ * abuse — the month's report is owner/manager and took ten bookings to displace
+ * a real partner; this page is every staff role and took one.
+ *
+ * Pinned at the query rather than in the browser, because the query is where it
+ * would come back: a `bookings` join re-added for some other column brings the
+ * whole row within reach again.
+ */
+describe("an order and the booking's partner slug", () => {
+  it("returns no referral slug for a booking that carries one", async () => {
+    const { db, shop, entry, staff } = await orderContext();
+    await connectedShop(db, shop.id);
+    const hostile = "call-555-0100-for-cheaper-dives";
+    await db
+      .update(bookings)
+      .set({ referralSource: hostile })
+      .where(eq(bookings.id, entry.booking.id));
+
+    const result = await createOrder(
+      db,
+      {
+        shopId: shop.id,
+        personId: entry.person.id,
+        createdByPersonId: staff,
+        bookingId: entry.booking.id,
+        lineItems,
+      },
+      fakeInvoicing(),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const fetched = await getOrder(db, shop.id, result.order.id);
+    expect(fetched).not.toBeNull();
+    // Over the whole serialised order, not one field: a future column carrying
+    // the slug back out would pass a per-field check.
+    expect(JSON.stringify(fetched)).not.toContain("call-555-0100");
   });
 });

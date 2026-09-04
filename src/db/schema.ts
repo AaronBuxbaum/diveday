@@ -2197,11 +2197,21 @@ export const bookings = pgTable(
      * most divers arrive without a partner link, and nothing about a booking
      * depends on this.
      *
-     * **A slug, never a name.** It is a third party's identity stored against a
-     * person's booking, so it is bounded, character-restricted, and never
-     * rendered as anything but the shop's own label for a link it generated.
-     * The shop typed the partner's name into its own embed generator; DiveDay
-     * neither verifies it nor shows it to the diver.
+     * **A slug, never a name, and never rendered** (issue #1294). It is a third
+     * party's identity stored against a person's booking, so it is bounded and
+     * character-restricted — and this comment used to go on to call it "the
+     * shop's own label for a link it generated", which is what made an order
+     * page print it. It is not. `partnerLinkUrl` writes no row, so nothing can
+     * tell a hotel's slug from one an anonymous visitor invented by editing the
+     * storefront URL and booking a seat. Every value here is
+     * attacker-influenceable text until a stored partner list exists.
+     *
+     * So no surface prints it: the month's report counts these seats and names
+     * none of them, and the order page's "Sent by" line is gone. The column
+     * stays because the arrival is real and a partner list arriving later can
+     * name these seats retroactively; the full-shop export still carries it,
+     * which is a shop's own database handed back to it rather than a page
+     * presenting a stranger's text as a fact.
      *
      * On the booking rather than the person for the same reason
      * `lastDivedBand` is: it is a fact about one visit. "Which hotel sends us
@@ -2219,10 +2229,12 @@ export const bookings = pgTable(
     /** Backs the organizer's "who has claimed" panel — member seats by their lead. */
     index("bookings_party_lead_idx").on(table.partyLeadBookingId),
     /**
-     * Backs the per-partner count on Reports — one shop's referred seats,
-     * grouped by partner. Two columns, not three: the report's month window is
-     * on `trips.starts_at`, never on `bookings.created_at`, so a third column
-     * here would buy the query that names it nothing.
+     * Backs the referred-seat count on Reports — one shop's seats carrying any
+     * partner slug. There is no `group by` any more (issue #1294): the report
+     * is a count, so this covers the `shop_id` + is-not-null half of it. Two
+     * columns, not three: the report's month window is on `trips.starts_at`,
+     * never on `bookings.created_at`, so a third column here would buy the
+     * query that names it nothing.
      */
     index("bookings_shop_referral_idx").on(table.shopId, table.referralSource),
   ],

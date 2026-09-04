@@ -848,19 +848,19 @@ export async function getOrder(db: DbExecutor, shopId: string, orderId: string) 
     .select({
       order: orders,
       person: people,
-      // Which partner's link brought the diver who owns the booking this order
-      // is for (issue #1285). A left join because most orders have no booking
-      // at all — an invoice a shop raised by hand has none — and most bookings
-      // carry no referral. `orders.booking_id` is a foreign key, so this can
-      // only ever match a row of the same shop.
-      referralSource: bookings.referralSource,
+      // **No `referralSource` here** (issue #1294, owner ruling 2026-09-02).
+      // This order page used to carry "Sent by <slug>" on its quiet meta line,
+      // on the assumption — written into the comment that stood here — that
+      // "the slug is the shop's own, from its own embed generator". It is not.
+      // `partnerLinkUrl` writes no row, so nothing can tell a hotel's slug from
+      // one an anonymous visitor invented by editing the storefront URL and
+      // booking a seat, and this surface was the cheaper of the two to abuse:
+      // the month's report was owner/manager and took ten bookings to displace
+      // a real partner, while this page is every staff role and took one. The
+      // booking left join went with it — it existed only to carry that column.
     })
     .from(orders)
     .innerJoin(people, eq(people.id, orders.personId))
-    // Shop-scoped as well as id-matched, for the same reason the `createdBy`
-    // lookup below is: `orders.booking_id` is a foreign key, not a claim, and
-    // this query is never the place to widen a tenant boundary.
-    .leftJoin(bookings, and(eq(bookings.id, orders.bookingId), eq(bookings.shopId, shopId)))
     .where(and(eq(orders.id, orderId), eq(orders.shopId, shopId)))
     .limit(1);
   if (!row) return null;

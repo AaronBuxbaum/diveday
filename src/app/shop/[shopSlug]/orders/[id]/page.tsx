@@ -304,15 +304,6 @@ export default async function OrderDetailPage({
             {order.createdBy
               ? ` · ${t("orders.detail.createdBy", { name: order.createdBy.fullName })}`
               : ""}
-            {/* Which partner's link sent this diver, when one did (issue
-                #1285). On the same quiet line as "raised on / by", because it
-                is the same kind of fact about how this order came to exist —
-                and absent entirely for the ordinary order, which is most of
-                them. The slug is the shop's own, from its own embed
-                generator. */}
-            {order.referralSource
-              ? ` · ${t("orders.detail.sentBy", { partner: order.referralSource })}`
-              : ""}
           </p>
         }
         actions={
