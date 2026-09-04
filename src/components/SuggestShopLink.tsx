@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { suggestShopSlug } from "@/lib/onboarding";
+import { suggestShopSlug } from "@/lib/onboarding-slug";
 import { publicSchedulePath } from "@/lib/public-routes";
 
 /**

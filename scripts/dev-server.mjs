@@ -851,7 +851,7 @@ async function main(argv = process.argv.slice(2)) {
             return;
           }
           say(
-            `restarting: idle, holding ${formatMb(rss)} against a ${formatMb(activeBudget)} budget. Next's dev server grows without a ceiling and would be killed by the kernel instead; the filesystem cache survives this, so the next page is a warm compile. Nothing you were doing caused it.`,
+            `restarting: idle, holding ${formatMb(rss)} against a ${formatMb(activeBudget)} budget. Next's dev server never unloads a route it has served and would be killed by the kernel instead; the filesystem cache survives this, so the next page is a warm compile. Nothing you were doing caused it.`,
           );
           warmController.abort();
           restart();

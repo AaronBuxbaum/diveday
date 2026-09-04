@@ -42,6 +42,27 @@ coverage
 *.tsbuildinfo
 
 # ---------------------------------------------------------------------------
+# Prose and repository furniture. `scripts/vercel-build.mjs` runs
+# check-migrations, check-migration-graph, db:migrate and `pnpm build`, and none
+# of them opens any of this. Every reference to `docs/` under `src/` is a link
+# inside a comment, not a read — checked before excluding.
+#
+# `docs/` is the big one: 472 files, 5,725,158 bytes on disk, **2,085,157 bytes
+# gzipped — 8.9% of the whole 23.6 MB upload.** It is the largest thing in the
+# tarball that nothing in the build can see.
+docs
+.claude
+.github
+
+# ---------------------------------------------------------------------------
+# A build output that only *looks* like a source file. `public/manifest-sw.js`
+# is written by `scripts/build-service-worker.mjs` from `src/worker/manifest-sw.ts`,
+# and `pnpm build` is `pnpm build:sw && next build` — so Vercel regenerates it
+# and the copy sitting in a developer's working tree is stale by definition.
+# It is gitignored, which is exactly why the CLI could not see it.
+public/manifest-sw.js
+
+# ---------------------------------------------------------------------------
 # Deliberately NOT excluded, each for a reason worth knowing before you add it:
 #
 #   patches/          `pnpm-workspace.yaml` declares a patchedDependency there;
@@ -50,9 +71,22 @@ coverage
 #                     and `src/db/migrations.postgres.test.ts` imports from it.
 #   drizzle/          `scripts/vercel-build.mjs` runs `check-migration-graph`,
 #                     which shells `drizzle-kit check` — and that walk reads the
-#                     per-migration `snapshot.json` files. Excluding them does not
-#                     fail: `prepareOutFolder` filters the snapshot list with
-#                     `existsSync`, so an empty list passes **vacuously**. The
-#                     commutativity guard would go quietly green on every deploy.
-#                     They are 80 MB on disk and 3.3 MB of the gzipped upload;
-#                     that is not worth a guard that lies.
+#                     per-migration `snapshot.json` files. They are 80 MB on disk
+#                     and 3.3 MB of the gzipped upload, and cutting them is the
+#                     obvious saving the first time somebody reads a build log.
+#
+#                     It is still refused, but the reason changed on 2026-09-04
+#                     and this paragraph used to give the old one. It said the
+#                     exclusion "does not fail" — that `prepareOutFolder` filters
+#                     the list through `existsSync`, so an empty list passes
+#                     **vacuously** and the guard goes quietly green. That was
+#                     true, and it was the whole problem: issue #1336 fixed it.
+#                     `scripts/check-migration-graph.mjs` now counts the folders
+#                     and the snapshots first and refuses a tree that has
+#                     migrations and not one snapshot, naming this file in the
+#                     message.
+#
+#                     So excluding them no longer lies — it **fails the
+#                     production deploy outright**, at `vercel-build.mjs`, before
+#                     `db:migrate` runs. Detectable is better than silent, and it
+#                     is still not the same as correct: the snapshots stay.

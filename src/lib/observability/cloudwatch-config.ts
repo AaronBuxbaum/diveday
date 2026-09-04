@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 /**
  * Where the structured log lines go, when they go anywhere at all.
  *
@@ -23,13 +21,22 @@ export type CloudWatchLogsConfig = {
   readonly environment: string;
 };
 
-const configSchema = z.object({
-  region: z.string().trim().min(1),
-  logGroupName: z.string().trim().min(1),
-  accessKeyId: z.string().trim().min(1),
-  secretAccessKey: z.string().trim().min(1),
-  environment: z.string().trim().min(1),
-});
+/**
+ * Trimmed, or `null` if there is nothing left.
+ *
+ * This was a five-field `z.object` of `z.string().trim().min(1)`, and the
+ * behaviour is identical — but zod is not. `log()` imports `./cloudwatch`,
+ * which imported this module, and `src/i18n/on-error.ts` imports `log`, so
+ * every client component that reads a translated string pulled a **375 KB
+ * (83.5 KB gzipped) zod chunk** into its browser bundle to validate five
+ * server-side environment variables it can never see. Five trimmed non-empty
+ * strings do not need a schema library; a browser bundle very much does not
+ * need one for this.
+ */
+function required(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
 
 /**
  * All four credentials or nothing. A half-configured shipper is the worst of
@@ -45,12 +52,11 @@ export function readCloudWatchLogsConfig(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): CloudWatchLogsConfig | null {
   if (env.DIVEDAY_DISABLE_EXTERNAL_HTTP === "1") return null;
-  const parsed = configSchema.safeParse({
-    region: env.CLOUDWATCH_AWS_REGION,
-    logGroupName: env.CLOUDWATCH_LOG_GROUP,
-    accessKeyId: env.CLOUDWATCH_AWS_ACCESS_KEY_ID,
-    secretAccessKey: env.CLOUDWATCH_AWS_SECRET_ACCESS_KEY,
-    environment: env.VERCEL_ENV || env.NODE_ENV || "development",
-  });
-  return parsed.success ? parsed.data : null;
+  const region = required(env.CLOUDWATCH_AWS_REGION);
+  const logGroupName = required(env.CLOUDWATCH_LOG_GROUP);
+  const accessKeyId = required(env.CLOUDWATCH_AWS_ACCESS_KEY_ID);
+  const secretAccessKey = required(env.CLOUDWATCH_AWS_SECRET_ACCESS_KEY);
+  const environment = required(env.VERCEL_ENV || env.NODE_ENV || "development");
+  if (!region || !logGroupName || !accessKeyId || !secretAccessKey || !environment) return null;
+  return { region, logGroupName, accessKeyId, secretAccessKey, environment };
 }

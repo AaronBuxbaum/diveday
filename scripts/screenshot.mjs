@@ -384,7 +384,8 @@ function serverGoneMessage(target, captured) {
     (captured > 0 ? `, after ${captured} capture${captured === 1 ? "" : "s"}` : "") +
     ". It did not come back within " +
     `${RESTART_GRACE_MS / 1000}s, so this is not the supervisor's own restart (scripts/dev-server.mjs).\n\n` +
-    "On a memory-capped container a Turbopack `next-server` grows without a ceiling and is " +
+    "On a memory-capped container a Turbopack `next-server` never unloads a route it has served and " +
+    "is " +
     "OOM-killed outright — measured at roughly thirty page renders in a 16 GB container, which is " +
     'well inside one capture matrix. `dmesg` says so: "Memory cgroup out of memory: Killed process ' +
     '… next-server".\n\n' +
