@@ -472,7 +472,6 @@
     "waiverSent": "Exención enviada",
     "waiverSigned": "Exención firmada"
   },
-  "onThisPhone": "En este teléfono",
   "offlineManifestManager": {
     "checkingDevice": "Comprobando este dispositivo…",
     "reconcileRejectedOne": "1 cambio necesita revisión. Abre el manifiesto en vivo para resolverlo.",
@@ -592,13 +591,6 @@
     "heading": "Faltan {shortfall, plural, one {# buceador} other {# buceadores}} para los {minimum} que necesita esta salida",
     "shortBody": "Si no los alcanza antes del {deadline}, DiveDay la cancela y avisa por correo a quienes iban. Llena las plazas o quita el mínimo en Detalles para realizarla igualmente.",
     "dueBody": "La fecha límite venció el {deadline}. DiveDay cancelará esta salida y avisará por correo a quienes iban en su próxima pasada; quita el mínimo en Detalles si quieres realizarla igualmente."
-  },
-  "emergency": {
-    "heading": "En una emergencia",
-    "empty": "No hay números de emergencia registrados. Añade la cámara, la línea de accidentes de buceo y tu contacto en tierra en Ajustes. La tripulación lee esto sin conexión.",
-    "vesselLabel": "Embarcación:",
-    "shoreContactLabel": "Contacto en tierra:",
-    "planLabel": "Si algo sale mal"
   },
   "preDepartureCheck": {
     "heading": "Comprobación previa a la salida",

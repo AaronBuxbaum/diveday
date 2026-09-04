@@ -160,5 +160,13 @@
   "rollCallRecordedShort": "{label} · {time} · {name}",
   "markBackAboard": "Marcar de vuelta a bordo",
   "crewMarkBackAboard": "Marcar de vuelta a bordo",
-  "supportNeedsLabel": "Apoyo en la inmersión"
+  "supportNeedsLabel": "Apoyo en la inmersión",
+  "emergency": {
+    "heading": "En una emergencia",
+    "empty": "No hay números de emergencia registrados. Añade la cámara, la línea de accidentes de buceo y tu contacto en tierra en Ajustes. La tripulación lee esto sin conexión.",
+    "vesselLabel": "Embarcación:",
+    "shoreContactLabel": "Contacto en tierra:",
+    "planLabel": "Si algo sale mal"
+  },
+  "onThisPhone": "En este teléfono"
 }

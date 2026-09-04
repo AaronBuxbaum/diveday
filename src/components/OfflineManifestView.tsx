@@ -1319,11 +1319,11 @@ export function OfflineManifestView() {
           // the one surface a crew has offshore.
           reference={envelope.snapshot.shop.emergencyReference ?? EMPTY_EMERGENCY_REFERENCE}
           copy={{
-            heading: t("trips.emergency.heading"),
-            empty: t("trips.emergency.empty"),
-            vesselLabel: t("trips.emergency.vesselLabel"),
-            shoreContactLabel: t("trips.emergency.shoreContactLabel"),
-            planLabel: t("trips.emergency.planLabel"),
+            heading: t("manifest.emergency.heading"),
+            empty: t("manifest.emergency.empty"),
+            vesselLabel: t("manifest.emergency.vesselLabel"),
+            shoreContactLabel: t("manifest.emergency.shoreContactLabel"),
+            planLabel: t("manifest.emergency.planLabel"),
           }}
         />
 
@@ -2223,7 +2223,7 @@ export function OfflineManifestView() {
                 id="offline-phone-heading"
                 className="text-base font-semibold group-hover/summary:underline"
               >
-                {t("trips.onThisPhone")}
+                {t("manifest.onThisPhone")}
               </h2>
             </summary>
             <div className="grid gap-3 pt-4 sm:grid-cols-2">

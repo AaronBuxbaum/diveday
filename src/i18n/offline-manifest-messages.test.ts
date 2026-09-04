@@ -30,8 +30,12 @@ import { offlineManifestTranslator } from "./offline-manifest-messages";
 const ROOT = process.cwd();
 const VIEW = "src/components/OfflineManifestView.tsx";
 
-/** The three the narrow module ships. */
-const SHIPPED = ["manifest", "shared", "trips"] as const;
+/**
+ * The two the narrow module ships. Was three until issue #1359 moved the
+ * emergency card's six keys into `manifest.json` and dropped `trips` — 613
+ * lines carried for 301 bytes of copy.
+ */
+const SHIPPED = ["manifest", "shared"] as const;
 
 /** The 31 staff namespaces, off disk — one JSON file each. */
 function staffNamespaces(): string[] {
@@ -86,11 +90,34 @@ function reachableModules(): string[] {
  * shape-matching regex would get wrong.
  */
 function staffNamespacesIn(file: string, known: readonly string[]): string[] {
-  const source = readFileSync(path.join(ROOT, file), "utf8");
+  const source = withoutComments(readFileSync(path.join(ROOT, file), "utf8"));
   const found = [...source.matchAll(/["`]([a-zA-Z]+)\.[a-zA-Z$][\w.${}]*["`]/g)]
     .map((match) => match[1] as string)
     .filter((namespace) => known.includes(namespace));
   return [...new Set(found)].sort();
+}
+
+/**
+ * Source with its block comments and whole-line `//` comments removed.
+ *
+ * **Because prose about a namespace is not a use of it.** The scan below reads
+ * raw text, so a docblock saying `` `trips.json` `` reads as a reference to the
+ * `trips` namespace and fails this suite — which is exactly what happened when
+ * issue #1359's explanation of *why* `trips` was dropped was written into
+ * `offline-manifest-messages.ts`. The guard is about what the code reaches;
+ * a comment reaches nothing.
+ *
+ * Deliberately conservative: only `/* … *\/` blocks and lines whose first
+ * non-space characters are `//` or `*`. A trailing `//` on a line of code is
+ * left alone, because stripping it would need to know where the strings are,
+ * and this over-approximates on purpose (see `reachableModules`).
+ */
+function withoutComments(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split("\n")
+    .filter((line) => !/^\s*(\/\/|\*)/.test(line))
+    .join("\n");
 }
 
 describe("the offline manifest's message bundle", () => {
@@ -136,20 +163,19 @@ describe("the offline manifest's message bundle", () => {
     expect(view).not.toContain('from "@/i18n/staff-messages"');
     const module = readFileSync(path.join(ROOT, "src/i18n/offline-manifest-messages.ts"), "utf8");
     expect(module).not.toContain("./staff-messages");
-    expect([...module.matchAll(/from "\.\/locales\/[^"]+"/g)]).toHaveLength(6);
+    expect([...module.matchAll(/from "\.\/locales\/[^"]+"/g)]).toHaveLength(4);
   });
 
-  it("resolves a key from each of the three, in both locales", () => {
+  it("resolves a key from each of the two, in both locales", () => {
     for (const locale of ["en-US", "es-ES"]) {
       const t = offlineManifestTranslator(locale);
-      // Real keys this surface renders, one per namespace. `trips` is the one
-      // not to forget: it carries the emergency card — the chamber, the
-      // dive-accident hotline, the shore contact and the plan — which is the
-      // single block on this page most worth resolving in the reader's own
-      // language.
+      // Real keys this surface renders, one per namespace. The emergency card
+      // — the chamber, the dive-accident hotline, the shore contact and the
+      // plan — is the single block on this page most worth resolving in the
+      // reader's own language, and it moved into `manifest` with issue #1359.
       expect(t("shared.readiness.status.ready")).not.toContain("shared.");
       expect(t("manifest.diverFactsSummary")).not.toContain("manifest.");
-      expect(t("trips.emergency.heading")).not.toContain("trips.");
+      expect(t("manifest.emergency.heading")).not.toContain("manifest.");
     }
   });
 

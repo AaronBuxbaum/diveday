@@ -520,11 +520,11 @@ export default async function TripManifestPage({
   }
 
   const emergencyCopy = {
-    heading: t("trips.emergency.heading"),
-    empty: t("trips.emergency.empty"),
-    vesselLabel: t("trips.emergency.vesselLabel"),
-    shoreContactLabel: t("trips.emergency.shoreContactLabel"),
-    planLabel: t("trips.emergency.planLabel"),
+    heading: t("manifest.emergency.heading"),
+    empty: t("manifest.emergency.empty"),
+    vesselLabel: t("manifest.emergency.vesselLabel"),
+    shoreContactLabel: t("manifest.emergency.shoreContactLabel"),
+    planLabel: t("manifest.emergency.planLabel"),
   };
 
   return (
@@ -830,7 +830,7 @@ export default async function TripManifestPage({
             refreshingLabel: t("trips.offlineManifestManager.refreshingLabel"),
             refreshNowLabel: t("trips.offlineManifestManager.refreshNowLabel"),
             openOfflineRollCall: t("trips.offlineManifestManager.openOfflineRollCall"),
-            groupHeading: t("trips.onThisPhone"),
+            groupHeading: t("manifest.onThisPhone"),
           } satisfies OfflineManifestManagerCopy
         }
       >

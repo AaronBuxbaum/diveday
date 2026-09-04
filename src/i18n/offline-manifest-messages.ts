@@ -1,15 +1,13 @@
 import { createTranslator } from "next-intl";
 import enManifest from "./locales/en-US/staff/manifest.json";
 import enShared from "./locales/en-US/staff/shared.json";
-import enTrips from "./locales/en-US/staff/trips.json";
 import esManifest from "./locales/es-ES/staff/manifest.json";
 import esShared from "./locales/es-ES/staff/shared.json";
-import esTrips from "./locales/es-ES/staff/trips.json";
 import { translatorOnError } from "./on-error";
 import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./settings";
 
 /**
- * **The three staff namespaces the offline boat manifest reads** (issue #1353).
+ * **The two staff namespaces the offline boat manifest reads** (issues #1353, #1359).
  *
  * `OfflineManifestView` is a Client Component -- it has to be, because the
  * whole point is a manifest that opens from cache on a phone with no signal at
@@ -19,15 +17,25 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./setting
  * heaviest page in the app by a wide margin, against a 237.3 KB floor, and the
  * next largest browser-byte item was about ten times smaller.
  *
+ * **Then two, not three** (issue #1359). `trips` was here for six keys — the
+ * emergency card and one heading — out of 613 lines, and every one of them is
+ * read on a manifest surface rather than in the departure editor where that
+ * copy had accumulated. Moving those six into `manifest.json` and dropping the
+ * namespace is worth ~23 KB gzip of the two locales' `trips.json`; the keys
+ * themselves are 301 bytes, so the saving is entirely the 612 lines left
+ * behind.
+ *
  * **Its own module, not a second export beside `staffTranslator`.** Putting the
  * narrow composer in `staff-messages.ts` would leave the saving resting on
  * export-level tree-shaking of `STAFF_MESSAGES` -- which may well work, and
  * which nothing here would verify. A separate module that never imports the
  * barrels cannot regress that way: the bytes are absent because the import is.
  *
- * Adding a namespace here is deliberate and costs a diver at the rail its
- * download. The set is pinned in `offline-manifest-messages.test.ts` against
- * the keys the view and its helpers actually reach.
+ * Adding a namespace here is deliberate and costs a crew member at the rail its
+ * whole download, however few keys are wanted from it. The set is pinned in
+ * `offline-manifest-messages.test.ts` against the keys the view and its helpers
+ * actually reach — narrowed to these two in the same change, which is what
+ * makes `trips` staying out enforceable rather than incidental.
  *
  * **Both locales stay statically imported, and that is not an oversight.**
  * Splitting them behind a dynamic import would halve this again, and it is the
@@ -41,8 +49,8 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale, toDiverLocale } from "./setting
  * the offline guarantee the page exists for.
  */
 const OFFLINE_MANIFEST_MESSAGES = {
-  "en-US": { manifest: enManifest, shared: enShared, trips: enTrips },
-  "es-ES": { manifest: esManifest, shared: esShared, trips: esTrips },
+  "en-US": { manifest: enManifest, shared: enShared },
+  "es-ES": { manifest: esManifest, shared: esShared },
 } as const satisfies Record<DiverLocale, unknown>;
 
 export type OfflineManifestMessages = (typeof OFFLINE_MANIFEST_MESSAGES)["en-US"];
