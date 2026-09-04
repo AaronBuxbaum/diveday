@@ -46,6 +46,45 @@ const nextConfig: NextConfig = {
     "@aws-sdk/client-sesv2",
     "@aws-sdk/client-sns",
   ],
+  // Vercel runs Linux. It has never run macOS, and it never will.
+  //
+  // `sharp` ships its libvips binary as one optional package per platform, and
+  // pnpm installs all of them so the lockfile resolves on a developer's Mac as
+  // well as on a runner. Every one then lands in the *traced* closure, which is
+  // the set of files Vercel actually deploys and the set its 250 MB
+  // per-function limit measures. Counted off `.next/**/*.nft.json` with every
+  // path resolved and stat'd, the worst function — `/s/[shopSlug]/trips/[id]`,
+  // 1,020 files — was **110.5 MB**, and four platform builds of one image
+  // library were 71.9 MB of it:
+  //
+  //     19.4 MB  @img/sharp-libvips-darwin-x64     <- excluded below
+  //     17.8 MB  @img/sharp-libvips-linux-x64         the one that runs
+  //     17.4 MB  @img/sharp-libvips-linux-arm64       kept, see below
+  //     17.3 MB  @img/sharp-libvips-darwin-arm64   <- excluded below
+  //
+  // Dropping the two darwin pairs takes 37.2 MB off *every* traced function.
+  // Nothing resolves them at runtime: `sharp` selects its native by
+  // `process.platform` at require time, so on a Linux function the darwin
+  // packages are never opened — which is exactly why they are safe to exclude
+  // and were never noticed.
+  //
+  // `linux-arm64` stays, deliberately. It is another 17.4 MB and the same
+  // argument would remove it, but only if the Function architecture is pinned
+  // to x64 — that is a project setting on Vercel's side, not a fact this file
+  // can read, and getting it wrong is a function that cannot decode a JPEG
+  // rather than a slightly larger one. Worth taking once somebody confirms the
+  // setting; not worth guessing.
+  //
+  // The store path and the hoisted symlink are both traced, so both shapes are
+  // listed. `**` as the key is every route (picomatch, `contains: true`).
+  outputFileTracingExcludes: {
+    "**": [
+      "node_modules/.pnpm/@img+sharp-darwin-*/**",
+      "node_modules/.pnpm/@img+sharp-libvips-darwin-*/**",
+      "node_modules/@img/sharp-darwin-*/**",
+      "node_modules/@img/sharp-libvips-darwin-*/**",
+    ],
+  },
   cacheComponents: true,
   images: {
     // The e2e build serves every photo's original bytes instead of running

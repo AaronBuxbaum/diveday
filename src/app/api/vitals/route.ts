@@ -3,12 +3,14 @@ import { redactCapabilityUrl } from "@/app/observability";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
 import {
-  mutationDurationBeaconSchema,
   mutationDurationLogContext,
   normalizeBeaconPath,
-  webVitalsBeaconSchema,
   webVitalsLogContext,
 } from "@/lib/observability/web-vitals";
+import {
+  mutationDurationBeaconSchema,
+  webVitalsBeaconSchema,
+} from "@/lib/observability/web-vitals-beacon";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 

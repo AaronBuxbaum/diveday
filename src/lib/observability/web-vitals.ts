@@ -1,4 +1,8 @@
-import { z } from "zod";
+// Type-only, and that matters: `web-vitals-beacon.ts` imports the constants
+// below, so a value import here would be a cycle — and worse, it would put zod
+// back in every route's browser bundle, which is the whole reason the two files
+// are separate. `import type` is erased at compile time, so neither happens.
+import type { MutationDurationBeacon, WebVitalsBeacon } from "./web-vitals-beacon";
 
 /**
  * Core Web Vitals as DiveDay measures them (ADR 20260806-cloudwatch-rum-and-vitals).
@@ -39,60 +43,6 @@ export const WEB_VITAL_NAMES = WEB_VITALS.map((vital) => vital.name) as [
   WebVitalName,
   ...WebVitalName[],
 ];
-
-/**
- * Rejects a body before it can become a log line and a CloudWatch metric.
- *
- * This endpoint is public and unauthenticated — it has to be, the report comes
- * from a diver's browser — so every bound here is doing real work. The value
- * ceiling matters most: an unbounded number would let anyone move the p75 of a
- * Core Web Vital to whatever they liked, and an alarm that a stranger can fire
- * is an alarm that gets muted. An hour is far past any real measurement and
- * still finite.
- */
-export const webVitalsBeaconSchema = z.object({
-  url: z.string().trim().min(1).max(2_048),
-  // An enum, not a bounded string. This value is grouped on in Logs Insights,
-  // and a free-form field on a public endpoint is a field an anonymous caller
-  // chooses the cardinality of. The set is the Navigation Timing API's own.
-  navigationType: z
-    .enum(["navigate", "reload", "back-forward", "back-forward-cache", "prerender", "restore"])
-    .optional(),
-  metrics: z
-    .array(
-      z.object({
-        name: z.enum(WEB_VITAL_NAMES),
-        value: z.number().finite().nonnegative().max(3_600_000),
-      }),
-    )
-    .min(1)
-    .max(WEB_VITALS.length),
-});
-
-export type WebVitalsBeacon = z.infer<typeof webVitalsBeaconSchema>;
-
-/**
- * A settled staff mutation, measured in the browser from the tap through the
- * server action's response. It deliberately carries no URL or record id: the
- * action name is a bounded enum-like label, and the duration is the only
- * number the observability question needs.
- */
-export const mutationDurationBeaconSchema = z.object({
-  mutations: z
-    .array(
-      z.object({
-        action: z
-          .string()
-          .trim()
-          .regex(/^[a-z0-9][a-z0-9_-]{0,63}$/),
-        durationMs: z.number().finite().nonnegative().max(600_000),
-      }),
-    )
-    .min(1)
-    .max(10),
-});
-
-export type MutationDurationBeacon = z.infer<typeof mutationDurationBeaconSchema>;
 
 /**
  * Longest route a log line will carry. A real one is a fraction of this; the

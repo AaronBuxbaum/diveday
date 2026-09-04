@@ -81,9 +81,10 @@
  * "split the file" case, not a reason to remove the atomic single-transaction
  * commit in src/db/import.ts.
  */
-import { type CertificationAgency, certificationAgency, type DiveSpecialty } from "@/db/schema";
+import type { CertificationAgency, DiveSpecialty } from "@/db/schema";
 import { isPlausibleDateOfBirth } from "./age";
 import { type CalendarDate, isValidCalendarDate } from "./calendar-date";
+import { CERTIFICATION_AGENCIES } from "./certification-options";
 import { currencyMinorUnits, isShopCurrency } from "./money";
 
 /**
@@ -128,7 +129,12 @@ export const MAX_IMPORT_CELL_LENGTH = 2_000;
  *     the rail or stops looking cards up at all. `normalizeAgency` matches whole
  *     tokens for exactly this reason — see its own note.
  */
-export const IMPORT_AGENCIES = certificationAgency.enumValues;
+// `CERTIFICATION_AGENCIES` rather than `certificationAgency.enumValues`: this
+// module is imported by `ImportWizard.tsx`, which is `"use client"`, and the
+// value import of the schema put drizzle-orm and every table definition in that
+// route's browser bundle (133,786 bytes raw / 26.1 KB gzip). The schema builds
+// its pgEnum from this same array, so the two cannot drift.
+export const IMPORT_AGENCIES = CERTIFICATION_AGENCIES;
 export type ImportAgency = CertificationAgency;
 
 /** Recreational ladder rungs; mirrors the certification_level pg enum. */

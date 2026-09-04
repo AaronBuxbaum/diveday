@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { fill, pluralForm } from "@/i18n/fill";
-import { type CourseFaq, MAX_FAQS } from "@/lib/courses";
+import { MAX_FAQS } from "@/lib/course-limits";
+import type { CourseFaq } from "@/lib/courses";
 import { draftFieldValue } from "./UnsavedChangesGuard";
 
 /**
