@@ -59,9 +59,10 @@ function waiverDetail(
   if (diver.waiver.state === "medical_review") {
     return t("divers.stats.waiverHeldSince", { date: date(diver.waiver.at) });
   }
-  // The date the answer arrived, not the date the hold started: the row above
-  // already says the diver is not cleared, and what a staffer reading this
-  // needs next is whether that is news (issue #1283).
+  // The date the answer arrived, not the date the hold started, and worded so
+  // it adds a fact rather than repeating the row above it: that row already
+  // says "Not cleared", so the only thing left for this line to carry is *when*
+  // the shop learned it (issue #1283).
   if (diver.waiver.state === "medical_not_cleared") {
     return t("divers.stats.waiverNotClearedOn", { date: date(diver.waiver.declinedAt) });
   }

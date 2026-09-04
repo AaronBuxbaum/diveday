@@ -299,7 +299,7 @@
     "waiverGoodUntil": "Good until {date}",
     "waiverLastSigned": "Last signed {date}",
     "waiverHeldSince": "Held since {date}",
-    "waiverNotClearedOn": "Not cleared on {date}",
+    "waiverNotClearedOn": "Answered {date}",
     "sendWaiverViaEmail": "Email waiver",
     "sendWaiverViaSms": "Text waiver",
     "copyWaiverLink": "Copy link",

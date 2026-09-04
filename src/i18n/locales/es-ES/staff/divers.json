@@ -299,7 +299,7 @@
     "waiverGoodUntil": "Válido hasta el {date}",
     "waiverLastSigned": "Firmado por última vez el {date}",
     "waiverHeldSince": "En espera desde el {date}",
-    "waiverNotClearedOn": "Sin autorización desde el {date}",
+    "waiverNotClearedOn": "Respondido el {date}",
     "sendWaiverViaEmail": "Enviar exención por correo",
     "sendWaiverViaSms": "Enviar exención por texto",
     "copyWaiverLink": "Copiar enlace",

@@ -103,7 +103,18 @@ export function MedicalClearanceControl({
             both radios is what makes "no answer" unsubmittable — there is no
             default here, on purpose. */}
         <fieldset>
-          <legend className="text-sm font-medium">{copy.outcomeLegend}</legend>
+          <legend className="text-sm font-medium">
+            {copy.outcomeLegend}
+            {/* `Field`'s own required marker, by hand because a fieldset is not
+                one: without it the outcome would be the only mandatory control
+                on this form not saying so, and "required" is the whole point of
+                a choice with no default. Same shape as `Field` — aria-hidden,
+                outside the accessible name. */}
+            <span aria-hidden="true" className="text-danger">
+              {" "}
+              *
+            </span>
+          </legend>
           <div className="mt-2 flex flex-wrap gap-3">
             <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm hover:bg-surface">
               <input type="radio" name="outcome" value="cleared" required />

@@ -854,9 +854,14 @@ export function RosterSection({
                   <li key={prompt}>{prompt}</li>
                 ))}
               </ul>
-            ) : (
+            ) : waiverStatus === "medical_review" ? (
+              // Only while the answer is still outstanding. This sentence ends
+              // "confirm physician clearance before boarding", which under a
+              // recorded refusal contradicts the line directly above it and
+              // tells a crew member to go looking for a clearance that has
+              // already been refused (caught by looking at the row).
               <p className="mt-1">{t("trips.roster.medicalFollowUpDescription")}</p>
-            )}
+            ) : null}
             <div className="flex flex-wrap items-center gap-x-4">
               {currentWaiver ? (
                 <Link
