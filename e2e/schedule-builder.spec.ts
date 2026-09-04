@@ -145,12 +145,16 @@ test.describe("schedule builder", () => {
     await expect(page.getByRole("status")).toContainText("Copied");
     await expect(page.getByRole("listitem").filter({ hasText: title })).toHaveCount(2);
 
-    // Remove — a two-step confirm in a panel below the row, the same shape
+    // Remove — a two-step confirm in a panel below the board, the same shape
     // Move and Copy use; both copies come back off the board.
+    //
+    // The confirm is scoped to the page rather than to the row as of issue
+    // #1309: the panel is rendered once for the whole board, outside both the
+    // day stream and the week grid, so that a resize across `xl` cannot hide
+    // it. Only one panel is ever open, so there is nothing to disambiguate.
     for (let remaining = 2; remaining > 0; remaining -= 1) {
-      const row = page.getByRole("listitem").filter({ hasText: title }).first();
       await chooseRowAction(page, "Remove", title);
-      await row.getByRole("button", { name: "Yes, remove the trip" }).click();
+      await page.getByRole("button", { name: "Yes, remove the trip" }).click();
       await expect(page.getByRole("status")).toContainText("Taken off the board.");
       await expect(page.getByRole("listitem").filter({ hasText: title })).toHaveCount(
         remaining - 1,
@@ -233,7 +237,9 @@ test.describe("schedule builder", () => {
     await expect(booked).toBeVisible();
     await booked.getByRole("button", { name: /^Move, copy, or remove / }).click();
     await booked.getByRole("button", { name: /^Remove / }).click();
-    await booked.getByRole("button", { name: "Yes, remove the trip" }).click();
+    // Page-scoped: the confirm panel renders once for the board, outside the
+    // row (issue #1309).
+    await page.getByRole("button", { name: "Yes, remove the trip" }).click();
 
     await expect(page.getByRole("status")).toContainText("Divers have booked this departure");
     // Still on the board, roster intact.

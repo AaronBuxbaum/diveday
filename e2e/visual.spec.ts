@@ -3021,19 +3021,21 @@ for (const scheme of ["light", "dark"] as const) {
        * read has landed — the preview is fetched when the panel opens, so the
        * `Board` heading and the pager are both true before it exists.
        *
-       * **Opened at the phone width on purpose.** The board has two
+       * **Both widths show the panel** as of issue #1309. This used to force
+       * the phone viewport before opening, because the board's two
        * compositions — the vertical day stream below `xl`, the week grid at and
-       * above it — and they key their panels separately (`move:` against
-       * `w:move:`), so whichever one is open closes when `capture()` resizes
-       * through the other. `MovePanel` is module scope and shared by both, so
-       * one composition covers the component either way; the narrow column is
-       * the half worth photographing, because a block of prose stacked above a
-       * two-field form is where crowding would show. The 1280 sibling is
-       * therefore the plain week grid.
+       * above it — keyed their panels separately (`move:` against `w:move:`),
+       * so whichever was open closed the moment `capture()` resized through the
+       * other and the 1280 sibling was a duplicate of the plain week grid: two
+       * baseline names for one image, and a reviewer triaging the same board
+       * change twice. The panel now renders once for the whole board, outside
+       * both compositions, so it survives the resize and each width photographs
+       * what it says it does — the narrow column where a block of prose stacked
+       * above a two-field form would crowd, and the wide one where it runs full
+       * width beneath the grid.
        */
       test(`the move panel says what a move will cost (${scheme})`, async ({ page }) => {
         const title = "Wreck Trip — Spiegel Grove";
-        await page.setViewportSize({ width: 390, height: 844 });
         await page.goto("/shop/blue-mantis/schedule/board");
         await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
         await boardListSettled(page);

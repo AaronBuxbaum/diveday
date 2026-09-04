@@ -1114,13 +1114,18 @@ describe("ScheduleBuilder unfinished after-dive roll call (DOM-H3)", () => {
     await userEvent.click(within(row).getByRole("button", { name: /^Move, copy, or remove / }));
     await userEvent.click(within(row).getByRole("button", { name: /^Remove / }));
 
-    const panel = within(row).getByRole("alert");
+    // Scoped to the board rather than to the row as of issue #1309: the panel
+    // is rendered once for the whole board, outside both compositions, so that
+    // crossing the `xl` breakpoint cannot hide it. That is more of what this
+    // test already said it was — "a panel now, like Move and Copy" — not less.
+    const panel = screen.getByRole("alert");
     expect(panel).toHaveTextContent("Take “Two-Tank Reef” off the board for good?");
+    expect(row.contains(panel)).toBe(false);
     // Arming submits nothing at all.
     expect(remove).not.toHaveBeenCalled();
 
-    await userEvent.click(within(row).getByRole("button", { name: "Never mind" }));
-    expect(within(row).queryByRole("alert")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Never mind" }));
+    expect(screen.queryByRole("alert")).toBeNull();
     expect(remove).not.toHaveBeenCalled();
   });
 
@@ -1766,6 +1771,73 @@ describe("ScheduleBuilder week board", () => {
     // grid rather than inside a 160px column.
     expect(screen.getByLabelText("New date")).toHaveValue("2026-08-27");
     expect(screen.getByLabelText("New departure time")).toHaveValue("07:00");
+  });
+
+  /**
+   * **The board has one panel, not one per composition** (issue #1309).
+   *
+   * The day stream and the week grid are both mounted at once and hidden from
+   * each other by CSS, and each used to render its own Move/Copy/Remove keyed
+   * `move:<id>` and `w:move:<id>`. So the open panel belonged to exactly one of
+   * them, and crossing `xl` made it vanish with whatever had been typed into
+   * it — rotate a tablet, un-maximise a window, open devtools.
+   *
+   * jsdom applies no media query, so both compositions are *visible* here.
+   * That makes this the right place to pin the structural half, which is the
+   * half that fixes the bug: whichever side opens the panel, there is exactly
+   * one of it and it sits outside both subtrees, so no media query can reach
+   * it. A shared key alone would have produced two — two controls labelled
+   * "New date" in the DOM, breaking strict-mode locators and duplicating a
+   * labelled control for assistive technology.
+   */
+  it("renders one move panel, outside both compositions, from whichever opened it", async () => {
+    const user = userEvent.setup();
+    board(
+      week({
+        days: week().days.map((day) =>
+          day.dateIso === "2026-08-27"
+            ? {
+                ...day,
+                entries: [
+                  weekEntry({ tripId: "trip-1", dateIso: "2026-08-27", title: "Two-Tank Reef" }),
+                ],
+              }
+            : day,
+        ),
+      }),
+    );
+
+    const openFromGrid = async () => {
+      await user.click(
+        within(grid()).getByRole("button", { name: /^Move, copy, or remove Two-Tank Reef/ }),
+      );
+      await user.click(screen.getByRole("button", { name: /^Move Two-Tank Reef/ }));
+    };
+
+    await openFromGrid();
+    // `getAllBy`, not `getBy`: the point is the count, and `getBy` would throw
+    // its own error rather than report two.
+    expect(screen.getAllByLabelText("New date")).toHaveLength(1);
+    const panel = screen.getByLabelText("New date");
+    // Outside the week grid — the subtree that is `display:none` below `xl`.
+    expect(grid().contains(panel)).toBe(false);
+    // And outside every row of the stream, the subtree hidden above it.
+    for (const row of screen.getAllByRole("listitem")) {
+      expect(row.contains(panel)).toBe(false);
+    }
+
+    // The stream's own control opens the same single panel.
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    const streamRow = screen
+      .getAllByRole("listitem")
+      .find((row) => within(row).queryByRole("button", { name: /^Move, copy, or remove/ }));
+    if (!streamRow) throw new Error("the stream row's actions control is missing");
+    await user.click(
+      within(streamRow).getByRole("button", { name: /^Move, copy, or remove Two-Tank Reef/ }),
+    );
+    await user.click(screen.getByRole("button", { name: /^Move Two-Tank Reef/ }));
+    expect(screen.getAllByLabelText("New date")).toHaveLength(1);
+    expect(streamRow.contains(screen.getByLabelText("New date"))).toBe(false);
   });
 
   it("opens move, copy and remove from a multi-day course bar too", async () => {

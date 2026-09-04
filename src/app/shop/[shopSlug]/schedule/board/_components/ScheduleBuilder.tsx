@@ -1251,6 +1251,13 @@ function MovePanel({
       className="mt-3 rounded-inset border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
     >
       <input type="hidden" name="tripId" value={trip.id} />
+      {/* **Which departure this is about.** The panel renders once for the
+          whole board, outside both compositions (issue #1309), so it is no
+          longer directly beneath the row that opened it — on a phone it leads
+          the day stream. Without the name it would be a date field with no
+          subject. Data, not copy: the shop's own title for its own departure,
+          so there is no bundle key to translate. */}
+      <p className="sm:col-span-2 text-sm font-medium">{trip.title}</p>
       <MoveImpact tripId={trip.id} copy={copy} loadPreflight={loadPreflight} />
       <Field
         label={copy.newDate}
@@ -1309,6 +1316,13 @@ function CopyPanel({
       className="mt-3 rounded-inset border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
     >
       <input type="hidden" name="tripId" value={trip.id} />
+      {/* **Which departure this is about.** The panel renders once for the
+          whole board, outside both compositions (issue #1309), so it is no
+          longer directly beneath the row that opened it — on a phone it leads
+          the day stream. Without the name it would be a date field with no
+          subject. Data, not copy: the shop's own title for its own departure,
+          so there is no bundle key to translate. */}
+      <p className="sm:col-span-2 text-sm font-medium">{trip.title}</p>
       <Field label={copy.copyTo} description={copy.copyDescription}>
         <input
           name="date"
@@ -1514,16 +1528,72 @@ export function ScheduleBuilder({
     ? [...week.days.flatMap((day) => day.entries), ...week.spans]
     : [];
   const weekAdd = open?.startsWith("w:add:") ? open.slice("w:add:".length) : null;
-  const weekAction = ((): {
-    kind: "menu" | "move" | "copy" | "remove";
-    entry: WeekDeparture;
+  // The grid's own action strip, and nothing else. Move, copy and remove used
+  // to resolve here too and render inside the grid's `hidden xl:block`
+  // wrapper; they now render once for the whole board — see `sharedPanel`.
+  const weekAction = ((): { entry: WeekDeparture } | null => {
+    const prefix = "w:menu:";
+    if (!open?.startsWith(prefix)) return null;
+    const tripId = open.slice(prefix.length);
+    const entry = weekDepartures.find((candidate) => candidate.tripId === tripId);
+    return entry ? { entry } : null;
+  })();
+
+  /**
+   * **The one move/copy/remove panel on the board**, whichever composition
+   * opened it (issue #1309).
+   *
+   * The board renders two compositions of the same departures — the vertical
+   * day stream below `xl`, the week grid at and above it — and **both are
+   * mounted at once, hidden with CSS rather than conditionally rendered**. Each
+   * used to render its own copy of these panels, keyed `move:<tripId>` in the
+   * stream and `w:move:<tripId>` in the grid. So the key that was set belonged
+   * to exactly one of them, and crossing the breakpoint made the open panel
+   * vanish: rotate a tablet, un-maximise a window or open devtools with a typed
+   * date in the Move form and it was gone, with nothing in the URL to come back
+   * to.
+   *
+   * The fix is not one shared key. Both subtrees are mounted, so a shared key
+   * would open the panel in *both* — two controls labelled "New date" in the
+   * DOM at once, which breaks strict-mode locators and is an accessibility
+   * problem on its own. The panel renders **once**, outside both wrappers, so
+   * there is one node: it cannot be hidden by either composition's media query,
+   * and because it never moves in the tree, the values typed into its
+   * uncontrolled inputs survive the resize rather than being remounted away.
+   *
+   * The `w:` prefix stays on the key, and is read here only to decide which
+   * trigger gets focus back. That is the reason it exists: each composition has
+   * its own "⋯" button for the same departure, and the one in the hidden
+   * subtree cannot take focus.
+   */
+  const sharedPanel = ((): {
+    kind: "move" | "copy" | "remove";
+    trip: PanelTrip;
+    /** The menu key of the composition that opened it, for focus return. */
+    closeKey: string;
   } | null => {
-    for (const kind of ["menu", "move", "copy", "remove"] as const) {
-      const prefix = `w:${kind}:`;
-      if (!open?.startsWith(prefix)) continue;
-      const tripId = open.slice(prefix.length);
-      const entry = weekDepartures.find((candidate) => candidate.tripId === tripId);
-      if (entry) return { kind, entry };
+    if (!open) return null;
+    for (const kind of ["move", "copy", "remove"] as const) {
+      for (const fromWeek of [false, true]) {
+        const prefix = fromWeek ? `w:${kind}:` : `${kind}:`;
+        // `move:` is not a prefix of `w:move:`, so the two never collide.
+        if (!open.startsWith(prefix)) continue;
+        const tripId = open.slice(prefix.length);
+        const closeKey = fromWeek ? `w:menu:${tripId}` : `menu:${tripId}`;
+        // **The composition that opened it describes it.** The two carry the
+        // same departure under the same id and not always the same fields — a
+        // multi-day run is one span in the grid and a row on each of its days
+        // in the stream — so a panel resolved from the wrong side would open
+        // pre-filled with a date the user was not looking at.
+        const entry = fromWeek
+          ? weekDepartures.find((candidate) => candidate.tripId === tripId)
+          : undefined;
+        if (entry) return { kind, trip: panelTripOf(entry), closeKey };
+        const streamTrip = windowTrips.find((candidate) => candidate.id === tripId);
+        if (streamTrip) return { kind, trip: streamTrip, closeKey };
+        const anyEntry = weekDepartures.find((candidate) => candidate.tripId === tripId);
+        if (anyEntry) return { kind, trip: panelTripOf(anyEntry), closeKey };
+      }
     }
     return null;
   })();
@@ -1737,67 +1807,81 @@ export function ScheduleBuilder({
               />
             ) : null}
             {canConfigure && weekAction ? (
-              <>
-                {weekAction.kind === "menu" ? (
-                  <div className="mt-3 flex flex-wrap items-center gap-2 rounded-inset border border-border bg-surface-sunken/50 p-3">
-                    <p className="text-sm font-medium">{weekAction.entry.ref}</p>
-                    <div className="ms-auto flex items-center gap-1">
-                      <button
-                        type="button"
-                        ref={focusOnMount}
-                        onClick={() => toggle(`w:move:${weekAction.entry.tripId}`)}
-                        aria-label={fill(copy.moveAria, { ref: weekAction.entry.ref })}
-                        className={buttonClass({ variant: "ghost", size: "sm" })}
-                      >
-                        {copy.move}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => toggle(`w:copy:${weekAction.entry.tripId}`)}
-                        aria-label={fill(copy.copyAria, { ref: weekAction.entry.ref })}
-                        className={buttonClass({ variant: "ghost", size: "sm" })}
-                      >
-                        {copy.copy}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => toggle(`w:remove:${weekAction.entry.tripId}`)}
-                        aria-label={fill(copy.removeAria, { ref: weekAction.entry.ref })}
-                        className={buttonClass({ variant: "danger-ghost", size: "sm" })}
-                      >
-                        {copy.remove}
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-                {weekAction.kind === "move" ? (
-                  <MovePanel
-                    trip={panelTripOf(weekAction.entry)}
-                    copy={copy}
-                    action={actions.move}
-                    loadPreflight={loadMovePreflight}
-                    onCancel={() => closePanel(`w:menu:${weekAction.entry.tripId}`)}
-                  />
-                ) : null}
-                {weekAction.kind === "copy" ? (
-                  <CopyPanel
-                    trip={panelTripOf(weekAction.entry)}
-                    copy={copy}
-                    action={actions.duplicate}
-                    onCancel={() => closePanel(`w:menu:${weekAction.entry.tripId}`)}
-                  />
-                ) : null}
-                {weekAction.kind === "remove" ? (
-                  <RemovePanel
-                    trip={panelTripOf(weekAction.entry)}
-                    copy={copy}
-                    action={actions.remove}
-                    onCancel={() => closePanel(`w:menu:${weekAction.entry.tripId}`)}
-                  />
-                ) : null}
-              </>
+              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-inset border border-border bg-surface-sunken/50 p-3">
+                <p className="text-sm font-medium">{weekAction.entry.ref}</p>
+                <div className="ms-auto flex items-center gap-1">
+                  <button
+                    type="button"
+                    ref={focusOnMount}
+                    onClick={() => toggle(`w:move:${weekAction.entry.tripId}`)}
+                    aria-label={fill(copy.moveAria, { ref: weekAction.entry.ref })}
+                    className={buttonClass({ variant: "ghost", size: "sm" })}
+                  >
+                    {copy.move}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggle(`w:copy:${weekAction.entry.tripId}`)}
+                    aria-label={fill(copy.copyAria, { ref: weekAction.entry.ref })}
+                    className={buttonClass({ variant: "ghost", size: "sm" })}
+                  >
+                    {copy.copy}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggle(`w:remove:${weekAction.entry.tripId}`)}
+                    aria-label={fill(copy.removeAria, { ref: weekAction.entry.ref })}
+                    className={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                  >
+                    {copy.remove}
+                  </button>
+                </div>
+              </div>
             ) : null}
           </div>
+        </div>
+      ) : null}
+
+      {/* **The board's one move/copy/remove panel** (issue #1309).
+          Deliberately outside both compositions rather than inside either: the
+          day stream and the week grid are both mounted, hidden from each other
+          by CSS, so a panel rendered inside one of them disappeared the moment
+          a resize crossed `xl` — taking a half-typed date with it. One node
+          cannot be hidden by either media query, and because it never moves in
+          the tree its uncontrolled inputs keep what was typed into them.
+
+          Here rather than at the foot of the board so the desktop placement is
+          unchanged: a move form is two date/time fields and a 160px grid column
+          is not a form, so it has always rendered full width beneath the week.
+          Below `xl` it now leads the day stream instead of sitting under its
+          row; the date input takes focus on mount, which brings it into view. */}
+      {canConfigure && sharedPanel ? (
+        <div className="mt-4">
+          {sharedPanel.kind === "move" ? (
+            <MovePanel
+              trip={sharedPanel.trip}
+              copy={copy}
+              action={actions.move}
+              loadPreflight={loadMovePreflight}
+              onCancel={() => closePanel(sharedPanel.closeKey)}
+            />
+          ) : null}
+          {sharedPanel.kind === "copy" ? (
+            <CopyPanel
+              trip={sharedPanel.trip}
+              copy={copy}
+              action={actions.duplicate}
+              onCancel={() => closePanel(sharedPanel.closeKey)}
+            />
+          ) : null}
+          {sharedPanel.kind === "remove" ? (
+            <RemovePanel
+              trip={sharedPanel.trip}
+              copy={copy}
+              action={actions.remove}
+              onCancel={() => closePanel(sharedPanel.closeKey)}
+            />
+          ) : null}
         </div>
       ) : null}
 
@@ -2198,34 +2282,6 @@ export function ScheduleBuilder({
                         />
                       </div>
                     </div>
-
-                    {canConfigure && open === `remove:${trip.id}` ? (
-                      <RemovePanel
-                        trip={trip}
-                        copy={copy}
-                        action={actions.remove}
-                        onCancel={() => closePanel(`menu:${trip.id}`)}
-                      />
-                    ) : null}
-
-                    {canConfigure && open === `move:${trip.id}` ? (
-                      <MovePanel
-                        trip={trip}
-                        copy={copy}
-                        action={actions.move}
-                        loadPreflight={loadMovePreflight}
-                        onCancel={() => closePanel(`menu:${trip.id}`)}
-                      />
-                    ) : null}
-
-                    {canConfigure && open === `copy:${trip.id}` ? (
-                      <CopyPanel
-                        trip={trip}
-                        copy={copy}
-                        action={actions.duplicate}
-                        onCancel={() => closePanel(`menu:${trip.id}`)}
-                      />
-                    ) : null}
                   </li>
                 );
               })}
