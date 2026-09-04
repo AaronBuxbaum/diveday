@@ -144,7 +144,10 @@ try {
       ? `${base} accepted the connection but did not answer within ${PROBE_TIMEOUT_MS / 1000}s. ` +
           "Something is listening — it is compiling, restarting, or wedged. Read the dev server's " +
           "own output rather than re-running this."
-      : `Nothing answering at ${base} — start \`pnpm dev\` first (or pass --base).`,
+      : `Nothing answering at ${base} — start \`pnpm dev\` first (or pass --base). If one *was* ` +
+          "running, it died: a Turbopack dev server is OOM-killed at roughly thirty page renders in " +
+          "a 16 GB container, and a restart over the `.next` a killed process left behind serves the " +
+          "not-found page for every /shop/** route. `rm -rf .next && pnpm dev`.",
   );
   process.exit(1);
 }
@@ -321,18 +324,31 @@ async function openAndSettle(page, target) {
       await waitPastTheSkeleton(page, target);
       return;
     } catch (error) {
-      if (attempt > 0 || !SERVER_WENT_AWAY.test(String(error?.message ?? error))) throw error;
+      const wentAway = SERVER_WENT_AWAY.test(String(error?.message ?? error));
+      // A second failure of the same shape means the retry ran against a
+      // server that came back and died again — still a dead server, and still
+      // the sentence worth printing rather than Playwright's.
+      if (attempt > 0 && wentAway) throw new ServerGone(serverGoneMessage(target, written.length));
+      if (attempt > 0 || !wentAway) throw error;
       console.warn(
         `screenshot: the dev server dropped the connection during ${target} — it restarts itself ` +
           `near the memory ceiling (see scripts/dev-server.mjs). Waiting ${RESTART_GRACE_MS / 1000}s ` +
           "and taking this one again.",
       );
-      await waitForServerBack();
+      if (!(await waitForServerBack())) {
+        throw new ServerGone(serverGoneMessage(target, written.length));
+      }
     }
   }
 }
 
-/** Poll the health route until it answers, bounded, then carry on. */
+/**
+ * Poll the health route until it answers, bounded. **True means it came back.**
+ *
+ * The caller needs the answer rather than a bare return: a server that comes
+ * back is a restart to shoot again through, and one that does not is a
+ * different sentence entirely (see {@link ServerGone}).
+ */
 async function waitForServerBack() {
   const deadline = Date.now() + RESTART_GRACE_MS;
   while (Date.now() < deadline) {
@@ -340,12 +356,45 @@ async function waitForServerBack() {
       const response = await fetch(`${base}/api/health`, {
         signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
       });
-      if (response.ok) return;
+      if (response.ok) return true;
     } catch {
       // Still down. The deadline is what ends this loop either way.
     }
     await new Promise((resolve) => setTimeout(resolve, 1_000));
   }
+  return false;
+}
+
+/**
+ * **The dev server died under the run and did not come back.**
+ *
+ * Its own sentence, because the two ways this ends read completely
+ * differently to whoever is holding the terminal. `scripts/dev-server.mjs`
+ * restarting near the memory ceiling is ordinary and self-healing; a
+ * `next-server` the kernel took is not, and it leaves a second trap behind it.
+ * Reported in one line rather than as a Playwright stack trace, like
+ * {@link SignInRefused}.
+ */
+class ServerGone extends Error {}
+
+/** How a dead server is explained, given how far the run got. */
+function serverGoneMessage(target, captured) {
+  return (
+    `The dev server stopped answering during ${target}` +
+    (captured > 0 ? `, after ${captured} capture${captured === 1 ? "" : "s"}` : "") +
+    ". It did not come back within " +
+    `${RESTART_GRACE_MS / 1000}s, so this is not the supervisor's own restart (scripts/dev-server.mjs).\n\n` +
+    "On a memory-capped container a Turbopack `next-server` grows without a ceiling and is " +
+    "OOM-killed outright — measured at roughly thirty page renders in a 16 GB container, which is " +
+    'well inside one capture matrix. `dmesg` says so: "Memory cgroup out of memory: Killed process ' +
+    '… next-server".\n\n' +
+    "**Delete `.next` before restarting.** A server started over the directory a killed process " +
+    "left behind serves the not-found page for every `/shop/**` route, in ~50ms of application " +
+    "code, until a file change forces Turbopack to recompile — which reads as though whatever you " +
+    "changed broke every staff route:\n\n" +
+    "    rm -rf .next && pnpm dev\n\n" +
+    "Then capture fewer paths per run."
+  );
 }
 
 /** How long the one sign-in gets before a stalled form is called a hang. */
@@ -440,15 +489,18 @@ try {
     }
   }
 } catch (error) {
-  if (!(error instanceof SignInRefused)) throw error;
+  if (!(error instanceof SignInRefused) && !(error instanceof ServerGone)) throw error;
   console.error(error.message);
   process.exitCode = 1;
 } finally {
   await browser.close();
-}
-
-if (written.length > 0) {
-  console.log(
-    written.map((file) => `${replaced.has(file) ? "replaced" : "wrote"} ${file}`).join("\n"),
-  );
+  // **In the `finally`, so a failed run still says what it got.** It used to
+  // sit after the block, which meant any error that reached the rethrow took
+  // the list of written files with it — and the pictures that *did* land are
+  // exactly what a caller wants when the run died halfway (issue #1321).
+  if (written.length > 0) {
+    console.log(
+      written.map((file) => `${replaced.has(file) ? "replaced" : "wrote"} ${file}`).join("\n"),
+    );
+  }
 }
