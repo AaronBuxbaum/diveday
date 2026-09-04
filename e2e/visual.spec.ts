@@ -2706,7 +2706,20 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("navigation", { name: "Choose a departure" })
           .getByRole("link", { name: /Dawn Two-Tank — Molasses Reef/ })
           .click();
-        await page.getByRole("heading", { name: /^Checked in — \d+$/ }).waitFor();
+        // **The heading that names the boat in focus, not one every departure
+        // renders.** This used to wait on `Checked in — <n>`, which the
+        // *origin* page renders too: the counter always has a departure in
+        // focus and always groups its checked-in divers under that heading, so
+        // the wait was satisfied before the click had navigated anywhere and
+        // the capture could shoot the default boat or a half-swapped frame
+        // (issue #1315). The focus `h2` is the one thing on this page that
+        // differs between the two — it links to *this* departure's manifest —
+        // so it is the destination's own signal, which is the rule the debug
+        // skill states for this whole class of race.
+        await page
+          .getByRole("heading", { level: 2 })
+          .getByRole("link", { name: "Dawn Two-Tank — Molasses Reef" })
+          .waitFor();
         // Same frame, same search box, same race — this one simply has not lost
         // it yet.
         await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
