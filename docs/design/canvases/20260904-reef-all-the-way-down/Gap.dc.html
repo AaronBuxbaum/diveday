@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .sunk { background: var(--tideline); border-radius: 28px; }
+    .inset { border-radius: 18px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; box-sizing: border-box; }
+    .btn-p { background: var(--lagoon); color: #ffffff; }
+    .btn-s { background: var(--shell); color: var(--ink); border: 1px solid var(--rope); }
+    .btn-g { color: var(--muted); }
+    .btn-sm { height: 44px; padding: 0 12px; font-size: 14px; }
+    .row { display: flex; align-items: center; gap: 14px; min-height: 52px; border-top: 1px solid var(--rope); }
+    .kind { font-size: 13px; font-weight: 650; min-width: 96px; }
+    .act { font-size: 15px; font-weight: 600; color: var(--lagoon); white-space: nowrap; }
+    .tab { font-size: 15px; font-weight: 500; color: var(--muted); padding: 9px 14px; border-radius: 10px; white-space: nowrap; }
+    .sitetile { width: 84px; height: 60px; border-radius: 18px; background: var(--lagoon-wash); color: var(--lagoon-deep); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+    .src { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+    .src i { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; }
+    .h3 { font-size: 16px; font-weight: 600; }
+    .body { font-size: 14px; line-height: 1.55; }
+    .muted { color: var(--muted); }
+    .find { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 24px; padding: 20px 0; border-top: 1px solid var(--rope); align-items: start; }
+    .find h3 { font-size: 17px; font-weight: 600; line-height: 1.3; }
+    .meas { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13.5px; }
+    .meas p { padding: 8px 12px; border-radius: 10px; background: var(--shell); border: 1px solid var(--rope); }
+    .meas b { display: block; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+    .shot { border: 1px solid var(--rope); border-radius: 12px; overflow: hidden; background: var(--shell); box-shadow: var(--bed); }
+  </style>
+</helmet>
+<div style="width: 1180px; min-height: 3480px; background: var(--sand); box-sizing: border-box; overflow: hidden; padding: 56px 60px;">
+  <p class="eyebrow">The gap &middot; read from the running app, 2026-09-04</p>
+  <h1 style="font-size: 40px; font-weight: 700; letter-spacing: -0.028em; line-height: 1.05; margin-top: 12px; max-width: 900px;">Where the code fell short of the drawing, measured.</h1>
+  <p style="font-size: 17px; line-height: 1.5; color: var(--muted); margin-top: 14px; max-width: 860px;">Reef&#8217;s tokens landed and the pictures did not: the slices shipped the colours, the radii and the three moments into the compositions that were already there. What follows is the shipped home, storefront, booking page and manifest beside what Reef drew, with the numbers. The pattern is one pattern: the drawing composed a <em>panel per object</em> and the code kept a <em>list</em>.</p>
+
+  <div style="margin-top: 32px; display: grid; grid-template-columns: 560px minmax(0, 1fr); gap: 28px; align-items: start;">
+    <div>
+      <p class="glabel">Shipped &middot; the home at 1280, light, the demo shop</p>
+      <div class="shot" style="margin-top: 8px;"><img src="ShippedHome.jpg" style="width: 560px; display: block;"></div>
+    </div>
+    <div>
+      <p class="glabel">What the drawing had, and the code does not</p>
+      <div style="margin-top: 8px; display: flex; flex-direction: column;">
+        <div style="display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--rope); align-items: flex-start;"><span class="num" style="width: 22px; font-weight: 700; color: var(--lagoon);">1</span><p class="body">A <strong>panel per station</strong>: 28px radius on the warm bed, the site tile leading it at 84&times;60. Shipped: a three-column grid (112px time, a hairline rail, the body), the tile floating on the rail, no panel at all.</p></div>
+        <div style="display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--rope); align-items: flex-start;"><span class="num" style="width: 22px; font-weight: 700; color: var(--lagoon);">2</span><p class="body"><strong>One sentence per row</strong> at 15px, a kind word in the row&#8217;s tone, one act. Shipped: subject on one line and detail on a second at 14px, and a kind column carrying a sentence (&#8220;Nobody in the water&#8221;).</p></div>
+        <div style="display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--rope); align-items: flex-start;"><span class="num" style="width: 22px; font-weight: 700; color: var(--lagoon);">3</span><p class="body"><strong>No standing control on the page.</strong> Shipped: a <em>Generate log</em> secondary button on every station, an owner&#8217;s rare act at button weight beside every boat, every morning.</p></div>
+        <div style="display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--rope); align-items: flex-start;"><span class="num" style="width: 22px; font-weight: 700; color: var(--lagoon);">4</span><p class="body"><strong>A settled station is the swell and one line.</strong> Shipped: a success glyph line, a disclosure row, and the button again &mdash; the morning&#8217;s finished boat is the busiest block on the page.</p></div>
+        <div style="display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--rope); border-bottom: 1px solid var(--rope); align-items: flex-start;"><span class="num" style="width: 22px; font-weight: 700; color: var(--lagoon);">5</span><p class="body"><strong>The dial at 76px with the count inside it.</strong> Shipped: 64px, with &#8220;of 12&#8221; and the open count as two lines beside it. Close, and the one gap that is a number rather than a shape.</p></div>
+      </div>
+      <div class="meas" style="margin-top: 16px;">
+        <p><b>Drawn</b>time 26/700 &middot; title 19/600 &middot; meta 14.5 &middot; row 15 &middot; row height 54 &middot; dial 76</p>
+        <p><b>Shipped</b>time 24/600 &middot; title 18/600 &middot; meta 14 &middot; row 14 &middot; row ~64 (two lines) &middot; dial 64</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="find" style="margin-top: 36px;">
+    <div><h3>The public booking page is unbounded</h3><p class="note" style="margin-top: 6px;">/s/blue-mantis/trips/&hellip; at 390, light</p></div>
+    <div style="display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 24px; align-items: start;">
+      <div class="shot"><img src="ShippedBooking.jpg" style="width: 120px; display: block;"></div>
+      <div>
+        <p class="body"><strong>5,782px before the form.</strong> The thread ADR decided the form is the page&#8217;s terminal word, and it is; what precedes it grew to a route map, ten species with photographs, a moments strip, five site-notes paragraphs and the crew before the diver is offered a seat. Sell then close is right; this is sell, sell, sell, sell, close. The repository&#8217;s own rule is that a page that screenshots enormous is telling you the page is unbounded.</p>
+        <p class="body" style="margin-top: 10px;"><strong>Drawn instead (BookingPhone):</strong> 2,140px. Three tiles and a &#8220;+7 more&#8221; door for the field guide, one line for the site, the route and the crew behind one link, two alternates with reasons, then the form. Everything cut is one tap away on the same page, opened in place.</p>
+        <div class="meas" style="margin-top: 12px;"><p><b>Shipped</b>5,782px &middot; form at 88% of scroll &middot; 10 species &middot; 5 prose blocks</p><p><b>Drawn</b>2,140px &middot; form at 34% &middot; 3 tiles + door &middot; 0 prose blocks above the form</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="find">
+    <div><h3>The storefront is the closest, and the most still</h3><p class="note" style="margin-top: 6px;">/s/blue-mantis at 1280</p></div>
+    <div>
+      <p class="body">Harbor shipped as drawn: the photograph, the shop&#8217;s face, the badge wall, the next-boat card, the week as a ledger. Its gap is not composition. Nothing on it changes between 6 AM and 10 PM: a visitor at 9:15 sees the 7:00 boat as a row like any other while it is out on the reef with ten people aboard. The Storefront board gives it the live line (rule 4) and the shop&#8217;s own lenses (D02), and moves the next-boat card to say <em>next with space</em> rather than merely next.</p>
+      <div class="meas" style="margin-top: 12px;"><p><b>Shipped</b>next-boat card at 360px wide, filters as two selects and a checkbox, no state on a departure that has left</p><p><b>Drawn</b>a live panel beside the next-with-space card, a lens rail of the shop&#8217;s words, &#8220;Underway&#8221; on the row that is out</p></div>
+    </div>
+  </div>
+
+  <div class="find">
+    <div><h3>The manifest is its drawing; its top is not</h3><p class="note" style="margin-top: 6px;">/shop/&hellip;/manifest at 390, before departure</p></div>
+    <div>
+      <p class="body">Below the roll call it is the instrument the ADR asked for &mdash; names, circles, the count. Above it, a diver who cannot board is a red paragraph (&#8220;1 diver is blocked: still on this manifest, but cannot board until their readiness clears&#8221;), the checkpoint dial is an empty circle beside the words, and there is no room for anything the desk did since the crew last looked. The ManifestPhone board keeps every safety rule (no hand, no coral, the circle is the state) and puts two things at the top: the catch-up strip (D42/D27) and the stage strip (D20). The blocked diver is a word on their row, where the tap is.</p>
+    </div>
+  </div>
+
+  <div class="find" style="border-bottom: 1px solid var(--rope);">
+    <div><h3>Why it happened, so it stops</h3></div>
+    <div>
+      <p class="body">The slices were sequenced by <em>token</em> (13a) and by <em>moment</em> (13g&ndash;13i), and each moment landed inside the composition that existed. Nothing was sequenced by <em>surface</em>. The station was never rebuilt as a panel because no slice was &#8220;the station&#8221;; the booking page was never bounded because no slice measured it. This canvas&#8217;s slice table is by surface, and every row names the pixel it is pinned by: the station is a <code style="font-size: 12.5px;">SectionCard</code> and its test refuses a rail; the booking page&#8217;s composition test refuses more than four field-guide tiles above the form; the visual spec captures the home at 6:40 and 6:10 so the band&#8217;s clock is photographed.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

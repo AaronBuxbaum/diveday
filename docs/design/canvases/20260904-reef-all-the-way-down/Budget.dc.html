@@ -1,0 +1,172 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .sunk { background: var(--tideline); border-radius: 28px; }
+    .inset { border-radius: 18px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; box-sizing: border-box; }
+    .btn-p { background: var(--lagoon); color: #ffffff; }
+    .btn-s { background: var(--shell); color: var(--ink); border: 1px solid var(--rope); }
+    .btn-g { color: var(--muted); }
+    .btn-sm { height: 44px; padding: 0 12px; font-size: 14px; }
+    .row { display: flex; align-items: center; gap: 14px; min-height: 52px; border-top: 1px solid var(--rope); }
+    .kind { font-size: 13px; font-weight: 650; min-width: 96px; }
+    .act { font-size: 15px; font-weight: 600; color: var(--lagoon); white-space: nowrap; }
+    .tab { font-size: 15px; font-weight: 500; color: var(--muted); padding: 9px 14px; border-radius: 10px; white-space: nowrap; }
+    .sitetile { width: 84px; height: 60px; border-radius: 18px; background: var(--lagoon-wash); color: var(--lagoon-deep); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+    .src { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+    .src i { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; }
+    .h3 { font-size: 16px; font-weight: 600; }
+    .body { font-size: 14px; line-height: 1.55; }
+    .muted { color: var(--muted); }
+    .sheet h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+    .sw { display: flex; flex-direction: column; gap: 6px; }
+    .swb { height: 64px; border-radius: 12px; border: 1px solid var(--rope); }
+    .swn { font-size: 13px; font-weight: 600; }
+    .swm { font-size: 12px; color: var(--muted); }
+    .rule { display: grid; grid-template-columns: 40px 300px minmax(0, 1fr); gap: 20px; padding: 18px 0; border-top: 1px solid var(--rope); align-items: start; }
+    .rn { width: 28px; height: 28px; border-radius: 999px; background: var(--lagoon-wash); color: var(--lagoon); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .stay { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--rope); font-size: 14px; }
+  </style>
+</helmet>
+<div class="sheet" style="width: 1180px; min-height: 3840px; background: var(--sand); box-sizing: border-box; overflow: hidden; padding: 56px 60px;">
+  <p class="eyebrow">The delight budget &middot; widened, and still a budget</p>
+  <h1 style="font-size: 40px; font-weight: 700; letter-spacing: -0.028em; line-height: 1.05; margin-top: 12px; max-width: 900px;">Reef may move, may know the hour, and may say one true thing about scale.</h1>
+  <p style="font-size: 17px; line-height: 1.5; color: var(--muted); margin-top: 14px; max-width: 860px;">Reef&#8217;s three moments shipped and the product is still quiet between them. The restraint is right about <em>status</em> and wrong about <em>time</em>: nothing on a staff surface says whether it is dawn or dusk, whether a boat is out, or that today is a day the shop will remember. Eight rules below widen the budget along exactly those lines and leave every ban in place. Each names what renders when the rule is not true: nothing.</p>
+
+  <!-- 1 The band follows the clock -->
+  <div class="rule" style="margin-top: 36px; border-top: 0;">
+    <span class="rn">1</span>
+    <div><h2>The water band follows the shop&#8217;s clock</h2><p class="note" style="margin-top: 6px;">Four washes for four parts of the day, read from <code style="font-size: 12.5px;">shops.timezone</code>. Lagoon-family and sand only: no coral, no fact, and the same 168px the band already has. Night is the one that does real work &mdash; a manager closing the day at 10 PM should not be looking at the morning.</p></div>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px;">
+      <div class="sw"><div class="swb" style="background: linear-gradient(180deg, #f6ecd9 0%, #e9f1ec 46%, #fbf7ef 100%);"></div><p class="swn">Dawn &middot; 5&ndash;8</p><p class="swm">warm sand over the wash</p></div>
+      <div class="sw"><div class="swb" style="background: linear-gradient(180deg, #e6f3f5 0%, #f1f4ee 55%, #fbf7ef 100%);"></div><p class="swn">Day &middot; 8&ndash;17</p><p class="swm">ships today</p></div>
+      <div class="sw"><div class="swb" style="background: linear-gradient(180deg, #d5e6ea 0%, #ecefe6 50%, #fbf7ef 100%);"></div><p class="swn">Dusk &middot; 17&ndash;20</p><p class="swm">lagoon, deeper</p></div>
+      <div class="sw"><div class="swb" style="background: linear-gradient(180deg, #0a4d61 0%, #4f8a96 45%, #fbf7ef 100%);"></div><p class="swn">Night &middot; 20&ndash;5</p><p class="swm">lagoon-deep to sand; ink stays ink</p></div>
+    </div>
+  </div>
+
+  <!-- 2 Three things may move -->
+  <div class="rule">
+    <span class="rn">2</span>
+    <div><h2>Three things may move, and only these</h2><p class="note" style="margin-top: 6px;">Each is water, each moves once on a change of state, each finishes inside 600ms on <code style="font-size: 12.5px;">--ease-out-soft</code>, none while a field has focus, and all three are still under <code style="font-size: 12.5px;">prefers-reduced-motion</code>. A fourth is a new decision.</p></div>
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; gap: 16px; align-items: center;">
+        <div style="width: 150px; height: 40px; position: relative; flex-shrink: 0;"><svg viewBox="0 0 260 26" preserveAspectRatio="none" class="hand" style="width: 150px; height: 26px; color: var(--lagoon-deep); opacity: .6;"><path d="M0 14c26-11 52-11 78 0s52 11 78 0 52-11 78 0 22 6 26 4"></path><path d="M0 22c26-11 52-11 78 0s52 11 78 0 52-11 78 0 22 6 26 4" opacity=".4"></path></svg></div>
+        <p class="body"><strong>The swell across settled work.</strong> Ships (slice 13g). Draws once, left to right, when a station&#8217;s last row clears.</p>
+      </div>
+      <div style="display: flex; gap: 16px; align-items: center;">
+        <div style="width: 150px; display: flex; justify-content: center; flex-shrink: 0;"><div style="position: relative; width: 44px; height: 44px; border-radius: 999px; background: var(--tideline); border: 1px solid var(--rope); overflow: hidden;"><div style="position: absolute; left: 0; right: 0; bottom: 0; height: 60%; background: var(--shallows);"></div></div></div>
+        <p class="body"><strong>The water in a dial.</strong> Ships (13h and the home&#8217;s dial). Rises to the new count; at the brim it settles flat. <em>New:</em> the waterline carries the swell&#8217;s crest, drawn once at 1.5px in the shell colour &mdash; the roll call&#8217;s dial stays flat, because a moving line beside a head count is a distraction on the one surface where the number is the job.</p>
+      </div>
+      <div style="display: flex; gap: 16px; align-items: center;">
+        <div style="width: 150px; display: flex; justify-content: center; flex-shrink: 0;"><svg width="84" height="56" viewBox="0 0 120 80" class="hand" style="color: var(--lagoon-deep);"><path d="M18 50h84l-10 14H30Z" fill="#fffdf8"></path><path d="M46 50V36h26v14M58 36V22"></path><path d="M6 70c14-8 28-8 42 0s28 8 42 0 20-6 30-2"></path><path d="M96 30c3 2 3 6 0 8" opacity=".6"></path></svg></div>
+        <p class="body"><strong>The boat leaves.</strong> New. When the crew taps <em>Underway</em>, the station&#8217;s stage chip takes the boat and the boat drifts 12px to the right, once. It is the eighth drawing in the hand and the only one that ever moves; it appears on the home, the board and the storefront, never on the manifest.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 One fact of scale -->
+  <div class="rule">
+    <span class="rn">3</span>
+    <div><h2>One fact of scale, on the day it is true</h2><p class="note" style="margin-top: 6px;">Principle 3 declined a standing good-news line and was right. This is not standing: it is a sentence that is true once, renders in the band that morning, and never again. It takes the surface&#8217;s earned moment, so on a day that also has an all-clear line the once-a-season fact wins and the daily line renders nothing (the same rule <code style="font-size: 12.5px;">DaySpine</code> already keeps).</p></div>
+    <div style="display: flex; flex-direction: column;">
+      <div class="stay" style="border-top: 0;"><span class="num" style="width: 150px; color: var(--muted); flex-shrink: 0;">every 100th</span><span>&#8220;Ben Okafor boards the 7:00 as your 400th diver of the season.&#8221; &mdash; counted from the shop&#8217;s season start, a setting with a default of the calendar year</span></div>
+      <div class="stay"><span class="num" style="width: 150px; color: var(--muted); flex-shrink: 0;">once a season</span><span>&#8220;First boat of the season.&#8221; &mdash; the morning the first departure after the season start boards</span></div>
+      <div class="stay"><span class="num" style="width: 150px; color: var(--muted); flex-shrink: 0;">once a shop</span><span>&#8220;Your first booking&#8221; and &#8220;your first boat home&#8221; &mdash; ship today; they join this table rather than living beside it</span></div>
+      <div class="stay"><span class="num" style="width: 150px; color: var(--muted); flex-shrink: 0;">never</span><span>a week&#8217;s revenue, a comparison to last year, a streak, a rank, anything about a person who is not aboard today. A fact of scale is a count of divers or boats and nothing else.</span></div>
+    </div>
+  </div>
+
+  <!-- 4 The stage line -->
+  <div class="rule">
+    <span class="rn">4</span>
+    <div><h2>A boat that is out says so, everywhere the boat is drawn</h2><p class="note" style="margin-top: 6px;">Five words the crew taps on the manifest (D20). One chip on the station, one line on the storefront, one line on every diver&#8217;s link. Renders <strong>nothing</strong> when the crew did not tap, and never a position &mdash; DiveDay does not track boats, it repeats what the crew said and when.</p></div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+      <span class="chip" style="background: var(--lagoon-wash); color: var(--lagoon-deep);">Boarding &middot; 6 of 10 at the dock</span>
+      <span class="chip" style="background: var(--lagoon-wash); color: var(--lagoon-deep);">Out on Molasses Reef &middot; since 7:04</span>
+      <span class="chip" style="background: var(--lagoon-wash); color: var(--lagoon-deep);">On the surface &middot; between dives</span>
+      <span class="chip" style="background: var(--lagoon-wash); color: var(--lagoon-deep);">Heading in &middot; back around 10:30</span>
+      <span class="chip" style="background: var(--success-wash); color: var(--success);">Home &middot; 10:24</span>
+      <p class="note" style="width: 100%; margin-top: 4px;">The chip never carries a status: it is lagoon on every stage but Home, which is the roll call&#8217;s own word and takes the roll call&#8217;s success.</p>
+    </div>
+  </div>
+
+  <!-- 5 Provenance -->
+  <div class="rule">
+    <span class="rn">5</span>
+    <div><h2>A mutable fact says where it came from</h2><p class="note" style="margin-top: 6px;">One small chip (D51), four words, beside any fact that can change between booking and boarding: the sea state, the sites, the meeting point, the dive record. A forecast is never dressed as an outcome. The chip is muted by default and takes the ink of its source only at the word.</p></div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <p><span class="src"><i style="border: 1.5px solid var(--muted); box-sizing: border-box;"></i>Forecast, 5:00 AM</span> <span class="note" style="margin-left: 12px;">an automated reading; hollow, because nobody stands behind it</span></p>
+      <p><span class="src"><i style="background: var(--lagoon);"></i>Plan</span> <span class="note" style="margin-left: 12px;">what the shop wrote on the trip; lagoon, because it is the shop&#8217;s intent</span></p>
+      <p><span class="src"><i style="background: var(--ink);"></i>Crew, 7:04 AM</span> <span class="note" style="margin-left: 12px;">a person on the boat said so, with the time they said it</span></p>
+      <p><span class="src"><i style="background: var(--success);"></i>Observed</span> <span class="note" style="margin-left: 12px;">recorded after the fact, in the executed-dive log; the only one a recap may print as what happened</span></p>
+    </div>
+  </div>
+
+  <!-- 6 Consent -->
+  <div class="rule">
+    <span class="rn">6</span>
+    <div><h2>Anything a diver shares says who sees it, in the sentence that asks</h2><p class="note" style="margin-top: 6px;">D53&#8217;s grammar, drawn before counsel rules so the surfaces above could use it, and changed to whatever counsel says. Audience, then duration, then the way back. Never a checkbox with a paragraph under it.</p></div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="padding: 12px 14px; border-radius: 12px; background: var(--shell); border: 1px solid var(--rope);"><p style="font-size: 14.5px; font-weight: 600;">What&#8217;s this dive for?</p><p class="note" style="margin-top: 3px;">Your crew sees how many picked each, not who. <span style="color: var(--lagoon); font-weight: 600;">Change it any time.</span></p></div>
+      <div style="padding: 12px 14px; border-radius: 12px; background: var(--shell); border: 1px solid var(--rope);"><p style="font-size: 14.5px; font-weight: 600;">Tell the crew it&#8217;s your first time with us?</p><p class="note" style="margin-top: 3px;">Your crew, on the day, and then it&#8217;s gone. <span style="color: var(--lagoon); font-weight: 600;">Take it back</span> from this link until the boat leaves.</p></div>
+      <div style="padding: 12px 14px; border-radius: 12px; background: var(--shell); border: 1px solid var(--rope);"><p style="font-size: 14.5px; font-weight: 600;">Anything we should fix?</p><p class="note" style="margin-top: 3px;">Just the shop. Never on the review, never public.</p></div>
+    </div>
+  </div>
+
+  <!-- 7 The diver keeps -->
+  <div class="rule">
+    <span class="rn">7</span>
+    <div><h2>The diver&#8217;s day gets three more sentences, and a picture to keep</h2><p class="note" style="margin-top: 6px;">The boat&#8217;s-back line on the thread; the dive-day number on the postcard; the crew&#8217;s pick of the next dive with its reason. And the postcard exports as an image with no link in it (#1081), with room for one private line that never leaves the phone (D33).</p></div>
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <p class="body">&#8220;Mantis II is back at the dock.&#8221; &mdash; <span class="muted">crew stage: Home</span></p>
+      <p class="body">&#8220;Dive day &numero; 3&#8221; &mdash; <span class="muted">ships as <code style="font-size: 12.5px;">visitMilestone</code>; moves onto the postcard&#8217;s face</span></p>
+      <p class="body">&#8220;Keiko said the wreck. Your Advanced card covers it.&#8221; &mdash; <span class="muted">D35: the reason is always printed, the pick is always one, and a card that would need a level the diver lacks is never picked</span></p>
+    </div>
+  </div>
+
+  <!-- 8 What stays -->
+  <div class="rule">
+    <span class="rn">8</span>
+    <div><h2>Every ban stands</h2><p class="note" style="margin-top: 6px;">Widening a budget is not lifting it. These are the lines <code style="font-size: 12.5px;">illustration.test.ts</code>, the coral table and principle 9 already draw, restated so nobody reads rules 1&ndash;7 as permission.</p></div>
+    <div style="display: flex; flex-direction: column;">
+      <div class="stay" style="border-top: 0;"><span style="width: 150px; font-weight: 600; flex-shrink: 0;">No drawing, no coral, no motion</span><span>on a manifest, a roll call, a cert check, a waiver, a payment, or beside a refusal. The manifest board on this canvas has a stage strip and a catch-up strip and not one line of the hand.</span></div>
+      <div class="stay"><span style="width: 150px; font-weight: 600; flex-shrink: 0;">Coral stays at three</span><span>the mark&#8217;s bubble, one creature&#8217;s detail, one earned moment. The fact of scale <em>is</em> the earned moment on its day; it does not add a fourth.</span></div>
+      <div class="stay"><span style="width: 150px; font-weight: 600; flex-shrink: 0;">A wash is not a status</span><span>the band, the dial&#8217;s water and the stage chip carry no fact a word beside them does not also carry.</span></div>
+      <div class="stay"><span style="width: 150px; font-weight: 600; flex-shrink: 0;">Nothing renders quietly</span><span>a suppressed moment is not drawn small. A stage the crew did not set is not &#8220;Unknown&#8221;; it is absent.</span></div>
+      <div class="stay"><span style="width: 150px; font-weight: 600; flex-shrink: 0;">Copy still earns its place</span><span>every new sentence on this canvas carries a state or a consequence; the seven tells in the voice list apply to all of it.</span></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

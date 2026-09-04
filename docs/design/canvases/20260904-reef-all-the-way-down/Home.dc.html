@@ -1,0 +1,336 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .sunk { background: var(--tideline); border-radius: 28px; }
+    .inset { border-radius: 18px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; box-sizing: border-box; }
+    .btn-p { background: var(--lagoon); color: #ffffff; }
+    .btn-s { background: var(--shell); color: var(--ink); border: 1px solid var(--rope); }
+    .btn-g { color: var(--muted); }
+    .btn-sm { height: 44px; padding: 0 12px; font-size: 14px; }
+    .row { display: flex; align-items: center; gap: 14px; min-height: 52px; border-top: 1px solid var(--rope); }
+    .kind { font-size: 13px; font-weight: 650; min-width: 96px; }
+    .act { font-size: 15px; font-weight: 600; color: var(--lagoon); white-space: nowrap; }
+    .tab { font-size: 15px; font-weight: 500; color: var(--muted); padding: 9px 14px; border-radius: 10px; white-space: nowrap; }
+    .sitetile { width: 84px; height: 60px; border-radius: 18px; background: var(--lagoon-wash); color: var(--lagoon-deep); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+    .src { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+    .src i { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; }
+    .h3 { font-size: 16px; font-weight: 600; }
+    .body { font-size: 14px; line-height: 1.55; }
+    .muted { color: var(--muted); }
+  </style>
+</helmet>
+<div style="width: 1440px; min-height: 1760px; background: var(--sand); box-sizing: border-box; overflow: hidden;">
+
+  <!-- Chrome: the one bar, 56px -->
+  <div style="height: 56px; display: flex; align-items: center; gap: 18px; padding: 0 40px; background: rgba(251,247,239,.92); border-bottom: 1px solid var(--rope); box-sizing: border-box;">
+    <div style="display: flex; align-items: center; gap: 11px;">
+      <div style="width: 32px; height: 32px; border-radius: 10px; background: var(--lagoon); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">BM</div>
+      <span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em;">Blue Mantis Divers</span>
+      <svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="color: var(--muted); stroke-width: 1.8;"><path d="M3 4.5 6 7.5 9 4.5"></path></svg>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px; margin-left: 14px;">
+      <span class="tab" style="background: var(--lagoon-wash); color: var(--lagoon-deep); font-weight: 600;">Today</span>
+      <span class="tab">Check-in</span>
+      <span class="tab">Divers</span>
+      <span class="tab">Board</span>
+      <span class="tab" style="display: inline-flex; align-items: center; gap: 6px;">More
+        <svg width="11" height="11" viewBox="0 0 12 12" class="hand" style="color: var(--muted); stroke-width: 1.8;"><path d="M3 4.5 6 7.5 9 4.5"></path></svg>
+      </span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 18px; border-radius: 999px; background: var(--shell); border: 1px solid var(--rope);">
+      <svg width="16" height="16" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 1.8;"><circle cx="7" cy="7" r="4.6"></circle><path d="M10.6 10.6 13.6 13.6"></path></svg>
+      <span style="font-size: 15px; color: var(--muted);">Find a diver, a boat, a day</span>
+      <span class="num" style="font-size: 12px; color: var(--muted); border: 1px solid var(--rope); border-radius: 7px; padding: 2px 7px;">&#8984;K</span>
+    </div>
+  </div>
+
+  <!-- The water band at dawn: the wash follows the shop's clock (budget rule 2). Sand warms toward the tideline at 6:40; the lagoon wash rides under it. No coral in the band, ever. -->
+  <div style="height: 168px; background: linear-gradient(180deg, #f6ecd9 0%, #e9f1ec 46%, #fbf7ef 100%); position: relative; overflow: hidden;">
+    <svg width="1440" height="26" viewBox="0 0 1440 26" preserveAspectRatio="none" class="hand" style="position: absolute; left: 0; top: 146px; color: var(--lagoon-deep); opacity: .16;">
+      <path d="M0 14c120-11 240-11 360 0s240 11 360 0 240-11 360 0 240 11 360 0"></path>
+      <path d="M0 22c120-11 240-11 360 0s240 11 360 0 240-11 360 0 240 11 360 0" opacity=".4"></path>
+    </svg>
+    <div style="width: 1120px; margin: 0 auto; padding-top: 30px; display: flex; align-items: flex-start; gap: 32px; position: relative;">
+      <div style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
+        <p class="eyebrow">Today &middot; Thu, Aug 27 &middot; 6:40 AM</p>
+        <h1 style="font-size: 44px; font-weight: 700; letter-spacing: -0.028em; line-height: 1.02;">Good morning, Dana.</h1>
+        <p style="font-size: 18px; color: var(--muted);">Three boats. Two things need you before the 7:00 leaves the dock.</p>
+        <p style="display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--muted);">
+          <span class="num">Flat seas, 1&#8211;2 ft &middot; wind 6 kn from the east &middot; 84&deg; by noon</span>
+          <span class="src"><i style="border: 1.5px solid var(--muted); box-sizing: border-box;"></i>Forecast, 5:00 AM</span>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div style="width: 1120px; margin: 0 auto; padding: 0 0 56px; box-sizing: border-box; display: flex; flex-direction: column; gap: 24px;">
+
+    <!-- The one fact of scale, on the day it is true (budget rule 4): the surface's earned moment, so it takes the coral wash. Renders nothing on every other day. -->
+    <div style="display: flex; align-items: center; gap: 14px; padding: 14px 22px; border-radius: 18px; background: var(--coral-wash); border: 1px solid #f3d4cc; margin-top: 2px;">
+      <svg width="34" height="24" viewBox="0 0 34 24" fill="none" style="flex-shrink: 0;"><circle cx="8" cy="17" r="5" stroke="#a83a2c" stroke-width="1.7"></circle><circle cx="18" cy="10" r="3.4" stroke="#a83a2c" stroke-width="1.7"></circle><circle cx="27" cy="4.5" r="2.4" fill="#ff6f61"></circle></svg>
+      <p style="font-size: 16px; font-weight: 600; color: var(--coral-deep);">Ben Okafor boards the 7:00 as your 400th diver of the season.</p>
+      <span style="margin-left: auto; font-size: 14px; color: var(--coral-deep); opacity: .8;">Since May 1</span>
+    </div>
+
+    <!-- First thing: the next boat's first blocking door, lifted -->
+    <div class="panel" style="padding: 20px 24px; display: flex; align-items: center; gap: 20px; border-color: #edcfc8;">
+      <div style="width: 48px; height: 48px; border-radius: 999px; background: var(--danger-wash); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="22" height="22" viewBox="0 0 18 18" class="hand" style="color: var(--danger); stroke-width: 1.9;"><circle cx="9" cy="9" r="7.2"></circle><path d="M6.2 6.2 11.8 11.8M11.8 6.2 6.2 11.8"></path></svg>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0;">
+        <p class="glabel" style="color: var(--danger);">First thing &middot; blocks boarding &middot; 20 min</p>
+        <p style="font-size: 18px; font-weight: 600;">Grace Mensah can&#8217;t board the 7:00 until her Advanced card is verified.</p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+        <span class="btn btn-g">Open her record</span>
+        <span class="btn btn-p" style="padding: 0 24px;">Verify her card</span>
+      </div>
+    </div>
+
+    <!-- Station 1: boarding now. The stage chip is the crew's word (D20) and the station's live line. -->
+    <div class="panel" style="padding: 22px 26px 24px; display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 20px;">
+        <div class="sitetile">
+          <svg width="60" height="42" viewBox="0 0 120 80" class="hand">
+            <path d="M30 42c10-16 30-22 50-16 8 2 14 6 18 12-4 6-10 10-18 12-20 6-40 0-50-8Z" fill="#fffdf8"></path>
+            <path d="M30 42 16 30v24Z" fill="#fffdf8"></path>
+            <path d="M56 38c6-6 14-6 20 0M52 50c4 4 10 4 14 0"></path>
+            <path d="M64 34c2 3 2 7 0 10M72 33c2 3 2 8 0 11" opacity=".55"></path>
+            <path d="M98 38c3 2 3 6 0 8"></path>
+            <circle cx="82" cy="37" r="2" fill="currentColor" stroke="none"></circle>
+            <circle cx="106" cy="26" r="2" opacity=".5"></circle>
+            <circle cx="44" cy="44" r="3.2" fill="#ff6f61" stroke="none"></circle>
+          </svg>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span class="num" style="font-size: 26px; font-weight: 700; letter-spacing: -0.015em; line-height: 1;">7:00 AM</span>
+            <span class="num" style="font-size: 14px; color: var(--muted);">until 10:30</span>
+            <span class="chip" style="background: var(--lagoon-wash); color: var(--lagoon-deep);">
+              <svg width="14" height="14" viewBox="0 0 18 18" class="hand" style="stroke-width: 1.8;"><path d="M3 11h12l-2 4H5Z"></path><path d="M7 11V7h4v4M9 7V4"></path></svg>
+              Boarding &middot; 6 of 10 at the dock
+            </span>
+          </div>
+          <p style="font-size: 19px; font-weight: 600; letter-spacing: -0.008em;">Two-Tank Reef &mdash; Molasses &amp; French</p>
+          <p style="font-size: 14.5px; color: var(--muted);">Molasses Reef &middot; Mantis II &middot; Keiko Tanaka, Sal Moretti &middot; <span class="num">$95</span></p>
+          <p style="font-size: 14px; color: var(--muted);">Aboard today: 4 came for an easygoing reef &middot; 2 are getting comfortable again &middot; 1 is photographing small life</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px; flex-shrink: 0;">
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px;">
+            <span style="font-size: 14px; color: var(--muted);">2 spots open</span>
+            <span style="font-size: 15px; font-weight: 600; color: var(--lagoon);">Open the boat</span>
+          </div>
+          <div style="position: relative; width: 76px; height: 76px; border-radius: 999px; background: var(--tideline); border: 1px solid var(--rope); overflow: hidden;">
+            <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 83%; background: var(--shallows);"></div>
+            <svg width="76" height="12" viewBox="0 0 76 12" fill="none" stroke="#fffdf8" stroke-width="1.5" style="position: absolute; left: 0; bottom: 78%; opacity: .7;"><path d="M-2 7c9-6 18-6 27 0s18 6 27 0 14 5 26 2"></path></svg>
+            <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <span class="num" style="font-size: 26px; font-weight: 700; line-height: 1;">10</span>
+              <span class="num" style="font-size: 11.5px; font-weight: 600; color: var(--lagoon-deep);">of 12</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column;">
+        <div class="row">
+          <svg width="19" height="19" viewBox="0 0 18 18" class="hand" style="color: var(--danger); stroke-width: 1.8; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M6.2 6.2 11.8 11.8M11.8 6.2 6.2 11.8"></path></svg>
+          <span class="kind" style="color: var(--danger);">Certification</span>
+          <span style="flex: 1; font-size: 15px;">Grace Mensah&#8217;s Advanced card is waiting for verification.</span>
+          <span class="act">Verify it</span>
+        </div>
+        <div class="row">
+          <svg width="19" height="19" viewBox="0 0 18 18" class="hand" style="color: var(--warning); stroke-width: 1.8; flex-shrink: 0;"><path d="M9 2.4 16.6 15.2H1.4L9 2.4Z"></path><path d="M9 7.2v3.4"></path><circle cx="9" cy="12.9" r=".5" fill="#b45309"></circle></svg>
+          <span class="kind" style="color: var(--warning);">Waiver</span>
+          <span style="flex: 1; font-size: 15px;">Priya Sharma hasn&#8217;t been sent hers.</span>
+          <span class="btn btn-s btn-sm">Send waiver</span>
+        </div>
+        <!-- D49: the no-show salvage, at the moment it is decidable. Money stays with a human. -->
+        <div class="row">
+          <svg width="19" height="19" viewBox="0 0 18 18" class="hand" style="color: var(--warning); stroke-width: 1.8; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M9 5.2V9l2.6 1.8"></path></svg>
+          <span class="kind" style="color: var(--warning);">Not here yet</span>
+          <span style="flex: 1; font-size: 15px;">Hugo Marsh hasn&#8217;t checked in and the boat leaves in 20 minutes. Two people are on the wait list.</span>
+          <span class="act">Offer his seat</span>
+        </div>
+        <!-- D22: the welcome cue is a sentence with an expiry, never a badge. Both consented. -->
+        <div class="row">
+          <svg width="19" height="19" viewBox="0 0 18 18" class="hand" style="color: var(--muted); stroke-width: 1.8; flex-shrink: 0;"><path d="M3 15c1-4 3-6 6-6s5 2 6 6"></path><circle cx="9" cy="5.6" r="2.6"></circle></svg>
+          <span class="kind" style="color: var(--muted);">Say hello</span>
+          <span style="flex: 1; font-size: 15px; color: var(--muted);">Ben Okafor is diving with you for the first time. Ada Lindqvist is back after three years.</span>
+          <span class="act">Open guests</span>
+        </div>
+        <div class="row">
+          <svg width="19" height="19" viewBox="0 0 18 18" class="hand" style="color: var(--muted); stroke-width: 1.8; flex-shrink: 0;"><rect x="3.2" y="3.2" width="11.6" height="11.6" rx="3"></rect><path d="M6.4 9h5.2M9 6.4v5.2"></path></svg>
+          <span class="kind" style="color: var(--muted);">Prep</span>
+          <span style="flex: 1; font-size: 15px; color: var(--muted);">Three divers still need rental sizes.</span>
+          <span class="act">Open prep list</span>
+        </div>
+        <div class="row">
+          <svg width="19" height="19" viewBox="0 0 18 18" class="hand" style="color: var(--muted); stroke-width: 1.8; flex-shrink: 0;"><circle cx="9" cy="6.2" r="2.8"></circle><path d="M3.6 15c.9-3 2.8-4.4 5.4-4.4s4.5 1.4 5.4 4.4"></path></svg>
+          <span class="kind" style="color: var(--muted);">Contact</span>
+          <span style="flex: 1; font-size: 15px; color: var(--muted);">No emergency contact for Nadia Petrov &mdash; ask when she arrives.</span>
+          <span class="act">Open guests</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Station 2 -->
+    <div class="panel" style="padding: 22px 26px 24px; display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 20px;">
+        <div class="sitetile">
+          <svg width="62" height="42" viewBox="0 0 120 80" class="hand">
+            <path d="M20 34h14v14H20z" fill="#fffdf8"></path>
+            <path d="M34 36 96 20v42L34 46Z" fill="currentColor" fill-opacity=".14"></path>
+            <path d="M62 36c6-3 12-3 16 1M62 48c6 3 12 3 16-1"></path>
+            <circle cx="84" cy="40" r="2" fill="currentColor" stroke="none"></circle>
+          </svg>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span class="num" style="font-size: 26px; font-weight: 700; letter-spacing: -0.015em; line-height: 1;">1:00 PM</span>
+            <span class="num" style="font-size: 14px; color: var(--muted);">until 5:00 &middot; boards at 12:30</span>
+          </div>
+          <p style="font-size: 19px; font-weight: 600; letter-spacing: -0.008em;">Wreck Trip &mdash; Spiegel Grove</p>
+          <p style="font-size: 14.5px; color: var(--muted);">Spiegel Grove &middot; Mantis II &middot; no crew assigned &middot; <span class="num">$145</span></p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px; flex-shrink: 0;">
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px;">
+            <span style="font-size: 14px; color: var(--muted);">Full</span>
+            <span style="font-size: 15px; font-weight: 600; color: var(--lagoon);">Open the boat</span>
+          </div>
+          <div style="position: relative; width: 76px; height: 76px; border-radius: 999px; background: var(--tideline); border: 1px solid var(--rope); overflow: hidden;">
+            <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 100%; background: var(--shallows);"></div>
+            <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <span class="num" style="font-size: 26px; font-weight: 700; line-height: 1;">10</span>
+              <span class="num" style="font-size: 11.5px; font-weight: 600; color: var(--lagoon-deep);">of 10</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column;">
+        <div class="row">
+          <svg width="19" height="19" viewBox="0 0 18 18" class="hand" style="color: var(--danger); stroke-width: 1.8; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M6.2 6.2 11.8 11.8M11.8 6.2 6.2 11.8"></path></svg>
+          <span class="kind" style="color: var(--danger);">Crew</span>
+          <span style="flex: 1; font-size: 15px;">No divemaster or instructor is assigned.</span>
+          <span class="act">Assign crew</span>
+        </div>
+        <div class="row">
+          <svg width="19" height="19" viewBox="0 0 18 18" class="hand" style="color: var(--danger); stroke-width: 1.8; flex-shrink: 0;"><circle cx="9" cy="9" r="7.2"></circle><path d="M6.2 6.2 11.8 11.8M11.8 6.2 6.2 11.8"></path></svg>
+          <span class="kind" style="color: var(--danger);">Certification</span>
+          <span style="flex: 1; font-size: 15px;">Tom&aacute;s Ferreira has none on file for a deep wreck.</span>
+          <span class="act">Open his record</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Station 3: after dark, the tile swaps wash and ink -->
+    <div class="panel" style="padding: 22px 26px 24px; display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 20px;">
+        <div class="sitetile" style="background: var(--lagoon-deep); color: var(--lagoon-wash);">
+          <svg width="62" height="42" viewBox="0 0 120 80" class="hand">
+            <path d="M20 34h14v14H20z" fill="#0a4d61"></path>
+            <path d="M34 36 96 20v42L34 46Z" fill="currentColor" fill-opacity=".18"></path>
+            <path d="M62 36c6-3 12-3 16 1M62 48c6 3 12 3 16-1"></path>
+            <circle cx="84" cy="40" r="2" fill="currentColor" stroke="none"></circle>
+          </svg>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span class="num" style="font-size: 26px; font-weight: 700; letter-spacing: -0.015em; line-height: 1;">7:30 PM</span>
+            <span class="num" style="font-size: 14px; color: var(--muted);">until 11:00</span>
+          </div>
+          <p style="font-size: 19px; font-weight: 600; letter-spacing: -0.008em;">Night Dive &mdash; City of Washington</p>
+          <p style="font-size: 14.5px; color: var(--muted);">City of Washington &middot; Skiff &middot; Keiko Tanaka, Sal Moretti &middot; <span class="num">$120</span></p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px; flex-shrink: 0;">
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px;">
+            <span style="font-size: 14px; color: var(--muted);">5 spots open</span>
+            <span style="font-size: 15px; font-weight: 600; color: var(--lagoon);">Open the boat</span>
+          </div>
+          <div style="position: relative; width: 76px; height: 76px; border-radius: 999px; background: var(--tideline); border: 1px solid var(--rope); overflow: hidden;">
+            <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 37.5%; background: var(--shallows);"></div>
+            <svg width="76" height="12" viewBox="0 0 76 12" fill="none" stroke="#fffdf8" stroke-width="1.5" style="position: absolute; left: 0; bottom: 33%; opacity: .7;"><path d="M-2 7c9-6 18-6 27 0s18 6 27 0 14 5 26 2"></path></svg>
+            <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <span class="num" style="font-size: 26px; font-weight: 700; line-height: 1;">3</span>
+              <span class="num" style="font-size: 11.5px; font-weight: 600; color: var(--muted);">of 8</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column;">
+        <div class="row">
+          <svg width="19" height="19" viewBox="0 0 18 18" class="hand" style="color: var(--muted); stroke-width: 1.8; flex-shrink: 0;"><path d="M2.6 9.6V3.4a.8.8 0 0 1 .8-.8h6.2l5.8 5.8a1.1 1.1 0 0 1 0 1.6l-4.8 4.8a1.1 1.1 0 0 1-1.6 0L2.6 9.6Z"></path><circle cx="6.3" cy="6.3" r="1.1"></circle></svg>
+          <span class="kind" style="color: var(--muted);">Seats</span>
+          <span style="flex: 1; font-size: 15px; color: var(--muted);">Five open, and no last-minute deal has gone out. 14 people asked to hear about night dives.</span>
+          <span class="act">Send a deal</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- At the desk -->
+    <div style="display: flex; flex-direction: column; gap: 8px; padding: 6px 26px 0;">
+      <p class="glabel">At the desk</p>
+      <div style="display: flex; flex-direction: column;">
+        <div class="row">
+          <svg width="19" height="19" viewBox="0 0 18 18" class="hand" style="color: var(--muted); stroke-width: 1.8; flex-shrink: 0;"><rect x="2.6" y="3.6" width="12.8" height="11.6" rx="3"></rect><path d="M5.8 2.2v2.8M12.2 2.2v2.8M2.6 7.4h12.8"></path></svg>
+          <span class="kind" style="color: var(--muted);">Requests</span>
+          <span style="flex: 1; font-size: 15px; color: var(--muted);">Two divers asked for days that aren&#8217;t on the board.</span>
+          <span class="act">Open requests</span>
+        </div>
+        <div class="row" style="border-bottom: 1px solid var(--rope);">
+          <svg width="19" height="19" viewBox="0 0 18 18" class="hand" style="color: var(--muted); stroke-width: 1.7; flex-shrink: 0;"><path d="M9 2.6l1.9 3.9 4.3.6-3.1 3 .7 4.3L9 12.4l-3.8 2 .7-4.3-3.1-3 4.3-.6L9 2.6Z"></path></svg>
+          <span class="kind" style="color: var(--muted);">Reviews</span>
+          <span style="flex: 1; font-size: 15px; color: var(--muted);">One review is waiting on you.</span>
+          <span class="act">Read it</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- The two horizons -->
+    <div style="display: flex; gap: 20px;">
+      <div class="sunk" style="flex: 1; padding: 18px 24px; display: flex; align-items: center; gap: 14px;">
+        <span style="font-size: 16px; font-weight: 600;">Tomorrow &middot; Fri, Aug 28</span>
+        <span class="num" style="margin-left: auto; font-size: 14.5px; color: var(--muted);">3 departures &middot; 5 jobs</span>
+        <svg width="15" height="15" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+      </div>
+      <div class="sunk" style="flex: 1; padding: 18px 24px; display: flex; align-items: center; gap: 14px;">
+        <span style="font-size: 16px; font-weight: 600;">The rest of the week</span>
+        <span class="num" style="margin-left: auto; font-size: 14.5px; color: var(--muted);">11 jobs &middot; Saturday is sold out</span>
+        <svg width="15" height="15" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

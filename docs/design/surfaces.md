@@ -33,6 +33,9 @@ So an entry here is the index; the constraint lives beside the code it constrain
 
 ### The shop home — `/shop/[shopSlug]`
 
+**Proposed 2026-09-04** ([ADR 20260904-reef-all-the-way-down](../architecture/decisions/20260904-reef-all-the-way-down.md), [canvas](canvases/20260904-reef-all-the-way-down/README.md)):
+the station becomes a panel with the tile leading and one sentence per row; the band follows the shop's clock; one fact of scale on the day it is true; a stage chip when the crew set one; the evening counts divers and crew. The clock, the fact of scale and the stage chip wait on H-67; the station as a panel waits only on the ADR.
+
 **Reef, 2026-09-02** ([ADR 20260901-diveday-reimagined](../architecture/decisions/20260901-diveday-reimagined.md)):
 the greeting is the one display moment on a staff surface (44/700, `ShopPageHeader`'s `display`);
 the page top is the water band; every work row leads with its glyph; the head count is a dial in
@@ -93,6 +96,8 @@ the roster's actions or deep links.
   bands, not detached forms.
 
 ### The boat manifest — `/shop/[shopSlug]/trips/[id]/manifest`
+
+**Proposed 2026-09-04** (same ADR and canvas): a catch-up strip and a five-word stage strip at the top, the blocked word on the row, no drawing, coral or motion.
 
 **Reef, 2026-09-02:** no drawing and no coral, mechanically — `src/components/illustration/illustration.test.ts`
 walks `src/app` and `src/components` (the offline manifest lives in the second) for both. The
@@ -187,6 +192,8 @@ night (`BrandPreview`), and the contrast note reports whichever scheme moved the
 
 ### The public schedule — `/s/[shopSlug]`
 
+**Proposed 2026-09-04** (same ADR and canvas): a live panel when a boat is out, "next with space", and a lens rail of the shop's own words.
+
 **Harbor, 2026-09-02:** every heading the diver meets is in the shop's face — the name in the bar,
 the four sections, each boat's name — and the fact beneath each stays in Geist. The hero carries
 the shop's about line (`shops.description`); the boats block carries the shop's own sentence per
@@ -207,6 +214,8 @@ routes took the display-scale h1 only.
   because a diver is choosing a shop before they are choosing a time slot.
 
 ### The public trip page — `/s/[shopSlug]/trips/[id]`
+
+**Proposed 2026-09-04** (same ADR and canvas): bounded to three field-guide tiles and a door above the form (the shipped page is 5,782px at 390 before it), two alternates with reasons, one optional intent question, a kind offer to a diver who has been away.
 
 **Built 2026-08-28** (slice 7b) — ADR
 [20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md) (Accepted),
@@ -245,6 +254,8 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
   by showing a shop's day, then gives the interested visitor one place to continue.
 
 ### The thread — `/ready/[token]` (and every state after booking)
+
+**Proposed 2026-09-04** (same ADR and canvas): one step, "Anything changed?", over the facts the shop kept; provenance on the arrival card; the boat's-back line on the day; the recap becomes a postcard with its number, an image to keep, a private pulse and the next dive with its reason.
 
 **Built 2026-08-29** (slices 7c and 7d) — same ADR and canvas. Extends ADR
 20260820-one-page-after-booking.

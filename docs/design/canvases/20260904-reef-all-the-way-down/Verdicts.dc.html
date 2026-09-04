@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .sunk { background: var(--tideline); border-radius: 28px; }
+    .inset { border-radius: 18px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; box-sizing: border-box; }
+    .btn-p { background: var(--lagoon); color: #ffffff; }
+    .btn-s { background: var(--shell); color: var(--ink); border: 1px solid var(--rope); }
+    .btn-g { color: var(--muted); }
+    .btn-sm { height: 44px; padding: 0 12px; font-size: 14px; }
+    .row { display: flex; align-items: center; gap: 14px; min-height: 52px; border-top: 1px solid var(--rope); }
+    .kind { font-size: 13px; font-weight: 650; min-width: 96px; }
+    .act { font-size: 15px; font-weight: 600; color: var(--lagoon); white-space: nowrap; }
+    .tab { font-size: 15px; font-weight: 500; color: var(--muted); padding: 9px 14px; border-radius: 10px; white-space: nowrap; }
+    .sitetile { width: 84px; height: 60px; border-radius: 18px; background: var(--lagoon-wash); color: var(--lagoon-deep); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+    .src { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+    .src i { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; }
+    .h3 { font-size: 16px; font-weight: 600; }
+    .body { font-size: 14px; line-height: 1.55; }
+    .muted { color: var(--muted); }
+    .vr { display: grid; grid-template-columns: 60px 250px 92px 220px minmax(0, 1fr); gap: 16px; padding: 11px 0; border-top: 1px solid var(--rope); align-items: start; font-size: 13.5px; line-height: 1.45; }
+    .vh { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); border-top: 0; padding-top: 0; }
+    .v { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+    .v-draw { background: var(--lagoon-wash); color: var(--lagoon-deep); }
+    .v-adopt { background: var(--success-wash); color: var(--success); }
+    .v-fold { background: var(--tideline); color: var(--ink); }
+    .v-hold { background: var(--warning-wash); color: var(--warning); }
+    .v-decline { background: var(--danger-wash); color: var(--danger); }
+    .grp { margin-top: 30px; }
+    .grp h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.015em; }
+    .t { font-weight: 600; }
+    .where { color: var(--ink); }
+  </style>
+</helmet>
+<div style="width: 1180px; min-height: 2780px; background: var(--sand); box-sizing: border-box; overflow: hidden; padding: 56px 60px;">
+  <p class="eyebrow">Every open feature idea &middot; 36 issues &middot; one verdict each</p>
+  <h1 style="font-size: 40px; font-weight: 700; letter-spacing: -0.028em; line-height: 1.05; margin-top: 12px; max-width: 900px;">Eighteen drawn, eleven adopted unseen, three held, three folded, one declined.</h1>
+  <p style="font-size: 17px; line-height: 1.5; color: var(--muted); margin-top: 14px; max-width: 880px;">The delight backlog (#1160) is thirty open tickets whose blocker, its own triage said, is <em>selection, not specification depth</em>. This is the selection. <strong style="color: var(--ink);">Drawn</strong> means it is on a surface board on the next page, in the place it lands. <strong style="color: var(--ink);">Adopt</strong> means build it from the issue as written; a picture would add nothing. <strong style="color: var(--ink);">Fold</strong> means it is the same feature as another row. <strong style="color: var(--ink);">Hold</strong> keeps the issue&#8217;s own waiting-on line. The owner&#8217;s ruling that the backlog re-triages after the first pilot boat day stands; this canvas is what that triage can read.</p>
+
+  <div class="grp">
+    <h2>Choosing a day &mdash; the storefront and the booking page</h2>
+    <div style="margin-top: 10px;">
+      <div class="vr vh"><span>Issue</span><span>Idea</span><span>Verdict</span><span>Lands on</span><span>Why</span></div>
+      <div class="vr"><span class="num">#1162</span><span class="t">D02 Experience-first lenses</span><span><span class="v v-draw">Drawn</span></span><span class="where">Storefront &middot; the lens rail; a lens word on every row</span><span>The shop&#8217;s own words for its kinds of day. A tag on the trip template, never a level, never inferred. Replaces the two selects and the checkbox.</span></div>
+      <div class="vr"><span class="num">#1161</span><span class="t">D01 The right departure</span><span><span class="v v-draw">Drawn</span></span><span class="where">BookingPhone &middot; &#8220;Also worth a look&#8221;</span><span>Two alternates with their reasons, from the same tags plus seats and time of day. Never hides the trip the diver came for; never a gate. #1161 and #1162 are one feature with two surfaces, and ship together.</span></div>
+      <div class="vr"><span class="num">#1172</span><span class="t">D12 The trip-intent card</span><span><span class="v v-draw">Drawn</span></span><span class="where">BookingPhone &middot; one optional question; Home and ManifestPhone &middot; the count</span><span>Five plain choices, one enum on the booking. The crew sees a count per choice and no names, which is what lets it be asked.</span></div>
+      <div class="vr"><span class="num">#1183</span><span class="t">D23 Consented buddy-start cue</span><span><span class="v v-fold">Fold</span></span><span class="where">into D12&#8217;s count on the manifest</span><span>The aggregate the divemaster reads on the team builder <em>is</em> the intent count. A second table would be the same rows with a second name.</span></div>
+      <div class="vr"><span class="num">#1178</span><span class="t">D18 Kind re-entry for a rusty diver</span><span><span class="v v-draw">Drawn</span></span><span class="where">BookingPhone &middot; the tideline block in the form</span><span>Three offers, none a gate, shown only when recency is old and suppressed inside 24 hours of departure. The third offer is the Friday refresher the shop already runs.</span></div>
+      <div class="vr"><span class="num">#1284</span><span class="t">Embed: one course, a named set</span><span><span class="v v-adopt">Adopt</span></span><span class="where">Settings &rarr; Website embed</span><span>As specified in the issue: <code style="font-size: 12px;">?show=</code> first, an <code style="font-size: 12px;">embed_sets</code> table second. A generator form, which the primitives already decide; no picture.</span></div>
+    </div>
+  </div>
+
+  <div class="grp">
+    <h2>Getting ready &mdash; the diver&#8217;s thread</h2>
+    <div style="margin-top: 10px;">
+      <div class="vr vh"><span>Issue</span><span>Idea</span><span>Verdict</span><span>Lands on</span><span>Why</span></div>
+      <div class="vr"><span class="num">#1175</span><span class="t">D15 A painless &#8220;something changed&#8221; door</span><span><span class="v v-draw">Drawn</span></span><span class="where">ThreadPhone &middot; a Change link per kept fact</span><span>Each mutable fact carries its own one-question door. Nothing else on the thread reopens.</span></div>
+      <div class="vr"><span class="num">#1179</span><span class="t">D19 One question that gets easier</span><span><span class="v v-fold">Fold</span></span><span class="where">into D15, as the step &#8220;Anything changed?&#8221;</span><span>The triage note already called it a duplicate. The step asks once, keeps the facts on an explicit &#8220;Nothing changed&#8221;, and routes a yes to D15&#8217;s doors.</span></div>
+      <div class="vr"><span class="num">#1174</span><span class="t">D14 A rental-fit learning loop</span><span><span class="v v-draw">Drawn</span></span><span class="where">Evening &middot; a leftover row (&#8220;Keep it&#8221;); ThreadPhone &middot; &#8220;Keiko kept M as your fit&#8221;</span><span>Learns only from a staff confirmation, asked once in the evening where the day&#8217;s other leftovers already are. The diver sees whose call it was.</span></div>
+      <div class="vr"><span class="num">#1180</span><span class="t">D20 A live day-stage line</span><span><span class="v v-draw">Drawn</span></span><span class="where">ManifestPhone &middot; the stage strip; Home &middot; the chip; Storefront &middot; the live panel; ThreadPhone &middot; the line</span><span>Five words the crew taps, an append-only stage event, nothing rendered when unset. The single feature that makes every surface feel like today rather than a schedule. Budget rule 4.</span></div>
+      <div class="vr"><span class="num">#1165</span><span class="t">D05 A calendar event with the real plan</span><span><span class="v v-adopt">Adopt</span></span><span class="where">the .ics; ThreadPhone assumes it (&#8220;updates itself if the plan moves&#8221;)</span><span>Half merged (#1348). The rest is one owner call: which edits bump the revision, and where the counter lives. Recommend <code style="font-size: 12px;">trips.revision</code>, bumped by a time or site change. Filed as H-67 (b).</span></div>
+      <div class="vr"><span class="num">#1177</span><span class="t">D17 State-aware reminder rhythm</span><span><span class="v v-adopt">Adopt</span></span><span class="where">the reminder engine</span><span>A rule table over what remains undone. No picture can show a message not sent; the acceptance tests can.</span></div>
+      <div class="vr"><span class="num">#1211</span><span class="t">D51 A fact-provenance grammar</span><span><span class="v v-draw">Drawn</span></span><span class="where">Budget rule 5; ThreadPhone, AfterPhone and ManifestPhone wear it</span><span>Four words, one chip. Starts with conditions and the dive plan, the two facts that already change under a diver.</span></div>
+      <div class="vr"><span class="num">#1213</span><span class="t">D53 Consent legible at the moment</span><span><span class="v v-hold">Hold</span></span><span class="where">Budget rule 6 drafts the grammar; counsel rules (H-01&ndash;H-03)</span><span>Drawn as a proposal so D12, D22 and D40 could say who sees what. Reworded to whatever counsel decides; nothing ships on this sentence alone.</span></div>
+    </div>
+  </div>
+
+  <div class="grp">
+    <h2>The dock and the boat &mdash; the home and the manifest</h2>
+    <div style="margin-top: 10px;">
+      <div class="vr vh"><span>Issue</span><span>Idea</span><span>Verdict</span><span>Lands on</span><span>Why</span></div>
+      <div class="vr"><span class="num">#1202</span><span class="t">D42 A shift catch-up strip</span><span><span class="v v-draw">Drawn</span></span><span class="where">ManifestPhone &middot; the strip above the instrument</span><span>Only what changed since this person last opened the trip; a per-person read cursor; dismissed with one tap and gone by tomorrow. Never a feed.</span></div>
+      <div class="vr"><span class="num">#1187</span><span class="t">D27 A desk-to-boat handoff receipt</span><span><span class="v v-fold">Fold</span></span><span class="where">into D42 &mdash; the strip&#8217;s content is the desk&#8217;s acts</span><span>A handoff is what the catch-up strip shows; two features would be one event table read twice.</span></div>
+      <div class="vr"><span class="num">#1182</span><span class="t">D22 Human welcome cues, not badges</span><span><span class="v v-draw">Drawn</span></span><span class="where">Home &middot; the &#8220;Say hello&#8221; row; ManifestPhone &middot; a muted word under the name</span><span>A sentence with an expiry, consented on the thread (rule 6), gone when the boat is home. A word, never a badge, never in the roll call&#8217;s circle.</span></div>
+      <div class="vr"><span class="num">#1209</span><span class="t">D49 The respectful no-show salvage</span><span><span class="v v-draw">Drawn</span></span><span class="where">Home &middot; the &#8220;Not here yet&#8221; row while boarding</span><span>Appears only while a boat is boarding and a booked diver is not checked in; the act offers the seat to the wait list and leaves money with a human.</span></div>
+      <div class="vr"><span class="num">#1184</span><span class="t">D24 The plan-change moment</span><span><span class="v v-draw">Drawn</span></span><span class="where">ManifestPhone &middot; &#8220;Changed the plan?&#8221;; Evening &middot; the station&#8217;s meta line</span><span>A structured reason and an optional note on the executed dive. The plan is never overwritten; the recap prints what happened as Observed.</span></div>
+      <div class="vr"><span class="num">#1346</span><span class="t">Souls, not seats; a crew nobody counted</span><span><span class="v v-draw">Drawn</span></span><span class="where">Evening &middot; every home line says divers and crew</span><span>A bug on a safety line. &#8220;All home&#8221; requires assigned crew accounted for, and the count names what it counts. Both locales together; the all-home capture must still reach the moment.</span></div>
+      <div class="vr"><span class="num">#1185</span><span class="t">D25 The departure load-out cart</span><span><span class="v v-adopt">Adopt</span></span><span class="where">the prep page, with the gear register</span><span>The load-out half of the shipped gear-return loop. A grouped checklist with exceptions only; needs its own canvas beside the register, not a corner of this one.</span></div>
+      <div class="vr"><span class="num">#1208</span><span class="t">D48 Crew language cue cards</span><span><span class="v v-hold">Hold</span></span><span class="where">&mdash;</span><span>Waiting on a reviewer per language, as the issue says. Off the manifest and the briefing whatever happens.</span></div>
+      <div class="vr"><span class="num">#1363</span><span class="t">The emergency card&#8217;s empty state</span><span><span class="v v-adopt">Adopt</span></span><span class="where">staff/manifest.json &middot; one string</span><span>Rewrite for the harder reader: the fact that nothing is recorded. The copy is the owner&#8217;s call; the shape is not in question.</span></div>
+      <div class="vr"><span class="num">#1366</span><span class="t">A diver cleared after a refusal</span><span><span class="v v-adopt">Adopt</span></span><span class="where">the diver record &middot; copy naming the next act (option a)</span><span>Safety-critical; the smallest change that stops the silence. Options b and c wait on the owner.</span></div>
+    </div>
+  </div>
+
+  <div class="grp">
+    <h2>After the dive &mdash; the recap</h2>
+    <div style="margin-top: 10px;">
+      <div class="vr vh"><span>Issue</span><span>Idea</span><span>Verdict</span><span>Lands on</span><span>Why</span></div>
+      <div class="vr"><span class="num">#1081</span><span class="t">Save the keepsake as an image</span><span><span class="v v-draw">Drawn</span></span><span class="where">AfterPhone &middot; &#8220;Save as image&#8221; beside Print</span><span>The postcard subtree alone, client-side, no URL and no token in the pixels. Security review before merge; a test that the output holds no link text.</span></div>
+      <div class="vr"><span class="num">#1193</span><span class="t">D33 A private memory note</span><span><span class="v v-draw">Drawn</span></span><span class="where">AfterPhone &middot; the dashed line on the postcard</span><span>Typed on the phone, drawn into the image, never sent. Ships with #1081 as one slice.</span></div>
+      <div class="vr"><span class="num">#1195</span><span class="t">D35 The next best dive</span><span><span class="v v-draw">Drawn</span></span><span class="where">AfterPhone &middot; &#8220;Your next dive&#8221;</span><span>One card, one printed reason, from the same tags as D02 plus the crew&#8217;s word and the diver&#8217;s level. Never two, never a score.</span></div>
+      <div class="vr"><span class="num">#1200</span><span class="t">D40 Feedback that was heard</span><span><span class="v v-draw">Drawn</span></span><span class="where">AfterPhone &middot; the private pulse under the review</span><span>Five categories, private, beside the review and never in it. Staff mark one addressed; the diver hears back on the channel they already use.</span></div>
+      <div class="vr"><span class="num">#1207</span><span class="t">D47 Why seats stayed open</span><span><span class="v v-draw">Drawn</span></span><span class="where">Evening &middot; one row on a settled station</span><span>Facts the shop already holds &mdash; the booking window, the deal that did not go out, the comparable that sold &mdash; in one sentence with a door. Not a recommendation, not a leaderboard.</span></div>
+      <div class="vr"><span class="num">#1196 #1205</span><span class="t">D36 + D45 The course after-state</span><span><span class="v v-adopt">Adopt</span></span><span class="where">a recap variant for a student</span><span>Reconciled first, as the ruling asks: one surface, what was practised and what the instructor marked, never a credential the shop did not record. Its own small canvas when the course pages are next reshaped.</span></div>
+      <div class="vr"><span class="num">#1204</span><span class="t">D44 Site memory with an expiry</span><span><span class="v v-adopt">Adopt</span></span><span class="where">the dive-site editor</span><span>A dated internal note on the site row, shown in planning only. A form; the primitives decide it.</span></div>
+      <div class="vr"><span class="num">#1212</span><span class="t">D52 A shop hospitality blueprint</span><span><span class="v v-adopt">Adopt</span></span><span class="where">Settings &middot; three fields; the storefront rows and the thread already read them</span><span>Three sentences a shop writes once. The lens words and &#8220;the shop&#8217;s favourite for a first night dive&#8221; on the Storefront board are its first readers. Shop prose never routes through ICU.</span></div>
+      <div class="vr"><span class="num">#1199</span><span class="t">D39 A conservation receipt</span><span><span class="v v-hold">Hold</span></span><span class="where">&mdash;</span><span>Waiting on a ruling about environmental claims. May close rather than ship.</span></div>
+      <div class="vr"><span class="num">#1198</span><span class="t">D38 A return-to-the-water ritual</span><span><span class="v v-decline">Decline</span></span><span class="where">&mdash;</span><span>A message the diver did not ask for is the one thing the whole delight report forbids. If it ever exists it is a line on the storefront the diver comes back to, never a send.</span></div>
+      <div class="vr" style="border-bottom: 1px solid var(--rope);"><span class="num">#1357</span><span class="t">Names that publish under the shop&#8217;s name</span><span><span class="v v-adopt">Adopt</span></span><span class="where">Settings &rarr; Team &middot; read-only</span><span>Show the consented public name and its consent stamp; no edit and no remove, which would override someone&#8217;s consent.</span></div>
+    </div>
+  </div>
+
+  <div style="margin-top: 34px; padding: 22px 26px; border-radius: 28px; background: var(--tideline);">
+    <p class="glabel">Not from the backlog</p>
+    <p class="body" style="margin-top: 8px; max-width: 980px;">Four things on the surface boards came from reading the app rather than the issues, and the Budget sheet carries them: the band that follows the clock (rule 1), the boat that leaves (rule 2), the one fact of scale (rule 3), and the storefront&#8217;s live panel (rule 4&#8217;s public face). Each is filed as its own follow-up &mdash; #1371, #1372, #1373, #1374 &mdash; so the tracker holds the whole set.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

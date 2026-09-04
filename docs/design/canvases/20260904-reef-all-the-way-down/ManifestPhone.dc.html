@@ -1,0 +1,138 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+  <style>
+    :root {
+      --sand: #fbf7ef; --shell: #fffdf8; --tideline: #f3ecdd; --rope: #e6dcc8; --rope-strong: #8a8065;
+      --ink: #0c2a35; --muted: #54676d;
+      --lagoon: #0e7490; --lagoon-deep: #0a4d61; --shallows: #7fd0d6; --lagoon-wash: #e6f3f5;
+      --coral: #ff6f61; --coral-deep: #a83a2c; --coral-wash: #ffeee9;
+      --success: #15803d; --success-wash: #e6f0e8;
+      --warning: #b45309; --warning-wash: #f8eee2;
+      --danger: #b91c1c; --danger-wash: #f8e8e6;
+      --bed: 0 2px 10px rgba(88, 66, 30, .06);
+    }
+    body { margin: 0; background: var(--sand); color: var(--ink); font-family: 'Geist', -apple-system, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: #0e7490; } a:hover { color: #0a4d61; }
+    p, h1, h2, h3 { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--lagoon); }
+    .glabel { font-size: 12px; font-weight: 650; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .panel { background: var(--shell); border: 1px solid var(--rope); border-radius: 28px; box-shadow: var(--bed); }
+    .sunk { background: var(--tideline); border-radius: 28px; }
+    .inset { border-radius: 18px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 16px; border-radius: 10px; font-size: 16px; font-weight: 500; white-space: nowrap; box-sizing: border-box; }
+    .btn-p { background: var(--lagoon); color: #ffffff; }
+    .btn-s { background: var(--shell); color: var(--ink); border: 1px solid var(--rope); }
+    .btn-g { color: var(--muted); }
+    .btn-sm { height: 44px; padding: 0 12px; font-size: 14px; }
+    .row { display: flex; align-items: center; gap: 14px; min-height: 52px; border-top: 1px solid var(--rope); }
+    .kind { font-size: 13px; font-weight: 650; min-width: 96px; }
+    .act { font-size: 15px; font-weight: 600; color: var(--lagoon); white-space: nowrap; }
+    .tab { font-size: 15px; font-weight: 500; color: var(--muted); padding: 9px 14px; border-radius: 10px; white-space: nowrap; }
+    .sitetile { width: 84px; height: 60px; border-radius: 18px; background: var(--lagoon-wash); color: var(--lagoon-deep); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .hand { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+    .src { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+    .src i { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+    .note { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+    .h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.2; }
+    .h3 { font-size: 16px; font-weight: 600; }
+    .body { font-size: 14px; line-height: 1.55; }
+    .muted { color: var(--muted); }
+    .seg { display: flex; padding: 4px; border-radius: 14px; background: var(--tideline); }
+    .seg span { flex: 1; text-align: center; height: 40px; line-height: 40px; border-radius: 10px; font-size: 15px; font-weight: 600; color: var(--muted); }
+    .seg span.on { background: var(--shell); color: var(--lagoon); box-shadow: 0 1px 2px rgba(12,42,53,.08); }
+    .stage { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--rope-strong); background: var(--shell); font-size: 14.5px; font-weight: 600; white-space: nowrap; }
+    .stage.on { background: var(--ink); border-color: var(--ink); color: #ffffff; }
+    .stage.done { color: var(--muted); border-color: var(--rope); }
+    .rc { display: flex; align-items: center; gap: 12px; min-height: 68px; padding: 0 14px 0 12px; border-top: 1px solid var(--rope); }
+    .circle { width: 48px; height: 48px; border-radius: 999px; border: 2.5px solid var(--ink); box-sizing: border-box; flex-shrink: 0; margin-left: auto; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 1860px; background: var(--sand); box-sizing: border-box; overflow: hidden; position: relative;">
+  <div style="padding: 20px 16px 0;">
+    <p class="eyebrow">&larr; Board</p>
+    <h1 style="font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.12; margin-top: 8px;">Two-Tank Reef &mdash; Molasses &amp; French</h1>
+    <p class="num" style="font-size: 14.5px; color: var(--muted); margin-top: 6px;">Thu, Aug 27 &middot; 7:00 &ndash; 10:30 AM &middot; Mantis II</p>
+
+    <div class="seg" style="margin-top: 16px;"><span>Trip</span><span class="on">Manifest</span><span>Prep</span></div>
+
+    <!-- D42 + D27: the catch-up strip. Only what changed since this person last opened the trip, from the desk's own acts. Dismissible; gone tomorrow. -->
+    <div style="margin-top: 14px; padding: 14px 16px; border-radius: 18px; background: var(--lagoon-wash); display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <p class="glabel" style="color: var(--lagoon-deep);">Since you looked at 6:10 &middot; from the desk</p>
+        <span style="margin-left: auto; font-size: 13px; font-weight: 600; color: var(--lagoon); white-space: nowrap;">Got it</span>
+      </div>
+      <p style="font-size: 15px; line-height: 1.4;">Grace Mensah&#8217;s card is verified. Hugo Marsh&#8217;s seat went to Lina Costa from the wait list. Ben Okafor asked for a hand with his BCD.</p>
+      <p style="font-size: 14px; color: var(--muted);">Aboard today: 4 came for an easygoing reef, 2 are getting comfortable again, 1 is photographing small life.</p>
+    </div>
+
+    <!-- The instrument -->
+    <div class="panel" style="margin-top: 14px; padding: 18px 18px 20px;">
+      <p class="eyebrow">Before departure</p>
+      <div style="display: flex; align-items: center; gap: 14px; margin-top: 10px;">
+        <div style="position: relative; width: 80px; height: 80px; border-radius: 999px; background: var(--tideline); border: 1px solid var(--rope); overflow: hidden; flex-shrink: 0;">
+          <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 70%; background: var(--shallows);"></div>
+          <span class="num" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 700; line-height: 1;">7</span>
+        </div>
+        <div>
+          <p class="num" style="font-size: 18px; font-weight: 600;">of 10 divers aboard</p>
+          <p style="font-size: 14px; color: var(--muted); margin-top: 2px;">3 still to call &middot; crew 0 of 2</p>
+        </div>
+      </div>
+      <!-- D20: the stage control. Five words, one tap, the crew's own. It writes the line the diver's link and the storefront show. -->
+      <div style="margin-top: 16px; display: flex; gap: 6px; overflow: hidden;">
+        <span class="stage on">Boarding</span><span class="stage">Underway</span><span class="stage">Surface</span><span class="stage">Heading in</span><span class="stage">Home</span>
+      </div>
+      <p class="note" style="font-size: 12.5px; margin-top: 8px;">Tap the next one as it happens. Divers&#8217; links and the shop&#8217;s website say it in one line.</p>
+    </div>
+
+    <div style="margin-top: 14px; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 14px; border-radius: 18px; border: 1px solid var(--rope); background: var(--shell);">
+      <svg width="12" height="12" viewBox="0 0 16 16" class="hand" style="color: var(--muted); stroke-width: 2;"><path d="M6 3.5 10.5 8 6 12.5"></path></svg>
+      <span style="font-size: 15px; font-weight: 600;">Before you leave the dock</span><span class="num" style="margin-left: auto; font-size: 14px; color: var(--muted);">3 of 5</span>
+    </div>
+
+    <p style="font-size: 18px; font-weight: 600; margin-top: 22px;">Roll call</p>
+    <div class="panel" style="margin-top: 10px; overflow: hidden;">
+      <div class="rc" style="border-top: 0; background: var(--success-wash);"><span class="num" style="font-size: 12px; font-weight: 600; color: var(--muted); width: 20px;">01</span><span style="display: flex; flex-direction: column;"><span style="font-size: 17px; font-weight: 600; white-space: nowrap;">Ben Okafor</span><span class="note" style="font-size: 12.5px;">first time with us</span></span><span class="circle" style="background: var(--ink);"></span></div>
+      <div class="rc" style="background: var(--success-wash);"><span class="num" style="font-size: 12px; font-weight: 600; color: var(--muted); width: 20px;">02</span><span style="font-size: 17px; font-weight: 600;">Grace Mensah</span><span class="circle" style="background: var(--ink);"></span></div>
+      <div class="rc" style="background: var(--success-wash);"><span class="num" style="font-size: 12px; font-weight: 600; color: var(--muted); width: 20px;">03</span><span style="display: flex; flex-direction: column;"><span style="font-size: 17px; font-weight: 600; white-space: nowrap;">Ada Lindqvist</span><span class="note" style="font-size: 12.5px;">back after 3 years</span></span><span class="circle" style="background: var(--ink);"></span></div>
+      <div class="rc"><span class="num" style="font-size: 12px; font-weight: 600; color: var(--muted); width: 20px;">04</span><span style="font-size: 17px; font-weight: 600;">Priya Sharma</span><span class="circle"></span></div>
+      <div class="rc"><span class="num" style="font-size: 12px; font-weight: 600; color: var(--muted); width: 20px;">05</span><span style="display: flex; flex-direction: column;"><span style="font-size: 17px; font-weight: 600; white-space: nowrap;">Nadia Petrov</span><span style="font-size: 12.5px; font-weight: 600; color: var(--warning);">No emergency contact on file</span></span><span class="circle"></span></div>
+      <div class="rc"><span class="num" style="font-size: 12px; font-weight: 600; color: var(--muted); width: 20px;">06</span><span style="font-size: 17px; font-weight: 600;">Lina Costa</span><span class="circle"></span></div>
+      <div class="rc" style="border-bottom: 0;"><span class="num" style="font-size: 12px; font-weight: 600; color: var(--muted); width: 20px;">07</span><span style="font-size: 17px; font-weight: 600; color: var(--muted);">+ 3 aboard</span><svg width="12" height="12" viewBox="0 0 12 12" class="hand" style="color: var(--muted); stroke-width: 1.8; margin-left: auto;"><path d="M3 4.5 6 7.5 9 4.5"></path></svg></div>
+    </div>
+
+    <p style="font-size: 18px; font-weight: 600; margin-top: 22px;">Crew</p>
+    <div class="panel" style="margin-top: 10px; overflow: hidden;">
+      <div class="rc" style="border-top: 0;"><span style="font-size: 17px; font-weight: 600;">Keiko Tanaka</span><span class="note" style="font-size: 13px;">captain</span><span class="circle"></span></div>
+      <div class="rc"><span style="font-size: 17px; font-weight: 600;">Sal Moretti</span><span class="note" style="font-size: 13px;">divemaster</span><span class="circle"></span></div>
+    </div>
+
+    <!-- D24: the plan-change door, on the executed-dive log. Structured reason, optional note, never overwrites the plan. -->
+    <p style="font-size: 18px; font-weight: 600; margin-top: 22px;">The plan</p>
+    <div style="margin-top: 8px; display: flex; flex-direction: column;">
+      <div class="row" style="gap: 10px;"><span class="num" style="font-size: 13px; color: var(--muted); width: 52px;">Dive 1</span><span style="flex: 1; font-size: 15px; font-weight: 600;">Molasses Reef</span><span class="src"><i style="background: var(--lagoon);"></i>Plan</span></div>
+      <div class="row" style="gap: 10px; border-bottom: 1px solid var(--rope);"><span class="num" style="font-size: 13px; color: var(--muted); width: 52px;">Dive 2</span><span style="flex: 1; font-size: 15px; font-weight: 600;">French Reef</span><span class="src"><i style="background: var(--lagoon);"></i>Plan</span></div>
+      <div style="display: flex; align-items: center; gap: 10px; min-height: 52px;">
+        <span style="font-size: 15px; font-weight: 600; color: var(--lagoon);">Changed the plan?</span>
+        <span class="note" style="font-size: 13px;">&middot; current, weather, vis, or a better call &middot; the diver&#8217;s record says what happened</span>
+      </div>
+    </div>
+
+    <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 14px; border-radius: 18px; border: 1px solid var(--rope); background: var(--shell);">
+      <span class="glabel">On this phone</span><span class="chip" style="margin-left: auto; background: var(--success-wash); color: var(--success); height: 26px;">Saved &middot; online</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
