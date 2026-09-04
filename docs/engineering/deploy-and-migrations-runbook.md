@@ -2,8 +2,9 @@
 
 How a merge to `main` reaches production, what the database does while that happens, and the one
 rule — expand/contract — that keeps a bad migration from taking the app down. The pipeline is three
-files: `vercel.json` (`"buildCommand": "node scripts/vercel-build.mjs"`, plus the daily cron entry),
-`scripts/vercel-build.mjs` (18 lines), and `drizzle.config.prod.ts`
+files: `vercel.json` (`"buildCommand": "node scripts/vercel-build.mjs"`, an
+`"ignoreCommand"` — see [When a push produces no deployment](#when-a-push-produces-no-deployment) —
+plus the daily cron entry), `scripts/vercel-build.mjs` (18 lines), and `drizzle.config.prod.ts`
 ([ADR 20260718-vercel-neon-hosting](../architecture/decisions/20260718-vercel-neon-hosting.md)).
 Restoring from a migration that has already destroyed data is a different document:
 [backup-and-restore-runbook.md](backup-and-restore-runbook.md).
@@ -34,6 +35,84 @@ Five consequences follow, and every one of them is load-bearing:
 Put together: an unsafe migration is applied by the same command that builds the code, with no way to
 reverse it. The SQL itself has been rehearsed; its interaction with real data volumes has not. That
 is the blast radius. Expand/contract is the mitigation that makes it survivable.
+
+## When a push produces no deployment
+
+Vercel builds every push to every branch, and this repository pushes hard: over the 63 hours to
+2026-09-04 it merged 69 times to `main` and carried 170 branch commits — call it ninety builds a day
+between production and previews. Build minutes are the second-largest line on the Vercel bill after
+the seat, and the cheapest one to reduce is the build that produces a byte-identical artifact.
+
+`vercel.json`'s `"ignoreCommand": "node scripts/vercel-ignore-build.mjs"` runs at the top of every
+deployment, before the install and before `scripts/vercel-build.mjs`. It diffs the commit being
+deployed against `VERCEL_GIT_PREVIOUS_SHA` — **the last commit that deployed successfully on this
+branch**, not this commit's parent — and cancels the deployment when the only files that moved are
+ones no build reads: `docs/`, any Markdown, `.claude/`, `.github/`, `LICENSE`. It is the same
+question `.github/workflows/ci.yml`'s `changes` job asks, against nearly the same list, and the
+script's own header carries the reasoning and the measurement (about one push in ten).
+
+Three things to know before you read a cancelled deployment as a problem:
+
+- **Vercel's exit codes are backwards from everything else here.** Exit 1 continues the build; exit 0
+  cancels it. The script names both rather than writing bare numbers.
+- **It fails open.** A first push to a branch, a commit the clone cannot reach, a `git` that will not
+  answer — every one of them builds. A wasted build costs minutes; a wrong skip leaves a deployment
+  silently behind its branch with a green check and nothing to look at.
+- **A cancelled deployment is `CANCELED`, not failed, and it does not redeploy anything.** The
+  previous deployment keeps its alias, which is the correct outcome: its artifact is the one this
+  commit would have rebuilt. Vercel still counts a cancellation against the daily deployment quota
+  and against concurrent build slots — it saves build minutes, not deployment count.
+
+### Previews happen when somebody asks for one
+
+`vercel.json`'s `git.deploymentEnabled` is `{"**": false, "*": false, "main": true}` — **no branch
+but `main` deploys on a push.** That is the largest reduction in build minutes available here: over
+the same 63 hours, 170 branch commits against 69 merges, so roughly three of every four builds were
+previews. Nothing in this repository consumed one. The e2e and visual suites run against
+locally-built servers inside CI (`e2e/servers.ts`), review screenshots come from
+`node scripts/screenshot.mjs` against a local `pnpm dev`, and no workflow reads a `*.vercel.app` URL.
+A preview is for a human looking at a branch, which is an event rather than a property of every push.
+
+Both `*` and `**` are listed because minimatch's `*` does not cross a `/`, and every agent branch in
+this repository is `claude/…`. `main` matches all three rules and Vercel's stated tie-break is that
+one `true` wins, so production is untouched.
+
+`.github/workflows/preview.yml` is the door back in. Three ways through it:
+
+| You do | You get |
+| --- | --- |
+| Add the `preview` label to a pull request | A preview now, and another on every push while the label is on |
+| Comment `/preview` on a pull request | One preview of the current head |
+| Push to a pull request already labelled `preview` | A preview |
+
+Remove the label to stop. The `/preview` comment path checks `author_association` before it acts —
+`issue_comment` fires for anyone who can comment on a public repository, and this one spends money;
+labelling and pushing already require write access, so those two need no such check.
+
+**It only ever builds a commit from this repository, and that is why the workflow is two jobs.** The
+first holds no credential (no `environment:`) and checks out nothing: it asks the API for the pull
+request's head repository and SHA, and fails if the head is a fork. Only then does the second job —
+the one with the Vercel token — check out that exact SHA. Without the split, `issue_comment` is a
+privileged-checkout hole and CodeQL says so: that event always runs in the base repository's context
+with its secrets available, so a maintainer typing `/preview` on a fork's pull request would check
+that fork's tree out and run `pnpm install` — arbitrary lifecycle scripts — with `VERCEL_TOKEN` in
+the environment. `author_association` gates *who may ask*; it says nothing about *whose code runs*.
+The second job takes the resolved SHA rather than a ref, because a branch can move between the two.
+
+It deploys with `vercel deploy` (a remote build) rather than `vercel build && vercel deploy
+--prebuilt` (a build on the runner). The prebuilt path would save the last of the Vercel build
+minutes and costs pulling the project's Preview environment — `DATABASE_URL` and every sealed
+credential with it — down onto a GitHub runner. A handful of requested previews a week is not worth
+moving secrets for.
+
+The workflow needs `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` on a **`preview-deploy`**
+environment — not `infra-deploy`'s copies, whose required-reviewer approval is right for a production
+deploy and would make an on-demand preview absurd. Manual action `preview-deploy-token` in
+[manual-actions.md](manual-actions.md) is how they get there. Until they do, the workflow fails at
+its first step naming the empty one; nothing else changes, and production deploys never touch it.
+
+A docs-only commit therefore never reaches `pnpm db:migrate` either. That is safe by construction:
+`drizzle/` is code, so any commit carrying a migration is a commit that builds.
 
 ## What CI rehearses, and what it still doesn't
 

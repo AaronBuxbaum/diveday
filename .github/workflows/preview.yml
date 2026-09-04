@@ -1,0 +1,169 @@
+# A preview deployment, only when somebody asks for one.
+#
+# `vercel.json`'s `git.deploymentEnabled` turns automatic preview deployments
+# off for every branch but `main`. That is the largest single reduction in this
+# project's Vercel build minutes available — over the 63 hours to 2026-09-04
+# this repository carried 170 branch commits against 69 merges, so roughly three
+# of every four builds were previews, and nothing in the repository consumed
+# one: the e2e and visual suites run against locally-built servers inside CI,
+# and review screenshots come from `scripts/screenshot.mjs` against a local dev
+# server. What a preview is actually for is a human looking at a branch, which
+# is an event, not a property of every push.
+#
+# So this workflow is the door back in. Three ways through it, and the third is
+# what makes the first two worth having:
+#
+#   * label a pull request `preview`
+#   * comment `/preview` on one
+#   * push to a pull request that already carries the `preview` label
+#
+# The label is sticky on purpose: turn it on once and that branch previews on
+# every push for as long as it is on, which is the old behaviour restored for
+# exactly the branches that want it. Remove the label to stop.
+name: Preview
+
+on:
+  pull_request:
+    types: [labeled, synchronize]
+  issue_comment:
+    types: [created]
+
+concurrency:
+  # One preview per pull request, newest wins. A second push while the first is
+  # still building would otherwise pay for a deployment nobody will open.
+  group: preview-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Two jobs, and the split is the security boundary rather than a tidiness
+  # preference. This one holds no credential — it has no `environment:`, so the
+  # Vercel secrets do not exist for it — and it checks out nothing. All it does
+  # is establish *which commit* the deploy job is allowed to build, and refuse
+  # if that commit is not from this repository.
+  #
+  # Without it, `issue_comment` is a privileged-checkout hole (CodeQL's
+  # `actions/untrusted-checkout`, and it is right): that event always runs in
+  # the base repository's context with its secrets available, so a maintainer
+  # typing `/preview` on a pull request from a fork would check that fork's tree
+  # out and run `pnpm install` — arbitrary lifecycle scripts — with VERCEL_TOKEN
+  # in the environment. The `author_association` check below gates *who may ask*
+  # and says nothing about *whose code runs*.
+  #
+  # Resolving the head by API rather than trusting the event payload also closes
+  # the gap between the two: the `pull_request` payload carries a head repo, the
+  # `issue_comment` payload carries none at all, and one answer for both is one
+  # thing to get right.
+  resolve:
+    name: Resolve the head to build
+    # Three conditions, one per door. `issue_comment` fires for issues as well
+    # as pull requests, so that arm checks `.pull_request` exists before
+    # anything else — and checks `author_association`, because anybody with a
+    # GitHub account can comment on a public repository and this spends money.
+    # `labeled`/`synchronize` need no such check: both require write access.
+    if: >-
+      (github.event_name == 'pull_request'
+        && github.event.action == 'labeled'
+        && github.event.label.name == 'preview')
+      || (github.event_name == 'pull_request'
+        && github.event.action == 'synchronize'
+        && contains(github.event.pull_request.labels.*.name, 'preview'))
+      || (github.event_name == 'issue_comment'
+        && github.event.issue.pull_request != null
+        && startsWith(github.event.comment.body, '/preview')
+        && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      sha: ${{ steps.head.outputs.sha }}
+    steps:
+      - id: head
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number || github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          read -r repo sha < <(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR}" \
+            --jq '[.head.repo.full_name, .head.sha] | @tsv')
+          if [ "$repo" != "$GITHUB_REPOSITORY" ]; then
+            echo "::error::#${PR}'s head is on ${repo}, not ${GITHUB_REPOSITORY}. A preview builds and installs the branch it deploys, so this workflow only ever runs code from this repository — where pushing already requires write access. Deploy a fork by hand if you have read the diff."
+            exit 1
+          fi
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy a preview
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+    # The three Vercel credentials live on their own environment with no
+    # required reviewer — `infra-deploy`'s copies sit behind an approval gate,
+    # which is right for a production deploy and would make an on-demand preview
+    # useless. Manual action "preview-deploy-token" is how they get there.
+    environment: preview-deploy
+    steps:
+      # The exact commit the job above proved is ours, never a ref: a branch can
+      # move between the two jobs, and a ref would build whatever it moved to.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+      - uses: ./.github/actions/setup
+      - name: Confirm the Vercel credentials are set
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -uo pipefail
+          missing=0
+          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name resolved to the empty string. The preview-deploy environment does not carry it yet — complete manual action \"preview-deploy-token\" in docs/engineering/manual-actions.md."
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ] || exit 1
+      # `vercel deploy`, not `vercel build && vercel deploy --prebuilt`: building
+      # on the runner would save the last of the Vercel build minutes, and costs
+      # pulling the project's Preview environment — DATABASE_URL and every
+      # sealed credential with it — down onto a GitHub runner. A handful of
+      # requested previews a week is not worth moving secrets for.
+      #
+      # The upload honours `.vercelignore`, which is what keeps `.env*`, the
+      # local `.pglite` database and 5.7 MB of `docs/` out of the tarball.
+      # `scripts/vercel-ignore-build.mjs` sees no git metadata in a CLI deploy,
+      # fails open, and builds — correct here, since somebody asked for this one.
+      - id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          url=$(pnpm exec vercel deploy --archive=tgz --yes --token="$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Say where it is
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URL: ${{ steps.deploy.outputs.url }}
+          SHA: ${{ needs.resolve.outputs.sha }}
+          PR: ${{ github.event.pull_request.number || github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          {
+            echo "Preview of \`${SHA}\`: ${URL}"
+            echo
+            echo "Pushes to this branch keep previewing while the \`preview\` label is on. Remove it to stop."
+            echo
+            echo "---"
+            echo "_Generated by [Claude Code](https://claude.ai/code)_"
+          } > preview-comment.md
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file preview-comment.md

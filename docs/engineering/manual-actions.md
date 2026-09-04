@@ -79,7 +79,19 @@ this file is the checklist, not the argument.
     verify   Actions -> Infra -> Run workflow, command: deploy -- after approval, confirm the wizard's Vercel steps push/deploy rather than the CLI reporting 'no project linked'.
     note     A revoked or expired token fails the wizard's Vercel steps loudly (a nonzero `vercel` exit code fails the job) rather than silently skipping them, since scripts/infra-deploy.mjs propagates the wizard's own exit status.
 
-[8] Give the weekly database dump its connection string
+[8] Give the on-demand preview workflow its own Vercel credentials
+    when     once, before the first `preview` label or `/preview` comment on a pull request. Skippable: nothing else needs it, and production deploys are unaffected
+    why      `vercel.json`'s git.deploymentEnabled turns automatic preview deployments off for every branch but main -- roughly three of every four Vercel builds, none of which anything in this repository consumed. .github/workflows/preview.yml is the door back in, and it shells out to the Vercel CLI, which needs the same token and project ids the deploy job uses. It cannot read infra-deploy's copies: that environment carries a required-reviewer approval, which is correct for a production deploy and would make an on-demand preview useless -- somebody would have to approve a run to look at a branch.
+    run      Reuse the token minted for ci-vercel-deploy-token, or mint a second one: Vercel -> Account Settings -> Tokens -> Create, scoped to the team that owns the project.
+             gh secret set VERCEL_TOKEN --env preview-deploy
+             gh secret set VERCEL_ORG_ID --env preview-deploy --body <orgId>; gh secret set VERCEL_PROJECT_ID --env preview-deploy --body <projectId> -- the same two ids as ci-vercel-deploy-token, read from .vercel/project.json.
+             Create the `preview` label on the repository if it does not exist: gh label create preview --description 'Deploy a Vercel preview on every push to this pull request'.
+    produces Labelling a pull request `preview`, or commenting `/preview` on one, deploys it to a Vercel preview URL and comments the link back. The label is sticky: while it is on, every push to that pull request previews again.
+    store    GitHub repo Settings -> Environments -> preview-deploy -> Environment secrets -> VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID. A separate environment from infra-deploy, and deliberately with **no required reviewer** -- the approval gate is what makes infra-deploy's copies unusable here. Give it no deployment-branch restriction either: the workflow runs against pull request refs, not main.
+    verify   Label any open pull request `preview` -- the Preview workflow should run and comment a URL. Without the secrets it fails at its first step naming the one that is empty, rather than at an opaque Vercel CLI error.
+    note     This credential can deploy to the project, which is why the workflow checks `author_association` before acting on a `/preview` comment: `issue_comment` fires for anyone who can comment. Labelling and pushing already require write access.
+
+[9] Give the weekly database dump its connection string
     when     once, before the first Monday after this stack is deployed, and again if the Neon connection string changes
     why      The dump is the only backup layer that can restore a login -- the per-shop export bundles exclude user_accounts, account_tokens and calendar_feeds by design -- and it needs Neon's direct (non-pooled) connection string, which is another vendor's credential this stack has no identity to mint or read. It deploys holding the literal 'unset' and refuses to run until this is done, rather than writing a zero-byte object every week.
     run      aws secretsmanager put-secret-value --secret-id diveday/database-url-unpooled --secret-string '<the DATABASE_URL_UNPOOLED value from Neon -- the direct endpoint, not -pooler>'
@@ -90,7 +102,7 @@ this file is the checklist, not the argument.
              AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-database-dumps/dumps/ --recursive
     note     A transaction-mode pooler is unreliable for pg_dump, the same reason migrations use the direct connection. The resulting file holds every password hash and every medical answer in the platform, which is why it lives in its own bucket that nothing holding Vercel-resident credentials can touch, why everything in that bucket is deleted after 35 days while the export bundles never expire, and why the job's own role is write-only. Restoring one is a deliberate human act with the admin profile.
 
-[9] Mint the Vercel and Neon usage read tokens
+[10] Mint the Vercel and Neon usage read tokens
     when     once, before the usage monitor can measure anything, and again after rotating either
     why      Both are another vendor's account credentials -- this stack has no identity on either platform and no API that could mint one. Nothing else in DiveDay needs them, so they exist only for the daily usage poll.
     run      Vercel -> Account Settings -> Tokens -> Create: scope it to the team that holds the billing account, read access only.
@@ -103,7 +115,7 @@ this file is the checklist, not the argument.
 ## AWS account
 
 ```text
-[10] Request SES production access
+[11] Request SES production access
     when     once per region, before sending to anyone who has not verified their address
     why      A human-reviewed AWS Support case. There is no API, and the sandbox is per region.
     run      Read docs/engineering/ses-email-runbook.md, 'Production access: the second request', and paste its case text.
@@ -113,7 +125,7 @@ this file is the checklist, not the argument.
     if not   A denial with no reason is the norm, not the end: reply on the same case with the runbook's follow-up answers, and if it is closed, open a new case that names the closed case id. A second region is its own sandbox and its own request.
     note     Everything the reviewer asks for is already in the stack: DKIM and a custom MAIL FROM on the identity, bounce and complaint events to /api/webhooks/ses, account-level suppression on the configuration set, one-click unsubscribe headers, Reply-To and a postal footer from the shop record, and the two reputation alarms in S13. The case text lists them; do not paraphrase it shorter.
 
-[11] Leave the SMS sandbox, raise the spend limit, register an origination identity
+[12] Leave the SMS sandbox, raise the spend limit, register an origination identity
     when     once, before sending SMS to a diver
     why      All three are account-level SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US origination identity (10DLC or toll-free) is a vetted registration with the carriers. The SetSMSAttributes custom resource (infra-stack.ts S10) deliberately touches none of them -- it sets delivery-status logging and nothing else.
     run      SNS console -> Text messaging (SMS) -> Exit SMS sandbox (a Support case).
@@ -122,7 +134,7 @@ this file is the checklist, not the argument.
     verify   aws sns get-sms-attributes --attributes MonthlySpendLimit
     note     Skipping this does not fail anything visibly: the pipeline reads healthy end to end while sends are capped or dropped.
 
-[12] Confirm the observability alarm subscription email
+[13] Confirm the observability alarm subscription email
     when     once per alert address, and again if the address changes
     why      An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts S13) transitions correctly and notifies nobody, which is the failure mode the alarms exist to prevent.
     run      Open the 'AWS Notification - Subscription Confirmation' mail sent to the alert address and click Confirm subscription.
@@ -135,7 +147,7 @@ this file is the checklist, not the argument.
 ## Verification
 
 ```text
-[13] Confirm the usage monitor reports numbers and reaches a real inbox
+[14] Confirm the usage monitor reports numbers and reaches a real inbox
     when     after minting the tokens, and after changing OPS_ALERT_EMAIL
     why      Every failure mode of this monitor is silent by construction. A wrong token, a revoked scope, a renamed provider field, or an unreachable alert mailbox all leave a cron that runs green and reports nothing, which is indistinguishable from a month with no cost problem.
     run      curl -s -H "Authorization: Bearer $CRON_SECRET" <webhookHost>/api/cron/usage | jq '.evaluations[] | {ceilingId, level, value}'

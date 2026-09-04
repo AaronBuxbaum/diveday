@@ -2121,6 +2121,27 @@ exports.handler = async (event) => {
         note: "A revoked or expired token fails the wizard's Vercel steps loudly (a nonzero `vercel` exit code fails the job) rather than silently skipping them, since scripts/infra-deploy.mjs propagates the wizard's own exit status.",
       },
       {
+        id: "preview-deploy-token",
+        title: "Give the on-demand preview workflow its own Vercel credentials",
+        category: "Credentials",
+        when: "once, before the first `preview` label or `/preview` comment on a pull request. Skippable: nothing else needs it, and production deploys are unaffected",
+        why: "`vercel.json`'s git.deploymentEnabled turns automatic preview deployments off for every branch but main -- roughly three of every four Vercel builds, none of which anything in this repository consumed. .github/workflows/preview.yml is the door back in, and it shells out to the Vercel CLI, which needs the same token and project ids the deploy job uses. It cannot read infra-deploy's copies: that environment carries a required-reviewer approval, which is correct for a production deploy and would make an on-demand preview useless -- somebody would have to approve a run to look at a branch.",
+        run: [
+          "Reuse the token minted for ci-vercel-deploy-token, or mint a second one: Vercel -> Account Settings -> Tokens -> Create, scoped to the team that owns the project.",
+          "gh secret set VERCEL_TOKEN --env preview-deploy",
+          "gh secret set VERCEL_ORG_ID --env preview-deploy --body <orgId>; gh secret set VERCEL_PROJECT_ID --env preview-deploy --body <projectId> -- the same two ids as ci-vercel-deploy-token, read from .vercel/project.json.",
+          "Create the `preview` label on the repository if it does not exist: gh label create preview --description 'Deploy a Vercel preview on every push to this pull request'.",
+        ],
+        produces:
+          "Labelling a pull request `preview`, or commenting `/preview` on one, deploys it to a Vercel preview URL and comments the link back. The label is sticky: while it is on, every push to that pull request previews again.",
+        store:
+          "GitHub repo Settings -> Environments -> preview-deploy -> Environment secrets -> VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID. A separate environment from infra-deploy, and deliberately with **no required reviewer** -- the approval gate is what makes infra-deploy's copies unusable here. Give it no deployment-branch restriction either: the workflow runs against pull request refs, not main.",
+        verify: [
+          "Label any open pull request `preview` -- the Preview workflow should run and comment a URL. Without the secrets it fails at its first step naming the one that is empty, rather than at an opaque Vercel CLI error.",
+        ],
+        note: "This credential can deploy to the project, which is why the workflow checks `author_association` before acting on a `/preview` comment: `issue_comment` fires for anyone who can comment. Labelling and pushing already require write access.",
+      },
+      {
         id: "cost-explorer-enabled",
         title: "Enable Cost Explorer",
         category: "Prerequisites",
@@ -2415,6 +2436,16 @@ exports.handler = async (event) => {
         // post-deploy wizard can run unattended (ADR 20260811-ci-deploy-full-wizard).
         "ci-github-admin-token",
         "ci-vercel-deploy-token",
+        // Same class a third time, and the only entry on this list that is
+        // genuinely optional: `vercel.json` turns automatic preview
+        // deployments off for every branch but main, and
+        // .github/workflows/preview.yml is the door back in. Skip it and
+        // nothing breaks -- production deploys are untouched, a `preview`
+        // label simply fails its first step naming the missing secret. It is
+        // here rather than in a runbook because a reader who wants a preview
+        // and cannot get one has no other place to look, and because minting
+        // the token is the same thing no CLI here can do for itself.
+        "preview-deploy-token",
         // Same class again: Neon's direct connection string is another vendor's
         // credential, so no CLI here can learn the value even though one can
         // place it. It earns the short list on consequence rather than only on
