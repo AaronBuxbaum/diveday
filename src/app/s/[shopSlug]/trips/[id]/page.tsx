@@ -24,6 +24,7 @@ import {
   getWaitlistEntryForTrip,
   listTripDives,
   listTripScheduleDays,
+  pagedUpcomingTripsWithCounts,
   tripCrewSpokenLanguages,
 } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
@@ -38,7 +39,7 @@ import { nowDate } from "@/lib/clock";
 import { courseCharges, perDiverBookingPriceCents } from "@/lib/courses";
 import { checkoutCharge } from "@/lib/deposits";
 import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
-import { formatDateTimeTz, formatShortDate } from "@/lib/format";
+import { formatDateTimeTz, formatDayParts, formatShortDate } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
   fetchAutomatedMarineForecast,
@@ -52,6 +53,7 @@ import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { publicSchedulePath, publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
 import { combineCertRequirements } from "@/lib/readiness";
 import { isLiveShopStaff } from "@/lib/session";
+import { similarDepartures } from "@/lib/similar-departures";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { tripPageJsonLd } from "@/lib/structured-data";
 import { isFull, spotsRemaining } from "@/lib/trips";
@@ -369,13 +371,54 @@ export default async function TripDetailPage({
   // case lands on the departure's public page rather than nowhere.
   const readinessLink = `${publicTripPath(shopSlug, tripId)}/ready?booking=${encodeURIComponent(bookingToken ?? "")}`;
 
-  const inPast = new Date(trip.startsAt.getTime() + 60 * 60 * 1000) <= nowDate();
+  const now = nowDate();
+  const inPast = new Date(trip.startsAt.getTime() + 60 * 60 * 1000) <= now;
   // Where this departure stands against the head count it needs, if it named
   // one. A departure that already sailed has nothing conditional left to
   // promise; a cancelled one returned far above this line, at the `status`
   // check that renders `CancelledTripNotice` instead of the booking page.
   const minimumSeats = inPast ? ({ kind: "none" } as const) : minimumSeatsState(trip, trip.booked);
   const full = isFull(trip);
+  /**
+   * **What else this shop is running, for a boat with no seats left** (issue
+   * #1166, D06). Read only when the trip is actually full: on every other
+   * render this is a query nobody asked for, and the surface it feeds does not
+   * exist.
+   *
+   * The candidate pool is the storefront's own schedule reader with
+   * `hasSpace`, so a departure offered here is one a diver can actually get
+   * onto, and a private charter is never offered to the public. Bounded at 50
+   * rather than paged: `similarDepartures` needs a pool, not a page, and a
+   * shop whose next matching departure is past the fiftieth is a shop the
+   * "find another trip" link serves better anyway.
+   */
+  const alternatives = full
+    ? similarDepartures({
+        full: { tripId: trip.id, courseId: trip.courseId, diveSiteId: trip.diveSiteId },
+        candidates: (
+          await pagedUpcomingTripsWithCounts(db, shop.id, {
+            now,
+            limit: 50,
+            hasSpace: true,
+            publicOnly: true,
+          })
+        ).trips.map((candidate) => ({
+          id: candidate.id,
+          title: candidate.title,
+          startsAt: candidate.startsAt,
+          courseId: candidate.courseId,
+          diveSiteId: candidate.diveSiteId,
+        })),
+      }).map((row) => ({
+        tripId: row.tripId,
+        title: row.title,
+        reason: row.reason,
+        // Preformatted in the shop's own zone, like every other date this page
+        // hands a client component.
+        when: formatDayParts(row.startsAt, locale, shop.timezone),
+        href: `${publicTripPath(shopSlug, row.tripId)}${isEmbed ? "?embed=1" : ""}`,
+      }))
+    : [];
   const remaining = spotsRemaining(trip);
   const errorMessage = error && isErrorCode(error) ? t(ERROR_MESSAGE_KEYS[error]) : undefined;
   const tripRef = { shopSlug, tripId, embed: isEmbed };
@@ -598,6 +641,7 @@ export default async function TripDetailPage({
             errorMessage={errorMessage}
             contactEmail={shop.contactEmail}
             contactPhone={shop.contactPhone}
+            alternatives={alternatives}
             terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
           />
         ) : (

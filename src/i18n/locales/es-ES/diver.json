@@ -304,6 +304,8 @@
     "booking": "Reservando…",
     "fullHeading": "Este barco está completo",
     "findAnotherTrip": "Buscar otra salida",
+    "alternativeSameCourse": "El mismo curso, {date}",
+    "alternativeSameSite": "El mismo sitio de buceo, {date}",
     "reefNotGoingAnywhere": "— el arrecife no se va a ninguna parte.",
     "waitlistHeading": "Anótate en la lista de espera",
     "waitlistBody": "Si se libera una plaza, el centro ya tendrá tus datos.",

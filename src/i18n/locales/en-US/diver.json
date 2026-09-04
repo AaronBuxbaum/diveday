@@ -304,6 +304,8 @@
     "booking": "Booking…",
     "fullHeading": "This boat’s full",
     "findAnotherTrip": "Find another trip",
+    "alternativeSameCourse": "Same course, {date}",
+    "alternativeSameSite": "Same site, {date}",
     "reefNotGoingAnywhere": "— the reef isn’t going anywhere.",
     "waitlistHeading": "Join the wait list",
     "waitlistBody": "If a spot opens, the shop will have your details ready.",
