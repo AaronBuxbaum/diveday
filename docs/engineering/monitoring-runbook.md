@@ -37,6 +37,17 @@ Wired with `withSentryConfig` in `next.config.ts` and runtime files (`src/app/ob
 
 The production build that matters for this is Vercel's own (`scripts/vercel-build.mjs` → `pnpm build`) on merge to `main` — that is the build that actually deploys and is what should upload source maps and create the release. Set `SENTRY_AUTH_TOKEN` as a **Vercel** project environment variable (Production), not a GitHub Actions secret: CI's `next build` (`build` job) always sets `DIVEDAY_E2E=1`, which `next.config.ts` reads to disable Sentry's source-map upload and telemetry outright — CI builds an ephemeral artifact for `perf:budget` and the e2e/visual suites, never something that deploys, so there is nothing for a CI-side Sentry token to usefully upload.
 
+**Preview builds generate no source maps, as of 2026-09-04.** `SENTRY_AUTH_TOKEN` being
+Production-only is not a detail of that sentence, it is the whole reason: a preview build has no
+token, so it uploaded nothing and — because the delete pass in `next.config.ts`'s `sourcemaps` block
+only runs after a successful upload — deleted nothing either. It generated the 1,680 files and
+173 MB of server maps counted in that block, on every preview, and shipped them into a deployment
+that would never be symbolicated. `isVercelPreviewBuild` (`VERCEL === "1"` and
+`VERCEL_ENV !== "production"`) now disables source maps for exactly that build; production keeps
+them, and a local `pnpm build` and CI's `e2e:build` are untouched. The observable change is none: an
+unsymbolicated preview stack trace is what a preview already produced. `src/test/next-config.test.ts`
+pins the narrowness.
+
 
 1. **Create a free Sentry account and project** at [sentry.io](https://sentry.io) — platform
    "Next.js". The free Developer plan covers 5,000 errors/month, which is generous for a young

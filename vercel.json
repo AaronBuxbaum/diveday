@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "node scripts/vercel-build.mjs",
+  "ignoreCommand": "node scripts/vercel-ignore-build.mjs",
   "crons": [
     { "path": "/api/cron/reminders", "schedule": "0 14 * * *" },
     { "path": "/api/cron/trip-reminders", "schedule": "10 * * * *" },

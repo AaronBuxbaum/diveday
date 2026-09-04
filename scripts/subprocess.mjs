@@ -49,6 +49,15 @@ export const SUBPROCESS_TIMEOUTS = {
   /** One local `git` read (`rev-parse`, `log`, `blame`, `archive`). No network. */
   git: 60_000,
   /**
+   * One `git fetch` -- the only git call in this repo that leaves the machine.
+   * Its single caller is `vercel-ignore-build.mjs`, deepening Vercel's shallow
+   * clone by one commit so it can diff against the last deployed tree. Longer
+   * than `git` above because a network round trip is in it, and short enough
+   * that a wedged fetch cannot outlast the decision it is feeding: the caller
+   * fails open, so a timeout here builds rather than hangs.
+   */
+  gitFetch: 120_000,
+  /**
    * One `ps` read of the whole process table. Purely local and normally a few
    * milliseconds; the ceiling is here because the one caller
    * (`stray-processes.mjs`) runs as a `Stop` hook on every turn, and a hook

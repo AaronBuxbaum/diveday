@@ -32,6 +32,13 @@ async function loadConfig(env: Record<string, string>): Promise<ImageConfig> {
   return module.default as ImageConfig;
 }
 
+async function loadPreviewFlag(env: Record<string, string>): Promise<boolean> {
+  vi.resetModules();
+  for (const [key, value] of Object.entries(env)) vi.stubEnv(key, value);
+  const module = (await import(CONFIG)) as { isVercelPreviewBuild: boolean };
+  return module.isVercelPreviewBuild;
+}
+
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.resetModules();
@@ -97,5 +104,30 @@ describe("next.config.ts images", () => {
       MEDIA_AWS_REGION: "",
     });
     expect(config.images?.remotePatterns).toEqual([]);
+  });
+});
+
+/**
+ * The flag that keeps Sentry's source-map generation on the one build whose
+ * maps anybody reads. `SENTRY_AUTH_TOKEN` is Production-only on Vercel
+ * (docs/engineering/monitoring-runbook.md), so a preview never uploaded a map
+ * and never deleted one either — it generated 173 MB of them and shipped them.
+ *
+ * What these pin is the *narrowness*: "not production" alone would also catch a
+ * developer's `pnpm build` and CI's `e2e:build`, changing two builds this was
+ * never about.
+ */
+describe("next.config.ts isVercelPreviewBuild", () => {
+  it("is true for a Vercel preview build", async () => {
+    expect(await loadPreviewFlag({ VERCEL: "1", VERCEL_ENV: "preview" })).toBe(true);
+  });
+
+  it("is false for the Vercel production build, which owns the maps", async () => {
+    expect(await loadPreviewFlag({ VERCEL: "1", VERCEL_ENV: "production" })).toBe(false);
+  });
+
+  it("is false off Vercel, so a local build and CI keep the behaviour they had", async () => {
+    expect(await loadPreviewFlag({ VERCEL: "", VERCEL_ENV: "" })).toBe(false);
+    expect(await loadPreviewFlag({ VERCEL: "", VERCEL_ENV: "preview" })).toBe(false);
   });
 });

@@ -2,8 +2,9 @@
 
 How a merge to `main` reaches production, what the database does while that happens, and the one
 rule — expand/contract — that keeps a bad migration from taking the app down. The pipeline is three
-files: `vercel.json` (`"buildCommand": "node scripts/vercel-build.mjs"`, plus the daily cron entry),
-`scripts/vercel-build.mjs` (18 lines), and `drizzle.config.prod.ts`
+files: `vercel.json` (`"buildCommand": "node scripts/vercel-build.mjs"`, an
+`"ignoreCommand"` — see [When a push produces no deployment](#when-a-push-produces-no-deployment) —
+plus the daily cron entry), `scripts/vercel-build.mjs` (18 lines), and `drizzle.config.prod.ts`
 ([ADR 20260718-vercel-neon-hosting](../architecture/decisions/20260718-vercel-neon-hosting.md)).
 Restoring from a migration that has already destroyed data is a different document:
 [backup-and-restore-runbook.md](backup-and-restore-runbook.md).
@@ -34,6 +35,36 @@ Five consequences follow, and every one of them is load-bearing:
 Put together: an unsafe migration is applied by the same command that builds the code, with no way to
 reverse it. The SQL itself has been rehearsed; its interaction with real data volumes has not. That
 is the blast radius. Expand/contract is the mitigation that makes it survivable.
+
+## When a push produces no deployment
+
+Vercel builds every push to every branch, and this repository pushes hard: over the 63 hours to
+2026-09-04 it merged 69 times to `main` and carried 170 branch commits — call it ninety builds a day
+between production and previews. Build minutes are the second-largest line on the Vercel bill after
+the seat, and the cheapest one to reduce is the build that produces a byte-identical artifact.
+
+`vercel.json`'s `"ignoreCommand": "node scripts/vercel-ignore-build.mjs"` runs at the top of every
+deployment, before the install and before `scripts/vercel-build.mjs`. It diffs the commit being
+deployed against `VERCEL_GIT_PREVIOUS_SHA` — **the last commit that deployed successfully on this
+branch**, not this commit's parent — and cancels the deployment when the only files that moved are
+ones no build reads: `docs/`, any Markdown, `.claude/`, `.github/`, `LICENSE`. It is the same
+question `.github/workflows/ci.yml`'s `changes` job asks, against nearly the same list, and the
+script's own header carries the reasoning and the measurement (about one push in ten).
+
+Three things to know before you read a cancelled deployment as a problem:
+
+- **Vercel's exit codes are backwards from everything else here.** Exit 1 continues the build; exit 0
+  cancels it. The script names both rather than writing bare numbers.
+- **It fails open.** A first push to a branch, a commit the clone cannot reach, a `git` that will not
+  answer — every one of them builds. A wasted build costs minutes; a wrong skip leaves a deployment
+  silently behind its branch with a green check and nothing to look at.
+- **A cancelled deployment is `CANCELED`, not failed, and it does not redeploy anything.** The
+  previous deployment keeps its alias, which is the correct outcome: its artifact is the one this
+  commit would have rebuilt. Vercel still counts a cancellation against the daily deployment quota
+  and against concurrent build slots — it saves build minutes, not deployment count.
+
+A docs-only commit therefore never reaches `pnpm db:migrate` either. That is safe by construction:
+`drizzle/` is code, so any commit carrying a migration is a commit that builds.
 
 ## What CI rehearses, and what it still doesn't
 

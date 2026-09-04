@@ -5,6 +5,16 @@ import { securityHeaderRules } from "./src/lib/security-headers";
 import { managedImageRemotePatterns } from "./src/lib/storage/blob-host";
 
 const isE2EBuild = process.env.DIVEDAY_E2E === "1";
+/**
+ * A Vercel build that is not the one aliased to the production domain — a
+ * preview, which is roughly three of every four builds this project runs
+ * (2026-09-04: ~26 merges to `main` a day against ~65 branch commits).
+ *
+ * Narrow on purpose: `process.env.VERCEL` rather than "not production", so a
+ * local `pnpm build` and CI's `e2e:build` keep exactly the behaviour they have.
+ */
+export const isVercelPreviewBuild =
+  process.env.VERCEL === "1" && process.env.VERCEL_ENV !== "production";
 
 const nextConfig: NextConfig = {
   // Baseline security headers (specialist-optimization-audit-20260731.md §5)
@@ -276,7 +286,21 @@ export default withSentryConfig(nextConfig, {
   // overrides that default pattern outright, so naming both trees is what
   // actually removes them once Sentry has them.
   sourcemaps: {
-    disable: isE2EBuild,
+    // **Preview builds have never had symbolication and still paid for it.**
+    // `SENTRY_AUTH_TOKEN` is a Production-only Vercel variable, deliberately
+    // (docs/engineering/monitoring-runbook.md says so at the line that sets
+    // it), so a preview build has no token, uploads nothing, and therefore
+    // never runs the `filesToDeleteAfterUpload` pass below either. What it does
+    // do is make Turbopack emit the maps: the 1,680 files and 173 MB of server
+    // maps counted in the comment under this one, generated on every preview,
+    // uploaded nowhere, deleted never, and shipped into the deployment as
+    // output nothing will ever fetch.
+    //
+    // Turning them off on previews costs nothing that existed: an unsymbolicated
+    // preview stack trace is what a preview already produced. Production is
+    // untouched — it has the token, and its maps are the ones a real incident
+    // is read through.
+    disable: isE2EBuild || isVercelPreviewBuild,
     // `.css.map` too: Sentry symbolicates JavaScript, never stylesheets, so the
     // two that survived its own strip pass are 141,995 bytes of deployed static
     // output that nothing will ever fetch — a browser requests a CSS map only
