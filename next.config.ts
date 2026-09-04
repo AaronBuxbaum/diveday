@@ -60,7 +60,7 @@ const nextConfig: NextConfig = {
   //
   //     19.4 MB  @img/sharp-libvips-darwin-x64     <- excluded below
   //     17.8 MB  @img/sharp-libvips-linux-x64         the one that runs
-  //     17.4 MB  @img/sharp-libvips-linux-arm64    <- excluded below, see 2026-09-04
+  //     17.4 MB  @img/sharp-libvips-linux-arm64       kept, see 2026-09-04
   //     17.3 MB  @img/sharp-libvips-darwin-arm64   <- excluded below
   //
   // Dropping the two darwin pairs takes 37.2 MB off *every* traced function.
@@ -69,27 +69,33 @@ const nextConfig: NextConfig = {
   // packages are never opened — which is exactly why they are safe to exclude
   // and were never noticed.
   //
-  // `linux-arm64` goes too, as of 2026-09-04. This comment used to say it
-  // stayed because pinning the Function architecture "is a project setting on
-  // Vercel's side, not a fact this file can read". Both halves were wrong, and
-  // nobody had checked:
+  // `linux-arm64` is deliberately **not** excluded, and the two halves of that
+  // are worth keeping straight, because this file has now been wrong about it
+  // in both directions:
   //
-  //   * There is no such dashboard setting. Architecture is not a project
-  //     setting at all — `getDefaultLambdaArchitecture` in
-  //     `@vercel/build-utils` switches on the **build machine's**
-  //     `process.arch` and returns `x86_64` for everything that is not arm.
-  //     So the old behaviour was not "whatever the dashboard says", it was
-  //     "whatever CPU Vercel happened to build on", which is a worse thing to
-  //     depend on silently.
-  //   * This file's neighbour can read it: `vercel.json`'s
-  //     `functions[glob].architecture` is a real field, validated by
-  //     `@vercel/build-utils` against exactly `"x86_64" | "arm64"` and applied
-  //     per route. `vercel.json` now pins `x86_64`, so the arm64 build is not
-  //     merely unused — it is unreachable by declaration rather than by luck,
-  //     and the two files have to be changed together to break it.
+  //   * The Function architecture is not a project setting on Vercel's side.
+  //     `getDefaultLambdaArchitecture` in `@vercel/build-utils` switches on the
+  //     **build machine's** `process.arch` and returns `x86_64` for everything
+  //     that is not arm — so what we get is "whatever CPU Vercel happened to
+  //     build on", not a dashboard value.
+  //   * We cannot declare it either. `functions[glob].architecture` does exist
+  //     in `@vercel/build-utils`' own `functionsSchema` (`"x86_64" | "arm64"`),
+  //     which is what a 2026-09-04 commit checked and pinned on — but that
+  //     schema runs inside a build that has already been accepted. The
+  //     deployment API validates `vercel.json` against the published schema at
+  //     https://openapi.vercel.sh/vercel.json first, and that one has no
+  //     `architecture` field at all: it rejects the file outright with
+  //     "`functions.src/app/**` should NOT have additional property
+  //     `architecture`", so the pin never reached a build. It is gone.
   //
-  // The failure mode the old comment feared — "a function that cannot decode a
-  // JPEG" — needed an arm64 runtime, which the pin is what rules out.
+  // Without the pin the architecture is again inferred rather than declared,
+  // which puts the arm64 exclusion back on the wrong side of the trade. On an
+  // x86_64 build machine it buys nothing: `pnpm-workspace.yaml` no longer
+  // forces `supportedArchitectures`, so the install matches the machine and
+  // `@img/sharp-linux-arm64` is not there to trace. On an arm64 one it would
+  // strip the binary that actually runs, which is the failure the original
+  // comment feared — a function that cannot decode a JPEG. A no-op in the good
+  // case and a breakage in the bad one is not a saving.
   //
   // The store path and the hoisted symlink are both traced, so both shapes are
   // listed. `**` as the key is every route (picomatch, `contains: true`).
@@ -126,10 +132,6 @@ const nextConfig: NextConfig = {
       "node_modules/.pnpm/@img+sharp-libvips-darwin-*/**",
       "node_modules/@img/sharp-darwin-*/**",
       "node_modules/@img/sharp-libvips-darwin-*/**",
-      "node_modules/.pnpm/@img+sharp-linux-arm64*/**",
-      "node_modules/.pnpm/@img+sharp-libvips-linux-arm64*/**",
-      "node_modules/@img/sharp-linux-arm64/**",
-      "node_modules/@img/sharp-libvips-linux-arm64/**",
       "node_modules/.pnpm/@electric-sql+pglite@*/node_modules/@electric-sql/pglite/dist/*.wasm",
       "node_modules/.pnpm/@electric-sql+pglite@*/node_modules/@electric-sql/pglite/dist/*.data",
       "node_modules/.pnpm/@electric-sql+pglite@*/node_modules/@electric-sql/pglite/dist/*.tar.gz",

@@ -1,9 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "node scripts/vercel-build.mjs",
-  "functions": {
-    "src/app/**": { "architecture": "x86_64" }
-  },
   "crons": [
     { "path": "/api/cron/reminders", "schedule": "0 14 * * *" },
     { "path": "/api/cron/trip-reminders", "schedule": "10 * * * *" },
