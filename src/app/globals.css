@@ -1,4 +1,26 @@
-@import "tailwindcss";
+/*
+ * Tailwind, with automatic class detection rooted at the source tree.
+ *
+ * A bare `@import "tailwindcss"` auto-detects from the base directory — the
+ * repo root — and walks everything `.gitignore` does not exclude: 391 files
+ * under `drizzle/` (all 195 migration snapshots among them), 472 under `docs/`
+ * and 167 under `scripts/`. Two costs, and the second is the one that matters.
+ * It more than doubles a full CSS rebuild, paid on every edit to this file.
+ * And it *emits* what it finds — utilities no component renders, scraped from
+ * competitive-landscape prose, design-canvas artboards, a guard's own test
+ * fixture and an e2e spec string, including palette-scale custom properties
+ * like `--color-red-500` and `--color-slate-50`, which is precisely what
+ * ADR-0004 forbids components from reaching for.
+ *
+ * It has to be `source(...)` on the import. A separate `@source "../"` *adds*
+ * to the detection list and does not replace the automatic scan, so the root
+ * walk continues and nothing improves — measured: 151,142 bytes / 767 ms with
+ * the bare import plus `@source`, against 145,068 / 302 ms with this form, and
+ * all five marker classes above still present in the first.
+ *
+ * The path is relative to *this file*, which lives at `src/app/`.
+ */
+@import "tailwindcss" source("../");
 
 /*
  * Design tokens — the single source of truth for color, motion, and radius.

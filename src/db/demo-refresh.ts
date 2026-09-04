@@ -4,7 +4,6 @@ import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import { DEMO_SHOP_SLUG } from "./dev-credentials";
 import { shops, trips } from "./schema";
-import { resetDemoSchedule } from "./seed";
 import { demoTodayDepartureStart } from "./seed-clock";
 import { seedRecentRecaps } from "./seed-recent-recaps";
 import { upcomingScheduleRange } from "./trips";
@@ -124,6 +123,10 @@ export async function refreshCanonicalDemoSchedule(
   const { last } = await upcomingScheduleRange(db, shop.id, now);
   const runwayDays = last ? Math.floor((last.getTime() - now.getTime()) / DAY_MS) : 0;
   if (runwayDays < minRunwayDays) {
+    // Deferred for the same reason as `client.ts`'s `seedIfEmpty`: a static
+    // edge to `./seed` from a module this widely imported drags the schema and
+    // the course templates into most of the app's route graphs.
+    const { resetDemoSchedule } = await import("./seed");
     await db.transaction(async (tx) => {
       await resetDemoSchedule(tx, shop.id, { history: true });
     });
