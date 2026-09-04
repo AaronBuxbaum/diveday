@@ -366,6 +366,48 @@ describe("managedImageRemotePatterns", () => {
     expect(managedImageRemotePatterns({})).toEqual([]);
   });
 
+  /**
+   * **The one shape that could make this list and `isManagedStorageUrl`
+   * disagree**, found by a security pass on the commit that added this.
+   *
+   * A bucket name is spliced into a *host* position. `x@attacker.example/`
+   * builds `https://x@attacker.example/.s3.amazonaws.com`, which
+   * `isManagedStorageUrl` matches against nothing (it compares to
+   * `URL.origin`, and no origin is shaped like that) and which this function
+   * re-parses into the host `attacker.example` — the whole domain allowlisted
+   * for the optimizer. Not reachable by an attacker, since both variables are
+   * stack-produced; here because the invariant should be true rather than
+   * merely unexercised.
+   */
+  it.each(["x@attacker.example/", "bucket/../..", "UPPERCASE", "a", "b..", "with space"])(
+    "refuses to build a host out of %o",
+    (bucket) => {
+      const env = { ...mockS3Env, MEDIA_BUCKET_NAME: bucket };
+      expect(managedImageRemotePatterns(env)).toEqual([]);
+      expect(isManagedStorageUrl("https://attacker.example/x.jpg", env)).toBe(false);
+    },
+  );
+
+  it("refuses a region that is not a plain AWS region label", () => {
+    const env = { ...mockS3Env, MEDIA_AWS_REGION: "us-east-1.evil.example/" };
+    const hostnames = managedImageRemotePatterns(env).map((pattern) => pattern.hostname);
+    // The global endpoint still stands; only the regional form, which is the
+    // one the region reaches, is withheld.
+    expect(hostnames).toEqual(["diveday-media.s3.amazonaws.com"]);
+  });
+
+  /**
+   * `URL.origin` is the literal string `"null"` for an opaque origin, which is
+   * not an origin. Storing it means `new URL("null")` later, and in
+   * `next.config.ts` that is a build dying on a bare `Invalid URL` naming
+   * nothing.
+   */
+  it.each(["file:///media", "data:text/plain,x"])("keeps the opaque origin of %o out", (base) => {
+    const env = { ...mockS3Env, MEDIA_PUBLIC_URL_BASE: base };
+    expect(() => managedImageRemotePatterns(env)).not.toThrow();
+    expect(managedImageRemotePatterns(env)).toHaveLength(2);
+  });
+
   it("survives an unparseable base instead of failing the build", () => {
     const env = { ...mockS3Env, MEDIA_PUBLIC_URL_BASE: "not a url" };
     expect(managedImageRemotePatterns(env)).toHaveLength(2);

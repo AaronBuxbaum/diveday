@@ -4,9 +4,15 @@ import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { seededShopContext } from "@/test/db";
 import { people, personRoles, shops, tripAssignments } from "./schema";
-import { listShopStaff, setCrewPublicConsent, setStaffLanguages } from "./staff-accounts";
+import {
+  listShopStaff,
+  setCrewPublicConsent,
+  setStaffAccountStatus,
+  setStaffLanguages,
+} from "./staff-accounts";
 import {
   listStaff,
+  setTripCrew,
   tripCrewSpokenLanguages,
   tripPublicCrew,
   upcomingTripsWithCounts,
@@ -401,6 +407,67 @@ describe("listShopStaff and the name a diver reads", () => {
     // public page have to be able to disagree with the record, because that is
     // the whole point of the person typing it (issue #1351).
     expect(row?.crewPublicName).toBe("Mar");
+  });
+
+  /**
+   * **The roster makes a claim about a page it is not, so it has to check that
+   * page's conditions** — found by a security pass on the commit that added
+   * this row.
+   *
+   * `tripPublicCrew` requires the consent stamp, a live person **and** an
+   * `active` account. Disabling somebody deliberately leaves their consent
+   * standing (a temporary disable should not destroy a standing answer), so a
+   * disabled divemaster is gone from every public page while the roster went
+   * on telling the owner "Divers see “Mar”" — a false statement on the one
+   * page built to let them check exactly that.
+   */
+  it("stops naming a disabled person, who no public page shows any more", async () => {
+    const { db, shop } = await seededShopContext();
+    // Not the owner: disabling the last one is refused, and that refusal would
+    // make this test pass for the wrong reason.
+    const member = (await listShopStaff(db, shop.id)).find(
+      (row) => !row.roles.includes("owner") && row.accountStatus === "active",
+    );
+    if (!member) throw new Error("seeded shop has no non-owner staff account");
+    await setCrewPublicConsent(db, {
+      shopId: shop.id,
+      personId: member.personId,
+      actorPersonId: member.personId,
+      consented: true,
+      publicName: "Mar",
+    });
+
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("seed has no upcoming departure");
+    await setTripCrew(db, shop.id, trip.id, [
+      { personId: member.personId, tripRole: "divemaster" },
+    ]);
+    const named = async () =>
+      (await tripPublicCrew(db, shop.id, trip.id)).map((crew) => crew.firstName);
+    expect(await named()).toContain("Mar");
+
+    const disabled = await setStaffAccountStatus(db, {
+      shopId: shop.id,
+      personId: member.personId,
+      userAccountId: member.userAccountId,
+      status: "disabled",
+    });
+    expect(disabled.ok, "the disable itself was refused, so this proves nothing").toBe(true);
+
+    // Gone from the public page — and the consent is deliberately still on the
+    // row, which is the whole reason the roster cannot read the name alone.
+    expect(await named()).not.toContain("Mar");
+    const [stored] = await db
+      .select({ name: people.crewPublicName, at: people.crewPublicConsentAt })
+      .from(people)
+      .where(eq(people.id, member.personId));
+    expect(stored?.name).toBe("Mar");
+    expect(stored?.at).not.toBeNull();
+
+    // So the roster row carries both facts, and the surface reads both.
+    const row = (await listShopStaff(db, shop.id)).find((r) => r.personId === member.personId);
+    expect(row?.crewPublicName).toBe("Mar");
+    expect(row?.accountStatus).toBe("disabled");
   });
 
   /**

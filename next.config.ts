@@ -185,11 +185,24 @@ const nextConfig: NextConfig = {
     // fetch. Read there for what an unconfigured environment gets, and why an
     // empty allowlist is the right answer rather than a fallback wildcard.
     //
-    // This is evaluated at build time, and `MEDIA_PUBLIC_URL_BASE` reaches both
-    // local and Vercel builds (config/env-registry.mjs), so a production build
-    // has it. A production build without it already served 403s from the direct
-    // bucket endpoint — the registry's own `absent:` note — so pinning costs
-    // that deployment nothing it had.
+    // Read from the environment when this file is loaded — at build time on
+    // Vercel, where it is baked into `images-manifest.json`, and again at boot
+    // under `next start`. `MEDIA_PUBLIC_URL_BASE` reaches both local and Vercel
+    // builds (config/env-registry.mjs), so a production build has it; one
+    // without it already served 403s from the direct bucket endpoint — the
+    // registry's own `absent:` note — so pinning costs that deployment nothing
+    // it had.
+    //
+    // **Origin-scoping is not the whole story, and this is the part to know.**
+    // Next's optimizer follows a 3xx by recursing into the redirect target with
+    // only its private-IP guard re-applied — the new URL is never re-tested
+    // against these patterns. Under the old `*.cloudfront.net` that made it a
+    // one-hop open proxy to anywhere; now it takes control of the shop's own
+    // bucket or distribution, which is a different threat entirely. Two further
+    // doors that bypass this list rather than widening it: `images.domains` is
+    // ORed with these patterns, and `assetPrefix` pushes its own host in here
+    // with no `pathname` at all. Both are unset, and `src/test/next-config.test.ts`
+    // is what keeps them that way.
     //
     // The CSP's `img-src` (src/lib/content-security-policy.ts) stays wildcarded
     // on purpose and is not the same decision: it is built in the edge layer,

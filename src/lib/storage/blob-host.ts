@@ -23,21 +23,64 @@ type StorageEnvironment = Readonly<Record<string, string | undefined>>;
  */
 export function managedStorageOrigins(env: StorageEnvironment = process.env): string[] {
   const origins: string[] = [];
-  const base = env.MEDIA_PUBLIC_URL_BASE?.trim();
-  if (base) {
-    try {
-      origins.push(new URL(base).origin);
-    } catch {
-      // An unparseable base is configuration this cannot rescue; skip it.
-    }
-  }
+  const base = toOrigin(env.MEDIA_PUBLIC_URL_BASE?.trim());
+  if (base) origins.push(base);
+
   const bucket = env.MEDIA_BUCKET_NAME?.trim();
   const region = env.MEDIA_AWS_REGION?.trim();
-  if (bucket) {
+  if (bucket && S3_BUCKET_NAME.test(bucket)) {
     origins.push(`https://${bucket}.s3.amazonaws.com`);
-    if (region) origins.push(`https://${bucket}.s3.${region}.amazonaws.com`);
+    if (region && AWS_REGION.test(region)) {
+      origins.push(`https://${bucket}.s3.${region}.amazonaws.com`);
+    }
   }
   return [...new Set(origins)];
+}
+
+/**
+ * **A bucket name is interpolated into a hostname, so it is checked like one.**
+ *
+ * AWS's own naming rules, and the same principle `rumConnectHosts` and
+ * `MEDIA_IMAGE_HOSTS` apply in `src/lib/content-security-policy.ts`: a value
+ * spliced into a host position must not be able to introduce a *different*
+ * host. Without this, a bucket configured as `x@attacker.example/` builds the
+ * string `https://x@attacker.example/.s3.amazonaws.com` — which
+ * {@link isManagedStorageUrl} matches against nothing, because it compares to
+ * `URL.origin` and no origin is ever shaped like that, but which
+ * {@link managedImageRemotePatterns} re-parses into the host
+ * `attacker.example`. Two functions that are supposed to be the same list,
+ * disagreeing.
+ *
+ * Not reachable by an attacker — both variables are stack-produced, so setting
+ * one means already owning the deployment. It is here because the invariant
+ * those two functions rest on should be true rather than merely unexercised.
+ *
+ * The regexes are written out rather than imported: this module deliberately
+ * has **no imports at all**, which is what lets `next.config.ts` reach it by
+ * relative path from outside the `@/` alias.
+ */
+const S3_BUCKET_NAME = /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/;
+
+/** A plain AWS region label — mirrors `AWS_REGION` in `content-security-policy.ts`. */
+const AWS_REGION = /^[a-z]{2}(-gov)?-[a-z]+-\d$/;
+
+/**
+ * A parsed origin, or null for anything that is not one.
+ *
+ * `URL.origin` is the literal string `"null"` for an opaque origin (`file:`,
+ * `data:`, any non-special scheme), which is not an origin and must never be
+ * stored as one — it parses back out as a `TypeError`, which in
+ * `managedImageRemotePatterns` would be a `next build` dying on a bare
+ * `Invalid URL` naming nothing.
+ */
+function toOrigin(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    const { origin } = new URL(value);
+    return origin === "null" ? null : origin;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -72,9 +115,11 @@ export function isManagedStorageUrl(url: string, env: StorageEnvironment = proce
  * internet — the most expensive request the app makes, available to anybody
  * with a URL and no account, with DiveDay's origin as the apparent fetcher.
  *
- * So the allowlist is now the same list the storage seam already keeps, and the
- * two cannot drift: a URL `isManagedStorageUrl` would refuse to store is a URL
- * the optimizer will not fetch.
+ * So the allowlist is now the same list the storage seam already keeps: a URL
+ * `isManagedStorageUrl` would refuse to store is a URL the optimizer will not
+ * fetch. The two read the *same* origins and each parses them the same way,
+ * which is what `S3_BUCKET_NAME` above is for — a host spliced together from an
+ * unchecked bucket name is the one shape that could make them disagree.
  *
  * **https only**, matching that predicate exactly rather than carrying whatever
  * scheme the base was configured with — an optimizer that will follow one
@@ -93,8 +138,8 @@ export function managedImageRemotePatterns(
   env: StorageEnvironment = process.env,
 ): { protocol: "https"; hostname: string; port: string; pathname: "/**" }[] {
   return managedStorageOrigins(env).flatMap((origin) => {
-    const url = new URL(origin);
-    if (url.protocol !== "https:") return [];
+    const url = toUrl(origin);
+    if (!url || url.protocol !== "https:") return [];
     return [
       {
         protocol: "https" as const,
@@ -104,4 +149,18 @@ export function managedImageRemotePatterns(
       },
     ];
   });
+}
+
+/**
+ * Belt beside {@link toOrigin}'s braces. Every value reaching here has already
+ * been through a `URL`, so this cannot fire today — and a config file that
+ * throws takes the whole build with it, naming no variable, which is a bad
+ * enough failure to be worth two lines.
+ */
+function toUrl(value: string): URL | null {
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
 }

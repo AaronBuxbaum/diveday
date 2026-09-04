@@ -47,9 +47,20 @@ export type StaffMember = {
    * the boundary the whole feature rests on: a roster that showed who said no
    * would be a list of who said no.
    *
-   * One column rather than two: `people_crew_public_name_with_consent` makes
-   * the stamp and a non-blank name equivalent in the database, so a name here
-   * is a consent and the consent cannot be read without one.
+   * One column rather than two, but the equivalence is narrower than it looks
+   * and the roster's reader is written for the narrow one.
+   * `people_crew_public_name_with_consent` pairs the stamp with a name that is
+   * non-blank **after Postgres `btrim`** — which strips ASCII space and nothing
+   * else — so a tab-only name would satisfy it, and `'   '` beside a null stamp
+   * satisfies it too. No writer can produce either today
+   * (`crewPublicNameToStore` maps every `\p{Cc}` to a space and trims), and the
+   * surface trims again rather than resting on that.
+   *
+   * The stamp is also not the whole condition for publishing: `tripPublicCrew`
+   * requires an `active` account as well, and a disable deliberately leaves a
+   * consent standing. So a surface stating what divers *see* reads
+   * `accountStatus` beside this — both found by a security pass on the commit
+   * that added the column to this projection.
    */
   crewPublicName: string | null;
 };
