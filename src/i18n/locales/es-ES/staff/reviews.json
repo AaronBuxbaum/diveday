@@ -8,7 +8,7 @@
     "publishedManyOther": "{count} reseñas publicadas en tu página de calendario.",
     "error": "No se pudo actualizar esa reseña. Inténtalo de nuevo.",
     "reasonRequired": "Elige un motivo antes de ocultar una reseña.",
-    "noteRequired": "Cuenta en pocas palabras qué pasó cuando el motivo es «Otro motivo».",
+    "noteRequired": "Cuenta en pocas palabras qué pasó cuando el motivo es “Otro motivo”.",
     "noteTooLong": "La nota es demasiado larga. Redúcela a 200 caracteres.",
     "standout": "Reseña marcada como destacada.",
     "standoutRemoved": "Reseña quitada de las destacadas."

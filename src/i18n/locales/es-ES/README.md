@@ -69,6 +69,15 @@ in the waiver's own English-only notice — still pass. It was added on 2026-08-
 turned up still carrying the word this section had already removed, one of them the sentence
 explaining the certification question on all three public forms.
 
+**It now guards six of this file's decisions, not one.** The same thing had happened to four more
+of them by 2026-09-04 (issue #1316): `descargo` and `liberación` for the waiver, `punto de
+buceo`/`punto de inmersión` for a dive site, guillemets, and a `viaje` that should have been a
+`salida` — twenty-nine strings between them, one of them a settings heading reading "Puntos de
+buceo". Every rule in that file quotes the section of this README it enforces, and each is paired
+in `check-shop-word.test.mjs` with the near-miss it must **not** take (`trastienda`, `punto de
+venta`, `punto de pronóstico`, `país`). A decision recorded here and not checked there has, on the
+evidence, about a fortnight.
+
 ## Register: Latin-American-readable, warm, tú
 
 - **Tú, never vosotros.** There are no `vosotros` forms in either bundle and none should appear.
@@ -120,6 +129,31 @@ reading two names for one thing — which is the exact confusion the English fix
 *Briefing* keeps its English form where crews already use it (`shared.tripDiveFields.footerNote`),
 and *ficha* below no longer names a dive-site record — it was doing the job the English word
 "briefing" wrongly did.
+
+## A departure is **la salida** — in the staff bundles
+
+Settled 2026-09-04 (issue #1316) by counting rather than by argument: the staff bundles said
+**salida** 302 times and **viaje** 7. The seven were strays, not a second convention, and they sat
+next to keys already saying *salida* — `page.backToTripGuests` read "participantes del viaje" in a
+file whose other nine mentions all said *salida*.
+
+| English | Spanish |
+| --- | --- |
+| the trip / this trip | la salida / esta salida |
+| trip guests | los participantes de la salida |
+| trip packing checklist | lista de equipo de la salida |
+| post-trip (recap, tips) | posterior a la salida |
+
+The noun is **feminine**, like *la exención*: `la`/`una`/`esta`, and `cancelada`, `programada`,
+`llena`, `próxima`.
+
+**`diver.json` is deliberately exempt, and `scripts/check-shop-word.mjs` scopes the rule to
+`staff/` to say so.** That bundle uses *viaje* about thirty times in its marketing, switching-guide
+and demo copy, where the English is loose in the same way — "book a trip", "post-trip recap" — and
+the word is doing a different job: an outing a diver takes, not a row on the schedule board. A
+diver reading "reserva un viaje" is not being told about a database record. Narrowing that copy is
+a decision about diver-facing voice and belongs to whoever is writing the marketing pages; it is
+not a terminology violation and this file does not call it one.
 
 ## The supervision ratio is **la ratio**, feminine, and it is *excedida* rather than *fuera*
 

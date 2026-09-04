@@ -14,7 +14,7 @@
   },
   "paperWaiver": {
     "markSignedOnPaper": "Marcar como firmado en papel",
-    "medicalAttestationLabel": "Tengo la liberación firmada de este buceador archivada, he revisado su cuestionario médico y ninguna respuesta necesita el visto bueno de un médico.",
+    "medicalAttestationLabel": "Tengo la exención firmada de este buceador archivada, he revisado su cuestionario médico y ninguna respuesta necesita el visto bueno de un médico.",
     "recording": "Registrando…",
     "recordPaperSignature": "Registrar firma en papel"
   },
@@ -130,7 +130,7 @@
     "levelNoCard": "Esta salida exige {level} y nada en la ficha de este buceador llega a ese nivel. Añade su certificación de {level} si la tiene; si no, resérvale una salida acorde a su nivel o el curso de {level}.",
     "cards": "{count, plural, one {Esta salida exige la certificación {list}. No hay ninguna en la ficha de este buceador.} other {Esta salida exige las certificaciones {list}. No hay ninguna de ellas en la ficha de este buceador.}}",
     "nitrox": "Nitrox",
-    "generic": "Las titulaciones registradas de este buceador no alcanzan lo que exigen esta salida y sus puntos de inmersión."
+    "generic": "Las titulaciones registradas de este buceador no alcanzan lo que exigen esta salida y sus sitios de buceo."
   },
   "readiness": {
     "certificationLevels": {

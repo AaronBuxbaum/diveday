@@ -161,7 +161,7 @@
     "reviewLink": {
       "heading": "Enlace de reseñas",
       "description": "Tu página de reseñas de Google Business, TripAdvisor o Facebook.",
-      "detail": "Cuando está configurada, el recap posterior al viaje invita al buceador a dejar una reseña. Vacía el campo para dejar de pedirlas.",
+      "detail": "Cuando está configurada, el recap posterior a la salida invita al buceador a dejar una reseña. Vacía el campo para dejar de pedirlas.",
       "label": "Enlace de reseñas",
       "hint": "(opcional)",
       "submit": "Guardar enlace de reseñas",
@@ -194,7 +194,7 @@
       "submitting": "Guardando…"
     },
     "packing": {
-      "heading": "Lista de equipo del viaje",
+      "heading": "Lista de equipo de la salida",
       "description": "Un artículo por línea. Los buceadores ven esta misma lista concisa en cada salida.",
       "label": "Elementos de la lista",
       "submit": "Guardar lista de equipo",
@@ -213,7 +213,7 @@
       "gearSetupDescription": "0 si el equipo se monta a bordo.",
       "briefingLabel": "Briefing antes de la salida",
       "briefingDescription": "0 si haces el briefing en el barco.",
-      "boatRideLabel": "Trayecto hasta el primer punto",
+      "boatRideLabel": "Trayecto hasta el primer sitio",
       "boatRideDescription": "0 si es una entrada desde la costa.",
       "bottomTimeLabel": "Tiempo en el agua por inmersión",
       "bottomTimeDescription": "Tu tiempo de fondo planificado habitual.",
@@ -230,7 +230,7 @@
       "minutesBefore": "{count} min antes",
       "minutesAfter": "{count} min después",
       "atDeparture": "A la hora",
-      "siteOverrides": "{count, plural, one {# punto de buceo tiene su propio tiempo en el agua, así que este ritmo no describe una inmersión allí:} other {# puntos de buceo tienen su propio tiempo en el agua, así que este ritmo no describe una inmersión en ninguno de ellos:}}",
+      "siteOverrides": "{count, plural, one {# sitio de buceo tiene su propio tiempo en el agua, así que este ritmo no describe una inmersión allí:} other {# sitios de buceo tienen su propio tiempo en el agua, así que este ritmo no describe una inmersión en ninguno de ellos:}}",
       "siteOverride": "{name} · {count} min"
     },
     "sendWindow": {
@@ -259,7 +259,7 @@
     "tax": {
       "heading": "Impuestos (IVA y ventas)",
       "description": "Añade IVA, impuestos sobre las ventas y otros impuestos similares a los nuevos pagos de reservas y facturas del personal mediante Stripe.",
-      "detail": "El impuesto se añade al precio publicado y se muestra al buceador en el checkout de Stripe. Stripe usa la configuración de impuestos de tu cuenta conectada y la ubicación del cliente. Las propinas posteriores al viaje son independientes y este ajuste no las afecta. Desactívalo si gestionas los impuestos por tu cuenta.",
+      "detail": "El impuesto se añade al precio publicado y se muestra al buceador en el checkout de Stripe. Stripe usa la configuración de impuestos de tu cuenta conectada y la ubicación del cliente. Las propinas posteriores a la salida son independientes y este ajuste no las afecta. Desactívalo si gestionas los impuestos por tu cuenta.",
       "enabledValue": "Activados",
       "disabledValue": "Desactivados",
       "checkboxLabel": "Usar Stripe Tax para nuevos pagos de reservas y facturas",
@@ -331,7 +331,7 @@
     },
     "counterQr": {
       "heading": "La tarjeta del mostrador",
-      "description": "Imprímela y ponla en el mostrador. Quien llegue sin reserva la escanea, indica su nombre, certificación y tallas, y se le envía el descargo, todo antes de llegar al frente de la cola."
+      "description": "Imprímela y ponla en el mostrador. Quien llegue sin reserva la escanea, indica su nombre, certificación y tallas, y se le envía la exención, todo antes de llegar al frente de la cola."
     },
     "integrations": {
       "heading": "Shopify, QuickBooks y Zapier"
@@ -367,7 +367,7 @@
       "heading": "Equipo"
     },
     "diveSites": {
-      "heading": "Puntos de buceo"
+      "heading": "Sitios de buceo"
     },
     "waivers": {
       "heading": "Plantilla de exención"
