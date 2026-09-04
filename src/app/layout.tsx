@@ -9,7 +9,12 @@ import { localeCorrectionScript, localeDirection } from "@/i18n/lang-script";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import { publicAppUrl } from "@/lib/notifications";
+// Deep import, not the `@/lib/notifications` barrel: the barrel statically
+// imports `./ses`, which imports `@aws-sdk/client-sesv2`. This is the *root*
+// layout, so that edge put the SES SDK in the module graph of every page in
+// the app to obtain a URL string. `app-url.ts` imports `@/lib/configured` and
+// one type, and nothing else.
+import { publicAppUrl } from "@/lib/notifications/app-url";
 import { openGraphSite } from "@/lib/site-metadata";
 import { Observability } from "./observability-client";
 

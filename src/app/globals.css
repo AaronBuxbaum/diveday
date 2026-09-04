@@ -1,6 +1,25 @@
 @import "tailwindcss";
 
 /*
+ * Scope the class scan to the source tree.
+ *
+ * Without this Tailwind auto-detects from `process.cwd()` — the repo root —
+ * and walks everything `.gitignore` does not exclude. Measured here: 391 files
+ * under `drizzle/` (including all 195 migration snapshots), 472 under `docs/`
+ * and 167 under `scripts/`. Two costs, and the second is the one that matters.
+ * It roughly doubles a full CSS rebuild (766ms from the root against 395ms
+ * scoped to `src/`), which is paid on every edit to this file. And it *emits*
+ * what it finds: ~6 KB of utilities no component renders, sourced from
+ * competitive-landscape prose, design-canvas artboards, a guard's own test
+ * fixture and an e2e spec string — including palette-scale custom properties
+ * like `--color-red-500` and `--color-slate-50`, which is precisely what
+ * ADR-0004 forbids components from reaching for.
+ *
+ * The path is relative to *this file*, which lives at `src/app/`.
+ */
+@source "../";
+
+/*
  * Design tokens — the single source of truth for color, motion, and radius.
  * Semantic names only: components never reference raw hex values.
  * Palette story: sunlit sand (light) / open ocean at depth (dark),

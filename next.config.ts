@@ -29,7 +29,23 @@ const nextConfig: NextConfig = {
   // not be inlined into the server bundle (ADR-0005). node-postgres (pg)
   // dynamically requires optional native/cloud drivers it doesn't use here;
   // keep it external too rather than have the bundler try to resolve them.
-  serverExternalPackages: ["@electric-sql/pglite", "pg", "sharp"],
+  // The two AWS SDK clients are here for a different reason: keeping them out
+  // of the bundler's graph rather than out of the output. `@aws-sdk/client-sesv2`
+  // is reachable from the **root layout** (`publicAppUrl` -> `@/lib/notifications`,
+  // whose index statically imports `./ses`), so it was in the module closure of
+  // all 127 route entries, and `client-sns` in 16. Between them that is 1,183
+  // modules appearing in 446 of the 1,537 server chunks — 8.1x duplication,
+  // against 2.7x for first-party code — and in `next dev` Turbopack holds every
+  // one of them per entrypoint, in memory, with no eviction. Externalizing costs
+  // nothing at runtime (both are resolved from node_modules on the server, like
+  // pglite above) and is what stops the graph being re-materialized per route.
+  serverExternalPackages: [
+    "@electric-sql/pglite",
+    "pg",
+    "sharp",
+    "@aws-sdk/client-sesv2",
+    "@aws-sdk/client-sns",
+  ],
   cacheComponents: true,
   images: {
     // The e2e build serves every photo's original bytes instead of running
@@ -107,7 +123,19 @@ export default withSentryConfig(nextConfig, {
   // telemetry or source maps. Production builds keep Sentry's normal release
   // behavior; this guard only applies to the deterministic local/CI fleet.
   telemetry: isE2EBuild ? false : undefined,
-  sourcemaps: { disable: isE2EBuild },
+  // `deleteSourcemapsAfterUpload` defaults to true under Turbopack, but the
+  // pattern it builds (`createFilesToDeleteAfterUploadPattern`) globs
+  // `<dist>/static/**` and nothing else — while the same version's
+  // `createSourcemapUploadAssetPatterns` uploads `server/**` *and*
+  // `static/chunks/**`. So the server maps were generated, uploaded, and then
+  // left behind: 1,680 files, 173 MB, more than twice the 47 MB of server code
+  // they annotate, four of them over 10 MB each. `filesToDeleteAfterUpload`
+  // overrides that default pattern outright, so naming both trees is what
+  // actually removes them once Sentry has them.
+  sourcemaps: {
+    disable: isE2EBuild,
+    filesToDeleteAfterUpload: [".next/**/*.js.map", ".next/**/*.mjs.map"],
+  },
 
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
