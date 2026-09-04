@@ -41,6 +41,7 @@ import {
   staffCredentialDueDetailText,
   stuckOperationKindText,
   stuckPaymentOperationDetailText,
+  uncrewedCourseDetailText,
   uncrewedDepartureDetailText,
   ungatedNitroxDetailText,
   unitsUnconfirmedDetailText,
@@ -1411,6 +1412,18 @@ export async function getTodayWork(
     // one with nobody booked has no one to supervise. Both keep the instructor
     // sentence, which stays true and actionable for them — a session without
     // an instructor cannot take an enrolment however empty it is.
+    //
+    // Two things this is safe because of, neither obvious from the code.
+    // `over_ratio` can never be the suppressed code: it requires
+    // `instructorCount >= 1` (src/lib/course-ratios.ts), which forces a
+    // non-zero in-water count, so `uncrewed` is always false when it fires and
+    // a ratio breach can never hide behind a zero-crew row. And the shop's own
+    // `diversPerDivemaster` cannot route a departure between these rows —
+    // with divers aboard and nobody in the water, `ceil(divers / ratio) >= 1`
+    // across the whole legal range (`MIN_`/`MAX_DIVERS_PER_DIVEMASTER`), so
+    // `under_target` always holds and only the two exemptions decide. A
+    // shop-set preference deciding whether a supervision signal appears would
+    // be alarming; it cannot.
     const uncrewed = ratioGap.code === "under_target" && ratioGap.divemasterCount === 0;
     if (crewGap.code !== "none" && !uncrewed) {
       actions.push({
@@ -1464,15 +1477,25 @@ export async function getTodayWork(
       // case gets a quieter one, ranked with the other purely-advisory rows
       // (`KIND_SEVERITY`, src/lib/today.ts).
       if (ratioGap.divemasterCount === 0) {
+        // Which of the two zero-crew rows is the course/fun-dive split, read
+        // off `crewGap` rather than off `trip.course` so the two cannot
+        // disagree: with nobody in the water `instructorCount` is 0, so
+        // `courseCrewGap` returns `no_instructor` for exactly the sessions
+        // that have a course attached. The course row says both words —
+        // "No crew" alone would send a manager looking for any divemaster,
+        // and only an instructor closes a course gap.
+        const course = crewGap.code === "no_instructor";
         actions.push({
           id: `uncrewed:${trip.id}`,
-          kind: "uncrewed_departure",
+          kind: course ? "uncrewed_course" : "uncrewed_departure",
           urgency: urgencyFor(trip.startsAt, now),
           subject: trip.title,
           context: when,
           departure,
           aboutDeparture: true,
-          detail: uncrewedDepartureDetailText(t, ratioGap.divers),
+          detail: course
+            ? uncrewedCourseDetailText(t, ratioGap.divers)
+            : uncrewedDepartureDetailText(t, ratioGap.divers),
           actionLabel: openCrewActionText(t),
           href: `${tripHref}#crew`,
           dueAt: trip.startsAt,

@@ -58,6 +58,13 @@ import { weekDates } from "./week-board";
 export type StaffGapCode =
   | "no_instructor"
   | "over_ratio"
+  // A course session with nobody in the water: both `no_instructor` and the
+  // zero-crew case at once (issue #1338). It is its own code rather than
+  // either of them because the chip is the entire information budget of a
+  // 135px cell, and the two words a manager needs are different phone calls —
+  // "No crew" invites rostering any divemaster, and a divemaster cannot run a
+  // training dive or sign anybody off. One row, both facts.
+  | "uncrewed_course"
   | "uncrewed_departure"
   | "crew_below_target";
 
@@ -75,6 +82,7 @@ export type StaffGapCode =
 export const GAP_TONE: Record<StaffGapCode, "warning" | "neutral"> = {
   no_instructor: "warning",
   over_ratio: "warning",
+  uncrewed_course: "warning",
   uncrewed_departure: "warning",
   crew_below_target: "neutral",
 };

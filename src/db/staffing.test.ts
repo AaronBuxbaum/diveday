@@ -435,7 +435,7 @@ describe("staffing view", () => {
       return { trip, readWeek };
     }
 
-    it("says the bigger fact — nobody aboard, not a missing instructor", async () => {
+    it("says both facts — nobody aboard and no instructor — in one row", async () => {
       const { db, shop } = await seededShopContext();
       const staff = await listStaff(db, shop.id);
       const captain = staff.find((entry) => entry.roles.includes("captain"));
@@ -450,7 +450,10 @@ describe("staffing view", () => {
       await seatDiver(db, shop.id, trip.id, "empty-session");
 
       const view = await readWeek();
-      expect(view.gapTrips.map((gap) => gap.gap)).toEqual(["uncrewed_departure"]);
+      // `uncrewed_course`, not `uncrewed_departure`: the chip has to carry
+      // both words. "No crew" alone sends a manager to phone any divemaster,
+      // and only an instructor can run a training dive or sign anybody off.
+      expect(view.gapTrips.map((gap) => gap.gap)).toEqual(["uncrewed_course"]);
       // #732's rule, restated where it could regress: the fix places a
       // different code, never a second row.
       expect(view.crewGaps).toEqual({ departures: 1, needCrew: 1 });

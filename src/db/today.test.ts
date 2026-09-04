@@ -1057,7 +1057,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
    * and only the instructor is outstanding. The bigger fact goes first, and
    * the Crew panel one tap away holds the detail.
    */
-  it("places the zero-crew row, not the instructor one, for a course session with nobody in the water", async () => {
+  it("places the one row that says both, for a course session with nobody in the water", async () => {
     const { db, shop } = ctx;
     const [course] = await db
       .select()
@@ -1109,7 +1109,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
     // over all three ids rather than as the absence of the two the old
     // assertion happened to name. Other kinds (`dive_prep` and friends) fire
     // for the same departure and are not what that rule is about.
-    expect(crewGapKindsFor(work, trip.id)).toEqual(["uncrewed_departure"]);
+    expect(crewGapKindsFor(work, trip.id)).toEqual(["uncrewed_course"]);
   });
 
   /**

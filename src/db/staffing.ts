@@ -343,8 +343,25 @@ export async function getStaffingView(
     // "Course needs instructor", which is the honest and actionable fact for
     // them — a session with no instructor cannot take an enrolment however
     // empty it is.
+    //
+    // Which of the two zero-crew codes is the course/fun-dive split, and it is
+    // read off `courseGap` rather than off `entry.course` so the two cannot
+    // disagree: with nobody in the water `instructorCount` is 0, so
+    // `courseCrewGap` returns `no_instructor` for exactly the sessions that
+    // have a course attached. `uncrewed_course` says both words, because "No
+    // crew" alone would send a manager looking for any divemaster and only an
+    // instructor closes a course gap.
+    //
+    // Two things this walk is safe because of, neither previously written
+    // down. `over_ratio` can never be suppressed here: it requires
+    // `instructorCount >= 1` (src/lib/course-ratios.ts), which forces a
+    // non-zero in-water count, so the branch below cannot be reached with it.
+    // And the shop's own `diversPerDivemaster` cannot route a departure
+    // between these rows: with divers aboard and nobody in the water,
+    // `ceil(divers / ratio) >= 1` across the whole legal range, so
+    // `under_target` always holds and only the two exemptions decide.
     if (ratioGap.code === "under_target" && ratioGap.divemasterCount === 0) {
-      place("uncrewed_departure");
+      place(courseGap.code === "no_instructor" ? "uncrewed_course" : "uncrewed_departure");
       continue;
     }
     if (courseGap.code !== "none") {

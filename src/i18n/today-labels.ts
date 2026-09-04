@@ -24,6 +24,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   requirements: "shared.today.actionKind.requirements",
   waiver: "shared.today.actionKind.waiver",
   instructor_missing: "shared.today.actionKind.instructorMissing",
+  uncrewed_course: "shared.today.actionKind.uncrewedCourse",
   uncrewed_departure: "shared.today.actionKind.uncrewedDeparture",
   nitrox_gate: "shared.today.actionKind.nitroxGate",
   high_wind_alert: "shared.today.actionKind.highWindAlert",
@@ -219,6 +220,23 @@ export function instructorMissingDetailText(t: StaffTranslator): string {
  */
 export function uncrewedDepartureDetailText(t: StaffTranslator, divers: number): string {
   return t("shared.today.detail.uncrewedDeparture", { divers });
+}
+
+/**
+ * A course session with nobody in the water (issue #1338) — the state that is
+ * {@link uncrewedDepartureDetailText} and {@link instructorMissingDetailText}
+ * at once.
+ *
+ * It carries both facts because they are two different phone calls. "No crew"
+ * alone invites rostering whoever is free, and a divemaster cannot run a
+ * training dive or sign anybody off; "no instructor" alone reads, beside an
+ * empty boat, as though a divemaster is already aboard. The chip
+ * (`actionKind.uncrewedCourse`) is 21 characters, shorter than the
+ * "Course needs instructor" that already fits the staffing week's 135px
+ * column.
+ */
+export function uncrewedCourseDetailText(t: StaffTranslator, divers: number): string {
+  return t("shared.today.detail.uncrewedCourse", { divers });
 }
 
 /**
