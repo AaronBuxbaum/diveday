@@ -127,6 +127,18 @@ with the next migration anyone writes.
   ticket of its own". This was that ticket.
 - The commutativity walk still runs inside `scripts/vercel-build.mjs`. Squashing removed the reason
   anyone wanted to drop it (the upload cost), so the guard stays.
+- **`src/db/courses-gallery-backfill.test.ts` is deleted**, and it is the only test the squash
+  retired. It read `drizzle/20260806051740_course-gallery-photos/migration.sql` off disk and ran
+  that migration's `UPDATE` against a hand-built pre-migration table, to pin what the backfill
+  decided for `courses.image_urls`/`image_alts` rows the old shape had let drift. It tested no
+  `src/` module — there is no `courses-gallery-backfill.ts` — so its whole subject was a file this
+  change deletes. Its docblock argued it survived those columns being dropped because "every shop
+  that upgraded through it still holds the data those decisions produced"; that premise is what the
+  squash retires, since no production database exists (issue #1290) and every dev and CI database is
+  built from migrations. A backfill for rows that have never existed cannot be under test.
+- Migration ids survive in comments as history — `schema.ts`'s gallery notes and one in
+  `courses.test.ts` — and no longer resolve to a folder. They are kept as provenance for why a
+  column is shaped the way it is; this record is where the folders went.
 - **What this does not license.** The pre-pilot posture in AGENTS.md ("There is no legacy. Delete
   it.", H-49) is why rewriting migration history was affordable *once*, before any production
   database exists. It is not a licence to squash again casually: a second squash against a live
