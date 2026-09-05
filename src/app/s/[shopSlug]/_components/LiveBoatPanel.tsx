@@ -1,6 +1,7 @@
 import { BoatDrift } from "@/components/illustration/BoatDrift";
 import { SiteMark } from "@/components/illustration/SiteMark";
 import { SectionCard } from "@/components/ui/card";
+import { groupLabelClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripStage } from "@/lib/trip-stages";
 
@@ -38,7 +39,7 @@ export function LiveBoatPanel({
           <SiteMark mark="boat" size="sm" ground="tint" coral={false} />
         </BoatDrift>
         <div className="min-w-0">
-          <p className="text-xs font-semibold tracking-wide text-muted uppercase">{eyebrow}</p>
+          <p className={groupLabelClass()}>{eyebrow}</p>
           <p className={`mt-1 ${SECTION_TITLE_CLASS}`}>{sentence}</p>
           <p className="mt-1 text-sm text-muted tabular-nums">{meta}</p>
         </div>

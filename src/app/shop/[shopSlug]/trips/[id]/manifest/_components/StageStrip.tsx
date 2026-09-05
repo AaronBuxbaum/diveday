@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { buttonClass } from "@/components/ui/button";
+import { groupLabelClass } from "@/components/ui/ledger";
 import type { TripStage } from "@/lib/trip-stages";
 import type { PreDepartureCheckResult } from "../actions";
 
@@ -50,7 +51,7 @@ export function StageStrip({
   const [result, formAction, isPending] = useActionState(action, null);
   return (
     <section aria-label={copy.legend} className="mt-4">
-      <h2 className="text-xs font-semibold tracking-wide text-muted uppercase">{copy.legend}</h2>
+      <h2 className={groupLabelClass()}>{copy.legend}</h2>
       <div className="mt-2 flex flex-wrap gap-2">
         {copy.taps.map((tap) => (
           <form action={formAction} key={tap.stage}>
