@@ -1,0 +1,23 @@
+{
+  "heading": "Kinds of day",
+  "value": "{count, plural, =0 {No kinds of day} =1 {1 kind of day} other {# kinds of day}}",
+  "nameLabel": "Name",
+  "nameHint": "Divers see this word on your schedule and can filter by it.",
+  "createTitle": "Add a kind of day",
+  "submit": "Save",
+  "submitting": "Saving...",
+  "add": "Add",
+  "adding": "Adding...",
+  "delete": "Delete",
+  "deleteConfirm": "Delete",
+  "deleteCancel": "Never mind",
+  "deletePending": "Deleting…",
+  "deleteDepartures": "{count, plural, one {# departure carries this word and loses it.} other {# departures carry this word and lose it.}}",
+  "noLenses": "No kinds of day yet.",
+  "created": "Kind of day added.",
+  "updated": "Kind of day saved.",
+  "deleted": "Kind of day deleted.",
+  "invalid": "Give the kind of day a name.",
+  "tripFieldLabel": "Kind of day",
+  "tripFieldNone": "None"
+}

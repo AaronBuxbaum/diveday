@@ -119,8 +119,13 @@
     "tripListLabel": "Upcoming trips",
     "monthNav": "Browse by month",
     "spotsLeftUrgent": "{count, plural, one {Only # spot left} other {Only # spots left}}",
-    "nextDeparture": {
-      "eyebrow": "Next boat out"
+    "nextWithSpace": {
+      "eyebrow": "Next boat with space",
+      "earlierFull": "{count, plural, one {the {time} boat is full} other {the # boats before it are full}}"
+    },
+    "lenses": {
+      "railLabel": "Kinds of day",
+      "all": "Every departure"
     },
     "shopfront": {
       "bookThisBoat": "Book this boat"

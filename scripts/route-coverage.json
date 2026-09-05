@@ -135,6 +135,7 @@
       "reviews.spec.ts",
       "schedule-embed.spec.ts",
       "schedule-filters.spec.ts",
+      "schedule-lenses.spec.ts",
       "schedule-trip.spec.ts",
       "seo.spec.ts",
       "storefront-brand.spec.ts",
@@ -142,7 +143,7 @@
       "trip-admission.spec.ts",
       "trips.spec.ts"
     ],
-    "visual": ["schedule", "schedule-above-level", "schedule-embed"],
+    "visual": ["schedule", "schedule-above-level", "schedule-embed", "schedule-lens"],
     "a11y": ["a11y.spec.ts"]
   },
   "/s/[shopSlug]/courses": {

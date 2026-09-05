@@ -551,7 +551,7 @@ test.describe("the shopfront on a phone", () => {
       page.getByText("Small-boat reef and wreck diving out of Key Largo."),
     ).toBeVisible();
 
-    const card = page.getByRole("region", { name: "Next boat out" });
+    const card = page.getByRole("region", { name: "Next boat with space" });
     await expect(card).toBeVisible();
     // The page's one primary — every week row below it is a link.
     const primaries = page.getByRole("link", { name: "Book this boat" });

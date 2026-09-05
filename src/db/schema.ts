@@ -1694,6 +1694,52 @@ export const diveSiteMoments = pgTable(
   ],
 );
 
+/**
+ * **A lens is the shop's own word for a kind of day** — ADR
+ * 20260904-reef-all-the-way-down, D02 (issue #1162).
+ *
+ * "Easygoing reef", "Getting comfortable again", "Photography" — a vocabulary
+ * the shop writes once and then hangs a departure on, so a diver reading the
+ * public schedule can pick the day they want rather than the next open seat.
+ * Deliberately the shop's prose rather than a DiveDay taxonomy: the whole
+ * value is that it sounds like the shop, and a fixed enum would make every
+ * shop's schedule read the same. The cost, stated plainly, is that a lens word
+ * is not translated — it is the shop's own sentence, like a boat's line or a
+ * site's fit tone.
+ *
+ * The slug is derived from the name once, on create, and never rewritten: a
+ * shop that renames "Easygoing reef" to "Easy reef" must not break the link a
+ * diver shared yesterday.
+ */
+export const tripLenses = pgTable(
+  "trip_lenses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    /** Also the rail's order: the order the shop wrote its own vocabulary in. */
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Deleting a lens stamps this and leaves the row (ADR
+     * 20260820-every-delete-is-soft), because `trips.lens_id` points at it and
+     * a real delete would erase which kind of day a past departure was. The
+     * word on screen is still "Delete".
+     */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("trip_lenses_shop_live_idx")
+      .on(table.shopId, table.createdAt)
+      .where(sql`${table.deletedAt} is null`),
+    uniqueIndex("trip_lenses_shop_slug_key")
+      .on(table.shopId, table.slug)
+      .where(sql`${table.deletedAt} is null`),
+  ],
+);
+
 export const trips = pgTable(
   "trips",
   {
@@ -1716,6 +1762,12 @@ export const trips = pgTable(
      * moved-from slot as empty and re-create the departure staff just moved.
      */
     seriesOccurrenceDate: text("series_occurrence_date"),
+    /**
+     * The shop's own word for this kind of day (ADR
+     * 20260904-reef-all-the-way-down, D02). Null is the ordinary case and
+     * renders nothing — never "Uncategorised".
+     */
+    lensId: uuid("lens_id").references(() => tripLenses.id, { onDelete: "set null" }),
     /** Compatibility pointer to the first dive's site for readiness and forecast consumers. */
     diveSiteId: uuid("dive_site_id").references(() => diveSites.id),
     /** Present only for a scheduled course session; ordinary charters leave this empty. */

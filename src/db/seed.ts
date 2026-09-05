@@ -119,6 +119,7 @@ import { seedDivers } from "./seed-divers";
 import { seedFrontDesk } from "./seed-front-desk";
 import { seedGear } from "./seed-gear";
 import { seedHistory } from "./seed-history";
+import { seedLenses } from "./seed-lenses";
 import { seedMedicalReview } from "./seed-medical-review";
 import { seedMinimumSeats } from "./seed-minimum-seats";
 import { seedMoreTrips } from "./seed-more-trips";
@@ -823,6 +824,11 @@ export async function seedDemoSchedule(
     divemasterId,
     waiverTemplate,
   });
+
+  // The shop's own words for its kinds of day, and which departure wears which
+  // (ADR 20260904-reef-all-the-way-down, decision 2). After `seedMoreTrips`,
+  // because it hangs the words on those departures by title.
+  await seedLenses(db, shopId);
 
   await seedPromos(db, shopId, promoRedemptionBooking);
 

@@ -11,6 +11,7 @@ import { ShopReviews } from "@/components/ShopReviews";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { DisclosureRowList } from "@/components/ui/disclosure";
+import { FilterChips } from "@/components/ui/FilterChips";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { listBoats } from "@/db/boats";
 import { type AppDb, getDb } from "@/db/client";
@@ -18,6 +19,7 @@ import { listActiveCourses } from "@/db/courses";
 import { tripRequirementSummaries } from "@/db/readiness";
 import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
+import { listTripLenses } from "@/db/trip-lenses";
 import { liveShopStage } from "@/db/trip-stages";
 import {
   countShopTrips,
@@ -66,6 +68,7 @@ import {
 } from "@/lib/schedule-pagination";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { scheduleJsonLd } from "@/lib/structured-data";
+import { resolveLens } from "@/lib/trip-lenses";
 import { STAGE_SENTENCE_KEYS } from "@/lib/trip-stages";
 import { capacityLabel, nextBookableDeparture } from "@/lib/trips";
 import { shopDayBounds, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
@@ -149,11 +152,13 @@ export default async function SchedulePage({
     tripType?: string;
     canDive?: string;
     hideAbove?: string;
+    /** One of the shop's own words for a kind of day (ADR 20260904-reef-all-the-way-down). */
+    lens?: string;
   }>;
 }) {
   await connection(); // schedule is live data — render per request, not at build
   const { shopSlug } = await params;
-  const { month, after, back, embed, hasSpace, tripType, canDive, hideAbove, credit } =
+  const { month, after, back, embed, hasSpace, tripType, canDive, hideAbove, credit, lens } =
     await searchParams;
   const hasSpaceFilter = hasSpace === "1";
   const tripTypeFilter = tripType === "fun_dive" || tripType === "course" ? tripType : undefined;
@@ -191,23 +196,6 @@ export default async function SchedulePage({
    * fits the frame at both widths the snippet allows.
    */
   const EMBED_TRIP_LIMIT = 4;
-  // The view a diver has built — month, embed mode, and both list filters —
-  // must survive every link that re-renders this page. A pager or month arrow
-  // that drops `hasSpace` quietly hands back the full unfiltered list with
-  // the checkbox reset, with nothing saying why.
-  const withViewParams = (params: URLSearchParams) => {
-    if (month) params.set("month", month);
-    if (isEmbed) params.set("embed", "1");
-    if (hasSpaceFilter) params.set("hasSpace", "1");
-    if (tripTypeFilter) params.set("tripType", tripTypeFilter);
-    if (canDiveFilter) params.set("canDive", canDiveFilter);
-    if (hideAboveFilter) params.set("hideAbove", "1");
-    return params;
-  };
-  /** The same filters as `withViewParams`, for links that already carry their own `?month=`. */
-  const filterSuffix = `${hasSpaceFilter ? "&hasSpace=1" : ""}${
-    tripTypeFilter ? `&tripType=${tripTypeFilter}` : ""
-  }${canDiveFilter ? `&canDive=${canDiveFilter}` : ""}${hideAboveFilter ? "&hideAbove=1" : ""}`;
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) {
@@ -242,6 +230,60 @@ export default async function SchedulePage({
   const explicitMonth = parseMonthKey(month);
   const listMonthBounds = explicitMonth ? monthBoundsUtc(explicitMonth) : null;
 
+  /**
+   * **The shop's own words for its kinds of day** — ADR
+   * 20260904-reef-all-the-way-down, decision 2 (issue #1162).
+   *
+   * Read before the batch below rather than inside it, because the list query
+   * needs the resolved lens id: the narrowing happens in SQL inside
+   * `upcomingTripScope`, so the keyset pages stay honest. Never in the frame —
+   * `FilterChips` renders a `<nav>` landmark and `?embed=1` promises the host
+   * page zero navigation landmarks.
+   *
+   * An unknown or malformed `?lens=` resolves to null and renders the whole
+   * board with "Every departure" current, which is what a link shared before
+   * the shop deleted a word should do.
+   */
+  const lenses = isEmbed ? [] : await listTripLenses(db, shop.id);
+  const activeLens = resolveLens(lens, lenses);
+
+  // The view a diver has built — month, embed mode, the lens, and every list
+  // filter — must survive every link that re-renders this page. A pager or
+  // month arrow that drops `hasSpace` quietly hands back the full unfiltered
+  // list with the checkbox reset, with nothing saying why.
+  const withViewParams = (params: URLSearchParams) => {
+    if (month) params.set("month", month);
+    if (isEmbed) params.set("embed", "1");
+    if (hasSpaceFilter) params.set("hasSpace", "1");
+    if (tripTypeFilter) params.set("tripType", tripTypeFilter);
+    if (canDiveFilter) params.set("canDive", canDiveFilter);
+    if (hideAboveFilter) params.set("hideAbove", "1");
+    // The *resolved* lens, never the raw parameter: carrying `?lens=nope`
+    // forward would leave every pager link claiming a view the rail says is
+    // not current.
+    if (activeLens) params.set("lens", activeLens.slug);
+    return params;
+  };
+  /** The same filters as `withViewParams`, for links that already carry their own `?month=`. */
+  const filterSuffix = `${hasSpaceFilter ? "&hasSpace=1" : ""}${
+    tripTypeFilter ? `&tripType=${tripTypeFilter}` : ""
+  }${canDiveFilter ? `&canDive=${canDiveFilter}` : ""}${hideAboveFilter ? "&hideAbove=1" : ""}${
+    activeLens ? `&lens=${activeLens.slug}` : ""
+  }`;
+  /**
+   * A chip's destination: the current view with the lens swapped, and the
+   * cursor dropped. `after`/`back` describe a position in a *different* list,
+   * so carrying them across a lens change would open the narrowed board
+   * somewhere in its middle.
+   */
+  const lensHref = (slug: string | null) => {
+    const params = withViewParams(new URLSearchParams());
+    params.delete("lens");
+    if (slug) params.set("lens", slug);
+    const query = params.toString();
+    return `${publicSchedulePath(shopSlug)}${query ? `?${query}` : ""}`;
+  };
+
   // The published-review *list* still streams in separately (below, via
   // <ScheduleReviewsSection>) — it is the slower, independent read the shell
   // and trip list never needed to wait behind (docs task 119 follow-up:
@@ -266,6 +308,7 @@ export default async function SchedulePage({
         hasSpace: hasSpaceFilter ? true : undefined,
         tripType: tripTypeFilter,
         publicOnly: true,
+        lensId: activeLens?.id,
       }),
       isEmbed ? EMPTY_REVIEW_AGGREGATE : getShopReviewAggregate(db, shop.id),
       isEmbed ? [] : listActiveCourses(db, shop.id),
@@ -395,6 +438,18 @@ export default async function SchedulePage({
   // a 900px frame to restate the row directly beneath it.
   const nextBoat =
     isEmbed || explicitMonth || after ? null : nextBookableDeparture(visibleUpcoming);
+  /**
+   * **How many boats the card stepped over to find a seat** (issue #1374, ADR
+   * 20260904-reef-all-the-way-down).
+   *
+   * `nextBookableDeparture` has always skipped the full ones; until now the
+   * eyebrow said "Next boat out" and the diver was left to work out why the
+   * card and the week's first row disagreed. The card names them instead — and
+   * says nothing at all when this boat *is* the shop's next departure, which is
+   * the ordinary case.
+   */
+  const skippedBoats = nextBoat ? visibleUpcoming.indexOf(nextBoat) : 0;
+  const firstSkippedBoat = skippedBoats > 0 ? visibleUpcoming[0] : null;
 
   // The month rail: one row of "where am I / step a month" instead of the
   // full month grid this page used to open with. The grid duplicated every
@@ -465,6 +520,11 @@ export default async function SchedulePage({
   // course session — which course it belongs to. Everything the row used to
   // stack beneath its title (the shop's description, the dive-plan words and
   // their two-sentence aside) is on the trip page one tap below.
+  // The shop's own word for each departure's kind of day, resolved from the
+  // vocabulary already read above rather than joined per row. A departure whose
+  // word has since been deleted resolves to null and renders nothing, which is
+  // the same silence a departure that never wore one gets.
+  const lensById = new Map(lenses.map((entry) => [entry.id, entry.name]));
   const weekRows: WeekLedgerRow[] = listedTrips.map((trip) => {
     const diveSites = diveSitesByTrip.get(trip.id) ?? { sites: [], undecidedDives: 0 };
     // The title already naming every site with nothing left to confirm is the
@@ -492,6 +552,7 @@ export default async function SchedulePage({
       }),
       timeRange: formatTimeRange(trip.startsAt, trip.endsAt, locale, shop.timezone),
       title: trip.title,
+      lens: trip.lensId ? (lensById.get(trip.lensId) ?? null) : null,
       course: trip.course
         ? {
             label: t("schedule.courseSession"),
@@ -629,6 +690,12 @@ export default async function SchedulePage({
                       ? formatMoneyScanned(nextBoat.priceCents, currency, locale)
                       : null
                   }
+                  skipped={skippedBoats}
+                  firstSkippedTime={
+                    firstSkippedBoat
+                      ? formatTime(firstSkippedBoat.startsAt, locale, shop.timezone)
+                      : undefined
+                  }
                   t={t}
                 />
               </div>
@@ -708,6 +775,42 @@ export default async function SchedulePage({
           </section>
         ) : null}
 
+        {/* **The lens rail** — ADR 20260904-reef-all-the-way-down, decision 2
+            (issue #1162): the shop's own words for its kinds of day, as a row
+            of views onto the list below.
+
+            **Above the filter form, never between it and the list.** Seven
+            assertions across `e2e/schedule-filters.spec.ts` and
+            `e2e/trip-admission.spec.ts` address the departures as the `ul`
+            directly after the form, and an element sibling in between breaks
+            every one of them silently; `page.composition.test.ts` pins the
+            order. And never inside the frame: `FilterChips` renders a `<nav>`
+            landmark, and `?embed=1` promises the host page zero navigation
+            landmarks. */}
+        {hasUpcoming && !isEmbed && lenses.length > 0 ? (
+          <FilterChips
+            label={t("schedule.lenses.railLabel")}
+            className="mb-4"
+            chips={[
+              {
+                key: "all",
+                href: lensHref(null),
+                active: !activeLens,
+                label: t("schedule.lenses.all"),
+              },
+              // The shop's own word, verbatim and untranslated — the same
+              // contract as a boat's line or a site's fit tone. Only the reset
+              // chip and the rail's accessible name are DiveDay's to say.
+              ...lenses.map((entry) => ({
+                key: entry.slug,
+                href: lensHref(entry.slug),
+                active: activeLens?.id === entry.id,
+                label: entry.name,
+              })),
+            ]}
+          />
+        ) : null}
+
         {/* No filters in the frame. A month pager and a "has space" checkbox are
             page furniture inside a 900px window whose whole job is "here is
             what's next" — and every control in there is one more thing competing
@@ -721,6 +824,7 @@ export default async function SchedulePage({
           <ScheduleFilters
             embed={isEmbed}
             month={month ?? null}
+            lens={activeLens?.slug ?? null}
             tripTypeFilter={tripTypeFilter ?? null}
             hasSpaceFilter={hasSpaceFilter}
             canDiveFilter={canDiveFilter ?? null}
@@ -772,7 +876,7 @@ export default async function SchedulePage({
         ) : visibleUpcoming.length === 0 ? (
           <EmptyState
             title={
-              hasSpaceFilter || tripTypeFilter || hideAboveFilter
+              hasSpaceFilter || tripTypeFilter || hideAboveFilter || activeLens
                 ? t("schedule.filters.noMatches")
                 : t("schedule.noTripsMonth")
             }

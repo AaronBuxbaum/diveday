@@ -83,6 +83,7 @@ import {
   tripInvitations,
   tripLastMinutePromoRecipients,
   tripLastMinutePromos,
+  tripLenses,
   tripRecapPhotos,
   tripRequirements,
   tripReviews,
@@ -690,6 +691,17 @@ export async function loadShopExportBundleInput(
 
       const boatName = new Map(boatRows.map((row) => [row.id, row.name]));
 
+      // The shop's own words for its kinds of day. Plainly a shop record — the
+      // shop wrote them and its public schedule shows them — so they leave with
+      // the shop (ADR 20260904-reef-all-the-way-down, decision 2). Deleted
+      // words ride along with their stamp, the same as every other soft-deleted
+      // table in this bundle: trips.csv still points at one by lens_id.
+      const tripLensRows = await tx
+        .select()
+        .from(tripLenses)
+        .where(eq(tripLenses.shopId, shopId))
+        .orderBy(asc(tripLenses.createdAt), asc(tripLenses.id));
+
       // Per-person rollups for contacts.csv. Archived cards never represent a
       // diver in a migration file; archived people still export, marked.
       const cardsByPerson = new Map<string, typeof certificationRows>();
@@ -911,6 +923,18 @@ export async function loadShopExportBundleInput(
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["boats.csv"],
+        },
+        {
+          file: "trip_lenses.csv",
+          header: ["id", "name", "slug", "created_at", "deleted_at"],
+          rows: tripLensRows.map((row) => [
+            row.id,
+            row.name,
+            row.slug,
+            row.createdAt,
+            row.deletedAt,
+          ]),
+          note: EXPORT_FILE_NOTES["trip_lenses.csv"],
         },
         {
           file: "contacts.csv",
@@ -1273,6 +1297,9 @@ export async function loadShopExportBundleInput(
             "dive_mode",
             "boat_id",
             "boat_name",
+            // The shop's own word for this kind of day, as an id into
+            // trip_lenses.csv.
+            "lens_id",
             "conditions_hold",
             "conditions_summary",
             "water_temperature_c",
@@ -1323,6 +1350,7 @@ export async function loadShopExportBundleInput(
             row.diveMode,
             row.boatId,
             row.boatId ? boatName.get(row.boatId) : null,
+            row.lensId,
             row.conditionsHold,
             row.conditionsSummary,
             row.waterTemperatureC,
@@ -4555,6 +4583,9 @@ export async function loadShopExportCounts(
     "shop.csv": 1,
     "boats.csv": await countOf(
       db.select({ n: count() }).from(boats).where(eq(boats.shopId, shopId)),
+    ),
+    "trip_lenses.csv": await countOf(
+      db.select({ n: count() }).from(tripLenses).where(eq(tripLenses.shopId, shopId)),
     ),
     // One flat import-ready row per person, so the count mirrors people.csv.
     "contacts.csv": peopleCount,
