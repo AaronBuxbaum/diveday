@@ -1,5 +1,5 @@
 import { formatShortDate, formatTimeRange } from "@/lib/format";
-import { hasDeparted } from "../focus";
+import { hasSailed } from "@/lib/trips";
 
 /**
  * **The line under a departure's title on the counter** — its day, its hours,
@@ -15,7 +15,7 @@ import { hasDeparted } from "../focus";
  * at sea, and at a busy dock the next diver walks up while the previous
  * departure is still the one on screen.
  *
- * The buffer belongs to `hasDeparted` and is not re-implemented here: a boat
+ * The buffer belongs to `hasSailed` and is not re-implemented here: a boat
  * scheduled 55 minutes ago has not gone, because trips run late (AGENTS.md's
  * departure buffer).
  *
@@ -43,7 +43,7 @@ export function DepartureMeta({
     <>
       {formatShortDate(startsAt, locale, timeZone)} ·{" "}
       {formatTimeRange(startsAt, endsAt, locale, timeZone)}
-      {hasDeparted(startsAt, now) ? (
+      {hasSailed(startsAt, now) ? (
         <>
           {" · "}
           <span className="font-medium text-foreground">{departedLabel}</span>

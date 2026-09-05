@@ -271,7 +271,11 @@ describe("theBoatIsHome", () => {
     // page then is not yet being asked how it was.
     expect(theBoatIsHome({ endsAt, now: endsAt })).toBe(false);
     expect(theBoatIsHome({ endsAt, now: new Date("2026-08-29T19:29:00Z") })).toBe(false);
-    expect(theBoatIsHome({ endsAt, now: new Date("2026-08-29T19:30:00Z") })).toBe(false);
+    // The hour is *up* at 19:30 — `hasSailed`/`hasReturned` count the boundary
+    // instant as past, which is the reading the other sites of this rule
+    // already took before they shared one function (`src/lib/trips.ts`).
+    expect(theBoatIsHome({ endsAt, now: new Date("2026-08-29T19:29:59.999Z") })).toBe(false);
+    expect(theBoatIsHome({ endsAt, now: new Date("2026-08-29T19:30:00Z") })).toBe(true);
   });
 
   it("hands over from the dive-day block at exactly the same moment", () => {
@@ -281,8 +285,8 @@ describe("theBoatIsHome", () => {
     // neither.
     const startsAt = new Date("2026-08-29T15:00:00Z");
     const timeZone = "America/New_York";
-    const stillOut = new Date("2026-08-29T19:30:00Z");
-    const home = new Date("2026-08-29T19:31:00Z");
+    const stillOut = new Date("2026-08-29T19:29:59.999Z");
+    const home = new Date("2026-08-29T19:30:00Z");
     expect(isDiveDay({ startsAt, endsAt, timeZone, now: stillOut })).toBe(true);
     expect(theBoatIsHome({ endsAt, now: stillOut })).toBe(false);
     expect(isDiveDay({ startsAt, endsAt, timeZone, now: home })).toBe(false);
@@ -313,7 +317,7 @@ describe("isAfterTheDive", () => {
     // anything by itself, so the standing buffer is the whole wait.
     expect(isAfterTheDive({ endsAt, boarded: "boarded", now: endsAt })).toBe(false);
     expect(
-      isAfterTheDive({ endsAt, boarded: "boarded", now: new Date("2026-08-29T19:30:00Z") }),
+      isAfterTheDive({ endsAt, boarded: "boarded", now: new Date("2026-08-29T19:29:59.999Z") }),
     ).toBe(false);
     expect(isAfterTheDive({ endsAt, boarded: "boarded", now: bufferGone })).toBe(true);
   });

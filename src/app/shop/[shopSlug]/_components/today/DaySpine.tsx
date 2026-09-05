@@ -16,7 +16,7 @@ import type { DayCloseoutRecord } from "@/db/closeout";
 import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS, seasonalBriefingText } from "@/i18n/today-labels";
-import { DEPARTURE_BUFFER_MS, type EveningClose } from "@/lib/closeout";
+import type { EveningClose } from "@/lib/closeout";
 import { formatMoneyScanned, formatShortDate, formatTime } from "@/lib/format";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import {
@@ -28,6 +28,7 @@ import {
   type TodayAction,
   todaysBoatsAreClear,
 } from "@/lib/today";
+import { hasSailed } from "@/lib/trips";
 import { ClosingBlock } from "./ClosingBlock";
 import { ClosingStation } from "./ClosingStation";
 import { DayStation } from "./DayStation";
@@ -515,8 +516,7 @@ export function DaySpine({
   const nextTripId =
     entries
       .flatMap((entry) => (entry.kind === "live" ? [entry.station] : []))
-      .find((station) => station.startsAt.getTime() + DEPARTURE_BUFFER_MS > now.getTime())
-      ?.tripId ?? null;
+      .find((station) => !hasSailed(station.startsAt, now))?.tripId ?? null;
   const nextStation = entries
     .flatMap((entry) => (entry.kind === "live" ? [entry.station] : []))
     .find((station) => station.tripId === nextTripId);

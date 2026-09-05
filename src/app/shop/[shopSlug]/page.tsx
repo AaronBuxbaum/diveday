@@ -41,7 +41,7 @@ import { daySpineSummaryText, GREETING_KEYS } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
 import { canViewShopReports } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { assembleEveningClose, DEPARTURE_BUFFER_MS } from "@/lib/closeout";
+import { assembleEveningClose } from "@/lib/closeout";
 import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
@@ -61,6 +61,7 @@ import {
   spineJobCount,
   type TodayAction,
 } from "@/lib/today";
+import { hasSailed } from "@/lib/trips";
 import { shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import {
   deleteCrewRecapPhotoAction,
@@ -466,7 +467,7 @@ async function TodayBody({
   // The next boat that has not gone yet, carrying the standing one-hour
   // late-arrival buffer every "has it sailed" question in this app carries.
   const nextStation: DayStation | undefined = spine.stations.find(
-    (station) => station.startsAt.getTime() + DEPARTURE_BUFFER_MS > now.getTime(),
+    (station) => !hasSailed(station.startsAt, now),
   );
   // "3 boats today. 2 things need you before the 7:00 AM leaves the dock." The
   // count is what is still open on the boat the sentence names, because that
