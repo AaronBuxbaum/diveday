@@ -218,3 +218,17 @@ describe("after the dive", () => {
     }
   });
 });
+
+/**
+ * **The boat's line** — ADR 20260904-reef-all-the-way-down, Budget rule 4,
+ * slice 16c.
+ */
+describe("the boat's line on the thread", () => {
+  it("stands above the status, once, and does not become a second status", () => {
+    expect(countOf("<BoatStageLine")).toBe(1);
+    expect(positionOf("<BoatStageLine")).toBeLessThan(positionOf("<ThreadStatus"));
+    // The page states status exactly once, and this is a fact about the boat
+    // rather than a second claim about the booking.
+    expect(countOf("<ThreadStatus")).toBe(1);
+  });
+});

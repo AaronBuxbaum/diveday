@@ -17,6 +17,7 @@ import {
   type TripAdmissionEvidence,
   type TripAdmissionRefusal,
 } from "@/lib/trip-admission";
+import { hasSailed } from "@/lib/trips";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { type AppDb, type DbExecutor, queryAll } from "./client";
 import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./dive-packages";
@@ -572,11 +573,7 @@ async function createBookingRecord(
     .where(and(eq(trips.id, req.tripId), eq(trips.shopId, req.shopId), liveTrip()))
     .limit(1)
     .for("update");
-  if (
-    trip?.status !== "scheduled" ||
-    trip.conditionsHold ||
-    new Date(trip.startsAt.getTime() + 60 * 60 * 1000) <= nowDate()
-  ) {
+  if (trip?.status !== "scheduled" || trip.conditionsHold || hasSailed(trip.startsAt, nowDate())) {
     return { ok: false, reason: "trip_unavailable" };
   }
 
@@ -1273,7 +1270,7 @@ export async function selfCancelBooking(
       .from(trips)
       .where(and(eq(trips.id, row.tripId), liveTrip()))
       .limit(1);
-    if (trip && new Date(trip.startsAt.getTime() + 60 * 60 * 1000) <= now) {
+    if (trip && hasSailed(trip.startsAt, now)) {
       return { ok: false, reason: "trip_departed" };
     }
 

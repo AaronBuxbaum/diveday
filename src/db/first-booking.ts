@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
-import { DEPARTURE_BUFFER_MS } from "@/lib/closeout";
+import { hasSailed } from "@/lib/trips";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
 import { type DbExecutor, queryAll } from "./client";
 import type { PaymentStatus, WaiverRecord } from "./schema";
@@ -99,7 +99,7 @@ export async function shopFirstBooking(
   if (rows.length !== 1 || !only) return null;
   if (!LIVE_BOOKING_STATUSES.includes(only.status)) return null;
   if (only.tripDeletedAt !== null) return null;
-  if (only.startsAt.getTime() + DEPARTURE_BUFFER_MS <= now.getTime()) return null;
+  if (hasSailed(only.startsAt, now)) return null;
 
   let paymentRows: { status: PaymentStatus; amountCents: number | null; currency: string }[] = [];
   let templateRows: { materialGeneration: number }[] = [];

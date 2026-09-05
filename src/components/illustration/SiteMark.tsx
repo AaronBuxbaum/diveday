@@ -24,6 +24,8 @@ import type { ReefDrawingCode } from "@/lib/site-mark";
  * home gives it to the next boat out; the board gives it to none.
  */
 export const SITE_MARK_SIZES = {
+  /** Inside a badge: a 22×16 mark, the only size that fits a pill. */
+  chip: { tile: "h-5 w-7 rounded-sm", svg: "h-[15px] w-[21px]" },
   /** The week board's 150px column: a 44×30 tile. */
   sm: { tile: "h-[30px] w-11 rounded-lg", svg: "h-[22px] w-[33px]" },
   /** The home spine's rail: an 84×60 tile at the inset rung, the board's own size. */
@@ -48,6 +50,13 @@ export const SITE_MARK_GROUNDS = {
   tint: "bg-primary-tint text-primary-hover [--site-mark-fill:var(--surface)]",
   surface: "bg-surface text-primary-hover [--site-mark-fill:var(--surface)]",
   deep: "bg-primary-hover text-primary-tint [--site-mark-fill:var(--primary-hover)]",
+  /**
+   * No tile at all — for a drawing inside something that already has a ground
+   * of its own, which today is the station's stage chip (a `Badge`). Two
+   * backgrounds on one pill would fight, and at 16px a filled hull reads as a
+   * blob, so the fill goes transparent and the drawing is strokes alone.
+   */
+  bare: "text-current [--site-mark-fill:transparent]",
 } as const;
 
 export type SiteMarkGround = keyof typeof SITE_MARK_GROUNDS;
@@ -116,6 +125,23 @@ function Drawing({ mark, coral }: { mark: ReefDrawingCode; coral: boolean }) {
           <path d="M33 28c-4 0-7-2-9-5M52 20c-2-4-2-7-2-10M70 24c2-4 5-6 8-8" />
           <path d="M50 74h20" />
           <CoralDetail cx={90} cy={20} coral={coral} />
+        </>
+      );
+    case "boat":
+      // The hand's eighth drawing (ADR 20260904-reef-all-the-way-down, Budget
+      // rule 2): a hull, a wheelhouse and the swell under it. The only drawing
+      // that ever moves, and only once, when the crew says the boat is
+      // underway — see `BoatDrift`.
+      return (
+        <>
+          <path d="M18 50h84l-10 14H30Z" fill={FILL} />
+          <path d="M46 50V36h26v14M58 36V22" />
+          <path d="M6 70c14-8 28-8 42 0s28 8 42 0 20-6 30-2" />
+          <path d="M96 30c3 2 3 6 0 8" opacity="0.5" />
+          {/* The boat's own coral detail: the buoy it moors to. Budgeted like
+              every other drawing's, and dropped when the surface has spent its
+              coral somewhere else. */}
+          <CoralDetail cx={110} cy={56} coral={coral} />
         </>
       );
     case "turtle":

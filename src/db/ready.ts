@@ -9,6 +9,7 @@ import { publicAppUrl } from "@/lib/notifications";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import type { RentalPricing } from "@/lib/rentals";
 import type { SupportNeeds } from "@/lib/support-needs";
+import { hasSailed } from "@/lib/trips";
 import { shopWaiverStatus } from "@/lib/waivers";
 import type { AppDb } from "./client";
 import { getHelpRequestForBooking, type HelpRequest } from "./help-requests";
@@ -21,14 +22,6 @@ import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getSupportNeeds } from "./support-needs";
 import { getTripWithBooked } from "./trips";
 import { getCurrentWaiverTemplate, listSignedWaiversByPerson } from "./waivers";
-
-/**
- * Trips run late, so "has this boat sailed?" allows an hour past the scheduled
- * departure everywhere in the app (AGENTS.md). `selfCancelBooking` applies the
- * same hour; this page has to, or it would hide the control for the hour the
- * domain would still honour it.
- */
-const DEPARTURE_BUFFER_MS = 60 * 60 * 1000;
 
 /**
  * Everything the transactional `/ready` page needs, gathered from the same
@@ -246,8 +239,7 @@ export async function getReadyPageData(
         : "forfeit"
       : "no_policy";
 
-  const canCancelBooking =
-    row.status === "booked" && trip.startsAt.getTime() + DEPARTURE_BUFFER_MS > now.getTime();
+  const canCancelBooking = row.status === "booked" && !hasSailed(trip.startsAt, now);
 
   return {
     detail,

@@ -89,6 +89,8 @@ import {
   type TodayAction,
   urgencyFor,
 } from "@/lib/today";
+import { liveStageOf, type TripStageReading } from "@/lib/trip-stages";
+import { hasReturned, hasSailed } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { type HorizonReadinessEvidence, inHorizonReadiness } from "./blockers";
 import type { AppDb } from "./client";
@@ -120,6 +122,7 @@ import {
 import { listStaffCredentials } from "./staff-credentials";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
+import { latestTripStagesByTrip } from "./trip-stages";
 import { countShopTrips, listStaff } from "./trips";
 import { liveTrip } from "./trips-live";
 
@@ -253,6 +256,12 @@ export type DepartureSummary = {
   crewAccountedFor: boolean;
   /** Why the crew half is open, as a **code**; the UI picks the words. */
   crewReason: CrewIncompleteReason | null;
+  /**
+   * Where the crew last said this boat was, and when (ADR
+   * 20260904-reef-all-the-way-down, Budget rule 4). Null when nobody has said
+   * anything, which is most departures and renders nothing.
+   */
+  stage: TripStageReading | null;
 };
 
 export type CrewedSessionSummary = {
@@ -324,13 +333,6 @@ export const RETURNED_ROLL_CALL_LOOKBACK_MS = 48 * HOUR_MS;
  * failure mode this whole change exists to remove.
  */
 export const ROLL_CALL_RESIDUE_MS = 30 * 24 * HOUR_MS;
-
-/**
- * How long after its scheduled departure a boat is still treated as at the
- * dock. Trips run late, so every "has it sailed" question in this app carries
- * the same hour (`src/db/ready.ts`).
- */
-const DEPARTURE_BUFFER_MS = 60 * 60 * 1000;
 
 /**
  * One trip's unclosed head count, as codes and numbers — `src/i18n/today-labels.ts`
@@ -594,7 +596,7 @@ export async function listRollCallGaps(
     // still reaches the crew scan below.
     if (bookingIds.length === 0 && crewIds.length === 0) continue;
     const checkpoints = rollCallCheckpoints(trip.plannedDives);
-    const home = new Date(trip.endsAt.getTime() + 60 * 60 * 1000) <= now;
+    const home = hasReturned(trip.endsAt, now);
     const underway = !home;
     const stale = home && trip.endsAt.getTime() < now.getTime() - RETURNED_ROLL_CALL_LOOKBACK_MS;
 
@@ -1109,6 +1111,7 @@ export async function getTodayWork(
     neverSentLastMinuteDeal,
     lastMinuteWindows,
     rollCallGaps,
+    stagesByTrip,
   ] = await Promise.all([
     // Each booking's latest departure result, not just a head count. The card
     // needs to tell "already aboard" from "still ashore" from "never left the
@@ -1162,6 +1165,13 @@ export async function getTodayWork(
     // forward, and a boat that is out or already came back is exactly what this
     // chases.
     listRollCallGaps(db, shopId, now),
+    // One answer per boat in one pass, for the same reason the roll call reads
+    // that way: a station-by-station read would be a query per departure.
+    latestTripStagesByTrip(
+      db,
+      shopId,
+      todayTrips.map((trip) => trip.id),
+    ),
   ]);
 
   const helpRequests = await listTodayHelpRequests(
@@ -2006,7 +2016,7 @@ export async function getTodayWork(
       const result = rollCall.get(row.booking.id);
       if (result === "boarded") return false;
       if (result === undefined) return true;
-      return trip.startsAt.getTime() + DEPARTURE_BUFFER_MS > now.getTime();
+      return !hasSailed(trip.startsAt, now);
     });
     // The crew list this trip names *now*, each carrying their own departure
     // result — the shape `rollCallCompleteness` requires, so that the verdict
@@ -2052,6 +2062,12 @@ export async function getTodayWork(
       crew: tripCrew,
       crewAccountedFor: completeness.crewAccountedFor,
       crewReason: completeness.crewReason,
+      // The same staleness rule every other reader applies: a word older than
+      // the boat's own day stops speaking, so a crew that tapped Underway and
+      // then got busy does not leave the home saying it at midnight. The
+      // manifest is the exception and reads the raw ledger — that strip is the
+      // crew's own control, and it shows them their last answer.
+      stage: liveStageOf(stagesByTrip.get(trip.id) ?? null, trip.endsAt, now),
     };
   });
 

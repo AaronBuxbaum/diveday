@@ -1395,3 +1395,53 @@ describe("one fact of scale (slice 16b)", () => {
     expect(screen.getByText(/400th diver of the season/)).toBeInTheDocument();
   });
 });
+
+/**
+ * **The boat says where it is** — ADR 20260904-reef-all-the-way-down, decision
+ * 2, Budget rule 4, slice 16c.
+ */
+describe("the stage chip (slice 16c)", () => {
+  const withStage = (stage: Parameters<typeof stationStage>[0]) =>
+    renderSpine({
+      departures: [{ ...departure(), stage: stationStage(stage) }],
+      actions: [action({ id: "b", departure: boat("t1") })],
+    });
+
+  it("says nothing on a departure whose crew has said nothing", () => {
+    const { container } = renderSpine({
+      departures: [{ ...departure(), stage: null }],
+      actions: [action({ id: "b", departure: boat("t1") })],
+    });
+    expect(container.textContent).not.toMatch(/Out on|Heading in|On the surface/);
+    // The word this app refuses to say about a boat nobody has spoken for.
+    expect(container.textContent).not.toMatch(/unknown/i);
+  });
+
+  it("carries the crew's word, the site and the time they said it", () => {
+    withStage("underway");
+    expect(screen.getByText(/Out on Molasses Reef · /)).toBeInTheDocument();
+  });
+
+  it("falls back to the siteless word on a departure with no plan", () => {
+    renderSpine({
+      departures: [
+        {
+          ...departure(),
+          stage: { ...stationStage("underway"), siteName: null },
+        },
+      ],
+      actions: [action({ id: "b", departure: boat("t1") })],
+    });
+    expect(screen.getByText(/Out on the water · /)).toBeInTheDocument();
+  });
+});
+
+/** A crew's tap, at a fixed instant, for the chip cases above. */
+function stationStage(stage: "boarding" | "underway" | "surface" | "heading_in" | "home") {
+  return {
+    stage,
+    siteName: "Molasses Reef",
+    recordedAt: new Date("2026-07-21T11:20:00.000Z"),
+    recordedByName: "Keiko Tanaka",
+  };
+}

@@ -89,6 +89,7 @@ import {
   tripScheduleDays,
   tripSeries,
   tripSeriesSkips,
+  tripStageEvents,
   trips,
   tripWaitlistEntries,
   userAccounts,
@@ -363,6 +364,16 @@ export async function loadShopExportBundleInput(
           asc(tripChangeEvents.occurredAt),
           asc(tripChangeEvents.seq),
           asc(tripChangeEvents.id),
+        );
+
+      const tripStageEventRows = await tx
+        .select()
+        .from(tripStageEvents)
+        .where(eq(tripStageEvents.shopId, shopId))
+        .orderBy(
+          asc(tripStageEvents.recordedAt),
+          asc(tripStageEvents.seq),
+          asc(tripStageEvents.id),
         );
 
       const scheduleDayRows = await tx
@@ -1365,6 +1376,34 @@ export async function loadShopExportBundleInput(
             row.seq,
           ]),
           note: EXPORT_FILE_NOTES["trip_change_events.csv"],
+        },
+        {
+          file: "trip_stage_events.csv",
+          header: [
+            "id",
+            "trip_id",
+            "trip_title",
+            "trip_starts_at",
+            "stage",
+            "dive_site_id",
+            "recorded_by_person_id",
+            "recorder_name",
+            "recorded_at",
+            "seq",
+          ],
+          rows: tripStageEventRows.map((row) => [
+            row.id,
+            row.tripId,
+            tripTitle.get(row.tripId),
+            tripStartsAt.get(row.tripId),
+            row.stage,
+            row.diveSiteId,
+            row.recordedByPersonId,
+            personName.get(row.recordedByPersonId),
+            row.recordedAt,
+            row.seq,
+          ]),
+          note: EXPORT_FILE_NOTES["trip_stage_events.csv"],
         },
         {
           file: "trip_series.csv",
@@ -4528,6 +4567,9 @@ export async function loadShopExportCounts(
     ),
     "trip_change_events.csv": await countOf(
       db.select({ n: count() }).from(tripChangeEvents).where(eq(tripChangeEvents.shopId, shopId)),
+    ),
+    "trip_stage_events.csv": await countOf(
+      db.select({ n: count() }).from(tripStageEvents).where(eq(tripStageEvents.shopId, shopId)),
     ),
     "trip_series.csv": await countOf(
       db.select({ n: count() }).from(tripSeries).where(eq(tripSeries.shopId, shopId)),

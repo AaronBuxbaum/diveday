@@ -13,6 +13,7 @@ import {
 } from "@/lib/notifications";
 import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
+import { hasSailed } from "@/lib/trips";
 import { releasePackageCoverageForBooking } from "./bookings";
 import { type AppDb, type DbExecutor, queryAll } from "./client";
 import { publishManifestEvent } from "./manifest-events";
@@ -117,7 +118,7 @@ export async function callTripBlowout(
     // A departed trip has nothing to cancel — the boat sailed or didn't. But
     // an *existing* cascade may still be resumed after departure time: the
     // messages are about a cancellation that already happened.
-    if (!existing && new Date(trip.startsAt.getTime() + 60 * 60 * 1000) <= now) {
+    if (!existing && hasSailed(trip.startsAt, now)) {
       return { ok: false as const, reason: "trip_departed" as const };
     }
 

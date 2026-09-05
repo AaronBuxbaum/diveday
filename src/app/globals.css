@@ -875,6 +875,29 @@ textarea {
 }
 
 /*
+ * The boat leaves — ADR 20260904-reef-all-the-way-down, decision 2, Budget
+ * rule 2. An arrival rather than an exit: the boat drifts 12px into its
+ * resting place once, when the crew taps Underway, so it keeps the default
+ * entrance curve. The one drawing this app ever animates, and the whole of
+ * what rule 2 permits it — 600ms is the budget's ceiling and this sits inside
+ * it. `illustration.test.ts` reads the duration and the curve back out of this
+ * file rather than trusting the number in this comment.
+ */
+@keyframes boat-leaves {
+  from {
+    transform: translateX(-12px);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.boat-leaves {
+  display: inline-flex;
+  animation: boat-leaves 520ms var(--ease-out-soft) both;
+}
+
+/*
  * The water band — Reef's page top (ADR 20260901-diveday-reimagined, decision
  * 1). The lagoon wash settles into the sand over the first 168px of every
  * staff page, behind the header; below that the ground is the ground. Drawn

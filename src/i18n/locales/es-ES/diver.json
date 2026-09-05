@@ -1,4 +1,15 @@
 {
+  "tripStage": {
+    "boarding": "{boat} está embarcando.",
+    "underway": "{boat} está en {site}.",
+    "underwayNoSite": "{boat} está en el agua.",
+    "surface": "{boat} está en superficie.",
+    "headingIn": "{boat} va de regreso.",
+    "home": "{boat} está de vuelta en el muelle.",
+    "said": "La tripulación lo dijo a las {time}.",
+    "liveEyebrow": "Ahora mismo",
+    "liveBack": "De vuelta hacia las {back}."
+  },
   "conservation": {
     "shopClaimsDisclaimer": "Declarado por el centro, no verificado por DiveDay.",
     "commitments": {

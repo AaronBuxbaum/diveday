@@ -1,7 +1,69 @@
 /**
- * Capacity math for trips. Kept framework-free so booking flows, manifests,
- * and the schedule UI all agree on what "full" means.
+ * Capacity math for trips, and the clock every surface reads a departure
+ * against. Kept framework-free so booking flows, manifests, and the schedule
+ * UI all agree on what "full" means — and on when the boat has gone.
  */
+
+import { HOUR_MS } from "@/lib/clock";
+
+/**
+ * **The standing late-arrival buffer.** Trips run late, so every "has it
+ * sailed / is it back / is it in the past" question in this app allows an hour
+ * past the scheduled time before it answers yes (AGENTS.md's hard rule).
+ *
+ * This constant used to live in `src/lib/closeout.ts`, where its own docstring
+ * said it was here "in one place rather than four literals". It was not. The
+ * hour was written **fifteen** times: nine separate `const … = 60 * 60 * 1000`
+ * declarations (`closeout`, `ready`, `today`, `roster-facts`,
+ * `find-my-booking`, `crew-requests`, `thread-steps`, the diver record's
+ * status split, and `COUNTER_DEPARTED_BUFFER_MS` at the walk-in counter) plus
+ * six bare literals compared inline in `bookings`, `blowouts`, `today`,
+ * `trips-overview` and the diver-facing departure page.
+ *
+ * What makes that worth a paragraph is *how* it stayed correct. Every one of
+ * the nine carried a docstring, and each cited a **different** sibling as the
+ * authority: `today` pointed at `ready`, `ready` pointed at `selfCancelBooking`,
+ * `roster-facts` pointed at the diver record, the diver record and
+ * `crew-requests` pointed at AGENTS.md, and `find-my-booking` simply said
+ * "same 1-hour buffer every other check uses". A ring of citations with no
+ * centre — which is exactly what a rule looks like shortly before one of its
+ * copies is edited alone.
+ *
+ * They also **disagreed at the boundary**. Most sites treated the departure as
+ * gone at `startsAt + 1h` exactly; two — the roster's "ahead" flag and the
+ * diver record's — held it upcoming for that one millisecond longer. Nothing
+ * depended on the difference, which is the point: it is the shape of a
+ * decision nobody made. {@link hasSailed} settles it on the majority reading.
+ */
+export const DEPARTURE_BUFFER_MS = HOUR_MS;
+
+/**
+ * **Has the boat gone?** — true once the departure is a buffered hour past the
+ * time it was scheduled to leave.
+ *
+ * This is the *weaker* of the two questions and the one that gates selling and
+ * seating: booking a seat, claiming one, a walk-in at the counter, whether a
+ * blowout still has anything to cancel. A departure that has sailed under this
+ * rule may well still be out on the water — {@link hasReturned} is what
+ * answers that.
+ */
+export function hasSailed(startsAt: Date, now: Date): boolean {
+  return now.getTime() >= startsAt.getTime() + DEPARTURE_BUFFER_MS;
+}
+
+/**
+ * **Is everyone home?** — true once the departure is a buffered hour past its
+ * scheduled return.
+ *
+ * The evening's whole shape hangs off this one: a station cannot settle, the
+ * closing block cannot appear, and the recap cannot go out until the last
+ * departure is an hour past the time it said it would be back. It is also what
+ * stops a staffer watching a boat that is genuinely still out from being told
+ * there is nothing left to watch.
+ */
+export function hasReturned(endsAt: Date, now: Date): boolean {
+  return now.getTime() >= endsAt.getTime() + DEPARTURE_BUFFER_MS;
+}
 
 /**
  * **The largest party one public booking can seat**, and why it is a number at

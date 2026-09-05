@@ -78,3 +78,34 @@ describe("coral never reaches a safety or payment surface", () => {
     expect(offenders).toEqual([]);
   });
 });
+
+/**
+ * **The one drawing that moves, and the whole of what it may do** — ADR
+ * 20260904-reef-all-the-way-down, decision 2, Budget rule 2.
+ *
+ * The boat drifts 12px into place once when the crew taps Underway. The rule
+ * bounds it at 600ms on `--ease-out-soft`, and the numbers live in
+ * `globals.css` rather than in a comment, so this reads them back.
+ */
+describe("the boat's one motion", () => {
+  const css = readFileSync(path.resolve(__dirname, "../../app/globals.css"), "utf8");
+
+  it("is declared once, inside the budget's ceiling, on the soft curve", () => {
+    const rule = css.match(/\.boat-leaves\s*\{([^}]*)\}/);
+    expect(rule, "globals.css declares .boat-leaves").toBeTruthy();
+    const body = rule?.[1] ?? "";
+    const duration = body.match(/animation:\s*boat-leaves\s+(\d+)ms/);
+    expect(duration, ".boat-leaves states its own duration").toBeTruthy();
+    expect(Number(duration?.[1])).toBeLessThanOrEqual(600);
+    expect(body).toContain("var(--ease-out-soft)");
+  });
+
+  it("moves the boat and nothing else", () => {
+    // A second animated drawing would be a second thing that moves, which the
+    // rule allows exactly none of.
+    const animatedDrawings = [
+      ...css.matchAll(/\.([a-z-]*(?:boat|turtle|reef|wreck)[a-z-]*)\s*\{[^}]*animation:/g),
+    ];
+    expect(animatedDrawings.map((match) => match[1])).toEqual(["boat-leaves"]);
+  });
+});
