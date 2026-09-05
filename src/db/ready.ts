@@ -3,6 +3,7 @@ import { type CarriedPreparation, carriedPreparation } from "@/lib/carried-prepa
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
 import { withinCancellationWindow } from "@/lib/deposits";
+import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { publicAppUrl } from "@/lib/notifications";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
@@ -91,6 +92,14 @@ export type ReadyPageData = {
    * answer, and the staff surfaces render it as their word.
    */
   lastDivedBand: DiveRecencyBand | null;
+  /**
+   * What the diver said this dive is for, or null when they were not asked or
+   * did not say (ADR 20260904-reef-all-the-way-down, D12). Gates nothing; the
+   * booking form asks it and `/ready` is where it can be changed, which is what
+   * makes the form's "change it any time" true — and what reaches the party
+   * member and the walk-in who never saw a booking form at all.
+   */
+  diveIntent: DiveIntent | null;
   nitroxCardVerified: boolean;
   /**
    * A live nitrox card exists for this diver, sighted or not. Only decides
@@ -166,6 +175,7 @@ export async function getReadyPageData(
       personId: bookings.personId,
       wantsNitrox: bookings.wantsNitrox,
       lastDivedBand: bookings.lastDivedBand,
+      diveIntent: bookings.diveIntent,
       hotelPickupLocation: bookings.hotelPickupLocation,
       pickupTime: bookings.pickupTime,
       status: bookings.status,
@@ -271,6 +281,7 @@ export async function getReadyPageData(
     },
     wantsNitrox: row.wantsNitrox,
     lastDivedBand: row.lastDivedBand,
+    diveIntent: row.diveIntent,
     nitroxCardVerified: nitroxVerified.has(row.personId),
     nitroxCardOnFile: nitroxOnFile.has(row.personId),
     rentalFit: toDiverRentalFit(rentalFit),

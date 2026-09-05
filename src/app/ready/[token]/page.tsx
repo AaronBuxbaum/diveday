@@ -61,6 +61,7 @@ import { listTripChangeEvents } from "@/db/trip-change-events";
 import { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trips";
 import { diverContrastCopy } from "@/i18n/contrast-copy";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
+import { DIVER_DIVE_INTENT_KEYS } from "@/i18n/dive-intent-labels";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import {
   DIVER_CERTIFICATION_AGENCY_KEYS,
@@ -75,6 +76,7 @@ import { claimLinkPath } from "@/lib/booking-capabilities";
 import type { CarriedPreparation as CarriedPreparationItem } from "@/lib/carried-preparation";
 import { nowDate } from "@/lib/clock";
 import { perDiverBookingPriceCents } from "@/lib/courses";
+import { DIVE_INTENTS } from "@/lib/dive-intent";
 import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
 import {
   formatMoneyCents,
@@ -111,6 +113,7 @@ import {
   emailFreshReadinessLinkAction,
   payFromReady,
   saveCertificationFromReady,
+  saveDiveIntentFromReady,
   saveDiveRecencyFromReady,
   saveFitFromReady,
   saveHelpRequestFromReady,
@@ -1039,6 +1042,36 @@ function DayOfDetails({
         </Field>
         <SubmitButton pendingLabel={t("ready.savingLastDived")} className={saveButton}>
           {t("ready.saveLastDived")}
+        </SubmitButton>
+      </form>
+      {/* **The way back.** The booking form asks this and says "change it any
+          time from the link we send you" — this is that link, and it is also
+          where the divers who never saw a booking form get asked at all: a
+          party member, a walk-in a staffer seated. Its own save, like every
+          other question on this page, so answering it cannot blank a size set
+          last week (ADR 20260904-reef-all-the-way-down, D12). */}
+      <form
+        action={saveDiveIntentFromReady.bind(null, token)}
+        className="flex flex-col gap-3 py-5 sm:flex-row sm:items-end"
+      >
+        <Field label={t("ready.intentHeading")} htmlFor="dive-intent" className="flex-1">
+          <select
+            id="dive-intent"
+            name="diveIntent"
+            required
+            defaultValue={data.diveIntent ?? ""}
+            className={controlClass}
+          >
+            <option value="">{t("ready.intentChoose")}</option>
+            {DIVE_INTENTS.map((intent) => (
+              <option key={intent} value={intent}>
+                {t(DIVER_DIVE_INTENT_KEYS[intent])}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <SubmitButton pendingLabel={t("ready.savingIntent")} className={saveButton}>
+          {t("ready.saveIntent")}
         </SubmitButton>
       </form>
       {/* **The diver's own words.** Its own save (`saveNoteFromReady` writes

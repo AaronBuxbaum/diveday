@@ -1642,11 +1642,17 @@ export async function loadShopExportBundleInput(
             "status",
             "wants_nitrox",
             "conditions_briefed_at",
-            "group_preference",
+            // What the diver said this dive was for, and the one support they
+            // asked for when they said they were easing back (ADR
+            // 20260904-reef-all-the-way-down). Codes rather than words: an
+            // export is the shop's own database handed back, and the sentence a
+            // diver read was in whichever language they read it in.
+            "dive_intent",
+            "re_entry_ask",
             // The diver's own answer to "when did you last dive?" (ADR
             // 20260821-currency-is-what-catches-people). A statement they made
             // about themselves, on the seat they made it for — the same kind of
-            // record as `group_preference` beside it, and a shop moving its data
+            // record as `dive_intent` beside it, and a shop moving its data
             // elsewhere should not have to ask every returning diver again.
             "last_dived_band",
             // The party structure a shop booked (ADR 20260804-seat-claim-links).
@@ -1690,7 +1696,8 @@ export async function loadShopExportBundleInput(
               row.status,
               row.wantsNitrox,
               row.conditionsBriefedAt,
-              row.groupPreference,
+              row.diveIntent,
+              row.reEntryAsk,
               row.lastDivedBand,
               row.partyLeadBookingId,
               row.claimedAt,
@@ -3888,7 +3895,8 @@ export async function loadDiverExportBundleInput(
             "status",
             "wants_nitrox",
             "conditions_briefed_at",
-            "group_preference",
+            "dive_intent",
+            "re_entry_ask",
             "last_dived_band",
             "claimed_at",
             "payment_status",
@@ -3906,7 +3914,8 @@ export async function loadDiverExportBundleInput(
               row.status,
               row.wantsNitrox,
               row.conditionsBriefedAt,
-              row.groupPreference,
+              row.diveIntent,
+              row.reEntryAsk,
               row.lastDivedBand,
               row.claimedAt,
               payment?.status ?? "unpaid",

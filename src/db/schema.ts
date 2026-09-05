@@ -2191,6 +2191,41 @@ export const diveRecencyBand = pgEnum("dive_recency_band", [
   "never",
 ]);
 
+/**
+ * **What this dive is for, in the diver's own words** — one optional choice on
+ * the booking form (ADR 20260904-reef-all-the-way-down, D12/#1172).
+ *
+ * Five plain answers rather than a free-text box, because the crew reads a
+ * *count*: "4 came for an easygoing reef, 2 are getting comfortable again" is a
+ * sentence a divemaster can act on, and a paragraph per seat is not.
+ *
+ * **A soft cue, never a promise or a pairing rule.** Nothing here gates a
+ * booking, ranks a diver, or builds a buddy team; a shop that reads it and does
+ * nothing has lost nothing.
+ */
+export const diveIntent = pgEnum("dive_intent", [
+  "easing_back",
+  "small_life",
+  "a_wreck",
+  "skills",
+  "good_day",
+]);
+
+/**
+ * **The one support a diver easing back asked for** (ADR
+ * 20260904-reef-all-the-way-down, D18/#1178). Offered only to a diver who has
+ * just said they are getting comfortable again, and only when the departure is
+ * far enough out that the shop can still act on it.
+ *
+ * **None of these gates a booking**, and none of them is a warning: D18's
+ * boundary is support without shame and without a silent gate.
+ */
+export const reEntryAsk = pgEnum("re_entry_ask", [
+  "deck_word",
+  "easy_first_dive",
+  "refresher_course",
+]);
+
 export const bookings = pgTable(
   "bookings",
   {
@@ -2229,8 +2264,30 @@ export const bookings = pgTable(
      * not a refusal the software makes.
      */
     lastDivedBand: diveRecencyBand("last_dived_band"),
-    /** Optional, non-sensitive pace/interest note the diver shares for buddy grouping. */
-    groupPreference: text("group_preference"),
+    /**
+     * The diver's own answer to "what's this dive for?", asked on the booking
+     * form and changeable on `/ready` (ADR 20260904-reef-all-the-way-down,
+     * D12). Null is "not said" — a real state, never a default that reads as a
+     * claim.
+     *
+     * **On the booking rather than the person**, for the same reason
+     * `last_dived_band` above is: it is a fact with a date on it. What a diver
+     * came for in March says nothing about the trip they book in November, and
+     * a person-level column would quietly become that claim.
+     *
+     * **Gates nothing and names nobody.** The crew reads the departure's tally,
+     * not a row per seat.
+     */
+    diveIntent: diveIntent("dive_intent"),
+    /**
+     * The one support this diver asked for when they said they were easing back
+     * (ADR 20260904-reef-all-the-way-down, D18). Null is "asked for nothing",
+     * which is every booking that never saw the question.
+     *
+     * On the booking for the reason above, and **gates nothing**: it is a line
+     * the crew answers, never a blocker on a seat.
+     */
+    reEntryAsk: reEntryAsk("re_entry_ask"),
     /** Optional lodging / hotel pickup address or landmark provided by the diver on /ready. */
     hotelPickupLocation: text("hotel_pickup_location"),
     /** Optional staff-set pickup time for this booking (e.g., "07:15"). */

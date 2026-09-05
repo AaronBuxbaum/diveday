@@ -15,6 +15,7 @@ import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
+import { diveIntentTallyForTrip } from "@/db/dive-intent";
 import { listDiveSites, listSiteFieldGuides } from "@/db/dive-sites";
 import { listExecutedDives } from "@/db/executed-dives";
 import { getTripManifests } from "@/db/manifests";
@@ -22,6 +23,7 @@ import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import type { ExecutedDive } from "@/db/schema";
 import { listTripDives } from "@/db/trips";
+import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { fieldGuideCards, marineLifeCatalogCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
@@ -264,6 +266,7 @@ export default async function TripManifestPage({
     plannedDives,
     executedDives,
     liveDiveSites,
+    diveIntents,
   ] = await Promise.all([
     getTripManifests(db, shop.id, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
@@ -282,6 +285,8 @@ export default async function TripManifestPage({
     listTripDives(db, shop.id, tripId),
     listExecutedDives(db, shop.id, tripId),
     listDiveSites(db, shop.id),
+    // Codes and counts, never a row per seat (#1183's boundary).
+    diveIntentTallyForTrip(db, shop.id, tripId),
   ]);
   // Each live site's field guide, for the dive log's "one thing you saw"
   // picker (issue #1190). Read after the sites resolve because it is keyed by
@@ -755,6 +760,7 @@ export default async function TripManifestPage({
           themselves ride on each member's row where roll call can see them. */}
       <BuddyTeamsPanel
         defaultOpen={buddies === "open"}
+        intentLine={staffDiveIntentLine(t, diveIntents, locale)}
         buddyTeamsList={buddyTeamsList}
         diverOptions={diverOptions}
         crewOptions={crewOptions}

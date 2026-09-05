@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
   type CourseTemplateDiff,
   type CourseTemplateSnapshot,
@@ -10,6 +10,7 @@ import {
   parseCourseTemplateSnapshot,
 } from "@/lib/course-template-sync";
 import { type CourseContent, canonicalAgency } from "@/lib/courses";
+import { REFRESHER_TEMPLATE_SLUGS } from "@/lib/re-entry";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
 import { courseTemplateSnapshot, getCourseTemplate } from "./course-templates";
@@ -144,6 +145,35 @@ export async function hasActiveCourses(db: AppDb, shopId: string): Promise<boole
     .select({ id: courses.id })
     .from(courses)
     .where(and(eq(courses.shopId, shopId), eq(courses.isActive, true)))
+    .limit(1);
+  return rows.length > 0;
+}
+
+/**
+ * Whether this shop publishes a course a diver easing back could be pointed at
+ * (ADR 20260904-reef-all-the-way-down, D18/#1178).
+ *
+ * Recognised by the DiveDay template a shop copied, never by reading its prose:
+ * a shop that wrote its own refresher under its own name is simply not
+ * recognised, which costs the diver one of three offers and never produces a
+ * wrong answer (`isRefresherCourse`).
+ *
+ * It runs on the public booking page, so it asks the database for the existence
+ * of a row rather than reading the catalog and filtering it — the same rule
+ * {@link hasActiveCourses} above states. Never widen this into a list: nothing
+ * shows which course, and a list cannot stop at the first row.
+ */
+export async function hasActiveRefresherCourse(db: AppDb, shopId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: courses.id })
+    .from(courses)
+    .where(
+      and(
+        eq(courses.shopId, shopId),
+        eq(courses.isActive, true),
+        inArray(courses.sourceTemplateSlug, [...REFRESHER_TEMPLATE_SLUGS]),
+      ),
+    )
     .limit(1);
   return rows.length > 0;
 }
