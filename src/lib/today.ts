@@ -1094,6 +1094,11 @@ export function todaysBoatsAreClear(spine: DaySpine): boolean {
  * order, so a day that crosses two hundreds says the first of them and never
  * the second. That is the same restraint the coral budget puts on every other
  * moment: one, or none.
+ *
+ * **Divers, not seats**, which is what issue #1373 asks for and what the
+ * sentence means: a regular who dives every Saturday is one diver of the
+ * season, not thirty. Only a person nobody has seen this season moves the
+ * count, and only once, however many of today's boats they are on.
  */
 export type FactOfScale =
   | { kind: "first_boat"; seasonStart: SeasonStart }
@@ -1107,13 +1112,25 @@ export type FactOfScale =
 
 export function factOfScaleFor(input: {
   seasonStart: SeasonStart;
-  seatsBefore: number;
-  todaySeats: readonly { diverName: string; departureAt: Date }[];
+  diversBefore: number;
+  todaySeats: readonly {
+    personId: string;
+    diverName: string;
+    departureAt: Date;
+    seenEarlierThisSeason: boolean;
+  }[];
   firstBoatOfSeason: boolean;
 }): FactOfScale | null {
   if (input.firstBoatOfSeason) return { kind: "first_boat", seasonStart: input.seasonStart };
-  for (const [index, seat] of input.todaySeats.entries()) {
-    const running = input.seatsBefore + index + 1;
+  // Divers, not seats. A regular who dives every Saturday is one diver, and a
+  // diver on two of today's boats is still one — so a person already counted
+  // this season, today included, moves the count no further.
+  const countedToday = new Set<string>();
+  let running = input.diversBefore;
+  for (const seat of input.todaySeats) {
+    if (seat.seenEarlierThisSeason || countedToday.has(seat.personId)) continue;
+    countedToday.add(seat.personId);
+    running += 1;
     if (running % FACT_OF_SCALE_EVERY !== 0) continue;
     return {
       kind: "divers",

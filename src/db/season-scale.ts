@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, asc, countDistinct, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { shopDayBounds } from "@/lib/zoned";
 import { type DbExecutor, queryAll } from "./client";
 import { bookings, people, trips } from "./schema";
@@ -20,10 +20,21 @@ import { liveTrip } from "./trips-live";
  * seats.
  */
 export type SeasonScale = {
-  /** Seats this season that boarded before today's calendar day began. */
-  seatsBefore: number;
+  /**
+   * **Divers, not seats.** How many different people had already boarded this
+   * season before today's calendar day began. A regular who dives every
+   * Saturday is one diver, which is what "your 400th diver of the season"
+   * means to the shop saying it.
+   */
+  diversBefore: number;
   /** Today's seats in boarding order — the departure's clock, then the booking's. */
-  todaySeats: { diverName: string; departureAt: Date }[];
+  todaySeats: {
+    personId: string;
+    diverName: string;
+    departureAt: Date;
+    /** This person already boarded earlier this season, so they are not new. */
+    seenEarlierThisSeason: boolean;
+  }[];
   /** Today carries a departure and this season has had no earlier one. */
   firstBoatOfSeason: boolean;
 };
@@ -51,13 +62,30 @@ export async function seasonScale(
   const [before, today, earliest] = await queryAll(db, [
     () =>
       db
-        .select({ seats: count() })
+        .select({ divers: countDistinct(bookings.personId) })
         .from(bookings)
         .innerJoin(trips, eq(bookings.tripId, trips.id))
         .where(and(seatIsLive, gte(trips.startsAt, seasonStart), lt(trips.startsAt, from))),
     () =>
       db
-        .select({ diverName: people.fullName, departureAt: trips.startsAt })
+        .select({
+          personId: bookings.personId,
+          diverName: people.fullName,
+          departureAt: trips.startsAt,
+          // Answered per seat in SQL rather than by handing the domain layer a
+          // set of every person who has dived this season: the shop day is
+          // bounded, the season is not.
+          seenEarlierThisSeason: sql<boolean>`exists (
+            select 1 from ${bookings} as earlier
+            join ${trips} as earlier_trip on earlier_trip.id = earlier.trip_id
+            where earlier.person_id = ${bookings.personId}
+              and earlier.shop_id = ${shopId}
+              and earlier.status in ('booked', 'checked_in')
+              and earlier_trip.deleted_at is null
+              and earlier_trip.starts_at >= ${seasonStart}
+              and earlier_trip.starts_at < ${from}
+          )`,
+        })
         .from(bookings)
         .innerJoin(trips, eq(bookings.tripId, trips.id))
         .innerJoin(people, eq(bookings.personId, people.id))
@@ -83,7 +111,7 @@ export async function seasonScale(
 
   const first = earliest[0]?.startsAt ?? null;
   return {
-    seatsBefore: before[0]?.seats ?? 0,
+    diversBefore: before[0]?.divers ?? 0,
     todaySeats: today,
     // Today has a boat, and it is the season's first: the earliest departure of
     // the season is today's own. A season with no departure at all has no

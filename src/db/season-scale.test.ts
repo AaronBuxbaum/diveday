@@ -60,13 +60,13 @@ describe("seasonScale", () => {
   it("counts nothing for a shop with no departures", async () => {
     const { db, shopId } = await freshShop("season-empty");
     expect(await scale(db, shopId)).toEqual({
-      seatsBefore: 0,
+      diversBefore: 0,
       todaySeats: [],
       firstBoatOfSeason: false,
     });
   });
 
-  it("counts this season's earlier seats and leaves today's out of them", async () => {
+  it("counts this season's earlier divers and leaves today's out of them", async () => {
     const { db, shopId } = await freshShop("season-before");
     const earlier = await aDeparture(db, shopId, new Date("2026-06-10T14:00:00.000Z"));
     await aSeat(db, shopId, earlier.id, "Ada Lindqvist");
@@ -75,9 +75,13 @@ describe("seasonScale", () => {
     await aSeat(db, shopId, today.id, "Ben Okafor");
 
     const result = await scale(db, shopId);
-    expect(result.seatsBefore).toBe(2);
-    expect(result.todaySeats).toEqual([
-      { diverName: "Ben Okafor", departureAt: new Date("2026-07-21T15:00:00.000Z") },
+    expect(result.diversBefore).toBe(2);
+    expect(result.todaySeats).toMatchObject([
+      {
+        diverName: "Ben Okafor",
+        departureAt: new Date("2026-07-21T15:00:00.000Z"),
+        seenEarlierThisSeason: false,
+      },
     ]);
   });
 
@@ -88,7 +92,7 @@ describe("seasonScale", () => {
     await aSeat(db, shopId, earlier.id, "Hugo Marsh", "no_show");
     await aSeat(db, shopId, earlier.id, "Lina Costa");
 
-    expect((await scale(db, shopId)).seatsBefore).toBe(1);
+    expect((await scale(db, shopId)).diversBefore).toBe(1);
   });
 
   it("leaves out a departure the shop deleted", async () => {
@@ -98,7 +102,7 @@ describe("seasonScale", () => {
     await db.update(trips).set({ deletedAt: NOW });
 
     const result = await scale(db, shopId);
-    expect(result.seatsBefore).toBe(0);
+    expect(result.diversBefore).toBe(0);
     expect(result.firstBoatOfSeason).toBe(false);
   });
 
@@ -107,7 +111,7 @@ describe("seasonScale", () => {
     const lastYear = await aDeparture(db, shopId, new Date("2025-11-02T14:00:00.000Z"));
     await aSeat(db, shopId, lastYear.id, "Ada Lindqvist");
 
-    expect((await scale(db, shopId)).seatsBefore).toBe(0);
+    expect((await scale(db, shopId)).diversBefore).toBe(0);
   });
 
   it("reads today's seats in boarding order", async () => {
@@ -141,6 +145,27 @@ describe("seasonScale", () => {
     await aDeparture(db, shopId, new Date("2025-11-02T14:00:00.000Z"));
     await aDeparture(db, shopId, new Date("2026-07-21T15:00:00.000Z"));
     expect((await scale(db, shopId)).firstBoatOfSeason).toBe(true);
+  });
+
+  it("never reads another shop's departures or seats", async () => {
+    // The seeded fixture is a second shop with a full board, so every case in
+    // this file already runs against a database with somebody else's
+    // departures in it. This one says so on purpose: a neighbour's earlier
+    // season departure must not take this shop's first boat away, and a
+    // neighbour's divers must not count toward this shop's hundred.
+    const { db, shopId } = await freshShop("season-tenant-isolation");
+    const [neighbour] = await db
+      .insert(shops)
+      .values({ name: "Neighbour", slug: "season-neighbour", timezone: ZONE })
+      .returning();
+    if (!neighbour) throw new Error("neighbour insert failed");
+    const theirs = await aDeparture(db, neighbour.id, new Date("2026-06-10T14:00:00.000Z"));
+    await aSeat(db, neighbour.id, theirs.id, "Someone Else");
+    await aDeparture(db, shopId, new Date("2026-07-21T15:00:00.000Z"));
+
+    const result = await scale(db, shopId);
+    expect(result.firstBoatOfSeason).toBe(true);
+    expect(result.diversBefore).toBe(0);
   });
 
   it("says no first boat on a day with no departure at all", async () => {

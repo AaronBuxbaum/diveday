@@ -820,9 +820,11 @@ describe("todaysBoatsAreClear", () => {
 });
 
 describe("one fact of scale", () => {
-  const seat = (diverName: string, hour: number) => ({
+  const seat = (diverName: string, hour: number, seenEarlierThisSeason = false) => ({
+    personId: `p-${diverName}`,
     diverName,
     departureAt: new Date(`2026-07-21T${String(hour).padStart(2, "0")}:00:00.000Z`),
+    seenEarlierThisSeason,
   });
   const season = { month: 5, day: 1 };
 
@@ -830,7 +832,7 @@ describe("one fact of scale", () => {
     expect(
       factOfScaleFor({
         seasonStart: season,
-        seatsBefore: 42,
+        diversBefore: 42,
         todaySeats: [seat("Ada Lindqvist", 11), seat("Hugo Marsh", 17)],
         firstBoatOfSeason: false,
       }),
@@ -841,7 +843,7 @@ describe("one fact of scale", () => {
     expect(
       factOfScaleFor({
         seasonStart: season,
-        seatsBefore: 99,
+        diversBefore: 99,
         todaySeats: [],
         firstBoatOfSeason: false,
       }),
@@ -851,7 +853,7 @@ describe("one fact of scale", () => {
   it("names the seat that crosses the hundred, not the day's first", () => {
     const fact = factOfScaleFor({
       seasonStart: season,
-      seatsBefore: 98,
+      diversBefore: 98,
       todaySeats: [seat("Ada Lindqvist", 11), seat("Ben Okafor", 11), seat("Hugo Marsh", 17)],
       firstBoatOfSeason: false,
     });
@@ -867,7 +869,7 @@ describe("one fact of scale", () => {
   it("says the first hundred a day crosses and never the second", () => {
     const fact = factOfScaleFor({
       seasonStart: season,
-      seatsBefore: 99,
+      diversBefore: 99,
       todaySeats: Array.from({ length: 105 }, (_, i) => seat(`Diver ${i}`, 11)),
       firstBoatOfSeason: false,
     });
@@ -878,18 +880,52 @@ describe("one fact of scale", () => {
     expect(
       factOfScaleFor({
         seasonStart: season,
-        seatsBefore: 100,
+        diversBefore: 100,
         todaySeats: [seat("Ada Lindqvist", 11)],
         firstBoatOfSeason: false,
       }),
     ).toBeNull();
   });
 
+  it("counts a diver once, however many of today's boats they are on", () => {
+    const ada = seat("Ada Lindqvist", 11);
+    const fact = factOfScaleFor({
+      seasonStart: season,
+      diversBefore: 99,
+      todaySeats: [ada, { ...ada, departureAt: new Date("2026-07-21T17:00:00.000Z") }],
+      firstBoatOfSeason: false,
+    });
+    // The second seat is the same person, so it never reaches 101 — and the
+    // 100th is the first one.
+    expect(fact).toMatchObject({ kind: "divers", count: 100, diverName: "Ada Lindqvist" });
+  });
+
+  it("does not count a diver who already dived this season", () => {
+    expect(
+      factOfScaleFor({
+        seasonStart: season,
+        diversBefore: 99,
+        todaySeats: [seat("Ada Lindqvist", 11, true)],
+        firstBoatOfSeason: false,
+      }),
+    ).toBeNull();
+  });
+
+  it("names the first diver who is new, past the regulars ahead of them", () => {
+    const fact = factOfScaleFor({
+      seasonStart: season,
+      diversBefore: 99,
+      todaySeats: [seat("Ada Lindqvist", 11, true), seat("Ben Okafor", 11), seat("Hugo Marsh", 17)],
+      firstBoatOfSeason: false,
+    });
+    expect(fact).toMatchObject({ kind: "divers", count: 100, diverName: "Ben Okafor" });
+  });
+
   it("lets the season's first boat outrank its hundredth diver", () => {
     expect(
       factOfScaleFor({
         seasonStart: season,
-        seatsBefore: 99,
+        diversBefore: 99,
         todaySeats: [seat("Ben Okafor", 11)],
         firstBoatOfSeason: true,
       }),
