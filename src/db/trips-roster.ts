@@ -33,6 +33,15 @@ export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: s
  * `bookings` carries its own `shop_id` (CR-007) — filtered directly rather
  * than joined through `trips`, so this can never be called safely with only
  * a trip UUID for the wrong shop.
+ *
+ * **Ordered by seat time, then by id, and the id is not decoration.**
+ * `created_at` alone was never a total order: Postgres stamps a whole seeding
+ * transaction with one instant, so every seeded diver on a departure already
+ * shared it and this list's order fell out of whatever the heap returned. Since
+ * `createBooking` stamps the application clock — frozen under the e2e harness —
+ * a diver booked mid-spec joins that tie as well. A roster is read at the rail;
+ * it does not get to be nondeterministic. `export.ts`, `seat-claims.ts` and
+ * `season-scale.ts` break the same tie the same way.
  */
 export async function getTripRoster(db: AppDb, shopId: string, tripId: string) {
   return db
@@ -46,14 +55,6 @@ export async function getTripRoster(db: AppDb, shopId: string, tripId: string) {
         ne(bookings.status, "cancelled"),
       ),
     )
-    // The id breaks the tie, as it already does in `export.ts`, `seat-claims.ts`
-    // and `season-scale.ts`. `created_at` alone was never a total order —
-    // Postgres stamps a whole seeding transaction with one instant, so every
-    // seeded diver on a departure already shared it and the roster's order fell
-    // out of whatever the heap returned. Now that `createBooking` stamps the
-    // application clock (frozen under the harness), a diver booked mid-spec
-    // joins that tie too. A roster is read at the rail; it does not get to be
-    // nondeterministic.
     .orderBy(asc(bookings.createdAt), asc(bookings.id));
 }
 
