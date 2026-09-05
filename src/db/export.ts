@@ -65,6 +65,7 @@ import {
   preDepartureChecklistItems,
   priorVisits,
   recapPhotos,
+  recapPulses,
   rentalFitProfiles,
   reviewModerationEvents,
   rollCallCrewEvents,
@@ -254,6 +255,24 @@ export async function loadShopExportBundleInput(
         .innerJoin(people, eq(people.id, tripReviews.personId))
         .where(eq(tripReviews.shopId, shopId))
         .orderBy(asc(tripReviews.createdAt), asc(tripReviews.id));
+
+      // The diver's private word to this shop about the day (ADR
+      // 20260904-reef-all-the-way-down, D40). Not a review — it is never
+      // published — but the same class of record: the diver's own account,
+      // tied to their seat, which the shop already reads on its Reviews page.
+      // A shop handed its data back gets the feedback it acted on.
+      const recapPulseRows = await tx
+        .select({ pulse: recapPulses, diverName: people.fullName })
+        .from(recapPulses)
+        // The tenant is named here rather than inferred. It does hold without
+        // this — `recapPulses.personId` is copied off `bookings.personId`, and
+        // `createBookingRecord` only ever resolves a person inside its own shop
+        // — but that invariant lives three files away, and the sibling
+        // `trip_recap_photos` join states its own. Costs nothing; makes the
+        // condition greppable in the query that depends on it.
+        .innerJoin(people, and(eq(people.id, recapPulses.personId), eq(people.shopId, shopId)))
+        .where(eq(recapPulses.shopId, shopId))
+        .orderBy(asc(recapPulses.createdAt), asc(recapPulses.id));
 
       const promoCodeRows = await tx
         .select()
@@ -1758,8 +1777,12 @@ export async function loadShopExportBundleInput(
             // as `last_dived_band` above — and a shop that moved its data would
             // otherwise be asking every one of them again.
             "welcome_shared_at",
-            // The diver answered "anything changed?" for this seat. A statement
-            // they made on the day, the same kind of record as the two above.
+            // The diver answering "nothing has changed" about the sizes, gas
+            // and emergency contact the shop already holds (ADR
+            // 20260904-reef-all-the-way-down, D15). Same class as the two
+            // columns above: a statement they made about themselves on this
+            // seat, and a shop that moved its data would otherwise ask the
+            // whole board the question over again.
             "carried_facts_confirmed_at",
             // The instructor's own words to this student, and who wrote them
             // (issues #1196, #1205). The student read it on their recap; a
@@ -2446,13 +2469,17 @@ export async function loadShopExportBundleInput(
             // attribution is a rumour.
             "needs_staff_fit_by",
             "needs_staff_fit_by_name",
-            // When a staffer last confirmed this fit at the counter, on which
-            // piece, and who did it — the same id + name pair the flag above
-            // uses, for the same reason.
+            // A staffer keeping the size a unit actually came back in (issue
+            // #1174). Carried for the same reason the flag above it is, and
+            // with the same id + name pair: the diver's own thread reads this
+            // back as "Keiko kept your BCD at M", so a bundle without the
+            // attribution would restore a sentence with nobody in it. The
+            // item says which piece, which is what stops the sentence naming
+            // the wrong one.
             "fit_confirmed_at",
-            "fit_confirmed_item",
             "fit_confirmed_by",
             "fit_confirmed_by_name",
+            "fit_confirmed_item",
             "updated_at",
           ],
           rows: rentalFitRows.map((row) => [
@@ -2476,9 +2503,9 @@ export async function loadShopExportBundleInput(
             row.needsStaffFitBy,
             row.needsStaffFitBy ? personName.get(row.needsStaffFitBy) : null,
             row.fitConfirmedAt,
-            row.fitConfirmedItem,
             row.fitConfirmedBy,
             row.fitConfirmedBy ? personName.get(row.fitConfirmedBy) : null,
+            row.fitConfirmedItem,
             row.updatedAt,
           ]),
           note: EXPORT_FILE_NOTES["rental_fit.csv"],
@@ -3192,6 +3219,42 @@ export async function loadShopExportBundleInput(
             review.updatedAt,
           ]),
           note: EXPORT_FILE_NOTES["trip_reviews.csv"],
+        },
+        {
+          file: "recap_pulses.csv",
+          header: [
+            "id",
+            "booking_id",
+            "trip_id",
+            "person_id",
+            "diver_name",
+            // Codes, not sentences — `recap_pulse_category`. The words are
+            // DiveDay's copy in the reader's language, and a CSV has no reader
+            // to resolve them for, so the slug is the durable fact. Same call
+            // `observed_species_slug` makes.
+            "categories",
+            "note",
+            "addressed_at",
+            "addressed_by_person_id",
+            "deleted_at",
+            "created_at",
+            "updated_at",
+          ],
+          rows: recapPulseRows.map(({ pulse, diverName }) => [
+            pulse.id,
+            pulse.bookingId,
+            pulse.tripId,
+            pulse.personId,
+            diverName,
+            JSON.stringify(pulse.categories),
+            pulse.note,
+            pulse.addressedAt,
+            pulse.addressedByPersonId,
+            pulse.deletedAt,
+            pulse.createdAt,
+            pulse.updatedAt,
+          ]),
+          note: EXPORT_FILE_NOTES["recap_pulses.csv"],
         },
         {
           file: "review_moderation_events.csv",
@@ -4873,6 +4936,9 @@ export async function loadShopExportCounts(
     ),
     "trip_reviews.csv": await countOf(
       db.select({ n: count() }).from(tripReviews).where(eq(tripReviews.shopId, shopId)),
+    ),
+    "recap_pulses.csv": await countOf(
+      db.select({ n: count() }).from(recapPulses).where(eq(recapPulses.shopId, shopId)),
     ),
     "review_moderation_events.csv": await countOf(
       db

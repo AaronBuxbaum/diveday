@@ -148,7 +148,23 @@ export type RecapPageData = {
     certification: { level: CertificationLevel; issuedAt: Date } | null;
   } | null;
   trip: {
+    /**
+     * **Server-side only, and it must stay that way.** The next-dive card's
+     * candidate filter needs the departure that just sailed so it never offers
+     * it back (`nextDiveForBooking`), and the pulse's booking scope needs
+     * nothing else. Neither this nor `courseId` nor `personId` below may reach
+     * `AfterStateProps`: this page is reached by a bearer URL, and the props are
+     * client-visible — so `buildAfterStateProps` names every prop it passes
+     * explicitly rather than spreading `data` into the object.
+     */
+    id: string;
     title: string;
+    /**
+     * The course row's own id, for the next dive's `course_next_session` rule.
+     * Server-side only. The course's *title* is not here: it belongs to the
+     * `course` block above, which the recap's own course beat reads.
+     */
+    courseId: string | null;
     startsAt: Date;
     endsAt: Date;
     plannedDives: number;
@@ -192,6 +208,11 @@ export type RecapPageData = {
   observedSpecies: string[];
   /** The booking this recap belongs to — the scope an uploaded photo attaches to. */
   bookingId: string;
+  /**
+   * Whose day this was. **Server-side only** — see `trip.id` above: it is read
+   * by the next dive's admission filter and by nothing that renders.
+   */
+  personId: string;
   /** A short crew-authored note for this trip, or null when the crew wrote none. */
   shoutout: string | null;
   /** The diver's own uploaded photos, newest first. */
@@ -597,7 +618,9 @@ export async function getRecapPageData(
         }
       : null,
     trip: {
+      id: row.tripId,
       title: trip.title,
+      courseId: trip.courseId,
       startsAt: trip.startsAt,
       endsAt: trip.endsAt,
       plannedDives: trip.plannedDives,
@@ -613,6 +636,7 @@ export async function getRecapPageData(
     fieldGuide,
     observedSpecies,
     bookingId,
+    personId: row.personId,
     shoutout: trip.recapShoutout,
     photos,
     // A phone-only diver (a supported case — their recap can go out by SMS

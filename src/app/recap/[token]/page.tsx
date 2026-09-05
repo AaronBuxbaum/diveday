@@ -15,7 +15,12 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { openGraphSite } from "@/lib/site-metadata";
-import { startTipAction, submitReviewAction, uploadRecapPhotoAction } from "./actions";
+import {
+  startTipAction,
+  submitRecapPulseAction,
+  submitReviewAction,
+  uploadRecapPhotoAction,
+} from "./actions";
 
 export async function generateMetadata({
   params,
@@ -84,7 +89,7 @@ export const instant = true;
  * capability (`recap-links.ts` domain-separates the two on purpose), so there
  * is no `/ready` URL to send this reader to. The two tokens render one
  * surface instead, which is what keeps every recap email already in the world
- * working — and why the three recap actions keep their signatures and their
+ * working — and why the four recap actions keep their signatures and their
  * `/recap/<token>` redirects.
  *
  * The `opengraph-image` beside this file stays for the same reason: this URL
@@ -95,11 +100,11 @@ export default async function DiveRecapPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ photo?: string; tip?: string; review?: string }>;
+  searchParams: Promise<{ photo?: string; tip?: string; review?: string; pulse?: string }>;
 }) {
   await connection();
   const { token } = await params;
-  const { photo, tip, review } = await searchParams;
+  const { photo, tip, review, pulse } = await searchParams;
   // A dead link resolves no shop, so there is no `shops.default_locale` to fall
   // back to — negotiate from the visitor's own device alone for those branches.
   const anonT = diverTranslator(await requestLocale());
@@ -203,11 +208,12 @@ export default async function DiveRecapPage({
     bookingId,
     locale,
     t,
-    params: { review, photo, tip },
+    params: { review, photo, tip, pulse },
     actions: {
       submitReview: submitReviewAction.bind(null, token),
       uploadPhoto: uploadRecapPhotoAction.bind(null, token),
       startTip: startTipAction.bind(null, token),
+      submitPulse: submitRecapPulseAction.bind(null, token),
     },
   });
 

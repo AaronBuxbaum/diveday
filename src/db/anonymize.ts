@@ -92,6 +92,7 @@ import {
   personRoles,
   priorVisits,
   recapPhotos,
+  recapPulses,
   rentalFitProfiles,
   rollCallCrewEvents,
   rollCallEvents,
@@ -984,6 +985,31 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
     .update(tripReviews)
     .set({ comment: null, isPublished: false, publishedAt: null, isStandout: false })
     .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.personId, personId)));
+
+  // --- the private word ----------------------------------------------------
+  // A pulse is free text a diver typed on their phone about their day (ADR
+  // 20260904-reef-all-the-way-down, D40). Nothing bounds it to "the gear was
+  // bad": it is whatever they wanted this shop to know, under their name.
+  //
+  // The note goes and the row stays, which is the same call the review above
+  // makes and for the same reason — the shop's record that it received and
+  // settled a piece of feedback is operational, the words are the diver's. A
+  // withdrawn pulse is scrubbed too: `deleted_at` is the diver taking it back,
+  // not an erasure, and the text was still on file.
+  //
+  // Missed when this table shipped, and found by a `security-reviewer` pass
+  // rather than by anything mechanical: nothing enumerates the person-scoped
+  // tables, so the next one can be forgotten the same way.
+  await tx
+    .update(recapPulses)
+    .set({ note: null })
+    .where(
+      and(
+        eq(recapPulses.shopId, shopId),
+        eq(recapPulses.personId, personId),
+        isNotNull(recapPulses.note),
+      ),
+    );
 
   // --- imported history ----------------------------------------------------
   // The count of visits is the shop's own history; every label on them came out

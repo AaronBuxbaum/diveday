@@ -458,6 +458,15 @@ export const RATE_LIMITS = {
   /** Reviews, per IP — catches one visitor spraying many guessed recap tokens. */
   reviewSubmitByIp: perHour(30),
   /**
+   * Leaving, revising or withdrawing a private pulse, per recap token. Sized
+   * like the review beside it and for the same reason: the partial unique index
+   * already caps a diver at one live row, so this bounds the write rate rather
+   * than the number of things they may say.
+   */
+  recapPulseByToken: perHour(10),
+  /** Pulses, per IP — the same brute-force-the-token throttle the review has. */
+  recapPulseByIp: perHour(30),
+  /**
    * Self-cancelling a booking from the readiness link, per IP. Tighter than
    * the general `capabilityAction` bucket (60/hr) — this is an irreversible,
    * money-moving action, not a form save, so a burst of attempts is a signal

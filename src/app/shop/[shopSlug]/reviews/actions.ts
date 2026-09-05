@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
+import { markRecapPulseAddressed } from "@/db/recap-pulses";
 import {
   REVIEW_MODERATION_REASONS,
   type ReviewModerationReason,
@@ -9,8 +11,9 @@ import {
   setReviewStandout,
   setReviewsPublished,
 } from "@/db/reviews";
+import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
-import { shopPath } from "@/lib/staff-notices";
+import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { isUuid } from "@/lib/uuid";
 
 /* -------------------------------------------------------------------------- *
@@ -170,4 +173,34 @@ export async function publishReviewsAction(
   if (published === 0) return { ok: false };
   revalidatePath(reviews);
   return { ok: true, published };
+}
+
+/**
+ * **A staffer says one private pulse is dealt with** (D40, issue #1200).
+ *
+ * The one act on this page that still redirects, and deliberately. Every other
+ * control here settles in place because it moves a row between three long
+ * lists a staffer is working down, and a bounce to the top of that queue costs
+ * them their place. The pulse panel is different in both halves: it sits above
+ * everything, and marking the last open item clears the whole block away — so
+ * without a sentence the page simply goes quiet on somebody who just acted on
+ * a person's complaint. The redirect lands where the panel was.
+ *
+ * Shop comes from the session and is re-checked inside `markRecapPulseAddressed`,
+ * so a form replayed against another shop's pulse id changes nothing (CR-007).
+ */
+export async function markPulseAddressedAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const reviews = shopPath(session.user.shopSlug, "reviews");
+  const pulseId = String(formData.get("pulseId") ?? "");
+  const marked = await markRecapPulseAddressed(
+    await getDb(),
+    session.user.shopId,
+    pulseId,
+    session.user.personId,
+  );
+  // `noticeUrl`, never a hand-built string: it escapes the value and normalises
+  // the code to kebab (src/lib/staff-notices.ts).
+  if (!marked) redirect(noticeUrl(reviews, "error"));
+  revalidateAndRedirect(reviews, noticeUrl(reviews, "pulse-addressed"));
 }

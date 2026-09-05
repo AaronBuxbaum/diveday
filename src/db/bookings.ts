@@ -19,6 +19,7 @@ import {
 } from "@/lib/trip-admission";
 import { hasSailed } from "@/lib/trips";
 import { revokeBookingCapabilities } from "./booking-capabilities";
+import { readCertificationEvidence } from "./certification-evidence";
 import { type AppDb, type DbExecutor, queryAll } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./dive-packages";
@@ -32,11 +33,9 @@ import {
   bookings,
   certifications,
   courses,
-  nitroxCertifications,
   people,
   personRoles,
   shops,
-  specialtyCertifications,
   tripAssignments,
   trips,
 } from "./schema";
@@ -447,50 +446,6 @@ const NO_EVIDENCE: TripAdmissionEvidence = {
   nitroxCertifications: [],
 };
 
-/** One diver's live cert evidence at this shop — the same rows readiness reads. */
-async function readCertificationEvidence(tx: DbExecutor, shopId: string, personId: string) {
-  const [certificationRows, specialtyRows, nitroxRows] = await queryAll(tx, [
-    () =>
-      tx
-        .select()
-        .from(certifications)
-        .where(
-          and(
-            eq(certifications.shopId, shopId),
-            eq(certifications.personId, personId),
-            isNull(certifications.deletedAt),
-          ),
-        ),
-    () =>
-      tx
-        .select()
-        .from(specialtyCertifications)
-        .where(
-          and(
-            eq(specialtyCertifications.shopId, shopId),
-            eq(specialtyCertifications.personId, personId),
-            isNull(specialtyCertifications.deletedAt),
-          ),
-        ),
-    () =>
-      tx
-        .select()
-        .from(nitroxCertifications)
-        .where(
-          and(
-            eq(nitroxCertifications.shopId, shopId),
-            eq(nitroxCertifications.personId, personId),
-            isNull(nitroxCertifications.deletedAt),
-          ),
-        ),
-  ]);
-  return {
-    certifications: certificationRows,
-    specialtyCertifications: specialtyRows,
-    nitroxCertifications: nitroxRows,
-  };
-}
-
 async function settlePackageCoverage(
   tx: DbExecutor,
   input: {
@@ -865,6 +820,26 @@ async function createBookingRecord(
       reEntryAsk: req.reEntryAsk ?? null,
       identityUnconfirmedAt: identityUnconfirmed ? nowDate() : null,
       referralSource: partnerReferralSlug(req.referralSource),
+      // **Stamped by the application clock, not the column's `defaultNow()`.**
+      //
+      // `defaultNow()` is Postgres' clock, which `DIVEDAY_CLOCK` does not
+      // reach — `src/test/db.ts`'s `dbNow` docblock is the long version. That
+      // was harmless while nothing compared this column against an
+      // app-stamped one; the diver's thread now does, asking whether
+      // `rental_fit_profiles.fit_stated_at` predates this booking to decide
+      // whether a diver is returning.
+      //
+      // A comparison that straddles the two clocks "compares a frozen instant
+      // against a live one, and the row is selected only while the two happen
+      // to fall in the right order" — and under the e2e harness the frozen
+      // instant sits weeks behind the wall clock, so *every* fit looked like
+      // last season's and every diver looked like a returning one. Both sides
+      // of that comparison now come from the same clock.
+      //
+      // Production is unchanged: with no override the app clock is the live
+      // one, so this is the same instant `defaultNow()` would have written,
+      // give or take the round trip.
+      createdAt: nowDate(),
     })
     .returning();
   if (!created) throw new Error("createBooking: booking insert returned no row");

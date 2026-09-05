@@ -12,6 +12,7 @@ import {
 import { buildAfterStateProps } from "@/app/ready/[token]/_lib/after-state-data";
 import {
   startTipAction,
+  submitRecapPulseAction,
   submitReviewAction,
   uploadRecapPhotoAction,
 } from "@/app/recap/[token]/actions";
@@ -1656,6 +1657,7 @@ export default async function DiverReadinessPage({
         submitReview: submitReviewAction.bind(null, recapToken),
         uploadPhoto: uploadRecapPhotoAction.bind(null, recapToken),
         startTip: startTipAction.bind(null, recapToken),
+        submitPulse: submitRecapPulseAction.bind(null, recapToken),
       },
     });
     return (
@@ -1865,6 +1867,17 @@ export default async function DiverReadinessPage({
    * their sizes, and the step would appear mid-thread asking whether the thing
    * they had just typed had changed. A staff edit made after the booking leaves
    * the ordinary gear row instead — rarer than the naive test, and never wrong.
+   *
+   * **Both sides must come from the same clock, and that is not free.**
+   * `fit_stated_at` is written through `nowDate()`; `bookings.created_at` was
+   * a `defaultNow()` column, which Postgres stamps and `DIVEDAY_CLOCK` cannot
+   * reach. Straddling the two made this "compare a frozen instant against a
+   * live one" (`dbNow`'s docblock in `src/test/db.ts`), and since the frozen
+   * instant sits weeks behind the wall clock under the e2e harness, every fit
+   * read as last season's and every diver as a returning one — the gear step
+   * vanished fleet-wide. `createBooking` now stamps `created_at` from the
+   * application clock for that reason; do not put a `defaultNow()` column on
+   * either side of this again.
    */
   const carriedFacts =
     data.rentalFit?.fitStatedAt != null && data.rentalFit.fitStatedAt < data.bookingCreatedAt;

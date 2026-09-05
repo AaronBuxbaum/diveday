@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { addRecapPhoto, canAddRecapPhoto, MAX_RECAP_PHOTOS_PER_BOOKING } from "@/db/recap";
+import { parseRecapPulseCategories, submitRecapPulse } from "@/db/recap-pulses";
 import { submitTripReview } from "@/db/reviews";
 import { getTipCurrencyForBooking, startTipCheckout, tipBoundsCents } from "@/db/tips";
 import { diverTranslator } from "@/i18n/messages";
@@ -254,4 +255,76 @@ export async function submitReviewAction(token: string, formData: FormData) {
   if (!outcome?.ok) redirect(`${back}?review=error`);
 
   revalidateAndRedirect(back, `${back}?review=${outcome.published ? "published" : "pending"}`);
+}
+
+/**
+ * **A diver tells the shop, and only the shop, what to fix** (D40, issue
+ * #1200).
+ *
+ * Same authorization shape as the review above and for the same reasons: the
+ * signed recap token is the only credential, it resolves to a booking, and
+ * `submitRecapPulse` derives shop, trip and person from that row rather than
+ * accepting any of them from the form. A crafted post naming another shop's
+ * trip changes nothing, because nothing in the form is read as identity.
+ *
+ * Rate-limited by IP **before** the token is verified, so this throttles
+ * brute-force token guessing rather than only abuse of a known-good link
+ * (CR-013), then per booking.
+ *
+ * An empty `category` list is the withdrawal — the "Take it back" control posts
+ * a form with no checkboxes in it at all (`RecapPulse`), which is why there is
+ * no separate intent field to forge.
+ */
+export async function submitRecapPulseAction(token: string, formData: FormData) {
+  const back = `/recap/${token}`;
+  const ip = await clientIp();
+  if (
+    !(await checkRateLimit(rateLimitKey("recap-pulse-ip", ip), RATE_LIMITS.recapPulseByIp)).allowed
+  ) {
+    redirect(`${back}?pulse=error`);
+  }
+  const bookingId = verifyRecapToken(token);
+  if (!bookingId) redirect(`${back}?pulse=error`);
+  if (
+    !(
+      await checkRateLimit(
+        rateLimitKey("recap-pulse-booking", bookingId),
+        RATE_LIMITS.recapPulseByToken,
+      )
+    ).allowed
+  ) {
+    redirect(`${back}?pulse=error`);
+  }
+
+  // Narrowed against the enum here and again in the writer; anything else the
+  // form carries is dropped rather than refused, so a stale tab posting a
+  // retired code still saves the codes it got right.
+  const categories = parseRecapPulseCategories(formData.getAll("category"));
+
+  // Same first-hand signal the review and the photo upload record (docs ADR
+  // 20260731-per-person-notification-locale) — this diver, their own device,
+  // their own link.
+  await recordDiverOwnLocaleForBooking(await getDb(), {
+    bookingId,
+    locale: await requestFirstHandLocale(),
+  });
+
+  const outcome = await submitRecapPulse(await getDb(), {
+    bookingId,
+    categories,
+    // `String`, so a crafted multipart part cannot arrive as a File — the
+    // writer trims and caps it, and stores null rather than an empty string.
+    note: String(formData.get("note") ?? ""),
+  }).catch(() => null);
+  // Each refusal keeps its own word. "That didn't send, try again" is a lie
+  // when the booking never sailed or when nothing was chosen, and both would
+  // send the diver round a loop that cannot succeed (task 56's rule).
+  if (outcome?.ok === false) {
+    const code =
+      outcome.reason === "did_not_dive" || outcome.reason === "empty" ? outcome.reason : "error";
+    redirect(`${back}?pulse=${code}`);
+  }
+  if (!outcome?.ok) redirect(`${back}?pulse=error`);
+
+  revalidateAndRedirect(back, `${back}?pulse=${outcome.withdrawn ? "withdrawn" : "saved"}`);
 }

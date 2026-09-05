@@ -2002,6 +2002,15 @@ for (const scheme of ["light", "dark"] as const) {
        * welcome-home greeting, the one dive record, the crew's word, the single
        * review ask, and the run of quiet doors at rest.
        *
+       * Slice 16i added three things inside that same frame and they are the
+       * reason this baseline moves: the record's face says "Dive day № 3"
+       * rather than a clause naming the shop (H-67 c), the record's footer
+       * carries the dashed private line and Save as image (D33 issue #1193,
+       * issue #1081), and the private pulse and the one next-dive card sit
+       * below the review (D40 issue #1200, D35 issue #1195). The two sibling
+       * recap captures below render the same component and move for the same
+       * reasons; none of the three is filtered to hide it.
+       *
        * Two pieces of setup it cannot render without. The review section (docs
        * ADR 20260726-post-trip-review-request) needs the shop's review link
        * set, done on a disposable staff context (the CR-019 pattern) so the
@@ -4924,6 +4933,30 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("region", { name: /^Waiting on you/ }).waitFor();
         await page.getByRole("region", { name: /^Published/ }).waitFor();
         await capture(page, "staff-reviews", scheme);
+      });
+
+      /**
+       * **The panel that only exists when something has gone wrong** (D40,
+       * issue #1200) — the class AGENTS.md says is photographed through a
+       * test-only seed route rather than by seeding the failure into the demo
+       * shop. `POST /api/test/seed-recap-pulse` files one open pulse against
+       * the pinned recap booking, which is the only way this block renders at
+       * all: with nothing to fix it draws nothing, and blue-mantis must not
+       * ship a standing complaint about its own rental gear.
+       *
+       * It sits above the ledger, so waiting on its heading is also what proves
+       * the page below it did not shift under a block that arrived late.
+       */
+      test(`the reviews page shows what divers asked the shop to fix (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        await request.post("/api/test/seed-recap-pulse");
+        await page.goto("/shop/blue-mantis/reviews");
+        await page.getByRole("heading", { level: 1, name: "What divers said" }).waitFor();
+        await page.getByRole("heading", { name: "Asked us to fix" }).waitFor();
+        await page.getByRole("region", { name: /^Published/ }).waitFor();
+        await capture(page, "staff-reviews-pulse", scheme);
       });
 
       test(`the public reviews archive renders true to the design (${scheme})`, async ({
