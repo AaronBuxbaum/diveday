@@ -703,5 +703,18 @@
     "divesWith": "Dives with {name}",
     "divesWithOnDeparture": "Dives with {name}, on this departure",
     "divesWithNotOnDeparture": "Dives with {name}, not booked on this departure"
+  },
+  "diveIntent": {
+    "aboardToday": "Aboard today: {list}",
+    "easingBack": "{count} getting comfortable again",
+    "smallLife": "{count} looking for small life",
+    "aWreck": "{count} hoping for a wreck",
+    "skills": "{count} practising skills",
+    "goodDay": "{count} out for a good day"
+  },
+  "reEntry": {
+    "deckWord": "Asked for a word with the divemaster.",
+    "easyFirstDive": "Asked for an easy first dive.",
+    "refresherCourse": "Asked about the refresher course."
   }
 }

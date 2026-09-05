@@ -175,10 +175,14 @@ test.describe("staff-prepared trip", () => {
     // 20260821-currency-is-what-catches-people). It gates nothing, so what is
     // worth proving is that the answer round-trips and the row settles.
     await openThreadStep(page, "dayof");
-    await page
+    const currencyForm = page.locator("form").filter({ hasText: "When did you last dive?" });
+    await currencyForm
       .getByLabel("When did you last dive?")
       .selectOption({ label: "More than five years ago" });
-    await page.getByRole("button", { name: "Save", exact: true }).click();
+    // Scoped to its own form: the page now also carries "What's this dive for?",
+    // whose Save is the same word on the same page. Two questions, two forms,
+    // and this one is about currency.
+    await currencyForm.getByRole("button", { name: "Save", exact: true }).click();
     await expect(
       page.getByRole("status").filter({ hasText: "Thanks. The crew will see that" }),
     ).toBeVisible();

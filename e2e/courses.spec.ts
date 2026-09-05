@@ -26,7 +26,12 @@ test("an uncertified visitor can enroll in an instructor-staffed Discover Scuba 
   // The course session line links out to the course page (a crawlable
   // inbound link for SEO), mirroring the link the schedule list already
   // carries — never just a bare name.
-  const courseLink = page.getByRole("link", { name: "Discover Scuba Diving" });
+  // `exact` because the page now also carries "Also on the schedule", whose
+  // ledger rows are overlay links labelled with the departure's own title —
+  // and "Discover Scuba Diving — afternoon" contains this name. Two different
+  // links, one a course and one a departure; this assertion is about the
+  // course, so it names it exactly rather than by prefix.
+  const courseLink = page.getByRole("link", { name: "Discover Scuba Diving", exact: true });
   await expect(courseLink).toHaveAttribute("href", /\/courses\//);
   await expect(courseLink).toHaveAttribute("href", "/s/blue-mantis/courses/discover-scuba-diving");
   await expect(page.getByRole("link", { name: "Add to calendar" })).toBeVisible();

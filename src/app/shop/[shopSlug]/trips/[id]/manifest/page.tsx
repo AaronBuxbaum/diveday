@@ -15,6 +15,7 @@ import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
+import { diveIntentTallyForTrip } from "@/db/dive-intent";
 import { listDiveSites, listSiteFieldGuides } from "@/db/dive-sites";
 import { listExecutedDives } from "@/db/executed-dives";
 import { getTripManifests } from "@/db/manifests";
@@ -23,6 +24,7 @@ import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-de
 import type { ExecutedDive } from "@/db/schema";
 import { latestTripStage } from "@/db/trip-stages";
 import { listTripDives } from "@/db/trips";
+import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { fieldGuideCards, marineLifeCatalogCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
@@ -268,6 +270,7 @@ export default async function TripManifestPage({
     plannedDives,
     executedDives,
     liveDiveSites,
+    diveIntents,
     stage,
   ] = await Promise.all([
     getTripManifests(db, shop.id, tripId),
@@ -287,6 +290,8 @@ export default async function TripManifestPage({
     listTripDives(db, shop.id, tripId),
     listExecutedDives(db, shop.id, tripId),
     listDiveSites(db, shop.id),
+    // Codes and counts, never a row per seat (#1183's boundary).
+    diveIntentTallyForTrip(db, shop.id, tripId),
     // The newest word the crew tapped, whatever its age: the strip shows the
     // crew their own last answer even on a boat that is hours overdue. The
     // staleness rule belongs to what a *diver* reads, not to the control.
@@ -791,6 +796,7 @@ export default async function TripManifestPage({
           themselves ride on each member's row where roll call can see them. */}
       <BuddyTeamsPanel
         defaultOpen={buddies === "open"}
+        intentLine={staffDiveIntentLine(t, diveIntents, locale)}
         buddyTeamsList={buddyTeamsList}
         diverOptions={diverOptions}
         crewOptions={crewOptions}

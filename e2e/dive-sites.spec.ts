@@ -89,6 +89,10 @@ test.describe("staff", () => {
     // briefing" above. This is the assertion that matters in this spec: a shop
     // writes a site's briefing once and every departure at that site carries it
     // (ADR 20260813-dive-site-briefings-are-the-shops-own-words).
+    // The shop's site prose moved behind the pitch's one door (ADR
+    // 20260904-reef-all-the-way-down, decision 1). Nothing is deleted, so the
+    // assertion stands exactly as it was — it just opens the door first.
+    await page.getByRole("heading", { name: "The rest of the briefing" }).click();
     await expect(page.getByText("Green turtles · spotted eagle rays")).toBeVisible();
     await expect(
       page.getByText("Look along the sandy edge for turtles resting below the coral heads."),
@@ -342,6 +346,8 @@ test.describe("staff", () => {
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]+$/);
     const tripId = page.url().split("/").pop();
     await page.goto(`/s/blue-mantis/trips/${tripId}`);
+    // The drawn route is one of the five beats behind the pitch's door.
+    await page.getByRole("heading", { name: "The rest of the briefing" }).click();
     await expect(page.getByText("Ledge and back")).toBeVisible();
     await expect(page.getByText("Out along the ledge, home over the sand.")).toBeVisible();
     await expect(page.getByTitle(`Terrain map of ${siteName}`)).toBeVisible();
@@ -643,10 +649,15 @@ test("the day's field guide reads in the shop's own picks, in English", async ({
     .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
     .click();
   // The pitch page, before any seat is taken: "is this my day?" is answered
-  // here, and preparation waits for a diver who has one.
+  // here, and preparation waits for a diver who has one. Three of the shop's
+  // picks lead as tiles and the rest are behind one door (ADR
+  // 20260904-reef-all-the-way-down, decision 1), so the door is opened and the
+  // whole guide read from inside it — which is also what proves the door works
+  // with the words it is holding.
+  await page.getByRole("heading", { name: "The rest of the briefing" }).click();
   await expect(page.getByRole("heading", { name: "Look for" })).toBeVisible();
-  await expect(page.getByText("Stoplight parrotfish")).toBeVisible();
-  await expect(page.getByText("Elkhorn coral")).toBeVisible();
+  await expect(page.getByText("Stoplight parrotfish").first()).toBeVisible();
+  await expect(page.getByText("Elkhorn coral").first()).toBeVisible();
 });
 
 test("the same saved field guide reads in Spanish for a Spanish-speaking diver", async ({
@@ -664,9 +675,10 @@ test("the same saved field guide reads in Spanish for a Spanish-speaking diver",
     .filter({ hasText: "Two-Tank Reef — Molasses & French" })
     .getByRole("link", { name: "Two-Tank Reef — Molasses & French" })
     .click();
+  await page.getByRole("heading", { name: "El resto del briefing" }).click();
   await expect(page.getByRole("heading", { name: "Busca" })).toBeVisible();
-  await expect(page.getByText("Loro semáforo")).toBeVisible();
-  await expect(page.getByText("Coral cuerno de alce")).toBeVisible();
+  await expect(page.getByText("Loro semáforo").first()).toBeVisible();
+  await expect(page.getByText("Coral cuerno de alce").first()).toBeVisible();
   await expect(page.getByText("Stoplight parrotfish")).toHaveCount(0);
 });
 

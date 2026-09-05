@@ -29,13 +29,18 @@ const noop = () => {};
 function entry(
   id: string,
   fullName: string,
-  over: { emergencyContactName?: string; emergencyContactPhone?: string } = {},
+  over: {
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    reEntryAsk?: "deck_word" | "easy_first_dive" | "refresher_course";
+  } = {},
 ): RosterEntry {
   return {
     booking: {
       id,
       status: "booked",
-      groupPreference: null,
+      diveIntent: null,
+      reEntryAsk: over.reEntryAsk ?? null,
       lastDivedBand: null,
       hotelPickupLocation: null,
       pickupTime: null,
@@ -201,6 +206,25 @@ describe("the guests ledger (slice 5d)", () => {
     expect(band).not.toBeNull();
     expect(within(band as HTMLElement).getByText(/3 divers: No certification/)).toBeVisible();
     expect(container.querySelector("#roster > div.mt-5")).toBeNull();
+  });
+
+  it("keeps a diver's re-entry ask in the open, and off the cleared group", () => {
+    // The ask is the one line on this row the diver wrote, and a request the
+    // crew has not answered is still to clear — the same rule the free-text
+    // preference note carried before D12 replaced it (ADR
+    // 20260904-reef-all-the-way-down, D18). It reads as a fact beside a name:
+    // no warning colour, no mark that means careful.
+    renderRoster({
+      roster: [entry("c", "Yara Halabi", { reEntryAsk: "deck_word" })],
+      readiness: new Map([["c", readinessRow("ready")]]) as ReadinessByBooking,
+      waivers: new Map([["c", signedWaiver]]) as WaiverByBooking,
+    });
+
+    const note = screen.getByText("Asked for a word with the divemaster.");
+    expect(note).toBeVisible();
+    expect(note.className).not.toMatch(/text-(danger|warning)/);
+    expect(screen.getByRole("heading", { name: "Still to clear · 1" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: /^Ready ·/ })).toBeNull();
   });
 
   it("offers no filter chips: the groups are the filter", () => {

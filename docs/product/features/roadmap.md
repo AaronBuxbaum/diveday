@@ -373,8 +373,9 @@ ADR, a test pins the rule, the canvas README's slice table moves, and the visual
   **Shipped 2026-09-05** — `#1374`'s "next with space" half stays open for 16f.
 - **16d** — the manifest's top: the catch-up strip (D42 with D27 folded in), the plan-change door
   (D24), the welcome word under a name (D22).
-- **16e** — the booking page bounded: three tiles and a door, "Also worth a look" (D01), the
-  intent question (D12), the rusty diver's offers (D18); a composition test holds the length.
+- **16e** — the booking page bounded: three tiles and a door, the other departures worth a look
+  (D01), the intent question (D12 with D23 folded into its count), the rusty diver's offers (D18);
+  a composition test holds the length. **Shipped 2026-09-05.**
 - **16f** — the storefront's lenses (D02) and "next with space".
 - **16g** — the thread: "Anything changed?" (D15 with D19 folded in), provenance chips (D51), the
   rental-fit line (D14).

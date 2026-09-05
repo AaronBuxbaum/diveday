@@ -4,8 +4,10 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
 import { countInWaterCrew, groupCrewAssignments } from "@/lib/crew-roles";
+import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { personNamesMatch } from "@/lib/person-name";
+import type { ReEntryAsk } from "@/lib/re-entry";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import { partnerReferralSlug } from "@/lib/referrals";
 import {
@@ -91,8 +93,21 @@ export type BookingRequest = {
    * error costs three call sites once.
    */
   actor: "staff" | "public";
-  /** Optional, non-sensitive interest or pace preference for crew buddy grouping. */
-  groupPreference?: string;
+  /**
+   * What this diver said this dive is for, from the booking form's five choices
+   * (ADR 20260904-reef-all-the-way-down, D12). Omitted is "not said".
+   *
+   * **A soft cue, never a promise or a pairing rule**: the crew reads a count
+   * for the departure, nothing here gates a seat, and no surface names who
+   * chose what.
+   */
+  diveIntent?: DiveIntent;
+  /**
+   * The one support a diver easing back asked for (D18). Omitted is "asked for
+   * nothing", which is every booking that never saw the question. **Gates
+   * nothing** — it is a line the crew answers.
+   */
+  reEntryAsk?: ReEntryAsk;
   /**
    * What this diver said about their own certification on the form, when the
    * form asked (ADR 20260820-attested-at-booking-verified-at-boarding). Read by
@@ -791,7 +806,11 @@ async function createBookingRecord(
       .set({
         status: "booked",
         conditionsBriefedAt: trip.conditionsUpdatedAt,
-        groupPreference: req.groupPreference?.trim() || null,
+        // A reactivated row is a *new* booking and starts this booking's own
+        // answers rather than inheriting its earlier life's — the same
+        // reasoning `partyLeadBookingId` and `referralSource` give below.
+        diveIntent: req.diveIntent ?? null,
+        reEntryAsk: req.reEntryAsk ?? null,
         // Re-booking this seat re-evaluates identity: a matching name now clears
         // any stale flag, a mismatch (re)raises it.
         identityUnconfirmedAt: identityUnconfirmed ? nowDate() : null,
@@ -841,7 +860,8 @@ async function createBookingRecord(
       tripId: trip.id,
       personId: person.id,
       conditionsBriefedAt: trip.conditionsUpdatedAt,
-      groupPreference: req.groupPreference?.trim() || null,
+      diveIntent: req.diveIntent ?? null,
+      reEntryAsk: req.reEntryAsk ?? null,
       identityUnconfirmedAt: identityUnconfirmed ? nowDate() : null,
       referralSource: partnerReferralSlug(req.referralSource),
     })
@@ -1280,6 +1300,40 @@ export async function selfCancelBooking(
     await releasePackageCoverageForBooking(tx, input.shopId, input.bookingId);
     return { ok: true };
   });
+}
+
+/**
+ * **What this dive is for, changed from the diver's own `/ready` page** (ADR
+ * 20260904-reef-all-the-way-down, D12).
+ *
+ * The same shape as `setBookingLastDived` below: scoped to the booking the
+ * capability names, refuses a cancelled seat, and typed against the pgEnum so
+ * nothing free-typed reaches the column. It is what makes the booking form's
+ * "change it any time" a promise the product keeps.
+ *
+ * There is no path back to "not said" on purpose: an answer given is a thing
+ * the crew read, and a diver who mis-tapped picks a different one rather than
+ * erasing what the shop already saw.
+ *
+ * Returns false when no live booking matched, so the caller can say so rather
+ * than reporting a save that never happened.
+ */
+export async function setBookingDiveIntent(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; intent: DiveIntent },
+): Promise<boolean> {
+  const [updated] = await db
+    .update(bookings)
+    .set({ diveIntent: input.intent })
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        eq(bookings.shopId, input.shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .returning({ id: bookings.id });
+  return Boolean(updated);
 }
 
 /**

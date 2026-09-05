@@ -56,6 +56,7 @@ const { getTripWithBooked } = await import("@/db/trips");
 const { createBookingParty } = await import("@/db/bookings");
 const { checkRateLimit, RATE_LIMITS } = await import("@/lib/rate-limit");
 const { bookSpot } = await import("./actions");
+const { nowDate } = await import("@/lib/clock");
 
 const SHOP_ID = "8a1f0c2e-1111-4222-8333-444444444444";
 const TRIP_ID = "9b2e1d3f-5555-4666-8777-888888888888";
@@ -63,7 +64,16 @@ const TRIP_ID = "9b2e1d3f-5555-4666-8777-888888888888";
 /** A shop with nothing priced, so the gear/checkout branches stay out of the way. */
 const shop = { id: SHOP_ID, slug: "blue-mantis", rentalPricing: null, rentalItems: [] };
 /** A free departure: no per-diver price means no Stripe lookup and no gear step. */
-const trip = { id: TRIP_ID, courseId: null, course: null, plannedDives: 2, priceCents: null };
+const trip = {
+  id: TRIP_ID,
+  courseId: null,
+  course: null,
+  plannedDives: 2,
+  priceCents: null,
+  // Three days out on the suite's frozen clock, so D18's window is open unless
+  // a test moves it.
+  startsAt: new Date("2026-07-24T13:30:00.000Z"),
+};
 
 /**
  * One submission. `level` is written into the field name the form used to
@@ -154,5 +164,82 @@ describe("the booking form's certification fields", () => {
     expect(state.error).toBeTruthy();
     // Refused before the seats are taken, not after.
     expect(createBookingParty).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * **The two optional questions** (ADR 20260904-reef-all-the-way-down, D12 and
+ * D18). Both are answers a diver may simply not give, so neither may ever cost
+ * anybody a seat, and neither may record something the form would not have
+ * offered.
+ */
+describe("what this dive is for, and what would help", () => {
+  it("carries the diver's answer into the booking", async () => {
+    const form = submission([{ email: "booker@example.com" }]);
+    form.set("diveIntent", "small_life");
+
+    await bookSpot(ref(TRIP_ID), {}, form);
+
+    const [, requests] = vi.mocked(createBookingParty).mock.calls[0] ?? [];
+    expect(requests?.[0]?.diveIntent).toBe("small_life");
+  });
+
+  it("reads a junk answer as nothing said, and still takes the booking", async () => {
+    // The form is anonymous: a hand-crafted post carrying a sixth value in this
+    // field must be dropped, never refused. An optional question that can cost
+    // a seat is not optional.
+    const form = submission([{ email: "booker@example.com" }]);
+    form.set("diveIntent", "EASING_BACK");
+    form.set("reEntryAsk", "free-refresher");
+
+    const state = await bookSpot(ref(TRIP_ID), {}, form);
+
+    expect(state.fieldErrors).toBeUndefined();
+    const [, requests] = vi.mocked(createBookingParty).mock.calls[0] ?? [];
+    expect(requests?.[0]?.diveIntent).toBeUndefined();
+    expect(requests?.[0]?.reEntryAsk).toBeUndefined();
+  });
+
+  it("writes the answer on the lead's seat only", async () => {
+    // One person filled the form in. Writing their answer onto all three seats
+    // would inflate the count the crew reads into a claim nobody made.
+    const form = submission([
+      { email: "lead@example.com" },
+      { email: "two@example.com" },
+      { email: "three@example.com" },
+    ]);
+    form.set("diveIntent", "easing_back");
+    form.set("reEntryAsk", "deck_word");
+
+    await bookSpot(ref(TRIP_ID), {}, form);
+
+    const [, requests] = vi.mocked(createBookingParty).mock.calls[0] ?? [];
+    expect(requests).toHaveLength(3);
+    expect(requests?.[0]?.diveIntent).toBe("easing_back");
+    expect(requests?.[0]?.reEntryAsk).toBe("deck_word");
+    expect(requests?.[1]?.diveIntent).toBeUndefined();
+    expect(requests?.[2]?.reEntryAsk).toBeUndefined();
+  });
+
+  it("drops an ask posted for a departure the shop can no longer act on", async () => {
+    // The window is re-derived from the departure, never trusted from the post
+    // — the same rule the nitrox tick follows. Inside 24 hours the form offers
+    // nothing, so a field that arrives anyway is a hand-crafted one.
+    vi.mocked(getTripWithBooked).mockResolvedValue({
+      ...trip,
+      // Two hours out on the suite's own frozen clock — `reEntryWindowOpen`
+      // reads `nowDate()`, which is pinned to `TEST_FROZEN_CLOCK`.
+      startsAt: new Date(nowDate().getTime() + 2 * 60 * 60 * 1000),
+    } as never);
+    const form = submission([{ email: "booker@example.com" }]);
+    form.set("diveIntent", "easing_back");
+    form.set("reEntryAsk", "deck_word");
+
+    await bookSpot(ref(TRIP_ID), {}, form);
+
+    const [, requests] = vi.mocked(createBookingParty).mock.calls[0] ?? [];
+    // The intent still stands — the crew can read a count at any notice.
+    expect(requests?.[0]?.diveIntent).toBe("easing_back");
+    expect(requests?.[0]?.reEntryAsk).toBeUndefined();
   });
 });

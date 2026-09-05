@@ -751,7 +751,12 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
   if (owned) {
     await tx
       .update(bookings)
-      .set({ groupPreference: null, hotelPickupLocation: null, pickupTime: null })
+      .set({
+        diveIntent: null,
+        reEntryAsk: null,
+        hotelPickupLocation: null,
+        pickupTime: null,
+      })
       .where(inArray(bookings.id, bookingIds));
 
     await tx

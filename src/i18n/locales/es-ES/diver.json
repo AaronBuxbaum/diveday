@@ -293,7 +293,9 @@
       "divemaster": "Divemaster",
       "captain": "Patrón",
       "crew": "Tripulación"
-    }
+    },
+    "pitchDoor": "El resto del briefing",
+    "pitchDoorSpecies": "{count, plural, one {# especie} other {# especies}}"
   },
   "booking": {
     "heading": "Reserva tu plaza",
@@ -308,9 +310,6 @@
       "dueAtShop": "A pagar en el centro",
       "balanceAtDock": "{balance} en el muelle el {when}"
     },
-    "preferenceLabel": "¿Qué haría de esta inmersión tu día?",
-    "preferenceHint": "(opcional — lo comparte con la tripulación, nunca es una promesa)",
-    "preferencePlaceholder": "Fotografía macro, un ritmo tranquilo o quedarte con tus amigos",
     "promoLabel": "Código promocional",
     "promoHint": "(si tienes uno)",
     "passThroughFee": "{name}: {price} por buceador (cargo de terceros)",
@@ -370,12 +369,39 @@
       "nameTooLong": "Ese nombre es demasiado largo.",
       "emailInvalid": "Escribe un correo electrónico válido.",
       "phoneTooLong": "Ese número de teléfono es demasiado largo.",
-      "noteTooLong": "Deja esta nota en menos de 300 caracteres.",
       "promoInvalid": "Ese código no está activo."
     },
     "emailsOnTheWay": "Te llegarán dos correos: la confirmación de tu reserva y el enlace para firmar tu exención.",
     "embedPayNext": "Tu plaza está reservada. El pago se abre en la página segura de DiveDay, fuera de esta ventana.",
-    "continueToPayment": "Continuar al pago"
+    "continueToPayment": "Continuar al pago",
+    "alsoOnTheSchedule": "También en el calendario",
+    "worthALook": {
+      "sameCourse": "El mismo curso, otro día.",
+      "sameSite": "El mismo sitio de buceo, otro día.",
+      "gentler": "El centro califica este sitio para principiantes.",
+      "alsoMorning": "También sale por la mañana.",
+      "alsoAfternoon": "También sale por la tarde.",
+      "alsoEvening": "También sale al atardecer.",
+      "moreRoom": "Hay más espacio en esta."
+    },
+    "intent": {
+      "question": "¿Para qué es esta inmersión?",
+      "optional": "opcional",
+      "easingBack": "Volver a tomar confianza",
+      "smallLife": "Vida pequeña y fotos",
+      "aWreck": "Un naufragio, algún día",
+      "skills": "Practicar destrezas",
+      "goodDay": "Solo un buen día",
+      "audience": "Tu tripulación ve cuántos eligieron cada opción, no quién.",
+      "changeIt": "Puedes cambiarlo cuando quieras desde el enlace que te enviamos."
+    },
+    "reEntry": {
+      "legend": "¿Algo que te ayude?",
+      "deckWord": "Hablar con el divemaster antes de entrar.",
+      "easyFirstDive": "Una primera inmersión tranquila para empezar.",
+      "refresherCourse": "Cuéntame sobre el curso de repaso.",
+      "noGate": "Ninguna de estas opciones cambia si puedes reservar."
+    }
   },
   "bookingGear": {
     "heading": "Equipo de alquiler",
@@ -775,7 +801,11 @@
     "carriedHeading": "Sigue archivado a tu nombre",
     "carriedWaiver": "Tu exención firmada",
     "carriedCertification": "Tu certificación",
-    "carriedFit": "Tus tallas"
+    "carriedFit": "Tus tallas",
+    "intentHeading": "¿Para qué es esta inmersión?",
+    "intentChoose": "Prefiero no decirlo",
+    "saveIntent": "Guardar",
+    "savingIntent": "Guardando…"
   },
   "thread": {
     "stepsDoneSuffix": "de {total, plural, one {# paso completado} other {# pasos completados}}",
