@@ -27,6 +27,7 @@ import {
   dueReminder,
   MAX_REMINDER_LEAD_HOURS,
   type ReminderKind,
+  reminderEarnsItsSend,
   TRIP_REMINDER_CADENCES,
 } from "@/lib/reminders";
 import { maySendNow } from "@/lib/send-window";
@@ -81,6 +82,15 @@ export type ReminderRunSummary = {
    * was nothing to send", `held` is "there was, and it is waiting for morning".
    */
   held: number;
+  /**
+   * Reminders that were due, were sendable, and were not sent because the diver
+   * had nothing left undone (`reminderEarnsItsSend`, issue #1177). A third
+   * meaning again: `skipped` is "no cadence was due", `held` is "one was and it
+   * is waiting for the shop's morning", and this is "one was, and no message
+   * earned its send". Nothing is recorded for these — a falsified delivery row
+   * would stop the nudge re-arming when a fact changes later in the same week.
+   */
+  settled: number;
   /** Reminders whose tracked channel failed or was not configured. */
   failed: number;
 };
@@ -170,6 +180,12 @@ function reminderSmsBody(
  * one, and over platform SMS otherwise — one message either way, never both
  * (`src/lib/notifications/courtesy.ts`).
  *
+ * **Due is not the same as worth sending** (issue #1177). Every due cadence is
+ * put to `reminderEarnsItsSend` against the diver's own checklist: the 24-hour
+ * dock reminder always passes, and the 7-day nudge is held back when the diver
+ * has nothing left to do, counted as `settled`. That suppression writes no
+ * delivery row, so it re-arms if a card lapses later in the same week.
+ *
  * There is no timer in the app: a cron caller drives `now`
  * (docs ADR 20260721-scheduled-reminder-cadence). Fully degradable — with no
  * email or SMS provider configured every send records `not_configured` and the
@@ -205,6 +221,7 @@ export async function sendDueReminders(
     sent: 0,
     skipped: 0,
     held: 0,
+    settled: 0,
     failed: 0,
   };
   if (rows.length === 0) return summary;
@@ -320,6 +337,27 @@ export async function sendDueReminders(
     row: { booking, person, trip, shop },
     cadence,
   } of dueRows) {
+    // The diver's own checklist, from the same engine their readiness page
+    // reads — built first because the rhythm rule (issue #1177) decides on it
+    // whether anything below runs at all.
+    const evidence = readinessByBooking.get(booking.id);
+    const checklist = evidence
+      ? buildDiverChecklist(evidence.requirement, evidence.readiness)
+      : null;
+
+    // **Due, sendable, and still not worth sending.** The 7-day nudge carries
+    // the diver's to-do list and nothing else, so with nothing on it there is
+    // no message to send. Checked *before* `issueBookingCapability` below, so a
+    // suppressed reminder does not mint a readiness token nobody will open, and
+    // before the no-reachable-channel branch, so a settled diver with no email
+    // and no phone is counted settled rather than failed. Nothing is written:
+    // the un-sent cadence is what re-arms the nudge if a card lapses later in
+    // the same week-wide bucket.
+    if (!reminderEarnsItsSend(cadence.kind, checklist)) {
+      summary.settled += 1;
+      continue;
+    }
+
     const lead = cadence.kind === "trip_reminder_7d" ? "week" : "day";
     // There is no request to negotiate `Accept-Language` from at a cron fire,
     // so this reads whatever the diver's own past requests already recorded,
@@ -343,11 +381,11 @@ export async function sendDueReminders(
       : undefined;
     const phone = smsRecipient(person.phone);
 
-    // Name the diver's own outstanding items from the same checklist the diver
-    // page shows, so the reminder never diverges from the readiness engine.
-    const evidence = readinessByBooking.get(booking.id);
-    const { outstanding, medicalReview } = evidence
-      ? reminderReadiness(buildDiverChecklist(evidence.requirement, evidence.readiness))
+    // Name the diver's own outstanding items from that same checklist, so the
+    // reminder never diverges from the readiness engine — and so the rule above
+    // and the words below cannot be reading two different answers.
+    const { outstanding, medicalReview } = checklist
+      ? reminderReadiness(checklist)
       : { outstanding: [], medicalReview: false };
 
     // The night-before (day) lead becomes the full brief: plain-language
