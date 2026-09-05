@@ -5,6 +5,22 @@ import { tripDives, tripStageEvents, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
 /**
+ * When the crew of a boat that is already out would have tapped **Underway**:
+ * twenty minutes after the lines came off, or this instant if she has not been
+ * out that long.
+ *
+ * The clamp is the whole point. `liveShopStage` refuses a reading stamped after
+ * the moment it is read — a word from the future is not a word anyone has said
+ * — so an unclamped `startsAt + 20m` on a boat that left ten minutes ago seeds a
+ * row that no surface will ever render, and the demo's chip, its storefront
+ * panel and every diver's line all come up blank on the one shop every capture
+ * is of.
+ */
+export function demoStageRecordedAt(startsAt: Date, now: Date): Date {
+  return new Date(Math.min(startsAt.getTime() + 20 * MINUTE_MS, now.getTime()));
+}
+
+/**
  * **The demo's boat says where it is** — ADR 20260904-reef-all-the-way-down,
  * decision 2, Budget rule 4.
  *
@@ -76,6 +92,6 @@ export async function seedTripStage(
     stage: running ? "underway" : "boarding",
     diveSiteId: firstDive?.diveSiteId ?? null,
     recordedByPersonId,
-    recordedAt: running ? new Date(today.startsAt.getTime() + 20 * MINUTE_MS) : now,
+    recordedAt: running ? demoStageRecordedAt(today.startsAt, now) : now,
   });
 }
