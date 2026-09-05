@@ -23,6 +23,14 @@ export type CalendarEvent = CalendarTrip & {
    * captain gets a duplicate.
    */
   uid: string;
+  /**
+   * RFC 5545 `SEQUENCE`: how many times this event has been revised. It must
+   * rise monotonically per UID and only for a **material** change, which is
+   * why it comes from `trips.revision` rather than from anything derived here
+   * (issue #1165). Required rather than optional: there are two callers, both
+   * have the number, and a default would be a fabricated revision.
+   */
+  sequence: number;
 };
 
 function escapeIcs(value: string): string {
@@ -56,11 +64,10 @@ function eventLines(event: CalendarEvent, stamp: Date): string[] {
     `DESCRIPTION:${escapeIcs(description)}`,
     ...(event.location ? [`LOCATION:${escapeIcs(event.location)}`] : []),
     `URL:${escapeIcs(event.url)}`,
-    // No SEQUENCE: it must increase monotonically per UID to mean anything,
-    // and `trips` carries no revision counter to derive one from. A
-    // METHOD:PUBLISH feed is re-read whole and reconciled by UID, so the
-    // field buys nothing here — and a fabricated one would actively mislead a
-    // client into ignoring a real edit.
+    // Written even at zero, never omitted: an absent SEQUENCE and a
+    // `SEQUENCE:0` are different facts to a client, and a first revision that
+    // appeared out of nothing would be the ambiguous one.
+    `SEQUENCE:${event.sequence}`,
     "END:VEVENT",
   ];
 }
@@ -112,10 +119,14 @@ export function calendarDocument(input: {
  * (issue #1165) — while DTSTAMP still wants an instant tied to the trip
  * itself. Defaulting it to `startsAt` keeps every existing caller byte-for-byte
  * identical.
+ *
+ * `revision` is the trip's own counter, published as `SEQUENCE` so a diver who
+ * downloads the file again after the departure moved gets an update to the
+ * entry they already hold rather than a second one beside it.
  */
-export function tripCalendarFile(trip: CalendarTrip & { stamp?: Date }): string {
+export function tripCalendarFile(trip: CalendarTrip & { stamp?: Date; revision: number }): string {
   return calendarDocument({
-    events: [{ ...trip, uid: `${trip.url}@diveday` }],
+    events: [{ ...trip, uid: `${trip.url}@diveday`, sequence: trip.revision }],
     // A one-off download is produced now and never re-fetched, so an instant
     // of the trip's own is a stable stamp — and one that keeps the file
     // byte-identical across renders, which the visual and e2e fleets depend on.

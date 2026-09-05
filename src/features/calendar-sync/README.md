@@ -47,6 +47,9 @@ direction is one-way, and `check:architecture` enforces it.
   cancellation verb across clients, so removing the UID is what removes the event.
 - **UIDs derive from trip identity, never contents** — a UID that moved with the title would
   duplicate every edited departure in the subscriber's calendar.
+- **`SEQUENCE` is the trip's own `trips.revision`**, which moves for a change to the departure
+  instant or to the day's dive sites and for nothing else (`src/lib/trip-revision.ts`). Every day
+  of a multi-day trip publishes the same number.
 - **No diver ever appears in a feed.** `listFeedTrips` reads trips, courses, sites, and crew, and
   never touches `bookings`. A feed URL gets pasted into Google's servers and synced to a phone; the
   roster — and one join away its medical and waiver state — has no business there. There is a test

@@ -101,10 +101,15 @@ the backlog re-triages after the first pilot boat day stands; this is what that 
 
 ### 4. Two sets of words are the owner's (H-67 b and c)
 
-- **D05's revision counter.** Half of D05 merged (#1348). The rest is which edits bump the
+- **D05's revision counter.** Half of D05 merged (#1348). The rest was which edits bump the
   calendar event's revision and where the counter lives. Recommended: `trips.revision`, an integer
   bumped by a change to `starts_at` or to the site list, read by the `.ics` as `SEQUENCE`; the
-  thread's "updates itself if the plan moves" line assumes it.
+  thread's "updates itself if the plan moves" line assumes it. **Shipped as recommended** (slice
+  16j, issue #1165): the column bumps for a `starts_at` change and for a change to the day's dive
+  sites, in `moveTrip`, `updateTrip`, `applyDetailsToFutureSeries` and the demo refresh, and for
+  nothing else — a conditions note and a status flip leave it where it is. Both calendar surfaces
+  read it as `SEQUENCE`, through `src/lib/trip-calendar.ts`; the rule itself is
+  `src/lib/trip-revision.ts`.
 - **Two phrases that print to a diver.** "Dive day № 3" on the postcard's face (today's
   `visitMilestone` sentence, moved and shortened), and the crew's five stage words as the storefront
   and the thread show them: *Boarding · Out on ⟨site⟩ · On the surface · Heading in · Home*. Both

@@ -51,6 +51,7 @@ export async function listFeedTrips(
       title: trips.title,
       tripStartsAt: trips.startsAt,
       tripEndsAt: trips.endsAt,
+      revision: trips.revision,
       courseTitle: courses.title,
       siteName: diveSites.name,
       meetingPointLabel: trips.meetingPointLabel,
@@ -102,6 +103,7 @@ export async function listFeedTrips(
           ? [row.meetingPointLabel, row.meetingPointAddress].filter(Boolean).join(", ")
           : row.siteName,
         crew: [],
+        revision: row.revision,
       });
     }
     if (row.crewName) {

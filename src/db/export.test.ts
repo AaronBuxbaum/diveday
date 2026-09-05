@@ -324,6 +324,13 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "recap_shoutout", // recap copy travels with recap_photos.csv
     "recap_auto_send_paused", // auto-send countdown / pause is ephemeral operational state
     "recap_auto_send_at",
+    // How many times this installation has re-issued the calendar events whose
+    // UIDs are `trip-<uuid>@diveday` — a counter about *our* published
+    // revisions, not a fact the shop entered. A re-imported bundle mints new
+    // trip ids and therefore new UIDs, so no subscriber anywhere holds a
+    // revision to compare it against and the number would mean nothing on the
+    // far side. Same class as `pending_checkout_intent_id`.
+    "revision",
   ],
   trip_change_events: ["shop_id"],
   trip_stage_events: ["shop_id"],

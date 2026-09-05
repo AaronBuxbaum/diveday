@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNull } from "drizzle-orm";
+import { and, asc, count, eq, isNull, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { tripReservationWindow } from "@/lib/gear";
 import { shiftInstantByWallTimeDelta, utcToWallTime, wallTimeDeltaMs } from "@/lib/zoned";
@@ -172,7 +172,15 @@ export async function moveTrip(
 
     const [trip] = await tx
       .update(trips)
-      .set({ startsAt, endsAt: shift(existing.endsAt) })
+      .set({
+        startsAt,
+        endsAt: shift(existing.endsAt),
+        // A move is the material change (issue #1165): every subscribed
+        // calendar has to re-alert, or a diver stands at the dock at the old
+        // time. Safe to write unconditionally here — the equal-instant case
+        // returned above, so reaching this line means the boat really moved.
+        revision: sql`${trips.revision} + 1`,
+      })
       .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId)))
       .returning();
     if (!trip) return { ok: false, reason: "not_found" };
