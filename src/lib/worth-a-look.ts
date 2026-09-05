@@ -1,5 +1,6 @@
 import { nowDate } from "@/lib/clock";
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
+import { hasSailed } from "@/lib/trips";
 import { utcToWallTime } from "@/lib/zoned";
 
 /**
@@ -139,7 +140,7 @@ export function worthALook(input: {
     // A departure that has already left is not worth a look, and the standing
     // late-arrival buffer applies here as everywhere: a boat scheduled forty
     // minutes ago is still at the dock more often than not.
-    if (candidate.startsAt.getTime() + 60 * 60 * 1000 <= now.getTime()) continue;
+    if (hasSailed(candidate.startsAt, now)) continue;
     // A null on either side is "this departure names no course" / "names no
     // site", and two absences are not a match.
     const reason: WorthALookReason | null =
