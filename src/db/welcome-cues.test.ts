@@ -32,18 +32,53 @@ async function welcomeFixture() {
 describe("setWelcomeConsent", () => {
   it("stamps the seat, and takes it back again", async () => {
     const { db, shop, trip, seat } = await welcomeFixture();
+    // An instant this departure is unambiguously still open at, named rather
+    // than inherited. The frozen clock sits *exactly* on `endsAt` plus the
+    // late-arrival hour for this seeded boat, so a test that leant on the
+    // ambient `now` was really asserting which way the boundary tips — which
+    // is a different test, two `it`s below.
+    const aboard = new Date(trip.endsAt.getTime() - 60_000);
     expect(
-      await setWelcomeConsent(db, { shopId: shop.id, bookingId: seat.id, shared: true }),
+      await setWelcomeConsent(db, {
+        shopId: shop.id,
+        bookingId: seat.id,
+        shared: true,
+        now: aboard,
+      }),
     ).toEqual({ ok: true });
 
     const shared = await welcomeCueInputsByBooking(db, shop.id, trip.id);
     expect(shared.get(seat.id)?.sharedAt).toBeInstanceOf(Date);
 
     expect(
-      await setWelcomeConsent(db, { shopId: shop.id, bookingId: seat.id, shared: false }),
+      await setWelcomeConsent(db, {
+        shopId: shop.id,
+        bookingId: seat.id,
+        shared: false,
+        now: aboard,
+      }),
     ).toEqual({ ok: true });
     const withdrawn = await welcomeCueInputsByBooking(db, shop.id, trip.id);
     expect(withdrawn.get(seat.id)?.sharedAt).toBeNull();
+  });
+
+  it("counts the boat home on the exact stroke of the late-arrival hour", async () => {
+    // The boundary itself, pinned because the e2e fleet's frozen clock lands on
+    // it for this departure — so "the tie" is the ordinary case there, not a
+    // corner. `hasReturned` is inclusive, and this is the one writer of the
+    // stamp: whichever way it tips, every "is the boat home?" check in the app
+    // has to tip the same way, which is the whole reason the offset is not
+    // spelled here by hand.
+    const { db, shop, trip, seat } = await welcomeFixture();
+    const onTheStroke = new Date(trip.endsAt.getTime() + DEPARTURE_BUFFER_MS);
+    expect(
+      await setWelcomeConsent(db, {
+        shopId: shop.id,
+        bookingId: seat.id,
+        shared: true,
+        now: onTheStroke,
+      }),
+    ).toEqual({ ok: false, reason: "trip_over" });
   });
 
   it("refuses a booking that is not this shop's", async () => {
