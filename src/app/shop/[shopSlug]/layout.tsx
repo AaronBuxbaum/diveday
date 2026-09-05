@@ -27,6 +27,7 @@ import {
 import { nowDate } from "@/lib/clock";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
+import { waterBandFor } from "@/lib/water-band";
 
 /**
  * Every /shop page reads the session, the shop row, and staff-role state up
@@ -247,10 +248,19 @@ export default async function ShopLayout({
           20260901-diveday-reimagined, decision 1; the system sheet's "water
           band wash → sand · page tops only"). A wash, not a drawing, so it
           may sit behind a manifest; the swell that rides it on the home is
-          the drawing, and that one stays on the home. */}
+          the drawing, and that one stays on the home.
+
+          `data-water-band` is the wash's hour (ADR
+          20260904-reef-all-the-way-down, decision 2, Budget rule 1): four
+          washes by the *shop's* clock, which is why the zone is read off the
+          shop row rather than from the machine. An unknown slug has no shop
+          and no zone, so the attribute is left off and the day wash — the
+          one that ships — stands. It carries no fact and never becomes a
+          status; `src/lib/water-band.ts` reads nothing but the hour. */}
       <div
         id="shop-main-content"
         tabIndex={-1}
+        data-water-band={shop ? waterBandFor(nowDate(), shop.timezone) : undefined}
         className="water-band min-h-0 flex-1 outline-none pb-(--dock-clearance)"
       >
         {children}

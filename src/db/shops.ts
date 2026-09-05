@@ -7,6 +7,7 @@ import type { DockDayRhythm } from "@/lib/diver-planning";
 import type { EmergencyReference } from "@/lib/emergency-reference";
 import type { ShopCurrency } from "@/lib/money";
 import type { RentalPricing } from "@/lib/rentals";
+import type { SeasonStart } from "@/lib/season";
 import type { SendWindow } from "@/lib/send-window";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import type { AppDb } from "./client";
@@ -87,6 +88,20 @@ export async function setShopPackingList(db: AppDb, shopId: string, packingList:
  */
 export async function setShopTimezone(db: AppDb, shopId: string, timezone: string) {
   const [shop] = await db.update(shops).set({ timezone }).where(eq(shops.id, shopId)).returning();
+  return shop ?? null;
+}
+
+/**
+ * Where this shop's season starts — the denominator behind the home's one fact
+ * of scale (ADR 20260904-reef-all-the-way-down, Budget rule 3). Validated by
+ * `parseSeasonStart` and again by the table's own CHECK constraints.
+ */
+export async function setShopSeasonStart(db: AppDb, shopId: string, season: SeasonStart) {
+  const [shop] = await db
+    .update(shops)
+    .set({ seasonStartMonth: season.month, seasonStartDay: season.day })
+    .where(eq(shops.id, shopId))
+    .returning();
   return shop ?? null;
 }
 

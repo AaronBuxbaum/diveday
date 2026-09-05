@@ -367,7 +367,7 @@ ADR, a test pins the rule, the canvas README's slice table moves, and the visual
 - **16a** — the station on the shop home is a `SectionCard` with the site tile leading, one line
   per row, the log door a quiet link, the dial at 76px. **Started 2026-09-04.**
 - **16b** — the water band follows the shop's clock (four washes) and the one fact of scale renders
-  on the day it is true, with a season-start setting (#1371, #1373).
+  on the day it is true, with a season-start setting (#1371, #1373). **Shipped 2026-09-05.**
 - **16c** — the boat says where it is: `trip_stage_events`, the manifest's stage strip, the home's
   chip, the storefront's live panel, the thread's line; the boat drawing (#1372, #1374, D20).
 - **16d** — the manifest's top: the catch-up strip (D42 with D27 folded in), the plan-change door

@@ -318,6 +318,42 @@ export function weekdayNames(locale = "en-US", width: "short" | "narrow" = "shor
 }
 
 /**
+ * A month and a day with no year in them — "May 1", or whatever the reader's
+ * locale makes of it. The shop's season start (ADR
+ * 20260904-reef-all-the-way-down, Budget rule 3), which is an anniversary
+ * rather than a date: the year is whichever one it last came round in.
+ *
+ * `timeZone: "UTC"` for the same reason `weekdayNames` says it — there is no
+ * instant in "1 May". 2025 is the reference year because it is not a leap
+ * year and the season's own constraint refuses 29 February, so no caller can
+ * reach a day this reference cannot render.
+ */
+/**
+ * The twelve month names, in order, for a picker that chooses a month rather
+ * than a date — the shop's season start. Calendar data, not copy, for the same
+ * reason `weekdayNames` is: `Intl` knows these in every locale the app
+ * negotiates, and twelve keys per language would be twelve chances to get one
+ * wrong.
+ */
+export function monthNames(locale = "en-US"): string[] {
+  const format = cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+    month: "long",
+    timeZone: "UTC",
+  });
+  return Array.from({ length: 12 }, (_, month) =>
+    format.format(new Date(Date.UTC(2025, month, 1))),
+  );
+}
+
+export function formatMonthDay(month: number, day: number, locale = "en-US"): string {
+  return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(2025, month - 1, day)));
+}
+
+/**
  * A span of calendar days as one phrase — "Aug 24 – 30, 2026", or whatever
  * the reader's locale collapses it to. The staff week board's title.
  *

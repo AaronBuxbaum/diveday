@@ -137,6 +137,11 @@
     "allHome": "All boats are home: {out} out, {back} back.",
     "firstBoatHome": "Your first boat is home: {out} out, {back} back.",
     "firstBooking": "Your first booking",
+    "factOfScale": {
+      "divers": "{name} boards the {time} as your {count}th diver of the season.",
+      "firstBoat": "First boat of the season.",
+      "since": "Since {date}"
+    },
     "close": {
       "back": "{back} of {booked} back",
       "backBy": "{back} of {booked} back by {time}",

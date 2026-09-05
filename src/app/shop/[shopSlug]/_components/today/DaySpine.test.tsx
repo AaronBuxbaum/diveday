@@ -2,7 +2,12 @@
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { assembleDaySpine, type SpineDeparture, type TodayAction } from "@/lib/today";
+import {
+  assembleDaySpine,
+  type FactOfScale,
+  type SpineDeparture,
+  type TodayAction,
+} from "@/lib/today";
 
 // The spine composes WaiverSendControl/ResendConfirmationControl/
 // PaymentActionControl, each of which statically imports its own `"use server"`
@@ -131,6 +136,7 @@ function renderSpine({
   sessions?: React.ReactNode;
   firstRun?: React.ReactNode;
   firstBooking?: FirstBooking | null;
+  factOfScale?: FactOfScale | null;
   evening?: EveningReading;
 } = {}) {
   return render(
@@ -1304,5 +1310,88 @@ describe("the first thing", () => {
     const panel = screen.getByRole("region", { name: /^First thing/ });
     expect(within(panel).getByText("Nadia Petrov")).toBeInTheDocument();
     expect(within(panel).queryByText("Left behind")).toBeNull();
+  });
+});
+
+/**
+ * **One fact of scale, on the day it is true** — ADR
+ * 20260904-reef-all-the-way-down, decision 2, Budget rule 3, slice 16b.
+ *
+ * The test that matters most is the first one: on the overwhelming majority of
+ * days this renders nothing, and a moment that leaks into an ordinary morning
+ * is the failure the whole coral budget exists to prevent.
+ */
+describe("one fact of scale (slice 16b)", () => {
+  const hundredth: FactOfScale = {
+    kind: "divers",
+    count: 400,
+    diverName: "Ben Okafor",
+    departureAt: new Date("2026-07-21T11:00:00.000Z"),
+    seasonStart: { month: 5, day: 1 },
+  };
+
+  it("says nothing on a day that is not the day", () => {
+    renderSpine({ factOfScale: null, actions: [action({ id: "b", departure: boat("t1") })] });
+    expect(screen.queryByText(/diver of the season/)).toBeNull();
+    expect(screen.queryByText(/First boat of the season/)).toBeNull();
+  });
+
+  it("names the diver, the departure and the count, with the season it counts from", () => {
+    renderSpine({ factOfScale: hundredth, actions: [action({ id: "b", departure: boat("t1") })] });
+    expect(
+      screen.getByText("Ben Okafor boards the 7:00 AM as your 400th diver of the season."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Since May 1")).toBeInTheDocument();
+  });
+
+  it("says the season's first boat without a count", () => {
+    renderSpine({
+      factOfScale: { kind: "first_boat", seasonStart: { month: 5, day: 1 } },
+      actions: [action({ id: "b", departure: boat("t1") })],
+    });
+    expect(screen.getByText("First boat of the season.")).toBeInTheDocument();
+    expect(screen.queryByText(/diver of the season/)).toBeNull();
+  });
+
+  it("outranks the morning all-clear, which happens on a good Tuesday", () => {
+    renderSpine({
+      factOfScale: hundredth,
+      actions: [
+        action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
+        action({ id: "later", kind: "waiver", departure: boat("t9") }),
+      ],
+    });
+    expect(screen.getByText(/400th diver of the season/)).toBeInTheDocument();
+    expect(screen.queryByText(/boats are all clear/)).toBeNull();
+  });
+
+  it("stands down for the shop's first booking ever, which happens once", () => {
+    renderSpine({
+      factOfScale: hundredth,
+      firstBooking: {
+        bookingId: "b1",
+        tripId: "t9",
+        tripTitle: "Two-Tank — Alligator Reef",
+        startsAt: hoursFromNow(96),
+        diverName: "Ravi Chandra",
+        priceCents: 9500,
+        currency: "usd",
+        paymentStatus: "paid",
+        paymentAmountCents: 9500,
+        paymentCurrency: "usd",
+        waiverSigned: true,
+      },
+      actions: [action({ id: "b", departure: boat("t1") })],
+    });
+    expect(screen.getByText("Your first booking")).toBeInTheDocument();
+    expect(screen.queryByText(/400th diver of the season/)).toBeNull();
+  });
+
+  it("sits above a morning with a blocker on it, because a count is not a compliment", () => {
+    renderSpine({
+      factOfScale: hundredth,
+      actions: [action({ id: "blocked", kind: "certification", departure: boat("t1") })],
+    });
+    expect(screen.getByText(/400th diver of the season/)).toBeInTheDocument();
   });
 });

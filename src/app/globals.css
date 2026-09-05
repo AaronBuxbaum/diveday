@@ -137,6 +137,21 @@
   /* 4.72:1 under --primary as text (a current nav chip is `bg-primary-tint
      text-primary`); #dceef0 measured 4.47 — axe, 2026-09-02. */
   --primary-tint: #e6f3f5;
+
+  /* **The water band's four washes** — ADR 20260904-reef-all-the-way-down,
+     decision 2, Budget rule 1. The page top follows the shop's clock: dawn
+     5-8, day, dusk 17-20, night. Lagoon-family and sand only, never coral,
+     and never a status — `src/lib/water-band-palette.test.ts` holds all three
+     against these values rather than against their names. Drawn hues rather
+     than one tint dimmed four ways, for the reason the night palette's washes
+     are drawn: a mix loses the hue that made it its own colour. `--water-day`
+     carries `--primary-tint`'s exact value, because rule 1 says the day wash
+     is the one that ships; the test pins that equality so the two cannot
+     drift apart in silence. */
+  --water-dawn: #f8eede;
+  --water-day: #e6f3f5;
+  --water-dusk: #e3f1ef;
+  --water-night: #e9f0f7;
   --success-tint: #e6f0e8;
   --warning-tint: #f8eee2;
   --danger-tint: #f8e8e6;
@@ -219,6 +234,14 @@
      */
     --accent-tint: #3f1d19;
     --primary-tint: #0b3540;
+
+    /* The same four at depth. Contrast rises as a wash darkens here, so the
+       night palette's constraint is the opposite of the light one: these stay
+       far enough above `--background` to read as water at all. */
+    --water-dawn: #143a3c;
+    --water-day: #0b3540;
+    --water-dusk: #123243;
+    --water-night: #0a2634;
     --success-tint: #0f3324;
     --warning-tint: #3a2a0e;
     --danger-tint: #3d1717;
@@ -861,14 +884,36 @@ textarea {
  * sit behind a manifest where the swell may not.
  */
 .water-band {
+  /* One gradient, four crests. The shape is the shipped one — the crest
+     settling into the sand it sits on — and `data-water-band` swaps only
+     which water it is. The 55% stop stays a mix *of the crest with the
+     ground*, which is what makes the band fade rather than end, and is why
+     each skin (boat, glare, print, high contrast) still gets its own water
+     without naming a colour of its own. */
+  --water-crest: var(--water-day);
   background-image: linear-gradient(
     180deg,
-    var(--primary-tint) 0%,
-    color-mix(in srgb, var(--primary-tint) 40%, var(--background)) 55%,
+    var(--water-crest) 0%,
+    color-mix(in srgb, var(--water-crest) 40%, var(--background)) 55%,
     var(--background) 100%
   );
   background-repeat: no-repeat;
   background-size: 100% 168px;
+}
+
+/* The shop's clock, read once in the staff shell (`src/lib/water-band.ts`).
+   No attribute means the day wash, so a page rendered without a shop — and
+   every other surface wearing this class — reads exactly as it does today. */
+.water-band[data-water-band="dawn"] {
+  --water-crest: var(--water-dawn);
+}
+
+.water-band[data-water-band="dusk"] {
+  --water-crest: var(--water-dusk);
+}
+
+.water-band[data-water-band="night"] {
+  --water-crest: var(--water-night);
 }
 
 /* Marketing sections reveal once, only after the browser has confirmed they

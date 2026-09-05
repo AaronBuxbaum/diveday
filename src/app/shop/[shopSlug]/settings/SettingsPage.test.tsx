@@ -485,3 +485,19 @@ describe("the rail and the pane say the same thing", () => {
     for (const row of rows) expect(row.props.activeSection).toBeNull();
   });
 });
+
+/**
+ * **The season the shop counts in** — ADR 20260904-reef-all-the-way-down,
+ * Budget rule 3, slice 16b. The denominator behind the home's one fact of
+ * scale, which is only a fact against a date the shop chose.
+ */
+describe("the season a shop counts in", () => {
+  it("asks for a month and a day, beside the timezone it reads them in", async () => {
+    const element = await renderSettings("owner");
+    // The month is a select and the day a number box, deliberately: the days a
+    // month has depend on the month, so the day is validated rather than
+    // enumerated.
+    expect(selectNamesIn(element)).toContain("seasonStartMonth");
+    expect(inputNamesIn(element)).toContain("seasonStartDay");
+  });
+});

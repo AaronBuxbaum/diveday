@@ -37,6 +37,8 @@
       "refreshed": "Estado de pagos actualizado desde Stripe.",
       "notAuthorized": "El catálogo de alquiler, los precios de alquiler y la conexión con Stripe son ajustes de pago, limitados a propietarios y gerentes.",
       "timezoneSaved": "Zona horaria guardada.",
+      "seasonSaved": "Inicio de temporada guardado.",
+      "seasonInvalid": "Elige un día que ese mes tenga.",
       "timezoneInvalid": "No reconocemos esa zona horaria: elige una de la lista.",
       "emergencySaved": "Referencia de emergencia guardada.",
       "sendWindowSaved": "Horario de mensajes guardado.",
@@ -84,6 +86,14 @@
         "palau": "Palaos",
         "fiji": "Fiyi"
       }
+    },
+    "season": {
+      "heading": "Inicio de temporada",
+      "detail": "Tus conteos de buceadores y salidas parten de esta fecha cada año.",
+      "monthLabel": "Mes",
+      "dayLabel": "Día",
+      "submitting": "Guardando…",
+      "submit": "Guardar inicio de temporada"
     },
     "contact": {
       "heading": "Datos de contacto públicos",

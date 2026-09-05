@@ -17,12 +17,13 @@ import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS, seasonalBriefingText } from "@/i18n/today-labels";
 import type { EveningClose } from "@/lib/closeout";
-import { formatMoneyScanned, formatShortDate, formatTime } from "@/lib/format";
+import { formatMoneyScanned, formatMonthDay, formatShortDate, formatTime } from "@/lib/format";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import {
   ACTION_KIND_META,
   type DaySpine as DaySpineData,
   type DayStation as DayStationData,
+  type FactOfScale,
   getSeasonalBriefing,
   spineJobCount,
   type TodayAction,
@@ -387,6 +388,7 @@ export function DaySpine({
   showPaymentsRow = false,
   firstRun,
   firstBooking,
+  factOfScale,
   sessions,
   evening,
   now,
@@ -421,6 +423,13 @@ export function DaySpine({
    * resolution above decides whether it renders.
    */
   firstBooking?: FirstBooking | null;
+  /**
+   * The season's one fact of scale, on the day it is true (`factOfScaleFor`;
+   * ADR 20260904-reef-all-the-way-down, decision 2, Budget rule 3). Present
+   * means the fact holds today; the coral resolution above decides whether it
+   * renders, and on most days it is null.
+   */
+  factOfScale?: FactOfScale | null;
   /** The instructor lens's own labeled group, above the first station. */
   sessions?: React.ReactNode;
   /** The day's closing state. Omitted, the spine renders its morning reading alone. */
@@ -508,8 +517,18 @@ export function DaySpine({
   const closedPanel = evening?.latest != null;
   const allHomeLine = !closedPanel && evening?.close.allHome === true;
   const firstBookingMark = !closedPanel && !allHomeLine && firstBooking != null;
+  // The season's fact outranks the *daily* all-clear and nothing above it
+  // (Budget rule 3). It is not a compliment, so it does not wait for a day
+  // with no blockers on it — the Home board draws it over a morning with a
+  // boarding blocker, which is the day a shop most deserves to be told it is
+  // on its four hundredth diver.
+  const factOfScaleLine = !closedPanel && !allHomeLine && !firstBookingMark && factOfScale != null;
   const boatsClearLine =
-    !closedPanel && !allHomeLine && !firstBookingMark && todaysBoatsAreClear(spine);
+    !closedPanel &&
+    !allHomeLine &&
+    !firstBookingMark &&
+    !factOfScaleLine &&
+    todaysBoatsAreClear(spine);
   const closing = evening?.close.closing === true;
   // The next boat out, carrying the standing one-hour late-arrival buffer:
   // its site mark is the one on the spine that wears the coral detail.
@@ -569,6 +588,37 @@ export function DaySpine({
         <EarnedMomentLine className="-mt-4 flex items-center gap-3">
           <SiteMark mark="turtle" size="sm" ground="surface" coral={false} />
           <span>{t("shared.today.todayQueue.boatsClear")}</span>
+        </EarnedMomentLine>
+      ) : null}
+
+      {/* **One fact of scale, on the day it is true** (ADR
+          20260904-reef-all-the-way-down, Budget rule 3). A count of divers or
+          boats and nothing else: never money, never a comparison, never a
+          streak or a rank. `animate={false}` for the same reason the first
+          booking is still: the fact holds all day, and a celebration replayed
+          on every visit stops meaning anything. */}
+      {factOfScaleLine && factOfScale ? (
+        <EarnedMomentLine animate={false} className="-mt-4">
+          <span className="font-medium">
+            {factOfScale.kind === "first_boat"
+              ? t("shopHome.spine.factOfScale.firstBoat")
+              : // Always a multiple of a hundred, so the ordinal is always
+                // "th" — there is no 401st diver of the season to render.
+                t("shopHome.spine.factOfScale.divers", {
+                  name: factOfScale.diverName,
+                  time: formatTime(factOfScale.departureAt, locale, timeZone),
+                  count: factOfScale.count,
+                })}
+          </span>{" "}
+          <span className="text-muted">
+            {t("shopHome.spine.factOfScale.since", {
+              date: formatMonthDay(
+                factOfScale.seasonStart.month,
+                factOfScale.seasonStart.day,
+                locale,
+              ),
+            })}
+          </span>
         </EarnedMomentLine>
       ) : null}
 

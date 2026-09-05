@@ -35,6 +35,7 @@ import {
   setShopRentalPricing,
   setShopReviewUrl,
   setShopSearchListing,
+  setShopSeasonStart,
   setShopSendWindow,
   setShopTaxEnabled,
   setShopTemperatureUnit,
@@ -84,6 +85,7 @@ import {
   shopOffersNitrox,
   toRentableKinds,
 } from "@/lib/rentals";
+import { parseSeasonStart } from "@/lib/season";
 import { parseSendWindow } from "@/lib/send-window";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -899,6 +901,26 @@ export async function saveTimezoneAction(formData: FormData) {
   }
   await setShopTimezone(await getDb(), session.user.shopId, submitted);
   revalidateAndRedirect(settings, noticeUrl(settings, "timezone-saved", { saved: "timezone" }));
+}
+
+/**
+ * The shop's season start — the denominator behind the home's one fact of
+ * scale (ADR 20260904-reef-all-the-way-down, Budget rule 3).
+ *
+ * `parseSeasonStart` refuses exactly what the table's CHECK constraints
+ * refuse, so a 31 chosen in April is a refusal on the form rather than a
+ * clamped 30 the shop never asked for.
+ */
+export async function saveSeasonStartAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+  const season = parseSeasonStart(formData.get("seasonStartMonth"), formData.get("seasonStartDay"));
+  if (!season) {
+    redirect(noticeUrl(settings, "season-invalid", { saved: "season" }));
+  }
+  await setShopSeasonStart(await getDb(), session.user.shopId, season);
+  revalidateAndRedirect(settings, noticeUrl(settings, "season-saved", { saved: "season" }));
 }
 
 /**

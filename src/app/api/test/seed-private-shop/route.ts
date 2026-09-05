@@ -5,6 +5,7 @@ import { createDemoShop, deleteDemoShopCascade } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
+import { isValidTimeZone } from "@/lib/format";
 
 /**
  * Mint a whole seeded shop of this test's own, so a spec that changes
@@ -53,12 +54,26 @@ export async function POST(request: Request) {
   // (`pinnedDemoShopIdentity`). Held to the same shape a slug has to have
   // anyway; anything else is refused rather than sanitised, since a caller
   // passing a bad slug wants to know.
-  const requested = new URL(request.url).searchParams.get("slug");
+  const params = new URL(request.url).searchParams;
+  const requested = params.get("slug");
   if (requested !== null && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(requested)) {
     return NextResponse.json({ error: "bad_slug" }, { status: 400 });
   }
+  // **`?timezone=` pins the shop's clock**, for a visual capture of the water
+  // band and nothing else (ADR 20260904-reef-all-the-way-down, Budget rule 1).
+  // The fleet's frozen instant cannot move, so the shop does: four zones read
+  // one instant as four different hours. Refused rather than sanitised, for
+  // the same reason the slug is.
+  const timezone = params.get("timezone");
+  if (timezone !== null && !isValidTimeZone(timezone)) {
+    return NextResponse.json({ error: "bad_timezone" }, { status: 400 });
+  }
   const { slug, ownerEmail } = await db.transaction(async (tx) =>
-    createDemoShop(tx, { history: false, slug: requested ?? undefined }),
+    createDemoShop(tx, {
+      history: false,
+      slug: requested ?? undefined,
+      timezone: timezone ?? undefined,
+    }),
   );
   return NextResponse.json({ slug, ownerEmail, password: DEMO_BYPASS_PASSWORD });
 }

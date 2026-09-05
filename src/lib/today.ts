@@ -12,6 +12,7 @@ import { HOUR_MS } from "@/lib/clock";
 import type { Role } from "./authz";
 import type { CrewIncompleteReason } from "./manifests";
 import type { AboardBlockerKind, ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
+import type { SeasonStart } from "./season";
 import { utcToWallTime } from "./zoned";
 
 /**
@@ -1075,3 +1076,72 @@ export function todaysBoatsAreClear(spine: DaySpine): boolean {
   if (spine.desk.some(pressing)) return false;
   return !spine.stations.some((station) => station.rows.some(pressing));
 }
+
+/**
+ * **One fact of scale, on the day it is true** — ADR
+ * 20260904-reef-all-the-way-down, decision 2, Budget rule 3.
+ *
+ * The narrower thing the standing good-news line was declined for being
+ * (issue #808, still declined): not a line that is present always, but a fact
+ * that is true once and then never again this season. Rule 3 bounds it to a
+ * count of divers or boats — never money, a comparison, a streak or a rank —
+ * and it renders **nothing** on every other day, which is most of them.
+ *
+ * The season's first boat outranks its hundredth diver when a day is both:
+ * one of them happens once a season and the other happens five times.
+ *
+ * The hundredth diver is the seat that *crosses* the hundred, in boarding
+ * order, so a day that crosses two hundreds says the first of them and never
+ * the second. That is the same restraint the coral budget puts on every other
+ * moment: one, or none.
+ *
+ * **Divers, not seats**, which is what issue #1373 asks for and what the
+ * sentence means: a regular who dives every Saturday is one diver of the
+ * season, not thirty. Only a person nobody has seen this season moves the
+ * count, and only once, however many of today's boats they are on.
+ */
+export type FactOfScale =
+  | { kind: "first_boat"; seasonStart: SeasonStart }
+  | {
+      kind: "divers";
+      count: number;
+      diverName: string;
+      departureAt: Date;
+      seasonStart: SeasonStart;
+    };
+
+export function factOfScaleFor(input: {
+  seasonStart: SeasonStart;
+  diversBefore: number;
+  todaySeats: readonly {
+    personId: string;
+    diverName: string;
+    departureAt: Date;
+    seenEarlierThisSeason: boolean;
+  }[];
+  firstBoatOfSeason: boolean;
+}): FactOfScale | null {
+  if (input.firstBoatOfSeason) return { kind: "first_boat", seasonStart: input.seasonStart };
+  // Divers, not seats. A regular who dives every Saturday is one diver, and a
+  // diver on two of today's boats is still one — so a person already counted
+  // this season, today included, moves the count no further.
+  const countedToday = new Set<string>();
+  let running = input.diversBefore;
+  for (const seat of input.todaySeats) {
+    if (seat.seenEarlierThisSeason || countedToday.has(seat.personId)) continue;
+    countedToday.add(seat.personId);
+    running += 1;
+    if (running % FACT_OF_SCALE_EVERY !== 0) continue;
+    return {
+      kind: "divers",
+      count: running,
+      diverName: seat.diverName,
+      departureAt: seat.departureAt,
+      seasonStart: input.seasonStart,
+    };
+  }
+  return null;
+}
+
+/** Every hundredth diver, which is the ADR's own number. */
+const FACT_OF_SCALE_EVERY = 100;
