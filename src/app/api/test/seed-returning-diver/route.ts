@@ -37,7 +37,15 @@ const bodySchema = z.object({
 /** The staffer who kept the fit — the seeded divemaster, by name inside this tenant. */
 const KEEPER_FULL_NAME = "Keiko Tanaka";
 
-/** Long enough before any booking a spec can make that the fit is genuinely last season's. */
+/**
+ * Long enough before any booking a spec can make that the fit is genuinely last
+ * season's.
+ *
+ * The comparison the page makes is against `bookings.created_at`, which carries
+ * the *database's* `now()` rather than the frozen clock this subtracts from. The
+ * two only agree in production; here the margin is what makes it safe, and it is
+ * wide enough for any plausible gap between `DIVEDAY_CLOCK` and wall time.
+ */
 const STATED_DAYS_AGO = 60;
 /** Recent enough that "after your last trip" is a trip the diver remembers. */
 const CONFIRMED_DAYS_AGO = 6;
@@ -111,7 +119,7 @@ export async function POST(request: Request) {
   await db
     .update(people)
     .set({
-      emergencyContactName: "Rosa Delgado (sister)",
+      emergencyContactName: "Marisol Vega (sister)",
       emergencyContactPhone: "+1-305-555-0148",
     })
     .where(eq(people.id, diver.id));

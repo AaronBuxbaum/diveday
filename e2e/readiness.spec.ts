@@ -389,7 +389,11 @@ test("a returning diver is asked once, and answering one fact leaves the others 
   // one fact.
   await expect(page.locator('[data-thread-step="changes"]')).toHaveCount(1);
   await expect(page.locator('[data-thread-step="gear"]')).toHaveCount(0);
-  await expect(threadStatus(page)).toContainText("Anything changed?");
+  // The figure still counts five steps, and the one it points at is still the
+  // first thing on this diver — the waiver. The question is a step of the
+  // thread, not a thing that jumps the queue.
+  await expect(threadStatus(page)).toContainText("of 4 done");
+  await expect(threadStatus(page)).toContainText("Next: Sign");
 
   const changes = await openThreadStep(page, "changes");
   await expect(changes.getByText("Sizes")).toBeVisible();
@@ -400,29 +404,42 @@ test("a returning diver is asked once, and answering one fact leaves the others 
   await expect(
     changes.getByText("Keiko Tanaka kept your BCD at M after your last trip."),
   ).toBeVisible();
-  await expect(changes.getByText(/Rosa Delgado \(sister\)/)).toBeVisible();
+  await expect(changes.getByText(/Marisol Vega/)).toBeVisible();
 
   // The figure before the answer, so the move can be read off it rather than
   // guessed at.
   const before = await threadStatus(page).innerText();
 
   await changes.getByRole("button", { name: "Nothing changed" }).click();
+  await expect(page.getByText("Thanks for checking.")).toBeVisible();
+  // Settled, and stating the same fact the gear step would have — no new
+  // sentence for one fact, and nothing saying "you confirmed".
   await expect(page.locator('[data-thread-step="changes"]')).toContainText(
     "Your sizes are with the crew.",
   );
-  await expect(threadStatus(page)).not.toContainText("Anything changed?");
+  // The figure moved by one, which is what makes the step countable rather than
+  // a row that answers nothing.
   expect(await threadStatus(page).innerText()).not.toBe(before);
 
   // Now change one fact through its own door, and nothing else moves. That is
   // the boundary #1175 and #1179 both state: a post to one fact may never reach
   // another's columns.
+  //
+  // Each fact is a `<details>` of its own *inside* the step, so the step being
+  // open is not enough — the tanks question is behind its own door, exactly as
+  // a diver finds it. Waited on the door's own `open` attribute, the way
+  // `openThreadStep` does, rather than on the control inside it.
   const reopened = await openThreadStep(page, "changes");
-  await reopened.getByLabel("Air or nitrox?").selectOption("on");
-  await reopened.getByRole("button", { name: "Save" }).first().click();
+  const tanks = reopened.locator("details").filter({ hasText: "Air or nitrox?" }).first();
+  await tanks.locator(":scope > summary").click();
+  await expect(tanks).toHaveAttribute("open", "");
+  await tanks.getByLabel("Air or nitrox?").selectOption("on");
+  await tanks.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Tank choice saved.")).toBeVisible();
 
+  // The one fact that moved, and the two that did not.
   const after = await openThreadStep(page, "changes");
   await expect(after.getByText("Nitrox").first()).toBeVisible();
   await expect(after.getByText(/BCD M/)).toBeVisible();
-  await expect(after.getByText(/Rosa Delgado \(sister\)/)).toBeVisible();
+  await expect(after.getByText(/Marisol Vega/)).toBeVisible();
 });

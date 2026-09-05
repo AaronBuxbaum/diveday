@@ -58,20 +58,27 @@ function FactRow({
   value: string;
   changeWord: string;
   children: ReactNode;
-  /** The recall line, under the row it is about. */
+  /**
+   * The recall line, on the row rather than behind its door. It is the reason
+   * the value beside it reads as it does, so a diver skimming the three facts
+   * has to be able to see it without opening anything.
+   */
   footnote?: ReactNode;
 }) {
   return (
     <details className="group/fact py-4">
+      {/* Every part of the head is phrasing content — `<span>`s and never
+          `<p>`s — because `<summary>`'s content model takes phrasing, and a
+          paragraph in here is invalid markup browsers silently re-parent. */}
       <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 py-1 select-none [&::-webkit-details-marker]:hidden">
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold">{label}</span>
           <span className="block text-base text-muted">{value}</span>
+          {footnote ? <span className="mt-1 block text-sm text-muted">{footnote}</span> : null}
         </span>
         <span className="shrink-0 text-sm font-medium text-primary">{changeWord}</span>
         <DisclosureCaret className="text-muted group-open/fact:rotate-90" />
       </summary>
-      {footnote ? <div className="pb-1">{footnote}</div> : null}
       <div className="pt-4">{children}</div>
     </details>
   );
@@ -138,15 +145,13 @@ export function ChangedFacts({
         value={sizesValue}
         changeWord={changeWord}
         footnote={
-          fitRecall ? (
-            <p className="text-sm text-muted">
-              {t("ready.fitKeptByCrew", {
+          fitRecall
+            ? t("ready.fitKeptByCrew", {
                 name: fitRecall.staffFullName,
                 item: t(DIVER_SIZED_ITEM_KEYS[fitRecall.item]),
                 size: fitRecall.size,
-              })}
-            </p>
-          ) : null
+              })
+            : null
         }
       >
         {fitForm}
