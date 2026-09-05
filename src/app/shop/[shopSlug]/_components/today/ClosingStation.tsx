@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { SettledCheck } from "@/components/ui/SettledCheck";
 import { FIGURE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { CLOSEOUT_STATUS_KEYS, closeoutDepartureDetailText } from "@/i18n/closeout-labels";
@@ -78,84 +79,77 @@ export function ClosingStation({
   const checkpoint = close.diveNumber >= 1 ? `after_dive_${close.diveNumber}` : "departure";
 
   return (
-    // The same three tracks the morning station uses, and 112px for the same
-    // reason: two station kinds sit in one spine, so a rail that differed by
-    // 16px between them would read as two lists (issue #1112).
-    <li className="grid grid-cols-1 gap-y-2 sm:grid-cols-[112px_112px_1fr] sm:gap-y-0">
-      <div className="sm:pt-1 sm:text-end">
+    // The same panel the live station is (ADR 20260904-reef-all-the-way-down,
+    // slice 16a): a settled boat holds its place in the column of times as a
+    // card on the bed, not as a gap in a rail. No site tile — the closing
+    // reader carries no site — so the time leads, in the muted ink of a boat
+    // that is done.
+    <SectionCard as="li" padding="lg">
+      <p>
         {/* The same machine-readable instant the morning station renders: the
             spine's whole claim is that these read in clock order, and a
             settled station holds its place in that order rather than leaving
             a gap where a boat used to be. */}
         <time
           dateTime={close.startsAt.toISOString()}
-          className={`block ${FIGURE_CLASS} leading-none tracking-tight`}
+          className={`block ${FIGURE_CLASS} leading-none tracking-tight text-muted`}
         >
           {formatTime(close.startsAt, locale, timeZone)}
         </time>
-      </div>
-      {/* The rail, decorative — the order says which boat came first and the
-          time beside it is the fact. Hollow rather than ringed: a settled
-          station's mark is the check below, and two dots competing to be the
-          state would be the drift `SettledCheck` exists to stop. */}
-      <div aria-hidden="true" className="relative hidden sm:block">
-        <span className="absolute top-3.5 bottom-0 start-1/2 w-px -translate-x-1/2 bg-border" />
-        <span className="absolute top-1.5 start-1/2 size-3 -translate-x-1/2 rounded-full border-2 border-border bg-surface" />
-      </div>
-      <div className="pb-10">
-        <h3 className={`${SECTION_TITLE_CLASS} tracking-tight`}>
-          {/* A real tap target, like the live station's title: an inline link
-              in an 18px heading is a 23px hit area, which the dock test
-              (principle 2) and axe's target-size rule both refuse — and on a
-              phone the settled boat's name can sit a hair above the dock. */}
+      </p>
+      <h3 className={`mt-1.5 ${SECTION_TITLE_CLASS} tracking-tight`}>
+        {/* A real tap target, like the live station's title: an inline link
+            in an 18px heading is a 23px hit area, which the dock test
+            (principle 2) and axe's target-size rule both refuse — and on a
+            phone the settled boat's name can sit a hair above the dock. */}
+        <Link
+          href={`/shop/${shopSlug}/trips/${close.tripId}`}
+          className={`${tapTargetLinkClass} -mx-2 rounded-lg px-2 transition-colors hover:bg-surface-sunken hover:no-underline`}
+        >
+          {close.title}
+        </Link>
+      </h3>
+      <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+        <SettledCheck
+          settled={close.status === "all_home"}
+          label={t(CLOSEOUT_STATUS_KEYS[close.status])}
+          className="font-medium"
+        />
+        <span className={`${detailInk} tabular-nums`}>{detail}</span>
+        {counted && headCountClose ? (
+          <span className="text-muted">
+            {t("shopHome.spine.close.closedBy", { name: headCountClose.closedBy })}
+          </span>
+        ) : null}
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+        {/* A boat still out is exactly the row you would chase, so it gets
+            the manifest door too — not only the rows with a recorded gap
+            (principle 10: no dead ends on the row that matters most). */}
+        {close.gapReason || close.status === "still_out" ? (
           <Link
-            href={`/shop/${shopSlug}/trips/${close.tripId}`}
-            className={`${tapTargetLinkClass} -mx-2 rounded-lg px-2 transition-colors hover:bg-surface-sunken hover:no-underline`}
+            href={`/shop/${shopSlug}/trips/${close.tripId}/manifest?checkpoint=${checkpoint}`}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
           >
-            {close.title}
+            {openRollCallActionText(t)}
           </Link>
-        </h3>
-        <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-          <SettledCheck
-            settled={close.status === "all_home"}
-            label={t(CLOSEOUT_STATUS_KEYS[close.status])}
-            className="font-medium"
-          />
-          <span className={`${detailInk} tabular-nums`}>{detail}</span>
-          {counted && headCountClose ? (
-            <span className="text-muted">
-              {t("shopHome.spine.close.closedBy", { name: headCountClose.closedBy })}
-            </span>
-          ) : null}
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {/* A boat still out is exactly the row you would chase, so it gets
-              the manifest door too — not only the rows with a recorded gap
-              (principle 10: no dead ends on the row that matters most). */}
-          {close.gapReason || close.status === "still_out" ? (
-            <Link
-              href={`/shop/${shopSlug}/trips/${close.tripId}/manifest?checkpoint=${checkpoint}`}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {openRollCallActionText(t)}
-            </Link>
-          ) : null}
-          {/* Writing the day up belongs to the evening, so the departure log
-              is generated from the station rather than from the manifest a
-              crew works at the rail. Owner-only (ADR
-              20260804-incident-export-owner-gate) and absent, never disabled,
-              for everyone else — the gate is the render. */}
-          {canOpenLog ? (
-            <Link
-              href={`/shop/${shopSlug}/trips/${close.tripId}/log`}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {t("incidentExport.openLink")}
-            </Link>
-          ) : null}
-        </div>
-        {children}
+        ) : null}
+        {/* Writing the day up belongs to the evening, so the departure log
+            is generated from the station rather than from the manifest a
+            crew works at the rail. Owner-only (ADR
+            20260804-incident-export-owner-gate) and absent, never disabled,
+            for everyone else — the gate is the render. A quiet link, at the
+            same weight the live station gives it (slice 16a). */}
+        {canOpenLog ? (
+          <Link
+            href={`/shop/${shopSlug}/trips/${close.tripId}/log`}
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            {t("incidentExport.openLink")}
+          </Link>
+        ) : null}
       </div>
-    </li>
+      {children}
+    </SectionCard>
   );
 }

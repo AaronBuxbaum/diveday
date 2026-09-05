@@ -2,7 +2,8 @@ import Link from "next/link";
 import { SiteMark } from "@/components/illustration/SiteMark";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
-import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
+import { tapTargetLinkClass } from "@/components/ui/button";
+import { SectionCard } from "@/components/ui/card";
 import { FIGURE_CLASS, FIGURE_DIAL_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatTime } from "@/lib/format";
@@ -32,6 +33,19 @@ import { StationSettles } from "./StationSettles";
  * survive: "Everyone's aboard" was coral, and this ADR's coral table gives the
  * home exactly one morning moment — the all-clear line — which the spine
  * renders once, above the first station, or not at all.
+ *
+ * **ADR 20260904-reef-all-the-way-down, decision 1 (slice 16a): the station is
+ * a panel.** Reef drew each departure as a `SectionCard` with its site tile
+ * leading the header, and the first slices shipped Reef's tokens into the
+ * three-column rail grid that was already here — the gap the canvas measured
+ * from the running app. So: one panel per departure on the warm bed, the tile
+ * at 84×60 in front of the time, the dial at 76px with the capacity inside it
+ * and the open count beside, and the departure log as a **quiet link** rather
+ * than a secondary button — present on every live station, because the
+ * 2026-08-12 amendment to ADR 20260804-incident-export-owner-gate says the
+ * moment a shop most needs the record is while the boat is still out; what the
+ * slice changes is its weight, never its presence. `DaySpine.test.tsx` pins
+ * the panel, the tile, the dial and the door's weight.
  *
  * A Server Component, so it takes the translator rather than a copy object:
  * a station's counts are per-boat, and pre-resolving four plurals per
@@ -105,158 +119,132 @@ export function DayStation({
     station.crewReason !== "crew_none_assigned";
 
   return (
-    // The time column is 112px rather than the 96px the canvas pinned: at
-    // `text-2xl` a 12-hour time with a double-digit hour ("11:30 PM",
-    // "12:45 AM") is about 107px wide, so from 10:00 to 12:59 the meridiem
-    // wrapped onto its own line and pushed the whole time block below its own
-    // station's title — for half of every day, in every 12-hour locale, and
-    // never in a 24-hour one. Widening is the only one of the four options
-    // that costs nothing a reader can see: shrinking the type breaks the
-    // spine's scale, dropping the meridiem costs a 12-hour reader the
-    // distinction that makes the time legible, and formatting double-digit
-    // hours differently from single-digit ones would make the column change
-    // shape by the hour (issue #1112).
-    <li className="grid grid-cols-1 gap-y-2 sm:grid-cols-[112px_112px_1fr] sm:gap-y-0">
-      <div className="sm:pt-1 sm:text-end">
-        {/* A real `<time>`: the spine's whole claim is that these read in clock
-            order, and a machine-readable instant is what lets anything but a
-            human check it. */}
-        <time
-          dateTime={station.startsAt.toISOString()}
-          className={`block ${FIGURE_CLASS} leading-none tracking-tight`}
-        >
-          {formatTime(station.startsAt, locale, timeZone)}
-        </time>
-        <p className="mt-1.5 text-xs text-muted tabular-nums">
-          {t("shopHome.spine.until", {
-            time: formatTime(station.endsAt, locale, timeZone),
-          })}
-        </p>
-      </div>
-      {/* The rail, and on it the departure's drawn site mark — Reef's hand,
-          first use (ADR 20260901-diveday-reimagined, slice 13f). Decorative:
-          the order already says which boat is next and the time beside it is
-          the fact; the drawing says what kind of water without a word. */}
-      <div aria-hidden="true" className="relative hidden sm:block">
-        <span className="absolute top-3.5 bottom-0 start-1/2 w-px -translate-x-1/2 bg-border" />
+    <SectionCard as="li" padding="lg">
+      {/* The header: the drawn site tile leads (Reef's hand, slice 13f — the
+          rail it used to float on is gone), then the time and the title, then
+          the head count. Below `sm` the count wraps onto its own line under
+          the title: a 76px glass plus its words left a boat's name three words
+          wide on a 390px phone. */}
+      <div className="flex flex-wrap items-start gap-x-5 gap-y-3">
         <SiteMark
           mark={siteMarkFor({ siteName: station.siteName, isCourse: station.courseTitle !== null })}
           size="md"
           ground={siteMarkGroundFor(station.startsAt, timeZone)}
           coral={next}
-          className="absolute top-0 start-1/2 -translate-x-1/2"
         />
-      </div>
-      <div className="pb-10">
-        {/* Below `sm` the dial takes its own line under the title: beside it,
-            a 64px glass plus its words left a boat's name three words wide
-            on a 390px phone. */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-          <div className="min-w-0">
-            <h3 className={`flex flex-wrap items-center gap-x-2 gap-y-1 ${SECTION_TITLE_CLASS}`}>
-              <Link
-                href={`/shop/${shopSlug}/trips/${station.tripId}`}
-                className={`${tapTargetLinkClass} group/station -mx-2 rounded-lg px-2 transition-colors hover:bg-surface-sunken hover:no-underline`}
-              >
-                {station.title}
-                <DiveDayIcon
-                  name="chevron-right"
-                  className="size-4 shrink-0 text-muted transition-transform group-hover/station:translate-x-0.5"
-                />
-              </Link>
-              {crewed ? <Badge tone="primary">{t("shopHome.spine.crewing")}</Badge> : null}
-            </h3>
-            {meta.length > 0 ? <p className="mt-1 text-sm text-muted">{meta.join(" · ")}</p> : null}
-          </div>
-          {/* The head count leads as a figure (decision 3), drawn as the
-              board draws it: a dial whose water stands at booked-of-capacity
-              in `shallows` — the token Reef minted for a fill that carries no
-              fact — with the figure over the water and the words beside it.
-              The roll call's dial (`HeadCount`) is the same anatomy on the
-              one surface that counts heads; this one counts seats, which is
-              why the words stay outside the glass at reading size and the
-              water is never a state. */}
-          <div className="flex shrink-0 items-center gap-3">
-            <div className="relative size-16 shrink-0 overflow-hidden rounded-full border border-border bg-surface-sunken">
-              <div
-                aria-hidden="true"
-                data-station-water
-                className="absolute inset-0 origin-bottom bg-shallows"
-                style={{ transform: `scaleY(${filled / 100})` }}
+        <div className="min-w-0 flex-1 basis-48">
+          <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            {/* A real `<time>`: the spine's whole claim is that these read in
+                clock order, and a machine-readable instant is what lets
+                anything but a human check it. */}
+            <time
+              dateTime={station.startsAt.toISOString()}
+              className={`${FIGURE_CLASS} leading-none tracking-tight`}
+            >
+              {formatTime(station.startsAt, locale, timeZone)}
+            </time>
+            <span className="text-sm text-muted tabular-nums">
+              {t("shopHome.spine.until", {
+                time: formatTime(station.endsAt, locale, timeZone),
+              })}
+            </span>
+          </p>
+          <h3
+            className={`mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 ${SECTION_TITLE_CLASS}`}
+          >
+            <Link
+              href={`/shop/${shopSlug}/trips/${station.tripId}`}
+              className={`${tapTargetLinkClass} group/station -mx-2 rounded-lg px-2 transition-colors hover:bg-surface-sunken hover:no-underline`}
+            >
+              {station.title}
+              <DiveDayIcon
+                name="chevron-right"
+                className="size-4 shrink-0 text-muted transition-transform group-hover/station:translate-x-0.5"
               />
-              <span
-                className={`absolute inset-0 flex items-center justify-center ${FIGURE_DIAL_CLASS}`}
-              >
-                {station.booked}
+            </Link>
+            {crewed ? <Badge tone="primary">{t("shopHome.spine.crewing")}</Badge> : null}
+          </h3>
+          {meta.length > 0 ? <p className="mt-1 text-sm text-muted">{meta.join(" · ")}</p> : null}
+        </div>
+        {/* The head count leads as a figure (decision 3), drawn as the board
+            draws it: a dial whose water stands at booked-of-capacity in
+            `shallows` — the token Reef minted for a fill that carries no
+            fact — with the figure and the capacity over the water and the
+            open count beside it. The roll call's dial (`HeadCount`) is the
+            same anatomy on the one surface that counts heads; this one counts
+            seats, and the water is never a state. */}
+        <div className="flex shrink-0 items-center gap-4 max-sm:basis-full sm:flex-row-reverse">
+          <div className="relative size-19 shrink-0 overflow-hidden rounded-full border border-border bg-surface-sunken">
+            <div
+              aria-hidden="true"
+              data-station-water
+              className="absolute inset-0 origin-bottom bg-shallows"
+              style={{ transform: `scaleY(${filled / 100})` }}
+            />
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className={FIGURE_DIAL_CLASS}>{station.booked}</span>
+              <span className="text-[11px] font-semibold text-primary-hover tabular-nums">
+                {t("shopHome.spine.ofCapacity", { capacity: station.capacity })}
               </span>
             </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-muted tabular-nums">
-                {t("shopHome.spine.ofCapacity", { capacity: station.capacity })}
-              </p>
-              <p className="mt-0.5 text-xs text-muted">
-                {open === 0
-                  ? t("shopHome.spine.full")
-                  : t("shopHome.spine.spotsOpen", { count: open })}
-              </p>
-            </div>
+          </div>
+          <div className="flex min-w-0 flex-col gap-1 sm:items-end">
+            <p className="text-sm text-muted tabular-nums">
+              {open === 0
+                ? t("shopHome.spine.full")
+                : t("shopHome.spine.spotsOpen", { count: open })}
+            </p>
+            {/* **A departure that has not come home still has a log** — ADR
+                20260804-incident-export-owner-gate's 2026-08-12 amendment says
+                it in as many words: *offered on every departure row, not only
+                the ones that are back.* A quiet link, not a button: an owner's
+                rare act was standing at button weight beside every boat every
+                morning, and the panel is calmer with it at reading weight
+                (slice 16a). Absent, never disabled, for everyone else. */}
+            {canOpenLog ? (
+              <Link
+                href={`/shop/${shopSlug}/trips/${station.tripId}/log`}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                {t("incidentExport.openLink")}
+              </Link>
+            ) : null}
           </div>
         </div>
-
-        {station.blockedAboardGroups.map((group) => (
-          <p key={group.kind} className="mt-3 text-sm">
-            {group.names.length === 1 && group.names[0]
-              ? t("shopHome.spine.aboardNamed", {
-                  name: group.names[0],
-                  reason: t(aboardReasonKey(group.kind)),
-                })
-              : t("shopHome.spine.aboardCount", {
-                  count: group.names.length,
-                  reason: t(aboardReasonKey(group.kind)),
-                })}
-          </p>
-        ))}
-        {crewRollCallOpen ? (
-          <p className="mt-3 text-sm font-medium text-warning">
-            {t("shopHome.spine.crewRollCallOpen")}
-          </p>
-        ) : null}
-
-        {/* **A departure that has not come home still has a log** — ADR
-            20260804-incident-export-owner-gate's 2026-08-12 amendment says it
-            in as many words: *offered on every departure row, not only the ones
-            that are back, because the moment a shop most needs a departure's
-            recorded facts is while the departure is still happening.* The
-            document has always reported what is on record so far.
-
-            6d moved the door onto the evening's station and left the live one
-            without it, which put an owner whose boat is overdue exactly one
-            place they cannot reach the record of who is on it. */}
-        {canOpenLog ? (
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Link
-              href={`/shop/${shopSlug}/trips/${station.tripId}/log`}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {t("incidentExport.openLink")}
-            </Link>
-          </div>
-        ) : null}
-
-        {/* The rows, and the water that closes over them when the last one
-            clears — Reef's first moment (ADR 20260901-diveday-reimagined,
-            slice 13g). The sentence names this boat's own time: it is the
-            station's answer, not the day's, which the summary line above the
-            spine already gives. */}
-        <StationSettles
-          rowCount={station.rows.length}
-          sentence={t("shopHome.spine.stationClear", {
-            time: formatTime(station.startsAt, locale, timeZone),
-          })}
-        >
-          {children}
-        </StationSettles>
       </div>
-    </li>
+
+      {station.blockedAboardGroups.map((group) => (
+        <p key={group.kind} className="mt-3 text-sm">
+          {group.names.length === 1 && group.names[0]
+            ? t("shopHome.spine.aboardNamed", {
+                name: group.names[0],
+                reason: t(aboardReasonKey(group.kind)),
+              })
+            : t("shopHome.spine.aboardCount", {
+                count: group.names.length,
+                reason: t(aboardReasonKey(group.kind)),
+              })}
+        </p>
+      ))}
+      {crewRollCallOpen ? (
+        <p className="mt-3 text-sm font-medium text-warning">
+          {t("shopHome.spine.crewRollCallOpen")}
+        </p>
+      ) : null}
+
+      {/* The rows, and the water that closes over them when the last one
+          clears — Reef's first moment (ADR 20260901-diveday-reimagined,
+          slice 13g). The sentence names this boat's own time: it is the
+          station's answer, not the day's, which the summary line above the
+          spine already gives. */}
+      <StationSettles
+        rowCount={station.rows.length}
+        sentence={t("shopHome.spine.stationClear", {
+          time: formatTime(station.startsAt, locale, timeZone),
+        })}
+      >
+        {children}
+      </StationSettles>
+    </SectionCard>
   );
 }

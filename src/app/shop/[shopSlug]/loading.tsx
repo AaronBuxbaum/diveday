@@ -23,9 +23,31 @@ export default function ShopSurfaceLoading() {
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton titleWidth="w-56" descriptionWidth="w-72 max-w-full" />
-        <div className="mt-8 flex flex-col gap-3">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className={sectionCardClass({ padding: "none", className: "h-20" })} />
+        {/* Three station-shaped panels (ADR 20260904-reef-all-the-way-down,
+            slice 16a): the shell the spine paints into, so the skeleton and
+            the page share one silhouette. */}
+        <div className="mt-8 flex flex-col gap-5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className={sectionCardClass({ padding: "lg" })}>
+              <div className="flex items-start gap-5">
+                <div className="h-15 w-21 shrink-0 rounded-inset bg-surface-sunken" />
+                <div className="min-w-0 flex-1">
+                  <div className="h-6 w-24 rounded bg-surface-sunken" />
+                  <div className="mt-2 h-5 w-64 max-w-full rounded bg-surface-sunken" />
+                  <div className="mt-2 h-4 w-80 max-w-full rounded bg-surface-sunken" />
+                </div>
+                <div className="size-19 shrink-0 rounded-full bg-surface-sunken" />
+              </div>
+              <div className="mt-5 flex flex-col divide-y divide-border border-t border-border">
+                {[0, 1, 2].map((row) => (
+                  <div key={row} className="flex items-center gap-3 py-4">
+                    <div className="size-5 rounded-full bg-surface-sunken" />
+                    <div className="h-4 w-20 rounded bg-surface-sunken" />
+                    <div className="h-4 flex-1 rounded bg-surface-sunken" />
+                  </div>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </div>

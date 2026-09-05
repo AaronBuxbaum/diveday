@@ -169,11 +169,24 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
       action.payment?.orderId ||
       action.helpRequest,
   );
+  // One line per row (ADR 20260904-reef-all-the-way-down, slice 16a): the
+  // person, then the sentence, at reading size — a subject over a detail at
+  // 14px was the rail's grammar, and a panel reads as one sentence with a name
+  // in it. Each half keeps its own element so a reader (and a test) can find
+  // either by its own words.
+  const tone = ACTION_KIND_META[action.kind].tone;
   const body = (
-    <div className="min-w-0 py-2">
-      {action.aboutDeparture ? null : <p className="text-sm font-medium">{action.subject}</p>}
-      <p className="text-sm text-muted">{action.detail}</p>
-    </div>
+    <p className="min-w-0 py-2 text-base leading-snug">
+      {action.aboutDeparture ? null : (
+        <>
+          <span className="font-medium">{action.subject}</span>
+          <span aria-hidden="true" className="text-muted">
+            {" · "}
+          </span>
+        </>
+      )}
+      <span className={tone === "neutral" ? "text-muted" : undefined}>{action.detail}</span>
+    </p>
   );
   const control = action.waiver ? (
     <WaiverSendControl
@@ -241,7 +254,6 @@ function StationRow({ action, controls }: { action: TodayAction; controls: RowCo
   // inline is deliberately not a door: the tap is the control beside it.
   const door = performs || !action.href ? {} : { href: action.href, linkLabel: action.actionLabel };
 
-  const tone = ACTION_KIND_META[action.kind].tone;
   return (
     <LedgerRow
       // Stacked below `sm`: the kind and the fix share the first line and the
@@ -296,7 +308,7 @@ function Stations({
   controls: RowControls;
 }) {
   return (
-    <ol>
+    <ol className="flex flex-col gap-5">
       {stations.map((station) => (
         <DayStation
           key={station.tripId}
@@ -660,7 +672,9 @@ export function DaySpine({
       ) : null}
 
       {entries.length > 0 ? (
-        <ol>
+        // Panels, not a rail: each station is a `SectionCard` on the bed and
+        // the column spaces them (ADR 20260904-reef-all-the-way-down, 16a).
+        <ol className="flex flex-col gap-5">
           {entries.map((entry) =>
             entry.kind === "live" ? (
               <DayStation

@@ -1,7 +1,8 @@
 # 20260904-reef-all-the-way-down — Take Reef to the bottom of every surface, decide the delight backlog, and widen the budget along one axis
 
-- **Status:** Proposed — three of its decisions are the owner's (H-67). Slices 16b, 16c and the
-  postcard number in 16i wait on that row; every other slice waits only on this record's acceptance
+- **Status:** Accepted — decided 2026-09-04 (Aaron Buxbaum, in session; H-67: the budget widens as
+  drawn, `trips.revision` carries the calendar revision, the postcard stamp and the stage words as
+  drawn). Slices 16a–16j in the roadmap
 - **Date:** 2026-09-04
 - **Design:** [the canvas](../../design/canvases/20260904-reef-all-the-way-down/README.md) — twelve
   artboards on two pages: the cover, the verdict ledger, the budget sheet and the measured gap; then
@@ -50,8 +51,11 @@ Proposed, in four parts. Parts 2 and 4 carry the three owner calls recorded as H
 The canvas's slice table is sequenced by *surface* rather than by token or moment, because the
 Gap board's last finding is that the other two orderings are how the pictures were missed. The
 station on the shop home becomes a `SectionCard` per departure with the site tile leading, one
-sentence per row, and the log door moved to the evening station where writing the day up belongs
-(the 2026-08-04 close-out ADR's own reasoning); the booking page is bounded to three field-guide
+sentence per row, and the log door demoted from a secondary button to a quiet link. *Corrected on
+acceptance*: the canvas moved that door to the evening, and the 2026-08-12 amendment to
+[20260804-incident-export-owner-gate](20260804-incident-export-owner-gate.md) forbids exactly that —
+the log is offered on every departure, because the moment a shop most needs it is while the boat is
+still out. The amendment stands; what changes is the weight, not the presence; the booking page is bounded to three field-guide
 tiles and a door above the form, with a composition test that refuses more; the manifest keeps
 every rule it has and gains two strips at its top; the storefront gains a live panel and a lens
 rail; the thread gains one step; the recap gains a postcard. Each slice ends in the standing
