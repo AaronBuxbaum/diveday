@@ -22,6 +22,7 @@ import {
   people,
   personRoles,
   priorVisits,
+  recapPulses,
   rentalFitProfiles,
   shops,
   tripDeskEvents,
@@ -146,6 +147,18 @@ describe("diver record merge", () => {
       message: "A note was added.",
       occurredAt: new Date("2026-08-25T00:00:00.000Z"),
     });
+    // The diver's own private word about the day (D40). It is theirs, not the
+    // shop's, so it must land on the survivor — and it is the one row here
+    // whose live-uniqueness is per *booking*, which is why moving it cannot
+    // collide the way a per-person singleton can.
+    await db.insert(recapPulses).values({
+      shopId: shop.id,
+      bookingId: booking.id,
+      tripId: trip.id,
+      personId: source.id,
+      categories: ["gear"],
+      note: "The BCD was loose all day.",
+    });
 
     const result = await mergeDiverRecords({
       db,
@@ -181,6 +194,11 @@ describe("diver record merge", () => {
       (await db.select().from(activityEvents).where(eq(activityEvents.bookingId, booking.id)))[0]
         ?.subjectPersonId,
     ).toBe(source.id);
+    expect(
+      (await db.select().from(recapPulses).where(eq(recapPulses.personId, survivor.id))).map(
+        (row) => row.note,
+      ),
+    ).toEqual(["The BCD was loose all day."]);
 
     const [merged] = await db.select().from(people).where(eq(people.id, source.id));
     expect(merged).toMatchObject({

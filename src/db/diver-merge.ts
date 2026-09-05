@@ -80,6 +80,12 @@ export const DIVER_HISTORY_TABLES = [
   "prior_gear_assignments",
   "nitrox_certifications",
   "trip_reviews",
+  // The private half of the same act (ADR 20260904-reef-all-the-way-down,
+  // D40): the diver's own word about how the day went, on the booking they
+  // sat in. It moves for the reason the review above it does — it is the
+  // diver's, not the shop's — and it cannot collide, because the live-row
+  // unique index is per *booking*, and the bookings move with them.
+  "recap_pulses",
   "trip_blowout_divers",
 ] as const;
 
@@ -166,6 +172,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "pre_departure_check_events.recorded_by_person_id": "who ticked the check",
   "pre_departure_checklist_items.deleted_by_person_id": "who removed the check",
   "processor_erasure_obligations.discharged_by_person_id": "who discharged the obligation",
+  "recap_pulses.addressed_by_person_id": "which staffer picked the pulse up",
   "review_moderation_events.recorded_by_person_id": "who published or withheld the review",
   "roll_call_crew_events.recorded_by_person_id": "who called the crew roll",
   "roll_call_events.recorded_by_person_id": "who called the roll",
