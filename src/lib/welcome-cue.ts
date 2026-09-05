@@ -1,5 +1,5 @@
 import { nowDate } from "@/lib/clock";
-import { DEPARTURE_BUFFER_MS } from "@/lib/closeout";
+import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 
 /**
  * **The welcome word under a diver's name** (issue #1182, delight report D22;

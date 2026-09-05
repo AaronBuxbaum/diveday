@@ -1,3 +1,4 @@
+import { hasReturned } from "@/lib/trips";
 import { calendarDateInTimezone } from "./calendar-date";
 import { nowDate } from "./clock";
 import type { ChecklistState, DiverChecklistItem } from "./readiness-summary";
@@ -233,7 +234,7 @@ export function isDiveDay(input: {
  */
 export function theBoatIsHome(input: { endsAt: Date; now?: Date }): boolean {
   const now = input.now ?? nowDate();
-  return now.getTime() > input.endsAt.getTime() + DEPARTURE_BUFFER_MS;
+  return hasReturned(input.endsAt, now);
 }
 
 /**
@@ -284,8 +285,8 @@ export function isAfterTheDive(input: {
   if (input.boarded === "not_boarded") return false;
   const now = input.now ?? nowDate();
   if (input.boarded === "boarded") return theBoatIsHome({ endsAt: input.endsAt, now });
+  // diveday:allow-departure-offset: the recap's own delay, not the sailed/returned
+  // question — a recap waits its scheduled hours after a boat this rule already
+  // counts as home.
   return now.getTime() > input.endsAt.getTime() + RECAP_AUTOMATIC_DELAY_MS;
 }
-
-/** The standing late-arrival buffer: trips run late, so nothing is "past" for an hour. */
-const DEPARTURE_BUFFER_MS = 60 * 60 * 1000;

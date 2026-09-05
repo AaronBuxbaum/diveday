@@ -13,6 +13,7 @@ import type { Role } from "./authz";
 import type { CrewIncompleteReason } from "./manifests";
 import type { AboardBlockerKind, ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 import type { SeasonStart } from "./season";
+import type { TripStageReading } from "./trip-stages";
 import { utcToWallTime } from "./zoned";
 
 /**
@@ -878,6 +879,12 @@ export type SpineDeparture = {
   blockedAboardGroups: readonly { kind: AboardBlockerKind; names: readonly string[] }[];
   crewAccountedFor: boolean;
   crewReason: CrewIncompleteReason | null;
+  /**
+   * The crew's own word for where this boat is, and when they said it (ADR
+   * 20260904-reef-all-the-way-down, Budget rule 4). Null on a departure whose
+   * crew has tapped nothing, which renders nothing — never "Unknown".
+   */
+  stage?: TripStageReading | null;
 };
 
 /**

@@ -370,6 +370,7 @@ ADR, a test pins the rule, the canvas README's slice table moves, and the visual
   on the day it is true, with a season-start setting (#1371, #1373). **Shipped 2026-09-05.**
 - **16c** — the boat says where it is: `trip_stage_events`, the manifest's stage strip, the home's
   chip, the storefront's live panel, the thread's line; the boat drawing (#1372, #1374, D20).
+  **Shipped 2026-09-05** — `#1374`'s "next with space" half stays open for 16f.
 - **16d** — the manifest's top: the catch-up strip (D42 with D27 folded in), the plan-change door
   (D24), the welcome word under a name (D22). **Shipped 2026-09-05.** `trip_desk_events` and
   `trip_read_marks` are new, kind-coded and prose-free, written from the consequence paths that
@@ -377,8 +378,9 @@ ADR, a test pins the rule, the canvas README's slice table moves, and the visual
   note on `executed_dives`, which never touches `trip_dives`; the welcome word is one consent
   stamp on `bookings` the diver writes on their own `/ready` thread. The strip's second drawn
   line, D12's intent count, ships with 16e.
-- **16e** — the booking page bounded: three tiles and a door, "Also worth a look" (D01), the
-  intent question (D12), the rusty diver's offers (D18); a composition test holds the length.
+- **16e** — the booking page bounded: three tiles and a door, the other departures worth a look
+  (D01), the intent question (D12 with D23 folded into its count), the rusty diver's offers (D18);
+  a composition test holds the length. **Shipped 2026-09-05.**
 - **16f** — the storefront's lenses (D02) and "next with space".
 - **16g** — the thread: "Anything changed?" (D15 with D19 folded in), provenance chips (D51), the
   rental-fit line (D14).

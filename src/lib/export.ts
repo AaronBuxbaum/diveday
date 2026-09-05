@@ -44,6 +44,8 @@ export const EXPORT_FILE_NOTES = {
     "Every trip ever scheduled, including cancelled ones, with sites and predicted conditions.",
   "trip_change_events.csv":
     "The public-safe change ledger for departures: what meeting point or conditions snapshot changed, the before and after values, broad source, and timestamp. No readiness, waiver, contact, or capability state is included.",
+  "trip_stage_events.csv":
+    "Where each departure was, in the crew's own word, with the time they said it and who said it. Five stages, appended and never edited; the newest row is what the shop's website and each diver's link showed. No position of any kind is recorded.",
   "trip_series.csv":
     "Recurring-trip cadences; every materialized instance is its own row in trips.csv carrying series_id. A blank ends_on means the trip simply keeps repeating.",
   "trip_series_skips.csv":

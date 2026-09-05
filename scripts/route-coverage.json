@@ -1,5 +1,5 @@
 {
-  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `a11y` names the specs that run an axe scan on it, `exempt` states why a route warrants less than both. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose — see scripts/check-route-coverage.mjs.",
+  "//": "Every `src/app/**/page.tsx` route and the tests that cover it. `e2e` names spec files under e2e/, `visual` names captures in e2e/visual.spec.ts, `a11y` names the specs that run an axe scan on it, `exempt` states why a route warrants less than both. Mechanical facts are written by `node scripts/check-route-coverage.mjs --write`; the coverage lists are hand-maintained on purpose \u2014 see scripts/check-route-coverage.mjs.",
   "/": {
     "e2e": ["demo.spec.ts", "manifest.spec.ts", "marketing.spec.ts", "seo.spec.ts"],
     "visual": ["landing"],
@@ -117,6 +117,7 @@
   "/s/[shopSlug]": {
     "e2e": [
       "a11y.spec.ts",
+      "boat-stage.spec.ts",
       "booking.spec.ts",
       "courses.spec.ts",
       "courtesy-email-unsubscribe.spec.ts",
@@ -189,6 +190,8 @@
     ],
     "visual": [
       "booking-confirmed-embed",
+      "booking-intent",
+      "booking-pitch-open",
       "shop-not-found",
       "site-briefing",
       "site-briefing-requirements"
@@ -198,6 +201,7 @@
   "/shop/[shopSlug]": {
     "e2e": [
       "boat-loop.spec.ts",
+      "boat-stage.spec.ts",
       "day-close.spec.ts",
       "day-spine.spec.ts",
       "departure-log.spec.ts",
@@ -553,6 +557,7 @@
     "e2e": [
       "a11y.spec.ts",
       "boat-loop.spec.ts",
+      "boat-stage.spec.ts",
       "buddy-pairs.spec.ts",
       "depth-and-age-surfaces.spec.ts",
       "divers.spec.ts",

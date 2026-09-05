@@ -101,10 +101,18 @@ export function TripDayPlan({
  * guide twice, and renders nothing at all when no site names a species — an
  * empty "Look for" is a heading apologising for having nothing under it.
  */
-export function TripLookFor({ briefings, locale }: { briefings: DiveBriefing[]; locale: string }) {
-  const t = diverTranslator(locale);
+/**
+ * The day's field guide as one list: every species its sites name, in plan
+ * order, deduplicated because a two-tank day on one mooring carries the same
+ * guide twice.
+ *
+ * Exported so `TripPitch`'s three tiles and the full list below read the same
+ * list in the same order — a preview that disagreed with what the door opens
+ * would be the worst of both.
+ */
+export function fieldGuideCardsFor(briefings: readonly DiveBriefing[]) {
   const seen = new Set<string>();
-  const cards = briefings.flatMap(({ creatures }) =>
+  return briefings.flatMap(({ creatures }) =>
     creatures.filter((creature) => {
       const key = creature.slug ?? creature.name;
       if (seen.has(key)) return false;
@@ -112,6 +120,11 @@ export function TripLookFor({ briefings, locale }: { briefings: DiveBriefing[]; 
       return true;
     }),
   );
+}
+
+export function TripLookFor({ briefings, locale }: { briefings: DiveBriefing[]; locale: string }) {
+  const t = diverTranslator(locale);
+  const cards = fieldGuideCardsFor(briefings);
   if (cards.length === 0) return null;
   return (
     <section className="mt-6">
@@ -157,8 +170,8 @@ export function TripLookFor({ briefings, locale }: { briefings: DiveBriefing[]; 
  * thing a screen reader could add. Renders nothing when no site has a
  * published moment with a photo, which is most shops.
  */
-export function TripMoments({ briefings, locale }: { briefings: DiveBriefing[]; locale: string }) {
-  const t = diverTranslator(locale);
+/** The day's published diver photos, one strip, deduplicated by site and capped at four. */
+export function dayMomentsFor(briefings: readonly DiveBriefing[]) {
   const seen = new Set<string>();
   const moments: { id: string; caption: string; imageUrl: string }[] = [];
   for (const { diveSite, moments: siteMoments } of briefings) {
@@ -170,7 +183,12 @@ export function TripMoments({ briefings, locale }: { briefings: DiveBriefing[]; 
       }
     }
   }
-  const shown = moments.slice(0, 4);
+  return moments.slice(0, 4);
+}
+
+export function TripMoments({ briefings, locale }: { briefings: DiveBriefing[]; locale: string }) {
+  const t = diverTranslator(locale);
+  const shown = dayMomentsFor(briefings);
   if (shown.length === 0) return null;
   return (
     <section className="mt-6">
@@ -221,8 +239,8 @@ export function TripMoments({ briefings, locale }: { briefings: DiveBriefing[]; 
  * ordinary case: most shops never draw one, and a heading over an empty frame
  * would be the page apologising for a feature the shop declined to use.
  */
-export function TripRoutes({ briefings, locale }: { briefings: DiveBriefing[]; locale: string }) {
-  const t = diverTranslator(locale);
+/** The day's sites the shop actually drew a route for, once each. */
+export function routeSitesFor(briefings: readonly DiveBriefing[]) {
   const seen = new Set<string>();
   const sites = [];
   for (const { diveSite } of briefings) {
@@ -230,6 +248,12 @@ export function TripRoutes({ briefings, locale }: { briefings: DiveBriefing[]; l
     seen.add(diveSite.id);
     sites.push(diveSite);
   }
+  return sites;
+}
+
+export function TripRoutes({ briefings, locale }: { briefings: DiveBriefing[]; locale: string }) {
+  const t = diverTranslator(locale);
+  const sites = routeSitesFor(briefings);
   if (sites.length === 0) return null;
   return (
     <section className="mt-6">
@@ -276,6 +300,42 @@ function SitePassage({ children }: { children: React.ReactNode }) {
 }
 
 /**
+ * The day's sites that have something written about them, once each, with the
+ * landmarks parsed and the two free-text marine-life fields already resolved
+ * against the picked species. An empty list is a day the shop wrote nothing
+ * about, and the beat renders nothing at all.
+ */
+export function siteNotePassagesFor(briefings: readonly DiveBriefing[]) {
+  const seen = new Set<string>();
+  const sites = [];
+  for (const { diveSite, creatures } of briefings) {
+    if (!diveSite || seen.has(diveSite.id)) continue;
+    seen.add(diveSite.id);
+    const landmarks = parseDiveSiteLandmarks(diveSite.landmarks);
+    // The species the shop *picked* are already the "Look for" beat above, so
+    // its two free-text twins — the shop's own paragraph ("Underwater
+    // briefing") and its short list ("What might divers see?") — speak only for
+    // a site that named none. Otherwise the page answers the same question
+    // twice, in two voices.
+    const lookFor =
+      creatures.length > 0
+        ? { summary: null, highlights: null }
+        : { summary: diveSite.marineLifeDescription, highlights: diveSite.marineLife };
+    const written =
+      diveSite.fitNote ||
+      diveSite.divePlan ||
+      diveSite.currentNote ||
+      diveSite.conservationNote ||
+      lookFor.summary ||
+      lookFor.highlights ||
+      landmarks.length > 0;
+    if (!written) continue;
+    sites.push({ site: diveSite, landmarks, lookFor });
+  }
+  return sites;
+}
+
+/**
  * **What the shop wrote about the places this day dives.**
  *
  * ADR 20260813-dive-site-briefings-are-the-shops-own-words turns on one
@@ -308,32 +368,7 @@ export function TripSiteNotes({
   locale: string;
 }) {
   const t = diverTranslator(locale);
-  const seen = new Set<string>();
-  const sites = [];
-  for (const { diveSite, creatures } of briefings) {
-    if (!diveSite || seen.has(diveSite.id)) continue;
-    seen.add(diveSite.id);
-    const landmarks = parseDiveSiteLandmarks(diveSite.landmarks);
-    // The species the shop *picked* are already the "Look for" beat above, so
-    // its two free-text twins — the shop's own paragraph ("Underwater
-    // briefing") and its short list ("What might divers see?") — speak only for
-    // a site that named none. Otherwise the page answers the same question
-    // twice, in two voices.
-    const lookFor =
-      creatures.length > 0
-        ? { summary: null, highlights: null }
-        : { summary: diveSite.marineLifeDescription, highlights: diveSite.marineLife };
-    const written =
-      diveSite.fitNote ||
-      diveSite.divePlan ||
-      diveSite.currentNote ||
-      diveSite.conservationNote ||
-      lookFor.summary ||
-      lookFor.highlights ||
-      landmarks.length > 0;
-    if (!written) continue;
-    sites.push({ site: diveSite, landmarks, lookFor });
-  }
+  const sites = siteNotePassagesFor(briefings);
   if (sites.length === 0) return null;
   return (
     <section className="mt-6">

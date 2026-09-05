@@ -25,6 +25,7 @@ import {
   savePushSubscription,
 } from "@/db/push-subscriptions";
 import { getShopById } from "@/db/shops";
+import { recordTripStage } from "@/db/trip-stages";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { depthToMeters, MAX_ENTERED_DEPTH_METERS } from "@/lib/depth-units";
@@ -34,6 +35,7 @@ import { isAllowedPushEndpoint } from "@/lib/notifications/web-push";
 import { PLAN_CHANGE_NOTE_MAX, PLAN_CHANGE_REASONS } from "@/lib/plan-change";
 import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
+import { TRIP_STAGES } from "@/lib/trip-stages";
 import { UUID_SOURCE } from "@/lib/uuid";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 
@@ -454,6 +456,8 @@ export type PreDepartureCheckResult = { ok: true } | { ok: false; reason: "error
  * `rollCallAction`, this takes the trip-only context, because the check
  * happens once before the boat leaves, not once per dive.
  */
+const tripStageSchema = z.object({ stage: z.enum(TRIP_STAGES) });
+
 export async function preDepartureCheckAction(
   ctx: ManifestTripContext,
   _prev: PreDepartureCheckResult,
@@ -469,6 +473,40 @@ export async function preDepartureCheckAction(
       checklistItemId: parsed.data.checklistItemId,
       recordedByPersonId: staff.user.personId,
       status: parsed.data.status,
+    });
+    if (!outcome.ok) return { ok: false, reason: "error" };
+  } catch {
+    return { ok: false, reason: "error" };
+  }
+  revalidatePath(manifestPath(ctx));
+  return { ok: true };
+}
+
+/**
+ * **The crew says where the boat is** — ADR 20260904-reef-all-the-way-down,
+ * decision 2, Budget rule 4.
+ *
+ * Checkpoint-independent on purpose: a stage is about the boat, not about a
+ * roll-call checkpoint, so it neither opens nor closes one. Every non-ok
+ * outcome returns the one refusal a crew member at the rail can act on — tap
+ * again — because the two the writer distinguishes (their role went away,
+ * the departure went away) are both "this did not save" to the person
+ * holding the phone.
+ */
+export async function setTripStageAction(
+  ctx: ManifestTripContext,
+  _prev: PreDepartureCheckResult,
+  formData: FormData,
+): Promise<PreDepartureCheckResult> {
+  const staff = await requireStaffSession();
+  const parsed = tripStageSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { ok: false, reason: "error" };
+  try {
+    const outcome = await recordTripStage(await getDb(), {
+      shopId: staff.user.shopId,
+      tripId: ctx.tripId,
+      stage: parsed.data.stage,
+      recordedByPersonId: staff.user.personId,
     });
     if (!outcome.ok) return { ok: false, reason: "error" };
   } catch {

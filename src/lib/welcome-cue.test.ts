@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEPARTURE_BUFFER_MS } from "./closeout";
+import { DEPARTURE_BUFFER_MS } from "./trips";
 import { offerableWelcomeCue, WELCOME_GAP_YEARS, welcomeCueFor } from "./welcome-cue";
 
 const NOW = new Date("2026-07-21T13:30:00.000Z");

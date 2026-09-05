@@ -8,12 +8,14 @@ import { sectionCardClass } from "@/components/ui/card";
  * nothing shaped to show meanwhile.
  *
  * Shaped like the body it stands in for, in the order that body now runs (ADR
- * 20260827-the-divers-thread, decision 2): back link, eyebrow, title, the
- * strong when-line, the price moment, the two flat pitch bands, then the one
- * raised booking card **last**. It held the old order — card, then a flat band
- * — until 2026-08-28, and a skeleton that promises a form where the pitch
- * lands is a layout jump wearing a placeholder's clothes. `max-w-xl` with the
- * page: the thread's one measure (decision 1).
+ * 20260827-the-divers-thread, decision 2, recomposed by ADR
+ * 20260904-reef-all-the-way-down, decision 1): back link, eyebrow, title, the
+ * strong when-line, the price moment, the day's run of dives, the pitch — a
+ * fact chip, three field-guide tiles and one door — the conditions line, two
+ * alternates, then the one raised booking card **last**. It held the old order
+ * — card, then a flat band — until 2026-08-28, and a skeleton that promises a
+ * form where the pitch lands is a layout jump wearing a placeholder's clothes.
+ * `max-w-xl` with the page: the thread's one measure (decision 1).
  */
 export default function TripDetailLoading() {
   return (
@@ -32,10 +34,20 @@ export default function TripDetailLoading() {
             }
           />
         </div>
-        {/* The pitch: "The day", "Look for", and the conditions line — flat
-            bands on the page background, not cards. */}
+        {/* "The day" — the run of dives, one row each. */}
         <div className="mt-8 h-28 rounded bg-surface-sunken" />
+        {/* The pitch, in its three parts: the fact chip, the three tiles, the
+            door. Flat bands on the page background, not cards. */}
+        <div className="mt-8 h-7 w-40 rounded-full bg-surface-sunken" />
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="h-24 rounded bg-surface-sunken" />
+          <div className="h-24 rounded bg-surface-sunken" />
+          <div className="h-24 rounded bg-surface-sunken" />
+        </div>
+        <div className="mt-4 h-14 rounded bg-surface-sunken" />
+        {/* The conditions line, then the two alternates. */}
         <div className="mt-6 h-12 rounded bg-surface-sunken" />
+        <div className="mt-8 h-26 rounded bg-surface-sunken" />
         {/* The booking card's shell, from the same place `SectionCard` takes
             it — the one raised card the page streams in, and the last thing
             on it. */}

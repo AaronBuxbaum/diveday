@@ -18,6 +18,7 @@ import { listActiveCourses } from "@/db/courses";
 import { tripRequirementSummaries } from "@/db/readiness";
 import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
 import { getShopBySlug } from "@/db/shops";
+import { liveShopStage } from "@/db/trip-stages";
 import {
   countShopTrips,
   nextSessionStartByCourse,
@@ -65,11 +66,13 @@ import {
 } from "@/lib/schedule-pagination";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { scheduleJsonLd } from "@/lib/structured-data";
+import { STAGE_SENTENCE_KEYS } from "@/lib/trip-stages";
 import { capacityLabel, nextBookableDeparture } from "@/lib/trips";
-import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { shopDayBounds, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { CoursesShelf } from "./_components/CoursesShelf";
 import { FindMyBookingForm } from "./_components/FindMyBookingForm";
 import { LastMinuteListForm } from "./_components/LastMinuteListForm";
+import { LiveBoatPanel } from "./_components/LiveBoatPanel";
 import { NextBoatCard } from "./_components/NextBoatCard";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
 import { ShopfrontHero } from "./_components/ShopfrontHero";
@@ -253,7 +256,7 @@ export default async function SchedulePage({
   //
   // Both, and the courses shelf, stand down inside the frame: `?embed=1`
   // renders neither the hero nor the shelves.
-  const [range, { trips: upcoming, nextCursor }, reviewAggregate, activeCourses, boats] =
+  const [range, { trips: upcoming, nextCursor }, reviewAggregate, activeCourses, boats, liveStage] =
     await Promise.all([
       upcomingScheduleRange(db, shop.id, now, { publicOnly: true }),
       pagedUpcomingTripsWithCounts(db, shop.id, {
@@ -269,7 +272,38 @@ export default async function SchedulePage({
       // The fleet, for the storefront's boats section (Harbor). Not in the
       // widget: an embed is the list-first window and names no hulls.
       isEmbed ? [] : listBoats(db, shop.id),
+      // The boat a crew said is out (ADR 20260904-reef-all-the-way-down,
+      // Budget rule 4). Bounded to today's own window so a stage nobody
+      // cleared cannot speak for a week, and never read inside the frame.
+      isEmbed ? null : liveShopStage(db, shop.id, now, shopDayBounds(now, shop.timezone).from),
     ]);
+  // The sentences, composed here because word order and the site's place in
+  // them are a locale's choice rather than a component's. The boat is the
+  // hull's name when the shop has one on file and the departure's own title
+  // when it does not — never "the boat", which names nothing a visitor can
+  // recognise from the dock.
+  const liveStageSentence = liveStage
+    ? liveStage.stage === "underway" && !liveStage.siteName
+      ? t("tripStage.underwayNoSite", { boat: liveStage.boatName ?? liveStage.tripTitle })
+      : t(STAGE_SENTENCE_KEYS[liveStage.stage], {
+          boat: liveStage.boatName ?? liveStage.tripTitle,
+          site: liveStage.siteName ?? "",
+        })
+    : "";
+  const liveStageMeta = liveStage
+    ? [
+        t("tripStage.said", {
+          time: formatTime(liveStage.recordedAt, locale, shop.timezone),
+        }),
+        liveStage.endsAt
+          ? t("tripStage.liveBack", {
+              back: formatTime(liveStage.endsAt, locale, shop.timezone),
+            })
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" ")
+    : "";
   // The widget shows a window; the page shows the schedule. Sliced here rather
   // than asked for in the query so the two surfaces read the same list and can
   // never disagree about what is next (issue #805).
@@ -566,6 +600,21 @@ export default async function SchedulePage({
               locale={locale}
               t={t}
             />
+            {/* **The boat that is out** — ADR 20260904-reef-all-the-way-down,
+                decision 2, Budget rule 4. Above the next departure, because a
+                visitor who can see a boat leave from the dock is asking about
+                today before they are asking about Saturday. Never in embed
+                mode: `?embed=1` is a window onto the schedule, and a live
+                panel would spend a third of a widget on a fact the host page
+                did not ask for. */}
+            {liveStage ? (
+              <LiveBoatPanel
+                stage={liveStage.stage}
+                eyebrow={t("tripStage.liveEyebrow")}
+                sentence={liveStageSentence}
+                meta={liveStageMeta}
+              />
+            ) : null}
             {nextBoat ? (
               <div className="mt-6 max-w-md">
                 <NextBoatCard

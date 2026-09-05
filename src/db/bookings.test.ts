@@ -182,7 +182,7 @@ describe("createBooking (in-memory PGlite)", () => {
     );
   });
 
-  it("keeps a diver's optional buddy-group preference with the booking", async () => {
+  it("keeps what the diver said this dive was for with the booking", async () => {
     const { db, shop, open } = await seededContext();
     const outcome = await createBooking(db, {
       actor: "public",
@@ -190,13 +190,44 @@ describe("createBooking (in-memory PGlite)", () => {
       tripId: open.id,
       fullName: "Mae Current",
       email: "mae-current@example.com",
-      groupPreference: "Slow pace and macro photography",
+      diveIntent: "small_life",
+      reEntryAsk: "deck_word",
     });
     if (!outcome.ok) throw new Error("setup booking failed");
     const roster = await getTripRoster(db, shop.id, open.id);
-    expect(
-      roster.find(({ booking }) => booking.id === outcome.bookingId)?.booking.groupPreference,
-    ).toBe("Slow pace and macro photography");
+    const seat = roster.find(({ booking }) => booking.id === outcome.bookingId)?.booking;
+    expect(seat?.diveIntent).toBe("small_life");
+    expect(seat?.reEntryAsk).toBe("deck_word");
+  });
+
+  it("does not let a reactivated seat inherit the last booking's answers", async () => {
+    // A reactivated row is a *new* booking, the same rule `partyLeadBookingId`
+    // and `referralSource` follow: what somebody came for in March is not what
+    // they came for when they rebooked.
+    const { db, shop, open } = await seededContext();
+    const first = await createBooking(db, {
+      actor: "public",
+      shopId: shop.id,
+      tripId: open.id,
+      fullName: "Mae Current",
+      email: "mae-current@example.com",
+      diveIntent: "a_wreck",
+      reEntryAsk: "easy_first_dive",
+    });
+    if (!first.ok) throw new Error("setup booking failed");
+    await cancelBooking(db, shop.id, first.bookingId);
+    const again = await createBooking(db, {
+      actor: "public",
+      shopId: shop.id,
+      tripId: open.id,
+      fullName: "Mae Current",
+      email: "mae-current@example.com",
+    });
+    if (!again.ok) throw new Error("reactivation failed");
+    const roster = await getTripRoster(db, shop.id, open.id);
+    const seat = roster.find(({ booking }) => booking.id === again.bookingId)?.booking;
+    expect(seat?.diveIntent).toBeNull();
+    expect(seat?.reEntryAsk).toBeNull();
   });
 
   it("rejects booking the same trip twice", async () => {

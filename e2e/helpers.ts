@@ -89,6 +89,21 @@ export async function choosePartySize(page: Page, count: number) {
 }
 
 /**
+ * Pick one of the booking form's five "what's this dive for?" pills.
+ *
+ * Clicks the **label**, which is what a diver's thumb lands on, then asserts
+ * the input took it — the same rule `choosePartySize` above states and for the
+ * same reason: the radio is `sr-only`, a 1px box lying under the very `<label>`
+ * that wraps it, so `check()` on it never resolves. Playwright's hit-target
+ * check finds the label in front of its click point and retries "intercepts
+ * pointer events" until the whole test times out.
+ */
+export async function chooseDiveIntent(page: Page, label: string) {
+  await page.getByText(label, { exact: true }).click();
+  await expect(page.getByRole("radio", { name: label, exact: true })).toBeChecked();
+}
+
+/**
  * Book one seat on the departure whose public page is already open, and land
  * on the diver's own thread (`/ready/<token>`).
  *

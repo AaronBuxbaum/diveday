@@ -1,5 +1,6 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
+  chooseDiveIntent,
   choosePartySize,
   createTrip,
   daysFromNow,
@@ -72,9 +73,13 @@ test.describe("staff", () => {
     await page.getByLabel("Email", { exact: true }).fill(`nora-${e2eNow().getTime()}@example.com`);
     await page.getByLabel("Diver 2 name").fill("Sam Quinn");
     await page.getByLabel("Diver 2 email").fill(`sam-${e2eNow().getTime()}@example.com`);
-    await page
-      .getByLabel("What kind of dive would make your day?")
-      .fill("A relaxed pace and macro photography");
+    // **What this dive is for** (ADR 20260904-reef-all-the-way-down, D12): five
+    // plain choices in place of the free-text box this replaced, and the first
+    // of them is what opens D18's three offers underneath.
+    await chooseDiveIntent(page, "Getting comfortable again");
+    await expect(page.getByText("None of these changes whether you can book.")).toBeVisible();
+    // The three offers are ordinary 16px radios, not the sr-only pills above.
+    await page.getByRole("radio", { name: "A word with the divemaster before we get in." }).check();
     await page.getByRole("button", { name: "Book these spots" }).click();
     // Booking lands on the diver's own readiness page, not a branch of the
     // trip page — one page after booking, and the one the confirmation email
@@ -119,8 +124,9 @@ test.describe("staff", () => {
     // The roster lives on the Guests tab now.
     await expect(page.getByText("Nora Quinn").first()).toBeVisible();
     await expect(page.getByText("Sam Quinn").first()).toBeVisible();
-    await expect(page.getByText("Buddy-group note:").first()).toBeVisible();
-    await expect(page.getByText("A relaxed pace and macro photography").first()).toBeVisible();
+    // The ask reaches the crew as a fact beside the name, on the seat that made
+    // it — never as a warning, and never on the party member who said nothing.
+    await expect(page.getByText("Asked for a word with the divemaster.")).toHaveCount(1);
 
     // Removing a booking confirms first — it can fire an automatic refund that
     // undo can't claw back, so a misclick shouldn't be one tap from done.
@@ -250,6 +256,84 @@ test.describe("staff", () => {
     await expect(
       page.locator("li").filter({ hasText: renamed }).filter({ visible: true }),
     ).toBeVisible();
+  });
+});
+
+/**
+ * **What the divers came for, and what one of them asked for** (ADR
+ * 20260904-reef-all-the-way-down; issues #1172/D12, #1183/D23, #1178/D18).
+ *
+ * Two halves that cannot be proved from either side alone: a diver answers an
+ * optional question on a public form, and a divemaster reads a *count* on the
+ * team builder that names nobody. Plus D18's window — the three offers go once
+ * the shop can no longer act on one, and the question underneath them stays,
+ * because a crew can read a count at any notice.
+ */
+test.describe("staff", () => {
+  signedInAsOwner();
+
+  test("a diver's intent reaches the crew as a count, and names nobody", async ({ page }) => {
+    // Two sign-ins and a booking between them.
+    test.setTimeout(30_000);
+    const title = `Macro Morning ${e2eNow().getTime()}`;
+    await createTrip(page, {
+      title,
+      date: daysFromNow(4),
+      departsAt: "08:00",
+      returnsAt: "11:30",
+      capacity: 6,
+    });
+    await signOut(page);
+
+    await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
+    await page.locator("li").filter({ hasText: title }).getByRole("link", { name: title }).click();
+    await page.getByLabel("Name", { exact: true }).fill("Ines Marchetti");
+    await page.getByLabel("Email", { exact: true }).fill(`ines-${e2eNow().getTime()}@example.com`);
+    await chooseDiveIntent(page, "Small life and photos");
+    // The consent grammar the ADR's budget rule 6 asks for: who sees it, and
+    // the way back.
+    await expect(page.getByText("Your crew sees how many picked each, not who.")).toBeVisible();
+    await page.getByRole("button", { name: /^Book (this spot|these spots)$/ }).click();
+    await expect(page).toHaveURL(/\/ready\//);
+
+    await signInAsOwner(page);
+    await page.goto("/shop/blue-mantis/schedule/board");
+    await page.locator("li").filter({ hasText: title }).getByRole("link").click();
+    await page
+      .getByRole("navigation", { name: "Trip" })
+      .getByRole("link", { name: "Manifest" })
+      .click();
+    await page.getByRole("heading", { name: "Buddy teams" }).click();
+    // The whole of what D23 gets: an aggregate on the team builder, with no
+    // name in it and no suggested pairing.
+    const aboard = page.getByText(/^Aboard today:/);
+    await expect(aboard).toBeVisible();
+    await expect(aboard).toContainText("1 looking for small life");
+    await expect(aboard).not.toContainText("Ines");
+  });
+
+  test("a departure inside the day asks the question and offers nothing", async ({ page }) => {
+    test.setTimeout(30_000);
+    // Ninety minutes out on the frozen clock (09:30 in the shop's zone), so
+    // D18's 24-hour window is shut: a deck-side word, an easy first dive and a
+    // refresher course are all things nobody can arrange in time, and offering
+    // them would be the shame the boundary exists to avoid.
+    const title = `Last Light ${e2eNow().getTime()}`;
+    await createTrip(page, {
+      title,
+      date: daysFromNow(0),
+      departsAt: "11:00",
+      returnsAt: "13:30",
+      capacity: 6,
+    });
+    await signOut(page);
+
+    await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
+    await page.locator("li").filter({ hasText: title }).getByRole("link", { name: title }).click();
+    await chooseDiveIntent(page, "Getting comfortable again");
+    // The question stands; the offers do not.
+    await expect(page.getByText("Your crew sees how many picked each, not who.")).toBeVisible();
+    await expect(page.getByText("Anything that would help?")).toHaveCount(0);
   });
 });
 

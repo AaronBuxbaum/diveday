@@ -712,5 +712,18 @@
   "welcomeCue": {
     "firstTrip": "first time with us",
     "returning": "back after {years, plural, one {# year} other {# years}}"
+  },
+  "diveIntent": {
+    "aboardToday": "Aboard today: {list}",
+    "easingBack": "{count} getting comfortable again",
+    "smallLife": "{count} looking for small life",
+    "aWreck": "{count} hoping for a wreck",
+    "skills": "{count} practising skills",
+    "goodDay": "{count} out for a good day"
+  },
+  "reEntry": {
+    "deckWord": "Asked for a word with the divemaster.",
+    "easyFirstDive": "Asked for an easy first dive.",
+    "refresherCourse": "Asked about the refresher course."
   }
 }

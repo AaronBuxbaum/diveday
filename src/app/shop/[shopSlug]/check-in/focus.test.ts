@@ -1,17 +1,18 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { counterQueuePath, hasDeparted, selectFocusedDeparture } from "./focus";
+import { hasSailed } from "@/lib/trips";
+import { counterQueuePath, selectFocusedDeparture } from "./focus";
 
 const NOW = new Date("2026-08-27T18:00:00.000Z");
 const at = (iso: string, today = true) => ({ tripId: iso, startsAt: new Date(iso), today });
 
-describe("hasDeparted", () => {
+describe("hasSailed", () => {
   it("holds a boat open for the standing one-hour late-arrival buffer", () => {
     // Scheduled 55 minutes ago: trips run late and divers still arrive, so the
     // counter has not written it off yet (AGENTS.md's departure buffer).
-    expect(hasDeparted(new Date("2026-08-27T17:05:00.000Z"), NOW)).toBe(false);
-    expect(hasDeparted(new Date("2026-08-27T16:59:00.000Z"), NOW)).toBe(true);
+    expect(hasSailed(new Date("2026-08-27T17:05:00.000Z"), NOW)).toBe(false);
+    expect(hasSailed(new Date("2026-08-27T16:59:00.000Z"), NOW)).toBe(true);
   });
 });
 

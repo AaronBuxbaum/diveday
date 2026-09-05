@@ -12,6 +12,7 @@ import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { getBookingForTrip } from "@/db/bookings";
 import { getLatestCheckoutForBooking } from "@/db/checkouts";
 import { getDb } from "@/db/client";
+import { hasActiveRefresherCourse } from "@/db/courses";
 import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { bookingConfirmationAndWaiverEmailsSent } from "@/db/notifications";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
@@ -40,7 +41,7 @@ import { nowDate } from "@/lib/clock";
 import { courseCharges, perDiverBookingPriceCents } from "@/lib/courses";
 import { checkoutCharge } from "@/lib/deposits";
 import { conditionsChangedSinceBooking } from "@/lib/diver-planning";
-import { formatDateTimeTz, formatDayParts, formatShortDate } from "@/lib/format";
+import { formatDateTimeTz, formatDayParts, formatShortDate, formatTime } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
   fetchAutomatedMarineForecast,
@@ -52,13 +53,15 @@ import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { publicSchedulePath, publicTripCalendarPath, publicTripPath } from "@/lib/public-routes";
+import { reEntryWindowOpen } from "@/lib/re-entry";
 import { combineCertRequirements } from "@/lib/readiness";
 import { isLiveShopStaff } from "@/lib/session";
 import { similarDepartures } from "@/lib/similar-departures";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { tripPageJsonLd } from "@/lib/structured-data";
-import { isFull, spotsRemaining } from "@/lib/trips";
+import { hasSailed, isFull, spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
+import { worthALook } from "@/lib/worth-a-look";
 import {
   BookSpotSection,
   CancelledTripNotice,
@@ -71,15 +74,10 @@ import { ConditionsLine } from "./_components/ConditionsLine";
 import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
 import { StaffPreviewBar } from "./_components/StaffPreviewBar";
 import { TripActions } from "./_components/TripActions";
-import { TripCrewLine } from "./_components/TripCrewLine";
-import {
-  TripDayPlan,
-  TripLookFor,
-  TripMoments,
-  TripRoutes,
-  TripSiteNotes,
-} from "./_components/TripDayPlan";
+import { TripAlternatives } from "./_components/TripAlternatives";
+import { TripDayPlan } from "./_components/TripDayPlan";
 import { TripHeader } from "./_components/TripHeader";
+import { TripPitch } from "./_components/TripPitch";
 import { TripTerms } from "./_components/TripTerms";
 import { ERROR_MESSAGE_KEYS, isErrorCode } from "./_components/types";
 
@@ -377,7 +375,7 @@ export default async function TripDetailPage({
   const readinessLink = `${publicTripPath(shopSlug, tripId)}/ready?booking=${encodeURIComponent(bookingToken ?? "")}`;
 
   const now = nowDate();
-  const inPast = new Date(trip.startsAt.getTime() + 60 * 60 * 1000) <= now;
+  const inPast = hasSailed(trip.startsAt, now);
   // Where this departure stands against the head count it needs, if it named
   // one. A departure that already sailed has nothing conditional left to
   // promise; a cancelled one returned far above this line, at the `status`
@@ -397,17 +395,25 @@ export default async function TripDetailPage({
    * shop whose next matching departure is past the fiftieth is a shop the
    * "find another trip" link serves better anyway.
    */
+  // One read of the shop's own board, feeding both lists. It used to run only
+  // for a full boat; D01 asks the same question of a departure a diver can
+  // still get on, and reading the schedule twice for two lists that are never
+  // both on screen would be a query nobody asked for either way.
+  const offersAnotherBoat = !inPast && !trip.conditionsHold && !confirmed && !waitlistConfirmation;
+  const board = !offersAnotherBoat
+    ? []
+    : (
+        await pagedUpcomingTripsWithCounts(db, shop.id, {
+          now,
+          limit: 50,
+          hasSpace: true,
+          publicOnly: true,
+        })
+      ).trips;
   const alternatives = full
     ? similarDepartures({
         full: { tripId: trip.id, courseId: trip.courseId, diveSiteId: trip.diveSiteId },
-        candidates: (
-          await pagedUpcomingTripsWithCounts(db, shop.id, {
-            now,
-            limit: 50,
-            hasSpace: true,
-            publicOnly: true,
-          })
-        ).trips.map((candidate) => ({
+        candidates: board.map((candidate) => ({
           id: candidate.id,
           title: candidate.title,
           startsAt: candidate.startsAt,
@@ -424,6 +430,55 @@ export default async function TripDetailPage({
         href: `${publicTripPath(shopSlug, row.tripId)}${isEmbed ? "?embed=1" : ""}`,
       }))
     : [];
+  /**
+   * **The right departure, not just the next open seat** (issue #1161, D01).
+   *
+   * Only for a boat a diver can still get on: a full one already stands
+   * `TripFullSection` with D06's own list, and two lists of other boats on one
+   * page is exactly the accretion ADR 20260904-reef-all-the-way-down bounds.
+   */
+  const worthALookRows =
+    full || !offersAnotherBoat
+      ? []
+      : worthALook({
+          subject: {
+            tripId: trip.id,
+            courseId: trip.courseId,
+            diveSiteId: trip.diveSiteId,
+            difficultyLevel: trip.diveSite?.difficultyLevel ?? null,
+            startsAt: trip.startsAt,
+            seatsOpen: spotsRemaining(trip),
+          },
+          candidates: board.map((candidate) => ({
+            tripId: candidate.id,
+            title: candidate.title,
+            courseId: candidate.courseId,
+            diveSiteId: candidate.diveSiteId,
+            difficultyLevel: candidate.diveSite?.difficultyLevel ?? null,
+            startsAt: candidate.startsAt,
+            seatsOpen: Math.max(candidate.capacity - candidate.booked, 0),
+          })),
+          timeZone: shop.timezone,
+          now,
+        }).map((row) => ({
+          tripId: row.tripId,
+          title: row.title,
+          seatsOpen: row.seatsOpen,
+          reason: row.reason,
+          partOfDay: row.partOfDay,
+          when: `${formatDayParts(row.startsAt, locale, shop.timezone).weekday} ${formatTime(row.startsAt, locale, shop.timezone)}`,
+          href: `${publicTripPath(shopSlug, row.tripId)}${isEmbed ? "?embed=1" : ""}`,
+        }));
+  /**
+   * **D18's window and its third offer** (issue #1178). Both are facts about
+   * the *shop*, resolved here so `BookSpotSection` can ask nothing of the
+   * database: whether there is still a day for the shop to act on an ask, and
+   * whether it publishes a refresher course to point a diver at. Neither is
+   * read on a departure that has sailed or is on hold, where the form itself
+   * does not render.
+   */
+  const reEntryOpen = !inPast && !trip.conditionsHold && reEntryWindowOpen(trip.startsAt, now);
+  const hasRefresherCourse = reEntryOpen ? await hasActiveRefresherCourse(db, shop.id) : false;
   const remaining = spotsRemaining(trip);
   const errorMessage = error && isErrorCode(error) ? t(ERROR_MESSAGE_KEYS[error]) : undefined;
   const tripRef = { shopSlug, tripId, embed: isEmbed };
@@ -564,11 +619,14 @@ export default async function TripDetailPage({
             for the thread entirely: what to bring is preparation, and
             preparation is for a diver who has a seat. */}
         <TripDayPlan briefings={diveBriefings} locale={locale} />
-        <TripRoutes briefings={diveBriefings} locale={locale} />
-        <TripLookFor briefings={diveBriefings} locale={locale} />
-        <TripMoments briefings={diveBriefings} locale={locale} />
-        <TripSiteNotes briefings={diveBriefings} locale={locale} />
-        <TripCrewLine crew={publicCrew} locale={locale} />
+        {/* **The bound** (ADR 20260904-reef-all-the-way-down, decision 1). The
+            route, the rest of the field guide, the moments strip, the shop's
+            site prose and the crew used to run down the page as five more
+            beats — 5,782px at 390 before a diver was offered a seat. They are
+            all still here, in this order, behind `TripPitch`'s one door. A
+            feature that wants to sell harder opens that door; it does not add
+            a section, and `page.composition.test.ts` is what says so. */}
+        <TripPitch briefings={diveBriefings} crew={publicCrew} locale={locale} />
         <ConditionsLine
           shop={shop}
           trip={trip}
@@ -604,6 +662,7 @@ export default async function TripDetailPage({
             about the reader, which is what makes it safe on an anonymous page
             (DOM-M6), and it still says nothing at all on a course session,
             whose own page states its admission rule. */}
+        <TripAlternatives alternatives={worthALookRows} locale={locale} />
         {requirementNote ? (
           <p className="mt-8 border-t border-border pt-4 text-sm text-muted">
             {t("trip.requirementNote", { list: requirementNote })}
@@ -671,6 +730,8 @@ export default async function TripDetailPage({
             eLearningFeeCents={eLearningFeeCents}
             depositCents={depositCents}
             balanceDueAt={trip.startsAt}
+            reEntryOpen={reEntryOpen}
+            hasRefresherCourse={hasRefresherCourse}
             terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
           />
         )}

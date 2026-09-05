@@ -2232,6 +2232,41 @@ export const diveRecencyBand = pgEnum("dive_recency_band", [
   "never",
 ]);
 
+/**
+ * **What this dive is for, in the diver's own words** — one optional choice on
+ * the booking form (ADR 20260904-reef-all-the-way-down, D12/#1172).
+ *
+ * Five plain answers rather than a free-text box, because the crew reads a
+ * *count*: "4 came for an easygoing reef, 2 are getting comfortable again" is a
+ * sentence a divemaster can act on, and a paragraph per seat is not.
+ *
+ * **A soft cue, never a promise or a pairing rule.** Nothing here gates a
+ * booking, ranks a diver, or builds a buddy team; a shop that reads it and does
+ * nothing has lost nothing.
+ */
+export const diveIntent = pgEnum("dive_intent", [
+  "easing_back",
+  "small_life",
+  "a_wreck",
+  "skills",
+  "good_day",
+]);
+
+/**
+ * **The one support a diver easing back asked for** (ADR
+ * 20260904-reef-all-the-way-down, D18/#1178). Offered only to a diver who has
+ * just said they are getting comfortable again, and only when the departure is
+ * far enough out that the shop can still act on it.
+ *
+ * **None of these gates a booking**, and none of them is a warning: D18's
+ * boundary is support without shame and without a silent gate.
+ */
+export const reEntryAsk = pgEnum("re_entry_ask", [
+  "deck_word",
+  "easy_first_dive",
+  "refresher_course",
+]);
+
 export const bookings = pgTable(
   "bookings",
   {
@@ -2270,8 +2305,30 @@ export const bookings = pgTable(
      * not a refusal the software makes.
      */
     lastDivedBand: diveRecencyBand("last_dived_band"),
-    /** Optional, non-sensitive pace/interest note the diver shares for buddy grouping. */
-    groupPreference: text("group_preference"),
+    /**
+     * The diver's own answer to "what's this dive for?", asked on the booking
+     * form and changeable on `/ready` (ADR 20260904-reef-all-the-way-down,
+     * D12). Null is "not said" — a real state, never a default that reads as a
+     * claim.
+     *
+     * **On the booking rather than the person**, for the same reason
+     * `last_dived_band` above is: it is a fact with a date on it. What a diver
+     * came for in March says nothing about the trip they book in November, and
+     * a person-level column would quietly become that claim.
+     *
+     * **Gates nothing and names nobody.** The crew reads the departure's tally,
+     * not a row per seat.
+     */
+    diveIntent: diveIntent("dive_intent"),
+    /**
+     * The one support this diver asked for when they said they were easing back
+     * (ADR 20260904-reef-all-the-way-down, D18). Null is "asked for nothing",
+     * which is every booking that never saw the question.
+     *
+     * On the booking for the reason above, and **gates nothing**: it is a line
+     * the crew answers, never a blocker on a seat.
+     */
+    reEntryAsk: reEntryAsk("re_entry_ask"),
     /** Optional lodging / hotel pickup address or landmark provided by the diver on /ready. */
     hotelPickupLocation: text("hotel_pickup_location"),
     /** Optional staff-set pickup time for this booking (e.g., "07:15"). */
@@ -2550,6 +2607,65 @@ export const tripChangeEvents = pgTable(
       table.shopId,
       table.tripId,
       table.occurredAt,
+      table.seq,
+    ),
+  ],
+);
+
+/**
+ * **Where a departure is, in the crew's own word** — ADR
+ * 20260904-reef-all-the-way-down, decision 2, Budget rule 4.
+ *
+ * Five words the crew taps on the manifest, repeated on every surface that
+ * draws the boat. Never inferred from a clock and **never a position**: a
+ * position is a promise DiveDay cannot keep and a liability a shop does not
+ * want, and the ADR rejects tracking in as many words. A stage nobody set is
+ * absent, never "Unknown".
+ */
+export const tripStage = pgEnum("trip_stage", [
+  "boarding",
+  "underway",
+  "surface",
+  "heading_in",
+  "home",
+]);
+
+/**
+ * The stage ledger — append-only, like `trip_change_events` beside it.
+ *
+ * A stage is added, never edited and never deleted: a crew that taps the wrong
+ * word taps the right one, and the newest row wins. So there is no
+ * `deleted_at` here (nothing a user points at and asks to remove) and no
+ * update path at all. `dive_site_id` is snapshotted at write time from the
+ * departure's own plan rather than resolved at render, so a later edit to the
+ * plan cannot rewrite a sentence a diver has already read; null is a real
+ * answer — a shore day, or a site nobody named — and the reader falls back to
+ * the siteless word.
+ */
+export const tripStageEvents = pgTable(
+  "trip_stage_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    stage: tripStage("stage").notNull(),
+    diveSiteId: uuid("dive_site_id").references(() => diveSites.id, { onDelete: "set null" }),
+    recordedByPersonId: uuid("recorded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
+    /** The final tiebreak when two taps share an instant, as on the roll call. */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    index("trip_stage_events_shop_trip_idx").on(
+      table.shopId,
+      table.tripId,
+      table.recordedAt,
       table.seq,
     ),
   ],

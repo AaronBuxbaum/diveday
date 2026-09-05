@@ -3,18 +3,12 @@ import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { hasLiveReadinessCapability, issueBookingCapability } from "./booking-capabilities";
 import type { AppDb } from "./client";
 import { sendAndRecordNotification } from "./notifications";
 import { recordTripActivity } from "./operations";
 import { bookings, people, shops, trips } from "./schema";
-
-/**
- * Same 1-hour buffer every other "has it sailed" check in this app uses
- * (AGENTS.md) — a departure running late is still "current" to a diver who
- * has not yet left for the dock.
- */
-const DEPARTURE_BUFFER_MS = 60 * 60 * 1000;
 
 /**
  * The "Can't find your link?" rescue (issue #723) — the same shape as
@@ -84,7 +78,9 @@ export async function sendFindMyBookingLinks(
         isNull(people.deletedAt),
         ne(bookings.status, "cancelled"),
         eq(trips.status, "scheduled"),
-        // Not yet departed, buffer included — see DEPARTURE_BUFFER_MS above.
+        // Not yet departed, buffer included. The one place the rule is applied as a
+        // *constant* rather than through `hasSailed`: the comparison happens in
+        // Postgres, so what crosses is the offset, not the predicate.
         gt(trips.startsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
       ),
     );

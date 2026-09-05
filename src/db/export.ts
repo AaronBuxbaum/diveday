@@ -89,6 +89,7 @@ import {
   tripScheduleDays,
   tripSeries,
   tripSeriesSkips,
+  tripStageEvents,
   trips,
   tripWaitlistEntries,
   userAccounts,
@@ -363,6 +364,16 @@ export async function loadShopExportBundleInput(
           asc(tripChangeEvents.occurredAt),
           asc(tripChangeEvents.seq),
           asc(tripChangeEvents.id),
+        );
+
+      const tripStageEventRows = await tx
+        .select()
+        .from(tripStageEvents)
+        .where(eq(tripStageEvents.shopId, shopId))
+        .orderBy(
+          asc(tripStageEvents.recordedAt),
+          asc(tripStageEvents.seq),
+          asc(tripStageEvents.id),
         );
 
       const scheduleDayRows = await tx
@@ -1367,6 +1378,34 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["trip_change_events.csv"],
         },
         {
+          file: "trip_stage_events.csv",
+          header: [
+            "id",
+            "trip_id",
+            "trip_title",
+            "trip_starts_at",
+            "stage",
+            "dive_site_id",
+            "recorded_by_person_id",
+            "recorder_name",
+            "recorded_at",
+            "seq",
+          ],
+          rows: tripStageEventRows.map((row) => [
+            row.id,
+            row.tripId,
+            tripTitle.get(row.tripId),
+            tripStartsAt.get(row.tripId),
+            row.stage,
+            row.diveSiteId,
+            row.recordedByPersonId,
+            personName.get(row.recordedByPersonId),
+            row.recordedAt,
+            row.seq,
+          ]),
+          note: EXPORT_FILE_NOTES["trip_stage_events.csv"],
+        },
+        {
           file: "trip_series.csv",
           header: [
             "id",
@@ -1642,11 +1681,17 @@ export async function loadShopExportBundleInput(
             "status",
             "wants_nitrox",
             "conditions_briefed_at",
-            "group_preference",
+            // What the diver said this dive was for, and the one support they
+            // asked for when they said they were easing back (ADR
+            // 20260904-reef-all-the-way-down). Codes rather than words: an
+            // export is the shop's own database handed back, and the sentence a
+            // diver read was in whichever language they read it in.
+            "dive_intent",
+            "re_entry_ask",
             // The diver's own answer to "when did you last dive?" (ADR
             // 20260821-currency-is-what-catches-people). A statement they made
             // about themselves, on the seat they made it for — the same kind of
-            // record as `group_preference` beside it, and a shop moving its data
+            // record as `dive_intent` beside it, and a shop moving its data
             // elsewhere should not have to ask every returning diver again.
             "last_dived_band",
             // The party structure a shop booked (ADR 20260804-seat-claim-links).
@@ -1696,7 +1741,8 @@ export async function loadShopExportBundleInput(
               row.status,
               row.wantsNitrox,
               row.conditionsBriefedAt,
-              row.groupPreference,
+              row.diveIntent,
+              row.reEntryAsk,
               row.lastDivedBand,
               row.partyLeadBookingId,
               row.claimedAt,
@@ -3903,7 +3949,8 @@ export async function loadDiverExportBundleInput(
             "status",
             "wants_nitrox",
             "conditions_briefed_at",
-            "group_preference",
+            "dive_intent",
+            "re_entry_ask",
             "last_dived_band",
             "claimed_at",
             "payment_status",
@@ -3921,7 +3968,8 @@ export async function loadDiverExportBundleInput(
               row.status,
               row.wantsNitrox,
               row.conditionsBriefedAt,
-              row.groupPreference,
+              row.diveIntent,
+              row.reEntryAsk,
               row.lastDivedBand,
               row.claimedAt,
               payment?.status ?? "unpaid",
@@ -4534,6 +4582,9 @@ export async function loadShopExportCounts(
     ),
     "trip_change_events.csv": await countOf(
       db.select({ n: count() }).from(tripChangeEvents).where(eq(tripChangeEvents.shopId, shopId)),
+    ),
+    "trip_stage_events.csv": await countOf(
+      db.select({ n: count() }).from(tripStageEvents).where(eq(tripStageEvents.shopId, shopId)),
     ),
     "trip_series.csv": await countOf(
       db.select({ n: count() }).from(tripSeries).where(eq(tripSeries.shopId, shopId)),

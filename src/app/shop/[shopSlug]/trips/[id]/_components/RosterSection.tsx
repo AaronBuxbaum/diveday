@@ -21,6 +21,7 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { listBookingNotes } from "@/db/operations";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
+import { STAFF_RE_ENTRY_KEYS } from "@/i18n/dive-intent-labels";
 import {
   CERTIFICATION_LEVEL_KEYS,
   diveRecencyText,
@@ -392,7 +393,10 @@ export function RosterSection({
       status !== "medical_review" &&
       !identityUnconfirmed &&
       hasEmergencyContact &&
-      !booking.groupPreference &&
+      // A diver who asked for something the crew has not answered is still to
+      // clear — the same rule the free-text preference note carried before D12
+      // replaced it (ADR 20260904-reef-all-the-way-down, D18).
+      !booking.reEntryAsk &&
       (depthText === null || depthShared) &&
       // Currency informs, never gates (ADR 20260821-currency-is-what-catches-
       // people) — but a warning filed under "Ready" is a warning nobody reads
@@ -634,15 +638,16 @@ export function RosterSection({
      */
     const outstanding = (
       <>
-        {/* What the diver themselves asked for, in the open. It is the one
-            line on this row they wrote, it only renders when they wrote one,
-            and the crew forms buddy teams from it. */}
-        {booking.groupPreference ? (
+        {/* What this diver asked for when they said they were easing back, in
+            the open. A fact beside a name in the tone `src/i18n/support-needs-
+            labels.ts` sets — no warning colour, no mark that means careful:
+            a diver getting comfortable again is a diver the shop is ready for.
+            What this seat *came for* is deliberately not here; the crew reads
+            that as the departure's count on the team builder, never as a row
+            per person (#1183's boundary). */}
+        {booking.reEntryAsk ? (
           <p className="mt-3 rounded-lg bg-surface-sunken px-3 py-2 text-sm text-muted">
-            <span className="font-semibold text-foreground">
-              {t("trips.roster.buddyGroupNote")}
-            </span>{" "}
-            {booking.groupPreference}
+            {t(STAFF_RE_ENTRY_KEYS[booking.reEntryAsk])}
           </p>
         ) : null}
 

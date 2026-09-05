@@ -89,6 +89,7 @@ import {
   tripReviews,
   tripSeries,
   tripSeriesSkips,
+  tripStageEvents,
   trips,
   tripWaitlistEntries,
   userAccounts,
@@ -132,6 +133,7 @@ import { seedRentalFit } from "./seed-rental-fit";
 import { seedSelfDeclaredJoiners } from "./seed-self-declared";
 import { seedSupportNeeds } from "./seed-support-needs";
 import { seedTripLegs } from "./seed-trip-legs";
+import { seedTripStage } from "./seed-trip-stage";
 import { seedTrips } from "./seed-trips";
 import { seedWaiverEvidence } from "./seed-waiver-evidence";
 import { seedWaiverVersions } from "./seed-waiver-versions";
@@ -981,6 +983,10 @@ export async function seedDemoSchedule(
   // below, which nothing may write after. Canonical demo only — a stated leg
   // beats the shop's own ride-out figure, which is exactly what a spec taking a
   // shop of its own is usually testing.
+  // The demo's boat says where it is, once, on today's departure (ADR
+  // 20260904-reef-all-the-way-down, Budget rule 4) — after the trips exist and
+  // their plans have sites on them, since the tap stamps the site it reads.
+  if (captainId) await seedTripStage(db, shopId, captainId);
   await seedTripLegs(db, shopId, opts.history !== false);
 
   // A synthetic, status-only medical-review hold on a future departure gives
@@ -1038,6 +1044,7 @@ export async function resetDemoSchedule(
   // boats and dive_packages below (RESET_KEEPS). Only the per-departure taps
   // against them are schedule-scoped operational history.
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
+  await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
   // Neither of these is seeded — both are written only by what a visitor does
   // (a staff note on a diver, the activity trail `seat-diver.ts` appends), and
   // both reference `people` without cascade. So a demo where anyone used the

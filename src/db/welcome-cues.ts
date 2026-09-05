@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNotNull, lt, max, ne, notInArray } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { DEPARTURE_BUFFER_MS } from "@/lib/closeout";
+import { hasReturned } from "@/lib/trips";
 import type { AppDb, DbExecutor } from "./client";
 import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -197,7 +197,7 @@ export async function setWelcomeConsent(
     )
     .limit(1);
   if (!booking) return { ok: false, reason: "unknown_booking" };
-  if (booking.endsAt.getTime() + DEPARTURE_BUFFER_MS < now.getTime()) {
+  if (hasReturned(booking.endsAt, now)) {
     return { ok: false, reason: "trip_over" };
   }
   await db

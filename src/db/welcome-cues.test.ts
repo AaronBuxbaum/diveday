@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { DEPARTURE_BUFFER_MS } from "@/lib/closeout";
+import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { seededShopContext } from "@/test/db";
 import { bookings, trips } from "./schema";
 import { setWelcomeConsent, welcomeCueInputsByBooking } from "./welcome-cues";

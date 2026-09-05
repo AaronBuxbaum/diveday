@@ -1,6 +1,7 @@
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import { BLOCKER_CATEGORY, type ReadinessBlocker, type ReadinessResult } from "@/lib/readiness";
+import { hasSailed } from "@/lib/trips";
 import {
   cardsNeedingLookCount,
   type DiverProfile,
@@ -78,15 +79,6 @@ export type DiverStatusRow = {
   orderId?: string;
 };
 
-/**
- * The standing late-arrival buffer (AGENTS.md): a boat that left at 7:00 is
- * not "in the past" at 7:05, so a departure counts as ahead of the diver for
- * an hour past its scheduled start. The record's old Upcoming/History split
- * ignored it, which put a diver's own boat into their history while they were
- * still standing on the dock waiting to board it.
- */
-export const DEPARTURE_BUFFER_MS = 60 * 60 * 1000;
-
 type BookingEntry = DiverProfile["bookings"][number];
 
 /** Is this seat still ahead of the diver? */
@@ -94,7 +86,7 @@ export function bookingIsAhead(entry: BookingEntry, now: Date): boolean {
   return (
     entry.trip.status === "scheduled" &&
     entry.booking.status !== "cancelled" &&
-    entry.trip.startsAt.getTime() + DEPARTURE_BUFFER_MS >= now.getTime()
+    !hasSailed(entry.trip.startsAt, now)
   );
 }
 

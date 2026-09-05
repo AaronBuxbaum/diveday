@@ -16,14 +16,17 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
 import { listDeskEventsSince } from "@/db/desk-events";
+import { diveIntentTallyForTrip } from "@/db/dive-intent";
 import { listDiveSites, listSiteFieldGuides } from "@/db/dive-sites";
 import { listExecutedDives } from "@/db/executed-dives";
 import { getTripManifests } from "@/db/manifests";
 import { listBookingNotes, listDiverNotesForTrip } from "@/db/operations";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import type { ExecutedDive } from "@/db/schema";
+import { latestTripStage } from "@/db/trip-stages";
 import { listTripDives } from "@/db/trips";
 import { catchUpSentences } from "@/i18n/desk-event-labels";
+import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { fieldGuideCards, marineLifeCatalogCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
@@ -49,6 +52,7 @@ import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { divesWithMatch } from "@/lib/support-needs";
+import { STAGE_TAP_KEYS, TRIP_STAGES } from "@/lib/trip-stages";
 import { uuidParam } from "@/lib/uuid";
 import { TripPageHeader } from "../_components/TripPageHeader";
 import { TripSurfaceNav } from "../_components/TripSurfaceNav";
@@ -60,6 +64,7 @@ import { type ExecutedDiveLabels, ExecutedDiveLog } from "./_components/Executed
 import { ManifestMoreMenu } from "./_components/ManifestMoreMenu";
 import type { PersonTrailEntry } from "./_components/PersonSheet";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
+import { StageStrip } from "./_components/StageStrip";
 import { SummaryPanel } from "./_components/SummaryPanel";
 import { TripPlanSection } from "./_components/TripPlanSection";
 import {
@@ -76,6 +81,7 @@ import {
   removeBuddyTeamMemberAction,
   rollCallAction,
   saveExecutedDiveAction,
+  setTripStageAction,
   subscribePushAction,
   unsubscribePushAction,
 } from "./actions";
@@ -284,6 +290,8 @@ export default async function TripManifestPage({
     executedDives,
     liveDiveSites,
     catchUp,
+    diveIntents,
+    stage,
   ] = await Promise.all([
     getTripManifests(db, shop.id, tripId),
     // Raw membership rows, cancelled members included: the teams panel must show
@@ -307,6 +315,12 @@ export default async function TripManifestPage({
     // nothing for a catch-up to be "since", and replaying the morning to a
     // first-time reader is the surveillance feed the boundary refuses.
     listDeskEventsSince(db, shop.id, tripId, session.user.personId),
+    // Codes and counts, never a row per seat (#1183's boundary).
+    diveIntentTallyForTrip(db, shop.id, tripId),
+    // The newest word the crew tapped, whatever its age: the strip shows the
+    // crew their own last answer even on a boat that is hours overdue. The
+    // staleness rule belongs to what a *diver* reads, not to the control.
+    latestTripStage(db, shop.id, tripId),
   ]);
   // Each live site's field guide, for the dive log's "one thing you saw"
   // picker (issue #1190). Read after the sites resolve because it is keyed by
@@ -384,6 +398,7 @@ export default async function TripManifestPage({
   // Same narrower context as the note above: the checklist is checkpoint-
   // independent, so its action re-proves nothing about which one was open.
   const boundPreDepartureCheckAction = preDepartureCheckAction.bind(null, { shopSlug, tripId });
+  const boundSetTripStageAction = setTripStageAction.bind(null, { shopSlug, tripId });
   const checklistListItems = checklistItems.map((item) => {
     const check = checklistChecks.get(item.id);
     const checkedByLine = check
@@ -668,6 +683,32 @@ export default async function TripManifestPage({
         t={t}
       />
 
+      {/* **Where the boat is** — ADR 20260904-reef-all-the-way-down, decision
+          2, Budget rule 4. Directly under the panel that counts the people
+          aboard, because it is the same question asked of the boat rather than
+          of the roster, and because the crew taps it at the rail. No drawing,
+          no coral and no motion: this is a safety surface, and the boat that
+          drifts on the home and the storefront is deliberately not here. */}
+      <StageStrip
+        action={boundSetTripStageAction}
+        current={stage?.stage ?? null}
+        copy={{
+          legend: t("manifest.stage.legend"),
+          consequence: t("manifest.stage.consequence"),
+          errorRefusal: t("manifest.stage.errorRefusal"),
+          taps: TRIP_STAGES.map((value) => ({
+            stage: value,
+            label: t(STAGE_TAP_KEYS[value]),
+          })),
+          recordedLine: stage
+            ? t("manifest.stage.recordedLine", {
+                name: stage.recordedByName ?? "",
+                time: formatTime(stage.recordedAt, locale, shop.timezone),
+              })
+            : undefined,
+        }}
+      />
+
       {/* A segmented control, not a row of buttons: the active checkpoint used
           to wear the same filled-primary costume as "Mark boarded", which gave
           the page a second primary that was not an action at all (principle
@@ -824,6 +865,7 @@ export default async function TripManifestPage({
           themselves ride on each member's row where roll call can see them. */}
       <BuddyTeamsPanel
         defaultOpen={buddies === "open"}
+        intentLine={staffDiveIntentLine(t, diveIntents, locale)}
         buddyTeamsList={buddyTeamsList}
         diverOptions={diverOptions}
         crewOptions={crewOptions}

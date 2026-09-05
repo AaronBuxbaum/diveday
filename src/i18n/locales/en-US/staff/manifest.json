@@ -1,4 +1,15 @@
 {
+  "stage": {
+    "legend": "Where the boat is",
+    "tapBoarding": "Boarding",
+    "tapUnderway": "Underway",
+    "tapSurface": "Surface",
+    "tapHeadingIn": "Heading in",
+    "tapHome": "Home",
+    "recordedLine": "{name} · {time}",
+    "consequence": "Each tap shows on divers' links and on your website.",
+    "errorRefusal": "That didn't save. Check your connection and tap again."
+  },
   "skipToRollCall": "Skip to roll call",
   "stillToBoardHeading": "Still to board ({count})",
   "notCountedBackHeading": "Not yet counted back aboard ({count})",
