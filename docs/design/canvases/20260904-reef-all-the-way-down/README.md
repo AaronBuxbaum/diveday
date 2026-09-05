@@ -1,6 +1,6 @@
 # Reef, all the way down — every surface, every open idea, and a wider budget
 
-- **Status:** Live (its ADR is Proposed; three decisions wait on H-67)
+- **Status:** Live (its ADR was Accepted on 2026-09-04 with H-67 Chosen; slices open below)
 - **Date:** 2026-09-04
 - **ADR:** [20260904-reef-all-the-way-down](../../../architecture/decisions/20260904-reef-all-the-way-down.md)
 - **Published:** https://claude.ai/code/artifact/7b7af489-4f19-47cc-b202-26383b362561
@@ -77,7 +77,7 @@ drift names this ADR in its doc comment, and a test pins the rule.
 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
-| 16a — the station is a panel: `DayStation` on a `SectionCard`, the tile leading, one sentence per row, the log door moved to the evening, the dial at 76 | open | — | — |
+| 16a — the station is a panel: `DayStation` on a `SectionCard`, the tile leading, one line per row, the log door a quiet link (the incident-export amendment keeps it on every departure), the dial at 76 | shipped | `src/app/shop/[shopSlug]/_components/today/DayStation.tsx` | `src/app/shop/[shopSlug]/_components/today/DaySpine.test.tsx` |
 | 16b — the band follows the clock (Budget 1) and the fact of scale (Budget 3): season start setting, the count, the line | open | — | — |
 | 16c — the boat says where it is (D20, Budget 4): `trip_stage_events`, the manifest's stage strip, the home's chip, the storefront's live panel, the thread's line; the boat drawing (Budget 2) | open | — | — |
 | 16d — the manifest's top: the catch-up strip (D42 with D27 folded in), the plan-change door (D24), the welcome word (D22) | open | — | — |

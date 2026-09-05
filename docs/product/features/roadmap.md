@@ -353,6 +353,37 @@ list.
 - **15e** — `marketing.md` records the "ex-Google" rules, the voice list, and the biography's
   return under 15a's shape; H-12's row is amended by H-66's outcome, never rewritten.
 
+### 16. Reef, all the way down (design complete; H-67 Chosen 2026-09-04)
+
+The 2026-09-04 loop over every surface a shop and a diver live in, argued on
+[the canvas](../../design/canvases/20260904-reef-all-the-way-down/README.md) and decided in ADR
+[20260904-reef-all-the-way-down](../../architecture/decisions/20260904-reef-all-the-way-down.md):
+the gap between Reef's drawings and the code is composition, not colour; the public booking page
+is unbounded; and the product does not know what time it is. Every open feature idea got one
+verdict, the delight budget widened along time with every ban standing, and the owner chose all
+three of H-67's calls. Each slice runs the `design-implementation` skill: the component names the
+ADR, a test pins the rule, the canvas README's slice table moves, and the visual diffs are explained.
+
+- **16a** — the station on the shop home is a `SectionCard` with the site tile leading, one line
+  per row, the log door a quiet link, the dial at 76px. **Started 2026-09-04.**
+- **16b** — the water band follows the shop's clock (four washes) and the one fact of scale renders
+  on the day it is true, with a season-start setting (#1371, #1373).
+- **16c** — the boat says where it is: `trip_stage_events`, the manifest's stage strip, the home's
+  chip, the storefront's live panel, the thread's line; the boat drawing (#1372, #1374, D20).
+- **16d** — the manifest's top: the catch-up strip (D42 with D27 folded in), the plan-change door
+  (D24), the welcome word under a name (D22).
+- **16e** — the booking page bounded: three tiles and a door, "Also worth a look" (D01), the
+  intent question (D12), the rusty diver's offers (D18); a composition test holds the length.
+- **16f** — the storefront's lenses (D02) and "next with space".
+- **16g** — the thread: "Anything changed?" (D15 with D19 folded in), provenance chips (D51), the
+  rental-fit line (D14).
+- **16h** — the evening: souls not seats (#1346), the open-seats debrief (D47), the rental-fit
+  leftover (D14), the plan-change meta (D24).
+- **16i** — the recap: the postcard's number, save-as-image (#1081), the private line (D33), the
+  private pulse (D40), the next dive (D35).
+- **16j** — the eleven adopted-unseen issues, each on its own pull request (#1284, D05 on
+  `trips.revision`, D17, D25, #1363, #1366, D36 and D45 as one recap variant, D44, D52, #1357).
+
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
 A 2026-08-08 eight-agent design review (three of them information-architecture rethinkers)

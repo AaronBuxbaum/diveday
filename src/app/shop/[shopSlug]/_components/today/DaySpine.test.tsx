@@ -253,6 +253,93 @@ describe("a station owns its departure's facts", () => {
 });
 
 /**
+ * **The station is a panel** — ADR 20260904-reef-all-the-way-down, decision 1,
+ * slice 16a. Reef drew each departure as a `SectionCard` with the site tile
+ * leading; the first slices shipped the tokens into a three-column rail. The
+ * rules here are the ones the canvas measured the gap against: the panel, the
+ * tile inside it, the capacity inside the dial, and the log door at reading
+ * weight — present on every live station, never at button weight.
+ */
+describe("the station is a panel (16a)", () => {
+  it("renders each live station as a SectionCard on the bed, never as a rail", () => {
+    const { container } = renderSpine({
+      departures: [
+        departure({ tripId: "a", title: "Morning Reef", startsAt: hoursFromNow(1) }),
+        departure({ tripId: "b", title: "Wreck Trip", startsAt: hoursFromNow(6) }),
+      ],
+    });
+    const stations = [...container.querySelectorAll("ol > li")];
+    expect(stations).toHaveLength(2);
+    for (const station of stations) {
+      expect(station.className).toContain("rounded-panel");
+      expect(station.className).toContain("shadow-bed");
+    }
+    // The rail is gone: no column grid, no drawn line for the tile to sit on.
+    expect(container.querySelector('[class*="grid-cols-[112px_112px_1fr]"]')).toBeNull();
+  });
+
+  it("puts the site tile inside the panel, leading the header", () => {
+    const { container } = renderSpine();
+    const station = container.querySelector("ol > li");
+    const mark = station?.querySelector("[data-site-mark]");
+    expect(mark).not.toBeNull();
+    // Leading: the first element child of the header row is the tile.
+    expect(mark?.parentElement?.firstElementChild).toBe(mark);
+  });
+
+  it("keeps the capacity inside the dial and the open count beside it", () => {
+    const { container } = renderSpine();
+    const water = container.querySelector("[data-station-water]");
+    const dial = water?.parentElement;
+    if (!dial) throw new Error("no dial rendered");
+    expect(within(dial as HTMLElement).getByText("10")).toBeInTheDocument();
+    expect(within(dial as HTMLElement).getByText("of 12")).toBeInTheDocument();
+    expect(within(dial as HTMLElement).queryByText("2 spots open")).toBeNull();
+    expect(screen.getByText("2 spots open")).toBeInTheDocument();
+  });
+
+  it("offers the departure log on a live station as a quiet link, never a button", () => {
+    renderSpine({
+      departures: [departure({ tripId: "t1" })],
+      evening: evening([]),
+    });
+    const door = screen.getByRole("link", { name: "Generate log" });
+    expect(door).toHaveAttribute("href", "/shop/blue-mantis/trips/t1/log");
+    // `buttonClass()` always emits the control rung; the door is a text link.
+    expect(door.className).not.toContain("rounded-lg");
+    expect(door.className).toContain("text-primary");
+  });
+
+  it("renders a settled station as the same panel", () => {
+    const { container } = renderSpine({
+      departures: [],
+      evening: evening([closed({ tripId: "t1" })]),
+    });
+    const station = container.querySelector("ol > li");
+    expect(station?.className).toContain("rounded-panel");
+    expect(container.querySelector('[class*="grid-cols-[112px_112px_1fr]"]')).toBeNull();
+  });
+
+  it("says a row as one line: the person, then the sentence", () => {
+    renderSpine({
+      actions: [
+        action({
+          id: "r1",
+          subject: "Priya Sharma",
+          detail: "Waiver has not been sent.",
+          departure: boat("t1"),
+        }),
+      ],
+    });
+    const subject = screen.getByText("Priya Sharma");
+    const detail = screen.getByText("Waiver has not been sent.");
+    // One `<p>` holds both halves; nothing stacks the sentence under the name.
+    expect(subject.parentElement).toBe(detail.parentElement);
+    expect(subject.parentElement?.tagName).toBe("P");
+  });
+});
+
+/**
  * The two safety sentences the departure card carried and the station keeps —
  * neither is a job anyone taps here, and both describe a checkpoint (issues
  * #789, #791). Every case below is as much about the sentence *not* rendering.
