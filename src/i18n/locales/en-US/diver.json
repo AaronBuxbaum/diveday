@@ -295,7 +295,7 @@
       "crew": "Crew"
     },
     "pitchDoor": "The rest of the briefing",
-    "pitchDoorSpecies": "{count, plural, one {# more species} other {# more species}}"
+    "pitchDoorSpecies": "{count, plural, one {# species} other {# species}}"
   },
   "booking": {
     "heading": "Grab a spot",

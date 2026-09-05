@@ -119,7 +119,14 @@ test.describe("staff", () => {
     // leg re-walks the real sign-in form on purpose: the loop is the point.
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
-    await page.locator("li").filter({ hasText: title }).getByRole("link").click();
+    // Named, because the board row also carries a "Set a price for …" link on a
+    // departure with no price yet — two links in one row, and this one is the
+    // departure.
+    await page
+      .locator("li")
+      .filter({ hasText: title })
+      .getByRole("link", { name: title, exact: true })
+      .click();
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
     // The roster lives on the Guests tab now.
     await expect(page.getByText("Nora Quinn").first()).toBeVisible();

@@ -1,87 +1,87 @@
 {
- "_note": "Rendered CSS widths for responsive `sizes` declarations, measured in a real browser against `pnpm dev` (where the optimizer is on, so `sizes` reaches the DOM) at 390/768/1280/1920. Fixed-pixel declarations on fixed-width elements are NOT here — scripts/check-image-sizes.mjs derives those from the element's own Tailwind class, which cannot drift. Issue #1350.",
- "src/app/s/[shopSlug]/_components/ShopfrontHero.tsx :: (min-width: 1152px) 1152px, 100vw": {
-  "measured": "2026-09-04, /s/blue-mantis",
-  "rendered": {
-   "390": 356,
-   "768": 718,
-   "1280": 1102,
-   "1920": 1102
+  "_note": "Rendered CSS widths for responsive `sizes` declarations, measured in a real browser against `pnpm dev` (where the optimizer is on, so `sizes` reaches the DOM) at 390/768/1280/1920. Fixed-pixel declarations on fixed-width elements are NOT here — scripts/check-image-sizes.mjs derives those from the element's own Tailwind class, which cannot drift. Issue #1350.",
+  "src/app/s/[shopSlug]/_components/ShopfrontHero.tsx :: (min-width: 1152px) 1152px, 100vw": {
+    "measured": "2026-09-04, /s/blue-mantis",
+    "rendered": {
+      "390": 356,
+      "768": 718,
+      "1280": 1102,
+      "1920": 1102
+    }
+  },
+  "src/app/s/[shopSlug]/_components/CoursesShelf.tsx :: (min-width: 1024px) 22rem, (min-width: 640px) 50vw, 100vw": {
+    "measured": "2026-09-04, /s/blue-mantis",
+    "rendered": {
+      "390": 356,
+      "768": 350,
+      "1280": 355,
+      "1920": 355
+    }
+  },
+  "src/app/s/[shopSlug]/courses/[slug]/_components/CourseSections.tsx :: (min-width: 896px) 896px, 100vw": {
+    "measured": "2026-09-04, /s/blue-mantis/courses/advanced-open-water-diver",
+    "rendered": {
+      "390": 356,
+      "768": 718,
+      "1280": 846,
+      "1920": 846
+    }
+  },
+  "src/app/s/[shopSlug]/courses/[slug]/_components/CourseSections.tsx :: (min-width: 896px) 17rem, (min-width: 640px) 33vw, 50vw": {
+    "measured": "2026-09-04, /s/blue-mantis/courses/advanced-open-water-diver. The third condition was added by this change: measured against the old `(min-width: 640px) 33vw, 50vw`, which resolved to 634px at 1920 for a slot that stops growing at 273px once its container hits max-width.",
+    "rendered": {
+      "390": 171,
+      "768": 230,
+      "1280": 273,
+      "1920": 273
+    }
+  },
+  "src/app/s/[shopSlug]/trips/[id]/_components/TripDayPlan.tsx :: (min-width: 640px) 33rem, 100vw": {
+    "measured": "2026-09-04, /s/blue-mantis/trips/<one with a single published moment>. This is the one-moment branch, where the grid is a single full-width column. Measured against the old flat `(min-width: 640px) 17rem, 100vw`, which declared 272px for a slot rendering at 528px — the under-declaration that motivated the fix.",
+    "rendered": {
+      "390": 342,
+      "768": 528,
+      "1280": 528,
+      "1920": 528
+    }
+  },
+  "src/app/s/[shopSlug]/trips/[id]/_components/TripDayPlan.tsx :: (min-width: 640px) 17rem, 100vw": {
+    "exempt": "The two-or-more-moments branch of the same component. The demo's departures publish at most one moment, so no seeded surface renders the two-column grid and there is nothing to measure. Seed a second `dive_site_moments` row on a demo departure and this becomes measurable."
+  },
+  "src/app/ready/[token]/_components/AfterState.tsx :: (min-width: 640px) 33vw, 50vw": {
+    "exempt": "Not yet measured. Reaching it needs a recap bearer token for a departure carrying published photos, which the measuring pass did not mint. Same string as the course gallery next door, which turned out over-declared past its container's max-width, so this one is worth measuring rather than assuming."
+  },
+  "src/app/shop/[shopSlug]/_components/today/RecapNoteEditor.tsx :: 288px": {
+    "exempt": "Not yet measured. A fixed px on a `w-full` cell inside a responsive grid, so the derived path cannot read it off a class and the registered path needs the evening close-out state seeded through /api/test/seed-evening."
+  },
+  "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx :: (min-width: 640px) 25vw, 50vw": {
+    "exempt": "Not yet measured. The course editor's gallery, behind a staff session and a course slug. The identical string on the dive-site surfaces below is the one PR #1347 found over-declared by 2.8x, so this is a likely finding rather than a formality."
+  },
+  "src/app/shop/[shopSlug]/dive-sites/_components/SiteFields.tsx :: (min-width: 640px) 25vw, 50vw": {
+    "exempt": "Not yet measured. The dive-site editor's photo grid. See the note on the course editor above — same string, same suspicion."
+  },
+  "src/app/shop/[shopSlug]/dive-sites/page.tsx :: (min-width: 640px) 180px, 50vw": {
+    "measured": "2026-09-04, /shop/blue-mantis/dive-sites?view=catalog&template=molasses-reef — the published site catalog's preview pane, which is the only place this grid renders. Its <main> is max-w-3xl, so above 640px the four columns and their three gap-x-3 gaps leave a cell that never grows again; below it the grid is two columns of a viewport-width main. PR #1347 derived the 171 from that arithmetic and shipped the fix before this guard existed; this is the same number read off the element in a browser.",
+    "rendered": {
+      "390": 173,
+      "768": 171,
+      "1280": 171,
+      "1920": 171
+    }
+  },
+  "src/components/DiveSitesPeek.tsx :: (min-width: 640px) 50vw, 100vw": {
+    "exempt": "Not yet measured. Rendered only on /waivers/[token], which needs a waiver bearer token for a booking whose trip has sites with photos."
+  },
+  "src/components/TripArrivalCard.tsx :: (max-width: 640px) calc(100vw - 56px), 576px": {
+    "exempt": "Not yet measured. Needs a departure carrying an arrival photo, which the demo does not seed."
+  },
+  "src/app/s/[shopSlug]/trips/[id]/_components/TripPitch.tsx :: (min-width: 640px) 11rem, 32vw": {
+    "measured": "2026-09-05, /s/blue-mantis/trips/<a reef departure with a published field guide>. Three cells across max-w-xl with an 8px gap: 11rem is the third once the measure stops growing, 32vw the third of a phone.",
+    "rendered": {
+      "390": 109,
+      "768": 171,
+      "1280": 171,
+      "1920": 171
+    }
   }
- },
- "src/app/s/[shopSlug]/_components/CoursesShelf.tsx :: (min-width: 1024px) 22rem, (min-width: 640px) 50vw, 100vw": {
-  "measured": "2026-09-04, /s/blue-mantis",
-  "rendered": {
-   "390": 356,
-   "768": 350,
-   "1280": 355,
-   "1920": 355
-  }
- },
- "src/app/s/[shopSlug]/courses/[slug]/_components/CourseSections.tsx :: (min-width: 896px) 896px, 100vw": {
-  "measured": "2026-09-04, /s/blue-mantis/courses/advanced-open-water-diver",
-  "rendered": {
-   "390": 356,
-   "768": 718,
-   "1280": 846,
-   "1920": 846
-  }
- },
- "src/app/s/[shopSlug]/courses/[slug]/_components/CourseSections.tsx :: (min-width: 896px) 17rem, (min-width: 640px) 33vw, 50vw": {
-  "measured": "2026-09-04, /s/blue-mantis/courses/advanced-open-water-diver. The third condition was added by this change: measured against the old `(min-width: 640px) 33vw, 50vw`, which resolved to 634px at 1920 for a slot that stops growing at 273px once its container hits max-width.",
-  "rendered": {
-   "390": 171,
-   "768": 230,
-   "1280": 273,
-   "1920": 273
-  }
- },
- "src/app/s/[shopSlug]/trips/[id]/_components/TripDayPlan.tsx :: (min-width: 640px) 33rem, 100vw": {
-  "measured": "2026-09-04, /s/blue-mantis/trips/<one with a single published moment>. This is the one-moment branch, where the grid is a single full-width column. Measured against the old flat `(min-width: 640px) 17rem, 100vw`, which declared 272px for a slot rendering at 528px — the under-declaration that motivated the fix.",
-  "rendered": {
-   "390": 342,
-   "768": 528,
-   "1280": 528,
-   "1920": 528
-  }
- },
- "src/app/s/[shopSlug]/trips/[id]/_components/TripDayPlan.tsx :: (min-width: 640px) 17rem, 100vw": {
-  "exempt": "The two-or-more-moments branch of the same component. The demo's departures publish at most one moment, so no seeded surface renders the two-column grid and there is nothing to measure. Seed a second `dive_site_moments` row on a demo departure and this becomes measurable."
- },
- "src/app/ready/[token]/_components/AfterState.tsx :: (min-width: 640px) 33vw, 50vw": {
-  "exempt": "Not yet measured. Reaching it needs a recap bearer token for a departure carrying published photos, which the measuring pass did not mint. Same string as the course gallery next door, which turned out over-declared past its container's max-width, so this one is worth measuring rather than assuming."
- },
- "src/app/shop/[shopSlug]/_components/today/RecapNoteEditor.tsx :: 288px": {
-  "exempt": "Not yet measured. A fixed px on a `w-full` cell inside a responsive grid, so the derived path cannot read it off a class and the registered path needs the evening close-out state seeded through /api/test/seed-evening."
- },
- "src/app/shop/[shopSlug]/courses/[slug]/edit/page.tsx :: (min-width: 640px) 25vw, 50vw": {
-  "exempt": "Not yet measured. The course editor's gallery, behind a staff session and a course slug. The identical string on the dive-site surfaces below is the one PR #1347 found over-declared by 2.8x, so this is a likely finding rather than a formality."
- },
- "src/app/shop/[shopSlug]/dive-sites/_components/SiteFields.tsx :: (min-width: 640px) 25vw, 50vw": {
-  "exempt": "Not yet measured. The dive-site editor's photo grid. See the note on the course editor above — same string, same suspicion."
- },
- "src/app/shop/[shopSlug]/dive-sites/page.tsx :: (min-width: 640px) 180px, 50vw": {
-  "measured": "2026-09-04, /shop/blue-mantis/dive-sites?view=catalog&template=molasses-reef — the published site catalog's preview pane, which is the only place this grid renders. Its <main> is max-w-3xl, so above 640px the four columns and their three gap-x-3 gaps leave a cell that never grows again; below it the grid is two columns of a viewport-width main. PR #1347 derived the 171 from that arithmetic and shipped the fix before this guard existed; this is the same number read off the element in a browser.",
-  "rendered": {
-   "390": 173,
-   "768": 171,
-   "1280": 171,
-   "1920": 171
-  }
- },
- "src/components/DiveSitesPeek.tsx :: (min-width: 640px) 50vw, 100vw": {
-  "exempt": "Not yet measured. Rendered only on /waivers/[token], which needs a waiver bearer token for a booking whose trip has sites with photos."
- },
- "src/components/TripArrivalCard.tsx :: (max-width: 640px) calc(100vw - 56px), 576px": {
-  "exempt": "Not yet measured. Needs a departure carrying an arrival photo, which the demo does not seed."
- },
- "src/app/s/[shopSlug]/trips/[id]/_components/TripPitch.tsx :: (min-width: 640px) 11rem, 32vw": {
-  "measured": "2026-09-05, /s/blue-mantis/trips/<a reef departure with a published field guide>. Three cells across max-w-xl with an 8px gap: 11rem is the third once the measure stops growing, 32vw the third of a phone.",
-  "rendered": {
-   "390": 109,
-   "768": 171,
-   "1280": 171,
-   "1920": 171
-  }
- }
 }
