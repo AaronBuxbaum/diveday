@@ -82,11 +82,19 @@ drift names this ADR in its doc comment, and a test pins the rule.
 | 16c — the boat says where it is (D20, Budget 4): `trip_stage_events`, the manifest's stage strip, the home's chip, the storefront's live panel, the thread's line; the boat drawing (Budget 2) | shipped | `src/lib/trip-stages.ts` | `src/lib/trip-stages.test.ts`, `src/db/trip-stages.test.ts`, `src/components/illustration/illustration.test.ts`, `e2e/boat-stage.spec.ts` |
 | 16d — the manifest's top: the catch-up strip (D42 with D27 folded in), the plan-change door (D24), the welcome word (D22) | shipped | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/CatchUpStrip.tsx` | `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/CatchUpStrip.test.tsx`, `src/lib/desk-events.test.ts`, `src/lib/welcome-cue.test.ts`, `src/db/desk-events.test.ts`, `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/DiverRollCall.test.tsx` |
 | 16e — the booking page bounded: three field-guide tiles and one door, the other departures worth a look (D01), the intent question (D12 with D23's count folded in), the rusty diver's offers (D18); the composition test that holds the length | shipped | `src/app/s/[shopSlug]/trips/[id]/_components/TripPitch.tsx` | `src/app/s/[shopSlug]/trips/[id]/_components/TripPitch.test.tsx`, `src/app/s/[shopSlug]/trips/[id]/page.composition.test.ts`, `src/lib/worth-a-look.test.ts`, `src/lib/dive-intent.test.ts`, `src/lib/re-entry.test.ts` |
-| 16f — the storefront's lenses (D02) and "next with space" | open | — | — |
-| 16g — the thread: "Anything changed?" (D15 with D19 folded in), provenance chips (D51, Budget 5), the rental-fit line (D14) | open | — | — |
+| 16f — the storefront's lenses (D02) and "next with space" | shipped | `src/app/s/[shopSlug]/page.tsx` | `src/app/s/[shopSlug]/page.composition.test.ts`, `src/lib/trip-lenses.test.ts`, `src/db/trip-lenses.test.ts`, `e2e/schedule-lenses.spec.ts` |
+| 16g — the thread: "Anything changed?" (D15 with D19 folded in), provenance chips (D51, Budget 5), the rental-fit line (D14) | shipped | `src/app/ready/[token]/_components/ChangedFacts.tsx` | `src/lib/thread-steps.test.ts`, `src/app/ready/[token]/page.composition.test.ts`, `src/app/ready/[token]/_components/ChangedFacts.test.tsx`, `src/components/ui/FactSource.test.tsx`, `src/components/TripChangeLedger.test.tsx` |
 | 16h — the evening: souls not seats (#1346), the open-seats debrief (D47), the rental-fit leftover (D14), the plan-change meta (D24) | shipped | `src/app/shop/[shopSlug]/_components/today/ClosingStation.tsx` | `src/lib/closeout.test.ts`, `src/lib/open-seats.test.ts`, `src/lib/manifests.test.ts`, `src/db/closeout.test.ts`, `src/app/shop/[shopSlug]/_components/today/DaySpine.test.tsx`, `e2e/day-close.spec.ts` |
 | 16i — the recap: the postcard's number, save-as-image (#1081), the private line (D33), the private pulse (D40), the next dive (D35) | open | — | — |
-| 16j — the ten adopted-unseen issues, built from their own bodies (#1284, D05 on H-67 b, D17, D25, #1363, #1366, D36+D45, D44, D52, #1357) | open | — | — |
+| 16j — the ten adopted-unseen issues, built from their own bodies (D05 on H-67 b, D17, D25, #1363, #1366, D36+D45, D44, D52, #1357) | open | — | — |
+
+16f ships with two deliberate deviations from `Storefront.dc.html`. The board draws a dashed **Has
+space** pill at the right end of the lens rail, folding the shipped checkbox into it; that filter
+already has a control in the filter row, and moving it is a recomposition neither the ADR nor
+issue #1162 asks for. And the drawn Friday 8:00 row wears two words ("Easygoing reef · first time
+back in a while"); a departure carries **one** lens, because the rail is single-select, "a kind of
+day" is singular, and the one meta line has room for one more fragment rather than two. A join
+table can be added later without changing the `?lens=` grammar.
 
 16a and 16b are the first two because the home is the surface the gap was measured on; 16c is
 third because every later surface reads the stage. 16j is a bundle in name only — each issue keeps

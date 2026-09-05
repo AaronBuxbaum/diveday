@@ -41,6 +41,7 @@ import {
   listTripInvitations,
   recordTripInvitation,
 } from "@/db/trip-invitations";
+import { getTripLens } from "@/db/trip-lenses";
 import { type SendLastMinuteDealOutcome, sendLastMinuteDealBlast } from "@/db/trip-promos";
 import {
   applyDetailsToFutureSeries,
@@ -130,6 +131,9 @@ const detailsSchema = z.object({
   // change what they turn up for. That is a decision, not the same oversight.
   diveMode: z.enum(["boat", "shore", "pool"]).optional(),
   boatId: z.preprocess((value) => (value === "" ? undefined : value), z.uuid().optional()),
+  // The shop's own word for this kind of day (ADR
+  // 20260904-reef-all-the-way-down, decision 2). An empty select clears it.
+  lensId: z.preprocess((value) => (value === "" ? undefined : value), z.uuid().optional()),
   isPrivate: z.preprocess((value) => value === "on", z.boolean()),
   // The shop's own divemaster target stops applying to this departure. Nothing
   // else moves: an agency training ratio still refuses a seat, and readiness,
@@ -401,6 +405,7 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     minimumDecisionHours,
     diveMode,
     boatId,
+    lensId,
     isPrivate,
     selfGuided,
   } = parsed.data;
@@ -418,6 +423,12 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
   const tripNow = await getTripWithBooked(dbi, s.user.shopId, tripId);
   const nextBoatId = diveMode && diveMode !== "boat" ? null : (boatId ?? tripNow?.boatId ?? null);
   const nextBoat = nextBoatId ? await getBoatById(dbi, s.user.shopId, nextBoatId) : null;
+  // The same tenant rule the hull above obeys: a lens id arriving on this form
+  // has to be one of *this* shop's live words, or the select becomes a
+  // cross-tenant door.
+  if (lensId && !(await getTripLens(dbi, s.user.shopId, lensId))) {
+    redirect(noticeUrl(back, "invalid", { form: "details" }));
+  }
   // Read for one rule only: clearing the price off a departure that demands
   // payment leaves a gate nobody can clear (issue #692). This form has no
   // payment toggle, so the stored row is the only place to learn it — the same
@@ -509,6 +520,9 @@ export async function saveDetails(shopSlug: string, tripId: string, formData: Fo
     plannedDives,
     diveMode: details.patch.diveMode,
     boatId: details.patch.boatId,
+    // An empty select clears the word, which is why this is `?? null` rather
+    // than the `undefined`-means-untouched shape the fields above use.
+    lensId: lensId ?? null,
     isPrivate,
     selfGuided,
     priceCents: details.patch.priceCents,

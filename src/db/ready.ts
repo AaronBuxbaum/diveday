@@ -17,7 +17,13 @@ import { getHelpRequestForBooking, type HelpRequest } from "./help-requests";
 import { nitroxCardOnFilePersonIds, verifiedNitroxPersonIds } from "./nitrox";
 import { getBookingPayment } from "./payments";
 import { type BookingReadinessDetail, getBookingReadinessDetail } from "./readiness";
-import { type DiverRentalFit, getRentalFit, toDiverRentalFit } from "./rental-fit";
+import {
+  type DiverRentalFit,
+  fitConfirmationForDiver,
+  getRentalFit,
+  type RentalFitItem,
+  toDiverRentalFit,
+} from "./rental-fit";
 import { bookings, certifications, people, shops } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getSupportNeeds } from "./support-needs";
@@ -79,6 +85,35 @@ export type ReadyPageData = {
      * heard one first-hand (docs ADR 20260731-per-person-notification-locale). */
     locale: string | null;
   };
+  /**
+   * **The diver's own emergency contact, read back to them on their own link**
+   * (ADR 20260904-reef-all-the-way-down, D15).
+   *
+   * An explicit two-field projection, never the `people` row: this is the same
+   * boundary `toDiverRentalFit` draws, and the next column added to `people`
+   * must not reach a bearer-token page by default.
+   *
+   * This adds no new audience for the number. It is already on the manifest the
+   * crew carries and on the waiver the diver signed; what is new is that the
+   * person it belongs to can see and correct it without asking the shop.
+   */
+  emergencyContact: { name: string | null; phone: string | null };
+  /**
+   * When this seat was booked. Read for one question and one only: whether the
+   * shop was already holding this diver's stated fit *before* the booking
+   * existed, which is what makes the "Anything changed?" step a question about
+   * last time rather than about a form they filled in five minutes ago
+   * (`buildThreadSteps`'s `carriedFacts`).
+   */
+  bookingCreatedAt: Date;
+  /** They have answered that question for this seat, or null — the ordinary absent state. */
+  carriedFactsConfirmedAt: Date | null;
+  /**
+   * A staffer kept this diver's fit after a previous trip, with the piece and
+   * the day (D14). Null unless the name, the item and the time are all on file,
+   * which is what stops the recall sentence half-rendering.
+   */
+  fitConfirmation: { staffFullName: string; item: RentalFitItem; confirmedAt: Date } | null;
   wantsNitrox: boolean;
   /**
    * The diver's own answer to "when did you last dive?", or null when they have
@@ -184,6 +219,8 @@ export async function getReadyPageData(
       hotelPickupLocation: bookings.hotelPickupLocation,
       pickupTime: bookings.pickupTime,
       status: bookings.status,
+      bookingCreatedAt: bookings.createdAt,
+      carriedFactsConfirmedAt: bookings.carriedFactsConfirmedAt,
       slug: shops.slug,
       defaultLocale: shops.defaultLocale,
       currency: shops.currency,
@@ -199,6 +236,8 @@ export async function getReadyPageData(
       dockCallMinutes: shops.dockCallMinutes,
       personEmail: people.email,
       personLocale: people.locale,
+      emergencyContactName: people.emergencyContactName,
+      emergencyContactPhone: people.emergencyContactPhone,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -219,6 +258,7 @@ export async function getReadyPageData(
     nitroxVerified,
     nitroxOnFile,
     welcomeInputs,
+    fitConfirmation,
   ] = await Promise.all([
     getRentalFit(db, row.shopId, row.personId),
     getSupportNeeds(db, row.shopId, row.personId),
@@ -231,6 +271,10 @@ export async function getReadyPageData(
     // same thing on the diver's own page as it does under their name at the
     // rail (issue #1182).
     welcomeCueInputsByBooking(db, row.shopId, row.tripId, now),
+    // Recall, not inference: who kept this diver's fit after a previous trip.
+    // Read here rather than folded into `getRentalFit`'s row, because the
+    // staffer's name comes from a join this page is the only caller of.
+    fitConfirmationForDiver(db, row.shopId, row.personId),
   ]);
   // `partly_refunded` settles too, or this page would invite a diver who has
   // already paid — and been handed part of it back — to pay the full price a
@@ -288,6 +332,10 @@ export async function getReadyPageData(
       email: row.personEmail,
       locale: row.personLocale,
     },
+    emergencyContact: { name: row.emergencyContactName, phone: row.emergencyContactPhone },
+    bookingCreatedAt: row.bookingCreatedAt,
+    carriedFactsConfirmedAt: row.carriedFactsConfirmedAt,
+    fitConfirmation,
     wantsNitrox: row.wantsNitrox,
     lastDivedBand: row.lastDivedBand,
     diveIntent: row.diveIntent,

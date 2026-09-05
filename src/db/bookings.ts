@@ -1360,6 +1360,40 @@ export async function setBookingDiveIntent(
 }
 
 /**
+ * **The diver answered "Anything changed?" for this seat** (ADR
+ * 20260904-reef-all-the-way-down, D15 with D19 folded in).
+ *
+ * Written from the diver's own `/ready` thread, by the primary "Nothing
+ * changed" and by every one of the three change doors alike — acting on a fact
+ * is answering the question, so a diver who corrects a wetsuit size never has
+ * to then confirm that they corrected it.
+ *
+ * Idempotent by design and deliberately not guarded against re-answering: a
+ * second tap is a diver tapping twice, not an error, and the stamp moving to
+ * the later of the two is the honest record of when they last looked.
+ *
+ * Returns false when no live booking matched, so the caller can say so rather
+ * than reporting a save that never happened.
+ */
+export async function confirmCarriedFacts(
+  db: AppDb,
+  input: { shopId: string; bookingId: string },
+): Promise<boolean> {
+  const [updated] = await db
+    .update(bookings)
+    .set({ carriedFactsConfirmedAt: nowDate() })
+    .where(
+      and(
+        eq(bookings.id, input.bookingId),
+        eq(bookings.shopId, input.shopId),
+        ne(bookings.status, "cancelled"),
+      ),
+    )
+    .returning({ id: bookings.id });
+  return Boolean(updated);
+}
+
+/**
  * Record how recently the diver says they last dived (ADR
  * 20260821-currency-is-what-catches-people). Written from the diver's own
  * `/ready` page, so it is scoped to the booking the capability names and

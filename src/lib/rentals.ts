@@ -365,6 +365,37 @@ export function rentalFitCompleteness(
 }
 
 /**
+ * **The size on file for one sized item**, trimmed, or null when there is
+ * none.
+ *
+ * Written for the recall sentence D14 asks for (ADR
+ * 20260904-reef-all-the-way-down): "Keiko kept your BCD at M after your last
+ * trip." names a size the shop is *actually holding*, and the only way to say
+ * that honestly is to read the column the register would be packed from — never
+ * a value the page composed. A blank column therefore renders nothing rather
+ * than a claim.
+ *
+ * `mask_fins` and `boots` are the same shoe-size answer in every capture form,
+ * written to both columns, so either column satisfies either item — the same
+ * rule {@link rentalFitCompleteness} already reads them by.
+ */
+export function sizeForRentalItem(
+  fit: RentalFitSizes | null | undefined,
+  kind: SizedRentalKind,
+): string | null {
+  if (!fit) return null;
+  const shoeSize = recorded(fit.finSize) ? fit.finSize : fit.bootSize;
+  const value = {
+    bcd: fit.bcdSize,
+    wetsuit: fit.wetsuitSize,
+    boots: shoeSize,
+    mask_fins: shoeSize,
+    weights: fit.weightPreference,
+  }[kind];
+  return value?.trim() || null;
+}
+
+/**
  * The core kit that makes up a "set", including the dive computer (H-06,
  * reconfirmed 2026-08-02 — HD-9). A shop usually prices these six as one
  * cheaper bundle; a diver who takes all of them is quoted the set. A diver

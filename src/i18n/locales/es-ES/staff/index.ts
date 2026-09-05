@@ -35,6 +35,7 @@ import feed from "./feed.json";
 import gear from "./gear.json";
 import incidentExport from "./incidentExport.json";
 import integrations from "./integrations.json";
+import lenses from "./lenses.json";
 import manifest from "./manifest.json";
 import orderLine from "./orderLine.json";
 import orders from "./orders.json";
@@ -85,6 +86,7 @@ const staff = {
   incidentExport,
   integrations,
   boats,
+  lenses,
 };
 
 export default staff;

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { calendarDateWeekday } from "@/lib/calendar-date";
 import { EVERY_WEEKDAY, weekdaySetFrom } from "@/lib/recurrence";
 import { seededShopContext } from "@/test/db";
+import { listDiveSites } from "./dive-sites";
 import {
   bookings,
   courses,
@@ -352,6 +353,62 @@ describe("recurring trip series (in-memory PGlite)", () => {
     const skipped = await getTripWithBooked(db, shop.id, crowded.id);
     expect(skipped?.title).toBe("Sunday Reef");
     expect(skipped?.capacity).toBe(12);
+  });
+
+  it("bumps the calendar revision only on the siblings whose dive sites actually moved", async () => {
+    // Issue #1165: `trips.revision` ships as RFC 5545 SEQUENCE, so a bulk apply
+    // that bumped every instance would re-alert every diver on a date whose day
+    // did not change at all.
+    const { db, shop } = await seededShopContext();
+    const now = at("2030-08-15T00:00:00.000Z");
+    const result = await createTripSeries(
+      db,
+      seriesInput({
+        shopId: shop.id,
+        title: "Wednesday Reef",
+        anchorDate: "2030-09-04",
+        weekdays: weekdaySetFrom([WED]),
+        endsOn: "2030-09-18",
+        template: {
+          startsAt: at("2030-09-04T11:00:00.000Z"),
+          endsAt: at("2030-09-04T15:00:00.000Z"),
+        },
+      }),
+    );
+    if (!result) throw new Error("series not created");
+    const [source, alreadyThere, stillElsewhere] = result.trips;
+    if (!source || !alreadyThere || !stillElsewhere) throw new Error("expected three instances");
+
+    const [siteOne, siteTwo] = await listDiveSites(db, shop.id);
+    if (!siteOne || !siteTwo) throw new Error("seeded shop needs two dive sites");
+    const plan = {
+      capacity: source.capacity,
+      plannedDives: source.plannedDives,
+      dives: [{ diveSiteId: siteOne.id }, { diveSiteId: siteTwo.id }],
+    };
+
+    await updateTrip(db, shop.id, source.id, {
+      title: source.title,
+      startsAt: source.startsAt,
+      endsAt: source.endsAt,
+      ...plan,
+    });
+    // One sibling is already running exactly these sites, so the apply changes
+    // nothing about its day.
+    await updateTrip(db, shop.id, alreadyThere.id, {
+      title: alreadyThere.title,
+      startsAt: alreadyThere.startsAt,
+      endsAt: alreadyThere.endsAt,
+      ...plan,
+    });
+    const settled = await getTripWithBooked(db, shop.id, alreadyThere.id);
+    expect(settled?.revision).toBe(1);
+
+    const applied = await applyDetailsToFutureSeries(db, shop.id, result.series.id, source.id, now);
+    expect(applied).toEqual({ updated: 2, skipped: 0 });
+
+    expect((await getTripWithBooked(db, shop.id, alreadyThere.id))?.revision).toBe(1);
+    expect((await getTripWithBooked(db, shop.id, stillElsewhere.id))?.revision).toBe(1);
   });
 
   it("skips a sibling whose recorded roll call would be orphaned by the new dive count", async () => {

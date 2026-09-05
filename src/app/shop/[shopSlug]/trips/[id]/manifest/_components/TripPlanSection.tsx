@@ -17,6 +17,11 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
  * No drawing, no coral, no motion — it is on the manifest (Budget rule 8). No
  * provenance chip either: the canvas draws one beside each planned site, and
  * that is D51, which lands in slice 16g.
+ *
+ * **`print:hidden`, like the catch-up strip above it.** The printed trip packet
+ * renders this whole manifest *and* its own `PacketDives` list, so without this
+ * the sheet a crew carries to the boat prints the dive plan twice — and the
+ * door beside it is a link to a screen nobody can tap on paper.
  */
 export function TripPlanSection({
   heading,
@@ -35,7 +40,7 @@ export function TripPlanSection({
 }) {
   if (dives.length === 0) return null;
   return (
-    <section className="mt-8" aria-labelledby="trip-plan-heading">
+    <section className="mt-8 print:hidden" aria-labelledby="trip-plan-heading">
       <h2 id="trip-plan-heading" className={SECTION_TITLE_CLASS}>
         {heading}
       </h2>

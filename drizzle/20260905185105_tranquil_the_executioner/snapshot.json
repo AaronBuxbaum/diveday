@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "4ee98919-b3de-4399-b119-f09bddef5286",
+  "id": "ff21e4be-54f1-49d6-a8d8-70db66157efe",
   "prevIds": [
     "0eb22446-15e7-4243-b0dc-2f54d55d9148",
     "24b751f3-a916-4e43-b838-91186e16daad",
@@ -585,6 +585,18 @@
         "refresher_course"
       ],
       "name": "re_entry_ask",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "bcd",
+        "wetsuit",
+        "boots",
+        "mask_fins",
+        "weights"
+      ],
+      "name": "rental_fit_item",
       "entityType": "enums",
       "schema": "public"
     },
@@ -3219,6 +3231,19 @@
       "generated": null,
       "identity": null,
       "name": "conditions_briefed_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "bookings"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "carried_facts_confirmed_at",
       "entityType": "columns",
       "schema": "public",
       "table": "bookings"
@@ -11122,32 +11147,6 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "fit_confirmed_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "rental_fit_profiles"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "fit_confirmed_by_person_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "rental_fit_profiles"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
       "name": "needs_staff_fit_at",
       "entityType": "columns",
       "schema": "public",
@@ -11175,6 +11174,45 @@
       "generated": null,
       "identity": null,
       "name": "needs_staff_fit_by",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_fit_profiles"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "fit_confirmed_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_fit_profiles"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "fit_confirmed_by",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "rental_fit_profiles"
+    },
+    {
+      "type": "rental_fit_item",
+      "typeSchema": "public",
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "fit_confirmed_item",
       "entityType": "columns",
       "schema": "public",
       "table": "rental_fit_profiles"
@@ -26622,23 +26660,6 @@
     {
       "nameExplicit": false,
       "columns": [
-        "fit_confirmed_by_person_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "people",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "rental_fit_profiles_fit_confirmed_by_person_id_people_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "rental_fit_profiles"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
         "needs_staff_fit_by"
       ],
       "schemaTo": "public",
@@ -26649,6 +26670,23 @@
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "name": "rental_fit_profiles_needs_staff_fit_by_people_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "rental_fit_profiles"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "fit_confirmed_by"
+      ],
+      "schemaTo": "public",
+      "tableTo": "people",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "rental_fit_profiles_fit_confirmed_by_people_id_fkey",
       "entityType": "fks",
       "schema": "public",
       "table": "rental_fit_profiles"

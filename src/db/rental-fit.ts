@@ -4,7 +4,13 @@ import type { PrepDiver } from "@/lib/dive-prep";
 import { SIZED_RENTAL_FIT_COLUMN, type SizedRentalKind } from "@/lib/rentals";
 import type { AppDb } from "./client";
 import { verifiedNitroxPersonIds } from "./nitrox";
-import { bookings, diveSupportNeeds, people, rentalFitProfiles } from "./schema";
+import {
+  bookings,
+  diveSupportNeeds,
+  people,
+  type rentalFitItem,
+  rentalFitProfiles,
+} from "./schema";
 import { SUPPORT_NEEDS_COLUMNS } from "./support-needs";
 
 export type RentalFitInput = {
@@ -143,11 +149,21 @@ export async function saveRentalFitNote(
  * **Keep the size that actually went out** (issue #1174, delight report D14).
  *
  * The evening's one-tap answer to "Hugo's BCD went out as L — keep that as the
- * fit?". It writes the one size column for that kind and stamps three clocks:
- * `fit_stated_at`, because a size a human confirmed *is* a stated fit, and
- * `fit_confirmed_at`/`fit_confirmed_by_person_id`, because a fit somebody
- * checked against a real return is a different fact from one somebody typed —
- * and the diver's own thread names whose call it was.
+ * fit?", and the only writer of the `fit_confirmed_*` trio. It writes the one
+ * size column for that kind and stamps `fit_stated_at` — a size a human
+ * confirmed *is* a stated fit — plus the trio, because a fit somebody checked
+ * against a real return is a different fact from one somebody typed.
+ *
+ * **The item is stamped, not just the clock**, because the diver's own thread
+ * has to name the piece: "Keiko Tanaka kept your BCD at M after your last
+ * trip". `fitConfirmationForDiver` below refuses to render without all three,
+ * so a stamp with no item would silently cost that sentence.
+ *
+ * Slices 16g and 16h each invented this write independently — 16g as a
+ * stamp-only `confirmRentalFit` with no caller, 16h as this one — and the
+ * stamp-only shape is the wrong one for the button that uses it: "keep that as
+ * the fit" that edits no size does nothing at all. One function, and the columns
+ * are 16g's three rather than 16h's two.
  *
  * **`needs_staff_fit_at` is conspicuously absent and must stay absent.** A size
  * edit never clears that flag (the column's own comment in schema.ts): a stale
@@ -184,7 +200,8 @@ export async function confirmRentalFitSize(
     [SIZED_RENTAL_FIT_COLUMN[input.kind]]: size,
     fitStatedAt: at,
     fitConfirmedAt: at,
-    fitConfirmedByPersonId: input.confirmedByPersonId,
+    fitConfirmedBy: input.confirmedByPersonId,
+    fitConfirmedItem: input.kind,
     updatedAt: at,
   };
   await db
@@ -233,6 +250,45 @@ export async function setNeedsStaffFit(
     )
     .returning();
   return profile ?? null;
+}
+
+/**
+ * Which piece of a fit a staffer kept — the `rental_fit_item` enum, whose values
+ * are `SIZED_RENTAL_KINDS` exactly. Two names for one set, because the enum is a
+ * stored column and the const is what the fit editor and the evening both read;
+ * `confirmRentalFitSize` passes a `SizedRentalKind` straight into it.
+ */
+export type RentalFitItem = (typeof rentalFitItem.enumValues)[number];
+
+/**
+ * **Who kept this diver's fit, which piece, and when** — or null.
+ *
+ * Null unless all three are on file, which is what makes the sentence it feeds
+ * refuse to half-render. The commonest way to lose one is anonymization: the
+ * erasure path nulls `fit_confirmed_by`, and a line reading "somebody kept your
+ * BCD" would be worse than no line, so the whole thing ages out instead.
+ *
+ * Its own reader rather than a widening of {@link toDiverRentalFit}: that
+ * projection is the browser boundary, and its docblock says the next column
+ * added to this table must not cross it by default.
+ */
+export async function fitConfirmationForDiver(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+): Promise<{ staffFullName: string; item: RentalFitItem; confirmedAt: Date } | null> {
+  const [row] = await db
+    .select({
+      confirmedAt: rentalFitProfiles.fitConfirmedAt,
+      item: rentalFitProfiles.fitConfirmedItem,
+      staffFullName: people.fullName,
+    })
+    .from(rentalFitProfiles)
+    .leftJoin(people, eq(people.id, rentalFitProfiles.fitConfirmedBy))
+    .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)))
+    .limit(1);
+  if (!row?.confirmedAt || !row.item || !row.staffFullName) return null;
+  return { staffFullName: row.staffFullName, item: row.item, confirmedAt: row.confirmedAt };
 }
 
 /**

@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
-import { cancelBooking, createBooking, setBookingLastDived } from "./bookings";
+import { cancelBooking, confirmCarriedFacts, createBooking, setBookingLastDived } from "./bookings";
 import { setBookingPayment } from "./payments";
 import { carriedPreparationForDiver, getReadyPageData } from "./ready";
 import { bookings, people, shops } from "./schema";
@@ -199,6 +199,43 @@ describe("getReadyPageData", () => {
       }),
     ).toBe(false);
     expect((await getReadyPageData(db, bookingId))?.lastDivedBand).toBeNull();
+  });
+
+  /**
+   * **What the "Anything changed?" step is built from** (ADR
+   * 20260904-reef-all-the-way-down, D15 and D14).
+   *
+   * The emergency contact reaches the page as an explicit two-field projection
+   * — the same boundary `toDiverRentalFit` draws — and the confirmation reaches
+   * it as its own value rather than as raw columns on the fit.
+   */
+  it("carries the diver's own emergency contact, and null where they gave none", async () => {
+    const { db, bookingId } = await unpaidBooking();
+    const fresh = await getReadyPageData(db, bookingId);
+    expect(fresh?.emergencyContact).toEqual({ name: null, phone: null });
+
+    const { db: seeded, booking } = await seededBooking();
+    const named = await getReadyPageData(seeded, booking.id);
+    expect(named?.emergencyContact).toHaveProperty("name");
+    expect(named?.emergencyContact).toHaveProperty("phone");
+    // The whole person row never crosses: two fields, and no more.
+    expect(Object.keys(named?.emergencyContact ?? {}).sort()).toEqual(["name", "phone"]);
+  });
+
+  it("carries when the seat was booked, and whether the question has been answered", async () => {
+    const { db, shop, bookingId } = await unpaidBooking();
+    const data = await getReadyPageData(db, bookingId);
+    expect(data?.bookingCreatedAt).toBeInstanceOf(Date);
+    // Nothing backfills the answer — an unasked question reads as unanswered.
+    expect(data?.carriedFactsConfirmedAt).toBeNull();
+
+    expect(await confirmCarriedFacts(db, { shopId: shop.id, bookingId })).toBe(true);
+    expect((await getReadyPageData(db, bookingId))?.carriedFactsConfirmedAt).toBeInstanceOf(Date);
+  });
+
+  it("claims no fit confirmation for a fit nobody kept", async () => {
+    const { db, bookingId } = await unpaidBooking();
+    expect((await getReadyPageData(db, bookingId))?.fitConfirmation).toBeNull();
   });
 });
 

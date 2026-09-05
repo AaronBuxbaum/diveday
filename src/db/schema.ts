@@ -1694,6 +1694,52 @@ export const diveSiteMoments = pgTable(
   ],
 );
 
+/**
+ * **A lens is the shop's own word for a kind of day** — ADR
+ * 20260904-reef-all-the-way-down, D02 (issue #1162).
+ *
+ * "Easygoing reef", "Getting comfortable again", "Photography" — a vocabulary
+ * the shop writes once and then hangs a departure on, so a diver reading the
+ * public schedule can pick the day they want rather than the next open seat.
+ * Deliberately the shop's prose rather than a DiveDay taxonomy: the whole
+ * value is that it sounds like the shop, and a fixed enum would make every
+ * shop's schedule read the same. The cost, stated plainly, is that a lens word
+ * is not translated — it is the shop's own sentence, like a boat's line or a
+ * site's fit tone.
+ *
+ * The slug is derived from the name once, on create, and never rewritten: a
+ * shop that renames "Easygoing reef" to "Easy reef" must not break the link a
+ * diver shared yesterday.
+ */
+export const tripLenses = pgTable(
+  "trip_lenses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    /** Also the rail's order: the order the shop wrote its own vocabulary in. */
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * Deleting a lens stamps this and leaves the row (ADR
+     * 20260820-every-delete-is-soft), because `trips.lens_id` points at it and
+     * a real delete would erase which kind of day a past departure was. The
+     * word on screen is still "Delete".
+     */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("trip_lenses_shop_live_idx")
+      .on(table.shopId, table.createdAt)
+      .where(sql`${table.deletedAt} is null`),
+    uniqueIndex("trip_lenses_shop_slug_key")
+      .on(table.shopId, table.slug)
+      .where(sql`${table.deletedAt} is null`),
+  ],
+);
+
 export const trips = pgTable(
   "trips",
   {
@@ -1716,6 +1762,12 @@ export const trips = pgTable(
      * moved-from slot as empty and re-create the departure staff just moved.
      */
     seriesOccurrenceDate: text("series_occurrence_date"),
+    /**
+     * The shop's own word for this kind of day (ADR
+     * 20260904-reef-all-the-way-down, D02). Null is the ordinary case and
+     * renders nothing — never "Uncategorised".
+     */
+    lensId: uuid("lens_id").references(() => tripLenses.id, { onDelete: "set null" }),
     /** Compatibility pointer to the first dive's site for readiness and forecast consumers. */
     diveSiteId: uuid("dive_site_id").references(() => diveSites.id),
     /** Present only for a scheduled course session; ordinary charters leave this empty. */
@@ -1871,6 +1923,29 @@ export const trips = pgTable(
      * (e.g. after being unpaused, to the later of original time or 1 hour from unpause).
      */
     recapAutoSendAt: timestamp("recap_auto_send_at", { withTimezone: true }),
+    /**
+     * **How many times this departure has materially changed**, published as
+     * RFC 5545 `SEQUENCE` by both calendar surfaces — the diver's one-off
+     * `.ics` (`src/app/s/[shopSlug]/trips/[id]/calendar/route.ts`) and the
+     * staff subscription feed (`src/features/calendar-sync`), through
+     * `src/lib/trip-calendar.ts` (issue #1165, delight report D05).
+     *
+     * **Exactly two edits bump it**: a change to `starts_at`, and a change to
+     * the list of dive sites the day visits (`src/lib/trip-revision.ts` holds
+     * that rule, with no database in it). `moveTrip`, `updateTrip`,
+     * `applyDetailsToFutureSeries` and the demo refresh are the writers.
+     *
+     * **Nothing else does**, and the omissions are the point. A conditions
+     * note, a status flip, a title, a price and a capacity all leave it where
+     * it is: a calendar client re-alerts a diver's phone on a `SEQUENCE` it
+     * has not seen, and a crew member typing "vis is 40ft today" at the rail
+     * must not buzz the whole boat. A counter that moved for a note and stayed
+     * flat for a two-hour time change would be worse than no counter at all.
+     *
+     * A duplicated departure is a new row and starts at 0; so does every
+     * instance a series roll materializes.
+     */
+    revision: integer("revision").notNull().default(0),
     /**
      * Set when staff delete an empty departure (ADR 20260820-every-delete-is-soft).
      *
@@ -2288,6 +2363,18 @@ export const bookings = pgTable(
      */
     wantsNitrox: boolean("wants_nitrox").notNull().default(false),
     conditionsBriefedAt: timestamp("conditions_briefed_at", { withTimezone: true }),
+    /**
+     * **The diver answered "Anything changed?" for this seat** (ADR
+     * 20260904-reef-all-the-way-down, D15 with D19 folded in) — by saying
+     * nothing changed, or by changing one of the three facts the question
+     * covers. Acting on a fact *is* answering it.
+     *
+     * Per booking rather than per person, because the question is "since last
+     * time" and it is asked once per departure: a diver who confirmed their
+     * sizes in March is not thereby answering for a November boat. Null is the
+     * ordinary absent state and nothing backfills it.
+     */
+    carriedFactsConfirmedAt: timestamp("carried_facts_confirmed_at", { withTimezone: true }),
     /**
      * The diver's own answer to "when did you last dive?", asked on `/ready`
      * (ADR 20260821-currency-is-what-catches-people). Null is "not said" — a
@@ -6262,6 +6349,25 @@ export const tripRequirements = pgTable(
 );
 
 /**
+ * The pieces of a **fit** that have a size to remember — the values of
+ * `SIZED_RENTAL_KINDS` (`src/lib/rentals.ts`), mirrored so a stored
+ * confirmation can only ever name one of them.
+ *
+ * Deliberately not `gear_item_kind` below: that one is the *register's*
+ * alphabet and carries `regulator`, `tank`, `drysuit`, `hood` and a split
+ * `mask`/`fins`, none of which has a size column on `rental_fit_profiles`. A
+ * confirmation naming one of those could not be printed back to a diver
+ * against any size the shop actually holds.
+ */
+export const rentalFitItem = pgEnum("rental_fit_item", [
+  "bcd",
+  "wetsuit",
+  "boots",
+  "mask_fins",
+  "weights",
+]);
+
+/**
  * A diver's reusable rental fit at one shop: which pieces of kit they take
  * from the shop and what size each is. Deliberately a storage concept — this
  * is what a diver needs prepared, never a reservation of a particular item or
@@ -6313,28 +6419,6 @@ export const rentalFitProfiles = pgTable(
      */
     fitStatedAt: timestamp("fit_stated_at", { withTimezone: true }),
     /**
-     * **When a human last checked this fit against what actually went out**
-     * (issue #1174, delight report D14).
-     *
-     * Distinct from `fit_stated_at` above, and the distinction is the whole
-     * point: that column means *a fit was stated*, by the diver on their own
-     * form or by staff typing what the diver said. This one means *somebody
-     * watched a unit come back in a different size and said keep it*. D14's
-     * boundary is that the app learns only from a staff-confirmed outcome, so
-     * a fact that ages naturally is the honest shape rather than a confidence
-     * score nobody calibrated.
-     *
-     * Null on every row nobody has confirmed, which is most of them, and it
-     * gates nothing: an unconfirmed fit is still the fit.
-     */
-    fitConfirmedAt: timestamp("fit_confirmed_at", { withTimezone: true }),
-    /**
-     * Whose call it was. The diver-facing thread says "Keiko kept M as your
-     * fit", so the name is part of what makes a size change something a person
-     * did rather than something the system decided.
-     */
-    fitConfirmedByPersonId: uuid("fit_confirmed_by_person_id").references(() => people.id),
-    /**
      * The safe fallback when a requested size isn't available (H-06): staff
      * flag the diver for hands-on fitting at check-in instead of silently
      * packing a different size. Set/cleared only by its own action — a size
@@ -6351,6 +6435,35 @@ export const rentalFitProfiles = pgTable(
      * only: authorization is checked in the action, not read from this column.
      */
     needsStaffFitBy: uuid("needs_staff_fit_by").references(() => people.id),
+    /**
+     * **A staffer kept this fit after a trip** — recall, never inference (issue
+     * #1174, ADR 20260904-reef-all-the-way-down, D14).
+     *
+     * Distinct from `fit_stated_at` above, and the distinction is the whole
+     * point: that column means *a fit was stated*, by the diver on their own
+     * form or by staff typing what the diver said. These three mean *somebody
+     * watched a unit come back in a different size and said keep it*. D14's
+     * boundary is that the app learns only from a staff-confirmed outcome, so a
+     * fact that ages naturally is the honest shape rather than a confidence
+     * score nobody calibrated.
+     *
+     * Written only by `confirmRentalFitSize` (src/db/rental-fit.ts), which the
+     * evening's one-tap "Keep it" calls; a diver's own save never touches any
+     * of the three. Their absence is the ordinary state — most rows — and it
+     * gates nothing: an unconfirmed fit is still the fit. The diver-facing
+     * sentence renders nothing without all three, so this can never become
+     * "somebody kept your fit".
+     *
+     * Modelled on the `needs_staff_fit_*` trio above and, like it, carries no
+     * check constraint tying the three together: `fit_confirmed_by` is nulled
+     * when a staffer is anonymized, and that must age the sentence out rather
+     * than break the row.
+     */
+    fitConfirmedAt: timestamp("fit_confirmed_at", { withTimezone: true }),
+    /** Who kept it. Attribution, never authorization — the same call `needs_staff_fit_by` makes. */
+    fitConfirmedBy: uuid("fit_confirmed_by").references(() => people.id),
+    /** Which piece they kept, so the sentence can name it beside the size on file. */
+    fitConfirmedItem: rentalFitItem("fit_confirmed_item"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

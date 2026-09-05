@@ -8,6 +8,7 @@ import type { AppDb } from "./client";
 import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
 import {
   confirmRentalFitSize,
+  fitConfirmationForDiver,
   getRentalFit,
   listTripPrepDivers,
   rentalFitByBooking,
@@ -15,7 +16,7 @@ import {
   saveRentalFitNote,
   setNeedsStaffFit,
 } from "./rental-fit";
-import { people } from "./schema";
+import { people, rentalFitProfiles } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 async function context() {
@@ -281,6 +282,89 @@ describe("setNeedsStaffFit (H-06 fallback)", () => {
   });
 });
 
+/**
+ * **Recall, not inference** (ADR 20260904-reef-all-the-way-down, D14).
+ *
+ * The diver-facing half of the evening's "Keep it": one sentence naming the
+ * staffer, the piece and roughly when. The reader's refusals matter as much as
+ * its answer — a half-present confirmation renders no sentence, which is what
+ * stops "somebody kept your BCD" reaching a diver after the staffer who did it
+ * was anonymized. What the writer may move is guarded beside `confirmRentalFitSize`
+ * below; here the rule is that only the kept piece changed.
+ */
+describe("fitConfirmationForDiver", () => {
+  it("reads back who kept which piece, and when", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Kept Fit");
+    const { personId: staffId } = await bookVisitor(db, shopId, tripId, "Keiko Tanaka");
+    await saveRentalFit(db, baseFitInput(shopId, personId));
+
+    expect(
+      await confirmRentalFitSize(db, {
+        shopId,
+        personId,
+        kind: "bcd",
+        size: "L",
+        confirmedByPersonId: staffId,
+      }),
+    ).toBe("saved");
+
+    const fit = await getRentalFit(db, shopId, personId);
+    expect(await fitConfirmationForDiver(db, shopId, personId)).toEqual({
+      staffFullName: "Keiko Tanaka",
+      item: "bcd",
+      confirmedAt: fit?.fitConfirmedAt,
+    });
+    // Only the piece that was kept moved. The rest of the fit is where the
+    // diver left it, which is what stops one evening tap rewriting a record.
+    expect(fit?.wetsuitSize).toBe("3 mm / M");
+    expect(fit?.finSize).toBe("M");
+    expect(fit?.weightPreference).toBe("12 lbs");
+  });
+
+  it("says nothing at all with no confirmation on file", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nothing To Keep");
+    await saveRentalFit(db, baseFitInput(shopId, personId));
+    expect(await fitConfirmationForDiver(db, shopId, personId)).toBeNull();
+  });
+
+  it("says nothing at all when the staffer who kept it is gone", async () => {
+    // The erasure path nulls `fit_confirmed_by`. A line reading "somebody kept
+    // your BCD" would be worse than no line, so the whole thing ages out.
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Anonymized Keeper");
+    const { personId: staffId } = await bookVisitor(db, shopId, tripId, "Gone Keeper");
+    await saveRentalFit(db, baseFitInput(shopId, personId));
+    await confirmRentalFitSize(db, {
+      shopId,
+      personId,
+      kind: "bcd",
+      size: "L",
+      confirmedByPersonId: staffId,
+    });
+    await db
+      .update(rentalFitProfiles)
+      .set({ fitConfirmedBy: null })
+      .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)));
+
+    expect(await fitConfirmationForDiver(db, shopId, personId)).toBeNull();
+  });
+
+  it("says nothing when only the clock was stamped", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Half A Record");
+    const { personId: staffId } = await bookVisitor(db, shopId, tripId, "Half Keeper");
+    await saveRentalFit(db, baseFitInput(shopId, personId));
+    await db
+      .update(rentalFitProfiles)
+      .set({ fitConfirmedAt: new Date("2026-09-01T12:00:00Z"), fitConfirmedBy: staffId })
+      .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)));
+
+    expect(await fitConfirmationForDiver(db, shopId, personId)).toBeNull();
+  });
+});
+
 describe("listTripPrepDivers", () => {
   it("lists the active roster with fit and live nitrox verification", async () => {
     const { db, shopId, tripId } = await context();
@@ -437,7 +521,9 @@ describe("rental fit completeness over a stored profile", () => {
       expect(fit?.wetsuitSize).toBe("3 mm / M");
       expect(fit?.fitStatedAt).toBeInstanceOf(Date);
       expect(fit?.fitConfirmedAt).toBeInstanceOf(Date);
-      expect(fit?.fitConfirmedByPersonId).toBe(staffPerson.id);
+      expect(fit?.fitConfirmedBy).toBe(staffPerson.id);
+      // The piece, not just the clock — the diver's thread names it.
+      expect(fit?.fitConfirmedItem).toBe("bcd");
       // **Never cleared here.** A stale flag costs one extra look at the
       // counter; a wrongly-cleared one puts a diver in gear nobody checked.
       expect(fit?.needsStaffFitAt).toBeInstanceOf(Date);

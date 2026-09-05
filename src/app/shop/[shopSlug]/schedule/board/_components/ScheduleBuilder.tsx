@@ -115,6 +115,8 @@ export type BuilderOptions = {
   courses: BuilderCourseOption[];
   diveSites: BuilderOption[];
   boats?: BuilderBoatOption[];
+  /** The shop's own words for its kinds of day (ADR 20260904-reef-all-the-way-down). */
+  lenses?: BuilderOption[];
   hasBoatDiving?: boolean;
   hasShoreDiving?: boolean;
   hasPoolDiving?: boolean;
@@ -296,6 +298,8 @@ export type BuilderCopy = {
   modePool?: string;
   boatSelectLabel?: string;
   unassignedBoat?: string;
+  lensLabel?: string;
+  lensNone?: string;
 };
 
 /**
@@ -675,7 +679,9 @@ function AddPanel({
           className={`${controlClass} tabular-nums sm:w-40`}
         />
       </Field>
-      {offeredModes.length > 1 || (options?.boats && options.boats.length > 0) ? (
+      {offeredModes.length > 1 ||
+      (options?.boats && options.boats.length > 0) ||
+      (options?.lenses && options.lenses.length > 0) ? (
         <FieldGrid columns={2} className="gap-y-4">
           {offeredModes.length > 1 ? (
             <Field label={copy.diveModeLabel ?? "Dive mode"}>
@@ -717,6 +723,22 @@ function AddPanel({
                 {options.boats.map((boat) => (
                   <option key={boat.id} value={boat.id}>
                     {boat.name} ({boat.capacity} seats)
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ) : null}
+          {/* The shop's own word for this kind of day (ADR
+              20260904-reef-all-the-way-down, decision 2). Rendered only when
+              the shop has written a vocabulary, the same silence the hull
+              select keeps with no boats. */}
+          {options?.lenses && options.lenses.length > 0 ? (
+            <Field label={copy.lensLabel ?? "Kind of day"} hint={copy.optional}>
+              <select name="lensId" defaultValue="" className={controlClass}>
+                <option value="">{copy.lensNone ?? "None"}</option>
+                {options.lenses.map((lens) => (
+                  <option key={lens.id} value={lens.id}>
+                    {lens.title}
                   </option>
                 ))}
               </select>
