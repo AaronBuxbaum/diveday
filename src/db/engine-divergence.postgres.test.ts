@@ -56,9 +56,23 @@ type Probe = {
   /** Why this repository cares — a row nobody depends on does not belong here. */
   matters: string;
   /** Must return a single column aliased `v`, rendered as text. */
-  query: ReturnType<typeof sql>;
+  query?: ReturnType<typeof sql>;
+  /**
+   * For a question one statement cannot ask. Postgres evaluates `now()` once
+   * per *statement*, so `select now() = now()` is true on any engine and
+   * proves nothing about the transaction — the probe that needs this is the
+   * reason the field exists.
+   */
+  run?: (db: DbExecutor) => Promise<string>;
   /** The answer measured on PGlite. */
   pglite: string;
+  /**
+   * The answer expected from a real server, where that is a fact worth
+   * pinning rather than a deployment's choice. Only meaningful on a `differ`
+   * row: without it, "differs from PGlite" is satisfied by *any* other answer,
+   * which is a ledger that cannot tell 16 from 15.
+   */
+  postgres?: string;
   /** Whether the real server is expected to answer the same. */
   verdict: "agree" | "differ";
 };
@@ -82,7 +96,16 @@ const PROBES: readonly Probe[] = [
       "`dbNow()` and `fileScopedShopContext` (src/test/db.ts) both rest on this: the second " +
       "rolls every test back inside one transaction, and a `now()` that ticked would make " +
       "`defaultNow()` columns written in one test disagree with reads in the same test.",
-    query: sql`select (now() = now())::text as v`,
+    // Two statements, one transaction. Both inside a single statement would be
+    // true on any engine — Postgres evaluates `now()` once per statement, and
+    // even `clock_timestamp() = clock_timestamp()` comes back true there — so
+    // the first draft of this probe passed without asking the question.
+    run: (db) =>
+      db.transaction(async (tx) => {
+        const first = await scalar(tx, sql`select now()::text as v`);
+        const second = await scalar(tx, sql`select now()::text as v`);
+        return String(first === second);
+      }),
     pglite: "true",
     verdict: "agree",
   },
@@ -119,13 +142,16 @@ const PROBES: readonly Probe[] = [
     verdict: "agree",
   },
   {
-    id: "advisory_lock",
+    id: "advisory_xact_lock",
     asks: "whether transaction-scoped advisory locks work",
     matters:
       "`seedProductionDb` serializes concurrent cold starts with `pg_advisory_xact_lock`. " +
       "It is skipped on PGlite for a different reason (each opener has its own database), " +
       "but the call still has to exist.",
-    query: sql`select pg_try_advisory_lock(42)::text as v`,
+    // `_xact_`, matching what `seedProductionDb` actually calls. The session
+    // variant answers the same `true` and would have passed while probing a
+    // different lock — and, holding past the statement, leaking one.
+    query: sql`select pg_try_advisory_xact_lock(42)::text as v`,
     pglite: "true",
     verdict: "agree",
   },
@@ -185,18 +211,29 @@ const PROBES: readonly Probe[] = [
       "direction and unavailable in the other. Nothing else in the tree said so.",
     query: sql`select split_part(current_setting('server_version'), '.', 1) as v`,
     pglite: "18",
+    // Named, not merely "not 18". CI's service container is `postgres:16` and
+    // production is Neon; a bare inequality would call the ledger healthy
+    // against 15 or 17 while the prose above still claimed 16. Changing the CI
+    // image means changing this line, which is the ledger working rather than
+    // an inconvenience.
+    postgres: "16",
     verdict: "differ",
   },
 ];
 
-async function ask(db: DbExecutor, probe: Probe): Promise<string> {
-  const result = await db.execute(probe.query);
+/** One `select … as v`, as text. Throws rather than coercing a missing row. */
+async function scalar(db: DbExecutor, query: ReturnType<typeof sql>): Promise<string> {
+  const result = await db.execute(query);
   const rows = (Array.isArray(result) ? result : (result.rows ?? [])) as { v: unknown }[];
   const value = rows[0]?.v;
-  if (value === undefined || value === null) {
-    throw new Error(`probe "${probe.id}" returned no value`);
-  }
+  if (value === undefined || value === null) throw new Error("probe returned no value");
   return String(value);
+}
+
+async function ask(db: DbExecutor, probe: Probe): Promise<string> {
+  if (probe.run) return probe.run(db);
+  if (!probe.query) throw new Error(`probe "${probe.id}" has neither a query nor a run`);
+  return scalar(db, probe.query);
 }
 
 /**
@@ -225,10 +262,10 @@ describe("what PGlite answers", () => {
    */
   it("orders text by bytes, which is not how any reader reads a name", async () => {
     const db = await unseededTestDb();
-    const collation = await ask(db, {
-      ...PROBES[0],
-      query: sql`select datcollate as v from pg_database where datname = current_database()`,
-    });
+    const collation = await scalar(
+      db,
+      sql`select datcollate as v from pg_database where datname = current_database()`,
+    );
     expect(collation).toBe("C");
 
     expect(await orderedNames(db, sql`x`)).toBe("Ana|Bea|Zoe|Ángel|Ñuria");
@@ -268,6 +305,14 @@ describePostgres("and where a real server answers differently", () => {
         `difference. That is good news and a stale row — update the verdict, and check whether ` +
         `a suite pinned to a real server can come back to the fast one.`,
     ).not.toBe(probe.pglite);
+
+    if (probe.postgres === undefined) return;
+    expect(
+      answer,
+      `${probe.id}: the server answered ${answer} where this ledger expects ${probe.postgres}. ` +
+        `Differing from PGlite is not enough on this row — the prose above names a version, and ` +
+        `a ledger that accepts any other answer cannot keep that prose true.`,
+    ).toBe(probe.postgres);
   });
 
   /**

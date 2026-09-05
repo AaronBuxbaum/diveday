@@ -54,6 +54,75 @@ describe("a check against a departure time", () => {
   });
 });
 
+/**
+ * The same check with the comparison moved off the binding's line, which the
+ * first version of this guard reported as a clean repository. Found in review
+ * of the change that added it (PR #1381), before anything in the tree was
+ * written that way.
+ */
+describe("a check split across lines", () => {
+  it("is refused, and reported at the comparison rather than the binding", () => {
+    expect(
+      lines(`
+        const cutoff = new Date(trip.startsAt.getTime() + HOUR_MS);
+        return cutoff <= now;
+      `),
+    ).toEqual([3]);
+  });
+
+  it("is still refused with statements in between", () => {
+    expect(
+      lines(`
+        const cutoff = new Date(trip.startsAt.getTime() + HOUR_MS);
+        const seats = await countSeats(trip.id);
+        log("checked", seats);
+        if (cutoff < nowDate()) return null;
+      `),
+    ).toEqual([5]);
+  });
+
+  /**
+   * The discriminator. Date arithmetic that never asks the clock is ordinary
+   * work — the seeds are full of it — and pairing a binding with any nearby
+   * comparison at all was the false-failure this rule had to avoid.
+   */
+  it("leaves a derived date compared against something other than now alone", () => {
+    expect(
+      lines(`
+        const endsAt = new Date(startsAt.getTime() + 12 * 60 * 60 * 1000);
+        if (endsAt < lastSlotOfDay) return "overflows";
+      `),
+    ).toEqual([]);
+  });
+
+  it("does not reach past its window to an unrelated comparison", () => {
+    expect(
+      lines(`
+        const endsAt = new Date(startsAt.getTime() + span);
+        const a = 1;
+        const b = 2;
+        const c = 3;
+        const d = 4;
+        const e = 5;
+        const f = 6;
+        const g = 7;
+        const h = 8;
+        if (endsAt <= now) return null;
+      `),
+    ).toEqual([]);
+  });
+
+  it("honours the exemption on the comparison line", () => {
+    expect(
+      lines(`
+        const sendAt = new Date(trip.endsAt.getTime() + RECAP_DELAY_MS);
+        // diveday:allow-departure-offset: the recap's own clock, not this rule
+        return sendAt <= now;
+      `),
+    ).toEqual([]);
+  });
+});
+
 describe("a second spelling of the buffer", () => {
   /**
    * The rule that matters. Every one of the nine constants this guard was

@@ -35,7 +35,7 @@ import { pathToFileURL } from "node:url";
  *
  * ## What is guarded
  *
- * Two shapes, in non-test sources under {@link GUARDED_ROOTS}:
+ * Three shapes, in non-test sources under {@link GUARDED_ROOTS}:
  *
  * 1. **A hand-rolled comparison** — an offset added to a `startsAt`/`endsAt`
  *    on a line that also compares (`<`, `>`, `<=`, `>=`). Construction is left
@@ -43,7 +43,13 @@ import { pathToFileURL } from "node:url";
  *    (`new Date(trip.startsAt.getTime() + index * step)`) and answer no
  *    question about the clock, which is why the comparison operator is the
  *    anchor rather than the arithmetic.
- * 2. **A second name for the constant** — any `*_BUFFER_MS` declared outside
+ * 2. **The same check split across lines** — the offset bound to a name, and
+ *    that name compared against *now* within {@link BINDING_WINDOW} lines. A
+ *    per-line rule cannot see this one, and the first version of this guard
+ *    called a repository containing it clean (caught in review of the change
+ *    that added it). Comparing a derived date against anything *other* than
+ *    the clock stays untouched, which is what keeps the seeds out of it.
+ * 3. **A second name for the constant** — any `*_BUFFER_MS` declared outside
  *    `src/lib/trips.ts`. This is the half that actually rotted: all nine
  *    private constants were correct on the day they were written and carried a
  *    docstring citing AGENTS.md, and all nine were still forks. A guard that
@@ -81,6 +87,31 @@ const COMPARISON = /(?:<=|>=|(?<![=!<>-])<(?!=)|(?<![=!<>-])>(?!=))/;
 /** A second spelling of the constant, anywhere but its home. */
 const REDECLARED = /\b(?:const|let|var)\s+([A-Z0-9_]*BUFFER_MS)\b/;
 
+/**
+ * An offset bound to a name — `const cutoff = new Date(trip.startsAt.getTime()
+ * + HOUR_MS);` — which is the same check as {@link OFFSET} with the comparison
+ * moved to a later line, where a per-line rule cannot see it.
+ */
+const BOUND_OFFSET = /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=/;
+
+/**
+ * "…compared against the clock." The discriminator that makes {@link
+ * BOUND_OFFSET} safe to act on: a departure-derived value compared against
+ * *now* is the prohibited check, while the same value compared against
+ * anything else is ordinary date arithmetic — a seed deciding whether one
+ * fixture date precedes another, say.
+ */
+const NOW = /\bnow\b|\bnowDate\(\)|\bnowMs\(\)|\bDate\.now\(\)/;
+
+/**
+ * How far past the binding to look for the comparison. Short on purpose: the
+ * shape this catches is two or three adjacent lines in one function, and a
+ * generous window over a file full of date arithmetic would start pairing a
+ * binding with somebody else's unrelated comparison — the exact false-failure
+ * that teaches people to reach for the exemption comment.
+ */
+const BINDING_WINDOW = 8;
+
 const ALLOW = /diveday:allow-departure-offset:/;
 const IS_TEST = /\.test\.tsx?$/;
 const COMMENT = /^\s*(?:\/\/|\/\*|\*)/;
@@ -109,9 +140,28 @@ function isAllowed(lines, index) {
 const SKIPPED_FILES = new Set([path.normalize("src/db/demo-refresh.ts")]);
 
 /**
- * Both rules over one source. Returns findings with the 1-indexed line and the
- * offending text, plus how many lines were examined, so a passing run can say
- * what it actually looked at rather than only that it found nothing.
+ * The first line within {@link BINDING_WINDOW} that compares `name` against the
+ * clock, or `-1`. This is the second half of the split-across-lines rule: the
+ * binding alone is innocent, and only the comparison against *now* makes it the
+ * check this guard refuses.
+ */
+function clockComparisonAfter(lines, start, name) {
+  const identifier = new RegExp(`\\b${name}\\b`);
+  const last = Math.min(lines.length - 1, start + BINDING_WINDOW);
+  for (let index = start + 1; index <= last; index += 1) {
+    const line = lines[index];
+    if (!identifier.test(line)) continue;
+    if (!COMPARISON.test(line) || !NOW.test(line)) continue;
+    if (isAllowed(lines, index)) return -1;
+    return index;
+  }
+  return -1;
+}
+
+/**
+ * All three rules over one source. Returns findings with the 1-indexed line and
+ * the offending text, plus how many lines were examined, so a passing run can
+ * say what it actually looked at rather than only that it found nothing.
  */
 export function findUnbufferedDepartureChecks(source, { isHome = false } = {}) {
   const lines = source.split("\n");
@@ -130,8 +180,23 @@ export function findUnbufferedDepartureChecks(source, { isHome = false } = {}) {
     if (!OFFSET.test(line)) continue;
     checked += 1;
     if (isHome) continue;
-    if (!COMPARISON.test(line)) continue;
-    findings.push({ line: index + 1, text: line.trim(), rule: "comparison" });
+
+    if (COMPARISON.test(line)) {
+      findings.push({ line: index + 1, text: line.trim(), rule: "comparison" });
+      continue;
+    }
+
+    // The same check with the comparison on a later line. Reported at the
+    // comparison rather than the binding, because that is the line that decides.
+    const bound = BOUND_OFFSET.exec(line);
+    if (!bound) continue;
+    const compared = clockComparisonAfter(lines, index, bound[1]);
+    if (compared === -1) continue;
+    findings.push({
+      line: compared + 1,
+      text: lines[compared].trim(),
+      rule: "deferred-comparison",
+    });
   }
 
   return { findings, checked };
