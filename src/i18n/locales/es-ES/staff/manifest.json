@@ -1,4 +1,15 @@
 {
+  "stage": {
+    "legend": "Dónde está el barco",
+    "tapBoarding": "Embarcando",
+    "tapUnderway": "Navegando",
+    "tapSurface": "En superficie",
+    "tapHeadingIn": "De regreso",
+    "tapHome": "En puerto",
+    "recordedLine": "{name} · {time}",
+    "consequence": "Cada toque aparece en los enlaces de los buceadores y en tu sitio web.",
+    "errorRefusal": "No se guardó. Revisa tu conexión y vuelve a tocar."
+  },
   "skipToRollCall": "Ir al pase de lista",
   "stillToBoardHeading": "Pendientes de embarcar ({count})",
   "notCountedBackHeading": "Sin contabilizar a bordo todavía ({count})",

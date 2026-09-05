@@ -2497,6 +2497,65 @@ export const tripChangeEvents = pgTable(
 );
 
 /**
+ * **Where a departure is, in the crew's own word** — ADR
+ * 20260904-reef-all-the-way-down, decision 2, Budget rule 4.
+ *
+ * Five words the crew taps on the manifest, repeated on every surface that
+ * draws the boat. Never inferred from a clock and **never a position**: a
+ * position is a promise DiveDay cannot keep and a liability a shop does not
+ * want, and the ADR rejects tracking in as many words. A stage nobody set is
+ * absent, never "Unknown".
+ */
+export const tripStage = pgEnum("trip_stage", [
+  "boarding",
+  "underway",
+  "surface",
+  "heading_in",
+  "home",
+]);
+
+/**
+ * The stage ledger — append-only, like `trip_change_events` beside it.
+ *
+ * A stage is added, never edited and never deleted: a crew that taps the wrong
+ * word taps the right one, and the newest row wins. So there is no
+ * `deleted_at` here (nothing a user points at and asks to remove) and no
+ * update path at all. `dive_site_id` is snapshotted at write time from the
+ * departure's own plan rather than resolved at render, so a later edit to the
+ * plan cannot rewrite a sentence a diver has already read; null is a real
+ * answer — a shore day, or a site nobody named — and the reader falls back to
+ * the siteless word.
+ */
+export const tripStageEvents = pgTable(
+  "trip_stage_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id),
+    tripId: uuid("trip_id")
+      .notNull()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    stage: tripStage("stage").notNull(),
+    diveSiteId: uuid("dive_site_id").references(() => diveSites.id, { onDelete: "set null" }),
+    recordedByPersonId: uuid("recorded_by_person_id")
+      .notNull()
+      .references(() => people.id),
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
+    /** The final tiebreak when two taps share an instant, as on the roll call. */
+    seq: bigserial("seq", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    index("trip_stage_events_shop_trip_idx").on(
+      table.shopId,
+      table.tripId,
+      table.recordedAt,
+      table.seq,
+    ),
+  ],
+);
+
+/**
  * A diver who asked to be told if a full trip frees a seat. It is deliberately
  * separate from bookings: a wait-list entry never consumes capacity or appears
  * on a manifest. It is also **not a queue position** — `createdAt` records when

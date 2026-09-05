@@ -31,7 +31,18 @@ export const SITE_MARKS = ["reef", "wreck", "course", "open"] as const;
 export type SiteMarkCode = (typeof SITE_MARKS)[number];
 
 /** Every drawing in the hand that renders as a tile; the swell is the sixth. */
-export const REEF_DRAWINGS = [...SITE_MARKS, "site", "turtle"] as const;
+/**
+ * The hand's whole vocabulary. The eighth is the **boat** (ADR
+ * 20260904-reef-all-the-way-down, decision 2, Budget rule 2): the one drawing
+ * that ever moves, and the one the crew's own word is drawn beside. It appears
+ * on the shop home, the schedule board and the storefront, and **never on the
+ * manifest** — `illustration.test.ts` refuses a drawing import under any path
+ * containing "manifest", so that ban is structural rather than remembered.
+ *
+ * A boat is not a `SITE_MARK`: a site mark is derived from a site's *name*,
+ * and the boat is chosen by a surface that knows a boat is out.
+ */
+export const REEF_DRAWINGS = [...SITE_MARKS, "site", "turtle", "boat"] as const;
 export type ReefDrawingCode = (typeof REEF_DRAWINGS)[number];
 
 const WRECK = /wreck|\b(ship|hull|barge|tug|freighter|tanker|schooner|cutter|uscgc?)\b/i;

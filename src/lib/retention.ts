@@ -39,6 +39,16 @@
  * — and the volume is a few hundred rows a year for a large fleet, so nothing
  * about growth argues the other way. Chosen by the product owner, 2026-08-20,
  * over a 1825-day-past-retirement window.
+ *
+ * **`trip_stage_events` is unbounded too, and that is not yet a decision.** The
+ * five words a crew taps carry no diver data — a shop, a trip, a stage code, a
+ * dive-site id, the staff person who tapped, an instant — so the erasure half
+ * is answered by the live join to `people` rather than by a window, and growth
+ * is a handful of rows per departure. But "a handful per departure" is still
+ * unbounded, and nothing forces an answer the way `export.test.ts` forces every
+ * table to be classified for the bundle. Recorded here rather than left silent,
+ * because the bad state is a table that is neither pruned nor deliberately kept.
+ * The window, if there is to be one, is the product owner's call (H-02): #1397.
  */
 
 import { DAY_MS } from "@/lib/clock";

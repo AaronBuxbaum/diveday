@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BoatDrift } from "@/components/illustration/BoatDrift";
 import { SiteMark } from "@/components/illustration/SiteMark";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import { formatMoneyCents, formatTime } from "@/lib/format";
 import type { AboardBlockerKind } from "@/lib/readiness";
 import { siteMarkFor, siteMarkGroundFor } from "@/lib/site-mark";
 import type { DayStation as DayStationData } from "@/lib/today";
+import { STAGE_WORD_KEYS, stageTone } from "@/lib/trip-stages";
 import { StationSettles } from "./StationSettles";
 
 /**
@@ -95,6 +97,15 @@ export function DayStation({
   /** This station's work rows, already composed by the spine. */
   children?: React.ReactNode;
 }) {
+  const stage = station.stage ?? null;
+  // The crew's word, composed here rather than in the chip: "Out on Molasses
+  // Reef" needs the site the crew was on when they said it, and a departure
+  // with no plan gets the siteless word rather than an empty gap.
+  const stageWord = stage
+    ? stage.stage === "underway" && !stage.siteName
+      ? t("shopHome.spine.stage.underwayNoSite")
+      : t(STAGE_WORD_KEYS[stage.stage], { site: stage.siteName ?? "" })
+    : "";
   const open = Math.max(0, station.capacity - station.booked);
   const filled =
     station.capacity > 0 ? Math.min(100, Math.round((station.booked / station.capacity) * 100)) : 0;
@@ -148,6 +159,24 @@ export function DayStation({
                 time: formatTime(station.endsAt, locale, timeZone),
               })}
             </span>
+            {/* **Where the boat is, in the crew's own word** — ADR
+                20260904-reef-all-the-way-down, decision 2, Budget rule 4. It
+                renders only where a crew has said something, never "Unknown",
+                and `home` alone takes the roll call's success tone. The boat is
+                drawn inside the chip and drifts in once when the word becomes
+                Underway; `coral={false}` unconditionally, because the spine
+                spends its one coral detail on the next boat's site mark. */}
+            {stage ? (
+              <BoatDrift stage={stage.stage}>
+                <Badge tone={stageTone(stage.stage)} toneMark={false} tabularNums>
+                  <SiteMark mark="boat" size="chip" ground="bare" coral={false} />
+                  {t("shopHome.spine.stage.chip", {
+                    stage: stageWord,
+                    time: formatTime(stage.recordedAt, locale, timeZone),
+                  })}
+                </Badge>
+              </BoatDrift>
+            ) : null}
           </p>
           <h3
             className={`mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 ${SECTION_TITLE_CLASS}`}
